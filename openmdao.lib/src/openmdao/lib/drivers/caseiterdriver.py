@@ -501,15 +501,13 @@ class CaseIteratorDriver(CaseIterDriverBase):
     to the ROSE framework. Concurrent evaluation is supported, with the various
     evaluations executed across servers obtained from the
     :class:`ResourceAllocationManager`.
-
-    - The `iterator` input provides the cases to be evaluated.
     """
 
     iterator = Instance(ICaseIterator, iotype='in',
                         desc='Iterator supplying Cases to evaluate.')
     
     def get_case_iterator(self):
-        """Returns a new iterator over the Case set"""
+        """Returns a new iterator over the Case set."""
         if self.iterator:
             return self.iterator.__iter__()
         else:

@@ -7,7 +7,7 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.api import Case
 
 class DBCaseIterator(object):
-    """"Pulls Cases from a relational DB (sqlite)"""
+    """Pulls Cases from a relational DB (sqlite)."""
     
     implements(ICaseIterator)
     

@@ -48,5 +48,5 @@ class ImportFactory(Factory):
         return self._ctors[typ](**ctor_args)
 
     def get_available_types(self, groups=None):
-        """Does nothing but included to adhere to the Factory interface."""
+        """Does nothing but is included to adhere to the Factory interface."""
         return []

@@ -466,7 +466,7 @@ listener_client = {
 
 class BaseManager(object):
     '''
-    Base class for managers
+    Base class for managers.
     '''
     _registry = {}
     _Server = Server
@@ -487,7 +487,7 @@ class BaseManager(object):
 
     def get_server(self):
         '''
-        Return server object with serve_forever() method and address attribute
+        Return server object with serve_forever() method and address attribute.
         '''
         assert self._state.value == State.INITIAL
         return Server(self._registry, self._address,
@@ -495,7 +495,7 @@ class BaseManager(object):
 
     def connect(self):
         '''
-        Connect manager object to the server process
+        Connect manager object to the server process.
         '''
         Listener, Client = listener_client[self._serializer]
         conn = Client(self._address, authkey=self._authkey)
@@ -504,7 +504,7 @@ class BaseManager(object):
 
     def start(self):
         '''
-        Spawn a server process for this manager object
+        Spawn a server process for this manager object.
         '''
         assert self._state.value == State.INITIAL
 
@@ -538,7 +538,7 @@ class BaseManager(object):
     @classmethod
     def _run_server(cls, registry, address, authkey, serializer, writer):
         '''
-        Create a server, report its address and run it
+        Create a server, report its address, and run it.
         '''
         # create server
         server = cls._Server(registry, address, authkey, serializer)
@@ -565,13 +565,13 @@ class BaseManager(object):
 
     def join(self, timeout=None):
         '''
-        Join the manager process (if it has been spawned)
+        Join the manager process (if it has been spawned).
         '''
         self._process.join(timeout)
 
     def _debug_info(self):
         '''
-        Return some info about the servers shared objects and connections
+        Return some info about the servers shared objects and connections.
         '''
         conn = self._Client(self._address, authkey=self._authkey)
         try:
@@ -581,7 +581,7 @@ class BaseManager(object):
 
     def _number_of_objects(self):
         '''
-        Return the number of shared objects
+        Return the number of shared objects.
         '''
         conn = self._Client(self._address, authkey=self._authkey)
         try:
@@ -598,7 +598,7 @@ class BaseManager(object):
     @staticmethod
     def _finalize_manager(process, address, authkey, state, _Client):
         '''
-        Shutdown the manager process; will be registered as a finalizer
+        Shutdown the manager process; will be registered as a finalizer.
         '''
         if process.is_alive():
             util.info('sending shutdown message to manager')
@@ -633,7 +633,7 @@ class BaseManager(object):
     def register(cls, typeid, callable=None, proxytype=None, exposed=None,
                  method_to_typeid=None, create_method=True):
         '''
-        Register a typeid with the manager type
+        Register a typeid with the manager type.
         '''
         if '_registry' not in cls.__dict__:
             cls._registry = cls._registry.copy()
@@ -685,7 +685,7 @@ class ProcessLocalSet(set):
 
 class BaseProxy(object):
     '''
-    A base for proxies of shared objects
+    A base for proxies of shared objects.
     '''
     _address_to_local = {}
     _mutex = util.ForkAwareThreadLock()
@@ -739,7 +739,7 @@ class BaseProxy(object):
 
     def _callmethod(self, methodname, args=(), kwds={}):
         '''
-        Try to call a method of the referrent and return a copy of the result
+        Try to call a method of the referent and return a copy of the result.
         '''
         try:
             conn = self._tls.connection
@@ -768,7 +768,7 @@ class BaseProxy(object):
 
     def _getvalue(self):
         '''
-        Get a copy of the value of the referent
+        Get a copy of the value of the referent.
         '''
         return self._callmethod('#GETVALUE')
 
@@ -843,7 +843,7 @@ class BaseProxy(object):
 
     def __str__(self):
         '''
-        Return representation of the referent (or a fall-back if that fails)
+        Return representation of the referent (or a fall-back if that fails).
         '''
         try:
             return self._callmethod('__repr__')
@@ -858,7 +858,7 @@ def RebuildProxy(func, token, serializer, kwds):
     '''
     Function used for unpickling proxy objects.
 
-    If possible the shared object is returned, or otherwise a proxy for it.
+    If possible, the shared object is returned; otherwise a proxy for it.
     '''
     server = getattr(current_process(), '_manager_server', None)
 
@@ -877,7 +877,7 @@ def RebuildProxy(func, token, serializer, kwds):
 
 def MakeProxyType(name, exposed, _cache={}):
     '''
-    Return an proxy type whose methods are given by `exposed`
+    Return a proxy type whose methods are given by `exposed`.
     '''
     exposed = tuple(exposed)
     try:

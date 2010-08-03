@@ -10,7 +10,7 @@ from pyparsing import Suppress, Word, alphanums, dictOf, oneOf, printables, \
 __all__ = ["parse_phoenixwrapper"]
            
 def _parse_phoenixline():
-    """Parse a single line containing a variable definition"""
+    """Parse a single line containing a variable definition."""
         
     data = ( Suppress("variable:") + \
              Word(alphanums).setResultsName("name") + \
@@ -22,7 +22,7 @@ def _parse_phoenixline():
     return data
 
 def _parse_phoenixgroup():
-    """Parse a single line containing a group definition"""
+    """Parse a single line containing a group definition."""
         
     data = ( Suppress(Word(alphanums)) + \
            sglQuotedString.setParseAction(removeQuotes).setResultsName("name") )
@@ -191,9 +191,11 @@ def parse_phoenixwrapper(infile, outfile, compname):
     wrapper. The first section of this wrapper is parsed, and the appropriate
     variables and containers are placed in the new OpenMDAO component.
     
-    infile  - ModelCenter scriptwrapper
-    outfile - file containing new OpenMDAO component skeleton
-    compname - Name for new component
+    infile  - ModelCenter scriptwrapper.
+    
+    outfile - File containing new OpenMDAO component skeleton.
+    
+    compname - Name for new component.
     """
     
     # Note: special processing since Python strings don't need escaped quotes.

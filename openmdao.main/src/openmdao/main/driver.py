@@ -20,7 +20,7 @@ class Driver(Component):
     
     implements(IDriver)
 
-    recorder = Instance(ICaseRecorder, desc='Case recorder for iteration data', 
+    recorder = Instance(ICaseRecorder, desc='Case recorder for iteration data.', 
                         required=False)
 
     workflow = Instance(Workflow, allow_none=True)

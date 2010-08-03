@@ -60,7 +60,7 @@ class ExternalCode(Component):
 
     def execute(self):
         """
-        Removes existing output (but not in/out) files,
+        Remove existing output (but not in/out) files.
         If `resources` have been specified, then an appropriate server
         is allocated and the command is run on that server.
         Otherwise runs the command locally.
@@ -249,8 +249,8 @@ class ExternalCode(Component):
 
     def copy_files(self, directory, patterns):
         """
-        Copies files from `directory` that match `patterns`
-        to the current directory and ensures they are writable.
+        Copy files from `directory` that match `patterns`
+        to the current directory and ensure they are writable.
         """
         if isinstance(patterns, basestring):
             patterns = [patterns]

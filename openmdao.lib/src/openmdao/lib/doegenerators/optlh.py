@@ -44,7 +44,8 @@ class LatinHypercube(object):
         return self.doe.shape
     
     def mmphi(self):
-        """Returns the Morris-Mitchell sampling criterion for this latin hypercube"""
+        """Returns the Morris-Mitchell sampling criterion for this latin hypercube."""
+
         if self.phi is None:
             n,m = self.doe.shape
             distdict = {}
@@ -109,30 +110,21 @@ _norm_map = {"1-norm":1,"2-norm":2}
 class OptLatinHypercube(HasTraits): 
     """IDOEgenerator which provides a latin hypercube DOE sample set.
     The Morris-Mitchell sampling criterion of the DOE is optimzied
-    using an evolutionary algorithm
-
-    num_samples: Int,optional
-        number of sample points in the DOE sample set
-    num_parameters: Int, optional
-        number of parameters, or dimensions, for the DOE
-    population: Int, optional
-        size of the population used in the evolutionary optimization
-    generations: Int, optional
-        number of generations the optimization will evolve over
+    using an evolutionary algorithm.
     """
     
     implements(IDOEgenerator)
     
-    num_sample_points = Int(20, desc="number of sample points in the DOE sample set")
+    num_sample_points = Int(20, desc="Number of sample points in the DOE sample set")
     
-    num_parameters = Int(2, desc="number of parameters, or dimensions, for the DOE")
+    num_parameters = Int(2, desc="Number of parameters, or dimensions, for the DOE")
     
     population = Int(20,
-        desc="size of the population used in the evolutionary optimization")
+        desc="Size of the population used in the evolutionary optimization")
     generations = Int(2,
-        desc="number of generations the optimization will evolve over")
+        desc="Number of generations the optimization will evolve over")
     norm_method = Enum(["1-norm","2-norm"],
-                    desc="vector norm calculation method. '1-norm' is faster, but less accurate")
+                    desc="Vector norm calculation method. '1-norm' is faster, but less accurate")
     
     def __init__(self, num_samples=None, num_parameters=None, population=None,generations=None):
         super(OptLatinHypercube,self).__init__()

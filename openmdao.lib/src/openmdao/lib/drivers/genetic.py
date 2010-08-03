@@ -20,44 +20,44 @@ array_test = re.compile("(\[[0-9]+\])+$")
 
 @add_delegate(HasParameters)
 class Genetic(Driver):
-    """Genetic algorithm for the OpenMDAO frameowork, based on the Pyevolve Genetic algorithm module. 
+    """Genetic algorithm for the OpenMDAO framework, based on the Pyevolve Genetic algorithm module. 
     """
     objective = Expression(iotype='in',
-                          desc='A string containing the objective function expression to be optimized') 
+                          desc='A string containing the objective function expression to be optimized.') 
     
     opt_type = Enum("minimize", values=["minimize","maximize"],
                     iotype="in",
-                    desc="sets the optimization to either minimize or maximize the objective function")
+                    desc="Sets the optimization to either minimize or maximize the objective function.")
     
     generations = Int(Consts.CDefGAGenerations,iotype="in",
-                      desc="the maximum number of generations the algorithm will "
-                      "evolve to before stopping")
+                      desc="The maximum number of generations the algorithm will "
+                      "evolve to before stopping.")
     population_size = Int(Consts.CDefGAPopulationSize, iotype="in",
-                          desc = "the size of the population in each generation")
+                          desc = "The size of the population in each generation.")
     crossover_rate = Float(Consts.CDefGACrossoverRate, iotype="in",low=0.0,high=1.0,
-                           desc="the crossover rate used when two parent genomes repoduce to form a "
-                           "child genome")
+                           desc="The crossover rate used when two parent genomes reproduce to form a "
+                           "child genome.")
     mutation_rate = Float(Consts.CDefGAMutationRate, iotype="in",low=0.0,high=1.0,
-                           desc="the mutation rate applied to population members")
+                           desc="The mutation rate applied to population members.")
     
     selection_method = Enum("roulette_wheel",("roulette_wheel","tournament","rank","uniform"),
-                         desc="the selection method used to pick population members who will survive for "
-                         "breeding into the next generation",
+                         desc="The selection method used to pick population members who will survive for "
+                         "breeding into the next generation.",
                          iotype="in")
     _selection_mapping = {"roulette_wheel":Selectors.GRouletteWheel,
                           "tournament":Selectors.GTournamentSelector,
                           "rank":Selectors.GRankSelector,
                           "uniform":Selectors.GUniformSelector}
     
-    elitism = Bool(False,iotype="in",desc="controls the use of elitism in the creation of new "
+    elitism = Bool(False, iotype="in", desc="Controls the use of elitism in the creation of new "
                    "generations.")
     
-    best_individual = Instance(klass = GenomeBase.GenomeBase, iotype="out", desc="the genome with the "
-                               "best score from the optimization") 
+    best_individual = Instance(klass = GenomeBase.GenomeBase, iotype="out", desc="The genome with the "
+                               "best score from the optimization.") 
     
     seed = Int(None,iotype="in",
                desc="Random seed for the optimizer. Set to a specific value for repeatable "
-               "results, otherwise leave as None for truely random seeding")
+               "results; otherwise leave as None for truly random seeding.")
     
     def __init__(self,doc=None):
         super(Genetic,self).__init__(doc)
@@ -114,7 +114,7 @@ class Genetic(Driver):
         # Genetic Algorithm Instance
         #print self.seed
         
-        #configuring the iptions
+        #configuring the options
         ga = GSimpleGA.GSimpleGA(genome,interactiveMode = False, seed=self.seed)
         ga.setMinimax(Consts.minimaxType[self.opt_type])
         ga.setGenerations(self.generations)

@@ -26,7 +26,7 @@ class SequentialWorkflow(Workflow):
         return comp in self._nodes
     
     def contents(self):
-        """Returns a list of all Components in the workflow."""
+        """Returns a list of all components in the workflow."""
         return self._nodes[:]
 
     def add(self, comp):
