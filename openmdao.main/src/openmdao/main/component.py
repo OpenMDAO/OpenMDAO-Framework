@@ -98,7 +98,8 @@ class Component (Container):
                     iotype='in')
     external_files = List(FileMetadata)
     
-    force_execute = Bool(False, desc="If True, always execute even if all IO traits are valid")
+    force_execute = Bool(False, iotype='in',
+                         desc="If True, always execute even if all IO traits are valid.")
         
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
