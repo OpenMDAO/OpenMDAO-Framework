@@ -1,2 +1,3 @@
-recursive-include src *.inp 
+recursive-include src *.inp
 include src/openmdao/lib/traits/domain/test *.mesh *.new
+recursive-include src/openmdao/lib/components/nastran/test *.txt *.bdf
