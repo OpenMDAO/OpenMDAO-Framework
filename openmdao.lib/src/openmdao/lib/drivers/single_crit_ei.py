@@ -109,10 +109,10 @@ class SingleCritEI(Driver):
         genome.mutator.set(Mutators.G1DListMutatorAllele)
         genome.crossover.set(Crossovers.G1DListCrossoverUniform)
         ga = GSimpleGA.GSimpleGA(genome,seed=1)
-        #ga.setElitism(True)
-        #ga.selector.set(Selectors.GTournamentSelector)
-        ga.setGenerations(25)
-        ga.setPopulationSize(75)
+        ga.setElitism(True)
+        ga.selector.set(Selectors.GTournamentSelector)
+        ga.setGenerations(10)
+        ga.setPopulationSize(100)
         ga.setMinimax(Consts.minimaxType["maximize"])
         ga.evolve()
         bi = ga.bestIndividual()
@@ -123,7 +123,7 @@ class SingleCritEI(Driver):
             [(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())]    
         outs = [(self.criteria,None,None)]
         case = Case(inputs=ins,outputs=outs)
-        #print "ei_next_case: ", case        
+        print "ei: ",self.parent.iter._iterations, self.EI     
         self.next_case = ListCaseIterator([case,])
         self.invalidate_deps(notify_parent=True)
         

@@ -41,6 +41,7 @@ class Iterator(Driver):
         #print "iter"
         self._iterations += 1
         if self._iterations <= self.iterations: return True
+        elif self._iterations > 1 and analysis.EI_driver.EI <= .03: return False
         return False
 
     def post_iteration(self): 
@@ -88,10 +89,11 @@ class Analysis(Assembly):
         
         self.add("retrain",CaseIteratorDriver())
         self.retrain.recorder = DBCaseRecorder('retrain.db')
+        #self.retrain.recorder = DBCaseRecorder()
         #self.retrain.force_execute = True
         
         self.add("iter",Iterator())
-        self.iter.iterations = 2
+        self.iter.iterations = 30
         self.iter.recorder = DumpCaseRecorder(open('iter.out','w'))
         
         #Iteration Heirarchy
@@ -102,7 +104,6 @@ class Analysis(Assembly):
         
         self.EI_driver.workflow.add(self.branin_meta_model)
         self.retrain.workflow.add(self.branin_meta_model)
-
         
         #Data Connections
         self.connect("filter.pareto_set","EI_driver.best_case")
