@@ -38,7 +38,7 @@ class Iterator(Driver):
         self._iterations = 0
     
     def continue_iteration(self):
-        print "iter"
+        #print "iter"
         self._iterations += 1
         if self._iterations <= self.iterations: return True
         return False
@@ -87,11 +87,11 @@ class Analysis(Assembly):
         #self.EI_driver.force_execute = True
         
         self.add("retrain",CaseIteratorDriver())
-        self.retrain.recorder = DumpCaseRecorder()
+        self.retrain.recorder = DBCaseRecorder('retrain.db')
         #self.retrain.force_execute = True
         
         self.add("iter",Iterator())
-        self.iter.iterations = 25
+        self.iter.iterations = 2
         self.iter.recorder = DumpCaseRecorder(open('iter.out','w'))
         
         
@@ -100,7 +100,6 @@ class Analysis(Assembly):
         
         self.DOE_trainer.workflow.add(self.branin_meta_model)
         self.iter.workflow.add([self.filter,self.EI_driver,self.retrain])
-        #self.driver.workflow.add([self.filter,self.EI_driver,self.retrain])
         
         self.EI_driver.workflow.add(self.branin_meta_model)
         self.retrain.workflow.add(self.branin_meta_model)

@@ -1,6 +1,10 @@
+import sqlite3
+
 from enthought.traits.api import implements
 
 from openmdao.main.interfaces import ICaseIterator
+
+
 
 
 class Case(object):
@@ -69,7 +73,11 @@ class Case(object):
     def add_output(self, name, index=None):
         """Convenience function for adding an output"""
         self.outputs.append((name, index, None))
-
+def adapt_case(c):
+    return str(c)
+#register the adapter
+sqlite3.register_adapter(Case,adapt_case)        
+        
 #class FileCaseIterator(object):
     #"""An iterator that returns :class:`Case` objects from a file having the
     #simple format below, where a blank line indicates a separation between two

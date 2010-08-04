@@ -55,15 +55,31 @@ class ParetoFilter(Component):
         dominated_set =[]
         pareto_set = list(cases)
         for point1,case in zip(y_list,cases):
-            case.outputs.append(('criteria',None,self.criteria)) #add the criteria as an output to cases
+            #case.outputs.append(('criteria',None,self.criteria)) #add the criteria as an output to cases
             for point2 in y_temp:
                 if self._is_dominated(point1,point2):
+                    
                     dominated_set.append(case)
                     y_temp.remove(point1)
                     pareto_set.remove(case)
                     break
-                
-        print "pareto_set: ", pareto_set[0].inputs        
+        for output in pareto_set[0].outputs: 
+            if "f_xy" in output[0]:
+                best = output[2]
+                break
+        others = []    
+        for case in dominated_set: 
+            for output in case.outputs: 
+                if "f_xy" in output[0]:
+                    others.append(output[2])
+                    break 
+               
+              
+        #print "pareto_set: ", pareto_set[0].inputs
+        #print "pareto_set: ",  pareto_set[0].outputs
+        #print "pareto_check: ", all([best < other for other in others]) 
+        #print "len(cases): ", len(cases)
+        #print        
         self.pareto_set = ListCaseIterator(pareto_set)
         self.dominated_set = ListCaseIterator(dominated_set)
     
