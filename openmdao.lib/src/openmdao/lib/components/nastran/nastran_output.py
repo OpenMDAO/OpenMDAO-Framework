@@ -1,5 +1,3 @@
-tandr = ["T1", "T2", "T3", "R1", "R2", "R3"]
-
 import nastran_output_helpers as helpers
 
 # TODO: add support for registering a set of helper functions

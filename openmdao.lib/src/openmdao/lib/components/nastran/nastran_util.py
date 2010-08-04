@@ -8,7 +8,7 @@ def nastran_replace_inline(big_string, old_string, new_string):
     offset = index % 8
     return big_string[:8*block] + new_string.ljust(8) + big_string[8*block+8:]
 
-      
+
 def stringify(thing, length=8):
     if len(str(thing)) <= length:
         return str(thing)
@@ -17,7 +17,7 @@ def stringify(thing, length=8):
     # 8 characters, we are treating it as a float
     # which, for nastran, means it MUST have a
     # decimal point. (lord knows why)
-    
+
     # it best be a number
     if .01 <= abs(thing) < 1:
         return re.sub("0[.]", ".", str(thing))[:(length-1)]
@@ -38,7 +38,8 @@ def stringify(thing, length=8):
         if len(possible) <= length:
             return possible
 
-    return "x" * length
-        
-    
+    raise RuntimeError("Unable to reduce " + str(thing) + \
+                       " to " + str(length) + " characters wide.")
+
+
 

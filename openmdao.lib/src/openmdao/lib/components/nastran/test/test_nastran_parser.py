@@ -1,8 +1,20 @@
+import os
+import pkg_resources
 import unittest
+from openmdao.main.api import SimulationRoot
 from openmdao.lib.components.nastran.nastran_parser import NastranParser, \
      readable_header
 
+ORIG_DIR = os.getcwd()
+DIRECTORY = pkg_resources.resource_filename('openmdao.lib.components.nastran', 'test')
+
 class TestNastranParser(unittest.TestCase):
+
+    def setUp(self):
+        SimulationRoot.chroot(DIRECTORY)
+
+    def tearDown(self):
+        SimulationRoot.chroot(ORIG_DIR)
 
     def go(self, filename):
         fh = open(filename, "r")

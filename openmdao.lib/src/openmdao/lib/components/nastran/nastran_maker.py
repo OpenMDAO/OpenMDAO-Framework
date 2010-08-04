@@ -33,13 +33,13 @@ class NastranMaker(object):
                     if not card:
                         card = index
                     else:
-                        raise Exception("There were two cards with the " + \
+                        raise RuntimeError("There were two cards with the " + \
                                         "same id. You don't want this. " + \
                                         "Two cards: " + match.group("name") +\
                                         " id: " + match.group("num"))
 
         if card is None:
-            raise Exception("Could not find card " + name + " with id " + str(id))
+            raise RuntimeError("Could not find card " + name + " with id " + str(id))
 
         # are we dealing with a long card?
         long_card = False
@@ -70,7 +70,7 @@ class NastranMaker(object):
                 continuation = items[-1].replace(" ", "")
                 if not continuation.startswith("+") and \
                        not continuation.startswith("*"):
-                    raise Exception("Your continuations should start" + \
+                    raise RuntimeError("Your continuations should start" + \
                                     "with either * or +. `" + continuation + "` is not" + \
                                     "acceptable")
 

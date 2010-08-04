@@ -1,8 +1,20 @@
+import os
 import unittest
+import pkg_resources
 
-from bar3truss.bar3_static_nastran import Bar3Static
+from openmdao.main.api import SimulationRoot
+from openmdao.lib.components.nastran.test.bar3truss.bar3_static_nastran import Bar3Static
+
+ORIG_DIR = os.getcwd()
+DIRECTORY = pkg_resources.resource_filename('openmdao.lib.components.nastran', 'test')
 
 class TestBar3Truss(unittest.TestCase):
+
+    def setUp(self):
+        SimulationRoot.chroot(DIRECTORY)
+
+    def tearDown(self):
+        SimulationRoot.chroot(ORIG_DIR)
 
     def test_one_iteration(self):
 

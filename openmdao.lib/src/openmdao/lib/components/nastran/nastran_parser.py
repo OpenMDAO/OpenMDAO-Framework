@@ -27,6 +27,8 @@ class NastranParser(object):
         if len(pages[-1]) == 0:
             del pages[-1]
 
+        # This lists will keep track of every page. If we can't
+        # parse the grid, it'll be None.
         headers = []
         subcases = []
         grids = []
@@ -442,7 +444,7 @@ class NastranParser(object):
 
         if myindex is None:
             if maybeindex is None:
-                raise Exception("Could not find " + header + \
+                raise RuntimeError("Could not find " + header + \
                                 " in:\n" + \
                                 "\n".join(map(lambda x: x["actual"].strip(), self.headers)) + "\n - or -\n" + \
                                 "\n".join(map(operator.itemgetter("clean"), self.headers)))
@@ -452,6 +454,10 @@ class NastranParser(object):
         # apply the dictionary of constraints in order
         # to eliminate rows that don't work (simple where clause)
         mygrid = self.grids[myindex]
+        if mygrid is None:
+            raise RuntimeError("The grid you are wanted (under header " +\
+                               self.headers[myindex] + ") could not or " +\
+                               "was not parsed.")
         available_rows = range(1,len(mygrid)) # ignore header
         to_delete = set([])
         for cname, cvalue in constraints.iteritems():
