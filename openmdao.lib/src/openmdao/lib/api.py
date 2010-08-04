@@ -54,6 +54,7 @@ from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.genetic import Genetic
 from openmdao.lib.drivers.iterate import Iterate
+from openmdao.lib.drivers.broydensolver import BroydenSolver
 
 # Components
 from openmdao.lib.components.external_code import ExternalCode
