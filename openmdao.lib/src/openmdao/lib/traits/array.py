@@ -1,5 +1,5 @@
 """
-Trait for numpy array variables, with optional units
+Trait for numpy array variables, with optional units.
 """
 
 #public symbols

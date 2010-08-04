@@ -10,15 +10,17 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
+from openmdao.main.hasevents import HasEvents
+from openmdao.util.decorators import add_delegate
 
-    
+@add_delegate(HasEvents)
 class Driver(Component):
     """ A Driver iterates over a workflow of Components until some condition
     is met. """
     
     implements(IDriver)
 
-    recorder = Instance(ICaseRecorder, desc='Case recorder for iteration data', 
+    recorder = Instance(ICaseRecorder, desc='Case recorder for iteration data.', 
                         required=False)
 
     workflow = Instance(Workflow, allow_none=True)
@@ -191,7 +193,7 @@ class Driver(Component):
     
     def pre_iteration(self):
         """Called prior to each iteration."""
-        pass
+        self.set_events()
         
     def run_iteration(self):
         """Runs workflow"""

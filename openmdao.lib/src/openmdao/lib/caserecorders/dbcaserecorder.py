@@ -6,7 +6,7 @@ from enthought.traits.api import implements
 from openmdao.main.interfaces import ICaseRecorder
 
 class DBCaseRecorder(object):
-    """"Records Cases to a relational DB (sqlite)"""
+    """Records Cases to a relational DB (sqlite)."""
     
     implements(ICaseRecorder)
     
@@ -45,7 +45,7 @@ class DBCaseRecorder(object):
         self._connection = sqlite3.connect(value)
     
     def record(self, case):
-        """Record the given Case"""
+        """Record the given Case."""
         cur = self._connection.cursor()
         
         cur.execute("""insert into cases(case_id,name,msg,retries,model_id,timeEnter) 

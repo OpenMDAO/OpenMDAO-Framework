@@ -143,11 +143,11 @@ class MultiDriverTestCase(unittest.TestCase):
                             ('comp2.x', -10., 99.),
                             ('comp3.x', -10., 99.),
                             ('comp4.x', -10., 99.),])
-        drv.constraints = [
+        map(drv.add_constraint, [
             'comp1.x**2 + comp2.x**2 + comp3.x**2 + comp4.x**2 + comp1.x-comp2.x+comp3.x-comp4.x-8.0',
             'comp1.x**2 + 2.*comp2.x**2 + comp3.x**2 + 2.*comp4.x**2 - comp1.x - comp4.x -10.',
             '2.0*comp1.x**2 + comp2.x**2 + comp3.x**2 + 2.0*comp1.x - comp2.x - comp4.x -5.0',
-        ]
+        ])
         # expected optimal values
         self.opt_objective = 6.
         self.opt_design_vars = [0., 1., 2., -1.]

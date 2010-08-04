@@ -94,7 +94,6 @@ class Analysis(Assembly):
         self.iter.iterations = 2
         self.iter.recorder = DumpCaseRecorder(open('iter.out','w'))
         
-        
         #Iteration Heirarchy
         self.driver.workflow.add([self.DOE_trainer,self.iter])
         

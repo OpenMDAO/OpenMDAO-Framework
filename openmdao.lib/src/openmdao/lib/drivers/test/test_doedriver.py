@@ -113,105 +113,6 @@ class TestCase(unittest.TestCase):
         self.model.driver._call_execute = True
         self.run_cases(sequential=True, forced_errors=True)
         
-
-    #def test_run_stop_step_resume(self):
-        #logging.debug('')
-        #logging.debug('test_run_stop_step_resume')
-
-        #self.generate_cases()
-        #stop_case = self.cases[1]  # Stop after 2 cases run.
-        #stop_case.inputs[3] = ('driven.stop_exec', None, True)
-        #self.model.driver.iterator = ListCaseIterator(self.cases)
-        #results = []
-        #self.model.driver.recorder = results
-        #self.model.driver.sequential = True
-
-        #try:
-            #self.model.run()
-        #except RunStopped:
-            #self.assertEqual(len(results), 2)
-            #self.verify_results()
-        #else:
-            #self.fail('Expected RunStopped')
-
-        #self.model.driver.step()
-        #self.assertEqual(len(results), 3)
-        #self.verify_results()
-
-        #self.model.driver.step()
-        #self.assertEqual(len(results), 4)
-        #self.verify_results()
-
-        #self.model.driver.resume()
-        #self.assertEqual(len(results), len(self.cases))
-        #self.verify_results()
-
-        #try:
-            #self.model.driver.resume()
-        #except RuntimeError as exc:
-            #self.assertEqual(str(exc), 'driver: Run already complete')
-        #else:
-            #self.fail('Expected RuntimeError')
-
-    #def test_concurrent(self):
-        ## FIXME: temporarily disable this test on windows because it loops
-        ## over a set of tests forever when running under a virtualenv
-        #if sys.platform == 'win32':
-            #return
-        ## This can always test using a LocalAllocator (forked processes).
-        ## It can also use a ClusterAllocator if the environment looks OK.
-        #logging.debug('')
-        #logging.debug('test_concurrent')
-
-        ## Ensure we aren't held up by local host load problems.
-        #local = ResourceAllocationManager.get_allocator(0)
-        #local.max_load = 10
-
-        #if sys.platform != 'win32':
-            ## ssh server not typically available on Windows.
-            #machines = []
-            #node = platform.node()
-            #python = find_python()
-            #if node.startswith('gxterm'):
-                ## User environment assumed OK on this GRC cluster front-end.
-                #for i in range(55):
-                    #machines.append({'hostname':'gx%02d' % i, 'python':python})
-            #elif self.local_ssh_available():
-                #machines.append({'hostname':node, 'python':python})
-            #if machines:
-                #name = node.replace('.', '_')
-                #cluster = ClusterAllocator(name, machines)
-                #ResourceAllocationManager.insert_allocator(0, cluster)
-
-        #self.run_cases(sequential=False)
-        #self.assertEqual(glob.glob('Sim-*'), [])
-
-        #logging.debug('')
-        #logging.debug('test_concurrent_errors')
-        ##self.generate_cases(force_errors=True)
-        #self.model.driver._call_execute = True
-        #self.run_cases(sequential=False, forced_errors=True)
-        #self.assertEqual(glob.glob('Sim-*'), [])
-
-    #@staticmethod
-    #def local_ssh_available():
-        #""" Return True if this user has an authorized key for this machine. """
-        #user = os.environ['USER']
-## Avoid problems with users who don't have a valid environment.
-        #if user not in SSH_USERS:
-            #return False
-        #home = os.environ['HOME']
-        #node = platform.node()
-        #keyfile = os.path.join(home, '.ssh', 'authorized_keys')
-        #try:
-            #with open(keyfile, 'r') as keys:
-                #for line in keys:
-                    #if line.find(user+'@'+node) > 0:
-                        #return True
-                #return False
-        #except IOError:
-            #return False
-
     def test_no_parameter(self):
         logging.debug('')
         logging.debug('test_no_parameter')
@@ -323,13 +224,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_norecorder')
 
         self.model.driver.recorder = None
-        try:
-            self.model.run()
-        except TraitError as exc:
-            msg = "driver: required plugin 'recorder' is not present"
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('TraitError expected')
+        self.model.run()
 
     def run_cases(self, sequential, forced_errors=False):
         """ Evaluate cases, either sequentially or across  multiple servers. """

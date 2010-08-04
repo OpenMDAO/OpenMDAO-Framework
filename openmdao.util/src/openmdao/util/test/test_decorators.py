@@ -19,6 +19,10 @@ class GoodDelegate(object):
     def _priv_method(self):
         pass
     
+class InheritedDelegate(GoodDelegate):
+    def inherited_amethod(self, a, b, c):
+        return sum([a,b,c,self.inst_y])
+    
 class BadDelegate1(object):
     
     def __init__(self, parent):
@@ -59,6 +63,21 @@ class decoratorTestCase(unittest.TestCase):
         f = Foo()
         self.assertEqual(f.del_amethod(1,2,0), 6)
         self.assertTrue(hasattr(f,'_gooddelegate'))
+
+    def test_inheritance(self):
+        @add_delegate(InheritedDelegate)
+        class Foo(object):
+            cls_x = 1
+            def __init__(self):
+                self.inst_x = 9
+            def amethod(self, a, b, c='foo'): pass
+            def genmethod(self, *args, **kwargs): pass
+            def _priv_method(self): pass
+    
+        mems = set([n for n,v in getmembers(Foo,ismethod) if not n.startswith('_')])
+        self.assertEqual(mems, set(['amethod','inherited_amethod','del_amethod','genmethod']))
+        f = Foo()
+        self.assertEqual(f.inherited_amethod(1,2,0), 6)
 
     def test_add_delegate_bad1(self):
         try:

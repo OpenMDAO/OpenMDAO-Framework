@@ -98,7 +98,8 @@ class Component (Container):
                     iotype='in')
     external_files = List(FileMetadata)
     
-    force_execute = Bool(False, desc="If True, always execute even if all IO traits are valid")
+    force_execute = Bool(False, iotype='in',
+                         desc="If True, always execute even if all IO traits are valid.")
         
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
@@ -255,7 +256,6 @@ class Component (Container):
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
                 #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
-                #print 'execute %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
         finally:

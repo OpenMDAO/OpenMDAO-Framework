@@ -6,7 +6,7 @@ import traceback
 
 
 class WorkerPool(object):
-    """ Pool of worker threads, grows as necessary. """
+    """ Pool of worker threads; grows as necessary. """
 
     _lock = threading.Lock()
     _pool = None  # Singleton.

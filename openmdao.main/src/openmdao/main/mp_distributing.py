@@ -55,7 +55,7 @@ else:
 _LOGGER = logging.getLogger('mp_distributing')
 
 def _flush_logger():
-    """ Flush all handlers for _LOGGER """
+    """ Flush all handlers for _LOGGER. """
 # Is this helpful on any platform?
     return
     for handler in _LOGGER.handlers:
@@ -147,7 +147,7 @@ HostManager.register('_RemoteProcess', RemoteProcess)
 class Cluster(managers.SyncManager):
     """
     Represents a collection of hosts. :class:`Cluster` is a subclass
-    of :class:`SyncManager` so it allows creation of various types of
+    of :class:`SyncManager`, so it allows creation of various types of
     shared objects.
     """
 

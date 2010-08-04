@@ -14,7 +14,7 @@ def _pprint_var(name, index, value):
     return ''.join(s)
 
 class DumpCaseRecorder(object):
-    """"Dumps Cases to a file-like object called 'out' (defaults to sys.stdout)"""
+    """"Dumps Cases to a file-like object called 'out' (defaults to sys.stdout)."""
     
     implements(ICaseRecorder)
     
@@ -22,7 +22,7 @@ class DumpCaseRecorder(object):
         self.out = out
 
     def record(self, case):
-        """Dump the given Case in a 'pretty' form."""
+        """Dump the given Case in a "pretty" form."""
         if self.out:  # if self.out is None, just do nothing
             out = self.out
             out.write("Case: %s\n" % case.ident)

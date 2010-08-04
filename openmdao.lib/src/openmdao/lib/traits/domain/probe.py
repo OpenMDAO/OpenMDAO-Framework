@@ -23,7 +23,7 @@ def register_surface_probe(name, function, integrate):
     - `name` is the name of the metric calculated.
     - `function` is the function to call.  The passed arguments are \
     ``(domain, surface, weights, reference_state)``.
-    - If `integrate` then function values are integrated, not averaged.
+    - If `integrate`, then function values are integrated, not averaged.
     """
     _VARIABLES[name] = (integrate, function)
 

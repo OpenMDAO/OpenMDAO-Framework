@@ -328,13 +328,7 @@ class TestCase(unittest.TestCase):
 
         # Check response to no recorder set.
         self.model.driver.iterator = ListCaseIterator([])
-        try:
-            self.model.run()
-        except TraitError as exc:
-            msg = "driver: required plugin 'recorder' is not present"
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('TraitError expected')
+        self.model.run()
 
 
 if __name__ == "__main__":
