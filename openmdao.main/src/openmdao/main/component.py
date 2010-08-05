@@ -104,8 +104,9 @@ class Component (Container):
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
-        # contains validity flag for each io Trait
-        self._valid_dict = dict([(name,False) for name,t in self.class_traits().items() if t.iotype])
+        # contains validity flag for each io Trait (inputs are valid since they're not connected yet,
+        # and outputs are invalid)
+        self._valid_dict = dict([(name,t.iotype=='in') for name,t in self.class_traits().items() if t.iotype])
         
         self._stop = False
         self._call_check_config = True
@@ -255,7 +256,8 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
-                #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
+                if self.get_pathname() != 'branin_meta_model':
+                    print 'execute %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
         finally:
@@ -331,7 +333,7 @@ class Component (Container):
         super(Component, self).add_trait(name, trait)
         self.config_changed()
         if trait.iotype:
-            self._valid_dict[name] = False
+            self._valid_dict[name] = trait.iotype=='in'
         
     def remove_trait(self, name):
         """Overrides base definition of add_trait in order to
@@ -968,18 +970,18 @@ class Component (Container):
         if varnames is None:
             varnames = self.list_inputs(valid=True)
         for var in varnames:
-            valids[var] = False
+            if var in self._sources:
+                valids[var] = False
         
         valid_outs = self.list_outputs(valid=True)
         
         if notify_parent and self.parent and len(valid_outs) > 0:
             self.parent.invalidate_deps(compname=self.name, 
                                         varnames=None, notify_parent=True)
-        
         for out in valid_outs:
             valids[out] = False
             
-        return None
+        return None 
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.

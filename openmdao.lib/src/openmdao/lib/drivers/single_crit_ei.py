@@ -78,7 +78,7 @@ class SingleCritEI(Driver):
         
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training point to run"""
-        print "EI_Driver"
+        #print "EI_Driver"
         if self.criteria == "": 
             self.raise_exception("no criteria was specified",RuntimeError)
         elif not self.set_of_alleles:
@@ -117,5 +117,4 @@ class SingleCritEI(Driver):
         case = Case(inputs=[(event_name,None,True) for event_name in self.next_case_events]+[(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())])
         print "ei_next_case: ", case        
         self.next_case = ListCaseIterator([case,])
-        self.invalidate_deps(notify_parent=True)
         

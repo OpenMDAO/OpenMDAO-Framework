@@ -115,7 +115,7 @@ class DepGraphTestCase(unittest.TestCase):
         vars = ['a','b','c','d']
         self.assertEqual(top.comp1.run_count, 0)
         valids = [top.comp1.get_valid(v) for v in vars]
-        self.assertEqual(valids, [False, False, False, False])
+        self.assertEqual(valids, [True, True, False, False])
         top.run()
         self.assertEqual(top.comp1.run_count, 1)
         self.assertEqual(top.comp1.c, 3)
@@ -124,7 +124,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(valids, [True, True, True, True])
         top.set('comp1.a', 5)
         valids = [top.comp1.get_valid(v) for v in vars]
-        self.assertEqual(valids, [False, True, False, False])
+        self.assertEqual(valids, [True, True, False, False])
         top.run()
         self.assertEqual(top.comp1.run_count, 2)
         self.assertEqual(top.comp1.c, 7)
@@ -142,7 +142,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(top.comp2.c, 3)
         self.assertEqual(top.comp2.d, -1)
         valids = [top.comp2.get_valid(v) for v in vars]
-        self.assertEqual(valids, [False, False, False, False])
+        self.assertEqual(valids, [False, True, False, False])
         top.run()
         self.assertEqual(top.comp1.run_count, 2)
         self.assertEqual(top.comp2.run_count, 1)
@@ -206,7 +206,7 @@ class DepGraphTestCase(unittest.TestCase):
         valids = [self.top.sub.comp6.get_valid(v) for v in vars]
         self.assertEqual(valids, [False, True, False, False])
         valids = [self.top.comp7.get_valid(v) for v in vars]
-        self.assertEqual(valids, [False, True, False, False])
+        self.assertEqual(valids, [True, True, False, False])
         valids = [self.top.comp8.get_valid(v) for v in vars]
         self.assertEqual(valids, [False, False, False, False])
         self.top.run()  

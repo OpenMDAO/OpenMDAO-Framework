@@ -87,7 +87,7 @@ class Analysis(Assembly):
         #self.EI_driver.force_execute = True
         
         self.add("retrain",CaseIteratorDriver())
-        self.retrain.recorder = DumpCaseRecorder()
+        self.retrain.recorder = DumpCaseRecorder(open('retrain.out','w'))
         #self.retrain.force_execute = True
         
         self.add("iter",Iterator())
