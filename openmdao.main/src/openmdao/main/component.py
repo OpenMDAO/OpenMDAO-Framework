@@ -256,8 +256,6 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
-                if self.get_pathname() != 'branin_meta_model':
-                    print 'execute %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
         finally:
