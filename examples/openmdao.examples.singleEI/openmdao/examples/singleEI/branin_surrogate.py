@@ -40,8 +40,9 @@ class Iterator(Driver):
     def continue_iteration(self):
         #print "iter"
         self._iterations += 1
+        if (self._iterations > 1) and (analysis.EI_driver.EI <= .03): return False
         if self._iterations <= self.iterations: return True
-        elif self._iterations > 1 and analysis.EI_driver.EI <= .03: return False
+        
         return False
 
     def post_iteration(self): 
@@ -72,7 +73,7 @@ class Analysis(Assembly):
 
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(12,2)
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(21,2)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
         self.DOE_trainer.add_event("branin_meta_model.train_next")
@@ -115,12 +116,20 @@ if __name__ == "__main__":
     from openmdao.util.plot import case_db_to_dict
     from matplotlib import pyplot as py, cm 
     from mpl_toolkits.mplot3d import Axes3D
-    from numpy import meshgrid,array
+    from numpy import meshgrid,array, pi
     
     analysis = Analysis()
     set_as_top(analysis)
     analysis.run()
     
+    
+    points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
+    for x,y,z in points: 
+        print "x: ", x, "; y: ", y
+        analysis.branin_meta_model.x = x
+        analysis.branin_meta_model.y = y
+        analysis.branin_meta_model.execute()
+        print "f_xy: ",analysis.branin_meta_model.f_xy, " % error: ", (analysis.branin_meta_model.f_xy.mu - z)/z*100
     #dump_iteration_tree(analysis)
 
     data_train = case_db_to_dict('trainer.db',
