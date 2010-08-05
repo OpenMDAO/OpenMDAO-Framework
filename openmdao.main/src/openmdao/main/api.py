@@ -78,3 +78,6 @@ from openmdao.util.eggsaver import SAVE_YAML, SAVE_LIBYAML, \
                                    SAVE_PICKLE, SAVE_CPICKLE
 
 from openmdao.units import convert_units
+
+# This sets the global debug level
+debug_level = 0

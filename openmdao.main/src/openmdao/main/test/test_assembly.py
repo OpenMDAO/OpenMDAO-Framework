@@ -53,6 +53,7 @@ class DummyComp(Component):
     
     dummy_in = Instance(Component, iotype='in')
     dummy_out = Instance(Component, iotype='out')
+    dummy_out_no_copy = Instance(Component, iotype='out', copy=None)
     
     def __init__(self):
         super(DummyComp, self).__init__()
@@ -198,9 +199,12 @@ class AssemblyTestCase(unittest.TestCase):
     def test_connect_containers(self):
         self.asm.set('comp1.dummy_in.rval_in', 75.4)
         self.asm.connect('comp1.dummy_out','comp2.dummy_in')
+        self.asm.connect('comp1.dummy_out_no_copy', 'comp3.dummy_in')
         self.asm.run()
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4)
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_out'), 75.4*1.5)
+        self.assertFalse(self.asm.comp1.dummy_out is self.asm.comp2.dummy_in)
+        self.assertTrue(self.asm.comp1.dummy_out_no_copy is self.asm.comp3.dummy_in)
         
     def test_create_passthrough(self):
         self.asm.set('comp3.r', 75.4)

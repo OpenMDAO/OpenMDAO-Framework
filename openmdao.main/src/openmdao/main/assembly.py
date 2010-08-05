@@ -3,6 +3,7 @@
 __all__ = ['Assembly']
 
 import sys
+import cStringIO
 
 from enthought.traits.api import HasTraits, List, Instance, TraitError
 from enthought.traits.api import TraitType
@@ -193,7 +194,7 @@ class Assembly (Component):
             self._valid_dict[destpath] = False
         elif srccomp is self and srctrait.iotype == 'in': # boundary input
             self.comp_graph.connect('.'.join(['@in',srcpath]), destpath)
-            self._valid_dict[srcpath] = False
+            #self._valid_dict[srcpath] = False
         else:
             destcomp.invalidate_deps(varnames=[destvarname], notify_parent=True)
         
@@ -365,7 +366,8 @@ class Assembly (Component):
             compname = '@in'
             if varnames is not None:
                 for v in varnames:
-                    self._valid_dict[v] = False
+                    if v in self._sources:
+                        self._valid_dict[v] = False
             
         visited = set()
         partial_visited = {}
@@ -631,25 +633,30 @@ class _Link(object):
             return srcs
 
 
-def dump_iteration_tree(obj, f=sys.stdout, tablevel=0):
-    """Writes a text version of the iteration tree
+def dump_iteration_tree(obj):
+    """Returns a text version of the iteration tree
     of an OpenMDAO object or hierarchy.  The tree
     shows which are being iterated over by which
     drivers.
     """
-    if isinstance(obj, Driver):
-        f.write(' '*tablevel)
-        f.write(obj.get_pathname())
-        f.write('\n')
-        for comp in obj.workflow:
-            if isinstance(comp, Driver) or isinstance(comp, Assembly):
-                dump_iteration_tree(comp, f, tablevel+3)
-            else:
-                f.write(' '*(tablevel+3))
-                f.write(comp.get_pathname())
-                f.write('\n')
-    elif isinstance(obj, Assembly):
-        f.write(' '*tablevel)
-        f.write(obj.get_pathname())
-        f.write('\n')
-        dump_iteration_tree(obj.driver, f, tablevel+3)
+    def _dump_iteration_tree(obj, f, tablevel):
+        if isinstance(obj, Driver):
+            f.write(' '*tablevel)
+            f.write(obj.get_pathname())
+            f.write('\n')
+            for comp in obj.workflow:
+                if isinstance(comp, Driver) or isinstance(comp, Assembly):
+                    _dump_iteration_tree(comp, f, tablevel+3)
+                else:
+                    f.write(' '*(tablevel+3))
+                    f.write(comp.get_pathname())
+                    f.write('\n')
+        elif isinstance(obj, Assembly):
+            f.write(' '*tablevel)
+            f.write(obj.get_pathname())
+            f.write('\n')
+            _dump_iteration_tree(obj.driver, f, tablevel+3)
+    f = cStringIO.StringIO()
+    _dump_iteration_tree(obj, f, 0)
+    return f.getvalue()
+

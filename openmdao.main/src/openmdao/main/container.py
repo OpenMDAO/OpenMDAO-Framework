@@ -41,6 +41,12 @@ from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator
 
+_copydict = {
+    None: lambda obj: obj,
+    'deep': copy.deepcopy,
+    'shallow': copy.copy
+    }
+
 def set_as_top(cont):
     """Specifies that the given Container is the top of a 
     Container hierarchy.
@@ -344,7 +350,9 @@ class Container(HasTraits):
         function will return that, with the value set to the current
         value of the named attribute. Otherwise, it functions like
         *getattr*, just returning the named attribute. Raises an exception
-        if the named trait cannot be found.
+        if the named trait cannot be found.  The value will be copied if
+        the trait has a 'copy' metadata attribute that is not None. Possible
+        values for 'copy' are 'shallow' and 'deep'.
         """
         trait = self.trait(name)
         if trait is None:
@@ -359,10 +367,10 @@ class Container(HasTraits):
         getwrapper = getattr(ttype, 'get_val_meta_wrapper', None)
         if getwrapper is not None:
             wrapper = getwrapper()
-            wrapper.value = getattr(self, name)
+            wrapper.value = _copydict[ttype.copy](getattr(self, name)) # copy value if 'copy' found in metadata
             return wrapper
         
-        return getattr(self, name)
+        return _copydict[ttype.copy](getattr(self, name)) # copy value if 'copy' found in metadata
         
     def add(self, name, obj, **kw_args):
         """Add a Container object to this Container.
