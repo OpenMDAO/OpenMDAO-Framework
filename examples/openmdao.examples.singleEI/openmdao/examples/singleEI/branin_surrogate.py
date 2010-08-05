@@ -91,7 +91,7 @@ class Analysis(Assembly):
         #self.retrain.force_execute = True
         
         self.add("iter",Iterator())
-        self.iter.iterations = 2
+        self.iter.iterations = 30
         self.iter.recorder = DumpCaseRecorder(open('iter.out','w'))
         
         #Iteration Heirarchy

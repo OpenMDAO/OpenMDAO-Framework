@@ -31,7 +31,7 @@ class SingleCritEI(Driver):
                     desc="CaseIterator which contains a single case, representing the criteria value")
     next_case_events = Array([],dtype="str",iotype="in",
                     desc="Names of event traits which should be added to next_case")
-    next_case = Instance(ICaseIterator, iotype="out",
+    next_case = Instance(ICaseIterator, iotype="out", copy=None,
                     desc="CaseIterator which contains the case which maximize expected improvement")
     criteria = Expression(iotype="in",
                     desc="Name of the variable to maximize the expected improvement around. "
@@ -78,7 +78,7 @@ class SingleCritEI(Driver):
         
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training point to run"""
-        #print "EI_Driver"
+        print "EI_Driver"
         if self.criteria == "": 
             self.raise_exception("no criteria was specified",RuntimeError)
         elif not self.set_of_alleles:

@@ -221,14 +221,13 @@ class Component (Container):
             invalid_ins = self.list_inputs(valid=False)
             if len(invalid_ins) > 0:
                 self._call_execute = True
-                name = self.name
                 self.parent.update_inputs(self.name, invalid_ins)
                 valids = self._valid_dict
                 for name in invalid_ins:
                     valids[name] = True
             elif self._call_execute == False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
-                                
+
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
         have already been set. This must be overridden in derived classes.
@@ -241,7 +240,7 @@ class Component (Container):
         """
         # make our output Variables valid again
         valids = self._valid_dict
-        for name in self.list_outputs():
+        for name in self.list_outputs(valid=False):
             valids[name] = True
         self._call_execute = False
         
@@ -256,7 +255,7 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
-                if self.get_pathname() != 'branin_meta_model':
+                if not self.get_pathname().endswith('meta_model'):
                     print 'execute %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
