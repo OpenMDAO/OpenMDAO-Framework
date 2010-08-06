@@ -33,9 +33,9 @@ class BroydenSolver(Driver):
 
     These solvers find x for which F(x)=0. Both x and F are multidimensional.
 
-    All solvers have the parameter iter (the number of iterations to compute), some
-    of them have other parameters of the solver, see the particular solver for
-    details.
+    All solvers have the parameter iter (the number of iterations to compute),
+    some of them have other parameters of the solver, see the particular solver
+    for details.
 
     A collection of general-purpose nonlinear multidimensional solvers.
 
