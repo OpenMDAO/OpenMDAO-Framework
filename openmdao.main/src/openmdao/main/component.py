@@ -319,7 +319,7 @@ class Component (Container):
         if self.parent is not None:
             srccomps = [n for n,v in self.get_expr_sources()]
             if len(srccomps):
-                counts = self.parent.exec_counts()
+                counts = self.parent.exec_counts(srccomps)
                 for count,tup in zip(counts, self._expr_sources):
                     if count != tup[1]:
                         self._call_execute = True  # to avoid making this same check unnecessarily later
