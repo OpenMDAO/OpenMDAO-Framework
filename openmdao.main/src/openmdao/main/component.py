@@ -261,7 +261,7 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
-                #print 'execute %s' % self.get_pathname()
+                print 'execute %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
         finally:

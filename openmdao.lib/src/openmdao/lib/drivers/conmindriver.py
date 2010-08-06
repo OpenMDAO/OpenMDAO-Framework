@@ -307,9 +307,9 @@ class CONMINdriver(Driver):
         
         self._load_common_blocks()
         
-        #print "Iteration %s: " % self.get_pathname(), self.iter_count
-        #print "Before"
-        #print self.design_vals
+        print "Iteration %s: " % self.get_pathname(), self.iter_count
+        print "Before"
+        print self.design_vals
         try:
             (self.design_vals,
              self._scal, self.gradients, self.s,
@@ -330,8 +330,8 @@ class CONMINdriver(Driver):
         
         self._save_common_blocks()
         
-        #print "After %s" % self.get_pathname()
-        #print self.design_vals
+        print "After %s" % self.get_pathname()
+        print self.design_vals
         
         # update the parameters in the model
         dvals = [float(val) for val in self.design_vals[:-2]]

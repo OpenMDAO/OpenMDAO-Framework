@@ -685,8 +685,6 @@ class Container(HasTraits):
         and constraints. index, if not None, should be a list of ints, at most
         one for each array dimension of the target value.
         """ 
-        assert(isinstance(path, basestring))
-        
         if path is None:
             if index is None:
                 # should never get down this far
