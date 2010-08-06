@@ -1,41 +1,5 @@
 """ 
 Pseudo package containing plugins from the OpenMDAO Standard Library.
-
-| *Public Variables*
-|
-|    Array
-|    Bool
-|    CBool
-|    Complex
-|    Dict
-|    Enum
-|    File
-|    Float
-|    Instance
-|    Int
-|    List
-|    Str
-|
-| *Drivers*
-|
-|    CaseIteratorDriver
-|    CONMINdriver
-|    Genetic
-|    Iterate
-|
-| *Components*
-|
-|    ExternalCode
-|
-| *CaseIterators*
-|
-|    ListCaseIterator
-|    DBCaseIterator
-|
-| *CaseRecorders*
-|
-|    DBCaseRecorder
-|    DumpCaseRecorder
 """
 
 # Traits that we've modified

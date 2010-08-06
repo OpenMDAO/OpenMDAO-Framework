@@ -22,16 +22,16 @@ def get_traits_info(app, what, name, obj, options, lines):
         #get functions
         fns = getmembers(obj, inspect.isfunction)
         for n,v in fns:
-            fp = 'openmdao.main.assembly.py'
-            lines.extend([":ref:`%s<%s>`" %(n,fp)])
+	    filename = v.__module__ + ".py"
+            lines.append(":ref:`%s<%s>`" %(n,filename))
             lines.append('\n')
       
             
         #get classes
         cls = getmembers(obj, inspect.isclass)
         for n1, v1 in cls:
-            fp = v1.__name__
-            lines.append(":ref:`%s < %s >`" %(n1,fp))
+            filename2 = v1.__module__+ ".py"
+            lines.append(":ref:`%s<%s>`" %(n1,filename2))
             lines.append('\n')
         
     
