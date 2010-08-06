@@ -7,7 +7,7 @@ import unittest
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.exceptions import RunStopped
-from openmdao.lib.api import CONMINdriver, Iterate, Float
+from openmdao.lib.api import CONMINdriver, FixedPointIterator, Float
 from openmdao.util.testutil import assert_rel_error
 
 # pylint: disable-msg=E1101,E1103
@@ -176,7 +176,7 @@ class SellarMDF(Assembly):
         
         # Outer Loop - Global Optimization
         self.add('coupler', Coupler())
-        self.add('iterate', Iterate())
+        self.add('iterate', FixedPointIterator())
         self.driver.workflow.add([self.coupler, self.iterate])
 
         # Inner Loop - Full Multidisciplinary Solve via "iterate"
@@ -192,8 +192,8 @@ class SellarMDF(Assembly):
         self.connect('dis1.y1','dis2.y1')
 
         # Iteration loop
-        self.iterate.loop_end = 'dis2.y2'
-        self.iterate.loop_start = 'dis1.y2'
+        self.iterate.x_out = 'dis2.y2'
+        self.iterate.x_in = 'dis1.y2'
         self.iterate.max_iteration = 1000
         self.iterate.tolerance = .0001
 
