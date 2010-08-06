@@ -100,7 +100,7 @@ class Component (Container):
     
     force_execute = Bool(False, iotype='in',
                          desc="If True, always execute even if all IO traits are valid.")
-        
+
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
@@ -115,6 +115,8 @@ class Component (Container):
         self._input_names = None
         self._output_names = None
         self._container_names = None
+        
+        self.data_behavior = 'pull'  # possible values are 'pull' and 'push'
         
         if directory:
             self.directory = directory
@@ -240,9 +242,13 @@ class Component (Container):
         """
         # make our output Variables valid again
         valids = self._valid_dict
-        for name in self.list_outputs(valid=False):
+        invalid_outs = self.list_outputs(valid=False)
+        for name in invalid_outs:
             valids[name] = True
         self._call_execute = False
+        
+        if self.parent and self.data_behavior == 'push':
+            self.parent.push_data(self.name)
         
     def run (self, force=False):
         """Run this object. This should include fetching input variables,
@@ -255,8 +261,7 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
-                if not self.get_pathname().endswith('meta_model'):
-                    print 'execute %s' % self.get_pathname()
+                #print 'execute %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
         finally:

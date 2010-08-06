@@ -68,6 +68,7 @@ class Analysis(Assembly):
         self.filter.criteria = ['branin_meta_model.f_xy']
         self.filter.case_set = DBCaseIterator('branin_meta_model.db')
         self.filter.force_execute = True
+        self.filter.data_behavior = 'push'
 
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())

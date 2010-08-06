@@ -335,6 +335,9 @@ class Assembly (Component):
         to make the specified output variables valid.
         """
         self.update_inputs('@out', outnames)
+        
+    def push_data(self, compname):
+        self.comp_graph.push_data(compname, self)
 
     def get_valids(self, names):
         """Returns a list of boolean values indicating whether the named
@@ -570,6 +573,10 @@ class ComponentGraph(object):
         if len(link) == 0:
             self._graph.remove_edge(srccompname, destcompname)
 
+    def push_data(self, srccompname, scope):
+        for destcompname, link in self.out_links(srccompname):
+            link.push(scope, srccompname, destcompname)
+
             
 class _Link(object):
     """A Class for keeping track of all connections between two Components."""
@@ -632,6 +639,30 @@ class _Link(object):
                     srcs.append(src)
             return srcs
 
+    def push(self, scope, srccompname, destcompname):
+        """Push the values of all sources to their corresponding destinations
+        for this link.
+        """
+        # TODO: change to one multiset call
+        srccomp = getattr(scope, srccompname)
+        destcomp = getattr(scope, destcompname)
+        
+        for src,dests in self._srcs.items():
+            for dest in dests:
+                try:
+                    srcval = srccomp.get_wrapped_attr(src)
+                except Exception, err:
+                    scope.raise_exception(
+                        "error retrieving value for %s from '%s'" %
+                        (src,srccompname), type(err))
+                try:
+                    srcname = '.'.join([srccompname,src])
+                    destcomp.set(dest, srcval, srcname=srcname)
+                except Exception, exc:
+                    dname = '.'.join([destcompname,dest])
+                    scope.raise_exception("cannot set '%s' from '%s': %s" % 
+                                          (dname, srcname, exc), type(exc))
+        
 
 def dump_iteration_tree(obj):
     """Returns a text version of the iteration tree
