@@ -15,11 +15,15 @@ from enthought.traits.api import on_trait_change, TraitError
                                  
 from openmdao.main.api import Driver, ExpressionList
 from openmdao.main.exceptions import RunStopped
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.lib.traits.float import Float
 from openmdao.lib.traits.int import Int
 from openmdao.lib.traits.enum import Enum
+from openmdao.util.decorators import add_delegate
 
         
+@add_delegate(HasParameters, HasEqConstraints)
 class BroydenSolver(Driver):
     """ MIMO Newton-Raphson Solver with Bryoden approximation to the Jacobian.
     Algorithms are based on those found in scipy.optimize.
@@ -51,16 +55,9 @@ class BroydenSolver(Driver):
     """ 
     
     # pylint: disable-msg=E1101
-    independents = ExpressionList(iotype='out',
-                                desc='A list of expressions for the locations'
-                                ' of the solver independents.')
-    
-    dependents = ExpressionList(iotype='in',
-                            desc= 'A list of expressions for the locations of'
-                                  ' the solver dependents.')
-
     algorithm = Enum('broyden2', ['broyden2', 'broyden3', 'excitingmixing'],
-                     iotype = 'in', desc='Algorithm to use')
+                     iotype = 'in', desc='Algorithm to use. Choose from '
+                     'broyden2, broyden3, and excitingmixing')
     
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
                 'termination')
@@ -86,23 +83,16 @@ class BroydenSolver(Driver):
     def execute(self):
         """Solver execution."""
         
-        self.xin = numpy.zeros(len(self.independents),'d')
-        self.F = numpy.zeros(len(self.dependents),'d')
-        
         # get the initial values of the independents
-        for i, val in enumerate(self.independents):
-            self.xin[i] = val.evaluate()
+        independents = self.get_parameters().values()
+        self.xin = numpy.zeros(len(independents),'d')
             
         # perform an initial run for self-consistency
         self.run_iteration()
 
         # get initial dependents
-        for i, val in enumerate(self.dependents):
-            try:
-                self.F[i] = val.evaluate()
-            except Exception as err:
-                msg = 'error evaluating dependent: %s' % str(err)
-                self.raise_exception(msg, RuntimeError)
+        dependents = self.get_eq_constraints().values()
+        self.F = numpy.zeros(len(dependents),'d')
                 
         # pick solver algorithm
         if self.algorithm == 'broyden2':
@@ -132,22 +122,18 @@ class BroydenSolver(Driver):
                 self.raise_exception('Stop requested', RunStopped)
 
             deltaxm = -Gm*Fxm
-            xm = xm + deltaxm
+            xm = xm + deltaxm.T
 
             # update the new independents in the model
-            for var, val in zip(self.independents, xm.flat):
-                var.set(val)
+            self.set_parameters(xm.flat)
 
             # run the model
             self.run_iteration()
 
-            # get the new values for the dependents
-            for i, val in enumerate(self.dependents):
-                try:
-                    self.F[i] = val.evaluate()
-                except Exception as err:
-                    msg = 'error evaluating dependent: %s' % str(err)
-                    self.raise_exception(msg, RuntimeError)
+            # get dependents
+            for i, v in enumerate(self.get_eq_constraints().values()):
+                term = v.evaluate()
+                self.F[i] = term[0] - term[1]
 
             # successful termination if independents are below tolerance
             if norm(self.F) < self.tol:
@@ -190,22 +176,18 @@ class BroydenSolver(Driver):
                 self.raise_exception('Stop requested', RunStopped)
 
             deltaxm = Gmul(-Fxm)
-            xm = xm + deltaxm
+            xm = xm + deltaxm.T
 
             # update the new independents in the model
-            for var, val in zip(self.independents, xm.flat):
-                var.set(val)
+            self.set_parameters(xm.flat)
 
             # run the model
             self.run_iteration()
 
-            # get the new values for the dependents
-            for i, val in enumerate(self.dependents):
-                try:
-                    self.F[i] = val.evaluate()
-                except Exception as err:
-                    msg = 'error evaluating dependent: %s' % str(err)
-                    self.raise_exception(msg, RuntimeError)
+            # get dependents
+            for i, v in enumerate(self.get_eq_constraints().values()):
+                term = v.evaluate()
+                self.F[i] = term[0] - term[1]
 
             # successful termination if independents are below tolerance
             if norm(self.F) < self.tol:
@@ -242,19 +224,15 @@ class BroydenSolver(Driver):
             xm = xm + deltaxm
 
             # update the new independents in the model
-            for var, val in zip(self.independents, xm.flat):
-                var.set(val)
+            self.set_parameters(xm.flat)
 
             # run the model
             self.run_iteration()
 
-            # get the new values for the dependents
-            for i, val in enumerate(self.dependents):
-                try:
-                    self.F[i] = val.evaluate()
-                except Exception as err:
-                    msg = 'error evaluating dependent: %s' % str(err)
-                    self.raise_exception(msg, RuntimeError)
+            # get dependents
+            for i, v in enumerate(self.get_eq_constraints().values()):
+                term = v.evaluate()
+                self.F[i] = term[0] - term[1]
 
             # successful termination if independents are below tolerance
             if norm(self.F) < self.tol:
@@ -272,19 +250,4 @@ class BroydenSolver(Driver):
                 
             Fxm = Fxm1.copy()
 
-
-    @on_trait_change('independents', 'dependents') 
-    def _exprlist_changed(self, obj, name, old, new):
-        """ Check independents on change"""
-
-        exprevals = getattr(obj, name)
-        for i, expr in enumerate(exprevals):
-            try:
-                # force checking for existence of vars referenced in expression
-                expr.refs_valid()  
-            except (AttributeError, RuntimeError), err:
-                msg = "invalid value '%s' for solver variable '%s[%d]': %s"
-                self.raise_exception( msg % \
-                    (str(expr), name, i, err), TraitError)\
-                    
 # end broydensolver.py
