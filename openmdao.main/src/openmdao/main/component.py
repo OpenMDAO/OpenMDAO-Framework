@@ -115,8 +115,11 @@ class Component (Container):
         self._input_names = None
         self._output_names = None
         self._container_names = None
+        self._expr_depends = None
+        self._expr_sources = None
         
-        self.data_behavior = 'pull'  # possible values are 'pull' and 'push'
+        #self.data_behavior = 'pull'  # possible values are 'pull' and 'push'
+        self.exec_count = 0
         
         if directory:
             self.directory = directory
@@ -134,7 +137,7 @@ class Component (Container):
     def _input_changed(self, name):
         if self._valid_dict[name]:  # if var is not already invalid
             self.invalidate_deps(varnames=[name], notify_parent=True)
-
+            
     def check_config (self):
         """Verify that this component is fully configured to execute.
         This function is called once prior to the first execution of this
@@ -240,15 +243,14 @@ class Component (Container):
         """Update output variables and anything else needed after execution. 
         Overrides of this function must call this version.
         """
+        self.exec_count += 1
+        
         # make our output Variables valid again
         valids = self._valid_dict
         invalid_outs = self.list_outputs(valid=False)
         for name in invalid_outs:
             valids[name] = True
         self._call_execute = False
-        
-        if self.parent and self.data_behavior == 'push':
-            self.parent.push_data(self.name)
         
     def run (self, force=False):
         """Run this object. This should include fetching input variables,
@@ -261,58 +263,15 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
-                print 'execute %s' % self.get_pathname()
+                #print 'execute %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
+            #else:
+                #print 'skipping %s' % self.get_pathname()
         finally:
             if self.directory:
                 self.pop_dir()
  
-    def get_io_graph(self):
-        """Return a graph connecting our input variables to our output
-        variables. In the case of a simple Container, all input variables are
-        predecessors to all output variables.
-        """
-        # NOTE: if the _io_graph changes, this function must return a NEW
-        # graph object instead of modifying the old one, because object
-        # identity is used in the parent assembly to determine of the graph
-        # has changed
-        if self._io_graph is None:
-            self._io_graph = nx.DiGraph()
-            io_graph = self._io_graph
-            name = self.name
-            ins = ['.'.join([name, v]) for v in self.keys(iotype='in')]
-            outs = ['.'.join([name, v]) for v in self.keys(iotype='out')]
-            
-            # add nodes for all of the variables
-            io_graph.add_nodes_from(ins)
-            io_graph.add_nodes_from(outs)
-            
-            # specify edges, with all inputs as predecessors to all outputs
-            for invar in ins:
-                io_graph.add_edges_from([(invar, o) for o in outs])
-          
-            exprs = self.get_expr_names()
-            selfname = self.name
-            for name in exprs:
-                exprobj = getattr(self, name)
-                #if isinstance(exprobj, basestring): # a simple Expression
-                if self.trait(name).is_trait_type(Expression):
-                    vnames = exprobj.get_referenced_varpaths()
-                else:  # an ExpressionList
-                    vnames = set()
-                    for entry in exprobj:
-                        vnames.update(entry.get_referenced_varpaths())
-                if self.trait(name).iotype == 'in':
-                    for vname in vnames:
-                        io_graph.add_edge(vname, '.'.join([selfname,name]), expr=True)
-                    io_graph.node['.'.join([selfname,name])]['expr'] = True
-                #else:
-                    #for vname in vnames:
-                        #io_graph.add_edge('.'.join([selfname,name]), vname, expr=True)
-                
-        return self._io_graph
-
     def add(self, name, obj):
         """Override of base class version to force call to *check_config* after
         any child containers are added.
@@ -355,7 +314,20 @@ class Component (Container):
         """Return False if any of our public variables is invalid."""
         if self._call_execute:
             return False
-        return False not in self._valid_dict.values()
+        if False in self._valid_dict.values():
+            return False
+        if self.parent is not None:
+            srccomps = [n for n,v in self.get_expr_sources()]
+            if len(srccomps):
+                counts = self.parent.exec_counts()
+                for count,tup in zip(counts, self._expr_sources):
+                    if count != tup[1]:
+                        self._call_execute = True  # to avoid making this same check unnecessarily later
+                        # update the count information since we're got it, to avoid making another call
+                        for i,tup in enumerate(self._expr_sources):
+                            self._expr_sources[i] = (tup[0], count)
+                        return False
+        return True
 
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
@@ -366,7 +338,8 @@ class Component (Container):
         self._input_names = None
         self._output_names = None
         self._container_names = None
-        self._io_graph = None
+        self._expr_depends = None
+        self._expr_sources = None
         self._call_check_config = True
         self._call_execute = True
 
@@ -403,7 +376,7 @@ class Component (Container):
                                                    if isinstance(v,Container)]            
         return self._container_names
     
-    def get_expr_names(self, iotype=None):
+    def _get_expr_names(self, iotype=None):
         """Return a list of names of all Expression and ExpressionList traits
         in this instance.
         """
@@ -421,29 +394,40 @@ class Component (Container):
         for each dependency introduced by any Expression or ExpressionList 
         traits in this Component.
         """
-        conn_list = []
-        exprs = self.get_expr_names()
-        selfname = self.name
-        for name in exprs:
-            exprobj = getattr(self, name)
-            if isinstance(exprobj, DumbDefault):
-                self.raise_exception("The Expression '%s' has not been defined" % name,
-                                     ValueError)
-            if isinstance(exprobj, basestring): # a simple Expression
-                cnames = exprobj.get_referenced_compnames()
-            else:  # an ExpressionList
-                cnames = []
-                for entry in exprobj:
-                    cnames += entry.get_referenced_compnames()
-            if self.trait(name).iotype == 'in':
-                for cname in cnames:
-                    conn_list.append((cname, selfname))
-            else:
-                for cname in cnames:
-                    conn_list.append((selfname, cname))
+        if self._expr_depends is None:
+            conn_list = []
+            exprs = self._get_expr_names()
+            selfname = self.name
+            for name in exprs:
+                exprobj = getattr(self, name)
+                if isinstance(exprobj, DumbDefault):
+                    self.raise_exception("The Expression '%s' has not been defined" % name,
+                                         ValueError)
+                if isinstance(exprobj, basestring): # a simple Expression
+                    cnames = exprobj.get_referenced_compnames()
+                else:  # an ExpressionList
+                    cnames = []
+                    for entry in exprobj:
+                        cnames += entry.get_referenced_compnames()
+                if self.trait(name).iotype == 'in':
+                    for cname in cnames:
+                        conn_list.append((cname, selfname))
+                else:
+                    for cname in cnames:
+                        conn_list.append((selfname, cname))
+            self._expr_depends = conn_list
+            
                 
-        return conn_list
-
+        return self._expr_depends
+    
+    def get_expr_sources(self):
+        """Return a list of tuples containing the names of all upstream components that are 
+        referenced in any of our Expressions, along with an initial exec_count of 0.
+        """
+        if self._expr_sources is None:
+            self._expr_sources = [(v,0) for u,v in self.get_expr_depends() if v==self.name]
+        return self._expr_sources
+            
     def check_path(self, path, check_dir=False):
         """Verify that the given path is a directory and is located
         within the allowed area (somewhere within the simulation root path).

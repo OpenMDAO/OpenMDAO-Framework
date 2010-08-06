@@ -336,8 +336,8 @@ class Assembly (Component):
         """
         self.update_inputs('@out', outnames)
         
-    def push_data(self, compname):
-        self.comp_graph.push_data(compname, self)
+    #def push_data(self, compname):
+        #self.comp_graph.push_data(compname, self)
 
     def get_valids(self, names):
         """Returns a list of boolean values indicating whether the named
@@ -409,6 +409,9 @@ class Assembly (Component):
             if notify_parent and self.parent:
                 self.parent.invalidate_deps(compname=self.name, varnames=outs, notify_parent=True)
         return outs
+    
+    def exec_counts(self, compnames):
+        return [getattr(self,c).exec_count for c in compnames]
 
 
 class ComponentGraph(object):
@@ -573,9 +576,9 @@ class ComponentGraph(object):
         if len(link) == 0:
             self._graph.remove_edge(srccompname, destcompname)
 
-    def push_data(self, srccompname, scope):
-        for destcompname, link in self.out_links(srccompname):
-            link.push(scope, srccompname, destcompname)
+    #def push_data(self, srccompname, scope):
+        #for destcompname, link in self.out_links(srccompname):
+            #link.push(scope, srccompname, destcompname)
 
             
 class _Link(object):

@@ -94,6 +94,10 @@ class MetaModel(Component):
         if compname:  # we were called from our model, which expects to be in an Assembly
             return
         super(MetaModel, self).invalidate_deps(varnames=varnames, notify_parent=notify_parent)
+        
+    def exec_counts(self, compnames):
+        # we force the run on our model, so it doesn't matter what we tell it the exec counts are
+        return [0 for n in compnames]
     
     def _model_changed(self, oldmodel, newmodel):
         self.update_model(oldmodel, newmodel)

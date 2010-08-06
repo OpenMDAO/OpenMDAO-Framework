@@ -56,19 +56,19 @@ class Driver(Component):
         if super(Driver, self).is_valid() is False:
             return False
         
-        # driver is invalid if any of its Expressions reference
-        # invalid Variables or if the Expression itself is invalid
-        for name in self.get_expr_names(iotype='in'):
-            if not self.get_valid(name):
-                return False
-            rv = getattr(self, name)
-            if isinstance(rv, list):
-                for entry in rv:
-                    if not entry.refs_valid():
-                        return False
-            else:
-                if not rv.refs_valid():
-                    return False
+        ## driver is invalid if any of its Expressions reference
+        ## invalid Variables or if the Expression itself is invalid
+        #for name in self._get_expr_names(iotype='in'):
+            #if not self.get_valid(name):
+                #return False
+            #rv = getattr(self, name)
+            #if isinstance(rv, list):
+                #for entry in rv:
+                    #if not entry.refs_valid():
+                        #return False
+            #else:
+                #if not rv.refs_valid():
+                    #return False
 
         # force execution if any component in the workflow is invalid
         for wf in self._workflows:
