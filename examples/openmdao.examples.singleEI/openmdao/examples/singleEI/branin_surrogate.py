@@ -73,7 +73,8 @@ class Analysis(Assembly):
 
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(21,2)
+        #self.DOE_trainer.DOEgenerator = OptLatinHypercube(5,2)
+        self.DOE_trainer.DOEgenerator = FullFactorial(3,2)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
         self.DOE_trainer.add_event("branin_meta_model.train_next")
@@ -86,6 +87,7 @@ class Analysis(Assembly):
         self.EI_driver.add_parameter("branin_meta_model.y")
         self.EI_driver.criterion = "branin_meta_model.f_xy"
         self.EI_driver.next_case_events = ['branin_meta_model.train_next']
+        self.rand_seed = 10
         #self.EI_driver.force_execute = True
         
         self.add("retrain",CaseIteratorDriver())
@@ -94,7 +96,7 @@ class Analysis(Assembly):
         #self.retrain.force_execute = True
         
         self.add("iter",Iterator())
-        self.iter.iterations = 30
+        self.iter.iterations = 2
         self.iter.recorder = DumpCaseRecorder(open('iter.out','w'))
         
         #Iteration Heirarchy

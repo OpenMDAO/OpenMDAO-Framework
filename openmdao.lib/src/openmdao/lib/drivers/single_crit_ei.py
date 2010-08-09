@@ -26,6 +26,8 @@ from openmdao.util.decorators import add_delegate
 @add_delegate(HasParameters)  # this adds a member called _hasparameters of type HasParameters
 class SingleCritEI(Driver):
     implements(IHasParameters)
+    
+    rand_seed = Float(None,iotype="in",desc="Value used to see the random number generator")
      
     best_case = Instance(ICaseIterator, iotype="in",
                     desc="CaseIterator which contains a single case, representing the criteria value")
@@ -108,7 +110,10 @@ class SingleCritEI(Driver):
         genome.initializator.set(Initializators.G1DListInitializatorAllele)
         genome.mutator.set(Mutators.G1DListMutatorAllele)
         genome.crossover.set(Crossovers.G1DListCrossoverUniform)
-        ga = GSimpleGA.GSimpleGA(genome,seed=1)
+        if self.rand_seed is not None: 
+            ga = GSimpleGA.GSimpleGA(genome,seed=10)
+        else: 
+            ga = GSimpleGA.GSimpleGA(genome)
         ga.setElitism(True)
         ga.selector.set(Selectors.GTournamentSelector)
         ga.setGenerations(10)
