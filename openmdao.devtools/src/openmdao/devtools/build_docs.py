@@ -224,7 +224,7 @@ def view_docs(browser=None):
 
 def test_docs():
     """Tests the openmdao sphinx documentation.  
-    A console script (testdocs) calls this.
+    A console script (openmdao_testdocs) calls this.
     If the docs are not built, this will build them before testing.
     """
     branchdir, docdir, bindir =_get_dirnames()
