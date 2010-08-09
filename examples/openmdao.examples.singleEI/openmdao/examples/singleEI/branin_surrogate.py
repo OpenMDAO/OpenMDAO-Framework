@@ -69,11 +69,11 @@ class Analysis(Assembly):
         self.add("filter",ParetoFilter())
         self.filter.criteria = ['branin_meta_model.f_xy']
         self.filter.case_set = DBCaseIterator('branin_meta_model.db')
-        self.filter.force_execute = True
+        #self.filter.force_execute = True
 
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
-        #self.DOE_trainer.DOEgenerator = OptLatinHypercube(5,2)
+        #self.DOE_trainer.DOEgenerator = OptLatinHypercube(21,2)
         self.DOE_trainer.DOEgenerator = FullFactorial(3,2)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")

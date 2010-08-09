@@ -75,6 +75,7 @@ class Expression(BaseStr):
             raise TraitError("invalid %sput ref variable value '%s'" % \
                              (self.iotype, str(value)))
         
+        # changing an expression value changes dependencies, so notify the component
         obj.config_changed()
 
         return s

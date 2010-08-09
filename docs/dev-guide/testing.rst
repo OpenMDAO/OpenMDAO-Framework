@@ -376,7 +376,7 @@ also run them separately. In an active openmdao virtual environment, type:
 
 ::
 
-    testdocs
+    openmdao_testdocs
 
 If the test was successful, you should see output similiar to the following:
 

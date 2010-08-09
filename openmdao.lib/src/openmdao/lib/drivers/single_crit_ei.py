@@ -36,7 +36,7 @@ class SingleCritEI(Driver):
                           "Must be a NormalDistrubtion type")
     next_case_events = Array([],dtype="str",iotype="in",
                     desc="Names of event traits which should be added to next_case")
-    next_case = Instance(ICaseIterator, iotype="out",
+    next_case = Instance(ICaseIterator, iotype="out", copy=None,
                     desc="CaseIterator which contains the case which maximize expected improvement")
     
     EI = Float(0.0, iotype="out", desc="The expected improvement of the next_case")
@@ -82,7 +82,7 @@ class SingleCritEI(Driver):
         
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training point to run"""
-        #print "EI_Driver"
+        print "EI_Driver"
         if self.criteria == "": 
             self.raise_exception("no criteria was specified",RuntimeError)
         elif not self.set_of_alleles:
@@ -128,7 +128,8 @@ class SingleCritEI(Driver):
             [(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())]    
         outs = [(self.criteria,None,None)]
         case = Case(inputs=ins,outputs=outs)
-        print "ei: ",self.parent.iter._iterations, self.EI     
+        print "ei: ",self.parent.iter._iterations, self.EI   
+        
         self.next_case = ListCaseIterator([case,])
-        self.invalidate_deps(notify_parent=True)
+        print "ei: ",self.next_case[0].inputs
         

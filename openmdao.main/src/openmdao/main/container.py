@@ -306,7 +306,7 @@ class Container(HasTraits):
         return super(Container, self).trait_get(*names, **metadata)
     
         
-    # call this if any trait having 'iotype' metadata is changed    
+    # call this if any trait having 'iotype' metadata is changed
     #@on_trait_change('+iotype') 
     def _io_trait_changed(self, obj, name, old, new):
         # setting old to Undefined is a kludge to bypass the destination check
@@ -677,8 +677,6 @@ class Container(HasTraits):
         and constraints. index, if not None, should be a list of ints, at most
         one for each array dimension of the target value.
         """ 
-        assert(isinstance(path, basestring))
-        
         if path is None:
             if index is None:
                 # should never get down this far
@@ -910,32 +908,6 @@ class Container(HasTraits):
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
         [x.pre_delete() for x in self.values() if isinstance(x, Container)]
-
-    def get_io_graph(self):
-        """Return a graph connecting our input variables to our output
-        variables. In the case of a simple Container, all input variables are
-        predecessors to all output variables.
-        """
-        # NOTE: if the _io_graph changes, this function must return a NEW
-        # graph object instead of modifying the old one, because object
-        # identity is used in the parent assembly to determine of the graph
-        # has changed
-        if self._io_graph is None:
-            self._io_graph = nx.DiGraph()
-            io_graph = self._io_graph
-            name = self.name
-            ins = ['.'.join([name, v]) for v in self.keys(iotype='in')]
-            outs = ['.'.join([name, v]) for v in self.keys(iotype='out')]
-            
-            # add nodes for all of the variables
-            io_graph.add_nodes_from(ins)
-            io_graph.add_nodes_from(outs)
-            
-            # specify edges, with all inputs as predecessors to all outputs
-            for invar in ins:
-                io_graph.add_edges_from([(invar, o) for o in outs])
-
-        return self._io_graph
     
     def _build_trait(self, pathname, iotype=None, trait=None):
         """Asks the component to dynamically create a trait for the 
@@ -1046,7 +1018,11 @@ class Container(HasTraits):
     
     def _trait_added_changed(self, name):
         """Called any time a new trait is added to this container."""
+        self.new_trait(name)
         self.config_changed()
+        
+    def new_trait(self, name):
+        pass
         
     def config_changed(self):
         """Call this whenever the configuration of this Component changes,
