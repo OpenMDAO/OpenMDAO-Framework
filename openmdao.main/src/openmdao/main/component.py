@@ -220,7 +220,7 @@ class Component (Container):
             self.check_config()
             self._call_check_config = False
         
-        if not self.is_valid():
+        if not self.is_valid() or self._num_input_caseiters > 0:
             self._call_execute = True
 
         if self.parent is None: # if parent is None, we're not part of an Assembly
@@ -270,11 +270,14 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
-                #print 'execute %s' % self.get_pathname()
+                if self.get_pathname() != 'branin_meta_model':
+                    print 'execute %s' % self.get_pathname()
+                else:
+                    sys.stdout.write('.')
                 self.execute()
                 self._post_execute()
-            #else:
-                #print 'skipping %s' % self.get_pathname()
+            else:
+                print 'skipping %s' % self.get_pathname()
         finally:
             if self.directory:
                 self.pop_dir()
@@ -327,7 +330,7 @@ class Component (Container):
         """Return False if any of our public variables is invalid."""
         if self._call_execute:
             return False
-        if False in self._valid_dict.values() or self._num_input_caseiters > 0:
+        if False in self._valid_dict.values():
             self.call_execute = True
             return False
         if self.parent is not None:
