@@ -312,7 +312,7 @@ class Container(HasTraits):
         return super(Container, self).trait_get(*names, **metadata)
     
         
-    # call this if any trait having 'iotype' metadata is changed    
+    # call this if any trait having 'iotype' metadata is changed
     #@on_trait_change('+iotype') 
     def _io_trait_changed(self, obj, name, old, new):
         # setting old to Undefined is a kludge to bypass the destination check
@@ -1026,7 +1026,11 @@ class Container(HasTraits):
     
     def _trait_added_changed(self, name):
         """Called any time a new trait is added to this container."""
+        self.new_trait(name)
         self.config_changed()
+        
+    def new_trait(self, name):
+        pass
         
     def config_changed(self):
         """Call this whenever the configuration of this Component changes,

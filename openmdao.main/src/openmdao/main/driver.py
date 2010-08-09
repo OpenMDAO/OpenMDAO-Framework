@@ -12,6 +12,7 @@ from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
+from openmdao.main.interfaces import ICaseIterator
 
 @add_delegate(HasEvents)
 class Driver(Component):
@@ -57,10 +58,8 @@ class Driver(Component):
             return False
         
         ## driver is invalid if any of its Expressions reference
-        ## invalid Variables or if the Expression itself is invalid
+        ## invalid Variables
         #for name in self._get_expr_names(iotype='in'):
-            #if not self.get_valid(name):
-                #return False
             #rv = getattr(self, name)
             #if isinstance(rv, list):
                 #for entry in rv:
@@ -91,13 +90,13 @@ class Driver(Component):
             for wf in wfs:
                 wf.config_changed()
 
-    def _pre_execute (self):
-        """Call base class *_pre_execute* after determining if we have any invalid
-        ref variables, which will cause us to have to regenerate our ref dependency graph.
-        """
-        if not self.is_valid():
-            self._call_execute = True
-        super(Driver, self)._pre_execute()
+    #def _pre_execute (self):
+        #"""Call base class *_pre_execute* after determining if we have any invalid
+        #ref variables, which will cause us to have to regenerate our ref dependency graph.
+        #"""
+        #if not self.is_valid():
+            #self._call_execute = True
+        #super(Driver, self)._pre_execute()
 
     def remove_from_workflow(self, component):
         """Remove the specified component from our workflow(s).
