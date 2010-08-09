@@ -97,7 +97,7 @@ class KrigingSurrogate(HasTraits):
             self.mu = dot(one,self.myfun(self.R_fact,Y))/dot(one,self.myfun(self.R_fact,one))
             self.sig2 = dot(Y-dot(one,self.mu),self.myfun(self.R_fact,(Y-dot(one,self.mu))))/self.n
             self.log_likelihood = -self.n/2*log(self.sig2)-1./2.*log(abs(det(self.R)))-sum(self.thetas)-sum(abs(self.thetas))
-        except linalg.LinAlgError:
+        except (linalg.LinAlgError,ValueError):
             #---LU DECOMPOSITION---
             #self.R_fact = lu_factor(R)
             #self.myfun = lu_solve
@@ -107,4 +107,3 @@ class KrigingSurrogate(HasTraits):
             self.mu = dot(one,lstsq(self.R,Y)[0])/dot(one,lstsq(self.R,one)[0])
             self.sig2 = dot(Y-dot(one,self.mu),lstsq(self.R,(Y-dot(one,self.mu)))[0])/self.n
             self.log_likelihood = -self.n/2*log(self.sig2)-1./2.*log(abs(det(self.R)+1e-16))-sum(self.thetas)
-                
