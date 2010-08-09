@@ -26,12 +26,16 @@ def get_traits_info(app, what, name, obj, options, lines):
             lines.append(":ref:`%s<%s>`" %(n,filename))
             lines.append('\n')
       
-            
         #get classes
         cls = getmembers(obj, inspect.isclass)
         for n1, v1 in cls:
-            filename2 = v1.__module__+ ".py"
-            lines.append(":ref:`%s<%s>`" %(n1,filename2))
+	    module = v1.__module__
+	    if (module=="enthought.traits.trait_types"):
+	        filename2 = ("http://code.enthought.com/projects/files/ETS32_API/enthought.traits.trait_types.%s.html" %n1)
+		lines.append("`%s <%s>`_" %(n1, filename2))
+	    else:
+                filename2 = module + ".py"
+                lines.append(":ref:`%s<%s>`" %(n1,filename2))
             lines.append('\n')
         
     
