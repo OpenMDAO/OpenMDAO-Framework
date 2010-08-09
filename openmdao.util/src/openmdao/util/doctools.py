@@ -17,7 +17,7 @@ def get_traits_info(app, what, name, obj, options, lines):
     """
 
     #Get the API information for OpenMDAO
-    if (name.endswith("api") and ismodule(obj)):
+    if (name.endswith(".api") and ismodule(obj)):
 
         #get functions
         fns = getmembers(obj, inspect.isfunction)
