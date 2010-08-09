@@ -220,8 +220,13 @@ class Component (Container):
             self.check_config()
             self._call_check_config = False
         
-        if not self.is_valid() or self._num_input_caseiters > 0:
+        if not self.is_valid():
             self._call_execute = True
+        elif self._num_input_caseiters > 0:
+            self._call_execute = True
+            # we're valid, but we're running anyway because of our input CaseIterators,
+            # so we need to notify downstream comps so they grab our new outputs
+            self.invalidate_deps()
 
         if self.parent is None: # if parent is None, we're not part of an Assembly
                                 # so Variable validity doesn't apply. Just execute.
@@ -270,14 +275,14 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
-                if self.get_pathname() != 'branin_meta_model':
-                    print 'execute %s' % self.get_pathname()
-                else:
-                    sys.stdout.write('.')
+                #if self.get_pathname() != 'branin_meta_model':
+                    #print 'execute %s' % self.get_pathname()
+                #else:
+                    #sys.stdout.write('.')
                 self.execute()
                 self._post_execute()
-            else:
-                print 'skipping %s' % self.get_pathname()
+            #else:
+                #print 'skipping %s' % self.get_pathname()
         finally:
             if self.directory:
                 self.pop_dir()
