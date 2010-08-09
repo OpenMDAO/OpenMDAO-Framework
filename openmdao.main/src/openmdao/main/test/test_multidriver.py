@@ -271,8 +271,9 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(nested.comp3.y, -7.33333, places=4)
 
         # test dumping of iteration tree
-        s = dump_iteration_tree(self.top)
-        self.assertEqual(s, 
+        s = StringIO.StringIO()
+        dump_iteration_tree(self.top, s)
+        self.assertEqual(s.getvalue(), 
             '\n   driver\n      nested\n         nested.driver\n            '
             'nested.comp1\n            nested.comp3\n            nested.comp2\n'
             '            nested.comp4\n')
@@ -329,8 +330,9 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(top.comp3.y, -7.33333, places=4)
         
         # test dumping of iteration tree
-        s = dump_iteration_tree(self.top)
-        self.assertEqual(s, 
+        s = StringIO.StringIO()
+        dump_iteration_tree(self.top, s)
+        self.assertEqual(s.getvalue(), 
             '\n   driver\n      driver1\n         comp1\n         comp3\n'
             '         comp2\n         comp4\n')
         

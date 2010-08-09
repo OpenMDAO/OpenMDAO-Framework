@@ -125,4 +125,5 @@ class SingleCritEI(Driver):
         case = Case(inputs=ins,outputs=outs)
         print "ei: ",self.parent.iter._iterations, self.EI     
         self.next_case = ListCaseIterator([case,])
+        self.invalidate_deps(notify_parent=True)
         

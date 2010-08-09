@@ -40,7 +40,7 @@ class Iterator(Driver):
     def continue_iteration(self):
         #print "iter"
         self._iterations += 1
-        #if (self._iterations > 1) and (analysis.EI_driver.EI <= .03): return False
+        if (self._iterations > 1) and (analysis.EI_driver.EI <= .03): return False
         if self._iterations <= self.iterations: return True
         
         return False
