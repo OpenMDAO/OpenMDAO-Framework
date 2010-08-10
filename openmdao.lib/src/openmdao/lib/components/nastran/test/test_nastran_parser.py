@@ -176,6 +176,30 @@ class TestNastranParser(unittest.TestCase):
         [[r2]] = self.parser.get(h, 1, {"POINT ID." : "2"}, ["R2"])
         self.assertAlmostEqual(float(r2), 0)
 
+    def test_row_width(self):
+        self.go("practice-grid.row-width.txt")
+        h = "S T R E S S E S   I N   Q U A D R I L A T E R A L   E L E M E N T S   ( Q U A D 4 )        OPTION = BILIN"
+
+        self.assertTrue(self.parser.headers[0]["actual"].strip() == h)
+        grid = self.parser.grids[0]
+        self.assertTrue(grid[0] == ["ELEMENT ID", "GRID-ID", "FIBER DISTANCE", "STRESSES IN ELEMENT COORD SYSTEM NORMAL-X", \
+                                    "STRESSES IN ELEMENT COORD SYSTEM NORMAL-Y", "STRESSES IN ELEMENT COORD SYSTEM SHEAR-XY", \
+                                    "PRINCIPAL STRESSES (ZERO SHEAR) ANGLE", "PRINCIPAL STRESSES (ZERO SHEAR) MAJOR", \
+                                    "PRINCIPAL STRESSES (ZERO SHEAR) MINOR", "VON MISES"])
+
+        vonmises = self.parser.get(h, None, {}, ["VON MISES"])
+        self.assertTrue(vonmises[:2] == [['9.012409E+03'], ['1.252266E+04']])
+        for x in vonmises:
+            self.assertTrue(len(x) == 1)
+
+        big_group = self.parser.get(h, None, {}, ["VON MISES"], row_width=15)
+        self.assertTrue(len(big_group[0]) == 15)
+
+        # row_width with some constraints
+        element_2 = self.parser.get(h, None, {"ELEMENT ID" : "2"}, ["VON MISES"], row_width=15)
+        self.assertTrue(len(element_2[0]) == 15)
+        self.assertTrue(element_2[0][:2] == [['8.079449E+03'], ['1.242515E+04']])
+
 
 
 if __name__ == "__main__":
