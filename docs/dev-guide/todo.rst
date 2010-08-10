@@ -1,6 +1,4 @@
-
-
-Appendix B: Todo List
+Appendix C: Todo List
 ======================
 
 All todo items from the documentation that used the "todo" directive are listed

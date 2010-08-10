@@ -13,6 +13,7 @@ Developer Guide
    working
    testing
    bazaar
+   proxy
    todo
    
 
