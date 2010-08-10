@@ -16,7 +16,7 @@ much experience with Python, we recommend trying `Dive into Python
 is licensed under the GNU Free Documentation License, so you can download and
 use it as you wish.
 
-The problem we present here is a paraboloid that is a function of two input  variables. Our goal is
+The problem we present here is a paraboloid that is a function of two input variables. Our goal is
 to find the minimum value of this function over a particular range of interest. First, we will solve
 this problem with no constraints. Then we will add constraints and solve the problem again. We will
 not be providing analytical gradients. The optimizer will calculate numerical gradients internally.
@@ -371,14 +371,21 @@ to the assembly:
             # Create Paraboloid component instances
             self.add('paraboloid', Paraboloid())
 
-            # Driver process definition
-            self.driver.workflow.add(self.paraboloid)
-
 Here you will make an instance of the *Paraboloid* component that you created above and
 give it the name *paraboloid.* Similarly you will create an instance of the CONMIN
-driver and give it the name *driver.* As with other class members, these are
-now accessible in the ``OptimizationUnconstrained`` assembly via ``self.paraboloid``
+driver and give it the name *driver.* The top-level driver (i.e. the outermost driver in
+a model with nested drivers) is always given the name "driver". As with other class members,
+these are now accessible in the ``OptimizationUnconstrained`` assembly via ``self.paraboloid``
 and ``self.driver``.
+
+Next, the CONMIN driver needs to be told what to run. Every driver has a *Workflow*
+that contains a list of the components that the driver tells to run. We can add the
+*Paraboloid* component to the driver's workflow by using its *add* function.
+
+.. testcode:: simple_model_Unconstrained_pieces
+
+            # Iteration Hierarchy
+            self.driver.workflow.add(self.paraboloid)
 
 For this problem, you want to minimize ``f_xy``. In optimization, this is called
 the *objective function*. In OpenMDAO, you define the objective function using an
@@ -401,7 +408,8 @@ minimization.
 
 Expressions are also used to define the design variables (decision variables)
 for the optimization problem. While CONMIN operates only on a single objective,
-it allows multiple design variables. These are assigned in a Python list:
+it allows multiple design variables. The design variables can be declared
+individually using the *add_parameter* function:
         
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -409,10 +417,11 @@ it allows multiple design variables. These are assigned in a Python list:
             self.driver.add_parameter('paraboloid.x', -50, 50)
             self.driver.add_parameter('paraboloid.y', -50, 50)
 
-Here, both x and y are chosen as the design variables. You can also add a range
-of validity for these variables, which allows an unconstrained optimization to be
-performed on what is essentially a bounded region. For this problem, you are
-creating a lower and an upper bound, constraining x and y to lie on [-50, 50].
+Here, both x and y from the *Paraboloid component are chosen as the design
+variables. The *add_parameter* interface also allows you to add a range of
+validity for these variables, so that the unconstrained optimization can be
+performed on a bounded region. For this problem, you are constraining x and y
+to lie on [-50, 50].
         
 The problem is now essentially ready to execute. CONMIN contains quite a few
 additional control parameters, though the default values for many of them are
@@ -536,14 +545,20 @@ return a positive value.
 You want to add the constraint ``(y-x+15)<0`` to the problem. The unconstrained
 minimum violates this constraint, so a new minimum must be found by
 the optimizer. You can add a constraint to your existing ``OptimizationUnconstrained``
-model by adding one line to the init function:
+model by adding one line to the initialize function:
 
 .. testcode:: simple_model_Unconstrained_pieces
 
         # CONMIN Constraints
         self.driver.add_constraint('paraboloid.y-paraboloid.x+15.0')
 
-So, please add this line to the ``__init__`` function in
+The add_constraint function is used to add a constraint to a driver. The
+constraint is described as an *Expression* in the first argument of the
+function. The default behavior for a constraint in OpenMDAO is for a
+constraint to be satisfied when this *Expression* is negative or zero, and
+violated when it is positive.
+
+Please add this line to the ``__init__`` function in
 ``optimization_constrained.py`` and save it. Execute it by typing:
 
 ::

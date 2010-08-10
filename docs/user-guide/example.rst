@@ -457,7 +457,7 @@ converted as it is passed from the output to the input. If an output and an inpu
 of a different unit class are connected (e.g., length and time), an exception is
 raised. A variable with no units defined can be connected to a variable with units.
 
-**Only the Float type performs automatic unit conversion and checking.**
+**Only the Float and Array types performs automatic unit conversion and checking.**
 
 The Transmission component uses an enumerated list to define the valid gear positions:
 
