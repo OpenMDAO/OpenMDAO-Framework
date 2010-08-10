@@ -495,8 +495,12 @@ class NastranParser(object):
                 result[-1].append(mygrid[row][column])
 
         if row_width > 1:
-            for i in range(0, len(result),row_width):
-                result = result[:i] + [zip(*result[i:i+row_width])] + result[i+row_width:]
+            big_result = []
+            for i in range(0, row_width * int(len(result)/row_width),row_width):
+                big_result.append([])
+                for j in range(row_width):
+                    big_result[-1].append(result[i+j])
+            return big_result
 
 
         return result
