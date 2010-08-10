@@ -82,7 +82,8 @@ Some steps of the development process, e.g., downloading a branch of the source 
 downloading Python distributions, require network access.  If you're using Linux or Mac OS X and
 are behind an http proxy, you may have to set the ``http_proxy`` environment variable on
 your system for Bazaar and :term:`virtualenv` to function properly. If you're using Windows 7,
-please see the process :ref:`for configuring proxy settings <proxy-settings>` in the appendix.
+please follow this `link <http://answers.oreilly.com/topic/675-how-to-configure-proxy-settings-in-windows-7/>`_
+for information on configuring proxy settings.
 
 *Bazaar User Setup*
 +++++++++++++++++++
