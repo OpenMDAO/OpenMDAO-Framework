@@ -29,7 +29,6 @@ class BroydenSolver(Driver):
     Algorithms are based on those found in scipy.optimize.
     
     Nonlinear solvers
-    =================
 
     These solvers find x for which F(x)=0. Both x and F are multidimensional.
 
@@ -39,15 +38,15 @@ class BroydenSolver(Driver):
 
     A collection of general-purpose nonlinear multidimensional solvers.
 
-    broyden2            --  Broyden's second method - the same as broyden1, but
-                            updates the inverse Jacobian directly
-    broyden3            --  Broyden's second method - the same as broyden2, but
-                            instead of directly computing the inverse Jacobian,
-                            it remembers how to construct it using vectors, and
-                            when computing inv(J)*F, it uses those vectors to
-                            compute this product, thus avoding the expensive NxN
-                            matrix multiplication.
-    excitingmixing      --  The excitingmixing algorithm. J=-1/alpha
+    - broyden2: Broyden's second method - the same as broyden1, but
+      updates the inverse Jacobian directly
+    - broyden3: Broyden's second method - the same as broyden2, but
+      instead of directly computing the inverse Jacobian,
+      it remembers how to construct it using vectors, and
+      when computing inv(J)*F, it uses those vectors to
+      compute this product, thus avoding the expensive NxN
+      matrix multiplication.
+    - excitingmixing: The excitingmixing algorithm. J=-1/alpha
 
     The broyden2 is the best. For large systems, use broyden3; excitingmixing is
     also very effective. The remaining nonlinear solvers from scipy are, in
@@ -104,12 +103,12 @@ class BroydenSolver(Driver):
             
                 
     def execute_broyden2(self):
-        """from scipy: Broyden's second method.
+        """from scipy, Broyden's second method.
 
         Updates inverse Jacobian by an optimal formula.
         There is NxN matrix multiplication in every iteration.
 
-        The best norm |F(x)|=0.003 achieved in ~20 iterations.
+        The best norm(F(x))=0.003 achieved in ~20 iterations.
         """ 
         
         xm = self.xin.T
@@ -146,12 +145,12 @@ class BroydenSolver(Driver):
 
 
     def execute_broyden3(self):
-        """from scipy: Broyden's second (sic) method.
+        """from scipy, Broyden's second (sic) method.
 
         Updates inverse Jacobian by an optimal formula.
         The NxN matrix multiplication is avoided.
 
-        The best norm |F(x)|=0.003 achieved in ~20 iterations.
+        The best norm(F(x))=0.003 achieved in ~20 iterations.
         """
         
         zy = []
@@ -200,11 +199,11 @@ class BroydenSolver(Driver):
 
 
     def execute_excitingmixing(self):
-        """from scipy: The excitingmixing method.
+        """from scipy, The excitingmixing method.
 
         J=-1/alpha
 
-        The best norm |F(x)|=0.005 achieved in ~140 iterations.
+        The best norm(F(x))=0.005 achieved in ~140 iterations.
         
         Note: Scipy uses 0.1 as the default value for alpha for this algorithm.
         Ours is set at 0.4, which is appropriate for Broyden2 and Broyden3, so
