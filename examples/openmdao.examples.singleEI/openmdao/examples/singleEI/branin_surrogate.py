@@ -1,3 +1,4 @@
+from __future__ import division
 from enthought.traits.api import Instance, Str
 
 from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, Case
@@ -44,7 +45,7 @@ class Iterator(Driver):
         if self._iterations <= self.iterations: return True
         
         return False
-
+    """
     def post_iteration(self): 
         outputs = [("%s.iteration"%self.name,None,self._iterations),
                    ("branin_meta_model.x",None,self.parent.branin_meta_model.x),
@@ -53,6 +54,7 @@ class Iterator(Driver):
                    ]
         c = Case(outputs = outputs)
         self.recorder.record(c)
+    """
         
         
 class Analysis(Assembly): 
@@ -73,8 +75,8 @@ class Analysis(Assembly):
 
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
-        #self.DOE_trainer.DOEgenerator = OptLatinHypercube(21,2)
-        self.DOE_trainer.DOEgenerator = FullFactorial(3,2)
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(21,2,rand_seed=10)
+        #self.DOE_trainer.DOEgenerator = FullFactorial(5,2)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
         self.DOE_trainer.add_event("branin_meta_model.train_next")
@@ -96,8 +98,8 @@ class Analysis(Assembly):
         #self.retrain.force_execute = True
         
         self.add("iter",Iterator())
-        self.iter.iterations = 2
-        self.iter.recorder = DumpCaseRecorder(open('iter.out','w'))
+        self.iter.iterations = 30
+        #self.iter.recorder = DumpCaseRecorder(open('iter.out','w'))
         
         #Iteration Heirarchy
         self.driver.workflow.add([self.DOE_trainer,self.iter])
@@ -116,11 +118,13 @@ class Analysis(Assembly):
 if __name__ == "__main__":
     from openmdao.main.api import set_as_top #, dump_iteration_tree
     from openmdao.util.plot import case_db_to_dict
-    from matplotlib import pyplot as py, cm 
+    from matplotlib import pyplot as plt, cm 
+    from matplotlib.pylab import get_cmap
     from mpl_toolkits.mplot3d import Axes3D
-    from numpy import meshgrid,array, pi
+    from numpy import meshgrid,array, pi,arange,cos
     
     analysis = Analysis()
+       
     set_as_top(analysis)
     analysis.run()
     
@@ -132,12 +136,55 @@ if __name__ == "__main__":
         analysis.branin_meta_model.y = y
         analysis.branin_meta_model.execute()
         print "f_xy: ",analysis.branin_meta_model.f_xy, " % error: ", (analysis.branin_meta_model.f_xy.mu - z)/z*100
-    #dump_iteration_tree(analysis)
-
-    data_train = case_db_to_dict('trainer.db',
-                                 ['broadcaster.y_in','broadcaster.x_in','branin_meta_model.f_xy'])
     
-    #convert the database data to python objects
-    data_train['branin_meta_model.f_xy'] = [convert_norm_dist(x).mu for x in data_train['branin_meta_model.f_xy']]
+    
+
+
+    #Generate the Contour plot to show the function
+    def branin(x,y): 
+        return (y-(5.1/(4.*pi**2.))*x**2.+5.*x/pi-6.)**2.+10.*(1.-1./(8.*pi))*cos(x)+10.
+    
+    
+    X_range = arange(-5,10.2,.25)
+    Y_range = arange(0,15.2,.25)
+    
+    X,Y = meshgrid(X_range,Y_range)
+    Z = branin(X,Y)
+    
+    
+    plt.contour(X,Y,Z,arange(1,200,2),zorder=1)
+    
+    cb = plt.colorbar(shrink=.45)
+    
+    
+    #plot the initial training data
+    data_train = case_db_to_dict('trainer.db',
+                                     ['branin_meta_model.y','branin_meta_model.x','branin_meta_model.f_xy'])
+    
+    plt.scatter(data_train['branin_meta_model.x'],data_train['branin_meta_model.y'],s=30,c='r',zorder=10)
+    
+    data_EI = case_db_to_dict('retrain.db',
+                                     ['branin_meta_model.y','branin_meta_model.x','branin_meta_model.f_xy'])
+    
+    
+    
+    
+    count = len(data_EI['branin_meta_model.x'])
+    colors = arange(0,count)/count
+    winter = get_cmap('winter')
+    plt.scatter(data_EI['branin_meta_model.x'],data_EI['branin_meta_model.y'],
+                s=30,
+                c=colors,
+                zorder=11,
+                cmap=winter)
+    
+    plt.axis([-5,10,0,15])
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Branin Function Contours and EI Sample Points")
+    plt.text(10.9,11,"Branin\nFunction\nValue")
+    plt.show()
+
+
     
    
