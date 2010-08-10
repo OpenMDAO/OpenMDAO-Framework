@@ -4,7 +4,7 @@ __all__ = ["Driver"]
 
 from enthought.traits.api import implements, List, Instance
 
-from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, \
+from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, IHasEvents,\
                                      obj_has_interface 
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
@@ -12,14 +12,13 @@ from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
-from openmdao.main.interfaces import ICaseIterator
 
 @add_delegate(HasEvents)
 class Driver(Component):
     """ A Driver iterates over a workflow of Components until some condition
     is met. """
     
-    implements(IDriver)
+    implements(IDriver, IHasEvents)
 
     recorder = Instance(ICaseRecorder, desc='Case recorder for iteration data.', 
                         required=False)
