@@ -17,7 +17,7 @@ from enthought.traits.trait_base import not_event, not_none
 from enthought.traits.api import Bool, List, Str, Instance, implements, TraitError
 
 from openmdao.main.container import Container
-from openmdao.main.interfaces import IComponent
+from openmdao.main.interfaces import IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.expression import Expression, ExpressionList, DumbDefault
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -108,6 +108,14 @@ class Component (Container):
         # and outputs are invalid)
         self._valid_dict = dict([(name,t.iotype=='in') for name,t in self.class_traits().items() if t.iotype])
         
+        # Components with input CaseIterators will be forced to execute whenever run() is
+        # called on them, even if they don't have any invalid inputs or outputs.
+        self._num_input_caseiters = 0
+        for name,trait in self.class_traits().items():
+            # isinstance(trait.trait_type.klass,ICaseIterator) doesn't work here...
+            if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+                self._num_input_caseiters += 1
+
         self._stop = False
         self._call_check_config = True
         self._call_execute = True
@@ -118,7 +126,6 @@ class Component (Container):
         self._expr_depends = None
         self._expr_sources = None
         
-        #self.data_behavior = 'pull'  # possible values are 'pull' and 'push'
         self.exec_count = 0
         
         if directory:
@@ -215,6 +222,11 @@ class Component (Container):
         
         if not self.is_valid():
             self._call_execute = True
+        elif self._num_input_caseiters > 0:
+            self._call_execute = True
+            # we're valid, but we're running anyway because of our input CaseIterators,
+            # so we need to notify downstream comps so they grab our new outputs
+            self.invalidate_deps()
 
         if self.parent is None: # if parent is None, we're not part of an Assembly
                                 # so Variable validity doesn't apply. Just execute.
@@ -263,7 +275,10 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
-                #print 'execute %s' % self.get_pathname()
+                #if self.get_pathname() != 'branin_meta_model':
+                    #print 'execute %s' % self.get_pathname()
+                #else:
+                    #sys.stdout.write('.')
                 self.execute()
                 self._post_execute()
             #else:
@@ -297,24 +312,31 @@ class Component (Container):
         self.config_changed()
         if trait.iotype:
             self._valid_dict[name] = trait.iotype=='in'
+        if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+            self._num_input_caseiters += 1
         
     def remove_trait(self, name):
         """Overrides base definition of add_trait in order to
         force call to *check_config* prior to execution when a trait is
         removed.
         """
+        trait = self.trait(name)
         super(Component, self).remove_trait(name)
         self.config_changed()
         try:
             del self._valid_dict[name]
         except KeyError:
             pass
+        
+        if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+            self._num_input_caseiters -= 1
 
     def is_valid(self):
         """Return False if any of our public variables is invalid."""
         if self._call_execute:
             return False
         if False in self._valid_dict.values():
+            self.call_execute = True
             return False
         if self.parent is not None:
             srccomps = [n for n,v in self.get_expr_sources()]

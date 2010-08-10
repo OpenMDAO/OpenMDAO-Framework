@@ -224,13 +224,12 @@ def view_docs(browser=None):
 
 def test_docs():
     """Tests the openmdao sphinx documentation.  
-    A console script (testdocs) calls this.
-    If the docs are not built, this will build them before testing.
+    A console script (openmdao_testdocs) calls this.
+    This forces a build of the docs before testing.
     """
     branchdir, docdir, bindir =_get_dirnames()
-    idxpath = os.path.join(docdir, '_build', 'html', 'index.html')
-    if not os.path.isfile(idxpath):
-        build_docs()
+    # force a new build before testing
+    build_docs()
     sphinx.main(argv=['-P', '-b', 'doctest', '-d', 
                       os.path.join(docdir, '_build', 'doctrees'), 
                       docdir, os.path.join(docdir, '_build', 'html')])

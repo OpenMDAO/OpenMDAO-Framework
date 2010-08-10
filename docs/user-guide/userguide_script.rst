@@ -326,7 +326,8 @@ Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
 | Name             | Callable Signature                                       |
 +==================+==========================================================+
 | Array            | Array( [default_value = None, shape = None, value = None,|
-|                  | dtype = None, units = None, iotype = None, desc = None] )|
+|                  | dtype = None, units = None, iotype = None, desc = None,  |
+|                  | units = None] )                                          |
 +------------------+----------------------------------------------------------+
 | Bool             | Bool( [value = None, desc = None, iotype = None] )       | 
 +------------------+----------------------------------------------------------+
@@ -339,7 +340,7 @@ Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
 | File             | File( [default_value = None, iotype = None,              |
 |                  | desc = None, low = None, high = None, path = None,       |
 |                  | content_type = None, binary = False,                     |
-|                  | local_path = None                                        |
+|                  | local_path = None] )                                     |
 +------------------+----------------------------------------------------------+
 | Float            | Float( [default_value = None, iotype = None,             |
 |                  | desc = None, low = None, high = None,                    |
@@ -440,6 +441,10 @@ useful to specify the size explicitly, so an exception is generated if an
 array of a different size or shape is passed into it. If the size of an array is not
 determined until runtime (e.g., a driver that takes an array of constraint
 equations as an input), then the shape should be left blank.
+
+An array can also have a single unit defined with the *units* parameter. This unit
+applies to every element in the array, and it enables unit checking and conversion
+when connecting an array output to an array input.
 
 Below is an example of a simple component that takes two Arrays as inputs
 and calculates their dot product as an output.
@@ -692,11 +697,11 @@ expressions.
 
 Again, no default is needed.
 
-.. index:: Float; unit conversion with
+.. index:: Float; Array; unit conversion with
 .. index:: unit conversion; with Float
 
-Unit Conversions with Float
-+++++++++++++++++++++++++++
+Unit Conversions with Float and Array
++++++++++++++++++++++++++++++++++++++
 
 OpenMDAO also supports variables with explicitly defined units using the Float
 variable type, which is included as part of the Standard Library. This variable 

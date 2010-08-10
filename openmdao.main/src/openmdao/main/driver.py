@@ -4,7 +4,7 @@ __all__ = ["Driver"]
 
 from enthought.traits.api import implements, List, Instance
 
-from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, \
+from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, IHasEvents,\
                                      obj_has_interface 
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
@@ -18,7 +18,7 @@ class Driver(Component):
     """ A Driver iterates over a workflow of Components until some condition
     is met. """
     
-    implements(IDriver)
+    implements(IDriver, IHasEvents)
 
     recorder = Instance(ICaseRecorder, desc='Case recorder for iteration data.', 
                         required=False)
@@ -57,10 +57,8 @@ class Driver(Component):
             return False
         
         ## driver is invalid if any of its Expressions reference
-        ## invalid Variables or if the Expression itself is invalid
+        ## invalid Variables
         #for name in self._get_expr_names(iotype='in'):
-            #if not self.get_valid(name):
-                #return False
             #rv = getattr(self, name)
             #if isinstance(rv, list):
                 #for entry in rv:
@@ -91,13 +89,13 @@ class Driver(Component):
             for wf in wfs:
                 wf.config_changed()
 
-    def _pre_execute (self):
-        """Call base class *_pre_execute* after determining if we have any invalid
-        ref variables, which will cause us to have to regenerate our ref dependency graph.
-        """
-        if not self.is_valid():
-            self._call_execute = True
-        super(Driver, self)._pre_execute()
+    #def _pre_execute (self):
+        #"""Call base class *_pre_execute* after determining if we have any invalid
+        #ref variables, which will cause us to have to regenerate our ref dependency graph.
+        #"""
+        #if not self.is_valid():
+            #self._call_execute = True
+        #super(Driver, self)._pre_execute()
 
     def remove_from_workflow(self, component):
         """Remove the specified component from our workflow(s).
