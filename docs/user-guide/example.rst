@@ -126,7 +126,7 @@ Variable	 	  Description   			Units
 torque_ratio	   Ratio of transmission output power to power 
                    at the wheel
 -----------------  -------------------------------------------  ------
-RPM    		   Engine rotational speed			1/min
+RPM    		   Engine rotational speed			rpm
 =================  ===========================================  ======
 
   
@@ -210,7 +210,7 @@ D_v  		   Intake valve diameter                        mm
 =================  ===========================================  ======
 Variable	 	  Description		                Units
 =================  ===========================================  ======
-RPM		   Engine rotational speed (1000-6000)          rev/min
+RPM		   Engine rotational speed (1000-6000)          rpm
 -----------------  -------------------------------------------  ------
 throttle	   Throttle position				
 =================  ===========================================  ======
@@ -428,7 +428,7 @@ from its inputs. We must create the public variables that define these inputs an
 	    velocity = Float(0., iotype='in', units='mi/h',
 	             desc='Current Velocity of Vehicle')
 
-	    RPM = Float(1000., iotype='out', units='RPM',
+	    RPM = Float(1000., iotype='out', units='rpm',
 	             desc='Engine RPM')        
 	    torque_ratio = Float(0., iotype='out',
 	             desc='Ratio of output torque to engine torque')    
@@ -519,7 +519,7 @@ variables allow you to specify an optional maximum and minimum value.
 .. testcode:: Code2
 
     RPM = Float(1000.0, low=1000., high=6000., iotype='in', 
-                     units='RPM',  desc='Engine RPM')
+                     units='rpm',  desc='Engine RPM')
 
 The *low* and *high* arguments are used to specify a minimum and maximum value
 for RPM. If the engine's RPM is set to a value outside of these limits, an
