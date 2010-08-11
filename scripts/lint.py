@@ -25,8 +25,8 @@ def main():
 
     # Find location of OpenMDAO root.
     root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-    python = os.path.join(root, 'buildout', 'bin', 'python')
-    pylint = os.path.join(root, 'buildout', 'bin', 'pylint')
+    python = os.path.join(root, 'devenv', 'bin', 'python')
+    pylint = '/usr/local/lib/python2.6/site-packages/scripts/pylint'
 
     # If specific files requested, just process those and exit.
     if options.specific:
