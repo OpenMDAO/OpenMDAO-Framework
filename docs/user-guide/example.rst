@@ -933,7 +933,8 @@ EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
 Setting up an Optimization Problem
 ----------------------------------
 
-The final step is to create a top level Assembly that defines the problem using DrivingSim and the vehicle assembly.
+The final step is to create a top level Assembly that defines the problem
+using DrivingSim and the vehicle assembly.
 
 The first problem we would like to solve is a single objective optimization problem
 where we adjust some of the design variables to minimize the 0-60 acceleration time.
@@ -961,11 +962,14 @@ create an instance of DrivingSim and CONMINdriver:
         
             super(EngineOptimization, self).__init__()
 
+            # Create CONMIN Optimizer instance
+            self.add('driver', CONMINdriver())
+        
             # Create DrivingSim instance
             self.add('driving_sim', Driving_Sim())
 
-            # Create CONMIN Optimizer instance
-            self.add('driver', CONMINdriver())
+            # Add Vehicle instance to vehicle socket
+            self.driving_sim.vehicle = Vehicle()
         
             # add DrivingSim to workflow
             self.driver.workflow.add(self.driving_sim)

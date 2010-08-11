@@ -872,6 +872,10 @@ Consider the top level assembly that was created for the :ref:`simple tutorial p
         
             # Create Paraboloid component instances
             self.add('paraboloid', Paraboloid())
+    
+            # Add to driver's workflow
+            self.driver.workflow.add(self.paraboloid)
+        
 
 We can see here that components that comprise the top level of this model are
 declared in the ``__init__`` function. The base class ``__init__`` function is called
@@ -1114,13 +1118,17 @@ follows:
 
             # Create CONMIN Optimizer instance
             self.add('driver', CONMINdriver())
-
-This first section of code defines an assembly called *EngineOptimization.* This
-assembly contains a DrivingSim component and a CONMIN driver, both of which are
-created and added inside the ``__init__`` function with *add*. The 
-objective function, design variables, constraints, and any CONMIN parameters
-are also assigned in the ``__init__`` function. The specific syntax for all of 
-these is given below.
+        
+            # add DrivingSim to workflow
+            driver.workflow.add(self.driving_sim)
+        
+This first section of code defines an assembly called *EngineOptimization.*
+This assembly contains a DrivingSim component and a CONMIN driver, both of
+which are created and added inside the ``__init__`` function with *add*. The
+DrivingSim component is also added to the driver's workflow. The objective
+function, design variables, constraints, and any CONMIN parameters are also
+assigned in the ``__init__`` function. The specific syntax for all of these is
+given below.
 
 .. testsetup:: CONMIN_show
 
@@ -1136,8 +1144,8 @@ these is given below.
     self.driver.clear_parameters()
 
 Both the objective function and the design variables are assigned via an
-:term:`Expression` variable. An Expression is a string that points to some other OpenMDAO
-variable in the variable tree. There is only one objective function, but there
+:term:`Expression`. An Expression is a string that contains a function of OpenMDAO
+variables in the variable tree. There is only one objective function, but there
 can be multiple design variables which are assigned as a Python list.
 
 .. testcode:: CONMIN_show
@@ -1155,8 +1163,7 @@ if an assembly contains a CONMIN driver, the objective function and design
 variables cannot be located outside of that assembly. Also, each design
 variable must point to a component input. During the optimization process, the
 design variables are modified, and the relevant portion of the model is
-executed to evaluate the new objective. It is generally not possible
-to connect more than one driver to an available input.
+executed to evaluate the new objective.
 
 Additionally, the objective function must always be either an output from a
 component or a function of available component outputs:
@@ -1181,9 +1188,13 @@ when they return a positive value**.
 
 .. testcode:: CONMIN_show
 
-    map(self.driver.add_constraint, ['driving_sim.stroke - driving_sim.bore'])
+    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore')
 
-Any equation can also be expressed as an inequality.
+Any constraint can also be expressed explicitly as an inequality.
+
+.. testcode:: CONMIN_show
+
+    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore <= 0')
 
 
 Controlling the Optimization
@@ -1275,7 +1286,7 @@ used to scale the design variables.
 
 There need to be as many scale values as there are design variables.
 
-If your problem uses linear  constraints, you can improve the efficiency of the
+If your problem uses linear constraints, you can improve the efficiency of the
 optimization process by designating those that are linear functions of the design
 variables as follows:
 
@@ -1285,8 +1296,11 @@ variables as follows:
                                '1.0 - driving_sim.stroke * driving_sim.bore'])
     self.cons_is_linear = [1, 0]
 
-If *cons_is_linear* is not specified, then all the constraints are assumed to be
-nonlinear. Note that the original CONMIN parameter for this is *ISC.*
+Here, the first constraint is linear, and the second constraint is nonlinear. If 
+*cons_is_linear* is not specified, then all the constraints are assumed to be
+nonlinear. Note that the original CONMIN parameter for this is *ISC.* If
+your constraint includes some framework output in the equation, then it is 
+probably not a linear function of the design variables.
 
 Finally, the *iprint* parameter can be used to display diagnostic
 messages inside of CONMIN. These messages are currently sent to the standard

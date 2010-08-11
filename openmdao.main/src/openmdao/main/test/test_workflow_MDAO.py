@@ -205,7 +205,7 @@ class SellarMDF(Assembly):
             self.driver.add_parameter(param, low=low, high=high)
         map(self.driver.add_constraint, ['3.16 - dis1.y1',
                                               'dis2.y2 - 24.0' ])
-        self.driver.cons_is_linear = [1, 1, 1, 1, 1, 0, 0, 0]
+        self.driver.cons_is_linear = [1, 1]
         self.driver.iprint = 0
         self.driver.itmax = 30
         self.driver.fdch = .001
@@ -262,7 +262,6 @@ class SellarIDF(Assembly):
                                               'dis1.y1-dis2.y1',
                                               'dis2.y2-dis1.y2',
                                               'dis1.y2-dis2.y2'])
-        #self.driver.cons_is_linear = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
         self.driver.iprint = 0
         self.driver.itmax = 100
         self.driver.fdch = .003

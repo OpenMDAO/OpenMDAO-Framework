@@ -9,6 +9,7 @@ from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.api import CONMINdriver
 
 from openmdao.examples.enginedesign.driving_sim import DrivingSim
+from openmdao.examples.enginedesign.vehicle import Vehicle
 
 class EngineOptimization(Assembly):
     """Optimization of a Vehicle."""
@@ -25,6 +26,9 @@ class EngineOptimization(Assembly):
         
         # Create DrivingSim instance
         self.add('driving_sim', DrivingSim())
+        
+        # Add Vehicle instance to vehicle socket
+        self.driving_sim.vehicle = Vehicle()
         
         # add DrivingSim to workflow
         driver.workflow.add(self.driving_sim)
