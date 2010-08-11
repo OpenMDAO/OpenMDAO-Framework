@@ -4,6 +4,8 @@ import sqlite3
 from enthought.traits.api import implements
 
 from openmdao.main.interfaces import ICaseRecorder
+from openmdao.main.case import Case
+from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
 
 class DBCaseRecorder(object):
     """Records Cases to a relational DB (sqlite)."""
@@ -61,3 +63,9 @@ class DBCaseRecorder(object):
             cur.execute("insert into casevars(var_id,name,case_id,sense,value,entry) values(?,?,?,?,?,?)", 
                             v)
         self._connection.commit()
+
+    def get_iterator(self):
+        """Return a DBCaseIterator that points to our current DB."""
+        return DBCaseIterator(dbfile=self._dbfile, connection=self._connection)
+
+    

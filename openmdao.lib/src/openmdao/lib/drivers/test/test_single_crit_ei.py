@@ -70,14 +70,15 @@ class TestCase(unittest.TestCase):
         try:
             self.top.run()
         except ValueError,err: 
-            self.assertEqual(str(err),"EIdriver: best_case did not have an output which matched the criteria, 'noisy_branin.f_xy'")
+            self.assertEqual(str(err),
+                "EIdriver: best_case did not have an output which matched the criteria, 'noisy_branin.f_xy'")
         else: 
             self.fail("ValueError expected")
         
     def test_add_parameter(self):
         """test for correct ranges on alleles for GA"""
         self.top.EIdriver.add_parameter("noisy_branin.x")
-        self.top.EIdriver.add_parameter("noisy_branin.y")      
+        self.top.EIdriver.add_parameter("noisy_branin.y")
 
         self.assertEqual(self.top.EIdriver.set_of_alleles[0][0],(-5,10))
         self.assertEqual(self.top.EIdriver.set_of_alleles[1][0],(0,15))
@@ -90,9 +91,9 @@ class TestCase(unittest.TestCase):
 
         self.top.run()
         
-        case = [val[2] for case in self.top.EIdriver.next_case for val in case.inputs]
-        self.assertAlmostEqual(case[0],-3.36,places=1)
-        self.assertAlmostEqual(case[1],13.1,places=1)
+        result = [val[2] for case in self.top.EIdriver.next_case for val in case.inputs]
+        self.assertAlmostEqual(result[0], -3.36, places=1)
+        self.assertAlmostEqual(result[1], 13.1, places=1)
         
 if __name__ == "__main__":
     unittest.main()

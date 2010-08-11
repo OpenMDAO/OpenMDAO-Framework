@@ -194,7 +194,6 @@ class Assembly (Component):
             self._valid_dict[destpath] = False
         elif srccomp is self and srctrait.iotype == 'in': # boundary input
             self.comp_graph.connect('.'.join(['@in',srcpath]), destpath)
-            #self._valid_dict[srcpath] = False
         else:
             destcomp.invalidate_deps(varnames=[destvarname], notify_parent=True)
         

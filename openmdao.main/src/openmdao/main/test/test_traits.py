@@ -1,7 +1,7 @@
 """
 Tests involving traits. This will notify us if any future versions of Traits we
 switch to have changed the tested behavior, and it also helps refresh my memory
-about how these crazy things work.
+about how these things work.
 """
 
 import unittest
@@ -41,7 +41,6 @@ class MyHasTraits2(MyHasTraits):
     pass
 
 class TraitsTestCase(unittest.TestCase):
-
     def test_copy_on_assign(self):
         # when one Instance value is assigned to another,
         # no copy is performed, even if the trait has copy metadata that is not None.
@@ -61,7 +60,7 @@ class TraitsTestCase(unittest.TestCase):
         mht2.copy_traits(mht, traits=['inst'])
         self.assertEqual(mht2.inst.val, mht.inst.val)
         self.assertFalse(mht2.inst is mht.inst)
-        
+
     def test_trait_names(self):
         mht = MyHasTraits()
         names = mht.trait_names()

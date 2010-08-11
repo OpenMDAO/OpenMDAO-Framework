@@ -11,9 +11,13 @@ class DBCaseIterator(object):
     
     implements(ICaseIterator)
     
-    def __init__(self, dbfile=':memory:', case_selector=None, var_selector=None):
-        self._connection = None
-        self.dbfile = dbfile
+    def __init__(self, dbfile=':memory:', case_selector=None, var_selector=None, connection=None):
+        if connection is not None:
+            self._dbfile = dbfile
+            self._connection = connection
+        else:
+            self._connection = None
+            self.dbfile = dbfile
         self.case_selector = case_selector # WHERE clause for case table
         self.var_selector = var_selector   # WHERE clause for casevars table
 
@@ -57,5 +61,4 @@ class DBCaseIterator(object):
                 else:
                     outputs.append((vname, entry, value))
             yield Case(inputs=inputs, outputs=outputs,retries=retries,msg=msg,ident=name)
-
             

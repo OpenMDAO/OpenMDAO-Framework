@@ -114,7 +114,6 @@ class Mimic(Component):
         """Return True if the named model trait should become a trait in the Mimic."""
         # TODO: add wildcarding to includes and excludes
         if name in _mimic_class_traitnames:
-            self._logger.warning("name collision for '%s' between model and Mimic" % name)
             return False
         if self.includes and name not in self.includes:
             return False

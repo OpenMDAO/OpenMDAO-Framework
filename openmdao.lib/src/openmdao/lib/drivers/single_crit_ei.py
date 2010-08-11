@@ -26,16 +26,20 @@ from openmdao.util.decorators import add_delegate
 @add_delegate(HasParameters)  # this adds a member called _hasparameters of type HasParameters
 class SingleCritEI(Driver):
     implements(IHasParameters)
+    
+    rand_seed = Float(None,iotype="in",desc="Value used to see the random number generator")
      
     best_case = Instance(ICaseIterator, iotype="in",
                     desc="CaseIterator which contains a single case, representing the criteria value")
+    criteria = Expression(iotype="in",
+                    desc="Name of the variable to maximize the expected improvement around. "
+                          "Must be a NormalDistrubtion type")
     next_case_events = Array([],dtype="str",iotype="in",
                     desc="Names of event traits which should be added to next_case")
     next_case = Instance(ICaseIterator, iotype="out", copy=None,
                     desc="CaseIterator which contains the case which maximize expected improvement")
-    criteria = Expression(iotype="in",
-                    desc="Name of the variable to maximize the expected improvement around. "
-                          "Must be a NormalDistrubtion type")
+    
+    EI = Float(0.0, iotype="out", desc="The expected improvement of the next_case")
     
     def __init__(self,*args,**kwargs):
         super(SingleCritEI,self).__init__(self,*args,**kwargs)
@@ -78,7 +82,6 @@ class SingleCritEI(Driver):
         
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training point to run"""
-        print "EI_Driver"
         if self.criteria == "": 
             self.raise_exception("no criteria was specified",RuntimeError)
         elif not self.set_of_alleles:
@@ -98,7 +101,6 @@ class SingleCritEI(Driver):
                 
         if not self.target: 
             self.raise_exception("best_case did not have an output which matched the criteria, '%s'"%self.criteria,ValueError)
-
         
         genome = G1DList.G1DList(len(self.set_of_alleles))
         genome.setParams(allele=self.set_of_alleles)
@@ -106,15 +108,26 @@ class SingleCritEI(Driver):
         genome.initializator.set(Initializators.G1DListInitializatorAllele)
         genome.mutator.set(Mutators.G1DListMutatorAllele)
         genome.crossover.set(Crossovers.G1DListCrossoverUniform)
-        ga = GSimpleGA.GSimpleGA(genome,seed=1)
-        #ga.setElitism(True)
-        #ga.selector.set(Selectors.GTournamentSelector)
-        ga.setGenerations(25)
-        ga.setPopulationSize(75)
+        if self.rand_seed is not None: 
+            ga = GSimpleGA.GSimpleGA(genome, seed=10)
+        else: 
+            ga = GSimpleGA.GSimpleGA(genome)
+        ga.setElitism(True)
+        ga.selector.set(Selectors.GTournamentSelector)
+        ga.setGenerations(10)
+        ga.setPopulationSize(100)
         ga.setMinimax(Consts.minimaxType["maximize"])
         ga.evolve()
-        new_x = array([x for x in ga.bestIndividual()])
-        case = Case(inputs=[(event_name,None,True) for event_name in self.next_case_events]+[(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())])
-        print "ei_next_case: ", case        
-        self.next_case = ListCaseIterator([case,])
+        bi = ga.bestIndividual()
+        
+        self.EI = bi.score
+        new_x = array([x for x in bi])
+        ins=[(event_name,None,True) for event_name in self.next_case_events]+ \
+            [(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())]    
+        outs = [(self.criteria,None,None)]
+        case = Case(inputs=ins,outputs=outs)
+        #print "ei: ",self.parent.iter._iterations, self.EI   
+        
+        self.next_case = ListCaseIterator([case])
+        #print "ei: ",self.next_case[0].inputs
         

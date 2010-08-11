@@ -19,14 +19,14 @@
 
 from __future__ import division
 
-from random import randint
+from random import randint, seed
 
 from numpy import array,size,sum,floor
 from numpy.linalg import norm
 
 from enthought.traits.api import HasTraits, implements
 
-from openmdao.lib.api import Int, Enum
+from openmdao.lib.api import Int, Enum, Float
 from openmdao.util.mdo import rand_latin_hypercube
 from openmdao.main.interfaces import IDOEgenerator
 
@@ -111,9 +111,10 @@ class OptLatinHypercube(HasTraits):
     """IDOEgenerator which provides a latin hypercube DOE sample set.
     The Morris-Mitchell sampling criterion of the DOE is optimzied
     using an evolutionary algorithm.
-    """
-    
+    """    
     implements(IDOEgenerator)
+    
+    rand_seed = Float(None,iotype="in",desc="seed used for random number generation if not None")
     
     num_sample_points = Int(20, desc="Number of sample points in the DOE sample set")
     
@@ -126,8 +127,13 @@ class OptLatinHypercube(HasTraits):
     norm_method = Enum(["1-norm","2-norm"],
                     desc="Vector norm calculation method. '1-norm' is faster, but less accurate")
     
-    def __init__(self, num_samples=None, num_parameters=None, population=None,generations=None):
+    def __init__(self, num_samples=None, num_parameters=None, population=None,generations=None, rand_seed=None):
         super(OptLatinHypercube,self).__init__()
+        
+        if rand_seed is not None: 
+            self.rand_seed = rand_seed
+            seed(rand_seed)
+        
         self.qs = [1,2,5,10,20,50,100] #list of qs to try for Phi_q optimization
         if num_samples is not None:
             self.num_sample_points = num_samples
