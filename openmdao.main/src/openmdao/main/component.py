@@ -320,7 +320,7 @@ class Component (Container):
         force call to *check_config* prior to execution when a trait is
         removed.
         """
-        trait = self.trait(name)
+        trait = self.traits().get(name)
         super(Component, self).remove_trait(name)
         self.config_changed()
         try:
@@ -420,6 +420,7 @@ class Component (Container):
             conn_list = []
             exprs = self._get_expr_names()
             selfname = self.name
+            traits = self.traits()
             for name in exprs:
                 exprobj = getattr(self, name)
                 if isinstance(exprobj, DumbDefault):
@@ -431,7 +432,7 @@ class Component (Container):
                     cnames = []
                     for entry in exprobj:
                         cnames += entry.get_referenced_compnames()
-                if self.trait(name).iotype == 'in':
+                if traits[name].iotype == 'in':
                     for cname in cnames:
                         conn_list.append((cname, selfname))
                 else:
@@ -747,7 +748,7 @@ class Component (Container):
                           isinstance(obj.parent, Component):
                         rel_path = join(obj.directory, rel_path)
                         obj = obj.parent
-                elif top.trait('_rel_dir_path'):
+                elif '_rel_dir_path' in top.traits():
                     top.warning('No parent, using saved relative directory')
                     rel_path = top._rel_dir_path  # Set during save_to_egg().
                 else:
