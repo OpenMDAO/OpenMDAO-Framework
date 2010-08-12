@@ -208,7 +208,6 @@ class MetaModel(Component):
         on the includes and excludes lists.
         """
         if name in self._mm_class_traitnames:
-            self._logger.warning("Name collision for '%s' between model and MetaModel." % name)
             return False
         if self.includes and name not in self.includes:
             return False

@@ -25,7 +25,8 @@ class HasConstraintsTestCase(unittest.TestCase):
         try:
             self.asm.driver.add_constraint('comp1.qq < comp1.b')
         except ValueError as err:
-            self.assertEqual(str(err), '')
+            self.assertEqual(str(err), 
+                "Invalid expression 'comp1.qq': comp1: cannot get valid flag of 'qq' because it's not an io trait.")
         else:
             self.fail('expected ValueError')
         

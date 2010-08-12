@@ -40,7 +40,7 @@ def _parse_constraint(expr_string):
     for relation in ['>=','<=','==','>','<','=']:
         parts = expr_string.split(relation)
         if len(parts) > 1:
-            return (parts[0], relation, parts[1])
+            return (parts[0].strip(), relation, parts[1].strip())
     else:
         return (expr_string, '>', '0')
     
