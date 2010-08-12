@@ -111,7 +111,7 @@ class Assembly (Component):
         """Retrieves the named trait, attempting to create a PassthroughTrait
         on-the-fly if the specified trait doesn't exist.
         """
-        trait = self.trait(pathname)
+        trait = self.traits().get(pathname)
         if trait is None:
             newtrait = self.create_passthrough(pathname)
             if iotype is not None and iotype != newtrait.iotype:
@@ -335,9 +335,6 @@ class Assembly (Component):
         """
         self.update_inputs('@out', outnames)
         
-    #def push_data(self, compname):
-        #self.comp_graph.push_data(compname, self)
-
     def get_valids(self, names):
         """Returns a list of boolean values indicating whether the named
         attributes are valid (True) or invalid (False). Entries in names may
@@ -345,8 +342,9 @@ class Assembly (Component):
         self, but no deeper in the hierarchy than that.
         """
         valids = []
+        traits = self.traits()
         for name in names:
-            if self.trait(name):
+            if name in traits:
                 valids.append(self.get_valid(name))
             else:
                 tup = name.split('.', 1)
