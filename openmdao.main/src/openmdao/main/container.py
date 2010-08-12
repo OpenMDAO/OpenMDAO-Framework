@@ -354,7 +354,12 @@ class Container(HasTraits):
         the trait has a 'copy' metadata attribute that is not None. Possible
         values for 'copy' are 'shallow' and 'deep'.
         """
-        trait = self.trait(name)
+        parts = name.split('.', 1)
+        if len(parts) > 1:
+            obj = getattr(self, parts[0])
+            return obj.get_wrapped_attr(parts[1])
+
+        trait = self.traits().get(name)
         if trait is None:
             self.raise_exception("trait '%s' does not exist" %
                                  name, TraitError)
@@ -410,7 +415,7 @@ class Container(HasTraits):
             self.raise_exception(
                 'remove does not allow dotted path names like %s' %
                                  name, ValueError)
-        trait = self.trait(name)
+        trait = self.traits().get(name)
         if trait is not None:
             # for Instance traits, set their value to None but don't remove
             # the trait
@@ -582,7 +587,7 @@ class Container(HasTraits):
             obj = getattr(self, parts[0])
             return obj.get_metadata(parts[1], metaname)
             
-        t = self.trait(traitpath)
+        t = self.traits().get(traitpath)
         if not t:
             self.raise_exception("Couldn't find trait %s" % traitpath,
                                  AttributeError)
@@ -661,7 +666,7 @@ class Container(HasTraits):
             src = None
         else:
             src = self._sources.get(name, None)
-        trait = self.trait(name)
+        trait = self.traits().get(name)
         if trait:
             if trait.iotype != 'in' and src is not None and src != srcname:
                 self.raise_exception(
@@ -942,7 +947,7 @@ class Container(HasTraits):
             obj = self
             for name in names:
                 if isinstance(obj, HasTraits):
-                    objtrait = obj.trait(name)
+                    objtrait = obj.traits().get(name)
                 else:
                     objtrait = None
                 obj = getattr(obj, name)
@@ -996,7 +1001,7 @@ class Container(HasTraits):
         """Retrieves the named trait, attempting to create it on-the-fly if
         it doesn't already exist.
         """
-        trait = self.trait(name)
+        trait = self.traits().get(name)
         if trait:
             return trait
         try:
@@ -1014,7 +1019,7 @@ class Container(HasTraits):
         """
         if alias is None:
             alias = path
-        oldtrait = self.trait(alias)
+        oldtrait = self.traits().get(alias)
         if oldtrait is None:
             newtrait = self._build_trait(path, iotype=io_status, trait=trait)
             self.add_trait(alias, newtrait)
