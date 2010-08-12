@@ -16,8 +16,6 @@ from openmdao.util.filewrap import FileParser
 
 from nastran_replacer import NastranReplacer
 from nastran_maker import NastranMaker
-from nastran_output import NastranOutput
-from nastran_output_helpers import *
 from nastran_parser import NastranParser
 from nastran_util import stringify, nastran_replace_inline
 
@@ -187,6 +185,11 @@ class NastranComponent(ExternalCode):
 
         tmpfh.close()
 
+        # what is the new file called?
+        self.output_filename = path.join(tmpdir, "input.out")
+
+        # perhaps this should be logged, or something
+        print self.output_filename
 
         # Then we run the nastran file
         self.command = self.nastran_command + " " + \
@@ -199,12 +202,6 @@ class NastranComponent(ExternalCode):
         super(NastranComponent, self).execute()
 
         # And now we parse the output
-
-        # what is the new file called?
-        self.output_filename = path.join(tmpdir, "input.out")
-
-        # perhaps this should be logged, or something
-        print self.output_filename
 
         filep = FileParser()
         filep.set_file(self.output_filename)
@@ -221,13 +218,11 @@ class NastranComponent(ExternalCode):
                                    self.output_filename)
 
 
-        output = NastranOutput(filep)
-
         for output_name, output_trait in output_variables.iteritems():
-            # We run trait.nastran_func on filep and output and get the
+            # We run trait.nastran_func on filep and get the
             # final value we want
             setattr(self, output_name,
-                    output_trait.nastran_func(filep, output))
+                    output_trait.nastran_func(filep))
 
 
         # This is the grid parser.

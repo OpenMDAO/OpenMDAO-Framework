@@ -108,8 +108,10 @@ class Bar3Static(NastranComponent):
     #frequency = Float(0.1, iotype='out', units='Hz',
     #                    desc='Frequency in Hertz')
 
-    def mass(filep, output):
-        return output.masses[0]
+    def mass(filep):
+        filep.reset_anchor()
+        filep.mark_anchor("MASS AXIS SYSTEM (S)")
+        return filep.transfer_var(1, 2)
 
     weight = Float(0., nastran_func=mass, iotype='out', units='lb',
                         desc='Weight of the structure')

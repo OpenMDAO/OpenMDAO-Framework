@@ -31,7 +31,7 @@ class TestStringify(unittest.TestCase):
             self.cmp_(-i)
 
     def test_stress(self):
-        for i in range(100000):
+        for i in range(10000):
             a = random.uniform(- 10 ** 10, 10 ** 10)
             self.cmp_(a)
             self.cmp_(-a)
