@@ -21,6 +21,9 @@ from openmdao.main.uncertain_distributions import convert_norm_dist
 
 from openmdao.examples.singleEI.branin_component import BraninComponent
 
+from openmdao.util.decorators import add_delegate
+from openmdao.main.hasstopcond import HasStopConditions
+
 class Broadcaster(Component): 
     x_in = Float(iotype="in",low=-5,high=10)
     x_out = Float(iotype="out")
@@ -32,6 +35,7 @@ class Broadcaster(Component):
         self.x_out = self.x_in
         self.y_out = self.y_in
         
+@add_delegate(HasStopConditions)
 class Iterator(Driver):
     iterations = Int(10,iotype="in")
     
@@ -40,9 +44,11 @@ class Iterator(Driver):
     
     def continue_iteration(self):
         self._iterations += 1
-        print 'Iter'
-        if (self._iterations > 1) and (analysis.EI_driver.EI <= .03): return False
-        if self._iterations <= self.iterations: return True
+        #print 'Iter'
+        if (self._iterations > 1) and self.should_stop():
+            return False
+        if self._iterations <= self.iterations: 
+            return True
         
         return False
     
@@ -94,6 +100,7 @@ class Analysis(Assembly):
         
         self.add("iter",Iterator())
         self.iter.iterations = 30
+        self.iter.add_stop_condition('EI_driver.EI <= .03')
         
         #Iteration Heirarchy
         self.driver.workflow.add([self.DOE_trainer,self.iter])

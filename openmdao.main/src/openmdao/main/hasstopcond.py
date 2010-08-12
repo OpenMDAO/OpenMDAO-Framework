@@ -44,9 +44,7 @@ class HasStopConditions(object):
         return self._stop_conditions.keys()
 
     def eval_stop_conditions(self): 
-        """Returns a list of tuples of the 
-        form (lhs, rhs, relation, is_violated)
-        """
+        """Returns a list of evaluated stop conditions."""
         return [c.evaluate() for c in self._stop_conditions.values()]
     
     def should_stop(self):
