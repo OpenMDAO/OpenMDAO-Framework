@@ -26,6 +26,14 @@ from openmdao.lib.traits.int import Int
 from openmdao.lib.traits.array import Array
 
 class NastranComponent(ExternalCode):
+    """All Nastran-capable components should be subclasses of NastranComponent
+
+    By subclassing NastranComponent, any component should have easy access
+    to NastranMaker, NastranReplacer, and NastranParser. Your subclass
+    must specify how to handle the input and output variables to NastranComponent
+    by specifying nastran specific attributes on the traits. All of these
+    attributes are described in the README."""
+
 
     nastran_filename = Str(iotype="in", desc="Input filename with \
                                               placeholder variables")
@@ -291,6 +299,18 @@ class NastranComponent(ExternalCode):
                 rmtree(tmpdir_to_delete)
 
     def nastran_maker_hook(self, maker):
-        # This class can be subclasses if you want to dynamically
-        # add variables with NastranMaker
+        """A subclass can override this function to dynamically
+        add variables to NastranMaker.
+
+        Parameters
+        ----------
+        maker: NastranMaker object
+            This NastranMaker object already has all the variables that
+            were specified in the traits.
+
+        Notes
+        -----
+        The return will be ignored. Right after this function exits
+        the Nastran input file will be written out to a file.
+        """
         pass

@@ -1,15 +1,43 @@
+"""Defines helpful functions that are used in conjunction with
+NastranComponent"""
 import re
 
 # we have to replace the old_string and it's entire block
 # with the new string in the same block
 def nastran_replace_inline(big_string, old_string, new_string):
+    """Find a string and replace it with another in one big string.
+
+    In big_string (probably a line), find old_string and replace
+    it with new_string. The trick is that because a lot of Nastran
+    is based on 8 character blocks, this will find the 8 character block
+    currently occupied by old_string and replace that entire block
+    with new_string.
+
+    Parameters
+    ----------
+    big_string, old_string, new_string: str
+
+    """
     index = big_string.find(old_string)
     block = index / 8
-    offset = index % 8
-    return big_string[:8*block] + new_string.ljust(8) + big_string[8*block+8:]
+    return big_string[:8*block] + new_string.ljust(8) + \
+           big_string[8*block+8:]
 
 
 def stringify(thing, length=8):
+    """Convert thing to a string of a certain length.
+
+    This function tries to make the best use of space. For
+    integers and floaters, it will try to get the most sig-
+    nicant digits while staying within ``length''. For
+    everything else, we just try to stick in a string.
+
+    Parameters
+    ----------
+    thing : anything
+        What we want to convert to a string.
+
+    """
     if len(str(thing)) <= length:
         return str(thing)
 
@@ -31,15 +59,18 @@ def stringify(thing, length=8):
         else:
             return str(thing)[:length-1] + "."
 
-    for i in range(length-4,0,-1):
-        format = "%." + str(i) + "e"
-        possible = (format % thing).replace("e-0", "-").replace("e+0", "+")
+    for i in range(length-4, 0, -1):
+        myformat = "%." + str(i) + "e"
+        possible = (myformat % thing).replace("e-0", "-").replace("e+0", "+")
         possible = possible.replace("e", "")
         if len(possible) <= length:
             return possible
 
     raise RuntimeError("Unable to reduce " + str(thing) + \
-                       " to " + str(length) + " characters wide.")
+                       " to " + str(length) + " characters wide." + \
+                       " If it's not a integer of a float, and just" + \
+                       " some string that is too long, then this" + \
+                       " function will not help you.")
 
 
 

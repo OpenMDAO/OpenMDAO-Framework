@@ -1,9 +1,12 @@
-import sys
+"""Defines NastranMaker, an intelligent bulk data replacer
+for Nastran files"""
 import re
 from nastran_util import stringify
 
 class NastranMaker(object):
-    """
+    """A object that performs specified replacements conforming
+    to the Nastran format.
+
     The goal of NastranMaker is to output a nastran file with
     a set of variables replaced. It takes an existing nastran file
     and variables. In order to retain as much data as possible,
@@ -16,12 +19,43 @@ class NastranMaker(object):
         self.text = text
         self.names = {}
 
-    def set(self, name, id, fieldnum, value):
-        self.names.setdefault((name, id), []).append({"fieldnum": fieldnum, "value":value})
+    def set(self, name, cid, fieldnum, value):
+        """Records what should be replaced where.
 
-    # attrs is a list of dictionaries that have two items
-    # 1: fieldnum, 2: value
-    def _nastran_set(self, name, id, attrs, unique_int):
+        We don't actually want to do the replacing when we
+        are given the variables to replace. Instead, we'd like
+        to do all the replacing at one time. Therefore, this
+        function just records what should be replaced.
+
+        Paramters
+        ---------
+        name: str
+        cid: int or str
+            Specifies the id of the card
+        fieldnum: int
+            What field should we modify?
+        value: thing that can be passed to str
+            What value should we put in?
+        """
+        self.names.setdefault((name, cid), []).append({"fieldnum": fieldnum, "value":value})
+
+    def _nastran_set(self, name, cid, attrs, unique_int):
+        """We go through the text that we have and make
+        the needed substitution.
+
+        Parameters
+        ----------
+        name: str
+        cid: int or str
+            Specifies the id of the card
+        attrs: [{fieldnum: value_to_insert}]
+            We may have to change a few fields for a given
+            line. Those changes are stored in attrs.
+        unique_int: int
+            This integer is needed for writing out the
+            continuations in the Nastran file. Must be
+            unique within the file (!beware)
+        """
         card = None
         for index, line in enumerate(self.text):
             if line.startswith(name):
@@ -29,7 +63,7 @@ class NastranMaker(object):
                 if match and \
                        (match.group("name") == name or \
                         match.group("name") == name + "*") \
-                        and match.group("num") == str(id):
+                        and match.group("num") == str(cid):
                     if not card:
                         card = index
                     else:
@@ -39,7 +73,7 @@ class NastranMaker(object):
                                         " id: " + match.group("num"))
 
         if card is None:
-            raise RuntimeError("Could not find card " + name + " with id " + str(id))
+            raise RuntimeError("Could not find card " + name + " with id " + str(cid))
 
         # are we dealing with a long card?
         long_card = False
@@ -117,13 +151,36 @@ class NastranMaker(object):
         #print "\n".join(new_rows)
         return unique_int
 
-    # This changes self.text
     def _output(self, unique_id):
-        for (name, id), attrs in self.names.iteritems():
-            unique_id = self._nastran_set(name, id, attrs, unique_id)
+        """A little helper that just commits all the changes
+        that should be made.
 
-    # This changes self.text and then prints self.text to a file
+        Notes
+        -----
+        This changes self.text"""
+        for (name, cid), attrs in self.names.iteritems():
+            unique_id = self._nastran_set(name, cid, attrs, unique_id)
+
     def write_to_file(self, file_handler, unique_int=10001):
+        """After specifying the substitutions that should be made,
+        write out the finished product.
+
+        Parameters
+        ----------
+        file_handler: file-like object
+            Should provide a write and close function
+
+        unique_int: int
+            Should be unique within the entire input file for Nastran
+            to work
+
+        Notes
+        -----
+        This changes self.text and then prints self.text to a file. So,
+        calling write_to_file more than once is silly, although it shouldn't
+        actually change anything. Also note that the unique_int should
+        be unique within the entire file."""
+
         self._output(unique_int)
         file_handler.write("\n".join(self.text))
         file_handler.close()
@@ -131,33 +188,34 @@ class NastranMaker(object):
 
 
 def _items_to_long_form(items, unique_int):
-        # make sure name is in long form
-        if "*" not in items[0]:
-            items[0] = items[0].strip() + "*"
+    """Convert to Nastran long form.
 
-        while len(items):
-            if items[-1] == "":
-                del items[-1]
-            else: break
+    This is a helper method to convert a list of items
+    to a list of strings that represent Nastran long form."""
+    if "*" not in items[0]:
+        items[0] = items[0].strip() + "*"
 
-        # insert some continuations
-        divisions = 4
-        index = 1
-        while index < len(items)-divisions:
-            index += divisions
-            continuation = "*" + str(unique_int)
-            unique_int += 1
-            items.insert(index, continuation)
-            items.insert(index, continuation)
-            index += 2
+    while len(items):
+        if items[-1] == "":
+            del items[-1]
+        else: break
 
-        final = []
-        current_row = -1
-        for index, item in enumerate(items):
-            if index % 6 == 0:
-                final.append(item.ljust(8))
-                current_row += 1
-            else:
-                final[-1] += item.ljust(16)
+    # insert some continuations
+    divisions = 4
+    index = 1
+    while index < len(items)-divisions:
+        index += divisions
+        continuation = "*" + str(unique_int)
+        unique_int += 1
+        items.insert(index, continuation)
+        items.insert(index, continuation)
+        index += 2
 
-        return unique_int, final
+    final = []
+    for index, item in enumerate(items):
+        if index % 6 == 0:
+            final.append(item.ljust(8))
+        else:
+            final[-1] += item.ljust(16)
+
+    return unique_int, final

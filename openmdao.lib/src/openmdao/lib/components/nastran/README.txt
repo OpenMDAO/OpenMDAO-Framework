@@ -1,6 +1,6 @@
 
 The MSC Nastran Component
----------------------
+-------------------------
 
  * Overview
 
@@ -24,6 +24,8 @@ The main shortcoming, and the reason why it is the crude way, is that the input 
 
 There is a secondary mode of operation. If you specify a variable that starts with an asterisk (ie, ``%*myvar''), NsatranReplacer will overwrite the variable and keep on overwritting for the length of the value. This is useful when you want to insert a value that doesn't correspond to an 8 character wide block. The best example is that if you wanted to replace the number in the line ``METHOD 103'', if you tried replacing it with a normal variable, you would either get ``METHOD 1XXXXXXXX'' or ``XXXXXXXX03'' if we insert ``XXXXXXXX''. Using overwrite variables, we can insert ``104'' in the expression ``METHOD %*n'' and it will yield ``METHOD 104''.
 
+The asterisk variables are very useful when replacing variables that aren't in the bulk data section. When you want to replace a bulk value (in a card), NastranMaker is much more appropriate since it understands the bulk data format. Replacing bulk data with NastranReplacer is highly discouraged.
+
  * NastranMaker
 
 This way does not rely on placeholder variables, instead you must give it the keyword, the id, and the fieldnum to change. NastranMaker finds the right card to modify and will convert the entire card to long form. That way, you get 16 characters to express numbers. It also allows you to keep the Nastran input unmodified, instead of littering it with placeholder variables.
@@ -36,7 +38,13 @@ An example:
                nastran_id="1",
                nastran_fieldnum=3)
 
-Note that the Nastran_card (the keyword) and the id must be strings, while the fieldnum must be an integer.
+Note that the Nastran_card (the keyword) and the id must be strings, while the fieldnum must be an integer. In order to make sense of what fields to change, an understanding of Nastran is required. Each field specifies a different attribute which can be modified. In order to find out which fields modify which attributes, consult Nastran documentation.
+
+In general, a sample input line will look something like:
+
+    PSHELL         8       4       3
+
+Here, PSHELL is the keyword, or the type of thing that you're modifying. The first number is usually the id, so in this case, 8. In this example, there are two attributes, with values 4 and 3, that control something about this PSHELL. Just as an example, for a PSHELL, the second argument (4) would dictate what material card we're referencing and the third argument (3) would specify the thickness.
 
  - Parsing Nastran's output
 
@@ -60,7 +68,7 @@ NastranParser tries to parse the grid out of each page of output. It identifies 
               nastran_constraints={"column name" : "value"},
               nastran_columns=["column name"])
 
-Once these values are specified, NastranParser will try and find the header in the output, and then apply the constraints to the grid and yield a smaller grid with the viable rows and the acceptable columns (specified by nastran_columns)
+Once these values are specified, NastranParser will try and find the header in the output, and then apply the constraints to the grid and yield a smaller grid with the viable rows and the acceptable columns (specified by nastran_columns). Note that ``a'' is a two dimensional python array. Each row will be a row in a grid, and will only contain the columns listed in ``nastran_columns''.
 
 NastranParser accepts the name of the header as a string of all lower case letters with sane spacing as well as the header presented in the output file (stripped of spaces at the beginning and end). Do note that as of this writing, if it cannot find the header, it will break. If it cannot find the column names you specify, it will break. Right now, even though the user specifies a smaller grid of values they want returned, the value of the variable will only be result[0][0]. This will change in future versions.
 
@@ -72,3 +80,17 @@ One of the main reasons for supporting retrieving multiple columns is that you c
                                               ["T2"])
 
 Do note that displacement_vector is a two dimensional array. In this example it has one value (so [[value]]), but if allowed more columns or more rows, we would get a bit bigger two dimensional array.
+
+self.parser.get has an optional argument that is useful in parsing grids that have more than one value per column. A good example can be found in test/practice-grid.row-width.txt. As you can see, if we wanted to select the data for element id 1, we actually want those 15 rows of data. So, we invoke ``get'' with a the optional argument, ``row_width''. By using row_width, once we find a row that satisfies our constraints, it'll include the remaining (row_width-1) rows in the output.
+
+It is important to understand how NastranParser works. It is a heuristic based parser. This means that the developers have built something that correctly identifies most grids that they have thrown at it. Since there is no official Nastran output specification, it might not work on your grid. This is a known problem without a known solution.
+
+Another perhaps more pressing problem is that NastranParser uses the data in the grid to help the parsing task. This means that if the data changes significantly, you _could_ get different parses. While this is not very likely, it is a possibility. Currently, if this happens, the hope is that the ``get'' function will break because you'll try to access a column that NastranParser doesn't recognize. While this is a real problem, it is not show stopping because most of the time NastranParser will parse the grid correctly regardless and because under most runs, the data doesn't undergo drastic changes. One example of a drastic change would be omitting an entire column of values during one execution, and then having values in the next iteration. Another example is going from a floating point number to 0.0. The problem is that the floating point numbers are long and usually block unnecessary columns from forming. But if there is a column of ``0.0'', the parsing problem might think there's an extra column. If you are worried about inconsistencies in parsing, you could isolate the particular grid you are parsing and change.
+
+ - NastranComponent
+
+We've gone over the parts that make NastranComponent work, but what about NastranComponent itself? Eseentially, it just passes off the work to its subparts. But there are a few things that you should be aware of in order to take maximum advantage of its utilities.
+
+ * nastran_maker_hook
+
+In order to use NastranMaker without actually defining the traits in your subclass, you can implement the function nastran_maker_hook in your subclass. This function will be called with one argument, the NastranMaker object. It is called after it has processes all the input variables that are visible on traits. The function's return is ignored. Right after it finishes, NastranMaker writes out the Nastran file which will be run.

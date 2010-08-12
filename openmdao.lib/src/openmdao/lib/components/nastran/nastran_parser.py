@@ -1,5 +1,5 @@
-
-import sys
+"""Defines NastranParser, an object that provides a way
+of parsing and accessing the data in the grids in Nastran's output."""
 import re
 import operator
 import copy
@@ -7,12 +7,36 @@ import copy
 NORMAL_LINE_LEN = 100
 
 class NastranParser(object):
+    """Provides access to the grids of Nastran output"""
 
     def __init__(self, text):
+        """
+        Give NastranParser the text to process.
+
+        Parameters
+        ----------
+        text : [str]
+            These lines should not include newlines.
+        """
         # text should be array of lines
         self.text = text
+        self.headers = None
+        self.subcases = None
+        self.grids = None
 
     def parse(self):
+        """Parse the information!
+
+        Try to parse grids and headers from the outfile
+        that was given to us before hand. The basic idea
+        is that we split the entire file by pages. Nastran
+        conveniently labels sections of the output by pages.
+        Each of these pages is expected to have one grid. We
+        parse it by trying to find location of the columns.
+        This is done completely heuristically because of
+        the inconsistency in Nastran's output specification."""
+
+
         # parse into pages
         pages = [[]]
         for line in self.text:
@@ -105,8 +129,27 @@ class NastranParser(object):
         self.headers = headers
         self.subcases = subcases
 
-    # a helper functiont to parser the grid
     def _parse_grid(self, grid):
+        """A helper function whose job is to parse the grid.
+
+        This function is meant to parse the grid.
+
+        Parameters
+        ----------
+        grid: [str]
+            no newlines.
+
+        Notes
+        -----
+        The reason it was separated from the main parse
+        function is two fold. First, parse was enormous
+        and had to be dismembered. Second,
+        _parse_grid will sometimes call itself on a smaller grid
+        (the same grid but only one line of headers, instead of all
+        of them) and therefore, we need the grid-getting behavior
+        isolated.
+
+        """
         if len(grid) == 0:
             return
 
@@ -194,9 +237,9 @@ class NastranParser(object):
         for line in grid:
             split_grid.append([])
             last_column = columns[0]
-            for c in columns[1:]:
-                split_grid[-1].append(line[last_column:c].strip())
-                last_column = c
+            for col in columns[1:]:
+                split_grid[-1].append(line[last_column:col].strip())
+                last_column = col
 
         # this is not a grid
         if len(split_grid) == 0 or len(split_grid[0]) == 0:
@@ -420,11 +463,50 @@ class NastranParser(object):
     # row width is to enable you to specify a wide row (perhaps each
     # id has two values for a certain column
     def get(self, header, subcase, constraints, column_names, row_width=1):
+        """
+        Get some data from the grid that we parsed previously.
+
+        You specify the grid you want with the header and a subcase.
+        If you don't care about the subcase, set it to None. You
+        can also give it a dictionary of constrains and also specify
+        which columns you'd liked returned. The row_width optional
+        attribute is useful if you have something that looks like:
+
+            ELEMENT ID    PRICES
+                     1      4.00
+                            5.00
+                     2     38.30
+                           60.00
+
+        As you can see, each element has two prices. In this case,
+        if we had a constraint that only selected the second element,
+        we would want both prices returned. Therefore, we would set
+        row_width to 2.
+
+        Parameters
+        ----------
+        header : str
+            This can be the actual header or a part of the header
+            you want to select
+        subcase : None or int
+            If None, then just take the first on you see.
+        constraints : { row_name : value }
+            A dictionary of constraints. str: str
+        column_names : [ column_name ] or "*"
+            Specify a list of column names, or the asterisk
+            character, for all of them.
+        row_width : int
+            Optional. Sometimes there are two values per
+            item, on difference rows. In that case, row_width=2.
+            If you specify the row_width,
+            the constraints won't get rid of good data.
+        """
+
         # find the grid we're talking about my matching
         # the header
         myindex = None
         maybeindex = None # for partial matches
-        for index, grid in enumerate(self.grids):
+        for index in range(len(self.grids)):
             if self.headers[index]["actual"].strip() == header or \
                    self.headers[index]["clean"] == header:
                 if not subcase or \
@@ -458,7 +540,7 @@ class NastranParser(object):
             raise RuntimeError("The grid you are wanted (under header " +\
                                self.headers[myindex] + ") could not or " +\
                                "was not parsed.")
-        available_rows = range(1,len(mygrid)) # ignore header
+        available_rows = range(1, len(mygrid)) # ignore header
         to_delete = set([])
         for cname, cvalue in constraints.iteritems():
             column_num = mygrid[0].index(cname)
@@ -483,7 +565,7 @@ class NastranParser(object):
         else:
             try:
                 column_nums = map(mygrid[0].index, column_names)
-            except ValueError, ve:
+            except ValueError:
                 print "Could not find column names", column_names, \
                       "in", mygrid[0]
                 raise
@@ -496,7 +578,7 @@ class NastranParser(object):
 
         if row_width > 1:
             big_result = []
-            for i in range(0, row_width * int(len(result)/row_width),row_width):
+            for i in range(0, row_width * int(len(result)/row_width), row_width):
                 big_result.append([])
                 for j in range(row_width):
                     big_result[-1].append(result[i+j])
@@ -506,10 +588,18 @@ class NastranParser(object):
         return result
 
 
-# returns int between 0-200
-# 200 is a sure header... it's really just that big
-# numbers are more likely than smaller numbers
 def _header_score(line, row):
+    """A helper function to assign the most likely headers.
+
+    Notes
+    -----
+    Teturns int between 0-200. 200 is a sure header...
+    but it's really just that big numbers are more
+    likely than smaller numbers to be good headers.
+
+    Criterion: how centered is it, is it in dumpcaps,
+    how many words does it have
+    """
     # if the line is done in dumbcaps, there
     # is a high probability it is a header
     if len(line.strip()) < 2:
@@ -542,11 +632,16 @@ def _header_score(line, row):
 
 
 def _is_dumbcaps(line):
+    """Is this line mostly in dumbcaps?
+
+    Dumbcaps is like so: ``D U M B   H E A D E R''.
+    """
     good = bad = 0
     seen_space = True
     for c in line:
         if c == ' ':
-            if not seen_space: good += 1
+            if not seen_space:
+                good += 1
             seen_space = True
         else:
             if not seen_space:
@@ -558,6 +653,7 @@ def _is_dumbcaps(line):
     return False
 
 def readable_header(line):
+    """Convert a header to something sane."""
     if line[0].isdigit():
         line = line[1:]
 
@@ -575,10 +671,23 @@ def readable_header(line):
         line = re.sub(" +", " ", line)
         return line.lower()
 
-# no overlapping sets of columns to merge
-# columns_to_merge should be of the form [(x,y), (w,z)]
-# where x<y<w<z
 def _merge_columns(grid, columns_to_merge):
+    """A helper function that merges columns
+    in a grid.
+
+    Parameters
+    ----------
+    grid : [[str]]
+    columns_to_merge : [(col1, col2)]
+        The columns must not overlap. Also, they must be
+        increasing. So if we had something like:
+        [(x,y), (w,z)], x<y<w<z must hold.
+
+    Note
+    ----
+    IMPORTANT. There must not be overlapping set of columns.
+    Also, the values should be monotonically increasing.
+    """
     # merge the values
     to_delete = set()
     for staying, coming in columns_to_merge:

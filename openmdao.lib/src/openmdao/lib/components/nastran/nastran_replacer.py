@@ -1,3 +1,5 @@
+"""Defines NastranReplacer, an object which provides a
+crude and simple search and replace function."""
 import re
 
 from nastran_util import stringify, nastran_replace_inline
@@ -5,18 +7,50 @@ from nastran_util import stringify, nastran_replace_inline
 variable_match = re.compile("%([*\w]+)")
 
 class NastranReplacer(object):
+    """A kind of dummy object that just replaces variables
+    in a text with their corresponding values."""
 
     def __init__(self, text):
+        """Give it the text.
+
+        Parameters
+        ----------
+        text : [str]
+            The strings should be the individual lines without
+            the newline
+        """
         self.text = text
 
     def replace(self, input_variables):
+        """
+        Replace the input_variables in the text with the
+        corresponding values.
+
+        Parameters
+        ----------
+        input_variables: {variable_name : value}
+            We want to replace the instances of variable_name
+            with value. variable_name should be a string; value
+            should be a strigafiable object. Note that although
+            the actual variables are specified like %varname in
+            the Nastran file, the variable name here should just
+            be ``varname''.
+
+        Notes
+        -----
+        Changes self.text. Running this twice should probably
+        error out since it wouldn't find the variables it was meant
+        to replace.
+
+        """
+
         # should be an array of lines
         nastran_text = self.text
 
         # we want all the variables in the nastran text
         all_variables = set()
 
-        for index, line in enumerate(nastran_text):
+        for line in nastran_text:
             matches = re.findall(variable_match, line)
             for match in matches:
                 if match in all_variables:
@@ -67,8 +101,8 @@ class NastranReplacer(object):
                 else:
                     new_nastran_text[-1] = \
                          nastran_replace_inline(new_nastran_text[-1],\
-                                                "%" + match, \
-                                                stringify(input_variables[match]))
+                             "%" + match, \
+                             stringify(input_variables[match]))
 
         self.text = new_nastran_text
 
