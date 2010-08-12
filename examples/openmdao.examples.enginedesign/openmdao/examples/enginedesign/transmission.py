@@ -52,7 +52,7 @@ class Transmission(Component):
     velocity = Float(0., iotype='in', units='mi/h',
                      desc='Current Velocity of Vehicle')
 
-    RPM = Float(1000., iotype='out', units='RPM',
+    RPM = Float(1000., iotype='out', units='rpm',
                      desc='Engine RPM')        
     torque_ratio = Float(0., iotype='out',
                          desc='Ratio of output torque to engine torque')        

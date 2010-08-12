@@ -20,10 +20,15 @@ def register_surface_probe(name, function, integrate):
     """
     Register a surface probe function.
 
-    - `name` is the name of the metric calculated.
-    - `function` is the function to call.  The passed arguments are \
-    ``(domain, surface, weights, reference_state)``.
-    - If `integrate`, then function values are integrated, not averaged.
+    name : string
+        The name of the metric calculated.
+
+    function : callable
+        The function to call.  The passed arguments are
+        ``(domain, surface, weights, reference_state)``.
+
+    integrate : bool
+        If True, then function values are integrated, not averaged.
     """
     _VARIABLES[name] = (integrate, function)
 
@@ -33,15 +38,23 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
     Calculate metrics on mesh surfaces.
     Currently only supports 3D structured grids with cell-centered data.
 
-    - `domain` is the :class:`Domain` to be processed.
-    - `surfaces` is a list of ``(zone_name,imin,imax,jmin,jmax,kmin,kmax)`` \
-    mesh surface specifications to be used for the calculation. \
-    Indices start at 0. Negative indices are relative to the end of the array.
-    - `variables` is a list of ``(metric_name, units)`` tuples. Legal metric \
-    names are 'area', 'mass_flow', 'corrected_mass_flow', 'pressure', \
-    'pressure_stagnation', 'temperature', and 'temperature_stagnation'.
-    - `weighting_scheme` specifies how individual values are weighted. \
-    Legal values are 'area' for area averaging and 'mass' for mass averaging.
+    domain : DomainObj
+        The domain to be processed.
+
+    surfaces : list
+        List of ``(zone_name,imin,imax,jmin,jmax,kmin,kmax)``
+        mesh surface specifications to be used for the calculation.
+        Indices start at 0. Negative indices are relative to the end of the
+        array.
+
+    variables : list
+        List of ``(metric_name, units)`` tuples. Legal metric names are
+        'area', 'mass_flow', 'corrected_mass_flow', 'pressure',
+        'pressure_stagnation', 'temperature', and 'temperature_stagnation'.
+
+    weighting_scheme : string
+        Specifies how individual values are weighted. Legal values are
+        'area' for area averaging and 'mass' for mass averaging.
 
     Returns a list of metric values in the order of the `variables` list.
     """

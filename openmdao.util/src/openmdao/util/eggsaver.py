@@ -43,10 +43,6 @@ import zc.buildout.easy_install
 from openmdao.util.log import NullLogger
 from openmdao.util import eggobserver, eggwriter
 
-__all__ = ('save', 'save_to_egg',
-           'SAVE_YAML', 'SAVE_LIBYAML', 'SAVE_PICKLE', 'SAVE_CPICKLE',
-           'EGG_SERVER_URL')
-
 # Save formats.
 SAVE_YAML    = 1
 SAVE_LIBYAML = 2
@@ -115,17 +111,35 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     recorded in an 'egg-info/openmdao_orphans.txt' file.  Also creates and
     saves loader scripts for each entry point.
 
-    - `entry_pts` is a list of (obj, obj_name, obj_group) tuples. \
-      The first of these specifies the root object and package name.
-    - `version` defaults to a timestamp of the form 'YYYY.MM.DD.HH.mm'.
-    - `py_dir` is the (root) directory for local Python files. \
-      It defaults to the current directory.
-    - `src_dir` is the root of all (relative) `src_files`.
-    - `dst_dir` is the directory to write the egg in.
-    - `fmt` and `proto` are passed to :meth:`save`.
-    - If `use_setuptools` is True, then :func:`eggwriter.write_via_setuptools` \
-      is called rather than :func:`eggwriter.write`.
-    - `observer` will be called via an :class:`EggObserver` intermediary.
+    entry_pts : list
+        List of ``(obj, obj_name, obj_group)`` tuples.
+        The first of these specifies the root object and package name.
+
+    version : string
+        Defaults to a timestamp of the form 'YYYY.MM.DD.HH.mm'.
+
+    py_dir : string
+        The (root) directory for local Python files.
+        It defaults to the current directory.
+
+    src_dir : string
+        The root of all (relative) `src_files`.
+
+    dst_dir : string
+        The directory to write the egg in.
+
+    fmt : int
+        Passed to :meth:`save`.
+
+    proto : int
+        Passed to :meth:`save`.
+
+    use_setuptools : bool
+        If True, then :func:`eggwriter.write_via_setuptools` is called rather
+        than :func:`eggwriter.write`.
+
+    observer : callable
+        Will be called via an :class:`EggObserver` intermediary.
 
     Returns ``(egg_filename, required_distributions, orphan_modules)``.
     """
@@ -833,6 +847,21 @@ def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None):
     The format can be supplied in case something other than :mod:`cPickle`
     is needed.  For the :mod:`pickle` formats, a `proto` of -1 means use the
     highest protocol.
+
+    root : object
+        The root of the object tree to save
+
+    outstream : file or string
+        Stream or filename to save to.
+
+    fmt : int
+        What format to save the object state in.
+
+    proto : int
+        What protocol to use when pickling.
+
+    logger : Logger
+        Used for recording progress, etc.
     """
     logger = logger or NullLogger()
 
