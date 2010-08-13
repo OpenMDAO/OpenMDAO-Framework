@@ -27,8 +27,17 @@ class GridCoordinates(Vector):
     def is_equivalent(self, other, logger, tolerance=0.):
         """
         Test if self and `other` are equivalent.
-        `tolerance` is the maximum relative difference in array values
-        to be considered equivalent.
+
+        other : GridCoordinates
+            The grid to check against.
+
+        logger : Logger or None
+            Used to log debug messages that will indicate what if anything is
+            not equivalent.
+
+        tolerance : float
+            The maximum relative difference in array values to be considered
+            equivalent.
         """
         if not isinstance(other, GridCoordinates):
             logger.debug('other is not a GridCoordinates object.')
@@ -47,7 +56,9 @@ class GridCoordinates(Vector):
     def make_cartesian(self, axis='z'):
         """
         Convert to cartesian coordinate system.
-        `axis` specifies which is the cylinder axis ('z' or 'x').
+
+        axis : string
+            Specifies which is the cylinder axis ('z' or 'x').
         """
         r_flat = self.r.flat
         t_flat = self.t.flat
@@ -85,7 +96,9 @@ class GridCoordinates(Vector):
     def make_cylindrical(self, axis='z'):
         """
         Convert to cylindrical coordinate system.
-        `axis` specifies which is the cylinder axis ('z' or 'x').
+
+        axis : string
+            Specifies which is the cylinder axis ('z' or 'x').
         """
         self.r = self.x.copy()
         self.t = self.x.copy()
@@ -119,7 +132,12 @@ class GridCoordinates(Vector):
             raise ValueError("axis must be 'z' or 'x'")
 
     def translate(self, delta_x, delta_y, delta_z):
-        """ Translate coordinates. """
+        """
+        Translate coordinates.
+
+        delta_x, delta_y, delta_z : float
+            Amount of translation along the corresponding axis.
+        """
         if delta_x:
             if self.x is None:
                 raise AttributeError('no X coordinates')

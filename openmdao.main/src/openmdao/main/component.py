@@ -32,7 +32,11 @@ class SimulationRoot (object):
     @staticmethod
     def chroot (path):
         """Change to directory `path` and set the singleton's root.
-        Normally not called but useful in special situations."""
+        Normally not called but useful in special situations.
+
+        path : string
+            Path to move to.
+        """
         os.chdir(path)
         SimulationRoot.__root = os.getcwd()
 
@@ -45,7 +49,11 @@ class SimulationRoot (object):
 
     @staticmethod
     def legal_path (path):
-        """Return True if `path` is legal (descendant of our root)."""
+        """Return True if `path` is legal (descendant of our root).
+
+        path : string
+            Path to check.
+        """
         if SimulationRoot.__root is None:
             SimulationRoot.__root = os.getcwd()
         return path.startswith(SimulationRoot.__root)
@@ -77,26 +85,14 @@ class DirectoryContext(object):
 class Component (Container):
     """This is the base class for all objects containing Traits that are \
     accessible to the OpenMDAO framework and are "runnable."
-
-    - If `create_instance_dir` is True, then this component needs a unique \
-      per-instance execution directory.  The created directory is filled \
-      based on `external_files` and `directory` (which should contain the \
-      required files).
-    - `directory` is a string specifying the directory to execute in. \
-      If it is a relative path, it is relative to its parent's directory.
-    - `external_files` is a list of :class:`FileMetadata` objects for external \
-      files used by the component.  The *path* attribute can be a \
-      :mod:`glob`-style pattern.
     """
 
     implements(IComponent)
     
-    create_instance_dir = Bool(False, desc='If True, create a unique'
-                               ' per-instance execution directory',
-                               iotype='in')
-    directory = Str('', desc='If non-blank, the directory to execute in.', 
-                    iotype='in')
-    external_files = List(FileMetadata)
+    directory = Str('', desc='If non-blank, the directory to execute in.')
+    external_files = List(FileMetadata,
+                          desc='FileMetadata objects for external files used'
+                               ' by this component')
         
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
@@ -112,6 +108,7 @@ class Component (Container):
         self._output_names = None
         self._container_names = None
         
+        self.create_instance_dir = False
         if directory:
             self.directory = directory
         
@@ -120,7 +117,7 @@ class Component (Container):
 
     @property
     def dir_context(self):
-        """Returns the :class:`DirectoryContext` for this component."""
+        """The :class:`DirectoryContext` for this component."""
         if self._dir_context is None:
             self._dir_context = DirectoryContext(self)
         return self._dir_context
@@ -504,25 +501,45 @@ class Component (Container):
     def save_to_egg(self, name, version, py_dir=None, require_relpaths=True,
                     child_objs=None, dst_dir=None, fmt=SAVE_CPICKLE,
                     proto=-1, use_setuptools=False, observer=None):
-        """Save state and other files to an egg.  Typically used to copy all or
-        part of a simulation to another user or machine.  By specifying child
+        """Save state and other files to an egg. Typically used to copy all or
+        part of a simulation to another user or machine. By specifying child
         components in `child_objs`, it will be possible to create instances of
-        just those components from the installed egg.  Child component names
+        just those components from the installed egg. Child component names
         should be specified relative to this component.
 
-        - `name` must be an alphanumeric string.
-        - `version` must be an alphanumeric string.
-        - `py_dir` is the (root) directory for local Python files. \
-          It defaults to the current directory.
-        - If `require_relpaths` is True, any path (directory attribute,
-          external file, or file trait) which cannot be made relative to this \
-          component's directory will raise ValueError. Otherwise such paths \
-          generate a warning and the file is skipped.
-        - `child_objs` is a list of child objects for additional entry points.
-        - `dst_dir` is the directory to write the egg in.
-        - `fmt` and `proto` are passed to :meth:`eggsaver.save`.
-        - `use_setuptools` is passed to :meth:`eggsaver.save_to_egg`.
-        - `observer` will be called via an :class:`EggObserver`.
+        name : string
+            Name for egg, must be an alphanumeric string.
+
+        version : string
+            Version for egg, must be an alphanumeric string.
+
+        py_dir : string
+            The (root) directory for local Python files. It defaults to
+            the current directory.
+
+       require_relpaths : bool
+            If True, any path (directory attribute, external file, or file
+            trait) which cannot be made relative to this component's directory
+            will raise ValueError. Otherwise such paths generate a warning and
+            the file is skipped.
+
+        child_objs : list
+            List of child objects for additional entry points.
+
+        dst_dir : string
+            The directory to write the egg in.
+
+        fmt : int
+            Passed to :meth:`eggsaver.save`.
+
+        proto : int
+            Passed to :meth:`eggsaver.save`.
+
+        use_setuptools : bool
+            Passed to :meth:`eggsaver.save_to_egg`.
+
+        observer : callable
+            Will be called via an :class:`EggObserver`.
 
         After collecting files and possibly modifying their paths, this
         calls :meth:`container.save_to_egg`.
@@ -706,7 +723,30 @@ class Component (Container):
         the egg.  `name` is set when creating an instance via a factory.
         In this case, external files are copied to a `name` directory and the
         component's directory attribute set accordingly.  Existing files
-        are not overwritten.
+        are not overwritten. Returns the root object.
+
+        instream : file or string
+            Stream to load from.
+
+        fmt : int
+            Format of state data.
+
+        package : string
+            Name of package to look for `instream`, if `instream` is a string
+            that is not an existing file.
+
+        call_post_load : bool
+            If True, call :meth:`post_load`.
+
+        top_obj : bool
+            Set True if loading the default entry, False if loading a
+            child entry point object.
+
+        name : string
+            Name for the root object
+
+        observer : callable
+            Will be called via an :class:`EggObserver`.
         """
         observer = EggObserver(observer, logging.getLogger())
         try:
