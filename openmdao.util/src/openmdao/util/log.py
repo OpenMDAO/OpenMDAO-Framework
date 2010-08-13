@@ -51,11 +51,20 @@ LOG_CRITICAL = logging.CRITICAL
 # Root logger level (normally WARNING).
 logging.getLogger().setLevel(logging.DEBUG)
 
+# Ensure we can write to the log file.
+_filename = 'openmdao_log.txt'
+try:
+    _tmplog = open(_filename, 'w')
+except IOError:
+    _filename = 'openmdao_log_%d.txt' % os.getpid()
+else:
+    _tmplog.close()
+
 # Allow everything through, typical UNIX-ish timestamp, typical log format.
 logging.basicConfig(level=logging.NOTSET,
                     datefmt='%b %d %H:%M:%S',
                     format='%(asctime)s %(levelname)s %(name)s: %(message)s',
-                    filename='openmdao_log.txt',
+                    filename=_filename,
                     filemode='w')
 
 # Compress level names.

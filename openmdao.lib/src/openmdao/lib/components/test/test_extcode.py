@@ -168,6 +168,9 @@ class TestCase(unittest.TestCase):
         extcode.name = 'ExternalCode'
         extcode.timeout = 5
         extcode.command = 'python sleep.py 1'
+        extcode.external_files = [
+            FileMetadata(path='sleep.py', input=True, constant=True),
+        ]
 
         # Exercise check_save_load().
         retcode = check_save_load(extcode)

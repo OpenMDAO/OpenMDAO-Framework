@@ -89,8 +89,7 @@ class Component (Container):
 
     implements(IComponent)
     
-    directory = Str('', desc='If non-blank, the directory to execute in.', 
-                    iotype='in')
+    directory = Str('', desc='If non-blank, the directory to execute in.')
     external_files = List(FileMetadata,
                           desc='FileMetadata objects for external files used'
                                ' by this component')
