@@ -18,7 +18,7 @@ from enthought.traits.api import TraitError
 from openmdao.main.api import Assembly
 from openmdao.lib.api import Float, Instance
 
-from openmdao.examples.enginedesign.vehicle import Vehicle, IVehicle
+from openmdao.examples.enginedesign.vehicle import Vehicle
 
 
 # Settings for the EPA profile simulation
@@ -49,7 +49,7 @@ class DrivingSim(Assembly):
                           desc='Simulation time step size')
     
     # Sockets
-    vehicle = Instance(IVehicle, allow_none=True, 
+    vehicle = Instance(Vehicle, allow_none=False, 
                        desc='Socket for a Vehicle')
     
     # Outputs
@@ -68,11 +68,6 @@ class DrivingSim(Assembly):
     def _vehicle_changed(self, oldvehicle, newvehicle):
         """Callback whenever a new Vehicle is added to the DrivingSim
         """
-        
-        # If a vehicle is in already this socket, we need to remove the old
-        # connections in this assembly.
-        if oldvehicle is not None:
-            self.remove(oldvehicle)
         
         self.driver.workflow.add(newvehicle)
         
@@ -338,7 +333,7 @@ def test_it(): # pragma: no cover
     ttime = time.time()
     
     toplevel = DrivingSim()  
-    toplevel.vehicle = Vehicle()
+    toplevel.add('vehicle', Vehicle())
     toplevel.run()
     
     print "Time (0-60): ", toplevel.accel_time

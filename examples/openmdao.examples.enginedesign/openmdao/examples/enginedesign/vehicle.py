@@ -9,7 +9,7 @@
 
 # pylint: disable-msg=E0611,F0401
 
-from enthought.traits.api import Interface, implements
+from enthought.traits.api import Interface
 
 from openmdao.main.api import Assembly
 from openmdao.lib.api import Float
@@ -19,13 +19,8 @@ from openmdao.examples.enginedesign.chassis import Chassis
 from openmdao.examples.enginedesign.engine_wrap_c import Engine
 
     
-class IVehicle(Interface):
-    """A marker interface for a Vehicle."""
-    
 class Vehicle(Assembly):
     """ Vehicle assembly. """
-    
-    implements(IVehicle)
     
     tire_circumference = Float(75.0, iotype='in', units='inch', 
                                     desc='Circumference of tire (inches)')

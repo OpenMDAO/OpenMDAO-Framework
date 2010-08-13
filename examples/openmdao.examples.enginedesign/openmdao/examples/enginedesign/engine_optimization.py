@@ -28,7 +28,7 @@ class EngineOptimization(Assembly):
         self.add('driving_sim', DrivingSim())
         
         # Add Vehicle instance to vehicle socket
-        self.driving_sim.vehicle = Vehicle()
+        self.driving_sim.add('vehicle', Vehicle())
         
         # add DrivingSim to workflow
         driver.workflow.add(self.driving_sim)
