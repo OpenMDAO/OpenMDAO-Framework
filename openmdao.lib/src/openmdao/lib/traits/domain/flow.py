@@ -42,16 +42,24 @@ class FlowSolution(object):
                       doc='Number of ghost cells for each index direction.')
     @property
     def arrays(self):
+        """ List of scalar data arrays. """
         return self._arrays
 
     @property
     def vectors(self):
+        """ List of vector data. """
         return self._vectors
 
     def add_array(self, name, array):
         """
-        Add a :class:`numpy.ndarray` and bind to `name`.
+        Add a :class:`numpy.ndarray` of scalar data and bind to `name`.
         Returns the added array.
+
+        name : string
+            Name for the added array.
+
+        array : ndarray
+            Scalar data.
         """
         if hasattr(self, name):
             raise ValueError("name '%s' is already bound" % name)
@@ -63,6 +71,12 @@ class FlowSolution(object):
         """
         Add a :class:`Vector` and bind to `name`.
         Returns the added vector.
+
+        name : string
+            Name for the added array.
+
+        vector : Vector
+            Vector data.
         """
         if hasattr(self, name):
             raise ValueError("name '%s' is already bound" % name)
@@ -73,8 +87,17 @@ class FlowSolution(object):
     def is_equivalent(self, other, logger, tolerance=0.):
         """
         Test if self and `other` are equivalent.
-        `tolerance` is the maximum relative difference in array values
-        to be considered equivalent.
+
+        other : FlowSolution
+            The flowfield to check against.
+
+        logger : Logger or None
+            Used to log debug messages that will indicate what if anything is
+            not equivalent.
+
+        tolerance : float
+            The maximum relative difference in array values to be considered
+            equivalent.
         """
         if not isinstance(other, FlowSolution):
             logger.debug('other is not a FlowSolution object.')
@@ -123,7 +146,7 @@ class FlowSolution(object):
         return True
 
     def name_of_obj(self, obj):
-        """ Return name of object. """
+        """ Return name of object or None if not found. """
         for name, value in self.__dict__.items():
             if value is obj:
                 return name
@@ -137,8 +160,12 @@ class FlowSolution(object):
     def make_cartesian(self, grid, axis='z'):
         """
         Convert to cartesian coordinate system.
-        The associated :class:`GridCoordinates` must be in cylindrical form.
-        `axis` specifies which is the cylinder axis ('z' or 'x').
+
+        grid : GridCoordinates
+            Must be in cylindrical form.
+
+        axis : string
+            Specifies which is the cylinder axis ('z' or 'x').
         """
         for vector in self._vectors:
             vector.make_cartesian(grid, axis)
@@ -146,24 +173,43 @@ class FlowSolution(object):
     def make_cylindrical(self, grid, axis='z'):
         """
         Convert to cylindrical coordinate system.
-        The associated :class:`GridCoordinates` must be in cylindrical form.
-        `axis` specifies which is the cylinder axis ('z' or 'x').
+
+        grid : GridCoordinates
+            Must be in cylindrical form.
+
+        axis : string
+            Specifies which is the cylinder axis ('z' or 'x').
         """
         for vector in self._vectors:
             vector.make_cylindrical(grid, axis)
 
     def rotate_about_x(self, deg):
-        """ Rotate about the X axis by `deg` degrees. """
+        """
+        Rotate about the X axis.
+
+        deg : float (degrees)
+            Amount of rotation.
+        """
         for vector in self._vectors:
             vector.rotate_about_x(deg)
 
     def rotate_about_y(self, deg):
-        """ Rotate about the Y axis by `deg` degrees. """
+        """
+        Rotate about the Y axis.
+
+        deg : float (degrees)
+            Amount of rotation.
+        """
         for vector in self._vectors:
             vector.rotate_about_y(deg)
 
     def rotate_about_z(self, deg):
-        """ Rotate about the Z axis by `deg` degrees. """
+        """
+        Rotate about the Z.
+
+        deg : float (degrees)
+            Amount of rotation.
+        """
         for vector in self._vectors:
             vector.rotate_about_z(deg)
 

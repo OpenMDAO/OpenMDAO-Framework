@@ -15,7 +15,7 @@ _READY    = 'ready'
 _COMPLETE = 'complete'
 _ERROR    = 'error'
 
-class ServerError(Exception):
+class _ServerError(Exception):
     """ Raised when a server thread has problems. """
     pass
 
@@ -26,27 +26,21 @@ class CaseIteratorDriver(Driver):
     to the ROSE framework. Concurrent evaluation is supported, with the various
     evaluations executed across servers obtained from the
     :class:`ResourceAllocationManager`.
-
-    - The `iterator` socket provides the cases to be evaluated.
-    - The `model` to be executed is found in the workflow.
-    - The `recorder` socket is used to record results.
-    - If `sequential` is True, then the cases are evaluated sequentially.
-    - If `reload_model` is True, the model is reloaded between executions.
-    - `max_retries` sets the number of times to retry a failed case.
-    
     """
 
-    iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
-    recorder = Instance(object, desc='Something to append() to.', required=True)
+    iterator = Instance(ICaseIterator, desc='Cases to be evaluated.',
+                        required=True)
+    recorder = Instance(object, desc='Something to append() cases to.',
+                        required=True)
     
     sequential = Bool(True, iotype='in',
-                      desc='Evaluate cases sequentially.')
+                      desc='If True, evaluate cases sequentially.')
 
     reload_model = Bool(True, iotype='in',
-                        desc='Reload model between executions.')
+                        desc='If True, reload the model between executions.')
 
     max_retries = Int(1, low=0, iotype='in',
-                      desc='Number of times to retry a case.')
+                      desc='Maximum number of times to retry a failed case.')
 
     def __init__(self, *args, **kwargs):
         super(CaseIteratorDriver, self).__init__(*args, **kwargs)
@@ -81,8 +75,11 @@ class CaseIteratorDriver(Driver):
 
     def resume(self, remove_egg=True):
         """
-        Resume execution. If `remove_egg` is True, then the egg file created
-        for concurrent evaluation is removed at the end of the run.
+        Resume execution.
+
+        remove_egg : bool
+            If True, then the egg file created for concurrent evaluation is
+            removed at the end of the run.
         """
         self._stop = False
         if self._iter is None:
@@ -126,13 +123,17 @@ class CaseIteratorDriver(Driver):
             pass
 
     def stop(self):
-        """ Avoid default driver handling of stop signal. """
+        """ Stop evaluating cases. """
+        # Necessary to avoid default driver handling of stop signal.
         self._stop = True
 
     def setup(self, replicate=True):
         """
-        Setup to begin new run. If `replicate`, then replicate the model
-        and save to an egg file first (for concurent evaluation).
+        Setup to begin new run.
+
+        replicate: bool
+             If True, then replicate the model and save to an egg file
+             first (for concurrent evaluation).
         """
         self._cleanup(remove_egg=replicate)
 
@@ -290,7 +291,7 @@ class CaseIteratorDriver(Driver):
                 self._logger.debug('    load_model')
                 self._load_model(server)
                 self._server_states[server] = _READY
-            except ServerError:
+            except _ServerError:
                 self._server_states[server] = _ERROR
 
         elif state == _READY:
@@ -350,7 +351,7 @@ class CaseIteratorDriver(Driver):
                     self._logger.debug('    load')
                     self._load_model(server)
                 self._server_states[server] = _READY
-            except ServerError:
+            except _ServerError:
                 # Handle server error separately.
                 self._logger.debug('    server error')
 
@@ -358,7 +359,7 @@ class CaseIteratorDriver(Driver):
             self._server_cases[server] = None
             try:
                 self._load_model(server)
-            except ServerError:
+            except _ServerError:
                 pass  # Needs work!
             else:
                 self._server_states[server] = _READY
@@ -385,10 +386,10 @@ class CaseIteratorDriver(Driver):
                     self._model_set(server, name, index, value)
                 except Exception as exc:
                     msg = "Exception setting '%s': %s" % (name, exc)
-                    self.raise_exception(msg, ServerError)
+                    self.raise_exception(msg, _ServerError)
             self._model_execute(server)
             self._server_states[server] = _COMPLETE
-        except ServerError as exc:
+        except _ServerError as exc:
             self._server_states[server] = _ERROR
             if case.retries < case.max_retries:
                 case.retries += 1

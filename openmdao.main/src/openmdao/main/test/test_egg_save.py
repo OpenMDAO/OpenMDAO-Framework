@@ -22,7 +22,8 @@ from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
 from openmdao.lib.api import Int, Bool, List, Str, Array, Instance, File
-from openmdao.util.testutil import find_python, make_protected_dir
+from openmdao.util.testutil import assert_raises, find_python, \
+                                   make_protected_dir
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
@@ -361,7 +362,6 @@ class TestCase(unittest.TestCase):
                 ('add', 'Egg_TestModel/Source/xyzzy'),
                 ('add', 'Egg_TestModel/Source_loader.py'),
                 ('add', 'Egg_TestModel/__init__.py'),
-                ('add', 'Egg_TestModel/buildout.cfg'),
                 ('add', 'Egg_TestModel/sub/data2'),
                 ('add', 'Egg_TestModel/sub/data4'),
             ]
@@ -437,7 +437,6 @@ class TestCase(unittest.TestCase):
                 ('extract', 'Egg_TestModel/Source/xyzzy'),
                 ('extract', 'Egg_TestModel/Source_loader.py'),
                 ('extract', 'Egg_TestModel/__init__.py'),
-                ('extract', 'Egg_TestModel/buildout.cfg'),
                 ('extract', 'Egg_TestModel/sub/data2'),
                 ('extract', 'Egg_TestModel/sub/data4'),
             ]
@@ -517,24 +516,16 @@ class TestCase(unittest.TestCase):
     def test_save_bad_name(self):
         logging.debug('')
         logging.debug('test_save_bad_name')
-        try:
-            self.model.save_to_egg('#%^&', next_egg(), py_dir=PY_DIR)
-        except ValueError, exc:
-            msg = 'Egg_TestModel: Egg name must be alphanumeric'
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('Expected ValueError')
+        code = "self.model.save_to_egg('#%^&', next_egg(), py_dir=PY_DIR)"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      'Egg_TestModel: Egg name must be alphanumeric')
 
     def test_save_bad_version(self):
         logging.debug('')
         logging.debug('test_save_bad_version')
-        try:
-            self.model.save_to_egg(self.model.name, '#%^&', py_dir=PY_DIR)
-        except ValueError, exc:
-            msg = 'Egg_TestModel: Egg version must be alphanumeric'
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('Expected ValueError')
+        code = "self.model.save_to_egg(self.model.name, '#%^&', py_dir=PY_DIR)"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      'Egg_TestModel: Egg version must be alphanumeric')
 
     def test_save_bad_directory(self):
         logging.debug('')
@@ -542,14 +533,10 @@ class TestCase(unittest.TestCase):
 
         # Set subcomponent directory outside model root.
         self.model.Oddball.directory = os.getcwd()
-        try:
-            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)
-        except ValueError, exc:
-            msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball.oddcomp" \
-                  " directory"
-            self.assertEqual(str(exc)[:len(msg)], msg)
-        else:
-            self.fail('Expected ValueError')
+        code = 'self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)'
+        msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball.oddcomp" \
+              " directory"
+        assert_raises(self, code, globals(), locals(), ValueError, msg)
 
     def test_save_bad_destination(self):
         logging.debug('')
@@ -582,13 +569,11 @@ class TestCase(unittest.TestCase):
         out.close()
         metadata = self.model.Source.external_files[0]
         metadata.path = path
+
+        code = 'self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)'
+        msg = "Egg_TestModel: Can't save, Egg_TestModel.Source file"
         try:
-            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)
-        except Exception, exc:
-            msg = "Egg_TestModel: Can't save, Egg_TestModel.Source file"
-            self.assertEqual(str(exc)[:len(msg)], msg)
-        else:
-            self.fail('Expected Exception')
+            assert_raises(self, code, globals(), locals(), ValueError, msg)
         finally:
             os.remove(path)
 
@@ -614,27 +599,19 @@ class TestCase(unittest.TestCase):
 
         # Set file trait path outside model root.
         self.model.Source.text_file.path = '/illegal'
-        try:
-            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)
-        except ValueError, exc:
-            msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file" \
-                  " path"
-            self.assertEqual(str(exc)[:len(msg)], msg)
-        else:
-            self.fail('Expected ValueError')
+        code = 'self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)'
+        msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"
+        assert_raises(self, code, globals(), locals(), ValueError, msg)
 
     def test_save_bad_format(self):
         logging.debug('')
         logging.debug('test_save_bad_format')
-        try:
-            # Attempt to save in unknown format.
-            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR,
-                                   fmt='unknown')
-        except RuntimeError, exc:
-            self.assertEqual(str(exc),
-                             "Egg_TestModel: Unknown format 'unknown'.")
-        else:
-            self.fail('Expected RuntimeError')
+
+        # Attempt to save in unknown format.
+        code = "self.model.save_to_egg(self.model.name, next_egg()," \
+               " py_dir=PY_DIR, fmt='unknown')"
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Egg_TestModel: Unknown format 'unknown'.")
 
     def test_save_bad_function(self):
         logging.debug('')
@@ -658,13 +635,9 @@ class TestCase(unittest.TestCase):
 
         # Set reference to unpickleable static method.
         self.model.Oddball.method_socket = self.model.Oddball.static_method
-        try:
-            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)
-        except RuntimeError, exc:
-            msg = "Egg_TestModel: Can't save, 1 object cannot be pickled."
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('Expected RuntimeError')
+        code = 'self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)'
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Egg_TestModel: Can't save, 1 object cannot be pickled.")
 
     def test_save_bad_pickle(self):
         logging.debug('')
@@ -672,64 +645,34 @@ class TestCase(unittest.TestCase):
 
         # Code objects don't pickle.
         self.model.code = compile('3 + 4', '<string>', 'eval')
-
-        # Problem was deletion of existing buildout.cfg.
-        if os.path.exists('buildout.cfg'):
-            buildout_size = os.path.getsize('buildout.cfg')
-            remove_buildout = False
-        else:
-            out = open('buildout.cfg', 'w')
-            out.close()
-            buildout_size = 0
-            remove_buildout = True
-
         try:
-            try:
-                # This will fail due to code object.
-                self.model.save_to_egg(self.model.name, next_egg(),
-                                       py_dir=PY_DIR)
-            except cPickle.PicklingError, exc:
-                msg = "Egg_TestModel: Can't save to" \
-                      " 'Egg_TestModel/Egg_TestModel.pickle': Can't pickle" \
-                      " <type 'code'>: attribute lookup __builtin__.code failed"
-                self.assertEqual(str(exc).replace('\\','/'), msg)
-            else:
-                self.fail('Expected cPickle.PicklingError')
+            # This will fail due to code object.
+            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)
+        except cPickle.PicklingError, exc:
+            msg = "Egg_TestModel: Can't save to" \
+                  " 'Egg_TestModel/Egg_TestModel.pickle': Can't pickle" \
+                  " <type 'code'>: attribute lookup __builtin__.code failed"
+            self.assertEqual(str(exc).replace('\\','/'), msg)
+        else:
+            self.fail('Expected cPickle.PicklingError')
 
-            # Verify buildout.cfg hasn't been affected.
-            self.assertTrue(os.path.exists('buildout.cfg'))
-            self.assertEqual(os.path.getsize('buildout.cfg'), buildout_size)
-        finally:
-            if remove_buildout:
-                os.remove('buildout.cfg')
-                
     def test_save_bad_child(self):
         logging.debug('')
         logging.debug('test_save_bad_child')
 
         # Create orphan component.
         orphan = Component()
-        try:
-            # Try to include orphan as an entry point in egg.
-            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR,
-                                   child_objs=[orphan])
-        except RuntimeError, exc:
-            self.assertEqual(str(exc), 'Entry point object has no parent!')
-        else:
-            self.fail('Expected RuntimeError')
+        code = 'self.model.save_to_egg(self.model.name, next_egg(),' \
+               ' py_dir=PY_DIR, child_objs=[orphan])'
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      'Entry point object has no parent!')
 
         # Create non-orphan component that is not part of model.
         badboy = orphan.add('badboy', Component())
-        try:
-            # Try to include non-member component as an entry point in egg.
-            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR,
-                                   child_objs=[badboy])
-        except RuntimeError, exc:
-            msg = 'Egg_TestModel: badboy is not a child of' \
-                  ' Egg_TestModel.'
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('Expected RuntimeError')
+        code = 'self.model.save_to_egg(self.model.name, next_egg(),' \
+               ' py_dir=PY_DIR, child_objs=[badboy])'
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      'Egg_TestModel: badboy is not a child of Egg_TestModel.')
 
     def test_save_load_container(self):
         logging.debug('')
@@ -758,35 +701,29 @@ class TestCase(unittest.TestCase):
     def test_load_badfile(self):
         logging.debug('')
         logging.debug('test_load_badfile')
-        try:
-            # Try to load from non-egg.
-            Component.load_from_eggfile('.')
-        except ValueError, exc:
-            self.assertEqual(str(exc), "'.' is not an egg/zipfile.")
-        else:
-            self.fail('Expected ValueError')
+
+        # Try to load from non-egg.
+        assert_raises(self, "Component.load_from_eggfile('.')",
+                      globals(), locals(), ValueError,
+                      "'.' is not an egg/zipfile.")
 
     def test_load_nofile(self):
         logging.debug('')
         logging.debug('test_load_nofile')
-        try:
-            # Try to load from nonexistant egg file.
-            Component.load_from_eggfile('no-such-egg')
-        except ValueError, exc:
-            self.assertEqual(str(exc), "'no-such-egg' not found.")
-        else:
-            self.fail('Expected ValueError')
+
+        # Try to load from nonexistant egg file.
+        assert_raises(self, "Component.load_from_eggfile('no-such-egg')",
+                      globals(), locals(), ValueError,
+                      "'no-such-egg' not found.")
 
     def test_load_nopackage(self):
         logging.debug('')
         logging.debug('test_load_nopackage')
-        try:
-            # Try to load from nonexistant egg package.
-            Component.load_from_eggpkg('no-such-egg')
-        except pkg_resources.DistributionNotFound, exc:
-            self.assertEqual(str(exc), 'no-such-egg')
-        else:
-            self.fail('Expected pkg_resources.DistributionNotFound')
+
+        # Try to load from nonexistant egg package.
+        assert_raises(self, "Component.load_from_eggpkg('no-such-egg')",
+                      globals(), locals(), pkg_resources.DistributionNotFound,
+                      'no-such-egg')
 
     def test_check_save_load(self):
         logging.debug('')
@@ -869,25 +806,19 @@ sys.exit(
             self.assertEqual(retcode, 0)
 
             # Try a non-existent package.
-            try:
-                Component.load_from_eggpkg('no-such-pkg', 'no-such-entry')
-            except pkg_resources.DistributionNotFound, exc:
-                self.assertEqual(str(exc), 'no-such-pkg')
-            else:
-                self.fail('Expected DistributionNotFound')
-            
+            code = "Component.load_from_eggpkg('no-such-pkg', 'no-such-entry')"
+            assert_raises(self, code, globals(), locals(),
+                          pkg_resources.DistributionNotFound, 'no-such-pkg')
+
             # Try a non-existent entry point.
             egg_path = os.path.join(install_dir, self.egg_name)
             sys.path.append(egg_path)
             orig_ws = pkg_resources.working_set
             pkg_resources.working_set = pkg_resources.WorkingSet()
+            code = "Component.load_from_eggpkg(package_name, 'no-such-entry')"
+            msg = "No 'openmdao.component' 'no-such-entry' entry point."
             try:
-                Component.load_from_eggpkg(package_name, 'no-such-entry')
-            except RuntimeError, exc:
-                msg = "No 'openmdao.component' 'no-such-entry' entry point."
-                self.assertEqual(str(exc), msg)
-            else:
-                self.fail('Expected RuntimeError')
+                assert_raises(self, code, globals(), locals(), RuntimeError, msg)
             finally:
                 sys.path.pop()
                 pkg_resources.working_set = orig_ws

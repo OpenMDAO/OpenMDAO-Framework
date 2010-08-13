@@ -73,7 +73,12 @@ class WorkerPool(object):
 
     @staticmethod
     def release(queue):
-        """ Release a worker queue back to the pool. """
+        """
+        Release a worker queue back to the pool.
+
+        queue : Queue
+            Worker queue previously obtained from :meth:`get`.
+        """
         return WorkerPool.get_instance()._release(queue)
 
     def _release(self, queue):

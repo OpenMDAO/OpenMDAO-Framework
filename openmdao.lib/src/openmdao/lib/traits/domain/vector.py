@@ -21,7 +21,7 @@ class Vector(object):
 
     @property
     def shape(self):
-        """ Returns tuple of index limits. """
+        """ Tuple of index limits. """
         for component in ('x', 'y', 'z', 'r', 't'):
             arr = getattr(self, component)
             if arr is not None:
@@ -30,7 +30,7 @@ class Vector(object):
 
     @property
     def extent(self):
-        """ Returns tuple of component ranges. """
+        """ Tuple of component ranges. """
         if self.x is not None:
             if self.y is not None:
                 if self.z is not None:
@@ -54,8 +54,20 @@ class Vector(object):
     def is_equivalent(self, other, name, logger, tolerance=0.):
         """
         Test if self and `other` are equivalent.
-        `tolerance` is the maximum relative difference in array values
-        to be considered equivalent.
+
+        other : Vector
+            The vector to check against.
+
+        name : string
+            Name of this vector, used for reporting differences.
+
+        logger : Logger or None
+            Used to log debug messages that will indicate what if anything is
+            not equivalent.
+
+        tolerance : float
+            The maximum relative difference in array values to be considered
+            equivalent.
         """
         if not isinstance(other, Vector):
             logger.debug('other is not a Vector object.')
@@ -97,8 +109,12 @@ class Vector(object):
     def make_cartesian(self, grid, axis='z'):
         """
         Convert to cartesian coordinate system.
-        The associated :class:`GridCoordinates` must be in cylindrical form.
-        `axis` specifies which is the cylinder axis ('z' or 'x').
+
+        grid : GridCoordinates
+            Must be in cylindrical form.
+
+        axis : string
+            Specifies which is the cylinder axis ('z' or 'x').
         """
         if grid.shape != self.shape:
             raise NotImplementedError('make_cartesian: grid shape mismatch'
@@ -146,8 +162,12 @@ class Vector(object):
     def make_cylindrical(self, grid, axis='z'):
         """
         Convert to cylindrical coordinate system.
-        The associated :class:`GridCoordinates` must be in cylindrical form.
-        `axis` specifies which is the cylinder axis ('z' or 'x').
+
+        grid : GridCoordinates
+            Must be in cylindrical form.
+
+        axis : string
+            Specifies which is the cylinder axis ('z' or 'x').
         """
         if grid.shape != self.shape:
             raise NotImplementedError('make_cylindrical: grid shape mismatch'
@@ -191,7 +211,12 @@ class Vector(object):
             raise ValueError("axis must be 'z' or 'x'")
 
     def rotate_about_x(self, deg):
-        """ Rotate about the X axis by `deg` degrees. """
+        """
+        Rotate about the X axis.
+
+        deg : float (degrees)
+           Amount of rotation.
+        """
         if self.y is None:
             raise AttributeError('rotate_about_x: no Y component')
         if self.z is None:
@@ -204,7 +229,12 @@ class Vector(object):
         self.y = y_new
 
     def rotate_about_y(self, deg):
-        """ Rotate about the Y axis by `deg` degrees. """
+        """
+        Rotate about the Y axis.
+
+        deg : float (degrees)
+           Amount of rotation.
+        """
         if self.x is None:
             raise AttributeError('rotate_about_y: no X component')
         if self.z is None:
@@ -217,7 +247,12 @@ class Vector(object):
         self.x = x_new
 
     def rotate_about_z(self, deg):
-        """ Rotate about the Z axis by `deg` degrees. """
+        """
+        Rotate about the Z axis.
+
+        deg : float (degrees)
+           Amount of rotation.
+        """
         if self.x is None:
             raise AttributeError('rotate_about_z: no X component')
         if self.y is None:
