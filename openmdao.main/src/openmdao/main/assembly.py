@@ -113,14 +113,14 @@ class Assembly (Component):
         """
         trait = self.traits().get(pathname)
         if trait is None:
-            newtrait = self.create_passthrough(pathname)
-            if iotype is not None and iotype != newtrait.iotype:
+            trait = self.create_passthrough(pathname)
+            if iotype is not None and iotype != trait.iotype:
                 self.raise_exception(
                     "new trait has iotype of '%s' but '%s' was expected" %
-                    (newtrait.iotype, iotype), TraitError)
+                    (trait.iotype, iotype), TraitError)
         return trait
 
-    def split_varpath(self, path):
+    def _split_varpath(self, path):
         """Return a tuple of compname,component,varname given a path
         name of the form 'compname.varname'. If the name is of the form 'varname'
         then compname will be None and comp is self. 
@@ -136,9 +136,9 @@ class Assembly (Component):
         """Connect one src Variable to one destination Variable. This could be
         a normal connection (output to input) or a passthrough connection."""
 
-        srccompname, srccomp, srcvarname = self.split_varpath(srcpath)
+        srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         srctrait = srccomp.get_dyn_trait(srcvarname, 'out')
-        destcompname, destcomp, destvarname = self.split_varpath(destpath)
+        destcompname, destcomp, destvarname = self._split_varpath(destpath)
         desttrait = destcomp.get_dyn_trait(destvarname, 'in')
         
         if srccompname == destcompname:

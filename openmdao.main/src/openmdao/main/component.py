@@ -152,7 +152,8 @@ class Component (Container):
         Classes that override this function must still call the base class
         version.
         """
-        for name, value in self._traits_meta_filter(required=True).items():
+        #for name, value in self._traits_meta_filter(required=True).items():
+        for name, value in self.traits(required=True).items():
             if value.is_trait_type(Instance) and getattr(self, name) is None:
                 self.raise_exception("required plugin '%s' is not present" %
                                      name, TraitError)
@@ -351,6 +352,14 @@ class Component (Container):
                         return False
         return True
 
+    def _trait_added_changed(self, name):
+        """Called any time a new trait is added to this container."""
+        self.new_trait(name)
+        self.config_changed()
+        
+    def new_trait(self, name):
+        pass
+        
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
@@ -407,7 +416,8 @@ class Component (Container):
         else:
             checker = iotype
         
-        return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
+        #return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
+        return [n for n,v in self.traits(iotype=checker).items() 
                     if v.is_trait_type(Expression) or 
                        v.is_trait_type(ExpressionList)]
     
