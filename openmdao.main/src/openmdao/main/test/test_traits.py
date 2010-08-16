@@ -41,6 +41,7 @@ class MyHasTraits2(MyHasTraits):
     pass
 
 class TraitsTestCase(unittest.TestCase):
+
     def test_copy_on_assign(self):
         # when one Instance value is assigned to another,
         # no copy is performed, even if the trait has copy metadata that is not None.
@@ -130,15 +131,15 @@ class TraitsTestCase(unittest.TestCase):
     def test_all_trait_names(self):
         mht = MyHasTraits()
         
-        # dynamically added traits DO NOT show up in all_trait_names(), 
-        # even after being set
+        # implicitly added traits DO show up in all_trait_names()
         allnames = mht.all_trait_names()
         self.assertFalse('added_int' in allnames)
         self.assertFalse('added_property' in allnames)
         mht.added_int = 8
         mht.added_property = 9
-        self.assertFalse('added_int' in allnames)
-        self.assertFalse('added_property' in allnames)
+        allnames = mht.all_trait_names()
+        self.assertTrue('added_int' in allnames)
+        self.assertTrue('added_property' in allnames)
         
     def test_reset_traits(self):
         mht = MyHasTraits()
