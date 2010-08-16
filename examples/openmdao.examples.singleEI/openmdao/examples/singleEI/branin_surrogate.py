@@ -115,6 +115,10 @@ class Analysis(Assembly):
         self.connect("filter.pareto_set","EI_driver.best_case")
         self.connect("EI_driver.next_case","retrain.iterator")
         
+    def cleanup(self):
+        os.remove('retrain.db')
+        os.remove('trainer.db')
+        
         
 if __name__ == "__main__":
     from openmdao.main.api import set_as_top

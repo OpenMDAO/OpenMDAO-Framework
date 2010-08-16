@@ -22,5 +22,5 @@ class EITest(unittest.TestCase):
        
         set_as_top(analysis)
         analysis.run()
-        
+        analysis.cleanup()
         
