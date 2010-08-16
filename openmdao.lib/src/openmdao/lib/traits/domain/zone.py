@@ -22,12 +22,12 @@ class Zone(object):
 
     @property
     def shape(self):
-        """ Returns tuple of coordinate index limits. """
+        """ Tuple of coordinate index limits. """
         return self.grid_coordinates.shape
 
     @property
     def extent(self):
-        """ Returns tuple of coordinate ranges. """
+        """ Tuple of coordinate ranges. """
         return self.grid_coordinates.extent
 
     def _get_coord_sys(self):
@@ -45,8 +45,17 @@ class Zone(object):
     def is_equivalent(self, other, logger, tolerance=0.):
         """
         Test if self and `other` are equivalent.
-        `tolerance` is the maximum relative difference in array values
-        to be considered equivalent.
+
+        other : Zone
+            Zone to check against.
+
+        logger : Logger or None
+            Used to log debug messages that will indicate what if anything is
+            not equivalent.
+
+        tolerance : float
+            The maximum relative difference in array values to be considered
+            equivalent.
         """
         if not isinstance(other, Zone):
             logger.debug('other is not a Zone object.')
@@ -85,7 +94,9 @@ class Zone(object):
     def make_cartesian(self, axis='z'):
         """
         Convert to cartesian coordinate system.
-        `axis` specifies which is the cylinder axis ('z' or 'x').
+
+        axis : string
+            Specifies which is the cylinder axis ('z' or 'x').
         """
         if self.coordinate_system != CARTESIAN:
             self.flow_solution.make_cartesian(self.grid_coordinates, axis)
@@ -95,7 +106,9 @@ class Zone(object):
     def make_cylindrical(self, axis='z'):
         """
         Convert to cylindrical coordinate system.
-        `axis` specifies which is the cylinder axis ('z' or 'x').
+
+        axis : string
+            Specifies which is the cylinder axis ('z' or 'x').
         """
         if self.coordinate_system != CYLINDRICAL:
             self.grid_coordinates.make_cylindrical(axis)
@@ -117,14 +130,24 @@ class Zone(object):
             self.right_handed = True
 
     def translate(self, delta_x, delta_y, delta_z):
-        """ Translate coordinates. """
+        """
+        Translate coordinates.
+
+        delta_x, delta_y, delta_z : float
+            Amount of translation along the corresponding axis.
+        """
         if self.coordinate_system == CARTESIAN:
             self.grid_coordinates.translate(delta_x, delta_y, delta_z)
         else:
             raise RuntimeError('Zone not in cartesian coordinates')
 
     def rotate_about_x(self, deg):
-        """ Rotate about the X axis by `deg` degrees. """
+        """
+        Rotate about the X axis.
+
+        deg : float (degrees)
+            Amount of rotation.
+        """
         if self.coordinate_system == CARTESIAN:
             self.grid_coordinates.rotate_about_x(deg)
             self.flow_solution.rotate_about_x(deg)
@@ -132,7 +155,12 @@ class Zone(object):
             raise RuntimeError('Zone not in cartesian coordinates')
 
     def rotate_about_y(self, deg):
-        """ Rotate about the Y axis by `deg` degrees. """
+        """
+        Rotate about the Y axis.
+
+        deg : float (degrees)
+            Amount of rotation.
+        """
         if self.coordinate_system == CARTESIAN:
             self.grid_coordinates.rotate_about_y(deg)
             self.flow_solution.rotate_about_y(deg)
@@ -140,7 +168,12 @@ class Zone(object):
             raise RuntimeError('Zone not in cartesian coordinates')
 
     def rotate_about_z(self, deg):
-        """ Rotate about the Z axis by `deg` degrees. """
+        """
+        Rotate about the Z axis.
+
+        deg : float (degrees)
+            Amount of rotation.
+        """
         if self.coordinate_system == CARTESIAN:
             self.grid_coordinates.rotate_about_z(deg)
             self.flow_solution.rotate_about_z(deg)

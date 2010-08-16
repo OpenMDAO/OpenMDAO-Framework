@@ -14,19 +14,31 @@ class Stream(object):
     Wrapper of standard Python :class:`file` object.
     Supports reading/writing int and float arrays in various formats.
 
-    - `file_obj` is a file object opened for reading or writing.
-    - If `binary`, the data is in binary, not text, form.
-    - If `big_endian`, the data bytes are in 'big-endian' order. \
-      Only meaningful if `binary`.
-    - If `single_precision`, floating-point data is 32 bits, not 64. \
-      Only meaningful if `binary`.
-    - If `integer_8`, integer data is 64 bits, not 32. \
-      Only meaningful if `binary`.
-    - If `unformatted`, the data is surrounded by Fortran record length \
-      markers.  Only meaningful if `binary`.
-    - If `recordmark_8`, the record length markers are 64 bits, not 32. \
-      Only meaningful if `unformatted`.
+    file_obj : file
+        File object opened for reading or writing.
 
+    binary : bool
+        If True, the data is in binary, not text, form.
+
+    big_endian : bool
+        If True, the data bytes are in 'big-endian' order.
+        Only meaningful if `binary`.
+
+    single_precision : bool
+        If True, floating-point data is 32 bits, not 64.
+        Only meaningful if `binary`.
+
+    integer_8 : bool
+        If True, integer data is 64 bits, not 32.
+        Only meaningful if `binary`.
+
+    unformatted : bool
+        If True, the data is surrounded by Fortran record length markers.
+        Only meaningful if `binary`.
+
+    recordmark_8 : bool
+        If True, the record length markers are 64 bits, not 32.
+        Only meaningful if `unformatted`.
     """
     def __init__(self, file_obj, binary=False, big_endian=False,
                  single_precision=False, integer_8=False,
@@ -48,14 +60,24 @@ class Stream(object):
             self.recordmark_8 = False
 
     def reclen_ints(self, count):
-        """ Returns record length for `count` ints. """
+        """
+        Returns record length for `count` ints.
+
+        count : int
+            Number of ints in record.
+        """
         if self.integer_8:
             return _SZ_LONG * count
         else:
             return _SZ_INT * count
 
     def reclen_floats(self, count):
-        """ Returns record length for `count` floats. """
+        """
+        Returns record length for `count` floats.
+
+        count : int
+            Number of floats in record.
+        """
         if self.single_precision:
             return _SZ_FLOAT * count
         else:
@@ -67,8 +89,11 @@ class Stream(object):
 
     def read_int(self, full_record=False):
         """
-        Returns next integer. If `full_record`, then read surrounding
-        recordmarks. Only meaningful if `unformatted`.
+        Returns next integer.
+
+        full_record : bool
+            If True, then read surrounding recordmarks.
+            Only meaningful if `unformatted`.
         """
         if full_record and self.unformatted:
             reclen = self.read_recordmark()
@@ -86,8 +111,11 @@ class Stream(object):
 
     def read_ints(self, shape, order='C', full_record=False):
         """
-        Returns integers as a :mod:`numpy` array of `shape`. If `full_record`,
-        then read surrounding recordmarks. Only meaningful if `unformatted`.
+        Returns integers as a :mod:`numpy` array of `shape`.
+
+        full_record : bool
+            If True, then read surrounding recordmarks.
+            Only meaningful if `unformatted`.
         """
         reshape = False
         count = 1
@@ -119,8 +147,11 @@ class Stream(object):
 
     def read_float(self, full_record=False):
         """
-        Returns next float. If `full_record`, then read surrounding
-        recordmarks. Only meaningful if `unformatted`.
+        Returns next float.
+
+        full_record : bool
+            If True, then read surrounding recordmarks.
+            Only meaningful if `unformatted`.
         """
         if full_record and self.unformatted:
             reclen = self.read_recordmark()
@@ -138,8 +169,11 @@ class Stream(object):
 
     def read_floats(self, shape, order='C', full_record=False):
         """
-        Returns floats as a :mod:`numpy` array of `shape`. If `full_record`,
-        then read surrounding recordmarks. Only meaningful if `unformatted`.
+        Returns floats as a :mod:`numpy` array of `shape`.
+
+        full_record : bool
+            If True, then read surrounding recordmarks.
+            Only meaningful if `unformatted`.
         """
         reshape = False
         count = 1
@@ -182,7 +216,9 @@ class Stream(object):
 
     def write_int(self, value, sep=' ', fmt='%s', full_record=False):
         """
-        Writes an integer. If `full_record`, then write surrounding
+        Writes an integer.
+
+        If `full_record`, then write surrounding
         recordmarks. Only meaningful if `unformatted`.
         """
         if self.binary:
@@ -205,11 +241,27 @@ class Stream(object):
     def write_ints(self, data, order='C', sep=' ', fmt='%s', linecount=0,
                    full_record=False):
         """
-        Writes :mod:`numpy` integer array `data`. If `order` is 'C', the data
-        is written in row-major order. If `order` is 'Fortran', the data is
-        written in column-major order. If `linecount` is > zero, then at most
-        `linecount` values are written per line. If `full_record`, then write
-        surrounding recordmarks. Only meaningful if `unformatted`.
+        Writes an integer array.
+
+        data : :class:`numpy.ndarray`
+            Integer data array.
+
+        order : string
+            If 'C', the data is written in row-major order.
+            If 'Fortran', the data is written in column-major order.
+
+        sep : string
+            Separator between items.
+
+        fmt : string
+            Format specifier for each item.
+
+        linecount : int
+            If > zero, then at most `linecount` values are written per line.
+
+        full_record : bool
+            If True, then write surrounding recordmarks.
+            Only meaningful if `unformatted`.
         """
         if self.binary:
             if full_record and self.unformatted:
@@ -237,8 +289,11 @@ class Stream(object):
 
     def write_float(self, value, sep=' ', fmt='%s', full_record=False):
         """
-        Writes a float. If `full_record`, then write surrounding
-        recordmarks. Only meaningful if `unformatted`.
+        Writes a float.
+
+        full_record : bool
+            If True, then write surrounding recordmarks.
+            Only meaningful if `unformatted`.
         """
         if self.binary:
             if full_record and self.unformatted:
@@ -260,11 +315,27 @@ class Stream(object):
     def write_floats(self, data, order='C', sep=' ', fmt='%s', linecount=0,
                      full_record=False):
         """
-        Writes :mod:`numpy` float array `data`. If `order` is 'C', the data
-        is written in row-major order. If `order` is 'Fortran', the data is
-        written in column-major order. If `linecount` is > zero, then at most
-        `linecount` values are written per line. If `full_record`, then write
-        surrounding recordmarks. Only meaningful if `unformatted`.
+        Writes a float array.
+
+        data : :class:`numpy.ndarray`
+            Float data array.
+
+        order : string
+            If 'C', the data is written in row-major order.
+            If 'Fortran', the data is written in column-major order.
+
+        sep : string
+            Separator between items.
+
+        fmt : string
+            Format specifier for each item.
+
+        linecount : int
+            If > zero, then at most `linecount` values are written per line.
+
+        full_record : bool
+            If True, then write surrounding recordmarks.
+            Only meaningful if `unformatted`.
         """
         if self.binary:
             if full_record and self.unformatted:
@@ -292,10 +363,23 @@ class Stream(object):
 
     def write_array(self, data, order='C', sep=' ', fmt='%s', linecount=0):
         """
-        Writes :mod:`numpy` array `data` as text. If `order` is 'C', the data
-        is written in row-major order. If `order` is 'Fortran', the data is
-        written in column-major order.  If `linecount` is > zero, then at
-        most `linecount` values are written per line.
+        Writes array as text.
+
+        data : :class:`numpy.ndarray`
+            Data array.
+
+        order : string
+            If 'C', the data is written in row-major order.
+            If 'Fortran', the data is written in column-major order.
+
+        sep : string
+            Separator between items.
+
+        fmt : string
+            Format specifier for each item.
+
+        linecount : int
+            If > zero, then at most `linecount` values are written per line.
         """
         shape = data.shape
         indices = [0 for i in shape]
@@ -335,7 +419,12 @@ class Stream(object):
             _write('\n')
 
     def write_recordmark(self, length):
-        """ Writes recordmark for `length` record. """
+        """
+        Writes recordmark.
+
+        length : int
+            Length of record (bytes).
+        """
         fmt = '>' if self.big_endian else '<'
         fmt += 'q' if self.recordmark_8 else 'i'
         self.file.write(struct.pack(fmt, length))

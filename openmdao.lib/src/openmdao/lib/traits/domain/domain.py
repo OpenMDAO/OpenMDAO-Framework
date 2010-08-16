@@ -18,20 +18,27 @@ class DomainObj(object):
 
     @property
     def shape(self):
-        """ Returns list of coordinate index limits for each zone. """
+        """ List of coordinate index limits for each zone. """
         return [zone.shape for zone in self.zones]
 
     @property
     def extent(self):
-        """ Returns list of coordinate ranges for each zone. """
+        """ List of coordinate ranges for each zone. """
         return [zone.extent for zone in self.zones]
 
     def add_domain(self, other, prefix='', make_copy=False):
         """
         Add zones from `other` to self, retaining names where possible.
-        Zone names will be prepended with `prefix`. If `make_copy` is True,
-        then a deep copy of each zone is made rather than just referring
-        to a shared instance.
+
+        other : DomainObj
+            Source for new zone data.
+
+        prefix : string
+            String prepended to zone names.
+
+        make_copy: bool
+            If True, then a deep copy of each zone is made rather than just
+            referring to a shared instance.
         """
         for zone in other.zones:
             name = other.zone_name(zone)
@@ -41,11 +48,18 @@ class DomainObj(object):
 
     def add_zone(self, name, zone, prefix='', make_copy=False):
         """
-        Add a :class:`Zone`. If `name` is None or blank, then a default
-        of the form ``zone_N`` is used. The resulting name will be prepended
-        with `prefix`. If `make_copy` is True, then a deep copy of each zone is
-        made rather than just referring to a shared instance.
-        Returns the added zone.
+        Add a :class:`Zone`. Returns the added zone.
+
+        name : string
+            Name for the zone. If None or blank, then a default of the form
+            ``zone_N`` is used.
+
+        prefix : string
+            String prepended to the zone name.
+
+        make_copy: bool
+            If True, then a deep copy of each zone is made rather than just
+            referring to a shared instance.
         """
         if not name:
             name = 'zone_%d' % (len(self.zones) + 1)
@@ -60,8 +74,10 @@ class DomainObj(object):
 
     def remove_zone(self, zone):
         """
-        Remove `zone`, specified either by name or object reference.
-        Returns the removed zone.
+        Remove a zone. Returns the removed zone.
+
+        zone : string or DomainObj
+            Zone to be removed.
         """
         if isinstance(zone, basestring):
             name = zone
@@ -73,7 +89,14 @@ class DomainObj(object):
         return zone
 
     def rename_zone(self, name, zone):
-        """ Rename `zone` to `name`. """
+        """ Rename a zone.
+
+        name : string
+            New name for the zone.
+
+        zone : DomainObj
+            Zone to be renamed.
+        """
         if hasattr(self, name):
             raise ValueError("name '%s' is already bound" % name)
         current = self.zone_name(zone)
@@ -81,7 +104,12 @@ class DomainObj(object):
         setattr(self, name, zone)
 
     def zone_name(self, zone):
-        """ Return name that `zone` is bound to. """
+        """
+        Return name that a zone is bound to.
+
+        zone : DomainObj
+            Zone whose name is to be returned.
+        """
         for name, value in self.__dict__.items():
             if value is zone:
                 return name
@@ -100,8 +128,17 @@ class DomainObj(object):
     def is_equivalent(self, other, logger=None, tolerance=0.):
         """
         Test if self and `other` are equivalent.
-        `tolerance` is the maximum relative difference in array values
-        to be considered equivalent.
+
+        other : DomainObj
+            The domain to check against.
+
+        logger : Logger or None
+            Used to log debug messages that will indicate what if anything
+            is not equivalent
+
+        tolerance : float
+            The maximum relative difference in array values to be considered
+            equivalent.
         """
         logger = logger or NullLogger()
         if not isinstance(other, DomainObj):
@@ -127,7 +164,9 @@ class DomainObj(object):
     def make_cartesian(self, axis='z'):
         """
         Convert to cartesian coordinate system.
-        `axis` specifies which is the cylinder axis ('z' or 'x').
+
+        axis : string
+            Specifies which is the cylinder axis ('z' or 'x').
         """
         for zone in self.zones:
             zone.make_cartesian(axis)
@@ -135,7 +174,9 @@ class DomainObj(object):
     def make_cylindrical(self, axis='z'):
         """
         Convert to cylindrical coordinate system.
-        `axis` specifies which is the cylinder axis ('z' or 'x').
+
+        axis : string
+            Specifies which is the cylinder axis ('z' or 'x').
         """
         for zone in self.zones:
             zone.make_cylindrical(axis)
@@ -151,22 +192,42 @@ class DomainObj(object):
             zone.make_right_handed()
 
     def translate(self, delta_x, delta_y, delta_z):
-        """ Translate coordinates. """
+        """
+        Translate coordinates.
+
+        delta_x, delta_y, delta_z : float
+            Amount of translation along the corresponding axis.
+        """
         for zone in self.zones:
             zone.translate(delta_x, delta_y, delta_z)
 
     def rotate_about_x(self, deg):
-        """ Rotate about the X axis by `deg` degrees. """
+        """
+        Rotate about the X axis.
+
+        deg : float (degrees)
+            Amount of rotation.
+        """
         for zone in self.zones:
             zone.rotate_about_x(deg)
 
     def rotate_about_y(self, deg):
-        """ Rotate about the Y axis by `deg` degrees. """
+        """
+        Rotate about the Y axis.
+
+        deg : float (degrees)
+            Amount of rotation.
+        """
         for zone in self.zones:
             zone.rotate_about_y(deg)
 
     def rotate_about_z(self, deg):
-        """ Rotate about the Z axis by `deg` degrees. """
+        """
+        Rotate about the Z axis.
+
+        deg : float (degrees)
+            Amount of rotation.
+        """
         for zone in self.zones:
             zone.rotate_about_z(deg)
 

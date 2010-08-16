@@ -766,16 +766,39 @@ class Container(HasTraits):
         just those containers from the installed egg.  Child container names
         should be specified relative to this container.
 
-        - `name` must be an alphanumeric string.
-        - `version` must be an alphanumeric string.
-        - `py_dir` is the (root) directory for local Python files. \
-           It defaults to the current directory.
-        - `src_dir` is the root of all (relative) `src_files`.
-        - `child_objs` is a list of child objects for additional entry points.
-        - `dst_dir` is the directory to write the egg in.
-        - `fmt` and `proto` are passed to eggsaver.save().
-        - `use_setuptools` is passed to :meth:`eggsaver.save_to_egg`.
-        - `observer` will be called via an :class:`EggObserver`.
+        name : string
+            Name for egg, must be an alphanumeric string.
+
+        version : string
+            Version for egg,  must be an alphanumeric string.
+
+        py_dir : string
+            The (root) directory for local Python files. It defaults to
+            the current directory.
+
+        src_dir : string
+            The root of all (relative) `src_files`.
+
+        src_files : list
+            List of paths to files to be included in the egg.
+
+        child_objs : list
+            List of child objects for additional entry points.
+
+        dst_dir : string
+            The directory to write the egg in.
+
+        fmt : int
+            Passed to :meth:`eggsaver.save`.
+
+        proto : int
+            Passed to :meth:`eggsaver.save`.
+
+        use_setuptools : bool
+            Passed to :meth:`eggsaver.save_to_egg`.
+
+        observer : callable
+            Will be called via an :class:`EggObserver`.
 
         After collecting entry point information, calls
         :meth:`eggsaver.save_to_egg`.
@@ -826,6 +849,15 @@ class Container(HasTraits):
         override this because the base class version will suffice, but
         Python extension classes will have to override. The format
         can be supplied in case something other than cPickle is needed.
+
+        outstream : file or string
+            Stream to save to.
+
+        fmt : int
+            Format for saved data.
+
+        proto : int
+            Protocol used.
         """
         parent = self.parent
         self.parent = None  # Don't want to save stuff above us.
@@ -840,8 +872,18 @@ class Container(HasTraits):
     def load_from_eggfile(filename, install=False, observer=None):
         """Extract files in egg to a subdirectory matching the saved object
         name, optionally install distributions the egg depends on, and then
-        load object graph state. `observer` will be called via an
-        :class:`EggObserver`. Returns the root object.
+        load object graph state.
+
+        filename : string
+            Name of egg file to be loaded.
+
+        install : bool
+            If True, dependent distributions will be installed.
+
+        observer : callable
+            Will be called via an :class:`EggObserver`.
+
+        Returns the root object.
         """
         # Load from file gets everything.
         entry_group = 'openmdao.top'
@@ -854,8 +896,20 @@ class Container(HasTraits):
                          observer=None):
         """Load object graph state by invoking the given package entry point.
         If specified, the root object is renamed to `instance_name`.
-        `observer` will be called via an :class:`EggObserver`. Returns the
-        root object.
+
+        package : string
+            Package name.
+
+        entry_name : string
+            Name of entry point.
+
+        instance_name : string
+            Name for root object.
+
+        observer : callable
+            Will be called via an :class:`EggObserver`.
+
+        Returns the root object.
         """
         entry_group = 'openmdao.component'
         if not entry_name:
@@ -869,6 +923,24 @@ class Container(HasTraits):
         """Load object(s) from the input stream. Pure Python classes generally
         won't need to override this, but extensions will. The format can be
         supplied in case something other than cPickle is needed.
+
+        instream : file or string
+            Stream to load from.
+
+        fmt : int
+            Format of state data.
+
+        package : string
+            Name of package to look for `instream`, if `instream` is a string
+            that is not an existing file.
+
+        call_post_load : bool
+            If True, call :meth:`post_load`.
+
+        name : string
+            Name for root object
+
+        Returns the root object.
         """
         top = eggloader.load(instream, fmt, package, logger)
         if name:

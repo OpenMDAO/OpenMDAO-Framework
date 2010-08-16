@@ -34,6 +34,24 @@ def load_from_eggfile(filename, entry_group, entry_name, install=False,
     Extract files in egg to a subdirectory matching the saved object name.
     Optionally installs distributions the egg depends on and then loads object
     graph state by invoking the given entry point.  Returns the root object.
+
+    filename : string
+        Name of egg file.
+
+    entry_group : string
+        Name of group.
+
+    entry_name : string
+        Name of entry point in group.
+
+    install : bool
+        If True, dependent packages are installed.
+
+    logger : Logger
+        Used for recording progress, etc.
+
+    observer : callable
+        Called via an :class:`EggObserver`.
     """
     logger = logger or NullLogger()
     observer = EggObserver(observer, logger)
@@ -58,6 +76,24 @@ def load_from_eggpkg(package, entry_group, entry_name, instance_name=None,
     """
     Load object graph state by invoking the given package entry point.
     Returns the root object.
+
+    package : string
+        Name of package to load from.
+
+    entry_group : string
+        Name of group.
+
+    entry_name : string
+        Name of entry point in group.
+
+    instance_name : string
+        Name for instance loaded.
+
+    logger : Logger
+        Used for recording progress, etc.
+
+    observer : callable
+        Called via an :class:`EggObserver`.
     """
     logger = logger or NullLogger()
     observer = EggObserver(observer, logger)
@@ -230,6 +266,15 @@ def check_requirements(required, logger=None, indent_level=0):
     """
     Display requirements (if logger debug level enabled) and note conflicts.
     Returns a list of unavailable requirements.
+
+    required : list
+        List of package requirements.
+
+    logger : Logger
+        Used for recording progress, etc.
+
+    indent_level : int
+        Used to improve readability of log messages.
     """
     def _recursive_check(required, logger, level, visited, working_set,
                          not_avail):
@@ -270,6 +315,18 @@ def load(instream, fmt=SAVE_CPICKLE, package=None, logger=None):
     If `instream` is a string that is not an existing filename or
     absolute path, then it is searched for using :mod:`pkg_resources`.
     Returns the root object.
+
+    instream : file or string
+        Stream or filename to load from.
+
+    fmt : int
+        Format of state data.
+
+    package : string
+        Name of package to use.
+
+    logger : Logger
+        Used for recording progress, etc.
     """
     logger = logger or NullLogger()
 
