@@ -181,3 +181,5 @@ if __name__ == "__main__":
     plt.text(10.9,11,"Branin\nFunction\nValue")
     plt.show()
 
+    analysis.cleanup()
+    
