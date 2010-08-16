@@ -6,6 +6,9 @@ import os
 import unittest
 import numpy
 
+from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
+                                               SellarDiscipline2
+
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.api import BroydenSolver, Float
 from openmdao.util.testutil import assert_rel_error
@@ -13,56 +16,6 @@ from openmdao.util.testutil import assert_rel_error
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
 
-class Discipline1(Component):
-    """Component containing Discipline 1"""
-    
-    # pylint: disable-msg=E1101
-    z1 = Float(0.0, iotype='in', desc='Global Design Variable')
-    z2 = Float(0.0, iotype='in', desc='Global Design Variable')
-    x1 = Float(0.0, iotype='in', desc='Local Design Variable')
-    y2 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
-
-    y1 = Float(iotype='out', desc='Output of this Discipline')        
-
-        
-    def execute(self):
-        """Evaluates the equation  
-        y1 = z1**2 + z2 + x1 - 0.2*y2"""
-        
-        z1 = self.z1
-        z2 = self.z2
-        x1 = self.x1
-        y2 = self.y2
-        
-        self.y1 = z1**2 + z2 + x1 - 0.2*y2
-
-
-class Discipline2(Component):
-    """Component containing Discipline 2"""
-    
-    # pylint: disable-msg=E1101
-    z1 = Float(0.0, iotype='in', desc='Global Design Variable')
-    z2 = Float(0.0, iotype='in', desc='Global Design Variable')
-    y1 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
-
-    y2 = Float(iotype='out', desc='Output of this Discipline')        
-
-        
-    def execute(self):
-        """Evaluates the equation  
-        y1 = y1**(.5) + z1 + z2"""
-        
-        z1 = self.z1
-        z2 = self.z2
-        
-        # Note: this may cause some issues. However, y1 is constrained to be
-        # above 3.16, so lets just let it converge, and the optimizer will 
-        # throw it out
-        y1 = abs(self.y1)
-        
-        self.y2 = y1**(.5) + z1 + z2
-
-        
 class SellarBroyden(Assembly):
     """Solution of the sellar analytical problem using MDF.
     
@@ -86,8 +39,8 @@ class SellarBroyden(Assembly):
         # create solver instance
         self.add('driver', BroydenSolver())
         
-        self.add('dis1', Discipline1())
-        self.add('dis2', Discipline2())
+        self.add('dis1', SellarDiscipline1())
+        self.add('dis2', SellarDiscipline2())
         self.driver.workflow.add([self.dis1, self.dis2])
 
         self.connect('dis1.y1','dis2.y1')

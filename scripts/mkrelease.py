@@ -24,6 +24,7 @@ openmdao_packages = { 'openmdao.main': '',
                       'openmdao.test': '', 
                       'openmdao.examples.simple': 'examples',
                       'openmdao.examples.bar3simulation': 'examples',
+                      'openmdao.examples.mdao': 'examples',
                       'openmdao.examples.enginedesign': 'examples',
                       }
 
