@@ -245,6 +245,7 @@ class TestCase(unittest.TestCase):
         prob.dis1.x4 = 1.0
         prob.dis1.x5 = 1.0
         prob.driver.algorithm = "excitingmixing"
+        prob.driver.alpha = 0.1
         
         prob.run()
         assert_rel_error(self, 1.0 - prob.dis1.x1, 1.0, 0.0001)
