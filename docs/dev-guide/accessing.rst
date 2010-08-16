@@ -20,11 +20,11 @@ not, please go to https://launchpad.net and register for an account. Go ahead
 and log in to your Launchpad account, since you will need to be logged in to
 register your key.
 
-Linux or OS X Users
--------------------
+Linux or Mac OS X Users
+-----------------------
 
 Please follow these instructions for the SSH key creation/registration process
-if you use Linux or OS X.
+if you use Linux or Mac OS X.
 
 *Creating Your Key on Linux*
 ++++++++++++++++++++++++++++

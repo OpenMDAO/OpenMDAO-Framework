@@ -1,5 +1,3 @@
-
-
 Appendix B: Todo List
 ======================
 
