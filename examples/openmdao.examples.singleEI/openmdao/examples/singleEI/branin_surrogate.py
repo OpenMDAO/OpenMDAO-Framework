@@ -1,4 +1,6 @@
 from __future__ import division
+import os
+
 from enthought.traits.api import Instance, Str
 
 from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, Case

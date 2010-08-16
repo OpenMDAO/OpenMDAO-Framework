@@ -86,6 +86,15 @@ class SingleCritEI(Driver):
             self.raise_exception("no criteria was specified",RuntimeError)
         elif not self.set_of_alleles:
             self.raise_exception("no parameters were added to the driver",RuntimeError)
+            
+        # pyevolve does some caching that causes failures during our
+        # complete unit tests due to stale values in the cache attributes
+        # below, so reset them here
+        Selectors.GRankSelector.cachePopID = None
+        Selectors.GRankSelector.cacheCount = None
+        Selectors.GRouletteWheel.cachePopID = None
+        Selectors.GRouletteWheel.cacheWheel = None
+
         #TODO: This is not a good way to do this
         #grab the target criteria value out of the input best_case
         best_case = None
