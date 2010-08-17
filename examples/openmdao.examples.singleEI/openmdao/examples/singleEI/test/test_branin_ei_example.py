@@ -5,7 +5,7 @@ Test for single criteria EI example.
 import unittest
 
 from openmdao.main.api import set_as_top
-from openmdao.examples.singleEI.branin_surrogate import Analysis, Iterator
+from openmdao.examples.singleEI.branin_ei_example import Analysis, Iterator
 
 
 class EITest(unittest.TestCase):
