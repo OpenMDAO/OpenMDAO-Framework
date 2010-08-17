@@ -206,7 +206,7 @@ class CaseIterDriverBase(Driver):
             server_thread.start()
 
             if sys.platform != 'win32':
-                # Process any pending events.
+                # Process any pending s.
                 while self._busy():
                     try:
                         name, result = self._reply_queue.get(True, 0.1)
@@ -383,6 +383,12 @@ class CaseIterDriverBase(Driver):
         self._server_cases[server] = case
 
         try:
+            for event in self.get_events(): 
+                try: 
+                    self._model_set(server,event,None,True)
+                except Exception as exc:
+                    msg = "Exception setting '%s': %s" % (name, exc)
+                    self.raise_exception(msg, ServerError)
             for name, index, value in case.inputs:
                 try:
                     self._model_set(server, name, index, value)
