@@ -309,7 +309,7 @@ class Container(HasTraits):
         #HasTraits.__getstate__ won't return our instance traits.
         #"""
         #if len(names) == 0:
-            #names = self._traits_meta_filter(None, **metadata).keys()
+            #names = self._alltraits(None, **metadata).keys()
         #return super(Container, self).trait_get(*names, **metadata)
     
         
@@ -485,30 +485,30 @@ class Container(HasTraits):
         """Return a list of names of child Containers."""
         return [n for n,v in self.items() if isinstance(v,Container)]
     
-    #def _traits_meta_filter(self, traits=None, **metadata):
-        #"""This returns a dict that contains all entries in the traits dict
-        #that match the given metadata.
-        #"""
-        #if traits is None:
-            #traits = self.traits()  # don't pass **metadata here
+    def _alltraits(self, traits=None, **metadata):
+        """This returns a dict that contains all traits (class and instance)
+        that match the given metadata.
+        """
+        if traits is None:
+            traits = self.traits()  # don't pass **metadata here
             #ss = set(self._instance_traits().keys())-set(traits.keys())
             #if len(ss): print '\n                            **** ', ss
-            #traits.update(self._instance_traits())
+            traits.update(self._instance_traits())
             
-        #result = {}
-        #for name, trait in traits.items():
-            #if trait.type is 'event':
-                #continue
-            #for meta_name, meta_eval in metadata.items():
-                #if type( meta_eval ) is FunctionType:
-                    #if not meta_eval(getattr(trait, meta_name)):
-                        #break
-                #elif meta_eval != getattr(trait, meta_name):
-                    #break
-            #else:
-                #result[ name ] = trait
+        result = {}
+        for name, trait in traits.items():
+            if trait.type is 'event':
+                continue
+            for meta_name, meta_eval in metadata.items():
+                if type( meta_eval ) is FunctionType:
+                    if not meta_eval(getattr(trait, meta_name)):
+                        break
+                elif meta_eval != getattr(trait, meta_name):
+                    break
+            else:
+                result[ name ] = trait
 
-        #return result
+        return result
     
     def _items(self, visited, recurse=False, **metadata):
         """Return an iterator that returns a list of tuples of the form 
@@ -518,10 +518,10 @@ class Container(HasTraits):
         """
         if id(self) not in visited:
             visited.add(id(self))
-            #match_dict = self._traits_meta_filter(**metadata)
             if 'type' not in metadata:
                 metadata['type'] = not_event
-            match_dict = self.traits(**metadata)
+            match_dict = self._alltraits(**metadata)
+            #match_dict = self.traits(**metadata)
             
             if recurse:
                 for name in self.list_containers():

@@ -152,7 +152,6 @@ class Component (Container):
         Classes that override this function must still call the base class
         version.
         """
-        #for name, value in self._traits_meta_filter(required=True).items():
         for name, value in self.traits(required=True).items():
             if value.is_trait_type(Instance) and getattr(self, name) is None:
                 self.raise_exception("required plugin '%s' is not present" %
@@ -416,8 +415,7 @@ class Component (Container):
         else:
             checker = iotype
         
-        #return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
-        return [n for n,v in self.traits(iotype=checker).items() 
+        return [n for n,v in self._alltraits(iotype=checker).items() 
                     if v.is_trait_type(Expression) or 
                        v.is_trait_type(ExpressionList)]
     
