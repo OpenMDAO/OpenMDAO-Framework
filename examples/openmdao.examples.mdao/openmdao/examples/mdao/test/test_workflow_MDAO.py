@@ -8,7 +8,8 @@ import unittest
 from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                SellarDiscipline2
 from openmdao.examples.mdao.broadcaster import Broadcaster
-from openmdao.examples.mdao.sellar_MDF import SellarMDF, SellarIDF
+from openmdao.examples.mdao.sellar_MDF import SellarMDF
+from openmdao.examples.mdao.sellar_IDF import SellarIDF
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.exceptions import RunStopped
