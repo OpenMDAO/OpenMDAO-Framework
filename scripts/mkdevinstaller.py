@@ -22,6 +22,7 @@ openmdao_packages = ['openmdao.util',
                      'examples/openmdao.examples.simple',
                      'examples/openmdao.examples.bar3simulation',
                      'examples/openmdao.examples.enginedesign',
+                     'examples/openmdao.examples.mdao',
                      'examples/openmdao.examples.singleEI'
                     ]
     
@@ -113,6 +114,7 @@ def after_install(options, home_dir):
                      'openmdao.examples.simple',
                      'openmdao.examples.bar3simulation',
                      'openmdao.examples.enginedesign',
+                     'openmdao.examples.mdao',
                      'openmdao.examples.singleEI'
                     ]
 

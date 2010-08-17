@@ -223,6 +223,21 @@ class CONMINdriverTestCase(unittest.TestCase):
         
         # No test, just verifies that the syntax didn't fail.
 
+    def test_linear_constraint_specification(self):
+        """ Note, just testing problem specification and setup """
+        
+        self.top.driver.objective = 'comp.result'
+        map(self.top.driver.add_parameter, 
+            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
+        
+        map(self.top.driver.add_constraint,['comp.x[1] + 3.0*comp.x[2] > 3.0',
+                                            'comp.x[2] + comp.x[3] > 13.0',
+                                            'comp.x[1] - 0.73*comp.x[3]*comp.x[2] > -12.0'])
+        self.top.driver.cons_is_linear = [1,1,0]
+        self.top.driver.itmax = 1
+
+        self.top.run()
+        
     def test_max_iteration(self):
         
         self.top.driver.objective = 'comp.result'

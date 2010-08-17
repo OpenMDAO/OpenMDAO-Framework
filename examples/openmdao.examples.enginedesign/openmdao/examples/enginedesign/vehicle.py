@@ -9,6 +9,8 @@
 
 # pylint: disable-msg=E0611,F0401
 
+from enthought.traits.api import Interface
+
 from openmdao.main.api import Assembly
 from openmdao.lib.api import Float
 

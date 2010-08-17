@@ -84,7 +84,7 @@ If you are a developer and have a branch from the source repository, you will fi
 	``examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation``
 	
 Note that a Fortran compiler is required. The instructions presented here are
-applicable to the UNIX and Mac OSX environments. There may be some differences on the Windows
+applicable to the UNIX and Mac OS X environments. There may be some differences on the Windows
 platform.
 
 .. index:: three-bar truss

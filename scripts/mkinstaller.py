@@ -95,6 +95,7 @@ def after_install(options, home_dir):
                      'openmdao.test', 
                      'openmdao.examples.simple',
                      'openmdao.examples.bar3simulation',
+                     'openmdao.examples.mdao',
                      'openmdao.examples.enginedesign',
                     ]
 
