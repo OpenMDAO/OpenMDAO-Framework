@@ -16,7 +16,7 @@ from pkg_resources import resource_stream
 from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly
-from openmdao.lib.api import Float
+from openmdao.lib.api import Float, Instance
 
 from openmdao.examples.enginedesign.vehicle import Vehicle
 
@@ -48,6 +48,10 @@ class DrivingSim(Assembly):
     timestep = Float(0.1, iotype='in', units='s', 
                           desc='Simulation time step size')
     
+    # Sockets
+    vehicle = Instance(Vehicle, allow_none=False, 
+                       desc='Socket for a Vehicle')
+    
     # Outputs
     accel_time = Float(0., iotype='out', units='s', 
                             desc='Time to reach end_speed starting from rest')
@@ -57,17 +61,19 @@ class DrivingSim(Assembly):
                              desc='EPA Fuel economy - Highway')
         
     def __init__(self):
-        """ Creates a new DrivingSim object"""
+        """Creates a new DrivingSim instance"""
 
-        
         super(DrivingSim, self).__init__()    
 
+    def _vehicle_changed(self, oldvehicle, newvehicle):
+        """Callback whenever a new Vehicle is added to the DrivingSim
+        """
+        
+        self.driver.workflow.add(newvehicle)
+        
         # set up interface to the framework  
         # pylint: disable-msg=E1101
 
-        veh = self.add('vehicle', Vehicle())
-        self.driver.workflow.add(veh)
-        
         # Promoted From Vehicle -> Engine
         self.create_passthrough('vehicle.stroke')
         self.create_passthrough('vehicle.bore')
@@ -327,7 +333,7 @@ def test_it(): # pragma: no cover
     ttime = time.time()
     
     toplevel = DrivingSim()  
-    toplevel.vehicle = Vehicle()
+    toplevel.add('vehicle', Vehicle())
     toplevel.run()
     
     print "Time (0-60): ", toplevel.accel_time

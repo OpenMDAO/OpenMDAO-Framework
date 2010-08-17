@@ -85,6 +85,8 @@ class BroydenSolver(Driver):
         # get the initial values of the independents
         independents = self.get_parameters().values()
         self.xin = numpy.zeros(len(independents),'d')
+        for i, val in enumerate(independents):
+            self.xin[i] = val.expreval.evaluate()
             
         # perform an initial run for self-consistency
         self.run_iteration()
@@ -92,6 +94,9 @@ class BroydenSolver(Driver):
         # get initial dependents
         dependents = self.get_eq_constraints().values()
         self.F = numpy.zeros(len(dependents),'d')
+        for i, val in enumerate(dependents):
+            term = val.evaluate()        
+            self.F[i] = term[0] - term[1]
                 
         # pick solver algorithm
         if self.algorithm == 'broyden2':
@@ -122,7 +127,7 @@ class BroydenSolver(Driver):
 
             deltaxm = -Gm*Fxm
             xm = xm + deltaxm.T
-
+            
             # update the new independents in the model
             self.set_parameters(xm.flat)
 
@@ -130,16 +135,25 @@ class BroydenSolver(Driver):
             self.run_iteration()
 
             # get dependents
-            for i, v in enumerate(self.get_eq_constraints().values()):
-                term = v.evaluate()
+            for i, val in enumerate(self.get_eq_constraints().values()):
+                term = val.evaluate()
                 self.F[i] = term[0] - term[1]
-
+            
             # successful termination if independents are below tolerance
             if norm(self.F) < self.tol:
                 return
  
             Fxm1 = numpy.matrix(self.F).T
             deltaFxm = Fxm1 - Fxm
+            
+            if norm(deltaFxm) == 0:
+                msg = "Broyden iteration has stopped converging. Change in " + \
+                      "input has produced no change in output. This could " + \
+                      "indicate a problem with your component connections. " + \
+                      "It could also mean that this solver method is " + \
+                      "inadequate for your problem."
+                raise RuntimeError(msg)
+            
             Fxm = Fxm1.copy()
             Gm = Gm + (deltaxm-Gm*deltaFxm)*deltaFxm.T/norm(deltaFxm)**2
 
@@ -184,8 +198,8 @@ class BroydenSolver(Driver):
             self.run_iteration()
 
             # get dependents
-            for i, v in enumerate(self.get_eq_constraints().values()):
-                term = v.evaluate()
+            for i, val in enumerate(self.get_eq_constraints().values()):
+                term = val.evaluate()
                 self.F[i] = term[0] - term[1]
 
             # successful termination if independents are below tolerance
@@ -194,6 +208,15 @@ class BroydenSolver(Driver):
  
             Fxm1 = numpy.matrix(self.F).T
             deltaFxm = Fxm1 - Fxm
+            
+            if norm(deltaFxm) == 0:
+                msg = "Broyden iteration has stopped converging. Change in " + \
+                      "input has produced no change in output. This could " + \
+                      "indicate a problem with your component connections. " + \
+                      "It could also mean that this solver method is " + \
+                      "inadequate for your problem."
+                raise RuntimeError(msg)
+            
             Fxm = Fxm1.copy()
             updateG(deltaxm - Gmul(deltaFxm), deltaFxm/norm(deltaFxm)**2)
 
@@ -229,8 +252,8 @@ class BroydenSolver(Driver):
             self.run_iteration()
 
             # get dependents
-            for i, v in enumerate(self.get_eq_constraints().values()):
-                term = v.evaluate()
+            for i, val in enumerate(self.get_eq_constraints().values()):
+                term = val.evaluate()
                 self.F[i] = term[0] - term[1]
 
             # successful termination if independents are below tolerance

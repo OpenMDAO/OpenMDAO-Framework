@@ -73,14 +73,17 @@ Guide.*  These requirements are described below.
 .. __: http://sourceforge.net/projects/mingw/files/Automated%20MinGW%20Installer/MinGW%205.1.6/MinGW-5.1.6.exe/download
 
 
+.. index:: proxy settings
+
 System Configuration
 ====================
 
-Some steps of the development process, e.g., downloading a branch of the source
-repository and downloading Python distributions, require network access.  If you're
-behind an http proxy, you may have to set the ``http_proxy`` environment variable
-on your system for Bazaar and :term:`virtualenv` to function properly.
-
+Some steps of the development process, e.g., downloading a branch of the source repository and
+downloading Python distributions, require network access.  If you're using Linux or Mac OS X and
+are behind an http proxy, you may have to set the ``http_proxy`` environment variable on
+your system for Bazaar and :term:`virtualenv` to function properly. If you're using Windows 7,
+please follow this `link <http://answers.oreilly.com/topic/675-how-to-configure-proxy-settings-in-windows-7/>`_
+for information on configuring proxy settings.
 
 *Bazaar User Setup*
 +++++++++++++++++++
@@ -195,18 +198,19 @@ Or, on Windows, type:
 
      Scripts\activate
 
-At this point, your ``devenv`` directory should contain the following subdirectories:
+At this point, your ``devenv`` directory should contain the following subdirectories, unless you are
+on Windows. On Windows, the directory structure is slightly different, as noted below.
 
-``bin``
-    Contains Python and a number of other scripts that are associated with
-    the Python packages that are installed in the virtual environment. On
-    Windows, this directory is called ``Scripts``.
-    
+``bin`` 
+    Contains Python and a number of other scripts that are associated with the Python
+    packages that are installed in the virtual environment. On **Windows,** this
+    directory is called ``Scripts``.
+
 ``etc``
     Contains miscellaneous files that don't fit in ``bin, lib,`` or ``include``.
     
 ``include``
-    Contains Python C header files.
+    Contains Python C header files. If you are on **Windows,** you will not have this directory.
 
 
 ``lib``

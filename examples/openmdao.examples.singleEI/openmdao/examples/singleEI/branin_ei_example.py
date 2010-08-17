@@ -25,17 +25,6 @@ from openmdao.examples.singleEI.branin_component import BraninComponent
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
-
-class Broadcaster(Component): 
-    x_in = Float(iotype="in",low=-5,high=10)
-    x_out = Float(iotype="out")
-    
-    y_in = Float(iotype="in",low=0,high=15)
-    y_out = Float(iotype="out")
-    
-    def execute(self): 
-        self.x_out = self.x_in
-        self.y_out = self.y_in
         
 @add_delegate(HasStopConditions)
 class Iterator(Driver):
@@ -53,15 +42,6 @@ class Iterator(Driver):
             return True
         
         return False
-    
-    #def post_iteration(self): 
-        #outputs = [("%s.iteration"%self.name,None,self._iterations),
-                   #("branin_meta_model.x",None,self.parent.branin_meta_model.x),
-                   #("branin_meta_model.y",None,self.parent.branin_meta_model.y),
-                   #("branin_meta_model.f_xy",None,self.parent.branin_meta_model.f_xy)
-                   #]
-        #c = Case(outputs = outputs)
-        #self.recorder.record(c)
         
         
 class Analysis(Assembly): 
@@ -73,16 +53,14 @@ class Analysis(Assembly):
         self.branin_meta_model.surrogate = KrigingSurrogate()
         self.branin_meta_model.model = BraninComponent()
         self.branin_meta_model.recorder = DBCaseRecorder(':memory:')
-        #self.branin_meta_model.recorder = DBCaseRecorder('branin_meta_model.db')
         
         self.add("filter",ParetoFilter())
         self.filter.criteria = ['branin_meta_model.f_xy']
         self.filter.case_set = self.branin_meta_model.recorder.get_iterator()
-        #self.filter.case_set = DBCaseIterator('branin_meta_model.db')
 
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(21, 2, rand_seed=10)
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(21, 2)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
         self.DOE_trainer.add_event("branin_meta_model.train_next")
@@ -94,15 +72,15 @@ class Analysis(Assembly):
         self.EI_driver.add_parameter("branin_meta_model.x")
         self.EI_driver.add_parameter("branin_meta_model.y")
         self.EI_driver.criterion = "branin_meta_model.f_xy"
-        self.EI_driver.next_case_events = ['branin_meta_model.train_next']
-        self.rand_seed = 10
+        #cself.EI_driver.next_case_events = ['branin_meta_model.train_next']
         
         self.add("retrain",CaseIteratorDriver())
+        self.retrain.add_event("branin_meta_model.train_next")
         self.retrain.recorder = DBCaseRecorder('retrain.db')
         
         self.add("iter",Iterator())
         self.iter.iterations = 30
-        self.iter.add_stop_condition('EI_driver.EI <= .03')
+        self.iter.add_stop_condition('EI_driver.EI <= .0001')
         
         #Iteration Heirarchy
         self.driver.workflow.add([self.DOE_trainer,self.iter])

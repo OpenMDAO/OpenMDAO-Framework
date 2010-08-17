@@ -25,6 +25,10 @@ from openmdao.util.decorators import add_delegate
 
 @add_delegate(HasParameters)  # this adds a member called _hasparameters of type HasParameters
 class SingleCritEI(Driver):
+    """Driver which implements the Expected Improvement(EI) process for single criteria problems. It uses components 
+    which outputs are instances of NormalDistribution, combined with a provided optimal case, 
+    to find the point in the design space with the best Expected Improvement."""
+    
     implements(IHasParameters)
     
     rand_seed = Float(None,iotype="in",desc="Value used to see the random number generator")
@@ -34,8 +38,6 @@ class SingleCritEI(Driver):
     criteria = Expression(iotype="in",
                     desc="Name of the variable to maximize the expected improvement around. "
                           "Must be a NormalDistrubtion type")
-    next_case_events = Array([],dtype="str",iotype="in",
-                    desc="Names of event traits which should be added to next_case")
     next_case = Instance(ICaseIterator, iotype="out", copy=None,
                     desc="CaseIterator which contains the case which maximize expected improvement")
     
@@ -131,8 +133,7 @@ class SingleCritEI(Driver):
         
         self.EI = bi.score
         new_x = array([x for x in bi])
-        ins=[(event_name,None,True) for event_name in self.next_case_events]+ \
-            [(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())]    
+        ins = [(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())]    
         outs = [(self.criteria,None,None)]
         case = Case(inputs=ins,outputs=outs)
         #print "ei: ",self.parent.iter._iterations, self.EI   

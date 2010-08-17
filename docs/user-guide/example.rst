@@ -126,7 +126,7 @@ Variable           Description                                  Units
 torque_ratio       Ratio of transmission output power to power 
                    at the wheel
 -----------------  -------------------------------------------  ------
-RPM                Engine rotational speed                      1/min
+RPM    		   Engine rotational speed			rpm
 =================  ===========================================  ======
 
   
@@ -210,7 +210,7 @@ D_v                Intake valve diameter                        mm
 =================  ===========================================  ======
 Variable           Description                                  Units
 =================  ===========================================  ======
-RPM                Engine rotational speed (1000-6000)          rev/min
+RPM		   Engine rotational speed (1000-6000)          rpm
 -----------------  -------------------------------------------  ------
 throttle           Throttle position                
 =================  ===========================================  ======
@@ -428,7 +428,7 @@ from its inputs. We must create the public variables that define these inputs an
         velocity = Float(0., iotype='in', units='mi/h',
                          desc='Current Velocity of Vehicle')
 
-        RPM = Float(1000., iotype='out', units='RPM',
+        RPM = Float(1000., iotype='out', units='rpm',
                     desc='Engine RPM')        
         torque_ratio = Float(0., iotype='out',
                              desc='Ratio of output torque to engine torque')    
@@ -519,7 +519,7 @@ variables allow you to specify an optional maximum and minimum value.
 .. testcode:: Code2
 
     RPM = Float(1000.0, low=1000., high=6000., iotype='in', 
-                     units='RPM',  desc='Engine RPM')
+                     units='rpm',  desc='Engine RPM')
 
 The *low* and *high* arguments are used to specify a minimum and maximum value
 for RPM. If the engine's RPM is set to a value outside of these limits, an
@@ -893,26 +893,80 @@ implementation. Both of these scripts run the engine 50 times before termination
 Sockets and Interfaces
 ----------------------
 
-Now that we have a functional and quick Vehicle assembly, we need
-to complete the problem by providing a way to simulate the acceleration and
-the EPA fuel economy estimates. The acceleration test requires an integration
-in time to match a specified velocity profile. The vehicle assembly is
-executed at each time step to produce the instantaneous acceleration. The EPA
-fuel economy tests are a bit more tricky and require an integration in time.
-The vehicle assembly must be executed while varying the throttle and gear
-position inputs to match a desired acceleration for the integration segment.
-Both of these solution procedures were implemented in a component called
-*DrivingSim,* which requires a Vehicle assembly to perform a simulation. This
-component is found in ``driving_sim.py.``
+Now that we have a functional and quick Vehicle assembly, we need to complete
+the problem by providing a way to simulate the acceleration and the EPA fuel
+economy estimates. The acceleration test requires an integration in time to
+match a specified velocity profile. In other words, the vehicle assembly need
+to be executed at each time step to produce the instantaneous acceleration.
+The EPA fuel economy tests are a bit more tricky, though they also require an integration in
+time. For these tests, the vehicle assembly must be executed while varying the throttle and
+gear position inputs to match a desired acceleration for the integration
+segment. Both of these solution procedures were implemented in a Python component
+called *DrivingSim.*  This component is found in ``driving_sim.py.``
 
-There are a couple of ways that we could implement this kind of problem in OpenMDAO. Here, it will
-be implemented as a :term:`Socket`.
+The component DrivingSim contains an execute function that performs the time
+integration on a Vehicle component. It is not important to understand the
+execution details. The basic premise is that this simulation component needs
+to contain another OpenMDAO component. This can be done through use of a socket.
 
-.. todo::
+In OpenMDAO, Sockets are placeholders where different objects can be
+substituted to modify the function of a Component. They are used by
+Components, Assemblies, and Drivers to provide a place where users can insert
+objects that satisfy a certain interface and whose purpose is to perform some
+additional calculations. For example, a component calculating the drag on a
+wing might provide a Socket to allow the user to insert a custom flap drag
+calculation. In the example problem section, a Design Of Experiment (DOE)
+Driver uses a Socket to allow different types of DOE to be used.
 
-	Define an interface for Vehicle and add more info on that to this part
-	of the tutorial. Sockets are not yet fully defined, so the vehicle instance
-	is currently stored directly in the DrivingSim class.
+A socket can be declared in the DrivingSim class using an *Instance* trait:
+
+.. testcode:: Socket_to_me
+
+    from openmdao.main.api import Assembly
+    from openmdao.lib.api import Float, Instance
+
+    from openmdao.examples.enginedesign.vehicle import Vehicle
+	
+    class DrivingSim(Assembly):
+	""" Simulation of vehicle performance.
+	    
+	# Simulation inputs
+	end_speed          # Simulation ending speed in mph.
+	timestep           # Simulation time step in sec.
+	    
+	# Outputs
+	accel_time        # Time to reach 60 mph from start
+	EPA_city          # Fuel economy for city driving
+	EPA_highway       # Fuel economy for highway driving
+	"""    
+	
+	# Simulation Parameters
+	end_speed = Float(60.0, iotype='in', units='m/h',
+			       desc='Simulation final speed')
+	timestep = Float(0.1, iotype='in', units='s', 
+			      desc='Simulation time step size')
+	
+	# Sockets
+	vehicle = Instance(Vehicle, allow_none=False, 
+			   desc='Socket for a Vehicle')
+	
+	# Outputs
+	accel_time = Float(0., iotype='out', units='s', 
+				desc='Time to reach end_speed starting from rest')
+	EPA_city = Float(0., iotype='out', units='mi/galUS', 
+			      desc='EPA Fuel economy - City')
+	EPA_highway = Float(0., iotype='out', units='mi/galUS', 
+				 desc='EPA Fuel economy - Highway')
+
+An *Instance* is a special type of public variable that hold an object. The
+first argument in the constructor is the type of object that is allowed to fit in
+the socket, which in this case is a Vehicle. The attribute *allow_none* can be used
+to declare whether filling the socket is optional. For our driving simulation to
+run, the socket must be filled with a Vehicle. Notice that a socket is neither an
+input or an output, so it does not require an iotype, and it is not available for
+passing data in the framework.
+
+.. todo:: We eventually will need to create our own Instance class in order to define the inputs/outputs of an interface.
 
 **DrivingSim - Outputs:**
 
@@ -929,11 +983,64 @@ EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
 		   driving profile
 =================  ===========================================  ========
 
+Ultimately, we want the DrivingSim component to be executed in a model with an optimizer,
+which can set the Vehicle's design variables to try and minimize the simulation outputs. To
+accomplish this, we need to promote the design variables to become inputs to the DrivingSim.
+We did this in the Vehicle assembly by creating a passthrough for each design variable. The
+passthrough feature is only available in an assembly, so the DrivingSim component must
+inherit from *Assembly* instead of *Component.*
+
+Because the socket won't be filled until after the DrivingSim is instantiated, the design
+variables cannot be promoted in the initialization function. Instead, we have to
+create a callback function named _xxx_changed where xxx is the name of our socket. For our
+case, the socket is named vehicle, so the function should be named _vehicle_changed. This
+callback function executed whenever a Vehicle instance is assigned to this socket.
+
+.. testcode:: Socket_to_me
+
+    def _vehicle_changed(self, oldvehicle, newvehicle):
+        """Callback whenever a new Vehicle is added to the DrivingSim
+        """
+        
+        self.driver.workflow.add(newvehicle)
+        
+        # set up interface to the framework  
+        # pylint: disable-msg=E1101
+
+        # Promoted From Vehicle -> Engine
+        self.create_passthrough('vehicle.stroke')
+        self.create_passthrough('vehicle.bore')
+	# ...
+
+In _vehicle_changed, we create passthroughs to all of our design variables. We
+also add the vehicle to the DrivingSim's workflow in order to tell the
+assembly to run the Vehicle whenever it executes.
+
+The final piece of the puzzle is to learn how to insert a vehicle into our socket. This
+is done with the *add* command.
+	
+    >>> from openmdao.examples.enginedesign.driving_sim import DrivingSim
+    >>> my_sim = DrivingSim()
+    >>> from openmdao.examples.enginedesign.vehicle import Vehicle
+    >>> my_sim.add('vehicle', Vehicle())
+    <openmdao.examples.enginedesign.vehicle.Vehicle object at ...>
+    >>> my_sim.run()
+    >>> my_sim.accel_time
+    7.49...
+    >>> my_sim.EPA_city
+    24.80...
+    >>> my_sim.EPA_highway
+    33.45...
+    
+.. note::
+    Be careful not to simply assign the new vehicle instance to the socket (i.e., my_sim.vehicle = Vehicle()).
+    If you do this, vital framework connections will be bypassed, and the component will not execute properly.
 
 Setting up an Optimization Problem
 ----------------------------------
 
-The final step is to create a top level Assembly that defines the problem using DrivingSim and the vehicle assembly.
+The final step is to create a top level Assembly that defines the problem
+using DrivingSim and the vehicle assembly.
 
 The first problem we would like to solve is a single objective optimization problem
 where we adjust some of the design variables to minimize the 0-60 acceleration time.
@@ -944,7 +1051,9 @@ but the second variable cannot be optimized by mere inspection.
 The optimization will be handled by the gradient optimizer CONMIN.
 
 In ``engine_optimization.py``, we define the class EngineOptimization and
-create an instance of DrivingSim and CONMINdriver:
+create an instance of CONMINdriver and DrivingSim, which is addded to the
+driver's workflow. We also create a Vehicle instance and insert it into the
+socket in DrivingSim:
 
 .. testcode:: Code9
 
@@ -961,11 +1070,14 @@ create an instance of DrivingSim and CONMINdriver:
         
             super(EngineOptimization, self).__init__()
 
+            # Create CONMIN Optimizer instance
+            self.add('driver', CONMINdriver())
+        
             # Create DrivingSim instance
             self.add('driving_sim', Driving_Sim())
 
-            # Create CONMIN Optimizer instance
-            self.add('driver', CONMINdriver())
+            # Add Vehicle instance to vehicle socket
+            self.driving_sim.vehicle = Vehicle()
         
             # add DrivingSim to workflow
             self.driver.workflow.add(self.driving_sim)
@@ -989,10 +1101,16 @@ of iterations for the optimization loop.
 
 The optimization objective is to minimize the 0-60 mph acceleration time by
 adjusting the design variables *bore* and *spark angle*. In the previous
-examples, we learned to use Expressions to build expressions that point to
-locations in the data hierarchy. Whenever we declare multiple design
-variables, the Expressions are placed in a list. The values for the lower and
-upper bounds are also defined in list.
+examples, we learned to use Expressions to build mathematical expressions with
+variables that point to locations in the data hierarchy, so here we do it once
+again with our objectives and design variables. We could submit the design
+variables one at a time using multiple calls to *add_parameter*, but we can
+also submit them with a single call to *add_paremeter* by placing the information
+for each design variable in a list of tuples. The information we need for each
+variable is the expression that points to it (e.g., driving_sim.spark_angle), and
+the minimum and maximum value of the search range for that variable (e.g., -.50, 10).
+Once again, if the min and max aren't specified, the *low* and *high* attributes
+from the OpenMDAO variable will be used if they have been specified.
 
 We are now ready to solve an optimization problem.
 

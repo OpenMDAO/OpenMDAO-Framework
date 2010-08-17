@@ -19,9 +19,10 @@ import conmin.conmin as conmin
 
 from openmdao.main.api import Case, Driver, Expression, ExpressionList
 from openmdao.main.exceptions import RunStopped
+from openmdao.lib.traits.array import Array
+from openmdao.lib.traits.enum import Enum
 from openmdao.lib.traits.float import Float
 from openmdao.lib.traits.int import Int
-from openmdao.lib.traits.array import Array
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.util.decorators import add_delegate
@@ -177,8 +178,8 @@ class CONMINdriver(Driver):
     # CONMIN has quite a few parameters to give the user control over aspects
     # of the solution. 
     
-    iprint = Int(0, iotype='in', desc='Print information during CONMIN '
-                    'solution. Higher values are more verbose.')
+    iprint = Enum(0, [0,1,2,3,4,5,101], iotype='in', desc='Print information '
+                    'during CONMIN solution. Higher values are more verbose.')
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
                     'termination.')
     fdch = Float(.01, iotype='in', desc='Relative change in parameters '
@@ -231,6 +232,7 @@ class CONMINdriver(Driver):
         self.design_vals = zeros(0,'d')
         self._scal = zeros(0,'d')
         self.cons_active_or_violated = zeros(0, 'i') 
+        self._cons_is_linear = zeros(0, 'i')
         
         # gradient of objective w.r.t x[i]
         self.df = zeros(0, 'd')
@@ -314,7 +316,7 @@ class CONMINdriver(Driver):
             (self.design_vals,
              self._scal, self.gradients, self.s,
              self.g1, self.g2, self._b, self._c,
-             self.cons_is_linear,
+             self._cons_is_linear,
              self.cons_active_or_violated, self._ms1) = \
                  conmin.conmin(self.design_vals,
                                self._lower_bounds, self._upper_bounds,
@@ -322,7 +324,7 @@ class CONMINdriver(Driver):
                                self._scal, self.df,
                                self.gradients,
                                self.s, self.g1, self.g2, self._b, self._c,
-                               self.cons_is_linear,
+                               self._cons_is_linear,
                                self.cons_active_or_violated, self._ms1)
         except Exception, err:
             self._logger.error(str(err))
@@ -451,13 +453,15 @@ class CONMINdriver(Driver):
         # if constraint i is known to be a linear function of design vars, 
         # the user can set cons_is_linear[i] to 1, otherwise set it to 0. This
         # is not essential and is for efficiency only.
-        if len(self.cons_is_linear) == 0:
-            self.cons_is_linear = zeros(length, 'i') 
-        else:
-            if len(self.cons_is_linear) != length:
+        self._cons_is_linear = zeros(length, 'i') 
+        if len(self.cons_is_linear) > 0:
+            if len(self.cons_is_linear) != len(self.get_ineq_constraints()):
                 self.raise_exception('size of cons_is_linear (%d) does not \
                                       match number of constraints (%d)'%
                                (len(self.cons_is_linear),length), ValueError)
+            else:
+                for i, val in enumerate(self.cons_is_linear):
+                    self._cons_is_linear[i] = val
         
         self.cnmn1.ndv = num_dvs
         self.cnmn1.ncon = len(self.get_ineq_constraints())
