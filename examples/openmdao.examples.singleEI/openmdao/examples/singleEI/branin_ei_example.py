@@ -79,8 +79,8 @@ class Analysis(Assembly):
         self.retrain.recorder = DBCaseRecorder('retrain.db')
         
         self.add("iter",Iterator())
-        self.iter.iterations = 20
-        self.iter.add_stop_condition('EI_driver.EI <= .001')
+        self.iter.iterations = 30
+        self.iter.add_stop_condition('EI_driver.EI <= .0001')
         
         #Iteration Heirarchy
         self.driver.workflow.add([self.DOE_trainer,self.iter])
