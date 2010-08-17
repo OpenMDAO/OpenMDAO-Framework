@@ -72,7 +72,6 @@ class Analysis(Assembly):
         self.EI_driver.add_parameter("branin_meta_model.x")
         self.EI_driver.add_parameter("branin_meta_model.y")
         self.EI_driver.criterion = "branin_meta_model.f_xy"
-        #cself.EI_driver.next_case_events = ['branin_meta_model.train_next']
         
         self.add("retrain",CaseIteratorDriver())
         self.retrain.add_event("branin_meta_model.train_next")
