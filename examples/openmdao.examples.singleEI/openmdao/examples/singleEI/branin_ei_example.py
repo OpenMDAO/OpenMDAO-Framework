@@ -25,17 +25,6 @@ from openmdao.examples.singleEI.branin_component import BraninComponent
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
-
-class Broadcaster(Component): 
-    x_in = Float(iotype="in",low=-5,high=10)
-    x_out = Float(iotype="out")
-    
-    y_in = Float(iotype="in",low=0,high=15)
-    y_out = Float(iotype="out")
-    
-    def execute(self): 
-        self.x_out = self.x_in
-        self.y_out = self.y_in
         
 @add_delegate(HasStopConditions)
 class Iterator(Driver):
