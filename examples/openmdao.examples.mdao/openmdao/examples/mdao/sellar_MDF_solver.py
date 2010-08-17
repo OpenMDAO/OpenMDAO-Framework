@@ -3,14 +3,19 @@
     Disciplines coupled using Quasi-Newton-Raphson solver
 """
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                SellarDiscipline2
 from openmdao.examples.mdao.broadcaster import Broadcaster
 
-from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.api import CONMINdriver, BroydenSolver, Float
+from openmdao.main.api import Assembly, set_as_top
+from openmdao.lib.api import CONMINdriver, BroydenSolver
 
 class SellarMDF(Assembly):
+    """ Optimization of the Sellar problem using MDF
+    Disciplines coupled with BroydenSolver.
+    """
+    
     def __init__(self):
         """ Creates a new Assembly with this problem
         
@@ -50,15 +55,17 @@ class SellarMDF(Assembly):
         self.solver.algorithm = "broyden2"
 
         # Optimization parameters
-        self.driver.objective = '(dis1.x1)**2 + coupler.z2 + dis1.y1 + math.exp(-dis2.y2)'
-        for param, low, high in zip(['coupler.z1_in', 'coupler.z2_in', 'dis1.x1'],
+        self.driver.objective = \
+            '(dis1.x1)**2 + coupler.z2 + dis1.y1 + math.exp(-dis2.y2)'
+        for param, low, high in zip(['coupler.z1_in', 'coupler.z2_in',
+                                     'dis1.x1'],
                                     [-10.0, 0.0, 0.0],
                                     [10.0, 10.0, 10.0]):
             self.driver.add_parameter(param, low=low, high=high)
         map(self.driver.add_constraint, ['3.16 - dis1.y1',
                                               'dis2.y2 - 24.0' ])
         self.driver.cons_is_linear = [1, 1]
-        self.driver.iprint = 2
+        self.driver.iprint = 0
         self.driver.itmax = 30
         self.driver.fdch = .001
         self.driver.fdchm = .001
@@ -74,6 +81,8 @@ if __name__ == "__main__": # pragma: no cover
     prob = SellarMDF()
     set_as_top(prob)
     
+    # pylint: disable-msg=E1101
+        
     prob.coupler.z1_in = 5.0
     prob.coupler.z2_in = 2.0
     prob.dis1.x1 = 1.0
@@ -93,4 +102,4 @@ if __name__ == "__main__": # pragma: no cover
     print "Elapsed time: ", time.time()-tt, "seconds"
 
     
-# End sellar_MDF.py
+# End sellar_MDF_solver.py
