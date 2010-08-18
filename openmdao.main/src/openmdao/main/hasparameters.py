@@ -57,9 +57,9 @@ class HasParameters(object):
                                          AttributeError)
         try:
             val = parameter.expreval.evaluate()
-        except:
-            self._parent.raise_exception("Can't add parameter because I can't evaluate '%s'" % name,
-                                         AttributeError)
+        except Exception as err:
+            self._parent.raise_exception("Can't add parameter because I can't evaluate '%s': %s" % 
+                                         (name,str(err)), type(err))
         if not isinstance(val,(float,float32,float64,int,int32,int64)):
             self._parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
                                          (name,type(val).__name__), ValueError)

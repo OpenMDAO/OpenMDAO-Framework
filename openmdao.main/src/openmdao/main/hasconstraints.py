@@ -9,7 +9,6 @@ _ops = {
     '<': operator.lt,
     '>=': operator.ge,
     '<=': operator.le,
-    '==': operator.eq,
     '=': operator.eq,
     }
 
@@ -37,15 +36,17 @@ class Constraint(object):
         
 
 def _parse_constraint(expr_string):
-    for relation in ['>=','<=','==','>','<','=']:
+    for relation in ['>=','<=','>','<','=']:
         parts = expr_string.split(relation)
         if len(parts) > 1:
-            return (parts[0], relation, parts[1])
+            return (parts[0].strip(), relation, parts[1].strip())
     else:
+        if len(expr_string.split('==')) > 1:
+            raise ValueError("'==' is not a valid relation in a constraint.  Use '=' instead.")
         return (expr_string, '>', '0')
     
 def _remove_spaces(s):
-    return ''.join([c for c in s if c!=' '])
+    return s.translate(None, ' \n\t\r')
 
 class _HasConstraintsBase(object):
     def __init__(self, parent):
@@ -63,15 +64,17 @@ class _HasConstraintsBase(object):
         """Removes all constraints."""
         self._constraints = ordereddict.OrderedDict()
         
-    
 class HasEqConstraints(_HasConstraintsBase):
     def add_constraint(self, expr_string):
         """Adds a constraint to the driver"""
-        lhs, rel, rhs = _parse_constraint(expr_string)
-        if rel=='==' or rel=='=':
+        try:
+            lhs, rel, rhs = _parse_constraint(expr_string)
+        except Exception as err:
+            self._parent.raise_exception(str(err), type(err))
+        if rel=='=':
             self.add_eq_constraint(lhs, rhs)
         else:
-            raise NotImplemented("add_ineq_constraint")
+            self._parent.raise_exception("add_ineq_constraint", NotImplemented)
 
     def add_eq_constraint(self, lhs, rhs):
         ident = _remove_spaces('='.join([lhs,rhs]))
@@ -96,7 +99,7 @@ class HasIneqConstraints(_HasConstraintsBase):
 
     def add_ineq_constraint(self, lhs, rel, rhs):
         if rel=='==' or rel=='=':
-            raise NotImplemented("add_eq_constraint")
+            self._parent.raise_exception("add_eq_constraint", NotImplemented)
 
         ident = _remove_spaces(rel.join([lhs,rhs]))
         self._constraints[ident] = Constraint(lhs,rel,rhs, scope=self._parent)

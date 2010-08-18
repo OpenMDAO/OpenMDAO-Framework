@@ -69,7 +69,7 @@ class Case(object):
     def add_output(self, name, index=None):
         """Convenience function for adding an output"""
         self.outputs.append((name, index, None))
-
+        
 #class FileCaseIterator(object):
     #"""An iterator that returns :class:`Case` objects from a file having the
     #simple format below, where a blank line indicates a separation between two

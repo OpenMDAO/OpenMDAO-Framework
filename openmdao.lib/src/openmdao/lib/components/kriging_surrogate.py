@@ -1,5 +1,5 @@
 from math import log,e,sqrt
-from numpy import array,zeros,dot,ones,arange,eye,abs,append
+from numpy import array,zeros,dot,ones,arange,eye,abs,append,vstack
 from numpy.linalg import det,pinv,linalg,lstsq
 from scipy.linalg import cho_factor,cho_solve,lu_factor,lu_solve,triu,LinAlgError
 from scipy.optimize import fmin, anneal, brute
@@ -11,7 +11,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 
 
 class KrigingSurrogate(HasTraits): 
-    implements(ISurrogate)    
+    implements(ISurrogate)
     
     def __init__(self,X=None,Y=None):
         super(KrigingSurrogate, self).__init__() # must call HasTraits init to set up Traits stuff
@@ -46,12 +46,21 @@ class KrigingSurrogate(HasTraits):
         thetas = 10**self.thetas
         for i in range(self.n):
             r[i] = e**(-sum(thetas*(array(X[i])-new_x)**2))
+            
         one = ones(self.n)
 
         #-----LSTSQ-------
-        f = self.mu+dot(r,lstsq(self.R,Y-dot(one,self.mu))[0])
-        term1 = dot(r,lstsq(self.R,r)[0])
-        term2 = (1-dot(one,lstsq(self.R,r)[0]))**2/dot(one,lstsq(self.R,one)[0])
+        rhs = vstack([(Y-dot(one,self.mu)), r, one]).T
+        lsq = lstsq(self.R.T,rhs)[0].T
+        
+        f = self.mu + dot(r, lsq[0])
+        term1 = dot(r,lsq[1])
+        term2 = (1.0 - dot(one,lsq[1]))**2/dot(one,lsq[2])        
+        
+        #f = self.mu+dot(r,lstsq(self.R,Y-dot(one,self.mu))[0])
+        #lsq = lstsq(self.R,r)[0]
+        #term1 = dot(r,lsq)
+        #term2 = (1-dot(one,lsq))**2/dot(one,lstsq(self.R,one)[0])
         #---LU or CHOLESKY DECOMPOSTION ---
         #R_fact = self.R_fact
         #f = self.mu+dot(r,self.myfun(R_fact,Y-dot(one,self.mu)))

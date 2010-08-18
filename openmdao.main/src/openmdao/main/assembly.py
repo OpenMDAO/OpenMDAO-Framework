@@ -111,16 +111,16 @@ class Assembly (Component):
         """Retrieves the named trait, attempting to create a PassthroughTrait
         on-the-fly if the specified trait doesn't exist.
         """
-        trait = self.trait(pathname)
+        trait = self.traits().get(pathname)
         if trait is None:
-            newtrait = self.create_passthrough(pathname)
-            if iotype is not None and iotype != newtrait.iotype:
+            trait = self.create_passthrough(pathname)
+            if iotype is not None and iotype != trait.iotype:
                 self.raise_exception(
                     "new trait has iotype of '%s' but '%s' was expected" %
-                    (newtrait.iotype, iotype), TraitError)
+                    (trait.iotype, iotype), TraitError)
         return trait
 
-    def split_varpath(self, path):
+    def _split_varpath(self, path):
         """Return a tuple of compname,component,varname given a path
         name of the form 'compname.varname'. If the name is of the form 'varname'
         then compname will be None and comp is self. 
@@ -136,9 +136,9 @@ class Assembly (Component):
         """Connect one src Variable to one destination Variable. This could be
         a normal connection (output to input) or a passthrough connection."""
 
-        srccompname, srccomp, srcvarname = self.split_varpath(srcpath)
+        srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         srctrait = srccomp.get_dyn_trait(srcvarname, 'out')
-        destcompname, destcomp, destvarname = self.split_varpath(destpath)
+        destcompname, destcomp, destvarname = self._split_varpath(destpath)
         desttrait = destcomp.get_dyn_trait(destvarname, 'in')
         
         if srccompname == destcompname:
@@ -194,7 +194,6 @@ class Assembly (Component):
             self._valid_dict[destpath] = False
         elif srccomp is self and srctrait.iotype == 'in': # boundary input
             self.comp_graph.connect('.'.join(['@in',srcpath]), destpath)
-            #self._valid_dict[srcpath] = False
         else:
             destcomp.invalidate_deps(varnames=[destvarname], notify_parent=True)
         
@@ -336,9 +335,6 @@ class Assembly (Component):
         """
         self.update_inputs('@out', outnames)
         
-    #def push_data(self, compname):
-        #self.comp_graph.push_data(compname, self)
-
     def get_valids(self, names):
         """Returns a list of boolean values indicating whether the named
         attributes are valid (True) or invalid (False). Entries in names may
@@ -346,8 +342,9 @@ class Assembly (Component):
         self, but no deeper in the hierarchy than that.
         """
         valids = []
+        traits = self.traits()
         for name in names:
-            if self.trait(name):
+            if name in traits:
                 valids.append(self.get_valid(name))
             else:
                 tup = name.split('.', 1)

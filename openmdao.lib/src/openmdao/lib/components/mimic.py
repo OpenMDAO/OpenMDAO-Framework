@@ -88,8 +88,7 @@ class Mimic(Component):
         self._current_model_traitnames = set()
         
         if newmodel:
-            traitdict = newmodel._traits_meta_filter(iotype=not_none)
-            
+            traitdict = newmodel._alltraits(iotype=not_none)
             for name,trait in traitdict.items():
                 if self._eligible(name):
                     self.add_trait(name, trait.trait_type)
@@ -114,7 +113,6 @@ class Mimic(Component):
         """Return True if the named model trait should become a trait in the Mimic."""
         # TODO: add wildcarding to includes and excludes
         if name in _mimic_class_traitnames:
-            self._logger.warning("name collision for '%s' between model and Mimic" % name)
             return False
         if self.includes and name not in self.includes:
             return False

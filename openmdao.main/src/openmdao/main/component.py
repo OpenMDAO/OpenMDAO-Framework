@@ -152,7 +152,7 @@ class Component (Container):
         Classes that override this function must still call the base class
         version.
         """
-        for name, value in self._traits_meta_filter(required=True).items():
+        for name, value in self.traits(required=True).items():
             if value.is_trait_type(Instance) and getattr(self, name) is None:
                 self.raise_exception("required plugin '%s' is not present" %
                                      name, TraitError)
@@ -320,7 +320,7 @@ class Component (Container):
         force call to *check_config* prior to execution when a trait is
         removed.
         """
-        trait = self.trait(name)
+        trait = self.traits().get(name)
         super(Component, self).remove_trait(name)
         self.config_changed()
         try:
@@ -351,6 +351,14 @@ class Component (Container):
                         return False
         return True
 
+    def _trait_added_changed(self, name):
+        """Called any time a new trait is added to this container."""
+        self.new_trait(name)
+        self.config_changed()
+        
+    def new_trait(self, name):
+        pass
+        
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
@@ -407,7 +415,7 @@ class Component (Container):
         else:
             checker = iotype
         
-        return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
+        return [n for n,v in self._alltraits(iotype=checker).items() 
                     if v.is_trait_type(Expression) or 
                        v.is_trait_type(ExpressionList)]
     
@@ -420,6 +428,7 @@ class Component (Container):
             conn_list = []
             exprs = self._get_expr_names()
             selfname = self.name
+            traits = self.traits()
             for name in exprs:
                 exprobj = getattr(self, name)
                 if isinstance(exprobj, DumbDefault):
@@ -431,7 +440,7 @@ class Component (Container):
                     cnames = []
                     for entry in exprobj:
                         cnames += entry.get_referenced_compnames()
-                if self.trait(name).iotype == 'in':
+                if traits[name].iotype == 'in':
                     for cname in cnames:
                         conn_list.append((cname, selfname))
                 else:
@@ -747,7 +756,7 @@ class Component (Container):
                           isinstance(obj.parent, Component):
                         rel_path = join(obj.directory, rel_path)
                         obj = obj.parent
-                elif top.trait('_rel_dir_path'):
+                elif '_rel_dir_path' in top.traits():
                     top.warning('No parent, using saved relative directory')
                     rel_path = top._rel_dir_path  # Set during save_to_egg().
                 else:

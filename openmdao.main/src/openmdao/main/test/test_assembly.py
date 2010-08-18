@@ -215,6 +215,15 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(self.asm.get('comp3.rout'), 75.4*1.5)
         self.assertEqual(self.asm.get('rout'), 75.4*1.5)
         
+    def test_create_passthrough_already_exists(self):
+        self.asm.create_passthrough('comp3.rout')
+        try:
+            self.asm.create_passthrough('comp3.rout')
+        except TraitError as err:
+            self.assertEqual(str(err), ": 'rout' already exists")
+        else:
+            self.fail('expected TraitError')
+        
     def test_passthrough_nested(self):
         self.asm.set('comp1.r', 8.)
         self.asm.nested.create_passthrough('comp1.r')

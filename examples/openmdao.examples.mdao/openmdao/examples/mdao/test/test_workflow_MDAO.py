@@ -189,8 +189,6 @@ class TestCase(unittest.TestCase):
         pass
 
     def test_MDF(self):
-        """ Run MDF"""
-        
         prob = SellarMDF()
         set_as_top(prob)
         prob.coupler.z1_in = 5.0
@@ -203,8 +201,6 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
 
     def test_IDF(self):
-        """ Run IDF"""
-        
         prob = SellarIDF()
         set_as_top(prob)
     
@@ -219,8 +215,6 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
         
     def test_CO(self):
-        """ Run CO"""
-        
         prob = SellarCO()
         set_as_top(prob)
     

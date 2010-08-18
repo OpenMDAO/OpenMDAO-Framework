@@ -128,7 +128,7 @@ class MetaModel(Component):
             
         if newmodel:
             # query for inputs
-            traitdict = newmodel._traits_meta_filter(iotype='in')
+            traitdict = newmodel._alltraits(iotype='in')
             for name,trait in traitdict.items():
                 if self._eligible(name):
                     self._surrogate_input_names.append(name)
@@ -137,7 +137,7 @@ class MetaModel(Component):
                 setattr(self, name, getattr(newmodel, name))
                 
             # now outputs
-            traitdict = newmodel._traits_meta_filter(iotype='out')
+            traitdict = newmodel._alltraits(iotype='out')
             for name,trait in traitdict.items():
                 if self._eligible(name):
                     self.add_trait(name, 
@@ -208,10 +208,10 @@ class MetaModel(Component):
         on the includes and excludes lists.
         """
         if name in self._mm_class_traitnames:
-            self._logger.warning("Name collision for '%s' between model and MetaModel." % name)
             return False
         if self.includes and name not in self.includes:
             return False
         elif self.excludes and name in self.excludes:
             return False
         return True
+    
