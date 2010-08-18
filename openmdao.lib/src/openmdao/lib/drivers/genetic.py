@@ -100,13 +100,6 @@ class Genetic(Driver):
                 
     def execute(self):
         """Perform the optimization"""
-        # pyevolve does some caching that causes failures during our
-        # complete unit tests due to stale values in the cache attributes
-        # below, so reset them here
-        Selectors.GRankSelector.cachePopID = None
-        Selectors.GRankSelector.cacheCount = None
-        Selectors.GRouletteWheel.cachePopID = None
-        Selectors.GRouletteWheel.cacheWheel = None
         
         alleles = self._make_alleles()
         

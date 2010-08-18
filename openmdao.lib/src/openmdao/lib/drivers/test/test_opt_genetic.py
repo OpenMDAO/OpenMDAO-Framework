@@ -10,6 +10,7 @@ import unittest
 import numpy
 
 from enthought.traits.api import TraitError
+from pyevolve import Selectors
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.api import Float, Array, Enum, Int, Str
@@ -46,8 +47,15 @@ class TestCase(unittest.TestCase):
     """ test case for the genetic driver"""         
 
     def setUp(self):
+        # pyevolve does some caching that causes failures during our
+        # complete unit tests due to stale values in the cache attributes
+        # below, so reset them here
+        Selectors.GRankSelector.cachePopID = None
+        Selectors.GRankSelector.cacheCount = None
+        Selectors.GRouletteWheel.cachePopID = None
+        Selectors.GRouletteWheel.cacheWheel = None
+        
         self.top = set_as_top(Assembly())
-
         self.top.add('driver', Genetic())
 
     def tearDown(self):

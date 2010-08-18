@@ -5,9 +5,12 @@ Test for single criteria EI example.
 import unittest
 import random
 
+from pyevolve import Selectors
+
 from openmdao.main.api import set_as_top
 from openmdao.examples.singleEI.branin_ei_example import Analysis, Iterator
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
+
 
 
 class EITest(unittest.TestCase):
@@ -15,6 +18,13 @@ class EITest(unittest.TestCase):
     
     def setUp(self):
         random.seed(10)
+        # pyevolve does some caching that causes failures during our
+        # complete unit tests due to stale values in the cache attributes
+        # below, so reset them here
+        Selectors.GRankSelector.cachePopID = None
+        Selectors.GRankSelector.cacheCount = None
+        Selectors.GRouletteWheel.cachePopID = None
+        Selectors.GRouletteWheel.cacheWheel = None
 
     def tearDown(self):
         pass
