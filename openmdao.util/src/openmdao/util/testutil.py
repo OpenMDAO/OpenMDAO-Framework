@@ -1,6 +1,8 @@
+"""Utilities for the OpenMDAO test process"""
+
 import os.path
 import sys
-
+from math import isnan
 
 def assertRaisesError(test_case_instance, code, err_type, err_msg):
     """ Determine that `code` raises `err_type` with `err_msg`. """
@@ -65,6 +67,10 @@ def assert_rel_error(test_case, actual, desired, tolerance):
     tolerance : float
         Maximum relative error ``(actual - desired) / desired``.
     """
+    if isnan(actual) and not isnan(desired):
+        test_case.fail('actual nan, desired %s, error nan, tolerance %s'
+                       % (desired, tolerance))
+    
     error = (actual - desired) / desired
     if abs(error) > tolerance:
         test_case.fail('actual %s, desired %s, error %s, tolerance %s'
