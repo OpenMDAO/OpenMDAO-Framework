@@ -5,6 +5,8 @@ Test for single criteria EI example.
 import unittest
 import random
 
+from numpy import random as numpy_random
+
 from pyevolve import Selectors
 
 from openmdao.main.api import set_as_top
@@ -18,6 +20,7 @@ class EITest(unittest.TestCase):
     
     def setUp(self):
         random.seed(10)
+        numpy_random.seed(10)
         # pyevolve does some caching that causes failures during our
         # complete unit tests due to stale values in the cache attributes
         # below, so reset them here
@@ -37,8 +40,8 @@ class EITest(unittest.TestCase):
         analysis.iterations = 3
         analysis.run()
         analysis.cleanup()
-        self.assertAlmostEqual(7.2,analysis.EI_driver.next_case[0].inputs[1][2],1)
-        self.assertAlmostEqual(12.35,analysis.EI_driver.next_case[0].inputs[2][2],1)
+        self.assertAlmostEqual(9.93,analysis.EI_driver.next_case[0].inputs[0][2],1)
+        self.assertAlmostEqual(10.81,analysis.EI_driver.next_case[0].inputs[1][2],1)
         
         
 if __name__=="__main__": #pragma: no cover

@@ -31,8 +31,6 @@ class SingleCritEI(Driver):
     
     implements(IHasParameters)
     
-    rand_seed = Float(None,iotype="in",desc="Value used to see the random number generator")
-     
     best_case = Instance(ICaseIterator, iotype="in",
                     desc="CaseIterator which contains a single case, representing the criteria value")
     criteria = Expression(iotype="in",
@@ -89,14 +87,6 @@ class SingleCritEI(Driver):
         elif not self.set_of_alleles:
             self.raise_exception("no parameters were added to the driver",RuntimeError)
             
-        # pyevolve does some caching that causes failures during our
-        # complete unit tests due to stale values in the cache attributes
-        # below, so reset them here
-        Selectors.GRankSelector.cachePopID = None
-        Selectors.GRankSelector.cacheCount = None
-        Selectors.GRouletteWheel.cachePopID = None
-        Selectors.GRouletteWheel.cacheWheel = None
-
         #TODO: This is not a good way to do this
         #grab the target criteria value out of the input best_case
         best_case = None
@@ -119,10 +109,7 @@ class SingleCritEI(Driver):
         genome.initializator.set(Initializators.G1DListInitializatorAllele)
         genome.mutator.set(Mutators.G1DListMutatorAllele)
         genome.crossover.set(Crossovers.G1DListCrossoverUniform)
-        if self.rand_seed is not None: 
-            ga = GSimpleGA.GSimpleGA(genome, seed=10)
-        else: 
-            ga = GSimpleGA.GSimpleGA(genome)
+        ga = GSimpleGA.GSimpleGA(genome)
         ga.setElitism(True)
         ga.selector.set(Selectors.GTournamentSelector)
         ga.setGenerations(10)
