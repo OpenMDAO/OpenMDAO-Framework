@@ -294,7 +294,16 @@ class TestCase(unittest.TestCase):
         for path in glob.glob('Egg_TestModel*.egg'):
             os.remove(path)
         if os.path.exists('Egg'):
-            shutil.rmtree('Egg')
+            # Wonderful Windows sometimes doesn't remove...
+            shutil.rmtree('Egg', onerror=self.onerror)
+
+    def onerror(self, function, path, excinfo):
+        """ Called by shutil.rmtree() if 'Egg' tree removal has problems. """
+        logging.error('onerror: function %s, path %s, excinfo %s',
+                      function, path, excinfo)
+        if function == os.rmdir:
+            # On Windows, sometimes get 'Directory not empty'.
+            logging.error('    files: %s', os.listdir(path))
 
     def save_load(self, fmt, use_setuptools=False):
         """
