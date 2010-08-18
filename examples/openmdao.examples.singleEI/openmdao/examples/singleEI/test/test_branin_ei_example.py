@@ -14,12 +14,13 @@ class EITest(unittest.TestCase):
     """Test to make sure the EI sample problem works as it should"""
     
     def setUp(self):
-        random.seed(10)
+        pass
 
     def tearDown(self):
         pass
     
     def test_EI(self): 
+        random.seed(10)
         analysis = Analysis()
         
         set_as_top(analysis)
