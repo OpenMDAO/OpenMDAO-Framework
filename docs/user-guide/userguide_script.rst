@@ -1404,10 +1404,10 @@ Genetic can be used in any simulation by importing it from ``openmdao.lib.api``:
 Design Variables
 ++++++++++++++++
 
-Public variables are added to Genetic and become design variables. Genetic will vary the set of
-design variables to search for an optimum. Genetic supports three public variable types:
-:term:`Float`, :term:`Int`, and :Term:`Enum`. These public variable types can be used as design
-variables in any optimization. 
+IOtraits are added to Genetic and become optimization parameters. Genetic will vary the set of
+parameters to search for an optimum. Genetic supports three public variable types:
+:term:`Float`, :term:`Int`, and :Term:`Enum`. These types can be used as parameters in any 
+optimization. 
 
 You add design variables to Genetic using the ``add_parameter`` method.
 
@@ -1562,6 +1562,13 @@ Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection
 .. todo::
 
     Discuss the Case Iterator
+    
+*The DOE Driver*
+~~~~~~~~~~~~~~~~~~~
+
+.. todo::
+
+    Discuss the Case Iterator    
 
 *Adding new Drivers*
 ~~~~~~~~~~~~~~~~~~~~

@@ -27,8 +27,8 @@ class EITest(unittest.TestCase):
         analysis.iterations = 3
         analysis.run()
         analysis.cleanup()
-        self.assertAlmostEqual(7.2,analysis.EI_driver.next_case[0].inputs[1][2],1)
-        self.assertAlmostEqual(12.35,analysis.EI_driver.next_case[0].inputs[2][2],1)
+        self.assertAlmostEqual(9.93,analysis.EI_driver.next_case[0].inputs[0][2],1)
+        self.assertAlmostEqual(10.81,analysis.EI_driver.next_case[0].inputs[1][2],1)
         
         
 if __name__=="__main__": #pragma: no cover

@@ -8,6 +8,7 @@ import pkg_resources
 import sys
 import unittest
 import numpy
+import random
 
 from enthought.traits.api import TraitError
 
@@ -46,6 +47,7 @@ class TestCase(unittest.TestCase):
     """ test case for the genetic driver"""         
 
     def setUp(self):
+        random.seed(10)
         self.top = set_as_top(Assembly())
 
         self.top.add('driver', Genetic())
@@ -127,7 +129,7 @@ class TestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.x[1]', low=-5.12,high=5.13)
         self.top.driver.add_parameter('comp.x[2]', low=-5.12,high=5.13)
 
-        self.top.driver.seed = 123
+        #self.top.driver.seed = 123
 
         self.top.driver.mutation_rate = .02
         self.top.driver.generations = 1
@@ -138,11 +140,11 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               2.6925,places = 4)
+                               12.0912,places = 4)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, -1.1610, places = 4)
-        self.assertAlmostEqual(y, 0.2189, places = 4)
-        self.assertAlmostEqual(z, -1.1387, places = 4)  
+        self.assertAlmostEqual(x, -1.7603, places = 4)
+        self.assertAlmostEqual(y, -2.5575, places = 4)
+        self.assertAlmostEqual(z, 1.5657, places = 4)  
 
 
     def test_list_remove_clear_params(self):
