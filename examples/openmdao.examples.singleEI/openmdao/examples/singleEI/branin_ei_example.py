@@ -95,9 +95,11 @@ class Analysis(Assembly):
         self.connect("EI_driver.next_case","retrain.iterator")
         
     def cleanup(self):
-        os.remove('retrain.db')
-        os.remove('trainer.db')
-        
+        try:
+            os.remove('retrain.db')
+            os.remove('trainer.db')
+        except:
+            pass
         
 if __name__ == "__main__":
     from openmdao.main.api import set_as_top

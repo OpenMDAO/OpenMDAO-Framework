@@ -27,7 +27,7 @@ from openmdao.util.decorators import add_delegate
 class SingleCritEI(Driver):
     """Driver which implements the Expected Improvement(EI) process for single criteria problems. It uses components 
     which outputs are instances of NormalDistribution, combined with a provided optimal case, 
-    to find the point in the design space with the best Ex[ected Improvement."""
+    to find the point in the design space with the best Expected Improvement."""
     
     implements(IHasParameters)
     
