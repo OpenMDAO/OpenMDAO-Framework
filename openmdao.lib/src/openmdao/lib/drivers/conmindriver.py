@@ -275,7 +275,7 @@ class CONMINdriver(Driver):
                                          ' of: %s' % str(val.expreval), ValueError)
 
         # perform an initial run for self-consistency
-        self.run_iteration()
+        super(CONMINdriver, self).run_iteration()
 
         # update constraint value array
         for i, v in enumerate(self.get_ineq_constraints().values()):

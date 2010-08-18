@@ -40,9 +40,20 @@ class EITest(unittest.TestCase):
         analysis.iterations = 3
         analysis.run()
         analysis.cleanup()
-        self.assertAlmostEqual(9.93,analysis.EI_driver.next_case[0].inputs[0][2],1)
-        self.assertAlmostEqual(10.81,analysis.EI_driver.next_case[0].inputs[1][2],1)
+        self.assertAlmostEqual(-2.114,analysis.EI_driver.next_case[0].inputs[0][2],1)
+        self.assertAlmostEqual(7.,analysis.EI_driver.next_case[0].inputs[1][2],1)
         
         
 if __name__=="__main__": #pragma: no cover
-    unittest.main()
+    import sys
+    if '--profile' in sys.argv:
+        sys.argv.remove('--profile')
+        import cProfile
+        import pstats
+        cProfile.run("unittest.main()", "test.prof")
+        p = pstats.Stats("test.prof")
+        p.sort_stats('cumulative').print_stats(10)
+    else:
+        unittest.main()
+
+
