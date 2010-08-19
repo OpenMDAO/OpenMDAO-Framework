@@ -216,7 +216,6 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
 
         try:
             # Copy external files from src_dir.
-            print 'src_dir', src_dir, 'src_files', src_files
             if src_dir:
                 for path in src_files:
                     subdir = os.path.dirname(path)
