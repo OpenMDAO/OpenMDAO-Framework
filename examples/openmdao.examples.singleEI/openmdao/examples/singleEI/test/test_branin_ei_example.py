@@ -52,7 +52,7 @@ if __name__=="__main__": #pragma: no cover
         import pstats
         cProfile.run("unittest.main()", "test.prof")
         p = pstats.Stats("test.prof")
-        p.sort_stats('cumulative').print_stats(10)
+        p.sort_stats('cumulative').print_stats()
     else:
         unittest.main()
 
