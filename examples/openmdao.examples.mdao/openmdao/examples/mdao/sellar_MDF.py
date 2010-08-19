@@ -30,9 +30,9 @@ class SellarMDF(Assembly):
         self.add('driver', CONMINdriver())
         
         # Outer Loop - Global Optimization
-        self.add('coupler', Broadcaster())
+        self.add('bcastr', Broadcaster())
         self.add('fixed_point_iterator', FixedPointIterator())
-        self.driver.workflow.add([self.coupler, self.fixed_point_iterator])
+        self.driver.workflow.add([self.bcastr, self.fixed_point_iterator])
 
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
         self.add('dis1', SellarDiscipline1())
@@ -40,10 +40,10 @@ class SellarMDF(Assembly):
         self.fixed_point_iterator.workflow.add([self.dis1, self.dis2])
         
         # Make all connections
-        self.connect('coupler.z1','dis1.z1')
-        self.connect('coupler.z1','dis2.z1')
-        self.connect('coupler.z2','dis1.z2')
-        self.connect('coupler.z2','dis2.z2')
+        self.connect('bcastr.z1','dis1.z1')
+        self.connect('bcastr.z1','dis2.z1')
+        self.connect('bcastr.z2','dis1.z2')
+        self.connect('bcastr.z2','dis2.z2')
         self.connect('dis1.y1','dis2.y1')
 
         # Iteration loop
@@ -54,14 +54,15 @@ class SellarMDF(Assembly):
 
         # Optimization parameters
         self.driver.objective = \
-            '(dis1.x1)**2 + coupler.z2 + dis1.y1 + math.exp(-dis2.y2)'
-        for param, low, high in zip(['coupler.z1_in', 'coupler.z2_in', 
-                                     'dis1.x1'],
-                                    [-10.0, 0.0, 0.0],
-                                    [10.0, 10.0, 10.0]):
-            self.driver.add_parameter(param, low=low, high=high)
-        map(self.driver.add_constraint, ['3.16 - dis1.y1',
-                                              'dis2.y2 - 24.0' ])
+            '(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)'
+        
+        self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
+        self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
+        self.driver.add_parameter('dis1.x1',      low = 0.0,   high = 10.0)
+        
+        self.driver.add_constraint('3.16 < dis1.y1')
+        self.driver.add_constraint('dis2.y2 - 24.0')
+        
         self.driver.cons_is_linear = [1, 1]
         self.driver.iprint = 0
         self.driver.itmax = 30
@@ -69,7 +70,6 @@ class SellarMDF(Assembly):
         self.driver.fdchm = .001
         self.driver.delfun = .0001
         self.driver.dabfun = .000001
-        self.driver.ct = -.01
         self.driver.ctlmin = 0.0001
         
 if __name__ == "__main__": # pragma: no cover         
@@ -81,8 +81,8 @@ if __name__ == "__main__": # pragma: no cover
     
     # pylint: disable-msg=E1101
         
-    prob.coupler.z1_in = 5.0
-    prob.coupler.z2_in = 2.0
+    prob.bcastr.z1_in = 5.0
+    prob.bcastr.z2_in = 2.0
     prob.dis1.x1 = 1.0
     prob.dis2.z1_in = 5.0
     prob.dis2.z2_in = 2.0
@@ -92,8 +92,8 @@ if __name__ == "__main__": # pragma: no cover
 
     print "\n"
     print "CONMIN Iterations: ", prob.driver.iter_count
-    print "Minimum found at (%f, %f, %f)" % (prob.coupler.z1_in, \
-                                             prob.coupler.z2_in, \
+    print "Minimum found at (%f, %f, %f)" % (prob.bcastr.z1_in, \
+                                             prob.bcastr.z2_in, \
                                              prob.dis1.x1)
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.driver.objective.evaluate()
