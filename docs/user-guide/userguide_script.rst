@@ -485,6 +485,9 @@ complete the calculation of the dot product. Individual elements of the array
 can also be accessed using brackets. An OpenMDAO Array behaves like a NumPy
 array, so it can be used as an argument in a NumPy function like sum.
 
+Note, this is a horrible way to do a dot product. Numpy has a dot function
+which is much faster than sum.
+
 .. index:: Enum
 
 .. _Enums:
