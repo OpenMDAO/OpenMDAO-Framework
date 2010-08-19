@@ -19,7 +19,7 @@
 
 from __future__ import division
 
-from random import randint, seed
+from random import randint
 
 from numpy import array,size,sum,floor
 from numpy.linalg import norm
@@ -114,8 +114,6 @@ class OptLatinHypercube(HasTraits):
     """    
     implements(IDOEgenerator)
     
-    rand_seed = Float(None,iotype="in",desc="seed used for random number generation if not None")
-    
     num_sample_points = Int(20, desc="Number of sample points in the DOE sample set")
     
     num_parameters = Int(2, desc="Number of parameters, or dimensions, for the DOE")
@@ -127,12 +125,8 @@ class OptLatinHypercube(HasTraits):
     norm_method = Enum(["1-norm","2-norm"],
                     desc="Vector norm calculation method. '1-norm' is faster, but less accurate")
     
-    def __init__(self, num_samples=None, num_parameters=None, population=None,generations=None, rand_seed=None):
+    def __init__(self, num_samples=None, num_parameters=None, population=None,generations=None):
         super(OptLatinHypercube,self).__init__()
-        
-        if rand_seed is not None: 
-            self.rand_seed = rand_seed
-            seed(rand_seed)
         
         self.qs = [1,2,5,10,20,50,100] #list of qs to try for Phi_q optimization
         if num_samples is not None:
