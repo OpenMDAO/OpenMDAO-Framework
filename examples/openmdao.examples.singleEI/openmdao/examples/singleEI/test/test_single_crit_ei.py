@@ -92,7 +92,7 @@ class TestCase(unittest.TestCase):
         self.top.run()
         
         result = [val[2] for case in self.top.EIdriver.next_case for val in case.inputs]
-        self.assertAlmostEqual(result[0], 3.30, places=1)
+        self.assertAlmostEqual(result[0], 3.16, places=1)
         self.assertAlmostEqual(result[1], 2.275, places=1)
         
 if __name__ == "__main__":

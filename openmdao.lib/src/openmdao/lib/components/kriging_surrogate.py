@@ -80,7 +80,7 @@ class KrigingSurrogate(HasTraits):
         #TODO: Check if one training point will work... if not raise error
         self.X = X
         self.Y = Y
-        self.m = len([0])
+        self.m = len(X[0])
         self.n = len(X)
         thetas = zeros(self.m)
         def _calcll(thetas):
