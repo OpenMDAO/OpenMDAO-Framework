@@ -118,6 +118,6 @@ class KrigingSurrogate(HasTraits):
             rhs = vstack([Y, one, (Y-dot(one,self.mu))]).T
             lsq = lstsq(self.R.T,rhs)[0].T
             
-            self.mu = dot(one,lsq[1])/dot(one,lsq[1])
+            self.mu = dot(one,lsq[0])/dot(one,lsq[1])
             self.sig2 = dot(Y-dot(one,self.mu),lsq[2])/self.n
             self.log_likelihood = -self.n/2*log(self.sig2)-1./2.*log(abs(det(self.R)+1e-16))-sum(self.thetas)
