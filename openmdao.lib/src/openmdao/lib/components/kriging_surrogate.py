@@ -11,7 +11,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 
 
 class KrigingSurrogate(HasTraits): 
-    implements(ISurrogate)    
+    implements(ISurrogate)
     
     def __init__(self,X=None,Y=None):
         super(KrigingSurrogate, self).__init__() # must call HasTraits init to set up Traits stuff
@@ -50,8 +50,9 @@ class KrigingSurrogate(HasTraits):
 
         #-----LSTSQ-------
         f = self.mu+dot(r,lstsq(self.R,Y-dot(one,self.mu))[0])
-        term1 = dot(r,lstsq(self.R,r)[0])
-        term2 = (1-dot(one,lstsq(self.R,r)[0]))**2/dot(one,lstsq(self.R,one)[0])
+        lsq = lstsq(self.R,r)[0]
+        term1 = dot(r,lsq)
+        term2 = (1-dot(one,lsq))**2/dot(one,lstsq(self.R,one)[0])
         #---LU or CHOLESKY DECOMPOSTION ---
         #R_fact = self.R_fact
         #f = self.mu+dot(r,self.myfun(R_fact,Y-dot(one,self.mu)))
