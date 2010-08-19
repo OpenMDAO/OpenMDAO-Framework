@@ -111,6 +111,9 @@ _`1`. Sellar, R. S., Batill, S. M., and Renaud, J. E., Response Surface Based, C
 Multidisciplinary Design Feasible (MDF)
 ---------------------------------------
 
+In a Multidisciplinary Design Feasible (MDF) problem, the disciplines are directly coupled
+via some kind of solver, and the design variables are optimized in a single loop.
+
 .. figure:: ../images/user-guide/Arch-MDF.png
    :align: center
 
