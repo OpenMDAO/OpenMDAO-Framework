@@ -49,7 +49,7 @@ LOG_ERROR    = logging.ERROR
 LOG_CRITICAL = logging.CRITICAL
 
 # Root logger level (normally WARNING).
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.WARNING)
 
 # Allow everything through, typical UNIX-ish timestamp, typical log format.
 logging.basicConfig(level=logging.NOTSET,
