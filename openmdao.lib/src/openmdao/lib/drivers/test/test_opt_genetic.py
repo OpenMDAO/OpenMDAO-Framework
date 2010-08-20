@@ -49,8 +49,8 @@ class TestCase(unittest.TestCase):
     """ test case for the genetic driver"""         
 
     def setUp(self):
-        random.seed(10)
-        numpy_random.seed(10)
+        #random.seed(10)
+        #numpy_random.seed(10)
         
         # pyevolve does some caching that causes failures during our
         # complete unit tests due to stale values in the cache attributes
@@ -62,6 +62,7 @@ class TestCase(unittest.TestCase):
         
         self.top = set_as_top(Assembly())
         self.top.add('driver', Genetic())
+        self.top.driver.seed = 123
 
     def tearDown(self):
         self.top = None
@@ -85,7 +86,7 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               .1920,places = 4)
+                               .1920, places = 4)
         x,y,z = [x for x in self.top.driver.best_individual] 
         self.assertAlmostEqual(x, -0.4381, places = 4)
         self.assertEqual(y, 0)
@@ -141,6 +142,7 @@ class TestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.x[2]', low=-5.12,high=5.13)
 
         #self.top.driver.seed = 123
+        self.top.driver.seed = 10
 
         self.top.driver.mutation_rate = .02
         self.top.driver.generations = 1
