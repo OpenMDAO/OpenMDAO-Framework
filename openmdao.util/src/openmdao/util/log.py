@@ -49,10 +49,10 @@ LOG_ERROR    = logging.ERROR
 LOG_CRITICAL = logging.CRITICAL
 
 # Root logger level (normally WARNING).
-logging.getLogger().setLevel(logging.WARNING)
+#logging.getLogger().setLevel(logging.WARNING)
 
 # Allow everything through, typical UNIX-ish timestamp, typical log format.
-logging.basicConfig(level=logging.NOTSET,
+logging.basicConfig(level=logging.WARNING,
                     datefmt='%b %d %H:%M:%S',
                     format='%(asctime)s %(levelname)s %(name)s: %(message)s',
                     filename='openmdao_log.txt',

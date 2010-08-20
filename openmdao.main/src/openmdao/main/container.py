@@ -187,7 +187,6 @@ class Container(HasTraits):
         # handling its unpickleability in __getstate__/__setstate__ in
         # order to avoid the extra layer of function calls when logging
         self._logger = Logger('')
-        self.log_level = LOG_DEBUG
 
         self._io_graph = None
 
