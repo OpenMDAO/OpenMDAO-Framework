@@ -159,7 +159,7 @@ class ObjServer(object):
         self._check_path(egg_filename, 'load')
         if self.tlo:
             self.tlo.pre_delete()
-        self.tlo = Container.load_from_eggfile(egg_filename, install=False)
+        self.tlo = Container.load_from_eggfile(egg_filename)
         return self.tlo
 
     def pack_zipfile(self, patterns, filename):

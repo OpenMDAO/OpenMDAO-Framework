@@ -869,16 +869,12 @@ class Container(HasTraits):
             self.parent = parent
 
     @staticmethod
-    def load_from_eggfile(filename, install=False, observer=None):
+    def load_from_eggfile(filename, observer=None):
         """Extract files in egg to a subdirectory matching the saved object
-        name, optionally install distributions the egg depends on, and then
-        load object graph state.
+        name and then load object graph state.
 
         filename : string
             Name of egg file to be loaded.
-
-        install : bool
-            If True, dependent distributions will be installed.
 
         observer : callable
             Will be called via an :class:`EggObserver`.
@@ -889,7 +885,7 @@ class Container(HasTraits):
         entry_group = 'openmdao.top'
         entry_name = 'top'
         return eggloader.load_from_eggfile(filename, entry_group, entry_name,
-                                           install, logger, observer)
+                                           logger, observer)
 
     @staticmethod
     def load_from_eggpkg(package, entry_name=None, instance_name=None,

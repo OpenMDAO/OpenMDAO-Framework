@@ -417,7 +417,7 @@ class TestCase(unittest.TestCase):
             self.model.pre_delete()
             egg_path = os.path.join('..', self.egg_name)
             OBSERVATIONS = []
-            self.model = Component.load_from_eggfile(egg_path, install=False,
+            self.model = Component.load_from_eggfile(egg_path, 
                                                      observer=observer)
             self.model.directory = os.path.join(os.getcwd(), self.model.name)
 
@@ -701,7 +701,7 @@ class TestCase(unittest.TestCase):
         os.chdir(test_dir)
         try:
             egg_path = os.path.join('..', self.egg_name)
-            sub = Container.load_from_eggfile(egg_path, install=False)
+            sub = Container.load_from_eggfile(egg_path)
             self.assertTrue(all(sub.binary_data == self.model.Source.sub.binary_data))
         finally:
             os.chdir(orig_dir)

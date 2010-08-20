@@ -57,7 +57,7 @@ class TestCase(unittest.TestCase):
             out.write("""\
 from openmdao.main.api import Component
 try:
-    Component.load_from_eggfile('%s', install=False)
+    Component.load_from_eggfile('%s')
 except Exception, err:
     import openmdao.util.log
     openmdao.util.log.logger.exception(str(err))
