@@ -564,35 +564,37 @@ All that is left to do is set up the CONMIN optimizer.
         self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
         self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
             
-        self.driver.add_constraint('dis2.y1-dis1.y1')
-        self.driver.add_constraint('dis1.y1-dis2.y1')
-        self.driver.add_constraint('dis2.y2-dis1.y2')
-        self.driver.add_constraint('dis1.y2-dis2.y2')
-        
+        self.driver.add_constraint('(dis2.y1-dis1.y1)**3')
+        self.driver.add_constraint('(dis1.y1-dis2.y1)**3')
+        self.driver.add_constraint('(dis2.y2-dis1.y2)**3')
+        self.driver.add_constraint('(dis1.y2-dis2.y2)**3')        
         self.driver.iprint = 0
         self.driver.itmax = 100
         self.driver.fdch = .003
         self.driver.fdchm = .003
         self.driver.delfun = .0001
         self.driver.dabfun = .00001
-        self.driver.ct = -.001
+        self.driver.ct = -.01
         self.driver.ctlmin = 0.001
         
 Notice that the coupling variables are included as optimizer parameters. We
 also introduce the CONMIN parameter *ct*, which is the constraint thickness for
-nonlinear constraints. The constraint 'dis2.y1-dis1.y1 < 0' is not a linear
-constraint. It is a linear function of component outputs, but those outputs
-are nonlinear functions of the input design variables.
+nonlinear constraints. Our constraints are nonlinear, but note that any
+constraint that involves a component output is most likely a nonlinear
+constraint because they usually nonlinear functions of the design variables.
 
 Since CONMIN doesn't support equality constraints, we have to fall back on a
 trick where we replace it with an equivalent pair of inequality constraints.
-For example, if we want to constrain x=2, we can constraint x<=2 and x>=2 and
+For example, if we want to constrain x=2, we could constraint x<=2 and x>=2 and
 let the optimzer converge to a solution where both constraints are active.
-Stability may be questionable for such a method, and it is advisable to use a
-optimizer that has equality constraints. Be careful about trying a fancier
-solution such as constraining abs(dis2.y1-dis1.y1)<=0. This is a nonlinear
-constraint with discontinuous slope. CONMIN doesn't perform so well with that
-constraint, but it has no problem with a pair of opposing linear constraints.
+Stability may be questionable for such a method, so it is always advisable to use an
+optimizer that has equality constraints rather than trying to squeeze a solution
+out of an optimizer this way. In particular, be careful about trying a fancier
+solution such as constraining abs(dis2.y1-dis1.y1)<=0. This nonlinear
+constraint has a discontinuous slope, and CONMIN won't handle that constraint very well.
+Here, we take (dis2.y1-dis1.y1) and turn it into a cubic expression, which seemed
+to make the problem a little less sensitive to changes in the computational
+environment (32 bit vs 64 bit, etc.)
 
 This problem is contained in sellar_IDF.py. Executing it at the command line should produce
 output that resembles this:
@@ -715,4 +717,44 @@ Now we need to set up the parameters for the outer optimization loop.
         self.driver.ctlmin = 0.001
 
 Here we are able to build up a complicated Expression for the sum of the squares
-of all of the residuals, and use it as our constraint.
+of all of the residuals, and use it as our constraint. Note that this is another
+example of a constraint that would be better served as an equality constraint, but
+it's not problematic because a sum of squares is one-sided. We have two constraints
+here, one for each discipline.
+
+Finally, we set up our local optimization loops.
+
+.. testcode:: CO_parts
+
+        #Parameters - Local Optimization 1
+        self.localopt1.objective = '(bcastr.z1-dis1.z1)**2 + ' + \
+                                   '(bcastr.z2-dis1.z2)**2 + ' + \
+                                   '(bcastr.x1-dis1.x1)**2 + ' + \
+                                   '(bcastr.y1-dis1.y1)**2 + ' + \
+                                   '(bcastr.y2-dis1.y2)**2'
+        self.localopt1.add_parameter('dis1.z1', low = -10.0, high = 10.0)
+        self.localopt1.add_parameter('dis1.z2', low = 0.0,   high = 10.0)
+        self.localopt1.add_parameter('dis1.x1', low = 0.0,   high = 10.0)
+        self.localopt1.add_parameter('dis1.y2', low = -10.0, high = 24.0)
+        self.localopt1.iprint = 0
+        self.localopt1.itmax = 100
+        self.localopt1.fdch = .003
+        self.localopt1.fdchm = .003
+        self.localopt1.delfun = .001
+        self.localopt1.dabfun = .00001
+        
+        #Parameters - Local Optimization 2
+        self.localopt2.objective = '(bcastr.z1-dis2.z1)**2 + ' + \
+                                   '(bcastr.z2-dis2.z2)**2 + ' + \
+                                   '(bcastr.y1-dis2.y1)**2 + ' + \
+                                   '(bcastr.y2-dis2.y2)**2'
+        self.localopt2.add_parameter('dis2.z1', low = -10.0, high = 10.0)
+        self.localopt2.add_parameter('dis2.z2', low = 0.0,   high = 10.0)
+        self.localopt2.add_parameter('dis2.y1', low = 3.16,  high = 10.0)
+        self.localopt2.iprint = 0
+        self.localopt2.itmax = 100
+        self.localopt2.fdch = .003
+        self.localopt2.fdchm = .003
+        self.localopt2.delfun = .001
+        self.localopt2.dabfun = .00001
+
