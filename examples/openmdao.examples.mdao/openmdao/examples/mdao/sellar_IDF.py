@@ -57,7 +57,7 @@ class SellarIDF(Assembly):
         self.driver.add_constraint('(dis2.y2-dis1.y2)**3')
         self.driver.add_constraint('(dis1.y2-dis2.y2)**3')
   
-        self.driver.iprint = 2
+        self.driver.iprint = 0
         self.driver.itmax = 100
         self.driver.fdch = .003
         self.driver.fdchm = .003
