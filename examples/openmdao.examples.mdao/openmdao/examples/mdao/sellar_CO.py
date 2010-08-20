@@ -27,10 +27,10 @@ class SellarCO(Assembly):
         
         # Global Optimization
         self.add('driver', CONMINdriver())
-        self.add('coupler', Broadcaster())
+        self.add('bcastr', Broadcaster())
         self.add('localopt1', CONMINdriver())
         self.add('localopt2', CONMINdriver())
-        self.driver.workflow.add([self.coupler, self.localopt1, 
+        self.driver.workflow.add([self.bcastr, self.localopt1, 
                                   self.localopt2])
         
         # Local Optimization 1
@@ -42,19 +42,21 @@ class SellarCO(Assembly):
         self.localopt2.workflow.add(self.dis2)
         
         #Parameters - Global Optimization
-        self.driver.objective = '(coupler.x1)**2 + coupler.z2 + coupler.y1' + \
-                                                '+ math.exp(-coupler.y2)'
-        for param,low,high in zip(['coupler.z1_in', 'coupler.z2_in', 'coupler.x1_in',
-                                   'coupler.y1_in', 'coupler.y2_in'],
-                                  [-10.0, 0.0, 0.0, 3.16, -10.0],
-                                  [10.0, 10.0, 10.0, 10, 24.0]):
-            self.driver.add_parameter(param, low=low, high=high)
+        self.driver.objective = '(bcastr.x1)**2 + bcastr.z2 + bcastr.y1' + \
+                                                '+ math.exp(-bcastr.y2)'
+        self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
+        self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
+        self.driver.add_parameter('bcastr.x1_in', low = 0.0,   high = 10.0)
+        self.driver.add_parameter('bcastr.y1_in', low = 3.16,  high = 10.0)
+        self.driver.add_parameter('bcastr.y2_in', low = -10.0, high = 24.0)
 
-        map(self.driver.add_constraint, [
-            '(coupler.z1-dis1.z1)**2 + (coupler.z2-dis1.z2)**2 + (coupler.x1-dis1.x1)**2 + '
-            '(coupler.y1-dis1.y1)**2 + (coupler.y2-dis1.y2)**2',
-            '(coupler.z1-dis2.z1)**2 + (coupler.z2-dis2.z2)**2 + (coupler.y1-dis2.y1)**2 + '
-            '(coupler.y2-dis2.y2)**2' ])
+        con1 = '(bcastr.z1-dis1.z1)**2 + (bcastr.z2-dis1.z2)**2 + ' + \
+               '(bcastr.x1-dis1.x1)**2 + ' + \
+               '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2'
+        con2 = '(bcastr.z1-dis2.z1)**2 + (bcastr.z2-dis2.z2)**2 + ' + \
+               '(bcastr.y1-dis2.y1)**2 + (bcastr.y2-dis2.y2)**2'
+        self.driver.add_constraint(con1)
+        self.driver.add_constraint(con2)
         
         self.driver.printvars = ['dis1.y1','dis2.y2']
         self.driver.iprint = 0
@@ -67,17 +69,15 @@ class SellarCO(Assembly):
         self.driver.ctlmin = 0.001
 
         #Parameters - Local Optimization 1
-        self.localopt1.objective = '(coupler.z1-dis1.z1)**2 + ' + \
-                                   '(coupler.z2-dis1.z2)**2 + ' + \
-                                   '(coupler.x1-dis1.x1)**2 + ' + \
-                                   '(coupler.y1-dis1.y1)**2 + ' + \
-                                   '(coupler.y2-dis1.y2)**2'
-        for param, low, high in zip(['dis1.z1', 'dis1.z2', 'dis1.x1', 'dis1.y2'],
-                                    [-10.0, 0.0, 0.0, -10.0],
-                                    [10.0, 10.0, 10.0, 24.0]):
-            self.localopt1.add_parameter(param, low=low, high=high)
-        #self.localopt1.lower_bounds = [-10.0, 0.0, 0.0, -10.0]
-        #self.localopt1.upper_bounds = [10.0, 10.0, 10.0, 24.0]
+        self.localopt1.objective = '(bcastr.z1-dis1.z1)**2 + ' + \
+                                   '(bcastr.z2-dis1.z2)**2 + ' + \
+                                   '(bcastr.x1-dis1.x1)**2 + ' + \
+                                   '(bcastr.y1-dis1.y1)**2 + ' + \
+                                   '(bcastr.y2-dis1.y2)**2'
+        self.localopt1.add_parameter('dis1.z1', low = -10.0, high = 10.0)
+        self.localopt1.add_parameter('dis1.z2', low = 0.0,   high = 10.0)
+        self.localopt1.add_parameter('dis1.x1', low = 0.0,   high = 10.0)
+        self.localopt1.add_parameter('dis1.y2', low = -10.0, high = 24.0)
         self.localopt1.iprint = 0
         self.localopt1.itmax = 100
         self.localopt1.fdch = .003
@@ -86,14 +86,13 @@ class SellarCO(Assembly):
         self.localopt1.dabfun = .00001
         
         #Parameters - Local Optimization 2
-        self.localopt2.objective = '(coupler.z1-dis2.z1)**2 + ' + \
-                                   '(coupler.z2-dis2.z2)**2 + ' + \
-                                   '(coupler.y1-dis2.y1)**2 + ' + \
-                                   '(coupler.y2-dis2.y2)**2'
-        for param, low, high in zip(['dis2.z1', 'dis2.z2', 'dis2.y1'],
-                                    [-10.0, 0.0, 3.16],
-                                    [10.0, 10.0, 10]):
-            self.localopt2.add_parameter(param, low=low, high=high)
+        self.localopt2.objective = '(bcastr.z1-dis2.z1)**2 + ' + \
+                                   '(bcastr.z2-dis2.z2)**2 + ' + \
+                                   '(bcastr.y1-dis2.y1)**2 + ' + \
+                                   '(bcastr.y2-dis2.y2)**2'
+        self.localopt2.add_parameter('dis2.z1', low = -10.0, high = 10.0)
+        self.localopt2.add_parameter('dis2.z2', low = 0.0,   high = 10.0)
+        self.localopt2.add_parameter('dis2.y1', low = 3.16,  high = 10.0)
         self.localopt2.iprint = 0
         self.localopt2.itmax = 100
         self.localopt2.fdch = .003
@@ -111,19 +110,19 @@ if __name__ == "__main__": # pragma: no cover
     
     # pylint: disable-msg=E1101
         
-    prob.coupler.z1_in = 5.0
+    prob.bcastr.z1_in = 5.0
     prob.dis1.z1 = 5.0
     prob.dis2.z1 = 5.0
 
-    prob.coupler.z2_in = 2.0
+    prob.bcastr.z2_in = 2.0
     prob.dis1.z2 = 2.0
     prob.dis2.z2 = 2.0
 
-    prob.coupler.x1_in = 1.0
+    prob.bcastr.x1_in = 1.0
     prob.dis1.x1 = 1.0
     
-    prob.coupler.y1_in = 3.16
-    prob.coupler.y2_in = 0.0
+    prob.bcastr.y1_in = 3.16
+    prob.bcastr.y2_in = 0.0
     prob.dis1.y2 = 0.0
     prob.dis2.y1 = 3.16
     
@@ -132,8 +131,8 @@ if __name__ == "__main__": # pragma: no cover
 
     print "\n"
     print "CONMIN Iterations: ", prob.driver.iter_count
-    print "Minimum found at (%f, %f, %f)" % (prob.coupler.z1_in, \
-                                             prob.coupler.z2_in, \
+    print "Minimum found at (%f, %f, %f)" % (prob.bcastr.z1_in, \
+                                             prob.bcastr.z2_in, \
                                              prob.dis1.x1)
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.driver.objective.evaluate()
