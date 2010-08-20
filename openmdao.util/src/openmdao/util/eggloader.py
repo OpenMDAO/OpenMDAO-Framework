@@ -17,8 +17,6 @@ import pkg_resources
 import sys
 import zipfile
 
-import zc.buildout.easy_install
-
 from openmdao.util.log import NullLogger
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.eggsaver import SAVE_CPICKLE, SAVE_PICKLE, SAVE_YAML, \
@@ -28,12 +26,12 @@ __all__ = ('load', 'load_from_eggfile', 'load_from_eggpkg',
            'check_requirements')
 
 
-def load_from_eggfile(filename, entry_group, entry_name, install=False,
-                      logger=None, observer=None):
+def load_from_eggfile(filename, entry_group, entry_name, logger=None,
+                      observer=None):
     """
-    Extract files in egg to a subdirectory matching the saved object name.
-    Optionally installs distributions the egg depends on and then loads object
-    graph state by invoking the given entry point.  Returns the root object.
+    Extracts files in egg to a subdirectory matching the saved object name.
+    Then loads object graph state by invoking the given entry point.
+    Returns the root object.
 
     filename : string
         Name of egg file.
@@ -43,9 +41,6 @@ def load_from_eggfile(filename, entry_group, entry_name, install=False,
 
     entry_name : string
         Name of entry point in group.
-
-    install : bool
-        If True, dependent packages are installed.
 
     logger : Logger
         Used for recording progress, etc.
@@ -58,7 +53,7 @@ def load_from_eggfile(filename, entry_group, entry_name, install=False,
     logger.debug('Loading %s from %s in %s...',
                  entry_name, filename, os.getcwd())
 
-    egg_dir, dist = _dist_from_eggfile(filename, install, logger, observer)
+    egg_dir, dist = _dist_from_eggfile(filename, logger, observer)
 
     if not '.' in sys.path:
         sys.path.append('.')
@@ -146,7 +141,7 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
         raise exc
 
 
-def _dist_from_eggfile(filename, install, logger, observer):
+def _dist_from_eggfile(filename, logger, observer):
     """ Create distribution by unpacking egg file. """
     if not os.path.exists(filename):
         msg = "'%s' not found." % filename
@@ -219,24 +214,6 @@ def _dist_from_eggfile(filename, install, logger, observer):
     logger.debug('    requires:')
     for req in dist.requires():
         logger.debug('        %s', req)
-
-    if install:
-        # Locate the installation (eggs) directory.
-        install_dir = os.path.dirname(
-                          os.path.dirname(
-                              os.path.dirname(
-                                  os.path.dirname(zc.buildout.__file__))))
-        logger.debug('    installing in %s', install_dir)
-
-        # Grab any distributions we depend on.
-        try:
-            zc.buildout.easy_install.install(
-                [str(req) for req in dist.requires()], install_dir,
-                index=EGG_SERVER_URL, always_unzip=True)
-        except Exception, exc:
-            msg = "Install failed: '%s'" % exc
-            observer.exception(msg)
-            raise RuntimeError(msg)
 
     # If any module didn't have a distribution, check that we can import it.
     if provider.has_metadata('openmdao_orphans.txt'):
