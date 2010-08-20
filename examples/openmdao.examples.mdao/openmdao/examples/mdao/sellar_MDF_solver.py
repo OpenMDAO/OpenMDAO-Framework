@@ -48,7 +48,7 @@ class SellarMDF(Assembly):
 
         # Iteration loop
         self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
-        self.solver.add_eq_constraint('dis2.y2 - dis1.y2', '0.0')
+        self.solver.add_constraint('dis2.y2 = dis1.y2')
         self.solver.itmax = 10
         self.solver.alpha = .4
         self.solver.tol = .0000001

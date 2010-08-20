@@ -409,7 +409,6 @@ Finally, putting it all together gives:
                 self.driver.fdchm = .001
                 self.driver.delfun = .0001
                 self.driver.dabfun = .000001
-                self.driver.ct = -.01
                 self.driver.ctlmin = 0.0001
 
 This problem is contained in sellar_MDF.py. Executing it at the command line should produce
@@ -424,13 +423,296 @@ output that resembles this:
         Minimum objective:  3.18346116811
         Elapsed time:  0.121051073074 seconds
 
+We can also replace the fixed point iterator with a better solver. Fixed point
+iteration works for some problems including this one, but may not converge to
+a solution for others. OpenMDAO also contains a Broyden solver called
+BroydenSolver. This solver is based on a quasi-Newton-Raphson algorithm found in 
+scipy.nonlinear. It uses a Broyden update to approximate the Jacobian. If we
+replace FixedPointIterator with BroydenSolver, the optimizer's workflow
+looks like this:
+
+.. testcode:: MDF_parts
+
+        # Don't forget to put the import in your header
+        from openmdao.lib.api import BroydenSolver
+
+        # Outer Loop - Global Optimization
+        self.add('bcastr', Broadcaster())
+        self.add('solver', BroydenSolver())
+        self.driver.workflow.add([self.bcastr, self.solver])
+
+Next, we set up our parameters for the inner loop. The Broyden solver can be
+connected using the standard driver interface. It can take multiple inputs and outputs
+though we only have 1 input and 1 output in this example.
+        
+.. testcode:: MDF_parts
+
+        # Iteration loop
+        self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
+        self.solver.add_constraint('dis2.y2 = dis1.y2')
+        self.solver.itmax = 10
+        self.solver.alpha = .4
+        self.solver.tol = .0000001
+        self.solver.algorithm = "broyden2"
+        
+The input is selected using add_parameter. You might aslo be familiar with the
+term 'independent' used to describe this. Here, we've given a *low* and a
+*high* attribute, but we've set them very high as the Broyden solver doesn't
+use either of these. The output is specified by adding an equality constraint.
+A solver essentially tries to drive something to zero. In this case, we want to
+drive the residual error in the coupled variable y2 to zero. An equality constraint
+is defined with an Expression which is parsed for the equals sign, so the
+following constraints are equivalent:
+
+.. testcode:: MDF_parts
+
+        # Iteration loop
+        self.solver.add_constraint('dis2.y2 = dis1.y2')
+        self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
+
+Be careful not to omit the equals sign, or OpenMDAO will treat the constraint
+as an inequality constraint.
+        
+Equality constraints may also be available for some optimizers, but you should 
+verify that they are supported. CONMIN does not support equality constraints.
         
 Individual Design Feasible (IDF)
 --------------------------------
 
+Next, we will look at how to set up the Individual Design Feasible (IDF)
+architecture using the Sellar problem. In IDF, the coupling between the
+disciplines is removed, and the input coupling variables are added to
+the optimizer's design variables. The algorithm calls for 2 new equality
+constraints that constrain to zero the residual error between the coupling variable
+output by the optimizer and the coupling variable output by the components.
+This assures that the solution is a feasible coupling, though it is achieved
+through the optimizer's additional effort instead of a solver. The data
+flow for IDF is illustrated in the following diagram:
+
 .. figure:: ../images/user-guide/Arch-IDF.png
    :align: center
 
+IDF only needs one driver, so there is just one workflow. The broadcaster and
+the two disciplines are executed sequentially.
+   
 .. figure:: ../images/user-guide/Arch-IDF-OpenMDAO.png
    :align: center
 
+Next, we will create the SellarIDF assembly. First, all of our components
+are instantiated and the work flow is defined.
+   
+.. testcode:: IDF_parts
+
+        from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
+                                                       SellarDiscipline2
+        from openmdao.examples.mdao.broadcaster import Broadcaster
+        
+        from openmdao.main.api import Assembly, set_as_top
+        from openmdao.lib.api import CONMINdriver
+        
+        
+        class SellarIDF(Assembly):
+            """ Optimization of the Sellar problem using IDF"""
+            
+            def __init__(self):
+                """ Creates a new Assembly with this problem
+                
+                Optimal Design at (1.9776, 0, 0)
+                
+                Optimal Objective = 3.18339"""
+                
+                # pylint: disable-msg=E1101
+                
+                super(SellarIDF, self).__init__()
+        
+                # create Optimizer instance
+                self.add('driver', CONMINdriver())
+        
+                # Disciplines
+                self.add('bcastr', Broadcaster())
+                self.add('dis1', SellarDiscipline1())
+                self.add('dis2', SellarDiscipline2())
+                
+                # Driver process definition
+                self.driver.workflow.add([self.bcastr, self.dis1, self.dis2])
+                
+                # Make all connections
+                self.connect('bcastr.z1','dis1.z1')
+                self.connect('bcastr.z1','dis2.z1')
+                self.connect('bcastr.z2','dis1.z2')
+                self.connect('bcastr.z2','dis2.z2')
+
+We've also hooked up our data connections. Only the design variables that are shared
+by both components need to be connected to the broadcaster.
+
+All that is left to do is set up the CONMIN optimizer.
+
+.. testcode:: IDF_parts
+    :hide:
+    
+    self = SellarIDF()
+
+.. testcode:: IDF_parts
+
+        # Optimization parameters
+        self.driver.objective = \
+            '(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)'
+        
+        self.driver.add_parameter('bcastr.z1_in', low = -10.0, high=10.0)
+        self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high=10.0)
+        self.driver.add_parameter('dis1.x1',      low = 0.0,   high=10.0)
+        self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
+        self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
+            
+        self.driver.add_constraint('dis2.y1-dis1.y1')
+        self.driver.add_constraint('dis1.y1-dis2.y1')
+        self.driver.add_constraint('dis2.y2-dis1.y2')
+        self.driver.add_constraint('dis1.y2-dis2.y2')
+        
+        self.driver.iprint = 0
+        self.driver.itmax = 100
+        self.driver.fdch = .003
+        self.driver.fdchm = .003
+        self.driver.delfun = .0001
+        self.driver.dabfun = .00001
+        self.driver.ct = -.001
+        self.driver.ctlmin = 0.001
+        
+Notice that the coupling variables are included as optimizer parameters. We
+also introduce the CONMIN parameter *ct*, which is the constraint thickness for
+nonlinear constraints. The constraint 'dis2.y1-dis1.y1 < 0' is not a linear
+constraint. It is a linear function of component outputs, but those outputs
+are nonlinear functions of the input design variables.
+
+Since CONMIN doesn't support equality constraints, we have to fall back on a
+trick where we replace it with an equivalent pair of inequality constraints.
+For example, if we want to constrain x=2, we can constraint x<=2 and x>=2 and
+let the optimzer converge to a solution where both constraints are active.
+Stability may be questionable for such a method, and it is advisable to use a
+optimizer that has equality constraints. Be careful about trying a fancier
+solution such as constraining abs(dis2.y1-dis1.y1)<=0. This is a nonlinear
+constraint with discontinuous slope. CONMIN doesn't perform so well with that
+constraint, but it has no problem with a pair of opposing linear constraints.
+
+This problem is contained in sellar_IDF.py. Executing it at the command line should produce
+output that resembles this:
+
+::
+
+        CONMIN Iterations:  10
+        Minimum found at (1.976427, 0.000287, 0.000000)
+        Couping vars: 3.156521, 3.754359
+        Minimum objective:  3.18022323743
+        Elapsed time:  0.200541973114 seconds
+
+Collaborative Optimization (CO)
+-------------------------------
+
+Next, we will set up a model that solves the Sellar problem by Collaborative
+Optimization (CO). CO is a two-level architecture with three optimizer loops,
+one at each discipline, and one acting globally. The global optimizer drives
+the design and coupling varibles towards an optimal solution that minimizes
+the objective while constraining to zero the sum of the squares of the
+residuals between the values commanded by the global optimizer, and those set
+by the local optimizers. The local optimizers each operate on their own
+discipline, driving its design variables while minimzing the residual between
+the actual value of the design variables and the values commanded by the global
+optimizer.
+
+CO for the Sellar case is very interesting because there are no component data connections.
+All values are passed through the expressions for the objectives, constraints, and
+parameters of the various optimizers, as shown in the next diagram.
+
+.. figure:: ../images/user-guide/Arch-CO.png
+   :align: center
+
+The CO model has three optimizers, so there are three work flows. The top level
+workflow includes the broadcaster and the two lower level optimizers, and each of
+those optimizers has a workflow with just the discipline component. This can be
+seen in the next figure.
+   
+.. figure:: ../images/user-guide/Arch-CO-OpenMDAO.png
+   :align: center
+
+First, we create the component instances and set up this itereation hierarchy. Notice
+that there are 3 drivers, and we add each component to one of the three work flows.
+        
+.. testcode:: CO_parts
+
+        from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
+                                                       SellarDiscipline2
+        from openmdao.examples.mdao.broadcaster import Broadcaster
+        
+        from openmdao.main.api import Assembly, set_as_top
+        from openmdao.lib.api import CONMINdriver
+
+        class SellarCO(Assembly):
+            """Solution of the sellar analytical problem using CO.
+            """
+        
+            def __init__(self):
+                """ Creates a new Assembly with this problem
+                
+                Optimal Design at (1.9776, 0, 0)
+                
+                Optimal Objective = 3.18339"""
+                
+                # pylint: disable-msg=E1101
+                super(SellarCO, self).__init__()
+                
+                # Global Optimization
+                self.add('driver', CONMINdriver())
+                self.add('bcastr', Broadcaster())
+                self.add('localopt1', CONMINdriver())
+                self.add('localopt2', CONMINdriver())
+                self.driver.workflow.add([self.bcastr, self.localopt1, 
+                                          self.localopt2])
+                
+                # Local Optimization 1
+                self.add('dis1', SellarDiscipline1())
+                self.localopt1.workflow.add(self.dis1)
+                
+                # Local Optimization 2
+                self.add('dis2', SellarDiscipline2())
+                self.localopt2.workflow.add(self.dis2)
+
+Notice that there are no data connections, so we never need to call self.connect.
+
+Now we need to set up the parameters for the outer optimization loop. 
+
+.. testcode:: CO_parts
+    :hide:
+    
+    self = SellarCO()
+
+.. testcode:: CO_parts
+
+        #Parameters - Global Optimization
+        self.driver.objective = '(bcastr.x1)**2 + bcastr.z2 + bcastr.y1' + \
+                                                '+ math.exp(-bcastr.y2)'
+        self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
+        self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
+        self.driver.add_parameter('bcastr.x1_in', low = 0.0,   high = 10.0)
+        self.driver.add_parameter('bcastr.y1_in', low = 3.16,  high = 10.0)
+        self.driver.add_parameter('bcastr.y2_in', low = -10.0, high = 24.0)
+
+        con1 = '(bcastr.z1-dis1.z1)**2 + (bcastr.z2-dis1.z2)**2 + ' + \
+               '(bcastr.x1-dis1.x1)**2 + ' + \
+               '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2'
+        con2 = '(bcastr.z1-dis2.z1)**2 + (bcastr.z2-dis2.z2)**2 + ' + \
+               '(bcastr.y1-dis2.y1)**2 + (bcastr.y2-dis2.y2)**2'
+        self.driver.add_constraint(con1)
+        self.driver.add_constraint(con2)
+        
+        self.driver.printvars = ['dis1.y1','dis2.y2']
+        self.driver.iprint = 0
+        self.driver.itmax = 100
+        self.driver.fdch = .003
+        self.driver.fdchm = .003
+        self.driver.delfun = .0001
+        self.driver.dabfun = .00001
+        self.driver.ct = -.001
+        self.driver.ctlmin = 0.001
+
+Here we are able to build up a complicated Expression for the sum of the squares
+of all of the residuals, and use it as our constraint.

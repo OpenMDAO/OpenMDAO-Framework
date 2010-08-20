@@ -210,7 +210,7 @@ class TestCase(unittest.TestCase):
         prob.dis2.y1 = 3.16
     
         prob.run()
-        assert_rel_error(self, prob.bcastr.z1_in, 1.977, 0.01)
+        assert_rel_error(self, prob.bcastr.z1_in, 1.977, 0.04)
         assert_rel_error(self, 1.0-prob.bcastr.z2_in, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
         

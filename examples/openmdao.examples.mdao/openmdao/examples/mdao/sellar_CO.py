@@ -44,17 +44,19 @@ class SellarCO(Assembly):
         #Parameters - Global Optimization
         self.driver.objective = '(bcastr.x1)**2 + bcastr.z2 + bcastr.y1' + \
                                                 '+ math.exp(-bcastr.y2)'
-        for param,low,high in zip(['bcastr.z1_in', 'bcastr.z2_in', 'bcastr.x1_in',
-                                   'bcastr.y1_in', 'bcastr.y2_in'],
-                                  [-10.0, 0.0, 0.0, 3.16, -10.0],
-                                  [10.0, 10.0, 10.0, 10, 24.0]):
-            self.driver.add_parameter(param, low=low, high=high)
+        self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
+        self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
+        self.driver.add_parameter('bcastr.x1_in', low = 0.0,   high = 10.0)
+        self.driver.add_parameter('bcastr.y1_in', low = 3.16,  high = 10.0)
+        self.driver.add_parameter('bcastr.y2_in', low = -10.0, high = 24.0)
 
-        map(self.driver.add_constraint, [
-            '(bcastr.z1-dis1.z1)**2 + (bcastr.z2-dis1.z2)**2 + (bcastr.x1-dis1.x1)**2 + '
-            '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2',
-            '(bcastr.z1-dis2.z1)**2 + (bcastr.z2-dis2.z2)**2 + (bcastr.y1-dis2.y1)**2 + '
-            '(bcastr.y2-dis2.y2)**2' ])
+        con1 = '(bcastr.z1-dis1.z1)**2 + (bcastr.z2-dis1.z2)**2 + ' + \
+               '(bcastr.x1-dis1.x1)**2 + ' + \
+               '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2'
+        con2 = '(bcastr.z1-dis2.z1)**2 + (bcastr.z2-dis2.z2)**2 + ' + \
+               '(bcastr.y1-dis2.y1)**2 + (bcastr.y2-dis2.y2)**2'
+        self.driver.add_constraint(con1)
+        self.driver.add_constraint(con2)
         
         self.driver.printvars = ['dis1.y1','dis2.y2']
         self.driver.iprint = 0
@@ -72,12 +74,10 @@ class SellarCO(Assembly):
                                    '(bcastr.x1-dis1.x1)**2 + ' + \
                                    '(bcastr.y1-dis1.y1)**2 + ' + \
                                    '(bcastr.y2-dis1.y2)**2'
-        for param, low, high in zip(['dis1.z1', 'dis1.z2', 'dis1.x1', 'dis1.y2'],
-                                    [-10.0, 0.0, 0.0, -10.0],
-                                    [10.0, 10.0, 10.0, 24.0]):
-            self.localopt1.add_parameter(param, low=low, high=high)
-        #self.localopt1.lower_bounds = [-10.0, 0.0, 0.0, -10.0]
-        #self.localopt1.upper_bounds = [10.0, 10.0, 10.0, 24.0]
+        self.localopt1.add_parameter('dis1.z1', low = -10.0, high = 10.0)
+        self.localopt1.add_parameter('dis1.z2', low = 0.0,   high = 10.0)
+        self.localopt1.add_parameter('dis1.x1', low = 0.0,   high = 10.0)
+        self.localopt1.add_parameter('dis1.y2', low = -10.0, high = 24.0)
         self.localopt1.iprint = 0
         self.localopt1.itmax = 100
         self.localopt1.fdch = .003
@@ -90,10 +90,9 @@ class SellarCO(Assembly):
                                    '(bcastr.z2-dis2.z2)**2 + ' + \
                                    '(bcastr.y1-dis2.y1)**2 + ' + \
                                    '(bcastr.y2-dis2.y2)**2'
-        for param, low, high in zip(['dis2.z1', 'dis2.z2', 'dis2.y1'],
-                                    [-10.0, 0.0, 3.16],
-                                    [10.0, 10.0, 10]):
-            self.localopt2.add_parameter(param, low=low, high=high)
+        self.localopt2.add_parameter('dis2.z1', low = -10.0, high = 10.0)
+        self.localopt2.add_parameter('dis2.z2', low = 0.0,   high = 10.0)
+        self.localopt2.add_parameter('dis2.y1', low = 3.16,  high = 10.0)
         self.localopt2.iprint = 0
         self.localopt2.itmax = 100
         self.localopt2.fdch = .003
