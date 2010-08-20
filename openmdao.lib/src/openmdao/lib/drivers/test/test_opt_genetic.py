@@ -9,6 +9,7 @@ import sys
 import unittest
 import numpy
 import random
+import numpy.random as numpy_random
 
 from enthought.traits.api import TraitError
 from pyevolve import Selectors
@@ -49,6 +50,8 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         random.seed(10)
+        numpy_random.seed(10)
+        
         # pyevolve does some caching that causes failures during our
         # complete unit tests due to stale values in the cache attributes
         # below, so reset them here
@@ -72,7 +75,7 @@ class TestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.y')
         self.top.driver.add_parameter('comp.z',high=5,low=-5)
 
-        self.top.driver.seed = 123
+        #self.top.driver.seed = 123
 
         self.top.driver.mutation_rate = .02
         self.top.driver.generations = 1
@@ -98,7 +101,7 @@ class TestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.y')
         self.top.driver.add_parameter('comp.z')
 
-        self.top.driver.seed = 123
+        #self.top.driver.seed = 123
 
         self.top.driver.mutation_rate = .02
         self.top.driver.generations = 1

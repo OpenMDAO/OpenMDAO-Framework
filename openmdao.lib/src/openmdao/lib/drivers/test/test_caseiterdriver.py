@@ -9,8 +9,10 @@ import pkg_resources
 import platform
 import sys
 import unittest
+from nose import SkipTest
 
-import numpy.random
+import random
+import numpy.random as numpy_random
 
 from enthought.traits.api import TraitError
 
@@ -79,6 +81,9 @@ class TestCase(unittest.TestCase):
     directory = pkg_resources.resource_filename('openmdao.lib.drivers', 'test')
 
     def setUp(self):
+        random.seed(10)
+        numpy_random.seed(10)
+        
         os.chdir(self.directory)
         self.model = set_as_top(MyModel())
         self.generate_cases()
@@ -87,8 +92,8 @@ class TestCase(unittest.TestCase):
         self.cases = []
         for i in range(10):
             raise_error = force_errors and i%4 == 3
-            inputs = [('driven.x', None, numpy.random.normal(size=4)),
-                      ('driven.y', None, numpy.random.normal(size=10)),
+            inputs = [('driven.x', None, numpy_random.normal(size=4)),
+                      ('driven.y', None, numpy_random.normal(size=10)),
                       ('driven.raise_error', None, raise_error),
                       ('driven.stop_exec', None, False)]
             outputs = [('driven.rosen_suzuki', None, None),
@@ -159,7 +164,8 @@ class TestCase(unittest.TestCase):
         # FIXME: temporarily disable this test on windows because it loops
         # over a set of tests forever when running under a virtualenv
         if sys.platform == 'win32':
-            return
+            #return
+            raise SkipTest('test_concurrent skipped')
         # This can always test using a LocalAllocator (forked processes).
         # It can also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
@@ -265,8 +271,8 @@ class TestCase(unittest.TestCase):
         # Create cases with missing input 'dc.z'.
         cases = []
         for i in range(2):
-            inputs = [('driven.x', None, numpy.random.normal(size=4)),
-                      ('driven.z', None, numpy.random.normal(size=10))]
+            inputs = [('driven.x', None, numpy_random.normal(size=4)),
+                      ('driven.z', None, numpy_random.normal(size=10))]
             outputs = [('driven.rosen_suzuki', None, None),
                        ('driven.sum_y', None, None)]
             cases.append(Case(inputs, outputs))
@@ -290,8 +296,8 @@ class TestCase(unittest.TestCase):
         # Create cases with missing output 'dc.sum_z'.
         cases = []
         for i in range(2):
-            inputs = [('driven.x', None, numpy.random.normal(size=4)),
-                      ('driven.y', None, numpy.random.normal(size=10))]
+            inputs = [('driven.x', None, numpy_random.normal(size=4)),
+                      ('driven.y', None, numpy_random.normal(size=10))]
             outputs = [('driven.rosen_suzuki', None, None),
                        ('driven.sum_z', None, None)]
             cases.append(Case(inputs, outputs))

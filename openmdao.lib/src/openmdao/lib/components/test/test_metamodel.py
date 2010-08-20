@@ -3,6 +3,7 @@
 import unittest
 import random
 
+import numpy.random as numpy_random
 from enthought.traits.api import TraitError, HasTraits, implements
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.api import Float
@@ -62,8 +63,11 @@ class MyMetaModel(MetaModel):
 
 class MetaModelTestCase(unittest.TestCase):
         
-    def test_model_change(self):
+    def setUp(self):
         random.seed(10)
+        numpy_random.seed(10)
+
+    def test_model_change(self):
         metamodel = MetaModel()
         mmins = set(metamodel.list_inputs())
         mmouts = set(metamodel.list_outputs())
@@ -82,7 +86,6 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertEquals(outputs-mmouts, set(['y','z']))
         
     def test_in_assembly(self):
-        random.seed(10)
         asm = set_as_top(Assembly())
         asm.add('metamodel', MetaModel())
         asm.add('comp1', Simple())
@@ -120,7 +123,6 @@ class MetaModelTestCase(unittest.TestCase):
         
         
     def test_default_execute(self):
-        random.seed(10)
         metamodel = MetaModel()
         metamodel.name = 'meta'
         metamodel.surrogate = KrigingSurrogate()
@@ -146,7 +148,6 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertEqual(metamodel.d.getvalue(), simple.d)
         
     def test_includes(self):
-        random.seed(10)
         metamodel = MyMetaModel()
         metamodel.surrogate = KrigingSurrogate()
         metamodel.includes = ['a','d']
@@ -160,7 +161,6 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertEqual(metamodel.list_outputs_from_model(), ['c'])
 
     def test_excludes(self):
-        random.seed(10)
         metamodel = MyMetaModel()
         metamodel.surrogate = KrigingSurrogate()
         metamodel.excludes = ['a','d']
@@ -174,7 +174,6 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertEqual(metamodel.list_outputs_from_model(), ['d'])
         
     def test_include_exclude(self):
-        random.seed(10)
         metamodel = MyMetaModel()
         metamodel.surrogate = KrigingSurrogate()
         metamodel.includes = ['a','d']

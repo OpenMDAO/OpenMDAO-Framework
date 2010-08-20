@@ -1,6 +1,5 @@
 """A simple Pyevolve-based driver for OpenMDAO"""
 
-import random
 import re
 
 from numpy import int32,int64,float32,float64

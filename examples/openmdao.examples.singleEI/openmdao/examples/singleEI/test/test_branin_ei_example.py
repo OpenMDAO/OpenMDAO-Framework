@@ -26,13 +26,13 @@ class EITest(unittest.TestCase):
         Selectors.GRankSelector.cacheCount = None
         Selectors.GRouletteWheel.cachePopID = None
         Selectors.GRouletteWheel.cacheWheel = None
-        
+        random.seed(10)
+        numpy_random.seed(10)
 
     def tearDown(self):
         pass
     
     def test_EI(self): 
-        random.seed(10)
         analysis = Analysis()
         set_as_top(analysis)
         analysis.DOE_trainer.DOEgenerator = FullFactorial(2, 2)
