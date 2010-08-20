@@ -8,7 +8,6 @@ import numpy.random as numpy_random
 
 from openmdao.lib.components.kriging_surrogate import KrigingSurrogate
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
-from openmdao.main.case import Case
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 class KrigingSurrogateTests(unittest.TestCase):
