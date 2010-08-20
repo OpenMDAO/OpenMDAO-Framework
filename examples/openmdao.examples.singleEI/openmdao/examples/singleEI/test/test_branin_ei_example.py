@@ -37,11 +37,11 @@ class EITest(unittest.TestCase):
         
         set_as_top(analysis)
         analysis.DOE_trainer.DOEgenerator = FullFactorial(3, 2)
-        analysis.iterations = 3
+        analysis.iterations = 1
         analysis.run()
         analysis.cleanup()
-        self.assertAlmostEqual(-2.114,analysis.EI_driver.next_case[0].inputs[0][2],1)
-        self.assertAlmostEqual(7.,analysis.EI_driver.next_case[0].inputs[1][2],1)
+        self.assertAlmostEqual(6.32,analysis.EI_driver.next_case[0].inputs[0][2],1)
+        self.assertAlmostEqual(12.96,analysis.EI_driver.next_case[0].inputs[1][2],1)
         
         
 if __name__=="__main__": #pragma: no cover
@@ -55,5 +55,6 @@ if __name__=="__main__": #pragma: no cover
         p.sort_stats('cumulative').print_stats()
     else:
         unittest.main()
+
 
 

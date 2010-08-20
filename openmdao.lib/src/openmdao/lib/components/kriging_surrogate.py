@@ -1,5 +1,5 @@
 from math import log,e,sqrt
-from numpy import array,zeros,dot,ones,arange,eye,abs,append
+from numpy import array,zeros,dot,ones,arange,eye,abs,append,vstack,exp
 from numpy.linalg import det,pinv,linalg,lstsq
 from scipy.linalg import cho_factor,cho_solve,lu_factor,lu_solve,triu,LinAlgError
 from scipy.optimize import fmin, anneal, brute
@@ -44,15 +44,25 @@ class KrigingSurrogate(HasTraits):
         r = zeros(self.n)
         X,Y = self.X,self.Y
         thetas = 10**self.thetas
+        XX = array(X)
         for i in range(self.n):
-            r[i] = e**(-sum(thetas*(array(X[i])-new_x)**2))
+            r[i] = sum(thetas*(XX[i]-new_x)**2)
+        r = exp(-r)
+            
         one = ones(self.n)
 
         #-----LSTSQ-------
-        f = self.mu+dot(r,lstsq(self.R,Y-dot(one,self.mu))[0])
-        lsq = lstsq(self.R,r)[0]
-        term1 = dot(r,lsq)
-        term2 = (1-dot(one,lsq))**2/dot(one,lstsq(self.R,one)[0])
+        rhs = vstack([(Y-dot(one,self.mu)), r, one]).T
+        lsq = lstsq(self.R.T,rhs)[0].T
+        
+        f = self.mu + dot(r, lsq[0])
+        term1 = dot(r,lsq[1])
+        term2 = (1.0 - dot(one,lsq[1]))**2/dot(one,lsq[2])        
+        
+        #f = self.mu+dot(r,lstsq(self.R,Y-dot(one,self.mu))[0])
+        #lsq = lstsq(self.R,r)[0]
+        #term1 = dot(r,lsq)
+        #term2 = (1-dot(one,lsq))**2/dot(one,lstsq(self.R,one)[0])
         #---LU or CHOLESKY DECOMPOSTION ---
         #R_fact = self.R_fact
         #f = self.mu+dot(r,self.myfun(R_fact,Y-dot(one,self.mu)))
@@ -70,7 +80,7 @@ class KrigingSurrogate(HasTraits):
         #TODO: Check if one training point will work... if not raise error
         self.X = X
         self.Y = Y
-        self.m = len([0])
+        self.m = len(X[0])
         self.n = len(X)
         thetas = zeros(self.m)
         def _calcll(thetas):
@@ -89,7 +99,7 @@ class KrigingSurrogate(HasTraits):
         for i in range(self.n):
             for j in arange(i+1,self.n):
                 R[i,j] = e**(-sum(thetas*(X[i]-X[j])**2)) #weighted distance formula
-        R = R+R.T+eye(self.n)
+        R = R + R.T + eye(self.n)
         self.R = R
         one = ones(self.n)
         try:
@@ -105,6 +115,9 @@ class KrigingSurrogate(HasTraits):
             #self.mu = dot(one,self.myfun(self.R_fact,Y))/dot(one,self.myfun(self.R_fact,one))
             #self.sig2 = dot(Y-dot(one,self.mu),self.myfun(self.R_fact,(Y-dot(one,self.mu))))/self.n
             #------LSTSQ---------
-            self.mu = dot(one,lstsq(self.R,Y)[0])/dot(one,lstsq(self.R,one)[0])
-            self.sig2 = dot(Y-dot(one,self.mu),lstsq(self.R,(Y-dot(one,self.mu)))[0])/self.n
+            rhs = vstack([Y, one]).T
+            lsq = lstsq(self.R.T,rhs)[0].T
+            
+            self.mu = dot(one,lsq[0])/dot(one,lsq[1])
+            self.sig2 = dot(Y-dot(one,self.mu),lstsq(self.R,Y-dot(one,self.mu))[0])/self.n
             self.log_likelihood = -self.n/2*log(self.sig2)-1./2.*log(abs(det(self.R)+1e-16))-sum(self.thetas)

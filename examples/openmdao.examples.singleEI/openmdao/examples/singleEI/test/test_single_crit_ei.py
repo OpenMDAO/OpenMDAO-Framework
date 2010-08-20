@@ -11,7 +11,6 @@ from openmdao.main.api import Assembly, Case, set_as_top, Component
 from openmdao.main.uncertain_distributions import NormalDistribution, UncertainDistribution
 
 
-
 class NoisyBraninComponent(Component): 
     x = Float(0,iotype="in",low=-5,high=10)
     y = Float(0,iotype="in",low=0,high=15)
@@ -92,8 +91,8 @@ class TestCase(unittest.TestCase):
         self.top.run()
         
         result = [val[2] for case in self.top.EIdriver.next_case for val in case.inputs]
-        self.assertAlmostEqual(result[0], 3.30, places=1)
-        self.assertAlmostEqual(result[1], 2.275, places=1)
+        self.assertAlmostEqual(result[0], 3.16, places=1)
+        self.assertAlmostEqual(result[1], 2.345, places=1)
         
 if __name__ == "__main__":
     unittest.main()
