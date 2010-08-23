@@ -1,4 +1,3 @@
-from __future__ import division
 from math import exp,log10,pi
 
 from numpy import array,ones,argsort,min,sort,zeros,isnan

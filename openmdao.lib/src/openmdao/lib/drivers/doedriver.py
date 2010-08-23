@@ -1,5 +1,3 @@
-from __future__ import division
-
 from numpy import array,zeros,size,argsort,unique,sum,floor,equal,bincount,sqrt,diff
 from numpy.linalg import norm
 
