@@ -1,7 +1,6 @@
 """
 Test for single criteria EI example.
 """
-
 import unittest
 import random
 
@@ -12,8 +11,6 @@ from pyevolve import Selectors
 from openmdao.main.api import set_as_top
 from openmdao.examples.singleEI.branin_ei_example import Analysis, Iterator
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
-
-
 
 class EITest(unittest.TestCase):
     """Test to make sure the EI sample problem works as it should"""
@@ -41,7 +38,6 @@ class EITest(unittest.TestCase):
         analysis.cleanup()
         self.assertAlmostEqual(9.85,analysis.EI_driver.next_case[0].inputs[0][2],1)
         self.assertAlmostEqual(2.95,analysis.EI_driver.next_case[0].inputs[1][2],1)
-        analysis = None
         
 if __name__=="__main__": #pragma: no cover
     import sys

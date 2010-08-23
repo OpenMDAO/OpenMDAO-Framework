@@ -77,7 +77,7 @@ class SingleCritEI(Driver):
             T2 = sigma*((1./((2.*pi)**.05))*exp(-0.5*((target-mu)/sigma)**2.))
             return abs(T1+T2)
         except ValueError: 
-            return 0
+            return 0.
         
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training point to run"""
