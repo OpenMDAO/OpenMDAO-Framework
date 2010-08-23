@@ -601,6 +601,7 @@ output that resembles this:
 
 ::
 
+        $ python sellar_IDF.py
         CONMIN Iterations:  10
         Minimum found at (1.976427, 0.000287, 0.000000)
         Couping vars: 3.156521, 3.754359
@@ -758,3 +759,17 @@ Finally, we set up our local optimization loops.
         self.localopt2.delfun = .001
         self.localopt2.dabfun = .00001
 
+This problem is contained in sellar_CO.py. Executing it at the command line should produce
+output that resembles this:
+
+::
+
+        $ python sellar_CO.py
+        CONMIN Iterations:  60
+        Minimum found at (2.007823, 0.000000, 0.003927)
+        Couping vars: 3.164985, 3.802037
+        Minimum objective:  3.18215119048
+        Elapsed time:  22.5064539909 seconds
+
+After 60 iterations of the top level optimizer, CO gives an answer that's slightly off the optimum, but the calculated
+objective is still very close.

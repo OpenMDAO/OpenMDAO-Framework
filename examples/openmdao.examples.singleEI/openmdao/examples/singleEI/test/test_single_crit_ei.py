@@ -2,6 +2,9 @@ import unittest
 from math import pi,cos
 
 from enthought.traits.api import Instance
+import numpy.random as numpy_random
+
+import random
 
 from openmdao.lib.drivers.single_crit_ei import SingleCritEI
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
@@ -9,7 +12,6 @@ from openmdao.lib.traits.float import Float
 
 from openmdao.main.api import Assembly, Case, set_as_top, Component
 from openmdao.main.uncertain_distributions import NormalDistribution, UncertainDistribution
-
 
 
 class NoisyBraninComponent(Component): 
@@ -27,6 +29,8 @@ class NoisyBraninComponent(Component):
 class TestCase(unittest.TestCase): 
     
     def setUp(self): 
+        random.seed(10)
+        numpy_random.seed(10)
         
         self.top = set_as_top(Assembly())
         
@@ -63,7 +67,6 @@ class TestCase(unittest.TestCase):
             self.fail("RuntimeError expected")
     
     def test_no_criteria_in_best_case(self): 
-        
         self.top.EIdriver.best_case = ListCaseIterator([self.bad_best_case])
         self.top.EIdriver.criteria = "noisy_branin.f_xy"
         self.top.EIdriver.add_parameter('noisy_branin.x')
@@ -76,7 +79,7 @@ class TestCase(unittest.TestCase):
             self.fail("ValueError expected")
         
     def test_add_parameter(self):
-        """test for correct ranges on alleles for GA"""
+        #test for correct ranges on alleles for GA"""
         self.top.EIdriver.add_parameter("noisy_branin.x")
         self.top.EIdriver.add_parameter("noisy_branin.y")
 
@@ -92,8 +95,8 @@ class TestCase(unittest.TestCase):
         self.top.run()
         
         result = [val[2] for case in self.top.EIdriver.next_case for val in case.inputs]
-        self.assertAlmostEqual(result[0], 3.30, places=1)
-        self.assertAlmostEqual(result[1], 2.275, places=1)
+        self.assertAlmostEqual(result[0], 3.29, places=1)
+        self.assertAlmostEqual(result[1], 2.25, places=1)
         
 if __name__ == "__main__":
     unittest.main()

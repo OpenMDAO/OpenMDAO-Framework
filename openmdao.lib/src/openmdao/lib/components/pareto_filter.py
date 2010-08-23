@@ -84,6 +84,7 @@ if __name__ == "__main__": # pragma: no cover
     from matplotlib import pyplot as py
     from mpl_toolkits.mplot3d import Axes3D
     from numpy import random
+    random.seed(10)
     
     from openmdao.main.case import Case
     pf = ParetoFilter()

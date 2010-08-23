@@ -10,8 +10,6 @@ import platform
 import sys
 import unittest
 
-import numpy.random
-
 from enthought.traits.api import TraitError, Event
 
 from openmdao.main.api import Assembly, Component, Case, set_as_top

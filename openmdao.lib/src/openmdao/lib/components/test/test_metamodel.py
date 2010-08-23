@@ -3,6 +3,7 @@
 import unittest
 import random
 
+import numpy.random as numpy_random
 from enthought.traits.api import TraitError, HasTraits, implements
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.api import Float
@@ -62,6 +63,10 @@ class MyMetaModel(MetaModel):
 
 class MetaModelTestCase(unittest.TestCase):
         
+    def setUp(self):
+        random.seed(10)
+        numpy_random.seed(10)
+
     def test_model_change(self):
         metamodel = MetaModel()
         mmins = set(metamodel.list_inputs())
@@ -110,7 +115,7 @@ class MetaModelTestCase(unittest.TestCase):
         asm.comp1.b = 2.
         asm.run()
         assert_rel_error(self, asm.comp2.c, 6., 0.01)
-        assert_rel_error(self, asm.comp2.d, -2., 0.01)
+        assert_rel_error(self, asm.comp2.d, -2.12, 0.01)
         
         # set new model and verify disconnect
         asm.metamodel.model = Simple2()
