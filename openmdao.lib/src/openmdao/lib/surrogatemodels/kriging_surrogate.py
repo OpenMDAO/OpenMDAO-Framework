@@ -62,14 +62,14 @@ class KrigingSurrogate(HasTraits):
         #f = self.mu+dot(r,lstsq(self.R,Y-dot(one,self.mu))[0])
         #lsq = lstsq(self.R,r)[0]
         #term1 = dot(r,lsq)
-        #term2 = (1-dot(one,lsq))**2/dot(one,lstsq(self.R,one)[0])
+        #term2 = (1.0-dot(one,lsq))**2/dot(one,lstsq(self.R,one)[0])
         #---LU or CHOLESKY DECOMPOSTION ---
         #R_fact = self.R_fact
         #f = self.mu+dot(r,self.myfun(R_fact,Y-dot(one,self.mu)))
         #term1 = dot(r,self.myfun(R_fact,r))
-        #term2 = (1-dot(one,self.myfun(R_fact,r)))**2/dot(one,self.myfun(R_fact,one))
+        #term2 = (1.0-dot(one,self.myfun(R_fact,r)))**2/dot(one,self.myfun(R_fact,one))
 
-        MSE = self.sig2*(1-term1+term2)
+        MSE = self.sig2*(1.0-term1+term2)
         RMSE = sqrt(abs(MSE))
         
         return NormalDistribution(f,RMSE)

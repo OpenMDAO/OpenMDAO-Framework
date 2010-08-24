@@ -10,7 +10,11 @@ from pyevolve import G1DList, G1DBinaryString, G2DList, GAllele, GenomeBase
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
 from openmdao.main.api import Driver, ExprEvaluator, set_as_top, Component, Assembly,Expression
-from openmdao.lib.api import Float, Int, Enum, Array,Bool, Instance
+from openmdao.lib.traits.enum import Enum
+from openmdao.lib.traits.float import Float
+from openmdao.lib.traits.int import Int
+from openmdao.lib.traits.array import Array
+from enthought.traits.api import Bool, Instance
 
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate

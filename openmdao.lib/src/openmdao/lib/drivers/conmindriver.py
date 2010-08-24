@@ -7,10 +7,8 @@
 #public symbols
 __all__ = ['CONMINdriver']
 
-from sys import float_info
-
 # pylint: disable-msg=E0611,F0401
-from numpy import ndarray, array, zeros, ones
+from numpy import ndarray, zeros, ones
 from numpy import int as numpy_int
 
 from enthought.traits.api import on_trait_change, TraitError
@@ -39,6 +37,8 @@ class _cnmn1(object):
     # traits) are assigned later.
     def clear(self):
         """ Clear values. """
+        
+        # pylint: disable-msg=W0201
         self.ndv = 0
         self.ncon = 0
         self.nside = 0
@@ -67,6 +67,7 @@ class _cnmn1(object):
         self.iter = 0
         self.iprint = 0
         self.itmax = 0
+        # pylint: enable-msg=W0201
  
 class _consav(object):
     """Just a primitive data structure for storing consav common block data"""
@@ -76,6 +77,8 @@ class _consav(object):
     
     def clear(self):
         """ Clear values. """
+        
+        # pylint: disable-msg=W0201
         self.dm1 = 0.0
         self.dm2 = 0.0
         self.dm3 = 0.0
@@ -149,6 +152,7 @@ class _consav(object):
         self.nlnc = 0
         self.jgoto = 0
         self.ispace = [0, 0]
+        # pylint: enable-msg=W0201
 
 @add_delegate(HasParameters, HasIneqConstraints)
 class CONMINdriver(Driver):
@@ -178,8 +182,9 @@ class CONMINdriver(Driver):
     # CONMIN has quite a few parameters to give the user control over aspects
     # of the solution. 
     
-    iprint = Enum(0, [0,1,2,3,4,5,101], iotype='in', desc='Print information '
-                    'during CONMIN solution. Higher values are more verbose.')
+    iprint = Enum(0, [0, 1, 2, 3, 4, 5, 101], iotype='in', desc='Print '
+                    'information during CONMIN solution. Higher values are '
+                    'more verbose.')
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
                     'termination.')
     fdch = Float(.01, iotype='in', desc='Relative change in parameters '
@@ -252,6 +257,7 @@ class CONMINdriver(Driver):
     
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
+        
         self._config_conmin()
         self.cnmn1.igoto = 0
         self.iter_count = 0
@@ -266,13 +272,15 @@ class CONMINdriver(Driver):
                     self.design_vals[i] = val.high
                 else:
                     self.raise_exception('maximum exceeded for initial value'
-                                         ' of: %s' % str(val.expreval), ValueError)
+                                         ' of: %s' % str(val.expreval),
+                                         ValueError)
             if dval < val.low:
                 if (val.low - dval) < self.ctlmin:
                     self.design_vals[i] = val.low
                 else:
                     self.raise_exception('minimum exceeded for initial value'
-                                         ' of: %s' % str(val.expreval), ValueError)
+                                         ' of: %s' % str(val.expreval),
+                                         ValueError)
 
         # perform an initial run for self-consistency
         super(CONMINdriver, self).run_iteration()
@@ -286,9 +294,12 @@ class CONMINdriver(Driver):
         
     def continue_iteration(self):
         """Returns True if iteration should continue."""
+        
         return self.cnmn1.igoto != 0 or self.iter_count == 0
     
     def pre_iteration(self):
+        """Checks or RunStopped and evaluates objective"""
+        
         super(CONMINdriver, self).pre_iteration()
         if self._stop:
             self.raise_exception('Stop requested', RunStopped)
@@ -297,10 +308,12 @@ class CONMINdriver(Driver):
         try:
             self.cnmn1.obj = self.objective.evaluate()
         except Exception as err:
-            self.raise_exception('error evaluating objective function: %s' % str(err), 
-                                 RuntimeError)
+            self.raise_exception('error evaluating objective function: '
+                                 '%s' % str(err), RuntimeError)
         
     def run_iteration(self):
+        """ The CONMIN driver iteration"""
+        
         #self._logger.debug('iter_count = %d' % self.iter_count)
         #self._logger.debug('objective = %f' % self.cnmn1.obj)
         #self._logger.debug('design vals = %s' % self.design_vals[:-2])
@@ -372,6 +385,8 @@ class CONMINdriver(Driver):
                     from CONMIN', RuntimeError)
 
     def post_iteration(self):
+        """ Checks CONMIN's return status and writes out cases"""
+        
         super(CONMINdriver, self).post_iteration()
         
         # Iteration count comes from CONMIN. You can't just count over the
@@ -382,6 +397,9 @@ class CONMINdriver(Driver):
             
             if self.recorder:
                 # Write out some relevant information to the recorder
+                
+                dvals = [float(val) for val in self.design_vals[:-2]]
+                
                 case_input = []
                 for var, val in zip(self.get_parameters().keys(), dvals):
                     case_input.append([var, None, val])
@@ -402,6 +420,7 @@ class CONMINdriver(Driver):
         """Set up arrays for the FORTRAN conmin routine, and perform some
         validation and make sure that array sizes are consistent.
         """
+        
         self.cnmn1.clear()
         self.consav.clear()
         
