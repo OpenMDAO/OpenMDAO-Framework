@@ -43,10 +43,10 @@ class KrigingSurrogate(HasTraits):
             raise RuntimeError("KrigingSurrogate has not been trained, so no prediction can be made")
         r = zeros(self.n)
         X,Y = self.X,self.Y
-        thetas = 10**self.thetas
+        thetas = 10.**self.thetas
         XX = array(X)
         for i in range(self.n):
-            r[i] = sum(thetas*(XX[i]-new_x)**2)
+            r[i] = sum(thetas*(XX[i]-new_x)**2.)
         r = exp(-r)
             
         one = ones(self.n)
@@ -57,17 +57,17 @@ class KrigingSurrogate(HasTraits):
         
         f = self.mu + dot(r, lsq[0])
         term1 = dot(r,lsq[1])
-        term2 = (1.0 - dot(one,lsq[1]))**2/dot(one,lsq[2])        
+        term2 = (1.0 - dot(one,lsq[1]))**2./dot(one,lsq[2])
         
         #f = self.mu+dot(r,lstsq(self.R,Y-dot(one,self.mu))[0])
         #lsq = lstsq(self.R,r)[0]
         #term1 = dot(r,lsq)
-        #term2 = (1.0-dot(one,lsq))**2/dot(one,lstsq(self.R,one)[0])
+        #term2 = (1.0-dot(one,lsq))**2./dot(one,lstsq(self.R,one)[0])
         #---LU or CHOLESKY DECOMPOSTION ---
         #R_fact = self.R_fact
         #f = self.mu+dot(r,self.myfun(R_fact,Y-dot(one,self.mu)))
         #term1 = dot(r,self.myfun(R_fact,r))
-        #term2 = (1.0-dot(one,self.myfun(R_fact,r)))**2/dot(one,self.myfun(R_fact,one))
+        #term2 = (1.0-dot(one,self.myfun(R_fact,r)))**2./dot(one,self.myfun(R_fact,one))
 
         MSE = self.sig2*(1.0-term1+term2)
         RMSE = sqrt(abs(MSE))
@@ -95,10 +95,10 @@ class KrigingSurrogate(HasTraits):
         #    Give error message
         R = zeros((self.n,self.n))
         X,Y = array(self.X), array(self.Y)
-        thetas = 10**self.thetas
+        thetas = 10.**self.thetas
         for i in range(self.n):
             for j in arange(i+1,self.n):
-                R[i,j] = e**(-sum(thetas*(X[i]-X[j])**2)) #weighted distance formula
+                R[i,j] = e**(-sum(thetas*(X[i]-X[j])**2.)) #weighted distance formula
         R = R + R.T + eye(self.n)
         self.R = R
         one = ones(self.n)
