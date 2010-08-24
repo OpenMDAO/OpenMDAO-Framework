@@ -33,7 +33,7 @@ class KrigingSurrogate(HasTraits):
             
     def get_uncertain_value(self,value): 
         """returns a NormalDistribution centered around the value, with a standard deviation of 0"""
-        return NormalDistribution(value,0)
+        return NormalDistribution(value,0.)
 
     def predict(self,new_x):
         """calculates a predicted value of the response, based on the current 
@@ -107,7 +107,7 @@ class KrigingSurrogate(HasTraits):
             self.myfun = cho_solve
             self.mu = dot(one,self.myfun(self.R_fact,Y))/dot(one,self.myfun(self.R_fact,one))
             self.sig2 = dot(Y-dot(one,self.mu),self.myfun(self.R_fact,(Y-dot(one,self.mu))))/self.n
-            self.log_likelihood = -self.n/2*log(self.sig2)-1./2.*log(abs(det(self.R)))-sum(self.thetas)-sum(abs(self.thetas))
+            self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)))-sum(self.thetas)-sum(abs(self.thetas))
         except (linalg.LinAlgError,ValueError):
             #---LU DECOMPOSITION---
             #self.R_fact = lu_factor(R)
@@ -120,4 +120,4 @@ class KrigingSurrogate(HasTraits):
             
             self.mu = dot(one,lsq[0])/dot(one,lsq[1])
             self.sig2 = dot(Y-dot(one,self.mu),lstsq(self.R,Y-dot(one,self.mu))[0])/self.n
-            self.log_likelihood = -self.n/2*log(self.sig2)-1./2.*log(abs(det(self.R)+1e-16))-sum(self.thetas)
+            self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)+1.e-16))-sum(self.thetas)

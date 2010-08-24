@@ -10,7 +10,7 @@ from openmdao.main.api import Assembly, Component, Driver, \
 from openmdao.main.interfaces import ICaseIterator
 
 from openmdao.lib.components.metamodel import MetaModel
-from openmdao.lib.components.kriging_surrogate import KrigingSurrogate
+from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
 from openmdao.lib.components.pareto_filter import ParetoFilter
 from openmdao.lib.drivers.doedriver import DOEdriver
 from openmdao.lib.drivers.single_crit_ei import SingleCritEI
