@@ -24,7 +24,9 @@ from numpy.linalg import norm
 
 from enthought.traits.api import HasTraits, implements
 
-from openmdao.lib.api import Int, Enum, Float
+from openmdao.lib.traits.int import Int
+from openmdao.lib.traits.enum import Enum
+from openmdao.lib.traits.float import Float
 from openmdao.util.mdo import rand_latin_hypercube
 from openmdao.main.interfaces import IDOEgenerator
 

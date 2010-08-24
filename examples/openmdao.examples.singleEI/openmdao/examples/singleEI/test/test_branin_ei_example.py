@@ -12,6 +12,7 @@ from openmdao.main.api import set_as_top
 from openmdao.examples.singleEI.branin_ei_example import Analysis, Iterator
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
 
+
 class EITest(unittest.TestCase):
     """Test to make sure the EI sample problem works as it should"""
     

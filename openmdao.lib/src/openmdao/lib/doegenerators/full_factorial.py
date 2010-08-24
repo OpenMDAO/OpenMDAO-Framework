@@ -22,5 +22,5 @@ class FullFactorial(HasTraits):
     
     def __iter__(self):
         """Return an iterator over our sets of input values"""
-        return product(*[linspace(0,1,self.num_levels) for i in range(self.num_parameters)])
+        return product(*[linspace(0.,1.,self.num_levels) for i in range(self.num_parameters)])
         

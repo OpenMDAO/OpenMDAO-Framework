@@ -10,7 +10,8 @@ from openmdao.lib.api import Float
 from openmdao.main.interfaces import ICaseRecorder
 
 from openmdao.lib.components.metamodel import MetaModel
-from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate # FIXME: in wrong place
+from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
+
 
 from openmdao.util.testutil import assert_rel_error
 

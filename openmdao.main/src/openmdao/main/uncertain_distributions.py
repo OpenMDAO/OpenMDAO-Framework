@@ -33,7 +33,7 @@ class NormalDistribution(UncertainDistribution):
        standard deviation
     """
     
-    def __init__(self,mu=0, sigma=1): 
+    def __init__(self,mu=0., sigma=1.): 
         super(NormalDistribution,self).__init__()
         
         self.mu = mu
@@ -71,7 +71,7 @@ class UniformDistribution(UncertainDistribution):
        maximum value
     """
  
-    def __init__(self,max=0,min=1,*args,**kwargs):
+    def __init__(self,max=0.,min=1.,*args,**kwargs):
         super(UniformDistribution,self).__init__(*args,**kwargs)
         
         self.max = max
@@ -97,7 +97,7 @@ class TriangularDistribution(UncertainDistribution):
        mode
     """
  
-    def __init__(self,max=0,min=1,mode=0.5,*args,**kwargs):
+    def __init__(self,max=0.,min=1.,mode=0.5,*args,**kwargs):
         super(TriangularDistribution,self).__init__(*args,**kwargs)
         
         self.max = max
@@ -121,7 +121,7 @@ class WeibullDistribution(UncertainDistribution):
        shape parameter
     """
 
-    def __init__(self,alpha=1,beta=2,*args,**kwargs):
+    def __init__(self,alpha=1.,beta=2.,*args,**kwargs):
         super(UniformDistribution,self).__init__(*args,**kwargs)
         
         self.alpha = alpha
@@ -131,5 +131,5 @@ class WeibullDistribution(UncertainDistribution):
         return weibullvariate(self.alpha,self.beta)
         
     def expected(self):
-        return self.alpha*gamma(1+1./self.beta)
+        return self.alpha*gamma(1.+1./self.beta)
         
