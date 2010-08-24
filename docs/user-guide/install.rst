@@ -22,7 +22,7 @@ OpenMDAO requires that the following software be installed at the system level o
 
 - SciPy  
 
-- Matplotlib   
+- Matplotlib
 
 
 **Platform-Specific Requirements**
@@ -38,12 +38,16 @@ use it, you must have compilers (C and Fortran) on your system.
 
  - python-devel
  - numpy
+ - scipy
+ - python-matplotlib
  - gcc-gfortran
 
 - On **Ubuntu**, the .deb package names are:
 
  - python-dev
  - python-numpy
+ - python-scipy
+ - python-matplotlib
  - gfortran
 
 **Windows**: 
@@ -61,8 +65,12 @@ use it, you must have compilers (C and Fortran) on your system.
 
 - Xcode -- It's included on the OS X install disk, and installing it will give you access to gcc. You can
            also download a newer version from Apple, but you'll have to fill out a (free) registration to do it.
-  
-- Running **Snow Leopard:**
+
+- gfortran -- It's sometimes hard to figure out which version of gfortran to install on your Mac. See
+              this `page <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_ for a pretty good overview 
+              of what's available.
+              
+- On **Snow Leopard:**
 
  - Python 2.6 -- Install a new version from ``python.org`` because the built-in version has a distutils bug that
    will cause some of the OpenMDAO tests to fail. It's not clear exactly what release the fix first
@@ -74,14 +82,12 @@ use it, you must have compilers (C and Fortran) on your system.
  - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
 
 
-
-- Running **Leopard:**
+- On **Leopard:**
 
  - `Python 2.6`__ 
  - `numpy <http://sourceforge.net/projects/numpy/files/>`_                  
  - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
- - `gfortran`__ -- Some other options for installing gfortran can be found on this
-   `page <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_. 
+ - `gfortran`__ 
  - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
 
 .. __: http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg
