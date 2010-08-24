@@ -1,7 +1,5 @@
 from __future__ import division
 
-import random
-
 from numpy import array,zeros,size,argsort,unique,sum,floor,equal,bincount,sqrt,diff
 from numpy.linalg import norm
 

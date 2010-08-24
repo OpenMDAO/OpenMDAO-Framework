@@ -1,8 +1,10 @@
 import unittest
 from math import pi,cos
-import random
 
 from enthought.traits.api import Instance
+import numpy.random as numpy_random
+
+import random
 
 from openmdao.lib.drivers.single_crit_ei import SingleCritEI
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
@@ -10,7 +12,6 @@ from openmdao.lib.traits.float import Float
 
 from openmdao.main.api import Assembly, Case, set_as_top, Component
 from openmdao.main.uncertain_distributions import NormalDistribution, UncertainDistribution
-
 
 
 class NoisyBraninComponent(Component): 
@@ -28,6 +29,9 @@ class NoisyBraninComponent(Component):
 class TestCase(unittest.TestCase): 
     
     def setUp(self): 
+        random.seed(10)
+        numpy_random.seed(10)
+        
         self.top = set_as_top(Assembly())
         
         self.top.add("EIdriver",SingleCritEI())
@@ -44,7 +48,6 @@ class TestCase(unittest.TestCase):
         self.top = None
     
     def test_no_criteria_error(self): 
-        random.seed(10)
         self.top.EIdriver.best_case = ListCaseIterator([self.best_case,])
         try:
             self.top.run()
@@ -64,7 +67,6 @@ class TestCase(unittest.TestCase):
             self.fail("RuntimeError expected")
     
     def test_no_criteria_in_best_case(self): 
-        random.seed(10)
         self.top.EIdriver.best_case = ListCaseIterator([self.bad_best_case])
         self.top.EIdriver.criteria = "noisy_branin.f_xy"
         self.top.EIdriver.add_parameter('noisy_branin.x')
@@ -77,8 +79,7 @@ class TestCase(unittest.TestCase):
             self.fail("ValueError expected")
         
     def test_add_parameter(self):
-        random.seed(10)
-        """test for correct ranges on alleles for GA"""
+        #test for correct ranges on alleles for GA"""
         self.top.EIdriver.add_parameter("noisy_branin.x")
         self.top.EIdriver.add_parameter("noisy_branin.y")
 
@@ -86,7 +87,6 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.top.EIdriver.set_of_alleles[1][0],(0,15))
     
     def test_ei_prediction(self): 
-        random.seed(10)
         self.top.EIdriver.add_parameter("noisy_branin.x")
         self.top.EIdriver.add_parameter("noisy_branin.y")      
         self.top.EIdriver.best_case = ListCaseIterator([self.best_case])

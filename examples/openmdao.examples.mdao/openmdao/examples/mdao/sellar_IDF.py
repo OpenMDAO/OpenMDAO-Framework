@@ -29,39 +29,41 @@ class SellarIDF(Assembly):
         self.add('driver', CONMINdriver())
 
         # Disciplines
-        self.add('coupler', Broadcaster())
+        self.add('bcastr', Broadcaster())
         self.add('dis1', SellarDiscipline1())
         self.add('dis2', SellarDiscipline2())
         
         # Driver process definition
-        self.driver.workflow.add([self.coupler, self.dis1, self.dis2])
+        self.driver.workflow.add([self.bcastr, self.dis1, self.dis2])
         
         # Make all connections
-        self.connect('coupler.z1','dis1.z1')
-        self.connect('coupler.z1','dis2.z1')
-        self.connect('coupler.z2','dis1.z2')
-        self.connect('coupler.z2','dis2.z2')
+        self.connect('bcastr.z1','dis1.z1')
+        self.connect('bcastr.z1','dis2.z1')
+        self.connect('bcastr.z2','dis1.z2')
+        self.connect('bcastr.z2','dis2.z2')
 
         # Optimization parameters
         self.driver.objective = \
-            '(dis1.x1)**2 + coupler.z2 + dis1.y1 + math.exp(-dis2.y2)'
-        for param, low, high in zip(['coupler.z1_in', 'coupler.z2_in',
-                                     'dis1.x1', 'dis2.y1', 'dis1.y2'],
-                                    [-10.0, 0.0, 0.0, 3.16, -10.0],
-                                    [10.0, 10.0, 10.0, 10, 24.0]):
-            self.driver.add_parameter(param, low=low, high=high)
+            '(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)'
+        
+        self.driver.add_parameter('bcastr.z1_in', low = -10.0, high=10.0)
+        self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high=10.0)
+        self.driver.add_parameter('dis1.x1',      low = 0.0,   high=10.0)
+        self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
+        self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
             
-        map(self.driver.add_constraint, ['dis2.y1-dis1.y1',
-                                              'dis1.y1-dis2.y1',
-                                              'dis2.y2-dis1.y2',
-                                              'dis1.y2-dis2.y2'])
+        self.driver.add_constraint('(dis2.y1-dis1.y1)**3')
+        self.driver.add_constraint('(dis1.y1-dis2.y1)**3')
+        self.driver.add_constraint('(dis2.y2-dis1.y2)**3')
+        self.driver.add_constraint('(dis1.y2-dis2.y2)**3')
+  
         self.driver.iprint = 0
         self.driver.itmax = 100
         self.driver.fdch = .003
         self.driver.fdchm = .003
         self.driver.delfun = .0001
         self.driver.dabfun = .00001
-        self.driver.ct = -.001
+        self.driver.ct = -.01
         self.driver.ctlmin = 0.001
 
 
@@ -74,8 +76,8 @@ if __name__ == "__main__": # pragma: no cover
     
     # pylint: disable-msg=E1101
         
-    prob.coupler.z1_in = 5.0
-    prob.coupler.z2_in = 2.0
+    prob.bcastr.z1_in = 5.0
+    prob.bcastr.z2_in = 2.0
     prob.dis1.x1 = 1.0
     prob.dis2.y1 = 3.16
     
@@ -84,8 +86,8 @@ if __name__ == "__main__": # pragma: no cover
 
     print "\n"
     print "CONMIN Iterations: ", prob.driver.iter_count
-    print "Minimum found at (%f, %f, %f)" % (prob.coupler.z1_in, \
-                                             prob.coupler.z2_in, \
+    print "Minimum found at (%f, %f, %f)" % (prob.bcastr.z1_in, \
+                                             prob.bcastr.z2_in, \
                                              prob.dis1.x1)
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.driver.objective.evaluate()

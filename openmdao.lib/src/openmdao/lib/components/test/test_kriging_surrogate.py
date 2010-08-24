@@ -4,12 +4,17 @@ import unittest
 import random
 
 from numpy import array,round,linspace,sin,cos,pi
+import numpy.random as numpy_random
+
 from openmdao.lib.components.kriging_surrogate import KrigingSurrogate
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
-from openmdao.main.case import Case
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 class KrigingSurrogateTests(unittest.TestCase):
+    
+    def setUp(self):
+        random.seed(10)
+        numpy_random.seed(10)
     
     def test_1d_kriging1(self):
         
@@ -51,7 +56,6 @@ class KrigingSurrogateTests(unittest.TestCase):
         self.assertAlmostEqual(0.479425538688,pred.mu,places=7)
     
     def test_2d_kriging(self):
-        random.seed(10)
         def bran(x):
             y = (x[1]-(5.1/(4.*pi**2.))*x[0]**2.+5.*x[0]/pi-6.)**2.+10.*(1.-1./(8.*pi))*cos(x[0])+10.
             return y
@@ -66,7 +70,6 @@ class KrigingSurrogateTests(unittest.TestCase):
         self.assertAlmostEqual(15.6772857277,pred.mu,places=5)
         
     def test_get_uncertain_value(self): 
-        
         x = array([[0.05], [.25], [0.61], [0.95]])
         y = array([0.738513784857542,-0.210367746201974,-0.489015457891476,12.3033138316612])
         krig1 = KrigingSurrogate(x,y)

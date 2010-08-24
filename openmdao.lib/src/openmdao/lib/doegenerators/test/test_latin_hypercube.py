@@ -15,7 +15,7 @@ from openmdao.util.mdo import rand_latin_hypercube, is_latin_hypercube
 
 class TestCase(unittest.TestCase):
     def setUp(self):
-        random.seed(12345)
+        random.seed(10)
 
     def test_mmlhs(self):
         lh = LatinHypercube(rand_latin_hypercube(10,2), 2, 1) 
