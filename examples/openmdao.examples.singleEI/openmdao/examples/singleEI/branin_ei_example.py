@@ -37,9 +37,7 @@ class Iterator(Driver):
         self._iterations = 0
     
     def continue_iteration(self):
-        #print "EI: ", analysis.EI_driver.EI
         self._iterations += 1
-        #print 'Iter'
         if (self._iterations > 1) and self.should_stop():
             return False
         if self._iterations <= self.iterations: 

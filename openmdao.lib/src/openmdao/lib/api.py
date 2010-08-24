@@ -23,6 +23,7 @@ from openmdao.lib.drivers.doedriver import DOEdriver
 
 # Components
 from openmdao.lib.components.external_code import ExternalCode
+from openmdao.lib.components.metamodel import MetaModel
 
 # CaseIterators
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
