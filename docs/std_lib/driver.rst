@@ -515,10 +515,10 @@ Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection
 
     Discuss the Case Iterator
     
-*DOEDriver*
+*DOEdriver*
 ~~~~~~~~~~~
 
-    The :term:`DOEDriver` provides the capability to execute a DOE on a workflow.
+    The DOEdriver provides the capability to execute a DOE on a workflow.
     This Driver supports the IHasParameters interface. At execution time, 
     the driver will use the list of parameters added to it by the user to 
     create a specific DOE and then iteratively execute the DOE cases on the
@@ -526,12 +526,13 @@ Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection
     
     The user can pick from any of the DOEgenerators provided in the standard
     library, or provide their own custom instance of a DOEgenerator. One of 
-    these would be plugged into the DOEgenerator socket on the DOEDriver. 
+    these would be plugged into the DOEgenerator socket on the DOEdriver. 
     
-    .. testcode:: DOEDriver
+    .. testcode:: DOEdriver
+    
         from openmdao.main.api import Assembly
-        from openmdao.lib.api import DOEDriver
-        from openmdao.lib.DOEgenerators.full_factorial import FullFactorial
+        from openmdao.lib.api import DOEdriver
+        from openmdao.lib.doegenerators.full_factorial import FullFactorial
         from openmdao.examples.singleEI.branin_component import BraninComponent
         
         class Analysis(Assembly): 
@@ -539,7 +540,7 @@ Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection
                 super(Analysis,self).__init__()
                 
                 self.add('branin',BraninComponent())
-                self.add('driver',DOEDriver())
+                self.add('driver',DOEdriver())
                 self.driver.add_parameter('branin.x')
                 self.driver.add_parameter('branin.y')
                 #use a full factorial DOE with 2 variables, and 3 levels
