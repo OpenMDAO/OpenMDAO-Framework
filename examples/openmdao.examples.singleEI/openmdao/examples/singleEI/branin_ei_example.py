@@ -1,5 +1,7 @@
-from __future__ import division
 import os
+from tempfile import mkdtemp
+import os.path
+import shutil
 
 from enthought.traits.api import Instance, Str
 
@@ -50,6 +52,8 @@ class Analysis(Assembly):
     def __init__(self,*args,**kwargs):
         super(Analysis,self).__init__(self,*args,**kwargs)
         
+        self._tdir = mkdtemp()
+        
         #Components
         self.add("branin_meta_model",MetaModel())
         self.branin_meta_model.surrogate = KrigingSurrogate()
@@ -67,7 +71,7 @@ class Analysis(Assembly):
         self.DOE_trainer.add_parameter("branin_meta_model.y")
         self.DOE_trainer.add_event("branin_meta_model.train_next")
         self.DOE_trainer.case_outputs = ["branin_meta_model.f_xy"]
-        self.DOE_trainer.recorder = DBCaseRecorder('trainer.db')
+        self.DOE_trainer.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
         
         self.add("EI_driver",SingleCritEI())
         self.EI_driver.criteria = "branin_meta_model.f_xy"
@@ -77,7 +81,7 @@ class Analysis(Assembly):
         
         self.add("retrain",CaseIteratorDriver())
         self.retrain.add_event("branin_meta_model.train_next")
-        self.retrain.recorder = DBCaseRecorder('retrain.db')
+        self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
         
         self.add("iter",Iterator())
         self.iter.iterations = 30
@@ -97,11 +101,7 @@ class Analysis(Assembly):
         self.connect("EI_driver.next_case","retrain.iterator")
         
     def cleanup(self):
-        try:
-            os.remove('retrain.db')
-            os.remove('trainer.db')
-        except:
-            pass
+        shutil.rmtree(self._tdir, ignore_errors=True)
         
 if __name__ == "__main__":
     from openmdao.main.api import set_as_top

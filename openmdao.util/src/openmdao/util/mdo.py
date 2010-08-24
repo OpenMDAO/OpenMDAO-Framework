@@ -1,9 +1,6 @@
 """
 Math related utility functions used by OpenMDAO.
 """
-
-from __future__ import division
-
 from random import shuffle
 
 from numpy import zeros, array
