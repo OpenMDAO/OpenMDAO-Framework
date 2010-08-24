@@ -530,7 +530,7 @@ Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection
     
     .. testcode:: DOEDriver
         from openmdao.main.api import Assembly
-        from openmdao.lib.api import DOEDriver
+        from openmdao.lib.api import DOEdriver
         from openmdao.lib.DOEgenerators.full_factorial import FullFactorial
         from openmdao.examples.singleEI.branin_component import BraninComponent
         
