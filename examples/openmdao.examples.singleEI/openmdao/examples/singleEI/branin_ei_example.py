@@ -104,6 +104,8 @@ class Analysis(Assembly):
 if __name__ == "__main__":
     from openmdao.main.api import set_as_top
     from openmdao.util.plot import case_db_to_dict
+    import matplotlib
+    matplotlib.use('SVG')
     from matplotlib import pyplot as plt, cm 
     from matplotlib.pylab import get_cmap
     from mpl_toolkits.mplot3d import Axes3D
@@ -141,7 +143,7 @@ if __name__ == "__main__":
     cb = plt.colorbar(shrink=.45)
     
     #plot the initial training data
-    data_train = case_db_to_dict('trainer.db',
+    data_train = case_db_to_dict(os.path.join(analysis._tdir,'trainer.db'),
                                      ['branin_meta_model.y',
                                       'branin_meta_model.x',
                                       'branin_meta_model.f_xy'])
@@ -149,7 +151,7 @@ if __name__ == "__main__":
     plt.scatter(data_train['branin_meta_model.x'],
                 data_train['branin_meta_model.y'],s=30,c='#572E07',zorder=10)
     
-    data_EI = case_db_to_dict('retrain.db',
+    data_EI = case_db_to_dict(os.path.join(analysis._tdir,'retrain.db'),
                                      ['branin_meta_model.y',
                                       'branin_meta_model.x',
                                       'branin_meta_model.f_xy'])
@@ -188,8 +190,10 @@ if __name__ == "__main__":
     plt.ylabel("y")
     plt.title("Branin Meta Model Contours")
     plt.text(10.9,11,"Meta Model\nFunction\nValue")
-        
-    plt.show()
+    
+    matplotlib.pylab.savefig('ei.svg')
+    
+    #plt.show()
 
     #analysis.cleanup()
     
