@@ -11,3 +11,4 @@ Appendix:  Standard Library Reference
    
    component.rst
    driver.rst
+   surrogatemodels.rst

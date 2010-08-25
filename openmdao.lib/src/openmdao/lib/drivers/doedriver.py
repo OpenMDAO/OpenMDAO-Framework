@@ -1,17 +1,18 @@
-from __future__ import division
-
 from numpy import array,zeros,size,argsort,unique,sum,floor,equal,bincount,sqrt,diff
 from numpy.linalg import norm
 
 from enthought.traits.api import HasTraits, Event, implements, ListStr, Instance
 
-from openmdao.main.api import Case
+from openmdao.main.case import Case
 from openmdao.main.interfaces import IDOEgenerator
-from openmdao.lib.api import Float,Int, Enum
+from openmdao.lib.traits.float import Float
+from openmdao.lib.traits.int import Int
+from openmdao.lib.traits.enum import Enum
 from openmdao.lib.drivers.caseiterdriver import CaseIterDriverBase
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
+
 
 @add_delegate(HasParameters)
 class DOEdriver(CaseIterDriverBase): 

@@ -1,4 +1,3 @@
-from __future__ import division
 from math import exp,log10,pi
 
 from numpy import array,ones,argsort,min,sort,zeros,isnan
@@ -74,11 +73,13 @@ class SingleCritEI(Driver):
         
         target = self.target
         try:
-            T1 = (target-mu)*(0.5+0.5*erf((1./(2.**0.5))*((target-mu)/sigma)))
+            #(1./(2.**0.5))*((target-mu)/sigma)
+            T1 = (target-mu)*.5*(1.+erf((target-mu)/(sigma*2.**.5)))
             T2 = sigma*((1./((2.*pi)**.05))*exp(-0.5*((target-mu)/sigma)**2.))
             return abs(T1+T2)
         except ValueError: 
-            return 0
+            return 0.
+
         
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training point to run"""

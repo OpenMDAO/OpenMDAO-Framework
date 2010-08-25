@@ -1,13 +1,8 @@
-
 # pylint: disable-msg=W0104,R0914
 
 #public symbols
 __all__ = ["ExprEvaluator"]
 
-
-
-
-#from __future__ import division
 
 import weakref
 import math
