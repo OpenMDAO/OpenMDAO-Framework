@@ -1053,14 +1053,105 @@ Drivers
 -------
 
 Drivers are generally iterative solvers, such as optimizers, that operate on
-their respective workflow until certain conditions are met. OpenMDAO comes with
+their respective workflow until certain conditions are met. OpenMDAO includes
 several drivers that are distributable (i.e., either open source or
-public domain.)
+public domain.) This section describes the driver interface that is common
+to most drivers. A more complete discussion on how to use each of the
+drivers can be found in :ref:`the Standard Library Reference<stdlib>`.
 
 The Driver API
---------------
+~~~~~~~~~~~~~~
+
+Drivers in OpenMDAO share a functional interface for setting up certain common
+parts of the problem. There are functions to handle parameters, which are inputs
+to a system and are also known as design variables for optimizers or independents
+for solvers. Likewise, there are also functions to handle constraints.
+
+To illustrated the paramter interface, let's consider a model in which our goal
+is to optimize the design of a vehicle with several design variables using
+the CONMINdriver optimizer.
+
+.. testcode:: Parameter_API
+
+    from openmdao.main.api import Assembly
+    from openmdao.lib.api import CONMINdriver
+
+    class EngineOpt(Assembly):
+        """ Top level assembly for optimizing a vehicle. """
+    
+        def __init__(self):
+            """ Creates a new Assembly containing a DrivingSim and an optimizer"""
+        
+            super(EngineOptimization, self).__init__()
+
+            # Create DrivingSim component instances
+            self.add('driving_sim', DrivingSim())
+
+            # Create CONMIN Optimizer instance
+            self.add('driver', CONMINdriver())
+        
+            # add DrivingSim to workflow
+            driver.workflow.add(self.driving_sim)
+
+We add design variables to the driver 'self.driver' using the add_parameter
+function.
+
+.. testsetup:: Parameter_API
+    
+    from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+    self = EngineOptimization()
+    self.driver.clear_parameters()
+
+.. testcode:: Parameter_API
+
+    # CONMIN Design Variables 
+    self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
+    self.driver.add_parameter('driving_sim.bore', low=65. , high=100.)
+
+The *low* and *high* parameters can be used to specify a range for a parameter. This is
+useful for optimization problems where the design variables are constrained. Generally,
+the optimizer treats these as a special kind of constraint, so they should be defined
+using the low and high parameters rather than the add_constraint interface. If a low or
+high value are not given, then they are pulled from the corresponding low and high
+parameters that are defined in the public variable. If low or high aren't definied
+in either place, then an exception is raised. Some drivers (in particular solvers) do
+not support a low or high value; in such a case, you can just set it to a large number (like
+1e99 or -1e99).
+
+Multiple parameters can also be added in a single call to a add_parameters (note the letter
+s) by passing a list of tuples.
+
+.. testcode:: Parameter_API
+
+    # Some more Design Variables 
+    self.driver.add_parameters([ ('driving_sim.conrod', 65.0 , 90.0), 
+                                 ('driving_sim.IVC', 0.0, 90.0) ])
 
 
+The parameter interface also includes some other functions that are more useful when
+used interactively or when writing some more advanced components. The functions list_parameters,
+remove_parameters, and clear_parameters can be used to respectively print, delete a
+single parameter, and clear all parameters.
+
+.. doctest:: more_parameter_interface
+
+    >>> from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
+    >>> top = OptimizationConstrained()
+    >>> top.driver.list_parameters()
+    ['paraboloid.x', 'paraboloid.y']
+    >>> top.driver.remove_parameter('paraboloid.x')
+    >>> top.driver.list_parameters()
+    ['paraboloid.y']
+    >>> top.driver.clear_parameters()
+    >>> top.driver.list_parameters()
+    []
+
+There are also some get and set methods for parameters in the list. These are used by drivers to
+manage set the parameters in their workflow, and are not generally needed by component
+developers.
+
+
+    
 *Adding new Drivers*
 ~~~~~~~~~~~~~~~~~~~~
 

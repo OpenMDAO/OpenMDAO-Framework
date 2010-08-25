@@ -6,11 +6,18 @@
 Drivers
 =======
 
+.. index:: Broyden Solver
+
+.. _Broyden-Solver:
+
+*BroydenSolver*
+~~~~~~~~~~~~~~~
+
 .. index:: CONMIN
 
 .. _CONMIN-driver:
 
-*The CONMIN Driver*
+*CONMINDriver*
 ~~~~~~~~~~~~~~~~~~~
 
 :term:`CONMIN` is a Fortran program written as a subroutine to solve
@@ -98,7 +105,7 @@ given below.
 Both the objective function and the design variables are assigned via an
 :term:`Expression`. An Expression is a string that contains a function of OpenMDAO
 variables in the variable tree. There is only one objective function, but there
-can be multiple design variables which are assigned as a Python list.
+can be multiple design variables which are assigned using the add_parameter function.
 
 .. testcode:: CONMIN_show
         
@@ -132,17 +139,11 @@ CONMIN driver.
 
 .. index:: pair: constraints; CONMIN
 
-Constraints in CONMIN are equations or inequalities that are constructed from the available 
-OpenMDAO variables using Python
-mathematical syntax. The constraints parameter is a list of inequalities that
-are defined to be **satisfied when they return a negative value or zero**, and **violated
-when they return a positive value**.
-
-.. testcode:: CONMIN_show
-
-    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore')
-
-Any constraint can also be expressed explicitly as an inequality.
+Constraints in CONMIN are inequalities that are constructed from the available
+OpenMDAO variables using Expressions. They are assigned using the
+add_constraint interface. In CONMIN, constraints are defined to be **satisfied
+when they return a negative value or zero**, and **violated when they return a
+positive value**. Note that CONMIN does not support equality constraints.
 
 .. testcode:: CONMIN_show
 

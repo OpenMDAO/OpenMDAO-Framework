@@ -36,7 +36,7 @@ class SingleCritEI(Driver):
                     desc="Name of the variable to maximize the expected improvement around. "
                           "Must be a NormalDistrubtion type")
     next_case = Instance(ICaseIterator, iotype="out", copy=None,
-                    desc="CaseIterator which contains the case which maximize expected improvement")
+                    desc="CaseIterator which contains the case which maximizes expected improvement")
     
     EI = Float(0.0, iotype="out", desc="The expected improvement of the next_case")
     

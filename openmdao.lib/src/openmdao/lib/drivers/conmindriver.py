@@ -164,11 +164,6 @@ class CONMINdriver(Driver):
             
     """
     # pylint: disable-msg=E1101
-    #constraints = ExpressionList(iotype='in',
-            #desc= 'A list of expression strings indicating constraints.'
-            #' A value of < 0 for the expression indicates that the constraint '
-            #'is violated.')
-    
     objective = Expression(iotype='in',
                 desc= 'A string containing the objective function expression.')
     
