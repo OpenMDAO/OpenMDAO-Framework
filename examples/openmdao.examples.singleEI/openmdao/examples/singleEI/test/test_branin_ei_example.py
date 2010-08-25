@@ -16,7 +16,7 @@ from openmdao.lib.doegenerators.full_factorial import FullFactorial
 class EITest(unittest.TestCase):
     """Test to make sure the EI sample problem works as it should"""
     
-    def setUp(self):
+    def test_EI(self): 
         # pyevolve does some caching that causes failures during our
         # complete unit tests due to stale values in the cache attributes
         # below, so reset them here
@@ -26,11 +26,6 @@ class EITest(unittest.TestCase):
         Selectors.GRouletteWheel.cacheWheel = None
         random.seed(10)
         numpy_random.seed(10)
-
-    def tearDown(self):
-        pass
-    
-    def test_EI(self): 
         analysis = Analysis()
         set_as_top(analysis)
         analysis.DOE_trainer.DOEgenerator = FullFactorial(2, 2)
@@ -41,16 +36,7 @@ class EITest(unittest.TestCase):
         self.assertAlmostEqual(2.95,analysis.EI_driver.next_case[0].inputs[1][2],1)
         
 if __name__=="__main__": #pragma: no cover
-    import sys
-    if '--profile' in sys.argv:
-        sys.argv.remove('--profile')
-        import cProfile
-        import pstats
-        cProfile.run("unittest.main()", "test.prof")
-        p = pstats.Stats("test.prof")
-        p.sort_stats('cumulative').print_stats()
-    else:
-        unittest.main()
+    unittest.main()
 
 
 
