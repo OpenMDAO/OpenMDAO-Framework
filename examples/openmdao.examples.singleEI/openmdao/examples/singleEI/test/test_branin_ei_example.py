@@ -1,6 +1,7 @@
 """
 Test for single criteria EI example.
 """
+import os
 import unittest
 import random
 
