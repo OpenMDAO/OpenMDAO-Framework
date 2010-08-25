@@ -1133,6 +1133,8 @@ used interactively or when writing some more advanced components. The functions 
 remove_parameters, and clear_parameters can be used to respectively print, delete a
 single parameter, and clear all parameters.
 
+.. doctest:: more_parameter_interface
+
     >>> from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
     >>> top = OptimizationConstrained()
     >>> top.driver.list_parameters()
@@ -1148,10 +1150,7 @@ There are also some get and set methods for parameters in the list. These are us
 manage set the parameters in their workflow, and are not generally needed by component
 developers.
 
-    >>> for item in top.driver.get_parameters().values():
-    ...     print item.expreval.evaluate()
-    0.0
-    0.0
+
     
 *Adding new Drivers*
 ~~~~~~~~~~~~~~~~~~~~

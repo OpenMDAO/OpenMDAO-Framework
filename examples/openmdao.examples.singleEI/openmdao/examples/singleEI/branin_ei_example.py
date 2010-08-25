@@ -102,10 +102,25 @@ class Analysis(Assembly):
         shutil.rmtree(self._tdir, ignore_errors=True)
         
 if __name__ == "__main__":
+    import sys
     from openmdao.main.api import set_as_top
     from openmdao.util.plot import case_db_to_dict
-    import matplotlib
-    matplotlib.use('SVG')
+    
+    seed = None
+    backend = None
+    figname = None
+    for arg in sys.argv[1:]:
+        if arg.startswith('--seed='):
+            import random
+            seed = int(arg.split('=')[1])
+            random.seed(seed)
+        if arg.startswith('--backend='):
+            backend = arg.split('=')[1]
+        if arg.startswith('--figname='):
+            figname = arg.split('=')[1]
+    if backend is not None:
+        import matplotlib
+        matplotlib.use(backend)
     from matplotlib import pyplot as plt, cm 
     from matplotlib.pylab import get_cmap
     from mpl_toolkits.mplot3d import Axes3D
@@ -171,6 +186,9 @@ if __name__ == "__main__":
     plt.title("Branin Function Contours and EI Sample Points")
     plt.text(10.9,11,"Branin\nFunction\nValue")
     
+    if figname is not None:
+        matplotlib.pylab.savefig(figname)
+
     plt.figure()
     Z2 = []
 
@@ -191,9 +209,7 @@ if __name__ == "__main__":
     plt.title("Branin Meta Model Contours")
     plt.text(10.9,11,"Meta Model\nFunction\nValue")
     
-    matplotlib.pylab.savefig('ei.svg')
-    
-    #plt.show()
+    plt.show()
 
     #analysis.cleanup()
     
