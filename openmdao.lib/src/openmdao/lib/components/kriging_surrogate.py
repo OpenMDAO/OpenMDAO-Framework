@@ -2,7 +2,7 @@ from math import log,e,sqrt
 from numpy import array,zeros,dot,ones,arange,eye,abs,append,vstack,exp
 from numpy.linalg import det,pinv,linalg,lstsq
 from scipy.linalg import cho_factor,cho_solve,lu_factor,lu_solve,triu,LinAlgError
-from scipy.optimize import fmin, anneal, brute
+from scipy.optimize import fmin
 
 from enthought.traits.api import HasTraits, implements
 
