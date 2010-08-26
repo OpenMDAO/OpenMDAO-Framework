@@ -22,8 +22,6 @@ from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
 from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
 from openmdao.lib.api import Float, Int
 
-from openmdao.main.uncertain_distributions import convert_norm_dist
-
 from openmdao.examples.singleEI.branin_component import BraninComponent
 
 from openmdao.util.decorators import add_delegate

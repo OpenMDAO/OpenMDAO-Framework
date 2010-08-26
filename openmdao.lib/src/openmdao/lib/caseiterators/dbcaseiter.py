@@ -1,5 +1,6 @@
 
 import sqlite3
+from cPickle import loads, UnpicklingError
 
 from enthought.traits.api import implements
 
@@ -44,8 +45,8 @@ class DBCaseIterator(object):
             
         casecur = self._connection.cursor()
         casecur.execute(' '.join(sql))
-        
-        sql = ["SELECT * from casevars WHERE case_id=%s"]
+          
+        sql = ['SELECT var_id,name,case_id,sense,value,entry from casevars WHERE case_id=%s']
         if self.var_selector:
             sql.append("AND %s" % self.var_selector)
         combined = ' '.join(sql)
@@ -56,9 +57,16 @@ class DBCaseIterator(object):
             inputs = []
             outputs = []
             for var_id, vname, case_id, sense, value, entry in varcur:
+                if not isinstance(value, (float,int,str)):
+                    try:
+                        value = loads(str(value))
+                    except UnpicklingError as err:
+                        raise UnpicklingError("can't unpickle value '%s' from database: %s" %
+                                              (vname, str(err)))
                 if sense=='i':
                     inputs.append((vname, entry, value))
                 else:
                     outputs.append((vname, entry, value))
-            yield Case(inputs=inputs, outputs=outputs,retries=retries,msg=msg,ident=name)
+            if len(inputs) > 0 or len(outputs) > 0:
+                yield Case(inputs=inputs, outputs=outputs,retries=retries,msg=msg,ident=name)
             

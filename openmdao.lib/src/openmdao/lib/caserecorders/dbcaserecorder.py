@@ -1,5 +1,6 @@
 
 import sqlite3
+from cPickle import dumps, HIGHEST_PROTOCOL
 
 from enthought.traits.api import implements
 
@@ -7,34 +8,42 @@ from openmdao.main.interfaces import ICaseRecorder
 from openmdao.main.case import Case
 from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
 
+
 class DBCaseRecorder(object):
-    """Records Cases to a relational DB (sqlite)."""
+    """Records Cases to a relational DB (sqlite). Values other than floats
+    or ints are pickled and are opaque to SQL queries.
+    """
     
     implements(ICaseRecorder)
     
-    def __init__(self, dbfile=':memory:', model_id=''):
+    def __init__(self, dbfile=':memory:', model_id='', append=False):
         self.dbfile = dbfile  # this creates the connection
         self.model_id = model_id
         
+        if append:
+            exstr = 'if not exists'
+        else:
+            exstr = ''
+        
         self._connection.execute("""
-        create table if not exists cases(
+        create table %s cases(
          case_id INTEGER PRIMARY KEY,
          name TEXT,
          msg TEXT,
          retries INTEGER,
          model_id TEXT,
          timeEnter TEXT
-         )""")
+         )""" % exstr)
         
         self._connection.execute("""
-        create table if not exists casevars(
+        create table %s casevars(
          var_id INTEGER PRIMARY KEY,
          name TEXT,
          case_id INTEGER,
          sense TEXT,
-         value NUMERIC,
+         value BLOB,
          entry TEXT
-         )""")
+         )""" % exstr)
 
     @property
     def dbfile(self):
@@ -55,8 +64,22 @@ class DBCaseRecorder(object):
                                      (None, case.ident, case.msg, case.retries, self.model_id))
         case_id = cur.lastrowid
         # insert the inputs and outputs into the vars table
-        vlist = [(None, name, case_id, 'i', value, entry) for name,entry,value in case.inputs]
-        vlist.extend([(None, name, case_id, 'o', value, entry) for name,entry,value in case.outputs])
+        vlist = []
+        for name,entry,value in case.inputs:
+            if isinstance(value, (float,int,str)):
+                vlist.append((None, name, case_id, 'i', value, entry))
+            else:
+                vlist.append((None, name, case_id, 'i', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)), entry))
+        #vlist = [(None, name, case_id, 'i', 
+        #          sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)), entry) for name,entry,value in case.inputs]
+        for name,entry,value in case.outputs:
+            if isinstance(value, (float,int,str)):
+                vlist.append((None, name, case_id, 'o', value, entry))
+            else:
+                vlist.append((None, name, case_id, 'o', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)), entry))
+            
+        #vlist.extend([(None, name, case_id, 'o', 
+        #               sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)), entry) for name,entry,value in case.outputs])
         #cur.executemany("insert into casevars(var_id,name,case_id,sense,value,entry) values(?,?,?,?,?,?)", 
                         #vlist)
         for v in vlist:
