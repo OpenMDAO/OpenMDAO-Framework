@@ -4,6 +4,7 @@ Utility functions related to plotting data
 
 import sys
 import sqlite3
+from pickle import loads, UnpicklingError
 from optparse import OptionParser
 
 def list_db_vars(dbname, case_sql=None, var_sql=None):
@@ -68,7 +69,7 @@ def case_db_to_dict(dbname, varnames, case_sql=None, var_sql=None):
     """
     connection = sqlite3.connect(dbname)
     
-    sql = ["SELECT * FROM cases"]
+    sql = ["SELECT case_id FROM cases"]
     if case_sql:
         sql.append("WHERE %s" % case_sql)
         
@@ -93,9 +94,15 @@ def case_db_to_dict(dbname, varnames, case_sql=None, var_sql=None):
     varcur = connection.cursor()
     
     vardict = {}
-    for case_id,name,msg,retries,model_id,timeEnter in casecur:
+    for case_id in casecur:
         varcur.execute(combined % case_id)
         for vname, value, entry in varcur:
+            if not isinstance(value, (float,int,str)):
+                try:
+                    value = loads(str(value))
+                except UnpicklingError as err:
+                    raise UnpicklingError("can't unpickle value '%s' from database: %s" %
+                                          (vname, str(err)))
             if entry:
                 vname = "vname%s" % entry
             dval = vardict.setdefault(vname, [])

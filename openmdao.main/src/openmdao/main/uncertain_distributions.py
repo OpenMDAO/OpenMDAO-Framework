@@ -1,4 +1,4 @@
-import sqlite3
+#import sqlite3
 from random import gauss, weibullvariate, uniform
 from scipy.special import gamma
 
@@ -48,17 +48,17 @@ class NormalDistribution(UncertainDistribution):
     def __str__(self): 
         return "NormalDistribution(mu=%s,sigma=%s)"%(self.mu,self.sigma)
     
-def adapt_norm_dist(nd): 
-    return "%f;%f"%(nd.mu,nd.sigma)
+#def _adapt_norm_dist(nd): 
+    #return "%f;%f"%(nd.mu,nd.sigma)
 
-def convert_norm_dist(nd):
-    mu,sigma = map(float, nd.split(';'))
-    return NormalDistribution(mu,sigma)
+#def _convert_norm_dist(nd):
+    #mu,sigma = map(float, nd.split(';'))
+    #return NormalDistribution(mu,sigma)
 
-#register the adapter
-sqlite3.register_adapter(NormalDistribution,adapt_norm_dist)
-#register the converter
-sqlite3.register_converter("NormalDistribution",convert_norm_dist)
+##register the adapter
+#sqlite3.register_adapter(NormalDistribution, _adapt_norm_dist)
+##register the converter
+#sqlite3.register_converter("NormalDistribution", _convert_norm_dist)
     
 class UniformDistribution(UncertainDistribution):
     """An UncertainDistribution which represents a quantity with a 

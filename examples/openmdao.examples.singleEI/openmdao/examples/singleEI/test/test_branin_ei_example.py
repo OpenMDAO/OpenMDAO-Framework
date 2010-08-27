@@ -1,9 +1,9 @@
 """
 Test for single criteria EI example.
 """
+import os
 import unittest
 import random
-import os
 
 from numpy import random as numpy_random
 from numpy import pi
@@ -27,16 +27,15 @@ class EITest(unittest.TestCase):
         Selectors.GRankSelector.cacheCount = None
         Selectors.GRouletteWheel.cachePopID = None
         Selectors.GRouletteWheel.cacheWheel = None
-        
+
         random.seed(10)
         numpy_random.seed(10)
-        
+
         analysis = Analysis()
         set_as_top(analysis)
         analysis.DOE_trainer.DOEgenerator = FullFactorial(2, 2)
         analysis.iterations = 1
         analysis.run()
-        
         # This test looks for the presence of at least one point close to
         # each optimum.
         
@@ -59,13 +58,12 @@ class EITest(unittest.TestCase):
             jj += 1
         
         analysis.cleanup()
-        
         self.assertTrue( num_close_points[0] > 0 )
         self.assertTrue( num_close_points[1] > 0 )
         self.assertTrue( num_close_points[2] > 0 )
         
         #self.assertAlmostEqual(3.491477,analysis.EI_driver.next_case[0].inputs[0][2],1)
-        #self.assertAlmostEqual(2.95,analysis.EI_driver.next_case[0].inputs[1][2],1)
+        #self.assertAlmostEqual(0.29819,analysis.EI_driver.next_case[0].inputs[1][2],1)
         
 if __name__=="__main__": #pragma: no cover
     unittest.main()

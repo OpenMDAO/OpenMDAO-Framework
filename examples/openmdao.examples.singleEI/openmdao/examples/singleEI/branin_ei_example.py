@@ -22,8 +22,6 @@ from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
 from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
 from openmdao.lib.api import Float, Int
 
-from openmdao.main.uncertain_distributions import convert_norm_dist
-
 from openmdao.examples.singleEI.branin_component import BraninComponent
 
 from openmdao.util.decorators import add_delegate
@@ -118,9 +116,11 @@ if __name__ == "__main__":
             backend = arg.split('=')[1]
         if arg.startswith('--figname='):
             figname = arg.split('=')[1]
+    import matplotlib
     if backend is not None:
-        import matplotlib
         matplotlib.use(backend)
+    elif sys.platform == 'win32':
+        matplotlib.use('WxAgg')
     from matplotlib import pyplot as plt, cm 
     from matplotlib.pylab import get_cmap
     from mpl_toolkits.mplot3d import Axes3D
@@ -151,7 +151,6 @@ if __name__ == "__main__":
     
     X,Y = meshgrid(X_range,Y_range)
     Z = branin(X,Y)
-    
     
     plt.contour(X,Y,Z,arange(1,200,2),zorder=1)
     

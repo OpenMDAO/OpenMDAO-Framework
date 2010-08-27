@@ -122,7 +122,7 @@ represent the following algorithms.
 
     - **broyden2**: Broyden's second method - the same as broyden1, but
       updates the inverse Jacobian directly
-    - **broyden3**: Broyden's second method - the same as broyden2, but
+    - **broyden3**: Broyden's third method - the same as broyden2, but
       instead of directly computing the inverse Jacobian,
       it remembers how to construct it using vectors, and
       when computing inv(J)*F, it uses those vectors to
@@ -455,6 +455,15 @@ used only for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 
+
+.. index:: Fixed Point Iterator
+
+.. _Fixed-Point_Iterator:
+
+*FixedPointIterator*
+~~~~~~~~~~~~~~~~~~~~
+
+
 .. index:: Genetic
 
 .. _`Genetic`:
@@ -612,7 +621,7 @@ allowed values are between 0.0 and 1.0.
 
 In a pure genetic algorithm, it is possible that your best performing individual will not survive from one
 generation to the next due to competition, mutation, and crossover. If you want to ensure that the best 
-individual survives in tact from one generation to the next, then turn on the `elitism` flag for your
+individual survives intact from one generation to the next, then turn on the `elitism` flag for your
 optimization. This will ensure that the best individual is always copied to the next generation no matter
 what. 
 
