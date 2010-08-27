@@ -46,7 +46,6 @@ class BadDelegate2(object):
     
 
 class decoratorTestCase(unittest.TestCase):
-    """ Test namelist writer functions. """
 
     def test_add_delegate(self):
         @add_delegate(GoodDelegate)

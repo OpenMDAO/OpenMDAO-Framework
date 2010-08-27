@@ -315,7 +315,7 @@ def _make_license_table(docdir, reqs=None):
         outfile.write(_get_border_line(numcols, colwidths, char='='))
         outfile.write('\n')
 
-if __name__ == '__main__':
+if __name__ == "__main__": #pragma: no cover
     build_docs()
 
 

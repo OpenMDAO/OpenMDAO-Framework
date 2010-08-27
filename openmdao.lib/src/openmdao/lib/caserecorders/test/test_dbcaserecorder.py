@@ -15,6 +15,7 @@ from openmdao.test.execcomp import ExecComp
 from openmdao.lib.api import DBCaseIterator, DBCaseRecorder, DumpCaseRecorder, ListCaseIterator
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.main.uncertain_distributions import NormalDistribution
+from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
     
 class DBCaseRecorderTestCase(unittest.TestCase):
 
@@ -83,7 +84,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             outputs = [('comp1.z', None, i*1.5), ('comp2.normal', None, NormalDistribution(float(i),0.5))]
             recorder.record(Case(inputs=inputs, outputs=outputs, ident='case%s'%i))
         iterator = recorder.get_iterator()
-        iterator.var_selector = "value>=0 and value<3"
+        iterator.selectors = ["value>=0","value<3"]
 
         count = 0
         for i,case in enumerate(iterator):
@@ -114,6 +115,32 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         except OSError:
             logging.error("problem removing directory %s" % dbdir)
         
+    def test_db_to_dict(self):
+        tmpdir = tempfile.mkdtemp()
+        dfile = os.path.join(tmpdir, 'junk.db')
+        recorder = DBCaseRecorder(dfile)
+        
+        # create some Cases where some are missing a variable
+        outputs = [('comp1.z', None, None), ('comp2.z', None, None)]
+        cases = []
+        for i in range(10):
+            if i<5:
+                inputs = [('comp1.x', None, i), ('comp1.y', None, i*2), ('comp1.y2', None, i*3)]
+            else:
+                inputs = [('comp1.x', None, i), ('comp1.y', None, i*2)]
+            recorder.record(Case(inputs=inputs, outputs=outputs, ident='case%s'%i))
+
+        varinfo = case_db_to_dict(dfile, ['comp1.x','comp1.y','comp1.y2'])
+        
+        self.assertEqual(len(varinfo), 3)
+        # each var list should have 5 data values in it
+        for name,lst in varinfo.items():
+            self.assertEqual(len(lst), 5)
+        
+        try:
+            shutil.rmtree(tmpdir)
+        except OSError:
+            logging.error("problem removing directory %s" % tmpdir)
 
 if __name__ == '__main__':
     unittest.main()
