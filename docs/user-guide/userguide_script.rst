@@ -1059,6 +1059,8 @@ public domain.) This section describes the driver interface that is common
 to most drivers. A more complete discussion on how to use each of the
 drivers can be found in :ref:`the Standard Library Reference<stdlib>`.
 
+.. _Driver-API: 
+
 The Driver API
 ~~~~~~~~~~~~~~
 
@@ -1066,6 +1068,8 @@ Drivers in OpenMDAO share a functional interface for setting up certain common
 parts of the problem. There are functions to handle parameters, which are inputs
 to a system and are also known as design variables for optimizers or independents
 for solvers. Likewise, there are also functions to handle constraints.
+
+.. index:: parameter, design variable
 
 To illustrated the paramter interface, let's consider a model in which our goal
 is to optimize the design of a vehicle with several design variables using
@@ -1094,7 +1098,7 @@ the CONMINdriver optimizer.
             driver.workflow.add(self.driving_sim)
 
 We add design variables to the driver 'self.driver' using the add_parameter
-function.
+function. 
 
 .. testsetup:: Parameter_API
     
@@ -1108,6 +1112,15 @@ function.
     self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
     self.driver.add_parameter('driving_sim.bore', low=65. , high=100.)
 
+Parameters are assigned via an :term:`Expression`. An Expression is a string
+that contains a function of OpenMDAO variables in the variable tree. These
+Expression variables must point to something that can be seen in the scope of
+the asssembly that contains the driver. In other words, if an assembly
+contains a driver, the parameters cannot be located outside of that assembly.
+Also, each parameter must point to a component input, not a component output.
+During driver execution, the parameters are modified and set, and the
+relevant portion of the model is executed to evaluate the new objective.
+    
 The *low* and *high* parameters can be used to specify a range for a parameter. This is
 useful for optimization problems where the design variables are constrained. Generally,
 the optimizer treats these as a special kind of constraint, so they should be defined
@@ -1147,11 +1160,86 @@ single parameter, and clear all parameters.
     []
 
 There are also some get and set methods for parameters in the list. These are used by drivers to
-manage set the parameters in their workflow, and are not generally needed by component
-developers.
+manage the parameters in their workflow, and are not generally needed by component
+developers. These will be described in the section :ref:`Adding-new-Drivers`.
 
+.. index:: constraint
 
+A similar interface is present for interacting with constraints.
+Constraints are equations or inequalities that are constructed from the available
+OpenMDAO variables using Expressions. Both equality and inequality constraints
+are supported via the interface, however when you use a driver, you should
+verify that it supports the type of constraint. For example, the CONMIN driver
+supports inequality constraints, but not equality constraints.
+
+Constraints are assigned using the add_constraint interface.
+
+.. testcode:: Parameter_API
+
+    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore')
+
+In OpenMDAO, constraints are defined to be **satisfied when they return a
+negative value or zero**, and **violated when they return a positive value**. The
+syntax for these expressions is very flexible and can include the inequality sign.
+The following constraint declarations are all equivalent:
+
+.. testcode:: Parameter_API
+
+    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore')
+    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore < 0')
+    self.driver.add_constraint('driving_sim.stroke < driving_sim.bore')
+    self.driver.add_constraint('driving_sim.bore > driving_sim.stroke')
     
+If no inequality sign is given, the driver assumes that the Expression describes an
+equality constraint with the default behavior (violated when positive.) When an
+inequality sign is present, the constraint is satisfied when the expression is
+true, and violated when it is false. Note that in both cases, an optimizer or
+solver can query for status (boolean - satisfied or violated) and its value. The
+value is needed by gradient optimizers that apply the constraint via a penalty
+function.
+
+The interface also supports equality constraints. At present, none of the
+optimizers in OpenMDAO support equality constraints, but they are used by the
+BroydenSolver to assign the dependent equation. The syntax includes an equal
+sign in the expression.
+
+.. testsetup:: Parameter_API2
+
+    from openmdao.lib.api import BroydenSolver
+    from openmdao.main.api import Assembly
+    from openmdao.examples.mdao.disciplines import SellarDiscipline1
+    
+    self = Assembly()
+    self.add('dis1', SellarDiscipline1())
+    self.add('driver', BroydenSolver())
+
+.. testcode:: Parameter_API2
+
+    self.driver.add_constraint('dis1.y1 = 0.0')
+
+.. todo::
+
+    Talk about other functions for manipulating constraints.
+
+.. index:: objective
+
+Finally, optimizers include one objective (or in the future, possibly multiple objectives)
+that is represented by an Expression built up from available OpenMDAO outputs. There is
+no functional interface for entering an objective, but drivers include a variable called
+*objective* that takes an Expression as its input.
+
+.. testcode:: Parameter_API
+
+    # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
+    self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+
+In this example, the objective is to maximize the weighted sum of two variables.
+The equation must be constructed using valid Python operators. All variables in
+the function are expressed in the scope of the local assembly that contains the
+driver.
+
+.. _Adding-new-Drivers:
+
 *Adding new Drivers*
 ~~~~~~~~~~~~~~~~~~~~
 

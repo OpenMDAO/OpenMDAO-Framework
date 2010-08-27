@@ -55,8 +55,8 @@ class EITest(unittest.TestCase):
             for x,y in zip(xx,yy):
                 dist = (optimum[0] - x)**2 + (optimum[1] - y)**2
                 if dist < tol_radius**2:
-                    num_close_points[jj] = num_close_points[jj] + 1
-            jj = jj + 1
+                    num_close_points[jj] += 1
+            jj += 1
         
         analysis.cleanup()
         

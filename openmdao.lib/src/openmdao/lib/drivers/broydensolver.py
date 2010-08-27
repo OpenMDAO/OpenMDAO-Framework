@@ -65,7 +65,7 @@ class BroydenSolver(Driver):
                   desc='Mixing Coefficient')
 
     alphamax = Float(1.0, iotype='in', 
-                  desc='Parameter alphamax (only used for excitingmixing)')
+                  desc='Maximum Mixing Coefficient (only used for excitingmixing)')
 
     tol = Float(0.00001, iotype='in', 
                   desc='Convergence tolerance. If the norm of the independent'

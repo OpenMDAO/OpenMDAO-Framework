@@ -13,8 +13,8 @@ two coupled disciplines using several MDAO strategies including:
 #. Independent Design Feasible (IDF)
 #. Collaborative Optimization (CO)
 
-The tutorial will introduce you to some new topics that include using the itereation
-hieararchy to set up models with nested optimization loops, using a solver to "close
+The tutorial will introduce you to some new topics that include using the iteration
+hierarchy to set up models with nested optimization loops, using a solver to "close
 the loop" in a coupled multidisciplinary simulation, and using a broadcaster to set
 the values of design variables in multiple places at one time.
 
@@ -169,7 +169,7 @@ for them in some of the other MDAO architectures.
 The diagram also shows a solver that takes the output of the component dataflow
 and feeds it back into the input. OpenMDAO presently has two solvers: *FixedPointIterator*
 and *BroydenSolver*. The FixedPointIterator is a solver that performs fixed point iteration,
-which means that it keeps driving x_new = f(x_old) until convergence is acheived. In
+which means that it keeps driving x_new = f(x_old) until convergence is achieved. In
 other words, y2 is passed from the output of SellarDiscipline2 to the input of SellarDiscipline1,
 and the loop keeps executing until the change in the value of y2 between iterations is
 smaller than a tolerance. The BroydenSolver is a solver based on a quasi-Newton-Raphson
@@ -455,7 +455,7 @@ though we only have 1 input and 1 output in this example.
         self.solver.tol = .0000001
         self.solver.algorithm = "broyden2"
         
-The input is selected using add_parameter. You might aslo be familiar with the
+The input is selected using add_parameter. You might also be familiar with the
 term 'independent' used to describe this. Here, we've given a *low* and a
 *high* attribute, but we've set them very high as the Broyden solver doesn't
 use either of these. The output is specified by adding an equality constraint.
@@ -586,7 +586,7 @@ constraint because they usually nonlinear functions of the design variables.
 Since CONMIN doesn't support equality constraints, we have to fall back on a
 trick where we replace it with an equivalent pair of inequality constraints.
 For example, if we want to constrain x=2, we could constraint x<=2 and x>=2 and
-let the optimzer converge to a solution where both constraints are active.
+let the optimizer converge to a solution where both constraints are active.
 Stability may be questionable for such a method, so it is always advisable to use an
 optimizer that has equality constraints rather than trying to squeeze a solution
 out of an optimizer this way. In particular, be careful about trying a fancier
@@ -614,11 +614,11 @@ Collaborative Optimization (CO)
 Next, we will set up a model that solves the Sellar problem by Collaborative
 Optimization (CO). CO is a two-level architecture with three optimizer loops,
 one at each discipline, and one acting globally. The global optimizer drives
-the design and coupling varibles towards an optimal solution that minimizes
+the design and coupling variables towards an optimal solution that minimizes
 the objective while constraining to zero the sum of the squares of the
 residuals between the values commanded by the global optimizer, and those set
 by the local optimizers. The local optimizers each operate on their own
-discipline, driving its design variables while minimzing the residual between
+discipline, driving its design variables while minimizing the residual between
 the actual value of the design variables and the values commanded by the global
 optimizer.
 
@@ -637,7 +637,7 @@ seen in the next figure.
 .. figure:: ../images/user-guide/Arch-CO-OpenMDAO.png
    :align: center
 
-First, we create the component instances and set up this itereation hierarchy. Notice
+First, we create the component instances and set up this iteration hierarchy. Notice
 that there are 3 drivers, and we add each component to one of the three work flows.
         
 .. testcode:: CO_parts
