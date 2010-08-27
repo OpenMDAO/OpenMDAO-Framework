@@ -38,7 +38,7 @@ class Case(object):
                (self.ident, self.inputs, self.outputs,
                 self.max_retries, self.retries, self.msg)
 
-    def set_inputs(self, scope):
+    def apply_inputs(self, scope):
         """Set all of the inputs in this case to their specified values in
         the given scope.
         """

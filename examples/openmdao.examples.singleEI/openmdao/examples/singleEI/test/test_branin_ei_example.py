@@ -13,7 +13,7 @@ from pyevolve import Selectors
 from openmdao.main.api import set_as_top
 from openmdao.examples.singleEI.branin_ei_example import Analysis, Iterator
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
-from openmdao.util.plot import case_db_to_dict
+from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
 
 
 class EITest(unittest.TestCase):
