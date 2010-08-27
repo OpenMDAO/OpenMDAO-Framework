@@ -140,7 +140,8 @@ class LatinHypercube(object):
 _norm_map = {"1-norm":1,"2-norm":2}
 
 class OptLatinHypercube(HasTraits): 
-    
+    """LatinHypercube optimizes based on the Morris-Mitchell criterion
+    """ 
     implements(ICaseIterator)
     
     n = Int(20, desc="number of sample points in the DOE")

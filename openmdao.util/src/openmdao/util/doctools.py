@@ -90,7 +90,7 @@ def get_traits_info(app, what, name, obj, options, lines):
     dicts = (keepers_instance, keepers_in, keepers_out, keepers_undefined)
     
     for dic in dicts:
-	sortedDict = sortedDictVals(dic)
+	sortedDict = _sortedDictVals(dic)
 	
         for t, val in sortedDict:
             lines.append('')
@@ -133,9 +133,12 @@ def get_traits_info(app, what, name, obj, options, lines):
             
 	    
 def setup(app):
+    """
+    Connect the doctools to the process-docstring hook
+    """
     app.connect('autodoc-process-docstring', get_traits_info)
 
-def sortedDictVals(unsorted_dict):
+def _sortedDictVals(unsorted_dict):
     """
     Sort a dictionary into alphabetical order by keys.
     """
@@ -144,12 +147,12 @@ def sortedDictVals(unsorted_dict):
     return items
 
 if __name__ == '__main__':
-    from openmdao.main.api import Assembly
-    #from openmdao.lib.api import ExternalCode
-    import openmdao.lib.api
+    #from openmdao.main.api import Assembly
+    from openmdao.lib.api import ExternalCode
+    #import openmdao.lib.api
     lines = []
-    get_traits_info(None, 'class', 'foo', Assembly, None, lines)
-    #get_traits_info(None, 'class', 'foo', ExternalCode, None, lines)
+    #get_traits_info(None, 'class', 'foo', Assembly, None, lines)
+    get_traits_info(None, 'class', 'foo', ExternalCode, None, lines)
     #get_traits_info(None, 'class', 'foo', openmdao.lib.api, None, lines)
     for line in lines:
     	print line

@@ -284,3 +284,6 @@ pdf_stylesheets = ['sphinx','kerning','a4']
 # Enable experimental feature to split table cells. Use it
 # if you get "DelayedTable too big" errors
 #pdf_splittables = False
+
+
+autodoc_member_order = 'groupwise'
