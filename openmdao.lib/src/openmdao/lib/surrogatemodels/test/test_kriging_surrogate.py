@@ -65,10 +65,13 @@ class KrigingSurrogateTests(unittest.TestCase):
         y = array([bran(case) for case in x])
 
         krig1 = KrigingSurrogate(x,y)
+        pred = krig1.predict([-2.,0.])
+        self.assertAlmostEqual(bran(x[0]),pred.mu,places=5)
+        
         pred = krig1.predict([5.,5.])
         
-        self.assertAlmostEqual(16.0393816869,pred.sigma,places=5)
-        self.assertAlmostEqual(15.6772857277,pred.mu,places=5)
+        self.assertAlmostEqual(14.513550,pred.sigma,places=5)
+        self.assertAlmostEqual(18.759264,pred.mu,places=5)
         
     def test_get_uncertain_value(self): 
         x = array([[0.05], [.25], [0.61], [0.95]])
