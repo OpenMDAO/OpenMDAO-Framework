@@ -7,42 +7,21 @@ import sqlite3
 from pickle import loads, UnpicklingError
 from optparse import OptionParser
 
-def list_db_vars(dbname, case_sql=None, var_sql=None):
+def list_db_vars(dbname):
     """
     Return the set of the names of the variables found in the specified case DB file.
     
     dbname : str
         The name of the sqlite DB file.
-        
-    case_sql : str, optional
-        SQL syntax that will be placed in the WHERE clause for Case retrieval.
-        
-    var_sql : str, optional
-        SQL syntax that will be placed in the WHERE clause for variable retrieval.
     """
     connection = sqlite3.connect(dbname)
-    
-    sql = ["SELECT case_id FROM cases"]
-    if case_sql:
-        sql.append("WHERE %s" % case_sql)
-        
-    casecur = connection.cursor()
-    casecur.execute(' '.join(sql))
-    
-    sql = ["SELECT name, entry from casevars WHERE case_id=%s"]
-    if var_sql:
-        sql.append("AND %s" % var_sql)
-    combined = ' '.join(sql)
-    
-    varcur = connection.cursor()
-    
     varnames = set()
-    for case_id in casecur:
-        varcur.execute(combined % case_id)
-        for vname, entry in varcur:
-            if entry:
-                vname = "vname%s" % entry
-            varnames.add(vname)
+    varcur = connection.cursor()
+    varcur.execute("SELECT name, entry from casevars")
+    for vname, entry in varcur:
+        if entry:
+            vname = "vname%s" % entry
+        varnames.add(vname)
 
     return varnames
 
@@ -68,10 +47,9 @@ def case_db_to_dict(dbname, varnames, case_sql=None, var_sql=None):
     
     """
     connection = sqlite3.connect(dbname)
-    
     sql = ["SELECT case_id FROM cases"]
     if case_sql:
-        sql.append("WHERE %s" % case_sql)
+        sql.append(" WHERE %s" % case_sql)
         
     casecur = connection.cursor()
     casecur.execute(' '.join(sql))
@@ -80,15 +58,15 @@ def case_db_to_dict(dbname, varnames, case_sql=None, var_sql=None):
     vars_added = False
     for i,name in enumerate(varnames):
         if i==0:
-            sql.append("AND (")
+            sql.append(" AND (")
         else:
-            sql.append("OR")
-        sql.append("name='%s'" % name)
+            sql.append(" OR")
+        sql.append(" name='%s'" % name)
         vars_added = True
     if vars_added: sql.append(")")
     
     if var_sql:
-        sql.append("AND %s" % var_sql)
+        sql.append(" AND %s" % var_sql)
     combined = ' '.join(sql)
     
     varcur = connection.cursor()
@@ -171,7 +149,12 @@ def displayXY(dbname, xnames, ynames, case_sql=None, var_sql=None,
             if sys.platform == 'darwin':
                 matplotlib.use('MacOSX')
             else:
-                matplotlib.use('TkAgg')
+                try:
+                    import wx
+                except ImportError:
+                    matplotlib.use('TkAgg')
+                else:
+                    matplotlib.use('WxAgg')
               
         import matplotlib.pyplot as plt
     except ImportError:

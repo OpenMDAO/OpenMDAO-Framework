@@ -99,7 +99,8 @@ class Analysis(Assembly):
     def cleanup(self):
         shutil.rmtree(self._tdir, ignore_errors=True)
         
-if __name__ == "__main__":
+
+if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
     from openmdao.util.plot import case_db_to_dict

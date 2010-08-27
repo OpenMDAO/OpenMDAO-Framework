@@ -8,6 +8,7 @@ import pkg_resources
 import shutil
 import sys
 import unittest
+import nose
 
 from openmdao.main.api import Assembly, FileMetadata, SimulationRoot, set_as_top
 from openmdao.main.eggchecker import check_save_load
@@ -85,7 +86,7 @@ class TestCase(unittest.TestCase):
         # FIXME: temporarily disable this test on windows to get around
         # a problem where a set of tests is run repeatedly for reasons unknown
         if sys.platform == 'win32':
-            return
+            raise nose.SkipTest()
         logging.debug('')
         logging.debug('test_remote')
 

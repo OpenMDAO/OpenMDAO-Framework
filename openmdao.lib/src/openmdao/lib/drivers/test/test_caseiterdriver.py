@@ -164,7 +164,6 @@ class TestCase(unittest.TestCase):
         # FIXME: temporarily disable this test on windows because it loops
         # over a set of tests forever when running under a virtualenv
         if sys.platform == 'win32':
-            #return
             raise SkipTest('test_concurrent skipped')
         # This can always test using a LocalAllocator (forked processes).
         # It can also use a ClusterAllocator if the environment looks OK.

@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import unittest
+import nose
 
 from enthought.traits.api import Callable, TraitError
 
@@ -557,7 +558,7 @@ class TestCase(unittest.TestCase):
 
 # TODO: get make_protected_dir() to work on Windows.
         if sys.platform == 'win32':
-            return
+            raise nose.SkipTest()
 
         directory = make_protected_dir()
         try:

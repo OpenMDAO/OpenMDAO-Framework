@@ -248,7 +248,7 @@ def get_metadata(path):
     
     return metadata
     
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma no cover
     if len(sys.argv) > 2:
         print get_metadata(sys.argv[1])[sys.argv[2]]
     elif len(sys.argv) > 1:

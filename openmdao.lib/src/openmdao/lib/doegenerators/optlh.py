@@ -190,7 +190,7 @@ def _mmlhs(x_start, population, generations):
     return x_best
 
 
-if __name__== "__main__": 
+if __name__== "__main__":  # pragma no cover
     import sys
     
     try:

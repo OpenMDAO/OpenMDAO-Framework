@@ -134,7 +134,7 @@ def create_wedge_2d(shape, inner, outer, angle):
     return domain
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma no cover
     write_plot3d_q(create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.),
                    'wedge3d.xyz', 'wedge3d.q')
 

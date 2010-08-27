@@ -43,7 +43,7 @@ class MyModel(Assembly):
                     print '    output:', name, index, value
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma no cover
     top = set_as_top(MyModel())
 #    top.run()
     top.check_save_load()  # Note: requires correct pythonV.R
