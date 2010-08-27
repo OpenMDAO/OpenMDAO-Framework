@@ -1,19 +1,17 @@
-from math import exp,log10,pi
+"""Multi Crit EI"""
 
-from numpy import array,ones,argsort,min,sort,zeros,isnan
-from scipy.optimize import fmin,fmin_cg,brute,anneal
+from math import exp, pi
+
+# pylint: disable-msg=E0611,F0401
+from numpy import array, min, isnan
 from scipy.special import erf
-from pyevolve import G1DList,GSimpleGA,GAllele,Consts
-from pyevolve import Initializators,Mutators,Crossovers,Selectors
 
-from enthought.traits.api import implements,Instance,Str
+from enthought.traits.api import implements, Instance, Str
 
-
-from openmdao.lib.traits.float import Float
+from pyevolve import G1DList, GSimpleGA, GAllele, Consts
+from pyevolve import Initializators, Mutators, Crossovers
 
 from openmdao.main.expression import Expression
-
-from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.driver import Driver
 from openmdao.main.interfaces import IHasParameters
 from openmdao.main.hasparameters import HasParameters
@@ -23,18 +21,28 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
 class MuliCritEI(Driver):
+    """ The Multi Crit Expected Improvement method """
 
-    objectives = Str("",iotype="in",desc="names of the output from cases to be used as the objectives")
-    best_cases = Instance(ICaseIterator,iotype="in",desc="CaseIterator which contains pareto optimal cases, representing the target objective values")
-    infill = Str(["EI","PI"],iotype="in",desc="infill criterion about which to maximize")
-    next_case = Instance(ICaseIterator,iotype="out",desc="CaseIterator which contains the case that maximizes specified infill criterion")
-    
     implements(IHasParameters)
 
-    objective = Expression(iotype="in",desc="string representing the objectives about which the infill criterion is maximized. Must be a NormalDistrubtion type")
+    # pylint: disable-msg=E1101
+    objectives = Str("", iotype="in", desc="names of the output from cases to"
+                                           " be used as the objectives")
+    best_cases = Instance(ICaseIterator, iotype="in", desc="CaseIterator which "
+                          "contains pareto optimal cases, representing the "
+                          "target objective values")
+    infill = Str(["EI","PI"], iotype="in", desc="infill criterion about which "
+                                                "to maximize")
+    next_case = Instance(ICaseIterator, iotype="out", desc="CaseIterator which "
+                         "contains the case that maximizes specified infill "
+                         "criterion")
+    
+    objective = Expression(iotype="in", desc="string representing the "
+                           "objectives about which the infill criterion is "
+                           "maximized. Must be a NormalDistrubtion type")
     
     def __init__(self,*args,**kwargs):
-        super(MultiObjectiveExpectedImprovement,self).__init__(self,*args,**kwargs)
+        super(MuliCritEI,self).__init__(self,*args,**kwargs)
         
         self._parameters = HasParameters()
     

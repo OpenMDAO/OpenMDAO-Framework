@@ -1,25 +1,25 @@
-from numpy import array,zeros,size,argsort,unique,sum,floor,equal,bincount,sqrt,diff
-from numpy.linalg import norm
+"""
+    doedriver.py - Driver that executes a Design of Experiments.
+"""
 
-from enthought.traits.api import HasTraits, Event, implements, ListStr, Instance
+# pylint: disable-msg=E0611,F0401
+from enthought.traits.api import ListStr, Instance
 
 from openmdao.main.case import Case
 from openmdao.main.interfaces import IDOEgenerator
-from openmdao.lib.traits.float import Float
-from openmdao.lib.traits.int import Int
-from openmdao.lib.traits.enum import Enum
 from openmdao.lib.drivers.caseiterdriver import CaseIterDriverBase
-from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
 
 
 @add_delegate(HasParameters)
-class DOEdriver(CaseIterDriverBase): 
+class DOEdriver(CaseIterDriverBase):
+    """ Driver for Design of Experiments """
     
     def __init__(self, *args, **kwargs):
         super(DOEdriver, self).__init__(*args, **kwargs)
     
+    # pylint: disable-msg=E1101
     DOEgenerator = Instance(IDOEgenerator, iotype='in', required=True,
                             desc='Iterator supplying normalized DOE values')
     
@@ -33,16 +33,18 @@ class DOEdriver(CaseIterDriverBase):
     def _get_cases(self):
         params = self.get_parameters().values()
         if self.DOEgenerator.num_parameters != len(params):
-            self.raise_exception("number of DOE values (%s) != number of parameters (%s)"%
-                                 (self.DOEgenerator.num_parameters,len(params)),
-                                 ValueError)
+            self.raise_exception('number of DOE values (%s) != number of '
+                                 'parameters (%s)'%
+                (self.DOEgenerator.num_parameters, len(params)), ValueError)
         for row in self.DOEgenerator:
             inputs = []
             for val, parameter in zip(row, params):
+                
                 #convert DOE values to variable values
                 value = parameter.low+(parameter.high-parameter.low)*val
                 if '[' in parameter.expreval:
-                    raise ValueError("array entry design vars not supported yet")
+                    raise ValueError('array entry design vars '
+                                     'not supported yet')
                 else:
                     inputs.append((str(parameter.expreval), None, value))
             
@@ -50,6 +52,6 @@ class DOEdriver(CaseIterDriverBase):
             for varname in self.get_events():
                 inputs.append((varname, None, True))
 
-            outputs = [(x,None,None) for x in self.case_outputs]
+            outputs = [(x, None, None) for x in self.case_outputs]
             yield Case(inputs=inputs, outputs=outputs)
             
