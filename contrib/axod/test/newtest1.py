@@ -99,7 +99,7 @@ class AxodWrapper_data(Component):
 
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma no cover
     one = AxodWrapper_data(input_filename='one_stage.inp')
     one.setup() 
     one.top.run()

@@ -6,6 +6,9 @@ import unittest
 import tempfile
 import StringIO
 import os
+import tempfile
+import logging
+import shutil
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
@@ -92,18 +95,24 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         self.assertEqual(count, 3)
 
     def test_tables_already_exist(self):
-        recorder = DBCaseRecorder('junk_dbfile', append=True)
+        dbdir = tempfile.mkdtemp()
+        dbname = os.path.join(dbdir,'junk_dbfile')
+        
+        recorder = DBCaseRecorder(dbname)
         recorder._connection.close()
-        recorder = DBCaseRecorder('junk_dbfile', append=True)
+        recorder = DBCaseRecorder(dbname, append=True)
         recorder._connection.close()
         try:
-            recorder = DBCaseRecorder('junk_dbfile')
+            recorder = DBCaseRecorder(dbname)
             recorder._connection.close()
         except Exception as err:
             self.assertEqual('table cases already exists', str(err))
         else:
             self.fail('expected Exception')
-        os.remove('junk_dbfile')
+        try:
+            shutil.rmtree(dbdir)
+        except OSError:
+            logging.error("problem removing directory %s" % dbdir)
         
 
 if __name__ == '__main__':

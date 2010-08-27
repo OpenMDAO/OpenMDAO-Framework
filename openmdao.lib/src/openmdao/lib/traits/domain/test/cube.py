@@ -65,6 +65,6 @@ def create_cube(shape, width, height, depth):
     return domain
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': #pragma: no cover
     write_plot3d_q(create_cube((30, 20, 10), 5., 4., 3.), 'cube.xyz', 'cube.q')
 

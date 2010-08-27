@@ -10,5 +10,5 @@ from openmdao.lib.api import Str
 from openmdao.util.plot import cmdlineXYplot
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': #pragma: no cover
     cmdlineXYplot()

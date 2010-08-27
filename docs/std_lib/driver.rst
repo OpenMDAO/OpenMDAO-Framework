@@ -463,6 +463,8 @@ used only for constrained problems.
 *FixedPointIterator*
 ~~~~~~~~~~~~~~~~~~~~
 
+The FixedPointIterator is a simple solver that can solve a single-input
+single-output problem using Fixed Point Iteration.
 
 .. index:: Genetic
 

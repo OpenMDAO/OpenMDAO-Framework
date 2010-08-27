@@ -48,7 +48,7 @@ def is_latin_hypercube(lh):
     return True
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma no cover
     lh1 = array([[1,2,3],[3,1,2],[2,3,1]])
     assert(is_latin_hypercube(lh1))
     badlh = array([[1,2,3],[1,3,2],[3,2,1]])
