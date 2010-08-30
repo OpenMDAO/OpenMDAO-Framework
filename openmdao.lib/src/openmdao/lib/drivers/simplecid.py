@@ -1,8 +1,8 @@
-import os.path
-import os.path
+""" A simple driver that runs cases from a CaseIterator and records them
+with a CaseRecorder """
 
-from openmdao.main.api import Component, Driver
-from openmdao.main.exceptions import RunStopped
+# pylint: disable-msg=E0611,F0401
+from openmdao.main.api import Driver
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.lib.api import Instance
 
@@ -21,8 +21,9 @@ class SimpleCaseIterDriver(Driver):
     be executed once.
     """
 
+    # pylint: disable-msg=E1101
     iterator = Instance(ICaseIterator, desc='Source of Cases.', required=True)
-    recorder = Instance(ICaseRecorder, desc='Where Case results are recorded.', 
+    recorder = Instance(ICaseRecorder, desc='Where Case results are recorded.',
                         required=True)
     
     def __init__(self, *args, **kwargs):

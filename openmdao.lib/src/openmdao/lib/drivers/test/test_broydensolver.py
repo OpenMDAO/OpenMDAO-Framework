@@ -158,11 +158,11 @@ class MIMOBroyden(Assembly):
         self.driver.add_parameter('dis1.x3', low=-9.e99, high=9.e99)
         self.driver.add_parameter('dis1.x4', low=-9.e99, high=9.e99)
         self.driver.add_parameter('dis1.x5', low=-9.e99, high=9.e99)
-        self.driver.add_eq_constraint('dis1.f1', '0.0')
-        self.driver.add_eq_constraint('dis1.f2', '0.0')
-        self.driver.add_eq_constraint('dis1.f3', '0.0')
-        self.driver.add_eq_constraint('dis1.f4', '0.0')
-        self.driver.add_eq_constraint('dis1.f5', '0.0')
+        self.driver.add_constraint('dis1.f1 = 0.0')
+        self.driver.add_constraint('dis1.f2 = 0.0')
+        self.driver.add_constraint('dis1.f3 = 0.0')
+        self.driver.add_constraint('dis1.f4 = 0.0')
+        self.driver.add_constraint('dis1.f5 = 0.0')
         self.driver.itmax = 40
         self.driver.alpha = .8
         self.driver.tol = .000001

@@ -1,32 +1,39 @@
 
-import ordereddict
-
+# pylint: disable-msg=E0611,F0401
 from numpy import array
 from enthought.traits.api import Instance, ListStr, Event
 from enthought.traits.trait_base import not_none
 
 from openmdao.main.api import Component, Case
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder
-from openmdao.main.uncertain_distributions import UncertainDistribution, NormalDistribution
+from openmdao.main.uncertain_distributions import UncertainDistribution, \
+                                                  NormalDistribution
 
 from openmdao.main.interfaces import obj_has_interface
 
 class MetaModel(Component):
+    """ A component that provides general Meta Modeling capability"""
     
+    # pylint: disable-msg=E1101
     model = Instance(Component, allow_none=True,
-                     desc='Socket for the Component or Assembly being encapsulated.')
+                     desc='Socket for the Component or Assembly being '
+                          'encapsulated.')
     includes = ListStr(iotype='in', 
-                           desc='A list of names of variables to be included in the public interface.')
+                           desc='A list of names of variables to be included '
+                                'in the public interface.')
     excludes = ListStr(iotype='in',
-                           desc='A list of names of variables to be excluded from the public interface.')
+                           desc='A list of names of variables to be excluded '
+                                'from the public interface.')
     
     surrogate = Instance(ISurrogate, allow_none=True,
-                         desc='An ISurrogate instance that is used as a template for each output surrogate.')
+                         desc='An ISurrogate instance that is used as a '
+                              'template for each output surrogate.')
     
     recorder = Instance(ICaseRecorder,
                         desc = 'Records training cases')
 
-    train_next = Event()  # when fired, the next execution will train the metamodel
+    # when fired, the next execution will train the metamodel
+    train_next = Event()
     
     def __init__(self, *args, **kwargs):
         super(MetaModel, self).__init__(*args, **kwargs)
