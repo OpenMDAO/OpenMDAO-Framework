@@ -1,7 +1,11 @@
-from math import log,e,sqrt
-from numpy import array,zeros,dot,ones,arange,eye,abs,append,vstack,exp
-from numpy.linalg import det,pinv,linalg,lstsq
-from scipy.linalg import cho_factor,cho_solve,lu_factor,lu_solve,triu,LinAlgError
+""" Surrogate model based on Kriging """
+
+from math import log, e, sqrt
+
+# pylint: disable-msg=E0611,F0401
+from numpy import array, zeros, dot, ones, arange, eye, abs, vstack, exp
+from numpy.linalg import det, linalg, lstsq
+from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import fmin
 
 from enthought.traits.api import HasTraits, implements
@@ -14,7 +18,9 @@ class KrigingSurrogate(HasTraits):
     implements(ISurrogate)
     
     def __init__(self,X=None,Y=None):
-        super(KrigingSurrogate, self).__init__() # must call HasTraits init to set up Traits stuff
+        
+        # must call HasTraits init to set up Traits stuff
+        super(KrigingSurrogate, self).__init__() 
 
         self.m = None #number of independent
         self.n = None #number of training points
@@ -32,17 +38,19 @@ class KrigingSurrogate(HasTraits):
             self.train(X,Y)
             
     def get_uncertain_value(self,value): 
-        """returns a NormalDistribution centered around the value, with a standard deviation of 0"""
+        """returns a NormalDistribution centered around the value, with a 
+        standard deviation of 0"""
         return NormalDistribution(value,0.)
 
     def predict(self,new_x):
-        """calculates a predicted value of the response, based on the current 
+        """calculates a predicted value of the response, based on the current
         trained model for the supplied list of inputs
         """
         if self.m == None: #untrained surrogate
-            raise RuntimeError("KrigingSurrogate has not been trained, so no prediction can be made")
+            raise RuntimeError("KrigingSurrogate has not been trained, so no "
+                               "prediction can be made")
         r = zeros(self.n)
-        X,Y = self.X,self.Y
+        X, Y = self.X, self.Y
         thetas = 10.**self.thetas
         XX = array(X)
         for i in range(self.n):
@@ -52,12 +60,12 @@ class KrigingSurrogate(HasTraits):
         one = ones(self.n)
 
         #-----LSTSQ-------
-        rhs = vstack([(Y-dot(one,self.mu)), r, one]).T
-        lsq = lstsq(self.R.T,rhs)[0].T
+        rhs = vstack([(Y-dot(one, self.mu)), r, one]).T
+        lsq = lstsq(self.R.T, rhs)[0].T
         
         f = self.mu + dot(r, lsq[0])
-        term1 = dot(r,lsq[1])
-        term2 = (1.0 - dot(one,lsq[1]))**2./dot(one,lsq[2])
+        term1 = dot(r, lsq[1])
+        term2 = (1.0 - dot(one, lsq[1]))**2./dot(one, lsq[2])
         
         #f = self.mu+dot(r,lstsq(self.R,Y-dot(one,self.mu))[0])
         #lsq = lstsq(self.R,r)[0]
@@ -72,7 +80,7 @@ class KrigingSurrogate(HasTraits):
         MSE = self.sig2*(1.0-term1+term2)
         RMSE = sqrt(abs(MSE))
         
-        return NormalDistribution(f,RMSE)
+        return NormalDistribution(f, RMSE)
 
     def train(self,X,Y):
         """train the surrogate model with the given set of inputs and outputs"""
@@ -93,7 +101,7 @@ class KrigingSurrogate(HasTraits):
     def _calculate_log_likelihood(self):
         #if self.m == None:
         #    Give error message
-        R = zeros((self.n,self.n))
+        R = zeros((self.n, self.n))
         X,Y = array(self.X), array(self.Y)
         thetas = 10.**self.thetas
         for i in range(self.n):
