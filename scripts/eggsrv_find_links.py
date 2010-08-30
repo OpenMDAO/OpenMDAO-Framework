@@ -220,7 +220,7 @@ def check_eggdir(name):
                                    d+' != '+f[0:len(d)])
                                        
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma no cover
     parser = OptionParser()
     parser.add_option("","--log", action="store", type="string", dest="log",
                       help="a file to log results to")

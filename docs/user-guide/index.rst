@@ -10,6 +10,7 @@ User Guide
    install.rst
    simple_example.rst
    example.rst
+   example_mdao.rst
    userguide_script.rst
    units.rst
 

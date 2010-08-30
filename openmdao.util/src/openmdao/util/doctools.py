@@ -8,7 +8,7 @@ from inspect import getmro, ismodule, getmembers, ismethod, isclass
 import inspect
 from sys import maxint, float_info
 from enthought.traits.api import Instance
-	    
+
 excludes = (Any, Python, Event, type)
 
 def get_traits_info(app, what, name, obj, options, lines):
@@ -22,18 +22,18 @@ def get_traits_info(app, what, name, obj, options, lines):
         #get functions
         fns = getmembers(obj, inspect.isfunction)
         for n,v in fns:
-	    filename = v.__module__ + ".py"
+            filename = v.__module__ + ".py"
             lines.append(":ref:`%s<%s>`" %(n,filename))
             lines.append('\n')
       
         #get classes
         cls = getmembers(obj, inspect.isclass)
         for n1, v1 in cls:
-	    module = v1.__module__
-	    if (module=="enthought.traits.trait_types"):
-	        filename2 = ("http://code.enthought.com/projects/files/ETS32_API/enthought.traits.trait_types.%s.html" %n1)
-		lines.append("`%s <%s>`_" %(n1, filename2))
-	    else:
+            module = v1.__module__
+            if (module=="enthought.traits.trait_types"):
+                filename2 = ("http://code.enthought.com/projects/files/ETS32_API/enthought.traits.trait_types.%s.html" %n1)
+                lines.append("`%s <%s>`_" %(n1, filename2))
+            else:
                 filename2 = module + ".py"
                 lines.append(":ref:`%s<%s>`" %(n1,filename2))
             lines.append('\n')
@@ -60,20 +60,20 @@ def get_traits_info(app, what, name, obj, options, lines):
     
     for trt, trt_val in this_class_traits.items():
         if not (base_class_traits.has_key(trt)):
-            keepers[trt] = trt_val	
+            keepers[trt] = trt_val        
         else:
             #the names are the same, so check the objects
             #to see if they are the same.  if they aren't,
             # there's an override in this class; keep it!
             if not (trt_val == base_class_traits[trt]):
                 keepers[trt] = trt_val
-		
+                
     keepers_in={}
     keepers_out={}
     keepers_instance={}
     keepers_undefined={}
     
-    #Now we need to SORT the traits by input/output type. 	  
+    #Now we need to SORT the traits by input/output type.
     for t,val in keepers.items():
         #As long as it's not an excluded type, add it.
         if not isinstance(val.trait_type, excludes):
@@ -83,10 +83,10 @@ def get_traits_info(app, what, name, obj, options, lines):
                 elif  (val.trait_type._metadata["iotype"] == "out"):
                     keepers_out[t]=val
             elif (type(val.trait_type).__name__ == "Instance"):
-                keepers_instance[t]=val	
+                keepers_instance[t]=val        
             else:
                 keepers_undefined[t]=val
-		
+                
     dicts = (keepers_instance, keepers_in, keepers_out, keepers_undefined)
     
     for dic in dicts:
@@ -98,7 +98,7 @@ def get_traits_info(app, what, name, obj, options, lines):
             if (val.is_trait_type(Instance)):
                 lines.extend(["*%s* (%s) **%s**" %(type(val.trait_type).__name__, val.trait_type.klass.__name__, t)])
             else:
-                lines.extend(["*%s* **%s**" %(type(val.trait_type).__name__, t)])	
+                lines.extend(["*%s* **%s**" %(type(val.trait_type).__name__, t)])
             lines.extend(["  %s" %val.desc])
             lines.append('')
             if (val.iotype is not None):
@@ -127,11 +127,11 @@ def get_traits_info(app, what, name, obj, options, lines):
                 if m not in dontdo:
                     if isinstance(v, basestring):
                         v = "'%s'" %v  
-                    lines.extend(['  *  %s:  %s' %(m, v)])	     	
-		    
+                    lines.extend(['  *  %s:  %s' %(m, v)])
+                    
             lines.append('')
             
-	    
+            
 def setup(app):
     """
     Connect the doctools to the process-docstring hook
@@ -146,7 +146,7 @@ def _sortedDictVals(unsorted_dict):
     items.sort()
     return items
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma no cover
     #from openmdao.main.api import Assembly
     from openmdao.lib.api import ExternalCode
     #import openmdao.lib.api
@@ -155,4 +155,4 @@ if __name__ == '__main__':
     get_traits_info(None, 'class', 'foo', ExternalCode, None, lines)
     #get_traits_info(None, 'class', 'foo', openmdao.lib.api, None, lines)
     for line in lines:
-    	print line
+        print line

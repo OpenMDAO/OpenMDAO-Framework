@@ -9,6 +9,7 @@ from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.api import CONMINdriver
 
 from openmdao.examples.enginedesign.driving_sim import DrivingSim
+from openmdao.examples.enginedesign.vehicle import Vehicle
 
 class EngineOptimization(Assembly):
     """Optimization of a Vehicle."""
@@ -26,6 +27,9 @@ class EngineOptimization(Assembly):
         # Create DrivingSim instance
         self.add('driving_sim', DrivingSim())
         
+        # Add Vehicle instance to vehicle socket
+        self.driving_sim.add('vehicle', Vehicle())
+        
         # add DrivingSim to workflow
         driver.workflow.add(self.driving_sim)
 
@@ -37,12 +41,8 @@ class EngineOptimization(Assembly):
         self.driver.objective = 'driving_sim.accel_time'
         
         # CONMIN Design Variables 
-        self.driver.design_vars = ['driving_sim.spark_angle', 
-                                         'driving_sim.bore' ]
-        
-        self.driver.lower_bounds = [-50, 65]
-        self.driver.upper_bounds = [10, 100]
-        
+        self.driver.add_parameters([('driving_sim.spark_angle', -50., 10.),
+                                    ('driving_sim.bore', 65., 100.)])
 
 if __name__ == "__main__": # pragma: no cover         
 

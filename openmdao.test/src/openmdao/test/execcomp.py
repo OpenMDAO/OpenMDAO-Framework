@@ -4,10 +4,11 @@ from openmdao.main.expreval import ExprEvaluator
 
 class ExecComp(Component):
     """Given a list of assignment statements, this component creates
-    input and output I/O traits at construction time.  All variables 
+    input and output I/O traits at construction time.  All variables
     appearing on the left hand side of the assignments are outputs
     and the rest are inputs.  All variables are assumed to be of
-    type Float."""
+    type Float.
+    """
     
     def __init__(self, exprs=[]):
         super(ExecComp, self).__init__()

@@ -1,7 +1,4 @@
 
-from enthought.traits.api import implements
-
-from openmdao.main.interfaces import IWorkflow
 from openmdao.main.container import Container
 from openmdao.main.component import Component
 from openmdao.main.exceptions import RunStopped
@@ -14,8 +11,6 @@ class Workflow(object):
     in some order.
     """
 
-    implements(IWorkflow)
-    
     def __init__(self, members=None):
         """ Create an workflow. If members is not None,
         iterate through members and add them to the workflow."""

@@ -53,20 +53,17 @@ class Bar3Optimization(Assembly):
         self.driver.fdch = .00001
         self.driver.fdchm = .00001
         self.driver.ct = -.001
-
         
         # CONMIN Objective 
         self.driver.objective = 'bar3_truss.weight'
         
         # CONMIN Design Variables 
-        self.driver.design_vars = ['bar3_truss.bar1_area', 
-                                   'bar3_truss.bar2_area',
-                                   'bar3_truss.bar3_area']
-        
-        self.driver.lower_bounds = [0.001, 0.001, 0.001]
-        self.driver.upper_bounds = [10000.0, 10000.0, 10000.0]
-        
-       
+        for param, low, high in zip(['bar3_truss.bar1_area', 
+                                        'bar3_truss.bar2_area',
+                                        'bar3_truss.bar3_area'],
+                                    [0.001, 0.001, 0.001],
+                                    [10000.0, 10000.0, 10000.0]):
+            self.driver.add_parameter(param, low=low, high=high)
 
        # CONMIN Constraints
 
@@ -77,7 +74,7 @@ class Bar3Optimization(Assembly):
         displacement_y_dir_allowable = self.displacement_y_dir_allowable
         frequency_allowable = self.frequency_allowable
 
-        self.driver.constraints = [ \
+        constraints = [
             '(bar3_truss.bar1_stress/bar1_stress_allowable)-1.0',
             '(bar3_truss.bar2_stress/bar2_stress_allowable)-1.0',
             '(bar3_truss.bar3_stress/bar3_stress_allowable)-1.0',
@@ -85,7 +82,7 @@ class Bar3Optimization(Assembly):
             '(bar3_truss.displacement_y_dir/displacement_y_dir_allowable)-1.0',
             '(frequency_allowable*frequency_allowable)/ \
              (bar3_truss.frequency*bar3_truss.frequency) - 1.0']
- 
+        map(self.driver.add_constraint, constraints)
 
 if __name__ == "__main__": # pragma: no cover         
 

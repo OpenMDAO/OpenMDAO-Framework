@@ -9,8 +9,10 @@ import pkg_resources
 import platform
 import sys
 import unittest
+from nose import SkipTest
 
-import numpy.random
+import random
+import numpy.random as numpy_random
 
 from enthought.traits.api import TraitError
 
@@ -19,6 +21,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.api import Float, Bool, Array, ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
+from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
 from openmdao.main.eggchecker import check_save_load
 from openmdao.util.testutil import find_python
 
@@ -78,6 +81,9 @@ class TestCase(unittest.TestCase):
     directory = pkg_resources.resource_filename('openmdao.lib.drivers', 'test')
 
     def setUp(self):
+        random.seed(10)
+        numpy_random.seed(10)
+        
         os.chdir(self.directory)
         self.model = set_as_top(MyModel())
         self.generate_cases()
@@ -86,8 +92,8 @@ class TestCase(unittest.TestCase):
         self.cases = []
         for i in range(10):
             raise_error = force_errors and i%4 == 3
-            inputs = [('driven.x', None, numpy.random.normal(size=4)),
-                      ('driven.y', None, numpy.random.normal(size=10)),
+            inputs = [('driven.x', None, numpy_random.normal(size=4)),
+                      ('driven.y', None, numpy_random.normal(size=10)),
                       ('driven.raise_error', None, raise_error),
                       ('driven.stop_exec', None, False)]
             outputs = [('driven.rosen_suzuki', None, None),
@@ -123,7 +129,7 @@ class TestCase(unittest.TestCase):
         stop_case = self.cases[1]  # Stop after 2 cases run.
         stop_case.inputs[3] = ('driven.stop_exec', None, True)
         self.model.driver.iterator = ListCaseIterator(self.cases)
-        results = []
+        results = ListCaseRecorder()
         self.model.driver.recorder = results
         self.model.driver.sequential = True
 
@@ -158,7 +164,7 @@ class TestCase(unittest.TestCase):
         # FIXME: temporarily disable this test on windows because it loops
         # over a set of tests forever when running under a virtualenv
         if sys.platform == 'win32':
-            return
+            raise SkipTest('test_concurrent skipped')
         # This can always test using a LocalAllocator (forked processes).
         # It can also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
@@ -217,7 +223,7 @@ class TestCase(unittest.TestCase):
         """ Evaluate cases, either sequentially or across  multiple servers. """
         self.model.driver.sequential = sequential
         self.model.driver.iterator = ListCaseIterator(self.cases)
-        results = []
+        results = ListCaseRecorder()
         self.model.driver.recorder = results
 
         self.model.run()
@@ -227,7 +233,7 @@ class TestCase(unittest.TestCase):
 
     def verify_results(self, forced_errors=False):
         """ Verify recorded results match expectations. """
-        for case in self.model.driver.recorder:
+        for case in self.model.driver.recorder.cases:
             i = case.ident  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
@@ -247,7 +253,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_load')
 
         self.model.driver.iterator = ListCaseIterator(self.cases)
-        results = []
+        results = ListCaseRecorder()
         self.model.driver.recorder = results
 
         # Set local dir in case we're running in a different directory.
@@ -264,14 +270,14 @@ class TestCase(unittest.TestCase):
         # Create cases with missing input 'dc.z'.
         cases = []
         for i in range(2):
-            inputs = [('driven.x', None, numpy.random.normal(size=4)),
-                      ('driven.z', None, numpy.random.normal(size=10))]
+            inputs = [('driven.x', None, numpy_random.normal(size=4)),
+                      ('driven.z', None, numpy_random.normal(size=10))]
             outputs = [('driven.rosen_suzuki', None, None),
                        ('driven.sum_y', None, None)]
             cases.append(Case(inputs, outputs))
 
         self.model.driver.iterator = ListCaseIterator(cases)
-        results = []
+        results = ListCaseRecorder()
         self.model.driver.recorder = results
 
         self.model.run()
@@ -279,7 +285,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(results), len(cases))
         msg = "driver: Exception setting 'driven.z':" \
               " driven: object has no attribute 'z'"
-        for case in results:
+        for case in results.cases:
             self.assertEqual(case.msg, msg)
 
     def test_nooutput(self):
@@ -289,14 +295,14 @@ class TestCase(unittest.TestCase):
         # Create cases with missing output 'dc.sum_z'.
         cases = []
         for i in range(2):
-            inputs = [('driven.x', None, numpy.random.normal(size=4)),
-                      ('driven.y', None, numpy.random.normal(size=10))]
+            inputs = [('driven.x', None, numpy_random.normal(size=4)),
+                      ('driven.y', None, numpy_random.normal(size=10))]
             outputs = [('driven.rosen_suzuki', None, None),
                        ('driven.sum_z', None, None)]
             cases.append(Case(inputs, outputs))
 
         self.model.driver.iterator = ListCaseIterator(cases)
-        results = []
+        results = ListCaseRecorder()
         self.model.driver.recorder = results
 
         self.model.run()
@@ -304,7 +310,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(results), len(cases))
         msg = "driver: Exception getting 'driven.sum_z': " \
             "'DrivenComponent' object has no attribute 'sum_z'"
-        for case in results:
+        for case in results.cases:
             self.assertEqual(case.msg, msg)
 
     def test_noiterator(self):
@@ -312,14 +318,14 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noiterator')
 
         # Check resoponse to no iterator set.
-        self.model.driver.recorder = []
+        self.model.driver.recorder = ListCaseRecorder()
         try:
             self.model.run()
-        except TraitError as exc:
-            msg = "driver: required plugin 'iterator' is not present"
+        except ValueError as exc:
+            msg = "driver: iterator has not been set"
             self.assertEqual(str(exc), msg)
         else:
-            self.fail('TraitError expected')
+            self.fail('ValueError expected')
 
     def test_norecorder(self):
         logging.debug('')
@@ -327,13 +333,7 @@ class TestCase(unittest.TestCase):
 
         # Check response to no recorder set.
         self.model.driver.iterator = ListCaseIterator([])
-        try:
-            self.model.run()
-        except TraitError as exc:
-            msg = "driver: required plugin 'recorder' is not present"
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('TraitError expected')
+        self.model.run()
 
 
 if __name__ == "__main__":

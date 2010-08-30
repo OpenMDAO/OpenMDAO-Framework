@@ -47,12 +47,13 @@ class DummyComp(Component):
     r = Float(iotype='in')
     r2 = Float(iotype='in')
     s = Str(iotype='in')
-    rout = Float(iotype='out')
+    rout = Float(iotype='out', units='ft')
     r2out = Float(iotype='out')
     sout = Str(iotype='out')
     
     dummy_in = Instance(Component, iotype='in')
     dummy_out = Instance(Component, iotype='out')
+    dummy_out_no_copy = Instance(Component, iotype='out', copy=None)
     
     def __init__(self):
         super(DummyComp, self).__init__()
@@ -140,6 +141,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(comp1.s, 'once upon a time')
         
         # also, test that we can't do a direct set of a connected input
+        # This tests Requirement Ticket #274
         oldval = self.asm.comp2.r
         try:
             self.asm.comp2.r = 44
@@ -197,9 +199,12 @@ class AssemblyTestCase(unittest.TestCase):
     def test_connect_containers(self):
         self.asm.set('comp1.dummy_in.rval_in', 75.4)
         self.asm.connect('comp1.dummy_out','comp2.dummy_in')
+        self.asm.connect('comp1.dummy_out_no_copy', 'comp3.dummy_in')
         self.asm.run()
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4)
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_out'), 75.4*1.5)
+        self.assertFalse(self.asm.comp1.dummy_out is self.asm.comp2.dummy_in)
+        self.assertTrue(self.asm.comp1.dummy_out_no_copy is self.asm.comp3.dummy_in)
         
     def test_create_passthrough(self):
         self.asm.set('comp3.r', 75.4)
@@ -209,6 +214,15 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.run()
         self.assertEqual(self.asm.get('comp3.rout'), 75.4*1.5)
         self.assertEqual(self.asm.get('rout'), 75.4*1.5)
+        
+    def test_create_passthrough_already_exists(self):
+        self.asm.create_passthrough('comp3.rout')
+        try:
+            self.asm.create_passthrough('comp3.rout')
+        except TraitError as err:
+            self.assertEqual(str(err), ": 'rout' already exists")
+        else:
+            self.fail('expected TraitError')
         
     def test_passthrough_nested(self):
         self.asm.set('comp1.r', 8.)
@@ -278,7 +292,7 @@ class AssemblyTestCase(unittest.TestCase):
         else:
             self.fail('exception expected')
      
-    def test_attribute_link(self):
+    def test_metadata_link(self):
         try:
             self.asm.connect('comp1.rout.units','comp2.s')
         except NameError, err:
@@ -286,7 +300,25 @@ class AssemblyTestCase(unittest.TestCase):
                     "comp1: Cannot locate trait named 'rout.units'")
         else:
             self.fail('NameError expected')
+            
+    def test_get_metadata(self):
+        units = self.asm.comp1.get_metadata('rout', 'units')
+        self.assertEqual(units, 'ft')
         
+        meta = self.asm.comp1.get_metadata('rout')
+        self.assertEqual(set(meta.keys()), set(['units','high','iotype','type','low']))
+        
+    def test_missing_metadata(self):
+        foo = self.asm.comp1.get_metadata('rout', 'foo')
+        self.assertEqual(foo, None)
+        
+        try:
+            bar = self.asm.comp1.get_metadata('bogus', 'bar')
+        except Exception as err:
+            self.assertEqual(str(err), "comp1: Couldn't find trait bogus")
+        else:
+            self.fail("Exception expected")
+            
     def test_value_link(self):
         try:
             self.asm.connect('comp1.rout.value','comp2.r2')
@@ -386,8 +418,8 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.connect('comp3.sout', 'comp2.s')
         conns = self.asm.list_connections()
-        self.assertEqual(conns, [('comp1.rout', 'comp2.r'),
-                                 ('comp3.sout', 'comp2.s')])
+        self.assertEqual(set(conns), set([('comp1.rout', 'comp2.r'),
+                                 ('comp3.sout', 'comp2.s')]))
         self.asm.remove('comp3')
         conns = self.asm.list_connections()
         self.assertEqual(conns, [('comp1.rout', 'comp2.r')])

@@ -8,8 +8,11 @@ import pkg_resources
 import sys
 import unittest
 import numpy
+import random
+import numpy.random as numpy_random
 
 from enthought.traits.api import TraitError
+from pyevolve import Selectors
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.api import Float, Array, Enum, Int, Str
@@ -46,9 +49,20 @@ class TestCase(unittest.TestCase):
     """ test case for the genetic driver"""         
 
     def setUp(self):
+        #random.seed(10)
+        #numpy_random.seed(10)
+        
+        # pyevolve does some caching that causes failures during our
+        # complete unit tests due to stale values in the cache attributes
+        # below, so reset them here
+        Selectors.GRankSelector.cachePopID = None
+        Selectors.GRankSelector.cacheCount = None
+        Selectors.GRouletteWheel.cachePopID = None
+        Selectors.GRouletteWheel.cacheWheel = None
+        
         self.top = set_as_top(Assembly())
-
         self.top.add('driver', Genetic())
+        self.top.driver.seed = 123
 
     def tearDown(self):
         self.top = None
@@ -62,7 +76,7 @@ class TestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.y')
         self.top.driver.add_parameter('comp.z',high=5,low=-5)
 
-        self.top.driver.seed = 123
+        #self.top.driver.seed = 123
 
         self.top.driver.mutation_rate = .02
         self.top.driver.generations = 1
@@ -72,7 +86,7 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               .1920,places = 4)
+                               .1920, places = 4)
         x,y,z = [x for x in self.top.driver.best_individual] 
         self.assertAlmostEqual(x, -0.4381, places = 4)
         self.assertEqual(y, 0)
@@ -88,7 +102,7 @@ class TestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.y')
         self.top.driver.add_parameter('comp.z')
 
-        self.top.driver.seed = 123
+        #self.top.driver.seed = 123
 
         self.top.driver.mutation_rate = .02
         self.top.driver.generations = 1
@@ -111,9 +125,10 @@ class TestCase(unittest.TestCase):
 
         try:        
             self.top.driver.add_parameter('comp.x[0]')
-        except TypeError,err: 
-            self.assertEqual(str(err),"driver: values for 'high' and 'low' arguments are required when specifying an "
-                             "Array element as a parameter. They were not given for 'comp.x[0]'")
+        except ValueError,err: 
+            self.assertEqual(str(err),"driver: Trying to add parameter 'comp.x[0]', "
+                             "but no lower limit was found and no 'low' argument was "
+                             "given. One or the other must be specified.")
         else: 
             self.fail('TypeError expected')
 
@@ -126,7 +141,8 @@ class TestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.x[1]', low=-5.12,high=5.13)
         self.top.driver.add_parameter('comp.x[2]', low=-5.12,high=5.13)
 
-        self.top.driver.seed = 123
+        #self.top.driver.seed = 123
+        self.top.driver.seed = 10
 
         self.top.driver.mutation_rate = .02
         self.top.driver.generations = 1
@@ -137,11 +153,11 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               2.6925,places = 4)
+                               12.0912,places = 4)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, -1.1610, places = 4)
-        self.assertAlmostEqual(y, 0.2189, places = 4)
-        self.assertAlmostEqual(z, -1.1387, places = 4)  
+        self.assertAlmostEqual(x, -1.7603, places = 4)
+        self.assertAlmostEqual(y, -2.5575, places = 4)
+        self.assertAlmostEqual(z, 1.5657, places = 4)  
 
 
     def test_list_remove_clear_params(self):
@@ -159,8 +175,8 @@ class TestCase(unittest.TestCase):
 
         try: 
             self.top.driver.remove_parameter('xyz')
-        except RuntimeError,err: 
-            self.assertEqual(str(err),"driver: Trying to remove parameter 'xyz', but it is not in the genetic driver")
+        except AttributeError,err: 
+            self.assertEqual(str(err),"driver: Trying to remove parameter 'xyz' that is not in this driver.")
         else: 
             self.fail('RuntimeError Expected')
 
@@ -173,8 +189,8 @@ class TestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.y')
         try: 
             self.top.driver.add_parameter('comp.y')
-        except RuntimeError,err: 
-            self.assertEqual(str(err),"driver: Trying to add 'comp.y' to the genetic driver, but it is already in the driver")
+        except AttributeError,err: 
+            self.assertEqual(str(err),"driver: Trying to add parameter 'comp.y' to driver, but it's already there")
         else: 
             self.fail('RuntimeError expected')
 
@@ -233,6 +249,11 @@ class TestCase(unittest.TestCase):
         try:         
             s = Simulation()    
         except ValueError,err:
-            self.assertEqual(str(err),"driver: Improper parameter type. Must be Float,Int, or an element of an Array.")
+            self.assertEqual(str(err),
+                "driver: The value of parameter 'comp.z' must be of type float or int, but its type is 'str'.")
         else: 
             self.fail("ValueError expected")
+
+            
+if __name__ == "__main__":
+    unittest.main()

@@ -8,10 +8,10 @@ Update the library_dir_option function in MSVCCompiler to add quotes around /LIB
 import sys
 
 if sys.platform == 'win32':
-    import new
+    import types
     def _lib_dir_option(self, dir):
         return '/LIBPATH:"%s"' % dir
     
     from distutils.msvc9compiler import MSVCCompiler
     setattr(MSVCCompiler, 'library_dir_option',
-            new.instancemethod(_lib_dir_option, None, MSVCCompiler))
+            types.MethodType(_lib_dir_option, None, MSVCCompiler))

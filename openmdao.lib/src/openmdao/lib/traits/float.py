@@ -15,6 +15,8 @@ from openmdao.units import PhysicalQuantity
 
 from openmdao.main.tvalwrapper import TraitValMetaWrapper
 
+from openmdao.main.uncertain_distributions import UncertainDistribution
+
 class Float(TraitType):
     """A Public Variable wrapper for floating point number valid within a
     specified range of values.
@@ -108,7 +110,8 @@ class Float(TraitType):
                                                     value.metadata)
             
             value = value.value
-            
+        elif isinstance(value, UncertainDistribution):
+            value = value.getvalue()
         try:
             return self._validator.validate(object, name, value)
         except TraitError:
@@ -157,6 +160,9 @@ class Float(TraitType):
         # pylint: disable-msg=E1101
         dst_units = self.units
         src_units = srcmeta['units']
+        
+        if isinstance(value, UncertainDistribution):
+            value = value.getvalue()
 
         # Note: benchmarking showed that this check does speed things up -- KTM
         if src_units == dst_units:
@@ -185,3 +191,5 @@ class Float(TraitType):
             return self._validator.validate(object, name, pq.value)
         except TraitError:
             self.error(object, name, pq.value)
+
+        

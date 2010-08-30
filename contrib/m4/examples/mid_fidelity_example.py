@@ -81,7 +81,7 @@ class VarFi(MidFidelity):
         self.add_output_mapping('z2', 'z', 'z2')
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma no cover
     top = set_as_top(MyModel())
     top.run()
 #    top.check_save_load()  # Note: requires correct pythonV.R

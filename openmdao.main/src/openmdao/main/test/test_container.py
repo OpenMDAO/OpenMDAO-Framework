@@ -4,6 +4,7 @@ import os.path
 import sys
 import unittest
 import StringIO
+import nose
 
 from enthought.traits.api import TraitError
 
@@ -181,7 +182,7 @@ class ContainerTestCase(unittest.TestCase):
     def test_save_bad_filename(self):
 # TODO: get make_protected_dir() to work on Windows.
         if sys.platform == 'win32':
-            return
+            raise nose.SkipTest()
 
         c1 = Container()
         directory = make_protected_dir()

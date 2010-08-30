@@ -1,12 +1,9 @@
 """
 Math related utility functions used by OpenMDAO.
 """
-
-from __future__ import division
-
 from random import shuffle
 
-from numpy import zeros
+from numpy import zeros, array
 
 def rand_latin_hypercube(n, k, edges=False):
     """
@@ -30,9 +27,30 @@ def rand_latin_hypercube(n, k, edges=False):
     for i in range(k):
         shuffle(row)
         X[:,i] = row
+        
     if edges:
-        X = (X-1.0)/float((n-1))
-    else: 
-        X = (X-.5)/float(n)
-    return X
+        return (X-1.0)/float((n-1))
+ 
+    return (X-.5)/float(n)
+
+
+def is_latin_hypercube(lh):
+    """Returns True if the given array is a latin hypercube.
+    The given array is assumed to be a numpy array.
+    """
+    n,k = lh.shape
+    for j in range(k):
+        colset = set()
+        col = lh[:,j]
+        colset.update(col)
+        if len(colset) < len(col):
+            return False  # something was duplicated
+    return True
+
+
+if __name__ == '__main__': # pragma no cover
+    lh1 = array([[1,2,3],[3,1,2],[2,3,1]])
+    assert(is_latin_hypercube(lh1))
+    badlh = array([[1,2,3],[1,3,2],[3,2,1]])
+    assert(is_latin_hypercube(badlh) is False)
 
