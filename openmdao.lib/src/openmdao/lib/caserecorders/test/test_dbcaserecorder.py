@@ -16,6 +16,7 @@ from openmdao.lib.api import DBCaseIterator, DBCaseRecorder, DumpCaseRecorder, L
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
+from openmdao.main.caseiter import caseiter_to_dict
     
 class DBCaseRecorderTestCase(unittest.TestCase):
 
@@ -124,18 +125,31 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         outputs = [('comp1.z', None, None), ('comp2.z', None, None)]
         cases = []
         for i in range(10):
+            if i>1:
+                msg = ''
+            else:
+                msg = 'an error occurred'
             if i<5:
                 inputs = [('comp1.x', None, i), ('comp1.y', None, i*2), ('comp1.y2', None, i*3)]
             else:
                 inputs = [('comp1.x', None, i), ('comp1.y', None, i*2)]
-            recorder.record(Case(inputs=inputs, outputs=outputs, ident='case%s'%i))
+            recorder.record(Case(inputs=inputs, outputs=outputs, ident='case%s'%i, msg=msg))
 
-        varinfo = case_db_to_dict(dfile, ['comp1.x','comp1.y','comp1.y2'])
+        varnames = ['comp1.x','comp1.y','comp1.y2']
+        varinfo = case_db_to_dict(dfile, varnames)
         
         self.assertEqual(len(varinfo), 3)
-        # each var list should have 5 data values in it
+        # each var list should have 3 data values in it (5 with the required variables minus
+        # 2 with errors
         for name,lst in varinfo.items():
-            self.assertEqual(len(lst), 5)
+            self.assertEqual(len(lst), 3)
+            
+        # now use caseiter_to_dict to grab the same data
+        varinfo = caseiter_to_dict(recorder.get_iterator(), varnames)
+        # each var list should have 3 data values in it (5 with the required variables minus
+        # 2 with errors
+        for name,lst in varinfo.items():
+            self.assertEqual(len(lst), 3)
         
         try:
             shutil.rmtree(tmpdir)

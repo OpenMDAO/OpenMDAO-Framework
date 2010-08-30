@@ -61,6 +61,8 @@ class DBCaseRecorder(object):
         """Record the given Case."""
         cur = self._connection.cursor()
         
+        if not case.msg:
+            case.msg = ''
         cur.execute("""insert into cases(id,cname,msg,retries,model_id,timeEnter) 
                            values (?,?,?,?,?,DATETIME('NOW'))""", 
                                      (None, case.ident, case.msg, case.retries, self.model_id))
@@ -111,7 +113,7 @@ def list_db_vars(dbname):
 
     return varnames
 
-def case_db_to_dict(dbname, varnames, case_sql=None, var_sql=None):
+def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=False):
     """
     Retrieve the values of specified variables from a sqlite DB containing
     Case data.
@@ -135,12 +137,21 @@ def case_db_to_dict(dbname, varnames, case_sql=None, var_sql=None):
     var_sql : str, optional
         SQL syntax that will be placed in the WHERE clause for variable retrieval.
     
+    include_errors : bool, optional [False]
+        if True, include data from cases that reported an error
+        
     """
     varnames = set(varnames)
     connection = sqlite3.connect(dbname)
     sql = ["SELECT id FROM cases"]
+    qlist = []
     if case_sql:
-        sql.append("WHERE %s" % case_sql)
+        qlist.append(case_sql)
+    if not include_errors:
+        qlist.append("msg = ''")
+            
+    if qlist:
+        sql.append("WHERE %s" % ' AND '.join(qlist))
         
     casecur = connection.cursor()
     casecur.execute(' '.join(sql))
