@@ -201,8 +201,6 @@ class Assembly (Component):
             self.comp_graph.connect('.'.join(['@in',srcpath]), destpath)
         else:
             destcomp.invalidate_deps(varnames=[destvarname], notify_parent=True)
-        
-        self._io_graph = None
 
     def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and

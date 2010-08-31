@@ -48,9 +48,6 @@ LOG_WARNING  = logging.WARNING
 LOG_ERROR    = logging.ERROR
 LOG_CRITICAL = logging.CRITICAL
 
-# Root logger level (normally WARNING).
-#logging.getLogger().setLevel(logging.WARNING)
-
 # Ensure we can write to the log file.
 _filename = 'openmdao_log.txt'
 try:
@@ -59,6 +56,7 @@ except IOError:
     _filename = 'openmdao_log_%d.txt' % os.getpid()
 else:
     _tmplog.close()
+    os.remove(_filename)
 
 # Allow everything through, typical UNIX-ish timestamp, typical log format.
 logging.basicConfig(level=logging.WARNING,
