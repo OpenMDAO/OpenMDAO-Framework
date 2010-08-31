@@ -21,7 +21,7 @@ def _check_expr(expr):
         raise ValueError( msg )
 
 class Constraint(object):
-    def __init__(self, lhs, relation='>', rhs='0', scope=None):
+    def __init__(self, lhs, relation, rhs, scope=None):
         self.lhs = ExprEvaluator(lhs, scope=scope)
         _check_expr(self.lhs)
         self.relation = relation
@@ -32,7 +32,7 @@ class Constraint(object):
         """Returns a tuple of the form (lhs, rhs, relation, is_violated)"""
         lhs = self.lhs.evaluate()
         rhs = self.rhs.evaluate()
-        return (lhs, rhs, self.relation, _ops[self.relation](lhs,rhs))
+        return (lhs, rhs, self.relation, not _ops[self.relation](lhs,rhs))
         
 
 def _parse_constraint(expr_string):
@@ -43,7 +43,7 @@ def _parse_constraint(expr_string):
     else:
         if len(expr_string.split('==')) > 1:
             raise ValueError("'==' is not a valid relation in a constraint.  Use '=' instead.")
-        return (expr_string, '>', '0')
+        return (expr_string, '>', '0.')
     
 def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
@@ -151,11 +151,11 @@ class HasConstraints(object):
 
     def get_eq_constraints(self):
         """Returns an ordered dict of equality constraint objects."""
-        return self._eq.get_constraints()
+        return self._eq.get_eq_constraints()
 
     def get_ineq_constraints(self):
         """Returns an ordered dict of inequality constraint objects."""
-        return self._ineq.get_constraints()
+        return self._ineq.get_ineq_constraints()
 
     def eval_eq_constraints(self): 
         """Returns a list of tuples of the form (lhs, rhs, relation,
