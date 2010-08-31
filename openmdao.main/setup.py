@@ -37,10 +37,8 @@ setup(name='openmdao.main',
       include_package_data=True,
       test_suite='nose.collector',
       zip_safe=False,
-      # TODO: get rid of our dependency on zc.buildout
       install_requires=[
           'setuptools',
-          'zc.buildout==1.4.3',
           'pyparsing==1.5.2',
           'numpy',
           'PyYAML==3.09',
