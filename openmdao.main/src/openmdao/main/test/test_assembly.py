@@ -2,8 +2,8 @@
 
 import unittest
 
-from enthought.traits.api import TraitError
-from openmdao.main.api import Assembly, Component, set_as_top
+from enthought.traits.api import TraitError, List
+from openmdao.main.api import Assembly, Component, Driver, Expression, ExpressionList, set_as_top
 from openmdao.lib.api import Float, Str, Instance
 
 class Multiplier(Component):
@@ -50,6 +50,7 @@ class DummyComp(Component):
     rout = Float(iotype='out', units='ft')
     r2out = Float(iotype='out')
     sout = Str(iotype='out')
+    slistout = List(Str, iotype='out')
     
     dummy_in = Instance(Component, iotype='in')
     dummy_out = Instance(Component, iotype='out')
@@ -76,6 +77,9 @@ class DummyComp(Component):
         # pylint: disable-msg=E1101
         self.dummy.execute()
 
+class SimpleDriver(Driver):
+    objective = Expression(iotype='in')
+    constraints = ExpressionList(iotype='in')
 
 class AssemblyTestCase(unittest.TestCase):
 
@@ -425,6 +429,25 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(conns, [('comp1.rout', 'comp2.r')])
         self.asm.run()
         
+    def test_expr_connection(self):
+        top = set_as_top(Assembly())
+        top.driver = SimpleDriver()
+        top.add('comp1', DummyComp())
+        try:
+            top.connect('comp1.sout', 'driver.objective')
+        except Exception as err:
+            self.assertEqual(str(err), 
+                ': Cannot connect comp1.sout to driver.objective because one of them is an Expression or ExpressionList')
+        else:
+            self.fail('expected Exception')
+        try:
+            top.connect('comp1.slistout', 'driver.constraints')
+        except Exception as err:
+            self.assertEqual(str(err), 
+                ': Cannot connect comp1.slistout to driver.constraints because one of them is an Expression or ExpressionList')
+        else:
+            self.fail('expected Exception')
+            
         
 if __name__ == "__main__":
     unittest.main()

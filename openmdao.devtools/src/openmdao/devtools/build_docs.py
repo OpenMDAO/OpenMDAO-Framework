@@ -121,7 +121,7 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
     #wanted to sort traits separately based only on filenames despite differing paths
     traitz = list(_get_resource_files(dist, ['*__init__.py','*setup.py','*/test/*.py'], ['*traits*.py']))
     sorted_traitz = sorted(traitz, cmp=_compare_traits_path)
-    			    				            
+    
     names.extend(sorted_traitz)
 
     exdirs = ['build', 'examples']
@@ -136,19 +136,18 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
         for ex in exdirs:
             if  name.startswith('%s/' % ex) or '/%s/'%ex in name:
                 break
-		
-	    else:       
-	        x = name.split('/')
-		#kind of dirty, but the other sections doesn't need api header.
-		if os.path.basename(name) == 'api.py' and x[1]=='lib':
-		    newheader = 'api'		
+            else:       
+                x = name.split('/')
+                #kind of dirty, but the other sections doesn't need api header.
+                if os.path.basename(name) == 'api.py' and x[1]=='lib':
+                    newheader = 'api'
                 if len(x) >= 4:
                     newheader =  x[2]
             if (oldheader != newheader):
                 print >> outfile, '**%s**' % newheader.upper()
                 print >> outfile, '_'*(4+len(newheader)) + '\n'
                 oldheader = newheader
-			   
+               
         _mod_sphinx_info(name, outfile, show_undoc=show_undoc)
 
 
@@ -337,7 +336,7 @@ def _make_license_table(docdir, reqs=None):
         # bottom border
         outfile.write(_get_border_line(numcols, colwidths, char='='))
         outfile.write('\n')
-	
+    
 def _compare_traits_path(x, y):
     if os.path.basename(x) > os.path.basename(y):
        return 1
