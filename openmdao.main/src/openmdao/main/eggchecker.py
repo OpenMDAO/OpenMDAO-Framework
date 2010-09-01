@@ -17,22 +17,22 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
                     fmt=SAVE_CPICKLE, logfile=None):
     """Convenience routine to check that saving & reloading `comp` works.
 
-    comp : Component
+    comp: Component
         The component to check.
 
-    py_dir : string or None
+    py_dir: string or None
         The directory in which to find local Python modules.
 
-    test_dir : string
+    test_dir: string
         Name of a scratch directory to unpack in.
 
-    cleanup : bool
+    cleanup: bool
         If True, the scratch directory will be removed after the test.
 
-    fmt : int
+    fmt: int
         The format for the saved state file.
 
-    logfile : string or None
+    logfile: string or None
         Name of file for logging progress.
 
     Creates an egg in the current directory, unpacks it in `test_dir`

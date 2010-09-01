@@ -84,7 +84,7 @@ class CaseIterDriverBase(Driver):
         """
         Resume execution.
 
-        remove_egg : bool
+        remove_egg: bool
             If True, then the egg file created for concurrent evaluation is
             removed at the end of the run.
         """

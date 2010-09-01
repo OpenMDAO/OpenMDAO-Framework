@@ -10,11 +10,11 @@ def rand_latin_hypercube(n, k, edges=False):
     Calculates a random latin hypercube set of n points in k 
     dimensions within [0,1]^k hypercube.
     
-    n : int
+    n: int
        Desired number of points.
-    k : int
+    k: int
        Number of design variables (dimensions).
-    edges : bool, optional
+    edges: bool, optional
        if Edges=True, the extreme bins will have their centres on the
        edges of the domain; otherwise the bins will be entirely 
        contained within the domain (default setting).

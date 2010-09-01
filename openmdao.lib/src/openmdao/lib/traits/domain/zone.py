@@ -46,14 +46,14 @@ class Zone(object):
         """
         Test if self and `other` are equivalent.
 
-        other : Zone
+        other: Zone
             Zone to check against.
 
-        logger : Logger or None
+        logger: Logger or None
             Used to log debug messages that will indicate what if anything is
             not equivalent.
 
-        tolerance : float
+        tolerance: float
             The maximum relative difference in array values to be considered
             equivalent.
         """
@@ -95,7 +95,7 @@ class Zone(object):
         """
         Convert to cartesian coordinate system.
 
-        axis : string
+        axis: string
             Specifies which is the cylinder axis ('z' or 'x').
         """
         if self.coordinate_system != CARTESIAN:
@@ -107,7 +107,7 @@ class Zone(object):
         """
         Convert to cylindrical coordinate system.
 
-        axis : string
+        axis: string
             Specifies which is the cylinder axis ('z' or 'x').
         """
         if self.coordinate_system != CYLINDRICAL:
@@ -133,7 +133,7 @@ class Zone(object):
         """
         Translate coordinates.
 
-        delta_x, delta_y, delta_z : float
+        delta_x, delta_y, delta_z: float
             Amount of translation along the corresponding axis.
         """
         if self.coordinate_system == CARTESIAN:
@@ -145,7 +145,7 @@ class Zone(object):
         """
         Rotate about the X axis.
 
-        deg : float (degrees)
+        deg: float (degrees)
             Amount of rotation.
         """
         if self.coordinate_system == CARTESIAN:
@@ -158,7 +158,7 @@ class Zone(object):
         """
         Rotate about the Y axis.
 
-        deg : float (degrees)
+        deg: float (degrees)
             Amount of rotation.
         """
         if self.coordinate_system == CARTESIAN:
@@ -171,7 +171,7 @@ class Zone(object):
         """
         Rotate about the Z axis.
 
-        deg : float (degrees)
+        deg: float (degrees)
             Amount of rotation.
         """
         if self.coordinate_system == CARTESIAN:

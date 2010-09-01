@@ -76,7 +76,7 @@ class WorkerPool(object):
         """
         Release a worker queue back to the pool.
 
-        queue : Queue
+        queue: Queue
             Worker queue previously obtained from :meth:`get`.
         """
         return WorkerPool.get_instance()._release(queue)

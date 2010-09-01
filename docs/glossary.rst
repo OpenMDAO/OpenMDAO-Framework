@@ -61,6 +61,10 @@ Glossary
         Computational Fluid Dynamics. A branch of fluid mechanics that uses numerical
         methods and algorithms to solve and analyze problems that involve fluid flows. 
 
+     
+      **CO** 
+       Collaborative Optimization (CO). See :ref:`Collaborative-Optimization-(CO)`.)
+       
       
       **CommandLineWrapper**
         A component that runs a separate executable program via a system call.
@@ -144,6 +148,10 @@ Glossary
 	references public variables in the framework.
 	
 	
+      **Expressions**
+        See :term:`Expression` above.
+	
+	
       **F2PY**
         Fortran to Python interface generator.
 
@@ -189,7 +197,11 @@ Glossary
         An interface to an object having physical dimensions and shape, with
         properties that can be queried.
        
+      
+      **IDF**
+        Individual Design Feasible. (See :ref:`Individual-Design-Feasible-(IDF)`.)
 
+      
       **Int**
         A public variable type, found in ``openmdao.lib.api``, which represents
 	numbers with integer values.
@@ -242,7 +254,15 @@ Glossary
       **model**
         A hierarchical structure with an :term:`Assembly` at its root.
        
-       
+      
+      **MDF**
+        Multidisciplinary Design Feasible. (See :ref:`Multidisciplinary-Design-Feasible-(MDF)`.)
+	
+	
+      **MIMO**
+        Multiple Inputs, Multiple Outputs
+	
+	
       **networkx**
         A Python package for creating and manipulating graphs and networks.
 	

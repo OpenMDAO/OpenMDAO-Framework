@@ -22,8 +22,8 @@ def forwarder(cls, fnc, delegatename):
 def add_delegate(*delegates):
     """A class decorator that takes delegate classes or (name,delegate) tuples as
     args. For each tuple, an instance with the given name will be created in the
-    wrapped __init__ method of the class.  If only the delegate class is provided,
-    then the instance created in the wrapped __init__ method will be named using
+    wrapped ``__init__`` method of the class.  If only the delegate class is provided,
+    then the instance created in the wrapped ``__init__`` method will be named using
     an underscore (_) followed by the lower case name of the class. All of the public 
     methods from the delegate classes will be added to the class
     unless there is an attribute or method in the class with the same name. In that

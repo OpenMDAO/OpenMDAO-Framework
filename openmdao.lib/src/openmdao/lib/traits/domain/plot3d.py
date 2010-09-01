@@ -2,34 +2,34 @@
 Functions to read and write a :class:`DomainObj` in Plot3D format.
 Many function arguments are common:
 
-multiblock : bool
+multiblock: bool
     If True, then the file is assumed to have a multiblock header.
 
-dim : int
+dim: int
     Specifies the expected dimensionality of the blocks.
 
-blanking : bool
+blanking: bool
     If True, then blanking data is expected.
 
-planes : bool
+planes: bool
     If True, then the data is expected in planar, not whole, format.
 
-binary : bool
+binary: bool
     If True, the data is in binary, not text, form.
 
-big_endian : bool
+big_endian: bool
     If True, the data bytes are in 'big-endian' order.
     Only meaningful if `binary`.
 
-single_precision : bool
+single_precision: bool
     If True, floating-point data is 32 bits, not 64.
     Only meaningful if `binary`.
 
-unformatted : bool
+unformatted: bool
     If True, the data is surrounded by Fortran record length markers.
     Only meaningful if `binary`.
 
-logger : Logger or None
+logger: Logger or None
     Used to record progress.
 
 Default argument values are set for a typical 3D multiblock single-precision
@@ -57,10 +57,10 @@ def read_plot3d_q(grid_file, q_file, multiblock=True, dim=3, blanking=False,
     'energy_stagnation_density'.  Scalars are assigned to 'mach', 'alpha',
     'reynolds', and 'time'.
 
-    grid_file : string
+    grid_file: string
         Grid filename.
 
-    q_file : string
+    q_file: string
         Q data filename.
     """
     logger = logger or NullLogger()
@@ -129,10 +129,10 @@ def read_plot3d_f(grid_file, f_file, varnames=None, multiblock=True, dim=3,
     Returns a :class:`DomainObj` initialized from Plot3D `grid_file` and
     `f_file`.  Variables are assigned to names of the form ``f_N``.
 
-    grid_file : string
+    grid_file: string
         Grid filename.
 
-    f_file : string
+    f_file: string
         Function data filename.
     """
     logger = logger or NullLogger()
@@ -200,7 +200,7 @@ def read_plot3d_grid(grid_file, multiblock=True, dim=3, blanking=False,
     """
     Returns a :class:`DomainObj` initialized from Plot3D `grid_file`.
 
-    grid_file : string
+    grid_file: string
         Grid filename.
     """
     logger = logger or NullLogger()
@@ -230,7 +230,7 @@ def read_plot3d_shape(grid_file, multiblock=True, dim=3, binary=True,
     """
     Returns a list of zone dimensions from Plot3D `grid_file`.
 
-    grid_file : string
+    grid_file: string
         Grid filename.
     """
     logger = logger or NullLogger()
@@ -459,13 +459,13 @@ def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
     Requires 'density', 'momentum', and 'energy_stagnation_density' variables
     as well as 'mach', 'alpha', 'reynolds', and 'time' scalars.
 
-    domain ; DomainObj
+    domain: DomainObj
         The domain to be written.
 
-    grid_file : string
+    grid_file: string
         Grid filename.
 
-    q_file : string
+    q_file: string
         Q data filename.
     """
     logger = logger or NullLogger()
@@ -513,13 +513,13 @@ def write_plot3d_f(domain, grid_file, f_file, varnames=None, planes=False,
     Writes `domain` to `grid_file` and `f_file` in Plot3D format.
     If `varnames` is None, then all arrays and then all vectors are written.
 
-    domain ; DomainObj
+    domain: DomainObj
         The domain to be written.
 
-    grid_file : string
+    grid_file: string
         Grid filename.
 
-    f_file : string
+    f_file: string
         Function data filename.
     """
     logger = logger or NullLogger()
@@ -568,10 +568,10 @@ def write_plot3d_grid(domain, grid_file, planes=False, binary=True,
     """
     Writes `domain` to `grid_file` in Plot3D format.
 
-    domain ; DomainObj
+    domain: DomainObj
         The domain to be written.
 
-    grid_file : string
+    grid_file: string
         Grid filename.
     """
     logger = logger or NullLogger()

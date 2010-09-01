@@ -55,17 +55,17 @@ class Vector(object):
         """
         Test if self and `other` are equivalent.
 
-        other : Vector
+        other: Vector
             The vector to check against.
 
-        name : string
+        name: string
             Name of this vector, used for reporting differences.
 
-        logger : Logger or None
+        logger: Logger or None
             Used to log debug messages that will indicate what if anything is
             not equivalent.
 
-        tolerance : float
+        tolerance: float
             The maximum relative difference in array values to be considered
             equivalent.
         """
@@ -110,10 +110,10 @@ class Vector(object):
         """
         Convert to cartesian coordinate system.
 
-        grid : GridCoordinates
+        grid: GridCoordinates
             Must be in cylindrical form.
 
-        axis : string
+        axis: string
             Specifies which is the cylinder axis ('z' or 'x').
         """
         if grid.shape != self.shape:
@@ -163,10 +163,10 @@ class Vector(object):
         """
         Convert to cylindrical coordinate system.
 
-        grid : GridCoordinates
+        grid: GridCoordinates
             Must be in cylindrical form.
 
-        axis : string
+        axis: string
             Specifies which is the cylinder axis ('z' or 'x').
         """
         if grid.shape != self.shape:
@@ -214,7 +214,7 @@ class Vector(object):
         """
         Rotate about the X axis.
 
-        deg : float (degrees)
+        deg: float (degrees)
            Amount of rotation.
         """
         if self.y is None:
@@ -232,7 +232,7 @@ class Vector(object):
         """
         Rotate about the Y axis.
 
-        deg : float (degrees)
+        deg: float (degrees)
            Amount of rotation.
         """
         if self.x is None:
@@ -250,7 +250,7 @@ class Vector(object):
         """
         Rotate about the Z axis.
 
-        deg : float (degrees)
+        deg: float (degrees)
            Amount of rotation.
         """
         if self.x is None:

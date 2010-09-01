@@ -30,10 +30,10 @@ class DomainObj(object):
         """
         Add zones from `other` to self, retaining names where possible.
 
-        other : DomainObj
+        other: DomainObj
             Source for new zone data.
 
-        prefix : string
+        prefix: string
             String prepended to zone names.
 
         make_copy: bool
@@ -50,11 +50,11 @@ class DomainObj(object):
         """
         Add a :class:`Zone`. Returns the added zone.
 
-        name : string
+        name: string
             Name for the zone. If None or blank, then a default of the form
             ``zone_N`` is used.
 
-        prefix : string
+        prefix: string
             String prepended to the zone name.
 
         make_copy: bool
@@ -76,7 +76,7 @@ class DomainObj(object):
         """
         Remove a zone. Returns the removed zone.
 
-        zone : string or DomainObj
+        zone: string or DomainObj
             Zone to be removed.
         """
         if isinstance(zone, basestring):
@@ -91,10 +91,10 @@ class DomainObj(object):
     def rename_zone(self, name, zone):
         """ Rename a zone.
 
-        name : string
+        name: string
             New name for the zone.
 
-        zone : DomainObj
+        zone: DomainObj
             Zone to be renamed.
         """
         if hasattr(self, name):
@@ -107,7 +107,7 @@ class DomainObj(object):
         """
         Return name that a zone is bound to.
 
-        zone : DomainObj
+        zone: DomainObj
             Zone whose name is to be returned.
         """
         for name, value in self.__dict__.items():
@@ -129,14 +129,14 @@ class DomainObj(object):
         """
         Test if self and `other` are equivalent.
 
-        other : DomainObj
+        other: DomainObj
             The domain to check against.
 
-        logger : Logger or None
+        logger: Logger or None
             Used to log debug messages that will indicate what if anything
             is not equivalent
 
-        tolerance : float
+        tolerance: float
             The maximum relative difference in array values to be considered
             equivalent.
         """
@@ -165,7 +165,7 @@ class DomainObj(object):
         """
         Convert to cartesian coordinate system.
 
-        axis : string
+        axis: string
             Specifies which is the cylinder axis ('z' or 'x').
         """
         for zone in self.zones:
@@ -175,7 +175,7 @@ class DomainObj(object):
         """
         Convert to cylindrical coordinate system.
 
-        axis : string
+        axis: string
             Specifies which is the cylinder axis ('z' or 'x').
         """
         for zone in self.zones:
@@ -195,7 +195,7 @@ class DomainObj(object):
         """
         Translate coordinates.
 
-        delta_x, delta_y, delta_z : float
+        delta_x, delta_y, delta_z: float
             Amount of translation along the corresponding axis.
         """
         for zone in self.zones:
@@ -205,7 +205,7 @@ class DomainObj(object):
         """
         Rotate about the X axis.
 
-        deg : float (degrees)
+        deg: float (degrees)
             Amount of rotation.
         """
         for zone in self.zones:
@@ -215,7 +215,7 @@ class DomainObj(object):
         """
         Rotate about the Y axis.
 
-        deg : float (degrees)
+        deg: float (degrees)
             Amount of rotation.
         """
         for zone in self.zones:
@@ -225,7 +225,7 @@ class DomainObj(object):
         """
         Rotate about the Z axis.
 
-        deg : float (degrees)
+        deg: float (degrees)
             Amount of rotation.
         """
         for zone in self.zones:
