@@ -127,17 +127,20 @@ class HasParameters(object):
         """Returns an ordered dict of parameter objects."""
         return self._parameters
 
-    def set_parameters(self, X): 
-        """Pushes the values in the X input array into the corresponding public 
+    def set_parameters(self, values): 
+        """Pushes the values in the iterator 'values' into the corresponding public 
         variables in the model.
         
-        X: iterator
+        values: iterator
             iterator of input values with an order defined to match the order of parameters returned 
-            by the list_parameter method. X must support the len() function.
+            by the list_parameter method. 'values' must support the len() function.
         """
-        if len(X) != len(self._parameters):
+        if len(values) != len(self._parameters):
             raise ValueError("number of input values (%s) != number of parameters (%s)" % 
-                             (len(X),len(self._parameters)))
+                             (len(values),len(self._parameters)))
 
-        for x, param in zip(X, self._parameters.values()): 
-            param.expreval.set(x)
+        for val, param in zip(values, self._parameters.values()):
+            #if (param.low is not None and val < param.low) or (param.high is not None and val > param.high):
+                #raise ValueError("parameter value (%s) is outside of allowed range [%s to %s]" %
+                                 #(val, param.low, param.high))
+            param.expreval.set(val)
