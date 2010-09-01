@@ -1,5 +1,7 @@
 """
     doedriver.py -- Driver that executes a Design of Experiments.
+    
+    See Appendix B for additional information on the :ref:`DOEdriver`.
 """
 
 # pylint: disable-msg=E0611,F0401

@@ -223,7 +223,7 @@ class InputFileGenerator(object):
         
         row_end - Optional. Use if the array wraps to cover additional lines.
         
-        sep - Optional. Separator to use if we go beyond the template"""
+        sep - Optional. Separator to use if we go beyond the template."""
         
         # Simplified input for single-line arrays
         if row_end == None:

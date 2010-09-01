@@ -3,7 +3,7 @@ Importing this file will fix problems we've found in distutils.
 
 Current fixes are:
 
-Update the library_dir_option function in MSVCCompiler to add quotes around /LIBPATH entries.
+Update the ``library_dir_option`` function in MSVCCompiler to add quotes around /LIBPATH entries.
 """
 import sys
 

@@ -1,5 +1,7 @@
 """
     conmindriver.py - Driver for the CONMIN optimizer.
+    
+    See Appendix B for additional information on the :ref:`CONMINDriver`.
 """
 
 # pylint: disable-msg=C0103

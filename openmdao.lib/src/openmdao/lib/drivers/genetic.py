@@ -1,4 +1,6 @@
-"""A simple Pyevolve-based driver for OpenMDAO"""
+"""A simple Pyevolve-based driver for OpenMDAO
+
+   See Appendix B for additional information on the :ref:`Genetic` driver."""
 
 import re
 

@@ -6,9 +6,9 @@
 Drivers
 =======
 
-.. index:: Broyden Solver
+.. index:: BroydenSolver
 
-.. _Broyden-Solver:
+.. _BroydenSolver:
 
 *BroydenSolver*
 ~~~~~~~~~~~~~~~
@@ -177,9 +177,12 @@ allowable mixing coefficient for adaptation. The default value is 1.0.
     self.driver.alphamax = 1.0
     
     
+(See the source documentation for information on :ref:`openmdao.lib.drivers.broydensolver.py`.)
+    
+    
 .. index:: CONMIN
 
-.. _CONMIN-driver:
+.. _CONMINDriver:
 
 *CONMINDriver*
 ~~~~~~~~~~~~~~~~~~~
@@ -455,10 +458,11 @@ used only for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 
+(See the source documentation for information on :ref:`openmdao.lib.drivers.conmindriver.py`.)
 
 .. index:: Fixed Point Iterator
 
-.. _Fixed-Point_Iterator:
+.. _FixedPointIterator:
 
 *FixedPointIterator*
 ~~~~~~~~~~~~~~~~~~~~
@@ -541,6 +545,7 @@ A more useful example in which the FixedPointIterator is used to converge two
 coupled components is shown in :ref:`Tutorial-MDAO-Architectures` .
     
 .. index:: Genetic
+
 
 .. _`Genetic`:
 
@@ -710,11 +715,13 @@ Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection
 ``selection_method`` attribute allows you to select the algorithm; allowed values are: ``"roulette_wheel," 
 "tournament," "rank,"`` and ``"uniform"``.
 
+(See the source documentation for information on :ref:`openmdao.lib.drivers.genetic.py`.)
+
 .. testcode:: Genetic
     
     top.optimizer.selection_method="rank"
 
-
+.. _Case-Iterator-Driver:
 
 *Case Iterator Driver*
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -722,6 +729,9 @@ Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection
 .. todo::
 
     Discuss the Case Iterator
+    
+
+.. _DOEdriver:
     
 *DOEdriver*
 ~~~~~~~~~~~
@@ -757,3 +767,4 @@ Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection
                 self.driver.DOEgenerator = FullFactorial(3,2)
    
 
+(See the source documentation for information on :ref:`openmdao.lib.drivers.doedriver.py`.)

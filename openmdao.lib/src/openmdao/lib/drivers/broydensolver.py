@@ -1,5 +1,8 @@
 """
     solver.py -- Solver based on the nonlinear solvers found in ``Scipy.Optimize``.
+    
+    See Appendix B for additional information on the :ref:`BroydenSolver`.
+    
 """
 
 # pylint: disable-msg=C0103

@@ -205,3 +205,5 @@ Components
     new training data is available. This makes MetaModel more efficient, because it is not trying
     to retrain the model constantly when running large sets of training cases. Instead, the actual
     surrogate model training is only done when a prediction is needed and new training data is available. 
+    
+    (See the source documentation for information on :ref:`openmdao.lib.components.metamodel.py`.)
