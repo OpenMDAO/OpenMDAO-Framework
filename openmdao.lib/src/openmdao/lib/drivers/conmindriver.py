@@ -19,10 +19,10 @@ import conmin.conmin as conmin
 
 from openmdao.main.api import Case, Driver, Expression, ExpressionList
 from openmdao.main.exceptions import RunStopped
-from openmdao.lib.traits.array import Array
-from openmdao.lib.traits.enum import Enum
-from openmdao.lib.traits.float import Float
-from openmdao.lib.traits.int import Int
+from openmdao.lib.datatypes.array import Array
+from openmdao.lib.datatypes.enum import Enum
+from openmdao.lib.datatypes.float import Float
+from openmdao.lib.datatypes.int import Int
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.util.decorators import add_delegate

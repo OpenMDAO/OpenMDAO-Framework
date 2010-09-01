@@ -2,8 +2,8 @@ from math import sqrt
 
 from openmdao.units.units import PhysicalQuantity
 
-from openmdao.lib.traits.domain.flow import CELL_CENTER
-from openmdao.lib.traits.domain.zone import CYLINDRICAL
+from openmdao.lib.datatypes.domain.flow import CELL_CENTER
+from openmdao.lib.datatypes.domain.zone import CYLINDRICAL
 
 # Dictionary for calculated variable information.
 # Holds (integrate_flag, collect_function).

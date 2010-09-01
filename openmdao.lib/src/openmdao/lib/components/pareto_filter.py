@@ -4,7 +4,7 @@
 from enthought.traits.api import Instance
 
 from openmdao.main.component import Component
-from openmdao.lib.traits.array import Array
+from openmdao.lib.datatypes.array import Array
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 

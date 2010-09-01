@@ -3,7 +3,7 @@ from math import asin, cos, sin
 import numpy
 
 from openmdao.units import PhysicalQuantity
-from openmdao.lib.traits.domain import DomainObj, Vector, Zone, write_plot3d_q
+from openmdao.lib.datatypes.domain import DomainObj, Vector, Zone, write_plot3d_q
 
 _DEG2RAD = asin(1.) / 90.
 

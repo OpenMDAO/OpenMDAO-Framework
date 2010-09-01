@@ -20,9 +20,9 @@ from openmdao.main.api import Driver, ExpressionList
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
-from openmdao.lib.traits.float import Float
-from openmdao.lib.traits.int import Int
-from openmdao.lib.traits.enum import Enum
+from openmdao.lib.datatypes.float import Float
+from openmdao.lib.datatypes.int import Int
+from openmdao.lib.datatypes.enum import Enum
 from openmdao.util.decorators import add_delegate
 
         

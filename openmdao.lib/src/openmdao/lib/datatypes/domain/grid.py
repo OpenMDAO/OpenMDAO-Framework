@@ -1,6 +1,6 @@
 from math import atan2, cos, hypot, sin
 
-from openmdao.lib.traits.domain.vector import Vector
+from openmdao.lib.datatypes.domain.vector import Vector
 
 
 class GridCoordinates(Vector):

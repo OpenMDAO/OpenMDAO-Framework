@@ -10,8 +10,8 @@ from enthought.traits.api import Bool, Dict, Str
 from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 from openmdao.main.resource import ResourceAllocationManager as RAM
-from openmdao.lib.traits.float import Float
-from openmdao.lib.traits.int import Int
+from openmdao.lib.datatypes.float import Float
+from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
 
