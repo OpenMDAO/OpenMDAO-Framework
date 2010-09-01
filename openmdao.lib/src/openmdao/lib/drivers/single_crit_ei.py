@@ -11,7 +11,7 @@ from enthought.traits.api import implements, Instance
 from pyevolve import G1DList, GSimpleGA, GAllele, Consts
 from pyevolve import Initializators, Mutators, Crossovers, Selectors
 
-from openmdao.lib.traits.float import Float
+from openmdao.lib.datatypes.float import Float
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
 from openmdao.main.expression import Expression

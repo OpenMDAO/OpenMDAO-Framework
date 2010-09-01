@@ -114,12 +114,12 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
     
     #excluding traits now since they need to be sorted separately
     names = list(_get_resource_files(dist,
-                                    ['*__init__.py','*setup.py','*/test/*.py', '*traits*'],
+                                    ['*__init__.py','*setup.py','*/test/*.py', '*datatypes*.py'],
                                     ['*.py']))    
     names.sort()
     
     #wanted to sort traits separately based only on filenames despite differing paths
-    traitz = list(_get_resource_files(dist, ['*__init__.py','*setup.py','*/test/*.py'], ['*traits*.py']))
+    traitz = list(_get_resource_files(dist, ['*__init__.py','*setup.py','*/test/*.py'], ['*datatypes*.py']))
     sorted_traitz = sorted(traitz, cmp=_compare_traits_path)
     			    				            
     names.extend(sorted_traitz)

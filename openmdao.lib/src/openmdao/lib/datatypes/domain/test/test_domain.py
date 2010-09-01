@@ -7,11 +7,11 @@ import unittest
 
 import numpy
 
-from openmdao.lib.traits.domain import DomainObj, FlowSolution, \
+from openmdao.lib.datatypes.domain import DomainObj, FlowSolution, \
                                        GridCoordinates, Vector, Zone, \
                                        write_plot3d_q
 
-from openmdao.lib.traits.domain.test.wedge import create_wedge_3d, \
+from openmdao.lib.datatypes.domain.test.wedge import create_wedge_3d, \
                                                   create_wedge_2d
 from openmdao.util.testutil import assert_raises
 
@@ -345,7 +345,7 @@ class TestCase(unittest.TestCase):
 if __name__ == '__main__':
     import nose
     import sys
-    sys.argv.append('--cover-package=openmdao.lib.traits.domain')
+    sys.argv.append('--cover-package=openmdao.lib.datatypes.domain')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 

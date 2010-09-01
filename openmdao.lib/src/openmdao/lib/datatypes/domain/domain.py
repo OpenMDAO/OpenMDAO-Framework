@@ -1,6 +1,6 @@
 import copy
 
-from openmdao.lib.traits.domain.zone import Zone
+from openmdao.lib.datatypes.domain.zone import Zone
 from openmdao.util.log import NullLogger
 
 

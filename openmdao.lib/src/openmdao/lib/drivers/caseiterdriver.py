@@ -9,7 +9,7 @@ from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.main.resource import ResourceAllocationManager as RAM
-from openmdao.lib.traits.int import Int
+from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer
 
 _EMPTY    = 'empty'
