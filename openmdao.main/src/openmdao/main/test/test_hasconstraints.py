@@ -2,8 +2,7 @@
 
 import unittest
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.api import Float, Str, Instance
+from openmdao.main.api import Assembly, Driver, set_as_top
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints, Constraint
 from openmdao.test.execcomp import ExecComp

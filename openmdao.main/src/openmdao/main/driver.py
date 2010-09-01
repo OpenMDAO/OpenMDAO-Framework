@@ -55,18 +55,6 @@ class Driver(Component):
         """
         if super(Driver, self).is_valid() is False:
             return False
-        
-        ## driver is invalid if any of its Expressions reference
-        ## invalid Variables
-        #for name in self._get_expr_names(iotype='in'):
-            #rv = getattr(self, name)
-            #if isinstance(rv, list):
-                #for entry in rv:
-                    #if not entry.refs_valid():
-                        #return False
-            #else:
-                #if not rv.refs_valid():
-                    #return False
 
         # force execution if any component in the workflow is invalid
         for wf in self._workflows:
@@ -88,14 +76,6 @@ class Driver(Component):
         else:
             for wf in wfs:
                 wf.config_changed()
-
-    #def _pre_execute (self):
-        #"""Call base class *_pre_execute* after determining if we have any invalid
-        #ref variables, which will cause us to have to regenerate our ref dependency graph.
-        #"""
-        #if not self.is_valid():
-            #self._call_execute = True
-        #super(Driver, self)._pre_execute()
 
     def remove_from_workflow(self, component):
         """Remove the specified component from our workflow(s).
@@ -190,7 +170,7 @@ class Driver(Component):
         return self._continue
     
     def pre_iteration(self):
-        """Called prior to each iteration."""
+        """Called prior to each iteration.  This is where iteration events are set."""
         self.set_events()
         
     def run_iteration(self):
