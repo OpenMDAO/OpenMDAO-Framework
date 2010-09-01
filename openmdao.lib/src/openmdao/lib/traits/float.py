@@ -163,6 +163,12 @@ class Float(TraitType):
         
         if isinstance(value, UncertainDistribution):
             value = value.getvalue()
+            
+        # FIXME: The try blocks testing whether the unit is bogus or undefined
+        # are generally redundant because that test is done at creation. HOWEVER
+        # you might have a case where it wasn't tested because it's technicalyl
+        # not a float. NPSS wrapper may be such a case. A test needs to be 
+        # constructed to test these lines.
 
         # Note: benchmarking showed that this check does speed things up -- KTM
         if src_units == dst_units:

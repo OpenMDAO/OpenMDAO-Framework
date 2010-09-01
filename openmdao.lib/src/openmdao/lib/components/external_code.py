@@ -1,3 +1,5 @@
+""" Base class for an external application that needs to be executed. """
+
 import glob
 import os.path
 import shutil
@@ -5,6 +7,7 @@ import subprocess
 import stat
 import time
 
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Bool, Dict, Str
 
 from openmdao.main.api import Component
@@ -22,6 +25,7 @@ class ExternalCode(Component):
     PIPE   = subprocess.PIPE
     STDOUT = subprocess.STDOUT
 
+    # pylint: disable-msg=E1101
     command = Str('', iotype='in',
                   desc='The command to be executed.')
     env_vars = Dict({}, iotype='in',

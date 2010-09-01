@@ -257,59 +257,6 @@ class GolinskiTestCase(unittest.TestCase):
                                self.top.comp.x[4], 0.05)
 
         
-    def test_save_load(self):
-        self.top.driver.objective = 'comp.result'
-        #                                
-        #  maximize x[0] value
-        iter  = 1
-        for param,low,high in zip(['comp.x[1]', 'comp.x[2]', 'comp.x[3]', 'comp.x[4]'],
-                                  [0.70, 17.0, 7.300, 7.300],
-                                  [0.80, 28.0, 8.300, 8.300]):
-            self.top.driver.add_parameter(param, low=low, high=high)
-        #  25 CONSTRAINTS  defined in the problem
-        #  reduced to 1 constraint
-        self.top.driver.add_constraint('1.0 - 40.0/(comp.x[2] * comp.x[3])')
-        # Set local dir in case we're running in a different directory.
-        py_dir = pkg_resources.resource_filename('openmdao.lib.drivers', 'test')
-        retcode = check_save_load(self.top, py_dir=py_dir)
-        self.assertEqual(retcode, 0)
-
-
-    def test_bad_objective(self):
-        try:
-            self.top.driver.objective = 'comp.missing'
-        except TraitError, err:
-            self.assertEqual(str(err), 
-                "driver: invalid value 'comp.missing' for input ref variable 'objective': comp: cannot get valid flag of 'missing' because it's not an io trait.")
-        else:
-            self.fail('TraitError expected')
-
-
-    def test_no_design_vars(self):
-        self.top.driver.objective = 'comp.result'
-        try:
-            self.top.run()
-        except Exception, err:
-            self.assertEqual(str(err), "driver: no parameters specified")
-        else:
-            self.fail('Exception expected')
-    
-    def test_no_objective(self):
-        for param,low,high in zip(['comp.x[1]', 'comp.x[2]', 'comp.x[3]', 'comp.x[4]'],
-                                  [0.70, 17.0, 7.300, 7.300],
-                                  [0.80, 28.0, 8.300, 8.300]):
-            self.top.driver.add_parameter(param, low=low, high=high)
-        try:
-            self.top.run()
-        except RuntimeError, err:
-            self.assertEqual(str(err), "driver: no objective specified")
-        else:
-            self.fail('RuntimeError expected')
-            
-    def test_get_objective(self):
-        self.top.driver.objective = 'comp.result'
-        self.assertEqual('comp.result', self.top.driver.objective)
-    
     def test_update_objective(self):
         try:
             x = self.top.driver.objective.evaluate()
@@ -329,25 +276,6 @@ class GolinskiTestCase(unittest.TestCase):
         self.top.comp.execute()       
         self.assertEqual(self.top.driver.objective.evaluate(), -0.7854*43.09340)
         
-    
-    def test_bad_design_vars(self):
-        try:
-            map(self.top.driver.add_parameter, ['comp_bogus.x[0]','comp.x[1]'])
-        except AttributeError, err:
-            self.assertEqual(str(err), 
-                "driver: Can't add parameter 'comp_bogus.x[0]' because it doesn't exist.")
-        else:
-            self.fail('TraitError expected')
-    
-    def test_bad_constraint(self):
-        try:
-            self.top.driver.add_constraint('bogus.flimflam')
-        except ValueError, err:
-            self.assertEqual(str(err), 
-                "Invalid expression 'bogus.flimflam': 'Assembly' object has no attribute 'bogus'")
-        else:
-            self.fail('ValueError expected')
-       
 
 if __name__ == "__main__":
     import nose

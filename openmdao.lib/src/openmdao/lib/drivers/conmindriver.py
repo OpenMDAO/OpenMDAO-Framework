@@ -8,8 +8,9 @@
 __all__ = ['CONMINdriver']
 
 # pylint: disable-msg=E0611,F0401
-from numpy import ndarray, zeros, ones
+from numpy import zeros, ones, array
 from numpy import int as numpy_int
+from copy import copy
 
 from enthought.traits.api import on_trait_change, TraitError
                                  
@@ -42,7 +43,6 @@ class _cnmn1(object):
         self.ndv = 0
         self.ncon = 0
         self.nside = 0
-        self.nacmx1 = 0
         self.infog = 0
         self.info = 0
         self.nfdg = 0
@@ -54,7 +54,6 @@ class _cnmn1(object):
         self.ctmin = 0.
         self.ctlmin = 0.
         self.theta = 0.
-        self.phi = 0.
         self.delfun = 0.
         self.dabfun = 1.e-8
         self.linobj = 0
@@ -484,10 +483,10 @@ class CONMINdriver(Driver):
         
         self.cnmn1.nside = 2*num_dvs
 
-        self.cnmn1.nacmx1 = max(num_dvs,
-                                self.cnmn1.ncon+self.cnmn1.nside)+1
+        nacmx1 = max(num_dvs, self.cnmn1.ncon+self.cnmn1.nside)+1
+        
         n1 = num_dvs+2
-        n3 = self.cnmn1.nacmx1
+        n3 = nacmx1
         n4 = max(n3, num_dvs)
         n5 = 2*n4
                 
@@ -515,7 +514,7 @@ class CONMINdriver(Driver):
         self.cnmn1.ctl = self.ctl
         self.cnmn1.ctlmin = self.ctlmin
         self.cnmn1.theta = self.theta
-        self.cnmn1.phi = self.phi
+        self.consav.phi = self.phi
         self.cnmn1.dabfun = self.dabfun
         self.cnmn1.delfun = self.delfun
         self.cnmn1.linobj = self.linobj
@@ -557,7 +556,8 @@ class CONMINdriver(Driver):
         
         for name, value in self.consav.__dict__.items():
             setattr( conmin.consav, name, value  )
-        
+            
+
         
     def _save_common_blocks(self):
         """" Saves the common block data to the class to prevent trampling by
@@ -565,16 +565,9 @@ class CONMINdriver(Driver):
         """
         common = self.cnmn1
         for name, value in common.__dict__.items():
-            if isinstance(value, ndarray):
-                setattr(common, name, getattr(conmin.cnmn1, name).copy())
-            else:
-                setattr(common, name, type(value)(getattr(conmin.cnmn1, name)))
+            setattr(common, name, type(value)(getattr(conmin.cnmn1, name)))
         
         consav = self.consav
         for name, value in consav.__dict__.items():
-            if isinstance(value, ndarray):
-                setattr(consav, name, getattr(conmin.consav, name).copy())
-            else:
-                setattr(consav, name, type(value)(getattr(conmin.consav, name)))
-        
+            setattr(consav, name, type(value)(getattr(conmin.consav, name)))
         

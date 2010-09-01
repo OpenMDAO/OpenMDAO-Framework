@@ -16,7 +16,8 @@ from openmdao.units import PhysicalQuantity
 from openmdao.main.tvalwrapper import TraitValMetaWrapper
 
 class Array(TraitArray):
-    """A Public Variable wrapper for a numpy array with optional units."""
+    """A Public Variable wrapper for a numpy array with optional units.
+    The unit applies to the entire array."""
     
     def __init__(self, default_value=None, dtype = None, shape = None,
                  iotype=None, desc=None, units=None,  **metadata):

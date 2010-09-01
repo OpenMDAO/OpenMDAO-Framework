@@ -177,6 +177,18 @@ allowable mixing coefficient for adaptation. The default value is 1.0.
     self.driver.alphamax = 1.0
     
     
+.. index:: Case Iterator Driver
+
+.. _Case-iterator-driver:
+
+*Case Iterator Driver*
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. todo::
+
+    Discuss the Case Iterator
+
+    
 .. index:: CONMIN
 
 .. _CONMIN-driver:
@@ -455,6 +467,47 @@ used only for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 
+    
+.. index:: DOEdriver, design of experiments
+
+.. _DOEdriver:
+
+*DOEdriver*
+~~~~~~~~~~~
+
+The DOEdriver provides the capability to execute a DOE on a workflow.
+This Driver supports the IHasParameters interface. At execution time, 
+the driver will use the list of parameters added to it by the user to 
+create a specific DOE and then iteratively execute the DOE cases on the
+workflow. 
+
+The user can pick from any of the DOEgenerators provided in the standard
+library, or provide their own custom instance of a DOEgenerator. One of 
+these would be plugged into the DOEgenerator socket on the DOEdriver. 
+    
+    .. testcode:: DOEdriver
+    
+        from openmdao.main.api import Assembly
+        from openmdao.lib.api import DOEdriver
+        from openmdao.lib.doegenerators.full_factorial import FullFactorial
+
+        from openmdao.examples.singleEI.branin_component import BraninComponent
+        
+        class Analysis(Assembly): 
+            def __init__(self,doc=None): 
+                super(Analysis,self).__init__()
+                
+                self.add('branin', BraninComponent())
+                self.add('driver', DOEdriver())
+                self.driver.workflow.add(self.branin)
+
+                self.driver.add_parameter('branin.x')
+                self.driver.add_parameter('branin.y')
+                
+                #use a full factorial DOE with 2 variables, and 3 levels
+                #   for each variable
+                self.driver.DOEgenerator = FullFactorial(3,2)
+   
 
 .. index:: Fixed Point Iterator
 
@@ -582,11 +635,11 @@ You add design variables to Genetic using the ``add_parameter`` method.
            any calculations
         """
 
-        w = Float(0.0,low=-10,high=10,iotype="in")
+        w = Float(0.0, low=-10, high=10, iotype="in")
     
-        x = Float(0.0,low=0.0,high=100.0,iotype="in")
-        y = Int(10,low=10,high=100,iotype="in")
-        z = Enum([-10,-5,0,7],iotype="in")
+        x = Float(0.0, low=0.0, high=100.0, iotype="in")
+        y = Int(10, low=10, high=100, iotype="in")
+        z = Enum([-10, -5, 0, 7], iotype="in")
     
     class Simulation(Assembly):
         """Top Level Assembly used for simulation"""
@@ -596,17 +649,20 @@ You add design variables to Genetic using the ``add_parameter`` method.
         
             super(Simulation,self).__init__()
         
-            self.add('optimizer',Genetic())
-            self.add('comp',SomeComp())
+            self.add('driver', Genetic())
+            self.add('comp', SomeComp())
         
-            self.optimizer.add_parameter('comp.x')
-            self.optimizer.add_parameter('comp.y')
-            self.optimizer.add_parameter('comp.z')
+            # Driver process definition
+            self.driver.workflow.add(self.comp)
+
+            self.driver.add_parameter('comp.x')
+            self.driver.add_parameter('comp.y')
+            self.driver.add_parameter('comp.z')
     
     top = Simulation()        
     set_as_top(top)
         
-In the above example, three parameterss were added to the optimizer. The optimizer 
+In the above example, three parameters were added to the optimizer. The optimizer 
 figures out for itself what type of variable it is and behaves appropriately. In all three
 cases, since no *low* or *high* arguments were provided, the optimizer will use the values
 from the metadata provided in the variable deceleration. 
@@ -620,7 +676,7 @@ the optimizer to use a different range instead of the default.
 
 .. testcode:: Genetic
     
-    top.optimizer.add_parameter('comp.w',low=5.0,high=7.0)
+    top.driver.add_parameter('comp.w', low=5.0, high=7.0)
 
 Now, for ``comp.x`` the optimizer will only try values between 5.0 and 7.0. Note that `low` and `high`
 are only applicable to Float and Int public variables. For Enum public variables, `low` and `high`
@@ -634,31 +690,31 @@ public variable or a more complex function, such as
 
 .. testcode:: Genetic
 
-    top.optimizer.objective = "comp.x"
+    top.driver.objective = "comp.x"
     
 or 
 
 .. testcode:: Genetic
 
-    top.optimizer.objective = "2*comp.x+comp.y+3*comp.z"
+    top.driver.objective = "2*comp.x + comp.y + 3*comp.z"
 
-In the second example above, a more complex objective was created where the overall objective was 
+In the second example above, a more complex objective function was created where the overall objective was 
 a weighted combination of ``comp.x, comp.y,`` and ``comp.z``. 
 
 To set the optimizer to either minimize or maximize your objective, you set the
-``opt_type`` attribute of the driver to "minimize" or "maximize."
+``opt_type`` attribute of Genetic to "minimize" or "maximize."
 
 .. testcode:: Genetic
 
-    top.optimizer.opt_type = "minimize"
+    top.driver.opt_type = "minimize"
     
 You can control the size of the population in each generation and the maximum number of generations in 
 your optimization with the ``population_size`` and ``generations`` attributes. 
     
 .. testcode:: Genetic
 
-    top.optimizer.population_size = 80
-    top.optimizer.generations = 100
+    top.driver.population_size = 80
+    top.driver.generations = 100
     
 As you increase the population size, you are effectively adding diversity in to the gene pool of your
 optimization. A large population means that a larger number of individuals from a given generation will
@@ -684,7 +740,7 @@ design space. If the rate is set too high, then it is likely that stronger indiv
 
 .. testcode:: Genetic
 
-    top.optimizer.crossover_rate = 0.9
+    top.driver.crossover_rate = 0.9
 
 The ``mutation_rate`` controls how likely any particular gene is to experience a mutation. A low, but non-zero,
 mutation rate will help prevent stagnation in the gene pool by randomly moving the values of genes. If this 
@@ -693,7 +749,7 @@ allowed values are between 0.0 and 1.0.
 
 .. testcode:: Genetic
 
-    top.optimizer.mutation_rate = .02
+    top.driver.mutation_rate = .02
 
 In a pure genetic algorithm, it is possible that your best performing individual will not survive from one
 generation to the next due to competition, mutation, and crossover. If you want to ensure that the best 
@@ -703,7 +759,7 @@ what.
 
 .. testcode:: Genetic
 
-    top.optimizer.elitism = True
+    top.driver.elitism = True
 
 A number of different commonly used selection algorithms are available. The default algorithm is the Roulette
 Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection are also available. The
@@ -712,48 +768,5 @@ Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection
 
 .. testcode:: Genetic
     
-    top.optimizer.selection_method="rank"
-
-
-
-*Case Iterator Driver*
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. todo::
-
-    Discuss the Case Iterator
-    
-*DOEdriver*
-~~~~~~~~~~~
-
-    The DOEdriver provides the capability to execute a DOE on a workflow.
-    This Driver supports the IHasParameters interface. At execution time, 
-    the driver will use the list of parameters added to it by the user to 
-    create a specific DOE and then iteratively execute the DOE cases on the
-    workflow. 
-    
-    The user can pick from any of the DOEgenerators provided in the standard
-    library, or provide their own custom instance of a DOEgenerator. One of 
-    these would be plugged into the DOEgenerator socket on the DOEdriver. 
-    
-    .. testcode:: DOEdriver
-    
-        from openmdao.main.api import Assembly
-        from openmdao.lib.api import DOEdriver
-        from openmdao.lib.doegenerators.full_factorial import FullFactorial
-
-        from openmdao.examples.singleEI.branin_component import BraninComponent
-        
-        class Analysis(Assembly): 
-            def __init__(self,doc=None): 
-                super(Analysis,self).__init__()
-                
-                self.add('branin',BraninComponent())
-                self.add('driver',DOEdriver())
-                self.driver.add_parameter('branin.x')
-                self.driver.add_parameter('branin.y')
-                #use a full factorial DOE with 2 variables, and 3 levels
-                #   for each variable
-                self.driver.DOEgenerator = FullFactorial(3,2)
-   
+    top.driver.selection_method="rank"
 

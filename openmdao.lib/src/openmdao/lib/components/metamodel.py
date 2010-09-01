@@ -1,3 +1,4 @@
+""" Metamodel provides basic Meta Modeling capability"""
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array

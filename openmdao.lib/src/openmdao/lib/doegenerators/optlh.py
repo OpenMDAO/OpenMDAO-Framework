@@ -19,7 +19,8 @@
 
 from random import randint
 
-from numpy import array,size,sum,floor
+# pylint: disable-msg=E0611,F0401
+from numpy import array, size, sum, floor
 from numpy.linalg import norm
 
 from enthought.traits.api import HasTraits, implements
@@ -51,6 +52,8 @@ class LatinHypercube(object):
             distdict = {}
             
             #calculate the norm between each pair of points in the DOE
+            # TODO: This norm takes up the majority of the computation time. It
+            # should be converted to C or ShedSkin.
             arr = self.doe
             for i in range(n):
                 for j in range(i+1, n):
