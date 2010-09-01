@@ -70,11 +70,11 @@ class ShellProc(subprocess.Popen):
         Closes any files implicitly opened.
         Returns ``(return_code, error_msg)``.
 
-        poll_delay : float (seconds)
+        poll_delay: float (seconds)
             Time to delay between polling for command completion.
             A value of zero uses an internal default.
 
-        timeout : float (seconds)
+        timeout: float (seconds)
             Maximum time to wait for command completion.
             A value of zero implies an infinite maximum wait.
         """
@@ -120,22 +120,22 @@ def call(args, stdin=None, stdout=None, stderr=None, env=None,
     """
     Run command with arguments. Returns ``(return_code, error_msg)``.
 
-    args : list
+    args: list
         List of arguments for the command.
 
-    stdin, stdout, stderr : string, file, or int
+    stdin, stdout, stderr: string, file, or int
         Specify handling of corresponding stream. If a string, a file
         of that name is opened. Otherwise see the :mod:`subprocess`
         documentation.
 
-    env : dict
+    env: dict
         Environment variables for the command.
 
-    poll_delay : float (seconds)
+    poll_delay: float (seconds)
         Time to delay between polling for command completion.
         A value of zero uses an internal default.
 
-    timeout : float (seconds)
+    timeout: float (seconds)
         Maximum time to wait for command completion.
         A value of zero implies an infinite maximum wait.
     """
@@ -153,22 +153,22 @@ def check_call(args, stdin=None, stdout=None, stderr=None, env=None,
     Run command with arguments.
     If non-zero `return_code`, raises :class:`CalledProcessError`.
 
-    args : list
+    args: list
         List of arguments for the command.
 
-    stdin, stdout, stderr : string, file, or int
+    stdin, stdout, stderr: string, file, or int
         Specify handling of corresponding stream. If a string, a file
         of that name is opened. Otherwise see the :mod:`subprocess`
         documentation.
 
-    env : dict
+    env: dict
         Environment variables for the command.
 
-    poll_delay : float (seconds)
+    poll_delay: float (seconds)
         Time to delay between polling for command completion.
         A value of zero uses an internal default.
 
-    timeout : float (seconds)
+    timeout: float (seconds)
         Maximum time to wait for command completion.
         A value of zero implies an infinite maximum wait.
     """

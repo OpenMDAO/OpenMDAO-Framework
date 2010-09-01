@@ -1,5 +1,5 @@
 """
-    solver.py - Solver based on the nonlinear solvers found in Scipy.Optimize.
+    solver.py -- Solver based on the nonlinear solvers found in ``Scipy.Optimize``.
 """
 
 # pylint: disable-msg=C0103
@@ -25,51 +25,51 @@ from openmdao.util.decorators import add_delegate
         
 @add_delegate(HasParameters, HasEqConstraints)
 class BroydenSolver(Driver):
-    """ MIMO Newton-Raphson Solver with Bryoden approximation to the Jacobian.
-    Algorithms are based on those found in scipy.optimize.
+    """ :term:`MIMO` Newton-Raphson Solver with Broyden approximation to the Jacobian.
+    Algorithms are based on those found in ``scipy.optimize``.
     
     Nonlinear solvers
 
     These solvers find x for which F(x)=0. Both x and F are multidimensional.
 
-    All solvers have the parameter iter (the number of iterations to compute),
-    some of them have other parameters of the solver, see the particular solver
+    All solvers have the parameter iter (the number of iterations to compute);
+    some of them have other parameters of the solver. See the particular solver
     for details.
 
     A collection of general-purpose nonlinear multidimensional solvers.
 
-    - broyden2: Broyden's second method - the same as broyden1, but
+    - broyden2: Broyden's second method -- the same as broyden1 but
       updates the inverse Jacobian directly
-    - broyden3: Broyden's second method - the same as broyden2, but
+    - broyden3: Broyden's second method -- the same as broyden2 but
       instead of directly computing the inverse Jacobian,
-      it remembers how to construct it using vectors, and
-      when computing inv(J)*F, it uses those vectors to
-      compute this product, thus avoding the expensive NxN
+      it remembers how to construct it using vectors. 
+      When computing inv(J)*F, it uses those vectors to
+      compute this product, thus avoiding the expensive NxN
       matrix multiplication.
     - excitingmixing: The excitingmixing algorithm. J=-1/alpha
 
     The broyden2 is the best. For large systems, use broyden3; excitingmixing is
-    also very effective. The remaining nonlinear solvers from scipy are, in
-    their own words, of "mediocre quality" so they were not implemented.
+    also very effective. The remaining nonlinear solvers from SciPy are, in
+    their own words, of "mediocre quality," so they were not implemented.
     """ 
     
     # pylint: disable-msg=E1101
     algorithm = Enum('broyden2', ['broyden2', 'broyden3', 'excitingmixing'],
                      iotype = 'in', desc='Algorithm to use. Choose from '
-                     'broyden2, broyden3, and excitingmixing')
+                     'broyden2, broyden3, and excitingmixing.')
     
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
-                'termination')
+                'termination.')
 
     alpha = Float(0.4, iotype='in', 
-                  desc='Mixing Coefficient')
+                  desc='Mixing Coefficient.')
 
     alphamax = Float(1.0, iotype='in', desc='Maximum Mixing Coefficient (only '
-                                            'used with excitingmixing)')
+                                            'used with excitingmixing.)')
 
     tol = Float(0.00001, iotype='in', 
                   desc='Convergence tolerance. If the norm of the independent'
-                  'vector is lower than this, then terminate successfully')
+                  'vector is lower than this, then terminate successfully.')
 
     def __init__(self):
         
@@ -108,7 +108,7 @@ class BroydenSolver(Driver):
             
                 
     def execute_broyden2(self):
-        """from scipy, Broyden's second method.
+        """From SciPy, Broyden's second method.
 
         Updates inverse Jacobian by an optimal formula.
         There is NxN matrix multiplication in every iteration.
@@ -228,7 +228,7 @@ class BroydenSolver(Driver):
 
         The best norm(F(x))=0.005 achieved in ~140 iterations.
         
-        Note: Scipy uses 0.1 as the default value for alpha for this algorithm.
+        Note: SciPy uses 0.1 as the default value for alpha for this algorithm.
         Ours is set at 0.4, which is appropriate for Broyden2 and Broyden3, so
         adjust it accordingly if there are problems.
         """

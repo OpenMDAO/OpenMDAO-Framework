@@ -1,5 +1,5 @@
 """
-    doedriver.py - Driver that executes a Design of Experiments.
+    doedriver.py -- Driver that executes a Design of Experiments.
 """
 
 # pylint: disable-msg=E0611,F0401
@@ -24,17 +24,17 @@ class DOEdriver(CaseIterDriverBase):
                             desc='Iterator supplying normalized DOE values')
     
     case_outputs = ListStr([], iotype='in', 
-                           desc='A list of outputs to be saved with each case')
+                           desc='A list of outputs to be saved with each case.')
     
     def get_case_iterator(self):
-        """Returns a new iterator over the Case set"""
+        """Returns a new iterator over the Case set."""
         return self._get_cases()
         
     def _get_cases(self):
         params = self.get_parameters().values()
         if self.DOEgenerator.num_parameters != len(params):
-            self.raise_exception('number of DOE values (%s) != number of '
-                                 'parameters (%s)'%
+            self.raise_exception('Number of DOE values (%s) != number of '
+                                 'parameters (%s).'%
                 (self.DOEgenerator.num_parameters, len(params)), ValueError)
         for row in self.DOEgenerator:
             inputs = []
@@ -43,8 +43,8 @@ class DOEdriver(CaseIterDriverBase):
                 #convert DOE values to variable values
                 value = parameter.low+(parameter.high-parameter.low)*val
                 if '[' in parameter.expreval:
-                    raise ValueError('array entry design vars '
-                                     'not supported yet')
+                    raise ValueError('Array entry design vars '
+                                     'not supported yet.')
                 else:
                     inputs.append((str(parameter.expreval), None, value))
             

@@ -40,7 +40,7 @@ class LatinHypercube(object):
     
     @property
     def shape(self):
-        """size of the LatinHypercube doe (rows,cols)"""
+        """Size of the LatinHypercube doe (rows,cols)."""
         return self.doe.shape
     
     def mmphi(self):
@@ -114,14 +114,14 @@ class OptLatinHypercube(HasTraits):
     """    
     implements(IDOEgenerator)
     
-    num_sample_points = Int(20, desc="Number of sample points in the DOE sample set")
+    num_sample_points = Int(20, desc="Number of sample points in the DOE sample set.")
     
-    num_parameters = Int(2, desc="Number of parameters, or dimensions, for the DOE")
+    num_parameters = Int(2, desc="Number of parameters, or dimensions, for the DOE.")
     
     population = Int(20,
-        desc="Size of the population used in the evolutionary optimization")
+        desc="Size of the population used in the evolutionary optimization.")
     generations = Int(2,
-        desc="Number of generations the optimization will evolve over")
+        desc="Number of generations the optimization will evolve over.")
     norm_method = Enum(["1-norm","2-norm"],
                     desc="Vector norm calculation method. '1-norm' is faster, but less accurate")
     
@@ -139,7 +139,7 @@ class OptLatinHypercube(HasTraits):
             self.generations = generations
 
     def __iter__(self):
-        """Return an iterator over our sets of input values"""
+        """Return an iterator over our sets of input values."""
         return self._get_input_values()
     
     def _get_input_values(self):

@@ -27,7 +27,7 @@ from openmdao.util.decorators import add_delegate
 @add_delegate(HasParameters)  
 class SingleCritEI(Driver):
     """Driver which implements the Expected Improvement(EI) process for single
-    criteria problems. It uses components which outputs are instances of
+    criteria problems. It uses components whose outputs are instances of
     NormalDistribution, combined with a provided optimal case, to find the
     point in the design space with the best Expected Improvement."""
     
@@ -36,13 +36,13 @@ class SingleCritEI(Driver):
     # pylint: disable-msg=E1101
     best_case = Instance(ICaseIterator, iotype="in",
                     desc="CaseIterator which contains a single case, "
-                         "representing the criteria value")
+                         "representing the criteria value.")
     criteria = Expression(iotype="in",
                     desc="Name of the variable to maximize the expected "
-                         "improvement around. Must be a NormalDistrubtion type")
+                         "improvement around. Must be a NormalDistrubtion type.")
     next_case = Instance(ICaseIterator, iotype="out", copy=None,
-                    desc="CaseIterator which contains the case which maximizes "
-                         "expected improvement")
+                    desc="CaseIterator that contains the case which maximizes "
+                         "expected improvement.")
     
     EI = Float(0.0, iotype="out", desc="The expected improvement of the "
                                        "next_case")
@@ -70,7 +70,7 @@ class SingleCritEI(Driver):
         self._make_alleles()
             
     def _calc_ei(self, X): 
-        """ calculates the expected improvement of the model at a given point, X
+        """ Calculates the expected improvement of the model at a given point, X.
         """
         
         #set inputs to model
@@ -97,7 +97,7 @@ class SingleCritEI(Driver):
         
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training
-        point to run"""
+        point to run."""
         if self.criteria == "": 
             self.raise_exception("no criteria was specified", RuntimeError)
         elif not self.set_of_alleles:

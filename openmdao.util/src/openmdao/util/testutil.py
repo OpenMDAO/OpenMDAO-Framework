@@ -19,22 +19,22 @@ def assert_raises(test_case, code, globals, locals, exception, msg,
     """
     Determine that `code` raises `exception` with `msg`.
 
-    test_case : :class:`unittest.TestCase`
+    test_case: :class:`unittest.TestCase`
         TestCase instance used for assertions.
 
-    code : string
+    code: string
         Statement to be executed.
 
-    globals, locals : dict
+    globals, locals: dict
         Arguments for :meth:`eval`.
 
-    exception : Exception
+    exception: Exception
         Exception that should be raised.
 
-    msg : string
+    msg: string
         Expected message from exception.
 
-    use_exec : bool
+    use_exec: bool
         If True, then evaluate `code` with :func:`exec` rather than
         :func:`eval`.  This is necessary for testing statements that are not
         expressions.
@@ -55,16 +55,16 @@ def assert_rel_error(test_case, actual, desired, tolerance):
     Determine that the relative error between `actual` and `desired`
     is within `tolerance`.
 
-    test_case : :class:`unittest.TestCase`
+    test_case: :class:`unittest.TestCase`
         TestCase instance used for assertions.
 
-    actual : float
+    actual: float
         The value from the test.
 
-    desired : float
+    desired: float
         The value expected.
 
-    tolerance : float
+    tolerance: float
         Maximum relative error ``(actual - desired) / desired``.
     """
     if isnan(actual) and not isnan(desired):

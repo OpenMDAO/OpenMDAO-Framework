@@ -70,7 +70,7 @@ class _cnmn1(object):
         # pylint: enable-msg=W0201
  
 class _consav(object):
-    """Just a primitive data structure for storing consav common block data"""
+    """Just a primitive data structure for storing consav common block data."""
     
     def __init__(self):
         self.clear()

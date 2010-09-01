@@ -26,10 +26,10 @@ class NormalDistribution(UncertainDistribution):
     """An UncertainDistribution which represents a quantity with a 
     normal distribution of uncertainty.
     
-    mu : float
+    mu: float
        mean value
        
-    sigma : float
+    sigma: float
        standard deviation
     """
     
@@ -64,10 +64,10 @@ class UniformDistribution(UncertainDistribution):
     """An UncertainDistribution which represents a quantity with a 
     uniform distribution of uncertainty.
     
-    min : float
+    min: float
        minimum value
        
-    max : float
+    max: float
        maximum value
     """
  
@@ -87,13 +87,13 @@ class TriangularDistribution(UncertainDistribution):
     """An UncertainDistribution which represents a quantity with a 
     triangular distribution of uncertainty.
     
-    min : float
+    min: float
        minimum value
        
-    max : float
+    max: float
        maximum value
        
-    mode : float
+    mode: float
        mode
     """
  
@@ -114,10 +114,10 @@ class WeibullDistribution(UncertainDistribution):
     """An UncertainDistribution which represents a quantity with a 
     weibull distribution of uncertainty.
     
-    alpha : float
+    alpha: float
        scale parameter
        
-    beta : float
+    beta: float
        shape parameter
     """
 

@@ -28,19 +28,19 @@ class HasParameters(object):
     def add_parameter(self, name, low=None, high=None):
         """Adds a parameter to the driver. 
         
-        name : string
-            name of the public variable the driver should vary during execution.
+        name: string
+            Name of the public variable the driver should vary during execution.
             
-        low : float, optional
-            minimum allowed value of the parameter
+        low: float, optional
+            Minimum allowed value of the parameter.
             
-        high : float, optional
-            maximum allowed value of the parameter
+        high: float, optional
+            Maximum allowed value of the parameter.
         
-        If neither 'low' nor 'high' are specified, the min and max will
+        If neither "low" nor "high" is specified, the min and max will
         default to the values in the metadata of the public variable being
         referenced. If they are not specified in the metadata and not provided
-        as arguments a ValueError is raised.
+        as arguments, a ValueError is raised.
         """
         if name in self._parameters: 
             self._parent.raise_exception("Trying to add parameter '%s' to driver, "

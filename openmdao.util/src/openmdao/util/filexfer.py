@@ -20,19 +20,19 @@ def filexfer(src_server, src_path, dst_server, dst_path, mode=''):
     After the copy has completed, permission bits from :meth:`stat` are set
     via :meth:`chmod`.
 
-    src_server : Proxy
+    src_server: Proxy
         Host to get file from.
 
-    src_path : string
+    src_path: string
         Path to file on `src_server`.
 
-    dst_server : Proxy
+    dst_server: Proxy
         Host to put file to.
 
-    dst_path : string
+    dst_path: string
         Path to file on `dst_server`.
 
-    mode : string
+    mode: string
         Mode settings for :func:`open`, not including 'r' or 'w'.
     """
     if src_server is None:
@@ -76,13 +76,13 @@ def pack_zipfile(patterns, filename, logger=NullLogger):
     Create 'zip' file `filename` of files in `patterns`.
     Returns ``(nfiles, nbytes)``.
 
-    patterns : list
+    patterns: list
         List of :mod:`glob` style patterns.
 
-    filename : string
+    filename: string
         Name of zip file to create.
 
-    logger : Logger
+    logger: Logger
         Used for recording progress.
     """
     nfiles = 0
@@ -106,10 +106,10 @@ def unpack_zipfile(filename, logger=NullLogger):
     Unpack 'zip' file `filename`.
     Returns ``(nfiles, nbytes)``.
 
-    filename : string
+    filename: string
         Nmae of zip file to unpack.
 
-    logger : Logger
+    logger: Logger
         Used for recording progress.
     """
     nfiles = 0

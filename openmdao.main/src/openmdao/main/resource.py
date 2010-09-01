@@ -50,7 +50,7 @@ class ResourceAllocationManager(object):
         """
         Add an allocator to the list of resource allocators.
 
-        allocator : ResourceAllocator
+        allocator: ResourceAllocator
             The allocator to be added.
         """
         ram = ResourceAllocationManager.get_instance()
@@ -62,10 +62,10 @@ class ResourceAllocationManager(object):
         """
         Insert an allocator into the list of resource allocators.
 
-        index : int
+        index: int
             List index for the insertion point.
 
-        allocator : ResourceAllocator
+        allocator: ResourceAllocator
             The allocator to be inserted.
         """
         ram = ResourceAllocationManager.get_instance()
@@ -77,7 +77,7 @@ class ResourceAllocationManager(object):
         """
         Return allocator at `index`.
 
-        index : int
+        index: int
             List index for allocator to be returned.
         """
         ram = ResourceAllocationManager.get_instance()
@@ -91,7 +91,7 @@ class ResourceAllocationManager(object):
         This should be considered an upper limit on the number of concurrent
         allocations attempted.
 
-        resource_desc : dict
+        resource_desc: dict
             Description of required resources.
         """
         ram = ResourceAllocationManager.get_instance()
@@ -115,7 +115,7 @@ class ResourceAllocationManager(object):
         In the case of a tie, the first allocator in the allocators list wins.
         Returns ``(proxy-object, server-dict)``.
 
-        resource_desc : dict
+        resource_desc: dict
             Description of required resources.
         """
         for handler in logging._handlerList:
@@ -168,7 +168,7 @@ class ResourceAllocationManager(object):
         Typically used by parallel code wrappers which have MPI or something
         similar for process deployment.
 
-        resource_desc : dict
+        resource_desc: dict
             Description of required resources.
         """
         ram = ResourceAllocationManager.get_instance()
@@ -217,7 +217,7 @@ class ResourceAllocationManager(object):
         """
         Release a server (proxy).
 
-        server : :mod:`multiprocessing` proxy
+        server: :mod:`multiprocessing` proxy
             Server to be released.
         """
         name = server.get_name()
@@ -258,7 +258,7 @@ class ResourceAllocator(ObjServerFactory):
         suffer if it overestimates.  The value is used to limit the number
         of concurrent evaluations.
 
-        resource_desc : dict
+        resource_desc: dict
             Description of required resources.
         """
         raise NotImplementedError
@@ -278,7 +278,7 @@ class ResourceAllocator(ObjServerFactory):
         to the estimate, such as hostnames, load averages, unsupported
         resources, etc.
 
-        resource_desc : dict
+        resource_desc: dict
             Description of required resources.
         """
         raise NotImplementedError
@@ -288,7 +288,7 @@ class ResourceAllocator(ObjServerFactory):
         Returns True if this allocator can support the specified required
         distributions.
 
-        resource_value : list
+        resource_value: list
             List of Distributions.
         """
         required = []
@@ -304,7 +304,7 @@ class ResourceAllocator(ObjServerFactory):
         Returns True if this allocator can support the specified 'orphan'
         modules.
 
-        resource_value : list
+        resource_value: list
             List of 'orphan' module names.
         """
 #FIXME: shouldn't pollute the environment like this does.
@@ -325,13 +325,13 @@ class ResourceAllocator(ObjServerFactory):
         Deploy a server suitable for `resource_desc`.
         Returns a proxy to the deployed server.
 
-        name : string
+        name: string
             Name for server.
 
-        resource_desc : dict
+        resource_desc: dict
             Description of required resources.
 
-        criteria : dict
+        criteria: dict
             The dictionary returned by :meth:`time_estimate`.
         """
         raise NotImplementedError
@@ -362,7 +362,7 @@ class LocalAllocator(ResourceAllocator):
         Returns `total_cpus` * `max_load` if `resource_desc` is supported,
         otherwise zero.
 
-        resource_desc : dict
+        resource_desc: dict
             Description of required resources.
         """
         estimate, criteria = self._check_compatibility(resource_desc, False)
@@ -384,7 +384,7 @@ class LocalAllocator(ResourceAllocator):
         to the estimate, such as hostnames, load averages, unsupported
         resources, etc.
 
-        resource_desc : dict
+        resource_desc: dict
             Description of required resources.
         """
         estimate, criteria = self._check_compatibility(resource_desc, True)
@@ -475,13 +475,13 @@ class LocalAllocator(ResourceAllocator):
         Deploy a server suitable for `resource_desc`.
         Returns a proxy to the deployed server.
 
-        name : string
+        name: string
             Name for server.
 
-        resource_desc : dict
+        resource_desc: dict
             Description of required resources.
 
-        criteria : dict
+        criteria: dict
             The dictionary returned by :meth:`time_estimate`.
         """
         return self.create(typname='', name=name)
@@ -492,7 +492,7 @@ class LocalAllocator(ResourceAllocator):
         Register :class:`LocalAllocator` proxy info with `manager`.
         Not typically called by user code.
 
-        manager : Manager
+        manager: Manager
             :mod:`multiprocessing` Manager to register with.
         """
         name = 'LocalAllocator'
@@ -573,7 +573,7 @@ class ClusterAllocator(object):
         Returns the total of :meth:`max_servers` across all
         :class:`LocalAllocator` in the cluster.
 
-        resource_desc : dict
+        resource_desc: dict
             Description of required resources.
         """
         with self._lock:
@@ -645,7 +645,7 @@ class ClusterAllocator(object):
         to find the best match and returns that.  The best allocator is saved
         in the returned criteria for a subsequent :meth:`deploy`.
 
-        resource_desc : dict
+        resource_desc: dict
             Description of required resources.
         """
         n_cpus = resource_desc.get('n_cpus', 0)
@@ -781,13 +781,13 @@ class ClusterAllocator(object):
         Uses the allocator saved in `criteria`.
         Returns a proxy to the deployed server.
 
-        name : string
+        name: string
             Name for server.
 
-        resource_desc : dict
+        resource_desc: dict
             Description of required resources.
 
-        criteria : dict
+        criteria: dict
             The dictionary returned by :meth:`time_estimate`.
         """
         with self._lock:

@@ -99,7 +99,7 @@ def list_db_vars(dbname):
     """
     Return the set of the names of the variables found in the specified case DB file.
     
-    dbname : str
+    dbname: str
         The name of the sqlite DB file.
     """
     connection = sqlite3.connect(dbname)
@@ -125,19 +125,19 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
     be returned so that all data values with the same index will correspond
     to the same case.
     
-    dbname : str
+    dbname: str
         The name of the sqlite DB file.
         
-    varnames : list[str]
+    varnames: list[str]
         iterator of names of variables to be retrieved.
         
-    case_sql : str, optional
+    case_sql: str, optional
         SQL syntax that will be placed in the WHERE clause for Case retrieval.
         
-    var_sql : str, optional
+    var_sql: str, optional
         SQL syntax that will be placed in the WHERE clause for variable retrieval.
     
-    include_errors : bool, optional [False]
+    include_errors: bool, optional [False]
         if True, include data from cases that reported an error
         
     """
@@ -227,31 +227,31 @@ def displayXY(dbname, xnames, ynames, case_sql=None, var_sql=None,
               title='', grid=False, xlabel='', ylabel=''):
     """Display an XY plot using Case data from a sqlite DB.
     
-    dbname : str
+    dbname: str
         Name of the database file.
         
-    xnames : list[str]
+    xnames: list[str]
         Names of X variables.
         
-    ynames : list[str]
+    ynames: list[str]
         Names of Y variables.
         
-    case_sql : str, optional
+    case_sql: str, optional
         SQL syntax that will be placed in the WHERE clause for Case retrieval.
         
-    var_sql : str, optional
+    var_sql: str, optional
         SQL syntax that will be placed in the WHERE clause for variable retrieval.
         
-    title : str, optional
+    title: str, optional
         Plot title.
         
-    grid : bool, optional
+    grid: bool, optional
         If True, a grid is drawn on the plot.
         
-    xlabel : str, optional
+    xlabel: str, optional
         X axis label.
         
-    ylabel : str, optional
+    ylabel: str, optional
         Y axis label.
     """
     try:
