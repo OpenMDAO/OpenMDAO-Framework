@@ -93,14 +93,14 @@ equations defined in MIMOSystem.
             self.driver.tol = .000000001
             
 The parameters are the independent variables that the solver is allowed to vary. The
-standard ``add_parameter`` interface is used to define these. Broyden does not utilize
-the low and high attributes, so they are set to some high value.
+method ``add_parameter`` is used to define these. Broyden does not utilize
+the low and high attributes, so they are set to some arbitrary large negative and positive values.
 
 The equations that we want to satisfy are added as equality constraints using the
-``add_constraint`` interface. We want to find *x* and *y* that satisfy ``f_xy=0`` and ``g_xy =0``,
+``add_constraint`` method. We want to find *x* and *y* that satisfy ``f_xy=0`` and ``g_xy =0``,
 so these two equations are added to the solver.
 
-Both the ``add_parameter`` and ``add_constraint`` interface are presented in more detail in
+Both the ``add_parameter`` and ``add_constraint`` methods are presented in more detail in
 :ref:`Tutorial:-MDAO-Architectures`.
 
 The resulting solution should yield:

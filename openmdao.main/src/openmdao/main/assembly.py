@@ -16,6 +16,7 @@ from openmdao.main.component import Component
 from openmdao.main.container import Container
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.driver import Driver
+from openmdao.main.expression import Expression, ExpressionList
 
 class PassthroughTrait(TraitType):
     """A trait that can use another trait for validation, but otherwise is
@@ -145,6 +146,10 @@ class Assembly (Component):
             self.raise_exception(
                 'Cannot connect %s to %s. Both are on same component.' %
                                  (srcpath, destpath), RuntimeError)
+        if (srctrait.is_trait_type and (srctrait.is_trait_type(Expression) or srctrait.is_trait_type(ExpressionList))) or \
+           (desttrait.is_trait_type and (desttrait.is_trait_type(Expression) or desttrait.is_trait_type(ExpressionList))):
+            self.raise_exception('Cannot connect %s to %s because one of them is an Expression or ExpressionList' %
+                                 (srcpath,destpath), RuntimeError)
         if srccomp is not self and destcomp is not self:
             # it's not a passthrough, so must connect input to output
             if srctrait.iotype != 'out':
@@ -196,8 +201,6 @@ class Assembly (Component):
             self.comp_graph.connect('.'.join(['@in',srcpath]), destpath)
         else:
             destcomp.invalidate_deps(varnames=[destvarname], notify_parent=True)
-        
-        self._io_graph = None
 
     def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and

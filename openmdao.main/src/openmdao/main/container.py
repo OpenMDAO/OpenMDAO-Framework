@@ -188,8 +188,6 @@ class Container(HasTraits):
         # order to avoid the extra layer of function calls when logging
         self._logger = Logger('')
 
-        self._io_graph = None
-
         # Create per-instance initial FileRefs for File traits. There ought
         # to be a better way to not share default initial values, but
         # FileRef.get_default_value/make_default won't pickle.

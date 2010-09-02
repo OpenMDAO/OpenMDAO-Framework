@@ -59,6 +59,7 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
     os.mkdir(test_dir)
     os.chdir(test_dir)
     egg_path = os.path.join('..', egg_name)
+    
     try:
         print '\nUnpacking %s in subprocess...' % egg_name
         env = os.environ

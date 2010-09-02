@@ -298,8 +298,8 @@ is a specialized solver that is applicable only to single-input/single-output pr
 As such, it does not conform to the standard driver interface. The output from ``SellarDiscipline2``
 is ``'dis2.y2'``. During iteration, this is the variable that is going to be sent to the input
 of ``SellarDiscipline1``, which is ``'dis1y2'``. The parameter ``x_out`` takes the output variable
-while the parameter ``x_in`` takes the input variable. These are :term:`Expressions`, but fixed point
-iteration doesn't make sense using anything other than single variables. We also set the
+while the parameter ``x_in`` takes the input variable. These are expression strings, but fixed point
+iteration doesn't make sense using anything other than a single input and output. We also set the
 maximum number of iterations and a convergence tolerance.
         
 .. testcode:: MDF_parts
@@ -322,7 +322,7 @@ Finally, the CONIM optimization is set up.
         self.driver.add_parameter('dis1.x1',      low = 0.0,   high = 10.0)
         
         self.driver.add_constraint('3.16 < dis1.y1')
-        self.driver.add_constraint('dis2.y2 - 24.0')
+        self.driver.add_constraint('dis2.y2 < 24.0')
         
         self.driver.cons_is_linear = [1, 1]
         self.driver.iprint = 0
@@ -345,8 +345,8 @@ the minimum constraint thickness for the linear constraints. We also use
 ``cons_is_linear`` to let CONMIN know that both constraints are linear. This
 can speed up the algorithm, though it hardly matters here.
 
-As before, the ``add_constraint`` function is used to add our constraints. This
-time however, we used a more general expression for the first constraint. Expressions
+As before, the ``add_constraint`` method is used to add our constraints. This
+time however, we used a more general expression for the first constraint. Expression strings
 in OpenMDAO can also be parsed as inequalities, so all of the following are
 equivalent ways of defining this constraint:
 
@@ -417,7 +417,7 @@ Finally, putting it all together gives:
                 self.driver.add_parameter('dis1.x1',      low = 0.0,   high = 10.0)
         
                 self.driver.add_constraint('3.16 < dis1.y1')
-                self.driver.add_constraint('dis2.y2 - 24.0')
+                self.driver.add_constraint('dis2.y2 < 24.0')
                     
                 self.driver.cons_is_linear = [1, 1]
                 self.driver.iprint = 0
@@ -478,7 +478,7 @@ term *independent* used to describe this. Here, we've given a *low* and a
 use either of these. The output is specified by adding an equality constraint.
 A solver essentially tries to drive something to zero. In this case, we want to
 drive the residual error in the coupled variable *y2* to zero. An equality constraint
-is defined with an Expression which is parsed for the equals sign, so the
+is defined with an expression string which is parsed for the equals sign, so the
 following constraints are equivalent:
 
 .. testcode:: MDF_parts
@@ -589,10 +589,10 @@ All that is left to do is set up the CONMIN optimizer.
         self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
         self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
             
-        self.driver.add_constraint('(dis2.y1-dis1.y1)**3')
-        self.driver.add_constraint('(dis1.y1-dis2.y1)**3')
-        self.driver.add_constraint('(dis2.y2-dis1.y2)**3')
-        self.driver.add_constraint('(dis1.y2-dis2.y2)**3')        
+        self.driver.add_constraint('(dis2.y1-dis1.y1)**3 < 0')
+        self.driver.add_constraint('(dis1.y1-dis2.y1)**3 < 0')
+        self.driver.add_constraint('(dis2.y2-dis1.y2)**3 < 0')
+        self.driver.add_constraint('(dis1.y2-dis2.y2)**3 < 0')
         self.driver.iprint = 0
         self.driver.itmax = 100
         self.driver.fdch = .003
@@ -653,7 +653,7 @@ the actual value of the design variables and the values commanded by the global
 optimizer.
 
 CO for the Sellar case is very interesting because there are no component data connections.
-All values are passed through the expressions for the objectives, constraints, and
+All values are passed through the expression strings for the objectives, constraints, and
 parameters of the various optimizers, as shown in the next diagram.
 
 .. figure:: ../images/user-guide/Arch-CO.png
@@ -735,9 +735,9 @@ Now we need to set up the parameters for the outer optimization loop.
 
         con1 = '(bcastr.z1-dis1.z1)**2 + (bcastr.z2-dis1.z2)**2 + ' + \
                '(bcastr.x1-dis1.x1)**2 + ' + \
-               '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2'
+               '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2  < 0'
         con2 = '(bcastr.z1-dis2.z1)**2 + (bcastr.z2-dis2.z2)**2 + ' + \
-               '(bcastr.y1-dis2.y1)**2 + (bcastr.y2-dis2.y2)**2'
+               '(bcastr.y1-dis2.y1)**2 + (bcastr.y2-dis2.y2)**2  < 0'
         self.driver.add_constraint(con1)
         self.driver.add_constraint(con2)
         
@@ -751,7 +751,7 @@ Now we need to set up the parameters for the outer optimization loop.
         self.driver.ct = -.001
         self.driver.ctlmin = 0.001
 
-Here we are able to build up a complicated Expression for the sum of the squares
+Here we are able to build up a complicated expression for the sum of the squares
 of all of the residuals and use it as our constraint. Note that this is another
 example of a constraint that would be better served as an equality constraint, but
 it's not problematic because a sum of squares is one-sided. We have two constraints
@@ -766,7 +766,7 @@ Finally, we set up our local optimization loops.
                                    '(bcastr.z2-dis1.z2)**2 + ' + \
                                    '(bcastr.x1-dis1.x1)**2 + ' + \
                                    '(bcastr.y1-dis1.y1)**2 + ' + \
-                                   '(bcastr.y2-dis1.y2)**2'
+                                   '(bcastr.y2-dis1.y2)**2 < 0'
         self.localopt1.add_parameter('dis1.z1', low = -10.0, high = 10.0)
         self.localopt1.add_parameter('dis1.z2', low = 0.0,   high = 10.0)
         self.localopt1.add_parameter('dis1.x1', low = 0.0,   high = 10.0)
@@ -782,7 +782,7 @@ Finally, we set up our local optimization loops.
         self.localopt2.objective = '(bcastr.z1-dis2.z1)**2 + ' + \
                                    '(bcastr.z2-dis2.z2)**2 + ' + \
                                    '(bcastr.y1-dis2.y1)**2 + ' + \
-                                   '(bcastr.y2-dis2.y2)**2'
+                                   '(bcastr.y2-dis2.y2)**2 < 0'
         self.localopt2.add_parameter('dis2.z1', low = -10.0, high = 10.0)
         self.localopt2.add_parameter('dis2.z2', low = 0.0,   high = 10.0)
         self.localopt2.add_parameter('dis2.y1', low = 3.16,  high = 10.0)

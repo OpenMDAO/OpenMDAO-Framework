@@ -35,7 +35,7 @@ class HasEvents(object):
         """
         try:
             self._events.remove(name)
-        except KeyError:
+        except ValueError:
             self._parent.raise_exception("Trying to remove event '%s' "
                                          "that is not in the driver." % name,
                                          AttributeError)
