@@ -29,7 +29,7 @@ class Constraint(object):
         _check_expr(self.rhs)
         
     def evaluate(self):
-        """Returns a tuple of the form (lhs, rhs, relation, is_violated)"""
+        """Returns a tuple of the form (lhs, rhs, relation, is_violated)."""
         lhs = self.lhs.evaluate()
         rhs = self.rhs.evaluate()
         return (lhs, rhs, self.relation, not _ops[self.relation](lhs,rhs))
@@ -123,7 +123,7 @@ class HasConstraints(object):
         self._ineq = HasIneqConstraints(parent)
 
     def add_constraint(self, expr_string):
-        """Adds a constraint to the driver"""
+        """Adds a constraint to the driver."""
         lhs, rel, rhs = _parse_constraint(expr_string)
         if rel=='==' or rel=='=':
             self._eq.add_eq_constraint(lhs, rhs)

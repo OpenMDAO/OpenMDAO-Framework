@@ -84,7 +84,7 @@ class Array(TraitArray):
         if self.units:
             info = "a numpy array having units compatible with '%s'" % self.units
         else:
-            info = "a numpy array"
+            info = "a numpy array."
 
         vtype = type( value )
         msg = "Trait '%s' must be %s, but a value of %s %s was specified." % \

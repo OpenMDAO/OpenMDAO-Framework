@@ -787,38 +787,38 @@ class Container(HasTraits):
         just those containers from the installed egg.  Child container names
         should be specified relative to this container.
 
-        name : string
+        name: string
             Name for egg, must be an alphanumeric string.
 
-        version : string
+        version: string
             Version for egg,  must be an alphanumeric string.
 
-        py_dir : string
+        py_dir: string
             The (root) directory for local Python files. It defaults to
             the current directory.
 
-        src_dir : string
+        src_dir: string
             The root of all (relative) `src_files`.
 
-        src_files : list
+        src_files: list
             List of paths to files to be included in the egg.
 
-        child_objs : list
+        child_objs: list
             List of child objects for additional entry points.
 
-        dst_dir : string
+        dst_dir: string
             The directory to write the egg in.
 
-        fmt : int
+        fmt: int
             Passed to :meth:`eggsaver.save`.
 
-        proto : int
+        proto: int
             Passed to :meth:`eggsaver.save`.
 
-        use_setuptools : bool
+        use_setuptools: bool
             Passed to :meth:`eggsaver.save_to_egg`.
 
-        observer : callable
+        observer: callable
             Will be called via an :class:`EggObserver`.
 
         After collecting entry point information, calls
@@ -871,13 +871,13 @@ class Container(HasTraits):
         Python extension classes will have to override. The format
         can be supplied in case something other than cPickle is needed.
 
-        outstream : file or string
+        outstream: file or string
             Stream to save to.
 
-        fmt : int
+        fmt: int
             Format for saved data.
 
-        proto : int
+        proto: int
             Protocol used.
         """
         parent = self.parent
@@ -894,10 +894,10 @@ class Container(HasTraits):
         """Extract files in egg to a subdirectory matching the saved object
         name and then load object graph state.
 
-        filename : string
+        filename: string
             Name of egg file to be loaded.
 
-        observer : callable
+        observer: callable
             Will be called via an :class:`EggObserver`.
 
         Returns the root object.
@@ -914,16 +914,16 @@ class Container(HasTraits):
         """Load object graph state by invoking the given package entry point.
         If specified, the root object is renamed to `instance_name`.
 
-        package : string
+        package: string
             Package name.
 
-        entry_name : string
+        entry_name: string
             Name of entry point.
 
-        instance_name : string
+        instance_name: string
             Name for root object.
 
-        observer : callable
+        observer: callable
             Will be called via an :class:`EggObserver`.
 
         Returns the root object.
@@ -941,20 +941,20 @@ class Container(HasTraits):
         won't need to override this, but extensions will. The format can be
         supplied in case something other than cPickle is needed.
 
-        instream : file or string
+        instream: file or string
             Stream to load from.
 
-        fmt : int
+        fmt: int
             Format of state data.
 
-        package : string
+        package: string
             Name of package to look for `instream`, if `instream` is a string
             that is not an existing file.
 
-        call_post_load : bool
+        call_post_load: bool
             If True, call :meth:`post_load`.
 
-        name : string
+        name: string
             Name for root object
 
         Returns the root object.

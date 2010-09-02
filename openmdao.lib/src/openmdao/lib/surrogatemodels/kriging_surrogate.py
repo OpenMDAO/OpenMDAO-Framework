@@ -38,13 +38,13 @@ class KrigingSurrogate(HasTraits):
             self.train(X,Y)
             
     def get_uncertain_value(self,value): 
-        """returns a NormalDistribution centered around the value, with a 
-        standard deviation of 0"""
+        """Returns a NormalDistribution centered around the value, with a 
+        standard deviation of 0."""
         return NormalDistribution(value,0.)
 
     def predict(self,new_x):
-        """calculates a predicted value of the response, based on the current
-        trained model for the supplied list of inputs
+        """Calculates a predicted value of the response based on the current
+        trained model for the supplied list of inputs.
         """
         if self.m == None: #untrained surrogate
             raise RuntimeError("KrigingSurrogate has not been trained, so no "
@@ -83,7 +83,7 @@ class KrigingSurrogate(HasTraits):
         return NormalDistribution(f, RMSE)
 
     def train(self,X,Y):
-        """train the surrogate model with the given set of inputs and outputs"""
+        """Train the surrogate model with the given set of inputs and outputs."""
         
         #TODO: Check if one training point will work... if not raise error
         self.X = X

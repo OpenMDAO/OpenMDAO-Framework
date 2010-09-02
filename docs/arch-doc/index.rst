@@ -1,9 +1,9 @@
 .. _appendix:
 
 
-================================
-Appendix:  Architecture Document
-================================
+===================================
+Appendix A:  Architecture Document
+===================================
 
 .. toctree::
    :maxdepth: 2

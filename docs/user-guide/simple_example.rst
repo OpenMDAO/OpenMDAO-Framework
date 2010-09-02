@@ -409,7 +409,7 @@ minimization.
 Expressions are also used to define the design variables (decision variables)
 for the optimization problem. While CONMIN operates only on a single objective,
 it allows multiple design variables. The design variables can be declared
-individually using the *add_parameter* function:
+individually using the ``add_parameter`` function:
         
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -418,7 +418,7 @@ individually using the *add_parameter* function:
             self.driver.add_parameter('paraboloid.y', -50, 50)
 
 Here, both x and y from the *Paraboloid component are chosen as the design
-variables. The *add_parameter* interface also allows you to add a range of
+variables. The ``add_parameter`` function also allows you to add a range of
 validity for these variables, so that the unconstrained optimization can be
 performed on a bounded region. For this problem, you are constraining x and y
 to lie on [-50, 50].

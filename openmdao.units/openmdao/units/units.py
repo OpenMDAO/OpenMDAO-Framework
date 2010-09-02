@@ -103,7 +103,7 @@ class PhysicalQuantity(object):
         There are two constructor calling patterns:
     
                 1. PhysicalQuantity(value, unit), where value is any number
-                and unit is a string defining the unit
+                and unit is a string defining the unit.
     
                 2. PhysicalQuantity(value_with_unit), where value_with_unit
                 is a string that contains both the value and the unit,
@@ -217,14 +217,14 @@ class PhysicalQuantity(object):
 
     def convert_to_unit(self, unit):
         """
-        Change the unit and adjust the value such that
+        Change the unit and adjust the value so that
         the combination is equivalent to the original one. The new unit
         must be compatible with the previous unit of the object.
     
         @param unit: a unit
         @type unit: C{str}
-        @raise TypeError: if the unit string is not a know unit or a
-        unit incompatible with the current one
+        @raise TypeError: if the unit string is not a known unit or a
+        unit incompatible with the current one.
         """
         unit = _find_unit(unit)
     
@@ -238,7 +238,7 @@ class PhysicalQuantity(object):
         expresses the quantity in that unit. If several units
         are specified, the return value is a tuple of
         PhysicalObject instances with with one element per unit such
-        that the sum of all quantities in the tuple equals the the
+        that the sum of all quantities in the tuple equals the
         original quantity and all the values except for the last one
         are integers. This is used to convert to irregular unit
         systems like hour/minute/second.
@@ -248,7 +248,7 @@ class PhysicalQuantity(object):
         @returns: one or more physical quantities
         @rtype: L{PhysicalQuantity} or C{tuple} of L{PhysicalQuantity}
         @raises TypeError: if any of the specified units are not compatible
-        with the original unit
+        with the original unit.
         """
         unit = _find_unit(unit)
        
@@ -289,7 +289,7 @@ class PhysicalQuantity(object):
         @type unit: C{str}
         @returns: C{True} if the specified unit is compatible with the
         one of the quantity
-        @rtype: C{bool}
+        @rtype: C{bool}.
         """
         unit = _find_unit(unit)
         return self.unit.is_compatible(unit)
@@ -443,7 +443,7 @@ class PhysicalUnit(object):
         @type other: L{PhysicalUnit}
         @returns: the conversion factor from this unit to another unit
         @rtype: C{float}
-        @raises TypeError: if the units are not compatible
+        @raises TypeError: if the units are not compatible.
         """
         if self.powers != other.powers:
             raise TypeError('Incompatible units')
@@ -462,7 +462,7 @@ class PhysicalUnit(object):
         @type other: L{PhysicalUnit}
         @returns: the conversion factor and offset from this unit to another unit
         @rtype: (C{float}, C{float})
-        @raises TypeError: if the units are not compatible
+        @raises TypeError: if the units are not compatible.
         """
         if self.powers != other.powers:
             raise TypeError('Incompatible units')
@@ -493,7 +493,7 @@ class PhysicalUnit(object):
         @param other: another unit
         @type other: L{PhysicalUnit}
         @returns: C{True} if the units are compatible, i.e. if the powers of the base units are the same
-        @rtype: C{bool}
+        @rtype: C{bool}.
         """
         return self.powers == other.powers
 

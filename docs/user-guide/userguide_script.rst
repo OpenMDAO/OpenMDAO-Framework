@@ -1097,7 +1097,7 @@ the CONMINdriver optimizer.
             # add DrivingSim to workflow
             driver.workflow.add(self.driving_sim)
 
-We add design variables to the driver 'self.driver' using the add_parameter
+We add design variables to the driver *self.driver* using the ``add_parameter``
 function. 
 
 .. testsetup:: Parameter_API
@@ -1112,26 +1112,26 @@ function.
     self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
     self.driver.add_parameter('driving_sim.bore', low=65. , high=100.)
 
-Parameters are assigned via an :term:`Expression`. An Expression is a string
-that contains a function of OpenMDAO variables in the variable tree. These
-Expression variables must point to something that can be seen in the scope of
-the asssembly that contains the driver. In other words, if an assembly
-contains a driver, the parameters cannot be located outside of that assembly.
-Also, each parameter must point to a component input, not a component output.
-During driver execution, the parameters are modified and set, and the
-relevant portion of the model is executed to evaluate the new objective.
+Parameters are assigned via a string that contains a function of OpenMDAO
+variables in the variable tree. These variables must point to something that
+can be seen in the scope of the assembly that contains the driver. In other
+words, if an assembly contains a driver, the parameters added to that driver
+cannot be located outside of that assembly. Also, each parameter must point to
+a component input, not a component output. During driver execution, the
+parameter values are set, and the relevant portion of the model is
+executed to evaluate the new objective.
     
 The *low* and *high* parameters can be used to specify a range for a parameter. This is
 useful for optimization problems where the design variables are constrained. Generally,
 the optimizer treats these as a special kind of constraint, so they should be defined
-using the low and high parameters rather than the add_constraint interface. If a low or
+using the low and high parameters rather than the add_constraint method. If a low or
 high value are not given, then they are pulled from the corresponding low and high
 parameters that are defined in the public variable. If low or high aren't definied
 in either place, then an exception is raised. Some drivers (in particular solvers) do
-not support a low or high value; in such a case, you can just set it to a large number (like
-1e99 or -1e99).
+not support a low or high value; in such a case, you can just set each of them to a large number,
+e.g., low=-1e99 and high=1e99.
 
-Multiple parameters can also be added in a single call to a add_parameters (note the letter
+Multiple parameters can also be added in a single call to ``add_parameters`` (note the letter
 s) by passing a list of tuples.
 
 .. testcode:: Parameter_API
@@ -1142,8 +1142,8 @@ s) by passing a list of tuples.
 
 
 The parameter interface also includes some other functions that are more useful when
-used interactively or when writing some more advanced components. The functions list_parameters,
-remove_parameters, and clear_parameters can be used to respectively print, delete a
+used interactively or when writing some more advanced components. The functions ``list_parameters``,
+``remove_parameters``, and ``clear_parameters`` can be used to respectively print, delete a
 single parameter, and clear all parameters.
 
 .. doctest:: more_parameter_interface
@@ -1172,7 +1172,7 @@ are supported via the interface, however when you use a driver, you should
 verify that it supports the type of constraint. For example, the CONMIN driver
 supports inequality constraints, but not equality constraints.
 
-Constraints are assigned using the add_constraint interface.
+Constraints are assigned using the ``add_constraint`` method.
 
 .. testcode:: Parameter_API
 

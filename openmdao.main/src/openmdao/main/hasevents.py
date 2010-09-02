@@ -9,7 +9,7 @@ class HasEvents(object):
     def add_event(self, name):
         """Adds an event variable to be set by the driver. 
         
-        name : string
+        name: string
             name of the event variable the driver should set during execution
         """
         if name in self._events: 
