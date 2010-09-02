@@ -25,6 +25,24 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.asm = set_as_top(Assembly())
         self.asm.add('comp1', ExecComp(exprs=['c=a+b', 'd=a-b']))
         
+    def test_list_constraints(self):
+        drv = self.asm.add('driver', MyDriver())
+        drv.add_constraint('comp1.a < comp1.b')
+        drv.add_constraint('comp1.c = comp1.d')
+        self.assertEqual(drv.list_constraints(), ['comp1.a<comp1.b','comp1.c=comp1.d'])
+        
+    def test_list_eq_constraints(self):
+        drv = self.asm.add('driver', MyEqDriver())
+        drv.add_constraint('comp1.a = comp1.b')
+        drv.add_constraint('comp1.c = comp1.d')
+        self.assertEqual(drv.list_constraints(), ['comp1.a=comp1.b','comp1.c=comp1.d'])
+        
+    def test_list_ineq_constraints(self):
+        drv = self.asm.add('driver', MyDriver())
+        drv.add_constraint('comp1.a < comp1.b')
+        drv.add_constraint('comp1.c >= comp1.d')
+        self.assertEqual(drv.list_constraints(), ['comp1.a<comp1.b','comp1.c>=comp1.d'])
+        
     def _check_add_constraint(self, drv, eq=False, ineq=False):
         self.asm.add('driver', drv)
 

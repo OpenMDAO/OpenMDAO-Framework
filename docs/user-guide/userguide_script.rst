@@ -1112,14 +1112,13 @@ function.
     self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
     self.driver.add_parameter('driving_sim.bore', low=65. , high=100.)
 
-Parameters are assigned via a string that contains a function of OpenMDAO
-variables in the variable tree. These variables must point to something that
-can be seen in the scope of the assembly that contains the driver. In other
-words, if an assembly contains a driver, the parameters added to that driver
-cannot be located outside of that assembly. Also, each parameter must point to
-a component input, not a component output. During driver execution, the
-parameter values are set, and the relevant portion of the model is
-executed to evaluate the new objective.
+Parameters are assigned via a string that contains the pathname of an OpenMDAO
+variable. This variable must exist in the scope of the assembly that contains
+the driver. In other words, if an assembly contains a driver, the parameters
+added to that driver cannot be located outside of that assembly. Also, each
+parameter must point to a component input, not a component output. During
+driver execution, the parameter values are set, and the relevant portion of
+the model is executed to evaluate the new objective.
     
 The *low* and *high* parameters can be used to specify a range for a parameter. This is
 useful for optimization problems where the design variables are constrained. Generally,
@@ -1141,9 +1140,9 @@ s) by passing a list of tuples.
                                  ('driving_sim.IVC', 0.0, 90.0) ])
 
 
-The parameter interface also includes some other functions that are more useful when
+The *IHasParameters* interface also includes some other functions that are more useful when
 used interactively or when writing some more advanced components. The functions ``list_parameters``,
-``remove_parameters``, and ``clear_parameters`` can be used to respectively print, delete a
+``remove_parameters``, and ``clear_parameters`` can be used to respectively list all parameters, delete a
 single parameter, and clear all parameters.
 
 .. doctest:: more_parameter_interface
@@ -1159,49 +1158,51 @@ single parameter, and clear all parameters.
     >>> top.driver.list_parameters()
     []
 
-There are also some get and set methods for parameters in the list. These are used by drivers to
-manage the parameters in their workflow, and are not generally needed by component
-developers. These will be described in the section :ref:`Adding-new-Drivers`.
+There are also ``get_parameters`` and ``set_parameters`` methods, but these
+methods are typically used by drivers to manage the parameters in their
+workflow, and are not called directly by users. These will be described in the
+section :ref:`Adding-new-Drivers`.
 
 .. index:: constraint
 
-A similar interface is present for interacting with constraints.
-Constraints are equations or inequalities that are constructed from the available
-OpenMDAO variables using Expressions. Both equality and inequality constraints
-are supported via the interface, however when you use a driver, you should
-verify that it supports the type of constraint. For example, the CONMIN driver
-supports inequality constraints, but not equality constraints.
+A similar interface is present for interacting with constraints. Constraints
+are defined using strings containing equations or inequalities that reference
+available OpenMDAO variables. Both equality and
+inequality constraints are supported via the interface, however when you use a
+driver, you should verify that it supports the desired type of constraint. For
+example, the CONMIN driver supports inequality constraints, but not equality
+constraints.
 
-Constraints are assigned using the ``add_constraint`` method.
-
-.. testcode:: Parameter_API
-
-    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore')
-
-In OpenMDAO, constraints are defined to be **satisfied when they return a
-negative value or zero**, and **violated when they return a positive value**. The
-syntax for these expressions is very flexible and can include the inequality sign.
-The following constraint declarations are all equivalent:
+Constraints are added to a driver using the ``add_constraint`` method.
 
 .. testcode:: Parameter_API
 
-    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore')
+    self.driver.add_constraint('driving_sim.stroke < driving_sim.bore')
+
+Constraints are defined using boolean expressions, so they are considered to
+be satisfied when the expressions evaluate to *True* and violated when they
+evaluate to *False*. The following constraint declarations are all equivalent:
+
+.. testcode:: Parameter_API
+
     self.driver.add_constraint('driving_sim.stroke - driving_sim.bore < 0')
     self.driver.add_constraint('driving_sim.stroke < driving_sim.bore')
     self.driver.add_constraint('driving_sim.bore > driving_sim.stroke')
     
-If no inequality sign is given, the driver assumes that the Expression describes an
-equality constraint with the default behavior (violated when positive.) When an
-inequality sign is present, the constraint is satisfied when the expression is
-true, and violated when it is false. Note that in both cases, an optimizer or
-solver can query for status (boolean - satisfied or violated) and its value. The
-value is needed by gradient optimizers that apply the constraint via a penalty
-function.
+Using the ``eval_eq_constraints`` and ``eval_ineq_constraints`` methods,
+an optimizer or solver can query for the status and values of its constraints. Both
+methods return a list of tuples of the form ``(lhs, rhs, relation, result)``, where
+*lhs* is the value of the left hand side of the expression, *rhs* is the value of
+the right hand side of the expression, *result* is the boolean result of evaluating
+the expression, and *relation* is a string indicating the type of
+relation used in the expression, e.g., *>*, *<*, *>=*, *<=*, or *=*. The
+values of the left and right hand sides are needed by gradient optimizers that 
+apply the constraint via a penalty function.
 
-The interface also supports equality constraints. At present, none of the
-optimizers in OpenMDAO support equality constraints, but they are used by the
-BroydenSolver to assign the dependent equation. The syntax includes an equal
-sign in the expression.
+The *IHasConstraints* interface also supports equality constraints. At
+present, none of the optimizers in OpenMDAO support equality constraints, but
+they are used by the BroydenSolver to assign the dependent equation. The
+syntax includes an equal sign in the expression.
 
 .. testsetup:: Parameter_API2
 
@@ -1217,9 +1218,26 @@ sign in the expression.
 
     self.driver.add_constraint('dis1.y1 = 0.0')
 
-.. todo::
+Constraints can be removed using ``remove_constraint``.  The same string used
+to add the constraint should be used to remove it. Whitespace within the expression
+is ignored.
 
-    Talk about other functions for manipulating constraints.
+.. testcode:: Parameter_API2
+
+    self.driver.remove_constraint('dis1.y1 =0.0')
+
+A list of constraint expression strings can be obtained using ``list_constraints``.
+
+.. testcode:: Parameter_API2
+
+    lst = self.driver.list_constraints()
+    
+Calling ``clear_constraints`` will remove all constraints from a driver.
+
+.. testcode:: Parameter_API2
+
+    self.driver.clear_constraints()
+    
 
 .. index:: objective
 
