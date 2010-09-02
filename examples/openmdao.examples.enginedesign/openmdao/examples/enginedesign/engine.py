@@ -356,7 +356,7 @@ class Engine(Component):
 
 # end engine.py        
 
-if __name__ == "__main__": # pragma no cover
+if __name__ == "__main__": # pragma: no cover
     
     MyEngine = Engine("Testing")
     

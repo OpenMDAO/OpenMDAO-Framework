@@ -58,7 +58,7 @@ class SellarCO(Assembly):
         self.driver.add_constraint(con1)
         self.driver.add_constraint(con2)
         
-        self.driver.printvars = ['dis1.y1','dis2.y2']
+        self.driver.printvars = ['dis1.y1', 'dis2.y2']
         self.driver.iprint = 0
         self.driver.itmax = 100
         self.driver.fdch = .003

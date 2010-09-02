@@ -179,9 +179,9 @@ class DrivingSim(Assembly):
                 if self.vehicle.engine.RPM < self.vehicle.transmission.RPM:
                     
                     if self.vehicle.current_gear > 4:
-                        self.raise_exception("Transmission gearing cannot \
-                        achieve acceleration and speed required by EPA \
-                        test.", RuntimeError)
+                        self.raise_exception("Transmission gearing cannot " \
+                        "achieve acceleration and speed required by EPA " \
+                        "test.", RuntimeError)
                     
                     self.vehicle.current_gear += 1
                     
@@ -263,8 +263,8 @@ class DrivingSim(Assembly):
                 # If engine cannot accelerate quickly enough to match profile, 
                 # then raise exception    
                 if command_accel > accel_max:
-                    self.raise_exception("Vehicle is unable to achieve \
-                    acceleration required to match EPA driving profile.", \
+                    self.raise_exception("Vehicle is unable to achieve " \
+                    "acceleration required to match EPA driving profile.", 
                                                     RuntimeError)
                         
                 #------------------------------------------------------------
