@@ -25,7 +25,7 @@ class EggObserver(object):
         Observe analysis of file.
         If `observer` returns False, raises :exc:`RuntimeError`.
 
-        path : string
+        path: string
             Name of file being analyzed.
         """
         self.logger.debug("    analyzing '%s'", path)
@@ -44,13 +44,13 @@ class EggObserver(object):
         Observe add of file.
         If `observer` returns False, raises :exc:`RuntimeError`.
 
-        path : string
+        path: string
             Name of file being added.
 
-        file_fraction : float
+        file_fraction: float
             Fraction of total files processed.
 
-        byte_fraction : float
+        byte_fraction: float
             Fraction of total bytes processed.
         """
         self.logger.debug("    adding '%s'", path)
@@ -70,13 +70,13 @@ class EggObserver(object):
         Observe copy of file.
         If `observer` returns False, raises :exc:`RuntimeError`.
 
-        path : string
+        path: string
             Name of file being copied.
 
-        file_fraction : float
+        file_fraction: float
             Fraction of total files processed.
 
-        byte_fraction : float
+        byte_fraction: float
             Fraction of total bytes processed.
         """
         self.logger.debug("    copying '%s'", path)
@@ -96,13 +96,13 @@ class EggObserver(object):
         Observe extraction of file.
         If `observer` returns False, raises :exc:`RuntimeError`.
 
-        path : string
+        path: string
             Name of file being extracted.
 
-        file_fraction : float
+        file_fraction: float
             Fraction of total files processed.
 
-        byte_fraction : float
+        byte_fraction: float
             Fraction of total bytes processed.
         """
         self.logger.debug("    extracting '%s'", path)
@@ -121,7 +121,7 @@ class EggObserver(object):
         """
         Observe operation complete.
 
-        path : string
+        path: string
             Name of file saved/loaded.
         """
         if self.observer is not None:
@@ -134,7 +134,7 @@ class EggObserver(object):
         """
         Observe exception.
 
-        msg : string
+        msg: string
             Exception message.
         """
         self.logger.error(msg)

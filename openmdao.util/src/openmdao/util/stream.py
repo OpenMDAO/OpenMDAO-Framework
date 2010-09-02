@@ -14,29 +14,29 @@ class Stream(object):
     Wrapper of standard Python :class:`file` object.
     Supports reading/writing int and float arrays in various formats.
 
-    file_obj : file
+    file_obj: file
         File object opened for reading or writing.
 
-    binary : bool
+    binary: bool
         If True, the data is in binary, not text, form.
 
-    big_endian : bool
+    big_endian: bool
         If True, the data bytes are in 'big-endian' order.
         Only meaningful if `binary`.
 
-    single_precision : bool
+    single_precision: bool
         If True, floating-point data is 32 bits, not 64.
         Only meaningful if `binary`.
 
-    integer_8 : bool
+    integer_8: bool
         If True, integer data is 64 bits, not 32.
         Only meaningful if `binary`.
 
-    unformatted : bool
+    unformatted: bool
         If True, the data is surrounded by Fortran record length markers.
         Only meaningful if `binary`.
 
-    recordmark_8 : bool
+    recordmark_8: bool
         If True, the record length markers are 64 bits, not 32.
         Only meaningful if `unformatted`.
     """
@@ -63,7 +63,7 @@ class Stream(object):
         """
         Returns record length for `count` ints.
 
-        count : int
+        count: int
             Number of ints in record.
         """
         if self.integer_8:
@@ -75,7 +75,7 @@ class Stream(object):
         """
         Returns record length for `count` floats.
 
-        count : int
+        count: int
             Number of floats in record.
         """
         if self.single_precision:
@@ -91,7 +91,7 @@ class Stream(object):
         """
         Returns next integer.
 
-        full_record : bool
+        full_record: bool
             If True, then read surrounding recordmarks.
             Only meaningful if `unformatted`.
         """
@@ -113,7 +113,7 @@ class Stream(object):
         """
         Returns integers as a :mod:`numpy` array of `shape`.
 
-        full_record : bool
+        full_record: bool
             If True, then read surrounding recordmarks.
             Only meaningful if `unformatted`.
         """
@@ -149,7 +149,7 @@ class Stream(object):
         """
         Returns next float.
 
-        full_record : bool
+        full_record: bool
             If True, then read surrounding recordmarks.
             Only meaningful if `unformatted`.
         """
@@ -171,7 +171,7 @@ class Stream(object):
         """
         Returns floats as a :mod:`numpy` array of `shape`.
 
-        full_record : bool
+        full_record: bool
             If True, then read surrounding recordmarks.
             Only meaningful if `unformatted`.
         """
@@ -243,23 +243,23 @@ class Stream(object):
         """
         Writes an integer array.
 
-        data : :class:`numpy.ndarray`
+        data: :class:`numpy.ndarray`
             Integer data array.
 
-        order : string
+        order: string
             If 'C', the data is written in row-major order.
             If 'Fortran', the data is written in column-major order.
 
-        sep : string
+        sep: string
             Separator between items.
 
-        fmt : string
+        fmt: string
             Format specifier for each item.
 
-        linecount : int
+        linecount: int
             If > zero, then at most `linecount` values are written per line.
 
-        full_record : bool
+        full_record: bool
             If True, then write surrounding recordmarks.
             Only meaningful if `unformatted`.
         """
@@ -291,7 +291,7 @@ class Stream(object):
         """
         Writes a float.
 
-        full_record : bool
+        full_record: bool
             If True, then write surrounding recordmarks.
             Only meaningful if `unformatted`.
         """
@@ -317,23 +317,23 @@ class Stream(object):
         """
         Writes a float array.
 
-        data : :class:`numpy.ndarray`
+        data: :class:`numpy.ndarray`
             Float data array.
 
-        order : string
+        order: string
             If 'C', the data is written in row-major order.
             If 'Fortran', the data is written in column-major order.
 
-        sep : string
+        sep: string
             Separator between items.
 
-        fmt : string
+        fmt: string
             Format specifier for each item.
 
-        linecount : int
+        linecount: int
             If > zero, then at most `linecount` values are written per line.
 
-        full_record : bool
+        full_record: bool
             If True, then write surrounding recordmarks.
             Only meaningful if `unformatted`.
         """
@@ -365,20 +365,20 @@ class Stream(object):
         """
         Writes array as text.
 
-        data : :class:`numpy.ndarray`
+        data: :class:`numpy.ndarray`
             Data array.
 
-        order : string
+        order: string
             If 'C', the data is written in row-major order.
             If 'Fortran', the data is written in column-major order.
 
-        sep : string
+        sep: string
             Separator between items.
 
-        fmt : string
+        fmt: string
             Format specifier for each item.
 
-        linecount : int
+        linecount: int
             If > zero, then at most `linecount` values are written per line.
         """
         shape = data.shape
@@ -422,7 +422,7 @@ class Stream(object):
         """
         Writes recordmark.
 
-        length : int
+        length: int
             Length of record (bytes).
         """
         fmt = '>' if self.big_endian else '<'

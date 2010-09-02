@@ -26,8 +26,8 @@ Contents:
    arch-doc/index
    std_lib/index
 
-Appendix, Glossary, and Indexes
-================================
+Appendixes, Glossary, and Indexes
+==================================
 
 * :ref:`appendix`
 * :ref:`stdlib`

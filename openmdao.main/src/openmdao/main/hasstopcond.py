@@ -40,7 +40,7 @@ class HasStopConditions(object):
         self._stop_conditions = ordereddict.OrderedDict()
         
     def get_stop_conditions(self):
-        """Returns an ordered dict of stop condition strings"""
+        """Returns an ordered dict of stop condition strings."""
         return self._stop_conditions.keys()
 
     def eval_stop_conditions(self): 

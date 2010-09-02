@@ -55,10 +55,10 @@ class FlowSolution(object):
         Add a :class:`numpy.ndarray` of scalar data and bind to `name`.
         Returns the added array.
 
-        name : string
+        name: string
             Name for the added array.
 
-        array : ndarray
+        array: ndarray
             Scalar data.
         """
         if hasattr(self, name):
@@ -72,10 +72,10 @@ class FlowSolution(object):
         Add a :class:`Vector` and bind to `name`.
         Returns the added vector.
 
-        name : string
+        name: string
             Name for the added array.
 
-        vector : Vector
+        vector: Vector
             Vector data.
         """
         if hasattr(self, name):
@@ -88,14 +88,14 @@ class FlowSolution(object):
         """
         Test if self and `other` are equivalent.
 
-        other : FlowSolution
+        other: FlowSolution
             The flowfield to check against.
 
-        logger : Logger or None
+        logger: Logger or None
             Used to log debug messages that will indicate what if anything is
             not equivalent.
 
-        tolerance : float
+        tolerance: float
             The maximum relative difference in array values to be considered
             equivalent.
         """
@@ -161,10 +161,10 @@ class FlowSolution(object):
         """
         Convert to cartesian coordinate system.
 
-        grid : GridCoordinates
+        grid: GridCoordinates
             Must be in cylindrical form.
 
-        axis : string
+        axis: string
             Specifies which is the cylinder axis ('z' or 'x').
         """
         for vector in self._vectors:
@@ -174,10 +174,10 @@ class FlowSolution(object):
         """
         Convert to cylindrical coordinate system.
 
-        grid : GridCoordinates
+        grid: GridCoordinates
             Must be in cylindrical form.
 
-        axis : string
+        axis: string
             Specifies which is the cylinder axis ('z' or 'x').
         """
         for vector in self._vectors:
@@ -187,7 +187,7 @@ class FlowSolution(object):
         """
         Rotate about the X axis.
 
-        deg : float (degrees)
+        deg: float (degrees)
             Amount of rotation.
         """
         for vector in self._vectors:
@@ -197,7 +197,7 @@ class FlowSolution(object):
         """
         Rotate about the Y axis.
 
-        deg : float (degrees)
+        deg: float (degrees)
             Amount of rotation.
         """
         for vector in self._vectors:
@@ -207,7 +207,7 @@ class FlowSolution(object):
         """
         Rotate about the Z.
 
-        deg : float (degrees)
+        deg: float (degrees)
             Amount of rotation.
         """
         for vector in self._vectors:

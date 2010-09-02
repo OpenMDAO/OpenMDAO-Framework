@@ -171,7 +171,7 @@ class TestCase(unittest.TestCase):
         try:
             self.model.run()
         except ValueError as err:
-            self.assertEqual(str(err), "driver: number of DOE values (4) != number of parameters (3)")
+            self.assertEqual(str(err), "driver: Number of DOE values (4) != number of parameters (3).")
         else:
             self.fail("expected ValueError")
 

@@ -13,7 +13,9 @@ from openmdao.main.uncertain_distributions import UncertainDistribution, \
 from openmdao.main.interfaces import obj_has_interface
 
 class MetaModel(Component):
-    """ A component that provides general Meta Modeling capability"""
+    """ A component that provides general Meta Modeling capability.
+    
+    See Appendix B for additional information on the :ref:`MetaModel` component."""
     
     # pylint: disable-msg=E1101
     model = Instance(Component, allow_none=True,

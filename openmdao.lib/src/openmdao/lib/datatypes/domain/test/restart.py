@@ -5,7 +5,7 @@ Modified ADPAC component wrapper restart.py for surface_probe() testing.
 from openmdao.units.units import PhysicalQuantity, add_unit
 from openmdao.util.stream import Stream
 
-from openmdao.lib.traits.domain import Vector, read_plot3d_grid
+from openmdao.lib.datatypes.domain import Vector, read_plot3d_grid
 
 
 def read(casename, logger):

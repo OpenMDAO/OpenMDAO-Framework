@@ -89,7 +89,7 @@ class FileRef(FileMetadata):
         """
         Return a copy of ourselves, owned by `owner`.
 
-        owner : Component
+        owner: Component
             The component used to determine the root for relative paths
             and checking the legality of absolute paths.
         """

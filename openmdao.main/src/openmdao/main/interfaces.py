@@ -210,14 +210,14 @@ class IHasParameters(Interface):
     def add_parameter(self,param_name,low=None,high=None):
         """Adds a parameter to the driver.
         
-        param_name : str 
-            name of the parameter to add to the driver
-        low : number, optional
-            minimum allowed value the optimzier can use for this parameter. If not specified, 
+        param_name: str 
+            Name of the parameter to add to the driver.
+        low: number, optional
+            Minimum allowed value the optimzier can use for this parameter. If not specified, 
             then the 'low' value from the public variable is used. 
-        high : number, optional
-            maximum allowed value the optimizer can use for this parameter. If not specified, 
-            then the 'high' value from the public variable is used.
+        high: number, optional
+            Maximum allowed value the optimizer can use for this parameter. If not specified, 
+            then the "high" value from the public variable is used.
         """
         
     def add_parameters(self, param_iter):
@@ -254,7 +254,7 @@ class IHasEvents(Interface):
     def add_event(self, name):
         """Adds an event variable to be set when set_events is called.
         
-        name : string
+        name: string
             name of the event variable that should be set during execution
         """
             

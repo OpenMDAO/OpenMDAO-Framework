@@ -25,9 +25,9 @@ from numpy.linalg import norm
 
 from enthought.traits.api import HasTraits, implements
 
-from openmdao.lib.traits.int import Int
-from openmdao.lib.traits.enum import Enum
-from openmdao.lib.traits.float import Float
+from openmdao.lib.datatypes.int import Int
+from openmdao.lib.datatypes.enum import Enum
+from openmdao.lib.datatypes.float import Float
 from openmdao.util.mdo import rand_latin_hypercube
 from openmdao.main.interfaces import IDOEgenerator
 
@@ -41,7 +41,7 @@ class LatinHypercube(object):
     
     @property
     def shape(self):
-        """size of the LatinHypercube doe (rows,cols)"""
+        """Size of the LatinHypercube doe (rows,cols)."""
         return self.doe.shape
     
     def mmphi(self):
@@ -117,14 +117,14 @@ class OptLatinHypercube(HasTraits):
     """    
     implements(IDOEgenerator)
     
-    num_sample_points = Int(20, desc="Number of sample points in the DOE sample set")
+    num_sample_points = Int(20, desc="Number of sample points in the DOE sample set.")
     
-    num_parameters = Int(2, desc="Number of parameters, or dimensions, for the DOE")
+    num_parameters = Int(2, desc="Number of parameters, or dimensions, for the DOE.")
     
     population = Int(20,
-        desc="Size of the population used in the evolutionary optimization")
+        desc="Size of the population used in the evolutionary optimization.")
     generations = Int(2,
-        desc="Number of generations the optimization will evolve over")
+        desc="Number of generations the optimization will evolve over.")
     norm_method = Enum(["1-norm","2-norm"],
                     desc="Vector norm calculation method. '1-norm' is faster, but less accurate")
     
@@ -142,7 +142,7 @@ class OptLatinHypercube(HasTraits):
             self.generations = generations
 
     def __iter__(self):
-        """Return an iterator over our sets of input values"""
+        """Return an iterator over our sets of input values."""
         return self._get_input_values()
     
     def _get_input_values(self):

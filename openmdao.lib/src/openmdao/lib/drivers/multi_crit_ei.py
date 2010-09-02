@@ -26,20 +26,20 @@ class MuliCritEI(Driver):
     implements(IHasParameters)
 
     # pylint: disable-msg=E1101
-    objectives = Str("", iotype="in", desc="names of the output from cases to"
-                                           " be used as the objectives")
+    objectives = Str("", iotype="in", desc="Names of the output from cases to"
+                                           " be used as the objectives.")
     best_cases = Instance(ICaseIterator, iotype="in", desc="CaseIterator which "
-                          "contains pareto optimal cases, representing the "
-                          "target objective values")
-    infill = Str(["EI","PI"], iotype="in", desc="infill criterion about which "
-                                                "to maximize")
+                          "Contains pareto optimal cases, representing the "
+                          "target objective values.")
+    infill = Str(["EI","PI"], iotype="in", desc="Infill criterion about which "
+                                                "to maximize.")
     next_case = Instance(ICaseIterator, iotype="out", desc="CaseIterator which "
                          "contains the case that maximizes specified infill "
-                         "criterion")
+                         "criterion.")
     
-    objective = Expression(iotype="in", desc="string representing the "
+    objective = Expression(iotype="in", desc="String representing the "
                            "objectives about which the infill criterion is "
-                           "maximized. Must be a NormalDistrubtion type")
+                           "maximized. Must be a NormalDistrubtion type.")
     
     def __init__(self,*args,**kwargs):
         super(MuliCritEI,self).__init__(self,*args,**kwargs)
@@ -65,7 +65,7 @@ class MuliCritEI(Driver):
     def _mcpi(self,mu,sigma):
         """Calculates the multi-criteria probability of improvement
         for a new point with two responses. Takes as input a 
-        pareto frontier, mean and sigma of new point"""
+        pareto frontier, mean, and sigma of new point."""
         
         #pull out values of objectives from best_cases        
         y_star = self.y_star
@@ -131,7 +131,7 @@ class MuliCritEI(Driver):
         return mcei
     
     def _calc_infill(self, X): 
-        """ calculates either PI or EI of the model at a given point, X """
+        """ Calculates either PI or EI of the model at a given point, X. """
         #set inputs to model
         self._parameters.set_parameters(X)
         #run the model    
@@ -152,7 +152,7 @@ class MuliCritEI(Driver):
         
         
     def execute(self): 
-        """Optimize the infill criterion and return the next point to run"""
+        """Optimize the infill criterion and return the next point to run."""
         
         #TODO: This is not a good way to do this
         #grab the target objective value out of the input best_cases

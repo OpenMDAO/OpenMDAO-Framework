@@ -13,8 +13,8 @@ from enthought.traits.api import Bool, Dict, Str
 from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 from openmdao.main.resource import ResourceAllocationManager as RAM
-from openmdao.lib.traits.float import Float
-from openmdao.lib.traits.int import Int
+from openmdao.lib.datatypes.float import Float
+from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
 
@@ -224,11 +224,11 @@ class ExternalCode(Component):
         """
         Copy inputs from `inputs_dir` that match `patterns`.
 
-        inputs_dir : string
+        inputs_dir: string
             Directory to copy files from. Relative paths are evaluated from
             the component's execution directory.
 
-        patterns : list or string
+        patterns: list or string
             One or more :mod:`glob` patterns to match against.
 
         This can be useful for resetting problem state.
@@ -244,11 +244,11 @@ class ExternalCode(Component):
         """
         Copy files from `results_dir` that match `patterns`.
 
-        results_dir : string
+        results_dir: string
             Directory to copy files from. Relative paths are evaluated from
             the component's execution directory.
 
-        patterns : list or string
+        patterns: list or string
             One or more :mod:`glob` patterns to match against.
 
         This can be useful for workflow debugging when the external
@@ -266,10 +266,10 @@ class ExternalCode(Component):
         Copy files from `directory` that match `patterns`
         to the current directory and ensure they are writable.
 
-        directory : string
+        directory: string
             Directory to copy files from.
 
-        patterns : list or string
+        patterns: list or string
             One or more :mod:`glob` patterns to match against.
         """
         if isinstance(patterns, basestring):

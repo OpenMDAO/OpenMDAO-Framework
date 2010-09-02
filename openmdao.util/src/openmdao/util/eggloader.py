@@ -33,19 +33,19 @@ def load_from_eggfile(filename, entry_group, entry_name, logger=None,
     Then loads object graph state by invoking the given entry point.
     Returns the root object.
 
-    filename : string
+    filename: string
         Name of egg file.
 
-    entry_group : string
+    entry_group: string
         Name of group.
 
-    entry_name : string
+    entry_name: string
         Name of entry point in group.
 
-    logger : Logger
+    logger: Logger
         Used for recording progress, etc.
 
-    observer : callable
+    observer: callable
         Called via an :class:`EggObserver`.
     """
     logger = logger or NullLogger()
@@ -72,22 +72,22 @@ def load_from_eggpkg(package, entry_group, entry_name, instance_name=None,
     Load object graph state by invoking the given package entry point.
     Returns the root object.
 
-    package : string
+    package: string
         Name of package to load from.
 
-    entry_group : string
+    entry_group: string
         Name of group.
 
-    entry_name : string
+    entry_name: string
         Name of entry point in group.
 
-    instance_name : string
+    instance_name: string
         Name for instance loaded.
 
-    logger : Logger
+    logger: Logger
         Used for recording progress, etc.
 
-    observer : callable
+    observer: callable
         Called via an :class:`EggObserver`.
     """
     logger = logger or NullLogger()
@@ -244,13 +244,13 @@ def check_requirements(required, logger=None, indent_level=0):
     Display requirements (if logger debug level enabled) and note conflicts.
     Returns a list of unavailable requirements.
 
-    required : list
+    required: list
         List of package requirements.
 
-    logger : Logger
+    logger: Logger
         Used for recording progress, etc.
 
-    indent_level : int
+    indent_level: int
         Used to improve readability of log messages.
     """
     def _recursive_check(required, logger, level, visited, working_set,
@@ -293,16 +293,16 @@ def load(instream, fmt=SAVE_CPICKLE, package=None, logger=None):
     absolute path, then it is searched for using :mod:`pkg_resources`.
     Returns the root object.
 
-    instream : file or string
+    instream: file or string
         Stream or filename to load from.
 
-    fmt : int
+    fmt: int
         Format of state data.
 
-    package : string
+    package: string
         Name of package to use.
 
-    logger : Logger
+    logger: Logger
         Used for recording progress, etc.
     """
     logger = logger or NullLogger()

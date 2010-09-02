@@ -34,7 +34,7 @@ class SimulationRoot (object):
         """Change to directory `path` and set the singleton's root.
         Normally not called but useful in special situations.
 
-        path : string
+        path: string
             Path to move to.
         """
         os.chdir(path)
@@ -51,7 +51,7 @@ class SimulationRoot (object):
     def legal_path (path):
         """Return True if `path` is legal (descendant of our root).
 
-        path : string
+        path: string
             Path to check.
         """
         if SimulationRoot.__root is None:
@@ -535,38 +535,38 @@ class Component (Container):
         just those components from the installed egg. Child component names
         should be specified relative to this component.
 
-        name : string
+        name: string
             Name for egg, must be an alphanumeric string.
 
-        version : string
+        version: string
             Version for egg, must be an alphanumeric string.
 
-        py_dir : string
+        py_dir: string
             The (root) directory for local Python files. It defaults to
             the current directory.
 
-       require_relpaths : bool
+       require_relpaths: bool
             If True, any path (directory attribute, external file, or file
             trait) which cannot be made relative to this component's directory
             will raise ValueError. Otherwise such paths generate a warning and
             the file is skipped.
 
-        child_objs : list
+        child_objs: list
             List of child objects for additional entry points.
 
-        dst_dir : string
+        dst_dir: string
             The directory to write the egg in.
 
-        fmt : int
+        fmt: int
             Passed to :meth:`eggsaver.save`.
 
-        proto : int
+        proto: int
             Passed to :meth:`eggsaver.save`.
 
-        use_setuptools : bool
+        use_setuptools: bool
             Passed to :meth:`eggsaver.save_to_egg`.
 
-        observer : callable
+        observer: callable
             Will be called via an :class:`EggObserver`.
 
         After collecting files and possibly modifying their paths, this
@@ -753,27 +753,27 @@ class Component (Container):
         component's directory attribute set accordingly.  Existing files
         are not overwritten. Returns the root object.
 
-        instream : file or string
+        instream: file or string
             Stream to load from.
 
-        fmt : int
+        fmt: int
             Format of state data.
 
-        package : string
-            Name of package to look for `instream`, if `instream` is a string
+        package: string
+            Name of package to look for `instream` if `instream` is a string
             that is not an existing file.
 
-        call_post_load : bool
+        call_post_load: bool
             If True, call :meth:`post_load`.
 
-        top_obj : bool
+        top_obj: bool
             Set True if loading the default entry, False if loading a
             child entry point object.
 
-        name : string
+        name: string
             Name for the root object
 
-        observer : callable
+        observer: callable
             Will be called via an :class:`EggObserver`.
         """
         observer = EggObserver(observer, logging.getLogger())

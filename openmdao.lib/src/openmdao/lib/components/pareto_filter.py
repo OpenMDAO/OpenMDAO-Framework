@@ -1,10 +1,10 @@
-""" Pareto Filter - finds non-dominated cases """
+""" Pareto Filter -- finds non-dominated cases """
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Instance
 
 from openmdao.main.component import Component
-from openmdao.lib.traits.array import Array
+from openmdao.lib.datatypes.array import Array
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
@@ -12,27 +12,27 @@ from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 class ParetoFilter(Component): 
     """Takes a set of cases and filters out the subset of cases which are
     pareto optimal. Assumes that smaller values for model responses are
-    better, so all problems must be posed as minimization problems
+    better, so all problems must be posed as minimization problems.
     """
     
     # pylint: disable-msg=E1101
     criteria = Array([], iotype="in", dtype=str,
-                     desc="list of outputs from the case to consider for "
-                          "filtering. Note, only case outputs are allowed as "
-                          "criteria")
+                     desc="List of outputs from the case to consider for "
+                          "filtering. Note that only case outputs are allowed as "
+                          "criteria.")
     
     case_set = Instance(ICaseIterator, iotype="in",
                         desc="CaseIterator with the cases to be filtered to "
-                             "find the pareto optimal subset")
+                             "Find the pareto optimal subset.")
     
     pareto_set = Instance(ICaseIterator, iotype="out",
                           desc="resulting collection of pareto optimal cases")
     dominated_set = Instance(ICaseIterator, iotype="out",
-                             desc="resulting collection of dominated cases")
+                             desc="Resulting collection of dominated cases.")
     
     
     def _is_dominated(self, y1, y2):
-        """tests to see if the point y1 is dominated by the point y2. 
+        """Tests to see if the point y1 is dominated by the point y2. 
         True if y1 is dominated by y2, False otherwise.
         """
         if y1 == y2:
@@ -43,7 +43,7 @@ class ParetoFilter(Component):
     
     def execute(self):
         """Finds and removes pareto optimal points in the given case set.
-        Returns list of pareto optimal points. Smaller is better for all
+        Returns a list of pareto optimal points. Smaller is better for all
         criteria.
         """
         y_list = []

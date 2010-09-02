@@ -1,6 +1,6 @@
 from math import atan2, cos, hypot, sin
 
-from openmdao.lib.traits.domain.vector import Vector
+from openmdao.lib.datatypes.domain.vector import Vector
 
 
 class GridCoordinates(Vector):
@@ -28,14 +28,14 @@ class GridCoordinates(Vector):
         """
         Test if self and `other` are equivalent.
 
-        other : GridCoordinates
+        other: GridCoordinates
             The grid to check against.
 
-        logger : Logger or None
+        logger: Logger or None
             Used to log debug messages that will indicate what if anything is
             not equivalent.
 
-        tolerance : float
+        tolerance: float
             The maximum relative difference in array values to be considered
             equivalent.
         """
@@ -57,7 +57,7 @@ class GridCoordinates(Vector):
         """
         Convert to cartesian coordinate system.
 
-        axis : string
+        axis: string
             Specifies which is the cylinder axis ('z' or 'x').
         """
         r_flat = self.r.flat
@@ -97,7 +97,7 @@ class GridCoordinates(Vector):
         """
         Convert to cylindrical coordinate system.
 
-        axis : string
+        axis: string
             Specifies which is the cylinder axis ('z' or 'x').
         """
         self.r = self.x.copy()
@@ -135,7 +135,7 @@ class GridCoordinates(Vector):
         """
         Translate coordinates.
 
-        delta_x, delta_y, delta_z : float
+        delta_x, delta_y, delta_z: float
             Amount of translation along the corresponding axis.
         """
         if delta_x:

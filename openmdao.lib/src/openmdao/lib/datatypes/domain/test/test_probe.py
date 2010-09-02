@@ -9,13 +9,13 @@ import unittest
 
 from math import pi
 
-from openmdao.lib.traits.domain import surface_probe
-from openmdao.lib.traits.domain.test.cube import create_cube
-from openmdao.lib.traits.domain.test.wedge import create_wedge_3d
+from openmdao.lib.datatypes.domain import surface_probe
+from openmdao.lib.datatypes.domain.test.cube import create_cube
+from openmdao.lib.datatypes.domain.test.wedge import create_wedge_3d
 
 from openmdao.util.testutil import assert_raises, assert_rel_error
 
-from openmdao.lib.traits.domain.test import restart
+from openmdao.lib.datatypes.domain.test import restart
 
 ORIG_DIR = os.getcwd()
 
@@ -24,7 +24,7 @@ class TestCase(unittest.TestCase):
     """ Test :class:`Domain` surface_probe() operations. """
 
     directory = os.path.realpath(
-        pkg_resources.resource_filename('openmdao.lib.traits.domain', 'test'))
+        pkg_resources.resource_filename('openmdao.lib.datatypes.domain', 'test'))
 
     def setUp(self):
         """ Called before each test in this class. """
@@ -289,7 +289,7 @@ class TestCase(unittest.TestCase):
 if __name__ == '__main__':
     import nose
     import sys
-    sys.argv.append('--cover-package=openmdao.lib.traits.domain')
+    sys.argv.append('--cover-package=openmdao.lib.datatypes.domain')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 

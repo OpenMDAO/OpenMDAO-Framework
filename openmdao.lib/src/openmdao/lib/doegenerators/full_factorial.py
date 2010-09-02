@@ -8,7 +8,7 @@ from numpy import linspace
 from enthought.traits.api import implements, HasTraits
 
 from openmdao.main.interfaces import IDOEgenerator
-from openmdao.lib.traits.int import Int
+from openmdao.lib.datatypes.int import Int
 
 
 class FullFactorial(HasTraits):

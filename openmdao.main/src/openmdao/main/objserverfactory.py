@@ -30,19 +30,19 @@ class ObjServerFactory(Factory):
         """
         Create an :class:`ObjServer` and return a proxy for it.
 
-        typname : string
+        typname: string
             Type of object to create. Currently not used.
 
-        version : string or None
+        version: string or None
             Version of `typname` to create. Currently not used.
 
-        server :
+        server:
             Currently not used.
 
-        res_desc : dict or None
+        res_desc: dict or None
             Required resources. Currently not used.
 
-        ctor_args :
+        ctor_args:
             Other constructor arguments.  If `name` is specified, that
             is used as the name of the ObjServer.
         """
@@ -116,19 +116,19 @@ class ObjServer(object):
         """
         Run `command` in subprocess.
 
-        command : string
+        command: string
             Command line to be executed.
 
-        stdin, stdout, stderr : string
+        stdin, stdout, stderr: string
             Filenames for the corresponding stream.
 
-        env_vars : dict
+        env_vars: dict
             Environment variables for the command.
 
-        poll_delay : float (seconds)
+        poll_delay: float (seconds)
             Delay between polling subprocess for completion.
 
-        timeout : float (seconds)
+        timeout: float (seconds)
             Maximum time to wait for command completion. A value of zero
             implies no timeout.
         """
@@ -152,7 +152,7 @@ class ObjServer(object):
         """
         Load model  and return top-level object.
 
-        egg_filename : string
+        egg_filename: string
             Filename of egg to be loaded.
         """
         logging.debug('%s load_model %s', self.name, egg_filename)
@@ -166,10 +166,10 @@ class ObjServer(object):
         """
         Create ZipFile of files matching `patterns`.
 
-        patterns : list
+        patterns: list
             List of :mod:`glob`-style patterns.
 
-        filename : string
+        filename: string
             Name of ZipFile to create.
         """
         logging.debug("%s pack_zipfile '%s'", self.name, filename)
@@ -180,7 +180,7 @@ class ObjServer(object):
         """
         Unpack ZipFile `filename`.
 
-        filename : string
+        filename: string
             Name of ZipFile to unpack.
         """
         logging.debug("%s unpack_zipfile '%s'", self.name, filename)
@@ -191,10 +191,10 @@ class ObjServer(object):
         """
         Returns ``os.chmod(path, mode)`` if `path` is legal.
 
-        path : string
+        path: string
             Path to file to modify.
 
-        mode : int
+        mode: int
             New mode bits (permissions).
         """
         logging.debug("%s chmod '%s' %s", self.name, path, mode)
@@ -210,13 +210,13 @@ class ObjServer(object):
         """
         Returns ``open(filename, mode, bufsize)`` if `filename` is legal.
 
-        filename : string
+        filename: string
             Name of file to open.
 
-        mode : string
+        mode: string
             Accees mode.
 
-        bufsize : int
+        bufsize: int
             Size of buffer to use.
         """
         logging.debug("%s open '%s' %s %s", self.name, filename, mode, bufsize)
@@ -232,7 +232,7 @@ class ObjServer(object):
         """
         Returns ``os.stat(path)`` if `path` is legal.
 
-        path : string
+        path: string
             Path to file to interrogate.
         """
         logging.debug("%s stat '%s'", self.name, path)
@@ -257,7 +257,7 @@ class ObjServer(object):
         Register :class:`ObjServer` proxy info with `manager`.
         Not typically called by user code.
 
-        manager : Manager
+        manager: Manager
             :mod:`multiprocessing` Manager to register with.
         """
         name = 'ObjServer'

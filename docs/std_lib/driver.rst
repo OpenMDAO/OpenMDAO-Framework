@@ -6,24 +6,24 @@
 Drivers
 =======
 
-.. index:: Broyden Solver
+.. index:: BroydenSolver
 
-.. _Broyden-Solver:
+.. _BroydenSolver:
 
 *BroydenSolver*
 ~~~~~~~~~~~~~~~
 
-The BroydenSolver is a solver that can be used to solve for the set of inputs
+The BroydenSolver can be used to solve for the set of inputs
 (independents) that are needed to to make a model satisfy an equation (the
-dependent equation) that is a function of model outputs. Broyden solver is based
-on the quasi-Newton-Raphson algorithms found in scipy's nonlinear solver library.
+dependent equation) that is a function of model outputs. BroydenSolver is based
+on the quasi-Newton-Raphson algorithms found in SciPy's nonlinear solver library.
 As the name implies, a Broyden update is used to approximate the Jacobian matrix.
 In fact, no Jacobian is evaluated with these algorithms, so they are quicker than
 a full Newton solver, but they may not be suitable for all problems.
 
 To see how to use the BroydenSolver, consider a problem where we'd like to solve
-for the intersection of a line and a parabola. We can inplement this as a single
-component (It is also possible to implement it as two components if you'd
+for the intersection of a line and a parabola. We can implement this as a single
+component. (It is also possible to implement it as two components if you'd
 prefer. See :ref:`Tutorial-MDAO-Architectures` to learn how to broadcast variables.)
 
 .. testcode:: Broyden
@@ -52,15 +52,15 @@ prefer. See :ref:`Tutorial-MDAO-Architectures` to learn how to broadcast variabl
             self.f_xy = 2.0*x**2 - y + 2.0 
             self.g_xy = 2.0*x - y + 4.0 
 
-Notice that this is a two input problem -- the variables x and y. There are
-also 2 equations that need to be satisfied -- the equation for the line, and
+Notice that this is a two-input problem -- the variables are *x* and *y*. There are
+also two equations that need to be satisfied: the equation for the line and
 the equation for the parabola. There are actually two solutions to this set
 of equations. The solver will return the first one that it finds. You can
 usually find other solutions by starting the solution from different initial
-points. We start at (10, 10), as designated by the default values for the variables
-x and y.
+points. We start at ``(10, 10)``, as designated by the default values for the variables
+*x* and *y*.
 
-Next, we build a model that uses the Broyden solver that finds a root for the 
+Next, we build a model that uses the Broyden solver to find a root for the 
 equations defined in MIMOSystem.
 
 .. testcode:: Broyden
@@ -93,15 +93,15 @@ equations defined in MIMOSystem.
             self.driver.tol = .000000001
             
 The parameters are the independent variables that the solver is allowed to vary. The
-standard add_parameter interface is used to define these. Broyden does not utilize
+standard ``add_parameter`` interface is used to define these. Broyden does not utilize
 the low and high attributes, so they are set to some high value.
 
 The equations that we want to satisfy are added as equality constraints using the
-add_constraint interface. We want to find x and y that satsify f_xy=0 and g_xy =0,
+``add_constraint`` interface. We want to find *x* and *y* that satisfy ``f_xy=0`` and ``g_xy =0``,
 so these two equations are added to the solver.
 
-Both the add_parameter and add_constraint interface are presented in more detail in
-:ref:`Tutorial-MDAO-Architectures`Driver-API`.
+Both the ``add_parameter`` and ``add_constraint`` interface are presented in more detail in
+:ref:`Tutorial:-MDAO-Architectures`.
 
 The resulting solution should yield:
 
@@ -112,25 +112,25 @@ The resulting solution should yield:
     >>> print top.problem.x, top.problem.y
     1.61... 7.23...
 
-There are 5 parameters that control the solution process in the Broyden solver.
+.. index:: algorithm, Enum, SciPy
 
-**algorithm** -- Scipy's nonlinear package contained several algorithms for solving
+There are five parameters that control the solution process in the Broyden solver.
+
+**algorithm** -- SciPy's nonlinear package contained several algorithms for solving
 a set of nonlinear equations. Three of these methods were considered by their
 developers to be of good quality, so those three were implemented as part of 
-the Broyden Solver. The variable *algorithm* is an Enum where the following values
-represent the following algorithms.
+the BroydenSolver. The variable *algorithm* is an Enum where the following values
+represent the algorithms that follow.
 
-    - **broyden2**: Broyden's second method - the same as broyden1, but
-      updates the inverse Jacobian directly
-    - **broyden3**: Broyden's third method - the same as broyden2, but
-      instead of directly computing the inverse Jacobian,
-      it remembers how to construct it using vectors, and
-      when computing inv(J)*F, it uses those vectors to
-      compute this product, thus avoding the expensive NxN
-      matrix multiplication.
-    - **excitingmixing**: The excitingmixing algorithm. J=-1/alpha
+- **broyden2**: Broyden's second method -- the same as broyden1 but
+  updates the inverse Jacobian directly
+- **broyden3**: Broyden's third method -- the same as broyden2, but instead of
+  directly computing the inverse Jacobian, it remembers how to construct it using
+  vectors. When computing ``inv(J)*F``, it uses those vectors to compute this
+  product, thus avoiding the expensive NxN matrix multiplication. 
+- **excitingmixing**: The excitingmixing algorithm. ``J=-1/alpha``
 
-The default value for *algorithm* is "broyden2".
+The default value for *algorithm* is ``"broyden2"``.
 
 .. testsetup:: Broyden3
 
@@ -153,9 +153,9 @@ BroydenSolver terminates. The default value is 10.
     
 **alpha** -- This parameter specifies the mixing coefficient for the algorithm. The
 mixing coefficient is a linear scale factor applied to the update of the parameters, so
-increasing it can lead to quicker convergence, but can also lead to instability. The 
-default value is 0.4. If you use the "excitingmixing" algorithm, you should try a lower
-value such as 0.1.
+increasing it can lead to quicker convergence but can also lead to instability. The 
+default value is 0.4. If you use the *excitingmixing* algorithm, you should try a lower
+value, such as 0.1.
     
 .. testcode:: Broyden3
 
@@ -168,15 +168,17 @@ equation is satisfied within this tolerance. The default value is 0.00001.
 
     self.driver.tol = 0.00001
     
-**alphamax** -- This parameter is only used for the "excitingmixing" algorithm
-where the mixing coefficient is adpatively adjusted. It specifies the maximum
+**alphamax** -- This parameter is only used for the *excitingmixing* algorithm
+where the mixing coefficient is adaptively adjusted. It specifies the maximum
 allowable mixing coefficient for adaptation. The default value is 1.0.
 
 .. testcode:: Broyden3
 
     self.driver.alphamax = 1.0
     
-    
+(See the source documentation for information on :ref:`openmdao.lib.drivers.broydensolver.py`.)
+
+
 .. index:: Case Iterator Driver
 
 .. _Case-iterator-driver:
@@ -191,7 +193,7 @@ allowable mixing coefficient for adaptation. The default value is 1.0.
     
 .. index:: CONMIN
 
-.. _CONMIN-driver:
+.. _CONMINDriver:
 
 *CONMINDriver*
 ~~~~~~~~~~~~~~~~~~~
@@ -467,7 +469,8 @@ used only for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 
-    
+(See the source documentation for information on :ref:`openmdao.lib.drivers.conmindriver.py`.)
+
 .. index:: DOEdriver, design of experiments
 
 .. _DOEdriver:
@@ -508,10 +511,11 @@ these would be plugged into the DOEgenerator socket on the DOEdriver.
                 #   for each variable
                 self.driver.DOEgenerator = FullFactorial(3,2)
    
+(See the source documentation for information on :ref:`openmdao.lib.drivers.doedriver.py`.)
 
 .. index:: Fixed Point Iterator
 
-.. _Fixed-Point_Iterator:
+.. _FixedPointIterator:
 
 *FixedPointIterator*
 ~~~~~~~~~~~~~~~~~~~~
@@ -519,7 +523,7 @@ these would be plugged into the DOEgenerator socket on the DOEdriver.
 The FixedPointIterator is a simple solver that can solve a single-input
 single-output problem using fixed point iteration. It provides a way
 to iterate on a single input to match an output. In other words, fixed
-point iteration can be used to solve the equation x = f(x). By extension,
+point iteration can be used to solve the equation ``x = f(x)``. By extension,
 FixedPointIterator can be used to close a loop in the data flow. The
 algorithm is probably useful for some problems, so it is included here.
 However, it may require more functional evaluations than the BroydenSolver.
@@ -573,8 +577,8 @@ like this.
             self.driver.x_in = 'problem.x'    
             self.driver.x_out = 'problem.y'
 
-The x input and the F(x) output are specified as Expressions and assigned to
-x_in and x_out in the solver.
+The *x* input and the *F(x)* output are specified as Expressions and assigned to
+``x_in`` and ``x_out`` in the solver.
             
 .. doctest:: FPI
 
@@ -583,17 +587,18 @@ x_in and x_out in the solver.
     >>> print top.problem.x
     1.4142...
 
-The are two additional parameters for controlling the FixedPointIterator. The
-parameter *tolerance* sets the convergence tolerance for the comparison
-between value of x_out at the current iteration and the previous iteration.
-The default valule for tolerance is 0.00001. The parameter *max_iteration*
+Two additional parameters control the FixedPointIterator. The
+parameter ``tolerance`` sets the convergence tolerance for the comparison
+between value of ``x_out`` at the current iteration and the previous iteration.
+The default value for tolerance is 0.00001. The parameter ``max_iteration``
 specifies the number of iterations to run. The default value for
-max_iterations is 25.
+``max_iterations`` is 25.
 
 A more useful example in which the FixedPointIterator is used to converge two
-couplied components is shown in :ref:`Tutorial-MDAO-Architectures` .
+coupled components is shown in :ref:`Tutorial-MDAO-Architectures` .
     
 .. index:: Genetic
+
 
 .. _`Genetic`:
 
@@ -763,10 +768,11 @@ what.
 
 A number of different commonly used selection algorithms are available. The default algorithm is the Roulette
 Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection are also available. The
-``selection_method`` attribute allows you to select the algorithm; allowed values are: "roulette_wheel," 
-"tournament," "rank," and "uniform."
+``selection_method`` attribute allows you to select the algorithm; allowed values are: ``"roulette_wheel," 
+"tournament," "rank,"`` and ``"uniform"``.
+
+(See the source documentation for information on :ref:`openmdao.lib.drivers.genetic.py`.)
 
 .. testcode:: Genetic
     
     top.driver.selection_method="rank"
-

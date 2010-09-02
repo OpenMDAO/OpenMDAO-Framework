@@ -11,14 +11,14 @@ def caseiter_to_dict(caseiter, varnames, include_errors=False):
     be returned so that all data values with the same index will correspond
     to the same case.
     
-    caseiter : CaseIterator
-        a CaseIterator containing the cases of interest
+    caseiter: CaseIterator
+        A CaseIterator containing the cases of interest.
 
-    varnames : list[str]
+    varnames: list[str]
         iterator of names of variables to be retrieved.
         
-    include_errors : bool, optional [False]
-        if True, include data from cases that reported an error
+    include_errors: bool, optional [False]
+        If True, include data from cases that reported an error.
         
     """
     
