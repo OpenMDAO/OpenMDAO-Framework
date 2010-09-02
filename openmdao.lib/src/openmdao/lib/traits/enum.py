@@ -70,15 +70,15 @@ class Enum(TraitType):
         super(Enum, self).__init__(default_value=default_value,
                                          **metadata)
 
-    def validate(self, object, name, value):
+    def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait."""
         
         try:
-            return self._validator.validate(object, name, value)
+            return self._validator.validate(obj, name, value)
         except TraitError:
-            self.error(object, name, value)
+            self.error(obj, name, value)
 
-    def error(self, object, name, value):
+    def error(self, obj, name, value):
         """Returns a general error string for Enum."""
         
         # pylint: disable-msg=E1101
@@ -91,4 +91,4 @@ class Enum(TraitType):
             msg = "Unknown error while setting trait '%s';" % (name) +\
                   "a value of %s %s was specified." % (value, vtype)
             
-        object.raise_exception(msg, TraitError)       
+        obj.raise_exception(msg, TraitError)       

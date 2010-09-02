@@ -6,10 +6,10 @@ Trait for numpy array variables, with optional units.
 __all__ = ["Array"]
 
 
-import numpy
-
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import TraitType, Range, TraitError
+from numpy import array, ndarray
+
+from enthought.traits.api import TraitError
 from enthought.traits.api import Array as TraitArray
 from openmdao.units import PhysicalQuantity
 
@@ -24,14 +24,14 @@ class Array(TraitArray):
         
         # Determine defalt_value if unspecified
         if default_value is None:
-            default_value = numpy.array([])
-        elif isinstance(default_value, numpy.ndarray):
+            default_value = array([])
+        elif isinstance(default_value, ndarray):
             pass
         elif isinstance(default_value, list):
-            default_value = numpy.array(default_value)
+            default_value = array(default_value)
         else:
-            raise TraitError("Default value should be a numpy array, not a %s." %
-                             type(default_value))
+            raise TraitError("Default value should be a numpy array, "
+                             "not a %s." % type(default_value))
         
         # Put iotype in the metadata dictionary
         if iotype is not None:
@@ -53,11 +53,11 @@ class Array(TraitArray):
                 raise TraitError("Units of '%s' are invalid" %
                                  metadata['units'])
             
-        super(Array, self).__init__(dtype=dtype, shape=shape, value=default_value,
-                                    **metadata )
+        super(Array, self).__init__(dtype=dtype, shape=shape, 
+                                    value=default_value, **metadata)
 
 
-    def validate(self, object, name, value):
+    def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
         Units are converted as needed.
         """
@@ -66,31 +66,32 @@ class Array(TraitArray):
         # If both source and target have units, we need to process differently
         if isinstance(value, TraitValMetaWrapper):
             valunits = value.metadata.get('units')
-            if self.units and valunits and self.units!=valunits:
-                return self._validate_with_metadata(object, name, 
+            if self.units and valunits and self.units != valunits:
+                return self._validate_with_metadata(obj, name, 
                                                     value.value, 
                                                     valunits)
             
             value = value.value
             
         try:
-            return super(Array,self).validate(object, name, value)
+            return super(Array, self).validate(obj, name, value)
         except TraitError:
-            self.error(object, name, value)
+            self.error(obj, name, value)
 
-    def error(self, object, name, value):
+    def error(self, obj, name, value):
         """Returns a string describing the type handled by Array."""
         
         # pylint: disable-msg=E1101
         if self.units:
-            info = "a numpy array having units compatible with '%s'" % self.units
+            info = "a numpy array having units compatible " \
+                   "with '%s'" % self.units
         else:
             info = "a numpy array"
 
         vtype = type( value )
         msg = "Trait '%s' must be %s, but a value of %s %s was specified." % \
                                (name, info, value, vtype)
-        object.raise_exception(msg, TraitError)
+        obj.raise_exception(msg, TraitError)
 
     def get_val_meta_wrapper(self):
         """Return a TraitValMetaWrapper object.  Its value attribute
@@ -99,7 +100,7 @@ class Array(TraitArray):
         # pylint: disable-msg=E1101
         return TraitValMetaWrapper(units=self.units)
             
-    def _validate_with_metadata(self, object, name, value, src_units):
+    def _validate_with_metadata(self, obj, name, value, src_units):
         """Perform validation and unit conversion using metadata from
         the source trait.
         """
@@ -125,6 +126,6 @@ class Array(TraitArray):
         
         try:
             value *= pq.value
-            return super(Array, self).validate(object, name, value)
+            return super(Array, self).validate(obj, name, value)
         except TraitError:
-            self.error(object, name, value)
+            self.error(obj, name, value)
