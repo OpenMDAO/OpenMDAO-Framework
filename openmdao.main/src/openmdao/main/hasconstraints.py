@@ -64,6 +64,9 @@ class _HasConstraintsBase(object):
         """Removes all constraints."""
         self._constraints = ordereddict.OrderedDict()
         
+    def list_constraints(self):
+        return self._constraints.keys()
+        
 class HasEqConstraints(_HasConstraintsBase):
     def add_constraint(self, expr_string):
         """Adds a constraint to the driver"""
@@ -168,3 +171,9 @@ class HasConstraints(object):
         is_violated) from evalution of inequality constraints.
         """
         return self._ineq.eval_ineq_constraints()
+    
+    def list_constraints(self):
+        """Return a list of strings containing constraint expressions."""
+        lst = self._ineq.list_constraints()
+        lst.extend(self._eq.list_constraints())
+        return lst

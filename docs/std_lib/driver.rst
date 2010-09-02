@@ -183,12 +183,12 @@ allowable mixing coefficient for adaptation. The default value is 1.0.
 
 .. _Case-iterator-driver:
 
-*Case Iterator Driver*
+*CaseIteratorDriver*
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. todo::
 
-    Discuss the Case Iterator
+    Discuss the CaseIteratorDriver
 
     
 .. index:: CONMIN

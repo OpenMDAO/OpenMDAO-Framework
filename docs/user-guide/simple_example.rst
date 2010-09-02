@@ -417,7 +417,7 @@ individually using the ``add_parameter`` function:
             self.driver.add_parameter('paraboloid.x', -50, 50)
             self.driver.add_parameter('paraboloid.y', -50, 50)
 
-Here, both x and y from the *Paraboloid component are chosen as the design
+Here, both x and y from the *Paraboloid* component are chosen as the design
 variables. The ``add_parameter`` function also allows you to add a range of
 validity for these variables, so that the unconstrained optimization can be
 performed on a bounded region. For this problem, you are constraining x and y
