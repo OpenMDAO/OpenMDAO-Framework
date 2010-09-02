@@ -21,10 +21,6 @@ class MyDriver(Driver):
     def continue_iteration(self):
         return self.iter_count < 3
 
-class MyComp(Component):
-        
-    def execute(self):
-        pass
 
 class HasParametersTestCase(unittest.TestCase):
 
