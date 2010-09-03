@@ -176,7 +176,8 @@ allowable mixing coefficient for adaptation. The default value is 1.0.
 
     self.driver.alphamax = 1.0
     
-(See the source documentation for information on :ref:`openmdao.lib.drivers.broydensolver.py`.)
+(See the source documentation for more information on
+ :ref:`BroydenSolver<openmdao.lib.drivers.broydensolver.py>`.)
 
 
 .. index:: Case Iterator Driver
@@ -186,9 +187,12 @@ allowable mixing coefficient for adaptation. The default value is 1.0.
 *CaseIteratorDriver*
 ~~~~~~~~~~~~~~~~~~~~~~
 
+(See the source documentation for more information on 
+:ref:`CaseIterDriver<openmdao.lib.drivers.caseiterdriver.py>`.)
+
 .. todo::
 
-    Discuss the CaseIteratorDriver
+    Discuss the CaseIteratorDriver in more detail.
 
     
 .. index:: CONMIN
@@ -469,7 +473,8 @@ used only for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 
-(See the source documentation for information on :ref:`openmdao.lib.drivers.conmindriver.py`.)
+(See the source documentation for more information on 
+:ref:`CONMINdriver<openmdao.lib.drivers.conmindriver.py>`.)
 
 .. index:: DOEdriver, design of experiments
 
@@ -511,7 +516,8 @@ these would be plugged into the DOEgenerator socket on the DOEdriver.
                 #   for each variable
                 self.driver.DOEgenerator = FullFactorial(3,2)
    
-(See the source documentation for information on :ref:`openmdao.lib.drivers.doedriver.py`.)
+(See the source documentation for more information on 
+:ref:`DOEdriver<openmdao.lib.drivers.doedriver.py>`.)
 
 .. index:: Fixed Point Iterator
 
@@ -596,7 +602,10 @@ specifies the number of iterations to run. The default value for
 
 A more useful example in which the FixedPointIterator is used to converge two
 coupled components is shown in :ref:`Tutorial-MDAO-Architectures` .
-    
+
+(See the source documentation for more information on 
+:ref:`FixedPointIterator<openmdao.lib.drivers.iterate.py>`.)
+
 .. index:: Genetic
 
 
@@ -771,7 +780,7 @@ Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection
 ``selection_method`` attribute allows you to select the algorithm; allowed values are: ``"roulette_wheel," 
 "tournament," "rank,"`` and ``"uniform"``.
 
-(See the source documentation for information on :ref:`openmdao.lib.drivers.genetic.py`.)
+(See the source documentation for more information on :ref:`Genetic<openmdao.lib.drivers.genetic.py>`.)
 
 .. testcode:: Genetic
     
