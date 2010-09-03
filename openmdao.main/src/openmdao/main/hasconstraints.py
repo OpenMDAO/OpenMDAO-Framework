@@ -65,11 +65,14 @@ class _HasConstraintsBase(object):
         self._constraints = ordereddict.OrderedDict()
         
     def list_constraints(self):
+        """Return a list of strings containing constraint expressions."""
         return self._constraints.keys()
         
 class HasEqConstraints(_HasConstraintsBase):
     def add_constraint(self, expr_string):
-        """Adds a constraint to the driver"""
+        """Adds a constraint in the form of a boolean expression string
+        to the driver.
+        """
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
@@ -80,6 +83,9 @@ class HasEqConstraints(_HasConstraintsBase):
             self._parent.raise_exception("add_ineq_constraint", NotImplemented)
 
     def add_eq_constraint(self, lhs, rhs):
+        """Adds an equality constraint as two strings, a left hand side and
+        a right hand side.
+        """
         ident = _remove_spaces('='.join([lhs,rhs]))
         self._constraints[ident] = Constraint(lhs,'=',rhs, scope=self._parent)
         
@@ -101,8 +107,12 @@ class HasIneqConstraints(_HasConstraintsBase):
         self.add_ineq_constraint(lhs, rel, rhs)
 
     def add_ineq_constraint(self, lhs, rel, rhs):
+        """Adds an inequality constraint as three strings; a left hand side,
+        a relation ('<','>','<=', or '>='), and a right hand side.
+        """
         if rel=='==' or rel=='=':
-            self._parent.raise_exception("add_eq_constraint", NotImplemented)
+            self._parent.raise_exception("equality constraints not supported", 
+                                         ValueError)
 
         ident = _remove_spaces(rel.join([lhs,rhs]))
         self._constraints[ident] = Constraint(lhs,rel,rhs, scope=self._parent)
@@ -147,9 +157,15 @@ class HasConstraints(object):
         self._ineq.clear_constraints()
         
     def add_ineq_constraint(self, lhs, relation, rhs):
+        """Adds an inequality constraint as three strings; a left hand side,
+        a relation ('<','>','<=', or '>='), and a right hand side.
+        """
         self._ineq.add_ineq_constraint(lhs, relation, rhs)
     
     def add_eq_constraint(self, lhs, rhs):
+        """Adds an equality constraint as two strings, a left hand side and
+        a right hand side.
+        """
         self._eq.add_eq_constraint(lhs, rhs)
 
     def get_eq_constraints(self):
