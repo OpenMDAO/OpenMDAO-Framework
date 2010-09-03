@@ -36,36 +36,63 @@ Components within OpenMDAO can be as simple or complex as necessary.
 The inputs and outputs to a Component are Python objects, so they are not limited
 to being simple types like floating point or integer.
 
-A :term:`Workflow` is an object that determines execution order for a group of Components.
+A :term:`Workflow` is an object that executes a group of components in a particular
+order.
 
 A :term:`Driver` is a special kind of Component that executes a Workflow
 repeatedly until some condition is met. Some examples of Drivers are
 optimizers, solvers, and design space explorers.
 
-An :term:`Assembly` is a special kind of Component that contains one or more
-Drivers and a group of Components. By default an Assembly contains one Driver
-called *driver*. When an Assembly executes, it runs *driver*, which in turn
-executes its Workflow. A Driver's Workflow may contain other Drivers, which
-allows for nested iteration schemes. The execution of each Driver will run its
-corresponding workflow until that Driver decides it is finished. Each Driver
-may contain its own Workflow, or it may use the default Workflow that is
-maintained by the Assembly. The default Workflow contains all non-Driver
-Components in the Assembly.
+An :term:`Assembly` is a special kind of Component that contains other components. 
+One of those components must be a Driver named *driver*. When an Assembly executes, 
+it executes *driver*, which then executes its Workflow. A Driver's Workflow may contain 
+other Drivers, and each of those Drivers has a Workflow of its own. The hierarchical
+structure defined by the contents of an Assembly's drivers and the contents of their
+workflows is called an *iteration hierarchy*.
 
-The next figure shows an example of an Assembly with one Driver and four
-Components. A solid line between two Components indicates that one of them is
-supplying inputs to the other. Each dashed line between a Driver and a 
-Component indicates an :term:`Expression` object in the Driver that references
-an input or output variable on the Component. The arrow at the end of  a dashed
-or solid line  indicates the direction of the data flow between two connected
-objects.
+The following figure shows an example of an iteration hierarchy involving four 
+different Drivers.  Note that in this example the same component, *component2*, 
+appears in two different workflows.
 
-.. _`driver flow`:
+   
+.. _`iteration hierarchy concept`:
 
-.. figure:: ../generated_images/DriverFlow.png
+.. figure:: ../generated_images/IterationHierarchy.png
    :align: center
 
-   View of an Assembly with one Driver
+   View of an Iteration Hierarchy
+
+
+The next figure shows the data flow within an Assembly having one Driver and four
+Components. A solid line between two Components indicates that one of them is
+supplying inputs to the other. Each dashed line between a Driver and a
+Component indicates a parameter, objective, or constraint in the Driver that
+references an input or output variable in the Component. The arrow at the end
+of a dashed or solid line indicates the direction of the data flow between two
+connected objects.
+
+.. _`driver intro2`:
+
+.. figure:: ../generated_images/Intro-Driver2.png
+   :align: center
+
+   View of an Assembly Showing Data Flow
+
+   
+Because an Assembly is also a Component, a hierarchy of assemblies can be constructed.
+For example, we could replace *component3* from the figure above with an assembly
+containing two other components, resulting in the following:
+
+.. _`driver intro1`:
+
+.. figure:: ../generated_images/Intro-Driver1.png
+   :align: center
+
+   View of an Assembly within an Assembly
+
+
+So assemblies allow us to organize our model into a hierarchy of submodels, and within each
+submodel, drivers and workflows give us a flexible way to define an iteration scheme.
 
 
 The functionality of OpenMDAO can be extended through the use of
