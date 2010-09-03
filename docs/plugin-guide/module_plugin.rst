@@ -212,8 +212,8 @@ specified in our ``setup.py`` file was ``'1.0'``, our distribution will be named
 
 .. index:: mod2dist
 
-Egg Creation for the Lazy
---------------------------
+Distribution Creation for the Lazy
+----------------------------------
 
 A tool called *mod2dist* exists for those of us who don't want to create a package
 directory structure and a ``setup.py`` file manually. It has a number of options that you
