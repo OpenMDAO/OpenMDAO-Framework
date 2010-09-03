@@ -10,5 +10,6 @@ Appendix B:  Standard Library Reference
    :maxdepth: 2
    
    component.rst
+   doegenerator.rst
    driver.rst
    surrogatemodels.rst

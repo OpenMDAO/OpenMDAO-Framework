@@ -202,7 +202,7 @@ following diagram shows an iteration hierarchy for the MDF problem.
 .. figure:: ../images/user-guide/Arch-MDF-OpenMDAO.png
    :align: center
    
-   An Iteration Hierarchy for the MDF Problem
+   Iteration Hierarchy for the MDF Problem
    
 In the top left of this diagram, the gray box labeled *Optimizer* is the
 top level (or outermost) driver. This driver has a workflow that contains
@@ -513,7 +513,7 @@ flow for IDF is illustrated in the following diagram:
 .. figure:: ../images/user-guide/Arch-IDF.png
    :align: center
 
-   Date Flow for IDF
+   Data Flow for IDF
    
 IDF needs only one driver, so there is just one workflow. The broadcaster and
 the two disciplines are executed sequentially.
@@ -521,7 +521,7 @@ the two disciplines are executed sequentially.
 .. figure:: ../images/user-guide/Arch-IDF-OpenMDAO.png
    :align: center
    
-   An Iteration Hierarchy for IDF
+   Iteration Hierarchy for IDF
    
 Next, we will create the SellarIDF assembly. First, all of our components
 are instantiated and the workflow is defined.
@@ -669,7 +669,7 @@ seen in the next figure.
 .. figure:: ../images/user-guide/Arch-CO-OpenMDAO.png
    :align: center
    
-   An Iteration Hierarchy for CO
+   Iteration Hierarchy for CO
 
 First, we create the component instances and set up this iteration hierarchy. Notice
 that there are three drivers, and we add each component to one of the three workflows.

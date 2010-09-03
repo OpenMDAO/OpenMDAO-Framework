@@ -490,8 +490,9 @@ create a specific DOE and then iteratively execute the DOE cases on the
 workflow. 
 
 The user can pick from any of the DOEgenerators provided in the standard
-library, or provide their own custom instance of a DOEgenerator. One of 
-these would be plugged into the DOEgenerator socket on the DOEdriver. 
+library, or provide their own custom instance of a DOEgenerator. A DOEgenerator
+must be plugged into the DOEgenerator socket on the DOEdriver in order to
+operate. 
     
     .. testcode:: DOEdriver
     
@@ -516,6 +517,9 @@ these would be plugged into the DOEgenerator socket on the DOEdriver.
                 #   for each variable
                 self.driver.DOEgenerator = FullFactorial(3,2)
    
+The *min* and *max* metadata of the parameters are used to denote the range for
+each variable over which the DOE will span.
+                
 (See the source documentation for more information on 
 :ref:`DOEdriver<openmdao.lib.drivers.doedriver.py>`.)
 
