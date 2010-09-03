@@ -61,7 +61,7 @@ class SellarMDF(Assembly):
         self.driver.add_parameter('dis1.x1',      low = 0.0,   high = 10.0)
         
         self.driver.add_constraint('3.16 < dis1.y1')
-        self.driver.add_constraint('dis2.y2 - 24.0')
+        self.driver.add_constraint('dis2.y2 < 24.0')
         
         self.driver.cons_is_linear = [1, 1]
         self.driver.iprint = 0

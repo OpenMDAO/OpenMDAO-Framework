@@ -52,9 +52,9 @@ class SellarCO(Assembly):
 
         con1 = '(bcastr.z1-dis1.z1)**2 + (bcastr.z2-dis1.z2)**2 + ' + \
                '(bcastr.x1-dis1.x1)**2 + ' + \
-               '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2'
+               '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2 <= 0'
         con2 = '(bcastr.z1-dis2.z1)**2 + (bcastr.z2-dis2.z2)**2 + ' + \
-               '(bcastr.y1-dis2.y1)**2 + (bcastr.y2-dis2.y2)**2'
+               '(bcastr.y1-dis2.y1)**2 + (bcastr.y2-dis2.y2)**2 <= 0'
         self.driver.add_constraint(con1)
         self.driver.add_constraint(con2)
         

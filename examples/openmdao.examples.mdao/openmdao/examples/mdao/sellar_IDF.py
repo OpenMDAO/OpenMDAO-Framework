@@ -52,10 +52,10 @@ class SellarIDF(Assembly):
         self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
         self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
             
-        self.driver.add_constraint('(dis2.y1-dis1.y1)**3')
-        self.driver.add_constraint('(dis1.y1-dis2.y1)**3')
-        self.driver.add_constraint('(dis2.y2-dis1.y2)**3')
-        self.driver.add_constraint('(dis1.y2-dis2.y2)**3')
+        self.driver.add_constraint('(dis2.y1-dis1.y1)**3 <= 0')
+        self.driver.add_constraint('(dis1.y1-dis2.y1)**3 <= 0')
+        self.driver.add_constraint('(dis2.y2-dis1.y2)**3 <= 0')
+        self.driver.add_constraint('(dis1.y2-dis2.y2)**3 <= 0')
   
         self.driver.iprint = 0
         self.driver.itmax = 100
