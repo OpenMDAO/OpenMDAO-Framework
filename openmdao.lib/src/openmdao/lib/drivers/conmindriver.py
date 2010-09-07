@@ -283,7 +283,11 @@ class CONMINdriver(Driver):
 
         # update constraint value array
         for i, v in enumerate(self.get_ineq_constraints().values()):
-            self.constraint_vals[i] = v.evaluate()[0]
+            val = v.evaluate()
+            if '>' in val[2]:
+                self.constraint_vals[i] = val[1]-val[0]
+            else:
+                self.constraint_vals[i] = val[0]-val[1]
         #self._logger.debug('%s: new iteration' % self.get_pathname())
         #self._logger.debug('objective = %s' % self.objective)
         #self._logger.debug('design vars = %s' % self.design_vars)
@@ -357,7 +361,10 @@ class CONMINdriver(Driver):
             # update constraint value array
             for i, v in enumerate(self.get_ineq_constraints().values()):
                 val = v.evaluate()
-                self.constraint_vals[i] = val[0]-val[1]
+                if '>' in val[2]:
+                    self.constraint_vals[i] = val[1]-val[0]
+                else:
+                    self.constraint_vals[i] = val[0]-val[1]
                 
             #self._logger.debug('constraints = %s'%self.constraint_vals)
                 

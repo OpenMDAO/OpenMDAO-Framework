@@ -153,6 +153,17 @@ class HasConstraintsTestCase(unittest.TestCase):
     def test_add_ineq_constraint(self):
         self._check_add_constraint(MyInEqDriver(), ineq=True)
     
+    def test_implicit_constraint(self):
+        drv = self.asm.add('driver', MyEqDriver())
+        try:
+            drv.add_constraint('comp1.a + comp1.b')
+        except ValueError, err:
+            self.assertEqual(str(err),
+                             "driver: Constraints require an explicit comparator (=, <, >, <=. or >=)")
+        else:
+            self.fail('ValueError expected')
+            
+        
     def test_eval_constraint(self):
         self._check_eval_constraints(MyDriver(), eq=True, ineq=True)
 

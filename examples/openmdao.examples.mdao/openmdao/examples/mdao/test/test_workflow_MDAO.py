@@ -127,9 +127,9 @@ class SellarCO(Assembly):
 
         map(self.driver.add_constraint, [
             '(bcastr.z1-dis1.z1)**2 + (bcastr.z2-dis1.z2)**2 + (bcastr.x1-dis1.x1)**2 + '
-            '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2',
+            '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2 < 0',
             '(bcastr.z1-dis2b.z1)**2 + (bcastr.z2-dis2c.z2)**2 + (bcastr.y1-dis2a.y1)**2 + '
-            '(bcastr.y2-dis2c.y2)**2' ])
+            '(bcastr.y2-dis2c.y2)**2 < 0' ])
         
         self.driver.printvars = ['dis1.y1','dis2c.y2']
         self.driver.iprint = 0

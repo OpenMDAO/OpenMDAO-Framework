@@ -1152,6 +1152,11 @@ syntax includes an equal sign in the expression.
 
     self.driver.add_constraint('dis1.y1 = 0.0')
 
+.. note::
+
+    OpenMDAO does not check for duplicate constraints, so be careful when
+    adding them.
+    
 Constraints can be removed using ``remove_constraint``.  The same string used
 to add the constraint should be used to remove it. Whitespace within the expression
 is ignored.

@@ -97,7 +97,7 @@ method ``add_parameter`` is used to define these. Broyden does not utilize
 the low and high arguments, so they are set to some large arbitrary negative and positive values.
 
 The equations that we want to satisfy are added as equality constraints using the
-``add_constraint`` method. We want to find *x* and *y* that satisfy ``f_xy=0`` and ``g_xy =0``,
+``add_constraint`` method. We want to find *x* and *y* that satisfy ``f_xy=0`` and ``g_xy=0``,
 so these two equations are added to the solver.
 
 Both the ``add_parameter`` and ``add_constraint`` methods are presented in more detail in
@@ -385,8 +385,8 @@ variables as follows:
 
 .. testcode:: CONMIN_show
 
-    map(self.driver.add_constraint, ['driving_sim.stroke - driving_sim.bore',
-                               '1.0 - driving_sim.stroke * driving_sim.bore'])
+    map(self.driver.add_constraint, ['driving_sim.stroke < driving_sim.bore',
+                               'driving_sim.stroke * driving_sim.bore > 1.0'])
     self.cons_is_linear = [1, 0]
 
 Here, the first constraint is linear, and the second constraint is nonlinear. If 

@@ -201,7 +201,7 @@ class GolinskiTestCase(unittest.TestCase):
                                        ('comp.x[3]',7.3,8.3),('comp.x[4]',7.3,8.3)])
         #  25 CONSTRAINTS  defined in the problem
         #  reduced to 1 constraint
-        self.top.driver.add_constraint('1.0 - 40.0/(comp.x[2] * comp.x[3])')
+        self.top.driver.add_constraint('40.0/(comp.x[2] * comp.x[3]) > 1.0')
         while iter < 4:
             # print  'iter     ',iter
             g00 = self.top.comp.x[0]
