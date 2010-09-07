@@ -200,7 +200,7 @@ class TestCase(unittest.TestCase):
         from openmdao.lib.api import Float,Int,Enum
 
         class SomeComp(Component):
-            """Arbitrary component with a few public variables, but which does not really do 
+            """Arbitrary component with a few variables, but which does not really do 
             any calculations"""
 
             w = Float(0.0,low=-10,high=0.0,iotype="in")
@@ -228,7 +228,7 @@ class TestCase(unittest.TestCase):
     
     def test_improper_parameter_type(self): 
         class SomeComp(Component):
-            """Arbitrary component with a few public variables, but which does not really do 
+            """Arbitrary component with a few variables, but which does not really do 
             any calculations"""
             z = Str("test",iotype="in")
 

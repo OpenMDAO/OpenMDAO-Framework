@@ -214,10 +214,10 @@ class IHasParameters(Interface):
             Name of the parameter to add to the driver.
         low: number, optional
             Minimum allowed value the optimzier can use for this parameter. If not specified, 
-            then the 'low' value from the public variable is used. 
+            then the 'low' value from the variable is used. 
         high: number, optional
             Maximum allowed value the optimizer can use for this parameter. If not specified, 
-            then the "high" value from the public variable is used.
+            then the "high" value from the variable is used.
         """
         
     def add_parameters(self, param_iter):

@@ -49,6 +49,9 @@ class DBCaseRecorder(object):
 
     @property
     def dbfile(self):
+        """The name of the database. This can be a filename or :memory: for
+        an in-memory database.
+        """
         return self._dbfile
     
     @dbfile.setter

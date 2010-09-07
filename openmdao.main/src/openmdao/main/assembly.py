@@ -340,7 +340,7 @@ class Assembly (Component):
         
     def get_valids(self, names):
         """Returns a list of boolean values indicating whether the named
-        attributes are valid (True) or invalid (False). Entries in names may
+        variables are valid (True) or invalid (False). Entries in names may
         specify either direct traits of self or those of direct children of
         self, but no deeper in the hierarchy than that.
         """

@@ -94,7 +94,7 @@ equations defined in MIMOSystem.
             
 The parameters are the independent variables that the solver is allowed to vary. The
 method ``add_parameter`` is used to define these. Broyden does not utilize
-the low and high attributes, so they are set to some arbitrary large negative and positive values.
+the low and high arguments, so they are set to some large arbitrary negative and positive values.
 
 The equations that we want to satisfy are added as equality constraints using the
 ``add_constraint`` method. We want to find *x* and *y* that satisfy ``f_xy=0`` and ``g_xy =0``,
@@ -636,7 +636,7 @@ Design Variables
 ++++++++++++++++
 
 IOtraits are added to Genetic and become optimization parameters. Genetic will vary the set of
-parameters to search for an optimum. Genetic supports three public variable types:
+parameters to search for an optimum. Genetic supports three variable types:
 :term:`Float`, :term:`Int`, and :Term:`Enum`. These types can be used as parameters in any 
 optimization. 
 
@@ -649,7 +649,7 @@ You add design variables to Genetic using the ``add_parameter`` method.
     from openmdao.lib.api import Float,Int,Enum
     
     class SomeComp(Component):
-        """Arbitrary component with a few public variables, but which does not really do 
+        """Arbitrary component with a few variables, but which does not really do 
            any calculations
         """
 
@@ -697,14 +697,14 @@ the optimizer to use a different range instead of the default.
     top.driver.add_parameter('comp.w', low=5.0, high=7.0)
 
 Now, for ``comp.x`` the optimizer will only try values between 5.0 and 7.0. Note that `low` and `high`
-are only applicable to Float and Int public variables. For Enum public variables, `low` and `high`
+are only applicable to Float and Int variables. For Enum variables, `low` and `high`
 are not applicable.
 
 Configuration
 +++++++++++++
 
-When setting the `objective` attribute you can specify a single 
-public variable or a more complex function, such as 
+When setting the `objective` variable you can specify a single 
+variable name or a more complex function, such as 
 
 .. testcode:: Genetic
 
@@ -720,14 +720,14 @@ In the second example above, a more complex objective function was created where
 a weighted combination of ``comp.x, comp.y,`` and ``comp.z``. 
 
 To set the optimizer to either minimize or maximize your objective, you set the
-``opt_type`` attribute of Genetic to "minimize" or "maximize."
+``opt_type`` variable of Genetic to "minimize" or "maximize."
 
 .. testcode:: Genetic
 
     top.driver.opt_type = "minimize"
     
 You can control the size of the population in each generation and the maximum number of generations in 
-your optimization with the ``population_size`` and ``generations`` attributes. 
+your optimization with the ``population_size`` and ``generations`` variables. 
     
 .. testcode:: Genetic
 
@@ -747,7 +747,7 @@ optimum. Setting it too high will help you find the true optimum, but you may en
 time on later generations where the optimum has been found. 
 
 You can further control the behavior of the genetic algorithm by setting the ``crossover_rate``,
-``mutation_rate``, ``selection_method``, and ``elitism`` attributes. These settings will allow you to
+``mutation_rate``, ``selection_method``, and ``elitism`` variables. These settings will allow you to
 fine-tune the convergence of your optimization to achieve the desired result; however, for many
 optimizations the default values will work well and won't need to be changed. 
 
@@ -781,7 +781,7 @@ what.
 
 A number of different commonly used selection algorithms are available. The default algorithm is the Roulette
 Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection are also available. The
-``selection_method`` attribute allows you to select the algorithm; allowed values are: ``"roulette_wheel," 
+``selection_method`` variable allows you to select the algorithm; allowed values are: ``"roulette_wheel," 
 "tournament," "rank,"`` and ``"uniform"``.
 
 (See the source documentation for more information on :ref:`Genetic<openmdao.lib.drivers.genetic.py>`.)

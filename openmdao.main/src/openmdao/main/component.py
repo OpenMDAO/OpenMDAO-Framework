@@ -329,7 +329,7 @@ class Component (Container):
             self._num_input_caseiters -= 1
 
     def is_valid(self):
-        """Return False if any of our public variables is invalid."""
+        """Return False if any of our variables is invalid."""
         if self._call_execute:
             return False
         if False in self._valid_dict.values():

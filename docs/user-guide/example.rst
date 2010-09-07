@@ -366,8 +366,8 @@ points, so simulating these driving profiles consumes much more CPU time than th
 
 .. index:: Component
 
-Components and Public Variables
--------------------------------
+Components and Variables
+------------------------
 
 In the previous section, three component models were outlined that together form a vehicle model that can simulate
 performance. These models have all been implemented as OpenMDAO components written in Python. This
@@ -398,7 +398,7 @@ be useful to browse these files as you learn some of the basic concepts in this 
 
 The first thing we will do is create an OpenMDAO Component called *Transmission.* You may recall
 that a Component contains inputs and outputs and provides a method to calculate its outputs
-from its inputs. We must create the public variables that define these inputs and outputs.
+from its inputs. We must create the variables that define these inputs and outputs.
 
 .. testcode:: Code2
 
@@ -438,17 +438,20 @@ used here, including the *Enum* type.
 
 .. index:: PEP 8
 
-In this example, we use more complicated names for our public variables, so we should cover what makes a
-valid variable name. Public variables are also Python variables, so they must follow Python's standard
-naming convention. They must begin with a letter or underscore and should consist of only alphanumeric characters and the
-underscore. Keep in mind that a leading underscore is generally used for private data or functions. **Spaces cannot be used
-in a variable name.** Generally, we've tried to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_ standard for
-component instance names as well as Python variable names. PEP 8 prescribes the use of lower case names with words separated by
-underscores. 
+In this example, we use more complicated names for our variables, so we should
+cover what makes a valid variable name. Variables are also Python variables,
+so they must follow Python's standard naming convention. They must begin with
+a letter or underscore and should consist of only alphanumeric characters and
+the underscore. Keep in mind that a leading underscore is generally used for
+private data or functions. **Spaces cannot be used in a variable name.**
+Generally, we've tried to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_ 
+standard for component instance
+names as well as Python variable names. PEP 8 prescribes the use of lower case
+names with words separated by underscores.
 
 The required parameter *iotype*, the optional parameter *desc*, and the
 default value are covered in previous tutorials. The parameter *units* is
-introduced here and is used in a few of the public variables in Transmission. OpenMDAO contains a Units
+introduced here and is used in a few of the variables in Transmission. OpenMDAO contains a Units
 module that allows for unit checking and conversion between outputs and
 inputs of components. Our units definitions are based on the those given in
 Scientific Python and can be found the :ref:`Summary-of-Units`. If an output and an
@@ -457,7 +460,7 @@ converted as it is passed from the output to the input. If an output and an inpu
 of a different unit class are connected (e.g., length and time), an exception is
 raised. A variable with no units defined can be connected to a variable with units.
 
-**Only the Float and Array types performs automatic unit conversion and checking.**
+**Only the Float and Array types perform automatic unit conversion and checking.**
 
 The Transmission component uses an enumerated list to define the valid gear positions:
 
@@ -691,7 +694,7 @@ the input. If the classes are incompatible (e.g., meters vs. seconds), then an
 exception is raised during execution.
 
 The Vehicle assembly also has inputs and outputs, and it can be hooked up to
-other components and included in other assemblies once its public variables
+other components and included in other assemblies once its variables
 are defined. We would like to promote all of the design and simulation
 variables from the Engine, Transmission, and Chassis components to the input
 and output of the Vehicle assembly. OpenMDAO includes a shortcut for doing
@@ -709,10 +712,10 @@ this quickly by creating passthroughs:
 	# ...
 	self.create_passthrough('chassis.mass_vehicle')
 	self.create_passthrough('chassis.Cf')
-		
-The ``create_passthrough`` function creates an identical public variable
+
+The ``create_passthrough`` function creates an identical variable
 in the assembly and connects it to the corresponding component variable. So now, all of the
-design variables are available as public variables in any simulation that includes an instance
+design variables are available as variables in any simulation that includes an instance
 of the vehicle model.
 
 However, the engine tutorial throws you a curve ball here. The Engine
@@ -720,7 +723,7 @@ and Chassis components are defined with SI units, but the Transmission
 component is defined with English units. We have two inputs -- the tire
 circumference and the vehicle velocity -- that are each used by two components
 with different units. The ``create_passthrough`` function creates an exact copy
-of the public variable, so we cannot use it here. Instead, we must connect them manually
+of the variable, so we cannot use it here. Instead, we must connect them manually
 by declaring variables in our assembly.
 
 .. testcode:: Code5
@@ -958,7 +961,7 @@ A socket can be declared in the DrivingSim class using an *Instance* trait:
 	EPA_highway = Float(0., iotype='out', units='mi/galUS', 
 				 desc='EPA Fuel economy - Highway')
 
-An *Instance* is a special type of public variable that hold an object. The
+An *Instance* is a special type of variable that holds an object. The
 first argument in the constructor is the type of object that is allowed to fit in
 the socket, which in this case is a Vehicle. The attribute *allow_none* can be used
 to declare whether filling the socket is optional. For our driving simulation to

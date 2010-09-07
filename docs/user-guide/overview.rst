@@ -12,12 +12,12 @@ Introduction to the OpenMDAO Framework
 
 MDAO stands for Multidisciplinary Analysis and Optimization. OpenMDAO is an
 open source framework for analyzing and solving MDAO problems. In OpenMDAO, a
-problem is represented by a system of objects called :term:`components`. These
-objects have input and output attributes and can perform some sort of
-calculation when they are executed. You can connect the inputs and outputs of
-one component to those of other components, allowing data to be passed between
-them.
+problem is represented by a system of objects called components. 
 
+A :term:`Component` is an object with an ``execute`` function that updates
+the values of its output variables based on the values of its input variables.
+You can connect the inputs and outputs of one component to those of other
+components, allowing data to be passed between them.
 
 The following figure gives a conceptual view of what a simple Component might
 look like. This Component has two inputs (*a, b*) and one output (*c*). The
@@ -48,7 +48,7 @@ One of those components must be a Driver named *driver*. When an Assembly execut
 it executes *driver*, which then executes its Workflow. A Driver's Workflow may contain 
 other Drivers, and each of those Drivers has a Workflow of its own. The hierarchical
 structure defined by the contents of an Assembly's drivers and the contents of their
-workflows is called an *iteration hierarchy*.
+workflows is called an :term:`iteration hierarchy`.
 
 The following figure shows an example of an iteration hierarchy involving four 
 different Drivers.  Note that in this example the same component, *component2*, 

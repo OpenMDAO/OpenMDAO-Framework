@@ -1,5 +1,5 @@
 """
-A public variable that references another member of the OpenMDAO model
+A variable that references another member of the OpenMDAO model
 hierarchy.
 """
 

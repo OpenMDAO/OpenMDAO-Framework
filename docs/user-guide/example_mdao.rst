@@ -474,8 +474,8 @@ though we only have one input and one output in this example.
         
 The input is selected using ``add_parameter``. You might also be familiar with the
 term *independent* used to describe this. Here, we've given a *low* and a
-*high* attribute, but we've set them very high as the Broyden solver doesn't
-use either of these. The output is specified by adding an equality constraint.
+*high* attribute, but we've set them to very large negative and positive values
+as the Broyden solver doesn't use either of these. The output is specified by adding an equality constraint.
 A solver essentially tries to drive something to zero. In this case, we want to
 drive the residual error in the coupled variable *y2* to zero. An equality constraint
 is defined with an expression string which is parsed for the equals sign, so the

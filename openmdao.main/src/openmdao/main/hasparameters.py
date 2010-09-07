@@ -29,7 +29,7 @@ class HasParameters(object):
         """Adds a parameter to the driver. 
         
         name: string
-            Name of the public variable the driver should vary during execution.
+            Name of the variable the driver should vary during execution.
             
         low: float, optional
             Minimum allowed value of the parameter.
@@ -38,7 +38,7 @@ class HasParameters(object):
             Maximum allowed value of the parameter.
         
         If neither "low" nor "high" is specified, the min and max will
-        default to the values in the metadata of the public variable being
+        default to the values in the metadata of the variable being
         referenced. If they are not specified in the metadata and not provided
         as arguments, a ValueError is raised.
         """

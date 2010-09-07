@@ -50,7 +50,7 @@ class Driver(Component):
         
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
-        or if any of our public variables is invalid, or if any public
+        or if any of our variables is invalid, or if any public
         variable referenced by any of our Expressions is invalid.
         """
         if super(Driver, self).is_valid() is False:

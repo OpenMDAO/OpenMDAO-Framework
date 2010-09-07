@@ -58,7 +58,7 @@ placed in the pseudo-package ``openmdao.main.api``. You can obtain a complete
 listing of what is available in this module by using the *dir()* command in
 Python. Likewise, a pseudo-package was also created to house some of the most
 commonly used imports from the standard library. In general, it contains
-public variables and divers. Most of these items are also explained elsewhere
+variables and divers. Most of these items are also explained elsewhere
 in the *User Guide.*
 
 Importing more objects into the namespace of your module increases the
@@ -77,28 +77,19 @@ from the given module into the current namespace.
     # GOOD
     from openmdao.main.api import Component, Assembly, Expression, Driver
 
-*The Model Hierarchy*
-~~~~~~~~~~~~~~~~~~~~~
-
-Every item (Container, Component, Assembly, public variable) that is publicly accessible
-to the framework is part of OpenMDAO's model hierarchy.
-
-.. todo::
-
-    Talk about the model hierarchy
 
 *Naming Conventions*
 ~~~~~~~~~~~~~~~~~~~~
 
-Components and public variables that are instantiated into the OpenMDAO model 
-hierarchy must follow the same naming syntax as variables in the Python
+Components and variables that are instantiated into the OpenMDAO model 
+hierarchy must follow the same naming syntax as attributes in the Python
 language. To summarize, they can include only alphanumeric
 characters and the underscore, and the lead character cannot be a number.
-Any attempt to create a component or a public variable that does not conform
+Any attempt to create a component or a variable that does not conform
 to Python's syntax should result in an exception. This restriction was required
 because these entities essentially exist as Python variables. One unfortunate
 side effect is that names with spaces are not allowed. OpenMDAO checks for
-compliance when a public variable or Component instance is created:
+compliance when a variable or Component instance is created:
 
     >>> from openmdao.main.api import Assembly
     >>> from openmdao.examples.enginedesign.chassis import Chassis
@@ -112,7 +103,7 @@ compliance when a public variable or Component instance is created:
 
 In the OpenMDAO source and examples, we've tried to follow the `PEP 8
 <http://www.python.org/dev/peps/pep-0008/>`_ standard, which specifies a naming
-convention for component instance names and public variable names. For all
+convention for component instance names and variable names. For all
 variable names, PEP 8 prescribes the use of lower case names with words
 separated by underscores. Naturally, PEP 8 compliance is not a requirement
 that will be forced on users, but it is a good style guideline.
@@ -192,17 +183,17 @@ class.
     save_to_egg example
 
 
-.. _Public-Variables:
+.. _Variables:
 
-Public Variables
-----------------
+Variables
+---------
 
-In OpenMDAO, a *public* variable is a variable that can be seen or manipulated by
+In OpenMDAO, a variable is an attribute that can be seen or manipulated by
 other entities in the framework. Any data that is passed between components in a
-model must use public variables to declare the inputs and outputs for each
+model must use variables to declare the inputs and outputs for each
 component.
 
-You can create a public variable for a component in two ways. The first is to
+You can create a variable for a component in two ways. The first is to
 declare it in the component's class definition as shown in the example 
 given in the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>`. A simple component that takes
 a floating point number as an input and provides a floating point number as an
@@ -225,10 +216,10 @@ output would look like this:
         
             self.y = 3.0*self.x
 
-The example above shows the way the majority of users will create public variables.
+The example above shows the way the majority of users will create variables.
 An alternative way to declare them is to use the ``add_trait`` function that is part of the
 Component public interface. First, lets define the same class in the shell but without
-the public variables x and y.
+the variables x and y.
   
 .. testcode:: creating_public_variables_2
 
@@ -253,7 +244,7 @@ an instance of Simple has been created:
     >>> equation.y
     21.0
 
-The primary use of ``add_trait`` is to create a public variable dynamically at some
+The primary use of ``add_trait`` is to create a variable dynamically at some
 point after the component has been created (possibly during execution).
 
     >>> from openmdao.examples.simple.paraboloid import Paraboloid
@@ -268,11 +259,11 @@ point after the component has been created (possibly during execution).
     7777
 
 Some specialized components will make use of the ability to create
-public variables on the fly, but most general components won't need this.
+variables on the fly, but most general components won't need this.
 
-The example above shows how to directly access a public variable, but there is also an
+The example above shows how to directly access a variable, but there is also an
 indirect access using a *set* and *get* method. Set and get are primarily used by the
-framework to pass data between public variables. In some cases a
+framework to pass data between variables. In some cases a
 model developer may need to use them -- but only for specific cases where
 some objects are executing on remote servers.
 
@@ -303,14 +294,14 @@ Here is an example of the set function:
 *Traits*
 ~~~~~~~~
 
-The underlying implementation of public variables in OpenMDAO was accomplished
+The underlying implementation of variables in OpenMDAO was accomplished
 through a Python add-on called :term:`Traits`. Traits provide a way to 
-apply explicit typing to the normally untyped Python variables. They also provide 
-the capability to add some other features to the public variables, including 
-unit checking and conversion, default values, minima and maxima, and a way to create 
+apply explicit typing to the normally untyped Python attributes. They also provide 
+the capability to add some other features to the variables, including 
+unit checking and conversion, default values, upper and lower bounds, and a way to create 
 callback functions that execute under specified conditions.
 
-In general, you won't need to worry about traits or how public variables are
+In general, you won't need to worry about traits or how variables are
 implemented, but those of you who want to create custom datatypes can do so by
 defining a new custom trait. More details on traits can be found on
 Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
@@ -318,7 +309,7 @@ Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
 *Built-in Variable Types*
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. index:: public variable types
+.. index:: variable types
     
 **Summary of Public Variable Types**
 
@@ -368,7 +359,7 @@ Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
 +------------------+----------------------------------------------------------+
 
 A more detailed list of Enthought's `Traits`__ is given in their documentation.
-Traits are also available for use as public variables in the framework, though
+Traits are also available for use as variables in the framework, though
 we haven't included examples of the more exotic ones. If you need
 to use one, remember that *iotype* and *desc* should be added to the arguments
 when one of these is instantiated. The traits use \*\*metadata to store these
@@ -376,10 +367,10 @@ user-defined attributes.
 
 .. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#other-predefined-traits
 
-A public variable is declared with a number of arguments, many of which are
+A variable is declared with a number of arguments, many of which are
 optional.
 
-The *iotype* attribute is required for all public variables regardless of type.
+The *iotype* attribute is required for all variables regardless of type.
 Its sole function is to tell the framework whether the variable should be
 treated as an input or an output. Presently, the only two options for this
 attribute are *'in'* and *'out'*.
@@ -394,20 +385,20 @@ iotype='in'   Component input
 iotype='out'  Component output
 ============  =====================
 
-The *desc* attribute is a concise description of the public variable -- one or
+The *desc* attribute is a concise description of the variable -- one or
 two sentences should be fine. While nothing in the framework requires this
 description, it would be wise to include one for every input and output of your
 components.
 
-It is possible to create new types of public variables to use in your models. 
-For an example of a user-created public variable, see :ref:`Building-a-Variable-Plugin`.
+It is possible to create new types of variables to use in your models. 
+For an example of a user-created variable, see :ref:`Building-a-Variable-Plugin`.
 
 .. index:: Array
 
 Arrays
 ++++++
 
-It is possible to use an array as a public variable through use of the *Array*
+It is possible to use an array as a variable through use of the *Array*
 trait. The value for an Array can be expressed as either a Python array or a NumPy
 array. NumPy arrays are very useful because of NumPy's built-in mathematical
 capabilities. Either array can be n-dimensional and of potentially any type.
@@ -425,9 +416,9 @@ are illustrated in the following example:
     >>> z.default_value[0][1]
     2.0
 
-Here, we import the Array public variable and the NumPy array, which is a
+Here, we import the Array variable and the NumPy array, which is a
 general-purpose n-dimensional array class. A 2-dimensional array is assigned as
-the default value for the public variable named *z*. 
+the default value for the variable named *z*. 
 
 The *dtype* parameter defines the type of variable that is in the array. For
 example, using a string (*str*) for a dtype would give an array of strings. Any
@@ -459,33 +450,33 @@ and calculates their dot product as an output.
     class Dot(Component):
         """ A component that outputs a dot product of two arrays"""
     
-    # set up interface to the framework  
-    x1 = Array(array([1.0,2.0]), dtype=float, desc = "Input 1", \
-               iotype='in')
-    x2 = Array(array([7.0,8.0]), dtype=float, desc = "Input 2", \
-               iotype='in')
+        # set up interface to the framework  
+        x1 = Array(array([1.0,2.0]), dtype=float, desc = "Input 1",
+                   iotype='in')
+        x2 = Array(array([7.0,8.0]), dtype=float, desc = "Input 2",
+                   iotype='in')
            
-    y = Float(0.0, iotype='out', desc = "Dot Product")
+        y = Float(0.0, iotype='out', desc = "Dot Product")
 
-    def execute(self):
-        """ calculate dot product """
+        def execute(self):
+            """ calculate dot product """
         
-        if len(self.x1) != len(self.x2):
-            self.raise_exception('Input vectors must be of equal length',
-                      RuntimeError)
+            if len(self.x1) != len(self.x2):
+                self.raise_exception('Input vectors must be of equal length',
+                          RuntimeError)
         
-        # Note: array multiplication is element by element
-        self.y = sum(self.x1*self.x2)
+            # Note: array multiplication is element by element
+            self.y = sum(self.x1*self.x2)
         
-        # print the first element of x1
-        print x1[0]
+            # print the first element of x1
+            print x1[0]
 
 Multiplication of a NumPy array is element by element, so *sum* is used to
 complete the calculation of the dot product. Individual elements of the array
 can also be accessed using brackets. An OpenMDAO Array behaves like a NumPy
 array, so it can be used as an argument in a NumPy function like sum.
 
-Note, this is a horrible way to do a dot product. Numpy has a dot function
+Note that this is a horrible way to do a dot product. Numpy has a dot function
 which is much faster than sum.
 
 .. index:: Enum
@@ -495,7 +486,7 @@ which is much faster than sum.
 Enums
 +++++
 
-It is possible to use an *Enum* (enumeration) type as a public variable in
+It is possible to use an *Enum* (enumeration) type as a variable in
 OpenMDAO. This is useful for cases where an input has certain fixed values
 that are possible. For example, consider a variable that can be one of three
 colors:
@@ -608,97 +599,42 @@ mark a file as binary.
 Instance Traits
 +++++++++++++++
 
-An *Instance* is a special type of public variable that allows an object to be
-passed between components. Essentially, any object can be passed through the
-use of an Instance. The first argument in the constructor is always the type of
-object that is required. Attempting to assign an object that does not match
-this type will generate an exception.
+An *Instance* is a trait that requires any value assigned to it either to be
+an instance of a specific class or to implement a specific Interface.  The class
+or Interface to be matched is the first argument to the constructor.
+Failure to match the specified class or Interface will result in an exception being raised.
+Instance traits are typically used to implement Sockets, which are placeholders for
+plugins within a component, but they may also be used to implement Variables by setting
+their *iotype* metadata attribute to 'in' or 'out'.  In this case, it is important to 
+also set the *copy* metadata attribute so the framework knows how to copy the data to
+connected components.  Allowable values for *copy* are 'deep' (the default), 'shallow',
+and None.  A copy value of None indicates that the data will be passed by reference
+and no copy will be made.
 
 
 .. testcode:: instance_example
 
     from openmdao.main.api import Component
     from openmdao.lib.api import Instance
+    from openmdao.main.interfaces import ICaseRecorder, ICaseIterator
     
     class Fred(Component):
         """ A component that takes a class as an input """
     
-        recorder = Instance(object, desc='Something to append() to.',
-                            iotype='in', required=True)
-        model = Instance(Component, desc='Model to be executed.',
-                         iotype='in', required=True)
+        recorder = Instance(ICaseRecorder, desc='Something to append() to.',
+                            required=True)
+        caseiter = Instance(ICaseIterator, desc='set of cases to run.',
+                            iotype='in')
  
-In this example, we have two inputs that are Instances. The one called *model*
-is of type Component, which means that this component takes another
-Component as input. Similarly, the one called *recorder* is of type *object.* In
-Python, object is the ultimate base class for any object, so this input can
-take anything. (It is still possible to create a class that doesn't
-inherit from object as its base class, but this is not considered good form.)
+In this example, we have one Socket and one input that are Instances. The
+input called *caseiter* requires data objects that implement the ICaseIterator
+interface. The Socket called *recorder* is required to implement the
+ICaseRecorder Interface.
 
 The attribute *required* is used to indicate whether the object that plugs into
-this input is required. If *required* is True, then an exception will be raised
+a Socket is required. If *required* is True, then an exception will be raised
 if the object is not present.
 
-.. index:: Expression
-
-Expression
-++++++++++
-
-An *Expression* is a special type of string variable that contains an expression to
-be evaluated. The expression can reference variables and functions within the
-scope of its containing component, as well as within the scope of the component's
-parent Assembly. A number of built-in functions and math functions may also be
-referenced within an Expression. For example, ``abs(math.sin(angle))``
-would be a valid Expression, assuming that *angle* is an attribute of the
-containing component. Note that *self* does not appear in the example expression.
-This is because the Expression automatically determines the containing scope of
-attributes and functions referenced in an expression. This helps keep expressions
-from becoming too verbose by containing a bunch of ``self`` and ``self.parent`` references.
-
-Expressions can be used in a variety of components. Many optimizer components use 
-Expressions to specify their objective function, design variables, and constraints.
-
-Here is an example of declaring an Expression as an input, as it would be used to
-create a variable to hold the objective function of an optimizer, which is
-inherently a function of variables in the framework.
-
-.. testcode:: Expression_example
-
-    from openmdao.main.api import Driver, Expression
-    
-    class MyDriver(Driver):
-        """ A component that outputs a dot product of two arrays"""
-
-        objective = Expression(iotype='in', \
-                               desc= 'A string containing the objective function \
-                               expression.')
-
-It makes little sense to give a default value to an Expression, since
-its value will usually depend on the component names. Expressions are most
-likely to be assigned their value in the higher-level container, typically the
-top level assembly. Also, Expression is imported from
-``openmdao.main.api`` instead of ``openmdao.lib.api``. This is because
-Expression is a special class of public variables that is an integral part of
-the framework infrastructure.
-
-There is also an *ExpressionList* variable which can be used to hold multiple
-string expressions. For example, an optimizer might take as input a list
-containing some number of constraints that are built from these string
-expressions.
-
-.. testcode:: ExpressionList_example
-
-    from openmdao.main.api import Driver, ExpressionList
-    
-    class MyDriver(Driver):
-        """ A component that outputs a dot product of two arrays"""
-
-        constraints = ExpressionList(iotype='in',
-                                     desc= 'An array of expression strings indicating constraints.'
-                                           ' A value of < 0 for the expression indicates that the constraint '
-                                           'is violated.')
-
-Again, no default is needed.
 
 .. index:: Float; Array; unit conversion with
 .. index:: unit conversion; with Float
@@ -706,13 +642,13 @@ Again, no default is needed.
 Unit Conversions with Float and Array
 +++++++++++++++++++++++++++++++++++++
 
-OpenMDAO also supports variables with explicitly defined units using the Float
-variable type, which is included as part of the Standard Library. This variable 
-type provides the following useful effects when utilized in the framework.
+OpenMDAO also supports variables with explicitly defined units using the Float and Array
+variable types, which are included as part of the Standard Library. Both
+types provide the following useful effects when utilized in the framework.
 
-- Automatically converts a value passed from an output to an input with compatible units (e.g., 'inch' and 'm')
-- Raises an exception when attempting to pass a value from an output to an input having incompatible units (e.g., 'kg' and 'm')
-- Allows values to be passed between unitless variables and variables with units; no unit conversion occurs
+- Automatically convert a value passed from an output to an input with compatible units (e.g., 'inch' and 'm')
+- Raise an exception when attempting to pass a value from an output to an input having incompatible units (e.g., 'kg' and 'm')
+- Allow values to be passed between unitless variables and variables with units; no unit conversion occurs
 
 A complete list of the available units is given in the :ref:`Summary-of-Units`.
 The unit conversion code and the base set of units come from the
@@ -739,16 +675,16 @@ component would look like this:
     class Pressure(Component):
         """Simple component to calculate pressure given force and area"""
     
-    # set up interface to the framework  
-    force = Float(1.0, iotype='in', desc='force', units='N')
-    area = Float(1.0, iotype='in', low=0.0, exclude_low=True, desc='m*m')        
+        # set up interface to the framework  
+        force = Float(1.0, iotype='in', desc='force', units='N')
+        area = Float(1.0, iotype='in', low=0.0, exclude_low=True, desc='m*m')
 
-    pressure = Float(1.0, iotype='out', desc='Pa')        
+        pressure = Float(1.0, iotype='out', desc='Pa')
 
-    def execute(self):
-        """calculate pressure"""
+        def execute(self):
+            """calculate pressure"""
         
-        self.pressure = self.force/self.area
+            self.pressure = self.force/self.area
 
 The *low* and *exclude_low* parameters are used in the declaration of *area* to prevent a
 value of zero from being assigned, resulting in a division error. Of course, you
@@ -765,7 +701,7 @@ Coercion and Casting
 ++++++++++++++++++++
 
 OpenMDAO variables have a certain pre-defined behavior when a value from a
-variable of a different type is assigned. Public variables were created
+variable of a different type is assigned. Variables were created
 using the *casting* traits as opposed to the *coercion* traits. This means that
 most mis-assignments in variable connections (e.g., a float connected to
 a string) should generate a TraitError exception. However, certain widening
@@ -781,7 +717,7 @@ More details can be found in the `Traits 3 User Manual`__.
 *Variable Containers*
 ~~~~~~~~~~~~~~~~~~~~~
 
-For components with many public variables, it is often useful to compartmentalize
+For components with many variables, it is often useful to compartmentalize
 them into a hierarchy of containers to enhance readability and "findability."
 
 Variables in OpenMDAO can be compartmentalized by creating a container from the
@@ -805,7 +741,7 @@ three variables that define two flight conditions:
     from openmdao.lib.api import Float
 
     class FlightCondition(Container):
-        """Container of public variables"""
+        """Container of variables"""
     
         airspeed = Float(120.0, iotype='in', units='nmi/h')
         angle_of_attack = Float(0.0, iotype='in', units='deg')
@@ -832,15 +768,15 @@ three variables that define two flight conditions:
             print "FCC1 angle of attack = ", self.fcc1.angle_of_attack
             print "FCC2 angle of attack = ", self.fcc2.angle_of_attack
 
-Here, the container ``FlightCondition`` was defined, containing three public variables.
-The component ``AircraftSim`` is also defined with a public variable *weight* and
+Here, the container ``FlightCondition`` was defined, containing three variables.
+The component ``AircraftSim`` is also defined with a variable *weight* and
 two variable containers *fcc1* and *fcc2*. We can access weight through ``self.weight``; 
 likewise, we can access the airspeed of the second flight condition through
 ``self.fcc2.airspeed``. You can also add containers to containers.
 
 An interesting thing about this example is that we've
 implemented a data structure with this container and used it to create
-multiple copies of a set of public variables. This can prove useful for blocks
+multiple copies of a set of variables. This can prove useful for blocks
 of variables that are repeated in a component. At the framework level,
 connections are still made by connecting individual variables. It is possible
 to create a custom data structure that the framework sees as a single entity
@@ -849,12 +785,12 @@ for connection purposes. This is explained in :ref:`Building-a-Variable-Plugin`.
 Building a Simulation Model
 ---------------------------
 
-A *model* is a collection of components (which can include assemblies and drivers)
-that can be executed in the framework. The outermost container that contains this model is
-called the *top level assembly.* It has no parent, and it sits at the top of
-the model hierarchy. Executing the top level assembly executes the entire model.
+A *model* is a hierarchical collection of components with an assembly at its root. 
+The root assembly is also called the *top level assembly.* 
+Executing the top level assembly executes the entire model.
 
-Consider the top level assembly that was created for the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>`.
+Consider the top level assembly that was created for the 
+:ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>`.
 
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -883,17 +819,16 @@ Consider the top level assembly that was created for the :ref:`simple tutorial p
 We can see here that components that comprise the top level of this model are
 declared in the ``__init__`` function. The base class ``__init__`` function is called
 (with the super function) before anything is added to the empty assembly. This
-is important to ensure that functions, such as *add*, that are defined in the base classes are
-available for use. 
+is important to ensure that internal framework machinery has been properly initialized
+before any methods such as ``add`` are called.
 
-The function add takes a valid OpenMDAO name and a constructor as
-its arguments. This function call creates a new instance of the Component and 
-adds it to the OpenMDAO model hierarchy using the given name. In this case then,
-the CONMIN driver is accessible anywhere in this assembly via ``self.driver``.
-Likewise, the Paraboloid is accessed via ``self.paraboloid``.
+The ``add`` method takes a valid OpenMDAO name and a corresponding component
+instance as its arguments. This function call adds the instance to the
+OpenMDAO model hierarchy using the given name. In this case then, the CONMIN
+driver is accessible anywhere in this assembly via ``self.driver``. Likewise,
+the Paraboloid is accessed via ``self.paraboloid``.
 
-A Component can also be removed from an Assembly using ``remove``,
-though it is not expected to be needed except in rare cases.
+A Component can also be removed from an Assembly using ``remove``.
 
 *Assemblies*
 ~~~~~~~~~~~~
@@ -901,8 +836,7 @@ though it is not expected to be needed except in rare cases.
 An Assembly is a special type of Component with the characteristics below. It contains:
 
 - Some number of other components (some of which may be assemblies)
-- A workflow (essentially an execution order)
-- At least one driver. A driver may have its own workflow or may use the assembly's workflow.
+- At least one Driver with the name *driver*. Each Driver has its own workflow.
 
 An Assembly retains the Component API (i.e., it can be executed, added to
 models, and exists in the model hierarchy), but it also extends the API to
@@ -937,18 +871,18 @@ Components are connected by using the *connect* function built into the
 assembly. *Connect* takes two arguments, the first of which must be a component
 output, and the second of which must be a component input. These are expressed
 using their locations in the OpenMDAO model hierarchy with respect to the scope
-of the top level assembly. Additionally, only one output can
+of their parent assembly. Additionally, only one output can
 be connected to any input.  On the other hand, it is fine to connect an output to multiple
-inputs. The violation of any of these rules generates a
-RuntimeError.
+inputs. The violation of any of these rules raises an exception.
 
-A public variable is not required to be connected to anything. Typical 
+A variable is not required to be connected to anything. Typical 
 components will have numerous inputs, and many of these will contain values
 that are set by the user or are perfectly fine at their defaults.
 
-Variables in an assembly also must be able to be connected to the assembly
-boundary so that outside components can link to them. This can be done using
-``create_passthrough``.
+Variables can be added to an assembly and used to *promote* internal variables,
+making them visible to components outside of the assembly. There is a convenience
+function called ``create_passthrough`` that creates a variable in the assembly and
+connects it to an internal component variable in one step.
 
 Consider a similar assembly as shown above, except that we want to promote the
 remaining unconnected variables to the assembly boundary so that they can be
@@ -977,11 +911,11 @@ linked at that level.
             self.create_passthrough('par2.y')
             self.create_passthrough('par2.f_xy')
 
-The ``create_passthrough`` function creates a public variable on the assembly. This new variable has
+The ``create_passthrough`` function creates a variable on the assembly. This new variable has
 the same name, iotype, default value, units, description, and range characteristics as the
 original variable on the subcomponent. If you would like to present a different interface
 external to the assembly (perhaps you would like different units), then a passthrough
-cannot be used. Instead, the desired public variables must be manually created and
+cannot be used. Instead, the desired variables must be manually created and
 connected. You can find a more detailed example of this in the :ref:`complex tutorial
 <A-More-Complex-Tutorial-Problem>`. Most of the time passthroughs are sufficient.
 
@@ -1044,7 +978,7 @@ Notice that this is a relative path. **All components in the model hierarchy
 must operate in a directory that is a sub-directory of the top level
 assembly's absolute path.** If you attempt to give a component an absolute path
 that is not a descendant of the top assembly's absolute path, OpenMDAO will terminate
-with a ValueError exception. If two components need to operate in directories
+with an exception. If two components need to operate in directories
 disparate from the top path in the hierarchy (e.g., one component in the model
 needs to run on a scratch disc), then this can be accomplished by using
 multiprocessing, wherein each process has its own top level.
@@ -1120,12 +1054,12 @@ parameter must point to a component input, not a component output. During
 driver execution, the parameter values are set, and the relevant portion of
 the model is executed to evaluate the new objective.
     
-The *low* and *high* parameters can be used to specify a range for a parameter. This is
+The *low* and *high* parameters can be used to specify an allowable range for a parameter. This is
 useful for optimization problems where the design variables are constrained. Generally,
 the optimizer treats these as a special kind of constraint, so they should be defined
 using the low and high parameters rather than the add_constraint method. If a low or
 high value are not given, then they are pulled from the corresponding low and high
-parameters that are defined in the public variable. If low or high aren't definied
+parameters that are defined in the variable. If low or high aren't definied
 in either place, then an exception is raised. Some drivers (in particular solvers) do
 not support a low or high value; in such a case, you can just set each of them to a large number,
 e.g., low=-1e99 and high=1e99.
@@ -1242,7 +1176,7 @@ Calling ``clear_constraints`` will remove all constraints from a driver.
 .. index:: objective
 
 Finally, optimizers include one objective (or in the future, possibly multiple objectives)
-that is represented by an Expression built up from available OpenMDAO outputs. There is
+that is represented by a string containing an expression built up from available OpenMDAO outputs. There is
 no functional interface for entering an objective, but drivers include a variable called
 *objective* that takes an Expression as its input.
 
@@ -1347,15 +1281,27 @@ This means that a component is available to run once its inputs become valid,
 which occurs when the components that supply those inputs are valid. Since
 direct circular connections (algebraic loops for those familiar with Simulink)
 are not permitted, there will always be an execution order that can be
-determined from the connections.
+determined from the connections.  In the absence of a connection between two
+components, this workflow will attempt to execute them in the order that they 
+were added to it.
 
-When any input is invalid, the component is essentially invalid and therefore
-will be executed during the next run. If the component is valid (i.e., has no
-invalid inputs), it does not need to execute when the model is run. When a
-component's inputs become invalidated, the effect is propagated downstream to
-all components that depend on it. Also, when a model is instantiated, all
-inputs are invalid, which ensures that the whole model always executes the
-first time it is run.
+When any component input is set, all dependent outputs are invalidated. If an input
+is connected to an output and that output becomes invalid, then the input
+is also invalid. If a component
+has any invalid inputs or outputs, it will be executed during the next run. 
+When a component's inputs are changed, all downstream variables that depend
+on them either directly or indirectly are invalidated. Also,
+when a model is instantiated, all outputs are invalid, which ensures that the
+whole model always executes the first time it is run.
+
+
+*SequentialWorkflow*
+~~~~~~~~~~~~~~~~~~~~
+
+This workflow is a simple sequence of components.  The components will be executed
+in the order that they were added to the workflow regardless of data dependencies.
+Generally, this is a bad idea, but it's here for those rare occasions when the 
+exact sequence must be specified.
 
 
 Geometry in OpenMDAO

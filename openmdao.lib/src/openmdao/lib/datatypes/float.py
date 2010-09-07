@@ -186,7 +186,7 @@ class Float(TraitType):
         try:
             pq.convert_to_unit(dst_units)
         except NameError:
-            raise TraitError("undefined unit '%s' for attribute '%s'" %
+            raise TraitError("undefined unit '%s' for variable '%s'" %
                              (dst_units, name))
         except TypeError:
             msg = "%s: units '%s' are incompatible " % (name, src_units) + \
