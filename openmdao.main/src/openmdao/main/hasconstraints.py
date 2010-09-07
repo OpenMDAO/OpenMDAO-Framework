@@ -21,7 +21,7 @@ def _check_expr(expr):
         raise ValueError( msg )
 
 class Constraint(object):
-    def __init__(self, lhs, relation='>', rhs='0', scope=None):
+    def __init__(self, lhs, relation='<', rhs='0', scope=None):
         self.lhs = ExprEvaluator(lhs, scope=scope)
         _check_expr(self.lhs)
         self.relation = relation
@@ -43,7 +43,7 @@ def _parse_constraint(expr_string):
     else:
         if len(expr_string.split('==')) > 1:
             raise ValueError("'==' is not a valid relation in a constraint.  Use '=' instead.")
-        return (expr_string, '>', '0')
+        return (expr_string, '<', '0')
     
 def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
@@ -74,7 +74,8 @@ class HasEqConstraints(_HasConstraintsBase):
         if rel=='=':
             self.add_eq_constraint(lhs, rhs)
         else:
-            self._parent.raise_exception("add_ineq_constraint", NotImplemented)
+            msg = "Inequality constraints are not supported on this driver"
+            self._parent.raise_exception(msg, NotImplementedError)
 
     def add_eq_constraint(self, lhs, rhs):
         ident = _remove_spaces('='.join([lhs,rhs]))
@@ -99,7 +100,8 @@ class HasIneqConstraints(_HasConstraintsBase):
 
     def add_ineq_constraint(self, lhs, rel, rhs):
         if rel=='==' or rel=='=':
-            self._parent.raise_exception("add_eq_constraint", NotImplemented)
+            msg = "Equality constraints are not supported on this driver"
+            self._parent.raise_exception(msg, NotImplementedError)
 
         ident = _remove_spaces(rel.join([lhs,rhs]))
         self._constraints[ident] = Constraint(lhs,rel,rhs, scope=self._parent)
