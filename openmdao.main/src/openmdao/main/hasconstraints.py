@@ -43,7 +43,9 @@ def _parse_constraint(expr_string):
     else:
         if len(expr_string.split('==')) > 1:
             raise ValueError("'==' is not a valid relation in a constraint.  Use '=' instead.")
-        return (expr_string, '<', '0.')
+        #return (expr_string, '<', '0.')
+        msg = "Constraints require an explicit comparator (=, <, >, <=. or >=)"
+        raise ValueError( msg )
     
 def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')

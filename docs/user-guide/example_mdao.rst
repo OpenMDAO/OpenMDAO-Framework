@@ -352,7 +352,6 @@ equivalent ways of defining this constraint:
 
 .. testcode:: MDF_parts
 
-        self.driver.add_constraint('3.16 - dis1.y1')
         self.driver.add_constraint('3.16 - dis1.y1 < 0')
         self.driver.add_constraint('3.16 < dis1.y1')
         self.driver.add_constraint('-3.16 > -dis1.y1')
@@ -486,9 +485,6 @@ following constraints are equivalent:
         # Iteration loop
         self.solver.add_constraint('dis2.y2 = dis1.y2')
         self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
-
-Be careful not to omit the equals sign, or OpenMDAO will treat the constraint
-as an inequality constraint.
         
 Equality constraints may also be available for some optimizers, but you should 
 verify that they are supported. CONMIN does not support equality constraints.
