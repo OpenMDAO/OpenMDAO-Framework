@@ -1,3 +1,4 @@
+""" Class definition for Component """
 
 #public symbols
 __all__ = ['Component', 'SimulationRoot']
@@ -12,7 +13,7 @@ import pkg_resources
 import sys
 import weakref
 
-import networkx as nx
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event, not_none
 from enthought.traits.api import Bool, List, Str, Instance, implements, TraitError
 
