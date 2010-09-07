@@ -1,6 +1,6 @@
+""" Workflow class definition """
 
-from openmdao.main.container import Container
-from openmdao.main.component import Component
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
 
 __all__ = ['Workflow']
@@ -57,7 +57,7 @@ class Workflow(object):
         raise NotImplemented("This Workflow has no 'add' function")
     
     def config_changed(self):
-        """Notifies the Workflow that workflow configuration (dependencies, etc.)
+        """Notifies the Workflow that workflow configuration (dependencies, etc)
         has changed.
         """
         pass

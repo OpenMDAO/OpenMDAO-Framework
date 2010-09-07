@@ -22,21 +22,19 @@ copy._deepcopy_dispatch[weakref.ref] = copy._deepcopy_atomic
 copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint: enable-msg=W0212
 
-import networkx as nx
+# pylint apparently doesn't understand namespace packages...
+# pylint: disable-msg=E0611,F0401
+
 from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
                                  push_exception_handler, Python, TraitType, \
-                                 Property, Trait, Interface, Instance
+                                 Property, Interface, Instance
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType
 from enthought.traits.trait_base import not_none, not_event
 from enthought.traits.trait_types import validate_implements
 
-# pylint apparently doesn't understand namespace packages...
-# pylint: disable-msg=E0611,F0401
-
 from openmdao.main.filevar import FileRef
 from openmdao.util.log import Logger, logger, LOG_DEBUG
-from openmdao.main.factorymanager import create as fmcreate
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator
@@ -79,7 +77,7 @@ def _deep_setattr(obj, path, value):
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
 # re-raised.
-push_exception_handler(handler = lambda o,t,ov,nv: None,
+push_exception_handler(handler = lambda o, t, ov, nv: None,
                        reraise_exceptions = True,
                        main = True,
                        locked = True )
@@ -251,7 +249,7 @@ class Container(HasTraits):
         """Return dict representing this container's state."""
         state = super(Container, self).__getstate__()
         dct = {}
-        for name,trait in state['_added_traits'].items():
+        for name, trait in state['_added_traits'].items():
             if trait.transient is not True:
                 dct[name] = trait
         state['_added_traits'] = dct
@@ -269,7 +267,7 @@ class Container(HasTraits):
         
         # restore dynamically added traits, since they don't seem
         # to get restored automatically
-        for name,trait in self._added_traits.items():
+        for name, trait in self._added_traits.items():
             self.add_trait(name, trait)
          
         # after unpickling, implicitly defined traits disappear, so we have to
@@ -370,10 +368,12 @@ class Container(HasTraits):
         getwrapper = getattr(ttype, 'get_val_meta_wrapper', None)
         if getwrapper is not None:
             wrapper = getwrapper()
-            wrapper.value = _copydict[ttype.copy](getattr(self, name)) # copy value if 'copy' found in metadata
+            # copy value if 'copy' found in metadata
+            wrapper.value = _copydict[ttype.copy](getattr(self, name))
             return wrapper
         
-        return _copydict[ttype.copy](getattr(self, name)) # copy value if 'copy' found in metadata
+        # copy value if 'copy' found in metadata
+        return _copydict[ttype.copy](getattr(self, name)) 
         
     def add(self, name, obj, **kw_args):
         """Add a Container object to this Container.
@@ -480,7 +480,7 @@ class Container(HasTraits):
 
     def list_containers(self):
         """Return a list of names of child Containers."""
-        return [n for n,v in self.items() if isinstance(v,Container)]
+        return [n for n, v in self.items() if isinstance(v, Container)]
     
     def _alltraits(self, traits=None, **metadata):
         """This returns a dict that contains all traits (class and instance)
@@ -585,7 +585,7 @@ class Container(HasTraits):
         of metadata.  If the specified piece of metadata is not part of
         the trait, None is returned.
         """
-        parts = traitpath.split('.',1)
+        parts = traitpath.split('.', 1)
         if len(parts) > 1:
             obj = getattr(self, parts[0])
             return obj.get_metadata(parts[1], metaname)
@@ -690,7 +690,7 @@ class Container(HasTraits):
         tup = path.split('.')
         if len(tup) == 1:
             trait = self._check_trait_settable(path, srcname, force)
-            if trait.type =='event':
+            if trait.type == 'event':
                 setattr(self, path, value)
             else:
                 if index is None:
@@ -1121,8 +1121,8 @@ def dump(cont, recurse=False, stream=None):
     their corresponding values to the given stream. If the stream
     is not supplied, it defaults to *sys.stdout*.
     """
-    pprint.pprint(dict([(n,str(v)) 
-                    for n,v in cont.items(recurse=recurse, 
+    pprint.pprint(dict([(n, str(v)) 
+                    for n, v in cont.items(recurse=recurse, 
                                           iotype=not_none)]),
                   stream)
 
