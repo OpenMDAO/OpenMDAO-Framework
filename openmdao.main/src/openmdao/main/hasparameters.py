@@ -4,7 +4,7 @@ from numpy import float32, float64, int32, int64
 
 from openmdao.main.expreval import ExprEvaluator
 
-class _Parameter(object): 
+class Parameter(object): 
     
     def __init__(self, low=None, high=None, expr=None):
         self.low = low
@@ -47,8 +47,8 @@ class HasParameters(object):
                                          "but it's already there" % name,
                                          AttributeError)
         
-        parameter = _Parameter()
-        parameter.expreval = ExprEvaluator(name, self._parent.parent, single_name=True)
+        parameter = Parameter()
+        parameter.expreval = ExprEvaluator(name, self._parent, single_name=True)
         
         try:
             metadata = self._parent.parent.get_metadata(name.split('[')[0])
@@ -58,8 +58,8 @@ class HasParameters(object):
         try:
             val = parameter.expreval.evaluate()
         except Exception as err:
-            self._parent.raise_exception("Can't add parameter because I can't evaluate '%s': %s" % 
-                                         (name,str(err)), type(err))
+            self._parent.raise_exception("Can't add parameter because I can't evaluate '%s'." % name, 
+                                         ValueError)
         if not isinstance(val,(float,float32,float64,int,int32,int64)):
             self._parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
                                          (name,type(val).__name__), ValueError)

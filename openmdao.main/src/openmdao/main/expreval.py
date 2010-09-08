@@ -399,3 +399,15 @@ class ExprEvaluator(str):
                     return False
         return True
     
+    def check_resolve(self):
+        """Return True if all variables referenced by our expression can
+        be resolved.
+        """
+        if self._scope:
+            scope = self._scope()
+            if scope and scope.parent:
+                if self._text != self:  # text has changed
+                    self._parse()
+                if scope.parent.check_resolve(self.var_names):
+                    return True
+        return False

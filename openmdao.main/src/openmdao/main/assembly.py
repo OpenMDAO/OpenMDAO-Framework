@@ -361,6 +361,20 @@ class Assembly (Component):
                                          name, RuntimeError)
         return valids
 
+    def check_resolve(self, pathnames):
+        """Returns True if all of the pathnames are resolvable starting from this
+        Assembly.
+        """
+        for name in pathnames:
+            tup = name.split('.', 1)
+            if len(tup) > 1:
+                comp = getattr(self, tup[0], None)
+                if comp is None or not comp.contains(tup[1]):
+                    return False
+            elif not hasattr(self, name):
+                return False
+        return True
+
     def invalidate_deps(self, compname=None, varnames=None, notify_parent=False):
         """Mark all Variables invalid that depend on varnames. 
         Returns a list of our newly invalidated boundary outputs.

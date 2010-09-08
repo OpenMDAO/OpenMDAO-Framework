@@ -13,25 +13,19 @@ _ops = {
     }
 
 def _check_expr(expr):
-    try:
-        # force checking for existence of vars referenced in expression
-        expr.refs_valid()  
-    except (AttributeError, RuntimeError), err:
-        msg = "Invalid expression '%s': %s" % (str(expr), err)
+    # force checking for existence of vars referenced in expression
+    if not expr.check_resolve():
+        msg = "Invalid expression '%s'" % str(expr)
         raise ValueError( msg )
 
 class Constraint(object):
     def __init__(self, lhs, comparator, rhs, scope=None):
         self.lhs = ExprEvaluator(lhs, scope=scope)
-        try:
-            self.lhs.refs_valid()
-        except (AttributeError, RuntimeError) as err:
+        if not self.lhs.check_resolve():
             raise ValueError("Constraint '%s' has an invalid left-hand-side." % ' '.join([lhs,comparator,rhs]))
         self.comparator = comparator
         self.rhs = ExprEvaluator(rhs, scope=scope)
-        try:
-            self.rhs.refs_valid()
-        except (AttributeError, RuntimeError) as err:
+        if not self.rhs.check_resolve():
             raise ValueError("Constraint '%s' has an invalid right-hand-side." % ' '.join([lhs,comparator,rhs]))
         
     def evaluate(self):
