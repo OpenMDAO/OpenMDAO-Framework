@@ -31,7 +31,7 @@ If we express the problem as a block diagram, we can see how to set it up in Ope
    A Simple Optimization Problem
    
 The optimizer is the :term:`Driver`. Its job is to manipulate the two design
-variables (*x* and *y*) to minimize the output of the paraboloid function
+variables (*x* and *y*) to minimize the output of the ``paraboloid`` function
 (*f*). The Paraboloid equation fits into the OpenMDAO process as a
 :term:`Component`. This Paraboloid component contains a method that operates
 on the inputs (*x* and *y*) and returns the value of the function (*f*)
@@ -163,7 +163,7 @@ Please edit the ``paraboloid.py`` that you created and define the class
 Paraboloid as you did above.
 
 If you stop here, you have a Paraboloid component with no inputs, no 
-outputs, and an execute function that does nothing. The next thing you need
+outputs, and an ``execute`` function that does nothing. The next thing you need
 to do is define the inputs and outputs in the class definition
 by adding these lines:
 
@@ -220,7 +220,7 @@ Finally, you need a function to execute this component:
         
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
         
-The execute function is where you define what a component does when it runs.
+The ``execute`` function is where you define what a component does when it runs.
 For your Paraboloid component, the equation is evaluated here. The input and
 output variables are members of the Paraboloid class, which means that
 they must be accessed using *self*. For example, ``self.x`` gives you the value
@@ -231,9 +231,9 @@ Often, you will already have the code for evaluating your component outputs,
 but it will be in some other language, such as Fortran or C/C++. The :ref:`Plugin-Developer-Guide` 
 gives some examples of how to incorporate these kinds of components into OpenMDAO.
 
-Please edit the ``paraboloid.py`` that you created and add an execute function
+Please edit the ``paraboloid.py`` that you created and add an ``execute`` function
 that solves the equation given above. Don't forget that indentation is important
-in Python; your execute function must be indented so that Python knows
+in Python; your ``execute`` function must be indented so that Python knows
 it is part of the Paraboloid class. The finished result should look like the code
 from the beginning of this tutorial.
 
@@ -340,10 +340,10 @@ The OptimizationUnconstrained class is derived from Assembly instead of Componen
     class OptimizationUnconstrained(Assembly):
         """Unconstrained optimization of the Paraboloid with CONMIN."""
     
-In the Paraboloid component, you created an execute function to tell it what to do when the
-component is run. The ``OptimizationUnconstrained`` assembly does not need an execute function because
+In the Paraboloid component, you created an ``execute`` function to tell it what to do when the
+component is run. The ``OptimizationUnconstrained`` assembly does not need an ``execute`` function because
 the Assembly class already has one that is sufficient for most cases. However, this assembly does
-need an initialize function to set parameters for the optimization. This is what the ``__init__``
+need an ``initialize`` function to set parameters for the optimization. This is what the ``__init__``
 function does:
 
 .. testcode:: simple_model_Unconstrained_pieces
@@ -362,7 +362,7 @@ parameters that CONMIN needs. The *super* command calls the
 can lead to unexpected behavior.
 
 Next, the Paraboloid and the CONMIN driver have to be instantiated and added
-to ``OptimizationUnconstrained``. The function *add* is used to add them
+to ``OptimizationUnconstrained``. The function ``add`` is used to add them
 to the assembly:
 
 .. testcode:: simple_model_Unconstrained_pieces
@@ -390,7 +390,7 @@ that contains a list of the components that the driver tells to run. We can add 
             self.driver.workflow.add(self.paraboloid)
 
 For this problem, you want to minimize ``f_xy``. In optimization, this is called
-the *objective function*. In OpenMDAO, you define the objective function using an
+the *objective function*. In OpenMDAO, you define the ``objective`` function using an
 *Expression* variable:
         
 .. testcode:: simple_model_Unconstrained_pieces
@@ -427,7 +427,7 @@ to lie on [-50, 50].
         
 The problem is now essentially ready to execute. CONMIN contains quite a few
 additional control parameters, though the default values for many of them are
-adequate. These parameters are detailed in the section on :ref:`CONMIN-driver`.
+adequate. These parameters are detailed in the section on :ref:`CONMINDriver`.
         
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -498,14 +498,16 @@ the final lines in this file are:
     Elapsed time:  ... seconds
         
  
-In this block of code you are doing four things. 1) In the first statement, you create an instance
-of the class ``OptimizationUnconstrained`` with the name ``opt_problem``. 2) In the second statement,
-you set ``opt_problem`` as the top Assembly in the model hierarchy. (This will be explained in a
-later tutorial.) 3) In the fifth statement, you tell ``opt_problem`` to run. (The model will execute
-until the optimizer's termination criteria are reached.) 4) In the remaining statements, you define
-the results to print, including the elapsed time.
+In this block of code you are doing four things: 
 
-Please edit your copy of ``optimization_unconstrained.py`` and add the
+   1. In the first statement, you create an instance of the class ``OptimizationUnconstrained`` with
+      the name ``opt_problem``. 
+   2. In the second statement, you set ``opt_problem`` as the top Assembly in the model hierarchy. (This will be explained in a later tutorial.)    
+   3. In the fifth statement, you tell ``opt_problem`` to run. (The model will execute until the optimizer's
+      termination criteria are reached.) 
+   4. In the remaining statements, you define the results to print, including the elapsed time.
+
+Please edit your copy of ``optimization_unconstrained.py`` and add the 
 block of code into it. Now, save the file and type the following at the command
 prompt:
 
@@ -543,10 +545,10 @@ an equation or inequality built using available variables with Python
 mathematical syntax and functions. CONMIN supports inequality
 constraints but not equality constraints.
 
-We want to add the constraint ``x-y >= 15`` to this problem. The unconstrained
+You want to add the constraint ``x-y >= 15`` to this problem. The unconstrained
 minimum violates this constraint, so a new minimum must be found by
 the optimizer. You can add a constraint to your existing ``OptimizationUnconstrained``
-model by adding one line to the initialize function:
+model by adding one line to the ``initialize`` function:
 
 .. testcode:: simple_model_Unconstrained_pieces
 

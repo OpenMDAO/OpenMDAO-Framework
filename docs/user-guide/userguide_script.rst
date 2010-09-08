@@ -55,10 +55,10 @@ loaded from ``openmdao.main.api``, along with the CONMIN driver from ``openmdao.
 
 To simplify the imports, a selection of the most commonly used imports was
 placed in the pseudo-package ``openmdao.main.api``. You can obtain a complete
-listing of what is available in this module by using the *dir()* command in
+listing of what is available in this module by using the ``dir()`` command in
 Python. Likewise, a pseudo-package was also created to house some of the most
 commonly used imports from the standard library. In general, it contains
-variables and divers. Most of these items are also explained elsewhere
+variables and drivers. Most of these items are also explained elsewhere
 in the *User Guide.*
 
 Importing more objects into the namespace of your module increases the
@@ -128,7 +128,7 @@ Component API.
 Every component in the OpenMDAO framework is an object that conforms to a
 specific interface. At present, the easiest way to match this interface
 is to inherit from the built-in Component class and then override the
-execute() function to give the component some kind of run behavior. Likewise,
+``execute()`` function to give the component some kind of run behavior. Likewise,
 the ``__init__()`` function can also be overridden to prescribe the component's
 behavior when it is instantiated. This is mostly useful for defining any 
 internal private variables that need to be saved between runs but aren't
@@ -168,7 +168,7 @@ A simple component that implements an equation with two inputs is shown below:
 
 In this example, the ``__init__()`` function doesn't do anything but call the
 equivalent in the base class, so technically it should be removed from this 
-class definition. Public variables are explained in more detail in the section :ref:`Public-Variables`.
+class definition. 
 
 .. index:: save_to_egg()
 
@@ -180,7 +180,7 @@ class.
 
 .. todo::
 
-    save_to_egg example
+    ``save_to_egg`` example
 
 
 .. _Variables:
@@ -188,7 +188,7 @@ class.
 Variables
 ---------
 
-In OpenMDAO, a variable is an attribute that can be seen or manipulated by
+In OpenMDAO, a *variable* is an attribute that can be seen or manipulated by
 other entities in the framework. Any data that is passed between components in a
 model must use variables to declare the inputs and outputs for each
 component.
@@ -219,7 +219,7 @@ output would look like this:
 The example above shows the way the majority of users will create variables.
 An alternative way to declare them is to use the ``add_trait`` function that is part of the
 Component public interface. First, lets define the same class in the shell but without
-the variables x and y.
+the variables *x* and *y*.
   
 .. testcode:: creating_public_variables_2
 
@@ -231,8 +231,8 @@ the variables x and y.
             """ y = 3*x """
             self.y = 3.0*self.x
 
-Next, the ``add_trait`` function is used to add the input x and the output y after
-an instance of Simple has been created:
+Next, the ``add_trait`` function is used to add the input *x* and the output *y* after
+an instance of *Simple* has been created:
 
 .. doctest:: creating_public_variables_2
 
@@ -262,12 +262,12 @@ Some specialized components will make use of the ability to create
 variables on the fly, but most general components won't need this.
 
 The example above shows how to directly access a variable, but there is also an
-indirect access using a *set* and *get* method. Set and get are primarily used by the
+indirect access using a ``set`` and ``get`` method. ``Set`` and ``get`` are primarily used by the
 framework to pass data between variables. In some cases a
 model developer may need to use them -- but only for specific cases where
 some objects are executing on remote servers.
 
-Here is an example of the get function:
+Here is an example of the ``get`` function:
 
 .. doctest:: var_indirect
 
@@ -278,7 +278,7 @@ Here is an example of the get function:
     >>> my_engine.get("bore")
     82.0
 
-Here is an example of the set function:
+Here is an example of the ``set`` function:
 
 .. doctest:: var_indirect
 
@@ -311,7 +311,7 @@ Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
 
 .. index:: variable types
     
-**Summary of Public Variable Types**
+**Summary of Variable Types**
 
 +------------------+----------------------------------------------------------+
 | Name             | Callable Signature                                       |
@@ -373,7 +373,7 @@ optional.
 The *iotype* attribute is required for all variables regardless of type.
 Its sole function is to tell the framework whether the variable should be
 treated as an input or an output. Presently, the only two options for this
-attribute are *'in'* and *'out'*.
+attribute are ``'in'`` and ``'out'``.
 
 **Summary of iotypes**
 
@@ -424,7 +424,7 @@ The *dtype* parameter defines the type of variable that is in the array. For
 example, using a string (*str*) for a dtype would give an array of strings. Any
 of Python's standard types and NumPy's additional types should be valid for the
 dtype parameter. The alternate *typecode* specification is also supported for 
-non-Numpy arrays (e.g., typecode='I' for unsigned integers.)
+non-NumPy arrays (e.g., ``typecode='I'`` for unsigned integers.)
 
 The *shape* parameter is not a required attribute; the Array will default to
 the dimensions of the array that are given as the value. However, it is often
@@ -474,7 +474,7 @@ and calculates their dot product as an output.
 Multiplication of a NumPy array is element by element, so *sum* is used to
 complete the calculation of the dot product. Individual elements of the array
 can also be accessed using brackets. An OpenMDAO Array behaves like a NumPy
-array, so it can be used as an argument in a NumPy function like sum.
+array, so it can be used as an argument in a NumPy function like `sum`.
 
 Note that this is a horrible way to do a dot product. Numpy has a dot function
 which is much faster than sum.
@@ -527,7 +527,7 @@ strings to go along with the numbers the code expects.
     class TrafficLight(Component):
         color = Enum(0, (0, 1, 2), iotype='in', aliases=("Red", "Yellow", "Green"))
 
-Lets create an instance of this component and try setting the Enum.
+Let's create an instance of this component and try setting the Enum.
 
 .. doctest:: enum_example
 
@@ -572,10 +572,10 @@ File Variables
 
 The *File* variable contains a reference to an input or output file on disk. It
 is more than just a text string that contains a path and filename; it is
-a FileReference that can be passed into other functions expecting
+a *FileReference* that can be passed into other functions expecting
 such an object. FileReferences have methods for copying the reference and
 opening the referenced file for reading. The available "flags" are defined
-by FileMetadata, which supports arbitrary user metadata.
+by `FileMetadata`, which supports arbitrary user metadata.
 
 
 .. testcode:: filevar_example
@@ -599,16 +599,14 @@ mark a file as binary.
 Instance Traits
 +++++++++++++++
 
-An *Instance* is a trait that requires any value assigned to it either to be
-an instance of a specific class or to implement a specific Interface.  The class
-or Interface to be matched is the first argument to the constructor.
-Failure to match the specified class or Interface will result in an exception being raised.
-Instance traits are typically used to implement Sockets, which are placeholders for
-plugins within a component, but they may also be used to implement Variables by setting
-their *iotype* metadata attribute to 'in' or 'out'.  In this case, it is important to 
-also set the *copy* metadata attribute so the framework knows how to copy the data to
-connected components.  Allowable values for *copy* are 'deep' (the default), 'shallow',
-and None.  A copy value of None indicates that the data will be passed by reference
+An *Instance* is a trait that requires any value assigned to it to be either an instance of a specific class
+or an implementation of a specific Interface. The class or Interface to be matched is the first argument to
+the constructor. Failure to match the specified class or Interface will result in an exception being raised.
+Instance traits are typically used to implement Sockets, which are placeholders for plugins within a
+component, but they may also be used to implement Variables by setting their *iotype* metadata attribute to
+``'in'`` or ``'out'``.  In this case, it is important to  also set the *copy* metadata attribute so the
+framework knows how to copy the data to connected components.  Allowable values for *copy* are ``'deep'`` (the
+default), ``'shallow'``, and None.  A copy value of None indicates that the data will be passed by reference
 and no copy will be made.
 
 
@@ -646,11 +644,11 @@ OpenMDAO also supports variables with explicitly defined units using the Float a
 variable types, which are included as part of the Standard Library. Both
 types provide the following useful effects when utilized in the framework.
 
-- Automatically convert a value passed from an output to an input with compatible units (e.g., 'inch' and 'm')
-- Raise an exception when attempting to pass a value from an output to an input having incompatible units (e.g., 'kg' and 'm')
+- Automatically convert a value passed from an output to an input with compatible units (e.g., ``'inch'`` and ``'m')``
+- Raise an exception when attempting to pass a value from an output to an input having incompatible units (e.g., ``'kg'`` and ``'m'``)
 - Allow values to be passed between unitless variables and variables with units; no unit conversion occurs
 
-A complete list of the available units is given in the :ref:`Summary-of-Units`.
+A complete list of the available units is given in the :ref:`Appendix:-Summary-of-Units`.
 The unit conversion code and the base set of units come from the
 PhysicalQuantities package found in `Scientific Python
 <http://dirac.cnrs-orleans.fr/plone/software/scientificpython>`_. It was
@@ -659,9 +657,8 @@ particular, a currency unit), so a new Units package was derived and is
 included in OpenMDAO as ``openmdao.units``. This package has the same basic
 function as that of PhysicalQuantities, but to make it more extensible, the
 unit definitions were moved from the internal dictionary into an externally
-readable text file called ``unitLibdefault.ini``. More information on
-customization (i.e., adding new units) of the Units package can be found in
-the :ref:`OpenMDAO-Standard-Library`.
+readable text file called ``unitLibdefault.ini``. See the source documentation for more information on the
+OpenMDAO :ref:`Units package<openmdao.units.units.py>`, including how to add units.
 
 As an example, consider a component that calculates a pressure (in Pascals) given
 a known force (in Newtons) applied to a known area (in square meters). Such a
@@ -686,7 +683,7 @@ component would look like this:
         
             self.pressure = self.force/self.area
 
-The *low* and *exclude_low* parameters are used in the declaration of *area* to prevent a
+The ``low`` and ``exclude_low`` parameters are used in the declaration of *area* to prevent a
 value of zero from being assigned, resulting in a division error. Of course, you
 could still get very large values for *pressure* if area is near machine zero.
 
@@ -818,7 +815,7 @@ Consider the top level assembly that was created for the
 
 We can see here that components that comprise the top level of this model are
 declared in the ``__init__`` function. The base class ``__init__`` function is called
-(with the super function) before anything is added to the empty assembly. This
+(with the ``super`` function) before anything is added to the empty assembly. This
 is important to ensure that internal framework machinery has been properly initialized
 before any methods such as ``add`` are called.
 
@@ -847,7 +844,7 @@ include functions that support the above-listed characteristics.
 
 Consider once again the top level assembly that was created for the 
 :ref:`simple tutorial <Getting-Started-with-OpenMDAO>`. We would like to create a few
-instances of the Paraboloid function and connect them together in series.
+instances of the ``Paraboloid`` function and connect them together in series.
 
 .. testcode:: connect_components
 
@@ -867,8 +864,8 @@ instances of the Paraboloid function and connect them together in series.
             self.connect("par1.f_xy","par2.x")
             self.connect("par2.f_xy","par3.y")
 
-Components are connected by using the *connect* function built into the
-assembly. *Connect* takes two arguments, the first of which must be a component
+Components are connected by using the ``connect`` function built into the
+assembly. ``Connect`` takes two arguments, the first of which must be a component
 output, and the second of which must be a component input. These are expressed
 using their locations in the OpenMDAO model hierarchy with respect to the scope
 of their parent assembly. Additionally, only one output can
@@ -919,7 +916,7 @@ cannot be used. Instead, the desired variables must be manually created and
 connected. You can find a more detailed example of this in the :ref:`complex tutorial
 <A-More-Complex-Tutorial-Problem>`. Most of the time passthroughs are sufficient.
 
-Assemblies also include a way to break variable connections. The *disconnect*
+Assemblies also include a way to break variable connections. The ``disconnect``
 function can be called to break the connection between an input and an output
 or to break all connections to an input or output.
 
@@ -932,7 +929,7 @@ or to break all connections to an input or output.
     >>> # Disconnect a specific connection
     >>> my_car.disconnect('velocity','transmission.velocity')
 
-You probably won't need to use *disconnect* very often. Some components may
+You probably won't need to use ``disconnect`` very often. However, some components may
 need to reconfigure their connections during runtime, so it is available.
 
 .. _Files-and-Directories:
@@ -991,7 +988,7 @@ their respective workflow until certain conditions are met. OpenMDAO includes
 several drivers that are distributable (i.e., either open source or
 public domain.) This section describes the driver interface that is common
 to most drivers. A more complete discussion on how to use each of the
-drivers can be found in :ref:`the Standard Library Reference<stdlib>`.
+drivers can be found in the section on :ref:`Drivers` in Appendix B: Standard Library Reference.
 
 .. _Driver-API: 
 
@@ -1000,12 +997,12 @@ The Driver API
 
 Drivers in OpenMDAO share a functional interface for setting up certain common
 parts of the problem. There are functions to handle parameters, which are inputs
-to a system and are also known as design variables for optimizers or independents
+to a system and are also known as *design variables* for optimizers or *independents*
 for solvers. Likewise, there are also functions to handle constraints.
 
 .. index:: parameter, design variable
 
-To illustrated the paramter interface, let's consider a model in which our goal
+To illustrate the parameter interface, consider a model in which our goal
 is to optimize the design of a vehicle with several design variables using
 the CONMINdriver optimizer.
 
@@ -1031,7 +1028,7 @@ the CONMINdriver optimizer.
             # add DrivingSim to workflow
             driver.workflow.add(self.driving_sim)
 
-We add design variables to the driver *self.driver* using the ``add_parameter``
+We add design variables to the driver ``self.driver`` using the ``add_parameter``
 function. 
 
 .. testsetup:: Parameter_API
@@ -1054,18 +1051,17 @@ parameter must point to a component input, not a component output. During
 driver execution, the parameter values are set, and the relevant portion of
 the model is executed to evaluate the new objective.
     
-The *low* and *high* parameters can be used to specify an allowable range for a parameter. This is
-useful for optimization problems where the design variables are constrained. Generally,
-the optimizer treats these as a special kind of constraint, so they should be defined
-using the low and high parameters rather than the add_constraint method. If a low or
-high value are not given, then they are pulled from the corresponding low and high
-parameters that are defined in the variable. If low or high aren't definied
-in either place, then an exception is raised. Some drivers (in particular solvers) do
-not support a low or high value; in such a case, you can just set each of them to a large number,
-e.g., low=-1e99 and high=1e99.
+The *low* and *high* parameters can be used to specify an allowable range for a parameter. Using these
+parameters is useful for optimization problems where the design variables are constrained. Generally, the
+optimizer treats these as a special kind of constraint, so they should be defined using the low and high
+parameters rather than the ``add_constraint method``. If low and high values are not given, then they are
+pulled from the corresponding low and high parameters that are defined in the variable. If low and high aren't
+defined in either place, then an exception is raised. Some drivers (in particular solvers) do not support a
+low or high value; in such a case, you can just set each of them to a large number, e.g., ``low=-1e99`` and
+``high=1e99``.
 
 Multiple parameters can also be added in a single call to ``add_parameters`` (note the letter
-s) by passing a list of tuples.
+*s*) by passing a list of tuples.
 
 .. testcode:: Parameter_API
 
@@ -1074,8 +1070,8 @@ s) by passing a list of tuples.
                                  ('driving_sim.IVC', 0.0, 90.0) ])
 
 
-The *IHasParameters* interface also includes some other functions that are more useful when
-used interactively or when writing some more advanced components. The functions ``list_parameters``,
+The ``IHasParameters`` interface also includes some other functions that are more useful when
+used interactively or when writing more advanced components. The functions ``list_parameters``,
 ``remove_parameters``, and ``clear_parameters`` can be used to respectively list all parameters, delete a
 single parameter, and clear all parameters.
 
@@ -1094,17 +1090,17 @@ single parameter, and clear all parameters.
 
 There are also ``get_parameters`` and ``set_parameters`` methods, but these
 methods are typically used by drivers to manage the parameters in their
-workflow, and are not called directly by users. These will be described in the
+workflow and are not called directly by users. These will be described in the
 section :ref:`Adding-new-Drivers`.
 
 .. index:: constraint
 
-A similar interface is present for interacting with constraints. Constraints
+A similar interface is present for interacting with constraints. *Constraints*
 are defined using strings containing equations or inequalities that reference
 available OpenMDAO variables. Both equality and
-inequality constraints are supported via the interface, however when you use a
+inequality constraints are supported via the interface; however, when you use a
 driver, you should verify that it supports the desired type of constraint. For
-example, the CONMIN driver supports inequality constraints, but not equality
+example, the CONMIN driver supports inequality constraints but not equality
 constraints.
 
 Constraints are added to a driver using the ``add_constraint`` method.
@@ -1129,8 +1125,8 @@ methods return a list of tuples of the form ``(lhs, rhs, relation, result)``, wh
 *lhs* is the value of the left hand side of the expression, *rhs* is the value of
 the right hand side of the expression, *result* is the boolean result of evaluating
 the expression, and *relation* is a string indicating the type of
-relation used in the expression, e.g., *>*, *<*, *>=*, *<=*, or *=*. The
-values of the left and right hand sides are needed by gradient optimizers that 
+relation used in the expression, e.g., ``>, <, >=, <=, or =``. The
+values of the left- and right-hand sides are needed by gradient optimizers that 
 apply the constraint via a penalty function.
 
 The *IHasConstraints* interface also supports equality constraints. At
@@ -1181,7 +1177,7 @@ Calling ``clear_constraints`` will remove all constraints from a driver.
 .. index:: objective
 
 Finally, optimizers include one objective (or in the future, possibly multiple objectives)
-that is represented by a string containing an expression built up from available OpenMDAO outputs. There is
+that are represented by a string containing an expression built up from available OpenMDAO outputs. There is
 no functional interface for entering an objective, but drivers include a variable called
 *objective* that takes an Expression as its input.
 
@@ -1202,7 +1198,7 @@ driver.
 
 .. todo::
 
-    Show how to add new drivers
+    Show how to add new drivers.
 
 Running OpenMDAO
 -----------------
@@ -1244,32 +1240,32 @@ variables will not be able to read, write, or even open their target files.
 
 .. todo::
 
-    Show how to run a model
+    Show how to run a model.
 
 .. todo::
 
-    Discuss Reset to Defaults
+    Discuss Reset to Defaults.
 
 *Error Logging & Debugging*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. todo::
 
-    Explain the error logging capability
+    Explain the error logging capability.
 
 *Saving & Loading*
 ~~~~~~~~~~~~~~~~~~
 
 .. todo::
 
-    Show how to save and load
+    Show how to save and load.
 
 *Sharing Models*
 ~~~~~~~~~~~~~~~~
 
 .. todo::
 
-    Discuss sharing models
+    Discuss sharing models.
 
 Workflow
 --------

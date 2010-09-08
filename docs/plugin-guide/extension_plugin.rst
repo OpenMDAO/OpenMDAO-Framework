@@ -161,10 +161,10 @@ comments are prefaced with ``Cf2py``:
     Cf2py intent(out) ff     
     Cf2py intent(out) obj
     
-The *intent(in)* marks an input, and *intent(out)* denotes an output. If an argument serves as
+The ``intent(in)`` marks an input, and ``intent(out)`` denotes an output. If an argument serves as
 both an input and output (i.e., it passes a value to the argument and expects a change
-upon completion), then intent(inout) can be used. There are several other intents that are
-useful for other less common cases. One that may be of interest is *intent(callback),* which
+upon completion), then ``intent(inout)`` can be used. There are several other intents that are
+useful for other less common cases. One that may be of interest is ``intent(callback)``, which
 can be used to pass a Python (or other) function into a Fortran subroutine.
 
 Once the intents have all been declared, F2PY can be executed to produce the module by
@@ -264,7 +264,7 @@ By the same token, NumPy arrays should be used to receive arrays that are return
 Python by the Fortran function.
 
 Data in the common blocks is also accessible. In this case, the Fortran code stores
-the values of the bar forces in a common block as *force1, force2,* and *force3.*
+the values of the bar forces in a common block as ``force1, force2,`` and ``force3.``
 
 .. testcode:: bar3_wrap
 

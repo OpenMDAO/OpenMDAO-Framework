@@ -18,7 +18,7 @@ from openmdao.main.tvalwrapper import TraitValMetaWrapper
 from openmdao.main.uncertain_distributions import UncertainDistribution
 
 class Float(TraitType):
-    """A Public Variable wrapper for floating point number valid within a
+    """A vVariable wrapper for floating point number valid within a
     specified range of values.
     """
     

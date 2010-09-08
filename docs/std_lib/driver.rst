@@ -24,7 +24,7 @@ a full Newton solver, but they may not be suitable for all problems.
 To see how to use the BroydenSolver, consider a problem where we'd like to solve
 for the intersection of a line and a parabola. We can implement this as a single
 component. (It is also possible to implement it as two components if you'd
-prefer. See :ref:`Tutorial-MDAO-Architectures` to learn how to broadcast variables.)
+prefer. See :ref:`Tutorial:-MDAO-Architectures` to learn how to broadcast variables.)
 
 .. testcode:: Broyden
 
@@ -60,7 +60,7 @@ usually find other solutions by starting the solution from different initial
 points. We start at ``(10, 10)``, as designated by the default values for the variables
 *x* and *y*.
 
-Next, we build a model that uses the Broyden solver to find a root for the 
+Next, we build a model that uses the BroydenSolver to find a root for the 
 equations defined in MIMOSystem.
 
 .. testcode:: Broyden
@@ -114,7 +114,7 @@ The resulting solution should yield:
 
 .. index:: algorithm, Enum, SciPy
 
-There are five parameters that control the solution process in the Broyden solver.
+There are five parameters that control the solution process in the BroydenSolver.
 
 **algorithm** -- SciPy's nonlinear package contained several algorithms for solving
 a set of nonlinear equations. Three of these methods were considered by their
@@ -310,7 +310,7 @@ absolute change in the objective function to indicate convergence (i.e., if the
 objective function changes by less than dabfun, then the problem is converged).
 Similarly, *delfun* is the relative change of the objective function with respect
 to the value at the previous step. Note that delfun has a hard-wired minimum of 
-1e-10 in the Fortran code, and dabfun has a minimum of 0.0001.
+``1e-10`` in the Fortran code, and dabfun has a minimum of 0.0001.
 
 .. testcode:: CONMIN_show
 
@@ -697,7 +697,7 @@ the optimizer to use a different range instead of the default.
     top.driver.add_parameter('comp.w', low=5.0, high=7.0)
 
 Now, for ``comp.x`` the optimizer will only try values between 5.0 and 7.0. Note that `low` and `high`
-are only applicable to Float and Int variables. For Enum variables, `low` and `high`
+are applicable only to Float and Int variables. For Enum variables, `low` and `high`
 are not applicable.
 
 Configuration

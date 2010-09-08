@@ -242,7 +242,7 @@ class IHasParameters(Interface):
         """Returns an ordered dict of parameter objects."""
 
     def set_parameters(self, X): 
-        """Pushes the values in the X input array into the corresponding public 
+        """Pushes the values in the X input array into the corresponding 
         variables in the model.
         
         X: iterator

@@ -12,7 +12,7 @@ from enthought.traits.api import Range, TraitError, TraitType
 
     
 class Int(TraitType):
-    """A Public Variable wrapper for an integer valid within a
+    """A variable wrapper for an integer valid within a
        specified range of values.
        """
     

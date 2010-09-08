@@ -240,7 +240,7 @@ pure Python OpenMDAO plugin.
 
 Let's assume we want to have a variable that represents a set of Cartesian 
 coordinates, with the value of the variable being a 3-tuple of floating point
-values representing the x, y, and z position.  We'll start by creating a 
+values representing the *x, y,* and *z* position.  We'll start by creating a 
 file called ``coord.py`` and placing the following code in it:
 
 ::
