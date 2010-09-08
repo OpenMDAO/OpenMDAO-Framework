@@ -183,7 +183,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.top.driver.add_constraint('bogus.flimflam < 1')
         except ValueError, err:
             self.assertEqual(str(err), 
-                "Invalid expression 'bogus.flimflam': 'Assembly' object has no attribute 'bogus'")
+                "Constraint 'bogus.flimflam < 1' has an invalid left-hand-side.")
         else:
             self.fail('ValueError expected')
             

@@ -88,14 +88,21 @@ use it, you must have compilers (C and Fortran) on your system.
 - On **Leopard:**
 
  - `Python 2.6`__ 
- - `numpy <http://sourceforge.net/projects/numpy/files/>`_                  
+ - `numpy <http://sourceforge.net/projects/numpy/files/>`_
  - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
  - `gfortran`__ 
  - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
 
+ If you have *g77* installed on Leopard, you may get build errors like: 
+ "ld: library not found for -lcc_dynamic". This indicates that *g77* is being used
+ instead of *gfortran*, which won't work.  At the moment, the recommended fix
+ is to change the name of *g77* to something else, for example, *_g77* so that
+ it won't be found by numpy.distutils.
+
 .. __: http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg
 
 .. __: http://openmdao.org/downloads/misc/gfortran-macosx-leopard-x86.dmg
+
 
 
 .. _Installation:

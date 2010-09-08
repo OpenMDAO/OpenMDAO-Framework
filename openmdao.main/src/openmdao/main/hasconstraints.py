@@ -21,27 +21,33 @@ def _check_expr(expr):
         raise ValueError( msg )
 
 class Constraint(object):
-    def __init__(self, lhs, relation, rhs, scope=None):
+    def __init__(self, lhs, comparator, rhs, scope=None):
         self.lhs = ExprEvaluator(lhs, scope=scope)
-        _check_expr(self.lhs)
-        self.relation = relation
+        try:
+            self.lhs.refs_valid()
+        except (AttributeError, RuntimeError) as err:
+            raise ValueError("Constraint '%s' has an invalid left-hand-side." % ' '.join([lhs,comparator,rhs]))
+        self.comparator = comparator
         self.rhs = ExprEvaluator(rhs, scope=scope)
-        _check_expr(self.rhs)
+        try:
+            self.rhs.refs_valid()
+        except (AttributeError, RuntimeError) as err:
+            raise ValueError("Constraint '%s' has an invalid right-hand-side." % ' '.join([lhs,comparator,rhs]))
         
     def evaluate(self):
-        """Returns a tuple of the form (lhs, rhs, relation, is_violated)."""
+        """Returns a tuple of the form (lhs, rhs, comparator, is_violated)."""
         lhs = self.lhs.evaluate()
         rhs = self.rhs.evaluate()
-        return (lhs, rhs, self.relation, not _ops[self.relation](lhs,rhs))
+        return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs,rhs))
         
 
 def _parse_constraint(expr_string):
-    for relation in ['>=','<=','>','<','=']:
-        parts = expr_string.split(relation)
+    for comparator in ['>=','<=','>','<','=']:
+        parts = expr_string.split(comparator)
         if len(parts) > 1:
-            return (parts[0].strip(), relation, parts[1].strip())
+            return (parts[0].strip(), comparator, parts[1].strip())
     else:
-        msg = "Constraints require an explicit comparator (=, <, >, <=. or >=)"
+        msg = "Constraints require an explicit comparator (=, <, >, <=, or >=)"
         raise ValueError( msg )
     
 def _remove_spaces(s):
@@ -86,6 +92,10 @@ class HasEqConstraints(_HasConstraintsBase):
         """Adds an equality constraint as two strings, a left hand side and
         a right hand side.
         """
+        if not isinstance(lhs, basestring):
+            raise ValueError("Constraint left-hand-side (%s) is not a string" % lhs)
+        if not isinstance(rhs, basestring):
+            raise ValueError("Constraint right-hand-side (%s) is not a string" % rhs)
         ident = _remove_spaces('='.join([lhs,rhs]))
         self._constraints[ident] = Constraint(lhs,'=',rhs, scope=self._parent)
         
@@ -95,7 +105,7 @@ class HasEqConstraints(_HasConstraintsBase):
 
     def eval_eq_constraints(self): 
         """Returns a list of tuples of the 
-        form (lhs, rhs, relation, is_violated)
+        form (lhs, rhs, comparator, is_violated)
         """
         return [c.evaluate() for c in self._constraints.values()]
 
@@ -108,12 +118,16 @@ class HasIneqConstraints(_HasConstraintsBase):
 
     def add_ineq_constraint(self, lhs, rel, rhs):
         """Adds an inequality constraint as three strings; a left hand side,
-        a relation ('<','>','<=', or '>='), and a right hand side.
+        a comparator ('<','>','<=', or '>='), and a right hand side.
         """
         if rel=='==' or rel=='=':
             msg = "Equality constraints are not supported on this driver"
             self._parent.raise_exception(msg, ValueError)
 
+        if not isinstance(lhs, basestring):
+            raise ValueError("Constraint left-hand-side (%s) is not a string" % lhs)
+        if not isinstance(rhs, basestring):
+            raise ValueError("Constraint right-hand-side (%s) is not a string" % rhs)
         ident = _remove_spaces(rel.join([lhs,rhs]))
         self._constraints[ident] = Constraint(lhs,rel,rhs, scope=self._parent)
         
@@ -156,11 +170,11 @@ class HasConstraints(object):
         self._eq.clear_constraints()
         self._ineq.clear_constraints()
         
-    def add_ineq_constraint(self, lhs, relation, rhs):
+    def add_ineq_constraint(self, lhs, comparator, rhs):
         """Adds an inequality constraint as three strings; a left hand side,
-        a relation ('<','>','<=', or '>='), and a right hand side.
+        a comparator ('<','>','<=', or '>='), and a right hand side.
         """
-        self._ineq.add_ineq_constraint(lhs, relation, rhs)
+        self._ineq.add_ineq_constraint(lhs, comparator, rhs)
     
     def add_eq_constraint(self, lhs, rhs):
         """Adds an equality constraint as two strings, a left hand side and
@@ -177,13 +191,13 @@ class HasConstraints(object):
         return self._ineq.get_ineq_constraints()
 
     def eval_eq_constraints(self): 
-        """Returns a list of tuples of the form (lhs, rhs, relation,
+        """Returns a list of tuples of the form (lhs, rhs, comparator,
         is_violated) from evalution of equality constraints.
         """
         return self._eq.eval_eq_constraints()
     
     def eval_ineq_constraints(self): 
-        """Returns a list of tuples of the form (lhs, rhs, relation,
+        """Returns a list of tuples of the form (lhs, rhs, comparator,
         is_violated) from evalution of inequality constraints.
         """
         return self._ineq.eval_ineq_constraints()
