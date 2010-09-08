@@ -166,9 +166,6 @@ class CONMINdriver(Driver):
             
     """
     # pylint: disable-msg=E1101
-    #objective = Expression(iotype='in',
-                #desc= 'A string containing the objective function expression.')
-    
     scal = Array(zeros(0.,'d'), iotype='in', 
         desc='Array of scaling factors for the parameters.')
 
