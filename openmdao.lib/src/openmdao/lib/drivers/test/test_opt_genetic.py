@@ -70,7 +70,7 @@ class TestCase(unittest.TestCase):
     def test_optimizeSphere_set_high_low(self):
         self.top.add('comp', SphereFunction())
         self.top.driver.workflow.add(self.top.comp)
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.add_objective("comp.total")
 
         self.top.driver.add_parameter('comp.x',high=5.13,low=-5.12)
         self.top.driver.add_parameter('comp.y')
@@ -96,7 +96,7 @@ class TestCase(unittest.TestCase):
     def test_optimizeSphere(self):
         self.top.add('comp', SphereFunction())
         self.top.driver.workflow.add(self.top.comp)
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.add_objective("comp.total")
 
         self.top.driver.add_parameter('comp.x')
         self.top.driver.add_parameter('comp.y')
@@ -121,7 +121,7 @@ class TestCase(unittest.TestCase):
     def test_optimizeSpherearray_nolowhigh(self):
         self.top.add('comp', SphereFunctionArray())
         self.top.driver.workflow.add(self.top.comp)
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.add_objective("comp.total")
 
         try:        
             self.top.driver.add_parameter('comp.x[0]')
@@ -135,7 +135,7 @@ class TestCase(unittest.TestCase):
     def test_optimizeSpherearray(self):
         self.top.add('comp', SphereFunctionArray())
         self.top.driver.workflow.add(self.top.comp)
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.add_objective("comp.total")
 
         self.top.driver.add_parameter('comp.x[0]', low=-5.12,high=5.13)
         self.top.driver.add_parameter('comp.x[1]', low=-5.12,high=5.13)

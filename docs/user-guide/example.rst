@@ -1089,7 +1089,7 @@ socket in DrivingSim:
             self.driver.itmax = 30
         
             # CONMIN Objective 
-            self.driver.objective = 'driving_sim.accel_time'
+            self.driver.add_objective('driving_sim.accel_time')
         
             # CONMIN Design Variables 
             self.add_parameters([('driving_sim.spark_angle', -50., 10.),
@@ -1210,14 +1210,14 @@ the expression:
 .. testcode:: Code10
 
 	        # CONMIN Objective = Maximize accel_time 
-        	self.driver.objective = '-driving_sim.accel_time'
+        	self.driver.add_objective('-driving_sim.accel_time')
 		
 You can build up more complicated expressions from any number of OpenMDAO variables using Python's mathematical syntax:
 
 .. testcode:: Code10
 
 	        # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-        	self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+        	self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
 
 Here, we used a weighted sum of the EPA city and highway fuel economy estimates as the objective in a maximization problem.
 Try solving the same optimization problem using this objective.
@@ -1229,7 +1229,7 @@ Try solving the same optimization problem using this objective.
 	>>> prob = EngineOptimization()
 	>>> set_as_top(prob)
 	<openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at 0xe80c3b0>
-	>>> prob.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+	>>> prob.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
 	>>> prob.driving_sim.spark_angle
 	-37.0
 	>>> prob.driving_sim.bore

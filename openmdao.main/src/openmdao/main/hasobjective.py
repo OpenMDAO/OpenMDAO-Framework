@@ -40,8 +40,8 @@ class HasObjective(object):
     
     def eval_objective(self):
         """Returns the value of the evaluated objective."""
-        if self._objective is None:
-            self._parent.raise_exception("No objective has been defined.")
+        if not self._objective:
+            self._parent.raise_exception("no objective specified")
         return self._objective.evaluate()
 
 

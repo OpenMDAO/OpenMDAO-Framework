@@ -142,7 +142,7 @@ class MuliCritEI(Driver):
         mu = obj.mu
         sigma = obj.sigma
                 
-        target = self.target        
+        target = self.target
         
         self.PI = self._mcpi(mu,sigma)
         if self.infill == "EI":

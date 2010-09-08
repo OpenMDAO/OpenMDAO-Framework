@@ -55,7 +55,7 @@ class Bar3Optimization(Assembly):
         self.driver.ct = -.001
         
         # CONMIN Objective 
-        self.driver.objective = 'bar3_truss.weight'
+        self.driver.add_objective('bar3_truss.weight')
         
         # CONMIN Design Variables 
         for param, low, high in zip(['bar3_truss.bar1_area', 

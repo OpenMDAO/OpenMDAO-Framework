@@ -10,27 +10,28 @@ from enthought.traits.api import Python
 from pyevolve import G1DList, GAllele, GenomeBase
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
-from openmdao.main.api import Driver, Expression
+from openmdao.main.api import Driver #, Expression
 from openmdao.lib.datatypes.enum import Enum
 from openmdao.lib.datatypes.float import Float
 from openmdao.lib.datatypes.int import Int
 from enthought.traits.api import Bool, Instance
 
 from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasobjective import HasObjective
 from openmdao.util.decorators import add_delegate
 
 array_test = re.compile("(\[[0-9]+\])+$")
 
-@add_delegate(HasParameters)
+@add_delegate(HasParameters, HasObjective)
 class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO framework, based on the Pyevolve
     Genetic algorithm module. 
     """
     
     # pylint: disable-msg=E1101
-    objective = Expression(iotype='in',
-                          desc='A string containing the objective function '
-                               'expression to be optimized.') 
+    #objective = Expression(iotype='in',
+                          #desc='A string containing the objective function '
+                               #'expression to be optimized.') 
     
     opt_type = Enum("minimize", values=["minimize", "maximize"],
                     iotype="in",
@@ -161,6 +162,6 @@ class Genetic(Driver):
     def _run_model(self, chromosome):
         self.set_parameters([val for val in chromosome])
         self.run_iteration()
-        return self.objective.evaluate()
+        return self.eval_objective()
     
     

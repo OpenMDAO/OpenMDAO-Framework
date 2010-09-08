@@ -117,8 +117,8 @@ class SellarCO(Assembly):
         self.localopt2.workflow.add([self.dis2a, self.dis2b, self.dis2c])
         
         #Parameters - Global Optimization
-        self.driver.objective = '(bcastr.x1)**2 + bcastr.z2 + bcastr.y1' + \
-                                                '+ math.exp(-bcastr.y2)'
+        self.driver.add_objective('(bcastr.x1)**2 + bcastr.z2 + bcastr.y1' + \
+                                                '+ math.exp(-bcastr.y2)')
         for param,low,high in zip(['bcastr.z1_in', 'bcastr.z2_in', 'bcastr.x1_in',
                                    'bcastr.y1_in', 'bcastr.y2_in'],
                                   [-10.0, 0.0, 0.0, 3.16, -10.0],
@@ -142,11 +142,11 @@ class SellarCO(Assembly):
         self.driver.ctlmin = 0.001
 
         #Parameters - Local Optimization 1
-        self.localopt1.objective = '(bcastr.z1-dis1.z1)**2 + ' + \
+        self.localopt1.add_objective('(bcastr.z1-dis1.z1)**2 + ' + \
                                    '(bcastr.z2-dis1.z2)**2 + ' + \
                                    '(bcastr.x1-dis1.x1)**2 + ' + \
                                    '(bcastr.y1-dis1.y1)**2 + ' + \
-                                   '(bcastr.y2-dis1.y2)**2'
+                                   '(bcastr.y2-dis1.y2)**2')
         for param, low, high in zip(['dis1.z1', 'dis1.z2', 'dis1.x1', 'dis1.y2'],
                                     [-10.0, 0.0, 0.0, -10.0],
                                     [10.0, 10.0, 10.0, 24.0]):
@@ -161,10 +161,10 @@ class SellarCO(Assembly):
         self.localopt1.dabfun = .00001
         
         #Parameters - Local Optimization 2
-        self.localopt2.objective = '(bcastr.z1-dis2b.z1)**2 + ' + \
+        self.localopt2.add_objective('(bcastr.z1-dis2b.z1)**2 + ' + \
                                    '(bcastr.z2-dis2c.z2)**2 + ' + \
                                    '(bcastr.y1-dis2a.y1)**2 + ' + \
-                                   '(bcastr.y2-dis2c.y2)**2'
+                                   '(bcastr.y2-dis2c.y2)**2')
         for param, low, high in zip(['dis2b.z1', 'dis2c.z2', 'dis2a.y1'],
                                     [-10.0, 0.0, 3.16],
                                     [10.0, 10.0, 10]):

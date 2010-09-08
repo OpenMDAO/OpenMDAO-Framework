@@ -38,7 +38,7 @@ class EngineOptimization(Assembly):
         self.driver.itmax = 30
         
         # CONMIN Objective 
-        self.driver.objective = 'driving_sim.accel_time'
+        self.driver.add_objective('driving_sim.accel_time')
         
         # CONMIN Design Variables 
         self.driver.add_parameters([('driving_sim.spark_angle', -50., 10.),

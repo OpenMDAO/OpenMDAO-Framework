@@ -304,7 +304,7 @@ the Python file ``optimization_unconstrained.py``:
             self.driver.fdchm = .000001
         
             # CONMIN Objective 
-            self.driver.objective = 'paraboloid.f_xy'
+            self.driver.add_objective('paraboloid.f_xy')
         
             # CONMIN Design Variables 
             self.driver.add_parameter('paraboloid.x', low=-50., high=50.)
@@ -396,7 +396,7 @@ the *objective function*. In OpenMDAO, you define the ``objective`` function usi
 .. testcode:: simple_model_Unconstrained_pieces
 
             # CONMIN Objective 
-            self.driver.objective = 'paraboloid.f_xy'
+            self.driver.add_objective('paraboloid.f_xy')
 
 An *Expression* is a special kind of variable that contains a string
 expression that combines variables with Python mathematical syntax. 

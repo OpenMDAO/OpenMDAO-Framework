@@ -1184,7 +1184,7 @@ no functional interface for entering an objective, but drivers include a variabl
 .. testcode:: Parameter_API
 
     # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-    self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+    self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
 
 In this example, the objective is to maximize the weighted sum of two variables.
 The equation must be constructed using valid Python operators. All variables in

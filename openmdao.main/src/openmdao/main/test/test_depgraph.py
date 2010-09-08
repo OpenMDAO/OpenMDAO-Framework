@@ -7,12 +7,13 @@ from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly, Component, Driver, Expression, set_as_top, Dataflow
 from openmdao.lib.api import Int
+from openmdao.main.hasobjective import HasObjective
+from openmdao.util.decorators import add_delegate
 
 exec_order = []
 
+@add_delegate(HasObjective)
 class DumbDriver(Driver):
-    objective = Expression(iotype='in')
-    
     def execute(self):
         global exec_order
         exec_order.append(self.name)
@@ -279,8 +280,8 @@ class DepGraphTestCase(unittest.TestCase):
         top.driver2.workflow.add(top.c1)
         
         top.connect('c1.c', 'c2.a')
-        top.driver1.objective = "c2.c*c2.d"
-        top.driver2.objective = "c1.c"
+        top.driver1.add_objective("c2.c*c2.d")
+        top.driver2.add_objective("c1.c")
         top.run()
         self.assertEqual(exec_order, ['driver2','c1','driver1','c2','c3'])
         

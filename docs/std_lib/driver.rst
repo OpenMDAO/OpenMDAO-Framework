@@ -266,15 +266,12 @@ follows:
             # add DrivingSim to workflow
             driver.workflow.add(self.driving_sim)
         
-            # CONMIN Objective 
-            self.driver.objective = 'driving_sim.accel_time'
-                
             # CONMIN Design Variables 
             self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
             self.driver.add_parameter('driving_sim.bore', low=65. , high=100.)
 
             # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-            self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+            self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
 
 This first section of code defines an assembly called *EngineOptimization.*
 This assembly contains a DrivingSim component and a CONMIN driver, both of
@@ -703,18 +700,18 @@ are not applicable.
 Configuration
 +++++++++++++
 
-When setting the `objective` variable you can specify a single 
+When setting the objective you can specify a single 
 variable name or a more complex function, such as 
 
 .. testcode:: Genetic
 
-    top.driver.objective = "comp.x"
+    top.driver.add_objective("comp.x")
     
 or 
 
 .. testcode:: Genetic
 
-    top.driver.objective = "2*comp.x + comp.y + 3*comp.z"
+    top.driver.add_objective("2*comp.x + comp.y + 3*comp.z")
 
 In the second example above, a more complex objective function was created where the overall objective was 
 a weighted combination of ``comp.x, comp.y,`` and ``comp.z``. 
