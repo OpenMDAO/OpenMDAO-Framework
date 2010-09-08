@@ -140,7 +140,7 @@ Thus, CONMIN can set the design variable in this Broadcaster, and when the Broad
 the new value gets passed to all of the components that need it.
 
 OpenMDAO doesn't have a built-in Broadcaster, so we need to make our own. It's a simple
-component with some inputs, some outputs, and an execute function that passes the inputs
+component with some inputs, some outputs, and an ``execute`` function that passes the inputs
 to the outputs.
 
 .. testcode:: Broadcaster
@@ -176,15 +176,15 @@ to the outputs.
 We've added the coupling variables in our Broadcaster as well, foreseeing the need
 for them in some of the other MDAO architectures.
 
-.. index:: WorkFlow
+.. index:: WorkFlow, BroydenSolver, FixedPointIterator
 
 The diagram also shows a solver that takes the output of the component dataflow
-and feeds it back into the input. OpenMDAO presently has two solvers: ``FixedPointIterator``
-and ``BroydenSolver``. The ``FixedPointIterator`` is a solver that performs fixed point iteration,
+and feeds it back into the input. OpenMDAO presently has two solvers: FixedPointIterator
+and BroydenSolver. The FixedPointIterator is a solver that performs fixed point iteration,
 which means that it keeps driving ``x_new = f(x_old)`` until convergence is achieved. In
 other words, *y2* is passed from the output of ``SellarDiscipline2`` to the input of ``SellarDiscipline1``,
 and the loop keeps executing until the change in the value of *y2* between iterations is
-smaller than a tolerance. The ``BroydenSolver`` is a solver based on a quasi-Newton-Raphson
+smaller than a tolerance. The BroydenSolver is a solver based on a quasi-Newton-Raphson
 algorithm that uses a Broyden update to approximate the Jacobian. This solver reads
 the output and calculates a new input each iteration. Convergence is achieved when the
 residual between the output and input is driven to zero.

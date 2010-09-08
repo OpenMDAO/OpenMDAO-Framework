@@ -128,7 +128,7 @@ class HasParameters(object):
         return self._parameters
 
     def set_parameters(self, values): 
-        """Pushes the values in the iterator 'values' into the corresponding public 
+        """Pushes the values in the iterator 'values' into the corresponding 
         variables in the model.
         
         values: iterator
