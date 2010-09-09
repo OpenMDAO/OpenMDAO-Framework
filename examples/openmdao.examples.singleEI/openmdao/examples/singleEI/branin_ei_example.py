@@ -62,6 +62,7 @@ class Analysis(Assembly):
 
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
+        self.DOE_trainer.sequential = True
         self.DOE_trainer.DOEgenerator = OptLatinHypercube(21, 2)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
@@ -76,6 +77,7 @@ class Analysis(Assembly):
         self.EI_driver.criterion = "branin_meta_model.f_xy"
         
         self.add("retrain",CaseIteratorDriver())
+        self.retrain.sequential = True
         self.retrain.add_event("branin_meta_model.train_next")
         self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
         
