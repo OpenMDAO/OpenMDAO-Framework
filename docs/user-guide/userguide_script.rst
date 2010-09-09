@@ -1045,7 +1045,7 @@ parameter must point to a component input, not a component output. During
 driver execution, the parameter values are set, and the relevant portion of
 the model is executed to evaluate the new objective.
     
-The *low* and *high* parameters can be used to specify an allowable range for a parameter. Using these
+The *low* and *high* arguments can be used to specify an allowable range for a parameter. Using these
 parameters is useful for optimization problems where the design variables are constrained. Generally, the
 optimizer treats these as a special kind of constraint, so they should be defined using the low and high
 parameters rather than the ``add_constraint method``. If low and high values are not given, then they are
@@ -1170,9 +1170,10 @@ Calling ``clear_constraints`` will remove all constraints from a driver.
 
 .. index:: objective
 
-Finally, optimizers include one objective (or in the future, possibly multiple objectives)
-that are represented by a string containing an expression built up from available OpenMDAO outputs. 
-Objectives are added to an optimizer using the ``add_objective`` method.
+Finally, OpenMDAO uses a similar interface for specifying objectives. A single
+objective (some future optimizers will handle multiple objectives) can be
+added to a driver using the ``add_objective`` method with an argument that is
+a string expression built up from available OpenMDAO outputs.
 
 .. testcode:: Parameter_API
 
@@ -1183,6 +1184,27 @@ In this example, the objective is to maximize the weighted sum of two variables.
 The equation must be constructed using valid Python operators. All variables in
 the function are expressed in the scope of the local assembly that contains the
 driver.
+
+For drivers that only operate on a single objective (e.g., CONMIN), you can
+replace the current objective by calling add_objective with the new objective as an argument.
+
+.. testcode:: Parameter_API
+
+    self.driver.add_objective('-driving_sim.EPA_city')
+    # Replace the objective with EPA_highway
+    self.driver.add_objective('-driving_sim.EPA_highway')
+
+The *IHasObjective* interface also includes functions to list the objective and to query
+for the objective value.
+
+.. doctest:: more_objective_interface
+
+    >>> from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
+    >>> model = OptimizationUnconstrained()
+    >>> model.driver.list_objective()
+    'paraboloid.f_xy'
+    >>> model.driver.eval_objective()
+    0.0
 
 .. _Adding-new-Drivers:
 
