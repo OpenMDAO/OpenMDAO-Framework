@@ -88,16 +88,22 @@ class HasConstraintsTestCase(unittest.TestCase):
         if ineq: 
             self.assertEqual(len(drv.get_ineq_constraints()), 0)
         
-        try:
-            if ineq:
-                drv.add_constraint('comp1.qq < comp1.b')
+        if ineq:
+            try:
+                drv.add_constraint('comp1.b < comp1.qq')
+            except ValueError as err:
+                self.assertEqual(str(err), 
+                    "Constraint 'comp1.b < comp1.qq' has an invalid right-hand-side.")
             else:
-                drv.add_constraint('comp1.qq = comp1.b')
-        except ValueError as err:
-            self.assertEqual(str(err), 
-                "Invalid expression 'comp1.qq': comp1: cannot get valid flag of 'qq' because it's not an io trait.")
+                self.fail('expected ValueError')
         else:
-            self.fail('expected ValueError')
+            try:
+                drv.add_constraint('comp1.qq = comp1.b')
+            except ValueError as err:
+                self.assertEqual(str(err), 
+                   "Constraint 'comp1.qq = comp1.b' has an invalid left-hand-side.")
+            else:
+                self.fail('expected ValueError')
         
     def _check_eval_constraints(self, drv, eq=False, ineq=False):
         self.asm.add('driver', drv)
@@ -159,7 +165,7 @@ class HasConstraintsTestCase(unittest.TestCase):
             drv.add_constraint('comp1.a + comp1.b')
         except ValueError, err:
             self.assertEqual(str(err),
-                             "driver: Constraints require an explicit comparator (=, <, >, <=. or >=)")
+                             "driver: Constraints require an explicit comparator (=, <, >, <=, or >=)")
         else:
             self.fail('ValueError expected')
             

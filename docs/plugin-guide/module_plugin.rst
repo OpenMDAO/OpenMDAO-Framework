@@ -39,15 +39,15 @@ there. The function in our component that performs a computation is called
 The *self* object that is passed as an argument to ``execute()`` represents an
 instance of our SimpleAdder class.
 
-SimpleAdder has three Public Variables of type Float with the names *a*, *b*, and
-*c*. All three attributes have a default value of 0.0. Attributes a and b
+SimpleAdder has three variables of type Float with the names *a*, *b*, and
+*c*. All three variables have a default value of 0.0. Attributes a and b
 are inputs, so we specify that they have an iotype of *'in'*. Attribute
 c is an output, so it has an iotype of *'out'*.
 
 The Float variable is defined in the package ``openmdao.lib.api``, so we have to
 import it from there before we can use it. This  package defines a wide variety
 of traits, including basic types like *Int*, *Str*, and *Bool*; containers like
-*List* and *Dict*; and others. Public Variables are actually based on
+*List* and *Dict*; and others. Variables are actually implemented using
 Enthought's Traits, and a larger selection of less commonly used traits are
 available by importing from the package ``enthought.traits.api``. To learn more
 about traits, see the  `Traits User Manual 
@@ -240,7 +240,7 @@ pure Python OpenMDAO plugin.
 
 Let's assume we want to have a variable that represents a set of Cartesian 
 coordinates, with the value of the variable being a 3-tuple of floating point
-values representing the x, y, and z position.  We'll start by creating a 
+values representing the *x, y,* and *z* position.  We'll start by creating a 
 file called ``coord.py`` and placing the following code in it:
 
 ::
@@ -261,7 +261,7 @@ file called ``coord.py`` and placing the following code in it:
                 self._logger.error(object, name, value)
 
 
-OpenMDAO uses the Traits package from Enthought to implement public variables. The
+OpenMDAO uses the Traits package from Enthought to implement variables. The
 base class for custom traits is *TraitType*, so that's the base class for our
 coordinates variable. If a component or a component class contains a TraitType
 object and that object has a metadata attribute called *iotype*, then that object

@@ -343,12 +343,12 @@ class Container(HasTraits):
 
     def get_wrapped_attr(self, name):
         """If the named trait can return a TraitValMetaWrapper, then this
-        function will return that, with the value set to the current
-        value of the named attribute. Otherwise, it functions like
-        *getattr*, just returning the named attribute. Raises an exception
-        if the named trait cannot be found.  The value will be copied if
-        the trait has a 'copy' metadata attribute that is not None. Possible
-        values for 'copy' are 'shallow' and 'deep'.
+        function will return that, with the value set to the current value of
+        the named variable. Otherwise, it functions like *getattr*, just
+        returning the value of the named variable. Raises an exception if the
+        named trait cannot be found. The value will be copied if the trait has
+        a 'copy' metadata attribute that is not None. Possible values for
+        'copy' are 'shallow' and 'deep'.
         """
         parts = name.split('.', 1)
         if len(parts) > 1:
@@ -601,12 +601,8 @@ class Container(HasTraits):
         
         
     def get(self, path, index=None):
-        """Return any public object specified by the given 
+        """Return the object specified by the given 
         path, which may contain '.' characters.  
-        
-        Returns the value specified by the name. This will either be the value
-        of a Variable or some attribute of a Variable.
-        
         """
         tup = path.split('.')
         if len(tup) == 1:
@@ -676,11 +672,11 @@ class Container(HasTraits):
         return trait
 
     def set(self, path, value, index=None, srcname=None, force=False):
-        """Set the value of the data object specified by the given path, which
-        may contain '.' characters. If path specifies a Variable, then its
-        value attribute will be set to the given value, subject to validation
-        and constraints. index, if not None, should be a list of ints, at most
-        one for each array dimension of the target value.
+        """Set the value of the Variable specified by the given path, which
+        may contain '.' characters. The Variable will be set to the given
+        value, subject to validation and constraints. *index*, if not None,
+        should be a list of ints, at most one for each array dimension of the
+        target value.
         """ 
         if path is None:
             if index is None:

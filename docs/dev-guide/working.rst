@@ -99,9 +99,9 @@ For detailed information on running tests on your branch, please see :ref:`Testi
 Tagging Your Branch
 --------------------
 
-If your branch is associated with a Trac ticket, you should tag your branch after you commit
-the final changes and before pushing it up to Launchpad. To tag your branch, type the
-following: 
+If your branch is associated with a Trac ticket, you may tag your branch after you commit the final changes
+and before pushing it up to Launchpad. However, in most cases the SCM will tag the branch when she
+merges. To tag a branch, type the following: 
 
 ::
 

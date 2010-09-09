@@ -5,10 +5,13 @@ import logging
 import StringIO
 from math import sqrt
 
-from openmdao.main.api import Assembly, Component, Driver, Expression, \
+from openmdao.main.api import Assembly, Component, Driver, \
                               Dataflow, SequentialWorkflow, set_as_top, dump_iteration_tree
+from openmdao.main.expression import Expression
 from openmdao.lib.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
+from openmdao.main.hasobjective import HasObjective
+from openmdao.util.decorators import add_delegate
 
 exec_order = []
 
@@ -27,11 +30,11 @@ class Adder(Component):
         self.sum = self.x1 + self.x2
         self.runcount += 1
 
+@add_delegate(HasObjective)
 class Summer(Driver):
     """Sums the objective over some number of iterations, feeding
     its current sum back into the specified parameter."""
     
-    objective = Expression(iotype='in')
     design = Expression(iotype='out')
     max_iterations = Int(1, iotype='in')
     sum = Float(iotype='out')
@@ -52,7 +55,7 @@ class Summer(Driver):
         self.design.set(self.sum)
     
     def post_iteration(self):
-        self.sum += self.objective.evaluate()
+        self.sum += self.eval_objective()
         self.itercount += 1
     
     def execute(self):
@@ -138,7 +141,7 @@ class MultiDriverTestCase(unittest.TestCase):
                           top.adder1, top.adder2, top.adder3])
         
         drv.itmax = 30
-        drv.objective = 'adder3.sum+50.'
+        drv.add_objective('adder3.sum+50.')
         drv.add_parameters([('comp1.x', -10., 99.),
                             ('comp2.x', -10., 99.),
                             ('comp3.x', -10., 99.),
@@ -158,7 +161,7 @@ class MultiDriverTestCase(unittest.TestCase):
         self.rosen_setUp()
         self.top.run()
         self.assertAlmostEqual(self.opt_objective, 
-                               self.top.driver1.objective.evaluate(), places=2)
+                               self.top.driver1.eval_objective(), places=2)
         self.assertAlmostEqual(self.opt_design_vars[0], 
                                self.top.comp1.x, places=1)
         self.assertAlmostEqual(self.opt_design_vars[1], 
@@ -185,13 +188,13 @@ class MultiDriverTestCase(unittest.TestCase):
         drv.workflow.add([self.top.comp1a, self.top.comp2a])
         
         drv.itmax = 40
-        drv.objective = 'comp2a.f_x'
+        drv.add_objective('comp2a.f_x')
         drv.add_parameter('comp1a.x', low=0, high=99)
         
         self.top.run()
         
         self.assertAlmostEqual(self.opt_objective, 
-                               self.top.driver1.objective.evaluate(), places=2)
+                               self.top.driver1.eval_objective(), places=2)
         self.assertAlmostEqual(self.opt_design_vars[0], 
                                self.top.comp1.x, places=1)
         self.assertAlmostEqual(self.opt_design_vars[1], 
@@ -201,7 +204,7 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.opt_design_vars[3], 
                                self.top.comp4.x, places=1)
         self.assertAlmostEqual(-6.2498054387439232, 
-                               self.top.driver1a.objective.evaluate(), 
+                               self.top.driver1a.eval_objective(), 
                                places=2)
         self.assertAlmostEqual(2.4860514783551508, 
                                self.top.comp1a.x, places=1)
@@ -246,20 +249,20 @@ class MultiDriverTestCase(unittest.TestCase):
         #inner_driver.iprint = 1001
         #inner_driver.fdch = .000001
         #inner_driver.fdchm = .000001
-        #inner_driver.objective = 'comp4.f_xy'
+        #inner_driver.add_objective('comp4.f_xy')
         #inner_driver.add_parameters(('comp1.x',-50,50), ('comp3.y',-50,50)])
         ##inner_driver.constraints = ['comp1.x**2 + comp3.y**2']
             
         inner_driver.itmax = 30
         inner_driver.fdch = .000001
         inner_driver.fdchm = .000001
-        inner_driver.objective = 'comp3.f_xy'
+        inner_driver.add_objective('comp3.f_xy')
         inner_driver.add_parameter('comp3.y', low=-50, high=50)
         
         outer_driver.itmax = 30
         outer_driver.fdch = .000001
         outer_driver.fdchm = .000001
-        outer_driver.objective = 'nested.f_xy'   # comp4.f_xy passthrough
+        outer_driver.add_objective('nested.f_xy')   # comp4.f_xy passthrough
         outer_driver.add_parameter('nested.x', low=-50, high=50)  # comp1.x passthrough
         
         self.top.run()
@@ -311,13 +314,13 @@ class MultiDriverTestCase(unittest.TestCase):
         inner_driver.itmax = 30
         inner_driver.fdch = .000001
         inner_driver.fdchm = .000001
-        inner_driver.objective = 'comp3.f_xy'
+        inner_driver.add_objective('comp3.f_xy')
         inner_driver.add_parameter('comp3.y', low=-50, high=50)
         
         outer_driver.itmax = 30
         outer_driver.fdch = .000001
         outer_driver.fdchm = .000001
-        outer_driver.objective = 'comp4.f_xy'
+        outer_driver.add_objective('comp4.f_xy')
         outer_driver.add_parameter('comp1.x', low=-50, high=50)
         
         self.top.run()
@@ -346,11 +349,11 @@ class MultiDriverTestCase(unittest.TestCase):
         top = set_as_top(Assembly())
         top.add('C1', ExprComp(expr='x+1'))
         top.add('D1', Summer())
-        top.D1.objective = 'C1.f_x'
+        top.D1.add_objective('C1.f_x')
         top.D1.design = 'C1.x'
         top.D1.max_iterations = 3
         top.add('D2', Summer())
-        top.D2.objective = 'C1.f_x'
+        top.D2.add_objective('C1.f_x')
         top.D2.design = 'C1.x'
         top.D2.max_iterations = 2
         
@@ -384,10 +387,10 @@ class MultiDriverTestCase(unittest.TestCase):
         top.add('D2', Summer())
         top.add('C1', ExprComp(expr='x+1'))
         top.add('C2', ExprComp(expr='x+1'))
-        top.D1.objective = 'C2.f_x'
+        top.D1.add_objective('C2.f_x')
         top.D1.design = 'C1.x'
         top.D1.max_iterations = 2
-        top.D2.objective = 'C1.f_x'
+        top.D2.add_objective('C1.f_x')
         top.D2.design = 'C2.x'
         top.D2.max_iterations = 3
 
@@ -428,11 +431,11 @@ class MultiDriverTestCase(unittest.TestCase):
         
         top.connect('C1.f_x', 'C2.x')
         top.add('D1', Summer())
-        top.D1.objective = 'C1.f_x'
+        top.D1.add_objective('C1.f_x')
         top.D1.design = 'C1.x'
         top.D1.max_iterations = 2
         top.add('D2', Summer())
-        top.D2.objective = 'C2.f_xy'
+        top.D2.add_objective('C2.f_xy')
         top.D2.design = 'C2.y'
         top.D2.max_iterations = 3
         

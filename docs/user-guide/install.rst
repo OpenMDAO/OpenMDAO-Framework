@@ -63,6 +63,9 @@ use it, you must have compilers (C and Fortran) on your system.
 
 **Mac OS X**:
 
+Our current OpenMDAO distribution for OS X is a source distribution, so to 
+use it, you must have compilers (C and Fortran) on your system.
+
 - Xcode -- It's included on the OS X install disk, and installing it will give you access to gcc. You can
            also download a newer version from Apple, but you'll have to fill out a (free) registration to do it.
 
@@ -85,14 +88,21 @@ use it, you must have compilers (C and Fortran) on your system.
 - On **Leopard:**
 
  - `Python 2.6`__ 
- - `numpy <http://sourceforge.net/projects/numpy/files/>`_                  
+ - `numpy <http://sourceforge.net/projects/numpy/files/>`_
  - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
  - `gfortran`__ 
  - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
 
+ If you have *g77* installed on Leopard, you may get build errors like: 
+ "ld: library not found for -lcc_dynamic". This indicates that *g77* is being used
+ instead of *gfortran*, which won't work.  At the moment, the recommended fix
+ is to change the name of *g77* to something else, for example, *_g77* so that
+ it won't be found by numpy.distutils.
+
 .. __: http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg
 
 .. __: http://openmdao.org/downloads/misc/gfortran-macosx-leopard-x86.dmg
+
 
 
 .. _Installation:
@@ -138,10 +148,10 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 
 **Activate your virtual environment**
 
-Each time before you want to use openmdao, you need to activate it. Activating your virtual environment adds your 
-virtual environment's ``bin`` directory to the front of your system path in the current shell so that when you 
-type ``python``, you'll get a Python interpreter that's customized for your virtual environment, 
-giving you access to everything in OpenMDAO.
+Each time before you want to use openmdao, you need to activate its virtual environment. 
+Activation adds your virtual environment's ``bin`` directory to the front of your system path in the current 
+shell so that when you type ``python``, you'll get a Python interpreter that's customized for your virtual 
+environment, giving you access to everything in OpenMDAO.
 
 Navigate into the folder that was just created by your install script.
 

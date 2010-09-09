@@ -193,7 +193,7 @@ class GolinskiTestCase(unittest.TestCase):
 
     def test_opt1(self):
         """Golinski optimization using CONMIN"""
-        self.top.driver.objective = 'comp.result'
+        self.top.driver.add_objective('comp.result')
         #                                
         #  maximize x[0] value
         iter  = 1
@@ -246,7 +246,7 @@ class GolinskiTestCase(unittest.TestCase):
         #print 'Obj FUNCTION Val = ', self.top.comp.result 
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective, \
-                               self.top.driver.objective.evaluate(), 0.01)
+                               self.top.driver.eval_objective(), 0.01)
         assert_rel_error(self, self.top.comp.opt_design_vars[1], \
                                self.top.comp.x[1], 0.1)
         assert_rel_error(self, self.top.comp.opt_design_vars[2], \
@@ -259,12 +259,12 @@ class GolinskiTestCase(unittest.TestCase):
         
     def test_update_objective(self):
         try:
-            x = self.top.driver.objective.evaluate()
-        except TraitError, err:
-            self.assertEqual(str(err), "Expression: string reference is undefined")
+            x = self.top.driver.eval_objective()
+        except Exception, err:
+            self.assertEqual(str(err), "driver: no objective specified")
         else:
-            self.fail('TraitError expected')
-        self.top.driver.objective = 'comp.result'
+            self.fail('Exception expected')
+        self.top.driver.add_objective('comp.result')
         self.top.comp.x = numpy.array([0,0,0,0,0,0,0],dtype=float)
         for param,low,high in zip(['comp.x[0]', 'comp.x[1]', 'comp.x[3]', 'comp.x[4]'],
                                   [0.70, 17.0, 7.300, 7.300],
@@ -274,7 +274,7 @@ class GolinskiTestCase(unittest.TestCase):
         self.assertEqual(list(self.top.comp.x), 
                          [1.,1.,0.,0.,0.,0.,0.])
         self.top.comp.execute()       
-        self.assertEqual(self.top.driver.objective.evaluate(), -0.7854*43.09340)
+        self.assertEqual(self.top.driver.eval_objective(), -0.7854*43.09340)
         
 
 if __name__ == "__main__":

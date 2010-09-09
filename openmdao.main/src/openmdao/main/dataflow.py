@@ -57,8 +57,8 @@ class Dataflow(SequentialWorkflow):
     def _get_collapsed_graph(self):
         """Get a dependency graph with only our workflow components
         in it, with additional edges added to it from sub-workflows
-        of any Driver components in our workflow, and from any Expressions
-        or ExpressionLists in any components in our workflow.
+        of any Driver components in our workflow, and from any ExprEvaluators
+        in any components in our workflow.
         """
         if self._collapsed_graph:
             return self._collapsed_graph

@@ -35,7 +35,7 @@ component is instantiated but before it can be used in a process model:
 
 **(Setting Parameters and Suppression States)**
 
-*Needed for requirements: Tools/Geometry/Interaction/01 and Tools/Geometry/Interaction/02*
+Needed for requirements: ``Tools/Geometry/Interaction/01`` and ``Tools/Geometry/Interaction/02``
 
 Parameters are set the same way as any other OpenMDAO input variable. For
 example, consider a cylinder with two parameters: *radius* and *height*. If we 
@@ -137,7 +137,7 @@ states, and tags, from a saved egg.
 
 **tag_node(node_label, tag_name, tag_description)**
 
-*Needed for the requirement: Tools/Geometry/Interaction/07*
+Needed for the requirement: ``Tools/Geometry/Interaction/07``
 
 Associates a geometric entity with some metadata. This is useful for marking
 an entity for later use by an analysis tool (e.g., marking loads and boundary
@@ -215,7 +215,7 @@ OpenMDAO provides query access to the geometry object at the Python component le
 *Topology Access*
 _________________
 
-*Needed for requirement: Tools/Geometry/Interaction/07*
+Needed for requirement: ``Tools/Geometry/Interaction/07``
 
 Geometry access for query includes entity query and evaluation, traversal of 
 topology, and tag query.
@@ -251,7 +251,7 @@ edges, faces, and boundaries that it includes.
 *Mesh Generation*
 _________________
 
-*Needed for requirement: Tools/Geometry/Grid Generation/01*
+Needed for requirement: ``Tools/Geometry/Grid Generation/01``
 
 **(point, d1, d2) = PointOnEdge(vol, edge, t, req_derivative)**
 
@@ -291,7 +291,7 @@ Returns *True* if the given point lies on the face.
 *Measurements*
 ______________
 
-*Needed for all requirements in: Tools/Geometry/Interaction/08*
+Needed for all requirements in: ``Tools/Geometry/Interaction/08``
 
 **(length) = LengthOfEdge(vol, edge, t1, t2)**
 
@@ -314,7 +314,7 @@ center of gravity, inertia matrix, and mass.
 *Planar Cuts*
 _____________
 
-*Needed for requirements in: Tools/Geometry/Interaction/10*
+Needed for requirements in: ``Tools/Geometry/Interaction/10``
 
 **(nsec, ivec, data) = VolumeSection(vol, face, type, isvec, idata)**
 

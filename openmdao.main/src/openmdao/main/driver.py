@@ -53,7 +53,7 @@ class Driver(Component):
         
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
-        or if any of our public variables is invalid, or if any public
+        or if any of our variables is invalid, or if any 
         variable referenced by any of our Expressions is invalid.
         """
         if super(Driver, self).is_valid() is False:
@@ -99,9 +99,9 @@ class Driver(Component):
         return allcomps
         
     def get_expr_depends(self):
-        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by any Expression or ExpressionList 
-        traits in this Driver, ignoring any dependencies on components that are
+        """Returns a list of tuples of the form (src_comp_name,
+        dest_comp_name) for each dependency introduced by any ExprEvaluators
+        in this Driver, ignoring any dependencies on components that are
         inside of this Driver's iteration set.
         """
         iternames = set([c.name for c in self.iteration_set()])

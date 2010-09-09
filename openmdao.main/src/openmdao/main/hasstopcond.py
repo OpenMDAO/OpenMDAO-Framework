@@ -4,11 +4,9 @@ import ordereddict
 from openmdao.main.expreval import ExprEvaluator
 
 def _check_expr(expr, scope):
-    try:
-        # force checking for existence of vars referenced in expression
-        expr.refs_valid()  
-    except (AttributeError, RuntimeError), err:
-        msg = "Invalid expression '%s': %s" % (str(expr), err)
+    # force checking for existence of vars referenced in expression
+    if not expr.check_resolve():
+        msg = "Invalid expression '%s'" % str(expr)
         scope.raise_exception(msg, ValueError)
 
 def _remove_spaces(s):

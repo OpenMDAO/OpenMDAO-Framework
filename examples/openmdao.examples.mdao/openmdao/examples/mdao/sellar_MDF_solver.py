@@ -55,8 +55,7 @@ class SellarMDF(Assembly):
         self.solver.algorithm = "broyden2"
 
         # Optimization parameters
-        self.driver.objective = \
-            '(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)'
+        self.driver.add_objective('(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)')
         for param, low, high in zip(['bcastr.z1_in', 'bcastr.z2_in',
                                      'dis1.x1'],
                                     [-10.0, 0.0, 0.0],
@@ -97,7 +96,7 @@ if __name__ == "__main__": # pragma: no cover
                                              prob.bcastr.z2_in, \
                                              prob.dis1.x1)
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
-    print "Minimum objective: ", prob.driver.objective.evaluate()
+    print "Minimum objective: ", prob.driver.eval_objective()
     print "Elapsed time: ", time.time()-tt, "seconds"
 
     

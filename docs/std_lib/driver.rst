@@ -24,7 +24,7 @@ a full Newton solver, but they may not be suitable for all problems.
 To see how to use the BroydenSolver, consider a problem where we'd like to solve
 for the intersection of a line and a parabola. We can implement this as a single
 component. (It is also possible to implement it as two components if you'd
-prefer. See :ref:`Tutorial-MDAO-Architectures` to learn how to broadcast variables.)
+prefer. See :ref:`Tutorial:-MDAO-Architectures` to learn how to broadcast variables.)
 
 .. testcode:: Broyden
 
@@ -60,7 +60,7 @@ usually find other solutions by starting the solution from different initial
 points. We start at ``(10, 10)``, as designated by the default values for the variables
 *x* and *y*.
 
-Next, we build a model that uses the Broyden solver to find a root for the 
+Next, we build a model that uses the BroydenSolver to find a root for the 
 equations defined in MIMOSystem.
 
 .. testcode:: Broyden
@@ -94,7 +94,7 @@ equations defined in MIMOSystem.
             
 The parameters are the independent variables that the solver is allowed to vary. The
 method ``add_parameter`` is used to define these. Broyden does not utilize
-the low and high attributes, so they are set to some arbitrary large negative and positive values.
+the low and high arguments, so they are set to some large arbitrary negative and positive values.
 
 The equations that we want to satisfy are added as equality constraints using the
 ``add_constraint`` method. We want to find *x* and *y* that satisfy ``f_xy=0`` and ``g_xy=0``,
@@ -114,7 +114,7 @@ The resulting solution should yield:
 
 .. index:: algorithm, Enum, SciPy
 
-There are five parameters that control the solution process in the Broyden solver.
+There are five parameters that control the solution process in the BroydenSolver.
 
 **algorithm** -- SciPy's nonlinear package contained several algorithms for solving
 a set of nonlinear equations. Three of these methods were considered by their
@@ -266,15 +266,12 @@ follows:
             # add DrivingSim to workflow
             driver.workflow.add(self.driving_sim)
         
-            # CONMIN Objective 
-            self.driver.objective = 'driving_sim.accel_time'
-                
             # CONMIN Design Variables 
             self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
             self.driver.add_parameter('driving_sim.bore', low=65. , high=100.)
 
             # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-            self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+            self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
 
 This first section of code defines an assembly called *EngineOptimization.*
 This assembly contains a DrivingSim component and a CONMIN driver, both of
@@ -310,7 +307,7 @@ absolute change in the objective function to indicate convergence (i.e., if the
 objective function changes by less than dabfun, then the problem is converged).
 Similarly, *delfun* is the relative change of the objective function with respect
 to the value at the previous step. Note that delfun has a hard-wired minimum of 
-1e-10 in the Fortran code, and dabfun has a minimum of 0.0001.
+``1e-10`` in the Fortran code, and dabfun has a minimum of 0.0001.
 
 .. testcode:: CONMIN_show
 
@@ -587,7 +584,7 @@ like this.
             self.driver.x_in = 'problem.x'    
             self.driver.x_out = 'problem.y'
 
-The *x* input and the *F(x)* output are specified as Expressions and assigned to
+The *x* input and the *F(x)* output are specified as string expressions and assigned to
 ``x_in`` and ``x_out`` in the solver.
             
 .. doctest:: FPI
@@ -636,7 +633,7 @@ Design Variables
 ++++++++++++++++
 
 IOtraits are added to Genetic and become optimization parameters. Genetic will vary the set of
-parameters to search for an optimum. Genetic supports three public variable types:
+parameters to search for an optimum. Genetic supports three variable types:
 :term:`Float`, :term:`Int`, and :Term:`Enum`. These types can be used as parameters in any 
 optimization. 
 
@@ -649,7 +646,7 @@ You add design variables to Genetic using the ``add_parameter`` method.
     from openmdao.lib.api import Float,Int,Enum
     
     class SomeComp(Component):
-        """Arbitrary component with a few public variables, but which does not really do 
+        """Arbitrary component with a few variables, but which does not really do 
            any calculations
         """
 
@@ -697,37 +694,37 @@ the optimizer to use a different range instead of the default.
     top.driver.add_parameter('comp.w', low=5.0, high=7.0)
 
 Now, for ``comp.x`` the optimizer will only try values between 5.0 and 7.0. Note that `low` and `high`
-are only applicable to Float and Int public variables. For Enum public variables, `low` and `high`
+are applicable only to Float and Int variables. For Enum variables, `low` and `high`
 are not applicable.
 
 Configuration
 +++++++++++++
 
-When setting the `objective` attribute you can specify a single 
-public variable or a more complex function, such as 
+When setting the objective you can specify a single 
+variable name or a more complex function, such as 
 
 .. testcode:: Genetic
 
-    top.driver.objective = "comp.x"
+    top.driver.add_objective("comp.x")
     
 or 
 
 .. testcode:: Genetic
 
-    top.driver.objective = "2*comp.x + comp.y + 3*comp.z"
+    top.driver.add_objective("2*comp.x + comp.y + 3*comp.z")
 
 In the second example above, a more complex objective function was created where the overall objective was 
 a weighted combination of ``comp.x, comp.y,`` and ``comp.z``. 
 
 To set the optimizer to either minimize or maximize your objective, you set the
-``opt_type`` attribute of Genetic to "minimize" or "maximize."
+``opt_type`` variable of Genetic to "minimize" or "maximize."
 
 .. testcode:: Genetic
 
     top.driver.opt_type = "minimize"
     
 You can control the size of the population in each generation and the maximum number of generations in 
-your optimization with the ``population_size`` and ``generations`` attributes. 
+your optimization with the ``population_size`` and ``generations`` variables. 
     
 .. testcode:: Genetic
 
@@ -747,7 +744,7 @@ optimum. Setting it too high will help you find the true optimum, but you may en
 time on later generations where the optimum has been found. 
 
 You can further control the behavior of the genetic algorithm by setting the ``crossover_rate``,
-``mutation_rate``, ``selection_method``, and ``elitism`` attributes. These settings will allow you to
+``mutation_rate``, ``selection_method``, and ``elitism`` variables. These settings will allow you to
 fine-tune the convergence of your optimization to achieve the desired result; however, for many
 optimizations the default values will work well and won't need to be changed. 
 
@@ -781,7 +778,7 @@ what.
 
 A number of different commonly used selection algorithms are available. The default algorithm is the Roulette
 Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection are also available. The
-``selection_method`` attribute allows you to select the algorithm; allowed values are: ``"roulette_wheel," 
+``selection_method`` variable allows you to select the algorithm; allowed values are: ``"roulette_wheel," 
 "tournament," "rank,"`` and ``"uniform"``.
 
 (See the source documentation for more information on :ref:`Genetic<openmdao.lib.drivers.genetic.py>`.)

@@ -53,8 +53,7 @@ class SellarMDF(Assembly):
         self.fixed_point_iterator.tolerance = .0001
 
         # Optimization parameters
-        self.driver.objective = \
-            '(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)'
+        self.driver.add_objective('(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)')
         
         self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
         self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
@@ -96,7 +95,7 @@ if __name__ == "__main__": # pragma: no cover
                                              prob.bcastr.z2_in, \
                                              prob.dis1.x1)
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
-    print "Minimum objective: ", prob.driver.objective.evaluate()
+    print "Minimum objective: ", prob.driver.eval_objective()
     print "Elapsed time: ", time.time()-tt, "seconds"
 
     

@@ -11,7 +11,7 @@ from enthought.traits.api import TraitError, TraitType
 
     
 class Enum(TraitType):
-    """A Public Variable wrapper for an enumeration, which is a variable that
+    """A variable wrapper for an enumeration, which is a variable that
        can assume one value from a set of specified values.
        """
     

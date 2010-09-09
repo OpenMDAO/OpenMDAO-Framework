@@ -50,7 +50,7 @@ class temp_data(Component):
 class AxodWrapper_data(Component):
     """Container for output Axod code           """
 
-    # OpenMDAO Public Variables
+    # OpenMDAO Variables
     ttin = Float(518.17,iotype ='in',desc='input temperature',units='degR')
     ptin = Float(14.6,iotype ='in',desc='input pressure',units='atm')
     hpower = Float(iotype='out')

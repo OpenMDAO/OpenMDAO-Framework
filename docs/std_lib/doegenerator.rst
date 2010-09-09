@@ -34,7 +34,7 @@ parameters at the requested resolution.
 ~~~~~~~~~~~~~~~~~~~
 
 The OptLatinHypercube component implements an algorithm that produces an optimal
-latin hypercube based on an evolutionary optimization of its Morris-Mitchell sampling
+Latin hypercube based on an evolutionary optimization of its Morris-Mitchell sampling
 criterion.
 
 (See the source documentation for more information on 

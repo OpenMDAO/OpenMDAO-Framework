@@ -70,7 +70,7 @@ class Mimic(Component):
         self.update_model(oldmodel, newmodel)
         
     def update_model(self, oldmodel, newmodel):
-        """called whenever the model attribute is set."""
+        """called whenever the model variable is set."""
         # TODO: check for pre-connected traits on the new model
         # TODO: disconnect traits corresponding to old model (or leave them if the new model has the same ones?)
         # TODO: check for nested Mimics?  Is this a problem?

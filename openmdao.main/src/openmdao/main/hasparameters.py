@@ -4,7 +4,7 @@ from numpy import float32, float64, int32, int64
 
 from openmdao.main.expreval import ExprEvaluator
 
-class _Parameter(object): 
+class Parameter(object): 
     
     def __init__(self, low=None, high=None, expr=None):
         self.low = low
@@ -29,7 +29,7 @@ class HasParameters(object):
         """Adds a parameter to the driver. 
         
         name: string
-            Name of the public variable the driver should vary during execution.
+            Name of the variable the driver should vary during execution.
             
         low: float, optional
             Minimum allowed value of the parameter.
@@ -38,7 +38,7 @@ class HasParameters(object):
             Maximum allowed value of the parameter.
         
         If neither "low" nor "high" is specified, the min and max will
-        default to the values in the metadata of the public variable being
+        default to the values in the metadata of the variable being
         referenced. If they are not specified in the metadata and not provided
         as arguments, a ValueError is raised.
         """
@@ -47,8 +47,8 @@ class HasParameters(object):
                                          "but it's already there" % name,
                                          AttributeError)
         
-        parameter = _Parameter()
-        parameter.expreval = ExprEvaluator(name, self._parent.parent, single_name=True)
+        parameter = Parameter()
+        parameter.expreval = ExprEvaluator(name, self._parent, single_name=True)
         
         try:
             metadata = self._parent.parent.get_metadata(name.split('[')[0])
@@ -58,8 +58,8 @@ class HasParameters(object):
         try:
             val = parameter.expreval.evaluate()
         except Exception as err:
-            self._parent.raise_exception("Can't add parameter because I can't evaluate '%s': %s" % 
-                                         (name,str(err)), type(err))
+            self._parent.raise_exception("Can't add parameter because I can't evaluate '%s'." % name, 
+                                         ValueError)
         if not isinstance(val,(float,float32,float64,int,int32,int64)):
             self._parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
                                          (name,type(val).__name__), ValueError)
@@ -128,7 +128,7 @@ class HasParameters(object):
         return self._parameters
 
     def set_parameters(self, values): 
-        """Pushes the values in the iterator 'values' into the corresponding public 
+        """Pushes the values in the iterator 'values' into the corresponding 
         variables in the model.
         
         values: iterator
@@ -144,3 +144,15 @@ class HasParameters(object):
                 #raise ValueError("parameter value (%s) is outside of allowed range [%s to %s]" %
                                  #(val, param.low, param.high))
             param.expreval.set(val)
+
+    def _get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by a parameter.
+        """
+        conn_list = []
+        pname = self._parent.name
+        for name,param in self._parameters.items():
+            for cname in param.expreval.get_referenced_compnames():
+                conn_list.append((pname, cname))
+        return conn_list
+    

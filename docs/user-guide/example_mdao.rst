@@ -140,7 +140,7 @@ Thus, CONMIN can set the design variable in this Broadcaster, and when the Broad
 the new value gets passed to all of the components that need it.
 
 OpenMDAO doesn't have a built-in Broadcaster, so we need to make our own. It's a simple
-component with some inputs, some outputs, and an execute function that passes the inputs
+component with some inputs, some outputs, and an ``execute`` function that passes the inputs
 to the outputs.
 
 .. testcode:: Broadcaster
@@ -176,15 +176,15 @@ to the outputs.
 We've added the coupling variables in our Broadcaster as well, foreseeing the need
 for them in some of the other MDAO architectures.
 
-.. index:: WorkFlow
+.. index:: WorkFlow, BroydenSolver, FixedPointIterator
 
 The diagram also shows a solver that takes the output of the component dataflow
-and feeds it back into the input. OpenMDAO presently has two solvers: ``FixedPointIterator``
-and ``BroydenSolver``. The ``FixedPointIterator`` is a solver that performs fixed point iteration,
+and feeds it back into the input. OpenMDAO presently has two solvers: FixedPointIterator
+and BroydenSolver. The FixedPointIterator is a solver that performs fixed point iteration,
 which means that it keeps driving ``x_new = f(x_old)`` until convergence is achieved. In
 other words, *y2* is passed from the output of ``SellarDiscipline2`` to the input of ``SellarDiscipline1``,
 and the loop keeps executing until the change in the value of *y2* between iterations is
-smaller than a tolerance. The ``BroydenSolver`` is a solver based on a quasi-Newton-Raphson
+smaller than a tolerance. The BroydenSolver is a solver based on a quasi-Newton-Raphson
 algorithm that uses a Broyden update to approximate the Jacobian. This solver reads
 the output and calculates a new input each iteration. Convergence is achieved when the
 residual between the output and input is driven to zero.
@@ -291,8 +291,6 @@ so that the design variables carry through to the discipline components.
         self.connect('dis1.y1','dis2.y1')
 
 
-.. index:: Expression
-
 Next, the parameters for the fixed point iterator must be set. ``FixedPointIterator``
 is a specialized solver that is applicable only to single-input/single-output problems.
 As such, it does not conform to the standard driver interface. The output from ``SellarDiscipline2``
@@ -315,7 +313,7 @@ Finally, the CONIM optimization is set up.
 .. testcode:: MDF_parts
 
         # Optimization parameters
-        self.driver.objective = '(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)'
+        self.driver.add_objective('(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)')
                 
         self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
         self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
@@ -409,7 +407,7 @@ Finally, putting it all together gives:
                 self.fixed_point_iterator.tolerance = .0001
         
                 # Optimization parameters
-                self.driver.objective = '(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)'
+                self.driver.add_objective('(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)')
                 
                 self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
                 self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
@@ -473,8 +471,8 @@ though we only have one input and one output in this example.
         
 The input is selected using ``add_parameter``. You might also be familiar with the
 term *independent* used to describe this. Here, we've given a *low* and a
-*high* attribute, but we've set them very high as the Broyden solver doesn't
-use either of these. The output is specified by adding an equality constraint.
+*high* attribute, but we've set them to very large negative and positive values
+as the Broyden solver doesn't use either of these. The output is specified by adding an equality constraint.
 A solver essentially tries to drive something to zero. In this case, we want to
 drive the residual error in the coupled variable *y2* to zero. An equality constraint
 is defined with an expression string which is parsed for the equals sign, so the
@@ -576,8 +574,7 @@ All that is left to do is set up the CONMIN optimizer.
 .. testcode:: IDF_parts
 
         # Optimization parameters
-        self.driver.objective = \
-            '(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)'
+        self.driver.add_objective('(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)')
         
         self.driver.add_parameter('bcastr.z1_in', low = -10.0, high=10.0)
         self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high=10.0)
@@ -721,8 +718,8 @@ Now we need to set up the parameters for the outer optimization loop.
 .. testcode:: CO_parts
 
         #Parameters - Global Optimization
-        self.driver.objective = '(bcastr.x1)**2 + bcastr.z2 + bcastr.y1' + \
-                                                '+ math.exp(-bcastr.y2)'
+        self.driver.add_objective('(bcastr.x1)**2 + bcastr.z2 + bcastr.y1' + 
+                                                '+ math.exp(-bcastr.y2)')
         self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
         self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
         self.driver.add_parameter('bcastr.x1_in', low = 0.0,   high = 10.0)
@@ -758,11 +755,11 @@ Finally, we set up our local optimization loops.
 .. testcode:: CO_parts
 
         #Parameters - Local Optimization 1
-        self.localopt1.objective = '(bcastr.z1-dis1.z1)**2 + ' + \
+        self.localopt1.add_objective('(bcastr.z1-dis1.z1)**2 + ' + \
                                    '(bcastr.z2-dis1.z2)**2 + ' + \
                                    '(bcastr.x1-dis1.x1)**2 + ' + \
                                    '(bcastr.y1-dis1.y1)**2 + ' + \
-                                   '(bcastr.y2-dis1.y2)**2 < 0'
+                                   '(bcastr.y2-dis1.y2)**2 < 0')
         self.localopt1.add_parameter('dis1.z1', low = -10.0, high = 10.0)
         self.localopt1.add_parameter('dis1.z2', low = 0.0,   high = 10.0)
         self.localopt1.add_parameter('dis1.x1', low = 0.0,   high = 10.0)
@@ -775,10 +772,10 @@ Finally, we set up our local optimization loops.
         self.localopt1.dabfun = .00001
         
         #Parameters - Local Optimization 2
-        self.localopt2.objective = '(bcastr.z1-dis2.z1)**2 + ' + \
-                                   '(bcastr.z2-dis2.z2)**2 + ' + \
-                                   '(bcastr.y1-dis2.y1)**2 + ' + \
-                                   '(bcastr.y2-dis2.y2)**2 < 0'
+        self.localopt2.add_objective('(bcastr.z1-dis2.z1)**2 + ' + \
+                                     '(bcastr.z2-dis2.z2)**2 + ' + \
+                                     '(bcastr.y1-dis2.y1)**2 + ' + \
+                                     '(bcastr.y2-dis2.y2)**2 < 0')
         self.localopt2.add_parameter('dis2.z1', low = -10.0, high = 10.0)
         self.localopt2.add_parameter('dis2.z2', low = 0.0,   high = 10.0)
         self.localopt2.add_parameter('dis2.y1', low = 3.16,  high = 10.0)

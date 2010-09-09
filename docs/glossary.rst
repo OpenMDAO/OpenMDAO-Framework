@@ -14,8 +14,8 @@ Glossary
 
       **Assembly**
         The Assembly class is the primary building block of the "system of systems"
-        aspect of OpenMDAO. Each assembly has a Driver called *driver* that controls
-        execution of the workflow of Components within the Assembly.
+        aspect of OpenMDAO. Each assembly has one or more Drivers that control
+        iteration of Components within the Assembly.
         An assembly is also a Component, so hierarchies of assemblies can be created.
       
       
@@ -41,13 +41,13 @@ Glossary
 
       **CAPRI**
         Computational Analysis Programming Interface. CAPRI is a CAD vendor-neutral
-        programming interface that aids in acquiring geometry data directly from CAD
-        files.
+        programming interface that supports direct communication of geometry data between
+        an application and a CAD system.
 
 
       **Case**
-        An object containing a collection of input names and values, and names of outputs 
-        to be stored along with the inputs after the process model runs.
+        An object containing a collection of names and values of inputs and/or outputs that
+        are associated with a given 'run' or iteration of a model.
 
 
       **CaseIterator**
@@ -75,7 +75,7 @@ Glossary
 
       
       **Component**
-        A Container with input and output variables that performs some sort of calculation. 
+        An object with input and output variables that performs some sort of calculation. 
 
 
       **components**
@@ -91,8 +91,8 @@ Glossary
 
       
       **Container**
-        A container of Variables and other Containers. The base class of all objects
-        within the framework that  support user access to input and output Variables. 
+        An object containing variables and possibly other Containers. It's used as a way to
+        give structure to groups of input or output variables.
 
       
       **Coverage**
@@ -100,10 +100,9 @@ Glossary
 
 
       **decorator**
-        A Python module that aims to simplify the usage of decorators for the average
-        programmer and to popularize decorators by showing various non-trivial examples. A
-        Python decorator is a specific change to the Python syntax that allows users to
-        more conveniently alter functions and methods.
+        A Python module that aims to simplify the creation of well behaved decorators for the average
+        programmer. A decorator is well behaved if the wrapped function that it returns has the same
+        doc string, argument list, and other attributes of the function being wrapped.
 
       
       **DLL**
@@ -135,19 +134,9 @@ Glossary
 
 
       **Enum**
-        A public variable type, found in ``openmdao.lib.api``, which supports a
+        A variable type which supports a 
         list of discrete allowed values. The list of allowed values can be of arbitrary
         length, and elements can be of any type.
-
-
-      **Expression**
-        A special kind of trait that contains a string expression that
-        references public variables in the framework.
-
-
-      **Expressions**
-        See :term:`Expression` above.
-
 
       **F2PY**
         Fortran to Python interface generator.
@@ -174,8 +163,9 @@ Glossary
         Genetic algorithm
 
       **Float**
-        A public variable type, found in ``openmdao.lib.api``, which represents a
-        floating point number. It also also allows for the specification of units.
+        A variable type which represents a floating point number. It
+        also also allows for the specification of units and specification of
+        upper and lower bounds.
      
       
       **Genetic**  
@@ -199,14 +189,19 @@ Glossary
 
       
       **Int**
-        A public variable type, found in ``openmdao.lib.api``, which represents
-        numbers with integer values.
+        A variable type which represents numbers having integer values.
 
 
       **IPC**
         Interprocess communication
 
+        
+      **iteration hierarchy**
+        A tree structure of Drivers and Components all operating within the same
+        Assembly.  Components are leaf nodes, and the branches coming from each 
+        Driver node are determined by the contents of the Driver's workflow.
 
+        
       **Jinja**
         A small but fast and easy-to-use stand-alone template engine written in pure
         Python. 
@@ -273,11 +268,6 @@ Glossary
         A unittest extension offering automatic test suite discovery and easy test
         authoring.
 
-      
-      **nosecoverage2**
-        A nose plugin that exposes some features of version 3.2 of the **coverage**
-        package, including html output and cobertura output.
-            
       
       **NumPy**
         NumPy is the fundamental package needed for scientific computing with Python. See
@@ -354,17 +344,6 @@ Glossary
         See :term:`plugin`
 
 
-      **Public Variables** 
-        A component's inputs and outputs. They are called *public* variables because
-        they are exposed to the framework; inputs can be set and outputs can be read
-        by other framework components. In general, a public variable is a wrapper for
-        data passed between framework components. It has a value, a default value, and
-        may contain additional attributes like min/max values and units. Public
-        variables can also perform their own validation when being assigned to another
-        public variable. OpenMDAO's public variables are implemented using Traits, an
-        open source extension to Python authored by Enthought, Inc.
-
-      
       **PuTTY**  
         A free terminal emulator application that can act as a client for SSH, Telnet,
         rlogin, and raw TCP computing protocols.
@@ -517,29 +496,45 @@ Glossary
       
       
       **Traits**
-        A software package from Enthought, Inc. that aids in developing Python code. A trait is
+        A software package from Enthought, Inc. A trait is
         a type definition that can be used for normal Python object attributes, giving the
         attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
-        The Traits package works with version 2.4 and later of Python and is similar in some ways
-        to the Python property language feature. 
 
 
       **TraitType** 
-        The base class used to validate and possibly convert data objects that are
-        passed between linked Components.
+        The base class used when creating a new Variable type.
       
       
       **trunk**
         A Bazaar term that refers to the main development branch (in this case,
-        the openmdao trunk) from which working branches are pulled. 	
+        the openmdao trunk) from which working branches are pulled.
+
+
+      **tuple**
+      	A tuple is an immutable list. It is defined in the same way as a list, except that the whole set of
+	elements is enclosed in parentheses instead of square brackets. The elements of a tuple have a defined
+	order, and tuples indices are zero-based, just like a list, so the first element of a non-empty tuple
+	is always t[0].  Negative indices count from the end of the tuple. Slicing works too, but when you
+	slice a tuple, you get a new tuple.  
 
 
       **units**
         A package used by OpenMDAO that provides unit conversion capability for variables.
 
-
+       
       **Variable**
-        see :term:`Public Variables`
+        see :term:`Variables`
+
+        
+      **Variables** 
+        A component's inputs and outputs that are visible to other components
+        in the framework. In general, a variable is a wrapper for data
+        passed between framework components. It has a value, a default value,
+        and may contain additional attributes like upper and lower bounds and units.
+        Variables can also perform their own validation when being
+        assigned to another variable. OpenMDAO's variables are
+        implemented using Traits, an open source extension to Python authored
+        by Enthought, Inc.
 
 
       **virtualenv**  
@@ -582,9 +577,7 @@ Glossary
       **Workflow**
         A Workflow controls the execution order of a group of Components. The default
         workflow class is Dataflow, which orders Components based on their input and
-        output connections. Other classes inheriting from 
-        Workflow will support different execution schemes, e.g., concurrent and
-        conditional execution.
+        output connections. 
 
 
       **WSGI**
@@ -603,15 +596,6 @@ Glossary
         Python, an object-oriented scripting language.
 
       
-      **zope.component**
-        Zope Component Architecture
-
-
       **zope.interface**
         A package that provides an implementation of object interfaces for Python. 
-
-      **ZopeSkel**
-        ZopeSkel provides a collection of skeletons for quickstarting Zope and Plone
-        projects.
-
 

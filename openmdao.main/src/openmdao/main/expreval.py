@@ -243,7 +243,7 @@ class ExprEvaluator(str):
     whereas variables from other objects must  be accessed using the appropriate
     *set()* or *get()* call.  Array entry access and function invocation are also
     translated in a similar way.  For example, the expression "a+b[2]-comp.y(x)"
-    for a scoping object that contains attributes a and b, but not comp,x or y,
+    for a scoping object that contains variables a and b, but not comp,x or y,
     would translate to 
     "a+b[2]-self.parent.invoke('comp.y',self.parent.get('x'))".
     
@@ -385,7 +385,7 @@ class ExprEvaluator(str):
         return set([x.split('.')[0] for x in self.var_names])
     
     def refs_valid(self):
-        """Return True if all attributes referenced by our expression
+        """Return True if all variables referenced by our expression
         are valid.
         """
         if self.single_name:
@@ -399,3 +399,15 @@ class ExprEvaluator(str):
                     return False
         return True
     
+    def check_resolve(self):
+        """Return True if all variables referenced by our expression can
+        be resolved.
+        """
+        if self._scope:
+            scope = self._scope()
+            if scope and scope.parent:
+                if self._text != self:  # text has changed
+                    self._parse()
+                if scope.parent.check_resolve(self.var_names):
+                    return True
+        return False

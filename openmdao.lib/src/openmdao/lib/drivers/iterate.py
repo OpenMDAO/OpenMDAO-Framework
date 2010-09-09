@@ -9,7 +9,8 @@ from numpy import zeros
 
 from openmdao.lib.datatypes.float import Float
 from openmdao.lib.datatypes.int import Int
-from openmdao.main.api import Driver, Expression
+from openmdao.main.api import Driver
+from openmdao.main.expression import Expression
 from openmdao.main.exceptions import RunStopped
 
 class FixedPointIterator(Driver):

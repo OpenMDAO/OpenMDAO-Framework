@@ -1,10 +1,10 @@
 """
-A public variable that references another member of the OpenMDAO model
+A variable that references another member of the OpenMDAO model
 hierarchy.
 """
 
 #public symbols
-__all__ = ['Expression', 'ExpressionList']
+__all__ = []
 
 
 # pylint: disable-msg=E0611,F0401

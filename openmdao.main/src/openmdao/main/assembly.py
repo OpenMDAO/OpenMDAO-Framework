@@ -342,7 +342,7 @@ class Assembly (Component):
         
     def get_valids(self, names):
         """Returns a list of boolean values indicating whether the named
-        attributes are valid (True) or invalid (False). Entries in names may
+        variables are valid (True) or invalid (False). Entries in names may
         specify either direct traits of self or those of direct children of
         self, but no deeper in the hierarchy than that.
         """
@@ -360,6 +360,20 @@ class Assembly (Component):
                     self.raise_exception("get_valids: unknown variable '%s'" %
                                          name, RuntimeError)
         return valids
+
+    def check_resolve(self, pathnames):
+        """Returns True if all of the pathnames are resolvable starting from this
+        Assembly.
+        """
+        for name in pathnames:
+            tup = name.split('.', 1)
+            if len(tup) > 1:
+                comp = getattr(self, tup[0], None)
+                if comp is None or not comp.contains(tup[1]):
+                    return False
+            elif not hasattr(self, name):
+                return False
+        return True
 
     def invalidate_deps(self, compname=None, varnames=None, notify_parent=False):
         """Mark all Variables invalid that depend on varnames. 
