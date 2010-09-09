@@ -411,8 +411,8 @@ class Component (Container):
         if hasattr(self, '_delegates_'):
             for name, dclass in self._delegates_.items():
                 delegate = getattr(self, name)
-                if hasattr(delegate, '_get_expr_depends'):
-                    conn_list.extend(delegate._get_expr_depends())
+                if hasattr(delegate, 'get_expr_depends'):
+                    conn_list.extend(delegate.get_expr_depends())
         return conn_list
 
     def get_expr_sources(self):

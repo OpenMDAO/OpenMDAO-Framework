@@ -56,7 +56,11 @@ def add_delegate(*delegates):
         that match the public members in the delegate class.  Any public members in the
         delegate that have a name matching anything in the scoping object are ignored.
         """
-        added_set = set([n for n,v in getmembers(cls) if not n.startswith('_')])
+        if hasattr(cls, '_do_not_promote'):
+            skip = cls._do_not_promote
+        else:
+            skip = []
+        added_set = set([n for n,v in getmembers(cls) if not n.startswith('_') and n not in skip])
     
         listofdels = []
         for tup in delegates:

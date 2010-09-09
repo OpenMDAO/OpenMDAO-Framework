@@ -14,6 +14,8 @@ class Parameter(object):
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface"""
 
+    _do_not_promote = ['get_expr_depends']
+    
     def __init__(self, parent):
         self._parameters = ordereddict.OrderedDict()
         self._parent = parent
@@ -145,7 +147,7 @@ class HasParameters(object):
                                  #(val, param.low, param.high))
             param.expreval.set(val)
 
-    def _get_expr_depends(self):
+    def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency introduced by a parameter.
         """

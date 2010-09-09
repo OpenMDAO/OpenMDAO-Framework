@@ -11,6 +11,8 @@ def _remove_spaces(s):
 class HasObjective(object): 
     """This class provides an implementation of the IHasObjective interface."""
 
+    _do_not_promote = ['get_expr_depends']
+
     def __init__(self, parent):
         self._objective = ''
         self._parent = parent
@@ -44,7 +46,7 @@ class HasObjective(object):
             self._parent.raise_exception("no objective specified")
         return self._objective.evaluate()
 
-    def _get_expr_depends(self):
+    def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency introduced by our objective.
         """
@@ -57,6 +59,8 @@ class HasObjective(object):
 class HasObjectives(object): 
     """This class provides an implementation of the IHasObjectives interface."""
 
+    _do_not_promote = ['get_expr_depends']
+    
     def __init__(self, parent):
         self._objectives = ordereddict.OrderedDict()
         self._parent = parent
@@ -114,10 +118,10 @@ class HasObjectives(object):
         return self._objectives
 
     def eval_objectives(self):
-        """Returns the value of the evaluated objective."""
+        """Returns a list of values of the evaluated objectives."""
         return [obj.evaluate() for obj in self._objectives.values()]
 
-    def _get_expr_depends(self):
+    def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency introduced by our objectives.
         """

@@ -48,6 +48,8 @@ def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
 
 class _HasConstraintsBase(object):
+    _do_not_promote = ['get_expr_depends']
+    
     def __init__(self, parent):
         self._parent = parent
         self._constraints = ordereddict.OrderedDict()
@@ -67,7 +69,7 @@ class _HasConstraintsBase(object):
         """Return a list of strings containing constraint expressions."""
         return self._constraints.keys()
     
-    def _get_expr_depends(self):
+    def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency introduced by a constraint.
         """
@@ -152,6 +154,9 @@ class HasConstraints(object):
     """Add this class as a delegate if your Driver supports both equality
     and inequality constraints.
     """
+    
+    _do_not_promote = ['get_expr_depends']
+    
     def __init__(self, parent):
         self._parent = parent
         self._eq = HasEqConstraints(parent)
@@ -216,11 +221,11 @@ class HasConstraints(object):
         lst.extend(self._eq.list_constraints())
         return lst
 
-    def _get_expr_depends(self):
+    def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency introduced by a constraint.
         """
-        conn_list = self._eq._get_expr_depends()
-        conn_list.extend(self._ineq._get_expr_depends())
+        conn_list = self._eq.get_expr_depends()
+        conn_list.extend(self._ineq.get_expr_depends())
         return conn_list
     
