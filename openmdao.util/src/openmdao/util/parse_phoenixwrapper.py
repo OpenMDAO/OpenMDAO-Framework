@@ -89,7 +89,7 @@ _unit_part_replace = {
 _unit_ignore = ('%', 'EPNdB', 'dB')
 
 def _gen_publicvar(data):
-    """Generates the OpenMDAO public variable line given a dictionary of info.
+    """Generates the OpenMDAO variable line given a dictionary of info.
     """
     
     sep = ", "
@@ -330,7 +330,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
         text += "class " + container_name + "(Container):\n"
         
         text += tab + '"""Container for %s"""\n\n' % str(group)
-        text += tab + "# OpenMDAO Public Variables\n"
+        text += tab + "# OpenMDAO Variables\n"
         openmdao.write(text)
     
         openmdao.write(vars[group])
@@ -354,7 +354,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
     text += "class " + compname + "(Component):\n"
     
     text += tab + '"""Wrapper for %s"""\n\n' % compname
-    text += tab + "# OpenMDAO Public Variables\n"
+    text += tab + "# OpenMDAO Variables\n"
     openmdao.write(text)
 
     openmdao.write(vars[""])

@@ -70,7 +70,7 @@ class TestCase(unittest.TestCase):
     def test_optimizeSphere_set_high_low(self):
         self.top.add('comp', SphereFunction())
         self.top.driver.workflow.add(self.top.comp)
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.add_objective("comp.total")
 
         self.top.driver.add_parameter('comp.x',high=5.13,low=-5.12)
         self.top.driver.add_parameter('comp.y')
@@ -96,7 +96,7 @@ class TestCase(unittest.TestCase):
     def test_optimizeSphere(self):
         self.top.add('comp', SphereFunction())
         self.top.driver.workflow.add(self.top.comp)
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.add_objective("comp.total")
 
         self.top.driver.add_parameter('comp.x')
         self.top.driver.add_parameter('comp.y')
@@ -121,7 +121,7 @@ class TestCase(unittest.TestCase):
     def test_optimizeSpherearray_nolowhigh(self):
         self.top.add('comp', SphereFunctionArray())
         self.top.driver.workflow.add(self.top.comp)
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.add_objective("comp.total")
 
         try:        
             self.top.driver.add_parameter('comp.x[0]')
@@ -135,7 +135,7 @@ class TestCase(unittest.TestCase):
     def test_optimizeSpherearray(self):
         self.top.add('comp', SphereFunctionArray())
         self.top.driver.workflow.add(self.top.comp)
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.add_objective("comp.total")
 
         self.top.driver.add_parameter('comp.x[0]', low=-5.12,high=5.13)
         self.top.driver.add_parameter('comp.x[1]', low=-5.12,high=5.13)
@@ -200,7 +200,7 @@ class TestCase(unittest.TestCase):
         from openmdao.lib.api import Float,Int,Enum
 
         class SomeComp(Component):
-            """Arbitrary component with a few public variables, but which does not really do 
+            """Arbitrary component with a few variables, but which does not really do 
             any calculations"""
 
             w = Float(0.0,low=-10,high=0.0,iotype="in")
@@ -228,7 +228,7 @@ class TestCase(unittest.TestCase):
     
     def test_improper_parameter_type(self): 
         class SomeComp(Component):
-            """Arbitrary component with a few public variables, but which does not really do 
+            """Arbitrary component with a few variables, but which does not really do 
             any calculations"""
             z = Str("test",iotype="in")
 

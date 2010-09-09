@@ -24,7 +24,7 @@ a full Newton solver, but they may not be suitable for all problems.
 To see how to use the BroydenSolver, consider a problem where we'd like to solve
 for the intersection of a line and a parabola. We can implement this as a single
 component. (It is also possible to implement it as two components if you'd
-prefer. See :ref:`Tutorial-MDAO-Architectures` to learn how to broadcast variables.)
+prefer. See :ref:`Tutorial:-MDAO-Architectures` to learn how to broadcast variables.)
 
 .. testcode:: Broyden
 
@@ -60,7 +60,7 @@ usually find other solutions by starting the solution from different initial
 points. We start at ``(10, 10)``, as designated by the default values for the variables
 *x* and *y*.
 
-Next, we build a model that uses the Broyden solver to find a root for the 
+Next, we build a model that uses the BroydenSolver to find a root for the 
 equations defined in MIMOSystem.
 
 .. testcode:: Broyden
@@ -93,14 +93,14 @@ equations defined in MIMOSystem.
             self.driver.tol = .000000001
             
 The parameters are the independent variables that the solver is allowed to vary. The
-standard ``add_parameter`` interface is used to define these. Broyden does not utilize
-the low and high attributes, so they are set to some high value.
+method ``add_parameter`` is used to define these. Broyden does not utilize
+the low and high arguments, so they are set to some large arbitrary negative and positive values.
 
 The equations that we want to satisfy are added as equality constraints using the
-``add_constraint`` interface. We want to find *x* and *y* that satisfy ``f_xy=0`` and ``g_xy =0``,
+``add_constraint`` method. We want to find *x* and *y* that satisfy ``f_xy=0`` and ``g_xy=0``,
 so these two equations are added to the solver.
 
-Both the ``add_parameter`` and ``add_constraint`` interface are presented in more detail in
+Both the ``add_parameter`` and ``add_constraint`` methods are presented in more detail in
 :ref:`Tutorial:-MDAO-Architectures`.
 
 The resulting solution should yield:
@@ -114,7 +114,7 @@ The resulting solution should yield:
 
 .. index:: algorithm, Enum, SciPy
 
-There are five parameters that control the solution process in the Broyden solver.
+There are five parameters that control the solution process in the BroydenSolver.
 
 **algorithm** -- SciPy's nonlinear package contained several algorithms for solving
 a set of nonlinear equations. Three of these methods were considered by their
@@ -176,9 +176,24 @@ allowable mixing coefficient for adaptation. The default value is 1.0.
 
     self.driver.alphamax = 1.0
     
-    
-(See the source documentation for information on :ref:`openmdao.lib.drivers.broydensolver.py`.)
-    
+(See the source documentation for more information on
+ :ref:`BroydenSolver<openmdao.lib.drivers.broydensolver.py>`.)
+
+
+.. index:: Case Iterator Driver
+
+.. _Case-iterator-driver:
+
+*CaseIteratorDriver*
+~~~~~~~~~~~~~~~~~~~~~~
+
+(See the source documentation for more information on 
+:ref:`CaseIterDriver<openmdao.lib.drivers.caseiterdriver.py>`.)
+
+.. todo::
+
+    Discuss the CaseIteratorDriver in more detail.
+
     
 .. index:: CONMIN
 
@@ -251,15 +266,12 @@ follows:
             # add DrivingSim to workflow
             driver.workflow.add(self.driving_sim)
         
-            # CONMIN Objective 
-            self.driver.objective = 'driving_sim.accel_time'
-                
             # CONMIN Design Variables 
             self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
             self.driver.add_parameter('driving_sim.bore', low=65. , high=100.)
 
             # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-            self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+            self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
 
 This first section of code defines an assembly called *EngineOptimization.*
 This assembly contains a DrivingSim component and a CONMIN driver, both of
@@ -295,7 +307,7 @@ absolute change in the objective function to indicate convergence (i.e., if the
 objective function changes by less than dabfun, then the problem is converged).
 Similarly, *delfun* is the relative change of the objective function with respect
 to the value at the previous step. Note that delfun has a hard-wired minimum of 
-1e-10 in the Fortran code, and dabfun has a minimum of 0.0001.
+``1e-10`` in the Fortran code, and dabfun has a minimum of 0.0001.
 
 .. testcode:: CONMIN_show
 
@@ -370,8 +382,8 @@ variables as follows:
 
 .. testcode:: CONMIN_show
 
-    map(self.driver.add_constraint, ['driving_sim.stroke - driving_sim.bore',
-                               '1.0 - driving_sim.stroke * driving_sim.bore'])
+    map(self.driver.add_constraint, ['driving_sim.stroke < driving_sim.bore',
+                               'driving_sim.stroke * driving_sim.bore > 1.0'])
     self.cons_is_linear = [1, 0]
 
 Here, the first constraint is linear, and the second constraint is nonlinear. If 
@@ -458,7 +470,55 @@ used only for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 
-(See the source documentation for information on :ref:`openmdao.lib.drivers.conmindriver.py`.)
+(See the source documentation for more information on 
+:ref:`CONMINdriver<openmdao.lib.drivers.conmindriver.py>`.)
+
+.. index:: DOEdriver, design of experiments
+
+.. _DOEdriver:
+
+*DOEdriver*
+~~~~~~~~~~~
+
+The DOEdriver provides the capability to execute a DOE on a workflow.
+This Driver supports the IHasParameters interface. At execution time, 
+the driver will use the list of parameters added to it by the user to 
+create a specific DOE and then iteratively execute the DOE cases on the
+workflow. 
+
+The user can pick from any of the DOEgenerators provided in the standard
+library, or provide their own custom instance of a DOEgenerator. A DOEgenerator
+must be plugged into the DOEgenerator socket on the DOEdriver in order to
+operate. 
+    
+    .. testcode:: DOEdriver
+    
+        from openmdao.main.api import Assembly
+        from openmdao.lib.api import DOEdriver
+        from openmdao.lib.doegenerators.full_factorial import FullFactorial
+
+        from openmdao.examples.singleEI.branin_component import BraninComponent
+        
+        class Analysis(Assembly): 
+            def __init__(self,doc=None): 
+                super(Analysis,self).__init__()
+                
+                self.add('branin', BraninComponent())
+                self.add('driver', DOEdriver())
+                self.driver.workflow.add(self.branin)
+
+                self.driver.add_parameter('branin.x')
+                self.driver.add_parameter('branin.y')
+                
+                #use a full factorial DOE with 2 variables, and 3 levels
+                #   for each variable
+                self.driver.DOEgenerator = FullFactorial(3,2)
+   
+The *min* and *max* metadata of the parameters are used to denote the range for
+each variable over which the DOE will span.
+                
+(See the source documentation for more information on 
+:ref:`DOEdriver<openmdao.lib.drivers.doedriver.py>`.)
 
 .. index:: Fixed Point Iterator
 
@@ -524,7 +584,7 @@ like this.
             self.driver.x_in = 'problem.x'    
             self.driver.x_out = 'problem.y'
 
-The *x* input and the *F(x)* output are specified as Expressions and assigned to
+The *x* input and the *F(x)* output are specified as string expressions and assigned to
 ``x_in`` and ``x_out`` in the solver.
             
 .. doctest:: FPI
@@ -543,7 +603,10 @@ specifies the number of iterations to run. The default value for
 
 A more useful example in which the FixedPointIterator is used to converge two
 coupled components is shown in :ref:`Tutorial-MDAO-Architectures` .
-    
+
+(See the source documentation for more information on 
+:ref:`FixedPointIterator<openmdao.lib.drivers.iterate.py>`.)
+
 .. index:: Genetic
 
 
@@ -570,7 +633,7 @@ Design Variables
 ++++++++++++++++
 
 IOtraits are added to Genetic and become optimization parameters. Genetic will vary the set of
-parameters to search for an optimum. Genetic supports three public variable types:
+parameters to search for an optimum. Genetic supports three variable types:
 :term:`Float`, :term:`Int`, and :Term:`Enum`. These types can be used as parameters in any 
 optimization. 
 
@@ -583,15 +646,15 @@ You add design variables to Genetic using the ``add_parameter`` method.
     from openmdao.lib.api import Float,Int,Enum
     
     class SomeComp(Component):
-        """Arbitrary component with a few public variables, but which does not really do 
+        """Arbitrary component with a few variables, but which does not really do 
            any calculations
         """
 
-        w = Float(0.0,low=-10,high=10,iotype="in")
+        w = Float(0.0, low=-10, high=10, iotype="in")
     
-        x = Float(0.0,low=0.0,high=100.0,iotype="in")
-        y = Int(10,low=10,high=100,iotype="in")
-        z = Enum([-10,-5,0,7],iotype="in")
+        x = Float(0.0, low=0.0, high=100.0, iotype="in")
+        y = Int(10, low=10, high=100, iotype="in")
+        z = Enum([-10, -5, 0, 7], iotype="in")
     
     class Simulation(Assembly):
         """Top Level Assembly used for simulation"""
@@ -601,12 +664,15 @@ You add design variables to Genetic using the ``add_parameter`` method.
         
             super(Simulation,self).__init__()
         
-            self.add('optimizer',Genetic())
-            self.add('comp',SomeComp())
+            self.add('driver', Genetic())
+            self.add('comp', SomeComp())
         
-            self.optimizer.add_parameter('comp.x')
-            self.optimizer.add_parameter('comp.y')
-            self.optimizer.add_parameter('comp.z')
+            # Driver process definition
+            self.driver.workflow.add(self.comp)
+
+            self.driver.add_parameter('comp.x')
+            self.driver.add_parameter('comp.y')
+            self.driver.add_parameter('comp.z')
     
     top = Simulation()        
     set_as_top(top)
@@ -625,45 +691,45 @@ the optimizer to use a different range instead of the default.
 
 .. testcode:: Genetic
     
-    top.optimizer.add_parameter('comp.w',low=5.0,high=7.0)
+    top.driver.add_parameter('comp.w', low=5.0, high=7.0)
 
 Now, for ``comp.x`` the optimizer will only try values between 5.0 and 7.0. Note that `low` and `high`
-are only applicable to Float and Int public variables. For Enum public variables, `low` and `high`
+are applicable only to Float and Int variables. For Enum variables, `low` and `high`
 are not applicable.
 
 Configuration
 +++++++++++++
 
-When setting the `objective` attribute you can specify a single 
-public variable or a more complex function, such as 
+When setting the objective you can specify a single 
+variable name or a more complex function, such as 
 
 .. testcode:: Genetic
 
-    top.optimizer.objective = "comp.x"
+    top.driver.add_objective("comp.x")
     
 or 
 
 .. testcode:: Genetic
 
-    top.optimizer.objective = "2*comp.x+comp.y+3*comp.z"
+    top.driver.add_objective("2*comp.x + comp.y + 3*comp.z")
 
-In the second example above, a more complex objective was created where the overall objective was 
+In the second example above, a more complex objective function was created where the overall objective was 
 a weighted combination of ``comp.x, comp.y,`` and ``comp.z``. 
 
 To set the optimizer to either minimize or maximize your objective, you set the
-``opt_type`` attribute of the driver to "minimize" or "maximize."
+``opt_type`` variable of Genetic to "minimize" or "maximize."
 
 .. testcode:: Genetic
 
-    top.optimizer.opt_type = "minimize"
+    top.driver.opt_type = "minimize"
     
 You can control the size of the population in each generation and the maximum number of generations in 
-your optimization with the ``population_size`` and ``generations`` attributes. 
+your optimization with the ``population_size`` and ``generations`` variables. 
     
 .. testcode:: Genetic
 
-    top.optimizer.population_size = 80
-    top.optimizer.generations = 100
+    top.driver.population_size = 80
+    top.driver.generations = 100
     
 As you increase the population size, you are effectively adding diversity in to the gene pool of your
 optimization. A large population means that a larger number of individuals from a given generation will
@@ -678,7 +744,7 @@ optimum. Setting it too high will help you find the true optimum, but you may en
 time on later generations where the optimum has been found. 
 
 You can further control the behavior of the genetic algorithm by setting the ``crossover_rate``,
-``mutation_rate``, ``selection_method``, and ``elitism`` attributes. These settings will allow you to
+``mutation_rate``, ``selection_method``, and ``elitism`` variables. These settings will allow you to
 fine-tune the convergence of your optimization to achieve the desired result; however, for many
 optimizations the default values will work well and won't need to be changed. 
 
@@ -689,7 +755,7 @@ design space. If the rate is set too high, then it is likely that stronger indiv
 
 .. testcode:: Genetic
 
-    top.optimizer.crossover_rate = 0.9
+    top.driver.crossover_rate = 0.9
 
 The ``mutation_rate`` controls how likely any particular gene is to experience a mutation. A low, but non-zero,
 mutation rate will help prevent stagnation in the gene pool by randomly moving the values of genes. If this 
@@ -698,7 +764,7 @@ allowed values are between 0.0 and 1.0.
 
 .. testcode:: Genetic
 
-    top.optimizer.mutation_rate = .02
+    top.driver.mutation_rate = .02
 
 In a pure genetic algorithm, it is possible that your best performing individual will not survive from one
 generation to the next due to competition, mutation, and crossover. If you want to ensure that the best 
@@ -708,63 +774,15 @@ what.
 
 .. testcode:: Genetic
 
-    top.optimizer.elitism = True
+    top.driver.elitism = True
 
 A number of different commonly used selection algorithms are available. The default algorithm is the Roulette
 Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection are also available. The
-``selection_method`` attribute allows you to select the algorithm; allowed values are: ``"roulette_wheel," 
+``selection_method`` variable allows you to select the algorithm; allowed values are: ``"roulette_wheel," 
 "tournament," "rank,"`` and ``"uniform"``.
 
-(See the source documentation for information on :ref:`openmdao.lib.drivers.genetic.py`.)
+(See the source documentation for more information on :ref:`Genetic<openmdao.lib.drivers.genetic.py>`.)
 
 .. testcode:: Genetic
     
-    top.optimizer.selection_method="rank"
-
-.. _Case-Iterator-Driver:
-
-*Case Iterator Driver*
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. todo::
-
-    Discuss the Case Iterator
-    
-
-.. _DOEdriver:
-    
-*DOEdriver*
-~~~~~~~~~~~
-
-    The DOEdriver provides the capability to execute a DOE on a workflow.
-    This Driver supports the IHasParameters interface. At execution time, 
-    the driver will use the list of parameters added to it by the user to 
-    create a specific DOE and then iteratively execute the DOE cases on the
-    workflow. 
-    
-    The user can pick from any of the DOEgenerators provided in the standard
-    library, or provide their own custom instance of a DOEgenerator. One of 
-    these would be plugged into the DOEgenerator socket on the DOEdriver. 
-    
-    .. testcode:: DOEdriver
-    
-        from openmdao.main.api import Assembly
-        from openmdao.lib.api import DOEdriver
-        from openmdao.lib.doegenerators.full_factorial import FullFactorial
-
-        from openmdao.examples.singleEI.branin_component import BraninComponent
-        
-        class Analysis(Assembly): 
-            def __init__(self,doc=None): 
-                super(Analysis,self).__init__()
-                
-                self.add('branin',BraninComponent())
-                self.add('driver',DOEdriver())
-                self.driver.add_parameter('branin.x')
-                self.driver.add_parameter('branin.y')
-                #use a full factorial DOE with 2 variables, and 3 levels
-                #   for each variable
-                self.driver.DOEgenerator = FullFactorial(3,2)
-   
-
-(See the source documentation for information on :ref:`openmdao.lib.drivers.doedriver.py`.)
+    top.driver.selection_method="rank"

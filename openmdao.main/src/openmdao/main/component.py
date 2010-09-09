@@ -1,3 +1,4 @@
+""" Class definition for Component """
 
 #public symbols
 __all__ = ['Component', 'SimulationRoot']
@@ -12,14 +13,13 @@ import pkg_resources
 import sys
 import weakref
 
-import networkx as nx
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event, not_none
 from enthought.traits.api import Bool, List, Str, Instance, implements, TraitError
 
 from openmdao.main.container import Container
 from openmdao.main.interfaces import IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
-from openmdao.main.expression import Expression, ExpressionList, DumbDefault
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 
@@ -329,7 +329,7 @@ class Component (Container):
             self._num_input_caseiters -= 1
 
     def is_valid(self):
-        """Return False if any of our public variables is invalid."""
+        """Return False if any of our variables is invalid."""
         if self._call_execute:
             return False
         if False in self._valid_dict.values():
@@ -402,60 +402,27 @@ class Component (Container):
             self._container_names = [n for n,v in self.items() 
                                                    if isinstance(v,Container)]            
         return self._container_names
-    
-    def _get_expr_names(self, iotype=None):
-        """Return a list of names of all Expression and ExpressionList traits
-        in this instance.
-        """
-        if iotype is None:
-            checker = not_none
-        else:
-            checker = iotype
-        
-        return [n for n,v in self._alltraits(iotype=checker).items() 
-                    if v.is_trait_type(Expression) or 
-                       v.is_trait_type(ExpressionList)]
-    
+            
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by any Expression or ExpressionList 
-        traits in this Component.
+        for each dependency resulting from ExprEvaluators in this Component.
         """
-        if self._expr_depends is None:
-            conn_list = []
-            exprs = self._get_expr_names()
-            selfname = self.name
-            traits = self.traits()
-            for name in exprs:
-                exprobj = getattr(self, name)
-                if isinstance(exprobj, DumbDefault):
-                    self.raise_exception("The Expression '%s' has not been defined" % name,
-                                         ValueError)
-                if isinstance(exprobj, basestring): # a simple Expression
-                    cnames = exprobj.get_referenced_compnames()
-                else:  # an ExpressionList
-                    cnames = []
-                    for entry in exprobj:
-                        cnames += entry.get_referenced_compnames()
-                if traits[name].iotype == 'in':
-                    for cname in cnames:
-                        conn_list.append((cname, selfname))
-                else:
-                    for cname in cnames:
-                        conn_list.append((selfname, cname))
-            self._expr_depends = conn_list
-            
-                
-        return self._expr_depends
-    
+        conn_list = []
+        if hasattr(self, '_delegates_'):
+            for name, dclass in self._delegates_.items():
+                delegate = getattr(self, name)
+                if hasattr(delegate, 'get_expr_depends'):
+                    conn_list.extend(delegate.get_expr_depends())
+        return conn_list
+
     def get_expr_sources(self):
         """Return a list of tuples containing the names of all upstream components that are 
-        referenced in any of our Expressions, along with an initial exec_count of 0.
+        referenced in any of our objectives, along with an initial exec_count of 0.
         """
         if self._expr_sources is None:
             self._expr_sources = [(v,0) for u,v in self.get_expr_depends() if v==self.name]
         return self._expr_sources
-            
+
     def check_path(self, path, check_dir=False):
         """Verify that the given path is a directory and is located
         within the allowed area (somewhere within the simulation root path).

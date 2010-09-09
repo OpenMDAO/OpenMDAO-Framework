@@ -10,14 +10,16 @@
 __all__ = ['CONMINdriver']
 
 # pylint: disable-msg=E0611,F0401
-from numpy import ndarray, zeros, ones
+from numpy import zeros, ones, array
 from numpy import int as numpy_int
+from copy import copy
 
 from enthought.traits.api import on_trait_change, TraitError
                                  
 import conmin.conmin as conmin
 
-from openmdao.main.api import Case, Driver, Expression, ExpressionList
+from openmdao.main.api import Case, Driver
+from openmdao.main.expression import ExpressionList
 from openmdao.main.exceptions import RunStopped
 from openmdao.lib.datatypes.array import Array
 from openmdao.lib.datatypes.enum import Enum
@@ -25,6 +27,7 @@ from openmdao.lib.datatypes.float import Float
 from openmdao.lib.datatypes.int import Int
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
+from openmdao.main.hasobjective import HasObjective
 from openmdao.util.decorators import add_delegate
 
 
@@ -44,7 +47,6 @@ class _cnmn1(object):
         self.ndv = 0
         self.ncon = 0
         self.nside = 0
-        self.nacmx1 = 0
         self.infog = 0
         self.info = 0
         self.nfdg = 0
@@ -56,7 +58,6 @@ class _cnmn1(object):
         self.ctmin = 0.
         self.ctlmin = 0.
         self.theta = 0.
-        self.phi = 0.
         self.delfun = 0.
         self.dabfun = 1.e-8
         self.linobj = 0
@@ -156,7 +157,7 @@ class _consav(object):
         self.ispace = [0, 0]
         # pylint: enable-msg=W0201
 
-@add_delegate(HasParameters, HasIneqConstraints)
+@add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class CONMINdriver(Driver):
     """ Driver wrapper of Fortran version of CONMIN. 
         
@@ -166,9 +167,6 @@ class CONMINdriver(Driver):
             
     """
     # pylint: disable-msg=E1101
-    objective = Expression(iotype='in',
-                desc= 'A string containing the objective function expression.')
-    
     scal = Array(zeros(0.,'d'), iotype='in', 
         desc='Array of scaling factors for the parameters.')
 
@@ -284,9 +282,13 @@ class CONMINdriver(Driver):
 
         # update constraint value array
         for i, v in enumerate(self.get_ineq_constraints().values()):
-            self.constraint_vals[i] = v.evaluate()[0]
+            val = v.evaluate()
+            if '>' in val[2]:
+                self.constraint_vals[i] = val[1]-val[0]
+            else:
+                self.constraint_vals[i] = val[0]-val[1]
         #self._logger.debug('%s: new iteration' % self.get_pathname())
-        #self._logger.debug('objective = %s' % self.objective)
+        #self._logger.debug('objective = %s' % self.list_objective())
         #self._logger.debug('design vars = %s' % self.design_vars)
         
     def continue_iteration(self):
@@ -302,11 +304,7 @@ class CONMINdriver(Driver):
             self.raise_exception('Stop requested', RunStopped)
             
         # calculate objective
-        try:
-            self.cnmn1.obj = self.objective.evaluate()
-        except Exception as err:
-            self.raise_exception('error evaluating objective function: '
-                                 '%s' % str(err), RuntimeError)
+        self.cnmn1.obj = self.eval_objective()
         
     def run_iteration(self):
         """ The CONMIN driver iteration"""
@@ -358,7 +356,10 @@ class CONMINdriver(Driver):
             # update constraint value array
             for i, v in enumerate(self.get_ineq_constraints().values()):
                 val = v.evaluate()
-                self.constraint_vals[i] = val[0]-val[1]
+                if '>' in val[2]:
+                    self.constraint_vals[i] = val[1]-val[0]
+                else:
+                    self.constraint_vals[i] = val[0]-val[1]
                 
             #self._logger.debug('constraints = %s'%self.constraint_vals)
                 
@@ -421,8 +422,8 @@ class CONMINdriver(Driver):
         self.cnmn1.clear()
         self.consav.clear()
         
-        if not isinstance(self.objective, basestring):
-            self.raise_exception('no objective specified', RuntimeError)
+        #if not isinstance(self.objective, basestring):
+            #self.raise_exception('no objective specified', RuntimeError)
         
         params = self.get_parameters().values()
         
@@ -486,10 +487,10 @@ class CONMINdriver(Driver):
         
         self.cnmn1.nside = 2*num_dvs
 
-        self.cnmn1.nacmx1 = max(num_dvs,
-                                self.cnmn1.ncon+self.cnmn1.nside)+1
+        nacmx1 = max(num_dvs, self.cnmn1.ncon+self.cnmn1.nside)+1
+        
         n1 = num_dvs+2
-        n3 = self.cnmn1.nacmx1
+        n3 = nacmx1
         n4 = max(n3, num_dvs)
         n5 = 2*n4
                 
@@ -517,37 +518,12 @@ class CONMINdriver(Driver):
         self.cnmn1.ctl = self.ctl
         self.cnmn1.ctlmin = self.ctlmin
         self.cnmn1.theta = self.theta
-        self.cnmn1.phi = self.phi
+        self.consav.phi = self.phi
         self.cnmn1.dabfun = self.dabfun
         self.cnmn1.delfun = self.delfun
         self.cnmn1.linobj = self.linobj
         self.cnmn1.itrm = self.itrm
         
-    @on_trait_change('objective') 
-    def _expr_changed(self, obj, name, old, new):
-        """ Check objective on change"""
-        
-        expr = getattr(obj, name)
-        try:
-            # force checking for existence of vars referenced in expression
-            expr.refs_valid()  
-        except (AttributeError, RuntimeError), err:
-            msg = "invalid value '%s' for input ref variable '%s': %s"
-            self.raise_exception( msg % (str(expr), name, err), TraitError)
-        
-    #@on_trait_change('constraints')
-    #def _exprlist_changed(self, obj, name, old, new):
-        #""" Check constraints and parameters on change"""
-
-        #exprevals = getattr(obj, name)
-        #for i, expr in enumerate(exprevals):
-            #try:
-                ## force checking for existence of vars referenced in expression
-                #expr.refs_valid()  
-            #except (AttributeError, RuntimeError), err:
-                #msg = "invalid value '%s' for input Expression '%s[%d]': %s"
-                #self.raise_exception( msg % \
-                    #(str(expr), name, i, err), TraitError)
         
     def _load_common_blocks(self):
         """ Reloads the common blocks using the intermediate info saved in the
@@ -559,7 +535,7 @@ class CONMINdriver(Driver):
         
         for name, value in self.consav.__dict__.items():
             setattr( conmin.consav, name, value  )
-        
+            
         
     def _save_common_blocks(self):
         """" Saves the common block data to the class to prevent trampling by
@@ -567,16 +543,9 @@ class CONMINdriver(Driver):
         """
         common = self.cnmn1
         for name, value in common.__dict__.items():
-            if isinstance(value, ndarray):
-                setattr(common, name, getattr(conmin.cnmn1, name).copy())
-            else:
-                setattr(common, name, type(value)(getattr(conmin.cnmn1, name)))
+            setattr(common, name, type(value)(getattr(conmin.cnmn1, name)))
         
         consav = self.consav
         for name, value in consav.__dict__.items():
-            if isinstance(value, ndarray):
-                setattr(consav, name, getattr(conmin.consav, name).copy())
-            else:
-                setattr(consav, name, type(value)(getattr(conmin.consav, name)))
-        
+            setattr(consav, name, type(value)(getattr(conmin.consav, name)))
         

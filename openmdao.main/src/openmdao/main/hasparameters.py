@@ -4,7 +4,7 @@ from numpy import float32, float64, int32, int64
 
 from openmdao.main.expreval import ExprEvaluator
 
-class _Parameter(object): 
+class Parameter(object): 
     
     def __init__(self, low=None, high=None, expr=None):
         self.low = low
@@ -14,6 +14,8 @@ class _Parameter(object):
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface"""
 
+    _do_not_promote = ['get_expr_depends']
+    
     def __init__(self, parent):
         self._parameters = ordereddict.OrderedDict()
         self._parent = parent
@@ -29,7 +31,7 @@ class HasParameters(object):
         """Adds a parameter to the driver. 
         
         name: string
-            Name of the public variable the driver should vary during execution.
+            Name of the variable the driver should vary during execution.
             
         low: float, optional
             Minimum allowed value of the parameter.
@@ -38,7 +40,7 @@ class HasParameters(object):
             Maximum allowed value of the parameter.
         
         If neither "low" nor "high" is specified, the min and max will
-        default to the values in the metadata of the public variable being
+        default to the values in the metadata of the variable being
         referenced. If they are not specified in the metadata and not provided
         as arguments, a ValueError is raised.
         """
@@ -47,8 +49,8 @@ class HasParameters(object):
                                          "but it's already there" % name,
                                          AttributeError)
         
-        parameter = _Parameter()
-        parameter.expreval = ExprEvaluator(name, self._parent.parent, single_name=True)
+        parameter = Parameter()
+        parameter.expreval = ExprEvaluator(name, self._parent, single_name=True)
         
         try:
             metadata = self._parent.parent.get_metadata(name.split('[')[0])
@@ -58,8 +60,8 @@ class HasParameters(object):
         try:
             val = parameter.expreval.evaluate()
         except Exception as err:
-            self._parent.raise_exception("Can't add parameter because I can't evaluate '%s': %s" % 
-                                         (name,str(err)), type(err))
+            self._parent.raise_exception("Can't add parameter because I can't evaluate '%s'." % name, 
+                                         ValueError)
         if not isinstance(val,(float,float32,float64,int,int32,int64)):
             self._parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
                                          (name,type(val).__name__), ValueError)
@@ -127,17 +129,32 @@ class HasParameters(object):
         """Returns an ordered dict of parameter objects."""
         return self._parameters
 
-    def set_parameters(self, X): 
-        """Pushes the values in the X input array into the corresponding public 
+    def set_parameters(self, values): 
+        """Pushes the values in the iterator 'values' into the corresponding 
         variables in the model.
         
-        X: iterator
+        values: iterator
             iterator of input values with an order defined to match the order of parameters returned 
-            by the list_parameter method. X must support the len() function.
+            by the list_parameter method. 'values' must support the len() function.
         """
-        if len(X) != len(self._parameters):
+        if len(values) != len(self._parameters):
             raise ValueError("number of input values (%s) != number of parameters (%s)" % 
-                             (len(X),len(self._parameters)))
+                             (len(values),len(self._parameters)))
 
-        for x, param in zip(X, self._parameters.values()): 
-            param.expreval.set(x)
+        for val, param in zip(values, self._parameters.values()):
+            #if (param.low is not None and val < param.low) or (param.high is not None and val > param.high):
+                #raise ValueError("parameter value (%s) is outside of allowed range [%s to %s]" %
+                                 #(val, param.low, param.high))
+            param.expreval.set(val)
+
+    def get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by a parameter.
+        """
+        conn_list = []
+        pname = self._parent.name
+        for name,param in self._parameters.items():
+            for cname in param.expreval.get_referenced_compnames():
+                conn_list.append((pname, cname))
+        return conn_list
+    

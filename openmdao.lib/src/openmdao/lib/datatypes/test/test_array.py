@@ -60,6 +60,14 @@ class ArrayTestCase(unittest.TestCase):
         self.assertAlmostEqual(24., self.hobj.arr2[1])
         self.assertAlmostEqual(36., self.hobj.arr2[2])
         
+        # unit to unitless
+        self.hobj.add_trait('arr5', Array(iotype='in'))
+        self.hobj.arr5 = [1., 2., 4.]
+        self.hobj.arr2 = self.hobj.get_wrapped_attr('arr5')
+        self.assertAlmostEqual(1., self.hobj.arr2[0])
+        self.assertAlmostEqual(2., self.hobj.arr2[1])
+        self.assertAlmostEqual(4., self.hobj.arr2[2])
+        
     def test_bogus_units(self):
         try:
             uf = Array([0.], iotype='in', units='bogus')

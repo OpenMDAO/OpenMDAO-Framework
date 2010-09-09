@@ -140,7 +140,7 @@ Thus, CONMIN can set the design variable in this Broadcaster, and when the Broad
 the new value gets passed to all of the components that need it.
 
 OpenMDAO doesn't have a built-in Broadcaster, so we need to make our own. It's a simple
-component with some inputs, some outputs, and an execute function that passes the inputs
+component with some inputs, some outputs, and an ``execute`` function that passes the inputs
 to the outputs.
 
 .. testcode:: Broadcaster
@@ -176,15 +176,15 @@ to the outputs.
 We've added the coupling variables in our Broadcaster as well, foreseeing the need
 for them in some of the other MDAO architectures.
 
-.. index:: WorkFlow
+.. index:: WorkFlow, BroydenSolver, FixedPointIterator
 
 The diagram also shows a solver that takes the output of the component dataflow
-and feeds it back into the input. OpenMDAO presently has two solvers: ``FixedPointIterator``
-and ``BroydenSolver``. The ``FixedPointIterator`` is a solver that performs fixed point iteration,
+and feeds it back into the input. OpenMDAO presently has two solvers: FixedPointIterator
+and BroydenSolver. The FixedPointIterator is a solver that performs fixed point iteration,
 which means that it keeps driving ``x_new = f(x_old)`` until convergence is achieved. In
 other words, *y2* is passed from the output of ``SellarDiscipline2`` to the input of ``SellarDiscipline1``,
 and the loop keeps executing until the change in the value of *y2* between iterations is
-smaller than a tolerance. The ``BroydenSolver`` is a solver based on a quasi-Newton-Raphson
+smaller than a tolerance. The BroydenSolver is a solver based on a quasi-Newton-Raphson
 algorithm that uses a Broyden update to approximate the Jacobian. This solver reads
 the output and calculates a new input each iteration. Convergence is achieved when the
 residual between the output and input is driven to zero.
@@ -202,7 +202,7 @@ following diagram shows an iteration hierarchy for the MDF problem.
 .. figure:: ../images/user-guide/Arch-MDF-OpenMDAO.png
    :align: center
    
-   An Iteration Hierarchy for the MDF Problem
+   Iteration Hierarchy for the MDF Problem
    
 In the top left of this diagram, the gray box labeled *Optimizer* is the
 top level (or outermost) driver. This driver has a workflow that contains
@@ -291,15 +291,13 @@ so that the design variables carry through to the discipline components.
         self.connect('dis1.y1','dis2.y1')
 
 
-.. index:: Expression
-
 Next, the parameters for the fixed point iterator must be set. ``FixedPointIterator``
 is a specialized solver that is applicable only to single-input/single-output problems.
 As such, it does not conform to the standard driver interface. The output from ``SellarDiscipline2``
 is ``'dis2.y2'``. During iteration, this is the variable that is going to be sent to the input
 of ``SellarDiscipline1``, which is ``'dis1y2'``. The parameter ``x_out`` takes the output variable
-while the parameter ``x_in`` takes the input variable. These are :term:`Expressions`, but fixed point
-iteration doesn't make sense using anything other than single variables. We also set the
+while the parameter ``x_in`` takes the input variable. These are expression strings, but fixed point
+iteration doesn't make sense using anything other than a single input and output. We also set the
 maximum number of iterations and a convergence tolerance.
         
 .. testcode:: MDF_parts
@@ -315,14 +313,14 @@ Finally, the CONIM optimization is set up.
 .. testcode:: MDF_parts
 
         # Optimization parameters
-        self.driver.objective = '(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)'
+        self.driver.add_objective('(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)')
                 
         self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
         self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
         self.driver.add_parameter('dis1.x1',      low = 0.0,   high = 10.0)
         
         self.driver.add_constraint('3.16 < dis1.y1')
-        self.driver.add_constraint('dis2.y2 - 24.0')
+        self.driver.add_constraint('dis2.y2 < 24.0')
         
         self.driver.cons_is_linear = [1, 1]
         self.driver.iprint = 0
@@ -345,14 +343,13 @@ the minimum constraint thickness for the linear constraints. We also use
 ``cons_is_linear`` to let CONMIN know that both constraints are linear. This
 can speed up the algorithm, though it hardly matters here.
 
-As before, the ``add_constraint`` function is used to add our constraints. This
-time however, we used a more general expression for the first constraint. Expressions
+As before, the ``add_constraint`` method is used to add our constraints. This
+time however, we used a more general expression for the first constraint. Expression strings
 in OpenMDAO can also be parsed as inequalities, so all of the following are
 equivalent ways of defining this constraint:
 
 .. testcode:: MDF_parts
 
-        self.driver.add_constraint('3.16 - dis1.y1')
         self.driver.add_constraint('3.16 - dis1.y1 < 0')
         self.driver.add_constraint('3.16 < dis1.y1')
         self.driver.add_constraint('-3.16 > -dis1.y1')
@@ -410,14 +407,14 @@ Finally, putting it all together gives:
                 self.fixed_point_iterator.tolerance = .0001
         
                 # Optimization parameters
-                self.driver.objective = '(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)'
+                self.driver.add_objective('(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)')
                 
                 self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
                 self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
                 self.driver.add_parameter('dis1.x1',      low = 0.0,   high = 10.0)
         
                 self.driver.add_constraint('3.16 < dis1.y1')
-                self.driver.add_constraint('dis2.y2 - 24.0')
+                self.driver.add_constraint('dis2.y2 < 24.0')
                     
                 self.driver.cons_is_linear = [1, 1]
                 self.driver.iprint = 0
@@ -474,11 +471,11 @@ though we only have one input and one output in this example.
         
 The input is selected using ``add_parameter``. You might also be familiar with the
 term *independent* used to describe this. Here, we've given a *low* and a
-*high* attribute, but we've set them very high as the Broyden solver doesn't
-use either of these. The output is specified by adding an equality constraint.
+*high* attribute, but we've set them to very large negative and positive values
+as the Broyden solver doesn't use either of these. The output is specified by adding an equality constraint.
 A solver essentially tries to drive something to zero. In this case, we want to
 drive the residual error in the coupled variable *y2* to zero. An equality constraint
-is defined with an Expression which is parsed for the equals sign, so the
+is defined with an expression string which is parsed for the equals sign, so the
 following constraints are equivalent:
 
 .. testcode:: MDF_parts
@@ -486,9 +483,6 @@ following constraints are equivalent:
         # Iteration loop
         self.solver.add_constraint('dis2.y2 = dis1.y2')
         self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
-
-Be careful not to omit the equals sign, or OpenMDAO will treat the constraint
-as an inequality constraint.
         
 Equality constraints may also be available for some optimizers, but you should 
 verify that they are supported. CONMIN does not support equality constraints.
@@ -513,7 +507,7 @@ flow for IDF is illustrated in the following diagram:
 .. figure:: ../images/user-guide/Arch-IDF.png
    :align: center
 
-   Date Flow for IDF
+   Data Flow for IDF
    
 IDF needs only one driver, so there is just one workflow. The broadcaster and
 the two disciplines are executed sequentially.
@@ -521,7 +515,7 @@ the two disciplines are executed sequentially.
 .. figure:: ../images/user-guide/Arch-IDF-OpenMDAO.png
    :align: center
    
-   An Iteration Hierarchy for IDF
+   Iteration Hierarchy for IDF
    
 Next, we will create the SellarIDF assembly. First, all of our components
 are instantiated and the workflow is defined.
@@ -580,8 +574,7 @@ All that is left to do is set up the CONMIN optimizer.
 .. testcode:: IDF_parts
 
         # Optimization parameters
-        self.driver.objective = \
-            '(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)'
+        self.driver.add_objective('(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)')
         
         self.driver.add_parameter('bcastr.z1_in', low = -10.0, high=10.0)
         self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high=10.0)
@@ -589,10 +582,10 @@ All that is left to do is set up the CONMIN optimizer.
         self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
         self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
             
-        self.driver.add_constraint('(dis2.y1-dis1.y1)**3')
-        self.driver.add_constraint('(dis1.y1-dis2.y1)**3')
-        self.driver.add_constraint('(dis2.y2-dis1.y2)**3')
-        self.driver.add_constraint('(dis1.y2-dis2.y2)**3')        
+        self.driver.add_constraint('(dis2.y1-dis1.y1)**3 < 0')
+        self.driver.add_constraint('(dis1.y1-dis2.y1)**3 < 0')
+        self.driver.add_constraint('(dis2.y2-dis1.y2)**3 < 0')
+        self.driver.add_constraint('(dis1.y2-dis2.y2)**3 < 0')
         self.driver.iprint = 0
         self.driver.itmax = 100
         self.driver.fdch = .003
@@ -653,7 +646,7 @@ the actual value of the design variables and the values commanded by the global
 optimizer.
 
 CO for the Sellar case is very interesting because there are no component data connections.
-All values are passed through the expressions for the objectives, constraints, and
+All values are passed through the expression strings for the objectives, constraints, and
 parameters of the various optimizers, as shown in the next diagram.
 
 .. figure:: ../images/user-guide/Arch-CO.png
@@ -669,7 +662,7 @@ seen in the next figure.
 .. figure:: ../images/user-guide/Arch-CO-OpenMDAO.png
    :align: center
    
-   An Iteration Hierarchy for CO
+   Iteration Hierarchy for CO
 
 First, we create the component instances and set up this iteration hierarchy. Notice
 that there are three drivers, and we add each component to one of the three workflows.
@@ -725,8 +718,8 @@ Now we need to set up the parameters for the outer optimization loop.
 .. testcode:: CO_parts
 
         #Parameters - Global Optimization
-        self.driver.objective = '(bcastr.x1)**2 + bcastr.z2 + bcastr.y1' + \
-                                                '+ math.exp(-bcastr.y2)'
+        self.driver.add_objective('(bcastr.x1)**2 + bcastr.z2 + bcastr.y1' + 
+                                                '+ math.exp(-bcastr.y2)')
         self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
         self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
         self.driver.add_parameter('bcastr.x1_in', low = 0.0,   high = 10.0)
@@ -735,9 +728,9 @@ Now we need to set up the parameters for the outer optimization loop.
 
         con1 = '(bcastr.z1-dis1.z1)**2 + (bcastr.z2-dis1.z2)**2 + ' + \
                '(bcastr.x1-dis1.x1)**2 + ' + \
-               '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2'
+               '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2  < 0'
         con2 = '(bcastr.z1-dis2.z1)**2 + (bcastr.z2-dis2.z2)**2 + ' + \
-               '(bcastr.y1-dis2.y1)**2 + (bcastr.y2-dis2.y2)**2'
+               '(bcastr.y1-dis2.y1)**2 + (bcastr.y2-dis2.y2)**2  < 0'
         self.driver.add_constraint(con1)
         self.driver.add_constraint(con2)
         
@@ -751,7 +744,7 @@ Now we need to set up the parameters for the outer optimization loop.
         self.driver.ct = -.001
         self.driver.ctlmin = 0.001
 
-Here we are able to build up a complicated Expression for the sum of the squares
+Here we are able to build up a complicated expression for the sum of the squares
 of all of the residuals and use it as our constraint. Note that this is another
 example of a constraint that would be better served as an equality constraint, but
 it's not problematic because a sum of squares is one-sided. We have two constraints
@@ -762,11 +755,11 @@ Finally, we set up our local optimization loops.
 .. testcode:: CO_parts
 
         #Parameters - Local Optimization 1
-        self.localopt1.objective = '(bcastr.z1-dis1.z1)**2 + ' + \
+        self.localopt1.add_objective('(bcastr.z1-dis1.z1)**2 + ' + \
                                    '(bcastr.z2-dis1.z2)**2 + ' + \
                                    '(bcastr.x1-dis1.x1)**2 + ' + \
                                    '(bcastr.y1-dis1.y1)**2 + ' + \
-                                   '(bcastr.y2-dis1.y2)**2'
+                                   '(bcastr.y2-dis1.y2)**2 < 0')
         self.localopt1.add_parameter('dis1.z1', low = -10.0, high = 10.0)
         self.localopt1.add_parameter('dis1.z2', low = 0.0,   high = 10.0)
         self.localopt1.add_parameter('dis1.x1', low = 0.0,   high = 10.0)
@@ -779,10 +772,10 @@ Finally, we set up our local optimization loops.
         self.localopt1.dabfun = .00001
         
         #Parameters - Local Optimization 2
-        self.localopt2.objective = '(bcastr.z1-dis2.z1)**2 + ' + \
-                                   '(bcastr.z2-dis2.z2)**2 + ' + \
-                                   '(bcastr.y1-dis2.y1)**2 + ' + \
-                                   '(bcastr.y2-dis2.y2)**2'
+        self.localopt2.add_objective('(bcastr.z1-dis2.z1)**2 + ' + \
+                                     '(bcastr.z2-dis2.z2)**2 + ' + \
+                                     '(bcastr.y1-dis2.y1)**2 + ' + \
+                                     '(bcastr.y2-dis2.y2)**2 < 0')
         self.localopt2.add_parameter('dis2.z1', low = -10.0, high = 10.0)
         self.localopt2.add_parameter('dis2.z2', low = 0.0,   high = 10.0)
         self.localopt2.add_parameter('dis2.y1', low = 3.16,  high = 10.0)

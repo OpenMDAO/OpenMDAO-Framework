@@ -132,6 +132,41 @@ class MIMOEquation(Component):
         self.f4 = ff[3]
         self.f5 = ff[4]
         
+class DumbComp(Component):
+    """A component whose output is independent of the input."""
+    
+    # pylint: disable-msg=E1101
+    x1 = Float(1.0, iotype='in', desc='Global Design Variable')
+    f1 = Float(3.14, iotype='out', desc='Output of this Discipline')        
+
+        
+    def execute(self):
+        """Do nothing"""
+        
+        pass
+    
+class DumbAssembly(Assembly):
+    """Assembly with DumbComp.
+    """
+
+    def __init__(self):
+        """ A new do-nothing assembly
+        """
+        
+        # pylint: disable-msg=E1101
+        
+        super(DumbAssembly, self).__init__()
+        
+        # create solver instance
+        self.add('driver', BroydenSolver())
+        
+        self.add('dis1', DumbComp())
+        self.driver.workflow.add([self.dis1])
+
+        # solver connections
+        self.driver.add_parameter('dis1.x1', low=-9.e99, high=9.e99)
+        self.driver.add_constraint('dis1.f1 = 0.0')
+
         
 class MIMOBroyden(Assembly):
     """Solution of the MIMO problem using MDF.
@@ -301,6 +336,39 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0 - prob.dis1.x4, 1.0, 0.0001)
         assert_rel_error(self, 1.0 - prob.dis1.x5, 1.0, 0.0001)
         
+    def test_no_change_in_value(self):
+        
+        prob = DumbAssembly()
+        set_as_top(prob)
+        prob.driver.algorithm = "broyden2"
+        
+        try:
+            prob.run()
+        except RuntimeError, err:
+            msg = "Broyden iteration has stopped converging. Change in " + \
+                  "input has produced no change in output. This could " + \
+                  "indicate a problem with your component connections. " + \
+                  "It could also mean that this solver method is " + \
+                  "inadequate for your problem."     
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail()
+        
+        prob.driver.algorithm = "broyden3"
+        
+        try:
+            prob.run()
+        except RuntimeError, err:
+            msg = "Broyden iteration has stopped converging. Change in " + \
+                  "input has produced no change in output. This could " + \
+                  "indicate a problem with your component connections. " + \
+                  "It could also mean that this solver method is " + \
+                  "inadequate for your problem."     
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail()
+        
+            
 if __name__ == '__main__':
     import nose
     import sys

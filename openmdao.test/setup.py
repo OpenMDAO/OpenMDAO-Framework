@@ -45,7 +45,6 @@ setup(name='openmdao.test',
           'setuptools',
           'openmdao.lib',
           'nose',
-          'nosecoverage2',
       ],
       entry_points={
       'openmdao.component': [

@@ -166,6 +166,7 @@ class CaseIterDriverBase(Driver):
         self._iter = self.get_case_iterator()
         
     def get_case_iterator(self):
+        """Returns a new iterator over the Case set."""
         raise NotImplemented('get_case_iterator')
 
     def _start(self):
@@ -512,9 +513,8 @@ class CaseIterDriverBase(Driver):
 
 class CaseIteratorDriver(CaseIterDriverBase):
     """
-    Run a set of cases provided by an :class:`ICaseIterator` in a manner similar
-    to the ROSE framework. Concurrent evaluation is supported, with the various
-    evaluations executed across servers obtained from the
+    Run a set of cases provided by an :class:`ICaseIterator`. Concurrent evaluation 
+    is supported, with the various evaluations executed across servers obtained from the
     :class:`ResourceAllocationManager`.
     """
 

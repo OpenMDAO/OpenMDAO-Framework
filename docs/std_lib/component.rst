@@ -26,9 +26,9 @@ Components
         from openmdao.lib.api import MetaModel
         from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
         
-        class simulation(Assembly):
+        class Simulation(Assembly):
             def __init__(self): 
-                super(simulation,self).__init__(self)
+                super(Simulation,self).__init__(self)
                 
                 self.add('meta_model',MetaModel())
                 self.meta_model.surrogate = KrigingSurrogate()
@@ -46,9 +46,9 @@ Components
         from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
         from openmdao.examples.singleEI.branin_component import BraninComponent
         
-        class simulation(Assembly):
+        class Simulation(Assembly):
             def __init__(self): 
-                super(simulation,self).__init__(self)
+                super(Simulation,self).__init__(self)
                 
                 self.add('meta_model',MetaModel())
                 self.meta_model.surrogate = KrigingSurrogate()
@@ -80,9 +80,9 @@ Components
         from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
         from openmdao.examples.singleEI.branin_component import BraninComponent
         
-        class simulation(Assembly):
+        class Simulation(Assembly):
             def __init__(self):
-                super(simulation,self).__init__(self)
+                super(Simulation,self).__init__(self)
                 
                 self.add('meta_model',MetaModel())
                 self.meta_model.surrogate = KrigingSurrogate()
@@ -103,10 +103,10 @@ Components
         from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
         from openmdao.examples.singleEI.branin_component import BraninComponent
         
-        class simulation(Assembly):
+        class Simulation(Assembly):
             
             def __init__(self): 
-                super(simulation,self).__init__(self)
+                super(Simulation,self).__init__(self)
                 
                 self.add('meta_model',MetaModel())
                 self.meta_model.surrogate = KrigingSurrogate()
@@ -139,10 +139,10 @@ Components
     outputs for the given inputs. A MetaModel instance must always be run in training mode 
     before executing it in predict mode.
     
-    To put an instance of MetaModel into the training mode, you must set the ``train_next`` event trait to
-    *True* before executing the component. This event trait automatically resets itself to the default
-    (*False*) after the execution, so it must be set again before each training case. This is shown in the
-    example below:
+    To put an instance of MetaModel into the training mode, you must set the ``train_next`` event trait
+    before executing the component. This event trait automatically resets itself after the execution, 
+    so it must be set again before each training case. An event trait is just a trigger mechanism, and
+    it will trigger its behavior regardless of the value you set it to. 
 
     .. testcode:: MetaModel
         
@@ -151,9 +151,9 @@ Components
         from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
         from openmdao.examples.singleEI.branin_component import BraninComponent
         
-        class simulation(Assembly):
+        class Simulation(Assembly):
             def __init__(self): 
-                super(simulation,self).__init__()
+                super(Simulation,self).__init__()
                 
                 self.add('meta_model',MetaModel())
                 self.meta_model.surrogate = KrigingSurrogate()
@@ -167,15 +167,14 @@ Components
                 
                 self.meta_model.execute()
         
-        
-        
     
-    In a typical iteration hierarchy, a Driver is responsible for setting
-    the ``train_next`` event when appropriate. This is accomplished via the IHasEvents 
-    Driver sub-interface. The ``train_next`` event is added to a Driver, which will then automatically set 
-    ``train_next`` each time before it executes the model. A simple code snippet is 
-    presented below, while a more detailed example can be found in the SingleEI
-    example under the ``openmdao.examples.singleEI`` package. 
+    In a typical iteration hierarchy, a Driver is responsible for setting the
+    ``train_next`` event when appropriate. This is accomplished via the
+    IHasEvents Driver sub-interface. The ``train_next`` event is added to a
+    Driver, which will then automatically set ``train_next`` prior to each
+    iteration of the model. A simple code snippet is presented below, while a
+    more detailed example can be found in the SingleEI example under the
+    ``openmdao.examples.singleEI`` package.
     
     .. testcode:: MetaModel_Assembly
         
@@ -200,10 +199,11 @@ Components
     surrogate model inside of MetaModel. 
     
     Before being able to predict the surrogate model response
-    for any of the outputs of MetaModel, the surrogate model must actually be trained with the 
+    for any of the outputs of MetaModel, the surrogate model must be trained with the 
     recorded training data. This will happen automatically whenever MetaModel is run in predict mode and 
     new training data is available. This makes MetaModel more efficient, because it is not trying
     to retrain the model constantly when running large sets of training cases. Instead, the actual
     surrogate model training is only done when a prediction is needed and new training data is available. 
     
-    (See the source documentation for information on :ref:`openmdao.lib.components.metamodel.py`.)
+    (See the source documentation for more information on 
+    :ref:`MetaModel<openmdao.lib.components.metamodel.py>`.)

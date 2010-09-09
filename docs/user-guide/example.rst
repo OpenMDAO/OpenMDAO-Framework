@@ -366,8 +366,8 @@ points, so simulating these driving profiles consumes much more CPU time than th
 
 .. index:: Component
 
-Components and Public Variables
--------------------------------
+Components and Variables
+------------------------
 
 In the previous section, three component models were outlined that together form a vehicle model that can simulate
 performance. These models have all been implemented as OpenMDAO components written in Python. This
@@ -398,7 +398,7 @@ be useful to browse these files as you learn some of the basic concepts in this 
 
 The first thing we will do is create an OpenMDAO Component called *Transmission.* You may recall
 that a Component contains inputs and outputs and provides a method to calculate its outputs
-from its inputs. We must create the public variables that define these inputs and outputs.
+from its inputs. We must create the variables that define these inputs and outputs.
 
 .. testcode:: Code2
 
@@ -433,22 +433,25 @@ from its inputs. We must create the public variables that define these inputs an
         torque_ratio = Float(0., iotype='out',
                              desc='Ratio of output torque to engine torque')    
 
-The Int and Float variable types were introduced in previous tutorials, but some new parameters are
+The *Int* and *Floa*t variable types were introduced in previous tutorials, but some new parameters are
 used here, including the *Enum* type.
 
 .. index:: PEP 8
 
-In this example, we use more complicated names for our public variables, so we should cover what makes a
-valid variable name. Public variables are also Python variables, so they must follow Python's standard
-naming convention. They must begin with a letter or underscore and should consist of only alphanumeric characters and the
-underscore. Keep in mind that a leading underscore is generally used for private data or functions. **Spaces cannot be used
-in a variable name.** Generally, we've tried to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_ standard for
-component instance names as well as Python variable names. PEP 8 prescribes the use of lower case names with words separated by
-underscores. 
+In this example, we use more complicated names for our variables, so we should
+cover what makes a valid variable name. Variables are also Python variables,
+so they must follow Python's standard naming convention. They must begin with
+a letter or underscore and should consist of only alphanumeric characters and
+the underscore. Keep in mind that a leading underscore is generally used for
+private data or functions. **Spaces cannot be used in a variable name.**
+Generally, we've tried to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_ 
+standard for component instance
+names as well as Python variable names. PEP 8 prescribes the use of lower case
+names with words separated by underscores.
 
 The required parameter *iotype*, the optional parameter *desc*, and the
 default value are covered in previous tutorials. The parameter *units* is
-introduced here and is used in a few of the public variables in Transmission. OpenMDAO contains a Units
+introduced here and is used in a few of the variables in Transmission. OpenMDAO contains a Units
 module that allows for unit checking and conversion between outputs and
 inputs of components. Our units definitions are based on the those given in
 Scientific Python and can be found the :ref:`Summary-of-Units`. If an output and an
@@ -457,7 +460,7 @@ converted as it is passed from the output to the input. If an output and an inpu
 of a different unit class are connected (e.g., length and time), an exception is
 raised. A variable with no units defined can be connected to a variable with units.
 
-**Only the Float and Array types performs automatic unit conversion and checking.**
+**Only the Float and Array types perform automatic unit conversion and checking.**
 
 The Transmission component uses an enumerated list to define the valid gear positions:
 
@@ -468,7 +471,7 @@ The Transmission component uses an enumerated list to define the valid gear posi
 
 An *enumeration* is a discrete variable that has a finite number of valid states. This
 transmission is a 5-speed manual, so the valid states are gears 1 through 5 and neutral. The
-constructor begins with a default value and a tuple containing all of the valid states. Sometimes
+constructor begins with a default value and a :term:`tuple` containing all of the valid states. Sometimes
 it is beneficial to add as the *alias* parameter a second tuple containing a more descriptive
 tag. In this case, the alias *'N'* tells you that a value of 0 sets the gear to Neutral. The
 Enum is not type-restrictive. You could use the alias strings as the values, though typically
@@ -502,14 +505,13 @@ illustrates how to use the input and output variables to perform a calculation.
             self.RPM = 1000.0
     
 You may recall that inputs and outputs are attributes of our component, so they are accessed using
-``self.variablename``. It is generally a good idea to create a local copy of a public
-variable for doing calculations in the component for improved efficiency and ease of reading.
+``self.variablename``. It is generally a good idea to create a local copy of a variable for doing calculations in the component for improved efficiency and ease of reading.
 
 We have also imported and used the ``convert_units`` function to convert the value of velocity
 from units of mi/h to units of inch/min. This makes the units consistent for the calculation
 of RPM. The ``convert_units`` function provides unit conversion capability for your internal
 variables. We could also change the definition of the velocity Float, specifying the units
-as 'inch/min', and then the ``convert_units`` call would not be needed.
+as ``'inch/min'=``, and then the ``convert_units`` call would not be needed.
 
 The transmission model is now complete; the next section will show how to interact with
 it in the Python shell. The engine and chassis are created in a similar manner. However, the 
@@ -560,7 +562,7 @@ set the RPM to something invalid.
         ...
     TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of Hello <type 'str'> was specified.
     
-The value "Hello" is invalid because RPM expects a value of type Float. Now,
+The value ``"Hello"`` is invalid because RPM expects a value of type Float. Now,
 let's try setting the engine speed to a value that exceeds the maximum, which
 is 6000 RPM.
 
@@ -580,9 +582,9 @@ to this situation. Now, run the engine and examine the power and torque at
     >>> my_engine.power
     53.3974483...
     
-You run a component by calling the *run* method. Recall that you define an execute method when you
-create a component. The run method calls execute but also does some other things. Always run your
-component with *run.*
+You run a component by calling the ``run`` method. If you recall, you define an ``execute`` method when you
+create a component. The ``run`` method calls ``execute`` but also does some other things. Always run your
+component with ``run.``
 
 .. index:: Assembly
 
@@ -632,8 +634,8 @@ Engine, and Chassis components.
 
 The Engine, Transmission, and Chassis components all need to be imported so
 their instances can be created; they can be added to the assembly
-with *add*. Please notice that an assembly inherits from Assembly
-instead of Component. When the instances of the Transmission, Engine, and
+with ``add``. Please notice that an assembly inherits from Assembly
+instead of from Component. When the instances of the Transmission, Engine, and
 Chassis are created, their members and data are internally accessible using
 *self* plus the instance name, e.g., ``self.transmission``.
 
@@ -691,7 +693,7 @@ the input. If the classes are incompatible (e.g., meters vs. seconds), then an
 exception is raised during execution.
 
 The Vehicle assembly also has inputs and outputs, and it can be hooked up to
-other components and included in other assemblies once its public variables
+other components and included in other assemblies once its variables
 are defined. We would like to promote all of the design and simulation
 variables from the Engine, Transmission, and Chassis components to the input
 and output of the Vehicle assembly. OpenMDAO includes a shortcut for doing
@@ -709,10 +711,10 @@ this quickly by creating passthroughs:
 	# ...
 	self.create_passthrough('chassis.mass_vehicle')
 	self.create_passthrough('chassis.Cf')
-		
-The ``create_passthrough`` function creates an identical public variable
+
+The ``create_passthrough`` function creates an identical variable
 in the assembly and connects it to the corresponding component variable. So now, all of the
-design variables are available as public variables in any simulation that includes an instance
+design variables are available as variables in any simulation that includes an instance
 of the vehicle model.
 
 However, the engine tutorial throws you a curve ball here. The Engine
@@ -720,7 +722,7 @@ and Chassis components are defined with SI units, but the Transmission
 component is defined with English units. We have two inputs -- the tire
 circumference and the vehicle velocity -- that are each used by two components
 with different units. The ``create_passthrough`` function creates an exact copy
-of the public variable, so we cannot use it here. Instead, we must connect them manually
+of the variable, so we cannot use it here. Instead, we must connect them manually
 by declaring variables in our assembly.
 
 .. testcode:: Code5
@@ -904,7 +906,7 @@ gear position inputs to match a desired acceleration for the integration
 segment. Both of these solution procedures were implemented in a Python component
 called *DrivingSim.*  This component is found in ``driving_sim.py.``
 
-The component DrivingSim contains an execute function that performs the time
+The component DrivingSim contains an ``execute`` function that performs the time
 integration on a Vehicle component. It is not important to understand the
 execution details. The basic premise is that this simulation component needs
 to contain another OpenMDAO component. This can be done through use of a socket.
@@ -958,9 +960,9 @@ A socket can be declared in the DrivingSim class using an *Instance* trait:
 	EPA_highway = Float(0., iotype='out', units='mi/galUS', 
 				 desc='EPA Fuel economy - Highway')
 
-An *Instance* is a special type of public variable that hold an object. The
+An *Instance* is a special type of variable that holds an object. The
 first argument in the constructor is the type of object that is allowed to fit in
-the socket, which in this case is a Vehicle. The attribute *allow_none* can be used
+the socket, which in this case is a Vehicle. The attribute ``allow_none`` can be used
 to declare whether filling the socket is optional. For our driving simulation to
 run, the socket must be filled with a Vehicle. Notice that a socket is neither an
 input or an output, so it does not require an iotype, and it is not available for
@@ -988,13 +990,13 @@ which can set the Vehicle's design variables to try and minimize the simulation 
 accomplish this, we need to promote the design variables to become inputs to the DrivingSim.
 We did this in the Vehicle assembly by creating a passthrough for each design variable. The
 passthrough feature is only available in an assembly, so the DrivingSim component must
-inherit from *Assembly* instead of *Component.*
+inherit from Assembly instead of Component.
 
 Because the socket won't be filled until after the DrivingSim is instantiated, the design
-variables cannot be promoted in the initialization function. Instead, we have to
-create a callback function named _xxx_changed where xxx is the name of our socket. For our
-case, the socket is named vehicle, so the function should be named _vehicle_changed. This
-callback function executed whenever a Vehicle instance is assigned to this socket.
+variables cannot be promoted in the ``initialization`` function. Instead, we have to
+create a ``callback`` function named ``_xxx_changed`` where ``xxx`` is the name of our socket. For our
+case, the socket is named *vehicle,* so the function should be named ``_vehicle_changed``. This
+``callback`` function is executed whenever a Vehicle instance is assigned to this socket.
 
 .. testcode:: Socket_to_me
 
@@ -1012,12 +1014,12 @@ callback function executed whenever a Vehicle instance is assigned to this socke
         self.create_passthrough('vehicle.bore')
 	# ...
 
-In _vehicle_changed, we create passthroughs to all of our design variables. We
-also add the vehicle to the DrivingSim's workflow in order to tell the
+In ``_vehicle_changed``, we create passthroughs to all of our design variables. We
+also add the vehicle to the DrivingSim's workflow to tell the
 assembly to run the Vehicle whenever it executes.
 
 The final piece of the puzzle is to learn how to insert a vehicle into our socket. This
-is done with the *add* command.
+is done with the ``add`` command.
 	
     >>> from openmdao.examples.enginedesign.driving_sim import DrivingSim
     >>> my_sim = DrivingSim()
@@ -1033,8 +1035,8 @@ is done with the *add* command.
     33.45...
     
 .. note::
-    Be careful not to simply assign the new vehicle instance to the socket (i.e., my_sim.vehicle = Vehicle()).
-    If you do this, vital framework connections will be bypassed, and the component will not execute properly.
+    Be careful not to simply assign the new vehicle instance to the socket (i.e., ``my_sim.vehicle =
+    Vehicle()``). If you do this, vital framework connections will be bypassed, and the component will not execute properly.
 
 Setting up an Optimization Problem
 ----------------------------------
@@ -1051,7 +1053,7 @@ but the second variable cannot be optimized by mere inspection.
 The optimization will be handled by the gradient optimizer CONMIN.
 
 In ``engine_optimization.py``, we define the class EngineOptimization and
-create an instance of CONMINdriver and DrivingSim, which is addded to the
+create an instance of CONMINdriver and DrivingSim, which are added to the
 driver's workflow. We also create a Vehicle instance and insert it into the
 socket in DrivingSim:
 
@@ -1087,7 +1089,7 @@ socket in DrivingSim:
             self.driver.itmax = 30
         
             # CONMIN Objective 
-            self.driver.objective = 'driving_sim.accel_time'
+            self.driver.add_objective('driving_sim.accel_time')
         
             # CONMIN Design Variables 
             self.add_parameters([('driving_sim.spark_angle', -50., 10.),
@@ -1097,19 +1099,17 @@ Recall that the *iprint* flag enables or disables the printing of diagnostics
 internal to CONMIN, while the *itmax* parameter specifies the maximum number
 of iterations for the optimization loop.
 
-.. index:: Expression
-
 The optimization objective is to minimize the 0-60 mph acceleration time by
 adjusting the design variables *bore* and *spark angle*. In the previous
-examples, we learned to use Expressions to build mathematical expressions with
+examples, we learned to use strings to build mathematical expressions with
 variables that point to locations in the data hierarchy, so here we do it once
 again with our objectives and design variables. We could submit the design
-variables one at a time using multiple calls to *add_parameter*, but we can
-also submit them with a single call to *add_paremeter* by placing the information
+variables one at a time using multiple calls to ``add_parameter``, but we can
+also submit them with a single call to ``add_parameters`` by placing the information
 for each design variable in a list of tuples. The information we need for each
-variable is the expression that points to it (e.g., driving_sim.spark_angle), and
+variable is the expression that points to it (e.g., ``driving_sim.spark_angle``), and
 the minimum and maximum value of the search range for that variable (e.g., -.50, 10).
-Once again, if the min and max aren't specified, the *low* and *high* attributes
+Once again, if the min and max aren't specified, the low and high attributes
 from the OpenMDAO variable will be used if they have been specified.
 
 We are now ready to solve an optimization problem.
@@ -1171,10 +1171,10 @@ You can run this same problem at the command prompt by typing:
     python engine_optimization.py
 
 This script prints out a little more information than we've shown in this
-example. See the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>` for a refresher on how
-to set up a component to run at the command prompt.
+example. See the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>` 
+for a refresher on how to set up a component to run at the command prompt.
 
-The Expression can be used to pose more sophisticated objective expressions
+String expressions can be used to pose more sophisticated objective expressions
 that are functions of multiple simulation variables. For example, if you want
 to maximize ``accel_time`` instead of minimizing it, you can do this by negating
 the expression:
@@ -1208,14 +1208,14 @@ the expression:
 .. testcode:: Code10
 
 	        # CONMIN Objective = Maximize accel_time 
-        	self.driver.objective = '-driving_sim.accel_time'
+        	self.driver.add_objective('-driving_sim.accel_time')
 		
 You can build up more complicated expressions from any number of OpenMDAO variables using Python's mathematical syntax:
 
 .. testcode:: Code10
 
 	        # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-        	self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+        	self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
 
 Here, we used a weighted sum of the EPA city and highway fuel economy estimates as the objective in a maximization problem.
 Try solving the same optimization problem using this objective.
@@ -1227,7 +1227,7 @@ Try solving the same optimization problem using this objective.
 	>>> prob = EngineOptimization()
 	>>> set_as_top(prob)
 	<openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at 0xe80c3b0>
-	>>> prob.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+	>>> prob.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
 	>>> prob.driving_sim.spark_angle
 	-37.0
 	>>> prob.driving_sim.bore

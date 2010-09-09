@@ -19,7 +19,6 @@ from openmdao.main.seqentialflow import SequentialWorkflow
 
 from openmdao.main.exceptions import ConstraintError
 
-from openmdao.main.expression import Expression, ExpressionList
 from openmdao.main.filevar import FileMetadata, FileRef
 
 from openmdao.main.case import Case

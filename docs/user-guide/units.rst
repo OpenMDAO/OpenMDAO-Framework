@@ -1,6 +1,6 @@
-.. _Summary-of-Units:
-
 .. index:: units
+
+.. _Appendix:-Summary-of-Units:
 
 Appendix: Summary of Units
 ==========================

@@ -1,8 +1,3 @@
-# Unit Handling
-#
-# Written by Justin Gray, but based heavily on the PhysicalQuantities
-# module in Scientific Python written by Konrad Hinsen
-
 """This module provides a data type that represents a physical
 quantity together with its unit. It is possible to add and
 subtract these quantities if the units are compatible and
@@ -15,7 +10,11 @@ of the base units.
 
 The module provides a basic set of predefined physical quanitites
 in its built-in library; however, it also supports generation of
-personal libararies which can be saved and reused."""
+personal libararies which can be saved and reused.
+
+This module is based on the PhysicalQuantities module
+in Scientific Python, by Konrad Hinsen. Modifications by
+Justin Gray."""
 
 import re, ConfigParser
 import os.path

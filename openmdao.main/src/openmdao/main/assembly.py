@@ -1,21 +1,22 @@
+""" Class definition for Assembly """
+
 
 #public symbols
 __all__ = ['Assembly']
 
-import sys
 import cStringIO
 
-from enthought.traits.api import HasTraits, List, Instance, TraitError
+# pylint: disable-msg=E0611,F0401
+from enthought.traits.api import Instance, TraitError
 from enthought.traits.api import TraitType
 
 import networkx as nx
-from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_connected_components
+from networkx.algorithms.traversal import is_directed_acyclic_graph, \
+                                          strongly_connected_components
 
-from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component
-from openmdao.main.container import Container
-from openmdao.main.dataflow import Dataflow
 from openmdao.main.driver import Driver
+from openmdao.main.expression import Expression, ExpressionList
 
 class PassthroughTrait(TraitType):
     """A trait that can use another trait for validation, but otherwise is
@@ -24,6 +25,7 @@ class PassthroughTrait(TraitType):
     """
     
     def validate(self, obj, name, value):
+        """Validation for the PassThroughTrait"""
         if self.validation_trait:
             return self.validation_trait.validate(obj, name, value)
         return value
@@ -35,7 +37,8 @@ class Assembly (Component):
     """
     
     driver = Instance(Driver, allow_none=True,
-                      desc="The top level Driver that manages execution of this Assembly")
+                      desc="The top level Driver that manages execution of "
+                           "this Assembly")
     
     def __init__(self, doc=None, directory=''):
         self.comp_graph = ComponentGraph()
@@ -145,6 +148,10 @@ class Assembly (Component):
             self.raise_exception(
                 'Cannot connect %s to %s. Both are on same component.' %
                                  (srcpath, destpath), RuntimeError)
+        if (srctrait.is_trait_type and (srctrait.is_trait_type(Expression) or srctrait.is_trait_type(ExpressionList))) or \
+           (desttrait.is_trait_type and (desttrait.is_trait_type(Expression) or desttrait.is_trait_type(ExpressionList))):
+            self.raise_exception('Cannot connect %s to %s because one of them is an Expression or ExpressionList' %
+                                 (srcpath,destpath), RuntimeError)
         if srccomp is not self and destcomp is not self:
             # it's not a passthrough, so must connect input to output
             if srctrait.iotype != 'out':
@@ -196,8 +203,6 @@ class Assembly (Component):
             self.comp_graph.connect('.'.join(['@in',srcpath]), destpath)
         else:
             destcomp.invalidate_deps(varnames=[destvarname], notify_parent=True)
-        
-        self._io_graph = None
 
     def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and
@@ -319,13 +324,13 @@ class Assembly (Component):
                     if srccomp is self:
                         srcname = src
                     else:
-                        srcname = '.'.join([srccompname,src])
+                        srcname = '.'.join([srccompname, src])
                     destcomp.set(dest, srcval, srcname=srcname)
                 except Exception, exc:
                     if compname[0] == '@':
                         dname = dest
                     else:
-                        dname = '.'.join([compname,dest])
+                        dname = '.'.join([compname, dest])
                     msg = "cannot set '%s' from '%s': %s" % (dname, srcname, exc)
                     self.raise_exception(msg, type(exc))
             
@@ -337,7 +342,7 @@ class Assembly (Component):
         
     def get_valids(self, names):
         """Returns a list of boolean values indicating whether the named
-        attributes are valid (True) or invalid (False). Entries in names may
+        variables are valid (True) or invalid (False). Entries in names may
         specify either direct traits of self or those of direct children of
         self, but no deeper in the hierarchy than that.
         """
@@ -355,6 +360,20 @@ class Assembly (Component):
                     self.raise_exception("get_valids: unknown variable '%s'" %
                                          name, RuntimeError)
         return valids
+
+    def check_resolve(self, pathnames):
+        """Returns True if all of the pathnames are resolvable starting from this
+        Assembly.
+        """
+        for name in pathnames:
+            tup = name.split('.', 1)
+            if len(tup) > 1:
+                comp = getattr(self, tup[0], None)
+                if comp is None or not comp.contains(tup[1]):
+                    return False
+            elif not hasattr(self, name):
+                return False
+        return True
 
     def invalidate_deps(self, compname=None, varnames=None, notify_parent=False):
         """Mark all Variables invalid that depend on varnames. 

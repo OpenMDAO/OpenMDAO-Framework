@@ -18,7 +18,7 @@ from openmdao.main.tvalwrapper import TraitValMetaWrapper
 from openmdao.main.uncertain_distributions import UncertainDistribution
 
 class Float(TraitType):
-    """A Public Variable wrapper for floating point number valid within a
+    """A Variable wrapper for floating point number valid within a
     specified range of values.
     """
     
@@ -96,7 +96,7 @@ class Float(TraitType):
         super(Float, self).__init__(default_value=default_value,
                                          **metadata)
 
-    def validate(self, object, name, value):
+    def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
         Units are converted as needed.
         """
@@ -105,7 +105,7 @@ class Float(TraitType):
         # If both source and target have units, we need to process differently
         if isinstance(value, TraitValMetaWrapper) and value.metadata.has_key('units'):
             if self.units and value.metadata['units']:
-                return self._validate_with_metadata(object, name, 
+                return self._validate_with_metadata(obj, name, 
                                                     value.value, 
                                                     value.metadata)
             
@@ -113,11 +113,11 @@ class Float(TraitType):
         elif isinstance(value, UncertainDistribution):
             value = value.getvalue()
         try:
-            return self._validator.validate(object, name, value)
+            return self._validator.validate(obj, name, value)
         except TraitError:
-            self.error(object, name, value)
+            self.error(obj, name, value)
 
-    def error(self, object, name, value):
+    def error(self, obj, name, value):
         """Returns a string describing the type handled by Float."""
         
         # pylint: disable-msg=E1101
@@ -143,7 +143,7 @@ class Float(TraitType):
         vtype = type( value )
         msg = "Trait '%s' must be %s, but a value of %s %s was specified." % \
                                (name, info, value, vtype)
-        object.raise_exception(msg, TraitError)
+        obj.raise_exception(msg, TraitError)
 
     def get_val_meta_wrapper(self):
         """Return a TraitValMetaWrapper object.  Its value attribute
@@ -152,7 +152,7 @@ class Float(TraitType):
         # pylint: disable-msg=E1101
         return TraitValMetaWrapper(units=self.units)
             
-    def _validate_with_metadata(self, object, name, value, srcmeta):
+    def _validate_with_metadata(self, obj, name, value, srcmeta):
         """Perform validation and unit conversion using metadata from
         the source trait.
         """
@@ -163,13 +163,19 @@ class Float(TraitType):
         
         if isinstance(value, UncertainDistribution):
             value = value.getvalue()
+            
+        # FIXME: The try blocks testing whether the unit is bogus or undefined
+        # are generally redundant because that test is done at creation. HOWEVER
+        # you might have a case where it wasn't tested because it's technicalyl
+        # not a float. NPSS wrapper may be such a case. A test needs to be 
+        # constructed to test these lines.
 
         # Note: benchmarking showed that this check does speed things up -- KTM
         if src_units == dst_units:
             try:
-                return self._validator.validate(object, name, value)
+                return self._validator.validate(obj, name, value)
             except TraitError:
-                self.error(object, name, value)
+                self.error(obj, name, value)
 
         try:
             pq = PhysicalQuantity(value, src_units)
@@ -180,7 +186,7 @@ class Float(TraitType):
         try:
             pq.convert_to_unit(dst_units)
         except NameError:
-            raise TraitError("undefined unit '%s' for attribute '%s'" %
+            raise TraitError("undefined unit '%s' for variable '%s'" %
                              (dst_units, name))
         except TypeError:
             msg = "%s: units '%s' are incompatible " % (name, src_units) + \
@@ -188,8 +194,8 @@ class Float(TraitType):
             raise TraitError(msg)
         
         try:
-            return self._validator.validate(object, name, pq.value)
+            return self._validator.validate(obj, name, pq.value)
         except TraitError:
-            self.error(object, name, pq.value)
+            self.error(obj, name, pq.value)
 
         

@@ -2,9 +2,12 @@
 
 import unittest
 
-from enthought.traits.api import TraitError
-from openmdao.main.api import Assembly, Component, set_as_top
+from enthought.traits.api import TraitError, List
+from openmdao.main.api import Assembly, Component, Driver, set_as_top
+from openmdao.main.expression import Expression, ExpressionList
 from openmdao.lib.api import Float, Str, Instance
+from openmdao.util.decorators import add_delegate
+from openmdao.main.hasobjective import HasObjective
 
 class Multiplier(Component):
     rval_in = Float(iotype='in')
@@ -50,6 +53,7 @@ class DummyComp(Component):
     rout = Float(iotype='out', units='ft')
     r2out = Float(iotype='out')
     sout = Str(iotype='out')
+    slistout = List(Str, iotype='out')
     
     dummy_in = Instance(Component, iotype='in')
     dummy_out = Instance(Component, iotype='out')
@@ -76,6 +80,10 @@ class DummyComp(Component):
         # pylint: disable-msg=E1101
         self.dummy.execute()
 
+@add_delegate(HasObjective)
+class SimpleDriver(Driver):
+    obj = Expression(iotype='in')
+    constr = ExpressionList(iotype='in')
 
 class AssemblyTestCase(unittest.TestCase):
 
@@ -425,6 +433,25 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(conns, [('comp1.rout', 'comp2.r')])
         self.asm.run()
         
+    def test_expr_connection(self):
+        top = set_as_top(Assembly())
+        top.driver = SimpleDriver()
+        top.add('comp1', DummyComp())
+        try:
+            top.connect('comp1.sout', 'driver.obj')
+        except Exception as err:
+            self.assertEqual(str(err), 
+                ': Cannot connect comp1.sout to driver.obj because one of them is an Expression or ExpressionList')
+        else:
+            self.fail('expected Exception')
+        try:
+            top.connect('comp1.slistout', 'driver.constr')
+        except Exception as err:
+            self.assertEqual(str(err), 
+                ': Cannot connect comp1.slistout to driver.constr because one of them is an Expression or ExpressionList')
+        else:
+            self.fail('expected Exception')
+            
         
 if __name__ == "__main__":
     unittest.main()

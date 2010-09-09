@@ -214,10 +214,10 @@ class IHasParameters(Interface):
             Name of the parameter to add to the driver.
         low: number, optional
             Minimum allowed value the optimzier can use for this parameter. If not specified, 
-            then the 'low' value from the public variable is used. 
+            then the 'low' value from the variable is used. 
         high: number, optional
             Maximum allowed value the optimizer can use for this parameter. If not specified, 
-            then the "high" value from the public variable is used.
+            then the "high" value from the variable is used.
         """
         
     def add_parameters(self, param_iter):
@@ -242,7 +242,7 @@ class IHasParameters(Interface):
         """Returns an ordered dict of parameter objects."""
 
     def set_parameters(self, X): 
-        """Pushes the values in the X input array into the corresponding public 
+        """Pushes the values in the X input array into the corresponding 
         variables in the model.
         
         X: iterator
@@ -338,6 +338,71 @@ class IHasConstraints(IHasEqConstraints, IHasIneqConstraints):
         an assignment or an inequality, e.g., 'a=b' or 'a<=b'.
         """
 
+class IHasObjective(Interface): 
+    """An Interface for objects having a single objective."""
+
+    def add_objective(self, expr):
+        """Sets the objective of this driver to be the specified expression.
+        If there is a preexisting objective in this driver, it is replaced.
+        
+        expr: string
+            String containing the objective expression.
+         """
+            
+    def list_objective(self):
+        """Returns the expression string for the objective."""
+    
+    def get_objective(self):
+        """Returns the objective object."""
+    
+    def eval_objective(self):
+        """Returns the value of the evaluated objective."""
+
+    def get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by our objective. 
+        """
+    
+
+class HasObjectives(object): 
+    """An Interface for objects having a multiple objectives."""
+
+    def add_objectives(self, obj_iter):
+        """Takes an iterator of objective strings and creates
+        objectives for them in the driver.
+        """
+
+    def add_objective(self, expr):
+        """Adds an objective to the driver. 
+        
+        expr: string
+            String containing the objective expression.
+            
+         """
+            
+    def remove_objective(self, expr):
+        """Removes the specified objective expression. Spaces within
+        the expression are ignored.
+        """
+        
+    def list_objectives(self):
+        """Returns a list of objective expression strings."""
+    
+    def clear_objectives(self):
+        """Removes all objectives."""
+        
+    def get_objectives(self):
+        """Returns an ordered dict of objective objects."""
+
+    def eval_objectives(self):
+        """Returns a list of values of the evaluated objectives."""
+ 
+    def get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by our objectives.
+        """            
+        
+        
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object inherits from HasTraits and
     implements one or more of the specified interfaces.

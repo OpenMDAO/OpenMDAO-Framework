@@ -13,42 +13,43 @@ _ops = {
     }
 
 def _check_expr(expr):
-    try:
-        # force checking for existence of vars referenced in expression
-        expr.refs_valid()  
-    except (AttributeError, RuntimeError), err:
-        msg = "Invalid expression '%s': %s" % (str(expr), err)
+    # force checking for existence of vars referenced in expression
+    if not expr.check_resolve():
+        msg = "Invalid expression '%s'" % str(expr)
         raise ValueError( msg )
 
 class Constraint(object):
-    def __init__(self, lhs, relation='>', rhs='0', scope=None):
+    def __init__(self, lhs, comparator, rhs, scope=None):
         self.lhs = ExprEvaluator(lhs, scope=scope)
-        _check_expr(self.lhs)
-        self.relation = relation
+        if not self.lhs.check_resolve():
+            raise ValueError("Constraint '%s' has an invalid left-hand-side." % ' '.join([lhs,comparator,rhs]))
+        self.comparator = comparator
         self.rhs = ExprEvaluator(rhs, scope=scope)
-        _check_expr(self.rhs)
+        if not self.rhs.check_resolve():
+            raise ValueError("Constraint '%s' has an invalid right-hand-side." % ' '.join([lhs,comparator,rhs]))
         
     def evaluate(self):
-        """Returns a tuple of the form (lhs, rhs, relation, is_violated)."""
+        """Returns a tuple of the form (lhs, rhs, comparator, is_violated)."""
         lhs = self.lhs.evaluate()
         rhs = self.rhs.evaluate()
-        return (lhs, rhs, self.relation, _ops[self.relation](lhs,rhs))
+        return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs,rhs))
         
 
 def _parse_constraint(expr_string):
-    for relation in ['>=','<=','>','<','=']:
-        parts = expr_string.split(relation)
+    for comparator in ['>=','<=','>','<','=']:
+        parts = expr_string.split(comparator)
         if len(parts) > 1:
-            return (parts[0].strip(), relation, parts[1].strip())
+            return (parts[0].strip(), comparator, parts[1].strip())
     else:
-        if len(expr_string.split('==')) > 1:
-            raise ValueError("'==' is not a valid relation in a constraint.  Use '=' instead.")
-        return (expr_string, '>', '0')
+        msg = "Constraints require an explicit comparator (=, <, >, <=, or >=)"
+        raise ValueError( msg )
     
 def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
 
 class _HasConstraintsBase(object):
+    _do_not_promote = ['get_expr_depends']
+    
     def __init__(self, parent):
         self._parent = parent
         self._constraints = ordereddict.OrderedDict()
@@ -64,9 +65,29 @@ class _HasConstraintsBase(object):
         """Removes all constraints."""
         self._constraints = ordereddict.OrderedDict()
         
+    def list_constraints(self):
+        """Return a list of strings containing constraint expressions."""
+        return self._constraints.keys()
+    
+    def get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by a constraint.
+        """
+        conn_list = []
+        pname = self._parent.name
+        for name,constraint in self._constraints.items():
+            for cname in constraint.lhs.get_referenced_compnames():
+                conn_list.append((cname, pname))
+            for cname in constraint.rhs.get_referenced_compnames():
+                conn_list.append((cname, pname))
+        return conn_list
+    
+        
 class HasEqConstraints(_HasConstraintsBase):
     def add_constraint(self, expr_string):
-        """Adds a constraint to the driver"""
+        """Adds a constraint in the form of a boolean expression string
+        to the driver.
+        """
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
@@ -74,9 +95,17 @@ class HasEqConstraints(_HasConstraintsBase):
         if rel=='=':
             self.add_eq_constraint(lhs, rhs)
         else:
-            self._parent.raise_exception("add_ineq_constraint", NotImplemented)
+            msg = "Inequality constraints are not supported on this driver"
+            self._parent.raise_exception(msg, ValueError)
 
     def add_eq_constraint(self, lhs, rhs):
+        """Adds an equality constraint as two strings, a left hand side and
+        a right hand side.
+        """
+        if not isinstance(lhs, basestring):
+            raise ValueError("Constraint left-hand-side (%s) is not a string" % lhs)
+        if not isinstance(rhs, basestring):
+            raise ValueError("Constraint right-hand-side (%s) is not a string" % rhs)
         ident = _remove_spaces('='.join([lhs,rhs]))
         self._constraints[ident] = Constraint(lhs,'=',rhs, scope=self._parent)
         
@@ -86,7 +115,7 @@ class HasEqConstraints(_HasConstraintsBase):
 
     def eval_eq_constraints(self): 
         """Returns a list of tuples of the 
-        form (lhs, rhs, relation, is_violated)
+        form (lhs, rhs, comparator, is_violated)
         """
         return [c.evaluate() for c in self._constraints.values()]
 
@@ -98,9 +127,17 @@ class HasIneqConstraints(_HasConstraintsBase):
         self.add_ineq_constraint(lhs, rel, rhs)
 
     def add_ineq_constraint(self, lhs, rel, rhs):
+        """Adds an inequality constraint as three strings; a left hand side,
+        a comparator ('<','>','<=', or '>='), and a right hand side.
+        """
         if rel=='==' or rel=='=':
-            self._parent.raise_exception("add_eq_constraint", NotImplemented)
+            msg = "Equality constraints are not supported on this driver"
+            self._parent.raise_exception(msg, ValueError)
 
+        if not isinstance(lhs, basestring):
+            raise ValueError("Constraint left-hand-side (%s) is not a string" % lhs)
+        if not isinstance(rhs, basestring):
+            raise ValueError("Constraint right-hand-side (%s) is not a string" % rhs)
         ident = _remove_spaces(rel.join([lhs,rhs]))
         self._constraints[ident] = Constraint(lhs,rel,rhs, scope=self._parent)
         
@@ -117,6 +154,9 @@ class HasConstraints(object):
     """Add this class as a delegate if your Driver supports both equality
     and inequality constraints.
     """
+    
+    _do_not_promote = ['get_expr_depends']
+    
     def __init__(self, parent):
         self._parent = parent
         self._eq = HasEqConstraints(parent)
@@ -143,28 +183,49 @@ class HasConstraints(object):
         self._eq.clear_constraints()
         self._ineq.clear_constraints()
         
-    def add_ineq_constraint(self, lhs, relation, rhs):
-        self._ineq.add_ineq_constraint(lhs, relation, rhs)
+    def add_ineq_constraint(self, lhs, comparator, rhs):
+        """Adds an inequality constraint as three strings; a left hand side,
+        a comparator ('<','>','<=', or '>='), and a right hand side.
+        """
+        self._ineq.add_ineq_constraint(lhs, comparator, rhs)
     
     def add_eq_constraint(self, lhs, rhs):
+        """Adds an equality constraint as two strings, a left hand side and
+        a right hand side.
+        """
         self._eq.add_eq_constraint(lhs, rhs)
 
     def get_eq_constraints(self):
         """Returns an ordered dict of equality constraint objects."""
-        return self._eq.get_constraints()
+        return self._eq.get_eq_constraints()
 
     def get_ineq_constraints(self):
         """Returns an ordered dict of inequality constraint objects."""
-        return self._ineq.get_constraints()
+        return self._ineq.get_ineq_constraints()
 
     def eval_eq_constraints(self): 
-        """Returns a list of tuples of the form (lhs, rhs, relation,
+        """Returns a list of tuples of the form (lhs, rhs, comparator,
         is_violated) from evalution of equality constraints.
         """
         return self._eq.eval_eq_constraints()
     
     def eval_ineq_constraints(self): 
-        """Returns a list of tuples of the form (lhs, rhs, relation,
+        """Returns a list of tuples of the form (lhs, rhs, comparator,
         is_violated) from evalution of inequality constraints.
         """
         return self._ineq.eval_ineq_constraints()
+    
+    def list_constraints(self):
+        """Return a list of strings containing constraint expressions."""
+        lst = self._ineq.list_constraints()
+        lst.extend(self._eq.list_constraints())
+        return lst
+
+    def get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by a constraint.
+        """
+        conn_list = self._eq.get_expr_depends()
+        conn_list.extend(self._ineq.get_expr_depends())
+        return conn_list
+    

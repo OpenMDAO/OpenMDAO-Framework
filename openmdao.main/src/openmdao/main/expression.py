@@ -1,10 +1,10 @@
 """
-A public variable that references another member of the OpenMDAO model
+A variable that references another member of the OpenMDAO model
 hierarchy.
 """
 
 #public symbols
-__all__ = ['Expression', 'ExpressionList']
+__all__ = []
 
 
 # pylint: disable-msg=E0611,F0401
@@ -29,6 +29,9 @@ class DumbDefault(object):
         
     def set(self, val):
         raise TraitError('Expression: string reference is undefined')
+    
+    def __len__(self):
+        return 0
             
 class Expression(BaseStr):
     """A trait that references, via a pathname, another trait in the

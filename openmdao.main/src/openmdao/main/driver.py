@@ -1,7 +1,10 @@
+""" Driver class definition """
+
 #public symbols
 __all__ = ["Driver"]
 
 
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.api import implements, List, Instance
 
 from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, IHasEvents,\
@@ -50,23 +53,11 @@ class Driver(Component):
         
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
-        or if any of our public variables is invalid, or if any public
+        or if any of our variables is invalid, or if any 
         variable referenced by any of our Expressions is invalid.
         """
         if super(Driver, self).is_valid() is False:
             return False
-        
-        ## driver is invalid if any of its Expressions reference
-        ## invalid Variables
-        #for name in self._get_expr_names(iotype='in'):
-            #rv = getattr(self, name)
-            #if isinstance(rv, list):
-                #for entry in rv:
-                    #if not entry.refs_valid():
-                        #return False
-            #else:
-                #if not rv.refs_valid():
-                    #return False
 
         # force execution if any component in the workflow is invalid
         for wf in self._workflows:
@@ -89,14 +80,6 @@ class Driver(Component):
             for wf in wfs:
                 wf.config_changed()
 
-    #def _pre_execute (self):
-        #"""Call base class *_pre_execute* after determining if we have any invalid
-        #ref variables, which will cause us to have to regenerate our ref dependency graph.
-        #"""
-        #if not self.is_valid():
-            #self._call_execute = True
-        #super(Driver, self)._pre_execute()
-
     def remove_from_workflow(self, component):
         """Remove the specified component from our workflow(s).
         """
@@ -116,9 +99,9 @@ class Driver(Component):
         return allcomps
         
     def get_expr_depends(self):
-        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by any Expression or ExpressionList 
-        traits in this Driver, ignoring any dependencies on components that are
+        """Returns a list of tuples of the form (src_comp_name,
+        dest_comp_name) for each dependency introduced by any ExprEvaluators
+        in this Driver, ignoring any dependencies on components that are
         inside of this Driver's iteration set.
         """
         iternames = set([c.name for c in self.iteration_set()])
@@ -190,7 +173,7 @@ class Driver(Component):
         return self._continue
     
     def pre_iteration(self):
-        """Called prior to each iteration."""
+        """Called prior to each iteration.  This is where iteration events are set."""
         self.set_events()
         
     def run_iteration(self):

@@ -12,7 +12,7 @@ from enthought.traits.api import Range, TraitError, TraitType
 
     
 class Int(TraitType):
-    """A Public Variable wrapper for an integer valid within a
+    """A variable wrapper for an integer valid within a
        specified range of values.
        """
     
@@ -68,15 +68,15 @@ class Int(TraitType):
         super(Int, self).__init__(default_value=default_value,
                                          **metadata)
 
-    def validate(self, object, name, value):
+    def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait."""
         
         try:
-            return self._validator.validate(object, name, value)
+            return self._validator.validate(obj, name, value)
         except TraitError:
-            self.error(object, name, value)
+            self.error(obj, name, value)
 
-    def error(self, object, name, value):
+    def error(self, obj, name, value):
         """Returns a string describing the type handled by Int."""
         
         # pylint: disable-msg=E1101
@@ -99,4 +99,4 @@ class Int(TraitType):
         vtype = type( value )
         msg = "Trait '%s' must be %s, but a value of %s %s was specified." % \
                                (name, info, value, vtype)
-        object.raise_exception(msg, TraitError)       
+        obj.raise_exception(msg, TraitError)       
