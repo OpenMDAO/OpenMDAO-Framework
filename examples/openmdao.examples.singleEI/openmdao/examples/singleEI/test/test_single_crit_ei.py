@@ -49,10 +49,11 @@ class TestCase(unittest.TestCase):
     
     def test_no_criteria_error(self): 
         self.top.EIdriver.best_case = ListCaseIterator([self.best_case,])
+        self.top.EIdriver.add_parameter('noisy_branin.x')
         try:
             self.top.run()
         except ValueError,err: 
-            self.assertEqual(str(err),"EIdriver: The Expression 'criteria' has not been defined")
+            self.assertEqual(str(err),"EIdriver: no criteria has been defined")
         else: 
             self.fail("ValueError expected")
         

@@ -98,8 +98,8 @@ class SingleCritEI(Driver):
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training
         point to run."""
-        if self.criteria == "": 
-            self.raise_exception("no criteria was specified", RuntimeError)
+        if len(self.criteria) == 0: 
+            self.raise_exception("no criteria has been defined", ValueError)
         elif not self.set_of_alleles:
             self.raise_exception("no parameters were added to the driver", 
                                  RuntimeError)

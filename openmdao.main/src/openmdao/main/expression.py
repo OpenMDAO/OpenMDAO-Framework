@@ -29,6 +29,9 @@ class DumbDefault(object):
         
     def set(self, val):
         raise TraitError('Expression: string reference is undefined')
+    
+    def __len__(self):
+        return 0
             
 class Expression(BaseStr):
     """A trait that references, via a pathname, another trait in the
