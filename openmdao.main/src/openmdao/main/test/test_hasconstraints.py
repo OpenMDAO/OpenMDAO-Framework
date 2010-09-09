@@ -66,12 +66,24 @@ class HasConstraintsTestCase(unittest.TestCase):
         if eq: 
             drv.remove_constraint(' comp1.c=comp1.d')
             self.assertEqual(len(drv.get_eq_constraints()), 0)
+            try:
+                drv.remove_constraint('comp1.bogus = comp1.d')
+            except Exception as err:
+                self.assertEqual(str(err), 
+                    "driver: Constraint 'comp1.bogus = comp1.d' was not found. Remove failed.")
+            else:
+                self.fail("Exception expected")
         if ineq: 
             self.assertEqual(len(drv.get_ineq_constraints()), 1)
-        
-        if ineq: 
             drv.remove_constraint(' comp1.a>  comp1.b  ')
             self.assertEqual(len(drv.get_ineq_constraints()), 0)
+            try:
+                drv.remove_constraint('comp1.bogus < comp1.d')
+            except Exception as err:
+                self.assertEqual(str(err), 
+                    "driver: Constraint 'comp1.bogus < comp1.d' was not found. Remove failed.")
+            else:
+                self.fail("Exception expected")
         if eq: 
             self.assertEqual(len(drv.get_eq_constraints()), 0)
         
