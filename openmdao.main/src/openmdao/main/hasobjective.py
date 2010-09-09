@@ -44,6 +44,15 @@ class HasObjective(object):
             self._parent.raise_exception("no objective specified")
         return self._objective.evaluate()
 
+    def _get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by our objective.
+        """
+        if not self._objective:
+            return []
+        pname = self._parent.name
+        return [(cname,pname) for cname in self._objective.get_referenced_compnames()]
+    
 
 class HasObjectives(object): 
     """This class provides an implementation of the IHasObjectives interface."""
@@ -92,7 +101,6 @@ class HasObjectives(object):
             self._parent.raise_exception("Trying to remove objective '%s' "
                                          "that is not in this driver." % expr,
                                          AttributeError)
-
     def list_objectives(self):
         """Returns a list of objective expressions."""
         return self._objectives.keys()
@@ -109,4 +117,13 @@ class HasObjectives(object):
         """Returns the value of the evaluated objective."""
         return [obj.evaluate() for obj in self._objectives.values()]
 
+    def _get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by our objectives.
+        """
+        pname = self._parent.name
+        conn_list = []
+        for obj in self._objectives.values():
+            conn_list.extend([(cname,pname) for cname in obj.get_referenced_compnames()])
+        return conn_list
     

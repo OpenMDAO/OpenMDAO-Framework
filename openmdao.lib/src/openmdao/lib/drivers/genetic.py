@@ -10,7 +10,7 @@ from enthought.traits.api import Python
 from pyevolve import G1DList, GAllele, GenomeBase
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
-from openmdao.main.api import Driver #, Expression
+from openmdao.main.api import Driver 
 from openmdao.lib.datatypes.enum import Enum
 from openmdao.lib.datatypes.float import Float
 from openmdao.lib.datatypes.int import Int
@@ -28,11 +28,7 @@ class Genetic(Driver):
     Genetic algorithm module. 
     """
     
-    # pylint: disable-msg=E1101
-    #objective = Expression(iotype='in',
-                          #desc='A string containing the objective function '
-                               #'expression to be optimized.') 
-    
+    # pylint: disable-msg=E1101    
     opt_type = Enum("minimize", values=["minimize", "maximize"],
                     iotype="in",
                     desc='Sets the optimization to either minimize or maximize '

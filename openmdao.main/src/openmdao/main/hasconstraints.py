@@ -66,6 +66,20 @@ class _HasConstraintsBase(object):
     def list_constraints(self):
         """Return a list of strings containing constraint expressions."""
         return self._constraints.keys()
+    
+    def _get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by a constraint.
+        """
+        conn_list = []
+        pname = self._parent.name
+        for name,constraint in self._constraints.items():
+            for cname in constraint.lhs.get_referenced_compnames():
+                conn_list.append((cname, pname))
+            for cname in constraint.rhs.get_referenced_compnames():
+                conn_list.append((cname, pname))
+        return conn_list
+    
         
 class HasEqConstraints(_HasConstraintsBase):
     def add_constraint(self, expr_string):
@@ -201,3 +215,12 @@ class HasConstraints(object):
         lst = self._ineq.list_constraints()
         lst.extend(self._eq.list_constraints())
         return lst
+
+    def _get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by a constraint.
+        """
+        conn_list = self._eq._get_expr_depends()
+        conn_list.extend(self._ineq._get_expr_depends())
+        return conn_list
+    

@@ -138,16 +138,6 @@ Glossary
         list of discrete allowed values. The list of allowed values can be of arbitrary
         length, and elements can be of any type.
 
-
-      **Expression**
-        A special kind of trait that contains a string expression that
-        references variables in the framework.
-
-
-      **Expressions**
-        See :term:`Expression` above.
-
-
       **F2PY**
         Fortran to Python interface generator.
 

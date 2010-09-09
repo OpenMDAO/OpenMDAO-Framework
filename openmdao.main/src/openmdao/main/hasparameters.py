@@ -144,3 +144,15 @@ class HasParameters(object):
                 #raise ValueError("parameter value (%s) is outside of allowed range [%s to %s]" %
                                  #(val, param.low, param.high))
             param.expreval.set(val)
+
+    def _get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by a parameter.
+        """
+        conn_list = []
+        pname = self._parent.name
+        for name,param in self._parameters.items():
+            for cname in param.expreval.get_referenced_compnames():
+                conn_list.append((pname, cname))
+        return conn_list
+    

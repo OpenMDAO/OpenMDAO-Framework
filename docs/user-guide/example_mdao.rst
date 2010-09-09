@@ -291,8 +291,6 @@ so that the design variables carry through to the discipline components.
         self.connect('dis1.y1','dis2.y1')
 
 
-.. index:: Expression
-
 Next, the parameters for the fixed point iterator must be set. ``FixedPointIterator``
 is a specialized solver that is applicable only to single-input/single-output problems.
 As such, it does not conform to the standard driver interface. The output from ``SellarDiscipline2``

@@ -42,6 +42,8 @@ def add_delegate(*delegates):
             ]
         for name, delegate in delegate_class_list:
             template.append('self.%s = %s(self)' % (name, delegate.__name__))
+            template.append("if not hasattr(self, '_delegates_'): self._delegates_ = {}")
+            template.append("self._delegates_['%s'] = self.%s" % (name,name))
         f = FunctionMaker.create('__init__%s' % sig, '\n'.join(template), 
                                  dict([(c.__name__,c) for n,c in delegate_class_list]+
                                       [('old_init__',fnc)]),

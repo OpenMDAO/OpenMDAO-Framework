@@ -1099,15 +1099,13 @@ Recall that the *iprint* flag enables or disables the printing of diagnostics
 internal to CONMIN, while the *itmax* parameter specifies the maximum number
 of iterations for the optimization loop.
 
-.. index:: Expression
-
 The optimization objective is to minimize the 0-60 mph acceleration time by
 adjusting the design variables *bore* and *spark angle*. In the previous
-examples, we learned to use Expressions to build mathematical expressions with
+examples, we learned to use strings to build mathematical expressions with
 variables that point to locations in the data hierarchy, so here we do it once
 again with our objectives and design variables. We could submit the design
 variables one at a time using multiple calls to ``add_parameter``, but we can
-also submit them with a single call to ``add_paremeter`` by placing the information
+also submit them with a single call to ``add_parameters`` by placing the information
 for each design variable in a list of tuples. The information we need for each
 variable is the expression that points to it (e.g., ``driving_sim.spark_angle``), and
 the minimum and maximum value of the search range for that variable (e.g., -.50, 10).
@@ -1173,10 +1171,10 @@ You can run this same problem at the command prompt by typing:
     python engine_optimization.py
 
 This script prints out a little more information than we've shown in this
-example. See the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>` for a refresher on how
-to set up a component to run at the command prompt.
+example. See the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>` 
+for a refresher on how to set up a component to run at the command prompt.
 
-The Expression can be used to pose more sophisticated objective expressions
+String expressions can be used to pose more sophisticated objective expressions
 that are functions of multiple simulation variables. For example, if you want
 to maximize ``accel_time`` instead of minimizing it, you can do this by negating
 the expression:

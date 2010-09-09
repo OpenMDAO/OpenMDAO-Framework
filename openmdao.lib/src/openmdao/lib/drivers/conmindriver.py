@@ -18,7 +18,8 @@ from enthought.traits.api import on_trait_change, TraitError
                                  
 import conmin.conmin as conmin
 
-from openmdao.main.api import Case, Driver, Expression, ExpressionList
+from openmdao.main.api import Case, Driver
+from openmdao.main.expression import ExpressionList
 from openmdao.main.exceptions import RunStopped
 from openmdao.lib.datatypes.array import Array
 from openmdao.lib.datatypes.enum import Enum

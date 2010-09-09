@@ -4,7 +4,7 @@ hierarchy.
 """
 
 #public symbols
-__all__ = ['Expression', 'ExpressionList']
+__all__ = []
 
 
 # pylint: disable-msg=E0611,F0401

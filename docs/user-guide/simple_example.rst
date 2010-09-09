@@ -353,8 +353,6 @@ function does:
         
             super(OptimizationUnconstrained, self).__init__()
 
-.. index:: Expression
-
 The ``__init__`` function is called by the class constructor on a new
 uninitialized instance of the class, so it's a good spot to set up any
 parameters that CONMIN needs. The *super* command calls the
@@ -390,24 +388,21 @@ that contains a list of the components that the driver tells to run. We can add 
             self.driver.workflow.add(self.paraboloid)
 
 For this problem, you want to minimize ``f_xy``. In optimization, this is called
-the *objective function*. In OpenMDAO, you define the ``objective`` function using an
-*Expression* variable:
+the *objective function*. In OpenMDAO, you define the ``objective`` function using a
+string containing an expression:
         
 .. testcode:: simple_model_Unconstrained_pieces
 
             # CONMIN Objective 
             self.driver.add_objective('paraboloid.f_xy')
 
-An *Expression* is a special kind of variable that contains a string
-expression that combines variables with Python mathematical syntax. 
 Every variable has a unique name in the OpenMDAO data hierarchy. This
 name combines the variable name with its parents' names. You can think
 of it as something similar to the path name in a file system, but it uses a "."
 as a separator. This allows two components to have the same variable name
 while assuring that you can still refer to each of them uniquely. Here, the
 ``f_xy`` output of the Paraboloid component is selected as the objective for
-minimization. Expressions differ from typical OpenMDAO variables in that they 
-cannot be connected to other variables.
+minimization.
 
 While CONMIN operates only on a single objective,
 it allows multiple design variables. The design variables can be declared

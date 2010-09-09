@@ -584,7 +584,7 @@ like this.
             self.driver.x_in = 'problem.x'    
             self.driver.x_out = 'problem.y'
 
-The *x* input and the *F(x)* output are specified as Expressions and assigned to
+The *x* input and the *F(x)* output are specified as string expressions and assigned to
 ``x_in`` and ``x_out`` in the solver.
             
 .. doctest:: FPI

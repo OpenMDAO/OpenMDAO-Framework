@@ -75,7 +75,7 @@ from the given module into the current namespace.
     import openmdao.main.api
     
     # GOOD
-    from openmdao.main.api import Component, Assembly, Expression, Driver
+    from openmdao.main.api import Component, Assembly, Driver
 
 
 *Naming Conventions*
@@ -350,12 +350,6 @@ Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
 | Range            | Deprecated. Use OpenMDAO's Int or Float.                 |
 +------------------+----------------------------------------------------------+
 | Str              | Str( [value = None, desc = None, iotype = None] )        |
-+------------------+----------------------------------------------------------+
-| Expression       | Expression( [default_value = NoDefaultSpecified,         |
-|                  | desc = None, iotype = None] )                            |
-+------------------+----------------------------------------------------------+
-| ExpressionList   | ExpressionList( [default_value = NoDefaultSpecified,     |
-|                  | desc = None, iotype = None] )                            |
 +------------------+----------------------------------------------------------+
 
 A more detailed list of Enthought's `Traits`__ is given in their documentation.
@@ -1177,9 +1171,8 @@ Calling ``clear_constraints`` will remove all constraints from a driver.
 .. index:: objective
 
 Finally, optimizers include one objective (or in the future, possibly multiple objectives)
-that are represented by a string containing an expression built up from available OpenMDAO outputs. There is
-no functional interface for entering an objective, but drivers include a variable called
-*objective* that takes an Expression as its input.
+that are represented by a string containing an expression built up from available OpenMDAO outputs. 
+Objectives are added to an optimizer using the ``add_objective`` method.
 
 .. testcode:: Parameter_API
 

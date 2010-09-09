@@ -5,8 +5,9 @@ import logging
 import StringIO
 from math import sqrt
 
-from openmdao.main.api import Assembly, Component, Driver, Expression, \
+from openmdao.main.api import Assembly, Component, Driver, \
                               Dataflow, SequentialWorkflow, set_as_top, dump_iteration_tree
+from openmdao.main.expression import Expression
 from openmdao.lib.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.main.hasobjective import HasObjective

@@ -16,7 +16,7 @@ from scipy.optimize.nonlin import norm
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import on_trait_change, TraitError
                                  
-from openmdao.main.api import Driver, ExpressionList
+from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints

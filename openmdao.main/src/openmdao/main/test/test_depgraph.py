@@ -5,7 +5,8 @@ import logging
 
 from enthought.traits.api import TraitError
 
-from openmdao.main.api import Assembly, Component, Driver, Expression, set_as_top, Dataflow
+from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
+from openmdao.main.expression import Expression
 from openmdao.lib.api import Int
 from openmdao.main.hasobjective import HasObjective
 from openmdao.util.decorators import add_delegate
