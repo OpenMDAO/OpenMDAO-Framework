@@ -388,8 +388,8 @@ that contains a list of the components that the driver tells to run. We can add 
             self.driver.workflow.add(self.paraboloid)
 
 For this problem, you want to minimize ``f_xy``. In optimization, this is called
-the *objective function*. In OpenMDAO, you define the ``objective`` function using a
-string containing an expression:
+the *objective function*. In OpenMDAO, you define the ``objective`` function by
+calling the driver's ``add_objective`` function.
         
 .. testcode:: simple_model_Unconstrained_pieces
 
