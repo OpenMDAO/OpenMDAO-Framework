@@ -759,7 +759,7 @@ Finally, we set up our local optimization loops.
                                    '(bcastr.z2-dis1.z2)**2 + ' + \
                                    '(bcastr.x1-dis1.x1)**2 + ' + \
                                    '(bcastr.y1-dis1.y1)**2 + ' + \
-                                   '(bcastr.y2-dis1.y2)**2 < 0')
+                                   '(bcastr.y2-dis1.y2)**2')
         self.localopt1.add_parameter('dis1.z1', low = -10.0, high = 10.0)
         self.localopt1.add_parameter('dis1.z2', low = 0.0,   high = 10.0)
         self.localopt1.add_parameter('dis1.x1', low = 0.0,   high = 10.0)
@@ -775,7 +775,7 @@ Finally, we set up our local optimization loops.
         self.localopt2.add_objective('(bcastr.z1-dis2.z1)**2 + ' + \
                                      '(bcastr.z2-dis2.z2)**2 + ' + \
                                      '(bcastr.y1-dis2.y1)**2 + ' + \
-                                     '(bcastr.y2-dis2.y2)**2 < 0')
+                                     '(bcastr.y2-dis2.y2)**2')
         self.localopt2.add_parameter('dis2.z1', low = -10.0, high = 10.0)
         self.localopt2.add_parameter('dis2.z2', low = 0.0,   high = 10.0)
         self.localopt2.add_parameter('dis2.y1', low = 3.16,  high = 10.0)
