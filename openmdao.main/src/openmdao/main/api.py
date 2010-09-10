@@ -1,6 +1,7 @@
 """ 
 Pseudo package containing all of the main classes/objects in the 
 openmdao.main API.
+
 """
 
 from openmdao.util.log import logger, enable_console
