@@ -125,6 +125,8 @@ def _release(version=None, test=False):
 
         # if everything went well update the 'latest' link to point to the 
         # most recent version directory
+        if not test:
+            prompt("Hit return to update the 'latest' link on the server (after testing the release)")
         run('rm -f ~/downloads/latest')
         run('ln -s ~/downloads/%s ~/downloads/latest' % version)
             
