@@ -10,10 +10,12 @@ from openmdao.main.api import Assembly, Component, Driver, \
 from openmdao.main.interfaces import ICaseIterator
 
 from openmdao.lib.components.metamodel import MetaModel
+from openmdao.lib.components.expected_improvement import ExpectedImprovement
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
 from openmdao.lib.components.pareto_filter import ParetoFilter
 from openmdao.lib.drivers.doedriver import DOEdriver
-from openmdao.lib.drivers.single_crit_ei import SingleCritEI
+from openmdao.lib.drivers.genetic import Genetic
+
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
@@ -42,7 +44,22 @@ class Iterator(Driver):
             return True
         
         return False
+    
+class MyDriver(Driver): 
+    def execute(self):
+        print "train testing"
+        self.set_events()
+        self.run_iteration()
         
+        print "   ei: ", analysis.EI.EI
+        print "   best_case: ", analysis.filter.pareto_set[0].inputs
+        print "   check_cas: ", analysis.EI.best_case[0].inputs
+        case = Case(inputs = [('branin_meta_model.x',None,analysis.branin_meta_model.x), 
+                              ('branin_meta_model.y',None,analysis.branin_meta_model.y)],
+                    outputs = [('branin_meta_model.f_xy',None,analysis.branin_meta_model.f_xy),])
+        self.recorder.record(case)
+        
+
         
 class Analysis(Assembly): 
     def __init__(self,*args,**kwargs):
@@ -55,48 +72,60 @@ class Analysis(Assembly):
         self.branin_meta_model.surrogate = KrigingSurrogate()
         self.branin_meta_model.model = BraninComponent()
         self.branin_meta_model.recorder = DBCaseRecorder(':memory:')
+        self.branin_meta_model.force_execute = True        
+        
+        self.add("EI",ExpectedImprovement())
+        self.EI.criteria = "branin_meta_model.f_xy"
         
         self.add("filter",ParetoFilter())
         self.filter.criteria = ['branin_meta_model.f_xy']
         self.filter.case_set = self.branin_meta_model.recorder.get_iterator()
-
+        self.filter.force_execute = True
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
         self.DOE_trainer.sequential = True
         self.DOE_trainer.DOEgenerator = OptLatinHypercube(21, 2)
+        #self.DOE_trainer.DOEgenerator = FullFactorial(5,2)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
         self.DOE_trainer.add_event("branin_meta_model.train_next")
         self.DOE_trainer.case_outputs = ["branin_meta_model.f_xy"]
         self.DOE_trainer.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
+
         
-        self.add("EI_driver",SingleCritEI())
-        self.EI_driver.criteria = "branin_meta_model.f_xy"
-        self.EI_driver.add_parameter("branin_meta_model.x")
-        self.EI_driver.add_parameter("branin_meta_model.y")
-        self.EI_driver.criterion = "branin_meta_model.f_xy"
+        self.add("EI_opt",Genetic())
+        self.EI_opt.opt_type = "maximize"
+        self.EI_opt.population_size = 100
+        self.EI_opt.generations = 10
+        self.EI_opt.selection_method = "tournament"
+        self.EI_opt.add_parameter("branin_meta_model.x")
+        self.EI_opt.add_parameter("branin_meta_model.y")
+        self.EI_opt.add_objective("EI.EI")
+        self.EI_opt.force_execute = True
         
-        self.add("retrain",CaseIteratorDriver())
-        self.retrain.sequential = True
+        self.add("retrain",MyDriver())
         self.retrain.add_event("branin_meta_model.train_next")
         self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
+        self.retrain.force_execute = True
         
         self.add("iter",Iterator())
         self.iter.iterations = 30
-        self.iter.add_stop_condition('EI_driver.EI <= .0001')
+        self.iter.add_stop_condition('EI.EI <= .01')
         
         #Iteration Heirarchy
         self.driver.workflow.add([self.DOE_trainer,self.iter])
         
         self.DOE_trainer.workflow.add(self.branin_meta_model)
-        self.iter.workflow.add([self.filter, self.EI_driver, self.retrain])
         
-        self.EI_driver.workflow.add(self.branin_meta_model)
+        self.iter.workflow = SequentialWorkflow()
+        self.iter.workflow.add([self.filter, self.EI_opt, self.retrain])
+        
+        self.EI_opt.workflow.add([self.branin_meta_model,self.EI])
         self.retrain.workflow.add(self.branin_meta_model)
         
         #Data Connections
-        self.connect("filter.pareto_set","EI_driver.best_case")
-        self.connect("EI_driver.next_case","retrain.iterator")
+        self.connect("filter.pareto_set","EI.best_case")
+        self.connect("branin_meta_model.f_xy","EI.predicted_value")
         
     def cleanup(self):
         shutil.rmtree(self._tdir, ignore_errors=True)
@@ -135,6 +164,8 @@ if __name__ == "__main__": #pragma: no cover
     
     analysis.run()
     
+    print "for damon: " , analysis.iter._iterations
+    
     points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
     for x,y,z in points: 
         print "x: ", x, "; y: ", y
@@ -155,6 +186,8 @@ if __name__ == "__main__": #pragma: no cover
     X,Y = meshgrid(X_range,Y_range)
     Z = branin(X,Y)
     
+    iterator = analysis.branin_meta_model.recorder.get_iterator()
+    
     plt.contour(X,Y,Z,arange(1,200,2),zorder=1)
     
     cb = plt.colorbar(shrink=.45)
@@ -174,13 +207,16 @@ if __name__ == "__main__": #pragma: no cover
                                       'branin_meta_model.f_xy'])
     
     count = len(data_EI['branin_meta_model.x'])
-    colors = arange(0,count)/count
-    winter = get_cmap('spring')
+    colors = arange(0,count)/float(count)
+
+    color_map = get_cmap('spring')
+    
+    
     plt.scatter(data_EI['branin_meta_model.x'],data_EI['branin_meta_model.y'],
                 s=30,
                 c=colors,
                 zorder=11,
-                cmap=winter)
+                cmap=color_map)
     
     plt.axis([-5,10,0,15])
     plt.xlabel("x")
@@ -190,7 +226,7 @@ if __name__ == "__main__": #pragma: no cover
     
     if figname is not None:
         matplotlib.pylab.savefig(figname)
-
+    
     plt.figure()
     Z2 = []
 
@@ -213,5 +249,5 @@ if __name__ == "__main__": #pragma: no cover
     
     plt.show()
 
-    #analysis.cleanup()
+    analysis.cleanup()
     

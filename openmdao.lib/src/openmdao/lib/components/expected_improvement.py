@@ -1,12 +1,15 @@
 """Expected Improvement calculation for one or more objectives""" 
 
-from numpy import exp, abs
+from numpy import exp, abs, pi
 from scipy.special import erf
 
 from enthought.traits.api import Instance, Str
 
+from openmdao.lib.datatypes.float import Float
+
 from openmdao.main.api import Component
 
+from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 class ExpectedImprovement(Component):
@@ -44,13 +47,16 @@ class ExpectedImprovement(Component):
             self.raise_exception("best_case did not have an output which "
                                  "matched the criteria, '%s'"%self.criteria,
                                  ValueError)
-            
+        print "TESTING", target    
         try:
+            
             T1 = (target-mu)*.5*(1.+erf((target-mu)/(sigma*2.**.5)))
             T2 = sigma*((1./((2.*pi)**.05))*exp(-0.5*((target-mu)/sigma)**2.))
             self.EI = abs(T1+T2)
-        except ValueError: 
+        except (ValueError,ZeroDivisionError): 
             self.EI = 0
+            
+        #print "ei: ", self.EI
             
             
     
