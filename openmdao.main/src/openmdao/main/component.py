@@ -15,7 +15,7 @@ import weakref
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event, not_none
-from enthought.traits.api import Bool, List, Str, Instance, implements, TraitError
+from enthought.traits.api import Bool, List, Str, Instance, Property, implements, TraitError
 
 from openmdao.main.container import Container
 from openmdao.main.interfaces import IComponent, ICaseIterator
@@ -98,6 +98,9 @@ class Component (Container):
     force_execute = Bool(False, iotype='in',
                          desc="If True, always execute even if all IO traits are valid.")
 
+    # this will automagically call _get_log_level and _set_log_level when needed
+    log_level = Property(desc='Logging message level')
+    
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
@@ -1015,6 +1018,15 @@ class Component (Container):
         """
         self.run()
         
+    # error reporting stuff
+    def _get_log_level(self):
+        """Return logging message level."""
+        return self._logger.level
+
+    def _set_log_level(self, level):
+        """Set logging message level."""
+        self._logger.level = level
+
 # TODO: uncomment require_gradients and require_hessians after they're better thought out
     
     #def require_gradients (self, varname, gradients):

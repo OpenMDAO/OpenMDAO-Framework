@@ -14,6 +14,7 @@ import networkx as nx
 from networkx.algorithms.traversal import is_directed_acyclic_graph, \
                                           strongly_connected_components
 
+from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression, ExpressionList
@@ -87,7 +88,7 @@ class Assembly (Component):
         if newname in self.__dict__:
             self.raise_exception("'%s' already exists" %
                                  newname, TraitError)
-        trait, val = self._find_trait_and_value(pathname)
+        trait, val = find_trait_and_value(self, pathname)
         if not trait:
             self.raise_exception("the variable named '%s' can't be found" %
                                  pathname, TraitError)

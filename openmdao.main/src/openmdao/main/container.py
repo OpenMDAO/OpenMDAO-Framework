@@ -2,9 +2,6 @@
 The Container class
 """
 
-#public symbols
-__all__ = ["Container", "set_as_top", "get_default_name", "dump"]
-
 import datetime
 import copy
 import traceback
@@ -27,7 +24,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
                                  push_exception_handler, Python, TraitType, \
-                                 Property, Interface, Instance
+                                 Interface, Instance
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType
 from enthought.traits.trait_base import not_none, not_event
@@ -62,17 +59,6 @@ def _deep_setattr(obj, path, value):
         obj = getattr(obj, name)
     setattr(obj, tup[-1], value)
 
-
-# TODO: implement get_closest_proxy, along with a way to detect
-# when a Container is proxy so we can differentiate between
-# failure to find an attribute vs. failure to find a local
-# version of the attribute
-#def get_closest_proxy(start_scope, pathname):
-    #"""Resolve down to the closest in-process parent object
-    #of the object indicated by pathname.
-    #Returns a tuple containing (proxy_or_parent, rest_of_pathname)
-    #"""
-    
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
@@ -158,9 +144,6 @@ class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
    
-    # this will automagically call _get_log_level and _set_log_level when needed
-    log_level = Property(desc='Logging message level')
-    
     __ = Python()
     
     def __init__(self, doc=None):
@@ -190,11 +173,11 @@ class Container(HasTraits):
             if isinstance(obj, FileRef):
                 setattr(self, name, obj.copy(owner=self))
 
-        # Call _io_trait_changed if any trait having 'iotype' metadata is
+        # Call _io_trait_modified if any trait having 'iotype' metadata is
         # changed. We originally used the decorator @on_trait_change for this,
         # but it failed to be activated properly when our objects were
         # unpickled.
-        self.on_trait_change(self._io_trait_changed, '+iotype')
+        self.on_trait_change(self._io_trait_modified, '+iotype')
         
     @property
     def parent(self):
@@ -267,9 +250,9 @@ class Container(HasTraits):
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
         
-        # restore call to _io_trait_changed to catch changes to any trait
+        # restore call to _io_trait_modified to catch changes to any trait
         # having 'iotype' metadata
-        self.on_trait_change(self._io_trait_changed, '+iotype')
+        self.on_trait_change(self._io_trait_modified, '+iotype')
         
         # restore dynamically added traits, since they don't seem
         # to get restored automatically
@@ -305,18 +288,8 @@ class Container(HasTraits):
             pass
         super(Container, self).remove_trait(name)
             
-    #def trait_get(self, *names, **metadata):
-        #"""Override the HasTraits version of this because if we don't,
-        #HasTraits.__getstate__ won't return our instance traits.
-        #"""
-        #if len(names) == 0:
-            #names = self._alltraits(None, **metadata).keys()
-        #return super(Container, self).trait_get(*names, **metadata)
-    
-        
     # call this if any trait having 'iotype' metadata is changed
-    #@on_trait_change('+iotype') 
-    def _io_trait_changed(self, obj, name, old, new):
+    def _io_trait_modified(self, obj, name, old, new):
         # setting old to Undefined is a kludge to bypass the destination check
         # when we call this directly from Assembly as part of setting this
         # attribute from an existing connection.
@@ -337,15 +310,6 @@ class Container(HasTraits):
             
     def _input_changed(self, name):
         pass
-
-    # error reporting stuff
-    def _get_log_level(self):
-        """Return logging message level."""
-        return self._logger.level
-
-    def _set_log_level(self, level):
-        """Set logging message level."""
-        self._logger.level = level
 
     def get_wrapped_attr(self, name):
         """If the named trait can return a TraitValMetaWrapper, then this
@@ -693,7 +657,7 @@ class Container(HasTraits):
                         self._trait_change_notify(True)
                     # now manually call the notifier with old set to Undefined
                     # to avoid the destination check
-                    self._io_trait_changed(self, path, Undefined, 
+                    self._io_trait_modified(self, path, Undefined, 
                                            getattr(self, path))
                 else:
                     self._array_set(path, value, index)
@@ -742,9 +706,9 @@ class Container(HasTraits):
             arr[index[length-1]] = value
                 
         # setting of individual Array values doesn't seem to trigger
-        # _io_trait_changed, so do it manually
+        # _io_trait_modified, so do it manually
         if old != value:
-            self._io_trait_changed(self, name, arr, arr)
+            self._io_trait_modified(self, name, arr, arr)
             
     def _array_get(self, name, index):
         arr = getattr(self, name)
@@ -959,11 +923,20 @@ class Container(HasTraits):
         [x.pre_delete() for n,x in self.items() if isinstance(x, Container)]
     
     def _build_trait(self, pathname, iotype=None, trait=None):
-        """Asks the component to dynamically create a trait for the 
+        """Asks the object to dynamically create a trait for the 
         attribute given by ref_name, based on whatever knowledge the
         component has of that attribute.
+        
+        pathname: str
+            The dotted path to the specified attribute.
+            
+        iotype: str, optional
+            The data direction, either 'in' or 'out'.
+            
+        trait: TraitType, optional
+            A validation trait for the given attribute.
         """
-        objtrait, value = self._find_trait_and_value(pathname)
+        objtrait, value = find_trait_and_value(self, pathname)
         if iotype is None and objtrait is not None:
             iotype = objtrait.iotype
         if trait is None:
@@ -971,67 +944,6 @@ class Container(HasTraits):
         # if we make it to here, object specified by ref_name exists
         return _PathProperty(ref_name=pathname, iotype=iotype, 
                             trait=trait)
-    
-    def _find_trait_and_value(self, pathname):
-        """Return a tuple of the form (trait, value) for the given dotted
-        pathname. Raises an exception if the value indicated by the pathname
-        is not found. If the value is found but has no trait, then (None, value) 
-        is returned.
-        """
-        if pathname:
-            names = pathname.split('.')
-            obj = self
-            for name in names:
-                if isinstance(obj, HasTraits):
-                    objtrait = obj.traits().get(name)
-                else:
-                    objtrait = None
-                obj = getattr(obj, name)
-            return (objtrait, obj)
-        else:
-            return (None, None)
-
-    def _create_io_traits(self, obj_info, iotype='in'):
-        """Create io trait(s) specified by the contents of obj_info. Calls
-        _build_trait(), which can be overridden by subclasses, to create each
-        trait.
-        
-        obj_info is assumed to be either a string, a tuple, or an iterator
-        that returns strings or tuples. Tuples must contain a name and an
-        alias, and my optionally contain an iotype and a validation trait.
-        
-        For example, the following are valid calls:
-
-        obj._create_io_traits('foo')
-        obj._create_io_traits(['foo','bar','baz'])
-        obj._create_io_traits(('foo', 'foo_alias', 'in', some_trait))
-        obj._create_io_traits([('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
-        """
-        if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
-            lst = [obj_info]
-        else:
-            lst = obj_info
-
-        for entry in lst:
-            iostat = iotype
-            trait = None
-            
-            if isinstance(entry, basestring):
-                name = entry
-                ref_name = name
-            elif isinstance(entry, tuple):
-                name = entry[0]  # wrapper name
-                ref_name = entry[1] or name # internal name
-                try:
-                    iostat = entry[2] # optional iotype
-                    trait = entry[3]  # optional validation trait
-                except IndexError:
-                    pass
-            else:
-                self.raise_exception('_create_io_traits cannot add trait %s' % entry,
-                                     TraitError)
-            self.add_trait(name, 
-                           self._build_trait(ref_name, iostat, trait))
         
     def get_dyn_trait(self, name, iotype=None):
         """Retrieves the named trait, attempting to create it on-the-fly if
@@ -1062,7 +974,7 @@ class Container(HasTraits):
             return newtrait
         else:
             self.raise_exception(
-                "Can't create alias '%s' because it already exists." % alias, 
+                "Can't create alias '%s' because it already exists." % alias,
                 RuntimeError)
     
     def raise_exception(self, msg, exception_class=Exception):
@@ -1139,3 +1051,63 @@ def get_default_name(obj, scope):
         ver += 1
     return '%s%d' % (classname, ver)
         
+
+def find_trait_and_value(obj, pathname):
+    """Return a tuple of the form (trait, value) for the given dotted
+    pathname. Raises an exception if the value indicated by the pathname
+    is not found in obj. If the value is found but has no trait, then (None, value) 
+    is returned.
+    """
+    if pathname:
+        names = pathname.split('.')
+        for name in names:
+            if isinstance(obj, HasTraits):
+                objtrait = obj.traits().get(name)
+            else:
+                objtrait = None
+            obj = getattr(obj, name)
+        return (objtrait, obj)
+    else:
+        return (None, None)
+
+def create_io_traits(self, obj_info, iotype='in'):
+    """Create io trait(s) specified by the contents of obj_info. Calls
+    _build_trait() on the scoping object, which can be overridden by 
+    subclasses, to create each trait.
+    
+    obj_info is assumed to be either a string, a tuple, or an iterator
+    that returns strings or tuples. Tuples must contain a name and an
+    alias, and my optionally contain an iotype and a validation trait.
+    
+    For example, the following are valid calls:
+
+    obj._create_io_traits('foo')
+    obj._create_io_traits(['foo','bar','baz'])
+    obj._create_io_traits(('foo', 'foo_alias', 'in', some_trait))
+    obj._create_io_traits([('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
+    """
+    if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
+        lst = [obj_info]
+    else:
+        lst = obj_info
+
+    for entry in lst:
+        iostat = iotype
+        trait = None
+        
+        if isinstance(entry, basestring):
+            name = entry
+            ref_name = name
+        elif isinstance(entry, tuple):
+            name = entry[0]  # wrapper name
+            ref_name = entry[1] or name # internal name
+            try:
+                iostat = entry[2] # optional iotype
+                trait = entry[3]  # optional validation trait
+            except IndexError:
+                pass
+        else:
+            self.raise_exception('_create_io_traits cannot add trait %s' % entry,
+                                 TraitError)
+        self.add_trait(name, 
+                       self._build_trait(ref_name, iostat, trait))
