@@ -47,13 +47,9 @@ class Iterator(Driver):
     
 class MyDriver(Driver): 
     def execute(self):
-        print "train testing"
         self.set_events()
         self.run_iteration()
-        
-        print "   ei: ", analysis.EI.EI
-        print "   best_case: ", analysis.filter.pareto_set[0].inputs
-        print "   check_cas: ", analysis.EI.best_case[0].inputs
+        print analysis.EI.EI
         case = Case(inputs = [('branin_meta_model.x',None,analysis.branin_meta_model.x), 
                               ('branin_meta_model.y',None,analysis.branin_meta_model.y)],
                     outputs = [('branin_meta_model.f_xy',None,analysis.branin_meta_model.f_xy),])
@@ -84,7 +80,7 @@ class Analysis(Assembly):
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
         self.DOE_trainer.sequential = True
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(21, 2)
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(10, 2)
         #self.DOE_trainer.DOEgenerator = FullFactorial(5,2)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
@@ -110,7 +106,7 @@ class Analysis(Assembly):
         
         self.add("iter",Iterator())
         self.iter.iterations = 30
-        self.iter.add_stop_condition('EI.EI <= .01')
+        self.iter.add_stop_condition('EI.EI <= .0001')
         
         #Iteration Heirarchy
         self.driver.workflow.add([self.DOE_trainer,self.iter])

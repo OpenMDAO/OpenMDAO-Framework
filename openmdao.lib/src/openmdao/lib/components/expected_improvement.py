@@ -46,8 +46,7 @@ class ExpectedImprovement(Component):
         if not target: 
             self.raise_exception("best_case did not have an output which "
                                  "matched the criteria, '%s'"%self.criteria,
-                                 ValueError)
-        print "TESTING", target    
+                                 ValueError)  
         try:
             
             T1 = (target-mu)*.5*(1.+erf((target-mu)/(sigma*2.**.5)))
