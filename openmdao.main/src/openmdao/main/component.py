@@ -223,7 +223,7 @@ class Component (Container):
             self._call_execute = True
             # we're valid, but we're running anyway because of our input CaseIterators,
             # so we need to notify downstream comps so they grab our new outputs
-            self.invalidate_deps()
+            self.invalidate_deps(notify_parent=True)
 
         if self.parent is None: # if parent is None, we're not part of an Assembly
                                 # so Variable validity doesn't apply. Just execute.
@@ -375,7 +375,7 @@ class Component (Container):
         the the list will contain names of inputs with matching validity.
         """
         if self._input_names is None:
-            self._input_names = self.keys(iotype='in')
+            self._input_names = [k for k,v in self.items(iotype='in')]
             
         if valid is None:
             return self._input_names
@@ -388,7 +388,7 @@ class Component (Container):
         the the list will contain names of outputs with matching validity.
         """
         if self._output_names is None:
-            self._output_names = self.keys(iotype='out')
+            self._output_names = [k for k,v in self.items(iotype='out')]
             
         if valid is None:
             return self._output_names
@@ -553,8 +553,8 @@ class Component (Container):
         # We have to check relative paths like '../somedir' and if
         # we do that after adjusting a parent, things can go bad.
         components = [self]
-        components.extend([obj for obj in self.values(recurse=True)
-                                       if isinstance(obj, Component)])
+        components.extend([obj for n,obj in self.items(recurse=True)
+                                               if isinstance(obj, Component)])
         try:
             for comp in sorted(components, reverse=True,
                                key=lambda comp: comp.get_pathname()):
@@ -785,8 +785,8 @@ class Component (Container):
             
             try:
                 # Create any missing subdirectories.
-                for component in [c for c in top.values(recurse=True)
-                                          if isinstance(c, Component)]:
+                for component in [c for n,c in top.items(recurse=True)
+                                              if isinstance(c, Component)]:
                     directory = component.get_abs_directory()
                     if not exists(directory):
                         os.makedirs(directory)
@@ -836,8 +836,8 @@ class Component (Container):
                     self._list_files(path, package, rel_path, is_input, False,
                                      ftrait.binary, file_list, from_egg)
             if from_egg:
-                for component in [c for c in self.values(recurse=False)
-                                          if isinstance(c, Component)]:
+                for component in [c for n,c in self.items(recurse=False)
+                                              if isinstance(c, Component)]:
                     path = rel_path
                     if component.directory:
                         # Always use '/' for resources.

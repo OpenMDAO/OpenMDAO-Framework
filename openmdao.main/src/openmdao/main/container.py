@@ -211,21 +211,23 @@ class Container(HasTraits):
         self._call_tree_rooted = True
         [x._branch_moved() for x in self.values() if isinstance(x, Container)]
  
-    def _get_name(self):
+    @property
+    def name(self):
+        """Name of the Container"""
         if self._name is None:
             if self.parent:
                 self._name = findname(self.parent, self)
         return self._name
 
-    def _set_name(self, name):
+    @name.setter
+    def name(self, name):
+        """Name of the Container"""
         match = _namecheck_rgx.search(name)
         if match is None or match.group() != name:
             raise NameError("name '%s' contains illegal characters" % name)
         self._name = name
         self._logger.rename(self._name)
         
-    name = property(_get_name, _set_name, doc="Name of the Container")
-    
     def get_pathname(self, rel_to_scope=None):
         """ Return full path name to this container, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
@@ -454,59 +456,6 @@ class Container(HasTraits):
             for cname in self.list_containers():
                 getattr(self, cname).revert_to_defaults(recurse)
             
-    def items(self, recurse=False, **metadata):
-        """Return a list of tuples of the form (rel_pathname, obj) for each
-        trait of this Container that matches the given metadata. If recurse is
-        True, also iterate through all child Containers of each Container
-        found.
-        """
-        return self._items(set([id(self.parent)]), recurse, **metadata)
-        
-    def keys(self, recurse=False, **metadata):
-        """Return a list of the relative pathnames of children of this
-        Container that match the given metadata. If recurse is True, child
-        Containers will also be iterated over.
-        """
-        return [tup[0] for tup in self._items(set([id(self.parent)]), 
-                                              recurse, **metadata)]
-        
-    def values(self, recurse=False, **metadata):
-        """Return a list of children of this Container that have matching 
-        trait metadata. If recurse is True, child Containers will also be 
-        iterated over.
-        """
-        return [tup[1] for tup in self._items(set([id(self.parent)]), 
-                                              recurse, **metadata)]
-
-    def list_containers(self):
-        """Return a list of names of child Containers."""
-        return [n for n, v in self.items() if isinstance(v, Container)]
-    
-    def _alltraits(self, traits=None, **metadata):
-        """This returns a dict that contains all traits (class and instance)
-        that match the given metadata.
-        """
-        if traits is None:
-            traits = self.traits()  # don't pass **metadata here
-            #ss = set(self._instance_traits().keys())-set(traits.keys())
-            #if len(ss): print '\n                            **** ', ss
-            traits.update(self._instance_traits())
-            
-        result = {}
-        for name, trait in traits.items():
-            if trait.type is 'event':
-                continue
-            for meta_name, meta_eval in metadata.items():
-                if type( meta_eval ) is FunctionType:
-                    if not meta_eval(getattr(trait, meta_name)):
-                        break
-                elif meta_eval != getattr(trait, meta_name):
-                    break
-            else:
-                result[ name ] = trait
-
-        return result
-    
     def _items(self, visited, recurse=False, **metadata):
         """Return an iterator that returns a list of tuples of the form 
         (rel_pathname, obj) for each trait of this Container that matches
@@ -518,7 +467,6 @@ class Container(HasTraits):
             if 'type' not in metadata:
                 metadata['type'] = not_event
             match_dict = self._alltraits(**metadata)
-            #match_dict = self.traits(**metadata)
             
             if recurse:
                 for name in self.list_containers():
@@ -539,6 +487,41 @@ class Container(HasTraits):
                     elif trait.iotype is not None:
                         yield (name, obj)
 
+    def items(self, recurse=False, **metadata):
+        """Return a list of tuples of the form (rel_pathname, obj) for each
+        trait of this Container that matches the given metadata. If recurse is
+        True, also iterate through all child Containers of each Container
+        found.
+        """
+        return self._items(set([id(self.parent)]), recurse, **metadata)
+        
+    def list_containers(self):
+        """Return a list of names of child Containers."""
+        return [n for n, v in self.items() if isinstance(v, Container)]
+    
+    def _alltraits(self, traits=None, **metadata):
+        """This returns a dict that contains all traits (class and instance)
+        that match the given metadata.
+        """
+        if traits is None:
+            traits = self.traits()  # don't pass **metadata here
+            traits.update(self._instance_traits())
+            
+        result = {}
+        for name, trait in traits.items():
+            if trait.type is 'event':
+                continue
+            for meta_name, meta_eval in metadata.items():
+                if type( meta_eval ) is FunctionType:
+                    if not meta_eval(getattr(trait, meta_name)):
+                        break
+                elif meta_eval != getattr(trait, meta_name):
+                    break
+            else:
+                result[ name ] = trait
+
+        return result
+    
     
     def contains(self, path):
         """Return True if the child specified by the given dotted path
@@ -965,11 +948,11 @@ class Container(HasTraits):
 
     def post_load(self):
         """Perform any required operations after model has been loaded."""
-        [x.post_load() for x in self.values() if isinstance(x, Container)]
+        [x.post_load() for n,x in self.items() if isinstance(x, Container)]
 
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
-        [x.pre_delete() for x in self.values() if isinstance(x, Container)]
+        [x.pre_delete() for n,x in self.items() if isinstance(x, Container)]
     
     def _build_trait(self, pathname, iotype=None, trait=None):
         """Asks the component to dynamically create a trait for the 
@@ -1152,5 +1135,3 @@ def get_default_name(obj, scope):
         ver += 1
     return '%s%d' % (classname, ver)
         
-
-
