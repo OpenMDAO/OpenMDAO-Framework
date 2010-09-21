@@ -108,7 +108,19 @@ class HasEqConstraints(_HasConstraintsBase):
     def add_constraint(self, expr_string, scale=1.0, shift=0.0):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
+        
+        expr_string: str
+            Expression string containing the constraint.
+        
+        scale: float, optional
+            Scale factor applied to both sides of the constraint's boolean 
+            expression. Default is unity (1.0)
+            
+        shift: float, optional
+            Shifting applied to both sides of the constraint's boolean 
+            expression. Default is no shift (0.0)
         """
+        
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
@@ -150,7 +162,21 @@ class HasIneqConstraints(_HasConstraintsBase):
     """
     
     def add_constraint(self, expr_string, scale=1.0, shift=0.0):
-        """Adds a constraint to the driver"""
+        """Adds a constraint in the form of a boolean expression string
+        to the driver.
+        
+        expr_string: str
+            Expression string containing the constraint.
+        
+        scale: float, optional
+            Scale factor applied to both sides of the constraint's boolean 
+            expression. Default is unity (1.0)
+            
+        shift: float, optional
+            Shifting applied to both sides of the constraint's boolean 
+            expression. Default is no shift (0.0)
+        """
+        
         lhs, rel, rhs = _parse_constraint(expr_string)
         self.add_ineq_constraint(lhs, rel, rhs, scale, shift)
 
@@ -194,7 +220,21 @@ class HasConstraints(object):
         self._ineq = HasIneqConstraints(parent)
 
     def add_constraint(self, expr_string, scale=1.0, shift=0.0):
-        """Adds a constraint to the driver."""
+        """Adds a constraint in the form of a boolean expression string
+        to the driver.
+        
+        expr_string: str
+            Expression string containing the constraint.
+        
+        scale: float, optional
+            Scale factor applied to both sides of the constraint's boolean 
+            expression. Default is unity (1.0)
+            
+        shift: float, optional
+            Shifting applied to both sides of the constraint's boolean 
+            expression. Default is no shift (0.0)
+        """
+        
         lhs, rel, rhs = _parse_constraint(expr_string)
         if rel == '==' or rel == '=':
             self._eq.add_eq_constraint(lhs, rhs, scale, shift)
