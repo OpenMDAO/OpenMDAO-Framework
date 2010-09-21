@@ -158,9 +158,6 @@ class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
    
-    #parent = WeakRef(Container, allow_none=True, adapt='no', transient=True)
-    parent = Python()
-    
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
     
@@ -173,7 +170,7 @@ class Container(HasTraits):
         # for keeping track of dynamically added traits for serialization
         self._added_traits = {}  
                           
-        self.parent = None
+        self._parent = None
         self._name = None
         
         self._call_tree_rooted = True
@@ -199,21 +196,28 @@ class Container(HasTraits):
         # unpickled.
         self.on_trait_change(self._io_trait_changed, '+iotype')
         
-        # keep track of modifications to our parent
-        self.on_trait_change(self._parent_modified, 'parent')
-                
-    def _parent_modified(self, obj, name, value):
+    @property
+    def parent(self):
+        """The parent Container of this Container."""
+        return self._parent
+    
+    @parent.setter
+    def parent(self, value):
         """This is called when the parent attribute is changed."""
-        self._logger.rename(self.get_pathname().replace('.', ','))
-        self._branch_moved()
+        if self._parent is not value:
+            self._parent = value
+            self._logger.rename(self.get_pathname().replace('.', ','))
+            self._branch_moved()
         
     def _branch_moved(self):
         self._call_tree_rooted = True
-        [x._branch_moved() for x in self.values() if isinstance(x, Container)]
+        for n,cont in self.items():
+            if isinstance(cont, Container):
+                cont._branch_moved()
  
     @property
     def name(self):
-        """Name of the Container"""
+        """The name of this Container."""
         if self._name is None:
             if self.parent:
                 self._name = findname(self.parent, self)
@@ -221,7 +225,7 @@ class Container(HasTraits):
 
     @name.setter
     def name(self, name):
-        """Name of the Container"""
+        """Sets the name of this Container."""
         match = _namecheck_rgx.search(name)
         if match is None or match.group() != name:
             raise NameError("name '%s' contains illegal characters" % name)
