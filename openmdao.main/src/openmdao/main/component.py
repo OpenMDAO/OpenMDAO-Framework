@@ -20,6 +20,7 @@ from enthought.traits.api import Bool, List, Str, Instance, implements, TraitErr
 from openmdao.main.container import Container
 from openmdao.main.interfaces import IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
+from openmdao.main.rbac import rbac
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 
@@ -261,6 +262,7 @@ class Component (Container):
             valids[name] = True
         self._call_execute = False
         
+    @rbac('*', 'owner')
     def run (self, force=False):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.

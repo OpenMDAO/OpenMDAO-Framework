@@ -3,28 +3,54 @@ import os.path
 import platform
 import shutil
 
+from multiprocessing import util
+
 from openmdao.main.container import Container
 from openmdao.main.component import SimulationRoot
 from openmdao.main.factory import Factory
+from openmdao.main.mp_support import OpenMDAO_Manager, register
+from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
+                               rbac
+
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
 
-from multiprocessing import util
-#from multiprocessing import managers
-from openmdao.main import mp_managers as managers
+class RemoteFile(object):
+    """ Wraps a :class:`file` with remote-access annotations. """
+
+    def __init__(self, fileobj):
+        self.fileobj = fileobj
+
+    @rbac('owner')
+    def close(self):
+        return self.fileobj.close()
+
+    @rbac('owner')
+    def flush(self):
+        return self.fileobj.flush()
+
+    @rbac('owner')
+    def read(self, size=None):
+        if size is None:
+            return self.fileobj.read()
+        else:
+            return self.fileobj.read(size)
+
+    @rbac('owner')
+    def write(self, data):
+        return self.fileobj.write(data)
 
 
 class ObjServerFactory(Factory):
     """
     An :class:`ObjServerFactory` creates :class:`ObjServers` which use
-    :mod:`multiprocessing` for communication.  Note that :mod:`multiprocessing`
-    is not a transparent distributed object protocol.  See the Python
-    documentation for details.
+    :mod:`multiprocessing` for communication.
     """
 
     def __init__(self):
         super(ObjServerFactory, self).__init__()
 
+    @rbac('*')
     def create(self, typname, version=None, server=None,
                res_desc=None, **ctor_args):
         """
@@ -46,8 +72,11 @@ class ObjServerFactory(Factory):
             Other constructor arguments.  If `name` is specified, that
             is used as the name of the ObjServer.
         """
-        manager = managers.BaseManager()
-        ObjServer.register(manager)
+        if get_credentials() is None:
+            set_credentials(Credentials())
+
+        manager = OpenMDAO_Manager(authkey='PublicKey')
+        register(ObjServer, manager)
         manager.start()
         name = ctor_args.get('name', '')
         logging.debug("ObjServerFactory: new server for '%s' listening on %s",
@@ -86,18 +115,7 @@ class ObjServer(object):
             format='%(asctime)s %(levelname)s %(name)s: %(message)s',
             filename='openmdao_log.txt', filemode='w')
 
-    def get_name(self):
-        """ Return this server's :attr:`name`. """
-        return self.name
-
-    def get_pid(self):
-        """ Return this server's :attr:`pid`. """
-        return self.pid
-
-    def get_host(self):
-        """ Return this server's :attr:`host`. """
-        return self.host
-
+    @rbac('owner')
     def cleanup(self):
         """ Cleanup this server's directory. """
         logging.shutdown()
@@ -111,6 +129,7 @@ class ObjServer(object):
         logging.debug("echo %s", args)
         return args
 
+    @rbac('owner')
     def execute_command(self, command, stdin, stdout, stderr, env_vars,
                         poll_delay, timeout):
         """
@@ -148,6 +167,7 @@ class ObjServer(object):
         logging.debug('    returning %s', (return_code, error_msg))
         return (return_code, error_msg)
 
+    @rbac('owner', proxy_types=[Container])
     def load_model(self, egg_filename):
         """
         Load model  and return top-level object.
@@ -162,6 +182,7 @@ class ObjServer(object):
         self.tlo = Container.load_from_eggfile(egg_filename)
         return self.tlo
 
+    @rbac('owner')
     def pack_zipfile(self, patterns, filename):
         """
         Create ZipFile of files matching `patterns`.
@@ -176,6 +197,7 @@ class ObjServer(object):
         self._check_path(filename, 'pack_zipfile')
         return pack_zipfile(patterns, filename, logging.getLogger())
 
+    @rbac('owner')
     def unpack_zipfile(self, filename):
         """
         Unpack ZipFile `filename`.
@@ -187,6 +209,7 @@ class ObjServer(object):
         self._check_path(filename, 'unpack_zipfile')
         return unpack_zipfile(filename, logging.getLogger())
 
+    @rbac('owner')
     def chmod(self, path, mode):
         """
         Returns ``os.chmod(path, mode)`` if `path` is legal.
@@ -206,6 +229,7 @@ class ObjServer(object):
                           mode, os.getcwd(), exc)
             raise
 
+    @rbac('owner', proxy_types=[RemoteFile])
     def open(self, filename, mode='r', bufsize=-1):
         """
         Returns ``open(filename, mode, bufsize)`` if `filename` is legal.
@@ -222,12 +246,13 @@ class ObjServer(object):
         logging.debug("%s open '%s' %s %s", self.name, filename, mode, bufsize)
         self._check_path(filename, 'open')
         try:
-            return open(filename, mode, bufsize)
+            return RemoteFile(open(filename, mode, bufsize))
         except Exception as exc:
             logging.error('%s open %s %s %s in %s failed %s', self.name,
                           filename, mode, bufsize, os.getcwd(), exc)
             raise
 
+    @rbac('owner')
     def stat(self, path):
         """
         Returns ``os.stat(path)`` if `path` is legal.
@@ -250,22 +275,4 @@ class ObjServer(object):
         if not path.startswith(self.root_dir):
             raise RuntimeError("Can't %s, %s doesn't start with %s",
                                operation, path, self.root_dir)
-
-    @staticmethod
-    def register(manager):
-        """
-        Register :class:`ObjServer` proxy info with `manager`.
-        Not typically called by user code.
-
-        manager: Manager
-            :mod:`multiprocessing` Manager to register with.
-        """
-        name = 'ObjServer'
-        method_to_typeid = {
-            'load_model': 'LoadedObject',
-            'open': 'file',
-        }
-        manager.register('LoadedObject', None)
-        manager.register('file', None)
-        manager.register(name, ObjServer, method_to_typeid=method_to_typeid)
 

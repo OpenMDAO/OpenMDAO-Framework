@@ -14,7 +14,8 @@ import time
 import traceback
 
 from openmdao.main import mp_distributing
-from openmdao.main.objserverfactory import ObjServerFactory, ObjServer
+from openmdao.main.mp_support import register
+from openmdao.main.objserverfactory import ObjServerFactory
 from openmdao.util.eggloader import check_requirements
 from openmdao.util.wrkpool import WorkerPool
 
@@ -140,9 +141,9 @@ class ResourceAllocationManager(object):
                                                best_criteria)
                 if server is not None:
                     server_info = {
-                        'name':server.get_name(),
-                        'pid':server.get_pid(),
-                        'host':server.get_host()
+                        'name':server.name,
+                        'pid':server.pid,
+                        'host':server.host
                     }
                     self._logger.debug('allocated %s pid %d on %s',
                                        server_info['name'], server_info['pid'],
@@ -220,7 +221,7 @@ class ResourceAllocationManager(object):
         server: :mod:`multiprocessing` proxy
             Server to be released.
         """
-        name = server.get_name()
+        name = server.name
         try:
             server.cleanup()
         except Exception:
@@ -486,25 +487,8 @@ class LocalAllocator(ResourceAllocator):
         """
         return self.create(typname='', name=name)
 
-    @staticmethod
-    def register(manager):
-        """
-        Register :class:`LocalAllocator` proxy info with `manager`.
-        Not typically called by user code.
-
-        manager: Manager
-            :mod:`multiprocessing` Manager to register with.
-        """
-        name = 'LocalAllocator'
-        ObjServer.register(manager)
-        method_to_typeid = {
-            'deploy': 'ObjServer',
-        }
-        manager.register(name, LocalAllocator,
-                         method_to_typeid=method_to_typeid)
-
-LocalAllocator.register(mp_distributing.Cluster)
-LocalAllocator.register(mp_distributing.HostManager)
+register(LocalAllocator, mp_distributing.Cluster)
+register(LocalAllocator, mp_distributing.HostManager)
 
 
 class ClusterAllocator(object):
@@ -532,7 +516,7 @@ class ClusterAllocator(object):
         for machine in machines:
             host = mp_distributing.Host(machine['hostname'],
                                         python=machine['python'])
-            LocalAllocator.register(host)
+            register(LocalAllocator, host)
             hosts.append(host)
 
         self.cluster = mp_distributing.Cluster(hosts, [])

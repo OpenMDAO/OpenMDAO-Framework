@@ -8,6 +8,7 @@ from enthought.traits.api import Bool, Instance
 from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
+from openmdao.main.rbac import Credentials, get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer
@@ -171,6 +172,10 @@ class CaseIterDriverBase(Driver):
 
     def _start(self):
         """ Start evaluating cases concurrently. """
+        credentials = get_credentials()
+        if credentials is None:
+            credentials = Credentials()
+            set_credentials(credentials)
 
         # Determine maximum number of servers available.
         resources = {
@@ -211,7 +216,7 @@ class CaseIterDriverBase(Driver):
             self._server_cases[name] = None
             self._server_states[name] = _EMPTY
             server_thread = threading.Thread(target=self._service_loop,
-                                             args=(name, resources))
+                                             args=(name, resources, credentials))
             server_thread.daemon = True
             server_thread.start()
 
@@ -417,8 +422,10 @@ class CaseIterDriverBase(Driver):
                 if self.recorder is not None:
                     self.recorder.record(case)
 
-    def _service_loop(self, name, resource_desc):
+    def _service_loop(self, name, resource_desc, credentials):
         """ Each server has an associated thread executing this. """
+        set_credentials(credentials)
+
         server, server_info = RAM.allocate(resource_desc)
         if server is None:
             self._logger.error('Server allocation for %s failed :-(', name)

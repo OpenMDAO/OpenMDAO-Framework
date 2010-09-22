@@ -31,15 +31,12 @@ try:
 except ImportError:
     import pickle
 
-from multiprocessing import Process, current_process
+from multiprocessing import Process, current_process, managers
 from multiprocessing import util, connection, forking
 
-#from multiprocessing import managers
-import openmdao.main.mp_managers as managers
+from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server
 
 from openmdao.util.wrkpool import WorkerPool
-
-__all__ = ['Cluster', 'Host', 'current_process']
 
 
 # SSH command to be used to access remote hosts.
@@ -62,11 +59,11 @@ def _flush_logger():
         handler.flush()
 
 
-class HostManager(managers.SyncManager):
+class HostManager(OpenMDAO_Manager):
     """ Manager used for spawning processes on a remote host. """
 
     def __init__(self, address, authkey):
-        managers.SyncManager.__init__(self, address, authkey)
+        super(HostManager, self).__init__(address, authkey)
         self._name = 'Host-unknown'
 
     def Process(self, group=None, target=None, name=None,
@@ -144,7 +141,7 @@ class RemoteProcess(Process):
 HostManager.register('_RemoteProcess', RemoteProcess)
 
 
-class Cluster(managers.SyncManager):
+class Cluster(OpenMDAO_Manager):
     """
     Represents a collection of hosts. :class:`Cluster` is a subclass
     of :class:`SyncManager`, so it allows creation of various types of
@@ -152,7 +149,7 @@ class Cluster(managers.SyncManager):
     """
 
     def __init__(self, hostlist, modules):
-        managers.SyncManager.__init__(self, address=('localhost', 0))
+        super(Cluster, self).__init__(address=('localhost', 0))
         self._hostlist = hostlist
         self._modules = modules
         if __name__ not in modules:
@@ -167,7 +164,7 @@ class Cluster(managers.SyncManager):
 
     def start(self):
         """ Start this manager and all remote managers. """
-        managers.SyncManager.start(self)
+        super(Cluster, self).start()
 #        AF_INET family results in default address of 'localhost'.
 #        listener = connection.Listener(family='AF_INET', authkey=self._authkey)
         hostname = socket.getfqdn()
@@ -497,7 +494,7 @@ def main():
     forking.prepare(data)
 
     # Create Server for a `HostManager` object.
-    server = managers.Server(HostManager._registry, (hostname, 0),
+    server = OpenMDAO_Server(HostManager._registry, (hostname, 0),
                              data['authkey'], "pickle")
     current_process()._server = server
 

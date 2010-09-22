@@ -34,6 +34,7 @@ from enthought.traits.trait_base import not_none, not_event
 from enthought.traits.trait_types import validate_implements
 
 from openmdao.main.filevar import FileRef
+from openmdao.main.rbac import rbac
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -599,7 +600,7 @@ class Container(HasTraits):
         else:
             return getattr(t, metaname)
         
-        
+    @rbac(('user', 'owner'))
     def get(self, path, index=None):
         """Return the object specified by the given 
         path, which may contain '.' characters.  
@@ -671,6 +672,7 @@ class Container(HasTraits):
                                  TraitError)
         return trait
 
+    @rbac('owner')
     def set(self, path, value, index=None, srcname=None, force=False):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
