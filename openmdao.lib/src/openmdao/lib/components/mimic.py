@@ -88,7 +88,7 @@ class Mimic(Component):
         self._current_model_traitnames = set()
         
         if newmodel:
-            traitdict = newmodel._alltraits(iotype=not_none)
+            traitdict = newmodel.alltraits(iotype=not_none)
             for name,trait in traitdict.items():
                 if self._eligible(name):
                     self.add_trait(name, trait.trait_type)

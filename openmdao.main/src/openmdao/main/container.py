@@ -434,7 +434,7 @@ class Container(HasTraits):
             visited.add(id(self))
             if 'type' not in metadata:
                 metadata['type'] = not_event
-            match_dict = self._alltraits(**metadata)
+            match_dict = self.alltraits(**metadata)
             
             if recurse:
                 for name in self.list_containers():
@@ -467,7 +467,7 @@ class Container(HasTraits):
         """Return a list of names of child Containers."""
         return [n for n, v in self.items() if isinstance(v, Container)]
     
-    def _alltraits(self, traits=None, **metadata):
+    def alltraits(self, traits=None, **metadata):
         """This returns a dict that contains all traits (class and instance)
         that match the given metadata.
         """
