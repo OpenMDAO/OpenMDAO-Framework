@@ -1154,11 +1154,11 @@ add_constraint.
 
 .. testcode:: Parameter_API
 
-    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore < .00001', scale=10000.0)
+    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore < .00001', scaler=10000.0)
     
 Here, the constraint has been scaled up so that its value when passed to the optimizer
 is in a similar range (and hence similar weight) to the other constraints in the model. An
-optional *shift* argument was also added to shift both the left and right hand sides of
+optional *adder* argument was also added to shift both the left and right hand sides of
 a constraint, though the current OpenMDAO gradient optimizer (CONMINdriver) internally shifts
 all constraints to the origin, so this parameter is not needed.
 

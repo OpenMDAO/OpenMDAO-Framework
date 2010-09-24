@@ -162,16 +162,40 @@ class HasConstraintsTestCase(unittest.TestCase):
             self.assertEqual(len(vals), 1)
             self.assertTrue(isinstance(vals['comp1.a>comp1.b'], Constraint))
 
-    def test_constraint_scale_shift(self):
+    def test_constraint_scaler_adder(self):
         drv = self.asm.add('driver', MyDriver())
         self.asm.comp1.a = 3
         self.asm.comp1.b = 5
-        drv.add_constraint('comp1.a < comp1.b', scale=3000.0, shift=100.0)
+        drv.add_constraint('comp1.a < comp1.b', scaler=3000.0, adder=100.0)
         result = drv.eval_ineq_constraints()
         
         self.assertEqual(result[0][0], 8900.)
         self.assertEqual(result[0][1], 14900.)
         
+        try:
+            drv.add_constraint('comp1.a < comp1.b', scaler=-5.0)
+        except ValueError as err:
+            self.assertEqual(str(err), 
+               "Scaler parameter should be a float > 0")
+        else:
+            self.fail('expected ValueError')
+            
+        try:
+            drv.add_constraint('comp1.a < comp1.b', scaler=2)
+        except ValueError as err:
+            self.assertEqual(str(err), 
+               "Scaler parameter should be a float")
+        else:
+            self.fail('expected ValueError')
+    
+        try:
+            drv.add_constraint('comp1.a < comp1.b', adder=2)
+        except ValueError as err:
+            self.assertEqual(str(err), 
+               "Adder parameter should be a float")
+        else:
+            self.fail('expected ValueError')
+    
     def test_add_constraint(self):
         self._check_add_constraint(MyDriver(), eq=True, ineq=True)
     
