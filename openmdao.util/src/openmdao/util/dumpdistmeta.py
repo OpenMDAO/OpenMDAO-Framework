@@ -6,7 +6,7 @@ of a single piece of metadata if metadata-item is specified on the command
 line.  The distribution can be in the form of an installed egg, a zipped
 egg, or a gzipped tar file containing a distutils distribution.
 
-usage: dumpdistmeta.py distribution [metadata-item]
+usage: ``dumpdistmeta.py distribution [metadata-item]``
 
 Example output: 
 
@@ -248,7 +248,7 @@ def get_metadata(path):
     
     return metadata
     
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma no cover
     if len(sys.argv) > 2:
         print get_metadata(sys.argv[1])[sys.argv[2]]
     elif len(sys.argv) > 1:

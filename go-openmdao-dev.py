@@ -1137,6 +1137,8 @@ openmdao_packages = ['openmdao.util',
                      'examples/openmdao.examples.simple',
                      'examples/openmdao.examples.bar3simulation',
                      'examples/openmdao.examples.enginedesign',
+                     'examples/openmdao.examples.mdao',
+                     'examples/openmdao.examples.singleEI'
                     ]
     
 def adjust_options(options, args):
@@ -1158,7 +1160,7 @@ def _single_install(cmds, req, bin_dir):
 
 def after_install(options, home_dir):
     global logger
-    reqs = ['numpy', 'docutils==0.6', 'Pyevolve==0.6', 'coverage==3.3.1', 'Pygments==1.3.1', 'pycrypto==2.0.1', 'Traits==3.3.0', 'PyYAML==3.09', 'Jinja2==2.4', 'virtualenv==1.4.6', 'zc.buildout==1.4.3', 'Fabric==0.9.0', 'Sphinx==1.0b2', 'networkx==1.0.1', 'pyparsing==1.5.2', 'nosecoverage2==0.1', 'conmin==1.0.1', 'nose==0.11.3']
+    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'coverage==3.3.1', 'Pygments==1.3.1', 'pycrypto==2.0.1', 'ordereddict==1.1', 'Traits==3.3.0', 'PyYAML==3.09', 'Sphinx==1.0.1', 'Jinja2==2.4', 'virtualenv==1.4.6', 'Fabric==0.9.0', 'decorator==3.2.0', 'networkx==1.0.1', 'pyparsing==1.5.2', 'conmin==1.0.1', 'nose==0.11.3']
     cmds = []
     url = 'http://openmdao.org/dists'
     found = [c for c in cmds if url in c]
@@ -1199,19 +1201,8 @@ def after_install(options, home_dir):
         print "ERROR: build failed"
         sys.exit(-1)
         
-    # copy the default wing project file into the virtualenv
-    # try to find the default.wpr file in the user's home directory
-    try:
-        if sys.platform == 'win32':
-            home = os.environ['HOMEDRIVE']+os.environ['HOMEPATH']
-        else:
-            home = os.environ['HOME']
-    except:
-        home = ''
-    
-    proj_template = join(home, '.wingide3', 'default.wpr')
-    if not os.path.isfile(proj_template):
-        proj_template = join(topdir,'config','wing_proj_template.wpr')
+    # copy the wing project file into the virtualenv
+    proj_template = join(topdir,'config','wing_proj_template.wpr')
     
     abshome = os.path.abspath(home_dir)
     shutil.copy(proj_template, 

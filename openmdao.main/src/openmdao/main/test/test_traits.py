@@ -33,10 +33,34 @@ class MyHasTraits(HasTraits):
     impval_ = Int(1)
     _ = MyProp()
     
+    def __init__(self, *args, **kwargs):
+        super(MyHasTraits, self).__init__(*args, **kwargs)
+        self.inst = MyClass()
+    
 class MyHasTraits2(MyHasTraits):
     pass
 
 class TraitsTestCase(unittest.TestCase):
+
+    def test_copy_on_assign(self):
+        # when one Instance value is assigned to another,
+        # no copy is performed, even if the trait has copy metadata that is not None.
+        # The default value of the 'copy' metadata for Instance traits is 'deep',
+        # but the copying apparently is not triggered on assignment
+        mht = MyHasTraits()
+        mht2 = MyHasTraits()
+        mht2.inst = mht.inst
+        self.assertTrue(mht.inst is mht2.inst)
+        cpy = mht.trait('inst').copy
+        self.assertEqual(cpy, 'deep')
+        
+    def test_copy_traits(self):
+        mht = MyHasTraits()
+        mht2 = MyHasTraits()
+        mht2.inst.val = 9
+        mht2.copy_traits(mht, traits=['inst'])
+        self.assertEqual(mht2.inst.val, mht.inst.val)
+        self.assertFalse(mht2.inst is mht.inst)
 
     def test_trait_names(self):
         mht = MyHasTraits()
@@ -50,17 +74,19 @@ class TraitsTestCase(unittest.TestCase):
         self.assertFalse('implicit_property' in mht.trait_names())
         
         # dynamically added property traits don't show up in trait_names
-        # even after they are set
+        # even after they are accessed
         mht.add_trait('added_property', MyProp())
         self.assertFalse('added_property' in mht.trait_names())
         mht.added_property = 6
         self.assertFalse('added_property' in mht.trait_names())
+        hasattr(mht, 'added_property')
+        self.assertFalse('added_property' in mht.trait_names())
         
         # dynamically added normal traits don't show up in trait_names
-        # UNTIL their value is set (even if set to same as their default)
+        # UNTIL their value is accessed
         mht.add_trait('added_int', Int(6))
         self.assertFalse('added_int' in mht.trait_names())
-        mht.added_int = 6
+        getattr(mht, 'added_int')
         self.assertTrue('added_int' in mht.trait_names())
         
         # dynamically added traits (but not implicitly defined ones) 
@@ -74,6 +100,14 @@ class TraitsTestCase(unittest.TestCase):
         mht2 = MyHasTraits()
         inames = mht2._instance_traits()
         self.assertTrue(len(inames)==0)
+        getattr(mht2, 'added_int', None)
+        inames = mht2._instance_traits()
+        self.assertTrue(len(inames)==0)
+        
+        # What about Instance traits?
+        mht3 = MyHasTraits()
+        self.assertTrue('inst' in mht3.traits())
+        
         
     def test_class_trait_names(self):
         mht = MyHasTraits2()
@@ -97,15 +131,15 @@ class TraitsTestCase(unittest.TestCase):
     def test_all_trait_names(self):
         mht = MyHasTraits()
         
-        # dynamically added traits DO NOT show up in all_trait_names(), 
-        # even after being set
+        # implicitly added traits DO show up in all_trait_names()
         allnames = mht.all_trait_names()
         self.assertFalse('added_int' in allnames)
         self.assertFalse('added_property' in allnames)
         mht.added_int = 8
         mht.added_property = 9
-        self.assertFalse('added_int' in allnames)
-        self.assertFalse('added_property' in allnames)
+        allnames = mht.all_trait_names()
+        self.assertTrue('added_int' in allnames)
+        self.assertTrue('added_property' in allnames)
         
     def test_reset_traits(self):
         mht = MyHasTraits()

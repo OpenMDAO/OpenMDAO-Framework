@@ -1,5 +1,5 @@
 """
-Utilities for file wrapping
+Utilities for file wrapping.
 
 Note: This is a work in progress.
 """
@@ -210,10 +210,10 @@ class InputFileGenerator(object):
         current anchor. This should generally be used for one-dimensional
         or free form arrays.
         
-        value - array of values to insert
+        value - array of values to insert.
         
         row_start - starting row for inserting the array. This is relative
-        to the anchor, and can be negative
+        to the anchor, and can be negative.
         
         field_start - starting field in the given row_start as denoted by 
         delimiter(s). 
@@ -221,9 +221,9 @@ class InputFileGenerator(object):
         field_end - the final field the array uses in row_end. 
         We need this to figure out if the template is too small or large
         
-        row_end - Optional. Use if the array wraps to cover additional lines
+        row_end - Optional. Use if the array wraps to cover additional lines.
         
-        sep - Optional. Separator to use if we go beyond the template"""
+        sep - Optional. Separator to use if we go beyond the template."""
         
         # Simplified input for single-line arrays
         if row_end == None:
@@ -268,12 +268,12 @@ class InputFileGenerator(object):
         current anchor. This method is specialized for 2D arrays, where each
         row of the array is on its own line.
         
-        value - array of values to insert
+        value - array of values to insert.
         
         row_start - Starting row for inserting the array. This is relative
-        to the anchor, and can be negative
+        to the anchor, and can be negative.
         
-        row_end - Final row for the array, relative to the anchor
+        row_end - Final row for the array, relative to the anchor.
         
         field_start - starting field in the given row_start as denoted by 
         delimiter(s). 
@@ -301,7 +301,7 @@ class InputFileGenerator(object):
     def clearline(self, row):
         """Replace the contents of a row with the newline character.
         
-        row - row number to clear, relative to current anchor"""
+        row - row number to clear, relative to current anchor."""
 
         self.data[self.current_row + row] = "\n"
         
@@ -352,14 +352,14 @@ class FileParser(object):
         location. If you want to restart the search for the anchor at the file
         beginning, then call reset_anchor() before mark_anchor. 
         
-        anchor: The text you want to search for
+        anchor: The text you want to search for.
         
         occurence: find nth instance of text; default is 1 (first). Use -1 to
         find last occurence. Reverse searches always start at the end of the
         file no matter the state of any previous anchor."""
         
         if not isinstance(occurrence, int):
-            raise ValueError("The value for occurrence must be an integer")
+            raise ValueError("The value for occurrence must be an integer.")
         
         instance = 0
         if occurrence > 0:
@@ -410,7 +410,7 @@ class FileParser(object):
         row - number of lines offset from anchor line (0 is anchor line).
         This can be negative.
         
-        field - which word in line to retrieve
+        field - which word in line to retrieve.
         
         fieldend - IGNORED
         
@@ -448,17 +448,17 @@ class FileParser(object):
             return data[field-1]
 
     def transfer_keyvar(self, key, field, occurrence=1, rowoffset=0):
-        """Searches for a key relative to the current anchor, and then grabs
+        """Searches for a key relative to the current anchor and then grabs
         a field from that line.
         
-        field -- Which field to transfer. Field 0 is the key
+        field -- Which field to transfer. Field 0 is the key.
         
         occurrence -- find nth instance of text; default is 1 (first value
         field). Use -1 to find last occurence. Position 0 is the key
         field, so it should not be used as a value for occurrence.
         
         rowoffset -- Optional row offset from the occurrence of key. This can
-        also be negative
+        also be negative.
         
         You can do the same thing with a call to mark_anchor and transfer_var.
         This function just combines them for convenience."""

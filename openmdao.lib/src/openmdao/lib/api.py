@@ -1,49 +1,13 @@
 """ 
 Pseudo package containing plugins from the OpenMDAO Standard Library.
-
-| *Public Variables*
-|
-|    Array
-|    Bool
-|    CBool
-|    Complex
-|    Dict
-|    Enum
-|    File
-|    Float
-|    Instance
-|    Int
-|    List
-|    Str
-|
-| *Drivers*
-|
-|    CaseIteratorDriver
-|    CONMINdriver
-|    Genetic
-|    Iterate
-|
-| *Components*
-|
-|    ExternalCode
-|
-| *CaseIterators*
-|
-|    ListCaseIterator
-|    DBCaseIterator
-|
-| *CaseRecorders*
-|
-|    DBCaseRecorder
-|    DumpCaseRecorder
 """
 
 # Traits that we've modified
-from openmdao.lib.traits.enum import Enum
-from openmdao.lib.traits.float import Float
-from openmdao.lib.traits.file import File
-from openmdao.lib.traits.int import Int
-from openmdao.lib.traits.array import Array
+from openmdao.lib.datatypes.enum import Enum
+from openmdao.lib.datatypes.float import Float
+from openmdao.lib.datatypes.file import File
+from openmdao.lib.datatypes.int import Int
+from openmdao.lib.datatypes.array import Array
 
 # Traits from Enthought
 from enthought.traits.api import Bool, List, Str, Instance, \
@@ -53,10 +17,13 @@ from enthought.traits.api import Bool, List, Str, Instance, \
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.genetic import Genetic
-from openmdao.lib.drivers.iterate import Iterate
+from openmdao.lib.drivers.iterate import FixedPointIterator
+from openmdao.lib.drivers.broydensolver import BroydenSolver
+from openmdao.lib.drivers.doedriver import DOEdriver
 
 # Components
 from openmdao.lib.components.external_code import ExternalCode
+from openmdao.lib.components.metamodel import MetaModel
 
 # CaseIterators
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator

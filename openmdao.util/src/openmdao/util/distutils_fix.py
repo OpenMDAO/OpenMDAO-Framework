@@ -3,16 +3,15 @@ Importing this file will fix problems we've found in distutils.
 
 Current fixes are:
 
-1) Update the library_dir_option function in MSVCCompiler to add
-   quotes around /LIBPATH entries.
+Update the ``library_dir_option`` function in MSVCCompiler to add quotes around /LIBPATH entries.
 """
 import sys
 
 if sys.platform == 'win32':
-    import new
+    import types
     def _lib_dir_option(self, dir):
         return '/LIBPATH:"%s"' % dir
     
     from distutils.msvc9compiler import MSVCCompiler
     setattr(MSVCCompiler, 'library_dir_option',
-            new.instancemethod(_lib_dir_option, None, MSVCCompiler))
+            types.MethodType(_lib_dir_option, None, MSVCCompiler))

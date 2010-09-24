@@ -14,20 +14,19 @@ Glossary
 
       **Assembly**
         The Assembly class is the primary building block of the "system of systems"
-        aspect of OpenMDAO. Each assembly has a Driver called *driver* that controls
-        execution of the workflow of Components within the Assembly.
-        An assembly is also a Component, so hierarchical structures of
-        assemblies can be created.
+        aspect of OpenMDAO. Each assembly has one or more Drivers that control
+        iteration of Components within the Assembly.
+        An assembly is also a Component, so hierarchies of assemblies can be created.
       
       
       **AXOD** 
         Axial-Flow Turbine Off-Design. A a computer code used for
-	preliminary studies of the gas turbine system.
-	
+        preliminary studies of the gas turbine system.
+
       
       **branch**
-      	Bazaar term for an ordered series of revisions (see :term:`revision`
-	below) that describes the history of a set of files. 	
+        Bazaar term for an ordered series of revisions (see :term:`revision`
+        below) that describes the history of a set of files. 
 
 
       **CAD**
@@ -42,13 +41,13 @@ Glossary
 
       **CAPRI**
         Computational Analysis Programming Interface. CAPRI is a CAD vendor-neutral
-        programming interface that aids in acquiring geometry data directly from CAD
-        files.
+        programming interface that supports direct communication of geometry data between
+        an application and a CAD system.
 
 
       **Case**
-        An object containing a collection of input names and values, and names of outputs 
-        to be stored along with the inputs after the process model runs.
+        An object containing a collection of names and values of inputs and/or outputs that
+        are associated with a given 'run' or iteration of a model.
 
 
       **CaseIterator**
@@ -61,6 +60,10 @@ Glossary
         Computational Fluid Dynamics. A branch of fluid mechanics that uses numerical
         methods and algorithms to solve and analyze problems that involve fluid flows. 
 
+     
+      **CO** 
+       Collaborative Optimization (CO). See :ref:`Collaborative-Optimization-(CO)`.)
+       
       
       **CommandLineWrapper**
         A component that runs a separate executable program via a system call.
@@ -69,30 +72,27 @@ Glossary
       **commit**
         Bazaar command that records a change. A change is committed to a developer's local
         repository.
-	
+
       
       **Component**
-        Container that is *runnable*; it also supports several other framework
-        functions, such as checkpoint/restart, stop, and invoke. A component has
-	input and output attributes and can perform some sort of calculation when
-	it is executed. 
+        An object with input and output variables that performs some sort of calculation. 
 
 
       **components**
-      	See :term:`Component` above.
-	
-	
+        See :term:`Component` above.
+
+
       **CONMIN**   
-        Stands for "CONstraint MINimization." CONMIN is a gradient descent optimization
-	algorithm developed by NASA. The simple tutorial in the *User Guide* contains information on
-	using CONMIN for an both an :ref:`unconstrained <using-CONMIN>`  optimization and a
-	:ref:`constrained <constrained-optimization>` optimization. The Standard Library also
-	contains information about :ref:`CONMIN-Driver`.
+        Stands for "CONstraint MINimization." CONMIN is a gradient descent
+        optimization algorithm developed by NASA. The simple tutorial in the *User
+        Guide* contains information on using CONMIN for an both an :ref:`unconstrained
+        <using-CONMIN>` optimization and a :ref:`constrained
+        <constrained-optimization>` optimization.
 
       
       **Container**
-        A container of Variables and other Containers. The base class of all objects
-        within the framework that  support user access to input and output Variables. 
+        An object containing variables and possibly other Containers. It's used as a way to
+        give structure to groups of input or output variables.
 
       
       **Coverage**
@@ -100,10 +100,9 @@ Glossary
 
 
       **decorator**
-        A Python module that aims to simplify the usage of decorators for the average
-        programmer and to popularize decorators by showing various non-trivial examples. A
-        Python decorator is a specific change to the Python syntax that allows users to
-        more conveniently alter functions and methods.
+        A Python module that aims to simplify the creation of well behaved decorators for the average
+        programmer. A decorator is well behaved if the wrapped function that it returns has the same
+        doc string, argument list, and other attributes of the function being wrapped.
 
       
       **DLL**
@@ -133,18 +132,12 @@ Glossary
       **eggs**
         See :term:`egg` above. 
 
-      	
+
       **Enum**
-        A public variable type, found in ``openmdao.lib.api``, which supports a
-	list of discrete allowed values. The list of allowed values can be of arbitrary
-	length, and elements can be of any type.
-	
-	
-      **Expression**
-        A special kind of trait that contains a string expression that
-	references public variables in the framework.
-	
-	
+        A variable type which supports a 
+        list of discrete allowed values. The list of allowed values can be of arbitrary
+        length, and elements can be of any type.
+
       **F2PY**
         Fortran to Python interface generator.
 
@@ -160,27 +153,27 @@ Glossary
 
 
       **FEM**
-	Finite Element Method. A numerical technique for finding approximate
-	solutions of partial differential equations (PDE) as well as of integral
-	equations. A structural analysis method which discretizes a continuum model of a
-	complex structure to a discrete model of a finite number of degrees of freedom.
+        Finite Element Method. A numerical technique for finding approximate
+        solutions of partial differential equations (PDE) as well as of integral
+        equations. A structural analysis method which discretizes a continuum model of a
+        complex structure to a discrete model of a finite number of degrees of freedom.
 
 
       **GA**
-      	Genetic algorithm
-	
-	
+        Genetic algorithm
+
       **Float**
-        A public variable type, found in ``openmdao.lib.api``, which represents a
-        floating point number. It also also allows for the specification of units.
+        A variable type which represents a floating point number. It
+        also also allows for the specification of units and specification of
+        upper and lower bounds.
      
       
-      **Genetic** 
-        OpenMDAO genetic algorithm optimizer based on the Pyevolve genetic
-	algorithm. For more information, see the section on :ref:`Genetic` in the
-	Standard Library section of the *User Guide.*
+      **Genetic**  
+        OpenMDAO genetic algorithm optimizer based on the Pyevolve genetic algorithm,
+        which is a complete genetic algorithm framework written in Python. (PyEvolve
+        was developed and is actively maintained by Christian S. Perone.) 
 
-	
+
       **GUI**
         Graphical User Interface. A computer operating system that is based upon icons
         and visual relationships rather than text.
@@ -190,16 +183,25 @@ Glossary
         An interface to an object having physical dimensions and shape, with
         properties that can be queried.
        
+      
+      **IDF**
+        Individual Design Feasible. (See :ref:`Individual-Design-Feasible-(IDF)`.)
 
+      
       **Int**
-        A public variable type, found in ``openmdao.lib.api``, which represents
-	numbers with integer values.
-	
-	
+        A variable type which represents numbers having integer values.
+
+
       **IPC**
         Interprocess communication
 
+        
+      **iteration hierarchy**
+        A tree structure of Drivers and Components all operating within the same
+        Assembly.  Components are leaf nodes, and the branches coming from each 
+        Driver node are determined by the contents of the Driver's workflow.
 
+        
       **Jinja**
         A small but fast and easy-to-use stand-alone template engine written in pure
         Python. 
@@ -208,7 +210,7 @@ Glossary
       **Jinja2**
         Jinja2 is the new and improved version of Jinja with new features and a simpler and
         faster runtime. 
-	
+
 
       **JSON**
         JSON, short for JavaScript Object Notation, is a lightweight computer data
@@ -223,9 +225,9 @@ Glossary
       
       **Launchpad**
         Free open-source project hosting. The repository is based on the Bazaar version control
-	system.
+        system.
 
-	
+
       **MDAO**  
         Multi-disciplinary Analysis & Optimization
 
@@ -235,19 +237,27 @@ Glossary
         dataset or other resource. It describes context, content, and structure of the resource and its
         management through time. 
 
-	
+
       **Method of Feasible Directions**
         A gradient descent optimization algorithm used in CONMIN.
-	
-	
+
+
       **model**
         A hierarchical structure with an :term:`Assembly` at its root.
        
-       
+      
+      **MDF**
+        Multidisciplinary Design Feasible. (See :ref:`Multidisciplinary-Design-Feasible-(MDF)`.)
+
+
+      **MIMO**
+        Multiple Inputs, Multiple Outputs
+
+
       **networkx**
         A Python package for creating and manipulating graphs and networks.
-	
-	
+
+
       **NOSA**
         NASA Open Source Agreement. A software license approved by the Open
         Source Initiative (:term:`OSI`). The National Aeronautics and Space
@@ -259,15 +269,10 @@ Glossary
         authoring.
 
       
-      **nosecoverage2**
-        A nose plugin that exposes some features of version 3.2 of the **coverage**
-        package, including html output and cobertura output.
-            
-      
       **NumPy**
         NumPy is the fundamental package needed for scientific computing with Python. See
-	http://numpy.scipy.org/ 
-	
+        http://numpy.scipy.org/ 
+
       
       **ObjServer**
         A process that allows remote connections to a Component or Container
@@ -287,13 +292,13 @@ Glossary
 
       **OS**
         Open Source
-	
+
 
       **OSI**    
         The Open Source Initiative (OSI) is a non-profit corporation formed to educate
-	the community about open source (OS), to advocate for the benefits of OS, and to build
-	bridges among different constituencies in the open-source community.  For more
-	information, see `Open Source Initiative <http://www.opensource.org>`_. 
+        the community about open source (OS), to advocate for the benefits of OS, and to build
+        bridges among different constituencies in the open-source community.  For more
+        information, see `Open Source Initiative <http://www.opensource.org>`_. 
            
       
       **PBS**
@@ -306,14 +311,14 @@ Glossary
 
       **Paste**
         Tools for using a Web Server Gateway Interface stack.
-	
+
       
       **PasteDeploy**
         A tool to load, configure, and compose :term:`WSGI` applications and servers.
 
 
       **PasteScript**
-	A pluggable command-line frontend, including commands to setup package file layouts
+        A pluggable command-line frontend, including commands to setup package file layouts
 
 
       **PID**
@@ -322,12 +327,12 @@ Glossary
 
       **PIL**
         Python Imaging Library
-	
-	
+
+
       **pip**
-	Installs Python packages. It is a replacement for ``easy_install`` and uses mostly
-	the same techniques for finding packages, so packages that were made easy_installable
-	should be pip-installable as well.
+        Installs Python packages. It is a replacement for ``easy_install`` and uses mostly
+        the same techniques for finding packages, so packages that were made easy_installable
+        should be pip-installable as well.  Currently works with source distributions only.
 
       
       **plugin**
@@ -338,52 +343,41 @@ Glossary
       **plugins**
         See :term:`plugin`
 
-	
-      **Public Variables** 
-        A component's inputs and outputs. They are called *public* variables because
-        they are exposed to the framework; inputs can be set and outputs can be read
-        by other framework components. In general, a public variable is a wrapper for
-        data passed between framework components. It has a value, a default value, and
-        may contain additional attributes like min/max values and units. Public
-        variables can also perform their own validation when being assigned to another
-        public variable. OpenMDAO's public variables are implemented using Traits, an
-        open source extension to Python authored by Enthought, Inc.
 
-      
       **PuTTY**  
         A free terminal emulator application that can act as a client for SSH, Telnet,
-	rlogin, and raw TCP computing protocols.	
+        rlogin, and raw TCP computing protocols.
 
-	
+
       **PuTTYgen** 
         A key generator. It generates pairs of public and private
-	keys to be used with PuTTY, PSCP, Plink, and the PuTTy
-	authentication agent, Pageant.
+        keys to be used with PuTTY, PSCP, Plink, and the PuTTy
+        authentication agent, Pageant.
 
-	
+
       **Pyevolve**
         A complete Python genetic algorithm framework
-	
-	
+
+
       **Pygments**
         Pygments is a syntax highlighting package written in Python.
-	
-	
+
+
       **Pylons**
         A Web framework
 
 
       **pyparsing**
         A Python parsing module
-	
-	
+
+
       **PyYAML**
         A :term:`YAML` parser and emitter for Python.
-	
+
 
       **repository**
         Bazaar term for a store of revisions. See :term:`revision`.
-	
+
 
       **ResourceAllocator**
         An object responsible for allocating CPU/disk resources for a particular
@@ -419,22 +413,22 @@ Glossary
       
       **roman**
         A Python module for roman numerals.
-	
-	
+
+
       **Routes**   
         A Routing package for Python that matches URLs to dicts (dictionary network
         protocols) and vice versa.
-	
-	
+
+
       **SciPy**   
         SciPy (pronounced "Sigh Pie") is open-source software for mathematics, science, and
         engineering.
 
-	
+
       **ScientificPython**
         A collection of Python modules that are useful for scientific computing.
-	
-	
+
+
       **setuptools**
         Tools for downloading, building, installing, upgrading, and uninstalling
         Python packages. 
@@ -442,18 +436,18 @@ Glossary
       
       **simplejson**
         Simple, fast, extensible :term:`JSON` encoder/decoder for Python.
-	
-	
+
+
       **Sphinx** 
         A Python documentation generator. It translates reStructuredText markup
-	language into HTML. (See the `Sphinx home page <http://sphinx.pocoo.org/index.html>`_
-	for more information.)
+        language into HTML. (See the `Sphinx home page <http://sphinx.pocoo.org/index.html>`_
+        for more information.)
      
-	
+
       **SQLAlchemy**
         Database Abstraction Library
-	
-		
+
+
       **Socket**
         A placeholder for a plugin within a :term:`Component`.
 
@@ -464,7 +458,7 @@ Glossary
 
       **Sockets**
         See :term:`Socket`.
-	
+
 
       **SWIG**
         Simplified Wrapper and Interface Generator. A software development tool that connects
@@ -473,11 +467,11 @@ Glossary
 
 
       **Tag**
-      	A Bazaar nickname for a particular revision. A tag is typically used to mark
-	a release of the software so you can easily refer to it later. Tags are stored in the
-	branch and are propagated when the branch is pushed, pulled or merged. If your branch is
-	associated with a Trac ticket, you should apply a tag (corresponding to your ticket
-	number) to your branch after committing final changes and before you push it to Launchpad
+        A Bazaar nickname for a particular revision. A tag is typically used to mark
+        a release of the software so you can easily refer to it later. Tags are stored in the
+        branch and are propagated when the branch is pushed, pulled or merged. If your branch is
+        associated with a Trac ticket, you should apply a tag (corresponding to your ticket
+        number) to your branch after committing final changes and before you push it to Launchpad
         and propose a merge.
    
       **Tempita**
@@ -498,42 +492,58 @@ Glossary
 
       **Trac**
         An open source, web-based project management and bug-tracking tool. OpenMDAO uses Trac
-	to track bugs, enhancements, and requirements and to host openmdao.org.
+        to track bugs, enhancements, and requirements and to host openmdao.org.
       
       
       **Traits**
-        A software package from Enthought, Inc. that aids in developing Python code. A trait is
+        A software package from Enthought, Inc. A trait is
         a type definition that can be used for normal Python object attributes, giving the
         attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
-        The Traits package works with version 2.4 and later of Python and is similar in some ways
-        to the Python property language feature. 
 
 
       **TraitType** 
-        The base class used to validate and possibly convert data objects that are
-        passed between linked Components.
+        The base class used when creating a new Variable type.
       
       
       **trunk**
         A Bazaar term that refers to the main development branch (in this case,
-        the openmdao trunk) from which working branches are pulled. 	
-	
-	
+        the openmdao trunk) from which working branches are pulled.
+
+
+      **tuple**
+      	A tuple is an immutable list. It is defined in the same way as a list, except that the whole set of
+	elements is enclosed in parentheses instead of square brackets. The elements of a tuple have a defined
+	order, and tuples indices are zero-based, just like a list, so the first element of a non-empty tuple
+	is always t[0].  Negative indices count from the end of the tuple. Slicing works too, but when you
+	slice a tuple, you get a new tuple.  
+
+
       **units**
         A package used by OpenMDAO that provides unit conversion capability for variables.
-	
-	
+
+       
       **Variable**
-        see :term:`Public Variables`
+        see :term:`Variables`
+
+        
+      **Variables** 
+        A component's inputs and outputs that are visible to other components
+        in the framework. In general, a variable is a wrapper for data
+        passed between framework components. It has a value, a default value,
+        and may contain additional attributes like upper and lower bounds and units.
+        Variables can also perform their own validation when being
+        assigned to another variable. OpenMDAO's variables are
+        implemented using Traits, an open source extension to Python authored
+        by Enthought, Inc.
 
 
       **virtualenv**  
         Virtualenv is a tool used to create isolated Python environments. You can
-	create a new Python environment to run OpenMDAO and install all package dependencies
-	into the virtualenv without affecting your system's site-packages or vice versa. If you
-	need to upgrade a package to see how it affects your app, you can create a new
-	virtualenv, install/copy your app into it, run your tests, and delete it when you are
-	finished.  
+        create a new Python environment to run OpenMDAO and install all package dependencies
+        into the virtualenv without affecting your system's site-packages or vice versa. If you
+        need to upgrade a package to see how it affects your app, you can create a new
+        virtualenv, install/copy your app into it, run your tests, and delete it when you are
+        finished.  
 
       
       **VSP**
@@ -567,9 +577,7 @@ Glossary
       **Workflow**
         A Workflow controls the execution order of a group of Components. The default
         workflow class is Dataflow, which orders Components based on their input and
-        output connections. Other classes inheriting from 
-        Workflow will support different execution schemes, e.g., concurrent and
-        conditional execution.
+        output connections. 
 
 
       **WSGI**
@@ -588,16 +596,6 @@ Glossary
         Python, an object-oriented scripting language.
 
       
-      **zope.component**
-        Zope Component Architecture
-
-
       **zope.interface**
         A package that provides an implementation of object interfaces for Python. 
-
-	
-      **ZopeSkel**
-        ZopeSkel provides a collection of skeletons for quickstarting Zope and Plone
-        projects.
-
 

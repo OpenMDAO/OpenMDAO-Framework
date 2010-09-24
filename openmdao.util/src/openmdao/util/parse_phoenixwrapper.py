@@ -10,7 +10,7 @@ from pyparsing import Suppress, Word, alphanums, dictOf, oneOf, printables, \
 __all__ = ["parse_phoenixwrapper"]
            
 def _parse_phoenixline():
-    """Parse a single line containing a variable definition"""
+    """Parse a single line containing a variable definition."""
         
     data = ( Suppress("variable:") + \
              Word(alphanums).setResultsName("name") + \
@@ -22,7 +22,7 @@ def _parse_phoenixline():
     return data
 
 def _parse_phoenixgroup():
-    """Parse a single line containing a group definition"""
+    """Parse a single line containing a group definition."""
         
     data = ( Suppress(Word(alphanums)) + \
            sglQuotedString.setParseAction(removeQuotes).setResultsName("name") )
@@ -89,7 +89,7 @@ _unit_part_replace = {
 _unit_ignore = ('%', 'EPNdB', 'dB')
 
 def _gen_publicvar(data):
-    """Generates the OpenMDAO public variable line given a dictionary of info.
+    """Generates the OpenMDAO variable line given a dictionary of info.
     """
     
     sep = ", "
@@ -191,9 +191,11 @@ def parse_phoenixwrapper(infile, outfile, compname):
     wrapper. The first section of this wrapper is parsed, and the appropriate
     variables and containers are placed in the new OpenMDAO component.
     
-    infile  - ModelCenter scriptwrapper
-    outfile - file containing new OpenMDAO component skeleton
-    compname - Name for new component
+    infile  - ModelCenter scriptwrapper.
+    
+    outfile - File containing new OpenMDAO component skeleton.
+    
+    compname - Name for new component.
     """
     
     # Note: special processing since Python strings don't need escaped quotes.
@@ -328,7 +330,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
         text += "class " + container_name + "(Container):\n"
         
         text += tab + '"""Container for %s"""\n\n' % str(group)
-        text += tab + "# OpenMDAO Public Variables\n"
+        text += tab + "# OpenMDAO Variables\n"
         openmdao.write(text)
     
         openmdao.write(vars[group])
@@ -352,7 +354,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
     text += "class " + compname + "(Component):\n"
     
     text += tab + '"""Wrapper for %s"""\n\n' % compname
-    text += tab + "# OpenMDAO Public Variables\n"
+    text += tab + "# OpenMDAO Variables\n"
     openmdao.write(text)
 
     openmdao.write(vars[""])

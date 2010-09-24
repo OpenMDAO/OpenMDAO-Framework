@@ -47,7 +47,7 @@ def _mod_sphinx_info(mod, outfile, show_undoc=False):
     outfile.write('.. index:: %s.py\n\n' % modbase)
     outfile.write('.. _%s.py:\n\n' % short)
     outfile.write('%s.py\n' % modbase)
-    outfile.write('_'*(3+len(short.split('.').pop()))+'\n\n')
+    outfile.write('+'*(3+len(short.split('.').pop()))+'\n\n')
     outfile.write('.. automodule:: %s\n' % short)
     outfile.write('   :members:\n')
     if show_undoc:
@@ -112,21 +112,43 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
     if docs:
         print >> outfile, docs, '\n'
     
+    #excluding traits now since they need to be sorted separately
     names = list(_get_resource_files(dist,
-                                    ['*__init__.py','*setup.py','*/test/*.py'],
-                                    ['*.py']))            
+                                    ['*__init__.py','*setup.py','*/test/*.py', '*datatypes*.py'],
+                                    ['*.py']))    
     names.sort()
-    pkg
+    
+    #wanted to sort traits separately based only on filenames despite differing paths
+    traitz = list(_get_resource_files(dist, ['*__init__.py','*setup.py','*/test/*.py'], ['*datatypes*.py']))
+    sorted_traitz = sorted(traitz, cmp=_compare_traits_path)
+    
+    names.extend(sorted_traitz)
+
     exdirs = ['build', 'examples']
-            
+    
+    oldheader = None
+    newheader = None
+
     for name in names:
         if os.path.basename(name) == 'releaseinfo.py':
             continue
+
         for ex in exdirs:
             if  name.startswith('%s/' % ex) or '/%s/'%ex in name:
                 break
-        else:       
-            _mod_sphinx_info(name, outfile, show_undoc=show_undoc)
+            else:       
+                x = name.split('/')
+                #kind of dirty, but the other sections doesn't need api header.
+                if os.path.basename(name) == 'api.py' and x[1]=='lib':
+                    newheader = 'api'
+                if len(x) >= 4:
+                    newheader =  x[2]
+            if (oldheader != newheader):
+                print >> outfile, '**%s**' % newheader.upper()
+                print >> outfile, '_'*(4+len(newheader)) + '\n'
+                oldheader = newheader
+               
+        _mod_sphinx_info(name, outfile, show_undoc=show_undoc)
 
 
 def _write_src_docs(branchdir, docdir):
@@ -224,13 +246,12 @@ def view_docs(browser=None):
 
 def test_docs():
     """Tests the openmdao sphinx documentation.  
-    A console script (testdocs) calls this.
-    If the docs are not built, this will build them before testing.
+    A console script (openmdao_testdocs) calls this.
+    This forces a build of the docs before testing.
     """
     branchdir, docdir, bindir =_get_dirnames()
-    idxpath = os.path.join(docdir, '_build', 'html', 'index.html')
-    if not os.path.isfile(idxpath):
-        build_docs()
+    # force a new build before testing
+    build_docs()
     sphinx.main(argv=['-P', '-b', 'doctest', '-d', 
                       os.path.join(docdir, '_build', 'doctrees'), 
                       docdir, os.path.join(docdir, '_build', 'html')])
@@ -315,8 +336,17 @@ def _make_license_table(docdir, reqs=None):
         # bottom border
         outfile.write(_get_border_line(numcols, colwidths, char='='))
         outfile.write('\n')
+    
+def _compare_traits_path(x, y):
+    if os.path.basename(x) > os.path.basename(y):
+       return 1
+    elif os.path.basename(x) < os.path.basename(y):
+        return -1
+    else:
+        return 0
+    
 
-if __name__ == '__main__':
+if __name__ == "__main__": #pragma: no cover
     build_docs()
 
 

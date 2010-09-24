@@ -95,7 +95,9 @@ def after_install(options, home_dir):
                      'openmdao.test', 
                      'openmdao.examples.simple',
                      'openmdao.examples.bar3simulation',
+                     'openmdao.examples.mdao',
                      'openmdao.examples.enginedesign',
+                     'openmdao.examples.singleEI',
                     ]
 
     cmds = []
@@ -103,18 +105,17 @@ def after_install(options, home_dir):
     import openmdao.main.releaseinfo
     version = openmdao.main.releaseinfo.__version__
     dists = working_set.resolve([Requirement.parse(r) for r in openmdao_pkgs])
-    excludes = set(['setuptools', 'distribute'])
+    excludes = set(['setuptools', 'distribute', 'numpy', 'scipy'])
     for dist in dists:
         if dist.project_name not in excludes:
-            if dist.project_name != 'numpy':
-                reqs.add('%s' % dist.as_requirement())  
+            reqs.add('%s' % dist.as_requirement())  
             
     if options.test:
         home = os.environ['HOME']
         url = 'file://%s/dists' % home
     else:
         url = 'http://openmdao.org/dists'
-    reqs = ['numpy'] + list(reqs)  # force numpy to be installed first (f2py requires it)
+    reqs = ['numpy', 'scipy'] + list(reqs)  # force numpy to be installed first (f2py requires it)
     optdict = { 'reqs': reqs, 'cmds':cmds, 'version': version, 'url': url }
     
     dest = os.path.abspath(options.dest)

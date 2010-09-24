@@ -16,7 +16,7 @@ from pkg_resources import resource_stream
 from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly
-from openmdao.lib.api import Float
+from openmdao.lib.api import Float, Instance
 
 from openmdao.examples.enginedesign.vehicle import Vehicle
 
@@ -48,6 +48,10 @@ class DrivingSim(Assembly):
     timestep = Float(0.1, iotype='in', units='s', 
                           desc='Simulation time step size')
     
+    # Sockets
+    vehicle = Instance(Vehicle, allow_none=False, 
+                       desc='Socket for a Vehicle')
+    
     # Outputs
     accel_time = Float(0., iotype='out', units='s', 
                             desc='Time to reach end_speed starting from rest')
@@ -57,16 +61,19 @@ class DrivingSim(Assembly):
                              desc='EPA Fuel economy - Highway')
         
     def __init__(self):
-        """ Creates a new DrivingSim object"""
+        """Creates a new DrivingSim instance"""
 
-        
         super(DrivingSim, self).__init__()    
 
+    def _vehicle_changed(self, oldvehicle, newvehicle):
+        """Callback whenever a new Vehicle is added to the DrivingSim
+        """
+        
+        self.driver.workflow.add(newvehicle)
+        
         # set up interface to the framework  
         # pylint: disable-msg=E1101
 
-        self.add('vehicle', Vehicle())
-        
         # Promoted From Vehicle -> Engine
         self.create_passthrough('vehicle.stroke')
         self.create_passthrough('vehicle.bore')
@@ -172,9 +179,9 @@ class DrivingSim(Assembly):
                 if self.vehicle.engine.RPM < self.vehicle.transmission.RPM:
                     
                     if self.vehicle.current_gear > 4:
-                        self.raise_exception("Transmission gearing cannot \
-                        achieve acceleration and speed required by EPA \
-                        test.", RuntimeError)
+                        self.raise_exception("Transmission gearing cannot " \
+                        "achieve acceleration and speed required by EPA " \
+                        "test.", RuntimeError)
                     
                     self.vehicle.current_gear += 1
                     
@@ -256,8 +263,8 @@ class DrivingSim(Assembly):
                 # If engine cannot accelerate quickly enough to match profile, 
                 # then raise exception    
                 if command_accel > accel_max:
-                    self.raise_exception("Vehicle is unable to achieve \
-                    acceleration required to match EPA driving profile.", \
+                    self.raise_exception("Vehicle is unable to achieve " \
+                    "acceleration required to match EPA driving profile.", 
                                                     RuntimeError)
                         
                 #------------------------------------------------------------
@@ -326,7 +333,7 @@ def test_it(): # pragma: no cover
     ttime = time.time()
     
     toplevel = DrivingSim()  
-    toplevel.vehicle = Vehicle()
+    toplevel.add('vehicle', Vehicle())
     toplevel.run()
     
     print "Time (0-60): ", toplevel.accel_time

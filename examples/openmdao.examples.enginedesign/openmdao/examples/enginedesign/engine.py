@@ -72,7 +72,7 @@ class Engine(Component):
                      desc='Inlet Valve Diameter')
 
     RPM = Float(1000.0, low=1000., high=6000., iotype='in', 
-                     units='RPM',  desc='Engine RPM')
+                     units='rpm',  desc='Engine RPM')
     throttle = Float(1.0, low=0.01, high=1.0, iotype='in', 
                      desc='Throttle position (from low idle to wide open)')
 
@@ -356,7 +356,7 @@ class Engine(Component):
 
 # end engine.py        
 
-if __name__ == "__main__": 
+if __name__ == "__main__": # pragma: no cover
     
     MyEngine = Engine("Testing")
     

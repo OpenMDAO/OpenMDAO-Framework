@@ -1,0 +1,40 @@
+
+       INPUT file structure for AXOD code:
+
+The  total input file is made of data from several stages for a given case.
+Each case is started with 2 Title lines, followed by a namelist "DATAIN'.
+Each namelist contain data for a stage within the case.
+
+A file can have as many cases as desired.
+
+
+INPUT file outline:
+
+                   Title1   line
+                   Title2   line
+&DATAIN              (.......start of namelist DATAIN ... Stage1 )
+         var1 = value,
+         var2 = value,
+                 .
+                 .                 more variables
+                 .
+/                  (end of namelist)
+&DATAIN              (.......start of namelist DATAIN ..  next stage   'Stage2')
+         var1 = value
+         var2 = value
+                 .
+                 .                 more variables
+                 .
+/                  (end of namelist)
+
+                 .
+                 .                 more stages
+                 .
+
+
+
+
+Note:  a variable cane be assigned as  'Case1.Stage1.var1 = val'
+           or                          'Case1.Stage2.var1 = val'
+  
+       This is an example when component code is used to define variables.

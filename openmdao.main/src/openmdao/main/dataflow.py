@@ -12,15 +12,22 @@ class Dataflow(SequentialWorkflow):
     A Dataflow consists of a collection of Components which are executed in 
     data flow order.
     """
-    def __init__(self, scope, members=None):
+    def __init__(self, parent, scope=None, members=None):
         """ Create an empty flow. """
         super(Dataflow, self).__init__(members)
+        self.parent = parent
         self._scope = scope
         self._collapsed_graph = None
 
+    @property
+    def scope(self):
+        if self._scope is None:
+            self._scope = self.parent.parent
+        return self._scope
+
     def __iter__(self):
         """Iterate through the nodes in dataflow order."""
-        scope = self._scope
+        scope = self.scope
         graph = self._get_collapsed_graph()
         topsort = nx.topological_sort(graph)
         if topsort is None:
@@ -50,15 +57,15 @@ class Dataflow(SequentialWorkflow):
     def _get_collapsed_graph(self):
         """Get a dependency graph with only our workflow components
         in it, with additional edges added to it from sub-workflows
-        of any Driver components in our workflow, and from any Expressions
-        or ExpressionLists in any components in our workflow.
+        of any Driver components in our workflow, and from any ExprEvaluators
+        in any components in our workflow.
         """
         if self._collapsed_graph:
             return self._collapsed_graph
         
         to_add = []
-        scope = self._scope
-        graph = scope.comp_graph.graph().copy()
+        scope = self.scope
+        graph = scope.comp_graph.copy_graph()
         
         # add any dependencies due to Expressions or ExpressionLists
         for comp in self._nodes:

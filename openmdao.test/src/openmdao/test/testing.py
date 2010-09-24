@@ -27,22 +27,6 @@ def run_openmdao_suite():
     args.append('--exe') # by default, nose will skip any .py files that are
                          # executable. --exe prevents this behavior
     
-    # In case --with-coverage2 is used, default these options in.
-    if '--with-coverage2' in args:
-        args.append('--cover2-erase')
-        if '--all' in args:
-            for pkg in tlist:
-                opt = '--cover2-package=%s' % pkg
-                if opt not in args:
-                    args.append(opt)
-
-        if '--cover2-html' in args:
-            for arg in args:
-                if arg.startswith('--cover2-html-dir='):
-                    break
-            else:
-                args.append('--cover2-html-dir=html_coverage')
-
     if '--with-coverage' in args:
         args.append('--cover-erase')
         if '--all' in args:

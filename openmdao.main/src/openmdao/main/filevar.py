@@ -86,7 +86,13 @@ class FileRef(FileMetadata):
         self.owner = owner
 
     def copy(self, owner):
-        """ Return a copy of ourselves, owned by `owner`. """
+        """
+        Return a copy of ourselves, owned by `owner`.
+
+        owner: Component
+            The component used to determine the root for relative paths
+            and checking the legality of absolute paths.
+        """
         ref = copy.copy(self)
         ref.owner = owner
         return ref

@@ -35,7 +35,7 @@ component is instantiated but before it can be used in a process model:
 
 **(Setting Parameters and Suppression States)**
 
-*Needed for requirements: Tools/Geometry/Interaction/01 and Tools/Geometry/Interaction/02*
+Needed for requirements: ``Tools/Geometry/Interaction/01`` and ``Tools/Geometry/Interaction/02``
 
 Parameters are set the same way as any other OpenMDAO input variable. For
 example, consider a cylinder with two parameters: *radius* and *height*. If we 
@@ -44,41 +44,44 @@ can be directly set:
 
 .. testsetup:: parameter_interface
 
-	from openmdao.main.api import Component, Assembly
-	from openmdao.lib.api import Float, Bool, CONMINdriver
-	
-	class GeoMan(Component):
-
-	    radius = Float(7.0, low=1., high=20.0, iotype='in', 
-                     units='m',  desc='radius')		
-	    height = Float(10.0, low=1., high=50.0, iotype='in', 
-                     units='m',  desc='height')	
-	    fillet1 = Bool(True, iotype='in')	
-	
-	    def __init__(self, directory=''):
-	        """ Creates a new Vehicle Assembly object """
-
-	        super(GeoMan, self).__init__(directory)
-	
-	class TLA(Assembly):
+    from openmdao.main.api import Component, Assembly
+    from openmdao.lib.api import Float, Bool, CONMINdriver
     
-	    def __init__(self, directory=''):
+    class GeoMan(Component):
+
+        radius = Float(7.0, low=1., high=20.0, iotype='in', 
+                     units='m',  desc='radius')        
+        height = Float(10.0, low=1., high=50.0, iotype='in', 
+                     units='m',  desc='height')    
+        fillet1 = Bool(True, iotype='in')    
+    
+        def __init__(self, directory=''):
+            """ Creates a new Vehicle Assembly object """
+
+            super(GeoMan, self).__init__(directory)
+    
+    class TLA(Assembly):
+    
+        def __init__(self, directory=''):
         
-	        super(TLA, self).__init__(directory)
+            super(TLA, self).__init__(directory)
 
-	        # Create GeoMan component instances
-        	self.add('geo_manipulator', GeoMan())
+            # Create GeoMan component instances
+            self.add('geo_manipulator', GeoMan())
 
-	        # Create CONMIN Optimizer instance
-        	self.add('driver', CONMINdriver())
+            # Create CONMIN Optimizer instance
+            self.add('driver', CONMINdriver())
 
-	self = TLA()
-	geo_manipulator = GeoMan()
+            # add geo_manipulator to workflow
+            self.driver.workflow.add(self.geo_manipulator)
+
+    self = TLA()
+    geo_manipulator = GeoMan()
 
 .. testcode:: parameter_interface
 
-	geo_manipulator.radius = 5
-	geo_manipulator.height = 15
+    geo_manipulator.radius = 5
+    geo_manipulator.height = 15
 
 More often, the geometry's parameters will be set as part of an optimization
 problem, so they can be declared as design variables when an optimizer is added
@@ -86,12 +89,10 @@ to a model.
       
 .. testcode:: parameter_interface
 
-	# CONMIN Design Variables 
-	self.driver.design_vars = ['geo_manipulator.radius', 
-                                   'geo_manipulator.height']
-				 
-	self.driver.lower_bounds = [3.0, 6.5]
-	self.driver.upper_bounds = [12, 25]
+    # CONMIN Design Variables 
+    self.driver.add_parameters([('geo_manipulator.radius', 3.0, 12.),
+                                ('geo_manipulator.height', 6.5, 25.)])
+                 
 
 Here, *self* is the top level assembly that contains an optimizer, the geometry
 manipulator, and some kind of process model such as the one pictured above.
@@ -102,7 +103,7 @@ suppress the feature fillet1.
 
 .. testcode:: parameter_interface
 
-	geo_manipulator.fillet1 = False
+    geo_manipulator.fillet1 = False
 
 **execute()**
 
@@ -136,7 +137,7 @@ states, and tags, from a saved egg.
 
 **tag_node(node_label, tag_name, tag_description)**
 
-*Needed for the requirement: Tools/Geometry/Interaction/07*
+Needed for the requirement: ``Tools/Geometry/Interaction/07``
 
 Associates a geometric entity with some metadata. This is useful for marking
 an entity for later use by an analysis tool (e.g., marking loads and boundary
@@ -214,7 +215,7 @@ OpenMDAO provides query access to the geometry object at the Python component le
 *Topology Access*
 _________________
 
-*Needed for requirement: Tools/Geometry/Interaction/07*
+Needed for requirement: ``Tools/Geometry/Interaction/07``
 
 Geometry access for query includes entity query and evaluation, traversal of 
 topology, and tag query.
@@ -250,7 +251,7 @@ edges, faces, and boundaries that it includes.
 *Mesh Generation*
 _________________
 
-*Needed for requirement: Tools/Geometry/Grid Generation/01*
+Needed for requirement: ``Tools/Geometry/Grid Generation/01``
 
 **(point, d1, d2) = PointOnEdge(vol, edge, t, req_derivative)**
 
@@ -290,7 +291,7 @@ Returns *True* if the given point lies on the face.
 *Measurements*
 ______________
 
-*Needed for all requirements in: Tools/Geometry/Interaction/08*
+Needed for all requirements in: ``Tools/Geometry/Interaction/08``
 
 **(length) = LengthOfEdge(vol, edge, t1, t2)**
 
@@ -313,7 +314,7 @@ center of gravity, inertia matrix, and mass.
 *Planar Cuts*
 _____________
 
-*Needed for requirements in: Tools/Geometry/Interaction/10*
+Needed for requirements in: ``Tools/Geometry/Interaction/10``
 
 **(nsec, ivec, data) = VolumeSection(vol, face, type, isvec, idata)**
 

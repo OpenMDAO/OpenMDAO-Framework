@@ -8,6 +8,7 @@ import pkg_resources
 import shutil
 import sys
 import unittest
+import nose
 
 from openmdao.main.api import Assembly, FileMetadata, SimulationRoot, set_as_top
 from openmdao.main.eggchecker import check_save_load
@@ -41,6 +42,7 @@ class Model(Assembly):
         super(Model, self).__init__()
         self.add('a', Unique())
         self.add('b', Unique())
+        self.driver.workflow.add([self.a,self.b])
 
 
 class TestCase(unittest.TestCase):
@@ -84,7 +86,7 @@ class TestCase(unittest.TestCase):
         # FIXME: temporarily disable this test on windows to get around
         # a problem where a set of tests is run repeatedly for reasons unknown
         if sys.platform == 'win32':
-            return
+            raise nose.SkipTest()
         logging.debug('')
         logging.debug('test_remote')
 
@@ -167,6 +169,9 @@ class TestCase(unittest.TestCase):
         extcode.name = 'ExternalCode'
         extcode.timeout = 5
         extcode.command = 'python sleep.py 1'
+        extcode.external_files = [
+            FileMetadata(path='sleep.py', input=True, constant=True),
+        ]
 
         # Exercise check_save_load().
         retcode = check_save_load(extcode)

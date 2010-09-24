@@ -4,14 +4,14 @@ User Guide
 ============ 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    
    overview.rst
    install.rst
    simple_example.rst
    example.rst
+   example_mdao.rst
    userguide_script.rst
-   standard_lib
    units.rst
 
 

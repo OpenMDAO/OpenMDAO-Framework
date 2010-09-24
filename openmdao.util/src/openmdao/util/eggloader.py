@@ -17,8 +17,6 @@ import pkg_resources
 import sys
 import zipfile
 
-import zc.buildout.easy_install
-
 from openmdao.util.log import NullLogger
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.eggsaver import SAVE_CPICKLE, SAVE_PICKLE, SAVE_YAML, \
@@ -28,19 +26,34 @@ __all__ = ('load', 'load_from_eggfile', 'load_from_eggpkg',
            'check_requirements')
 
 
-def load_from_eggfile(filename, entry_group, entry_name, install=False,
-                      logger=None, observer=None):
+def load_from_eggfile(filename, entry_group, entry_name, logger=None,
+                      observer=None):
     """
-    Extract files in egg to a subdirectory matching the saved object name.
-    Optionally installs distributions the egg depends on, and then loads object
-    graph state by invoking the given entry point.  Returns the root object.
+    Extracts files in egg to a subdirectory matching the saved object name.
+    Then loads object graph state by invoking the given entry point.
+    Returns the root object.
+
+    filename: string
+        Name of egg file.
+
+    entry_group: string
+        Name of group.
+
+    entry_name: string
+        Name of entry point in group.
+
+    logger: Logger
+        Used for recording progress, etc.
+
+    observer: callable
+        Called via an :class:`EggObserver`.
     """
     logger = logger or NullLogger()
     observer = EggObserver(observer, logger)
     logger.debug('Loading %s from %s in %s...',
                  entry_name, filename, os.getcwd())
 
-    egg_dir, dist = _dist_from_eggfile(filename, install, logger, observer)
+    egg_dir, dist = _dist_from_eggfile(filename, logger, observer)
 
     if not '.' in sys.path:
         sys.path.append('.')
@@ -58,6 +71,24 @@ def load_from_eggpkg(package, entry_group, entry_name, instance_name=None,
     """
     Load object graph state by invoking the given package entry point.
     Returns the root object.
+
+    package: string
+        Name of package to load from.
+
+    entry_group: string
+        Name of group.
+
+    entry_name: string
+        Name of entry point in group.
+
+    instance_name: string
+        Name for instance loaded.
+
+    logger: Logger
+        Used for recording progress, etc.
+
+    observer: callable
+        Called via an :class:`EggObserver`.
     """
     logger = logger or NullLogger()
     observer = EggObserver(observer, logger)
@@ -110,7 +141,7 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
         raise exc
 
 
-def _dist_from_eggfile(filename, install, logger, observer):
+def _dist_from_eggfile(filename, logger, observer):
     """ Create distribution by unpacking egg file. """
     if not os.path.exists(filename):
         msg = "'%s' not found." % filename
@@ -184,24 +215,6 @@ def _dist_from_eggfile(filename, install, logger, observer):
     for req in dist.requires():
         logger.debug('        %s', req)
 
-    if install:
-        # Locate the installation (eggs) directory.
-        install_dir = os.path.dirname(
-                          os.path.dirname(
-                              os.path.dirname(
-                                  os.path.dirname(zc.buildout.__file__))))
-        logger.debug('    installing in %s', install_dir)
-
-        # Grab any distributions we depend on.
-        try:
-            zc.buildout.easy_install.install(
-                [str(req) for req in dist.requires()], install_dir,
-                index=EGG_SERVER_URL, always_unzip=True)
-        except Exception, exc:
-            msg = "Install failed: '%s'" % exc
-            observer.exception(msg)
-            raise RuntimeError(msg)
-
     # If any module didn't have a distribution, check that we can import it.
     if provider.has_metadata('openmdao_orphans.txt'):
         errors = 0
@@ -230,6 +243,15 @@ def check_requirements(required, logger=None, indent_level=0):
     """
     Display requirements (if logger debug level enabled) and note conflicts.
     Returns a list of unavailable requirements.
+
+    required: list
+        List of package requirements.
+
+    logger: Logger
+        Used for recording progress, etc.
+
+    indent_level: int
+        Used to improve readability of log messages.
     """
     def _recursive_check(required, logger, level, visited, working_set,
                          not_avail):
@@ -270,6 +292,18 @@ def load(instream, fmt=SAVE_CPICKLE, package=None, logger=None):
     If `instream` is a string that is not an existing filename or
     absolute path, then it is searched for using :mod:`pkg_resources`.
     Returns the root object.
+
+    instream: file or string
+        Stream or filename to load from.
+
+    fmt: int
+        Format of state data.
+
+    package: string
+        Name of package to use.
+
+    logger: Logger
+        Used for recording progress, etc.
     """
     logger = logger or NullLogger()
 

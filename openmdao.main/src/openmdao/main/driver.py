@@ -1,143 +1,107 @@
+""" Driver class definition """
+
 #public symbols
 __all__ = ["Driver"]
 
 
-
-
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.api import implements, List, Instance
-#from enthought.traits.trait_base import not_none
-#import networkx as nx
-#from networkx.algorithms.traversal import strongly_connected_components
 
-from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, \
+from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, IHasEvents,\
                                      obj_has_interface 
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
-#from openmdao.main.expression import Expression, ExpressionList
+from openmdao.main.hasevents import HasEvents
+from openmdao.util.decorators import add_delegate
 
-    
+@add_delegate(HasEvents)
 class Driver(Component):
     """ A Driver iterates over a workflow of Components until some condition
     is met. """
     
-    implements(IDriver)
+    implements(IDriver, IHasEvents)
 
-    recorder = Instance(ICaseRecorder, desc='Case recorder for iteration data', 
+    recorder = Instance(ICaseRecorder, desc='Case recorder for iteration data.', 
                         required=False)
 
     workflow = Instance(Workflow, allow_none=True)
     
     def __init__(self, doc=None):
-        super(Driver, self).__init__(doc=doc)
-        self.workflow = None
+        self._workflows = []
         self._iter = None
+        super(Driver, self).__init__(doc=doc)
+        self.add_workflow('workflow', Dataflow(self))
         
-    def _get_workflow(self):
-        """Returns the 'active' workflow for this Driver, which is either
-        self.workflow or the parent's workflow if no workflow is set for
-        this Driver."""
-        if self.workflow:
-            return self.workflow
+    def add_workflow(self, name, wf):
+        """Add a new Workflow with the given name to this Driver"""
+        if isinstance(wf, Workflow):
+            setattr(self, name, wf)
+            self._workflows.append(wf)
         else:
-            return self.parent._default_workflow
-
+            self.raise_exception("'%s' is not a Workflow" % name,
+                                 TypeError)
+            
+    def remove_workflow(self, name):
+        wf = getattr(self, name, None)
+        try:
+            self._workflows.remove(wf)
+        except:
+            self.raise_exception("'%s' is not a member of the Workflow list" % name,
+                                 NameError)
+        
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
-        or if any of our public variables is invalid, or if any public
+        or if any of our variables is invalid, or if any 
         variable referenced by any of our Expressions is invalid.
         """
         if super(Driver, self).is_valid() is False:
             return False
-        
-        # driver is invalid if any of its Expressions reference
-        # invalid Variables or if the Expression itself is invalid
-        for name in self.get_expr_names(iotype='in'):
-            if not self.get_valid(name):
-                return False
-            rv = getattr(self, name)
-            if isinstance(rv, list):
-                for entry in rv:
-                    if not entry.refs_valid():
-                        return False
-            else:
-                if not rv.refs_valid():
-                    return False
 
         # force execution if any component in the workflow is invalid
-        for comp in self._get_workflow().contents():
-            if not comp.is_valid():
-                return False
+        for wf in self._workflows:
+            for comp in wf.contents():
+                if not comp.is_valid():
+                    return False
 
         return True
-
-    def add_to_workflow(self, obj):
-        """Add the given object to this Driver's workflow, creating a
-        local workflow if one doesn't already exist.
-        """
-        if self.workflow is None:
-            if self.parent:
-                self.workflow = Dataflow(self.parent)
-            else:
-                self.raise_exception("'parent' not set, so can't set scope of Dataflow", 
-                                     RuntimeError)
-        if obj_has_interface(obj, IComponent):
-            self.workflow.add(obj)
-        else:
-            try:
-                iter(obj)
-            except TypeError:
-                self.raise_exception("Cannot add object of type %s to workflow" % type(obj),
-                                     TypeError)
-            for entry in obj:
-                if obj_has_interface(entry, IComponent):
-                    self.workflow.add(entry)
-                else:
-                    self.raise_exception("Cannot add object of type %s to workflow" % type(entry),
-                                     TypeError)
 
     def config_changed(self):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
         """
         super(Driver, self).config_changed()
-        if self.workflow:
-            self.workflow.config_changed()
-
-    def _pre_execute (self):
-        """Call base class *_pre_execute* after determining if we have any invalid
-        ref variables, which will cause us to have to regenerate our ref dependency graph.
-        """
-        if not self.is_valid():
-            self._call_execute = True
-        super(Driver, self)._pre_execute()
-        
-        if self._call_execute:
-            if self in self._get_workflow().contents():
-                self.raise_exception("Driver '%s' is a member of it's own workflow!" %
-                                     self.name, RuntimeError)
+        try:
+            wfs = self._workflows
+        except:
+            pass  # early on, self._workflows may not exist yet
+        else:
+            for wf in wfs:
+                wf.config_changed()
 
     def remove_from_workflow(self, component):
-        """Remove the specified component from our workflow."""
-        if self.workflow:
-            self.workflow.remove(component)
+        """Remove the specified component from our workflow(s).
+        """
+        for wf in self._workflows:
+            wf.remove(component)
 
     def iteration_set(self):
-        """Return a set of all Components in our workflow, and 
-        recursively in any workflow in any Driver in our workflow.
+        """Return a set of all Components in our workflow(s), and 
+        recursively in any workflow in any Driver in our workflow(s).
         """
         allcomps = set()
-        for child in self._get_workflow().contents():
-            allcomps.add(child)
-            if isinstance(child, Driver):
-                allcomps.update(child.iteration_set())
+        for wf in self._workflows:
+            for child in wf.contents():
+                allcomps.add(child)
+                if isinstance(child, Driver):
+                    allcomps.update(child.iteration_set())
         return allcomps
         
     def get_expr_depends(self):
-        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by any Expression or ExpressionList 
-        traits in this Driver, ignoring any dependencies on components that are
+        """Returns a list of tuples of the form (src_comp_name,
+        dest_comp_name) for each dependency introduced by any ExprEvaluators
+        in this Driver, ignoring any dependencies on components that are
         inside of this Driver's iteration set.
         """
         iternames = set([c.name for c in self.iteration_set()])
@@ -188,14 +152,14 @@ class Driver(Component):
     def _step_workflow(self):
         while True:
             try:
-                self._get_workflow().step()
+                self.workflow.step()
             except RunStopped:
                 pass
             yield
 
     def stop(self):
         self._stop = True
-        self._get_workflow().stop()
+        self.workflow.stop()
 
     def start_iteration(self):
         """Called just prior to the beginning of an iteration loop. This can 
@@ -209,12 +173,12 @@ class Driver(Component):
         return self._continue
     
     def pre_iteration(self):
-        """Called prior to each iteration."""
-        pass
+        """Called prior to each iteration.  This is where iteration events are set."""
+        self.set_events()
         
     def run_iteration(self):
-        """Runs the workflow of components."""
-        wf = self._get_workflow()
+        """Runs workflow"""
+        wf = self.workflow
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         wf.run()
@@ -223,44 +187,3 @@ class Driver(Component):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration
 
-    #def get_referenced_comps(self, iotype=None):
-        #"""Return a set of names of Components that we reference based on the 
-        #contents of our Expressions and ExpressionLists.  If iotype is
-        #supplied, return only component names that are referenced by ref
-        #variables with matching iotype.
-        #"""
-        #if self._expr_comps[iotype] is None:
-            #comps = set()
-        #else:
-            #return self._expr_comps[iotype]
-    
-        #for name in self.get_expr_names(iotype):
-            #obj = getattr(self, name)
-            #if isinstance(obj, list):
-                #for entry in obj:
-                    #comps.update(entry.get_referenced_compnames())
-            #else:
-                #comps.update(obj.get_referenced_compnames())
-                
-        #self._expr_comps[iotype] = comps
-        #return comps
-        
-    #def get_expr_graph(self, iotype=None):
-        #"""Return the dependency graph for this Driver based on
-        #Expressions and ExpressionLists.
-        #"""
-        #if self._expr_graph[iotype] is not None:
-            #return self._expr_graph[iotype]
-        
-        #self._expr_graph[iotype] = nx.DiGraph()
-        #name = self.name
-        
-        #if iotype == 'out' or iotype is None:
-            #self._expr_graph[iotype].add_edges_from([(name,rv) 
-                                  #for rv in self.get_referenced_comps(iotype='out')])
-            
-        #if iotype == 'in' or iotype is None:
-            #self._expr_graph[iotype].add_edges_from([(rv, name) 
-                                  #for rv in self.get_referenced_comps(iotype='in')])
-        #return self._expr_graph[iotype]
-    

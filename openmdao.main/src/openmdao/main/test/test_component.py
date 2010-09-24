@@ -7,6 +7,7 @@ import os.path
 import sys
 import stat
 import unittest
+import nose
 
 from openmdao.main.api import Component
 
@@ -38,7 +39,8 @@ class TestCase(unittest.TestCase):
 
     def test_protected_directory(self):
         if sys.platform == 'win32':
-            return     # Windows box has permission problems with this test
+            raise nose.SkipTest("Windows box has permission problems with this test")
+        
         logging.debug('')
         logging.debug('test_protected_directory')
 

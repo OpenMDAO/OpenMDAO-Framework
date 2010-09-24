@@ -153,6 +153,7 @@ class GolinskiTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('driver', CONMINdriver())
         self.top.add('comp', OptGolinskiComponent())
+        self.top.driver.workflow.add(self.top.comp)
         self.top.driver.iprint = 0
         self.top.driver.itmax = 30
         
@@ -192,17 +193,15 @@ class GolinskiTestCase(unittest.TestCase):
 
     def test_opt1(self):
         """Golinski optimization using CONMIN"""
-        self.top.driver.objective = 'comp.result'
+        self.top.driver.add_objective('comp.result')
         #                                
         #  maximize x[0] value
         iter  = 1
-        self.top.driver.design_vars = ['comp.x[1]','comp.x[2]',
-                                       'comp.x[3]','comp.x[4]']
-        self.top.driver.lower_bounds = [0.70, 17.0, 7.300, 7.300]
-        self.top.driver.upper_bounds = [0.80, 28.0, 8.300, 8.300]
+        self.top.driver.add_parameters([('comp.x[1]',.7,.8),('comp.x[2]',17.,28.),
+                                       ('comp.x[3]',7.3,8.3),('comp.x[4]',7.3,8.3)])
         #  25 CONSTRAINTS  defined in the problem
         #  reduced to 1 constraint
-        self.top.driver.constraints = ['1.0 - 40.0/(comp.x[2] * comp.x[3])']
+        self.top.driver.add_constraint('40.0/(comp.x[2] * comp.x[3]) > 1.0')
         while iter < 4:
             # print  'iter     ',iter
             g00 = self.top.comp.x[0]
@@ -247,7 +246,7 @@ class GolinskiTestCase(unittest.TestCase):
         #print 'Obj FUNCTION Val = ', self.top.comp.result 
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective, \
-                               self.top.driver.objective.evaluate(), 0.01)
+                               self.top.driver.eval_objective(), 0.01)
         assert_rel_error(self, self.top.comp.opt_design_vars[1], \
                                self.top.comp.x[1], 0.1)
         assert_rel_error(self, self.top.comp.opt_design_vars[2], \
@@ -258,121 +257,25 @@ class GolinskiTestCase(unittest.TestCase):
                                self.top.comp.x[4], 0.05)
 
         
-    def test_save_load(self):
-        self.top.driver.objective = 'comp.result'
-        #                                
-        #  maximize x[0] value
-        iter  = 1
-        self.top.driver.design_vars = ['comp.x[1]', 'comp.x[2]',
-                                             'comp.x[3]', 'comp.x[4]']
-        self.top.driver.lower_bounds = [0.70, 17.0, 7.300, 7.300]
-        self.top.driver.upper_bounds = [0.80, 28.0, 8.300, 8.300]
-        #  25 CONSTRAINTS  defined in the problem
-        #  reduced to 1 constraint
-        self.top.driver.constraints = ['1.0 - 40.0/(comp.x[2] * comp.x[3])']
-        # Set local dir in case we're running in a different directory.
-        py_dir = pkg_resources.resource_filename('openmdao.lib.drivers', 'test')
-        retcode = check_save_load(self.top, py_dir=py_dir)
-        self.assertEqual(retcode, 0)
-
-
-    def test_bad_objective(self):
-        try:
-            self.top.driver.objective = 'comp.missing'
-        except TraitError, err:
-            self.assertEqual(str(err), 
-                "driver: invalid value 'comp.missing' for input ref variable 'objective': comp: cannot get valid flag of 'missing' because it's not an io trait.")
-        else:
-            self.fail('TraitError expected')
-
-
-    def test_no_design_vars(self):
-        self.top.driver.objective = 'comp.result'
-        try:
-            self.top.run()
-        except Exception, err:
-            self.assertEqual(str(err), "driver: no design variables specified")
-        else:
-            self.fail('Exception expected')
-    
-    def test_no_objective(self):
-        self.top.driver.design_vars = ['comp.x[1]','comp.x[2]',
-                                       'comp.x[3]','comp.x[4]']
-        try:
-            self.top.run()
-        except RuntimeError, err:
-            self.assertEqual(str(err), "driver: no objective specified")
-        else:
-            self.fail('RuntimeError expected')
-            
-    def test_get_objective(self):
-        self.top.driver.objective = 'comp.result'
-        self.assertEqual('comp.result', self.top.driver.objective)
-    
     def test_update_objective(self):
         try:
-            x = self.top.driver.objective.evaluate()
-        except TraitError, err:
-            self.assertEqual(str(err), "Expression: string reference is undefined")
+            x = self.top.driver.eval_objective()
+        except Exception, err:
+            self.assertEqual(str(err), "driver: no objective specified")
         else:
-            self.fail('TraitError expected')
-        self.top.driver.objective = 'comp.result'
+            self.fail('Exception expected')
+        self.top.driver.add_objective('comp.result')
         self.top.comp.x = numpy.array([0,0,0,0,0,0,0],dtype=float)
-        self.top.driver.design_vars = ['comp.x[0]','comp.x[1]',
-                                       'comp.x[3]','comp.x[4]']
-        for dv,val in zip(self.top.driver.design_vars,[1.,1.,0.,0.]):
-            dv.set(val)
+        for param,low,high in zip(['comp.x[0]', 'comp.x[1]', 'comp.x[3]', 'comp.x[4]'],
+                                  [0.70, 17.0, 7.300, 7.300],
+                                  [0.80, 28.0, 8.300, 8.300]):
+            self.top.driver.add_parameter(param, low=low, high=high)
+        self.top.driver.set_parameters([1.,1.,0.,0.])
         self.assertEqual(list(self.top.comp.x), 
                          [1.,1.,0.,0.,0.,0.,0.])
         self.top.comp.execute()       
-        self.assertEqual(self.top.driver.objective.evaluate(), -0.7854*43.09340)
+        self.assertEqual(self.top.driver.eval_objective(), -0.7854*43.09340)
         
-    
-    def test_bad_design_vars(self):
-        try:
-            self.top.driver.design_vars = ['comp_bogus.x[0]','comp.x[1]']
-        except TraitError, err:
-            self.assertEqual(str(err), 
-                "driver: invalid value 'comp_bogus.x[0]' for input ref variable 'design_vars[0]': 'Assembly' object has no attribute 'comp_bogus'")
-        else:
-            self.fail('TraitError expected')
-    
-    def test_bad_constraint(self):
-        try:
-            self.top.driver.constraints = ['bogus.flimflam']
-        except TraitError, err:
-            self.assertEqual(str(err), 
-                "driver: invalid value 'bogus.flimflam' for input ref variable 'constraints[0]': 'Assembly' object has no attribute 'bogus'")
-        else:
-            self.fail('TraitError expected')
-            
-    def test_lower_bounds_mismatch(self):
-        self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[1]','comp.x[2]']
-        try:
-            self.top.driver.lower_bounds = [0, 0, 0, 0]
-            self.top.run()
-        except ValueError, err:
-            self.assertEqual(str(err),
-                             "driver: size of new lower bound array"+
-                             " (4) does not match number of design vars (2)")
-        else:
-            self.fail('ValueError expected')
-            
-    def test_upper_bounds_mismatch(self):
-        self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[1]','comp.x[2]']
-        try:
-            self.top.driver.upper_bounds = [99]
-            self.top.run()
-        except ValueError, err:
-            msg = "driver: size of new upper bound array" \
-                  " (1) does not match number of design vars (2)"
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail('ValueError expected')
-    
- 
 
 if __name__ == "__main__":
     import nose

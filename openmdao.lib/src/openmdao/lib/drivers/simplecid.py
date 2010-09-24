@@ -1,15 +1,16 @@
-import os.path
+""" A simple driver that runs cases from a CaseIterator and records them
+with a CaseRecorder """
 
-from openmdao.main.api import Component, Driver
-from openmdao.main.exceptions import RunStopped
+# pylint: disable-msg=E0611,F0401
+from openmdao.main.api import Driver
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.lib.api import Instance
 
 class SimpleCaseIterDriver(Driver):
     """
-    A Driver that runs a set of cases provided by an :class:`ICaseIterator`
-    sequentially and records the results in a :class:`CaseRecorder`. This is
-    intended for test cases or very simple models only. For a more full
+    A Driver that sequentially runs a set of cases provided by an :class:`ICaseIterator`
+    and records the results in a :class:`CaseRecorder`. This is
+    intended for test cases or very simple models only. For a more full-
     featured Driver with similar functionality, see
     :class:`CaseIteratorDriver`.
 
@@ -20,8 +21,9 @@ class SimpleCaseIterDriver(Driver):
     be executed once.
     """
 
-    iterator = Instance(ICaseIterator, desc='source of Cases', required=True)
-    recorder = Instance(ICaseRecorder, desc='where Case results are recorded', 
+    # pylint: disable-msg=E1101
+    iterator = Instance(ICaseIterator, desc='Source of Cases.', required=True)
+    recorder = Instance(ICaseRecorder, desc='Where Case results are recorded.',
                         required=True)
     
     def __init__(self, *args, **kwargs):
@@ -33,16 +35,16 @@ class SimpleCaseIterDriver(Driver):
         self._call_execute = True
     
     def execute(self):
-        """ Runs each case in `iterator` and records results in `recorder`. """
+        """ Run each case in `iterator` and record results in `recorder`. """
         for case in self.iterator:
             self._run_case(case)
             self.recorder.record(case)
 
     def _run_case(self, case):
         msg = ''
-        case.set_inputs(self.parent)
+        case.apply_inputs(self.parent)
         try:
-            self._get_workflow().run()
+            self.workflow.run()
         except Exception as err:
             msg = str(err)
         try:

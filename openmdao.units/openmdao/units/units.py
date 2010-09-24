@@ -1,21 +1,20 @@
-# Unit Handling
-#
-# Written by Justin Gray, but based heavily on the PhysicalQuantities
-# module in Scientific Python written by Konrad Hinsen
-
 """This module provides a data type that represents a physical
 quantity together with its unit. It is possible to add and
-subtract these quantities if the units are compatible, and
+subtract these quantities if the units are compatible and
 a quantity can be converted to another compatible unit.
 Multiplication, subtraction, and raising to integer powers
-is allowed without restriction, and the result will have
+are allowed without restriction, and the result will have
 the correct unit. A quantity can be raised to a non-integer
 power only if the result can be represented by integer powers
 of the base units.
 
 The module provides a basic set of predefined physical quanitites
-in its built in library, however it also supports generation of
-personal libararies which can be saved and reused"""
+in its built-in library; however, it also supports generation of
+personal libararies which can be saved and reused.
+
+This module is based on the PhysicalQuantities module
+in Scientific Python, by Konrad Hinsen. Modifications by
+Justin Gray."""
 
 import re, ConfigParser
 import os.path
@@ -36,9 +35,9 @@ class NumberDict(dict):
   
     Constructor: NumberDict()
   
-    An instance of this class acts like an array of number with
+    An instance of this class acts like an array of numbers with
     generalized (non-integer) indices. A value of zero is assumed
-    for undefined entries. NumberDict instances support addition,
+    for undefined entries. NumberDict instances support addition
     and subtraction with other NumberDict instances, and multiplication
     and division by scalars.
     """
@@ -103,7 +102,7 @@ class PhysicalQuantity(object):
         There are two constructor calling patterns:
     
                 1. PhysicalQuantity(value, unit), where value is any number
-                and unit is a string defining the unit
+                and unit is a string defining the unit.
     
                 2. PhysicalQuantity(value_with_unit), where value_with_unit
                 is a string that contains both the value and the unit,
@@ -211,20 +210,20 @@ class PhysicalQuantity(object):
         return self.value != 0
   
     def convert_value(self, target_unit):
-        """Converts the values of the PQ to the target_unit"""
+        """Converts the values of the PQ to the target_unit."""
         (factor, offset) = self.unit.conversion_tuple_to(target_unit)
         return (self.value + offset) * factor
 
     def convert_to_unit(self, unit):
         """
-        Change the unit and adjust the value such that
+        Change the unit and adjust the value so that
         the combination is equivalent to the original one. The new unit
         must be compatible with the previous unit of the object.
     
         @param unit: a unit
         @type unit: C{str}
-        @raise TypeError: if the unit string is not a know unit or a
-        unit incompatible with the current one
+        @raise TypeError: if the unit string is not a known unit or a
+        unit incompatible with the current one.
         """
         unit = _find_unit(unit)
     
@@ -238,7 +237,7 @@ class PhysicalQuantity(object):
         expresses the quantity in that unit. If several units
         are specified, the return value is a tuple of
         PhysicalObject instances with with one element per unit such
-        that the sum of all quantities in the tuple equals the the
+        that the sum of all quantities in the tuple equals the
         original quantity and all the values except for the last one
         are integers. This is used to convert to irregular unit
         systems like hour/minute/second.
@@ -248,7 +247,7 @@ class PhysicalQuantity(object):
         @returns: one or more physical quantities
         @rtype: L{PhysicalQuantity} or C{tuple} of L{PhysicalQuantity}
         @raises TypeError: if any of the specified units are not compatible
-        with the original unit
+        with the original unit.
         """
         unit = _find_unit(unit)
        
@@ -289,7 +288,7 @@ class PhysicalQuantity(object):
         @type unit: C{str}
         @returns: C{True} if the specified unit is compatible with the
         one of the quantity
-        @rtype: C{bool}
+        @rtype: C{bool}.
         """
         unit = _find_unit(unit)
         return self.unit.is_compatible(unit)
@@ -307,7 +306,7 @@ class PhysicalQuantity(object):
         return pow(self, 0.5)
 
     def sin(self):
-        """Parsing Sine"""
+        """Parsing Sine."""
         if self.unit.is_angle():
             return N.sin(self.value * \
                 self.unit.conversion_factor_to(PhysicalQuantity('1rad').unit))
@@ -315,7 +314,7 @@ class PhysicalQuantity(object):
             raise TypeError('Argument of sin must be an angle')
 
     def cos(self):
-        """Parsing Cosine"""
+        """Parsing Cosine."""
         if self.unit.is_angle():
             return N.cos(self.value * \
                 self.unit.conversion_factor_to(PhysicalQuantity('1rad').unit))
@@ -323,7 +322,7 @@ class PhysicalQuantity(object):
             raise TypeError('Argument of cos must be an angle')
 
     def tan(self):
-        """Parsing tangent"""
+        """Parsing tangent."""
         if self.unit.is_angle():
             return N.tan(self.value * \
                 self.unit.conversion_factor_to(PhysicalQuantity('1rad').unit))
@@ -443,7 +442,7 @@ class PhysicalUnit(object):
         @type other: L{PhysicalUnit}
         @returns: the conversion factor from this unit to another unit
         @rtype: C{float}
-        @raises TypeError: if the units are not compatible
+        @raises TypeError: if the units are not compatible.
         """
         if self.powers != other.powers:
             raise TypeError('Incompatible units')
@@ -462,7 +461,7 @@ class PhysicalUnit(object):
         @type other: L{PhysicalUnit}
         @returns: the conversion factor and offset from this unit to another unit
         @rtype: (C{float}, C{float})
-        @raises TypeError: if the units are not compatible
+        @raises TypeError: if the units are not compatible.
         """
         if self.powers != other.powers:
             raise TypeError('Incompatible units')
@@ -493,7 +492,7 @@ class PhysicalUnit(object):
         @param other: another unit
         @type other: L{PhysicalUnit}
         @returns: C{True} if the units are compatible, i.e. if the powers of the base units are the same
-        @rtype: C{bool}
+        @rtype: C{bool}.
         """
         return self.powers == other.powers
 
@@ -502,12 +501,12 @@ class PhysicalUnit(object):
         return not any(self.powers)
   
     def is_angle(self):
-        """Checks if this PQ is an Angle"""
+        """Checks if this PQ is an Angle."""
         return (self.powers[_unit_lib.base_types['angle']] == 1 and \
                              sum(self.powers) == 1)
   
     def set_name(self, name):
-        """Sets the name"""
+        """Sets the name."""
         self.names = NumberDict()
         self.names[name] = 1
 
@@ -537,7 +536,7 @@ class PhysicalUnit(object):
 _unit_cache = {}
 
 def _find_unit(unit):
-    """find unit helper function"""
+    """Find unit helper function."""
     if isinstance(unit, str):
         name = unit.strip()
         try:
@@ -584,7 +583,7 @@ def _new_unit(name, factor, powers):
 
 
 def add_offset_unit(name, baseunit, factor, offset, comment=''):
-    """adding Offset Unit"""
+    """Adding Offset Unit."""
     if isinstance(baseunit, str):
         baseunit = _find_unit(baseunit)
     #else, baseunit should be a instance of PhysicalUnit
@@ -604,7 +603,7 @@ def add_offset_unit(name, baseunit, factor, offset, comment=''):
         
         
 def add_unit(name, unit, comment=''):
-    """adding Unit"""
+    """Adding Unit."""
     if comment:
         _unit_lib.help.append((name, comment, unit))
     if isinstance(unit, str):
@@ -623,14 +622,14 @@ def add_unit(name, unit, comment=''):
 _unit_lib = ConfigParser.ConfigParser()
 
 def do_nothing(string):
-    """makes the ConfigParser case sensitive"""
+    """Makes the ConfigParser case sensitive."""
     return string
 
 _unit_lib.optionxform = do_nothing
 
 
 def import_library(libfilepointer):
-    """Imports a library"""
+    """Imports a library."""
     global _unit_lib 
     global _unit_cache
     _unit_cache = {}

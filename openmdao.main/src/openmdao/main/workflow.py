@@ -1,9 +1,6 @@
+""" Workflow class definition """
 
-from enthought.traits.api import implements
-
-from openmdao.main.interfaces import IWorkflow
-from openmdao.main.container import Container
-from openmdao.main.component import Component
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
 
 __all__ = ['Workflow']
@@ -14,8 +11,6 @@ class Workflow(object):
     in some order.
     """
 
-    implements(IWorkflow)
-    
     def __init__(self, members=None):
         """ Create an workflow. If members is not None,
         iterate through members and add them to the workflow."""
@@ -62,7 +57,7 @@ class Workflow(object):
         raise NotImplemented("This Workflow has no 'add' function")
     
     def config_changed(self):
-        """Notifies the Workflow that workflow configuration (dependencies, etc.)
+        """Notifies the Workflow that workflow configuration (dependencies, etc)
         has changed.
         """
         pass
@@ -72,7 +67,7 @@ class Workflow(object):
         raise NotImplemented("This Workflow has no 'remove' function")
 
     def contents(self):
-        """Returns a list of all Components in the workflow.
+        """Returns a list of all components in the workflow.
         No ordering is assumed.
         """
         raise NotImplemented("This Workflow has no 'contents' function")

@@ -19,9 +19,9 @@ from nastran_maker import NastranMaker
 from nastran_parser import NastranParser
 from nastran_util import stringify, nastran_replace_inline
 
-from openmdao.lib.traits.float import Float
-from openmdao.lib.traits.int import Int
-from openmdao.lib.traits.array import Array
+from openmdao.lib.datatypes.float import Float
+from openmdao.lib.datatypes.int import Int
+from openmdao.lib.datatypes.array import Array
 
 class NastranComponent(ExternalCode):
     """All Nastran-capable components should be subclasses of NastranComponent

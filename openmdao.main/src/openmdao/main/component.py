@@ -1,3 +1,4 @@
+""" Class definition for Component """
 
 #public symbols
 __all__ = ['Component', 'SimulationRoot']
@@ -12,14 +13,13 @@ import pkg_resources
 import sys
 import weakref
 
-import networkx as nx
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event, not_none
 from enthought.traits.api import Bool, List, Str, Instance, implements, TraitError
 
 from openmdao.main.container import Container
-from openmdao.main.interfaces import IComponent
+from openmdao.main.interfaces import IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
-from openmdao.main.expression import Expression, ExpressionList
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 
@@ -32,7 +32,11 @@ class SimulationRoot (object):
     @staticmethod
     def chroot (path):
         """Change to directory `path` and set the singleton's root.
-        Normally not called but useful in special situations."""
+        Normally not called but useful in special situations.
+
+        path: string
+            Path to move to.
+        """
         os.chdir(path)
         SimulationRoot.__root = os.getcwd()
 
@@ -45,7 +49,11 @@ class SimulationRoot (object):
 
     @staticmethod
     def legal_path (path):
-        """Return True if `path` is legal (descendant of our root)."""
+        """Return True if `path` is legal (descendant of our root).
+
+        path: string
+            Path to check.
+        """
         if SimulationRoot.__root is None:
             SimulationRoot.__root = os.getcwd()
         return path.startswith(SimulationRoot.__root)
@@ -77,33 +85,34 @@ class DirectoryContext(object):
 class Component (Container):
     """This is the base class for all objects containing Traits that are \
     accessible to the OpenMDAO framework and are "runnable."
-
-    - If `create_instance_dir` is True, then this component needs a unique \
-      per-instance execution directory.  The created directory is filled \
-      based on `external_files` and `directory` (which should contain the \
-      required files).
-    - `directory` is a string specifying the directory to execute in. \
-      If it is a relative path, it is relative to its parent's directory.
-    - `external_files` is a list of :class:`FileMetadata` objects for external \
-      files used by the component.  The *path* attribute can be a \
-      :mod:`glob`-style pattern.
     """
 
     implements(IComponent)
     
-    create_instance_dir = Bool(False, desc='If True, create a unique'
-                               ' per-instance execution directory',
-                               iotype='in')
+  
     directory = Str('', desc='If non-blank, the directory to execute in.', 
                     iotype='in')
-    external_files = List(FileMetadata)
-        
+    external_files = List(FileMetadata,
+                          desc='FileMetadata objects for external files used'
+                               ' by this component')
+    force_execute = Bool(False, iotype='in',
+                         desc="If True, always execute even if all IO traits are valid.")
+
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
-        # contains validity flag for each io Trait
-        self._valid_dict = dict([(name,False) for name,t in self.class_traits().items() if t.iotype])
+        # contains validity flag for each io Trait (inputs are valid since they're not connected yet,
+        # and outputs are invalid)
+        self._valid_dict = dict([(name,t.iotype=='in') for name,t in self.class_traits().items() if t.iotype])
         
+        # Components with input CaseIterators will be forced to execute whenever run() is
+        # called on them, even if they don't have any invalid inputs or outputs.
+        self._num_input_caseiters = 0
+        for name,trait in self.class_traits().items():
+            # isinstance(trait.trait_type.klass,ICaseIterator) doesn't work here...
+            if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+                self._num_input_caseiters += 1
+
         self._stop = False
         self._call_check_config = True
         self._call_execute = True
@@ -111,7 +120,11 @@ class Component (Container):
         self._input_names = None
         self._output_names = None
         self._container_names = None
+        self._expr_depends = None
+        self._expr_sources = None
         
+        self.exec_count = 0
+        self.create_instance_dir = False
         if directory:
             self.directory = directory
         
@@ -120,15 +133,15 @@ class Component (Container):
 
     @property
     def dir_context(self):
-        """Returns the :class:`DirectoryContext` for this component."""
+        """The :class:`DirectoryContext` for this component."""
         if self._dir_context is None:
             self._dir_context = DirectoryContext(self)
         return self._dir_context
 
     def _input_changed(self, name):
-        if self.get_valid(name):  # if var is not already invalid
-            self.invalidate_deps([name], notify_parent=True)
-        
+        if self._valid_dict[name]:  # if var is not already invalid
+            self.invalidate_deps(varnames=[name], notify_parent=True)
+            
     def check_config (self):
         """Verify that this component is fully configured to execute.
         This function is called once prior to the first execution of this
@@ -136,7 +149,7 @@ class Component (Container):
         Classes that override this function must still call the base class
         version.
         """
-        for name, value in self._traits_meta_filter(required=True).items():
+        for name, value in self.traits(required=True).items():
             if value.is_trait_type(Instance) and getattr(self, name) is None:
                 self.raise_exception("required plugin '%s' is not present" %
                                      name, TraitError)
@@ -206,24 +219,29 @@ class Component (Container):
         
         if not self.is_valid():
             self._call_execute = True
+        elif self._num_input_caseiters > 0:
+            self._call_execute = True
+            # we're valid, but we're running anyway because of our input CaseIterators,
+            # so we need to notify downstream comps so they grab our new outputs
+            self.invalidate_deps()
 
         if self.parent is None: # if parent is None, we're not part of an Assembly
                                 # so Variable validity doesn't apply. Just execute.
             self._call_execute = True
+            valids = self._valid_dict
             for name in self.list_inputs():
-                self.set_valid(name, True)
+                valids[name] = True
         else:
             invalid_ins = self.list_inputs(valid=False)
             if len(invalid_ins) > 0:
                 self._call_execute = True
-                name = self.name
-                self.parent.update_inputs(['.'.join([name, n]) for n in invalid_ins])
+                self.parent.update_inputs(self.name, invalid_ins)
                 valids = self._valid_dict
                 for name in invalid_ins:
                     valids[name] = True
             elif self._call_execute == False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
-                                
+
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
         have already been set. This must be overridden in derived classes.
@@ -234,9 +252,13 @@ class Component (Container):
         """Update output variables and anything else needed after execution. 
         Overrides of this function must call this version.
         """
+        self.exec_count += 1
+        
         # make our output Variables valid again
-        for name in self.list_outputs():
-            self.set_valid(name, True)
+        valids = self._valid_dict
+        invalid_outs = self.list_outputs(valid=False)
+        for name in invalid_outs:
+            valids[name] = True
         self._call_execute = False
         
     def run (self, force=False):
@@ -249,60 +271,19 @@ class Component (Container):
         self._stop = False
         try:
             self._pre_execute()
-            if self._call_execute or force:
-                #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
-                #print 'execute %s' % self.get_pathname()
+            if self._call_execute or force or self.force_execute:
+                #if self.get_pathname() != 'branin_meta_model':
+                    #print 'execute %s' % self.get_pathname()
+                #else:
+                    #sys.stdout.write('.')
                 self.execute()
                 self._post_execute()
+            #else:
+                #print 'skipping %s' % self.get_pathname()
         finally:
             if self.directory:
                 self.pop_dir()
  
-    def get_io_graph(self):
-        """Return a graph connecting our input variables to our output
-        variables. In the case of a simple Container, all input variables are
-        predecessors to all output variables.
-        """
-        # NOTE: if the _io_graph changes, this function must return a NEW
-        # graph object instead of modifying the old one, because object
-        # identity is used in the parent assembly to determine of the graph
-        # has changed
-        if self._io_graph is None:
-            self._io_graph = nx.DiGraph()
-            io_graph = self._io_graph
-            name = self.name
-            ins = ['.'.join([name, v]) for v in self.keys(iotype='in')]
-            outs = ['.'.join([name, v]) for v in self.keys(iotype='out')]
-            
-            # add nodes for all of the variables
-            io_graph.add_nodes_from(ins)
-            io_graph.add_nodes_from(outs)
-            
-            # specify edges, with all inputs as predecessors to all outputs
-            for invar in ins:
-                io_graph.add_edges_from([(invar, o) for o in outs])
-          
-            exprs = self.get_expr_names()
-            selfname = self.name
-            for name in exprs:
-                exprobj = getattr(self, name)
-                #if isinstance(exprobj, basestring): # a simple Expression
-                if self.trait(name).is_trait_type(Expression):
-                    vnames = exprobj.get_referenced_varpaths()
-                else:  # an ExpressionList
-                    vnames = set()
-                    for entry in exprobj:
-                        vnames.update(entry.get_referenced_varpaths())
-                if self.trait(name).iotype == 'in':
-                    for vname in vnames:
-                        io_graph.add_edge(vname, '.'.join([selfname,name]), expr=True)
-                    io_graph.node['.'.join([selfname,name])]['expr'] = True
-                #else:
-                    #for vname in vnames:
-                        #io_graph.add_edge('.'.join([selfname,name]), vname, expr=True)
-                
-        return self._io_graph
-
     def add(self, name, obj):
         """Override of base class version to force call to *check_config* after
         any child containers are added.
@@ -327,26 +308,54 @@ class Component (Container):
         super(Component, self).add_trait(name, trait)
         self.config_changed()
         if trait.iotype:
-            self._valid_dict[name] = False
+            self._valid_dict[name] = trait.iotype=='in'
+        if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+            self._num_input_caseiters += 1
         
     def remove_trait(self, name):
         """Overrides base definition of add_trait in order to
         force call to *check_config* prior to execution when a trait is
         removed.
         """
+        trait = self.traits().get(name)
         super(Component, self).remove_trait(name)
         self.config_changed()
         try:
             del self._valid_dict[name]
         except KeyError:
             pass
+        
+        if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+            self._num_input_caseiters -= 1
 
     def is_valid(self):
-        """Return False if any of our public variables is invalid."""
+        """Return False if any of our variables is invalid."""
         if self._call_execute:
             return False
-        return False not in self._valid_dict.values()
+        if False in self._valid_dict.values():
+            self.call_execute = True
+            return False
+        if self.parent is not None:
+            srccomps = [n for n,v in self.get_expr_sources()]
+            if len(srccomps):
+                counts = self.parent.exec_counts(srccomps)
+                for count,tup in zip(counts, self._expr_sources):
+                    if count != tup[1]:
+                        self._call_execute = True  # to avoid making this same check unnecessarily later
+                        # update the count information since we're got it, to avoid making another call
+                        for i,tup in enumerate(self._expr_sources):
+                            self._expr_sources[i] = (tup[0], count)
+                        return False
+        return True
 
+    def _trait_added_changed(self, name):
+        """Called any time a new trait is added to this container."""
+        self.new_trait(name)
+        self.config_changed()
+        
+    def new_trait(self, name):
+        pass
+        
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
@@ -356,7 +365,8 @@ class Component (Container):
         self._input_names = None
         self._output_names = None
         self._container_names = None
-        self._io_graph = None
+        self._expr_depends = None
+        self._expr_sources = None
         self._call_check_config = True
         self._call_execute = True
 
@@ -392,44 +402,26 @@ class Component (Container):
             self._container_names = [n for n,v in self.items() 
                                                    if isinstance(v,Container)]            
         return self._container_names
-    
-    def get_expr_names(self, iotype=None):
-        """Return a list of names of all Expression and ExpressionList traits
-        in this instance.
-        """
-        if iotype is None:
-            checker = not_none
-        else:
-            checker = iotype
-        
-        return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
-                    if v.is_trait_type(Expression) or 
-                       v.is_trait_type(ExpressionList)]
-    
+            
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by any Expression or ExpressionList 
-        traits in this Component.
+        for each dependency resulting from ExprEvaluators in this Component.
         """
         conn_list = []
-        exprs = self.get_expr_names()
-        selfname = self.name
-        for name in exprs:
-            exprobj = getattr(self, name)
-            if isinstance(exprobj, basestring): # a simple Expression
-                cnames = exprobj.get_referenced_compnames()
-            else:  # an ExpressionList
-                cnames = []
-                for entry in exprobj:
-                    cnames += entry.get_referenced_compnames()
-            if self.trait(name).iotype == 'in':
-                for cname in cnames:
-                    conn_list.append((cname, selfname))
-            else:
-                for cname in cnames:
-                    conn_list.append((selfname, cname))
-                
+        if hasattr(self, '_delegates_'):
+            for name, dclass in self._delegates_.items():
+                delegate = getattr(self, name)
+                if hasattr(delegate, 'get_expr_depends'):
+                    conn_list.extend(delegate.get_expr_depends())
         return conn_list
+
+    def get_expr_sources(self):
+        """Return a list of tuples containing the names of all upstream components that are 
+        referenced in any of our objectives, along with an initial exec_count of 0.
+        """
+        if self._expr_sources is None:
+            self._expr_sources = [(v,0) for u,v in self.get_expr_depends() if v==self.name]
+        return self._expr_sources
 
     def check_path(self, path, check_dir=False):
         """Verify that the given path is a directory and is located
@@ -504,25 +496,45 @@ class Component (Container):
     def save_to_egg(self, name, version, py_dir=None, require_relpaths=True,
                     child_objs=None, dst_dir=None, fmt=SAVE_CPICKLE,
                     proto=-1, use_setuptools=False, observer=None):
-        """Save state and other files to an egg.  Typically used to copy all or
-        part of a simulation to another user or machine.  By specifying child
+        """Save state and other files to an egg. Typically used to copy all or
+        part of a simulation to another user or machine. By specifying child
         components in `child_objs`, it will be possible to create instances of
-        just those components from the installed egg.  Child component names
+        just those components from the installed egg. Child component names
         should be specified relative to this component.
 
-        - `name` must be an alphanumeric string.
-        - `version` must be an alphanumeric string.
-        - `py_dir` is the (root) directory for local Python files. \
-          It defaults to the current directory.
-        - If `require_relpaths` is True, any path (directory attribute,
-          external file, or file trait) which cannot be made relative to this \
-          component's directory will raise ValueError. Otherwise such paths \
-          generate a warning and the file is skipped.
-        - `child_objs` is a list of child objects for additional entry points.
-        - `dst_dir` is the directory to write the egg in.
-        - `fmt` and `proto` are passed to :meth:`eggsaver.save`.
-        - `use_setuptools` is passed to :meth:`eggsaver.save_to_egg`.
-        - `observer` will be called via an :class:`EggObserver`.
+        name: string
+            Name for egg, must be an alphanumeric string.
+
+        version: string
+            Version for egg, must be an alphanumeric string.
+
+        py_dir: string
+            The (root) directory for local Python files. It defaults to
+            the current directory.
+
+       require_relpaths: bool
+            If True, any path (directory attribute, external file, or file
+            trait) which cannot be made relative to this component's directory
+            will raise ValueError. Otherwise such paths generate a warning and
+            the file is skipped.
+
+        child_objs: list
+            List of child objects for additional entry points.
+
+        dst_dir: string
+            The directory to write the egg in.
+
+        fmt: int
+            Passed to :meth:`eggsaver.save`.
+
+        proto: int
+            Passed to :meth:`eggsaver.save`.
+
+        use_setuptools: bool
+            Passed to :meth:`eggsaver.save_to_egg`.
+
+        observer: callable
+            Will be called via an :class:`EggObserver`.
 
         After collecting files and possibly modifying their paths, this
         calls :meth:`container.save_to_egg`.
@@ -706,7 +718,30 @@ class Component (Container):
         the egg.  `name` is set when creating an instance via a factory.
         In this case, external files are copied to a `name` directory and the
         component's directory attribute set accordingly.  Existing files
-        are not overwritten.
+        are not overwritten. Returns the root object.
+
+        instream: file or string
+            Stream to load from.
+
+        fmt: int
+            Format of state data.
+
+        package: string
+            Name of package to look for `instream` if `instream` is a string
+            that is not an existing file.
+
+        call_post_load: bool
+            If True, call :meth:`post_load`.
+
+        top_obj: bool
+            Set True if loading the default entry, False if loading a
+            child entry point object.
+
+        name: string
+            Name for the root object
+
+        observer: callable
+            Will be called via an :class:`EggObserver`.
         """
         observer = EggObserver(observer, logging.getLogger())
         try:
@@ -728,7 +763,7 @@ class Component (Container):
                           isinstance(obj.parent, Component):
                         rel_path = join(obj.directory, rel_path)
                         obj = obj.parent
-                elif top.trait('_rel_dir_path'):
+                elif '_rel_dir_path' in top.traits():
                     top.warning('No parent, using saved relative directory')
                     rel_path = top._rel_dir_path  # Set during save_to_egg().
                 else:
@@ -930,61 +965,49 @@ class Component (Container):
             self.raise_exception(
                 "cannot get valid flag of '%s' because it's not "
                 "an io trait." % name, RuntimeError)
-            
-        #valid = self._valid_dict.get(name, Missing)
-        #if valid is Missing:
-            #trait = self.trait(name)
-            #if trait and trait.iotype:
-                #self._valid_dict[name] = False
-                #return False
-            #else:
-                #self.raise_exception(
-                    #"cannot get valid flag of '%s' because it's not "
-                    #"an io trait." % name, RuntimeError)
-        #return valid
-    
+                
     def get_valids(self, names):
         """Get a list of validity flags for the io traits with the given
         names.
         """
         return [self.get_valid(v) for v in names]
 
-    def set_valid(self, name, valid):
-        """Mark the io trait with the given name as valid or invalid."""
-        try:
-            self._valid_dict[name] = valid
-        except KeyError:
-            self.raise_exception(
-                "cannot set valid flag of '%s' because "
-                "it's not an io trait." % name, RuntimeError)
+    def set_valids(self, names, valid):
+        """Mark the io traits with the given names as valid or invalid."""
+        for name in names:
+            try:
+                self._valid_dict[name] = valid
+            except KeyError:
+                self.raise_exception(
+                    "cannot set valid flag of '%s' because "
+                    "it's not an io trait." % name, RuntimeError)
             
-        #if name in self._valid_dict:
-            #self._valid_dict[name] = valid
-        #else:
-            #trait = self.trait(name)
-            #if trait and trait.iotype:
-                #self._valid_dict[name] = valid
-            #else:
-                #self.raise_exception(
-                    #"cannot set valid flag of '%s' because "
-                    #"it's not an io trait." % name, RuntimeError)
-
-    def invalidate_deps(self, varlist, notify_parent=False):
-        """Invalidate all of our valid outputs."""
-        valid_outs = self.list_outputs(valid=True)
+    def invalidate_deps(self, varnames=None, notify_parent=False):
+        """Invalidate all of our outputs if they're not invalid already.
+        For a typical Component, this will always be all or nothing, meaning
+        there will never be partial validation of outputs.  Components
+        supporting partial output validation must override this function.
         
+        Returns None, indicating that all outputs are invalidated.
+        """
         self._call_execute = True
         
-        for var in varlist:
-            self.set_valid(var, False)
-            
+        valids = self._valid_dict
+        if varnames is None:
+            varnames = self.list_inputs(valid=True)
+        for var in varnames:
+            if var in self._sources:
+                valids[var] = False
+        
+        valid_outs = self.list_outputs(valid=True)
+        
         if notify_parent and self.parent and len(valid_outs) > 0:
-            self.parent.invalidate_deps(['.'.join([self.name,n]) for n in valid_outs], 
-                                        notify_parent)
+            self.parent.invalidate_deps(compname=self.name, 
+                                        varnames=None, notify_parent=True)
         for out in valid_outs:
-            self._valid_dict[out] = False
+            valids[out] = False
             
-        return valid_outs
+        return None 
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.

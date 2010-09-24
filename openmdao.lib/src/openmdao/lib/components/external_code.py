@@ -1,3 +1,5 @@
+""" Base class for an external application that needs to be executed. """
+
 import glob
 import os.path
 import shutil
@@ -5,48 +7,42 @@ import subprocess
 import stat
 import time
 
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Bool, Dict, Str
 
 from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 from openmdao.main.resource import ResourceAllocationManager as RAM
-from openmdao.lib.traits.float import Float
-from openmdao.lib.traits.int import Int
+from openmdao.lib.datatypes.float import Float
+from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
 
 
 class ExternalCode(Component):
-    """
-    Run an external code as a component.
+    """ Run an external code as a component. """
 
-    - `command` is the command to be executed.
-    - `env_vars` is a dictionary of environment variables for `command`.
-    - `resources` is a dictionary of resources required to run this component.
-    - `poll_delay` is the delay between polling for command completion \
-      (seconds). A value <= zero will use an internally computed default.
-    - `timeout` is the maximum time to wait for command completion (seconds). \
-      A value <= zero implies an infinite wait.
-    - `return_code` is the value returned by the command.
-    - `timed_out` is set True if the command timed-out.
-    """
     PIPE   = subprocess.PIPE
     STDOUT = subprocess.STDOUT
 
+    # pylint: disable-msg=E1101
     command = Str('', iotype='in',
-                  desc='Command to be executed.')
+                  desc='The command to be executed.')
     env_vars = Dict({}, iotype='in',
-                    desc='Environment variables.')
+                    desc='Environment variables required by the command.')
     resources = Dict({}, iotype='in',
                      desc='Resources required to run this component.')
-    poll_delay = Float(0., units='s', io_type='in',
-                       desc='Delay between polling for command completion.')
+    poll_delay = Float(0., low=0., units='s', iotype='in',
+                       desc='Delay between polling for command completion.'
+                            ' A value of zero will use an internally computed'
+                            ' default.')
     timeout = Float(0., low=0., iotype='in', units='s',
-                    desc='Max time to wait for command completion.')
+                    desc='Maximum time to wait for command completion.'
+                         ' A value of zero implies an infinite wait.')
     timed_out = Bool(False, iotype='out',
-                     desc='True if command timed-out.')
+                     desc='True if the command timed-out.')
     return_code = Int(0, iotype='out',
-                      desc='Return code from command.')
+                      desc='Return code from the command.')
 
     def __init__(self, *args, **kwargs):
         super(ExternalCode, self).__init__(*args, **kwargs)
@@ -60,10 +56,12 @@ class ExternalCode(Component):
 
     def execute(self):
         """
-        Removes existing output (but not in/out) files,
-        If `resources` have been specified, then an appropriate server
+        Runs the specified command.
+
+        First removes existing output (but not in/out) files.
+        Then if `resources` have been specified, an appropriate server
         is allocated and the command is run on that server.
-        Otherwise runs the command locally.
+        Otherwise the command is run locally.
         """
         self.return_code = -12345678
         self.timed_out = False
@@ -225,6 +223,14 @@ class ExternalCode(Component):
     def copy_inputs(self, inputs_dir, patterns):
         """
         Copy inputs from `inputs_dir` that match `patterns`.
+
+        inputs_dir: string
+            Directory to copy files from. Relative paths are evaluated from
+            the component's execution directory.
+
+        patterns: list or string
+            One or more :mod:`glob` patterns to match against.
+
         This can be useful for resetting problem state.
         """
         self._logger.info('copying initial inputs from %s...', inputs_dir)
@@ -237,6 +243,14 @@ class ExternalCode(Component):
     def copy_results(self, results_dir, patterns):
         """
         Copy files from `results_dir` that match `patterns`.
+
+        results_dir: string
+            Directory to copy files from. Relative paths are evaluated from
+            the component's execution directory.
+
+        patterns: list or string
+            One or more :mod:`glob` patterns to match against.
+
         This can be useful for workflow debugging when the external
         code takes a long time to execute.
         """
@@ -249,8 +263,14 @@ class ExternalCode(Component):
 
     def copy_files(self, directory, patterns):
         """
-        Copies files from `directory` that match `patterns`
-        to the current directory and ensures they are writable.
+        Copy files from `directory` that match `patterns`
+        to the current directory and ensure they are writable.
+
+        directory: string
+            Directory to copy files from.
+
+        patterns: list or string
+            One or more :mod:`glob` patterns to match against.
         """
         if isinstance(patterns, basestring):
             patterns = [patterns]

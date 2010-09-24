@@ -26,6 +26,9 @@ class OptimizationConstrained(Assembly):
         # Create CONMIN Optimizer instance
         self.add('driver', CONMINdriver())
         
+        # Driver process definition
+        self.driver.workflow.add(self.paraboloid)
+        
         # CONMIN Flags
         self.driver.iprint = 0
         self.driver.itmax = 30
@@ -33,17 +36,14 @@ class OptimizationConstrained(Assembly):
         self.driver.fdchm = .000001
         
         # CONMIN Objective 
-        self.driver.objective = 'paraboloid.f_xy'
+        self.driver.add_objective('paraboloid.f_xy')
         
         # CONMIN Design Variables 
-        self.driver.design_vars = ['paraboloid.x', 
-                                         'paraboloid.y' ]
-        
-        self.driver.lower_bounds = [-50, -50]
-        self.driver.upper_bounds = [50, 50]
+        self.driver.add_parameter('paraboloid.x', low=-50., high=50.)
+        self.driver.add_parameter('paraboloid.y', low=-50., high=50.)
         
         # CONMIN Constraints
-        self.driver.constraints = ['paraboloid.y-paraboloid.x+15.0']
+        self.driver.add_constraint('paraboloid.x-paraboloid.y >= 15.0')
         
         
 if __name__ == "__main__": # pragma: no cover         

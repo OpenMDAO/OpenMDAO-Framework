@@ -3,11 +3,13 @@ import Queue
 import sys
 import threading
 
+from enthought.traits.api import Bool, Instance
+
 from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.main.resource import ResourceAllocationManager as RAM
-from openmdao.lib.api import Bool, Instance, Int
+from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer
 
 _EMPTY    = 'empty'
@@ -15,19 +17,18 @@ _READY    = 'ready'
 _COMPLETE = 'complete'
 _ERROR    = 'error'
 
-class ServerError(Exception):
+class _ServerError(Exception):
     """ Raised when a server thread has problems. """
     pass
 
 
-class CaseIteratorDriver(Driver):
+class CaseIterDriverBase(Driver):
     """
-    Run a set of cases provided by an :class:`ICaseIterator` in a manner similar
+    A base class for Drivers that run sets of cases in a manner similar
     to the ROSE framework. Concurrent evaluation is supported, with the various
     evaluations executed across servers obtained from the
     :class:`ResourceAllocationManager`.
 
-    - The `iterator` socket provides the cases to be evaluated.
     - The `model` to be executed is found in the workflow.
     - The `recorder` socket is used to record results.
     - If `sequential` is True, then the cases are evaluated sequentially.
@@ -36,20 +37,20 @@ class CaseIteratorDriver(Driver):
     
     """
 
-    iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
-    recorder = Instance(object, desc='Something to append() to.', required=True)
+    recorder = Instance(ICaseRecorder, allow_none=True, 
+                        desc='Something to save Cases to.')
     
     sequential = Bool(True, iotype='in',
-                      desc='Evaluate cases sequentially.')
+                      desc='If True, evaluate cases sequentially.')
 
     reload_model = Bool(True, iotype='in',
-                        desc='Reload model between executions.')
+                        desc='If True, reload the model between executions.')
 
     max_retries = Int(1, low=0, iotype='in',
-                      desc='Number of times to retry a case.')
+                      desc='Maximum number of times to retry a failed case.')
 
     def __init__(self, *args, **kwargs):
-        super(CaseIteratorDriver, self).__init__(*args, **kwargs)
+        super(CaseIterDriverBase, self).__init__(*args, **kwargs)
 
         self._iter = None  # Set to None when iterator is empty.
         self._replicants = 0
@@ -75,14 +76,17 @@ class CaseIteratorDriver(Driver):
         self._rerun = []  # Cases that failed and should be retried.
 
     def execute(self):
-        """ Runs each case in `iterator` and records results in `recorder`. """
+        """ Runs all cases and records results in `recorder`. """
         self.setup()
         self.resume()
 
     def resume(self, remove_egg=True):
         """
-        Resume execution. If `remove_egg` is True, then the egg file created
-        for concurrent evaluation is removed at the end of the run.
+        Resume execution.
+
+        remove_egg: bool
+            If True, then the egg file created for concurrent evaluation is
+            removed at the end of the run.
         """
         self._stop = False
         if self._iter is None:
@@ -126,13 +130,17 @@ class CaseIteratorDriver(Driver):
             pass
 
     def stop(self):
-        """ Avoid default driver handling of stop signal. """
+        """ Stop evaluating cases. """
+        # Necessary to avoid default driver handling of stop signal.
         self._stop = True
 
     def setup(self, replicate=True):
         """
-        Setup to begin new run. If `replicate`, then replicate the model
-        and save to an egg file first (for concurent evaluation).
+        Setup to begin new run.
+
+        replicate: bool
+             If True, then replicate the model and save to an egg file
+             first (for concurrent evaluation).
         """
         self._cleanup(remove_egg=replicate)
 
@@ -143,7 +151,7 @@ class CaseIteratorDriver(Driver):
                 self._replicants += 1
                 version = 'replicant.%d' % (self._replicants)
                 driver = self.parent.driver
-                self.parent.add('driver', Driver())
+                self.parent.add('driver', Driver()) # this driver will execute the workflow once
                 self.parent.driver.workflow = self.workflow
                 try:
                     #egg_info = self.model.save_to_egg(self.model.name, version)
@@ -155,7 +163,11 @@ class CaseIteratorDriver(Driver):
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
 
-        self._iter = self.iterator.__iter__()
+        self._iter = self.get_case_iterator()
+        
+    def get_case_iterator(self):
+        """Returns a new iterator over the Case set."""
+        raise NotImplemented('get_case_iterator')
 
     def _start(self):
         """ Start evaluating cases concurrently. """
@@ -277,7 +289,7 @@ class CaseIteratorDriver(Driver):
     def _server_ready(self, server, stepping=False):
         """
         Responds to asynchronous callbacks during :meth:`execute` to run cases
-        retrieved from `iterator`.  Results are processed by `recorder`.
+        retrieved from `self._iter`.  Results are processed by `recorder`.
         If `stepping`, then we don't grab any new cases.
         Returns True if this server is still in use.
         """
@@ -290,7 +302,7 @@ class CaseIteratorDriver(Driver):
                 self._logger.debug('    load_model')
                 self._load_model(server)
                 self._server_states[server] = _READY
-            except ServerError:
+            except _ServerError:
                 self._server_states[server] = _ERROR
 
         elif state == _READY:
@@ -340,7 +352,8 @@ class CaseIteratorDriver(Driver):
                     self._logger.debug('    exception %s', exc)
                     case.msg = str(exc)
                 # Record the data.
-                self.recorder.append(case)
+                if self.recorder is not None:
+                    self.recorder.record(case)
 
                 if not case.msg:
                     if self.reload_model:
@@ -350,7 +363,7 @@ class CaseIteratorDriver(Driver):
                     self._logger.debug('    load')
                     self._load_model(server)
                 self._server_states[server] = _READY
-            except ServerError:
+            except _ServerError:
                 # Handle server error separately.
                 self._logger.debug('    server error')
 
@@ -358,7 +371,7 @@ class CaseIteratorDriver(Driver):
             self._server_cases[server] = None
             try:
                 self._load_model(server)
-            except ServerError:
+            except _ServerError:
                 pass  # Needs work!
             else:
                 self._server_states[server] = _READY
@@ -380,22 +393,29 @@ class CaseIteratorDriver(Driver):
         self._server_cases[server] = case
 
         try:
+            for event in self.get_events(): 
+                try: 
+                    self._model_set(server,event,None,True)
+                except Exception as exc:
+                    msg = "Exception setting '%s': %s" % (name, exc)
+                    self.raise_exception(msg, ServerError)
             for name, index, value in case.inputs:
                 try:
                     self._model_set(server, name, index, value)
                 except Exception as exc:
                     msg = "Exception setting '%s': %s" % (name, exc)
-                    self.raise_exception(msg, ServerError)
+                    self.raise_exception(msg, _ServerError)
             self._model_execute(server)
             self._server_states[server] = _COMPLETE
-        except ServerError as exc:
+        except _ServerError as exc:
             self._server_states[server] = _ERROR
             if case.retries < case.max_retries:
                 case.retries += 1
                 self._rerun.append(case)
             else:
                 case.msg = str(exc)
-                self.recorder.append(case)
+                if self.recorder is not None:
+                    self.recorder.record(case)
 
     def _service_loop(self, name, resource_desc):
         """ Each server has an associated thread executing this. """
@@ -468,7 +488,7 @@ class CaseIteratorDriver(Driver):
         self._exceptions[server] = None
         if server is None:
             try:
-                self._get_workflow().run()
+                self.workflow.run()
             except Exception as exc:
                 self._exceptions[server] = exc
                 self._logger.critical('Caught exception: %s' % exc)
@@ -490,3 +510,20 @@ class CaseIteratorDriver(Driver):
         """ Return execute status from model. """
         return self._exceptions[server]
 
+
+class CaseIteratorDriver(CaseIterDriverBase):
+    """
+    Run a set of cases provided by an :class:`ICaseIterator`. Concurrent evaluation 
+    is supported, with the various evaluations executed across servers obtained from the
+    :class:`ResourceAllocationManager`.
+    """
+
+    iterator = Instance(ICaseIterator, iotype='in',
+                        desc='Iterator supplying Cases to evaluate.')
+    
+    def get_case_iterator(self):
+        """Returns a new iterator over the Case set."""
+        if self.iterator is not None:
+            return self.iterator.__iter__()
+        else:
+            self.raise_exception("iterator has not been set", ValueError)

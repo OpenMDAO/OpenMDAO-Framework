@@ -1,10 +1,10 @@
 """
-A public variable that references another member of the OpenMDAO model
+A variable that references another member of the OpenMDAO model
 hierarchy.
 """
 
 #public symbols
-__all__ = ['Expression', 'ExpressionList']
+__all__ = []
 
 
 # pylint: disable-msg=E0611,F0401
@@ -29,6 +29,9 @@ class DumbDefault(object):
         
     def set(self, val):
         raise TraitError('Expression: string reference is undefined')
+    
+    def __len__(self):
+        return 0
             
 class Expression(BaseStr):
     """A trait that references, via a pathname, another trait in the
@@ -43,6 +46,9 @@ class Expression(BaseStr):
         
         if default_value is NoDefaultSpecified:
             default_value = DumbDefault()
+        else:
+            defval = default_value
+            default_value = ExprEvaluator(default_value) # try block around this seems to do nothing ???
             
         # Put iotype in the metadata dictionary
         if iotype is not None:
@@ -68,10 +74,11 @@ class Expression(BaseStr):
             else:
                 s = ExprEvaluator(s, obj)
             s._parse()
-        except RuntimeError:
+        except Exception:
             raise TraitError("invalid %sput ref variable value '%s'" % \
                              (self.iotype, str(value)))
         
+        # changing an expression value changes dependencies, so notify the component
         obj.config_changed()
 
         return s

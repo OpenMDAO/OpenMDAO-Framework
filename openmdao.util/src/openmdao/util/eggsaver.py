@@ -38,14 +38,8 @@ import sys
 import tempfile
 import types
 
-import zc.buildout.easy_install
-
 from openmdao.util.log import NullLogger
 from openmdao.util import eggobserver, eggwriter
-
-__all__ = ('save', 'save_to_egg',
-           'SAVE_YAML', 'SAVE_LIBYAML', 'SAVE_PICKLE', 'SAVE_CPICKLE',
-           'EGG_SERVER_URL')
 
 # Save formats.
 SAVE_YAML    = 1
@@ -115,17 +109,35 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     recorded in an 'egg-info/openmdao_orphans.txt' file.  Also creates and
     saves loader scripts for each entry point.
 
-    - `entry_pts` is a list of (obj, obj_name, obj_group) tuples. \
-      The first of these specifies the root object and package name.
-    - `version` defaults to a timestamp of the form 'YYYY.MM.DD.HH.mm'.
-    - `py_dir` is the (root) directory for local Python files. \
-      It defaults to the current directory.
-    - `src_dir` is the root of all (relative) `src_files`.
-    - `dst_dir` is the directory to write the egg in.
-    - `fmt` and `proto` are passed to :meth:`save`.
-    - If `use_setuptools` is True, then :func:`eggwriter.write_via_setuptools` \
-      is called rather than :func:`eggwriter.write`.
-    - `observer` will be called via an :class:`EggObserver` intermediary.
+    entry_pts: list
+        List of ``(obj, obj_name, obj_group)`` tuples.
+        The first of these specifies the root object and package name.
+
+    version: string
+        Defaults to a timestamp of the form 'YYYY.MM.DD.HH.mm'.
+
+    py_dir: string
+        The (root) directory for local Python files.
+        It defaults to the current directory.
+
+    src_dir: string
+        The root of all (relative) `src_files`.
+
+    dst_dir: string
+        The directory to write the egg in.
+
+    fmt: int
+        Passed to :meth:`save`.
+
+    proto: int
+        Passed to :meth:`save`.
+
+    use_setuptools: bool
+        If True, then :func:`eggwriter.write_via_setuptools` is called rather
+        than :func:`eggwriter.write`.
+
+    observer: callable
+        Will be called via an :class:`EggObserver` intermediary.
 
     Returns ``(egg_filename, required_distributions, orphan_modules)``.
     """
@@ -199,31 +211,32 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
         # Move to scratch area.
         tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
         os.chdir(tmp_dir)
+        os.mkdir(name)
         cleanup_files = []
 
-        buildout_name = 'buildout.cfg'
-        buildout_path = os.path.join(name, buildout_name)
-        buildout_orig = buildout_path+'-orig'
         try:
+            # Copy external files from src_dir.
             if src_dir:
-                if py_dir != src_dir or sys.platform == 'win32':
-                    # Copy original directory to object name.
-#                    shutil.copytree(src_dir, name)
-                     _copytree(src_dir, name)
-                else:
-                    # Just link original directory to object name.
-                    os.symlink(src_dir, name)
-            else:
-                os.mkdir(name)
+                for path in src_files:
+                    subdir = os.path.dirname(path)
+                    if subdir:
+                        subdir = os.path.join(name, subdir)
+                        if not os.path.exists(subdir):
+                            os.makedirs(subdir)
+                    src = os.path.join(src_dir, path)
+                    dst = os.path.join(name, path)
+                    if sys.platform == 'win32':
+                        shutil.copy2(src, dst)
+                    else:
+                        os.symlink(src, dst)
 
-            # If py_dir isn't src_dir, copy local modules from py_dir.
-            if py_dir != src_dir:
-                for path in local_modules:
-                    if not os.path.exists(
-                               os.path.join(name, os.path.basename(path))):
-                        if not os.path.isabs(path):
-                            path = os.path.join(py_dir, path)
-                        shutil.copy(path, name)
+            # Copy local modules from py_dir.
+            for path in local_modules:
+                if not os.path.exists(
+                           os.path.join(name, os.path.basename(path))):
+                    if not os.path.isabs(path):
+                        path = os.path.join(py_dir, path)
+                    shutil.copy(path, name)
 
             # For each entry point...
             entry_info = []
@@ -247,13 +260,6 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                 _write_loader_script(loader_path, state_name, name, obj is root)
 
                 entry_info.append((obj_group, obj_name, loader))
-
-            # Create buildout.cfg
-            if os.path.exists(buildout_path):
-                os.rename(buildout_path, buildout_orig)
-            _create_buildout(name, EGG_SERVER_URL, required_distributions,
-                             buildout_path)
-            src_files.add(buildout_name)
 
             # If needed, make an empty __init__.py
             init_path = os.path.join(name, '__init__.py')
@@ -280,11 +286,6 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
             for path in cleanup_files:
                 if os.path.exists(path):
                     os.remove(path)
-            if os.path.exists(buildout_path):
-                os.remove(buildout_path)
-            if os.path.exists(buildout_orig):
-                os.rename(buildout_orig, buildout_path)
-
     finally:
         os.chdir(orig_dir)
         if tmp_dir:
@@ -292,25 +293,6 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
         _restore_objects(fixup)
 
     return (egg_name, required_distributions, orphan_modules)
-
-
-def _copytree(src_dir, dst_dir):
-    """
-    Approximate shutil.copytree(), ignores exceptions.
-    Avoids problems with trying to copy files we don't actually use anyway.
-    """
-    names = os.listdir(src_dir)
-    os.makedirs(dst_dir)
-    for name in names:
-        srcname = os.path.join(src_dir, name)
-        dstname = os.path.join(dst_dir, name)
-        try:
-            if os.path.isdir(srcname):
-                _copytree(srcname, dstname)
-            else:
-                shutil.copy2(srcname, dstname)
-        except Exception:
-            pass
 
 
 def _get_objects(root, logger):
@@ -709,25 +691,6 @@ def _process_found_modules(py_dir, finder_items, modules, distributions,
                     orphans.add((name, path))
 
 
-def _create_buildout(name, server_url, distributions, path):
-    """ Create buildout.cfg """
-    out = open(path, 'w')
-    out.write("""\
-[buildout]
-parts = %(name)s
-index = %(server)s
-unzip = true
-
-[%(name)s]
-recipe = zc.recipe.egg:scripts
-interpreter = python
-eggs =
-""" % {'name':name, 'server':server_url})
-    for dist in distributions:
-        out.write("    %s\n" % dist.as_requirement())
-    out.close()
-
-
 def _write_state_file(dst_dir, root, name, fmt, proto, logger, observer):
     """ Write state of `root` and its children. Returns (filename, path). """
     if fmt is SAVE_CPICKLE or fmt is SAVE_PICKLE:
@@ -833,6 +796,21 @@ def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None):
     The format can be supplied in case something other than :mod:`cPickle`
     is needed.  For the :mod:`pickle` formats, a `proto` of -1 means use the
     highest protocol.
+
+    root: object
+        The root of the object tree to save
+
+    outstream: file or string
+        Stream or filename to save to.
+
+    fmt: int
+        What format to save the object state in.
+
+    proto: int
+        What protocol to use when pickling.
+
+    logger: Logger
+        Used for recording progress, etc.
     """
     logger = logger or NullLogger()
 

@@ -38,7 +38,7 @@ class Case(object):
                (self.ident, self.inputs, self.outputs,
                 self.max_retries, self.retries, self.msg)
 
-    def set_inputs(self, scope):
+    def apply_inputs(self, scope):
         """Set all of the inputs in this case to their specified values in
         the given scope.
         """
@@ -69,7 +69,7 @@ class Case(object):
     def add_output(self, name, index=None):
         """Convenience function for adding an output"""
         self.outputs.append((name, index, None))
-
+        
 #class FileCaseIterator(object):
     #"""An iterator that returns :class:`Case` objects from a file having the
     #simple format below, where a blank line indicates a separation between two

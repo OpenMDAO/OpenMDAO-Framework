@@ -38,7 +38,7 @@ class OptRosenSuzukiComponent(Component):
          X = (0.0, 1.0, 2.0, -1.0)
     """
     
-    x = Array(iotype='in')
+    x = Array(iotype='in', low=-10, high=99)
     result = Float(iotype='out')
     
     # pylint: disable-msg=C0103
@@ -65,6 +65,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('driver', CONMINdriver())
         self.top.add('comp', OptRosenSuzukiComponent())
+        self.top.driver.workflow.add(self.top.comp)
         self.top.driver.iprint = 0
         self.top.driver.itmax = 30
         
@@ -72,21 +73,19 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top = None
         
     def test_opt1(self):
-        self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]']
-        self.top.driver.lower_bounds = [-10, -10, -10, -10]
-        self.top.driver.upper_bounds = [99, 99, 99, 99]
+        self.top.driver.add_objective('comp.result')
+        map(self.top.driver.add_parameter, 
+            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
         
         # pylint: disable-msg=C0301
-        self.top.driver.constraints = [
-            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]-8',
-            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
+        map(self.top.driver.add_constraint,[
+            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
+            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])        
         self.top.run()
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.objective.evaluate(), places=2)
+                               self.top.driver.eval_objective(), places=2)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
                                self.top.comp.x[0], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
@@ -96,121 +95,89 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
                                self.top.comp.x[3], places=1)
 
+    def test_opt1_flippedconstraints(self):
+        self.top.driver.add_objective('comp.result')
+        map(self.top.driver.add_parameter, 
+            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
         
-    def test_bad_objective(self):
-        try:
-            self.top.driver.objective = 'comp.missing'
-        except TraitError, err:
-            self.assertEqual(str(err), 
-                "driver: invalid value 'comp.missing' for input ref variable "+
-                "'objective': comp: cannot get valid flag of 'missing' because "+
-                "it's not an io trait.")
-        else:
-            self.fail('TraitError expected')
+        # pylint: disable-msg=C0301
+        map(self.top.driver.add_constraint,[
+            '8 > comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]',
+            '10 > comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]',
+            '5 > 2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]'])        
+        self.top.run()
+        # pylint: disable-msg=E1101
+        self.assertAlmostEqual(self.top.comp.opt_objective, 
+                               self.top.driver.eval_objective(), places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
+                               self.top.comp.x[0], places=1)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
+                               self.top.comp.x[1], places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
+                               self.top.comp.x[2], places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
+                               self.top.comp.x[3], places=1)
 
 
     def test_no_design_vars(self):
-        self.top.driver.objective = 'comp.result'
+        self.top.driver.add_objective('comp.result')
         try:
             self.top.run()
         except RuntimeError, err:
             self.assertEqual(str(err), 
-                "driver: no design variables specified")
+                "driver: no parameters specified")
         else:
             self.fail('RuntimeError expected')
     
     def test_no_objective(self):
-        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]']
+        map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
+                                             'comp.x[2]', 'comp.x[3]'])
         try:
             self.top.run()
-        except RuntimeError, err:
+        except Exception, err:
             self.assertEqual(str(err), "driver: no objective specified")
         else:
-            self.fail('RuntimeError expected')
+            self.fail('Exception expected')
             
     def test_get_objective(self):
-        self.top.driver.objective = 'comp.result'
-        self.assertEqual('comp.result', self.top.driver.objective)
+        self.top.driver.add_objective('comp.result')
+        self.assertEqual('comp.result', self.top.driver.list_objective())
     
     def test_update_objective(self):
         try:
-            val = self.top.driver.objective.evaluate()
-        except TraitError, err:
-            self.assertEqual(str(err), "Expression: string reference is undefined")
+            val = self.top.driver.eval_objective()
+        except Exception, err:
+            self.assertEqual(str(err), "driver: no objective specified")
         else:
-            self.fail('TraitError expected')
+            self.fail('Exception expected')
             
         self.top.comp.result = 88.
-        self.top.driver.objective = 'comp.result'
-        self.assertEqual(self.top.driver.objective.evaluate(), 88.)
+        self.top.driver.add_objective('comp.result')
+        self.assertEqual(self.top.driver.eval_objective(), 88.)
         
     
     def test_bad_design_vars(self):
         try:
-            self.top.driver.design_vars = ['comp_bogus.x[0]', 'comp.x[1]']
-        except TraitError, err:
+            self.top.driver.add_parameter('comp_bogus.x[0]')
+            self.top.driver.add_parameter('comp.x[1]')
+        except AttributeError, err:
             self.assertEqual(str(err), 
-                "driver: invalid value 'comp_bogus.x[0]' for input ref variable 'design_vars[0]': 'Assembly' object has no attribute 'comp_bogus'")
+                "driver: Can't add parameter 'comp_bogus.x[0]' because it doesn't exist.")
         else:
             self.fail('TraitError expected')
     
     def test_bad_constraint(self):
         try:
-            self.top.driver.constraints = ['bogus.flimflam']
-        except TraitError, err:
+            self.top.driver.add_constraint('bogus.flimflam < 1')
+        except ValueError, err:
             self.assertEqual(str(err), 
-                "driver: invalid value 'bogus.flimflam' for input ref variable 'constraints[0]': 'Assembly' object has no attribute 'bogus'")
-        else:
-            self.fail('TraitError expected')
-            
-    def test_lower_bounds_mismatch(self):
-        self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]']
-        self.top.driver.lower_bounds = [0, 0, 0, 0]
-        try:
-            self.top.run()
-        except ValueError, err:
-            self.assertEqual(str(err),
-                             "driver: size of new lower bound array"+
-                             " (4) does not match number of design vars (2)")
+                "Constraint 'bogus.flimflam < 1' has an invalid left-hand-side.")
         else:
             self.fail('ValueError expected')
             
-    def test_upper_bounds_mismatch(self):
-        self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]']
-        self.top.driver.upper_bounds = [99]
-        try:
-            self.top.run()
-        except ValueError, err:
-            self.assertEqual(str(err),
-                             "driver: size of new upper bound array"+
-                             " (1) does not match number of design vars (2)")
-        else:
-            self.fail('ValueError expected')
-
-    
-    def test_bounds_swapped(self):
-        
-        self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]']
-        self.top.driver.lower_bounds = [-10, 99, -10, -10]
-        self.top.driver.upper_bounds = [99, -10, 99, 99]
-        try:
-            self.top.run()
-        except ValueError, err:
-            self.assertEqual(str(err),
-                             'driver: lower bound greater than upper bound '+
-                             'for design variable (comp.x[1])')
-        else:
-            self.fail('ValueError expected')
-        
-        
     def test_scale_design_vector_size_mismatch(self):
-        self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]']
+        self.top.driver.add_objective('comp.result')
+        map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]'])
         self.top.driver.scal = [2,3,4]
         try:
             self.top.run()
@@ -222,57 +189,27 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.fail('ValueError expected')
 
     
-    def test_gradient_step_size_small(self):
-        # Test that a smaller value of fd step-size is more acurate
-        
-        self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]']
-        self.top.driver.lower_bounds = [-10, -10, -10, -10]
-        self.top.driver.upper_bounds = [99, 99, 99, 99]
-        
-        # pylint: disable-msg=C0301
-        self.top.driver.constraints = [
-            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]-8',
-            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
-
-        self.top.run()
-        baseerror = abs(self.top.comp.opt_objective - self.top.driver.objective.evaluate())
-        
-        self.top.driver.fdch = .00001
-        self.top.driver.fdchm = .00001
-        self.top.comp.x = numpy.array([1., 1., 1., 1.], dtype=float)
-        self.top.run()
-        newerror = abs(self.top.comp.opt_objective - self.top.driver.objective.evaluate())
-
-        # pylint: disable-msg=E1101
-        if baseerror < newerror:
-            self.fail("Refining CONMIN gradient step size did not improve objective.")
-        
     def test_gradient_step_size_large(self):
         # Test that a larger value of fd step-size is less acurate
         
-        self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]']
-        self.top.driver.lower_bounds = [-10, -10, -10, -10]
-        self.top.driver.upper_bounds = [99, 99, 99, 99]
+        self.top.driver.add_objective('comp.result')
+        map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
+                                             'comp.x[2]', 'comp.x[3]'])
         
         # pylint: disable-msg=C0301
-        self.top.driver.constraints = [
-            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]-8',
-            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
+        map(self.top.driver.add_constraint, [
+            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8.',
+            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10.',
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5.'])        
         
         self.top.run()
-        baseerror = abs(self.top.comp.opt_objective - self.top.driver.objective.evaluate())
+        baseerror = abs(self.top.comp.opt_objective - self.top.driver.eval_objective())
         
         self.top.driver.fdch = .3
         self.top.driver.fdchm = .3
         self.top.comp.x = numpy.array([1., 1., 1., 1.], dtype=float)
         self.top.run()
-        newerror = abs(self.top.comp.opt_objective - self.top.driver.objective.evaluate())
+        newerror = abs(self.top.comp.opt_objective - self.top.driver.eval_objective())
 
         # pylint: disable-msg=E1101
         if baseerror > newerror:
@@ -281,31 +218,42 @@ class CONMINdriverTestCase(unittest.TestCase):
         
     def test_scaling(self):
         
-        self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]']
-        self.top.driver.lower_bounds = [-10, -10, -10, -10]
-        self.top.driver.upper_bounds = [99, 99, 99, 99]
+        self.top.driver.add_objective('comp.result')
+        map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
+                                             'comp.x[2]', 'comp.x[3]'])
         self.top.driver.scal = [10.0, 10.0, 10.0, 10.0]
         self.top.driver.nscal = -1
         
         # pylint: disable-msg=C0301
-        self.top.driver.constraints = [
-            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]-8',
-            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
+        map(self.top.driver.add_constraint, [
+            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8.',
+            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10.',
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5.'])
         
         self.top.run()
         
         # No test, just verifies that the syntax didn't fail.
 
+    def test_linear_constraint_specification(self):
+        """ Note, just testing problem specification and setup """
+        
+        self.top.driver.add_objective('comp.result')
+        map(self.top.driver.add_parameter, 
+            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
+        
+        map(self.top.driver.add_constraint,['comp.x[1] + 3.0*comp.x[2] > 3.0',
+                                            'comp.x[2] + comp.x[3] > 13.0',
+                                            'comp.x[1] - 0.73*comp.x[3]*comp.x[2] > -12.0'])
+        self.top.driver.cons_is_linear = [1,1,0]
+        self.top.driver.itmax = 1
+
+        self.top.run()
+        
     def test_max_iteration(self):
         
-        self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]']
-        self.top.driver.lower_bounds = [-10, -10, -10, -10]
-        self.top.driver.upper_bounds = [99, 99, 99, 99]
+        self.top.driver.add_objective('comp.result')
+        map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
+                                             'comp.x[2]', 'comp.x[3]'])
         self.top.driver.scal = [10.0, 10.0, 10.0, 10.0]
         self.top.driver.nscal = -1
         
@@ -317,10 +265,36 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         self.assertEqual(self.top.driver.iter_count,2)
 
+    def test_input_minmax_violation(self):
         
+        self.top.driver.add_objective('comp.result')
+        map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
+                                             'comp.x[2]', 'comp.x[3]'])
+        
+        self.top.comp.x[0] = 100
+        try:
+            self.top.run()
+        except ValueError, err:
+            self.assertEqual(str(err),
+                             "driver: maximum exceeded for initial value of: comp.x[0]")
+        else:
+            self.fail('ValueError expected')
+
+        self.top.comp.x[0] = -50
+        try:
+            self.top.run()
+        except ValueError, err:
+            self.assertEqual(str(err),
+                             "driver: minimum exceeded for initial value of: comp.x[0]")
+        else:
+            self.fail('ValueError expected')
+
+        self.top.comp.x[0] = 99.0001
+        self.top.driver.ctlmin = .001
+        self.top.run()
+
+
 if __name__ == "__main__":
     unittest.main()
-    #suite = unittest.TestLoader().loadTestsFromTestCase(ContainerTestCase)
-    #unittest.TextTestRunner(verbosity=2).run(suite)    
 
 

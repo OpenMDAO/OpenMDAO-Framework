@@ -1,13 +1,8 @@
-
 # pylint: disable-msg=W0104,R0914
 
 #public symbols
 __all__ = ["ExprEvaluator"]
 
-
-
-
-#from __future__ import division
 
 import weakref
 import math
@@ -68,10 +63,6 @@ def _trans_lhs(strng, loc, tok, exprobj):
             scname = 'scope'
         else:
             scname = 'scope.parent'
-            if scope.trait(tok[0]) is not None:
-                scope.warning("attribute '"+tok[0]+"' is private"+
-                              " so a public value in the parent is"+
-                              " being used instead (if found)")
             if lazy_check is False and not scope.parent.contains(tok[0]):
                 _cannot_find(tok[0])
         exprobj.var_names.add(tok[0])
@@ -125,16 +116,12 @@ def _trans_fancyname(strng, loc, tok, exprobj):
         return tok
     elif scope.contains(tok[0]):
         scname = 'scope'
-        if scope.trait(tok[0]) is not None:
+        if hasattr(scope, tok[0]):
             return tok  # use name unmodified for faster local access
     elif tok[0] == '_local_setter': # used in assigment statements
         return tok
     else:
         scname = 'scope.parent'
-        if scope.trait(tok[0]) is not None:
-            scope.warning("attribute '%s' is private" % tok[0]+
-                          " so a public value in the parent is"+
-                          " being used instead (if found)")
         if lazy_check is False and (scope.parent is None or 
                                  not scope.parent.contains(tok[0])):
             _cannot_find(tok[0])
@@ -145,6 +132,7 @@ def _trans_fancyname(strng, loc, tok, exprobj):
         if len(tok) > 1:
             full += ","+tok[1]
         exprobj.var_names.add(tok[0])
+        exprobj._comp_names[tok[0].split('.')[0]] = 0
     else:
         # special check here for calls to builtins like abs, all, any, etc.
         # or calls to math functions (math.sin, math.cos, etc.)
@@ -255,7 +243,7 @@ class ExprEvaluator(str):
     whereas variables from other objects must  be accessed using the appropriate
     *set()* or *get()* call.  Array entry access and function invocation are also
     translated in a similar way.  For example, the expression "a+b[2]-comp.y(x)"
-    for a scoping object that contains attributes a and b, but not comp,x or y,
+    for a scoping object that contains variables a and b, but not comp,x or y,
     would translate to 
     "a+b[2]-self.parent.invoke('comp.y',self.parent.get('x'))".
     
@@ -279,6 +267,7 @@ class ExprEvaluator(str):
         s.single_name = single_name
         s._text = None  # used to detect change in str
         s.var_names = set()
+        s._comp_names = {}
         s.scoped_text = None
         s._has_globals = False
         if lazy_check is False:
@@ -311,6 +300,7 @@ class ExprEvaluator(str):
     def _parse(self):
         self._text = str(self).replace('==', _fake_eq)
         self.var_names = set()
+        self._comp_names = {}
         self.scoped_text = translate_expr(self._text, self, 
                                           single_name=self.single_name).replace(_fake_eq,'==')
         self._code = compile(self.scoped_text, '<string>','eval')
@@ -395,13 +385,29 @@ class ExprEvaluator(str):
         return set([x.split('.')[0] for x in self.var_names])
     
     def refs_valid(self):
-        """Return True if all attributes referenced by our expression
+        """Return True if all variables referenced by our expression
         are valid.
+        """
+        if self.single_name:
+            return True   # since we're setting this expression, we don't care if it's valid
+        if self._scope:
+            scope = self._scope()
+            if scope and scope.parent:
+                if self._text != self:  # text has changed
+                    self._parse()
+                if not all(scope.parent.get_valids(self.var_names)):
+                    return False
+        return True
+    
+    def check_resolve(self):
+        """Return True if all variables referenced by our expression can
+        be resolved.
         """
         if self._scope:
             scope = self._scope()
             if scope and scope.parent:
                 if self._text != self:  # text has changed
                     self._parse()
-                return all(scope.parent.get_valids(self.var_names))
-        return True
+                if scope.parent.check_resolve(self.var_names):
+                    return True
+        return False

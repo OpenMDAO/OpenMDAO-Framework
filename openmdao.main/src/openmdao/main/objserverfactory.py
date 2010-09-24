@@ -27,7 +27,25 @@ class ObjServerFactory(Factory):
 
     def create(self, typname, version=None, server=None,
                res_desc=None, **ctor_args):
-        """ Create an :class:`ObjServer` and return a proxy for it. """
+        """
+        Create an :class:`ObjServer` and return a proxy for it.
+
+        typname: string
+            Type of object to create. Currently not used.
+
+        version: string or None
+            Version of `typname` to create. Currently not used.
+
+        server:
+            Currently not used.
+
+        res_desc: dict or None
+            Required resources. Currently not used.
+
+        ctor_args:
+            Other constructor arguments.  If `name` is specified, that
+            is used as the name of the ObjServer.
+        """
         manager = managers.BaseManager()
         ObjServer.register(manager)
         manager.start()
@@ -39,8 +57,8 @@ class ObjServerFactory(Factory):
     
 class ObjServer(object):
     """
-    Object which knows how to load a model.
-    Executes in a subdirectory of the startup directory.
+    An object which knows how to load a model.
+    Executes in a subdirectory of the parent factory's startup directory.
     All remote file accesses must be within the tree rooted there.
     """
 
@@ -95,7 +113,25 @@ class ObjServer(object):
 
     def execute_command(self, command, stdin, stdout, stderr, env_vars,
                         poll_delay, timeout):
-        """ Run `command`. """
+        """
+        Run `command` in subprocess.
+
+        command: string
+            Command line to be executed.
+
+        stdin, stdout, stderr: string
+            Filenames for the corresponding stream.
+
+        env_vars: dict
+            Environment variables for the command.
+
+        poll_delay: float (seconds)
+            Delay between polling subprocess for completion.
+
+        timeout: float (seconds)
+            Maximum time to wait for command completion. A value of zero
+            implies no timeout.
+        """
         logging.debug("execute_command '%s'", command)
         for arg in (stdin, stdout, stderr):
             if isinstance(arg, basestring):
@@ -113,28 +149,54 @@ class ObjServer(object):
         return (return_code, error_msg)
 
     def load_model(self, egg_filename):
-        """ Load model from `egg_filename`. """
+        """
+        Load model  and return top-level object.
+
+        egg_filename: string
+            Filename of egg to be loaded.
+        """
         logging.debug('%s load_model %s', self.name, egg_filename)
         self._check_path(egg_filename, 'load')
         if self.tlo:
             self.tlo.pre_delete()
-        self.tlo = Container.load_from_eggfile(egg_filename, install=False)
+        self.tlo = Container.load_from_eggfile(egg_filename)
         return self.tlo
 
     def pack_zipfile(self, patterns, filename):
-        """ Create ZipFile `filename` of files matching `patterns`. """
+        """
+        Create ZipFile of files matching `patterns`.
+
+        patterns: list
+            List of :mod:`glob`-style patterns.
+
+        filename: string
+            Name of ZipFile to create.
+        """
         logging.debug("%s pack_zipfile '%s'", self.name, filename)
         self._check_path(filename, 'pack_zipfile')
         return pack_zipfile(patterns, filename, logging.getLogger())
 
     def unpack_zipfile(self, filename):
-        """ Unpack ZipFile `filename`. """
+        """
+        Unpack ZipFile `filename`.
+
+        filename: string
+            Name of ZipFile to unpack.
+        """
         logging.debug("%s unpack_zipfile '%s'", self.name, filename)
         self._check_path(filename, 'unpack_zipfile')
         return unpack_zipfile(filename, logging.getLogger())
 
     def chmod(self, path, mode):
-        """ Returns ``os.chmod(path, mode)``. """
+        """
+        Returns ``os.chmod(path, mode)`` if `path` is legal.
+
+        path: string
+            Path to file to modify.
+
+        mode: int
+            New mode bits (permissions).
+        """
         logging.debug("%s chmod '%s' %s", self.name, path, mode)
         self._check_path(path, 'chmod')
         try:
@@ -145,7 +207,18 @@ class ObjServer(object):
             raise
 
     def open(self, filename, mode='r', bufsize=-1):
-        """ Returns ``open(filename, mode, bufsize)``. """
+        """
+        Returns ``open(filename, mode, bufsize)`` if `filename` is legal.
+
+        filename: string
+            Name of file to open.
+
+        mode: string
+            Accees mode.
+
+        bufsize: int
+            Size of buffer to use.
+        """
         logging.debug("%s open '%s' %s %s", self.name, filename, mode, bufsize)
         self._check_path(filename, 'open')
         try:
@@ -156,7 +229,12 @@ class ObjServer(object):
             raise
 
     def stat(self, path):
-        """ Returns ``os.stat(path)``. """
+        """
+        Returns ``os.stat(path)`` if `path` is legal.
+
+        path: string
+            Path to file to interrogate.
+        """
         logging.debug("%s stat '%s'", self.name, path)
         self._check_path(path, 'stat')
         try:
@@ -178,6 +256,9 @@ class ObjServer(object):
         """
         Register :class:`ObjServer` proxy info with `manager`.
         Not typically called by user code.
+
+        manager: Manager
+            :mod:`multiprocessing` Manager to register with.
         """
         name = 'ObjServer'
         method_to_typeid = {

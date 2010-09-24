@@ -24,7 +24,9 @@ openmdao_packages = { 'openmdao.main': '',
                       'openmdao.test': '', 
                       'openmdao.examples.simple': 'examples',
                       'openmdao.examples.bar3simulation': 'examples',
+                      'openmdao.examples.mdao': 'examples',
                       'openmdao.examples.enginedesign': 'examples',
+                      'openmdao.examples.singleEI': 'examples',
                       }
 
 # build binary eggs for these projects in addition to source dists

@@ -22,6 +22,8 @@ openmdao_packages = ['openmdao.util',
                      'examples/openmdao.examples.simple',
                      'examples/openmdao.examples.bar3simulation',
                      'examples/openmdao.examples.enginedesign',
+                     'examples/openmdao.examples.mdao',
+                     'examples/openmdao.examples.singleEI'
                     ]
     
 def adjust_options(options, args):
@@ -84,19 +86,8 @@ def after_install(options, home_dir):
         print "ERROR: build failed"
         sys.exit(-1)
         
-    # copy the default wing project file into the virtualenv
-    # try to find the default.wpr file in the user's home directory
-    try:
-        if sys.platform == 'win32':
-            home = os.environ['HOMEDRIVE']+os.environ['HOMEPATH']
-        else:
-            home = os.environ['HOME']
-    except:
-        home = ''
-    
-    proj_template = join(home, '.wingide3', 'default.wpr')
-    if not os.path.isfile(proj_template):
-        proj_template = join(topdir,'config','wing_proj_template.wpr')
+    # copy the wing project file into the virtualenv
+    proj_template = join(topdir,'config','wing_proj_template.wpr')
     
     abshome = os.path.abspath(home_dir)
     shutil.copy(proj_template, 
@@ -123,20 +114,21 @@ def after_install(options, home_dir):
                      'openmdao.examples.simple',
                      'openmdao.examples.bar3simulation',
                      'openmdao.examples.enginedesign',
+                     'openmdao.examples.mdao',
+                     'openmdao.examples.singleEI'
                     ]
 
     cmds = []
     reqs = set()
     dists = working_set.resolve([Requirement.parse(r) for r in openmdao_pkgs])
-    excludes = set(['setuptools', 'distribute'])
+    excludes = set(['setuptools', 'distribute', 'numpy', 'scipy'])
     for dist in dists:
         if dist.project_name == 'openmdao.main':
             version = dist.version
         if not dist.project_name.startswith('openmdao.') and dist.project_name not in excludes:
-            if dist.project_name != 'numpy':
-                reqs.add('%s' % dist.as_requirement())  
+            reqs.add('%s' % dist.as_requirement())  
             
-    reqs = ['numpy'] + list(reqs)
+    reqs = ['numpy', 'scipy'] + list(reqs)
     
     optdict = { 'reqs': reqs, 'cmds':cmds }
     

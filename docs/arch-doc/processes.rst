@@ -34,7 +34,7 @@ ______________________________
 
 
 Local components can simply be imported and instantiated if the package containing
-them is on the python search path.  The *create* function can be used to 
+them is on the python search path.  The ``create`` function can be used to 
 instantiate them if there are openmdao plugin entry points registered for them.
 
 When a new object is requested and the module containing the requested type is
@@ -103,7 +103,7 @@ _______________________
 
 Components communicate by linking output Variables of one component to input
 Variables of another. (See the figure `Linking Variables`_.) At the time of connection,
-the validate() function of the input :term:`Variable` object will be called to ensure
+the ``validate()`` function of the input :term:`Variable` object will be called to ensure
 that the types of the Variables being connected are compatible. It will also
 be possible at this time to create an adaptor, if available, between
 incompatible Variables.  
@@ -141,10 +141,10 @@ version may be present in Python's sys.path, so a simple import would give the
 user the wrong version. Secondly, the desired component module may not be
 available at all on the current host, and it may have to be loaded into a remote
 host and communicated with using a proxy. Finally, an attempt could be made to
-load a submodel containing Component_X version 2.0 into a larger memory resident
-model that contains Component_X version 1.0. These two incompatible versions of
+load a submodel containing ``Component_X`` version 2.0 into a larger memory resident
+model that contains ``Component_X`` version 1.0. These two incompatible versions of
 the same module cannot exist in the same process, so the loader must be able to
-handle the problem during the loading process by creating Component_X version
+handle the problem during the loading process by creating ``Component_X`` version
 2.0 in a separate process and communicating with it via a proxy in the local
 process.
 
@@ -152,7 +152,7 @@ To solve these problems, a special Loader object will be serialized along with t
 other objects in the model. It will be serialized (and restored) before any of the
 other objects by serializing a list, e.g., [loader, obj], where *obj* is the top level
 object of the model or submodel being serialized. By overriding the loader's
-*__setstate__* and *__getstate__* functions, the loader can collect a list of all
+``__setstate__`` and ``__getstate__`` functions, the loader can collect a list of all
 dependent modules and their versions at save time, and later, at load time, can
 force early importing of the correct versions of all of the dependent modules before
 any of the other serialized objects are loaded into memory.
@@ -198,7 +198,7 @@ remote serialized state so that it can be located later during a load operation.
 Execution
 =========
 
-Each Component in the system has a *run()* function which handles updating of
+Each Component in the system has a ``run()`` function which handles updating of
 necessary inputs, executing the Component, and updating outputs. An
 :term:`Assembly` is a Component that contains other Components along with at
 least one special Component called a Driver. When an Assembly runs, it runs
@@ -239,8 +239,8 @@ implicitly when the system is evaluating components concurrently (such as when
 running an optimization). Resource descriptions are represented by a dictionary
 whose keys are the various types of resources required and the values have
 meaning dependent on the resource. Examples of resources that might be
-explicitly specified include *number_cpus,* *memory,* and *ansys.* Implicit
-resources could include *module_versions.* Batch queuing systems (such as :term:`PBS`)
+explicitly specified include ``number_cpus,`` ``memory``, and ``ansys``. Implicit
+resources could include ``module_versions``. Batch queuing systems (such as :term:`PBS`)
 have other examples of useful keys.
 
 Explicit resource descriptions are part of a component's configuration. Implicit
@@ -271,7 +271,7 @@ deployment of the new process.
 
 Variables to be transferred between components (see the diagram `Variable
 Transfers Between Components`_) are defined by the links created via
-assembly.connect(), which is called implicitly while constructing a model. The
+``assembly.connect()``, which is called implicitly while constructing a model. The
 assembly maintains a list of all variables linked between its components.
 Transfer of regular variables is handled by simply getting the value from the
 source and setting the corresponding variable on the destination, after applying

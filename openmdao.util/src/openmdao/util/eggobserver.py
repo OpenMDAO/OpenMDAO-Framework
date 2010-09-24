@@ -24,6 +24,9 @@ class EggObserver(object):
         """
         Observe analysis of file.
         If `observer` returns False, raises :exc:`RuntimeError`.
+
+        path: string
+            Name of file being analyzed.
         """
         self.logger.debug("    analyzing '%s'", path)
         if self.observer is not None:
@@ -40,6 +43,15 @@ class EggObserver(object):
         """
         Observe add of file.
         If `observer` returns False, raises :exc:`RuntimeError`.
+
+        path: string
+            Name of file being added.
+
+        file_fraction: float
+            Fraction of total files processed.
+
+        byte_fraction: float
+            Fraction of total bytes processed.
         """
         self.logger.debug("    adding '%s'", path)
         if self.observer is not None:
@@ -57,6 +69,15 @@ class EggObserver(object):
         """
         Observe copy of file.
         If `observer` returns False, raises :exc:`RuntimeError`.
+
+        path: string
+            Name of file being copied.
+
+        file_fraction: float
+            Fraction of total files processed.
+
+        byte_fraction: float
+            Fraction of total bytes processed.
         """
         self.logger.debug("    copying '%s'", path)
         if self.observer is not None:
@@ -74,6 +95,15 @@ class EggObserver(object):
         """
         Observe extraction of file.
         If `observer` returns False, raises :exc:`RuntimeError`.
+
+        path: string
+            Name of file being extracted.
+
+        file_fraction: float
+            Fraction of total files processed.
+
+        byte_fraction: float
+            Fraction of total bytes processed.
         """
         self.logger.debug("    extracting '%s'", path)
         if self.observer is not None:
@@ -88,7 +118,12 @@ class EggObserver(object):
                     raise RuntimeError('Aborted by observer.')
 
     def complete(self, path):
-        """ Observe operation complete. """
+        """
+        Observe operation complete.
+
+        path: string
+            Name of file saved/loaded.
+        """
         if self.observer is not None:
             try:
                 self.observer('complete', path, 1, 1)
@@ -96,7 +131,12 @@ class EggObserver(object):
                 self.logger.debug('Exception calling observer: %s', exc)
 
     def exception(self, msg):
-        """ Observe exception. """
+        """
+        Observe exception.
+
+        msg: string
+            Exception message.
+        """
         self.logger.error(msg)
         if self.observer is not None:
             try:

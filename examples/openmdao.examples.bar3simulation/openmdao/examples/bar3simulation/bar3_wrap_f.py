@@ -42,7 +42,7 @@ class Bar3Truss(Component):
                         desc='Length of bar 2 and horizontal distance between \
                         nodes')
 
-    weight_density = Float(0.100, iotype='in', units='lb/(inch**3)',
+    weight_density = Float(0.284, iotype='in', units='lb/(inch**3)',
                         desc='weight density of all bars')
 
     lumped_mass = Float(0.68005, iotype='in', units='lb*s*s/inch',
@@ -69,38 +69,6 @@ class Bar3Truss(Component):
     weight = Float(0., iotype='out', units='lb',
                         desc='Weight of the structure')
 
-    #def __init__(self, desc=None, directory=''):
-        #""" Creates a new Engine object
-
-            ## Design parameters
-
-            ## Constants                     # None
-
-            ## Simulation inputs             #design variables
-            #bar1_area = 1.0                 #area of bar 1 (in*in)
-            #bar2_area = 1.0                 #area of bar 2 (in*in)
-            #bar3_area = 1.0                 #area of bar 3 (in*in)
-            #Youngs_Modulus = 30000.0        #Youngs_Modulus (ksi)
-            #bar2_length = 100.0             #Length of bar2 (in)
-            #weight_density = 0.100          #weight_density (lb/cubic in)
-            #lumped_mass = 0.6805            #assumed point mass at lower node 
-                                             # (lb sec^2/in)
-
-            ## Outputs
-            #bar1_force                      #force in bar1 (lb)
-            #bar2_force                      #force in bar2 (lb)
-            #bar3_force                      #force in bar3 (lb)
-            #bar1_stress                     #stress in bar1 (psi)
-            #bar2_stress                     #stress in bar2  (psi)
-            #bar3_stress                     #stress in bar3  (psi)
-            #displacement_x_dir              #displacement_x_dir (in)
-            #displacement_y_dir              #displacement_y_dir (in)
-            #frequency                    #frequency of first mode (Hz)
-            #weight                          #weight (lb)
-        #"""
-
-       #super(Bar3Truss, self).__init__(desc, directory)
-
     def execute(self):
         """ Simulates the analysis of a three bar truss structure.
             Force, Stress, Displacement,Frequency and Weight are returned at
@@ -123,11 +91,10 @@ class Bar3Truss(Component):
 
         (self.bar1_stress, self.bar2_stress, self.bar3_stress, 
          self.displacement_x_dir, self.displacement_y_dir, 
-         self.frequency, self.weight) \
-         = runbar3truss(
-                    load, lumped_mass, 
-                    bar1_area,bar2_area,bar3_area,
-                    Youngs_Modulus, bar2_length, weight_density)
+         self.frequency, self.weight) = runbar3truss(load, lumped_mass, 
+                                                     bar1_area,bar2_area,bar3_area,
+                                                     Youngs_Modulus, bar2_length, 
+                                                     weight_density)
 
         # Pull value of Forces from the COMMON block Forces.
         self.bar1_force = float(forces.force1)
