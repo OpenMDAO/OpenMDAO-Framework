@@ -28,7 +28,6 @@ class ExpectedImprovement(Component):
     EI = Float(0.0, iotype="out", desc="The expected improvement of the "
                                        "next_case")
     
-    
     def execute(self): 
         """ Calculates the expected improvement of the model at a given point.
         """
