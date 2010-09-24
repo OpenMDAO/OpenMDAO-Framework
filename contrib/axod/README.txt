@@ -35,15 +35,15 @@ Following modifications were needed to create a python wrapped module.
       the AXOD  code under python environment.  The script to run the code 
       'testaxod.py' is created.
 
-5.    Execute it as "python testaxod.py" from the commond line.
+5.    Execute it as "python testaxod.py" from the command line.
       The testaxod.py script executes the code with  2 input files in a loop.
 
-      The "test_axod_comp.py" tests the component 'AxodComp' with 2 input files           
+      The "test_axod_comp.py" tests the component 'AxodCompn' with 2 input files           
       (one_stage.inp & eee_hpt.inp).
     
       A test case is also included where input file is being modified with
       data received from another component. (See also  newtest1.py in test
-      directoryi).
+      directory).
 
 6.    The wrapper module was tested by executing the code using two different
       input files, namely, eee_hpt.inp & one_stage.inp. The script allows to run the code

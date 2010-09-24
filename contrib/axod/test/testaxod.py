@@ -10,7 +10,7 @@ if '.' not in sys.path:
     sys.path.append('.')
 
 
-from axod_comp import axod 
+from axod_compn import axod 
 
 print axod.__doc__
 print axod.axod.__doc__

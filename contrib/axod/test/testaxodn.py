@@ -1,4 +1,4 @@
-# newtest1.py
+# testaxodn.py
 
 import sys
 import numpy
@@ -14,7 +14,6 @@ from axod_compn import AxodCompn
 from openmdao.main.api import Component, set_as_top, Container
 
 #    changing data in input file ............................
-#    executing using axod component 'AxodCompn'
 
 one = set_as_top(AxodCompn(input_filename='eee_hpt.inp'))
 one.Case1.Stage1.ptin = 51.00
