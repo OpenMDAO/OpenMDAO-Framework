@@ -32,9 +32,7 @@ class NastranComponent(ExternalCode):
     by specifying nastran specific attributes on the traits. All of these
     attributes are described in the README.
 
-    Note
-    ----
-    This component does nothing with external_files. If you want to deal with
+    Note: This component does nothing with external_files. If you want to deal with
     that, then do so in your subclass.
     """
 
@@ -80,20 +78,17 @@ class NastranComponent(ExternalCode):
         parent's execute function. Finally, we parse the data
         and set the output variables given to us.
 
-        Raises
-        ------
         RuntimeError
             The component relies on ExternalCode which can throw all
             sorts of RuntimeError like exceptions (RunStopped,
             RunInterrupted also included)
+            
         Filesystem-type Errors
             NastranComponent makes a temporary directory with mkdtemp
             in the temp module. If that fails, the error just
             propagates up.
 
 
-        Notes
-        -----
         While there are no explicit parameters or return values for this
         function, it gets all the input it needs from the design
         variables that are connected to the subclass of NastranComponent.
@@ -303,14 +298,10 @@ class NastranComponent(ExternalCode):
         """A subclass can override this function to dynamically
         add variables to NastranMaker.
 
-        Parameters
-        ----------
         maker: NastranMaker object
             This NastranMaker object already has all the variables that
             were specified in the traits.
 
-        Notes
-        -----
         The return will be ignored. Right after this function exits
         the Nastran input file will be written out to a file.
         """

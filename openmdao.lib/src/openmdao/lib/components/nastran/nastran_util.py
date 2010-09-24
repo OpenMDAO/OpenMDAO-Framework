@@ -13,8 +13,6 @@ def nastran_replace_inline(big_string, old_string, new_string):
     currently occupied by old_string and replace that entire block
     with new_string.
 
-    Parameters
-    ----------
     big_string, old_string, new_string: str
 
     """
@@ -29,11 +27,9 @@ def stringify(thing, length=8):
 
     This function tries to make the best use of space. For
     integers and floaters, it will try to get the most sig-
-    nicant digits while staying within ``length''. For
+    nicant digits while staying within ``length``. For
     everything else, we just try to stick in a string.
 
-    Parameters
-    ----------
     thing : anything
         What we want to convert to a string.
 

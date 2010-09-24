@@ -27,15 +27,17 @@ class NastranMaker(object):
         to do all the replacing at one time. Therefore, this
         function just records what should be replaced.
 
-        Paramters
-        ---------
         name: str
+        
         cid: int or str
-            Specifies the id of the card
+        Specifies the id of the card
+        
         fieldnum: int
-            What field should we modify?
+        What field should we modify?
+        
         value: thing that can be passed to str
-            What value should we put in?
+        What value should we put in?
+            
         """
         self.names.setdefault((name, cid), []).append({"fieldnum": fieldnum, "value":value})
 
@@ -43,18 +45,20 @@ class NastranMaker(object):
         """We go through the text that we have and make
         the needed substitution.
 
-        Parameters
-        ----------
         name: str
+        
         cid: int or str
             Specifies the id of the card
+            
         attrs: [{fieldnum: value_to_insert}]
             We may have to change a few fields for a given
             line. Those changes are stored in attrs.
+            
         unique_int: int
             This integer is needed for writing out the
             continuations in the Nastran file. Must be
             unique within the file (!beware)
+            
         """
         card = None
         for index, line in enumerate(self.text):
@@ -155,8 +159,6 @@ class NastranMaker(object):
         """A little helper that just commits all the changes
         that should be made.
 
-        Notes
-        -----
         This changes self.text"""
         for (name, cid), attrs in self.names.iteritems():
             unique_id = self._nastran_set(name, cid, attrs, unique_id)
@@ -165,8 +167,6 @@ class NastranMaker(object):
         """After specifying the substitutions that should be made,
         write out the finished product.
 
-        Parameters
-        ----------
         file_handler: file-like object
             Should provide a write and close function
 
@@ -174,8 +174,6 @@ class NastranMaker(object):
             Should be unique within the entire input file for Nastran
             to work
 
-        Notes
-        -----
         This changes self.text and then prints self.text to a file. So,
         calling write_to_file more than once is silly, although it shouldn't
         actually change anything. Also note that the unique_int should

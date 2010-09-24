@@ -13,10 +13,9 @@ class NastranParser(object):
         """
         Give NastranParser the text to process.
 
-        Parameters
-        ----------
         text : [str]
             These lines should not include newlines.
+            
         """
         # text should be array of lines
         self.text = text
@@ -134,13 +133,9 @@ class NastranParser(object):
 
         This function is meant to parse the grid.
 
-        Parameters
-        ----------
         grid: [str]
             no newlines.
 
-        Notes
-        -----
         The reason it was separated from the main parse
         function is two fold. First, parse was enormous
         and had to be dismembered. Second,
@@ -483,23 +478,26 @@ class NastranParser(object):
         we would want both prices returned. Therefore, we would set
         row_width to 2.
 
-        Parameters
-        ----------
         header : str
             This can be the actual header or a part of the header
             you want to select
+            
         subcase : None or int
             If None, then just take the first on you see.
+            
         constraints : { row_name : value }
             A dictionary of constraints. str: str
+            
         column_names : [ column_name ] or "*"
             Specify a list of column names, or the asterisk
             character, for all of them.
+            
         row_width : int
             Optional. Sometimes there are two values per
             item, on difference rows. In that case, row_width=2.
             If you specify the row_width,
             the constraints won't get rid of good data.
+            
         """
 
         # find the grid we're talking about my matching
@@ -591,8 +589,6 @@ class NastranParser(object):
 def _header_score(line, row):
     """A helper function to assign the most likely headers.
 
-    Notes
-    -----
     Teturns int between 0-200. 200 is a sure header...
     but it's really just that big numbers are more
     likely than smaller numbers to be good headers.
@@ -675,16 +671,12 @@ def _merge_columns(grid, columns_to_merge):
     """A helper function that merges columns
     in a grid.
 
-    Parameters
-    ----------
     grid : [[str]]
     columns_to_merge : [(col1, col2)]
         The columns must not overlap. Also, they must be
         increasing. So if we had something like:
         [(x,y), (w,z)], x<y<w<z must hold.
 
-    Note
-    ----
     IMPORTANT. There must not be overlapping set of columns.
     Also, the values should be monotonically increasing.
     """
