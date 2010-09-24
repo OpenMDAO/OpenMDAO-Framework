@@ -15,6 +15,7 @@ from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
 
+
 class RemoteFile(object):
     """ Wraps a :class:`file` with remote-access annotations. """
 

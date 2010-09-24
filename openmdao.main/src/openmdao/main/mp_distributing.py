@@ -34,7 +34,8 @@ except ImportError:
 from multiprocessing import Process, current_process, managers
 from multiprocessing import util, connection, forking
 
-from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server
+from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server, register
+from openmdao.main.rbac import Credentials, set_credentials
 
 from openmdao.util.wrkpool import WorkerPool
 
@@ -138,15 +139,11 @@ class RemoteProcess(Process):
     def get_identity(self):
         return self._identity
 
-HostManager.register('_RemoteProcess', RemoteProcess)
+register(RemoteProcess, HostManager)
 
 
 class Cluster(OpenMDAO_Manager):
-    """
-    Represents a collection of hosts. :class:`Cluster` is a subclass
-    of :class:`SyncManager`, so it allows creation of various types of
-    shared objects.
-    """
+    """ Represents a collection of hosts. """
 
     def __init__(self, hostlist, modules):
         super(Cluster, self).__init__(address=('localhost', 0))
@@ -317,7 +314,7 @@ class Host(object):
 
     def __init__(self, hostname, python=None):
         self.hostname = hostname
-        # Plink.exe wants user@host always.
+        # Putty/Plink.exe wants user@host always.
         parts = hostname.split('@')
         if len(parts) == 1:
             if sys.platform == 'win32':
@@ -331,15 +328,11 @@ class Host(object):
         self.proc = None
         self.tempdir = None
 
-    def register(self, typeid, callable=None, method_to_typeid=None):
+    def register(self, cls):
         """ Register proxy info to be sent to remote process. """
-        if callable is None:
-            name = None
-            module = None
-        else:
-            name = callable.__name__
-            module = callable.__module__
-        self.registry[typeid] = (name, module, method_to_typeid)
+        name = cls.__name__
+        module = cls.__module__
+        self.registry[name] = module
 
     def start_manager(self, index, authkey, address, files):
         """ Launch remote manager process. """
@@ -478,22 +471,20 @@ def main():
 
     # Update HostManager registry.
     dct = data['registry']
-    for key in dct.keys():
-        name, module, method_to_typeid = dct[key]
-        out.write('%s: %s %s %s\n' % (key, name, module, method_to_typeid))
+    for name in dct.keys():
+        module = dct[name]
+        out.write('%s: %s\n' % (name, module))
         out.flush()
-        if name:
-            mod = __import__(module, fromlist=name)
-            callable = getattr(mod, name)
-        else:
-            callable = None
-        HostManager.register(key, callable, method_to_typeid=method_to_typeid)
+        mod = __import__(module, fromlist=name)
+        cls = getattr(mod, name)
+        register(cls, HostManager)
 
     # Set some stuff.
     _LOGGER.setLevel(data['dist_log_level'])
     forking.prepare(data)
 
     # Create Server for a `HostManager` object.
+    set_credentials(Credentials())
     server = OpenMDAO_Server(HostManager._registry, (hostname, 0),
                              data['authkey'], "pickle")
     current_process()._server = server

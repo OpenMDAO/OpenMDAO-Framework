@@ -16,6 +16,9 @@ import traceback
 from openmdao.main import mp_distributing
 from openmdao.main.mp_support import register
 from openmdao.main.objserverfactory import ObjServerFactory
+from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
+                               rbac
+
 from openmdao.util.eggloader import check_requirements
 from openmdao.util.wrkpool import WorkerPool
 
@@ -33,6 +36,10 @@ class ResourceAllocationManager(object):
     _RAM = None  # Singleton.
 
     def __init__(self):
+        credentials = get_credentials()
+        if credentials is None:
+            set_credentials(Credentials())
+
         self._logger = logging.getLogger('RAM')
         self._allocations = 0
         self._allocators = []
@@ -141,9 +148,10 @@ class ResourceAllocationManager(object):
                                                best_criteria)
                 if server is not None:
                     server_info = {
-                        'name':server.name,
-                        'pid':server.pid,
-                        'host':server.host
+# BUG
+                        'name':'xyzzy', #'name':server.name,
+                        'pid':123, #'pid':server.pid,
+                        'host':'fred' #'host':server.host
                     }
                     self._logger.debug('allocated %s pid %d on %s',
                                        server_info['name'], server_info['pid'],
@@ -221,7 +229,8 @@ class ResourceAllocationManager(object):
         server: :mod:`multiprocessing` proxy
             Server to be released.
         """
-        name = server.name
+# BUG
+        name = 'xyzzy' #server.name
         try:
             server.cleanup()
         except Exception:
@@ -248,6 +257,7 @@ class ResourceAllocator(ObjServerFactory):
         self.name = name
         self._logger = logging.getLogger(name)
 
+    @rbac('*')
     def get_name(self):
         """ Returns this allocator's name. """
         return self.name
@@ -358,6 +368,7 @@ class LocalAllocator(ResourceAllocator):
                 self.total_cpus = 1
         self.max_load = max(max_load, 0.5)  # Ensure > 0!
 
+    @rbac('*')
     def max_servers(self, resource_desc):
         """
         Returns `total_cpus` * `max_load` if `resource_desc` is supported,
@@ -371,6 +382,7 @@ class LocalAllocator(ResourceAllocator):
             return 0  # Incompatible with resource_desc.
         return max(int(self.total_cpus * self.max_load), 1)
 
+    @rbac('*')
     def time_estimate(self, resource_desc):
         """
         Returns ``(estimate, criteria)`` indicating how well this allocator can
@@ -471,6 +483,7 @@ class LocalAllocator(ResourceAllocator):
 
         return (0, {})
 
+    @rbac('*')
     def deploy(self, name, resource_desc, criteria):
         """
         Deploy a server suitable for `resource_desc`.
@@ -516,7 +529,7 @@ class ClusterAllocator(object):
         for machine in machines:
             host = mp_distributing.Host(machine['hostname'],
                                         python=machine['python'])
-            register(LocalAllocator, host)
+            host.register(LocalAllocator)
             hosts.append(host)
 
         self.cluster = mp_distributing.Cluster(hosts, [])
@@ -777,6 +790,7 @@ class ClusterAllocator(object):
         with self._lock:
             allocator = criteria['allocator']
             self._last_deployed = allocator
+            del criteria['allocator']  # Avoid passing a proxy.
         return allocator.deploy(name, resource_desc, criteria)
 
     def shutdown(self):

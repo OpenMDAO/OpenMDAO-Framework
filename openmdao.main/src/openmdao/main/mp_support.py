@@ -186,7 +186,7 @@ def public_methods(obj):
         methods = rbac_methods(obj)
 
     # Add special methods for attribute access.
-    methods.extend([name for name in _SPECIALS if hasattr(obj, name)])
+#    methods.extend([name for name in _SPECIALS if hasattr(obj, name)])
     return methods
 
 
@@ -195,10 +195,10 @@ def register(cls, manager):
     Register class `cls` proxy info with `manager`.
     Not typically called by user code.
     """
-    name = cls.__name__
+    typeid = cls.__name__
     exposed = public_methods(cls)
-    proxytype = make_proxy_type(name, exposed)
-    manager.register(name, cls, exposed=exposed, proxytype=proxytype)
+    proxytype = make_proxy_type(typeid, exposed)
+    manager.register(typeid, callable=cls, exposed=exposed, proxytype=proxytype)
 
 
 def dump_registry(title, registry, logger):
@@ -609,9 +609,33 @@ class OpenMDAO_Proxy(BaseProxy):
                 new_args.append(dict(arg))
             else:
                 new_args.append(arg)
+# Cause error
+#        new_args = args
 
-        conn.send(_encrypt((self._id, methodname, new_args, kwds, credentials),
-                           session_key))
+        try:
+            conn.send(_encrypt((self._id, methodname, new_args, kwds, credentials),
+                               session_key))
+        except cPickle.PicklingError as exc:
+            print 'mp_suppport._callmethod: %s, %s' % (methodname, exc)
+            print '    args:', len(new_args)
+            for arg in new_args:
+                print '        %r' % arg,
+                try:
+                    cPickle.dumps(arg)
+                except cPickle.PicklingError as exc:
+                    print '-- error', exc
+                else:
+                    print '-- ok'
+            print '    kwds:', len(kwds)
+            for key, val in kwds.items():
+                print '        %s: %r' % (key, val),
+                try:
+                    cPickle.dumps(val)
+                except cPickle.PicklingError as exc:
+                    print '-- error', exc
+                else:
+                    print '-- ok'
+            raise
 
         kind, result = _decrypt(conn.recv(), session_key)
 
