@@ -10,12 +10,9 @@
 __all__ = ['CONMINdriver']
 
 # pylint: disable-msg=E0611,F0401
-from numpy import zeros, ones, array
+from numpy import zeros, ones
 from numpy import int as numpy_int
-from copy import copy
 
-from enthought.traits.api import on_trait_change, TraitError
-                                 
 import conmin.conmin as conmin
 
 from openmdao.main.api import Case, Driver
