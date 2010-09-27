@@ -12,7 +12,6 @@ from openmdao.main.interfaces import ICaseRecorder
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
 
-
 from openmdao.util.testutil import assert_rel_error
 
 class DumbRecorder(HasTraits):
@@ -115,8 +114,9 @@ class MetaModelTestCase(unittest.TestCase):
         asm.comp1.a = 1.
         asm.comp1.b = 2.
         asm.run()
-        assert_rel_error(self, asm.comp2.c, 6., 0.01)
-        assert_rel_error(self, asm.comp2.d, -2.12, 0.01)
+        # Tolerance bumped up to 2% for some 32-bit platforms.
+        assert_rel_error(self, asm.comp2.c, 6., 0.02)
+        assert_rel_error(self, asm.comp2.d, -2.12, 0.02)
         
         # set new model and verify disconnect
         asm.metamodel.model = Simple2()

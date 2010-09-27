@@ -169,8 +169,8 @@ class HasConstraintsTestCase(unittest.TestCase):
         drv.add_constraint('comp1.a < comp1.b', scaler=3000.0, adder=100.0)
         result = drv.eval_ineq_constraints()
         
-        self.assertEqual(result[0][0], 8900.)
-        self.assertEqual(result[0][1], 14900.)
+        self.assertEqual(result[0][0], 9100.)
+        self.assertEqual(result[0][1], 15100.)
         
         try:
             drv.add_constraint('comp1.a < comp1.b', scaler=-5.0)

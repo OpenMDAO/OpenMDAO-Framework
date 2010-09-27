@@ -51,8 +51,8 @@ class Constraint(object):
     def evaluate(self):
         """Returns a tuple of the form (lhs, rhs, comparator, is_violated)."""
         
-        lhs = self.lhs.evaluate()*self.scaler - self.adder
-        rhs = self.rhs.evaluate()*self.scaler - self.adder
+        lhs = self.lhs.evaluate()*self.scaler + self.adder
+        rhs = self.rhs.evaluate()*self.scaler + self.adder
         return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
         
 
