@@ -75,7 +75,6 @@ def _modify_wpr_file(fpath):
     f.write(content)
     f.close()
     
-
 def run_wing():
     """Runs the Wing IDE after first setting up a profile containing
     the files in the openmdao repository. It also adds all of our 
@@ -115,8 +114,10 @@ def run_wing():
             libs.extend(sodirs)
             env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
     
-    Popen([wingpath, projpath], env=env)
-
+    try:
+        Popen([wingpath, projpath], env=env)
+    except Exception as err:
+        print 'Failed to run wing executable (%s) using project (%s).' % (wingpath, projpath)
     
 if __name__ == '__main__':
     run_wing()

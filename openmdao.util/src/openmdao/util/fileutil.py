@@ -2,16 +2,56 @@
 Misc. file utility routines
 """
 
-
 import os
 from os import makedirs
 import sys
 import shutil
-import linecache
 import fnmatch
-from os.path import islink, isdir
-from os.path import normpath,dirname,exists,abspath
+from os.path import islink, isdir, join
+from os.path import normpath, dirname, exists, isfile, abspath
 from subprocess import Popen,PIPE,STDOUT
+
+def find_in_dir_list(fname, dirlist, exts=('',)):
+    """Search the given list of directories for the specified file.
+    Return the absolute path of the file if found, or None otherwise.
+    
+    fname: str
+        Base name of file.
+        
+    dirlist: list of str
+        List of directory paths, relative or absolute.
+        
+    exts: tuple of str
+        Tuple of extensions (including the '.') to apply to fname for, e.g., .exe.
+    """
+    for path in dirlist:
+        for ext in exts:
+            fpath = join(path, fname)+ext
+            if isfile(fpath):
+                return abspath(fpath)
+    return None
+    
+def find_in_path(fname, pathvar=None, sep=os.pathsep, exts=('',)):
+    """Search for a given file in all of the directories given
+    in the pathvar string. Return the absolute path to the file
+    if found, None otherwise.
+    
+    fname: str
+        Base name of file.
+        
+    pathvar: str
+        String containing search paths. Defaults to $PATH
+        
+    sep: str
+        Delimiter used to separate paths within pathvar.
+        
+    exts: tuple of str
+        Tuple of extensions (including the '.') to apply to fname for, e.g., .exe.
+    """
+    if pathvar is None:
+        pathvar = os.environ['PATH']
+        
+    return find_in_dir_list(fname, pathvar.split(sep), exts)
 
 
 def makepath(path):
@@ -39,12 +79,12 @@ def find_files(pat, startdir):
     """
     for path, dirlist, filelist in os.walk(startdir):
         for name in fnmatch.filter(filelist, pat):
-            yield os.path.join(path, name)
+            yield join(path, name)
 
 
 def rm(path):
     """Delete a file or directory."""
-    if os.path.isdir(path):
+    if isdir(path):
         shutil.rmtree(path)
     else:
         os.remove(path)
@@ -52,9 +92,9 @@ def rm(path):
 
 def copy(src, dest):
     """Copy a file or directory."""
-    if os.path.isfile(src):
+    if isfile(src):
         shutil.copy(src, dest)
-    elif os.path.isdir(src):
+    elif isdir(src):
         shutil.copytree(src, dest) 
     
 
@@ -62,14 +102,14 @@ def find_bzr(path=None):
     """ Return bzr root directory path or None. """
     if not path:
         path = os.getcwd()
-    if not os.path.exists(path):
+    if not exists(path):
         return None
     while path:
-        if os.path.exists(os.path.join(path, '.bzr')):
+        if exists(join(path, '.bzr')):
             return path
         else:
             pth = path
-            path = os.path.dirname(path)
+            path = dirname(path)
             if path == pth:
                 return None
     return None
