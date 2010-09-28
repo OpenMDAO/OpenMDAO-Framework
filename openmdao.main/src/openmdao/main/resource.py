@@ -148,10 +148,9 @@ class ResourceAllocationManager(object):
                                                best_criteria)
                 if server is not None:
                     server_info = {
-# BUG
-                        'name':'xyzzy', #'name':server.name,
-                        'pid':123, #'pid':server.pid,
-                        'host':'fred' #'host':server.host
+                        'name'  :server.name,
+                        'pid':  server.pid,
+                        'host': server.host
                     }
                     self._logger.debug('allocated %s pid %d on %s',
                                        server_info['name'], server_info['pid'],
@@ -229,8 +228,7 @@ class ResourceAllocationManager(object):
         server: :mod:`multiprocessing` proxy
             Server to be released.
         """
-# BUG
-        name = 'xyzzy' #server.name
+        name = server.name
         try:
             server.cleanup()
         except Exception:
@@ -302,9 +300,7 @@ class ResourceAllocator(ObjServerFactory):
         resource_value: list
             List of Distributions.
         """
-        required = []
-        for dist in resource_value:
-            required.append(dist.as_requirement())
+        required = [dist.as_requirement() for dist in resource_value]
         not_avail = check_requirements(sorted(required), logger=self._logger)
         if not_avail:  # Distribution not found or version conflict.
             return (-2, {'required_distributions' : not_avail})
@@ -532,7 +528,7 @@ class ClusterAllocator(object):
             host.register(LocalAllocator)
             hosts.append(host)
 
-        self.cluster = mp_distributing.Cluster(hosts, [])
+        self.cluster = mp_distributing.Cluster(hosts, [], authkey='PublicKey')
         self.cluster.start()
         self._logger.debug('server listening on %s', self.cluster.address)
 
@@ -573,6 +569,7 @@ class ClusterAllocator(object):
         resource_desc: dict
             Description of required resources.
         """
+        credentials = get_credentials()
         with self._lock:
             # Drain _reply_q.
             while True:
@@ -587,7 +584,8 @@ class ClusterAllocator(object):
             for i, allocator in enumerate(self._allocators.values()):
                 if i < max_workers:
                     worker_q = WorkerPool.get()
-                    worker_q.put((self._get_count, (allocator, resource_desc),
+                    worker_q.put((self._get_count,
+                                  (allocator, resource_desc, credentials),
                                   {}, self._reply_q))
                 else:
                     todo.append(allocator)
@@ -606,22 +604,27 @@ class ClusterAllocator(object):
                     WorkerPool.release(worker_q)
                 else:
                     worker_q.put((self._get_count,
-                                  (next_allocator, resource_desc),
+                                  (next_allocator, resource_desc, credentials),
                                   {}, self._reply_q))
                 count = retval
                 if count:
                     total += count
             return total
 
-    def _get_count(self, allocator, resource_desc):
+    def _get_count(self, allocator, resource_desc, credentials):
         """ Get `max_servers` from an allocator. """
+        set_credentials(credentials)
         count = 0
         try:
             count = allocator.max_servers(resource_desc)
         except Exception, exc:
             msg = '%s\n%s' % (exc, traceback.format_exc())
-            self._logger.error('allocator %s caught exception %s',
-                               allocator.get_name(), msg)
+            try:
+                name = allocator.get_name()
+            except Exception:
+                name = '<unavailable>'
+            self._logger.error('allocator %s.max_servers() caught exception %s',
+                               name, msg)
         return count
 
     def time_estimate(self, resource_desc):
@@ -645,6 +648,7 @@ class ClusterAllocator(object):
         resource_desc: dict
             Description of required resources.
         """
+        credentials = get_credentials()
         n_cpus = resource_desc.get('n_cpus', 0)
         if n_cpus:
             # Spread across LocalAllocators.
@@ -676,7 +680,7 @@ class ClusterAllocator(object):
                 if i < max_workers:
                     worker_q = WorkerPool.get()
                     worker_q.put((self._get_estimate,
-                                  (allocator, resource_desc),
+                                  (allocator, resource_desc, credentials),
                                   {}, self._reply_q))
                 else:
                     todo.append(allocator)
@@ -695,7 +699,7 @@ class ClusterAllocator(object):
                     WorkerPool.release(worker_q)
                 else:
                     worker_q.put((self._get_estimate,
-                                  (next_allocator, resource_desc),
+                                  (next_allocator, resource_desc, credentials),
                                   {}, self._reply_q))
 
                 if retval is None:
@@ -752,10 +756,22 @@ class ClusterAllocator(object):
 
             return (best_estimate, best_criteria)
 
-    def _get_estimate(self, allocator, resource_desc):
+    def _get_estimate(self, allocator, resource_desc, credentials):
         """ Get (estimate, criteria) from an allocator. """
+        set_credentials(credentials)
         try:
             estimate, criteria = allocator.time_estimate(resource_desc)
+        except Exception, exc:
+            msg = '%s\n%s' % (exc, traceback.format_exc())
+            try:
+                name = allocator.get_name()
+            except Exception:
+                name = '<unavailable>'
+            self._logger.error('allocator %s.time_estimate() caught exception %s',
+                               name, msg)
+            estimate = None
+            criteria = None
+        else:
             if estimate == 0:
                 self._logger.debug('allocator %s returned %g (%g)',
                                    allocator.get_name(), estimate,
@@ -763,12 +779,6 @@ class ClusterAllocator(object):
             else:
                 self._logger.debug('allocator %s returned %g',
                                    allocator.get_name(), estimate)
-        except Exception, exc:
-            msg = '%s\n%s' % (exc, traceback.format_exc())
-            self._logger.error('allocator %s caught exception %s',
-                               allocator.get_name(), msg)
-            estimate = None
-            criteria = None
 
         return (allocator, estimate, criteria)
 

@@ -2,16 +2,18 @@
 Support for Role-Based Access Control.
 
 Remote access to methods/functions is determined by a role-based access control
-attribute attached to the method/function. This attribute is a sequence of role
-patterns. The `rbac` decorator is available for assigning role patterns to
-methods.
+attribute attached to the method/function. This attribute contains a sequence
+of role patterns, an optional proxy role to be used while executing the
+method, and a list of return types which are to be proxied. The :func:`rbac`
+decorator is available for assigning this access control attribute to methods.
 
 Remote access to attributes is checked based on role, accessing method, object,
 and attribute.
 
 These access checks are mediated by a :class:`RoleMapper`.  There is a default
 mapper assigned to each :class:`OpenMDAO_Server`.  The server will check for an
-object-specific mapper before using the default.
+object-specific mapper by trying to invoke :meth:`get_role_mapper` before using
+the default.
 
 The current role is determined from a :class:`Credentials` object which is
 attached to the current thread.  Credentials are currently just a user
@@ -202,7 +204,7 @@ class RoleMapper(object):
 def check_role(role, func):
     """
     Verifies that `role` is matched by at least one :mod:`fnmatch`-style
-    pattern in `func`s RBAC. Raises :class:`RoleError` if no match is found.
+    pattern in `func`'s RBAC. Raises :class:`RoleError` if no match is found.
     """
     try:
         patterns = func._rbac[0]

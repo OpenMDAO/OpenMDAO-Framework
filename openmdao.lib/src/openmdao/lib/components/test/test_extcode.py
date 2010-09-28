@@ -5,6 +5,7 @@ Test the ExternalCode component.
 import logging
 import os.path
 import pkg_resources
+import platform
 import shutil
 import sys
 import unittest
@@ -13,8 +14,11 @@ import nose
 from openmdao.main.api import Assembly, FileMetadata, SimulationRoot, set_as_top
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunInterrupted
-from openmdao.main.resource import ResourceAllocationManager
+from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
+
 from openmdao.lib.components.external_code import ExternalCode
+
+from openmdao.util.testutil import find_python
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -94,6 +98,17 @@ class TestCase(unittest.TestCase):
         local = ResourceAllocationManager.get_allocator(0)
         local.max_load = 10
 
+        # Exercise cluster deployment if on this GRC cluster front-end.
+        node = platform.node()
+        if node.startswith('gxterm'):
+            python = find_python()
+            machines = []
+            for i in range(55):
+                machines.append({'hostname':'gx%02d' % i, 'python':python})
+            name = node.replace('.', '_')
+            cluster = ClusterAllocator(name, machines)
+            ResourceAllocationManager.insert_allocator(0, cluster)
+
         dummy = 'dummy_output'
         if os.path.exists(dummy):
             os.remove(dummy)
@@ -122,7 +137,7 @@ class TestCase(unittest.TestCase):
 
     def test_bad_alloc(self):
         logging.debug('')
-        logging.debug('test_remote')
+        logging.debug('test_bad_alloc')
 
         extcode = set_as_top(ExternalCode())
         extcode.command = 'python sleep.py'

@@ -303,12 +303,16 @@ class CaseIterDriverBase(Driver):
         in_use = True
 
         if state == _EMPTY:
-            try:
-                self._logger.debug('    load_model')
-                self._load_model(server)
-                self._server_states[server] = _READY
-            except _ServerError:
-                self._server_states[server] = _ERROR
+            if not self._todo and not self._rerun and self._iter is None:
+                self._logger.debug('    no more cases')
+                in_use = False
+            else:
+                try:
+                    self._logger.debug('    load_model')
+                    self._load_model(server)
+                    self._server_states[server] = _READY
+                except _ServerError:
+                    self._server_states[server] = _ERROR
 
         elif state == _READY:
             # Test for stop request.

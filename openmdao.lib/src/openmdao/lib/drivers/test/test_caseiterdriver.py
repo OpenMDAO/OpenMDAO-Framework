@@ -17,12 +17,14 @@ import numpy.random as numpy_random
 from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly, Component, Case, set_as_top
+from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
+
 from openmdao.lib.api import Float, Bool, Array, ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
-from openmdao.main.eggchecker import check_save_load
+
 from openmdao.util.testutil import find_python
 
 

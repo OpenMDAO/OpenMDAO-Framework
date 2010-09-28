@@ -34,8 +34,9 @@ except ImportError:
 from multiprocessing import Process, current_process, managers
 from multiprocessing import util, connection, forking
 
-from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server, register
-from openmdao.main.rbac import Credentials, set_credentials
+from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server, \
+                                     register, _decode_public_key
+from openmdao.main.rbac import Credentials, get_credentials, set_credentials
 
 from openmdao.util.wrkpool import WorkerPool
 
@@ -145,8 +146,8 @@ register(RemoteProcess, HostManager)
 class Cluster(OpenMDAO_Manager):
     """ Represents a collection of hosts. """
 
-    def __init__(self, hostlist, modules):
-        super(Cluster, self).__init__(address=('localhost', 0))
+    def __init__(self, hostlist, modules, authkey=None):
+        super(Cluster, self).__init__(authkey=authkey)
         self._hostlist = hostlist
         self._modules = modules
         if __name__ not in modules:
@@ -158,12 +159,9 @@ class Cluster(OpenMDAO_Manager):
         self._files = [os.path.abspath(filename) for filename in files]
         self._reply_q = Queue.Queue()
 
-
     def start(self):
         """ Start this manager and all remote managers. """
         super(Cluster, self).start()
-#        AF_INET family results in default address of 'localhost'.
-#        listener = connection.Listener(family='AF_INET', authkey=self._authkey)
         hostname = socket.getfqdn()
         listener = connection.Listener(address=(hostname, 0),
                                        authkey=self._authkey,
@@ -172,7 +170,7 @@ class Cluster(OpenMDAO_Manager):
 
         # Start managers in separate thread to avoid losing connections.
         starter = threading.Thread(target=self._start_hosts,
-                                   args=(listener.address,))
+                                   args=(listener.address, get_credentials()))
         starter.daemon = True
         starter.start()
 
@@ -188,13 +186,15 @@ class Cluster(OpenMDAO_Manager):
                     _LOGGER.debug('waiting for a connection, host %s',
                                   host.hostname)
                     conn = listener.accept()
-                    i, address = conn.recv()
+                    i, address, pubkey_text = conn.recv()
                     conn.close()
                     other_host = self._hostlist[i]
                     other_host.manager = HostManager.from_address(address,
                                                                   self._authkey)
                     other_host.Process = other_host.manager.Process
                     other_host.state = 'up'
+                    if pubkey_text:
+                        other_host.manager._pubkey = _decode_public_key(pubkey_text)
                     host_processed = True
                     _LOGGER.debug('Host %s is now up', other_host.hostname)
 
@@ -213,8 +213,9 @@ class Cluster(OpenMDAO_Manager):
                         _LOGGER.warning('Cluster startup timeout,'
                                         ' hosts not started:')
                         for host in waiting:
-                            _LOGGER.warning('    %s (%s) in %s', host.hostname,
-                                            host.state, host.tempdir)
+                            _LOGGER.warning('    %s (%s) in dir %s',
+                                            host.hostname, host.state,
+                                            host.tempdir)
                         break
             else:
                 break
@@ -225,7 +226,7 @@ class Cluster(OpenMDAO_Manager):
         self._base_shutdown = self.shutdown
         del self.shutdown
 
-    def _start_hosts(self, address):
+    def _start_hosts(self, address, credentials):
         """ Start host managers. """
         # Start first set of hosts.
         todo = []
@@ -234,7 +235,8 @@ class Cluster(OpenMDAO_Manager):
             if i < max_workers:
                 worker_q = WorkerPool.get()
                 _LOGGER.info('Starting host %s...', host.hostname)
-                worker_q.put((self._start_manager, (host, i, address), {},
+                worker_q.put((self._start_manager,
+                             (host, i, address, credentials), {},
                               self._reply_q))
             else:
                 todo.append(host)
@@ -254,11 +256,12 @@ class Cluster(OpenMDAO_Manager):
             else:
                 _LOGGER.info('Starting host %s...', next_host.hostname)
                 worker_q.put((self._start_manager,
-                              (next_host, i+max_workers, address), {},
-                              self._reply_q))
+                              (next_host, i+max_workers, address, credentials),
+                               {}, self._reply_q))
 
-    def _start_manager(self, host, i, address):
+    def _start_manager(self, host, i, address, credentials):
         """ Start one host manager. """
+        set_credentials(credentials)
         try:
             host.start_manager(i, self._authkey, address, self._files)
         except Exception, exc:
@@ -372,11 +375,10 @@ class Host(object):
 
     def poll(self):
         """ Poll for process status. """
-#        _LOGGER.debug('polling %s', self.hostname)
         if self.proc is not None and self.state != 'failed':
             self.proc.poll()
             if self.proc.returncode is not None:
-                _LOGGER.error('Host %s in %s exited, returncode %s',
+                _LOGGER.error('Host %s in dir %s exited, returncode %s',
                               self.hostname, self.tempdir, self.proc.returncode)
                 for line in self.proc.stdout:
                     _LOGGER.error('>    %s', line.rstrip())
@@ -427,7 +429,7 @@ def _check_ssh(hostname):
 
 
 _UNZIP_CODE = '''"import tempfile, os, sys, tarfile
-tempdir = tempfile.mkdtemp(prefix='distrib-')
+tempdir = tempfile.mkdtemp(prefix='omdao-')
 os.chdir(tempdir)
 tf = tarfile.open(fileobj=sys.stdin, mode='r|gz')
 tf.extractall()
@@ -469,11 +471,17 @@ def main():
     out.write('%s data received\n' % ident)
     out.flush()
 
+    if data['authkey'] == 'PublicKey':
+        _LOGGER.debug('%s using PublicKey authentication', ident)
+        out.write('%s using PublicKey authentication\n' % ident)
+        out.flush()
+
     # Update HostManager registry.
     dct = data['registry']
+    out.write('%s registry:' % ident)
     for name in dct.keys():
         module = dct[name]
-        out.write('%s: %s\n' % (name, module))
+        out.write('    %s: %s\n' % (name, module))
         out.flush()
         mod = __import__(module, fromlist=name)
         cls = getattr(mod, name)
@@ -486,7 +494,7 @@ def main():
     # Create Server for a `HostManager` object.
     set_credentials(Credentials())
     server = OpenMDAO_Server(HostManager._registry, (hostname, 0),
-                             data['authkey'], "pickle")
+                             data['authkey'], 'pickle')
     current_process()._server = server
 
     # Report server address and number of cpus back to parent.
@@ -496,7 +504,7 @@ def main():
               % (ident, data['parent_address']))
     out.flush()
     conn = connection.Client(data['parent_address'], authkey=data['authkey'])
-    conn.send((data['index'], server.address))
+    conn.send((data['index'], server.address, server.public_key_text))
     conn.close()
 
     # Set name etc.

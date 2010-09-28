@@ -33,6 +33,7 @@ import ConfigParser
 import cPickle
 import hashlib
 import inspect
+import logging
 import os.path
 import sys
 import threading
@@ -56,11 +57,15 @@ from openmdao.main.rbac import RoleError, RoleMapper, check_role, \
 # Cache of proxies created by make_proxy_type().
 _PROXY_CACHE = {}
 
+# Cache of client key pairs indexed by user (from credentials).
+_KEY_CACHE = {}
+_KEY_CACHE_LOCK = threading.Lock()
+
 # Names of methods requiring special handling.
 _SPECIALS = ('__getattribute__', '__getattr__', '__setattr__', '__delattr__')
 
 
-class SHA1(object):
+class _SHA1(object):
     """
     Just to get around a deprecation message when using the default
     :class:`RandomPool` hash.
@@ -70,12 +75,12 @@ class SHA1(object):
 
     def __init__(self):
         self.hash = hashlib.sha1()
-        if SHA1.digest_size is None:
-            SHA1.digest_size = self.hash.digest_size
+        if _SHA1.digest_size is None:
+            _SHA1.digest_size = self.hash.digest_size
 
     @staticmethod
     def new(bytes=None):
-        obj = SHA1()
+        obj = _SHA1()
         if bytes:
             obj.update(bytes)
         return obj
@@ -89,7 +94,7 @@ class SHA1(object):
 
 def _generate_key_pair():
     """ Returns RSA key containing both public and private keys. """
-    pool = RandomPool(2048, hash=SHA1)
+    pool = RandomPool(2048, hash=_SHA1)
     pool.stir()
     return RSA.generate(2048, pool.get_bytes)
 
@@ -111,7 +116,7 @@ def write_server_config(server, filename):
     parser.add_section(section)
     parser.set(section, 'address', str(server.address[0]))
     parser.set(section, 'port', str(server.address[1]))
-    parser.set(section, 'key', server.public_key_text())
+    parser.set(section, 'key', server.public_key_text)
     with open(filename, 'w') as cfg:
         parser.write(cfg)
 
@@ -186,7 +191,7 @@ def public_methods(obj):
         methods = rbac_methods(obj)
 
     # Add special methods for attribute access.
-#    methods.extend([name for name in _SPECIALS if hasattr(obj, name)])
+    methods.extend([name for name in _SPECIALS if hasattr(obj, name)])
     return methods
 
 
@@ -202,6 +207,7 @@ def register(cls, manager):
 
 
 def dump_registry(title, registry, logger):
+    """ Displays a :class:`Manager`'s registry information. """
     logger.debug('%s:', title)
     for key, (callable, exposed, meth2type, proxytype) in registry.items():
         logger.debug('    %s:', key)
@@ -234,8 +240,9 @@ class OpenMDAO_Server(Server):
         else:
             raise RuntimeError('No public key available')
 
+    @property
     def public_key_text(self):
-        """ Return text representation of public key. """
+        """ Text representation of public key. """
         if self._authkey == 'PublicKey':
             return _encode_public_key(self.public_key)
         else:
@@ -243,7 +250,7 @@ class OpenMDAO_Server(Server):
 
     def serve_client(self, conn):
         """
-        Handle requests from the proxies in a particular process/thread
+        Handle requests from the proxies in a particular process/thread.
         Supports dynamic proxy generation and credential checking.
         """
         util.debug('starting server thread to service %r',
@@ -463,7 +470,7 @@ class OpenMDAO_Manager(BaseManager):
 
     def get_server(self):
         """
-        Return server object with serve_forever() method and address attribute
+        Return a server object with :meth:`serve_forever` and address attribute.
         """
         assert self._state.value == State.INITIAL
         return OpenMDAO_Server(self._registry, self._address,
@@ -471,7 +478,7 @@ class OpenMDAO_Manager(BaseManager):
 
     def start(self):
         """
-        Spawn a server process for this manager object
+        Spawn a server process for this manager object.
         Retrieves server's public key.
         """
         assert self._state.value == State.INITIAL
@@ -526,7 +533,7 @@ class OpenMDAO_Manager(BaseManager):
     @staticmethod
     def _finalize_manager(process, address, authkey, state, _Client):
         """
-        Shutdown the manager process; will be registered as a finalizer
+        Shutdown the manager process; will be registered as a finalizer.
         Uses relaxed timing.
         """
         if process.is_alive():
@@ -562,11 +569,21 @@ class OpenMDAO_Proxy(BaseProxy):
 
     def _callmethod(self, methodname, args=None, kwds=None):
         """
-        Try to call a method of the referrent and return a copy of the result
-        Sends current thread's credentials.
+        Try to call a method of the referrent and return a copy of the result.
+        Optionally encrypts the channel. Sends current thread's credentials
+        with method arguments.
         """
         args = args or ()
         kwds = kwds or {}
+
+        credentials = get_credentials()
+        if self._authkey == 'PublicKey':
+            if credentials is None or not credentials.user:
+                msg = 'No credentials for PublicKey authentication of %s' \
+                      % methodname
+                logging.error(msg)
+                raise RuntimeError(msg)
+
         try:
             conn = self._tls.connection
         except AttributeError:
@@ -577,32 +594,38 @@ class OpenMDAO_Proxy(BaseProxy):
 
             if self._authkey == 'PublicKey':
                 # Send client public key, receive session key.
-                server_key = self._manager._pubkey
-                chunk_size = server_key.size() / 8
-                key_pair = _generate_key_pair()
+                with _KEY_CACHE_LOCK:
+                    try:
+                        key_pair = _KEY_CACHE[credentials.user]
+                    except KeyError:
+                        key_pair = _generate_key_pair()
+                        _KEY_CACHE[credentials.user] = key_pair
                 public_key = key_pair.publickey()
                 text = _encode_public_key(public_key)
+
+                server_key = self._manager._pubkey
+                if not server_key:
+                    msg = 'No server PublicKey for %s' % methodname
+                    logging.error(msg)
+                    raise RuntimeError(msg)
+                chunk_size = server_key.size() / 8
                 chunks = []
                 while text:
                     chunks.append(server_key.encrypt(text[:chunk_size], ''))
                     text = text[chunk_size:]
                 conn.send(chunks)
-                if not hasattr(curr_thread, 'session_keys'):
-                    curr_thread.session_keys = {}
+
                 bytes = conn.recv()
-                session_key = key_pair.decrypt(bytes)
-                curr_thread.session_keys[id(conn)] = session_key
+                self._tls.session_key = key_pair.decrypt(bytes)
+            else:
+                self._tls.session_key = ''
 
-        if self._authkey == 'PublicKey':
-            session_key = threading.current_thread().session_keys[id(conn)]
-        else:
-            session_key = ''
+        session_key = self._tls.session_key
 
-        credentials = get_credentials()
-
-        # Incredibly bizarre problem evidenced by test_extcode.py (Python 2.6.1)
-        # For some reason pickling the env_vars dictionary caused:
+        # Bizarre problem evidenced by test_extcode.py (Python 2.6.1)
+        # For some reason pickling the env_vars dictionary causes:
         #    PicklingError: Can't pickle <class 'openmdao.main.mp_support.ObjServer'>: attribute lookup openmdao.main.mp_support.ObjServer failed
+        # Possibly some Trait feature?
         new_args = []
         for arg in args:
             if isinstance(arg, dict):
@@ -730,7 +753,7 @@ def %s(self, *args, **kwds):
 def auto_proxy(token, serializer, manager=None, authkey=None,
                exposed=None, incref=True):
     """
-    Return an auto-proxy for `token`
+    Return an auto-proxy for `token`.
     Uses :func:`make_auto_proxy`.
     """
     _Client = listener_client[serializer][1]
