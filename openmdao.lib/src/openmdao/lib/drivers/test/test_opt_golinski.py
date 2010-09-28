@@ -192,7 +192,8 @@ class GolinskiTestCase(unittest.TestCase):
         return x06
 
     def test_opt1(self):
-        """Golinski optimization using CONMIN"""
+        # Golinski optimization using CONMIN
+        
         self.top.driver.add_objective('comp.result')
         #                                
         #  maximize x[0] value

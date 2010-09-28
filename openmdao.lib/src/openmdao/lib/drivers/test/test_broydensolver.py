@@ -94,7 +94,7 @@ class SellarBroyden(Assembly):
         
         # solver connections
         self.driver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
-        self.driver.add_eq_constraint('dis2.y2 - dis1.y2', '0.0')
+        self.driver.add_constraint('dis2.y2 = dis1.y2')
         self.driver.itmax = 10
         self.driver.alpha = .4
         self.driver.tol = .000000001
@@ -216,7 +216,6 @@ class TestCase(unittest.TestCase):
         pass
 
     def test_Broyden2(self):
-        """ Run Broyden2"""
     
         prob = SellarBroyden()
         set_as_top(prob)
@@ -236,7 +235,6 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, prob.dis2.y2, 0.904988, 0.0001)
 
     def test_Broyden3(self):
-        """ Run Broyden3"""
     
         prob = SellarBroyden()
         set_as_top(prob)
@@ -256,7 +254,6 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, prob.dis2.y2, 0.904988, 0.0001)
         
     def test_ExcitingMixing(self):
-        """ Run ExcitingMixing"""
     
         prob = SellarBroyden()
         set_as_top(prob)
@@ -276,7 +273,7 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, prob.dis2.y2, 0.904988, 0.0001)
      
     def test_MIMO_Broyden2(self):
-        """ Testing Broyden on a 2 input 2 output case"""
+        # Testing Broyden on a 2 input 2 output case
     
         prob = MIMOBroyden()
         set_as_top(prob)
@@ -296,7 +293,7 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0 - prob.dis1.x5, 1.0, 0.0001)
         
     def test_MIMO_Broyden3(self):
-        """ Testing Broyden on a 2 input 2 output case"""
+        # Testing Broyden on a 2 input 2 output case
     
         prob = MIMOBroyden()
         set_as_top(prob)
