@@ -81,6 +81,39 @@ def find_files(pat, startdir):
         for name in fnmatch.filter(filelist, pat):
             yield join(path, name)
 
+def find_files_and_dirs(pat, startdir):
+    """Return a list of files and directories (using a generator) that match
+    the given glob pattern. Walks an entire directory structure.
+    """
+    for path, dirlist, filelist in os.walk(startdir):
+        for name in fnmatch.filter(filelist+dirlist, pat):
+            yield join(path, name)
+
+def find_up(name, path=None):
+    """Search upward from the starting path (or the current directory)
+    until the given file or directory is found. The given name is
+    assumed to be a basename, not a path.  Returns the absolute path
+    of the file or directory if found, None otherwise.
+    
+    name: str
+        Base name of the file or directory being searched for
+        
+    path: str, optional
+        Starting directory.  If not supplied, current directory is used.
+    """
+    if not path:
+        path = os.getcwd()
+    if not exists(path):
+        return None
+    while path:
+        if exists(join(path, name)):
+            return abspath(join(path, name))
+        else:
+            pth = path
+            path = dirname(path)
+            if path == pth:
+                return None
+    return None
 
 def rm(path):
     """Delete a file or directory."""
