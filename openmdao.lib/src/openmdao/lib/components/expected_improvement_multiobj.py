@@ -5,10 +5,10 @@ from scipy.special import erf
 
 from enthought.traits.api import Instance, Str, ListStr, Array
 
-from openmdao.lib.api import Enum
+from openmdao.lib.datatypes.enum import Enum
 from openmdao.lib.datatypes.float import Float
 
-from openmdao.main.api import Component
+from openmdao.main.component import Component
 
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
