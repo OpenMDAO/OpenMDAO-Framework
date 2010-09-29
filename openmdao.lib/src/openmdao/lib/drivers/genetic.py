@@ -78,11 +78,13 @@ class Genetic(Driver):
         the parameters specified by the user"""
         
         alleles = GAllele.GAlleles()
+        count = 0
         for param in self.get_parameters().values():
-            
+            count += 1    
             expreval = param.expreval
             val = expreval.evaluate() #now grab the value 
             ref = str(expreval)
+        
             
             #split up the ref string to be able to get the trait.
             
@@ -97,9 +99,9 @@ class Genetic(Driver):
             #bunch of logic to check for array elements being passed as refs
             
             obj = getattr(self.parent, path)
-           
+            
             t = obj.traits().get(target) #get the trait
-                                 
+            
             if (t and (t.is_trait_type(Float) or t.is_trait_type(Python))) \
                 or (array_test.search(target) and isinstance(val,float)):
                 allele = GAllele.GAlleleRange(begin=low, end=high, real=True)
@@ -113,7 +115,7 @@ class Genetic(Driver):
             elif t and t.is_trait_type(Enum): 
                 allele = GAllele.GAlleleList(t.values)
                 alleles.add(allele)
-        
+        self.count = count
         return alleles
                 
     def execute(self):
@@ -139,7 +141,10 @@ class Genetic(Driver):
         ga.setMinimax(Consts.minimaxType[self.opt_type])
         ga.setGenerations(self.generations)
         ga.setMutationRate(self.mutation_rate)
-        ga.setCrossoverRate(self.crossover_rate)
+        if self.count > 1:
+            ga.setCrossoverRate(self.crossover_rate)
+        else:   
+            ga.setCrossoverRate(0)
         ga.setPopulationSize(self.population_size)
         ga.setElitism(self.elitism)
         

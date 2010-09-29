@@ -9,7 +9,7 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
 
-class ParetoFilter(Component): 
+class ParetoFilter(Component):
     """Takes a set of cases and filters out the subset of cases which are
     pareto optimal. Assumes that smaller values for model responses are
     better, so all problems must be posed as minimization problems.
@@ -21,7 +21,11 @@ class ParetoFilter(Component):
                           "filtering. Note that only case outputs are allowed as "
                           "criteria.")
     
-    case_set = Instance(ICaseIterator, iotype="in",
+    #case_set = Instance(ICaseIterator, iotype="in",
+    #                    desc="CaseIterator with the cases to be filtered to "
+    #                         "Find the pareto optimal subset.")
+                             
+    case_sets = Array([], iotype="in",
                         desc="CaseIterator with the cases to be filtered to "
                              "Find the pareto optimal subset.")
     
@@ -47,7 +51,12 @@ class ParetoFilter(Component):
         criteria.
         """
         y_list = []
-        cases = [case for case in self.case_set]
+        cases = []
+        for case_set in self.case_sets:
+            cases.extend([case for case in case_set])
+        
+        
+        #cases = [case for case in self.case_set]
         criteria_count = len(self.criteria)
         
         for case in cases:
@@ -55,7 +64,7 @@ class ParetoFilter(Component):
             outputs = [o[2] for o in case.outputs if o[0] in self.criteria]
             if len(outputs) == criteria_count:
                 y_list.append(outputs)
-                
+        
         if not y_list: #empty y_list set means no cases met the criteria!
             self.raise_exception('no cases in the provided case_set had output '
                  'matching the provided criteria, %s'%self.criteria, ValueError)

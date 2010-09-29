@@ -8,17 +8,14 @@ here = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.normpath(os.path.join(here,
                                                  'openmdao',
                                                  'examples',
-                                                 'singleEI')))
-print "TESTING FOR STUPID JUSTIN:", os.path.normpath(os.path.join(here,
-                                                 'openmdao',
-                                                 'examples',
-                                                 'singleEI'))
+                                                 'multiArch_multiEI')))
+
 import releaseinfo
 version = releaseinfo.__version__
 
-setup(name='openmdao.examples.singleEI',
+setup(name='openmdao.examples.multiArch_multiEI',
       version=version,
-      description="OpenMDAO examples - Single Objective Expected Improvement",
+      description="OpenMDAO examples - Multi Architecture Multi Objective Expected Improvement",
       long_description="""\
          """,
       classifiers=[

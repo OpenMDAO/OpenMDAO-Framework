@@ -98,6 +98,8 @@ def after_install(options, home_dir):
                      'openmdao.examples.mdao',
                      'openmdao.examples.enginedesign',
                      'openmdao.examples.singleEI',
+                     'examples/openmdao.examples.multiEI',
+                     'examples/openmdao.examples.multiArch_multiEI',
                     ]
 
     cmds = []
