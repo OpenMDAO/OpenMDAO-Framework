@@ -29,7 +29,7 @@ class ParetoFilter(Component):
                         desc="CaseIterator with the cases to be filtered to "
                              "Find the pareto optimal subset.")
     
-    pareto_set = Instance(ICaseIterator, iotype="out",
+    pareto_set = Instance(ICaseIterator, iotype="out", 
                           desc="resulting collection of pareto optimal cases")
     dominated_set = Instance(ICaseIterator, iotype="out",
                              desc="Resulting collection of dominated cases.")
@@ -54,7 +54,6 @@ class ParetoFilter(Component):
         cases = []
         for case_set in self.case_sets:
             cases.extend([case for case in case_set])
-        
         
         #cases = [case for case in self.case_set]
         criteria_count = len(self.criteria)
