@@ -35,7 +35,7 @@ from multiprocessing import Process, current_process, managers
 from multiprocessing import util, connection, forking
 
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server, \
-                                     register, _decode_public_key
+                                     register, decode_public_key
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials
 
 from openmdao.util.wrkpool import WorkerPool
@@ -194,7 +194,7 @@ class Cluster(OpenMDAO_Manager):
                     other_host.Process = other_host.manager.Process
                     other_host.state = 'up'
                     if pubkey_text:
-                        other_host.manager._pubkey = _decode_public_key(pubkey_text)
+                        other_host.manager._pubkey = decode_public_key(pubkey_text)
                     host_processed = True
                     _LOGGER.debug('Host %s is now up', other_host.hostname)
 

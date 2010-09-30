@@ -9,7 +9,7 @@ import pkg_resources
 import platform
 import sys
 import unittest
-from nose import SkipTest
+import nose
 
 import random
 import numpy.random as numpy_random
@@ -163,10 +163,11 @@ class TestCase(unittest.TestCase):
             self.fail('Expected RuntimeError')
 
     def test_concurrent(self):
+#        raise nose.SkipTest()
         # FIXME: temporarily disable this test on windows because it loops
         # over a set of tests forever when running under a virtualenv
         if sys.platform == 'win32':
-            raise SkipTest('test_concurrent skipped')
+            raise nose.SkipTest()
         # This can always test using a LocalAllocator (forked processes).
         # It can also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
@@ -189,8 +190,10 @@ class TestCase(unittest.TestCase):
                 machines.append({'hostname':node, 'python':python})
             if machines:
                 name = node.replace('.', '_')
-                cluster = ClusterAllocator(name, machines)
-                ResourceAllocationManager.insert_allocator(0, cluster)
+                alloc = ResourceAllocationManager.get_allocator(0)
+                if alloc.name != name:  # Don't add multiple copies.
+                    cluster = ClusterAllocator(name, machines)
+                    ResourceAllocationManager.insert_allocator(0, cluster)
 
         self.run_cases(sequential=False)
         self.assertEqual(glob.glob('Sim-*'), [])
@@ -339,7 +342,6 @@ class TestCase(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import nose
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()

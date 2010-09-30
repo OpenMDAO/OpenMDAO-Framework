@@ -87,6 +87,7 @@ class TestCase(unittest.TestCase):
             os.remove(dummy)
 
     def test_remote(self):
+#        raise nose.SkipTest()
         # FIXME: temporarily disable this test on windows to get around
         # a problem where a set of tests is run repeatedly for reasons unknown
         if sys.platform == 'win32':
@@ -101,13 +102,15 @@ class TestCase(unittest.TestCase):
         # Exercise cluster deployment if on this GRC cluster front-end.
         node = platform.node()
         if node.startswith('gxterm'):
-            python = find_python()
-            machines = []
-            for i in range(55):
-                machines.append({'hostname':'gx%02d' % i, 'python':python})
             name = node.replace('.', '_')
-            cluster = ClusterAllocator(name, machines)
-            ResourceAllocationManager.insert_allocator(0, cluster)
+            alloc = ResourceAllocationManager.get_allocator(0)
+            if alloc.name != name:  # Don't add multiple copies.
+                python = find_python()
+                machines = []
+                for i in range(55):
+                    machines.append({'hostname':'gx%02d' % i, 'python':python})
+                cluster = ClusterAllocator(name, machines)
+                ResourceAllocationManager.insert_allocator(0, cluster)
 
         dummy = 'dummy_output'
         if os.path.exists(dummy):

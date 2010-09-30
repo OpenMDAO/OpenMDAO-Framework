@@ -96,23 +96,34 @@ class ShellProc(subprocess.Popen):
                     break
                 time.sleep(poll_delay)
                 return_code = self.poll()
-
-            if return_code:
-                if return_code > 0:
-                    error_msg = ': %s' % os.strerror(return_code)
-                else:
-                    sig = -return_code
-                    if sig < signal.NSIG:
-                        for item in signal.__dict__.keys():
-                            if item.startswith('SIG'):
-                                if getattr(signal, item) == sig:
-                                    error_msg = ': %s' % item
-                                    break
         finally:
             self.close_files()
 
+        error_msg = self.error_message(return_code)
         self.errormsg = error_msg  # returncode set by self.poll().
         return (return_code, error_msg)
+
+    def error_message(self, return_code):
+        """
+        Return error message for `return_code`.
+
+        return_code: int
+            Return code from :meth:`poll`.
+        """
+        if return_code:
+            if return_code > 0:
+                error_msg = ': %s' % os.strerror(return_code)
+            else:
+                sig = -return_code
+                if sig < signal.NSIG:
+                    for item in signal.__dict__.keys():
+                        if item.startswith('SIG'):
+                            if getattr(signal, item) == sig:
+                                error_msg = ': %s' % item
+                                break
+        else:
+            error_msg = ''
+        return error_msg
 
 
 def call(args, stdin=None, stdout=None, stderr=None, env=None,

@@ -103,7 +103,7 @@ class WorkerPool(object):
                 # Sometimes we have issues at shutdown.
                 try:
                     trace = traceback.format_exc()
-                except Exception:
+                except Exception:  #pragma no cover
                     return
 
             request_q.task_done()

@@ -31,10 +31,12 @@ method.
 import base64
 import ConfigParser
 import cPickle
+import errno
 import hashlib
 import inspect
 import logging
 import os.path
+import socket
 import sys
 import threading
 from traceback import format_exc
@@ -104,7 +106,7 @@ def _encode_public_key(key):
         key = key.publickey()
     return base64.b64encode(cPickle.dumps(key, cPickle.HIGHEST_PROTOCOL))
 
-def _decode_public_key(text):
+def decode_public_key(text):
     """ Return public key from text representation. """
     return cPickle.loads(base64.b64decode(text))
 
@@ -131,7 +133,7 @@ def read_server_config(filename):
     port = parser.getint(section, 'port')
     key = parser.get(section, 'key')
     if key:
-        key = _decode_public_key(key)
+        key = decode_public_key(key)
     return (address, port, key)
 
 
@@ -267,7 +269,7 @@ class OpenMDAO_Server(Server):
             text = ''
             for chunk in chunks:
                 text += self._key_pair.decrypt(chunk)
-            client_key = _decode_public_key(text)
+            client_key = decode_public_key(text)
             session_key = hashlib.sha1(str(id(conn))).hexdigest()
             bytes = client_key.encrypt(session_key, '')
             send(bytes)
@@ -283,6 +285,9 @@ class OpenMDAO_Server(Server):
                 obj, exposed, gettypeid = id_to_obj[ident]
 
                 if methodname not in exposed:
+                    if methodname == '__getattr__':
+                        # More informative for common case of missing RBAC.
+                        methodname = args[0]
                     raise AttributeError(
                         'method %r of %r object is not in exposed=%r' %
                         (methodname, type(obj), exposed)
@@ -679,6 +684,78 @@ class OpenMDAO_Proxy(BaseProxy):
             dispatch(conn, None, 'decref', (token.id,))
             return proxy
         raise convert_to_error(kind, result)
+
+    def _incref(self):
+        """ Avoids hang in _Client if server no longer exists. """
+        if not OpenMDAO_Proxy._manager_is_alive(self._token):
+            raise RuntimeError('Cannot connect to manager')
+
+        conn = self._Client(self._token.address, authkey=self._authkey)
+        dispatch(conn, None, 'incref', (self._id,))
+        util.debug('INCREF %r', self._token.id)
+
+        self._idset.add(self._id)
+
+        state = self._manager and self._manager._state
+
+        self._close = util.Finalize(
+            self, OpenMDAO_Proxy._decref,
+            args=(self._token, self._authkey, state,
+                  self._tls, self._idset, self._Client),
+            exitpriority=10
+            )
+
+    @staticmethod
+    def _decref(token, authkey, state, tls, idset, _Client):
+        """ Avoids hang in _Client if server no longer exists. """
+        idset.discard(token.id)
+
+        # check whether manager is still alive
+        if state is None or state.value == State.STARTED:
+            # Avoid a hang in _Client() if the server isn't there anymore.
+            if OpenMDAO_Proxy._manager_is_alive(token):
+                # tell manager this process no longer cares about referent
+                try:
+                    util.debug('DECREF %r', token.id)
+                    conn = _Client(token.address, authkey=authkey)
+                    dispatch(conn, None, 'decref', (token.id,))
+                except Exception, e:
+                    util.debug('... decref failed %s', e)
+        else:
+            util.debug('DECREF %r -- manager already shutdown', token.id)
+
+        # check whether we can close this thread's connection because
+        # the process owns no more references to objects for this manager
+        if not idset and hasattr(tls, 'connection'):
+            util.debug('thread %r has no more proxies so closing conn',
+                       threading.current_thread().name)
+            tls.connection.close()
+            del tls.connection
+
+    @staticmethod
+    def _manager_is_alive(token):
+        """ Check whether manager is still alive. """
+        addr_type = connection.address_type(token.address)
+        if addr_type == 'AF_INET':
+            s = socket.socket(socket.AF_INET)
+        elif addr_type == 'AF_UNIX':
+            s = socket.socket(socket.AF_UNIX)
+        else:  # AF_PIPE (Windows)
+# TODO: handle Windows
+            s = None
+
+        alive = True
+        if s is not None:
+            try:
+                s.connect(token.address)
+            except socket.error as exc:
+                if exc.args[0] == errno.ECONNREFUSED:
+                    alive = False
+                else:
+                    raise
+            else:
+                s.close()
+        return alive
 
     def __reduce__(self):
         """ For unpickling, uses :func:`auto_proxy`. """

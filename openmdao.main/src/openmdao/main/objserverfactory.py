@@ -1,21 +1,113 @@
 import logging
 import os.path
+import pkg_resources
 import platform
 import shutil
+import signal
+import socket
+import sys
+import time
 
 from multiprocessing import util
 
-from openmdao.main.container import Container
 from openmdao.main.component import SimulationRoot
+from openmdao.main.container import Container
 from openmdao.main.factory import Factory
-from openmdao.main.mp_support import OpenMDAO_Manager, register
+from openmdao.main.factorymanager import create, get_available_types
+from openmdao.main.mp_support import OpenMDAO_Manager, register, \
+                                     write_server_config
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                rbac
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
-from openmdao.util.shellproc import ShellProc
+from openmdao.util.shellproc import ShellProc, STDOUT
+
+_PROXIES = {}
 
 
+class ObjServerFactory(Factory):
+    """
+    An :class:`ObjServerFactory` creates :class:`ObjServers` which use
+    :mod:`multiprocessing` for communication.
+    """
+
+    def __init__(self):
+        super(ObjServerFactory, self).__init__()
+        self._count = 0
+        self._logger = logging.getLogger('ObjServerFactory')
+        self._logger.info('PID: %d', os.getpid())
+        print 'Factory PID:', os.getpid()
+        sys.stdout.flush()
+
+    @rbac('*')
+    def get_available_types(self, groups=None):
+        """
+        Returns a set of tuples of the form ``(typename, dist_version)``,
+        one for each available plugin type in the given entry point groups.
+        If groups is *None,* return the set for all openmdao entry point groups.
+        """
+        self._logger.debug('get_available_types %s', groups)
+        types = get_available_types(groups)
+        for typname, version in types:
+            self._logger.debug('    %s %s', typname, version)
+        return types
+
+    @rbac('owner')
+    def create(self, typname, version=None, server=None,
+               res_desc=None, **ctor_args):
+        """
+        Create an :class:`ObjServer` and return a proxy for it.
+
+        typname: string
+            Type of object to create. If null a new :class:`ObjServer` is
+            returned.
+
+        version: string or None
+            Version of `typname` to create.
+
+        server:
+            :class:`ObjServer` on which to create `typname`.
+
+        res_desc: dict or None
+            Required resources. Currently not used.
+
+        ctor_args:
+            Other constructor arguments.  If `name` is specified, that
+            is used as the name of the :class:`ObjServer`.
+        """
+        if get_credentials() is None:
+            set_credentials(Credentials())
+
+        if server is None:
+            manager = OpenMDAO_Manager(authkey='PublicKey')
+            register(ObjServer, manager)
+            manager.start()
+            self._count += 1
+            name = ctor_args.get('name', '')
+            if not name:
+                name = 'Server_%d' % self._count
+            self._logger.info("new server '%s' listening on %s",
+                              name, manager.address)
+            server = manager.ObjServer(name=name, host=platform.node())
+
+        if typname:
+            obj = server.create(typname, version, None, res_desc, **ctor_args)
+        else:
+            obj = server
+
+        self._logger.debug('create returning %r %d', obj, id(obj))
+        return obj
+
+
+class ServiceManager(OpenMDAO_Manager):
+    """
+    A :class:`multiprocessing.Manager` which manages :class:`ObjServerFactory`.
+    """
+    pass
+
+register(ObjServerFactory, ServiceManager)
+
+    
 class RemoteFile(object):
     """ Wraps a :class:`file` with remote-access annotations. """
 
@@ -42,49 +134,6 @@ class RemoteFile(object):
         return self.fileobj.write(data)
 
 
-class ObjServerFactory(Factory):
-    """
-    An :class:`ObjServerFactory` creates :class:`ObjServers` which use
-    :mod:`multiprocessing` for communication.
-    """
-
-    def __init__(self):
-        super(ObjServerFactory, self).__init__()
-
-    @rbac('*')
-    def create(self, typname, version=None, server=None,
-               res_desc=None, **ctor_args):
-        """
-        Create an :class:`ObjServer` and return a proxy for it.
-
-        typname: string
-            Type of object to create. Currently not used.
-
-        version: string or None
-            Version of `typname` to create. Currently not used.
-
-        server:
-            Currently not used.
-
-        res_desc: dict or None
-            Required resources. Currently not used.
-
-        ctor_args:
-            Other constructor arguments.  If `name` is specified, that
-            is used as the name of the ObjServer.
-        """
-        if get_credentials() is None:
-            set_credentials(Credentials())
-
-        manager = OpenMDAO_Manager(authkey='PublicKey')
-        register(ObjServer, manager)
-        manager.start()
-        name = ctor_args.get('name', '')
-        logging.debug("ObjServerFactory: new server for '%s' listening on %s",
-                      name, manager.address)
-        return manager.ObjServer(name=name, host=platform.node())
-
-    
 class ObjServer(object):
     """
     An object which knows how to load a model.
@@ -98,14 +147,15 @@ class ObjServer(object):
         self.name = name or ('sim-%d' % self.pid)
         self.orig_dir = os.getcwd()
         self.root_dir = os.path.join(self.orig_dir, self.name)
+#        self._fix_logging()
+        self._logger = logging.getLogger(self.name)
         if os.path.exists(self.root_dir):
-            logging.warning('%s: Removing existing directory %s',
-                            self.name, self.root_dir)
+            self._logger.warning('Removing existing directory %s',
+                                 self.root_dir)
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
         util.Finalize(None, self.cleanup, exitpriority=-100)
-        self._fix_logging()
         SimulationRoot.chroot(self.root_dir)
         self.tlo = None
 
@@ -124,10 +174,24 @@ class ObjServer(object):
         if os.path.exists(self.root_dir):
             shutil.rmtree(self.root_dir)
 
-    @staticmethod
-    def echo(*args):
+    @rbac('owner', proxy_types=[object])
+    def create(self, typname, version=None, server=None,
+               res_desc=None, **ctor_args):
+        """
+        Returns an object of type *typname,* using the specified
+        package version, server location, and resource description.
+        """
+        self._logger.info('create typname %s, version %s server %s,'
+                          ' res_desc %s, args %s', typname, version, server,
+                          res_desc, ctor_args)
+        obj = create(typname, version, server, res_desc, **ctor_args)
+        self._logger.info('    returning %r %d', obj, id(obj))
+        return obj
+
+    @rbac('*')
+    def echo(self, *args):
         """ Simply return our arguments. """
-        logging.debug("echo %s", args)
+        self._logger.debug("echo %s", args)
         return args
 
     @rbac('owner')
@@ -152,20 +216,20 @@ class ObjServer(object):
             Maximum time to wait for command completion. A value of zero
             implies no timeout.
         """
-        logging.debug("execute_command '%s'", command)
+        self._logger.debug("execute_command '%s'", command)
         for arg in (stdin, stdout, stderr):
             if isinstance(arg, basestring):
                 self._check_path(arg, 'execute_command')
         try:
             process = ShellProc(command, stdin, stdout, stderr, env_vars)
         except Exception as exc:
-            logging.error('exception creating process: %s', exc)
+            self._logger.error('exception creating process: %s', exc)
             raise
 
-        logging.debug('    PID = %d', process.pid)
+        self._logger.debug('    PID = %d', process.pid)
         return_code, error_msg = process.wait(poll_delay, timeout)
         process.close_files()
-        logging.debug('    returning %s', (return_code, error_msg))
+        self._logger.debug('    returning %s', (return_code, error_msg))
         return (return_code, error_msg)
 
     @rbac('owner', proxy_types=[Container])
@@ -176,7 +240,7 @@ class ObjServer(object):
         egg_filename: string
             Filename of egg to be loaded.
         """
-        logging.debug('%s load_model %s', self.name, egg_filename)
+        self._logger.debug('load_model %s', egg_filename)
         self._check_path(egg_filename, 'load')
         if self.tlo:
             self.tlo.pre_delete()
@@ -194,7 +258,7 @@ class ObjServer(object):
         filename: string
             Name of ZipFile to create.
         """
-        logging.debug("%s pack_zipfile '%s'", self.name, filename)
+        self._logger.debug("pack_zipfile '%s'", filename)
         self._check_path(filename, 'pack_zipfile')
         return pack_zipfile(patterns, filename, logging.getLogger())
 
@@ -206,7 +270,7 @@ class ObjServer(object):
         filename: string
             Name of ZipFile to unpack.
         """
-        logging.debug("%s unpack_zipfile '%s'", self.name, filename)
+        self._logger.debug("unpack_zipfile '%s'", filename)
         self._check_path(filename, 'unpack_zipfile')
         return unpack_zipfile(filename, logging.getLogger())
 
@@ -221,13 +285,13 @@ class ObjServer(object):
         mode: int
             New mode bits (permissions).
         """
-        logging.debug("%s chmod '%s' %s", self.name, path, mode)
+        self._logger.debug("chmod '%s' %s", path, mode)
         self._check_path(path, 'chmod')
         try:
             return os.chmod(path, mode)
         except Exception as exc:
-            logging.error('%s chmod %s %s in %s failed %s', self.name, path,
-                          mode, os.getcwd(), exc)
+            self._logger.error('chmod %s %s in %s failed %s',
+                               path, mode, os.getcwd(), exc)
             raise
 
     @rbac('owner', proxy_types=[RemoteFile])
@@ -244,13 +308,13 @@ class ObjServer(object):
         bufsize: int
             Size of buffer to use.
         """
-        logging.debug("%s open '%s' %s %s", self.name, filename, mode, bufsize)
+        self._logger.debug("open '%s' %s %s", filename, mode, bufsize)
         self._check_path(filename, 'open')
         try:
             return RemoteFile(open(filename, mode, bufsize))
         except Exception as exc:
-            logging.error('%s open %s %s %s in %s failed %s', self.name,
-                          filename, mode, bufsize, os.getcwd(), exc)
+            self._logger.error('open %s %s %s in %s failed %s',
+                               filename, mode, bufsize, os.getcwd(), exc)
             raise
 
     @rbac('owner')
@@ -261,13 +325,13 @@ class ObjServer(object):
         path: string
             Path to file to interrogate.
         """
-        logging.debug("%s stat '%s'", self.name, path)
+        self._logger.debug("stat '%s'", path)
         self._check_path(path, 'stat')
         try:
             return os.stat(path)
         except Exception as exc:
-            logging.error('%s stat %s in %s failed %s', self.name, path,
-                          os.getcwd(), exc)
+            self._logger.error('stat %s in %s failed %s',
+                               path, os.getcwd(), exc)
             raise
 
     def _check_path(self, path, operation):
@@ -276,4 +340,132 @@ class ObjServer(object):
         if not path.startswith(self.root_dir):
             raise RuntimeError("Can't %s, %s doesn't start with %s",
                                operation, path, self.root_dir)
+
+
+def connect(address, port, key):
+    """
+    Returns proxy for :class:`ObjServerFactory` at `address` using `key`.
+
+    address: string
+        IP address for server.
+
+    port: int
+        Server port.
+
+    key:
+        Server public key.
+    """
+    location = (address, port)
+    try:
+        return _PROXIES[location]
+    except KeyError:
+        mgr = ServiceManager(location, 'PublicKey', pubkey=key)
+        mgr.connect()
+        proxy = mgr.ObjServerFactory()
+        _PROXIES[location] = proxy
+        return proxy
+
+
+def start_server(server_cfg='server.cfg', server_out='server.out'):
+    """
+    Start :class:`ObjServerFactory` service in a separate process.
+
+    server_cfg: string
+        Filename for server config file containing public key, etc.
+
+    server_out: string
+        Filename for server stdout and stderr.
+
+    Returns :class:`ShellProc`.
+    """
+    for path in (server_cfg, server_out):
+        if os.path.exists(path):
+            os.remove(path)
+
+    factory_path = pkg_resources.resource_filename('openmdao.main',
+                                                   'objserverfactory.py')
+    args = 'python %s' % factory_path
+    proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
+
+    retry = 0
+    while not os.path.exists(server_cfg):
+        return_code = proc.poll()
+        if return_code:
+            error_msg = proc.error_message()
+            raise RuntimeError('Server startup failed %s' % error_msg)
+        retry += 1
+        if retry < 100:
+            time.sleep(.1)
+        else:
+            proc.terminate()
+            raise RuntimeError('Server startup timeout')
+    return proc
+
+
+# Remote process code.
+
+_LOGGER = logging.getLogger()
+_SERVER_CFG = ''
+
+def main():  #pragma no cover
+    """ OpenMDAO factory service process. """
+    global _SERVER_CFG
+    _SERVER_CFG = 'server.cfg'
+
+    _LOGGER.setLevel(logging.DEBUG)
+    address = (platform.node(), 0)  # Use non-zero for specific port.
+    authkey = 'PublicKey'
+    set_credentials(Credentials())
+    _LOGGER.info("Starting ServiceManager %s '%s'", address, authkey)
+    manager = ServiceManager(address, authkey)
+
+    server = None
+    retries = 0
+    while server is None:
+        try:
+            server = manager.get_server()
+        except socket.error as exc:
+            if str(exc).find('Address already in use') >= 0:
+                if retries < 10:
+                    _LOGGER.debug('Address %s in use, retrying...', address)
+                    time.sleep(5)
+                    retries += 1
+                else:
+                    msg = 'Address %s in use, too many retries.' % address
+                    _LOGGER.error(msg)
+                    print msg
+                    sys.exit(1)
+            else:
+                raise
+
+    write_server_config(server, _SERVER_CFG)
+    msg = 'Serving on %s' % (server.address,)
+    _LOGGER.info(msg)
+    print msg
+    sys.stdout.flush()
+
+    signal.signal(signal.SIGTERM, sigterm_handler)
+    server.serve_forever()
+
+    # Not clear how we could get here...
+    cleanup()
+
+
+def sigterm_handler(signum, frame):  #pragma no cover
+    """ Try to go down gracefully. """
+    _LOGGER.info('sigterm_handler invoked')
+    print 'sigterm_handler invoked'
+    sys.stdout.flush()
+    cleanup()
+    sys.exit(1)
+
+
+def cleanup():  #pragma no cover
+    """ Cleanup in preparation to shut down. """
+    if os.path.exists(_SERVER_CFG):
+        os.remove(_SERVER_CFG)
+
+
+if __name__ == '__main__':  #pragma no cover
+    main()
 
