@@ -97,9 +97,7 @@ def after_install(options, home_dir):
                      'openmdao.examples.bar3simulation',
                      'openmdao.examples.mdao',
                      'openmdao.examples.enginedesign',
-                     'openmdao.examples.singleEI',
-                     'examples/openmdao.examples.multiEI',
-                     'examples/openmdao.examples.multiArch_multiEI',
+                     'openmdao.examples.expected_improvement'
                     ]
 
     cmds = []

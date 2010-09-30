@@ -8,6 +8,7 @@ from enthought.traits.api import Instance, Str
 from openmdao.main.api import Assembly, Component, Driver, \
      SequentialWorkflow, Case
 from openmdao.main.interfaces import ICaseIterator
+from openmdao.main.expreval import ExprEvaluator
 
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.components.expected_improvement import ExpectedImprovement
@@ -24,7 +25,7 @@ from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
 from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
 from openmdao.lib.api import Float, Int
 
-from openmdao.examples.singleEI.branin_component import BraninComponent
+from openmdao.examples.expected_improvement.branin_component import BraninComponent
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
@@ -44,15 +45,25 @@ class Iterator(Driver):
             return True
         
         return False
+
+   
     
 class MyDriver(Driver): 
+    def __init__(self,doc=None):
+        super(MyDriver,self).__init__(doc)
+        
+        self.ins = ['branin_meta_model.x','branin_meta_model.y']
+        self.outs = ['branin_meta_model.f_xy']  
+        
     def execute(self):
         self.set_events()
         self.run_iteration()
-        print analysis.EI.EI
-        case = Case(inputs = [('branin_meta_model.x',None,analysis.branin_meta_model.x), 
-                              ('branin_meta_model.y',None,analysis.branin_meta_model.y)],
-                    outputs = [('branin_meta_model.f_xy',None,analysis.branin_meta_model.f_xy),])
+        
+        inputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.ins]
+        outputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.outs]
+        
+        case = Case(inputs = inputs,
+                    outputs = outputs)
         self.recorder.record(case)
         
 
@@ -75,7 +86,7 @@ class Analysis(Assembly):
         
         self.add("filter",ParetoFilter())
         self.filter.criteria = ['branin_meta_model.f_xy']
-        self.filter.case_set = self.branin_meta_model.recorder.get_iterator()
+        self.filter.case_sets = [self.branin_meta_model.recorder.get_iterator(),]
         self.filter.force_execute = True
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())

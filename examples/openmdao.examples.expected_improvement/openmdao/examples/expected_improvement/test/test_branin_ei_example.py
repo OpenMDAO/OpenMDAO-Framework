@@ -12,7 +12,7 @@ from numpy import pi
 from pyevolve import Selectors
 
 from openmdao.main.api import set_as_top
-from openmdao.examples.singleEI.branin_ei_example import Analysis, Iterator
+from openmdao.examples.expected_improvement.single_objective_ei import Analysis, Iterator
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
 from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
 
