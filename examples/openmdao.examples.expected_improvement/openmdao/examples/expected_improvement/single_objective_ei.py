@@ -85,7 +85,7 @@ class Analysis(Assembly):
         self.EI.criteria = "branin_meta_model.f_xy"
         
         self.add("filter",ParetoFilter())
-        self.filter.criteria = ['branin_meta_model.f_xy']
+        self.filter.criteria = ['f_xy']
         self.filter.case_sets = [self.branin_meta_model.recorder.get_iterator(),]
         self.filter.force_execute = True
         #Driver Configuration

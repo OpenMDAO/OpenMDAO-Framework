@@ -60,7 +60,11 @@ class ParetoFilter(Component):
         
         for case in cases:
             #TODO: Implement extraction of output from case, 'case.get_output('x')'
-            outputs = [o[2] for o in case.outputs if o[0] in self.criteria]
+            outputs = []
+            for crit in self.criteria: 
+                outputs.extend([o[2] for o in case.outputs if crit in o[0]])
+            #outputs = [o[2] for o in case.outputs if o[0] in self.criteria]
+            
             if len(outputs) == criteria_count:
                 y_list.append(outputs)
         

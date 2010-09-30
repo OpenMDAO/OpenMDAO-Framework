@@ -497,7 +497,7 @@ operate.
         from openmdao.lib.api import DOEdriver
         from openmdao.lib.doegenerators.full_factorial import FullFactorial
 
-        from openmdao.examples.singleEI.branin_component import BraninComponent
+        from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
         class Analysis(Assembly): 
             def __init__(self,doc=None): 
