@@ -17,7 +17,7 @@ from openmdao.lib.doegenerators.full_factorial import FullFactorial
 from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
 
 
-class EITest(unittest.TestCase):
+class SingleObjectiveEITest(unittest.TestCase):
     """Test to make sure the EI sample problem works as it should"""
     
     def test_EI(self): 
@@ -34,36 +34,18 @@ class EITest(unittest.TestCase):
 
         analysis = Analysis()
         set_as_top(analysis)
-        analysis.DOE_trainer.DOEgenerator = FullFactorial(2, 2)
-        analysis.iterations = 1
+        analysis.DOE_trainer.DOEgenerator = FullFactorial(4, 2)
+        analysis.iter.iterations = 1
         analysis.run()
         # This test looks for the presence of at least one point close to
         # each optimum.
         
-        data_EI = case_db_to_dict(os.path.join(analysis._tdir,'retrain.db'),
-                                ['branin_meta_model.x',
-                                 'branin_meta_model.y'])
+        #print analysis.EI.EI
+        #print analysis.branin_meta_model.x
+        #print analysis.branin_meta_model.y
         
-        true_optima = [(-pi, 12.275), (pi, 2.275), (9.42478, 2.745)]
-        num_close_points = [0, 0, 0]
-        min_dists = [1.e99,1.e99,1.e99]
-        xx = data_EI['branin_meta_model.x']
-        yy = data_EI['branin_meta_model.y']
-        
-        for i,optimum in enumerate(true_optima):
-            for x,y in zip(xx,yy):
-                dist = sqrt((optimum[0] - x)**2 + (optimum[1] - y)**2)
-                if dist < min_dists[i]:
-                    min_dists[i] = dist
-        
-        analysis.cleanup()
-        dist_tol = 0.9
-        for i in range(3):
-            self.assertTrue( min_dists[0] < dist_tol, 
-                             msg="min distance of %s is > %s" % (min_dists[0],dist_tol) )
-        
-        #self.assertAlmostEqual(3.491477,analysis.EI_driver.next_case[0].inputs[0][2],1)
-        #self.assertAlmostEqual(0.29819,analysis.EI_driver.next_case[0].inputs[1][2],1)
+        self.assertAlmostEqual(analysis.branin_meta_model.x,8.0,1)
+        self.assertAlmostEqual(analysis.branin_meta_model.y,1.8,1)
         
 if __name__=="__main__": #pragma: no cover
     unittest.main()

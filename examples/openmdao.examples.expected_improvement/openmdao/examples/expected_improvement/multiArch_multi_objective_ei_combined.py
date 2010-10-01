@@ -98,8 +98,8 @@ class Analysis(Assembly):
         self.MOEI.criteria = ['alg2_meta_model.f1','alg2_meta_model.f2']
         
         self.add("filter",ParetoFilter())
-        self.filter.criteria = ['alg2_meta_model.f1','alg2_meta_model.f2']
-        #self.filter.criteria = ['alg1_meta_model.f1','alg1_meta_model.f2','alg2_meta_model.f1','alg2_meta_model.f2']
+        #self.filter.criteria = ['alg2_meta_model.f1','alg2_meta_model.f2']
+        self.filter.criteria = ['f1','f2']
         self.filter.case_sets = [self.alg1_meta_model.recorder.get_iterator(), self.alg2_meta_model.recorder.get_iterator()]
         self.filter.force_execute = True
         

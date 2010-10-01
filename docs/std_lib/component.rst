@@ -44,7 +44,7 @@ Components
         from openmdao.main.api import Assembly
         from openmdao.lib.api import MetaModel
         from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
-        from openmdao.examples.singleEI.branin_component import BraninComponent
+        from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
         class Simulation(Assembly):
             def __init__(self): 
@@ -78,7 +78,7 @@ Components
         from openmdao.main.api import Assembly
         from openmdao.lib.api import MetaModel
         from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
-        from openmdao.examples.singleEI.branin_component import BraninComponent
+        from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
         class Simulation(Assembly):
             def __init__(self):
@@ -101,7 +101,7 @@ Components
         from openmdao.main.api import Assembly
         from openmdao.lib.api import MetaModel
         from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
-        from openmdao.examples.singleEI.branin_component import BraninComponent
+        from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
         class Simulation(Assembly):
             
@@ -149,7 +149,7 @@ Components
         from openmdao.main.api import Assembly
         from openmdao.lib.api import MetaModel
         from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
-        from openmdao.examples.singleEI.branin_component import BraninComponent
+        from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
         class Simulation(Assembly):
             def __init__(self): 
@@ -173,14 +173,14 @@ Components
     IHasEvents Driver sub-interface. The ``train_next`` event is added to a
     Driver, which will then automatically set ``train_next`` prior to each
     iteration of the model. A simple code snippet is presented below, while a
-    more detailed example can be found in the SingleEI example under the
-    ``openmdao.examples.singleEI`` package.
+    more detailed example can be found in the single_objective_ei example under the
+    ``openmdao.examples.expected_improvement`` package.
     
     .. testcode:: MetaModel_Assembly
         
         from openmdao.main.api import Assembly
         from openmdao.lib.api import DOEdriver, MetaModel
-        from openmdao.examples.singleEI.branin_component import BraninComponent
+        from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
         class Analysis(Assembly): 
             def __init__(self,doc=None): 
