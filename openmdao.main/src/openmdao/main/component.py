@@ -15,7 +15,7 @@ import weakref
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event, not_none
-from enthought.traits.api import Bool, List, Str, Instance, Property, implements, TraitError
+from enthought.traits.api import Bool, List, Str, Int, Instance, Property, implements, TraitError
 
 from openmdao.main.container import Container
 from openmdao.main.interfaces import IComponent, ICaseIterator
@@ -100,6 +100,10 @@ class Component (Container):
 
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
+    
+    exec_count = Int(0, desc='Number of times this Component has been executed')
+    
+    create_instance_dir = Bool(False)
     
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)

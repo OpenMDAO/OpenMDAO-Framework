@@ -1070,7 +1070,7 @@ def find_trait_and_value(obj, pathname):
     else:
         return (None, None)
 
-def create_io_traits(self, obj_info, iotype='in'):
+def create_io_traits(cont, obj_info, iotype='in'):
     """Create io trait(s) specified by the contents of obj_info. Calls
     _build_trait() on the scoping object, which can be overridden by 
     subclasses, to create each trait.
@@ -1081,10 +1081,10 @@ def create_io_traits(self, obj_info, iotype='in'):
     
     For example, the following are valid calls:
 
-    obj._create_io_traits('foo')
-    obj._create_io_traits(['foo','bar','baz'])
-    obj._create_io_traits(('foo', 'foo_alias', 'in', some_trait))
-    obj._create_io_traits([('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
+    create_io_traits(obj, 'foo')
+    create_io_traits(obj, ['foo','bar','baz'])
+    create_io_traits(obj, ('foo', 'foo_alias', 'in', some_trait))
+    create_io_traits(obj, [('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
     """
     if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
         lst = [obj_info]
@@ -1107,7 +1107,7 @@ def create_io_traits(self, obj_info, iotype='in'):
             except IndexError:
                 pass
         else:
-            self.raise_exception('_create_io_traits cannot add trait %s' % entry,
+            cont.raise_exception('create_io_traits cannot add trait %s' % entry,
                                  TraitError)
-        self.add_trait(name, 
-                       self._build_trait(ref_name, iostat, trait))
+        cont.add_trait(name, 
+                       cont._build_trait(ref_name, iostat, trait))

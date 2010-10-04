@@ -83,6 +83,46 @@ def after_install(options, home_dir):
         print "ERROR: build failed"
         sys.exit(-1)
         
+    if sys.platform != 'win32':
+        import fnmatch
+        def _find_files(pat, startdir):
+            for path, dirlist, filelist in os.walk(startdir):
+                for name in fnmatch.filter(filelist, pat):
+                    yield os.path.join(path, name)
+
+       # in order to find all of our shared libraries,
+       # put their directories in LD_LIBRARY_PATH
+        pkgdir = os.path.join(lib_dir, 'site-packages')
+        sofiles = [os.path.abspath(x) for x in _find_files('*.so',pkgdir)]
+                      
+        final = set()
+        for f in sofiles:
+            pyf = os.path.splitext(f)[0]+'.py'
+            if not os.path.exists(pyf):
+                final.add(os.path.dirname(f))
+                
+        subdict = { 'libpath': 'LD_LIBRARY_PATH',
+                    'add_on': os.pathsep.join(final)
+                    }
+
+        if len(final) > 0:
+            activate_template = '\\n'.join([
+            'export PATH',
+            '',
+            'if [ -z "$%%(libpath)s" ] ; then',
+            '   %%(libpath)s=""',
+            'fi',
+            '',
+            '%%(libpath)s=$%%(libpath)s:%%(add_on)s',
+            'export %%(libpath)s',
+            ])
+            f = open(os.path.join(absbin, 'activate'), 'r')
+            content = f.read()
+            f.close()
+            f = open(os.path.join(absbin, 'activate'), 'w')
+            f.write(content.replace('export PATH', activate_template %% subdict))
+            f.close()
+
     # copy the wing project file into the virtualenv
     proj_template = join(topdir,'config','wing_proj_template.wpr')
     
