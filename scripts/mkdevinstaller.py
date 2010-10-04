@@ -57,9 +57,6 @@ def after_install(options, home_dir):
     if sys.platform == 'win32':
         lib_dir = join(home_dir, 'Lib')
         bin_dir = join(home_dir, 'Scripts')
-    elif is_jython:
-        lib_dir = join(home_dir, 'Lib')
-        bin_dir = join(home_dir, 'bin')
     else:
         lib_dir = join(home_dir, 'lib', py_version)
         bin_dir = join(home_dir, 'bin')
