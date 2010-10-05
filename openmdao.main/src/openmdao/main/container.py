@@ -926,9 +926,10 @@ class Container(HasTraits):
         """Retrieves the named trait, attempting to create it on-the-fly if
         it doesn't already exist.
         """
-        trait = self.traits().get(name)
-        if trait:
+        trait = find_trait(self, name)
+        if trait: 
             return trait
+        
         try:
             return self._create_alias(name, iotype)
         except AttributeError:
@@ -944,7 +945,7 @@ class Container(HasTraits):
         """
         if alias is None:
             alias = path
-        oldtrait = self.traits().get(alias)
+        oldtrait = find_trait(self, alias)
         if oldtrait is None:
             newtrait = self._build_trait(path, iotype=io_status, trait=trait)
             self.add_trait(alias, newtrait)
@@ -1028,6 +1029,15 @@ def get_default_name(obj, scope):
         ver += 1
     return '%s%d' % (classname, ver)
         
+def find_trait(obj, name):
+    """obj is assumed to be a HasTraits object.  Returns the
+    trait indicated by name, or None if not found.  name is
+    expected to be a simple name (no dots)
+    """
+    trait = obj.traits().get(name)
+    if trait: return trait
+    trait = obj._instance_traits().get(name)
+    return trait
 
 def find_trait_and_value(obj, pathname):
     """Return a tuple of the form (trait, value) for the given dotted
@@ -1037,13 +1047,13 @@ def find_trait_and_value(obj, pathname):
     """
     if pathname:
         names = pathname.split('.')
-        for name in names:
-            if isinstance(obj, HasTraits):
-                objtrait = obj.traits().get(name)
-            else:
-                objtrait = None
+        for name in names[:-1]:
             obj = getattr(obj, name)
-        return (objtrait, obj)
+        if isinstance(obj, HasTraits):
+            objtrait = find_trait(obj, names[-1])
+        else:
+            objtrait = None
+        return (objtrait, getattr(obj, names[-1]))
     else:
         return (None, None)
 

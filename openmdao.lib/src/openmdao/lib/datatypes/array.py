@@ -7,7 +7,7 @@ __all__ = ["Array"]
 
 
 # pylint: disable-msg=E0611,F0401
-from numpy import array, ndarray
+from numpy import array, ndarray, zeros
 
 from enthought.traits.api import TraitError
 from enthought.traits.api import Array as TraitArray
@@ -24,7 +24,13 @@ class Array(TraitArray):
         
         # Determine defalt_value if unspecified
         if default_value is None:
-            default_value = array([])
+            if shape is None or len(shape) == 1:
+                default_value = array([])
+            elif len(shape) == 2:
+                default_value = array([[]])
+            elif len(shape) == 3:
+                default_value = array([[[]]])
+                    
         elif isinstance(default_value, ndarray):
             pass
         elif isinstance(default_value, list):
