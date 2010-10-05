@@ -91,7 +91,10 @@ class Array(TraitArray):
         vtype = type( value )
         msg = "Trait '%s' must be %s, but a value of %s %s was specified." % \
                                (name, info, value, vtype)
-        obj.raise_exception(msg, TraitError)
+        if obj:
+            obj.raise_exception(msg, TraitError)
+        else:
+            raise TraitError(msg)
 
     def get_val_meta_wrapper(self):
         """Return a TraitValMetaWrapper object.  Its value attribute

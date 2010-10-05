@@ -43,7 +43,7 @@ class HasObjective(object):
     def eval_objective(self):
         """Returns the value of the evaluated objective."""
         if not self._objective:
-            self._parent.raise_exception("no objective specified")
+            self._parent.raise_exception("no objective specified", ValueError)
         return self._objective.evaluate()
 
     def get_expr_depends(self):

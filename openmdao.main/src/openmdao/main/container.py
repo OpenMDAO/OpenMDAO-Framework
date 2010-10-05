@@ -121,7 +121,7 @@ class _PathProperty(TraitType):
         except AttributeError:
             raise TraitError("_PathProperty cannot resolve path '%s'" % 
                              '.'.join(self._names))
-        self._last_name = self._names[len(self._names)-1]
+        self._last_name = self._names[-1]
         self._ref = weakref.ref(obj)
         return obj
             
@@ -630,16 +630,12 @@ class Container(HasTraits):
         target value.
         """ 
         if path is None:
-            if index is None:
-                # should never get down this far
-                self.raise_exception('this object cannot replace itself')
-            else:
-                self.raise_exception(
-                    'Cannot set value at index %s'%
-                    str(index), AttributeError)
+            self.raise_exception('set: no path specified', NameError)
                     
-        tup = path.split('.')
-        if len(tup) == 1:
+        #tup = path.split('.')
+        childname, sep, restofpath = path.partition('.')
+        #if len(tup) == 1:
+        if not restofpath:
             trait = self._check_trait_settable(path, srcname, force)
             if trait.type == 'event':
                 setattr(self, path, value)
@@ -662,29 +658,17 @@ class Container(HasTraits):
                 else:
                     self._array_set(path, value, index)
         else:
-            obj = getattr(self, tup[0], Missing)
+            obj = getattr(self, childname, Missing)
             if obj is Missing:
-                self.raise_exception("object has no attribute '%s'" % tup[0], 
+                self.raise_exception("object has no attribute '%s'" % childname, 
                                      TraitError)
-            if len(tup) == 2:
-                if isinstance(obj, Container):
-                    obj.set(tup[1], value, index, srcname=srcname, 
-                            force=force)
-                elif index is None:
-                    setattr(obj, tup[1], value)
-                else:
-                    obj._array_set(tup[1], value, index)
+            if isinstance(obj, Container):
+                obj.set(restofpath, value, index, srcname=srcname, 
+                        force=force)
+            elif index is None:
+                setattr(obj, restofpath, value)
             else:
-                if isinstance(obj, Container):
-                    obj.set('.'.join(tup[1:]), value, index, force=force)
-                elif index is not None:
-                    obj._array_set('.'.join(tup[1:]), value, index)
-                else:
-                    try:
-                        _deep_setattr(obj, '.'.join(tup[1:]), value)
-                    except Exception:
-                        self.raise_exception("object has no attribute '%s'" % 
-                                             path, TraitError)
+                obj._array_set(restofpath, value, index)
 
     def _array_set(self, name, value, index):
         arr = getattr(self, name)
@@ -924,7 +908,7 @@ class Container(HasTraits):
     
     def _build_trait(self, pathname, iotype=None, trait=None):
         """Asks the object to dynamically create a trait for the 
-        attribute given by ref_name, based on whatever knowledge the
+        attribute given by pathname, based on whatever knowledge the
         component has of that attribute.
         
         pathname: str
@@ -941,7 +925,7 @@ class Container(HasTraits):
             iotype = objtrait.iotype
         if trait is None:
             trait = objtrait
-        # if we make it to here, object specified by ref_name exists
+        # if we make it to here, object specified by pathname exists
         return _PathProperty(ref_name=pathname, iotype=iotype, 
                             trait=trait)
         
