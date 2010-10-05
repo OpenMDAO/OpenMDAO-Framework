@@ -555,8 +555,8 @@ class Container(HasTraits):
         """Return the object specified by the given 
         path, which may contain '.' characters.  
         """
-        tup = path.split('.')
-        if len(tup) == 1:
+        childname, _, restofpath = path.partition('.')
+        if not restofpath:
             if index is None:
                 obj = getattr(self, path, Missing)
                 if obj is Missing:
@@ -567,20 +567,17 @@ class Container(HasTraits):
             else:
                 return self._array_get(path, index)
         else:
-            obj = getattr(self, tup[0], Missing)
+            obj = getattr(self, childname, Missing)
             if obj is Missing:
                 self.raise_exception(
-                    "object has no attribute '%s'" % tup[0], 
+                    "object has no attribute '%s'" % childname, 
                     AttributeError)
-            if len(tup) == 2 and index is None:
-                return getattr(obj, tup[1])
-            
             if isinstance(obj, Container):
-                return obj.get('.'.join(tup[1:]), index)
+                return obj.get(restofpath, index)
             elif index is None:
-                return getattr(obj, '.'.join(tup[1:]))
+                return getattr(obj, restofpath)
             else:
-                return obj._array_get('.'.join(tup[1:]), index)
+                return obj._array_get(restofpath, index)
      
     def set_source(self, name, source):
         """Mark the named io trait as a destination by registering a source
@@ -598,7 +595,7 @@ class Container(HasTraits):
         allow the destination to later be connected to a different source or
         to have its value directly set.
         """
-        del self._sources[destination]    
+        del self._sources[destination]
         
     def _check_trait_settable(self, name, srcname=None, force=False):
         if force:
@@ -607,16 +604,16 @@ class Container(HasTraits):
             src = self._sources.get(name, None)
         trait = self.traits().get(name)
         if trait:
-            if trait.iotype != 'in' and src is not None and src != srcname:
-                self.raise_exception(
-                    "'%s' is not an input trait and cannot be set" %
-                    name, TraitError)
-                
             if src is not None and src != srcname:
-                self.raise_exception(
-                    "'%s' is connected to source '%s' and cannot be "
-                    "set by source '%s'" %
-                    (name,src,srcname), TraitError)
+                if trait.iotype != 'in':
+                    self.raise_exception(
+                        "'%s' is not an input trait and cannot be set" %
+                        name, TraitError)
+                else:
+                    self.raise_exception(
+                        "'%s' is connected to source '%s' and cannot be "
+                        "set by source '%s'" %
+                        (name,src,srcname), TraitError)
         else:
             self.raise_exception("object has no attribute '%s'" % name,
                                  TraitError)
@@ -632,9 +629,7 @@ class Container(HasTraits):
         if path is None:
             self.raise_exception('set: no path specified', NameError)
                     
-        #tup = path.split('.')
         childname, sep, restofpath = path.partition('.')
-        #if len(tup) == 1:
         if not restofpath:
             trait = self._check_trait_settable(path, srcname, force)
             if trait.type == 'event':

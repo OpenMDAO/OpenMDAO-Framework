@@ -309,7 +309,7 @@ class TestCase(unittest.TestCase):
 
         self.assertEqual(len(results), len(cases))
         msg = "driver: Exception getting 'driven.sum_z': " \
-            "'DrivenComponent' object has no attribute 'sum_z'"
+            "driven: object has no attribute 'sum_z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)
 
