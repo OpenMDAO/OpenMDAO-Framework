@@ -490,22 +490,20 @@ class Container(HasTraits):
 
         return result
     
-    
     def contains(self, path):
         """Return True if the child specified by the given dotted path
         name is contained in this Container. 
         """
-        tup = path.split('.', 1)
-        if len(tup) == 1:
-            return hasattr(self, path)
-        
-        obj = getattr(self, tup[0], None)
-        if obj is not None:
-            if isinstance(obj, Container):
-                return obj.contains(tup[1])
+        childname, _, restofpath = path.partition('.')
+        if restofpath:
+            obj = getattr(self, childname, Missing)
+            if obj is Missing:
+                return False
+            elif isinstance(obj, Container):
+                return obj.contains(restofpath)
             else:
-                return hasattr(obj, tup[1])
-        return False
+                return hasattr(obj, restofpath)
+        return hasattr(self, path)
     
     def invoke(self, path, *args, **kwargs):
         """Call the callable specified by **path**, which may be a simple
@@ -513,21 +511,18 @@ class Container(HasTraits):
         return the result.
         """
         if path:
-            tup = path.split('.')
-            if len(tup) == 1:
-                return getattr(self, path)(*args, **kwargs)
-            else:
-                obj = getattr(self, tup[0], Missing)
+            childname, _, restofpath = path.partition('.')
+            if restofpath:
+                obj = getattr(self, childname, Missing)
                 if obj is Missing:
-                    self.raise_exception("object has no attribute '%s'" % 
-                                         tup[0], AttributeError)
-                if len(tup) == 2:
-                    return getattr(obj, tup[1])(*args, **kwargs)
-                else:
-                    return obj.invoke('.'.join(tup[1:]), *args, **kwargs)
+                    self.raise_exception("object has no attribute '%s'" % childname, 
+                                         AttributeError)
+                return obj.invoke(restofpath, *args, **kwargs)
+            
+            return getattr(self, path)(*args, **kwargs)
         else:
-            self.raise_exception("this object is not callable",
-                                 RuntimeError)        
+            self.raise_exception("invoke: no path given",
+                                 RuntimeError)
     
     def get_metadata(self, traitpath, metaname=None):
         """Retrieve the metadata associated with the trait found using
@@ -536,10 +531,13 @@ class Container(HasTraits):
         of metadata.  If the specified piece of metadata is not part of
         the trait, None is returned.
         """
-        parts = traitpath.split('.', 1)
-        if len(parts) > 1:
-            obj = getattr(self, parts[0])
-            return obj.get_metadata(parts[1], metaname)
+        childname, _, restofpath = traitpath.partition('.')
+        if restofpath:
+            obj = getattr(self, childname, Missing)
+            if obj is Missing:
+                self.raise_exception("object has no attribute '%s'" % childname, 
+                                     AttributeError)
+            return obj.get_metadata(restofpath, metaname)
             
         t = self.traits().get(traitpath)
         if not t:
@@ -629,7 +627,7 @@ class Container(HasTraits):
         if path is None:
             self.raise_exception('set: no path specified', NameError)
                     
-        childname, sep, restofpath = path.partition('.')
+        childname, _, restofpath = path.partition('.')
         if not restofpath:
             trait = self._check_trait_settable(path, srcname, force)
             if trait.type == 'event':
