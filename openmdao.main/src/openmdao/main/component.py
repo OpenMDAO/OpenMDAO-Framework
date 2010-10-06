@@ -17,7 +17,7 @@ import weakref
 from enthought.traits.trait_base import not_event, not_none
 from enthought.traits.api import Bool, List, Str, Int, Instance, Property, implements, TraitError
 
-from openmdao.main.container import Container
+from openmdao.main.container import Container, get_trait
 from openmdao.main.interfaces import IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -324,7 +324,7 @@ class Component (Container):
         force call to *check_config* prior to execution when a trait is
         removed.
         """
-        trait = self.traits().get(name)
+        trait = get_trait(self, name)
         super(Component, self).remove_trait(name)
         self.config_changed()
         try:

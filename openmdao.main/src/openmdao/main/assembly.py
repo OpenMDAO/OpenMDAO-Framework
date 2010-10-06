@@ -14,7 +14,7 @@ import networkx as nx
 from networkx.algorithms.traversal import is_directed_acyclic_graph, \
                                           strongly_connected_components
 
-from openmdao.main.container import find_trait_and_value
+from openmdao.main.container import find_trait_and_value, get_trait
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression, ExpressionList
@@ -115,7 +115,7 @@ class Assembly (Component):
         """Retrieves the named trait, attempting to create a PassthroughTrait
         on-the-fly if the specified trait doesn't exist.
         """
-        trait = self.traits().get(pathname)
+        trait = get_trait(self, pathname)
         if trait is None:
             trait = self.create_passthrough(pathname)
             if iotype is not None and iotype != trait.iotype:
@@ -348,10 +348,11 @@ class Assembly (Component):
         self, but no deeper in the hierarchy than that.
         """
         valids = []
-        traits = self.traits()
+        vdict = self._valid_dict
         for name in names:
-            if name in traits:
-                valids.append(self.get_valid(name))
+            v = vdict.get(name, None)
+            if v is not None:
+                valids.append(v)
             else:
                 tup = name.split('.', 1)
                 if len(tup) > 1:

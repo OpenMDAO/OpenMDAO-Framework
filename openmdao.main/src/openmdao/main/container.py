@@ -273,7 +273,7 @@ class Container(HasTraits):
         """
         self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
-        getattr(self, name)  # this causes instance traits to show up in traits()
+        getattr(self, name)  # this causes (non-property) instance traits to show up in traits()
         
     def remove_trait(self, name):
         """Overrides HasTraits definition of remove_trait in order to
@@ -320,12 +320,14 @@ class Container(HasTraits):
         a 'copy' metadata attribute that is not None. Possible values for
         'copy' are 'shallow' and 'deep'.
         """
-        parts = name.split('.', 1)
-        if len(parts) > 1:
-            obj = getattr(self, parts[0])
-            return obj.get_wrapped_attr(parts[1])
-
-        trait = self.traits().get(name)
+        childname, _, restofpath = name.partition('.')
+        if restofpath:
+            obj = getattr(self, childname)
+            if isinstance(obj, HasTraits):
+                return obj.get_wrapped_attr(restofpath)
+            else:
+                return getattr(obj, restofpath)
+        trait = get_trait(self, name)
         if trait is None:
             self.raise_exception("trait '%s' does not exist" %
                                  name, TraitError)
@@ -383,7 +385,7 @@ class Container(HasTraits):
             self.raise_exception(
                 'remove does not allow dotted path names like %s' %
                                  name, ValueError)
-        trait = self.traits().get(name)
+        trait = get_trait(self, name)
         if trait is not None:
             # for Instance traits, set their value to None but don't remove
             # the trait
@@ -539,7 +541,7 @@ class Container(HasTraits):
                                      AttributeError)
             return obj.get_metadata(restofpath, metaname)
             
-        t = self.traits().get(traitpath)
+        t = get_trait(self, traitpath)
         if not t:
             self.raise_exception("Couldn't find trait %s" % traitpath,
                                  AttributeError)
@@ -600,7 +602,7 @@ class Container(HasTraits):
             src = None
         else:
             src = self._sources.get(name, None)
-        trait = self.traits().get(name)
+        trait = get_trait(self, name)
         if trait:
             if src is not None and src != srcname:
                 if trait.iotype != 'in':
@@ -628,7 +630,19 @@ class Container(HasTraits):
             self.raise_exception('set: no path specified', NameError)
                     
         childname, _, restofpath = path.partition('.')
-        if not restofpath:
+        if restofpath:
+            obj = getattr(self, childname, Missing)
+            if obj is Missing:
+                self.raise_exception("object has no attribute '%s'" % childname, 
+                                     TraitError)
+            if isinstance(obj, Container):
+                obj.set(restofpath, value, index, srcname=srcname, 
+                        force=force)
+            elif index is None:
+                setattr(obj, restofpath, value)
+            else:
+                obj._array_set(restofpath, value, index)
+        else:
             trait = self._check_trait_settable(path, srcname, force)
             if trait.type == 'event':
                 setattr(self, path, value)
@@ -650,18 +664,6 @@ class Container(HasTraits):
                                            getattr(self, path))
                 else:
                     self._array_set(path, value, index)
-        else:
-            obj = getattr(self, childname, Missing)
-            if obj is Missing:
-                self.raise_exception("object has no attribute '%s'" % childname, 
-                                     TraitError)
-            if isinstance(obj, Container):
-                obj.set(restofpath, value, index, srcname=srcname, 
-                        force=force)
-            elif index is None:
-                setattr(obj, restofpath, value)
-            else:
-                obj._array_set(restofpath, value, index)
 
     def _array_set(self, name, value, index):
         arr = getattr(self, name)
@@ -913,6 +915,9 @@ class Container(HasTraits):
         trait: TraitType, optional
             A validation trait for the given attribute.
         """
+        trait = get_trait(self, pathname)
+        if trait:
+            self.raise_exception("trait '%s' already exists" % pathname, NameError)
         objtrait, value = find_trait_and_value(self, pathname)
         if iotype is None and objtrait is not None:
             iotype = objtrait.iotype
@@ -926,8 +931,8 @@ class Container(HasTraits):
         """Retrieves the named trait, attempting to create it on-the-fly if
         it doesn't already exist.
         """
-        trait = find_trait(self, name)
-        if trait: 
+        trait = get_trait(self, name)
+        if trait is not None: 
             return trait
         
         try:
@@ -945,7 +950,7 @@ class Container(HasTraits):
         """
         if alias is None:
             alias = path
-        oldtrait = find_trait(self, alias)
+        oldtrait = get_trait(self, alias)
         if oldtrait is None:
             newtrait = self._build_trait(path, iotype=io_status, trait=trait)
             self.add_trait(alias, newtrait)
@@ -1029,10 +1034,10 @@ def get_default_name(obj, scope):
         ver += 1
     return '%s%d' % (classname, ver)
         
-def find_trait(obj, name):
+def get_trait(obj, name):
     """obj is assumed to be a HasTraits object.  Returns the
-    trait indicated by name, or None if not found.  name is
-    expected to be a simple name (no dots)
+    trait indicated by name, or None if not found.  No recursive
+    search is performed if name contains dots.
     """
     trait = obj.traits().get(name)
     if trait: return trait
@@ -1050,7 +1055,7 @@ def find_trait_and_value(obj, pathname):
         for name in names[:-1]:
             obj = getattr(obj, name)
         if isinstance(obj, HasTraits):
-            objtrait = find_trait(obj, names[-1])
+            objtrait = get_trait(obj, names[-1])
         else:
             objtrait = None
         return (objtrait, getattr(obj, names[-1]))
