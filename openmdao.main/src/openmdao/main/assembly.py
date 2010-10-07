@@ -166,7 +166,7 @@ class Assembly (Component):
                     ' must be an input variable',
                     RuntimeError)
                 
-        if self.is_destination(destpath):
+        if self.comp_graph.is_destination(destcompname, destvarname):
             self.raise_exception(destpath+' is already connected',
                                  RuntimeError)             
             
@@ -252,13 +252,6 @@ class Assembly (Component):
                 getattr(self, sinkcomp).remove_source(sinkvar)
             self.comp_graph.disconnect(src, sink)
 
-    def is_destination(self, varpath):
-        """Return True if the Variable specified by varname is a destination
-        according to our graph. This means that either it's an input connected
-        to an output, or it's the destination part of a passthrough connection.
-        """
-        return self.comp_graph.is_destination(varpath)
-        
     def execute (self):
         """Runs driver and updates our boundary variables."""
         self.driver.run()
@@ -457,16 +450,12 @@ class ComponentGraph(object):
         graph.remove_nodes_from(['@in', '@out'])
         return graph
     
-    def is_destination(self, varpath):
-        tup = varpath.split('.',1)
-        if len(tup) > 1:
-            for u,v,data in self._graph.in_edges(tup[0], data=True):
-                if tup[1] in data['link']._dests:
-                    return True
-        else:
-            for u,v,data in self._graph.in_edges('@out', data=True):
-                if varpath in data['link']._dests:
-                    return True
+    def is_destination(self, cname, varname):
+        if not cname:
+            cname = '@out'
+        for u,v,data in self._graph.in_edges(cname, data=True):
+            if varname in data['link']._dests:
+                return True
         return False
 
     def iter(self, scope):
