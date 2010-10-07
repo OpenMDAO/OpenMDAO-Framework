@@ -141,8 +141,9 @@ class Assembly (Component):
         a normal connection (output to input) or a passthrough connection."""
 
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
-        srctrait = srccomp.get_dyn_trait(srcvarname, 'out')
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
+        
+        srctrait = srccomp.get_dyn_trait(srcvarname, 'out')
         desttrait = destcomp.get_dyn_trait(destvarname, 'in')
         
         if srccompname == destcompname:
@@ -485,14 +486,11 @@ class ComponentGraph(object):
         for u,v,data in self._graph.edges(nbunch, data=True):
             link = data['link']
             if u == '@in':
-                for dest,src in link._dests.items():
-                    conns.append((src, '.'.join([v,dest])))
+                conns.extend([(src, '.'.join([v,dest])) for dest,src in link._dests.items()])
             elif v == '@out':
-                for dest,src in link._dests.items():
-                    conns.append(('.'.join([u,src]), dest))
+                conns.extend([('.'.join([u,src]), dest) for dest,src in link._dests.items()])
             else:
-                for dest,src in link._dests.items():
-                    conns.append(('.'.join([u,src]), '.'.join([v,dest])))
+                conns.extend([('.'.join([u,src]), '.'.join([v,dest])) for dest,src in link._dests.items()])
         return conns
 
     def in_map(self, cname, varset):
@@ -514,35 +512,29 @@ class ComponentGraph(object):
         containing each incoming link to the given component and the name
         of the connected component.
         """
-        ret = []
-        for u,v,data in self._graph.in_edges(cname, data=True):
-            ret.append((u,data['link']))
-        return ret
+        return [(u,data['link']) for u,v,data in self._graph.in_edges(cname, data=True)]
     
     def out_links(self, cname):
         """Return a list of the form [(compname,link), (compname2,link2)...]
         containing each outgoing link from the given component and the name
         of the connected component.
         """
-        ret = []
-        for u,v,data in self._graph.edges(cname, data=True):
-            ret.append((v,data['link']))
-        return ret
+        return [(v,data['link']) for u,v,data in self._graph.edges(cname, data=True)]
 
     def var_edges(self, name):
         """Return a list of outgoing edges connecting variables."""
         edges = []
         for u,v,data in self._graph.edges(name, data=True):
-            for dest,src in data['link']._dests.items():
-                edges.append(('.'.join([u,src]), '.'.join([v,dest])))
+            edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
+                                for dest,src in data['link']._dests.items()])
         return edges
     
     def var_in_edges(self, name):
         """Return a list of incoming edges connecting variables."""
         edges = []
         for u,v,data in self._graph.in_edges(name, data=True):
-            for dest,src in data['link']._dests.items():
-                edges.append(('.'.join([u,src]), '.'.join([v,dest])))
+            edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
+                                 for dest,src in data['link']._dests.items()])
         return edges
     
     def connect(self, srcpath, destpath):

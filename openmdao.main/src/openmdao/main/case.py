@@ -55,12 +55,11 @@ class Case(object):
         """
         if msg:
             self.msg = msg
-        new_outputs = []
         # TODO: make this smart enough to do a multiget on a component
         #       instead of multiple individual gets
-        for name,index,value in self.outputs:
-            new_outputs.append((name, index, scope.get(name, index)))
-        self.outputs = new_outputs
+        outs = self.outputs
+        for i,tup in enumerate(outs):
+            outs[i] = (tup[0], tup[1], scope.get(tup[0], tup[1]))
 
     def add_input(self, name, value, index=None):
         """Convenience function for adding an input"""
