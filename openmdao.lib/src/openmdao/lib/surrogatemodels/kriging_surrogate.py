@@ -58,7 +58,7 @@ class KrigingSurrogate(HasTraits):
         r = exp(-r)
             
         one = ones(self.n)
-
+        
         #-----LSTSQ-------
         rhs = vstack([(Y-dot(one, self.mu)), r, one]).T
         lsq = lstsq(self.R.T, rhs)[0].T
@@ -67,15 +67,11 @@ class KrigingSurrogate(HasTraits):
         term1 = dot(r, lsq[1])
         term2 = (1.0 - dot(one, lsq[1]))**2./dot(one, lsq[2])
         
-        #f = self.mu+dot(r,lstsq(self.R,Y-dot(one,self.mu))[0])
-        #lsq = lstsq(self.R,r)[0]
-        #term1 = dot(r,lsq)
-        #term2 = (1.0-dot(one,lsq))**2./dot(one,lstsq(self.R,one)[0])
-        #---LU or CHOLESKY DECOMPOSTION ---
-        #R_fact = self.R_fact
-        #f = self.mu+dot(r,self.myfun(R_fact,Y-dot(one,self.mu)))
-        #term1 = dot(r,self.myfun(R_fact,r))
-        #term2 = (1.0-dot(one,self.myfun(R_fact,r)))**2./dot(one,self.myfun(R_fact,one))
+        #TODO: use cholesky if not ill-conditioned, otherwise use lsq
+        #---CHOLESKY DECOMPOSTION ---
+        #f = self.mu+dot(r,cho_solve(self.R_fact,Y-dot(one,self.mu)))
+        #term1 = dot(r,cho_solve(self.R_fact,r))
+        #term2 = (1.0-dot(one,cho_solve(self.R_fact,r)))**2./dot(one,cho_solve(self.R_fact,one))
 
         MSE = self.sig2*(1.0-term1+term2)
         RMSE = sqrt(abs(MSE))
@@ -120,20 +116,13 @@ class KrigingSurrogate(HasTraits):
         one = ones(self.n)
         try:
             self.R_fact = cho_factor(R)
-            self.myfun = cho_solve
-            self.mu = dot(one,self.myfun(self.R_fact,Y))/dot(one,self.myfun(self.R_fact,one))
-            self.sig2 = dot(Y-dot(one,self.mu),self.myfun(self.R_fact,(Y-dot(one,self.mu))))/self.n
+            self.mu = dot(one,cho_solve(self.R_fact,Y))/dot(one,cho_solve(self.R_fact,one))
+            self.sig2 = dot(Y-dot(one,self.mu),cho_solve(self.R_fact,(Y-dot(one,self.mu))))/self.n
             self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)))-sum(self.thetas)-sum(abs(self.thetas))
         except (linalg.LinAlgError,ValueError):
-            #---LU DECOMPOSITION---
-            #self.R_fact = lu_factor(R)
-            #self.myfun = lu_solve
-            #self.mu = dot(one,self.myfun(self.R_fact,Y))/dot(one,self.myfun(self.R_fact,one))
-            #self.sig2 = dot(Y-dot(one,self.mu),self.myfun(self.R_fact,(Y-dot(one,self.mu))))/self.n
             #------LSTSQ---------
             rhs = vstack([Y, one]).T
             lsq = lstsq(self.R.T,rhs)[0].T
-            
             self.mu = dot(one,lsq[0])/dot(one,lsq[1])
             self.sig2 = dot(Y-dot(one,self.mu),lstsq(self.R,Y-dot(one,self.mu))[0])/self.n
             self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)+1.e-16))-sum(self.thetas)

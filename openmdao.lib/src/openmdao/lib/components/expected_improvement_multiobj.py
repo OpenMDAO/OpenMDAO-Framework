@@ -101,30 +101,30 @@ class MultiObjExpectedImprovement(Component):
         the model at a given point.
         """
         
-        #best_case = self.best_cases[0]
-        outs = [case.outputs for case in self.best_cases]
-        
         #y_star is a 2D list of pareto points
         y_star = []
         c = []
-        for case in outs:
-            for objective in case:
-                if objective[0] in self.criteria:
-                    #TODO: criteria needs at least two things matching
-                    #objective names in CaseIterator outputs, error otherwise
-                    c.append(objective[2])
-            y_star.append(c)
-            c = []
+        
+        for case in self.best_cases:
 
+            for objective in case.outputs :
+                for crit in self.criteria: 
+                    if crit in objective[0]:
+                        #TODO: criteria needs at least two things matching
+                        #objective names in CaseIterator outputs, error otherwise
+                        c.append(objective[2])
+            if c != [] :
+                y_star.append(c)
+            c = []
         mu = [objective.mu for objective in self.predicted_values]
         sig = [objective.sigma for objective in self.predicted_values]
 
-        self.y_star = y_star
+        #self.y_star = y_star
         
         #sort list on first objective
         self.y_star = array(y_star)[array([i[0] for i in y_star]).argsort()]
-
+        
         self.EI = self._multiEI(mu,sig)
         #print "ei: ", self.EI
-
+        
         

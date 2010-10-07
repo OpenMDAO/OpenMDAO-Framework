@@ -158,8 +158,7 @@ class Genetic(Driver):
         
         #run it once to get the model into the optimal state
         self._run_model(self.best_individual) 
-           
-
+        
     def _run_model(self, chromosome):
         self.set_parameters([val for val in chromosome])
         self.run_iteration()

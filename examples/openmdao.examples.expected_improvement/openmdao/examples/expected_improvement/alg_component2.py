@@ -4,7 +4,7 @@ from openmdao.main.api import Component
 from openmdao.lib.api import Float
 
 class Alg_Component2(Component):
-    y = Float(iotype="in",low=-0.325,high=1.0)
+    y = Float(iotype="in",low=-0.315,high=1.000001)
     
     f1 = Float(0.,iotype="out")
     f2 = Float(0.,iotype="out")
