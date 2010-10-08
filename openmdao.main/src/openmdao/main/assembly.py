@@ -19,6 +19,8 @@ from openmdao.main.component import Component
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression, ExpressionList
 
+_iodict = { 'out': 'output', 'in': 'input' }
+
 class PassthroughTrait(TraitType):
     """A trait that can use another trait for validation, but otherwise is
     just a trait that lives on an Assembly boundary and can be connected
@@ -111,17 +113,13 @@ class Assembly (Component):
 
         return newtrait
 
-    def get_dyn_trait(self, pathname, iotype=None):
+    def get_dyn_trait(self, pathname, iotype):
         """Retrieves the named trait, attempting to create a PassthroughTrait
         on-the-fly if the specified trait doesn't exist.
         """
         trait = get_trait(self, pathname)
         if trait is None:
             trait = self.create_passthrough(pathname)
-            if iotype is not None and iotype != trait.iotype:
-                self.raise_exception(
-                    "new trait has iotype of '%s' but '%s' was expected" %
-                    (trait.iotype, iotype), TraitError)
         return trait
 
     def _split_varpath(self, path):
@@ -143,25 +141,25 @@ class Assembly (Component):
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
-        srctrait = srccomp.get_dyn_trait(srcvarname, 'out')
-        desttrait = destcomp.get_dyn_trait(destvarname, 'in')
+        srctrait = srccomp.find_trait(srcvarname)
+        desttrait = destcomp.find_trait(destvarname)
         
         if srccompname == destcompname:
             self.raise_exception(
                 'Cannot connect %s to %s. Both are on same component.' %
                                  (srcpath, destpath), RuntimeError)
-        if (srctrait.is_trait_type and (srctrait.is_trait_type(Expression) or srctrait.is_trait_type(ExpressionList))) or \
+        if srctrait and desttrait and (srctrait.is_trait_type and (srctrait.is_trait_type(Expression) or srctrait.is_trait_type(ExpressionList))) or \
            (desttrait.is_trait_type and (desttrait.is_trait_type(Expression) or desttrait.is_trait_type(ExpressionList))):
             self.raise_exception('Cannot connect %s to %s because one of them is an Expression or ExpressionList' %
                                  (srcpath,destpath), RuntimeError)
         if srccomp is not self and destcomp is not self:
             # it's not a passthrough, so must connect input to output
-            if srctrait.iotype != 'out':
+            if srctrait and srctrait.iotype != 'out':
                 self.raise_exception(
                     '.'.join([srccomp.get_pathname(),srcvarname])+
                     ' must be an output variable',
                     RuntimeError)
-            if desttrait.iotype != 'in':
+            if desttrait and desttrait.iotype != 'in':
                 self.raise_exception(
                     '.'.join([destcomp.get_pathname(),destvarname])+
                     ' must be an input variable',
@@ -172,7 +170,7 @@ class Assembly (Component):
                                  RuntimeError)             
             
         # test compatability (raises TraitError on failure)
-        if desttrait.validate is not None:
+        if desttrait and desttrait.validate is not None:
             try:
                 if desttrait.trait_type.get_val_meta_wrapper:
                     desttrait.validate(destcomp, destvarname, 
@@ -183,14 +181,13 @@ class Assembly (Component):
             except TraitError, err:
                 self.raise_exception("can't connect '%s' to '%s': %s" % 
                                      (srcpath,destpath,str(err)), TraitError)
-        
         if destcomp is not self:
-            destcomp.set_source(destvarname, srcpath)
+            destcomp.set_source(destvarname, (0, srcpath))
             if srccomp is not self: # neither var is on boundary
                 self.comp_graph.connect(srcpath, destpath)
         
         # invalidate destvar if necessary
-        if destcomp is self and desttrait.iotype == 'out': # boundary output
+        if destcomp is self and desttrait and desttrait.iotype == 'out': # boundary output
             if destcomp.get_valid(destvarname) and \
                srccomp.get_valid(srcvarname) is False:
                 if self.parent:
@@ -253,6 +250,26 @@ class Assembly (Component):
                 getattr(self, sinkcomp).remove_source(sinkvar)
             self.comp_graph.disconnect(src, sink)
 
+    def set_source(self, destname, source_tup):
+        """Mark the named io trait as a destination by registering a source
+        for it, which will prevent it from being set directly or connected 
+        to another source.
+        
+        destname: str
+            Name of the destination variable.
+            
+        source_tup: 2-tuple (upscopes, source_name)
+            Tuple where upscopes is an int indicating the number of scopes
+            above the parent component where the source is found, and 
+            source_name is the pathname of the source variable relative to
+            the parent scope indicated in upscopes.  The upscopes value is
+            necessary because the source_name by itself is not unique.
+            
+        """
+        super(Assembly, self).set_source(destname, source_tup)
+        if '.' in destname:
+            self.comp_graph.connect('@in.%s'%source_tup, destname)
+        
     def execute (self):
         """Runs driver and updates our boundary variables."""
         self.driver.run()
@@ -320,7 +337,7 @@ class Assembly (Component):
                         srcname = src
                     else:
                         srcname = '.'.join([srccompname, src])
-                    destcomp.set(dest, srcval, srcname=srcname)
+                    destcomp.set(dest, srcval, src=(0, srcname))
                 except Exception, exc:
                     if compname[0] == '@':
                         dname = dest
@@ -645,7 +662,7 @@ class _Link(object):
         """Push the values of all sources to their corresponding destinations
         for this link.
         """
-        # TODO: change to one multiset call
+        # TODO: change to use multiset calls
         srccomp = getattr(scope, srccompname)
         destcomp = getattr(scope, destcompname)
         
@@ -659,7 +676,7 @@ class _Link(object):
                         (src,srccompname), type(err))
                 try:
                     srcname = '.'.join([srccompname,src])
-                    destcomp.set(dest, srcval, srcname=srcname)
+                    destcomp.set(dest, srcval, src=srcname)
                 except Exception, exc:
                     dname = '.'.join([destcompname,dest])
                     scope.raise_exception("cannot set '%s' from '%s': %s" % 

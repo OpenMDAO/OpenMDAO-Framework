@@ -357,11 +357,7 @@ class Component (Container):
 
     def _trait_added_changed(self, name):
         """Called any time a new trait is added to this container."""
-        self.new_trait(name)
         self.config_changed()
-        
-    def new_trait(self, name):
-        pass
         
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
@@ -383,12 +379,12 @@ class Component (Container):
         """
         if self._input_names is None:
             self._input_names = [k for k,v in self.items(iotype='in')]
+            self._input_names.extend([k for k,v in self._sources.items() if '.' in k])
             
         if valid is None:
             return self._input_names
         else:
-            fval = self.get_valid
-            return [n for n in self._input_names if fval(n)==valid]
+            return [n for n in self._input_names if self.get_valid(n)==valid]
         
     def list_outputs(self, valid=None):
         """Return a list of names of output values. If valid is not None,
@@ -400,8 +396,7 @@ class Component (Container):
         if valid is None:
             return self._output_names
         else:
-            fval = self.get_valid
-            return [n for n in self._output_names if fval(n)==valid]
+            return [n for n in self._output_names if self.get_valid(n)==valid]
         
     def list_containers(self):
         """Return a list of names of child Containers."""
@@ -519,7 +514,7 @@ class Component (Container):
             The (root) directory for local Python files. It defaults to
             the current directory.
 
-       require_relpaths: bool
+        require_relpaths: bool
             If True, any path (directory attribute, external file, or file
             trait) which cannot be made relative to this component's directory
             will raise ValueError. Otherwise such paths generate a warning and
@@ -962,6 +957,26 @@ class Component (Container):
         """Stop this component."""
         self._stop = True
 
+    def set_source(self, destname, source_tup):
+        """Mark the named io trait as a destination by registering a source
+        for it, which will prevent it from being set directly or connected 
+        to another source.
+        
+        destname: str
+            Name of the destination variable.
+            
+        source_tup: 2-tuple (upscopes, source_name)
+            Tuple where upscopes is an int indicating the number of scopes
+            above the parent component where the source is found, and 
+            source_name is the pathname of the source variable relative to
+            the parent scope indicated in upscopes.  The upscopes value is
+            necessary because the source_name by itself is not unique.
+            
+        """
+        super(Component, self).set_source(destname, source_tup)
+        if '.' in destname:
+            self._valid_dict[destname] = False
+
     def get_valid(self, name):
         """Get the value of the validity flag for the io trait with the given
         name.
@@ -977,17 +992,14 @@ class Component (Container):
         """Get a list of validity flags for the io traits with the given
         names.
         """
-        return [self.get_valid(v) for v in names]
+        valids = self._valid_dict
+        return [valids[v] for v in names]
 
     def set_valids(self, names, valid):
         """Mark the io traits with the given names as valid or invalid."""
+        valids = self._valid_dict
         for name in names:
-            try:
-                self._valid_dict[name] = valid
-            except KeyError:
-                self.raise_exception(
-                    "cannot set valid flag of '%s' because "
-                    "it's not an io trait." % name, RuntimeError)
+            valids[name] = valid
             
     def invalidate_deps(self, varnames=None, notify_parent=False):
         """Invalidate all of our outputs if they're not invalid already.

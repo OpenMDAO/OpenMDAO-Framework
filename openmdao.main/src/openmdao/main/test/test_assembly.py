@@ -303,9 +303,9 @@ class AssemblyTestCase(unittest.TestCase):
     def test_metadata_link(self):
         try:
             self.asm.connect('comp1.rout.units','comp2.s')
-        except NameError, err:
+        except AttributeError, err:
             self.assertEqual(str(err), 
-                    "comp1: Cannot locate trait named 'rout.units'")
+                    "comp1: Cannot locate variable named 'rout.units'")
         else:
             self.fail('NameError expected')
             
@@ -327,16 +327,6 @@ class AssemblyTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
             
-    def test_value_link(self):
-        try:
-            self.asm.connect('comp1.rout.value','comp2.r2')
-        except NameError, err:
-            self.assertEqual(str(err), 
-                    "comp1: Cannot locate trait named 'rout.value'")
-        else:
-            self.fail('NameError expected')
-        
-     
     def test_circular_dependency(self):
         self.asm.connect('comp1.rout','comp2.r')
         try:

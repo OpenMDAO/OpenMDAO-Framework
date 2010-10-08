@@ -42,6 +42,8 @@ _copydict = {
     'shallow': copy.copy
     }
 
+_iodict = { 'out': 'output', 'in': 'input' }
+
 def set_as_top(cont):
     """Specifies that the given Container is the top of a 
     Container hierarchy.
@@ -140,19 +142,33 @@ class _PathProperty(TraitType):
         setattr(self._ref() or self._resolve(obj), self._last_name, value)
     
         
+def _tup_to_srcname(cont, tup):
+    """Convert (upscopes, srcname) to source name."""
+    if tup is None:
+        return None
+    if tup[0] == 0:
+        return tup[1]
+    scopename = cont.parent.get_pathname().rsplit('.', tup[0])[0]
+    return '%s.%s' % (scopename,tup[1])
+    
+        
 class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
    
     __ = Python()
     
-    def __init__(self, doc=None):
+    def __init__(self, doc=None, iotype=None):
         super(Container, self).__init__()
         self._sources = {}  # for checking that destination traits cannot be 
-                          # set by other objects
-        # for keeping track of dynamically added traits for serialization
-        self._added_traits = {}  
+                            # set by other objects. Key is destination name,
+                            # value is (upscopes, source_name)
+                            
+        self._ext_dests = {} # outputs to outside our parent scope (keyed by source)
                           
+        # for keeping track of dynamically added traits for serialization
+        self._added_traits = {}
+        
         self._parent = None
         self._name = None
         
@@ -304,7 +320,7 @@ class Container(HasTraits):
                 self.raise_exception(
                     "'%s' is already connected to source '%s' and "
                     "cannot be directly set"%
-                    (name, self._sources[name]), TraitError)
+                    (name, _tup_to_srcname(self, self._sources[name])), TraitError)
             self._call_execute = True
             self._input_changed(name)
             
@@ -579,16 +595,30 @@ class Container(HasTraits):
             else:
                 return obj._array_get(restofpath, index)
      
-    def set_source(self, name, source):
+    def set_source(self, destname, source_tup):
         """Mark the named io trait as a destination by registering a source
         for it, which will prevent it from being set directly or connected 
         to another source.
+        
+        destname: str
+            Name of the destination variable.
+            
+        source_tup: 2-tuple (upscopes, source_name)
+            Tuple where upscopes is an int indicating the number of scopes
+            above the parent component where the source is found, and 
+            source_name is the pathname of the source variable relative to
+            the parent scope indicated in upscopes.  The upscopes value is
+            necessary because the source_name by itself is not unique.
+            
         """
-        if name in self._sources:
+        if destname in self._sources:
             self.raise_exception(
                 "'%s' is already connected to source '%s'" % 
-                (name, self._sources[name]), TraitError)
-        self._sources[name] = source
+                (destname, self._sources[destname]), TraitError)
+        self._sources[destname] = source_tup
+        cname, _, restofpath = destname.partition('.')
+        if restofpath:
+            getattr(self, cname).set_source(restofpath, (source_tup[0]+1, source_tup[1]))
             
     def remove_source(self, destination):
         """Remove the source from the given destination io trait. This will
@@ -597,14 +627,14 @@ class Container(HasTraits):
         """
         del self._sources[destination]
         
-    def _check_trait_settable(self, name, srcname=None, force=False):
+    def _check_trait_settable(self, name, srctup=None, force=False):
         if force:
             src = None
         else:
             src = self._sources.get(name, None)
         trait = get_trait(self, name)
         if trait:
-            if src is not None and src != srcname:
+            if src is not None and src != srctup:
                 if trait.iotype != 'in':
                     self.raise_exception(
                         "'%s' is not an input trait and cannot be set" %
@@ -613,13 +643,13 @@ class Container(HasTraits):
                     self.raise_exception(
                         "'%s' is connected to source '%s' and cannot be "
                         "set by source '%s'" %
-                        (name,src,srcname), TraitError)
+                        (name,_tup_to_srcname(self, src),_tup_to_srcname(self, srctup)), TraitError)
         else:
             self.raise_exception("object has no attribute '%s'" % name,
                                  TraitError)
         return trait
 
-    def set(self, path, value, index=None, srcname=None, force=False):
+    def set(self, path, value, index=None, src=None, force=False):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
         value, subject to validation and constraints. *index*, if not None,
@@ -636,14 +666,16 @@ class Container(HasTraits):
                 self.raise_exception("object has no attribute '%s'" % childname, 
                                      TraitError)
             if isinstance(obj, Container):
-                obj.set(restofpath, value, index, srcname=srcname, 
+                if src is not None:
+                    src = (src[0]+1, src[1])
+                obj.set(restofpath, value, index, src=src, 
                         force=force)
             elif index is None:
                 setattr(obj, restofpath, value)
             else:
                 obj._array_set(restofpath, value, index)
         else:
-            trait = self._check_trait_settable(path, srcname, force)
+            trait = self._check_trait_settable(path, src, force)
             if trait.type == 'event':
                 setattr(self, path, value)
             else:
@@ -927,19 +959,45 @@ class Container(HasTraits):
         return _PathProperty(ref_name=pathname, iotype=iotype, 
                             trait=trait)
         
-    def get_dyn_trait(self, name, iotype=None):
+    def find_trait(self, pathname):
+        """Returns a trait if a trait with the given pathname exists.
+        If an attribute exists with the given
+        pathname but no trait is found, None will be returned. If
+        no attribute exists, an AttributeError will be raised.
+        
+        pathname: str
+            pathname of the desired trait
+        """
+        cname, _, restofpath = pathname.partition('.')
+        if restofpath:
+            child = getattr(self, cname)
+            if isinstance(child, Container):
+                return child.find_trait(restofpath)
+            else:
+                if deep_hasattr(child, restofpath):
+                    return None
+        else:
+            trait = get_trait(self, cname)
+            if trait is not None:
+                return trait
+            elif trait is None and self.contains(cname):
+                return None
+            
+        self.raise_exception("Cannot locate variable named '%s'" %
+                             pathname, AttributeError)
+
+    def get_dyn_trait(self, name, iotype):
         """Retrieves the named trait, attempting to create it on-the-fly if
         it doesn't already exist.
         """
         trait = get_trait(self, name)
-        if trait is not None: 
-            return trait
-        
-        try:
-            return self._create_alias(name, iotype)
-        except AttributeError:
-            self.raise_exception("Cannot locate trait named '%s'" %
-                                 name, NameError)
+        if trait is None:
+            try:
+                trait = self._create_alias(name, iotype)
+            except AttributeError:
+                self.raise_exception("Cannot locate trait named '%s'" %
+                                     name, NameError)
+        return trait
 
     def _create_alias(self, path, io_status=None, trait=None, alias=None):
         """Create a trait that maps to some internal variable designated by a
@@ -1044,6 +1102,18 @@ def get_trait(obj, name):
     trait = obj._instance_traits().get(name)
     return trait
 
+def deep_hasattr(obj, pathname):
+    """Returns True if the attrbute indicated by the give pathname
+    exists, False otherwise.
+    """
+    try:
+        parts = pathname.split('.')
+        for name in parts[:-1]:
+            obj = getattr(obj, name)
+    except Exception:
+        return False
+    return hasattr(obj, parts[-1])
+
 def find_trait_and_value(obj, pathname):
     """Return a tuple of the form (trait, value) for the given dotted
     pathname. Raises an exception if the value indicated by the pathname
@@ -1061,6 +1131,7 @@ def find_trait_and_value(obj, pathname):
         return (objtrait, getattr(obj, names[-1]))
     else:
         return (None, None)
+
 
 def create_io_traits(cont, obj_info, iotype='in'):
     """Create io trait(s) specified by the contents of obj_info. Calls
