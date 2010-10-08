@@ -2,8 +2,11 @@
 Test distributed simulation.
 """
 
+import glob
 import logging
 from math import pi
+from multiprocessing import AuthenticationError
+from multiprocessing.managers import RemoteError
 import os
 import shutil
 import sys
@@ -11,51 +14,64 @@ import time
 import unittest
 import nose
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.util.decorators import add_delegate
+from enthought.traits.api import TraitError
+
+from openmdao.main.api import Assembly, Case, Component, Container, Driver, \
+                              set_as_top
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasparameters import HasParameters
-from openmdao.main.mp_support import read_server_config
+from openmdao.main.mp_support import has_interface, read_server_config
 from openmdao.main.objserverfactory import connect, start_server
-from openmdao.main.rbac import Credentials, set_credentials
+from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
+                               AccessController, RoleError, rbac
 
 from openmdao.lib.api import Float, Int
+from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
 
-from openmdao.util.testutil import assert_rel_error
+from openmdao.test.execcomp import ExecComp
 
+from openmdao.util.decorators import add_delegate
+from openmdao.util.testutil import assert_raises, assert_rel_error
+
+# Used for naming classes we want to create instances of.
 _MODULE = 'openmdao.main.test.test_distsim'
 
+# Used for naming server directories.
+_SERVER_ID = 0
 
-class Box(Component):
+
+class Box(ExecComp):
     """ Simple component for testing. """
 
-    width = Float(1., iotype='in', units='cm')
-    height = Float(1., iotype='in', units='cm')
-    depth = Float(1., iotype='in', units='cm')
-    thickness = Float(0.05, iotype='in', units='cm')
-    density = Float(0.01, iotype='in', units='g/cm**3')
-
-    mass = Float(iotype='out', units='g')
-    volume = Float(iotype='out', units='cm**3')
-    surface_area = Float(iotype='out', units='cm**2')
     pid = Int(iotype='out')
 
-    def __init__(self, doc=None, directory=''):
-        super(Box, self).__init__(doc, directory)
+    def __init__(self):
+        super(Box, self).__init__([
+            'surface_area = (width*(height+depth) + depth*height)*2',
+            'volume = width*height*depth'])
         self.pid = os.getpid()
 
     def execute(self):
-        print 'Box.execute(), %f %f %f on %d' % (self.width, self.height, self.depth, os.getpid())
-        self.surface_area = (self.width*(self.height+self.depth)+
-                     self.depth*self.height)*2
-        self.mass = self.surface_area*self.thickness*self.density        
-        self.volume = self.width*self.height*self.depth
+        print 'Box.execute(), %f %f %f on %d' \
+              % (self.width, self.height, self.depth, self.pid)
+        super(Box, self).execute()
+
+    def no_rbac(self):
+        pass
+
+    @rbac('owner')
+    def cause_parent_error1(self):
+        return self.parent.no_such_variable
+
+    @rbac('owner')
+    def cause_parent_error2(self):
+        return self.parent.get_proxy()
 
 
 class HollowSphere(Component):
     """ Simple component for testing. """
 
-    radius = Float(1.0,  iotype='in', units='cm')
+    radius = Float(1.0, low=0., exclude_low=True, iotype='in', units='cm')
     thickness = Float(0.05, iotype='in', units='cm')
 
     inner_volume = Float(iotype='out', units='cm**3')
@@ -80,49 +96,46 @@ class HollowSphere(Component):
 class BoxDriver(Driver):
     """ Just drives :class:`Box` inputs and records results. """
 
+    def __init__(self):
+        super(BoxDriver, self).__init__()
+        self.recorder = ListCaseRecorder()
+
     def execute(self):
         """ Runs with various box parameter values. """
-        for width in range(1, 3):
-            for height in range(1, 4):
-                for depth in range(1, 5):
+        for width in range(1, 2):
+            for height in range(1, 3):
+                for depth in range(1, 4):
                     self._logger.debug('w,h,d %s, %s, %s', width, height, depth)
                     self.set_parameters((width, height, depth))
                     self.workflow.run()
                     volume, area = self.eval_objectives()
                     self._logger.debug('    v,a %s, %s', volume, area)
 
+                    case = Case()
+                    case.inputs = [('width', None, width),
+                                   ('height', None, height),
+                                   ('depth', None, depth)]
+                    case.outputs = [('volume', None, volume),
+                                    ('area', None, area),
+                                    ('pid', None, self.parent.box.pid)]
+                                   # Just to show access to remote from driver.
+                    self.recorder.record(case)
 
-class BoxSource(Component):
+
+class BoxSource(ExecComp):
     """ Just a pass-through for :class:`BoxDriver` input values. """
 
-    width_in  = Float(1., low=0., exclude_low=True, iotype='in', units='cm')
-    height_in = Float(1., low=0., exclude_low=True, iotype='in', units='cm')
-    depth_in  = Float(1., low=0., exclude_low=True, iotype='in', units='cm')
+    def __init__(self):
+        super(BoxSource, self).__init__(['width_out  = width_in',
+                                         'height_out = height_in',
+                                         'depth_out  = depth_in'])
 
-    width_out  = Float(iotype='out', units='cm')
-    height_out = Float(iotype='out', units='cm')
-    depth_out  = Float(iotype='out', units='cm')
-
-    def execute(self):
-        """ Copy inputs to outputs. """
-        self.width_out  = self.width_in
-        self.height_out = self.height_in
-        self.depth_out  = self.depth_in
-
-
-class BoxSink(Component):
+class BoxSink(ExecComp):
     """ Just a pass-through for :class:`BoxDriver` result values. """
 
-    volume_in = Float(0., iotype='in', units='cm**3')
-    area_in   = Float(0., iotype='in', units='cm**2')
-
-    volume_out = Float(iotype='out', units='cm**3')
-    area_out   = Float(iotype='out', units='cm**2')
-
-    def execute(self):
-        """ Copy inputs to outputs. """
-        self.volume_out = self.volume_in
-        self.area_out   = self.area_in
+    def __init__(self):
+        super(BoxSink, self).__init__(['volume_out = volume_in',
+                                       'area_out   = area_in'])
 
 
 class Model(Assembly):
@@ -135,9 +148,9 @@ class Model(Assembly):
         self.driver.workflow.add(self.add('box', box))
         self.driver.workflow.add(self.add('sink', BoxSink()))
 
-        self.driver.add_parameter('source.width_in')
-        self.driver.add_parameter('source.height_in')
-        self.driver.add_parameter('source.depth_in')
+        self.driver.add_parameter('source.width_in',  low=1e-99, high=1e99)
+        self.driver.add_parameter('source.height_in', low=1e-99, high=1e99)
+        self.driver.add_parameter('source.depth_in',  low=1e-99, high=1e99)
 
         self.connect('source.width_out',  'box.width')
         self.connect('source.height_out', 'box.height')
@@ -150,27 +163,103 @@ class Model(Assembly):
         self.driver.add_objective('sink.area_out')
 
 
+class Protector(AccessController):
+    """ Special :class:`AccessController` to protect secrets. """
+
+    def __init__(self):
+        set_credentials(Credentials())  # Ensure something is current.
+        super(Protector, self).__init__()
+        self.owner = Credentials()
+        self.owner.user = 'xyzzy@spooks-r-us.com'
+
+    def check_access(self, role, methodname, obj, attr):
+        if not role:
+            raise RoleError('No access by null role')
+        if role == 'owner':
+            return
+        if methodname != '__delattr__' and self.user_attribute(obj, attr):
+            return
+        raise RoleError("No %s access to '%s' by role '%s'"
+                        % (methodname, attr, role))
+
+    @staticmethod
+    def user_attribute(obj, attr):
+        if attr in obj.keys(iotype='in') or \
+           attr in obj.keys(iotype='out') or \
+           attr in ('parent', 'name'):
+            return True
+        return False
+
+PROTECTOR = Protector()
+
+
+class ProtectedBox(Box):
+    """ Box which can be used but the innards are hidden. """
+
+    secret = Int()
+
+    def __init__(self):
+        super(ProtectedBox, self).__init__()
+
+    @rbac('owner')
+    def proprietary_method(self):
+        pass
+
+    def get_access_controller(self):
+        return PROTECTOR
+
+    @rbac(('owner', 'user'))
+    def get(self, path, index=None):
+        if PROTECTOR.user_attribute(self, path):
+            return super(ProtectedBox, self).get(path, index)
+        raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
+
+    @rbac(('owner', 'user'))
+    def get_dyn_trait(self, name, iotype=None):
+        if PROTECTOR.user_attribute(self, name):
+            return super(ProtectedBox, self).get_dyn_trait(name, iotype)
+        raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
+
+    @rbac(('owner', 'user'))
+    def get_wrapped_attr(self, name):
+        if PROTECTOR.user_attribute(self, name):
+            return super(ProtectedBox, self).get_wrapped_attr(name)
+        raise RoleError("No get_wrapped_attr access to '%s' by role '%s'"
+                        % (attr, role))
+
+    @rbac(('owner', 'user'))
+    def set(self, path, value, index=None, srcname=None, force=False):
+        if PROTECTOR.user_attribute(self, path):
+            return super(ProtectedBox, self).set(path, value, index, srcname, force)
+        raise RoleError("No set access to '%s' by role '%s'"
+                        % (attr, role))
+
+
 class TestCase(unittest.TestCase):
     """ Test distributed simulation. """
 
     def setUp(self):
-        """ Start server process. """
-        if os.path.exists('server_dir'):
-            shutil.rmtree('server_dir')
-        os.mkdir('server_dir')
-        os.chdir('server_dir')
+        """ Start each server process in a unique directory. """
+        global _SERVER_ID
+        _SERVER_ID += 1
+        server_dir = 'server_%d' % _SERVER_ID
+        if os.path.exists(server_dir):
+            shutil.rmtree(server_dir)
+        os.mkdir(server_dir)
+        os.chdir(server_dir)
         try:
             self.server = start_server()
-            set_credentials(Credentials())
             address, port, key = read_server_config('server.cfg')
+            logging.debug('')
             logging.debug('server address: %s', address)
             logging.debug('server port: %s', port)
             logging.debug('server key: %s', key)
         finally:
             os.chdir('..')
 
-        # Could hang forever (no timeout!)
-        self.factory = connect(address, port, key)
+        # Connect could hang forever (no timeout!)
+        set_credentials(Credentials())
+        self.factory = connect(address, port, pubkey=key)
         logging.debug('factory: %r', self.factory)
 
     def tearDown(self):
@@ -178,14 +267,13 @@ class TestCase(unittest.TestCase):
         if self.server is not None:
             self.server.terminate()
             self.server = None
-#        shutil.rmtree('server_dir')
+            time.sleep(1)  # Wait for server to clean up.
+        for path in glob.glob('server_*'):
+            shutil.rmtree(path)
 
-    def zest_client(self):
+    def test_1_client(self):
         logging.debug('')
         logging.debug('test_client')
-
-        # Connects to ObjServerFactory service described by 'server.cfg' file,
-        # creates some components, and runs them.
 
         # List available types.
         types = self.factory.get_available_types()
@@ -214,45 +302,205 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, obj.get('solid_volume'), 2.5766295747, 0.000001)
         assert_rel_error(self, obj.get('surface_area'), 50.265482457, 0.000001)
 
+        msg = ": Trait 'radius' must be a float in the range (0.0, "
+        assert_raises(self, "obj.set('radius', -1)", globals(), locals(),
+                      TraitError, msg)
+
         # Now a Box, accessed via attribute methods.
         obj = self.factory.create(_MODULE+'.Box')
         box_pid = obj.get('pid')
         self.assertNotEqual(box_pid, os.getpid())
         self.assertNotEqual(box_pid, sphere_pid)
 
-        obj.width += 1
-        obj.height += 1
-        obj.depth += 1
+        obj.width  += 2
+        obj.height += 2
+        obj.depth  += 2
         self.assertEqual(obj.width, 2.)
         self.assertEqual(obj.height, 2.)
         self.assertEqual(obj.depth, 2.)
-        self.assertEqual(obj.thickness, 0.05)
-        self.assertEqual(obj.density, 0.01)
-        self.assertEqual(obj.mass, 0.)
         self.assertEqual(obj.volume, 0.)
         self.assertEqual(obj.surface_area, 0.)
         obj.run()
-        assert_rel_error(self, obj.mass, 0.012, 0.000001)
         self.assertEqual(obj.volume, 8.0)
         self.assertEqual(obj.surface_area, 24.0)
 
-    def test_model(self):
+        try:
+            obj.no_rbac()
+        except RemoteError as exc:
+            msg = "AttributeError: method 'no_rbac' of"
+            logging.debug('msg: %s', msg)
+            logging.debug('exc: %s', exc)
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('Expected RemoteError')
+
+    def test_2_model(self):
         logging.debug('')
         logging.debug('test_model')
+
+        # Create model and run it.
         box = self.factory.create(_MODULE+'.Box')
-#        box = Box()
         model = set_as_top(Model(box))
         model.run()
 
-    def zest_shutdown(self):
+        # Check results.
+        for width in range(1, 2):
+            for height in range(1, 3):
+                for depth in range(1, 4):
+                    case = model.driver.recorder.cases.pop(0)
+                    self.assertEqual(case.outputs[0][2], width*height*depth)
+
+        # Cause server-side errors we can see.
+
+#FIXME: Shouldn't this be legal?
+        try:
+            source = model.box.parent.source
+        except RemoteError as exc:
+            msg = "AttributeError: attribute 'source' of"
+            logging.debug('msg: %s', msg)
+            logging.debug('exc: %s', exc)
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('Expected RemoteError')
+
+        try:
+            box.cause_parent_error1()
+        except RemoteError as exc:
+            msg = "AttributeError: attribute 'no_such_variable' of"
+            logging.debug('msg: %s', msg)
+            logging.debug('exc: %s', exc)
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('Expected RemoteError')
+
+        try:
+            box.cause_parent_error2()
+        except RemoteError as exc:
+            msg = "AttributeError: method 'get_proxy' of"
+            logging.debug('msg: %s', msg)
+            logging.debug('exc: %s', exc)
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('Expected RemoteError')
+
+    def test_3_access(self):
+        logging.debug('')
+        logging.debug('test_access')
+
+        # Create model and run it.
+        box = self.factory.create(_MODULE+'.ProtectedBox')
+        model = set_as_top(Model(box))
+        model.run()
+
+        # Check results.
+        for width in range(1, 2):
+            for height in range(1, 3):
+                for depth in range(1, 4):
+                    case = model.driver.recorder.cases.pop(0)
+                    self.assertEqual(case.outputs[0][2], width*height*depth)
+
+        # Check access protections.
+        try:
+            i = model.box.secret
+        except RemoteError as exc:
+            msg = "RoleError: No __getattribute__ access to 'secret' by role 'user'"
+            logging.debug('msg: %s', msg)
+            logging.debug('exc: %s', exc)
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('Expected RemoteError')
+
+        try:
+            model.box.proprietary_method()
+        except RemoteError as exc:
+            msg = "RoleError: proprietary_method(): No access for role 'user'"
+            logging.debug('msg: %s', msg)
+            logging.debug('exc: %s', exc)
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('Expected RemoteError')
+
+        spook = Credentials()
+        spook.user = 'xyzzy@spooks-r-us.com'
+        set_credentials(spook)
+        i = model.box.secret
+        model.box.proprietary_method()
+
+    def test_4_authkey(self):
+        logging.debug('')
+        logging.debug('test_authkey')
+
+        # Start server in non-public-key mode.
+        # Connections must have matching authkey,
+        # but data is sent in the clear!?
+        # This is standard multiprocessing behaviour.
+        authkey = 'password'
+        server_dir = 'server_authkey'
+        if os.path.exists(server_dir):
+            shutil.rmtree(server_dir)
+        os.mkdir(server_dir)
+        os.chdir(server_dir)
+        try:
+            server = start_server(authkey=authkey)
+            address, port, key = read_server_config('server.cfg')
+            logging.debug('')
+            logging.debug('server address: %s', address)
+            logging.debug('server port: %s', port)
+            logging.debug('server key: %s', key)
+        finally:
+            os.chdir('..')
+
+        try:
+            # Connect could hang forever (no timeout!)
+            set_credentials(Credentials())
+            assert_raises(self, 'connect(address, port, pubkey=key)',
+                          globals(), locals(), AuthenticationError,
+                          'digest sent was rejected')
+
+            factory = connect(address, port, authkey=authkey)
+            logging.debug('factory: %r', factory)
+
+            # Create model and run it.
+            box = factory.create(_MODULE+'.Box')
+            model = set_as_top(Model(box))
+            model.run()
+
+            # Check results.
+            for width in range(1, 2):
+                for height in range(1, 3):
+                    for depth in range(1, 4):
+                        case = model.driver.recorder.cases.pop(0)
+                        self.assertEqual(case.outputs[0][2], width*height*depth)
+        finally:
+            server.terminate()
+            server = None
+
+    def test_5_shutdown(self):
         logging.debug('')
         logging.debug('test_shutdown')
         # At one time merely having this after test_client caused the test
         # process to never exit.
 
+    def test_6_misc(self):
+        logging.debug('')
+        logging.debug('test_misc')
+
+        self.assertFalse(has_interface(self.factory, HasObjectives))
+
+        credentials = get_credentials()
+        set_credentials(None)
+        msg = 'No credentials for PublicKey authentication of get_available_types'
+        assert_raises(self, 'self.factory.get_available_types()',
+                      globals(), locals(), RuntimeError, msg)
+        set_credentials(credentials)
+                      
+        assert_raises(self, "read_server_config('no-such-file')",
+                      globals(), locals(), IOError,
+                      "No such file 'no-such-file'")
+
 
 if __name__ == '__main__':
-    sys.argv.append('--cover-package=openmdao')
+    sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 

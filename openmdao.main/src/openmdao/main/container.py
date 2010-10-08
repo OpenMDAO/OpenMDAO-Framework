@@ -419,9 +419,9 @@ class Container(HasTraits):
         return obj
 
     def get_proxy(self):
-        """ Return OpenMDAO_Proxy for self. """
+        """ Return :class:`OpenMDAO_Proxy` for self. """
         if self._manager is None:
-            self._manager = ObjectManager(self)
+            self._manager = ObjectManager(self, authkey='PublicKey')
         return self._manager.proxy
 
     def remove(self, name):
@@ -650,7 +650,7 @@ class Container(HasTraits):
             else:
                 return obj._array_get('.'.join(tup[1:]), index)
 
-    @rbac('owner')
+    @rbac(('owner', 'user'))
     def set_source(self, name, source):
         """Mark the named io trait as a destination by registering a source
         for it, which will prevent it from being set directly or connected 
@@ -691,7 +691,7 @@ class Container(HasTraits):
                                  TraitError)
         return trait
 
-    @rbac('owner')
+    @rbac(('owner', 'user'))
     def set(self, path, value, index=None, srcname=None, force=False):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
@@ -1067,7 +1067,7 @@ class Container(HasTraits):
             self.add_trait(name, 
                            self._build_trait(ref_name, iostat, trait))
 
-    @rbac('owner')
+    @rbac(('owner', 'user'))
     def get_dyn_trait(self, name, iotype=None):
         """Retrieves the named trait, attempting to create it on-the-fly if
         it doesn't already exist.

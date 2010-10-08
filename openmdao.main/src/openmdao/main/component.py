@@ -359,7 +359,7 @@ class Component (Container):
     def new_trait(self, name):
         pass
 
-    @rbac('owner')
+    @rbac(('owner', 'user'))
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
@@ -987,7 +987,7 @@ class Component (Container):
                     "cannot set valid flag of '%s' because "
                     "it's not an io trait." % name, RuntimeError)
 
-    @rbac('owner')
+    @rbac(('owner', 'user'))
     def invalidate_deps(self, varnames=None, notify_parent=False):
         """Invalidate all of our outputs if they're not invalid already.
         For a typical Component, this will always be all or nothing, meaning

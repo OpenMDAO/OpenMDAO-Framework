@@ -1,4 +1,5 @@
 import logging
+import optparse
 import os.path
 import pkg_resources
 import platform
@@ -27,8 +28,8 @@ _PROXIES = {}
 
 class ObjServerFactory(Factory):
     """
-    An :class:`ObjServerFactory` creates :class:`ObjServers` which use
-    :mod:`multiprocessing` for communication.
+    An :class:`ObjServerFactory` creates :class:`ObjServers` and objects
+    within those servers.
     """
 
     def __init__(self):
@@ -56,17 +57,19 @@ class ObjServerFactory(Factory):
     def create(self, typname, version=None, server=None,
                res_desc=None, **ctor_args):
         """
-        Create an :class:`ObjServer` and return a proxy for it.
+        Create a new `typname` object in `server` or a new
+        :class:`ObjectServer`.  Returns a proxy for for the new object.
 
         typname: string
-            Type of object to create. If null a new :class:`ObjServer` is
-            returned.
+            Type of object to create. If null then a proxy for the new
+            :class:`ObjServer` is returned.
 
         version: string or None
             Version of `typname` to create.
 
-        server:
+        server: proxy
             :class:`ObjServer` on which to create `typname`.
+            If none, then a new server is created.
 
         res_desc: dict or None
             Required resources. Currently not used.
@@ -99,31 +102,37 @@ class ObjServerFactory(Factory):
         return obj
 
 
-class ServiceManager(OpenMDAO_Manager):
+class _ServiceManager(OpenMDAO_Manager):
     """
     A :class:`multiprocessing.Manager` which manages :class:`ObjServerFactory`.
     """
     pass
 
-register(ObjServerFactory, ServiceManager)
+register(ObjServerFactory, _ServiceManager)
 
     
 class RemoteFile(object):
-    """ Wraps a :class:`file` with remote-access annotations. """
+    """
+    Wraps a :class:`file` with remote-access annotations such that only role
+    'owner' may access the file.
+    """
 
     def __init__(self, fileobj):
         self.fileobj = fileobj
 
     @rbac('owner')
     def close(self):
+        """ Close the file. """
         return self.fileobj.close()
 
     @rbac('owner')
     def flush(self):
+        """ Flush any buffered output. """
         return self.fileobj.flush()
 
     @rbac('owner')
     def read(self, size=None):
+        """ Read up to `size` bytes. """
         if size is None:
             return self.fileobj.read()
         else:
@@ -131,6 +140,7 @@ class RemoteFile(object):
 
     @rbac('owner')
     def write(self, data):
+        """ Write `data` to the file. """
         return self.fileobj.write(data)
 
 
@@ -190,7 +200,7 @@ class ObjServer(object):
 
     @rbac('*')
     def echo(self, *args):
-        """ Simply return our arguments. """
+        """ Simply return the arguments. """
         self._logger.debug("echo %s", args)
         return args
 
@@ -198,7 +208,7 @@ class ObjServer(object):
     def execute_command(self, command, stdin, stdout, stderr, env_vars,
                         poll_delay, timeout):
         """
-        Run `command` in subprocess.
+        Run `command` in a subprocess.
 
         command: string
             Command line to be executed.
@@ -235,13 +245,13 @@ class ObjServer(object):
     @rbac('owner', proxy_types=[Container])
     def load_model(self, egg_filename):
         """
-        Load model  and return top-level object.
+        Load model from egg and return top-level object.
 
         egg_filename: string
             Filename of egg to be loaded.
         """
         self._logger.debug('load_model %s', egg_filename)
-        self._check_path(egg_filename, 'load')
+        self._check_path(egg_filename, 'load_model')
         if self.tlo:
             self.tlo.pre_delete()
         self.tlo = Container.load_from_eggfile(egg_filename)
@@ -342,9 +352,10 @@ class ObjServer(object):
                                operation, path, self.root_dir)
 
 
-def connect(address, port, key):
+def connect(address, port, authkey='PublicKey', pubkey=None):
     """
-    Returns proxy for :class:`ObjServerFactory` at `address` using `key`.
+    Connects to the :class:`ObjServerFactory` at `address` and `port`
+    using `key` and returns a proxy for it.
 
     address: string
         IP address for server.
@@ -359,47 +370,63 @@ def connect(address, port, key):
     try:
         return _PROXIES[location]
     except KeyError:
-        mgr = ServiceManager(location, 'PublicKey', pubkey=key)
+        mgr = _ServiceManager(location, authkey, pubkey=pubkey)
         mgr.connect()
         proxy = mgr.ObjServerFactory()
         _PROXIES[location] = proxy
         return proxy
 
 
-def start_server(server_cfg='server.cfg', server_out='server.out'):
+def start_server(authkey='PublicKey', port=0, prefix='server', timeout=10):
     """
-    Start :class:`ObjServerFactory` service in a separate process.
+    Start an :class:`ObjServerFactory` service in a separate process
+    in the current directory.
 
-    server_cfg: string
-        Filename for server config file containing public key, etc.
+    authkey: string
+        Authorization key, must be matched by clients.
 
-    server_out: string
-        Filename for server stdout and stderr.
+    port: int
+        Port to use, or zero for next avaiable port.
+
+    prefix: string
+        Prefix for server config file and stdout/stderr file.
+
+    timeout: int
+        Seconds to wait for server to start.
 
     Returns :class:`ShellProc`.
     """
+    server_key = prefix+'.key'
+    server_cfg = prefix+'.cfg'
+    server_out = prefix+'.out'
     for path in (server_cfg, server_out):
         if os.path.exists(path):
             os.remove(path)
+    with open(server_key, 'w') as out:
+        out.write('%s\n' % authkey)
 
     factory_path = pkg_resources.resource_filename('openmdao.main',
                                                    'objserverfactory.py')
-    args = 'python %s' % factory_path
+    args = 'python %s --port %s --prefix %s' % (factory_path, port, prefix)
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
 
-    retry = 0
-    while not os.path.exists(server_cfg):
-        return_code = proc.poll()
-        if return_code:
-            error_msg = proc.error_message()
-            raise RuntimeError('Server startup failed %s' % error_msg)
-        retry += 1
-        if retry < 100:
-            time.sleep(.1)
-        else:
-            proc.terminate()
-            raise RuntimeError('Server startup timeout')
-    return proc
+    try:
+        retry = 0
+        while not os.path.exists(server_cfg):
+            return_code = proc.poll()
+            if return_code:
+                error_msg = proc.error_message(return_code)
+                raise RuntimeError('Server startup failed %s' % error_msg)
+            retry += 1
+            if retry < 10*timeout:
+                time.sleep(.1)
+            else:
+                proc.terminate()
+                raise RuntimeError('Server startup timeout')
+        return proc
+    finally:
+        if os.path.exists(server_key):
+            os.remove(server_key)
 
 
 # Remote process code.
@@ -408,16 +435,39 @@ _LOGGER = logging.getLogger()
 _SERVER_CFG = ''
 
 def main():  #pragma no cover
-    """ OpenMDAO factory service process. """
+    """
+    OpenMDAO factory service process.
+    """
+
+    parser = optparse.OptionParser()
+    parser.add_option('--port', action='store', type='int', default=0,
+                      help='server port (0 implies next available port)')
+    parser.add_option('--prefix', action='store', default='server',
+                      help='prefix for config and stdout/stderr files')
+
+    options, arguments = parser.parse_args()
+    if arguments:
+        parser.print_help()
+        sys.exit(1)
+
+    server_key = options.prefix+'.key'
+    server_cfg = options.prefix+'.cfg'
     global _SERVER_CFG
-    _SERVER_CFG = 'server.cfg'
+    _SERVER_CFG = server_cfg
+
+    authkey = 'PublicKey'
+    try:
+        with open(server_key, 'r') as inp:
+            authkey = inp.readline().strip()
+        os.remove(server_key)
+    except IOError:
+        pass
 
     _LOGGER.setLevel(logging.DEBUG)
-    address = (platform.node(), 0)  # Use non-zero for specific port.
-    authkey = 'PublicKey'
+    address = (platform.node(), options.port)
     set_credentials(Credentials())
     _LOGGER.info("Starting ServiceManager %s '%s'", address, authkey)
-    manager = ServiceManager(address, authkey)
+    manager = _ServiceManager(address, authkey)
 
     server = None
     retries = 0
@@ -444,23 +494,23 @@ def main():  #pragma no cover
     print msg
     sys.stdout.flush()
 
-    signal.signal(signal.SIGTERM, sigterm_handler)
+    signal.signal(signal.SIGTERM, _sigterm_handler)
     server.serve_forever()
 
     # Not clear how we could get here...
-    cleanup()
+    _cleanup()
 
 
-def sigterm_handler(signum, frame):  #pragma no cover
+def _sigterm_handler(signum, frame):  #pragma no cover
     """ Try to go down gracefully. """
     _LOGGER.info('sigterm_handler invoked')
     print 'sigterm_handler invoked'
     sys.stdout.flush()
-    cleanup()
+    _cleanup()
     sys.exit(1)
 
 
-def cleanup():  #pragma no cover
+def _cleanup():  #pragma no cover
     """ Cleanup in preparation to shut down. """
     if os.path.exists(_SERVER_CFG):
         os.remove(_SERVER_CFG)
