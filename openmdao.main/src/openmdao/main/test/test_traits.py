@@ -5,6 +5,7 @@ about how these things work.
 """
 
 import unittest
+import copy
 
 from enthought.traits.api import HasTraits, TraitType
 from openmdao.lib.api import Int, Instance
@@ -61,6 +62,14 @@ class TraitsTestCase(unittest.TestCase):
         mht2.copy_traits(mht, traits=['inst'])
         self.assertEqual(mht2.inst.val, mht.inst.val)
         self.assertFalse(mht2.inst is mht.inst)
+        self.assertEqual(mht2.dyntrait, mht.dyntrait)
+        
+    def test_deepcopy(self):
+        mht = MyHasTraits()
+        mht.add_trait('dyntrait', Int(9))
+        getattr(mht, 'dyntrait')
+        mht2 = copy.deepcopy(mht)
+        self.assertEqual(mht2.dyntrait, 9)
 
     def test_trait_names(self):
         mht = MyHasTraits()

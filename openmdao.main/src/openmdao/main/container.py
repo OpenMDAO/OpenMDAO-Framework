@@ -37,7 +37,6 @@ from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator
 
 _copydict = {
-    None: lambda obj: obj,
     'deep': copy.deepcopy,
     'shallow': copy.copy
     }
@@ -287,6 +286,7 @@ class Container(HasTraits):
         """Overrides HasTraits definition of *add_trait* in order to
         keep track of dynamically added traits for serialization.
         """
+        #FIXME: saving our own list of added traits shouldn't be necessary...
         self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
         getattr(self, name)  # this causes (non-property) instance traits to show up in traits()
@@ -354,14 +354,19 @@ class Container(HasTraits):
         # to the original trait which is held in the 'trait_type' attribute.
         ttype = trait.trait_type
         getwrapper = getattr(ttype, 'get_val_meta_wrapper', None)
+        val = getattr(self, name)
+        # copy value if 'copy' found in metadata
+        if ttype.copy:
+            #if isinstance(val, HasTraits):
+            #    val = val.clone_traits(copy = ttype.copy)
+            #else:
+            val = _copydict[ttype.copy](val)
         if getwrapper is not None:
             wrapper = getwrapper()
-            # copy value if 'copy' found in metadata
-            wrapper.value = _copydict[ttype.copy](getattr(self, name))
+            wrapper.value = val
             return wrapper
         
-        # copy value if 'copy' found in metadata
-        return _copydict[ttype.copy](getattr(self, name)) 
+        return val
         
     def add(self, name, obj, **kw_args):
         """Add a Container object to this Container.
