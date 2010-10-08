@@ -1,26 +1,30 @@
 
 .. index:: Nastran, NastranComponent, MSC Nastran
 
+.. _`NastranComponent`:
 
 MSC NastranComponent
 ====================
 
-The following documentation refers to the MSC (MacNeal-Schwendler Corporation) Nastran Component.
+The following documentation refers to the MSC (MacNeal-Schwendler Corporation) Nastran Component. This component is
+a wrapper for MSC Nastran, but it does not include the MSC Nastran executable. You need to have installed MSC Nastran
+with a valid license before this wrapper will work. 
 
 Overview
 ---------
 
 If you are creating a component that is supposed to call Nastran to calculate your component's outputs,
-you must do three things: 
+you must do four things: 
 
-* First, you must make your component a subclass of NastranComponent 
-* Second, you must specify how Nastran will deal with your inputs 
-* Third, you must specify how Nastran will deal with your outputs 
+#) Point your component to the Nastran executable, by setting the *nastran_command* input
+#) Make your component a subclass of NastranComponent 
+#) Specify how Nastran will deal with your inputs 
+#) Specify how Nastran will deal with your outputs 
 
-Once you do these three things, NastranComponent will worry about setting up Nastran's input file (for the
+Once you do these things, NastranComponent will worry about setting up Nastran's input file (for the
 correct input variables), running Nastran, and parsing the output values out of Nastran's output. The MSC
 Nastran Component has been tested exclusively with MSC Nastran 2005, although as long as the input and
-output don't change, it should work for any version.
+output don't change, it should work for any version. 
 
 .. index:: NastranComponent
 
@@ -35,7 +39,8 @@ the Nastran file for the current input variables. It runs the Nastran command by
 and second, by calling ``NastranParser``.
 
 What all these classes do will be explained when we discuss how to tell NastranComponent how to process
-the input and output variables.
+the input and output variables. Additional details on all of the inputs to NastranComponent can be found in the
+source documentation, :ref:`here<openmdao.lib.components.nastran.nastran.py>`.
 
 .. index:: NastranMaker
 
@@ -219,67 +224,4 @@ To use NastranMaker without actually defining the traits in your subclass, you c
 ``nastran_maker_hook`` in your subclass. This function will be called with one argument, the ``NastranMaker``
 object. It is called after it has processed all the input variables that are visible on traits. The
 function's return is ignored. Right after it finishes, ``NastranMaker`` writes out the Nastran file that will
-be run.
-
-Addendum
---------
-
-To run Nastran on chryse: ``/msc/nastran/bin/nastran file.bdf``
-
-The output file is named: ``file.out``
-
-If ``FATAL`` is not found in the ``file.out`` file, the run was successful.
-
-Other files, such as ``file.DBALL`` and ``file.MASTER``, can be removed (used only for restarts).
-
-Comment is specified with a $ at the beginning of the line in ``file.bdf``. 
-
-For static analysis (stress and displacement calculations), the following MSC/Nastran commands should be specified:
-
-::
-
-
-   EXEC Section Commands
-   
-   SOL 101
-   
-   CEND
-   
-   CASE Control Commands
-   
-   DISPLACEMENT(SORT1,REAL)=ALL
-   
-   STRESS(SORT1,REAL,VONMISES,BILIN)=ALL
-   
-   BEGIN BULK section commands
-   
-   PARAM,GRDPNT,0 +
-   
-This parameter calculates and prints the MASS, which is the ``objective`` function in optimization. We extract
-the value in the first row of the ``MASS`` column, searching for ``MASS AXIS SYSTEM (S)``.
-
-**MSC/Nastran Property Commands**
- 
- 
-.. figure::  ../images/plugins/Nastran_property_commands.png
-  
-       
-|
-
-**Extraction of Results from Nastran Output for Displacement and Stress Constraints**
-
-
-.. figure::  ../images/plugins/extraction_results.jpg
-   
-
-|
-
-**Constraint Formula**
-
- 
-.. figure::  ../images/plugins/constraint.png
-
-
-**Formulation of Constraints for PROD**
-
-.. figure::  ../images/plugins/formulation_PROD.png      
+be run.   
