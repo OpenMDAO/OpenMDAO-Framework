@@ -249,6 +249,23 @@ class Container(HasTraits):
     #  HasTraits overrides
     #
     
+    def __deepcopy__ ( self, memo ):
+        """ Overrides deepcopy for HasTraits because otherwise we lose instance
+        traits when we copy.
+        """
+        id_self = id( self )
+        if id_self in memo:
+            return memo[ id_self ]
+        result = super(Container, self).__deepcopy__(memo)
+        olditraits = self._instance_traits()
+        newtraits = result._instance_traits()
+        newtraits.update(result.traits())
+        for name, trait in olditraits.items():
+            if trait.type is not 'event' and name not in newtraits:
+                result.add_trait(name, copy.copy(trait.trait_type))
+                setattr(result, name, getattr(self, name))
+        return result
+
     def __getstate__(self):
         """Return dict representing this container's state."""
         state = super(Container, self).__getstate__()

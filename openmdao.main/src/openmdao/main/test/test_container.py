@@ -5,8 +5,9 @@ import sys
 import unittest
 import StringIO
 import nose
+import copy
 
-from enthought.traits.api import TraitError
+from enthought.traits.api import TraitError, HasTraits
 
 import openmdao.util.eggsaver as constants
 from openmdao.main.container import Container, get_default_name
@@ -16,6 +17,19 @@ from openmdao.util.testutil import make_protected_dir
 # Various Pickle issues arise only when this test runs as the main module.
 # This is used to detect when we're the main module or not.
 MODULE_NAME = __name__
+
+class MyHasTraits(HasTraits):
+    def __init__(self, *args, **kwargs):
+        super(MyHasTraits, self).__init__(*args, **kwargs)
+        self.add_trait('dyntrait', Float(9., desc='some desc'))
+        setattr(self, 'dyntrait', getattr(self, 'dyntrait'))
+
+
+class MyContainer(Container):
+    def __init__(self, *args, **kwargs):
+        super(MyContainer, self).__init__(*args, **kwargs)
+        self.add_trait('dyntrait', Float(9., desc='some desc'))
+        setattr(self, 'dyntrait', getattr(self, 'dyntrait'))
 
 
 class ContainerTestCase(unittest.TestCase):
@@ -46,6 +60,12 @@ class ContainerTestCase(unittest.TestCase):
         """this teardown function will be called after each test"""
         self.root = None
 
+    def test_deepcopy(self):
+        cont = MyContainer()
+        self.assertEqual(cont.dyntrait, 9.)
+        ccont = copy.deepcopy(cont)
+        self.assertEqual(ccont.dyntrait, 9.)
+        
     def test_add_bad_child(self):
         foo = Container()
         try:
