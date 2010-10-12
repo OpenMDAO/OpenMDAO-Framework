@@ -1,4 +1,7 @@
 """nastran.py defines NastranComponent.
+
+   See the Standard Library for additional information on the :ref:`NastranComponent`.
+    
 """
 
 from os import fdopen, remove, path

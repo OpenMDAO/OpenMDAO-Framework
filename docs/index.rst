@@ -25,14 +25,13 @@ Contents:
    glossary
    arch-doc/index
    std_lib/index
-   plugins/index
+   
 
 Appendixes, Glossary, and Indexes
 ==================================
 
 * :ref:`appendix`
 * :ref:`stdlib`
-* :ref:`nastran`
 * :ref:`glossary`
 * :ref:`genindex`
 * :ref:`modindex`
