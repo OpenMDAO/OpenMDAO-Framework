@@ -78,17 +78,21 @@ class ObjServerFactory(Factory):
             Other constructor arguments.  If `name` is specified, that
             is used as the name of the :class:`ObjServer`.
         """
+        self._logger.info('create typname %s, version %s server %s,'
+                          ' res_desc %s, args %s', typname, version, server,
+                          res_desc, ctor_args)
+
         if get_credentials() is None:
             set_credentials(Credentials())
 
         if server is None:
-            manager = OpenMDAO_Manager(authkey='PublicKey')
-            register(ObjServer, manager)
-            manager.start()
             self._count += 1
             name = ctor_args.get('name', '')
             if not name:
                 name = 'Server_%d' % self._count
+            manager = OpenMDAO_Manager(name=name, authkey='PublicKey')
+            register(ObjServer, manager)
+            manager.start()
             self._logger.info("new server '%s' listening on %s",
                               name, manager.address)
             server = manager.ObjServer(name=name, host=platform.node())
@@ -467,7 +471,7 @@ def main():  #pragma no cover
     address = (platform.node(), options.port)
     set_credentials(Credentials())
     _LOGGER.info("Starting ServiceManager %s '%s'", address, authkey)
-    manager = _ServiceManager(address, authkey)
+    manager = _ServiceManager(address, authkey, name='ObjServerFactory')
 
     server = None
     retries = 0

@@ -267,8 +267,8 @@ class TestCase(unittest.TestCase):
         if self.server is not None:
             self.server.terminate(timeout=30)
             self.server = None
-        for path in glob.glob('server_*'):
-            shutil.rmtree(path)
+#        for path in glob.glob('server_*'):
+#            shutil.rmtree(path)
 
     def test_1_client(self):
         logging.debug('')

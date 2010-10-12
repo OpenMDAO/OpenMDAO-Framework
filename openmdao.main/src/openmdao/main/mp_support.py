@@ -290,12 +290,18 @@ def register(cls, manager):
 class OpenMDAO_Server(Server):
     """ Supports dynamic proxy generation and credential checking. """
 
-    def __init__(self, registry, address, authkey, serializer):
+    def __init__(self, registry, address, authkey, serializer, name):
         super(OpenMDAO_Server, self).__init__(registry, address, authkey,
                                               serializer)
+        if name is None:
+            name = str(os.getpid())
+        self._logger = logging.getLogger(name)
+        self._logger.debug('OpenMDAO_Server process %d started', os.getpid())
         self._authkey = authkey
         if authkey == 'PublicKey':
+            self._logger.debug('generating public key...')
             self._key_pair = _generate_key_pair()
+            self._logger.debug('    done')
         else:
             self._key_pair = None
         self._id_to_controller = {}
@@ -417,12 +423,13 @@ class OpenMDAO_Server(Server):
                                                                    function,
                                                                    credentials))
 
-                print '%d: invoke' % os.getpid(), methodname, args, kwds, \
-                      role, get_credentials()
-                sys.stdout.flush()
+                self._logger.debug('invoke %s %s %s %s %s', methodname, args,
+                                   kwds, role, get_credentials())
                 try:
                     res = function(*args, **kwds)
                 except Exception as exc:
+                    self._logger.info('%s %s %s %s %s: %s', methodname, args,
+                                      kwds, role, get_credentials(), exc)
                     msg = ('#ERROR', exc)
                 else:
                     typeid = None
@@ -443,7 +450,8 @@ class OpenMDAO_Server(Server):
                         #       with our own.
                         typeid = res._token.typeid
                         proxyid = res.__class__.__name__
-                        util.debug('Creating proxy for proxy %s', proxyid)
+                        self._logger.debug('Creating proxy for proxy %s',
+                                           proxyid)
                         if proxyid not in self.registry:
                             self.registry[proxyid] = \
                                 (None, None, None, auto_proxy)
@@ -471,11 +479,11 @@ class OpenMDAO_Server(Server):
                     if typeid:
                         rident, rexposed = self.create(conn, proxyid, res)
                         token = Token(typeid, self.address, rident)
-                        util.debug('Returning proxy for %s at %s',
-                                   typeid, self.address)
+                        self._logger.debug('Returning proxy for %s at %s',
+                                           typeid, self.address)
                         msg = ('#PROXY', (rexposed, token))
                     else:
-                        util.debug("Returning '%s'", res)
+                        self._logger.debug("Returning '%s'", res)
                         msg = ('#RETURN', res)
 
             except AttributeError:
@@ -494,8 +502,8 @@ class OpenMDAO_Server(Server):
                         msg = ('#TRACEBACK', orig_traceback)
 
             except EOFError:
-                util.debug('got EOF -- exiting thread serving %r',
-                           threading.current_thread().name)
+                self._logger.debug('got EOF -- exiting thread serving %r',
+                                   threading.current_thread().name)
                 sys.exit(0)
 
             # Just being defensive, this should never happen.
@@ -508,10 +516,10 @@ class OpenMDAO_Server(Server):
                 except Exception:
                     send(_encrypt(('#UNSERIALIZABLE', repr(msg)), session_key))
             except Exception as exc:
-                util.info('exception in thread serving %r',
-                          threading.current_thread().name)
-                util.info(' ... message was %r', msg)
-                util.info(' ... exception was %r', exc)
+                self._logger.info('exception in thread serving %r',
+                                  threading.current_thread().name)
+                self._logger.info(' ... message was %r', msg)
+                self._logger.info(' ... exception was %r', exc)
                 conn.close()
                 sys.exit(1)
 
@@ -600,9 +608,10 @@ class OpenMDAO_Manager(BaseManager):
     _Server = OpenMDAO_Server
 
     def __init__(self, address=None, authkey=None, serializer='pickle',
-                 pubkey=None):
+                 pubkey=None, name=None):
         super(OpenMDAO_Manager, self).__init__(address, authkey, serializer)
         self._pubkey = pubkey
+        self._name = name
 
     def get_server(self):
         """
@@ -610,7 +619,7 @@ class OpenMDAO_Manager(BaseManager):
         """
         assert self._state.value == State.INITIAL
         return OpenMDAO_Server(self._registry, self._address,
-                               self._authkey, self._serializer)
+                               self._authkey, self._serializer, self._name)
 
     def start(self):
         """
@@ -626,7 +635,7 @@ class OpenMDAO_Manager(BaseManager):
         self._process = Process(
             target=type(self)._run_server,
             args=(self._registry, self._address, self._authkey,
-                  self._serializer, writer),
+                  self._serializer, self._name, writer),
             )
         ident = ':'.join(str(i) for i in self._process._identity)
         self._process.name = type(self).__name__  + '-' + ident
@@ -650,12 +659,12 @@ class OpenMDAO_Manager(BaseManager):
 
     # This happens on the remote server side and we'll check when using it.
     @classmethod
-    def _run_server(cls, registry, address, authkey, serializer, writer): #pragma no cover
+    def _run_server(cls, registry, address, authkey, serializer, name, writer): #pragma no cover
         """
         Create a server, report its address and public key, and run it.
         """
         # Create server.
-        server = cls._Server(registry, address, authkey, serializer)
+        server = cls._Server(registry, address, authkey, serializer, name)
 
         # Inform parent process of the server's address.
         writer.send(server.address)
