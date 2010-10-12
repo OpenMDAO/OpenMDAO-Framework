@@ -64,6 +64,20 @@ class ShellProc(subprocess.Popen):
         if isinstance(self._stderr_arg, basestring):
             self._err.close()
 
+    def terminate(self, timeout=None):
+        """
+        Stop child process. If `timeout` is specified then :meth:wait will
+        be called to wait for the process to terminate.
+
+        timeout: float (seconds)
+            Maximum time to wait for the process to stop.
+            A value of zero implies an infinite maximum wait.
+
+        """
+        super(ShellProc, self).terminate()
+        if timeout is not None:
+            self.wait(timeout=timeout)
+
     def wait(self, poll_delay=0., timeout=0.):
         """
         Polls for command completion or timeout.

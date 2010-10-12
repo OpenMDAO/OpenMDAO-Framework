@@ -10,7 +10,6 @@ from multiprocessing.managers import RemoteError
 import os
 import shutil
 import sys
-import time
 import unittest
 import nose
 
@@ -248,9 +247,10 @@ class TestCase(unittest.TestCase):
         os.mkdir(server_dir)
         os.chdir(server_dir)
         try:
-            self.server = start_server()
-            address, port, key = read_server_config('server.cfg')
             logging.debug('')
+            logging.debug('starting server...')
+            self.server = start_server(timeout=30)
+            address, port, key = read_server_config('server.cfg')
             logging.debug('server address: %s', address)
             logging.debug('server port: %s', port)
             logging.debug('server key: %s', key)
@@ -265,9 +265,8 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         """ Shut down server process. """
         if self.server is not None:
-            self.server.terminate()
+            self.server.terminate(timeout=30)
             self.server = None
-            time.sleep(1)  # Wait for server to clean up.
         for path in glob.glob('server_*'):
             shutil.rmtree(path)
 
@@ -441,9 +440,9 @@ class TestCase(unittest.TestCase):
         os.mkdir(server_dir)
         os.chdir(server_dir)
         try:
-            server = start_server(authkey=authkey)
+            logging.debug('starting server (authkey %s)...', authkey)
+            server = start_server(authkey=authkey, timeout=30)
             address, port, key = read_server_config('server.cfg')
-            logging.debug('')
             logging.debug('server address: %s', address)
             logging.debug('server port: %s', port)
             logging.debug('server key: %s', key)
@@ -472,7 +471,7 @@ class TestCase(unittest.TestCase):
                         case = model.driver.recorder.cases.pop(0)
                         self.assertEqual(case.outputs[0][2], width*height*depth)
         finally:
-            server.terminate()
+            server.terminate(timeout=30)
             server = None
 
     def test_5_shutdown(self):

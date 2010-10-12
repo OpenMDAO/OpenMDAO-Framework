@@ -421,7 +421,7 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=10):
             if retry < 10*timeout:
                 time.sleep(.1)
             else:
-                proc.terminate()
+                proc.terminate(timeout)
                 raise RuntimeError('Server startup timeout')
         return proc
     finally:
