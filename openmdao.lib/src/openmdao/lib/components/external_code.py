@@ -114,7 +114,7 @@ class ExternalCode(Component):
             self._process = None
 
         et = time.time() - start_time
-        if et >= 60:
+        if et >= 60:  #pragma no cover
             self._logger.info('elapsed time: %.1f sec.', et)
 
         return (return_code, error_msg)
@@ -151,7 +151,7 @@ class ExternalCode(Component):
                                              self.env_vars, self.poll_delay,
                                              self.timeout)
             et = time.time() - start_time
-            if et >= 60:
+            if et >= 60:  #pragma no cover
                 self._logger.info('elapsed time: %f sec.', et)
 
             # Retrieve results.
@@ -183,13 +183,14 @@ class ExternalCode(Component):
         finally:
             os.remove(filename)
 
-        if ufiles != pfiles or ubytes != pbytes:
+        # Difficult to force file transfer error.
+        if ufiles != pfiles or ubytes != pbytes:  #pragma no cover
             msg = 'Inputs xfer error: %d:%d vs. %d:%d' \
                   % (ufiles, ubytes, pfiles, pbytes)
             self.raise_exception(msg, RuntimeError)
 
         et = time.time() - start_time
-        if et >= 60:
+        if et >= 60:  #pragma no cover
             self._logger.info('elapsed time: %f sec.', et)
 
     def _retrieve_results(self, patterns):
@@ -205,13 +206,14 @@ class ExternalCode(Component):
         finally:
             os.remove(filename)
 
-        if ufiles != pfiles or ubytes != pbytes:
+        # Difficult to force file transfer error.
+        if ufiles != pfiles or ubytes != pbytes:  #pragma no cover
             msg = 'Results xfer error: %d:%d vs. %d:%d' \
                   % (ufiles, ubytes, pfiles, pbytes)
             self.raise_exception(msg, RuntimeError)
 
         et = time.time() - start_time
-        if et >= 60:
+        if et >= 60:  #pragma no cover
             self._logger.info('elapsed time: %f sec.', et)
 
     def stop(self):

@@ -176,7 +176,7 @@ class Container(HasTraits):
     
     def __init__(self, doc=None):
         super(Container, self).__init__()
-        self._manager = None  # Object manager for remote access.
+        self._managers = {}  # Object manager for remote access by authkey.
         self._sources = {}  # for checking that destination traits cannot be 
                           # set by other objects
         # for keeping track of dynamically added traits for serialization
@@ -399,7 +399,7 @@ class Container(HasTraits):
             
         if is_instance(obj, Container):
             if isinstance(obj, OpenMDAO_Proxy):
-                obj.parent = self.get_proxy()
+                obj.parent = self.get_proxy(obj._authkey)
             else:
                 obj.parent = self
             # if an old child with that name exists, remove it
@@ -418,11 +418,15 @@ class Container(HasTraits):
                     TypeError)
         return obj
 
-    def get_proxy(self):
+    def get_proxy(self, authkey):
         """ Return :class:`OpenMDAO_Proxy` for self. """
-        if self._manager is None:
-            self._manager = ObjectManager(self, authkey='PublicKey')
-        return self._manager.proxy
+        try:
+            manager = self._managers[authkey]
+        except KeyError:
+            print self.get_pathname(), 'get_proxy', authkey
+            manager = ObjectManager(self, authkey=authkey)
+            self._managers[authkey] = manager
+        return manager.proxy
 
     def remove(self, name):
         """Remove the specified child from this container and remove any

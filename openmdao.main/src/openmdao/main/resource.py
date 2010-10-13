@@ -156,7 +156,8 @@ class ResourceAllocationManager(object):
                                        server_info['name'], server_info['pid'],
                                        server_info['host'])
                     return (server, server_info)
-                else:
+                # Difficult to generate deployable request that won't deploy...
+                else:  #pragma no cover
                     deployment_retries += 1
                     if deployment_retries > 10:
                         self._logger.error('deployment failed too many times.')
@@ -165,7 +166,8 @@ class ResourceAllocationManager(object):
                     best_estimate = -1
             elif best_estimate != -1:
                 return (None, None)
-            else:
+            # Difficult to generate deployable request that won't deploy...
+            else:  #pragma no cover
                 time.sleep(1)  # Wait a bit between retries.
 
     @staticmethod
@@ -194,7 +196,8 @@ class ResourceAllocationManager(object):
                 return best_criteria['hostnames']
             elif best_score != -1:
                 return None
-            else:
+            # Difficult to generate deployable request that won't deploy...
+            else:  #pragma no cover
                 time.sleep(1)  # Wait a bit between retries.
 
     def _get_estimates(self, resource_desc, need_hostnames=False):
@@ -231,7 +234,8 @@ class ResourceAllocationManager(object):
         name = server.name
         try:
             server.cleanup()
-        except Exception:
+        # Just being defensive here.
+        except Exception:  #pragma no cover
             trace = traceback.format_exc()
             ram = ResourceAllocationManager.get_instance()
             try:
@@ -260,7 +264,8 @@ class ResourceAllocator(ObjServerFactory):
         """ Returns this allocator's name. """
         return self.name
 
-    def max_servers(self, resource_desc):
+    # To be implemented by real allocator.
+    def max_servers(self, resource_desc):  #pragma no cover
         """
         Return the maximum number of servers which could be deployed for
         `resource_desc`.  The value needn't be exact, but performance may
@@ -272,7 +277,8 @@ class ResourceAllocator(ObjServerFactory):
         """
         raise NotImplementedError
 
-    def time_estimate(self, resource_desc):
+    # To be implemented by real allocator.
+    def time_estimate(self, resource_desc):  #pragma no cover
         """
         Return ``(estimate, criteria)`` indicating how well this resource
         allocator can satisfy the `resource_desc` request.  The estimate will
@@ -327,7 +333,8 @@ class ResourceAllocator(ObjServerFactory):
             return (-2, {'orphan_modules' : not_found})
         return (0, None)
 
-    def deploy(self, name, resource_desc, criteria):
+    # To be implemented by real allocator.
+    def deploy(self, name, resource_desc, criteria):  #pragma no cover
         """
         Deploy a server suitable for `resource_desc`.
         Returns a proxy to the deployed server.
@@ -360,7 +367,8 @@ class LocalAllocator(ResourceAllocator):
         else:
             try:
                 self.total_cpus = multiprocessing.cpu_count()
-            except NotImplementedError:
+            # Just being defensive (according to docs this could happen).
+            except NotImplementedError:  # pragma no cover
                 self.total_cpus = 1
         self.max_load = max(max_load, 0.5)  # Ensure > 0!
 
@@ -403,7 +411,8 @@ class LocalAllocator(ResourceAllocator):
         # Check system load.
         try:
             loadavgs = os.getloadavg()
-        except AttributeError:
+        # Not available on Windows.
+        except AttributeError:  #pragma no cover
             criteria = {
                 'hostnames'  : [socket.gethostname()],
                 'total_cpus' : self.total_cpus,
@@ -420,7 +429,8 @@ class LocalAllocator(ResourceAllocator):
         }
         if (loadavgs[0] / self.total_cpus) < self.max_load:
             return (0, criteria)
-        else:
+        # Tests force max_load high to avoid other issues.
+        else:  #pragma no cover
             return (-1, criteria)  # Try again later.
 
     def _check_compatibility(self, resource_desc, log_failure):
@@ -500,7 +510,8 @@ register(LocalAllocator, mp_distributing.Cluster)
 register(LocalAllocator, mp_distributing.HostManager)
 
 
-class ClusterAllocator(object):
+# Cluster allocation requires ssh configuration and multiple hosts.
+class ClusterAllocator(object):  #pragma no cover
     """
     Cluster-based resource allocator.  This allocator manages a collection
     of :class:`LocalAllocator`, one for each machine in the cluster.
@@ -800,7 +811,7 @@ class ClusterAllocator(object):
         with self._lock:
             allocator = criteria['allocator']
             self._last_deployed = allocator
-            del criteria['allocator']  # Avoid passing a proxy.
+            del criteria['allocator']  # Don't pass a proxy without a server!
         return allocator.deploy(name, resource_desc, criteria)
 
     def shutdown(self):

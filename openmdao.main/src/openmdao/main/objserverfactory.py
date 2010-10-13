@@ -1,3 +1,9 @@
+"""
+Support for an OpenMDAO 'object service', a factory that can create servers
+which support various operations such as creating objects, loading models via
+egg files, remote execution, and remote file access.
+"""
+
 import logging
 import optparse
 import os.path
@@ -9,7 +15,7 @@ import socket
 import sys
 import time
 
-from multiprocessing import util
+from multiprocessing import current_process, util
 
 from openmdao.main.component import SimulationRoot
 from openmdao.main.container import Container
@@ -82,15 +88,12 @@ class ObjServerFactory(Factory):
                           ' res_desc %s, args %s', typname, version, server,
                           res_desc, ctor_args)
 
-        if get_credentials() is None:
-            set_credentials(Credentials())
-
         if server is None:
             self._count += 1
             name = ctor_args.get('name', '')
             if not name:
                 name = 'Server_%d' % self._count
-            manager = OpenMDAO_Manager(name=name, authkey='PublicKey')
+            manager = OpenMDAO_Manager(name=name)
             register(ObjServer, manager)
             manager.start()
             self._logger.info("new server '%s' listening on %s",
@@ -123,6 +126,16 @@ class RemoteFile(object):
 
     def __init__(self, fileobj):
         self.fileobj = fileobj
+
+    @rbac('owner')
+    def __enter__(self):
+        """ Enter context. """
+        return self.fileobj.__enter__()
+
+    @rbac('owner')
+    def __exit__(self, exc_type, exc_value, traceback):
+        """ Exit context. """
+        return self.fileobj.__exit__(exc_type, exc_value, traceback)
 
     @rbac('owner')
     def close(self):
@@ -274,7 +287,7 @@ class ObjServer(object):
         """
         self._logger.debug("pack_zipfile '%s'", filename)
         self._check_path(filename, 'pack_zipfile')
-        return pack_zipfile(patterns, filename, logging.getLogger())
+        return pack_zipfile(patterns, filename, self._logger)
 
     @rbac('owner')
     def unpack_zipfile(self, filename):
@@ -286,7 +299,7 @@ class ObjServer(object):
         """
         self._logger.debug("unpack_zipfile '%s'", filename)
         self._check_path(filename, 'unpack_zipfile')
-        return unpack_zipfile(filename, logging.getLogger())
+        return unpack_zipfile(filename, self._logger)
 
     @rbac('owner')
     def chmod(self, path, mode):
@@ -332,6 +345,23 @@ class ObjServer(object):
             raise
 
     @rbac('owner')
+    def remove(self, path):
+        """
+        Remove `path` if `path` is legal.
+
+        path: string
+            Path to file to remove.
+        """
+        self._logger.debug("remove '%s'", path)
+        self._check_path(path, 'remove')
+        try:
+            return os.remove(path)
+        except Exception as exc:
+            self._logger.error('remove %s in %s failed %s',
+                               path, os.getcwd(), exc)
+            raise
+
+    @rbac('owner')
     def stat(self, path):
         """
         Returns ``os.stat(path)`` if `path` is legal.
@@ -350,10 +380,10 @@ class ObjServer(object):
 
     def _check_path(self, path, operation):
         """ Check if path is allowed to be used. """
-        path = os.path.abspath(path)
-        if not path.startswith(self.root_dir):
-            raise RuntimeError("Can't %s, %s doesn't start with %s",
-                               operation, path, self.root_dir)
+        abspath = os.path.abspath(path)
+        if not abspath.startswith(self.root_dir):
+            raise RuntimeError("Can't %s '%s', not within root %s"
+                               % (operation, path, self.root_dir))
 
 
 def connect(address, port, authkey='PublicKey', pubkey=None):
@@ -381,7 +411,7 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
         return proxy
 
 
-def start_server(authkey='PublicKey', port=0, prefix='server', timeout=10):
+def start_server(authkey='PublicKey', port=0, prefix='server', timeout=60):
     """
     Start an :class:`ObjServerFactory` service in a separate process
     in the current directory.
@@ -396,7 +426,8 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=10):
         Prefix for server config file and stdout/stderr file.
 
     timeout: int
-        Seconds to wait for server to start.
+        Seconds to wait for server to start. Note that public key generation
+        can take a while.
 
     Returns :class:`ShellProc`.
     """
@@ -441,8 +472,21 @@ _SERVER_CFG = ''
 def main():  #pragma no cover
     """
     OpenMDAO factory service process.
-    """
 
+    Usage: python objserver.py [--port=number][--prefix=name]
+
+    port: int
+        Server port (default of 0 implies next available port).
+        Note that ports below 1024 typically require special privileges.
+
+    prefix: string
+        Prefix for config and stdout/stderr files (default 'server').
+
+    If ``prefix.key`` exists, it is read for an authorization key string.
+    Otherwise public key authorization and encryption is used.
+    Once initialized ``prefix.cfg`` is written with address, port, and
+    public key information.
+    """
     parser = optparse.OptionParser()
     parser.add_option('--port', action='store', type='int', default=0,
                       help='server port (0 implies next available port)')
@@ -471,7 +515,8 @@ def main():  #pragma no cover
     address = (platform.node(), options.port)
     set_credentials(Credentials())
     _LOGGER.info("Starting ServiceManager %s '%s'", address, authkey)
-    manager = _ServiceManager(address, authkey, name='ObjServerFactory')
+    current_process().authkey = authkey
+    manager = _ServiceManager(address, authkey, name='Factory')
 
     server = None
     retries = 0
@@ -499,10 +544,10 @@ def main():  #pragma no cover
     sys.stdout.flush()
 
     signal.signal(signal.SIGTERM, _sigterm_handler)
-    server.serve_forever()
-
-    # Not clear how we could get here...
-    _cleanup()
+    try:
+        server.serve_forever()
+    finally:
+        _cleanup()
 
 
 def _sigterm_handler(signum, frame):  #pragma no cover

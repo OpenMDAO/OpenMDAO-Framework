@@ -241,7 +241,7 @@ class TestCase(unittest.TestCase):
         """ Start each server process in a unique directory. """
         global _SERVER_ID
         _SERVER_ID += 1
-        server_dir = 'server_%d' % _SERVER_ID
+        server_dir = 'factory_%d' % _SERVER_ID
         if os.path.exists(server_dir):
             shutil.rmtree(server_dir)
         os.mkdir(server_dir)
@@ -249,7 +249,7 @@ class TestCase(unittest.TestCase):
         try:
             logging.debug('')
             logging.debug('starting server...')
-            self.server = start_server(timeout=30)
+            self.server = start_server()
             address, port, key = read_server_config('server.cfg')
             logging.debug('server address: %s', address)
             logging.debug('server port: %s', port)
@@ -267,8 +267,8 @@ class TestCase(unittest.TestCase):
         if self.server is not None:
             self.server.terminate(timeout=30)
             self.server = None
-#        for path in glob.glob('server_*'):
-#            shutil.rmtree(path)
+        for path in glob.glob('factory_*'):
+            shutil.rmtree(path)
 
     def test_1_client(self):
         logging.debug('')
@@ -434,7 +434,7 @@ class TestCase(unittest.TestCase):
         # but data is sent in the clear!?
         # This is standard multiprocessing behaviour.
         authkey = 'password'
-        server_dir = 'server_authkey'
+        server_dir = 'factory_authkey'
         if os.path.exists(server_dir):
             shutil.rmtree(server_dir)
         os.mkdir(server_dir)
@@ -474,13 +474,7 @@ class TestCase(unittest.TestCase):
             server.terminate(timeout=30)
             server = None
 
-    def test_5_shutdown(self):
-        logging.debug('')
-        logging.debug('test_shutdown')
-        # At one time merely having this after test_client caused the test
-        # process to never exit.
-
-    def test_6_misc(self):
+    def test_5_misc(self):
         logging.debug('')
         logging.debug('test_misc')
 

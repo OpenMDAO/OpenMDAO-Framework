@@ -251,10 +251,13 @@ def _decrypt(msg, session_key):
         return msg
 
 
-def public_methods(obj):
+def _public_methods(obj):
     """
     Returns a list of names of the methods of `obj` to be exposed.
-    Supports attribute access in addition to decorated methods.
+    Supports attribute access in addition to RBAC decorated methods.
+
+    obj: object
+        Object to be scanned.
     """
     # Proxy pass-through only happens remotely.
     if isinstance(obj, BaseProxy):  #pragma no cover
@@ -280,15 +283,41 @@ def register(cls, manager):
     """
     Register class `cls` proxy info with `manager`.
     Not typically called by user code.
+
+    cls: class
+        Class to be registered.
+
+    manager: :class:`OpenMDAO_Manager`
+        Manager to register with.
     """
     typeid = cls.__name__
-    exposed = public_methods(cls)
-    proxytype = make_proxy_type(typeid, exposed)
+    exposed = _public_methods(cls)
+    proxytype = _make_proxy_type(typeid, exposed)
     manager.register(typeid, callable=cls, exposed=exposed, proxytype=proxytype)
 
 
 class OpenMDAO_Server(Server):
-    """ Supports dynamic proxy generation and credential checking. """
+    """
+    A :class:`Server` that supports dynamic proxy generation and credential
+    checking.
+
+    registry: dict
+        Manager's proxy registry.
+
+    address: tuple or string
+        A :mod:`multiprocessing` address specifying an Internet address or
+        a pipe.
+
+    authkey: string
+        Authorization key. Inherited from the current :class:`Process`
+        object if not specified.
+
+    serializer: string
+        Which serialization method to use.
+
+    name: string
+        Name for server, used in log files, etc.
+    """
 
     def __init__(self, registry, address, authkey, serializer, name):
         super(OpenMDAO_Server, self).__init__(registry, address, authkey,
@@ -454,7 +483,7 @@ class OpenMDAO_Server(Server):
                                            proxyid)
                         if proxyid not in self.registry:
                             self.registry[proxyid] = \
-                                (None, None, None, auto_proxy)
+                                (None, None, None, _auto_proxy)
                     elif access_controller is not None:
                         if methodname in _SPECIALS:
                             if access_controller.need_proxy(obj, args[0], res):
@@ -562,7 +591,7 @@ class OpenMDAO_Server(Server):
     def create(self, c, typeid, *args, **kwds):
         """
         Create a new shared object and return its id.
-        This version uses :func:`public_methods`.
+        This version uses :func:`_public_methods`.
         """
         self.mutex.acquire()
         try:
@@ -576,7 +605,7 @@ class OpenMDAO_Server(Server):
                 obj = callable(*args, **kwds)
 
             if exposed is None:
-                exposed = public_methods(obj)
+                exposed = _public_methods(obj)
             if method_to_typeid is not None:
                 assert type(method_to_typeid) is dict
                 exposed = list(exposed) + list(method_to_typeid)
@@ -603,6 +632,24 @@ class OpenMDAO_Manager(BaseManager):
     """
     Uses :class:`OpenMDAO_Server`, retains the public key, and puts some slack
     in shutdown timing.
+
+    address: tuple or string
+        A :mod:`multiprocessing` address specifying an Internet address or
+        a pipe.
+
+    authkey: string
+        Authorization key. Inherited from the current :class:`Process`
+        object if not specified.
+
+    serializer: string
+        Which serialization method to use.
+
+    pubkey: public key
+        Public portion of server's public/private key pair.
+        Needed for client/proxy side.
+
+    name: string
+        Name for server, used in log files, etc.
     """
 
     _Server = OpenMDAO_Server
@@ -712,7 +759,23 @@ class OpenMDAO_Manager(BaseManager):
 
 
 class ObjectManager(object):
-    """ Provides a multiprocessing interface for an existing object. """
+    """
+    Provides a multiprocessing interface for an existing object.
+
+    obj: object
+        Object to provide remote access to.
+
+    address: tuple or string
+        A :mod:`multiprocessing` address specifying an Internet address or
+        a pipe.
+
+    serializer: string
+        Which serialization method to use.
+
+    authkey: string
+        Authorization key. Inherited from the current :class:`Process`
+        object if not specified.
+    """
 
     def __init__(self, obj, address=None, serializer='pickle', authkey=None):
         self._typeid = '%s.%s' % (obj.__class__.__module__,
@@ -721,7 +784,7 @@ class ObjectManager(object):
         self._manager = OpenMDAO_Manager(address=address, serializer=serializer,
                                          authkey=authkey)
         self._server = self._manager.get_server()
-        self._exposed = public_methods(obj)
+        self._exposed = _public_methods(obj)
         self._server.id_to_obj[self._ident] = (obj, self._exposed, None)
         self._server.id_to_refcount[self._ident] = 1
 
@@ -738,9 +801,9 @@ class ObjectManager(object):
             token = Token(self._typeid, self._server.address, self._ident)
             authkey = self._server._authkey
             pubkey = self._server.public_key if authkey == 'PublicKey' else None
-            self._proxy = auto_proxy(token, self._manager._serializer,
-                                     exposed=self._exposed, authkey=authkey,
-                                     pubkey=pubkey)
+            self._proxy = _auto_proxy(token, self._manager._serializer,
+                                      exposed=self._exposed, authkey=authkey,
+                                      pubkey=pubkey)
         return self._proxy
 
     def _run_server(self):
@@ -820,10 +883,10 @@ class OpenMDAO_Proxy(BaseProxy):
 
         session_key = self._tls.session_key
 
-        # Bizarre problem evidenced by test_extcode.py (Python 2.6.1)
-        # For some reason pickling the env_vars dictionary causes:
-        #    PicklingError: Can't pickle <class 'openmdao.main.mp_support.ObjServer'>: attribute lookup openmdao.main.mp_support.ObjServer failed
-        # Possibly some Trait feature?
+# FIXME: Bizarre problem evidenced by test_extcode.py (Python 2.6.1)
+# For some reason pickling the env_vars dictionary causes:
+#    PicklingError: Can't pickle <class 'openmdao.main.mp_support.ObjServer'>: attribute lookup openmdao.main.mp_support.ObjServer failed
+# Possibly some Trait feature?
         new_args = []
         for arg in args:
             if isinstance(arg, dict):
@@ -867,7 +930,7 @@ class OpenMDAO_Proxy(BaseProxy):
             try:
                 proxytype = self._manager._registry[token.typeid][-1]
             except KeyError:
-                self._manager.register(token.typeid, None, auto_proxy)
+                self._manager.register(token.typeid, None, _auto_proxy)
                 proxytype = self._manager._registry[token.typeid][-1]
             proxy = proxytype(
                 token, self._serializer, manager=self._manager,
@@ -956,7 +1019,7 @@ class OpenMDAO_Proxy(BaseProxy):
         return alive
 
     def __reduce__(self):
-        """ For unpickling.  This version uses :func:`auto_proxy`. """
+        """ For unpickling.  This version uses :func:`_auto_proxy`. """
         kwds = {}
         kwds['pubkey'] = self._pubkey
         # Happens on other side of fork().
@@ -969,13 +1032,13 @@ class OpenMDAO_Proxy(BaseProxy):
         if getattr(self, '_isauto', False):
             kwds['exposed'] = self._exposed_
             return (RebuildProxy,
-                    (auto_proxy, self._token, self._serializer, kwds))
+                    (_auto_proxy, self._token, self._serializer, kwds))
         else:
             return (RebuildProxy,
                     (type(self), self._token, self._serializer, kwds))
 
 
-def make_proxy_type(name, exposed):
+def _make_proxy_type(name, exposed):
     """
     Return a proxy type whose methods are given by `exposed`.
     This version supports special attribute access methods.
@@ -1053,11 +1116,11 @@ def %s(self, *args, **kwds):
     return ProxyType
 
 
-def auto_proxy(token, serializer, manager=None, authkey=None,
-               exposed=None, incref=True, pubkey=None):
+def _auto_proxy(token, serializer, manager=None, authkey=None,
+                exposed=None, incref=True, pubkey=None):
     """
     Return an auto-proxy for `token`.
-    This version uses :func:`make_proxy_type`.
+    This version uses :func:`_make_proxy_type`.
     """
     _Client = listener_client[serializer][1]
 
@@ -1073,7 +1136,7 @@ def auto_proxy(token, serializer, manager=None, authkey=None,
         finally:
             conn.close()
 
-    ProxyType = make_proxy_type('OpenMDAO_AutoProxy[%s]' % token.typeid,
+    ProxyType = _make_proxy_type('OpenMDAO_AutoProxy[%s]' % token.typeid,
                                 exposed)
     proxy = ProxyType(token, serializer, manager=manager, authkey=authkey,
                       incref=incref, pubkey=pubkey)

@@ -13,6 +13,8 @@ This module is based on the *distributing.py* file example which was
 #
 
 import copy
+import cPickle
+import getpass
 import itertools
 import logging
 import os
@@ -26,12 +28,7 @@ import threading
 import time
 import traceback
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
-from multiprocessing import Process, current_process, managers
+from multiprocessing import current_process, managers #, Process
 from multiprocessing import util, connection, forking
 
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server, \
@@ -42,8 +39,8 @@ from openmdao.util.wrkpool import WorkerPool
 
 
 # SSH command to be used to access remote hosts.
-if sys.platform == 'win32':
-    _SSH = r'C:\Putty\%s%s' % (os.environ['USERNAME'], '.ppk')
+if sys.platform == 'win32':  #pragma no cover
+    _SSH = r'C:\Putty\%s%s' % (getpass.getuser(), '.ppk')
     _SSH = [r'C:\Putty\plink.exe', '-i', _SSH]
 else:
     _SSH = ['ssh']
@@ -53,37 +50,15 @@ else:
 #_LOGGER = util.get_logger()
 _LOGGER = logging.getLogger('mp_distributing')
 
-def _flush_logger():
-    """ Flush all handlers for _LOGGER. """
-# Is this helpful on any platform?
-    return
-    for handler in _LOGGER.handlers:
-        handler.flush()
 
-
-class HostManager(OpenMDAO_Manager):
+# This is used by Cluster, which also isn't covered.
+# Cluster allocation requires ssh configuration and multiple hosts.
+class HostManager(OpenMDAO_Manager):  #pragma no cover
     """ Manager used for spawning processes on a remote host. """
 
     def __init__(self, address, authkey):
         super(HostManager, self).__init__(address, authkey)
         self._name = 'Host-unknown'
-
-    def Process(self, group=None, target=None, name=None,
-                args=None, kwargs=None):
-        """ Return proxy for remote process. """
-        args = args or ()
-        kwargs = kwargs = {}
-        if hasattr(sys.modules['__main__'], '__file__'):
-            main_path = os.path.basename(sys.modules['__main__'].__file__)
-        else:
-            main_path = None
-        data = pickle.dumps((target, args, kwargs))
-        proc = self._RemoteProcess(data, main_path)
-        if name is None:
-            temp = self._name.split('Host-')[-1] + '/Process-%s'
-            name = temp % ':'.join(map(str, proc.get_identity()))
-        proc.name = name
-        return proc
 
     @classmethod
     def from_address(cls, address, authkey):
@@ -115,35 +90,8 @@ class HostManager(OpenMDAO_Manager):
         return '<Host(%s)>' % self._name
 
 
-class RemoteProcess(Process):
-    """ Represents a process started on a remote host. """
-
-    def __init__(self, data, main_path):
-        assert not main_path or os.path.basename(main_path) == main_path
-        Process.__init__(self)
-        self._data = data
-        self._main_path = main_path
-
-    def start(self):
-        """ Start this manager. """
-        try:
-            Process.start(self)
-        except Exception:
-            traceback.print_exc()
-            raise
-
-    def _bootstrap(self):
-        forking.prepare({'main_path': self._main_path})
-        self._target, self._args, self._kwargs = pickle.loads(self._data)
-        return Process._bootstrap(self)
-
-    def get_identity(self):
-        return self._identity
-
-register(RemoteProcess, HostManager)
-
-
-class Cluster(OpenMDAO_Manager):
+# Cluster allocation requires ssh configuration and multiple hosts.
+class Cluster(OpenMDAO_Manager):  #pragma no cover
     """ Represents a collection of hosts. """
 
     def __init__(self, hostlist, modules, authkey=None):
@@ -191,7 +139,7 @@ class Cluster(OpenMDAO_Manager):
                     other_host = self._hostlist[i]
                     other_host.manager = HostManager.from_address(address,
                                                                   self._authkey)
-                    other_host.Process = other_host.manager.Process
+#                    other_host.Process = other_host.manager.Process
                     other_host.state = 'up'
                     if pubkey_text:
                         other_host.manager._pubkey = decode_public_key(pubkey_text)
@@ -220,7 +168,7 @@ class Cluster(OpenMDAO_Manager):
             else:
                 break
 
-        self._slotlist = [Slot(host) for host in self._hostlist
+        self._slotlist = [_Slot(host) for host in self._hostlist
                                               if host.state == 'up']
         self._slot_iterator = itertools.cycle(self._slotlist)
         self._base_shutdown = self.shutdown
@@ -278,15 +226,15 @@ class Cluster(OpenMDAO_Manager):
                 host.manager.shutdown()
         self._base_shutdown()
 
-    def Process(self, group=None, target=None, name=None,
-                args=None, kwargs=None):
-        """ Return a :class:`Process` object associated with a host.  """
-        args = args or ()
-        kwargs = kwargs or {}
-        slot = self._slot_iterator.next()
-        return slot.Process(
-            group=group, target=target, name=name, args=args, kwargs=kwargs
-            )
+#    def Process(self, group=None, target=None, name=None,
+#                args=None, kwargs=None):
+#        """ Return a :class:`Process` object associated with a host.  """
+#        args = args or ()
+#        kwargs = kwargs or {}
+#        slot = self._slot_iterator.next()
+#        return slot.Process(
+#            group=group, target=target, name=name, args=args, kwargs=kwargs
+#            )
 
     def __getitem__(self, i):
         return self._slotlist[i]
@@ -298,15 +246,17 @@ class Cluster(OpenMDAO_Manager):
         return iter(self._slotlist)
 
 
-class Slot(object):
+# Used by Cluster, which isn't covered.
+class _Slot(object):  #pragma no cover
     """ Class representing a notional cpu in the cluster. """
 
     def __init__(self, host):
         self.host = host
-        self.Process = host.Process
+#        self.Process = host.Process
 
 
-class Host(object):
+# Requires ssh configuration.
+class Host(object):  #pragma no cover
     """
     Represents a host to use as a node in a cluster.
     `hostname` gives the name of the host.
@@ -320,10 +270,7 @@ class Host(object):
         # Putty/Plink.exe wants user@host always.
         parts = hostname.split('@')
         if len(parts) == 1:
-            if sys.platform == 'win32':
-                user = os.environ['USERNAME']
-            else:
-                user = os.environ['USER']
+            user = getpass.getuser()
             self.hostname = '%s@%s' % (user, hostname)
         self.python = python or 'python'
         self.registry = {}
@@ -365,7 +312,7 @@ class Host(object):
             dir=self.tempdir, authkey=str(authkey), parent_address=address,
             registry=self.registry
             )
-        pickle.dump(data, self.proc.stdin, pickle.HIGHEST_PROTOCOL)
+        cPickle.dump(data, self.proc.stdin, pickle.HIGHEST_PROTOCOL)
         self.proc.stdin.close()
 # TODO: put timeout in accept() to avoid this hack.
         time.sleep(1)  # Give the proc time to register startup problems.
@@ -387,7 +334,8 @@ class Host(object):
                 self.state = 'failed'
 
 
-def _check_ssh(hostname):
+# Requires ssh configuration.
+def _check_ssh(hostname):  #pragma no cover
     """ Check basic communication with `hostname`. """
     cmd = copy.copy(_SSH)
     cmd.extend([hostname, 'date'])
@@ -435,7 +383,8 @@ tf = tarfile.open(fileobj=sys.stdin, mode='r|gz')
 tf.extractall()
 print tempdir"'''
 
-def _copy_to_remote(hostname, files, python):
+# Requires ssh configuration.
+def _copy_to_remote(hostname, files, python):  #pragma no cover
     """ Copy files to remote directory, returning name of directory. """
     cmd = copy.copy(_SSH)
     cmd.extend([hostname, python, '-c', _UNZIP_CODE.replace("\n", ';')])
@@ -449,7 +398,8 @@ def _copy_to_remote(hostname, files, python):
     return proc.stdout.read().rstrip()
 
 
-def main():
+# Runs on the remote host.
+def main():  #pragma no cover
     """ Code which runs a host manager. """
     sys.stdout = open('stdout', 'w')
     sys.stderr = open('stderr', 'w')
@@ -465,7 +415,7 @@ def main():
     out.flush()
 
     # Get data from parent over stdin.
-    data = pickle.load(sys.stdin)
+    data = cPickle.load(sys.stdin)
     sys.stdin.close()
     _LOGGER.debug('%s data received', ident)
     out.write('%s data received\n' % ident)

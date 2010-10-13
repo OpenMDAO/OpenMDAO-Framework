@@ -120,6 +120,9 @@ class ShellProc(subprocess.Popen):
     def error_message(self, return_code):
         """
         Return error message for `return_code`.
+        The error messages are derived from the operating system definitions,
+        some programs don't necessarily return exit codes conforming to these
+        definitions.
 
         return_code: int
             Return code from :meth:`poll`.
@@ -127,6 +130,8 @@ class ShellProc(subprocess.Popen):
         if return_code:
             if return_code > 0:
                 error_msg = ': %s' % os.strerror(return_code)
+            elif sys.platform == 'win32':
+                error_msg = '(return code %d)' % return_code
             else:
                 sig = -return_code
                 if sig < signal.NSIG:
@@ -135,6 +140,10 @@ class ShellProc(subprocess.Popen):
                             if getattr(signal, item) == sig:
                                 error_msg = ': %s' % item
                                 break
+                    else:
+                        error_msg = '(return code %d)' % return_code
+                else:
+                    error_msg = '(return code %d)' % return_code
         else:
             error_msg = ''
         return error_msg

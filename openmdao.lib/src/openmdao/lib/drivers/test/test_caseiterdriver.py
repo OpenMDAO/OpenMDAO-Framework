@@ -225,7 +225,7 @@ class TestCase(unittest.TestCase):
             return False
 
     def run_cases(self, sequential, forced_errors=False):
-        """ Evaluate cases, either sequentially or across  multiple servers. """
+        """ Evaluate cases, either sequentially or across multiple servers. """
         self.model.driver.sequential = sequential
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()

@@ -8,7 +8,7 @@ from enthought.traits.api import Bool, Instance
 from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
-from openmdao.main.rbac import Credentials, get_credentials, set_credentials
+from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer
@@ -29,13 +29,6 @@ class CaseIterDriverBase(Driver):
     to the ROSE framework. Concurrent evaluation is supported, with the various
     evaluations executed across servers obtained from the
     :class:`ResourceAllocationManager`.
-
-    - The `model` to be executed is found in the workflow.
-    - The `recorder` socket is used to record results.
-    - If `sequential` is True, then the cases are evaluated sequentially.
-    - If `reload_model` is True, the model is reloaded between executions.
-    - `max_retries` sets the number of times to retry a failed case.
-    
     """
 
     recorder = Instance(ICaseRecorder, allow_none=True, 
@@ -173,9 +166,6 @@ class CaseIterDriverBase(Driver):
     def _start(self):
         """ Start evaluating cases concurrently. """
         credentials = get_credentials()
-        if credentials is None:
-            credentials = Credentials()
-            set_credentials(credentials)
 
         # Determine maximum number of servers available.
         resources = {
@@ -195,7 +185,6 @@ class CaseIterDriverBase(Driver):
         while n_servers < max_servers:
             if self._stop:
                 break
-
             if self._iter is None:
                 break
 
@@ -234,7 +223,7 @@ class CaseIterDriverBase(Driver):
                         else:
                             self._in_use[name] = self._server_ready(name)
 
-        if sys.platform == 'win32':
+        if sys.platform == 'win32':  #pragma no cover
             # Don't start server processing until all servers are started,
             # otherwise we have egg removal issues.
             for name in self._in_use.keys():
@@ -259,11 +248,13 @@ class CaseIterDriverBase(Driver):
         for i in range(len(self._queues)):
             try:
                 name, status = self._reply_queue.get(True, 1)
-            except Queue.Empty:
+            # Hard to force worker to hang, which is handled here.
+            except Queue.Empty:  #pragma no cover
                 pass
             else:
                 del self._queues[name]
-        for name in self._queues.keys():
+        # Hard to force worker to hang, which is handled here.
+        for name in self._queues.keys():  #pragma no cover
             self._logger.warning('Timeout waiting for %s to shut-down.', name)
 
     def _busy(self):
@@ -385,8 +376,10 @@ class CaseIterDriverBase(Driver):
             else:
                 self._server_states[server] = _READY
 
-        else:
-            self._logger.error('unexpected state %s for server %s', state, server)
+        # Just being defensive, should never happen.
+        else:  #pragma no cover
+            self._logger.error('unexpected state %s for server %s',
+                               state, server)
             in_use = False
 
         return in_use
@@ -404,10 +397,10 @@ class CaseIterDriverBase(Driver):
         try:
             for event in self.get_events(): 
                 try: 
-                    self._model_set(server,event,None,True)
+                    self._model_set(server, event, None, True)
                 except Exception as exc:
                     msg = "Exception setting '%s': %s" % (name, exc)
-                    self.raise_exception(msg, ServerError)
+                    self.raise_exception(msg, _ServerError)
             for name, index, value in case.inputs:
                 try:
                     self._model_set(server, name, index, value)
@@ -431,7 +424,8 @@ class CaseIterDriverBase(Driver):
         set_credentials(credentials)
 
         server, server_info = RAM.allocate(resource_desc)
-        if server is None:
+        # Just being defensive, this should never happen.
+        if server is None:  #pragma no cover
             self._logger.error('Server allocation for %s failed :-(', name)
             self._reply_queue.put((name, False))
             return
@@ -474,7 +468,7 @@ class CaseIterDriverBase(Driver):
         tlo = self._servers[server].load_model(self._egg_file)
         if not tlo:
             self._logger.error("server.load_model of '%s' failed :-(",
-                       self._egg_file)
+                               self._egg_file)
             return False
         self._top_levels[server] = tlo
         return True
@@ -485,7 +479,6 @@ class CaseIterDriverBase(Driver):
             self.parent.set(name, value, index)
         else:
             self._top_levels[server].set(name, value, index)
-        return True
 
     def _model_get(self, server, name, index):
         """ Get value from server's model. """
@@ -513,9 +506,9 @@ class CaseIterDriverBase(Driver):
         except Exception as exc:
             self._exceptions[server] = exc
             self._logger.error('Caught exception from server %s, PID %d on %s: %s',
-                       self._server_info[server]['name'],
-                       self._server_info[server]['pid'],
-                       self._server_info[server]['host'], exc)
+                               self._server_info[server]['name'],
+                               self._server_info[server]['pid'],
+                               self._server_info[server]['host'], exc)
 
     def _model_status(self, server):
         """ Return execute status from model. """
@@ -524,9 +517,9 @@ class CaseIterDriverBase(Driver):
 
 class CaseIteratorDriver(CaseIterDriverBase):
     """
-    Run a set of cases provided by an :class:`ICaseIterator`. Concurrent evaluation 
-    is supported, with the various evaluations executed across servers obtained from the
-    :class:`ResourceAllocationManager`.
+    Run a set of cases provided by an :class:`ICaseIterator`. Concurrent
+    evaluation is supported, with the various evaluations executed across
+    servers obtained from the :class:`ResourceAllocationManager`.
     """
 
     iterator = Instance(ICaseIterator, iotype='in',

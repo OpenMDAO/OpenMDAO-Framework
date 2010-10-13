@@ -2,6 +2,7 @@
 Test resource allocation.
 """
 
+import getpass
 import glob
 import logging
 import multiprocessing
@@ -23,10 +24,7 @@ class TestCase(unittest.TestCase):
     """ Test resources. """
 
     def setUp(self):
-        try:
-            self.user = os.environ['USER']
-        except KeyError:
-            self.user = None  # Probably Windows...
+        self.user = getpass.getuser()
         self.node = platform.node()
         self.name = self.node.replace('.', '_')
         self.python = find_python()
@@ -63,9 +61,9 @@ class TestCase(unittest.TestCase):
             if info.st_uid == uid:
                 shutil.rmtree(path)
 
-    def test_normal(self):
+    def test_cluster(self):
         logging.debug('')
-        logging.debug('test_normal')
+        logging.debug('test_cluster')
 
         if self.skip_ssh:
             return
@@ -91,6 +89,21 @@ class TestCase(unittest.TestCase):
         n_servers = self.cluster.max_servers({'python_version':'bad-version'})
         self.assertEqual(n_servers, 0)
 
+    def test_max_servers(self):
+        logging.debug('')
+        logging.debug('test_max_servers')
+
+        local = ResourceAllocationManager.get_allocator(0)
+        n_servers = local.max_servers({'python_version':sys.version[:3]})
+        try:
+            n_cpus = multiprocessing.cpu_count()
+        except AttributeError:
+            n_cpus = 1
+        self.assertEqual(n_servers, local.max_load * n_cpus)
+
+        n_servers = local.max_servers({'python_version':'bad-version'})
+        self.assertEqual(n_servers, 0)
+
     def test_hostnames(self):
         logging.debug('')
         logging.debug('test_hostnames')
@@ -98,9 +111,13 @@ class TestCase(unittest.TestCase):
         # Ensure we aren't held up by local host load problems.
         local = ResourceAllocationManager.get_allocator(0)
         local.max_load = 10
+        self.assertEqual(local.get_name(), 'LocalHost')
 
         hostnames = ResourceAllocationManager.get_hostnames({'n_cpus':1})
         self.assertEqual(hostnames[0], platform.node())
+        
+        hostnames = ResourceAllocationManager.get_hostnames({'no_such_resource':1})
+        self.assertEqual(hostnames, None)
         
     def test_resources(self):
         logging.debug('')
@@ -111,6 +128,9 @@ class TestCase(unittest.TestCase):
         local.max_load = 10
 
         result = ResourceAllocationManager.allocate({'localhost':False})
+        self.assertEqual(result, (None, None))
+
+        result = ResourceAllocationManager.allocate({'exclude':[platform.node()]})
         self.assertEqual(result, (None, None))
 
         result = ResourceAllocationManager.allocate({'n_cpus':1000000})

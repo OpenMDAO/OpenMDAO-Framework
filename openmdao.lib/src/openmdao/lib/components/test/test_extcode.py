@@ -18,7 +18,7 @@ from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
 from openmdao.lib.components.external_code import ExternalCode
 
-from openmdao.util.testutil import find_python
+from openmdao.util.testutil import assert_raises, find_python
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -159,6 +159,10 @@ class TestCase(unittest.TestCase):
 
         extcode = set_as_top(ExternalCode())
 
+        assert_raises(self, "extcode.copy_inputs('Inputs', '*.inp')",
+                      globals(), locals(), RuntimeError,
+                      ": inputs_dir 'Inputs' does not exist")
+
         os.mkdir('Inputs')
         try:
             shutil.copy('sleep.py', os.path.join('Inputs', 'junk.inp'))
@@ -168,6 +172,10 @@ class TestCase(unittest.TestCase):
             shutil.rmtree('Inputs')
             if os.path.exists('junk.inp'):
                 os.remove('junk.inp')
+
+        assert_raises(self, "extcode.copy_results('Outputs', '*.dat')",
+                      globals(), locals(), RuntimeError,
+                      ": results_dir 'Outputs' does not exist")
 
         os.mkdir('Outputs')
         try:

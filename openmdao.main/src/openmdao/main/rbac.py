@@ -24,8 +24,8 @@ credentials match those in effect when the controller object was created.
 """
 
 import fnmatch
+import getpass
 import inspect
-import os
 import socket
 import threading
 
@@ -44,7 +44,7 @@ class Credentials(object):
     """
 
     def __init__(self):
-        self.user = '%s@%s' % (os.getenv('LOGNAME'), socket.gethostname())
+        self.user = '%s@%s' % (getpass.getuser(), socket.gethostname())
 
     def __eq__(self, other):
         return self.user == other.user
