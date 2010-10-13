@@ -64,7 +64,7 @@ Guide.*  These requirements are described below.
       We use the Express version, but others (Professional, Standard) should work too. To get this software,
       go to the `downloads page <http://www.microsoft.com/express/downloads/#2008-Visual-CPP>`_.
 
-    - *mingw32*   (for FORTRAN and optionally as a Visual C++ replacement)
+    - *mingw32*   (for Fortran and optionally as a Visual C++ replacement)
       
       Make sure to put the ``bin`` directory of the mingw32 install in your path.
       You can find mingw32 `here`__.
@@ -79,7 +79,7 @@ Guide.*  These requirements are described below.
 
          
          
-.. __: http://sourceforge.net/projects/mingw/files/Automated%20MinGW%20Installer/MinGW%205.1.6/MinGW-5.1.6.exe/download
+.. __: http://sourceforge.net/projects/mingw/files
 
 
 .. index:: proxy settings
