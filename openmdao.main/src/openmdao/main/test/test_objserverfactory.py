@@ -109,8 +109,9 @@ class TestCase(unittest.TestCase):
 
         # Get stats.
         info = server.stat('zipped')
-        assert_raises(self, "server.stat('no-such-file')", globals(), locals(),
-                      OSError, "[Errno 2] No such file or directory: 'no-such-file'")
+
+        assert_raises(self, "server.stat('no-such-file')",
+                      globals(), locals(), OSError, msg)
 
         # Remove zipped contents.
         server.remove('xyzzy')
