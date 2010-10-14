@@ -127,6 +127,7 @@ class TestCase(unittest.TestCase):
 
         # Unpack.
         server.unpack_zipfile('zipped')
+        server.chmod('zipped', 0600)  # Ensure we can remove under Windows.
 
         # Verify contents.
         inp = server.open('xyzzy', 'r')
