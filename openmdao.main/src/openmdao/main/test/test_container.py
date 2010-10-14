@@ -22,14 +22,12 @@ class MyHasTraits(HasTraits):
     def __init__(self, *args, **kwargs):
         super(MyHasTraits, self).__init__(*args, **kwargs)
         self.add_trait('dyntrait', Float(9., desc='some desc'))
-        setattr(self, 'dyntrait', getattr(self, 'dyntrait'))
 
 
 class MyContainer(Container):
     def __init__(self, *args, **kwargs):
         super(MyContainer, self).__init__(*args, **kwargs)
         self.add_trait('dyntrait', Float(9., desc='some desc'))
-        setattr(self, 'dyntrait', getattr(self, 'dyntrait'))
 
 
 class ContainerTestCase(unittest.TestCase):
@@ -60,11 +58,22 @@ class ContainerTestCase(unittest.TestCase):
         """this teardown function will be called after each test"""
         self.root = None
 
+    #def test_set_source(self):
+        #self.root.set_source('c2.c22.c221.number', 'c1.foo')
+        #self.assertEqual(self.root._sources['c2.c22.c221.number'], 'c1.foo')
+        #self.assertEqual(self.root.c2._sources['c22.c221.number'], 'parent.c1.foo')
+        #self.assertEqual(self.root.c2.c22._sources['c221.number'], 'parent.parent.c1.foo')
+        #self.assertEqual(self.root.c2.c22.c221._sources['number'], 'parent.parent.parent.c1.foo')
+        
+    
     def test_deepcopy(self):
         cont = MyContainer()
         self.assertEqual(cont.dyntrait, 9.)
         ccont = copy.deepcopy(cont)
         self.assertEqual(ccont.dyntrait, 9.)
+        cont.dyntrait = 12.
+        ccont2 = copy.deepcopy(cont)
+        self.assertEqual(ccont2.dyntrait, 12.)
         
     def test_add_bad_child(self):
         foo = Container()
@@ -251,7 +260,7 @@ class ContainerTestCase(unittest.TestCase):
             self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected ValueError')
-
+            
 
 if __name__ == "__main__":
     import nose

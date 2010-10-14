@@ -22,6 +22,7 @@ from openmdao.main.interfaces import IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
+from openmdao.main.depgraph import DependencyGraph
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -111,6 +112,10 @@ class Component (Container):
         # contains validity flag for each io Trait (inputs are valid since they're not connected yet,
         # and outputs are invalid)
         self._valid_dict = dict([(name,t.iotype=='in') for name,t in self.class_traits().items() if t.iotype])
+        
+        # dependency graph between us and our boundaries (bookkeeps connections between our
+        # variables and external ones)
+        self._depgraph = DependencyGraph()
         
         # Components with input CaseIterators will be forced to execute whenever run() is
         # called on them, even if they don't have any invalid inputs or outputs.
@@ -279,14 +284,11 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
-                #if self.get_pathname() != 'branin_meta_model':
-                    #print 'execute %s' % self.get_pathname()
-                #else:
-                    #sys.stdout.write('.')
+                print 'execute %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
-            #else:
-                #print 'skipping %s' % self.get_pathname()
+            else:
+                print 'skipping %s' % self.get_pathname()
         finally:
             if self.directory:
                 self.pop_dir()
@@ -349,7 +351,7 @@ class Component (Container):
                 for count,tup in zip(counts, self._expr_sources):
                     if count != tup[1]:
                         self._call_execute = True  # to avoid making this same check unnecessarily later
-                        # update the count information since we're got it, to avoid making another call
+                        # update the count information since we've got it, to avoid making another call
                         for i,tup in enumerate(self._expr_sources):
                             self._expr_sources[i] = (tup[0], count)
                         return False
@@ -392,6 +394,7 @@ class Component (Container):
         """
         if self._output_names is None:
             self._output_names = [k for k,v in self.items(iotype='out')]
+            self._output_names.extend([k for k,v in self._ext_dests.items()])
             
         if valid is None:
             return self._output_names
@@ -402,9 +405,17 @@ class Component (Container):
         """Return a list of names of child Containers."""
         if self._container_names is None:
             self._container_names = [n for n,v in self.items() 
-                                                   if isinstance(v,Container)]            
+                                                   if isinstance(v,Container)]
         return self._container_names
             
+    def _cross_boundary_connect(self, srcpath, destpath):
+        super(Component, self)._cross_boundary_connect(srcpath, destpath)
+        if srcpath.startswith('parent.'):
+            self._valid_dict[destpath] = False
+        else:
+            self._valid_dict[srcpath] = False
+        self.config_changed(update_parent=False)
+        
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency resulting from ExprEvaluators in this Component.
@@ -957,25 +968,23 @@ class Component (Container):
         """Stop this component."""
         self._stop = True
 
-    def set_source(self, destname, source_tup):
-        """Mark the named io trait as a destination by registering a source
-        for it, which will prevent it from being set directly or connected 
-        to another source.
+    #def set_source(self, destname, srcname):
+        #"""Mark the named io trait as a destination by registering a source
+        #for it, which will prevent it from being set directly or connected 
+        #to another source.
         
-        destname: str
-            Name of the destination variable.
+        #destname: str
+            #Name of the destination variable.
             
-        source_tup: 2-tuple (upscopes, source_name)
-            Tuple where upscopes is an int indicating the number of scopes
-            above the parent component where the source is found, and 
-            source_name is the pathname of the source variable relative to
-            the parent scope indicated in upscopes.  The upscopes value is
-            necessary because the source_name by itself is not unique.
+        #srcname: str
+            #Pathname of the source variable. The pathname may contain references
+            #to 'parent.' indicating that the source is from outside of the 
+            #immediate parent's scope.
             
-        """
-        super(Component, self).set_source(destname, source_tup)
-        if '.' in destname:
-            self._valid_dict[destname] = False
+        #"""
+        #super(Component, self).set_source(destname, srcname)
+        #if '.' in destname:
+            #self._valid_dict[destname] = False
 
     def get_valid(self, name):
         """Get the value of the validity flag for the io trait with the given

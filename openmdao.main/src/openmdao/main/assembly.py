@@ -18,8 +18,10 @@ from openmdao.main.container import find_trait_and_value, get_trait
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression, ExpressionList
+from openmdao.main.depgraph import DependencyGraph
 
 _iodict = { 'out': 'output', 'in': 'input' }
+
 
 class PassthroughTrait(TraitType):
     """A trait that can use another trait for validation, but otherwise is
@@ -44,7 +46,7 @@ class Assembly (Component):
                            "this Assembly")
     
     def __init__(self, doc=None, directory=''):
-        self.comp_graph = ComponentGraph()
+        self.comp_graph = DependencyGraph()
                 
         super(Assembly, self).__init__(doc=doc, directory=directory)
         
@@ -74,53 +76,53 @@ class Assembly (Component):
         return super(Assembly, self).remove(name)
 
 
-    def create_passthrough(self, pathname, alias=None):
-        """Creates a PassthroughTrait that uses the trait indicated by
-        pathname for validation (if it's not a property trait), adds it to
-        self, and creates a connection between the two. If alias is *None,*
-        the name of the "promoted" trait will be the last entry in its
-        pathname. The trait specified by pathname must exist.
-        """
-        if alias:
-            newname = alias
-        else:
-            parts = pathname.split('.')
-            newname = parts[-1]
+    #def create_passthrough(self, pathname, alias=None):
+        #"""Creates a PassthroughTrait that uses the trait indicated by
+        #pathname for validation (if it's not a property trait), adds it to
+        #self, and creates a connection between the two. If alias is *None,*
+        #the name of the "promoted" trait will be the last entry in its
+        #pathname. The trait specified by pathname must exist.
+        #"""
+        #if alias:
+            #newname = alias
+        #else:
+            #parts = pathname.split('.')
+            #newname = parts[-1]
 
-        if newname in self.__dict__:
-            self.raise_exception("'%s' already exists" %
-                                 newname, TraitError)
-        trait, val = find_trait_and_value(self, pathname)
-        if not trait:
-            self.raise_exception("the variable named '%s' can't be found" %
-                                 pathname, TraitError)
-        iotype = trait.iotype
-        # the trait.trait_type stuff below is for the case where the trait is actually
-        # a ctrait (very common). In that case, trait_type is the actual underlying
-        # trait object
-        if (getattr(trait,'get') or getattr(trait,'set') or
-            getattr(trait.trait_type, 'get') or getattr(trait.trait_type,'set')):
-            trait = None  # not sure how to validate using a property
-                          # trait without setting it, so just don't use it
-        newtrait = PassthroughTrait(iotype=iotype, validation_trait=trait)
-        self.add_trait(newname, newtrait)
-        setattr(self, newname, val)
+        #if newname in self.__dict__:
+            #self.raise_exception("'%s' already exists" %
+                                 #newname, TraitError)
+        #trait, val = find_trait_and_value(self, pathname)
+        #if not trait:
+            #self.raise_exception("the variable named '%s' can't be found" %
+                                 #pathname, TraitError)
+        #iotype = trait.iotype
+        ## the trait.trait_type stuff below is for the case where the trait is actually
+        ## a ctrait (very common). In that case, trait_type is the actual underlying
+        ## trait object
+        #if (getattr(trait,'get') or getattr(trait,'set') or
+            #getattr(trait.trait_type, 'get') or getattr(trait.trait_type,'set')):
+            #trait = None  # not sure how to validate using a property
+                          ## trait without setting it, so just don't use it
+        #newtrait = PassthroughTrait(iotype=iotype, validation_trait=trait)
+        #self.add_trait(newname, newtrait)
+        #setattr(self, newname, val)
 
-        if iotype == 'in':
-            self.connect(newname, pathname)
-        else:
-            self.connect(pathname, newname)
+        #if iotype == 'in':
+            #self.connect(newname, pathname)
+        #else:
+            #self.connect(pathname, newname)
 
-        return newtrait
+        #return newtrait
 
-    def get_dyn_trait(self, pathname, iotype):
-        """Retrieves the named trait, attempting to create a PassthroughTrait
-        on-the-fly if the specified trait doesn't exist.
-        """
-        trait = get_trait(self, pathname)
-        if trait is None:
-            trait = self.create_passthrough(pathname)
-        return trait
+    #def get_dyn_trait(self, pathname, iotype):
+        #"""Retrieves the named trait, attempting to create a PassthroughTrait
+        #on-the-fly if the specified trait doesn't exist.
+        #"""
+        #trait = get_trait(self, pathname)
+        #if trait is None:
+            #trait = self.create_passthrough(pathname)
+        #return trait
 
     def _split_varpath(self, path):
         """Return a tuple of compname,component,varname given a path
@@ -134,13 +136,46 @@ class Assembly (Component):
         
         return (compname, getattr(self, compname), varname)
 
+    def _cross_boundary_connect(self, srcpath, destpath):
+        super(Assembly, self)._cross_boundary_connect(srcpath, destpath)
+        scope, _, restofpath = srcpath.partition('.')
+        if scope == 'parent':
+            self.comp_graph.connect('@in.'+restofpath, destpath)
+        else:
+            scope, _, restofpath = destpath.partition('.')
+            if scope == 'parent':
+                self.comp_graph.connect(srcpath, '@out.'+restofpath)
+        
+        
     def connect(self, srcpath, destpath):
         """Connect one src Variable to one destination Variable. This could be
-        a normal connection (output to input) or a passthrough connection."""
+        a normal connection between variables from two internal Components, or
+        it could be a passthrough connection, which connects across the scope boundary
+        of this object.  When a pathname begins with 'parent.', that indicates
+        that it is referring to a Variable outside of this object's scope.
+        
+        srcpath: str
+            Pathname of source variable
+            
+        destpath: str
+            Pathname of destination variable
+        """
 
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
+        if srccompname == 'parent':
+            self._cross_boundary_connect(srcpath, destpath)
+            return
+        elif '.' in srcvarname:
+            srccomp.connect(srcvarname, 'parent.'+destpath)
+            
+        if destcompname == 'parent':
+            self._cross_boundary_connect(srcpath, destpath)
+            return
+        elif '.' in destvarname:
+            destcomp.connect('parent.'+srcpath, destvarname)
+            
         srctrait = srccomp.find_trait(srcvarname)
         desttrait = destcomp.find_trait(destvarname)
         
@@ -165,8 +200,9 @@ class Assembly (Component):
                     ' must be an input variable',
                     RuntimeError)
                 
-        if self.comp_graph.is_destination(destcompname, destvarname):
-            self.raise_exception(destpath+' is already connected',
+        sname = self.comp_graph.get_source(destcompname, destvarname)
+        if sname is not None:
+            self.raise_exception('%s is already connected to %s' % (destpath, sname),
                                  RuntimeError)             
             
         # test compatability (raises TraitError on failure)
@@ -177,14 +213,13 @@ class Assembly (Component):
                                        srccomp.get_wrapped_attr(srcvarname))
                 else:
                     desttrait.validate(destcomp, destvarname, 
-                                       getattr(srccomp, srcvarname))
+                                       srccomp.get(srcvarname))
             except TraitError, err:
                 self.raise_exception("can't connect '%s' to '%s': %s" % 
                                      (srcpath,destpath,str(err)), TraitError)
-        if destcomp is not self:
-            destcomp.set_source(destvarname, (0, srcpath))
-            if srccomp is not self: # neither var is on boundary
-                self.comp_graph.connect(srcpath, destpath)
+            
+        if destcomp is not self and srccomp is not self: # neither var is on boundary
+            self.comp_graph.connect(srcpath, destpath)
         
         # invalidate destvar if necessary
         if destcomp is self and desttrait and desttrait.iotype == 'out': # boundary output
@@ -247,29 +282,28 @@ class Assembly (Component):
         for src,sink in to_remove:
             sinkcomp,sinkvar = sink.split('.', 1)
             if sinkcomp[0] != '@':  # sink is not on boundary
-                getattr(self, sinkcomp).remove_source(sinkvar)
+                #getattr(self, sinkcomp).remove_source(sinkvar)
+                getattr(self, sinkcomp).disconnect(sinkvar)
             self.comp_graph.disconnect(src, sink)
 
-    def set_source(self, destname, source_tup):
-        """Mark the named io trait as a destination by registering a source
-        for it, which will prevent it from being set directly or connected 
-        to another source.
+    #def set_source(self, destname, srcname):
+        #"""Mark the named io trait as a destination by registering a source
+        #for it, which will prevent it from being set directly or connected 
+        #to another source.
         
-        destname: str
-            Name of the destination variable.
+        #destname: str
+            #Name of the destination variable.
             
-        source_tup: 2-tuple (upscopes, source_name)
-            Tuple where upscopes is an int indicating the number of scopes
-            above the parent component where the source is found, and 
-            source_name is the pathname of the source variable relative to
-            the parent scope indicated in upscopes.  The upscopes value is
-            necessary because the source_name by itself is not unique.
+        #srcname: str
+            #Pathname of the source variable. The pathname may contain references
+            #to 'parent.' indicating that the source is from outside of the 
+            #immediate parent's scope.
             
-        """
-        super(Assembly, self).set_source(destname, source_tup)
-        if '.' in destname:
-            self.comp_graph.connect('@in.%s'%source_tup, destname)
-        
+        #"""
+        #super(Assembly, self).set_source(destname, srcname)
+        #if '.' in destname:
+            #self.comp_graph.connect('@in.%s' % srcname, destname)
+            
     def execute (self):
         """Runs driver and updates our boundary variables."""
         self.driver.run()
@@ -334,10 +368,15 @@ class Assembly (Component):
                         (src,srccompname), type(err))
                 try:
                     if srccomp is self:
-                        srcname = src
+                        # if it's a boundary input and it has a '.' in it,
+                        # then it's coming from outside of this scope
+                        if '.' in src: 
+                            srcname = 'parent.'+src
+                        else:
+                            srcname = src
                     else:
                         srcname = '.'.join([srccompname, src])
-                    destcomp.set(dest, srcval, src=(0, srcname))
+                    destcomp.set(dest, srcval, src='parent.'+srcname)
                 except Exception, exc:
                     if compname[0] == '@':
                         dname = dest
@@ -400,7 +439,6 @@ class Assembly (Component):
                 for v in varnames:
                     if v in self._sources:
                         self._valid_dict[v] = False
-            
         visited = set()
         partial_visited = {}
         stack = [(compname, varnames)]
@@ -443,246 +481,6 @@ class Assembly (Component):
         return [getattr(self,c).exec_count for c in compnames]
 
 
-class ComponentGraph(object):
-    """
-    A dependency graph for Components.  Each edge contains a _Link object, which 
-    maps all connected inputs and outputs between the two Components.
-    """
-
-    def __init__(self):
-        self._graph = nx.DiGraph()
-        self._graph.add_nodes_from(['@in', '@out']) #fake nodes for boundary vars
-        
-    def __contains__(self, compname):
-        """Return True if this graph contains the given component."""
-        return compname in self._graph
-    
-    def __len__(self):
-        return len(self._graph)-2  # subtract 2 because of the 2 'fake' nodes
-        
-    def subgraph(self, nodelist):
-        return self._graph.subgraph(nodelist)
-    
-    def copy_graph(self):
-        graph = self._graph.copy()
-        graph.remove_nodes_from(['@in', '@out'])
-        return graph
-    
-    def is_destination(self, cname, varname):
-        if not cname:
-            cname = '@out'
-        for u,v,data in self._graph.in_edges(cname, data=True):
-            if varname in data['link']._dests:
-                return True
-        return False
-
-    def iter(self, scope):
-        """Iterate through the nodes in dataflow order."""
-        for n in nx.topological_sort(self._graph):
-            if n[0] != '@':  # skip 'fake' nodes @in and @out
-                yield getattr(scope, n)
-            
-    def add(self, comp):
-        """Add the name of a Component to the graph."""
-        self._graph.add_node(comp.name)
-
-    def remove(self, comp):
-        """Remove the name of a Component from the graph. It is not
-        an error if the component is not found in the graph.
-        """
-        self._graph.remove_node(comp.name)
-        
-    def list_connections(self, show_passthrough=True):
-        """Return a list of tuples of the form (outvarname, invarname).
-        """
-        conns = []
-        if show_passthrough:
-            nbunch = None
-        else:
-            nbunch = [g for g in self._graph.nodes() if g[0] != '@']
-        for u,v,data in self._graph.edges(nbunch, data=True):
-            link = data['link']
-            if u == '@in':
-                conns.extend([(src, '.'.join([v,dest])) for dest,src in link._dests.items()])
-            elif v == '@out':
-                conns.extend([('.'.join([u,src]), dest) for dest,src in link._dests.items()])
-            else:
-                conns.extend([('.'.join([u,src]), '.'.join([v,dest])) for dest,src in link._dests.items()])
-        return conns
-
-    def in_map(self, cname, varset):
-        """Yield a tuple of lists of the form (compname, srclist, destlist) for each link,
-        where all dests in destlist are found in varset.
-        """
-        for u,v,data in self._graph.in_edges(cname, data=True):
-            srcs = []
-            dests = []
-            link = data['link']
-            matchset = varset.intersection(link._dests.keys())
-            for dest in matchset:
-                dests.append(dest)
-                srcs.append(link._dests[dest])
-            yield (u, srcs, dests)
-
-    def in_links(self, cname):
-        """Return a list of the form [(compname,link), (compname2,link2)...]
-        containing each incoming link to the given component and the name
-        of the connected component.
-        """
-        return [(u,data['link']) for u,v,data in self._graph.in_edges(cname, data=True)]
-    
-    def out_links(self, cname):
-        """Return a list of the form [(compname,link), (compname2,link2)...]
-        containing each outgoing link from the given component and the name
-        of the connected component.
-        """
-        return [(v,data['link']) for u,v,data in self._graph.edges(cname, data=True)]
-
-    def var_edges(self, name):
-        """Return a list of outgoing edges connecting variables."""
-        edges = []
-        for u,v,data in self._graph.edges(name, data=True):
-            edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
-                                for dest,src in data['link']._dests.items()])
-        return edges
-    
-    def var_in_edges(self, name):
-        """Return a list of incoming edges connecting variables."""
-        edges = []
-        for u,v,data in self._graph.in_edges(name, data=True):
-            edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
-                                 for dest,src in data['link']._dests.items()])
-        return edges
-    
-    def connect(self, srcpath, destpath):
-        """Add an edge to our Component graph from 
-        *srccompname* to *destcompname*.
-        """
-        graph = self._graph
-        srccompname, srcvarname = srcpath.split('.', 1)
-        destcompname, destvarname = destpath.split('.', 1)
-        try:
-            link = graph[srccompname][destcompname]['link']
-        except KeyError:
-            link=_Link()
-            graph.add_edge(srccompname, destcompname, link=link)
-            
-        if is_directed_acyclic_graph(graph):
-            link.connect(srcvarname, destvarname)
-        else:   # cycle found
-            # do a little extra work here to give more info to the user in the error message
-            strongly_connected = strongly_connected_components(graph)
-            if len(link) == 0:
-                graph.remove_edge(srccompname, destcompname)
-            for strcon in strongly_connected:
-                if len(strcon) > 1:
-                    raise RuntimeError(
-                        'circular dependency (%s) would be created by connecting %s to %s' %
-                                 (str(strcon), 
-                                  '.'.join([srccompname,srcvarname]), 
-                                  '.'.join([destcompname,destvarname])))
-
-    def disconnect(self, srcpath, destpath):
-        """Disconnect the given variables."""
-        graph = self._graph
-        srccompname, srcvarname = srcpath.split('.', 1)
-        destcompname, destvarname = destpath.split('.', 1)
-        link = self._graph[srccompname][destcompname]['link']
-        link.disconnect(srcvarname, destvarname)
-        if len(link) == 0:
-            self._graph.remove_edge(srccompname, destcompname)
-
-    #def push_data(self, srccompname, scope):
-        #for destcompname, link in self.out_links(srccompname):
-            #link.push(scope, srccompname, destcompname)
-
-            
-class _Link(object):
-    """A Class for keeping track of all connections between two Components."""
-    def __init__(self, connections=None):
-        self._srcs = {}
-        self._dests = {}
-        if connections is not None:
-            for src,dest in connections.items():
-                self.connect(src, dest)
-
-    def __len__(self):
-        return len(self._srcs)
-
-    def connect(self, src, dest):
-        if dest in self._dests:
-            raise RuntimeError("%s is already connected" % dest)
-        if src not in self._srcs:
-            self._srcs[src] = []
-        self._srcs[src].append(dest)
-        self._dests[dest] = src
-        
-    def disconnect(self, src, dest):
-        del self._dests[dest]
-        dests = self._srcs[src]
-        dests.remove(dest)
-        if len(dests) == 0:
-            del self._srcs[src]
-    
-    def invalidate(self, destcomp, varlist=None):
-        if varlist is None:
-            destcomp.set_valids(self._dests.keys(), False)
-        else:
-            destcomp.set_valids(varlist, False)
-
-    def get_dests(self, srcs=None):
-        """Return the list of destination vars that match the given source vars.
-        If srcs is None, return a list of all dest vars.  Ignore any src vars
-        that are not part of this link.
-        """
-        if srcs is None:
-            return self._dests.keys()
-        else:
-            dests = []
-            for name in srcs:
-                dests.extend(self._srcs.get(name, []))
-            return dests
-    
-    def get_srcs(self, dests=None):
-        """Return the list of source vars that match the given dest vars.
-        If dests is None, return a list of all src vars.  Ignore any dest vars
-        that are not part of this link.
-        """
-        if dests is None:
-            return self._srcs.keys()
-        else:
-            srcs = []
-            for name in dests:
-                src = self._dests.get(name)
-                if src:
-                    srcs.append(src)
-            return srcs
-
-    def push(self, scope, srccompname, destcompname):
-        """Push the values of all sources to their corresponding destinations
-        for this link.
-        """
-        # TODO: change to use multiset calls
-        srccomp = getattr(scope, srccompname)
-        destcomp = getattr(scope, destcompname)
-        
-        for src,dests in self._srcs.items():
-            for dest in dests:
-                try:
-                    srcval = srccomp.get_wrapped_attr(src)
-                except Exception, err:
-                    scope.raise_exception(
-                        "error retrieving value for %s from '%s'" %
-                        (src,srccompname), type(err))
-                try:
-                    srcname = '.'.join([srccompname,src])
-                    destcomp.set(dest, srcval, src=srcname)
-                except Exception, exc:
-                    dname = '.'.join([destcompname,dest])
-                    scope.raise_exception("cannot set '%s' from '%s': %s" % 
-                                          (dname, srcname, exc), type(exc))
-        
-
 def dump_iteration_tree(obj):
     """Returns a text version of the iteration tree
     of an OpenMDAO object or hierarchy.  The tree
@@ -710,3 +508,27 @@ def dump_iteration_tree(obj):
     _dump_iteration_tree(obj, f, 0)
     return f.getvalue()
 
+
+def asm_dump(asm):
+    def _asm_dump(asm, f):
+        f.write('inputs: %s\n' % asm.list_inputs())
+        f.write('outputs: %s\n' % asm.list_outputs())
+        f.write('boundary ins: \n')
+        for name,link in asm.comp_graph.out_links('@in'):
+            for src in link.get_srcs():
+                f.write('   %s\n' % src)
+        f.write('_sources:\n')
+        for dest,src in asm._sources.items():
+            f.write('   s: %s,  d: %s\n' % (src,dest))
+        f.write('boundary outs: \n')
+        for name,link in asm.comp_graph.in_links('@out'):
+            for dest in link.get_dests():
+                f.write('   %s\n' % dest)
+        f.write('_ext_dests:\n')
+        for src, destlst in asm._ext_dests.items():
+            f.write('   s: %s,  d: %s\n' % (src,destlst))
+        f.write('valids: %s\n' % asm._valid_dict)
+    f = cStringIO.StringIO()
+    _asm_dump(asm, f)
+    return f.getvalue()
+    

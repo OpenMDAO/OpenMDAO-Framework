@@ -74,81 +74,81 @@ push_exception_handler(handler = lambda o, t, ov, nv: None,
 _namecheck_rgx = re.compile(
     '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
     
-class _DumbTmp(object):
-    pass
+#class _DumbTmp(object):
+    #pass
 
-class _PathProperty(TraitType):
-    """A trait that allows attributes in child objects to be referenced
-    using an alias in a parent scope.  We don't use a delegate because
-    we can't be sure that the attribute we want is found in a HasTraits
-    object.
-    """
-    def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
-        ref_name = metadata.get('ref_name')
-        if not ref_name:
-            raise TraitError("_PathProperty constructor requires a"
-                             " 'ref_name' argument.")
-        self._names = ref_name.split('.')
-        if len(self._names) < 2:
-            raise TraitError("_PathProperty ref_name must have at least "
-                             "two entries in the path."
-                             " The given ref_name was '%s'" % ref_name)        
-        #make weakref to a transient object to force a re-resolve later
-        #without checking for self._ref being equal to None
-        self._ref = weakref.ref(_DumbTmp()) 
-        super(_PathProperty, self).__init__(default_value, **metadata)
+#class _PathProperty(TraitType):
+    #"""A trait that allows attributes in child objects to be referenced
+    #using an alias in a parent scope.  We don't use a delegate because
+    #we can't be sure that the attribute we want is found in a HasTraits
+    #object.
+    #"""
+    #def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
+        #ref_name = metadata.get('ref_name')
+        #if not ref_name:
+            #raise TraitError("_PathProperty constructor requires a"
+                             #" 'ref_name' argument.")
+        #self._names = ref_name.split('.')
+        #if len(self._names) < 2:
+            #raise TraitError("_PathProperty ref_name must have at least "
+                             #"two entries in the path."
+                             #" The given ref_name was '%s'" % ref_name)        
+        ##make weakref to a transient object to force a re-resolve later
+        ##without checking for self._ref being equal to None
+        #self._ref = weakref.ref(_DumbTmp()) 
+        #super(_PathProperty, self).__init__(default_value, **metadata)
 
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        state['_ref'] = self._ref()
-        return state
+    #def __getstate__(self):
+        #state = self.__dict__.copy()
+        #state['_ref'] = self._ref()
+        #return state
     
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        if self._ref is None:
-            self._ref = weakref.ref(_DumbTmp())
-        else:
-            self._ref = weakref.ref(self._ref)
+    #def __setstate__(self, state):
+        #self.__dict__.update(state)
+        #if self._ref is None:
+            #self._ref = weakref.ref(_DumbTmp())
+        #else:
+            #self._ref = weakref.ref(self._ref)
     
-    def _resolve(self, obj):
-        """Try to resolve down to the last containing object in the path and
-        store a weakref to that object.
-        """
-        # TODO - need to handle only being able to resolve down to 
-        #        the nearest proxy here
-        try:
-            for name in self._names[:-1]:
-                obj = getattr(obj, name)
-        except AttributeError:
-            raise TraitError("_PathProperty cannot resolve path '%s'" % 
-                             '.'.join(self._names))
-        self._last_name = self._names[-1]
-        self._ref = weakref.ref(obj)
-        return obj
+    #def _resolve(self, obj):
+        #"""Try to resolve down to the last containing object in the path and
+        #store a weakref to that object.
+        #"""
+        ## TODO - need to handle only being able to resolve down to 
+        ##        the nearest proxy here
+        #try:
+            #for name in self._names[:-1]:
+                #obj = getattr(obj, name)
+        #except AttributeError:
+            #raise TraitError("_PathProperty cannot resolve path '%s'" % 
+                             #'.'.join(self._names))
+        #self._last_name = self._names[-1]
+        #self._ref = weakref.ref(obj)
+        #return obj
             
-    def get(self, obj, name):
-        """Return the value of the referenced attribute."""
-        return getattr(self._ref() or self._resolve(obj), self._last_name)
+    #def get(self, obj, name):
+        #"""Return the value of the referenced attribute."""
+        #return getattr(self._ref() or self._resolve(obj), self._last_name)
 
-    def set(self, obj, name, value):
-        """Set the value of the referenced attribute."""
-        if self.iotype == 'out':
-            raise TraitError('%s is an output trait and cannot be set' % name)
+    #def set(self, obj, name, value):
+        #"""Set the value of the referenced attribute."""
+        #if self.iotype == 'out':
+            #raise TraitError('%s is an output trait and cannot be set' % name)
         
-        if self.trait:
-            value = self.trait.validate(obj, name, value)
+        #if self.trait:
+            #value = self.trait.validate(obj, name, value)
         
-        setattr(self._ref() or self._resolve(obj), self._last_name, value)
+        #setattr(self._ref() or self._resolve(obj), self._last_name, value)
     
         
-def _tup_to_srcname(cont, tup):
-    """Convert (upscopes, srcname) to source name."""
-    if tup is None:
-        return None
-    if tup[0] == 0:
-        return tup[1]
-    scopename = cont.parent.get_pathname().rsplit('.', tup[0])[0]
-    return '%s.%s' % (scopename,tup[1])
+#def _tup_to_srcname(cont, tup):
+    #"""Convert (upscopes, srcname) to source name."""
+    #if tup is None:
+        #return None
+    #if tup[0] == 0:
+        #return tup[1]
+    #scopename = cont.parent.get_pathname().rsplit('.', tup[0])[0]
+    #return '%s.%s' % (scopename,tup[1])
     
         
 class Container(HasTraits):
@@ -159,11 +159,11 @@ class Container(HasTraits):
     
     def __init__(self, doc=None, iotype=None):
         super(Container, self).__init__()
-        self._sources = {}  # for checking that destination traits cannot be 
-                            # set by other objects. Key is destination name,
-                            # value is (upscopes, source_name)
+        #self._sources = {}  # for checking that destination traits cannot be 
+        #                    # set by other objects. Key is destination name,
+        #                    # value is (upscopes, source_name)
                             
-        self._ext_dests = {} # outputs to outside our parent scope (keyed by source)
+        #self._ext_dests = {} # outputs to outside our parent scope (keyed by source)
                           
         # for keeping track of dynamically added traits for serialization
         self._added_traits = {}
@@ -245,6 +245,76 @@ class Container(HasTraits):
             name = obj.name
         return '.'.join(path[::-1])
             
+    def _cross_boundary_connect(self, srcpath, destpath):
+        if srcpath.startswith('parent.'):
+            if not self.contains(destpath):
+                self.raise_exception("Can't find '%s'" % destpath, AttributeError)
+            #if destpath in self._sources:
+            sname = self._depgraph.get_source(destpath)
+            if sname is not None:
+                self.raise_exception(
+                    "'%s' is already connected to source '%s'" % 
+                    #(destpath, self._sources[destpath]), TraitError)
+                    (destpath, sname), TraitError)
+            #self._sources[destpath] = srcpath
+            self._depgraph.connect(srcpath, destpath)
+            cname, _, restofpath = destpath.partition('.')
+            if restofpath:
+                getattr(self, cname).connect('parent.'+srcpath, restofpath)
+        elif destpath.startswith('parent.'):
+            if not self.contains(srcpath):
+                self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
+            #if srcpath not in self._ext_dests:
+            #    self._ext_dests[srcpath] = []
+            #self._ext_dests[srcpath].append(destpath)
+            self._depgraph.connect(srcpath, destpath)
+            cname, _, restofpath = srcpath.partition('.')
+            if restofpath:
+                getattr(self, cname).connect(restofpath, 'parent.'+destpath)
+        else:
+            self.raise_exception("Only cross-boundary connections are supported. Cannot connect '%s' to '%s'" %
+                                 (srcpath, destpath))
+    
+    def connect(self, srcpath, destpath):
+        """Connect one src Variable to one destination Variable. This must be a 
+        passthrough connection, which connects across the scope boundary
+        of this object.  When a pathname begins with 'parent.', that indicates
+        that it is referring to a Variable outside of this object's scope.
+        
+        srcpath: str
+            Pathname of source variable
+            
+        destpath: str
+            Pathname of destination variable
+        """
+        self._cross_boundary_connect(srcpath, destpath)
+                
+    def disconnect(self, varpath, varpath2=None):
+        """If varpath2 is supplied, remove the connection between varpath and
+        varpath2. Otherwise, remove all connections to/from varpath in the 
+        current scope. If both paths are given, the first is assumed to be 
+        the source and the second is assumed to be the destination.
+        """
+        if not self.contains(varpath):
+            self.raise_exception("Can't find '%s'" % varpath, AttributeError)
+        if varpath2 is None:
+            if varpath in self._sources:
+                del self._sources[varpath]
+            elif varpath in self._ext_dests:
+                del self._ext_dests[varpath]
+        else:
+            if not self.contains(varpath2):
+                self.raise_exception("Can't find '%s'" % varpath2, AttributeError)
+            if varpath.startswith('parent.'):
+                del self._sources[varpath2]
+            elif varpath2.startswith('parent.'):
+                self._ext_dests[varpath].remove(varpath2)
+                if len(self._ext_dests[varpath]) == 0:
+                    del self._ext_dests[varpath]
+            else:
+                self.raise_exception("Only cross-boundary connections are supported. Cannot disconnect '%s' from '%s'" %
+                                     (varpath, varpath2))
+
     #
     #  HasTraits overrides
     #
@@ -337,7 +407,7 @@ class Container(HasTraits):
                 self.raise_exception(
                     "'%s' is already connected to source '%s' and "
                     "cannot be directly set"%
-                    (name, _tup_to_srcname(self, self._sources[name])), TraitError)
+                    (name, self._sources[name]), TraitError)
             self._call_execute = True
             self._input_changed(name)
             
@@ -353,9 +423,11 @@ class Container(HasTraits):
         a 'copy' metadata attribute that is not None. Possible values for
         'copy' are 'shallow' and 'deep'.
         """
-        childname, _, restofpath = name.partition('.')
+        scopename, _, restofpath = name.partition('.')
         if restofpath:
-            obj = getattr(self, childname)
+            if scopename == 'parent':
+                return self.parent.get_wrapped_attr(name[7:])
+            obj = getattr(self, scopename)
             if isinstance(obj, HasTraits):
                 return obj.get_wrapped_attr(restofpath)
             else:
@@ -374,9 +446,6 @@ class Container(HasTraits):
         val = getattr(self, name)
         # copy value if 'copy' found in metadata
         if ttype.copy:
-            #if isinstance(val, HasTraits):
-            #    val = val.clone_traits(copy = ttype.copy)
-            #else:
             val = _copydict[ttype.copy](val)
         if getwrapper is not None:
             wrapper = getwrapper()
@@ -617,46 +686,15 @@ class Container(HasTraits):
             else:
                 return obj._array_get(restofpath, index)
      
-    def set_source(self, destname, source_tup):
-        """Mark the named io trait as a destination by registering a source
-        for it, which will prevent it from being set directly or connected 
-        to another source.
-        
-        destname: str
-            Name of the destination variable.
-            
-        source_tup: 2-tuple (upscopes, source_name)
-            Tuple where upscopes is an int indicating the number of scopes
-            above the parent component where the source is found, and 
-            source_name is the pathname of the source variable relative to
-            the parent scope indicated in upscopes.  The upscopes value is
-            necessary because the source_name by itself is not unique.
-            
-        """
-        if destname in self._sources:
-            self.raise_exception(
-                "'%s' is already connected to source '%s'" % 
-                (destname, self._sources[destname]), TraitError)
-        self._sources[destname] = source_tup
-        cname, _, restofpath = destname.partition('.')
-        if restofpath:
-            getattr(self, cname).set_source(restofpath, (source_tup[0]+1, source_tup[1]))
-            
-    def remove_source(self, destination):
-        """Remove the source from the given destination io trait. This will
-        allow the destination to later be connected to a different source or
-        to have its value directly set.
-        """
-        del self._sources[destination]
-        
-    def _check_trait_settable(self, name, srctup=None, force=False):
+    def _check_trait_settable(self, name, source=None, force=False):
         if force:
             src = None
         else:
-            src = self._sources.get(name, None)
+            #src = self._sources.get(name, None)
+            src = self._depgraph.get_source(name)
         trait = get_trait(self, name)
         if trait:
-            if src is not None and src != srctup:
+            if src is not None and src != source:
                 if trait.iotype != 'in':
                     self.raise_exception(
                         "'%s' is not an input trait and cannot be set" %
@@ -665,7 +703,7 @@ class Container(HasTraits):
                     self.raise_exception(
                         "'%s' is connected to source '%s' and cannot be "
                         "set by source '%s'" %
-                        (name,_tup_to_srcname(self, src),_tup_to_srcname(self, srctup)), TraitError)
+                        (name,src,source), TraitError)
         else:
             self.raise_exception("object has no attribute '%s'" % name,
                                  TraitError)
@@ -689,7 +727,7 @@ class Container(HasTraits):
                                      TraitError)
             if isinstance(obj, Container):
                 if src is not None:
-                    src = (src[0]+1, src[1])
+                    src = 'parent.'+src
                 obj.set(restofpath, value, index, src=src, 
                         force=force)
             elif index is None:
@@ -969,17 +1007,19 @@ class Container(HasTraits):
         trait: TraitType, optional
             A validation trait for the given attribute.
         """
-        trait = get_trait(self, pathname)
-        if trait:
-            self.raise_exception("trait '%s' already exists" % pathname, NameError)
-        objtrait, value = find_trait_and_value(self, pathname)
-        if iotype is None and objtrait is not None:
-            iotype = objtrait.iotype
-        if trait is None:
-            trait = objtrait
-        # if we make it to here, object specified by pathname exists
-        return _PathProperty(ref_name=pathname, iotype=iotype, 
-                            trait=trait)
+        #trait = get_trait(self, pathname)
+        #if trait:
+            #self.raise_exception("trait '%s' already exists" % pathname, NameError)
+        #objtrait, value = find_trait_and_value(self, pathname)
+        #if iotype is None and objtrait is not None:
+            #iotype = objtrait.iotype
+        #if trait is None:
+            #trait = objtrait
+        ## if we make it to here, object specified by pathname exists
+        #return _PathProperty(ref_name=pathname, iotype=iotype, 
+                            #trait=trait)
+        self.raise_exception("Unable to create a new trait automatically", 
+                             RuntimeError)
         
     def find_trait(self, pathname):
         """Returns a trait if a trait with the given pathname exists.
@@ -1008,18 +1048,18 @@ class Container(HasTraits):
         self.raise_exception("Cannot locate variable named '%s'" %
                              pathname, AttributeError)
 
-    def get_dyn_trait(self, name, iotype):
-        """Retrieves the named trait, attempting to create it on-the-fly if
-        it doesn't already exist.
-        """
-        trait = get_trait(self, name)
-        if trait is None:
-            try:
-                trait = self._create_alias(name, iotype)
-            except AttributeError:
-                self.raise_exception("Cannot locate trait named '%s'" %
-                                     name, NameError)
-        return trait
+    #def get_dyn_trait(self, name, iotype):
+        #"""Retrieves the named trait, attempting to create it on-the-fly if
+        #it doesn't already exist.
+        #"""
+        #trait = get_trait(self, name)
+        #if trait is None:
+            #try:
+                #trait = self._create_alias(name, iotype)
+            #except AttributeError:
+                #self.raise_exception("Cannot locate trait named '%s'" %
+                                     #name, NameError)
+        #return trait
 
     def _create_alias(self, path, io_status=None, trait=None, alias=None):
         """Create a trait that maps to some internal variable designated by a
