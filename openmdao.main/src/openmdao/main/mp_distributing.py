@@ -15,7 +15,6 @@ This module is based on the *distributing.py* file example which was
 import copy
 import cPickle
 import getpass
-import itertools
 import logging
 import os
 import Queue
@@ -28,7 +27,7 @@ import threading
 import time
 import traceback
 
-from multiprocessing import current_process, managers #, Process
+from multiprocessing import current_process, managers
 from multiprocessing import util, connection, forking
 
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server, \
@@ -80,6 +79,7 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
 
     @staticmethod
     def _finalize_host(address, authkey, name):
+        """ Sends a shutdown message. """
         conn = connection.Client(address, authkey=authkey)
         try:
             return managers.dispatch(conn, None, 'shutdown')
@@ -139,10 +139,10 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                     other_host = self._hostlist[i]
                     other_host.manager = HostManager.from_address(address,
                                                                   self._authkey)
-#                    other_host.Process = other_host.manager.Process
                     other_host.state = 'up'
                     if pubkey_text:
-                        other_host.manager._pubkey = decode_public_key(pubkey_text)
+                        other_host.manager._pubkey = \
+                            decode_public_key(pubkey_text)
                     host_processed = True
                     _LOGGER.debug('Host %s is now up', other_host.hostname)
 
@@ -169,8 +169,7 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                 break
 
         self._slotlist = [_Slot(host) for host in self._hostlist
-                                              if host.state == 'up']
-        self._slot_iterator = itertools.cycle(self._slotlist)
+                                               if host.state == 'up']
         self._base_shutdown = self.shutdown
         del self.shutdown
 
@@ -212,7 +211,7 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
         set_credentials(credentials)
         try:
             host.start_manager(i, self._authkey, address, self._files)
-        except Exception, exc:
+        except Exception as exc:
             msg = '%s\n%s' % (exc, traceback.format_exc())
             _LOGGER.error('starter for %s caught exception %s',
                           host.hostname, msg)
@@ -225,16 +224,6 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                 host.state = 'shutdown'
                 host.manager.shutdown()
         self._base_shutdown()
-
-#    def Process(self, group=None, target=None, name=None,
-#                args=None, kwargs=None):
-#        """ Return a :class:`Process` object associated with a host.  """
-#        args = args or ()
-#        kwargs = kwargs or {}
-#        slot = self._slot_iterator.next()
-#        return slot.Process(
-#            group=group, target=target, name=name, args=args, kwargs=kwargs
-#            )
 
     def __getitem__(self, i):
         return self._slotlist[i]
@@ -252,7 +241,6 @@ class _Slot(object):  #pragma no cover
 
     def __init__(self, host):
         self.host = host
-#        self.Process = host.Process
 
 
 # Requires ssh configuration.
@@ -312,7 +300,7 @@ class Host(object):  #pragma no cover
             dir=self.tempdir, authkey=str(authkey), parent_address=address,
             registry=self.registry
             )
-        cPickle.dump(data, self.proc.stdin, pickle.HIGHEST_PROTOCOL)
+        cPickle.dump(data, self.proc.stdin, cPickle.HIGHEST_PROTOCOL)
         self.proc.stdin.close()
 # TODO: put timeout in accept() to avoid this hack.
         time.sleep(1)  # Give the proc time to register startup problems.

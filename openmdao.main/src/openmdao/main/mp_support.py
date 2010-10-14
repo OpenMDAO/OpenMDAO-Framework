@@ -129,20 +129,20 @@ class _SHA1(object):
             _SHA1.digest_size = self.hash.digest_size
 
     @staticmethod
-    def new(bytes=None):
-        """ Return new hash object, optionally initialized with `bytes`. """
+    def new(data=None):
+        """ Return new hash object, optionally initialized with `data`. """
         obj = _SHA1()
-        if bytes:
-            obj.update(bytes)
+        if data:
+            obj.update(data)
         return obj
 
     def digest(self):
         """ Return hash result. """
         return self.hash.digest()
 
-    def update(self, bytes):
-        """ Update hash with `bytes`. """
-        self.hash.update(bytes)
+    def update(self, data):
+        """ Update hash with `data`. """
+        self.hash.update(data)
 
 
 def _generate_key_pair():
@@ -210,7 +210,7 @@ def read_server_config(filename):
 
 def _encrypt(obj, session_key):
     """
-    If `session_key` is specified, returns ``(length, bytes)`` of encrypted,
+    If `session_key` is specified, returns ``(length, data)`` of encrypted,
     pickled, `obj`. Otherwise `obj` is returned.
     """
     if session_key:
@@ -225,8 +225,8 @@ def _encrypt(obj, session_key):
         if pad:
             pad = AES.block_size - pad
             text += '-'*pad
-        bytes = encryptor.encrypt(text)
-        return (length, bytes)
+        data = encryptor.encrypt(text)
+        return (length, data)
     else:
         return obj
 
@@ -244,8 +244,8 @@ def _decrypt(msg, session_key):
             session_key += '!'*16
         session_key = session_key[:16]
         decryptor = AES.new(session_key, AES.MODE_CBC, '?'*AES.block_size)
-        length, bytes = msg
-        text = decryptor.decrypt(bytes)
+        length, data = msg
+        text = decryptor.decrypt(data)
         return cPickle.loads(text[:length])
     else:
         return msg
@@ -376,8 +376,8 @@ class OpenMDAO_Server(Server):
                 text += self._key_pair.decrypt(chunk)
             client_key = decode_public_key(text)
             session_key = hashlib.sha1(str(id(conn))).hexdigest()
-            bytes = client_key.encrypt(session_key, '')
-            send(bytes)
+            data = client_key.encrypt(session_key, '')
+            send(data)
         else:
             session_key = ''
 
@@ -448,17 +448,17 @@ class OpenMDAO_Server(Server):
                         # these are just the credentials of the caller, but
                         # sometimes a function needs to execute with different
                         # credentials.
-                        set_credentials(access_controller.get_proxy_credentials(
-                                                                   function,
+                        set_credentials(
+                            access_controller.get_proxy_credentials(function,
                                                                    credentials))
 
-                self._logger.debug('invoke %s %s %s %s %s', methodname, args,
-                                   kwds, role, get_credentials())
+                self._logger.debug('Invoke %s %s %s', methodname, role,
+                                   get_credentials())
                 try:
                     res = function(*args, **kwds)
                 except Exception as exc:
-                    self._logger.info('%s %s %s %s %s: %s', methodname, args,
-                                      kwds, role, get_credentials(), exc)
+                    self._logger.error('%s %s %s: %s', methodname, role,
+                                       get_credentials(), exc)
                     msg = ('#ERROR', exc)
                 else:
                     typeid = None
@@ -527,7 +527,7 @@ class OpenMDAO_Server(Server):
                             self, conn, ident, obj, *args, **kwds
                             )
                         msg = ('#RETURN', result)
-                    except Exception as exc:
+                    except Exception:
                         msg = ('#TRACEBACK', orig_traceback)
 
             except EOFError:
@@ -754,7 +754,8 @@ class OpenMDAO_Manager(BaseManager):
         state.value = State.SHUTDOWN
         try:
             del BaseProxy._address_to_local[address]
-        except KeyError:
+        # Just being defensive here.
+        except KeyError:  #pragma no cover
             pass
 
 
@@ -876,8 +877,8 @@ class OpenMDAO_Proxy(BaseProxy):
                     text = text[chunk_size:]
                 conn.send(chunks)
 
-                bytes = conn.recv()
-                self._tls.session_key = key_pair.decrypt(bytes)
+                data = conn.recv()
+                self._tls.session_key = key_pair.decrypt(data)
             else:
                 self._tls.session_key = ''
 
@@ -885,7 +886,8 @@ class OpenMDAO_Proxy(BaseProxy):
 
 # FIXME: Bizarre problem evidenced by test_extcode.py (Python 2.6.1)
 # For some reason pickling the env_vars dictionary causes:
-#    PicklingError: Can't pickle <class 'openmdao.main.mp_support.ObjServer'>: attribute lookup openmdao.main.mp_support.ObjServer failed
+#    PicklingError: Can't pickle <class 'openmdao.main.mp_support.ObjServer'>:
+#                     attribute lookup openmdao.main.mp_support.ObjServer failed
 # Possibly some Trait feature?
         new_args = []
         for arg in args:
@@ -945,7 +947,7 @@ class OpenMDAO_Proxy(BaseProxy):
         """
         This version avoids a hang in _Client if the server no longer exists.
         """
-        if not OpenMDAO_Proxy._manager_is_alive(self._token):
+        if not OpenMDAO_Proxy.manager_is_alive(self._token.address):
             raise RuntimeError('Cannot connect to manager')
 
         conn = self._Client(self._token.address, authkey=self._authkey)
@@ -973,7 +975,7 @@ class OpenMDAO_Proxy(BaseProxy):
         # check whether manager is still alive
         if state is None or state.value == State.STARTED:
             # Avoid a hang in _Client() if the server isn't there anymore.
-            if OpenMDAO_Proxy._manager_is_alive(token):
+            if OpenMDAO_Proxy.manager_is_alive(token.address):
                 # tell manager this process no longer cares about referent
                 try:
                     util.debug('DECREF %r', token.id)
@@ -993,9 +995,9 @@ class OpenMDAO_Proxy(BaseProxy):
             del tls.connection
 
     @staticmethod
-    def _manager_is_alive(token):
+    def manager_is_alive(address):
         """ Check whether manager is still alive. """
-        addr_type = connection.address_type(token.address)
+        addr_type = connection.address_type(address)
         if addr_type == 'AF_INET':
             sock = socket.socket(socket.AF_INET)
         elif addr_type == 'AF_UNIX':
@@ -1007,12 +1009,13 @@ class OpenMDAO_Proxy(BaseProxy):
         alive = True
         if sock is not None:
             try:
-                sock.connect(token.address)
+                sock.connect(address)
             except socket.error as exc:
                 if exc.args[0] == errno.ECONNREFUSED or \
                    exc.args[0] == errno.ENOENT:
                     alive = False
-                else:
+                # Just being defensive.
+                else:  #pragma no cover
                     raise
             else:
                 sock.close()

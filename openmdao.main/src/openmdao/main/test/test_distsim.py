@@ -19,7 +19,9 @@ from openmdao.main.api import Assembly, Case, Component, Container, Driver, \
                               set_as_top
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasparameters import HasParameters
-from openmdao.main.mp_support import has_interface, read_server_config
+from openmdao.main.interfaces import IComponent
+from openmdao.main.mp_support import has_interface, is_instance, \
+                                     read_server_config
 from openmdao.main.objserverfactory import connect, start_server
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
@@ -250,16 +252,15 @@ class TestCase(unittest.TestCase):
             logging.debug('')
             logging.debug('starting server...')
             self.server = start_server()
-            address, port, key = read_server_config('server.cfg')
-            logging.debug('server address: %s', address)
-            logging.debug('server port: %s', port)
-            logging.debug('server key: %s', key)
+            self.address, self.port, self.key = read_server_config('server.cfg')
+            logging.debug('server address: %s', self.address)
+            logging.debug('server port: %s', self.port)
+            logging.debug('server key: %s', self.key)
         finally:
             os.chdir('..')
 
-        # Connect could hang forever (no timeout!)
         set_credentials(Credentials())
-        self.factory = connect(address, port, pubkey=key)
+        self.factory = connect(self.address, self.port, pubkey=self.key)
         logging.debug('factory: %r', self.factory)
 
     def tearDown(self):
@@ -348,6 +349,9 @@ class TestCase(unittest.TestCase):
                 for depth in range(1, 4):
                     case = model.driver.recorder.cases.pop(0)
                     self.assertEqual(case.outputs[0][2], width*height*depth)
+
+        self.assertTrue(is_instance(model.box.parent, Assembly))
+        self.assertTrue(has_interface(model.box.parent, IComponent))
 
         # Cause server-side errors we can see.
 
@@ -450,7 +454,6 @@ class TestCase(unittest.TestCase):
             os.chdir('..')
 
         try:
-            # Connect could hang forever (no timeout!)
             set_credentials(Credentials())
             assert_raises(self, 'connect(address, port, pubkey=key)',
                           globals(), locals(), AuthenticationError,
@@ -478,15 +481,23 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_misc')
 
+        # Check false return of has_interface().
         self.assertFalse(has_interface(self.factory, HasObjectives))
 
+        # Check that credentials are required.
         credentials = get_credentials()
         set_credentials(None)
         msg = 'No credentials for PublicKey authentication of get_available_types'
         assert_raises(self, 'self.factory.get_available_types()',
                       globals(), locals(), RuntimeError, msg)
         set_credentials(credentials)
-                      
+
+        # Try to connect to wrong port (assuming port+1 isn't being used!)
+        port = self.port + 1
+        assert_raises(self, 'connect(self.address, port, pubkey=self.key)',
+                      globals(), locals(), RuntimeError, "can't connect to ")
+
+        # Try to read config from non-existent file.
         assert_raises(self, "read_server_config('no-such-file')",
                       globals(), locals(), IOError,
                       "No such file 'no-such-file'")

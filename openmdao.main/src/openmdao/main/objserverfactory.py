@@ -21,8 +21,8 @@ from openmdao.main.component import SimulationRoot
 from openmdao.main.container import Container
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
-from openmdao.main.mp_support import OpenMDAO_Manager, register, \
-                                     write_server_config
+from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, \
+                                     register, write_server_config
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                rbac
 
@@ -404,6 +404,8 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
     try:
         return _PROXIES[location]
     except KeyError:
+        if not OpenMDAO_Proxy.manager_is_alive(location):
+            raise RuntimeError("can't connect to %s" % (location,))
         mgr = _ServiceManager(location, authkey, pubkey=pubkey)
         mgr.connect()
         proxy = mgr.ObjServerFactory()

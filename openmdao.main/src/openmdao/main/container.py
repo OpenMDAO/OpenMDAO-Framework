@@ -423,7 +423,6 @@ class Container(HasTraits):
         try:
             manager = self._managers[authkey]
         except KeyError:
-            print self.get_pathname(), 'get_proxy', authkey
             manager = ObjectManager(self, authkey=authkey)
             self._managers[authkey] = manager
         return manager.proxy
