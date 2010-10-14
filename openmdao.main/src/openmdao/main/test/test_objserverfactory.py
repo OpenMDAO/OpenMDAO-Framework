@@ -37,8 +37,9 @@ class TestCase(unittest.TestCase):
         self.assertTrue('openmdao.test.ExecComp' in names)
 
         # Create a component.
-        exec_comp = factory.create('openmdao.test.ExecComp')
-        exec_comp.run()
+        if sys.platform != 'win32':
+            exec_comp = factory.create('openmdao.test.ExecComp')
+            exec_comp.run()
 
         # Force failed factory server startup by using restricted port.
         try:
@@ -115,8 +116,13 @@ class TestCase(unittest.TestCase):
 
         # Remove zipped contents.
         server.remove('xyzzy')
-        assert_raises(self, "server.remove('xyzzy')", globals(), locals(),
-                      OSError, "[Errno 2] No such file or directory: 'xyzzy'")
+
+        if sys.platform == 'win32':
+            msg = '[Error 2] The system cannot find the file specified'
+        else:
+            msg = "[Errno 2] No such file or directory: 'xyzzy'"
+        assert_raises(self, "server.remove('xyzzy')",
+                      globals(), locals(), OSError, msg)
 
         # Unpack.
         server.unpack_zipfile('zipped')
