@@ -253,6 +253,7 @@ class TestCase(unittest.TestCase):
             logging.debug('starting server...')
             self.server = start_server()
             self.address, self.port, self.key = read_server_config('server.cfg')
+            logging.debug('server pid: %s', self.server.pid)
             logging.debug('server address: %s', self.address)
             logging.debug('server port: %s', self.port)
             logging.debug('server key: %s', self.key)
@@ -266,7 +267,9 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         """ Shut down server process. """
         if self.server is not None:
+            logging.debug('terminating server pid %s', self.server.pid)
             self.server.terminate(timeout=30)
+            logging.debug('   done (?)')
             self.server = None
         for path in glob.glob('factory_*'):
             shutil.rmtree(path)
