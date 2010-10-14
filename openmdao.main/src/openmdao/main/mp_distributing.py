@@ -133,10 +133,16 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                     # Accept conection from *any* host.
                     _LOGGER.debug('waiting for a connection, host %s',
                                   host.hostname)
+                    # This will hang if server doesn't receive our address.
                     conn = listener.accept()
                     i, address, pubkey_text = conn.recv()
                     conn.close()
                     other_host = self._hostlist[i]
+                    if address is None:
+                        _LOGGER.error('Host %s died: %s', other_host.hostname,
+                                      pubkey_text)  # Exception text.
+                        continue
+
                     other_host.manager = HostManager.from_address(address,
                                                                   self._authkey)
                     other_host.state = 'up'
@@ -414,35 +420,43 @@ def main():  #pragma no cover
         out.write('%s using PublicKey authentication\n' % ident)
         out.flush()
 
-    # Update HostManager registry.
-    dct = data['registry']
-    out.write('%s registry:' % ident)
-    for name in dct.keys():
-        module = dct[name]
-        out.write('    %s: %s\n' % (name, module))
-        out.flush()
-        mod = __import__(module, fromlist=name)
-        cls = getattr(mod, name)
-        register(cls, HostManager)
+    exc = None
+    try:
+        # Update HostManager registry.
+        dct = data['registry']
+        out.write('%s registry:' % ident)
+        for name in dct.keys():
+            module = dct[name]
+            out.write('    %s: %s\n' % (name, module))
+            out.flush()
+            mod = __import__(module, fromlist=name)
+            cls = getattr(mod, name)
+            register(cls, HostManager)
 
-    # Set some stuff.
-    _LOGGER.setLevel(data['dist_log_level'])
-    forking.prepare(data)
+        # Set some stuff.
+        _LOGGER.setLevel(data['dist_log_level'])
+        forking.prepare(data)
 
-    # Create Server for a `HostManager` object.
-    set_credentials(Credentials())
-    server = OpenMDAO_Server(HostManager._registry, (hostname, 0),
-                             data['authkey'], 'pickle')
-    current_process()._server = server
+        # Create Server for a `HostManager` object.
+        set_credentials(Credentials())
+        name = '%d[%d]' % (data['index'], pid)
+        server = OpenMDAO_Server(HostManager._registry, (hostname, 0),
+                                 data['authkey'], 'pickle', name)
+        current_process()._server = server
+    except Exception as exc:
+        _LOGGER.error('%s', exc)
 
-    # Report server address and number of cpus back to parent.
+    # Report server address and public key back to parent.
     _LOGGER.debug('%s connecting to parent at %s',
                   ident, data['parent_address'])
     out.write('%s connecting to parent at %s\n'
               % (ident, data['parent_address']))
     out.flush()
     conn = connection.Client(data['parent_address'], authkey=data['authkey'])
-    conn.send((data['index'], server.address, server.public_key_text))
+    if exc:
+        conn.send((data['index'], None, str(exc)))
+    else:
+        conn.send((data['index'], server.address, server.public_key_text))
     conn.close()
 
     # Set name etc.
