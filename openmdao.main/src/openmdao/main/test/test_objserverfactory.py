@@ -42,12 +42,13 @@ class TestCase(unittest.TestCase):
             exec_comp.run()
 
         # Force failed factory server startup by using restricted port.
-        try:
-            assert_raises(self, 'start_server(port=1)', globals(), locals(),
-                          RuntimeError, 'Server startup failed')
-        finally:
-            if os.path.exists('server.out'):
-                os.remove('server.out')
+        if sys.platform != 'win32':  # Windows allows this!?
+            try:
+                assert_raises(self, 'start_server(port=1)', globals(), locals(),
+                              RuntimeError, 'Server startup failed')
+            finally:
+                if os.path.exists('server.out'):
+                    os.remove('server.out')
 
     def test_server(self):
         logging.debug('')
