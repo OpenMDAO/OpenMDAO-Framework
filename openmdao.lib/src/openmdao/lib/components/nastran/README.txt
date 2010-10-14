@@ -1,4 +1,10 @@
 
+
+Note: This README was converted to a reStructuredText (.rst) file and added to the OpenMDAO user
+documentation, which you may view in the Standard Library Reference (an Appendix) at: http://openmdao.org/docs/.
+
+.. _nastran:  
+
 The MSC Nastran Component
 -------------------------
 
