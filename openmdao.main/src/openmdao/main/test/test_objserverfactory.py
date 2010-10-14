@@ -66,8 +66,9 @@ class TestCase(unittest.TestCase):
         self.assertEqual(args[1], 'world!')
 
         # Execute a command.
+        cmd = 'dir' if sys.platform == 'win32' else 'ls'
         return_code, error_msg = \
-            server.execute_command('ls', None, 'ls.out', None, None, 0, 10)
+            server.execute_command(cmd, None, 'cmd.out', None, None, 0, 10)
 
         return_code, error_msg = \
             server.execute_command('no-such-command', None, 'stdout', 'stderr',
@@ -100,7 +101,7 @@ class TestCase(unittest.TestCase):
         server.chmod('zipped', 0400)
 
         if sys.platform == 'win32':
-            msg = '[Error2] The system cannot find the file specified'
+            msg = '[Error 2] The system cannot find the file specified'
         else:
             msg = "[Errno 2] No such file or directory: 'no-such-file'"
         assert_raises(self, "server.chmod('no-such-file', 0400)",
