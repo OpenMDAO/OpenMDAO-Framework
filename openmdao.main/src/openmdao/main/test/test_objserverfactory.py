@@ -98,9 +98,13 @@ class TestCase(unittest.TestCase):
 
         # Make it read-only.
         server.chmod('zipped', 0400)
+
+        if sys.platform == 'win32':
+            msg = '[Error2] The system cannot find the file specified'
+        else:
+            msg = "[Errno 2] No such file or directory: 'no-such-file'"
         assert_raises(self, "server.chmod('no-such-file', 0400)",
-                      globals(), locals(), OSError,
-                      "[Errno 2] No such file or directory: 'no-such-file'")
+                      globals(), locals(), OSError, msg) 
 
         # Get stats.
         info = server.stat('zipped')
