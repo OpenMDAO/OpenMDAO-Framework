@@ -250,8 +250,8 @@ class TestCase(unittest.TestCase):
         os.chdir(server_dir)
         self.server = None
         try:
-            if sys.platform == 'win32':
-                raise nose.SkipTest()
+#            if sys.platform == 'win32':
+#                raise nose.SkipTest()
             logging.debug('')
             logging.debug('starting server...')
             self.server = start_server()
