@@ -87,11 +87,10 @@ class TestCase(unittest.TestCase):
             os.remove(dummy)
 
     def test_remote(self):
-#        raise nose.SkipTest()
         # FIXME: temporarily disable this test on windows to get around
         # a problem where a set of tests is run repeatedly for reasons unknown
-        if sys.platform == 'win32':
-            raise nose.SkipTest()
+#        if sys.platform == 'win32':
+#            raise nose.SkipTest()
         logging.debug('')
         logging.debug('test_remote')
 

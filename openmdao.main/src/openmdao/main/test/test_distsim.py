@@ -250,8 +250,6 @@ class TestCase(unittest.TestCase):
         os.chdir(server_dir)
         self.server = None
         try:
-#            if sys.platform == 'win32':
-#                raise nose.SkipTest()
             logging.debug('')
             logging.debug('starting server...')
             self.server = start_server()
@@ -272,7 +270,6 @@ class TestCase(unittest.TestCase):
         if self.server is not None:
             logging.debug('terminating server pid %s', self.server.pid)
             self.server.terminate(timeout=30)
-            logging.debug('   done (?)')
             self.server = None
         for path in glob.glob('factory_*'):
             shutil.rmtree(path)

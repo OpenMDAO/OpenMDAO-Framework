@@ -6,6 +6,7 @@ but in an unobservable manner as far as test coverage is concerned.
 
 import logging
 import os.path
+import shutil
 import sys
 import unittest
 import nose
@@ -41,14 +42,19 @@ class TestCase(unittest.TestCase):
             exec_comp = factory.create('openmdao.test.ExecComp')
             exec_comp.run()
 
-        # Force failed factory server startup by using restricted port.
-        if sys.platform != 'win32':  # Windows allows this!?
-            try:
-                assert_raises(self, 'start_server(port=1)', globals(), locals(),
-                              RuntimeError, 'Server startup failed')
-            finally:
-                if os.path.exists('server.out'):
-                    os.remove('server.out')
+        # Force failed factory server startup via invalid port.
+        server_dir = 'factory_startup'
+        if os.path.exists(server_dir):
+            shutil.rmtree(server_dir)
+        os.mkdir(server_dir)
+        os.chdir(server_dir)
+        try:
+            assert_raises(self, "start_server(port='xyzzy')",
+                          globals(), locals(), RuntimeError,
+                          'Server startup failed')
+        finally:
+            os.chdir('..')
+            shutil.rmtree(server_dir)
 
     def test_server(self):
         logging.debug('')
