@@ -22,16 +22,15 @@ class CalledProcessError(subprocess.CalledProcessError):
 class ShellProc(subprocess.Popen):
     """
     A slight modification to :class:`subprocess.Popen`.
-    Sets the ``shell`` argument True, updates a copy of ``os.environ`` with
-    `env`, and opens files for any stream which is a :class:`basestring`.
+    If `args` is a string then the ``shell`` argument is set True,
+    updates a copy of ``os.environ`` with `env`, and opens files for any
+    stream which is a :class:`basestring`.
     """
 
     def __init__(self, args, stdin=None, stdout=None, stderr=None, env=None):
+        environ = os.environ.copy()
         if env:
-            environ = os.environ.copy()
             environ.update(env)
-        else:
-            environ = None
 
         self._stdin_arg  = stdin
         self._stdout_arg = stdout
@@ -52,8 +51,9 @@ class ShellProc(subprocess.Popen):
         else:
             self._err = stderr
 
+        shell = isinstance(args, basestring)
         subprocess.Popen.__init__(self, args, stdin=self._inp, stdout=self._out,
-                                  stderr=self._err, shell=True, env=environ)
+                                  stderr=self._err, shell=shell, env=environ)
 
     def close_files(self):
         """ Closes files that were implicitly opened. """

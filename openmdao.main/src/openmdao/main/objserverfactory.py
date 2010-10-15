@@ -444,7 +444,7 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=60):
 
     factory_path = pkg_resources.resource_filename('openmdao.main',
                                                    'objserverfactory.py')
-    args = 'python %s --port %s --prefix %s' % (factory_path, port, prefix)
+    args = ['python', factory_path, '--port', str(port), '--prefix', prefix]
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
 
     try:
