@@ -11,39 +11,35 @@ from networkx.algorithms.traversal import is_directed_acyclic_graph, \
 class DependencyGraph(object):
     """
     A dependency graph for Components.  Each edge contains a _Link object, which 
-    maps all connected inputs and outputs between the two Components.
+    maps all connected inputs and outputs between the two Components.  Graph
+    nodes starting with '@' are abstract nodes that represent boundary connections.
     """
 
     def __init__(self):
         self._graph = nx.DiGraph()
-        self._graph.add_nodes_from(['@in', '@out']) #fake nodes for boundary vars
+        self._graph.add_nodes_from(['@in', '@out', '@self']) #fake nodes for boundary connections
         
     def __contains__(self, compname):
         """Return True if this graph contains the given component."""
         return compname in self._graph
     
     def __len__(self):
-        return len(self._graph)-2  # subtract 2 because of the 2 'fake' nodes
+        return len(self._graph)-3  # subtract 3 because of the 3 'fake' nodes
         
     def subgraph(self, nodelist):
         return self._graph.subgraph(nodelist)
     
     def copy_graph(self):
         graph = self._graph.copy()
-        graph.remove_nodes_from(['@in', '@out'])
+        graph.remove_nodes_from(['@in', '@out', '@self'])
         return graph
     
     def get_source(self, cname, destvar):
-        if not cname:
-            cname = '@out'
         for u,v,data in self._graph.in_edges(cname, data=True):
             src = data['link']._dests.get(destvar)
             if src:
-                if u == '@in':
-                    u = 'parent'
-                return '.'.join([u, src])
+                return src
         return None
-
 
     def iter(self, scope):
         """Iterate through the nodes in dataflow order."""
@@ -123,7 +119,7 @@ class DependencyGraph(object):
     
     def get_boundary_outputs(self):
         outs = []
-        for u,v,data in self._graph.edges('@out', data=True):
+        for u,v,data in self._graph.in_edges('@out', data=True):
             outs.extend(['.'.join([u,src]) for src in data['link']._srcs.keys()])
         return outs
     
@@ -140,13 +136,22 @@ class DependencyGraph(object):
         *srccompname* to *destcompname*.
         """
         graph = self._graph
-        srccompname, srcvarname = srcpath.split('.', 1)
-        destcompname, destvarname = destpath.split('.', 1)
+        srccompname, _, srcvarname = srcpath.partition('.')
+        destcompname, _, destvarname = destpath.partition('.')
         
-        if srccompname == 'parent':
+        if srccompname == 'parent':  # cross-boundary input
             srccompname = '@in'
-        if destcompname == 'parent':
+            srcvarname = 'parent.'+srcvarname
+        elif not srcvarname:  # connection to a boundary var
+            srcvarname = srccompname
+            srccompname = '@self'
+        if destcompname == 'parent':  # cross-boundary output
             destcompname = '@out'
+            destvarname = 'parent.'+destvarname
+        elif not destvarname:  # connection to a boundary var
+            destvarname = destcompname
+            destcompname = '@self'
+        
         try:
             link = graph[srccompname][destcompname]['link']
         except KeyError:
@@ -244,27 +249,27 @@ class _Link(object):
                     srcs.append(src)
             return srcs
 
-    def push(self, scope, srccompname, destcompname):
-        """Push the values of all sources to their corresponding destinations
-        for this link.
-        """
-        # TODO: change to use multiset calls
-        srccomp = getattr(scope, srccompname)
-        destcomp = getattr(scope, destcompname)
+    #def push(self, scope, srccompname, destcompname):
+        #"""Push the values of all sources to their corresponding destinations
+        #for this link.
+        #"""
+        ## TODO: change to use multiset calls
+        #srccomp = getattr(scope, srccompname)
+        #destcomp = getattr(scope, destcompname)
         
-        for src,dests in self._srcs.items():
-            for dest in dests:
-                try:
-                    srcval = srccomp.get_wrapped_attr(src)
-                except Exception, err:
-                    scope.raise_exception(
-                        "error retrieving value for %s from '%s'" %
-                        (src,srccompname), type(err))
-                try:
-                    srcname = '.'.join([srccompname,src])
-                    destcomp.set(dest, srcval, src=srcname)
-                except Exception, exc:
-                    dname = '.'.join([destcompname,dest])
-                    scope.raise_exception("cannot set '%s' from '%s': %s" % 
-                                          (dname, srcname, exc), type(exc))
+        #for src,dests in self._srcs.items():
+            #for dest in dests:
+                #try:
+                    #srcval = srccomp.get_wrapped_attr(src)
+                #except Exception, err:
+                    #scope.raise_exception(
+                        #"error retrieving value for %s from '%s'" %
+                        #(src,srccompname), type(err))
+                #try:
+                    #srcname = '.'.join([srccompname,src])
+                    #destcomp.set(dest, srcval, src=srcname)
+                #except Exception, exc:
+                    #dname = '.'.join([destcompname,dest])
+                    #scope.raise_exception("cannot set '%s' from '%s': %s" % 
+                                          #(dname, srcname, exc), type(exc))
         

@@ -151,6 +151,20 @@ _namecheck_rgx = re.compile(
     #return '%s.%s' % (scopename,tup[1])
     
         
+class _ContainerDepends(object):
+    """An object that bookkeeps connections to/from Container variables."""
+    def __init__(self):
+        self._srcs = {}
+        
+    def connect(self, srcpath, destpath, value=None):
+        self._srcs[srcpath] = destpath
+    
+    def get_source(self, destname):
+        """For a given destination name, return the connected source, 
+        or None if not connected.
+        """
+        return self._srcs.get(destname)
+
 class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
@@ -164,6 +178,8 @@ class Container(HasTraits):
         #                    # value is (upscopes, source_name)
                             
         #self._ext_dests = {} # outputs to outside our parent scope (keyed by source)
+        
+        self._depgraph = _ContainerDepends()
                           
         # for keeping track of dynamically added traits for serialization
         self._added_traits = {}
@@ -245,50 +261,42 @@ class Container(HasTraits):
             name = obj.name
         return '.'.join(path[::-1])
             
-    def _cross_boundary_connect(self, srcpath, destpath):
-        if srcpath.startswith('parent.'):
-            if not self.contains(destpath):
-                self.raise_exception("Can't find '%s'" % destpath, AttributeError)
-            #if destpath in self._sources:
-            sname = self._depgraph.get_source(destpath)
-            if sname is not None:
-                self.raise_exception(
-                    "'%s' is already connected to source '%s'" % 
-                    #(destpath, self._sources[destpath]), TraitError)
-                    (destpath, sname), TraitError)
-            #self._sources[destpath] = srcpath
-            self._depgraph.connect(srcpath, destpath)
-            cname, _, restofpath = destpath.partition('.')
-            if restofpath:
-                getattr(self, cname).connect('parent.'+srcpath, restofpath)
-        elif destpath.startswith('parent.'):
-            if not self.contains(srcpath):
-                self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
-            #if srcpath not in self._ext_dests:
-            #    self._ext_dests[srcpath] = []
-            #self._ext_dests[srcpath].append(destpath)
-            self._depgraph.connect(srcpath, destpath)
-            cname, _, restofpath = srcpath.partition('.')
-            if restofpath:
-                getattr(self, cname).connect(restofpath, 'parent.'+destpath)
-        else:
-            self.raise_exception("Only cross-boundary connections are supported. Cannot connect '%s' to '%s'" %
-                                 (srcpath, destpath))
-    
-    def connect(self, srcpath, destpath):
-        """Connect one src Variable to one destination Variable. This must be a 
+    def connect(self, srcpath, destpath, value=None):
+        """Connect one src variable to one destination variable. This must be a 
         passthrough connection, which connects across the scope boundary
         of this object.  When a pathname begins with 'parent.', that indicates
-        that it is referring to a Variable outside of this object's scope.
+        that it is referring to a variable outside of this object's scope.
         
         srcpath: str
             Pathname of source variable
             
         destpath: str
             Pathname of destination variable
+
+        value: object, optional
+            A value used for validation by the destination variable
         """
-        self._cross_boundary_connect(srcpath, destpath)
-                
+        
+        if not srcpath.startswith('parent.'):
+            if not self.contains(srcpath):
+                self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
+            cname, _, restofpath = srcpath.partition('.')
+            if restofpath:
+                getattr(self, cname).connect(restofpath, 'parent.'+destpath, value)
+        if not destpath.startswith('parent.'):
+            if not self.contains(destpath):
+                self.raise_exception("Can't find '%s'" % destpath, AttributeError)
+            sname = self._depgraph.get_source('@self', destpath)
+            if sname is not None:
+                self.raise_exception(
+                    "'%s' is already connected to source '%s'" % 
+                    (destpath, sname), TraitError)
+            cname, _, restofpath = destpath.partition('.')
+            if restofpath:
+                getattr(self, cname).connect('parent.'+srcpath, restofpath, value)
+        
+        self._depgraph.connect(srcpath, destpath)
+                        
     def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and
         varpath2. Otherwise, remove all connections to/from varpath in the 
@@ -397,7 +405,7 @@ class Container(HasTraits):
         # when we call this directly from Assembly as part of setting this
         # attribute from an existing connection.
         if self.trait(name).iotype == 'in':
-            if old is not Undefined and name in self._sources:
+            if old is not Undefined and self._depgraph.get_source('@self', name):
                 # bypass the callback here and set it back to the old value
                 self._trait_change_notify(False)
                 try:
@@ -691,7 +699,7 @@ class Container(HasTraits):
             src = None
         else:
             #src = self._sources.get(name, None)
-            src = self._depgraph.get_source(name)
+            src = self._depgraph.get_source('@self', name)
         trait = get_trait(self, name)
         if trait:
             if src is not None and src != source:

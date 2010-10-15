@@ -114,7 +114,7 @@ class Component (Container):
         self._valid_dict = dict([(name,t.iotype=='in') for name,t in self.class_traits().items() if t.iotype])
         
         # dependency graph between us and our boundaries (bookkeeps connections between our
-        # variables and external ones)
+        # variables and external ones).  This replaces self._depgraph from Container.
         self._depgraph = DependencyGraph()
         
         # Components with input CaseIterators will be forced to execute whenever run() is
@@ -129,11 +129,14 @@ class Component (Container):
         self._call_check_config = True
         self._call_execute = True
 
+        # cached configuration information
         self._input_names = None
         self._output_names = None
         self._container_names = None
         self._expr_depends = None
         self._expr_sources = None
+        self._connected_inputs = None
+        self._connected_outputs = None
         
         self.exec_count = 0
         self.create_instance_dir = False
@@ -380,8 +383,9 @@ class Component (Container):
         the the list will contain names of inputs with matching validity.
         """
         if self._input_names is None:
-            self._input_names = [k for k,v in self.items(iotype='in')]
-            self._input_names.extend([k for k,v in self._sources.items() if '.' in k])
+            nset = set([k for k,v in self.items(iotype='in')])
+            nset.update([s.replace('@self.','') for s in self._depgraph.get_boundary_inputs()])
+            self._input_names = list(nset)
             
         if valid is None:
             return self._input_names
@@ -393,8 +397,9 @@ class Component (Container):
         the the list will contain names of outputs with matching validity.
         """
         if self._output_names is None:
-            self._output_names = [k for k,v in self.items(iotype='out')]
-            self._output_names.extend([k for k,v in self._ext_dests.items()])
+            nset = set([k for k,v in self.items(iotype='out')])
+            nset.update([s.replace('@self.','') for s in self._depgraph.get_boundary_outputs()])
+            self._output_names = list(nset)
             
         if valid is None:
             return self._output_names
@@ -407,13 +412,25 @@ class Component (Container):
             self._container_names = [n for n,v in self.items() 
                                                    if isinstance(v,Container)]
         return self._container_names
+    
+    def _get_connected_inputs(self):
+        """Return a list of names of connected input variables and passthroughs."""
+        if self._connected_inputs is None:
+            self._connected_inputs = self._depgraph.get_boundary_inputs()
+        return self._connected_inputs
             
-    def _cross_boundary_connect(self, srcpath, destpath):
-        super(Component, self)._cross_boundary_connect(srcpath, destpath)
-        if srcpath.startswith('parent.'):
-            self._valid_dict[destpath] = False
-        else:
+    def _get_connected_outputs(self):
+        """Return a list of names of connected output variables and passthroughs."""
+        if self._connected_outputs is None:
+            self._connected_outputs = self._depgraph.get_boundary_outputs()
+        return self._connected_outputs
+        
+    def connect(self, srcpath, destpath, value=None):
+        super(Component, self).connect(srcpath, destpath, value)
+        if not srcpath.startswith('parent.') and '.' in srcpath and srcpath not in self._valid_dict:
             self._valid_dict[srcpath] = False
+        if not destpath.startswith('parent.') and '.' in destpath and destpath not in self._valid_dict:
+            self._valid_dict[destpath] = False
         self.config_changed(update_parent=False)
         
     def get_expr_depends(self):
@@ -1021,11 +1038,15 @@ class Component (Container):
         self._call_execute = True
         
         valids = self._valid_dict
+        # if no varnames given, invalidat all connected inputs
         if varnames is None:
-            varnames = self.list_inputs(valid=True)
-        for var in varnames:
-            if var in self._sources:
+            for var in self._get_connected_inputs():
                 valids[var] = False
+        else:
+            vnset = set(varnames)
+            for var in self._get_connected_inputs():
+                if var in vnset:
+                    valids[var] = False
         
         valid_outs = self.list_outputs(valid=True)
         

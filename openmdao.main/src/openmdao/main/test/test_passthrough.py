@@ -26,35 +26,36 @@ class Simple(Component):
 class PassthroughTestCase(unittest.TestCase):
 
     def setUp(self):
-        """
-        top
-            comp1
-            nested
-                comp1
-                nested
-                    comp1
-            comp2
-        """
-        top = self.asm = set_as_top(Assembly())
-        top.add('comp1', Simple())
-        top.add('comp2', Simple())
-        nested = top.add('nested', Assembly())
-        nested.add('comp1', Simple())
-        nested2 = nested.add('nested', Assembly())
-        nested2.add('comp1', Simple())
-            
-        # iteration hierarchy
-        top.driver.workflow.add([top.comp1,top.nested,top.comp2])
-        nested.driver.workflow.add([nested.comp1, nested.nested])
-        nested2.driver.workflow.add([nested2.comp1])
-        
+        pass
+    
     def tearDown(self):
         self.asm = None
         
-    def test_nested_connect(self):
-        self.asm.connect('comp1.c', 'nested.nested.comp1.a')
-        self.asm.connect('nested.comp1.c', 'comp2.a')
-        self.asm.nested.connect('nested.comp1.c', 'comp1.b')
+    def _setup_simple(self):
+        """
+        top
+            c1
+            a1
+                c2
+            c3
+        """
+        top = self.asm = set_as_top(Assembly())
+        top.add('c1', Simple())
+        a1 = top.add('a1', Assembly())
+        a1.add('c2', Simple())
+        top.add('c3', Simple())
+            
+        # iteration hierarchy
+        top.driver.workflow.add([top.c1,top.a1,top.c3])
+        a1.driver.workflow.add([a1.c2])
+        
+        top.connect('c1.c', 'a1.c2.b')
+        top.connect('a1.c2.d', 'c3.a')
+        
+    def test_simple_passthrough(self):
+        self._setup_simple()
+        self.assertEqual(set(self.asm.c1.list_outputs()), set(['c','d']))
+        self.assertTrue('c2.b' in self.asm.a1.list_inputs())
         self.asm.run()
         
         

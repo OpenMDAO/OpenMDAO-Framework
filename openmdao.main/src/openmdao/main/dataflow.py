@@ -65,7 +65,7 @@ class Dataflow(SequentialWorkflow):
         
         to_add = []
         scope = self.scope
-        graph = scope.comp_graph.copy_graph()
+        graph = scope._depgraph.copy_graph()
         
         # add any dependencies due to Expressions or ExpressionLists
         for comp in self._nodes:

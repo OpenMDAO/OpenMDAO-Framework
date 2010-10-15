@@ -46,8 +46,6 @@ class Assembly (Component):
                            "this Assembly")
     
     def __init__(self, doc=None, directory=''):
-        self.comp_graph = DependencyGraph()
-                
         super(Assembly, self).__init__(doc=doc, directory=directory)
         
         # default Driver executes its workflow once
@@ -60,7 +58,7 @@ class Assembly (Component):
         """
         obj = super(Assembly, self).add(name, obj)
         if isinstance(obj, Component):
-            self.comp_graph.add(obj)
+            self._depgraph.add(obj)
         
         return obj
         
@@ -68,7 +66,7 @@ class Assembly (Component):
         """Remove the named container object from this assembly and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
-        self.comp_graph.remove(cont)
+        self._depgraph.remove(cont)
         for obj in self.__dict__.values():
             if obj is not cont and isinstance(obj, Driver):
                 obj.remove_from_workflow(cont)
@@ -136,18 +134,18 @@ class Assembly (Component):
         
         return (compname, getattr(self, compname), varname)
 
-    def _cross_boundary_connect(self, srcpath, destpath):
-        super(Assembly, self)._cross_boundary_connect(srcpath, destpath)
-        scope, _, restofpath = srcpath.partition('.')
-        if scope == 'parent':
-            self.comp_graph.connect('@in.'+restofpath, destpath)
-        else:
-            scope, _, restofpath = destpath.partition('.')
-            if scope == 'parent':
-                self.comp_graph.connect(srcpath, '@out.'+restofpath)
+    #def _cross_boundary_connect(self, srcpath, destpath):
+        #super(Assembly, self)._cross_boundary_connect(srcpath, destpath)
+        #scope, _, restofpath = srcpath.partition('.')
+        #if scope == 'parent':
+            #self._depgraph.connect('@in.'+restofpath, destpath)
+        #else:
+            #scope, _, restofpath = destpath.partition('.')
+            #if scope == 'parent':
+                #self._depgraph.connect(srcpath, '@out.'+restofpath)
         
         
-    def connect(self, srcpath, destpath):
+    def connect(self, srcpath, destpath, value=None):
         """Connect one src Variable to one destination Variable. This could be
         a normal connection between variables from two internal Components, or
         it could be a passthrough connection, which connects across the scope boundary
@@ -159,23 +157,16 @@ class Assembly (Component):
             
         destpath: str
             Pathname of destination variable
+            
+        value: object, optional
+            A value used for validation by the destination variable
         """
 
+        super(Assembly, self).connect(srcpath, destpath, value)
+        
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
-        if srccompname == 'parent':
-            self._cross_boundary_connect(srcpath, destpath)
-            return
-        elif '.' in srcvarname:
-            srccomp.connect(srcvarname, 'parent.'+destpath)
-            
-        if destcompname == 'parent':
-            self._cross_boundary_connect(srcpath, destpath)
-            return
-        elif '.' in destvarname:
-            destcomp.connect('parent.'+srcpath, destvarname)
-            
         srctrait = srccomp.find_trait(srcvarname)
         desttrait = destcomp.find_trait(destvarname)
         
@@ -200,10 +191,10 @@ class Assembly (Component):
                     ' must be an input variable',
                     RuntimeError)
                 
-        sname = self.comp_graph.get_source(destcompname, destvarname)
-        if sname is not None:
-            self.raise_exception('%s is already connected to %s' % (destpath, sname),
-                                 RuntimeError)             
+        #sname = self._depgraph.get_source(destcompname, destvarname)
+        #if sname is not None:
+            #self.raise_exception('%s is already connected to %s' % (destpath, sname),
+                                 #RuntimeError)             
             
         # test compatability (raises TraitError on failure)
         if desttrait and desttrait.validate is not None:
@@ -218,8 +209,8 @@ class Assembly (Component):
                 self.raise_exception("can't connect '%s' to '%s': %s" % 
                                      (srcpath,destpath,str(err)), TraitError)
             
-        if destcomp is not self and srccomp is not self: # neither var is on boundary
-            self.comp_graph.connect(srcpath, destpath)
+        #if destcomp is not self and srccomp is not self: # neither var is on boundary
+            #self._depgraph.connect(srcpath, destpath)
         
         # invalidate destvar if necessary
         if destcomp is self and desttrait and desttrait.iotype == 'out': # boundary output
@@ -231,10 +222,11 @@ class Assembly (Component):
                     # Note that it's a dest var in this scope, but a src var in
                     # the parent scope.
                     self.parent.invalidate_deps(self.name, [destvarname], True)
-            self.comp_graph.connect(srcpath, '.'.join(['@out',destvarname]))
+            #self._depgraph.connect(srcpath, '.'.join(['@out',destvarname]))
             self._valid_dict[destpath] = False
         elif srccomp is self and srctrait.iotype == 'in': # boundary input
-            self.comp_graph.connect('.'.join(['@in',srcpath]), destpath)
+            #self._depgraph.connect('.'.join(['@in',srcpath]), destpath)
+            pass
         else:
             destcomp.invalidate_deps(varnames=[destvarname], notify_parent=True)
 
@@ -246,13 +238,13 @@ class Assembly (Component):
         and outputs. 
         """
         to_remove = []
-        if varpath in self.comp_graph: # varpath is a component name
+        if varpath in self._depgraph: # varpath is a component name
             if varpath2 is not None:
                 self.raise_exception("%s is not a valid second argument" %
                                      varpath2, RuntimeError)
-            for u,v in self.comp_graph.var_edges(varpath):
+            for u,v in self._depgraph.var_edges(varpath):
                 to_remove.append((u, v))
-            for u,v in self.comp_graph.var_in_edges(varpath):
+            for u,v in self._depgraph.var_in_edges(varpath):
                 to_remove.append((u, v))
             
         else:   # varpath is not a component name
@@ -270,10 +262,10 @@ class Assembly (Component):
             cname, vname = varpath.split('.', 1)
             if varpath2 is None:  # remove all connections to varpath
                 dotvname = '.'+vname
-                for u,v in self.comp_graph.var_edges(cname):
+                for u,v in self._depgraph.var_edges(cname):
                     if u.endswith(dotvname):
                         to_remove.append((u, v))
-                for u,v in self.comp_graph.var_in_edges(cname):
+                for u,v in self._depgraph.var_in_edges(cname):
                     if v.endswith(dotvname):
                         to_remove.append((u, v))
             else:
@@ -284,7 +276,7 @@ class Assembly (Component):
             if sinkcomp[0] != '@':  # sink is not on boundary
                 #getattr(self, sinkcomp).remove_source(sinkvar)
                 getattr(self, sinkcomp).disconnect(sinkvar)
-            self.comp_graph.disconnect(src, sink)
+            self._depgraph.disconnect(src, sink)
 
     #def set_source(self, destname, srcname):
         #"""Mark the named io trait as a destination by registering a source
@@ -302,7 +294,7 @@ class Assembly (Component):
         #"""
         #super(Assembly, self).set_source(destname, srcname)
         #if '.' in destname:
-            #self.comp_graph.connect('@in.%s' % srcname, destname)
+            #self._depgraph.connect('@in.%s' % srcname, destname)
             
     def execute (self):
         """Runs driver and updates our boundary variables."""
@@ -310,9 +302,9 @@ class Assembly (Component):
         self._update_boundary_vars()
     
     def _update_boundary_vars (self):
-        """Update output variables on our bounary."""
+        """Update output variables on our boundary."""
         valids = self._valid_dict
-        for srccompname,link in self.comp_graph.in_links('@out'):
+        for srccompname,link in self._depgraph.in_links('@self'):
             srccomp = getattr(self, srccompname)
             for dest,src in link._dests.items():
                 if valids[dest] is False:
@@ -329,7 +321,7 @@ class Assembly (Component):
     def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        return self.comp_graph.list_connections(show_passthrough)
+        return self._depgraph.list_connections(show_passthrough)
 
     def update_inputs(self, compname, varnames):
         """Transfer input data to input variables on the specified component.
@@ -342,7 +334,7 @@ class Assembly (Component):
             destcomp = self
         else:
             destcomp = getattr(self, compname)
-        for srccompname,srcs,dests in self.comp_graph.in_map(compname, vset):
+        for srccompname,srcs,dests in self._depgraph.in_map(compname, vset):
             if srccompname == '@in':  # boundary inputs
                 srccompname = ''
                 srccomp = self
@@ -432,13 +424,13 @@ class Assembly (Component):
         Returns a list of our newly invalidated boundary outputs.
         """
         outs = set()
-        compgraph = self.comp_graph
+        compgraph = self._depgraph
         if compname is None: # start at @in (boundary inputs)
             compname = '@in'
             if varnames is not None:
-                for v in varnames:
-                    if v in self._sources:
-                        self._valid_dict[v] = False
+                for name in self._depgraph.get_boundary_inputs():
+                    if name in varnames:
+                        self._valid_dict[name] = False
         visited = set()
         partial_visited = {}
         stack = [(compname, varnames)]
@@ -514,14 +506,14 @@ def asm_dump(asm):
         f.write('inputs: %s\n' % asm.list_inputs())
         f.write('outputs: %s\n' % asm.list_outputs())
         f.write('boundary ins: \n')
-        for name,link in asm.comp_graph.out_links('@in'):
+        for name,link in asm._depgraph.out_links('@in'):
             for src in link.get_srcs():
                 f.write('   %s\n' % src)
         f.write('_sources:\n')
         for dest,src in asm._sources.items():
             f.write('   s: %s,  d: %s\n' % (src,dest))
         f.write('boundary outs: \n')
-        for name,link in asm.comp_graph.in_links('@out'):
+        for name,link in asm._depgraph.in_links('@out'):
             for dest in link.get_dests():
                 f.write('   %s\n' % dest)
         f.write('_ext_dests:\n')
