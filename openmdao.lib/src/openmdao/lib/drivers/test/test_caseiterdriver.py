@@ -8,6 +8,7 @@ import os.path
 import pkg_resources
 import platform
 import sys
+import time
 import unittest
 import nose
 
@@ -196,6 +197,7 @@ class TestCase(unittest.TestCase):
                     ResourceAllocationManager.insert_allocator(0, cluster)
 
         self.run_cases(sequential=False)
+        time.sleep(1)  # Allow servers time to clean-up.
         self.assertEqual(glob.glob('Sim-*'), [])
 
         logging.debug('')

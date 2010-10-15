@@ -66,6 +66,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_cluster')
 
         if self.skip_ssh:
+            logging.debug('    requires ssh, skipping')
             return
 
         self.cluster = ClusterAllocator(self.name, self.machines)
@@ -136,7 +137,7 @@ class TestCase(unittest.TestCase):
         result = ResourceAllocationManager.allocate({'n_cpus':1000000})
         self.assertEqual(result, (None, None))
 
-        result = ResourceAllocationManager.allocate({'orphan_modules':'xyzzy'})
+        result = ResourceAllocationManager.allocate({'orphan_modules':['xyzzy']})
         self.assertEqual(result, (None, None))
 
         result = ResourceAllocationManager.allocate({'python_version':'xyzzy'})
@@ -150,6 +151,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_bad_host')
 
         if self.skip_ssh:
+            logging.debug('    requires ssh, skipping')
             return
 
         self.machines.append({'hostname':'xyzzy', 'python':self.python})
@@ -165,6 +167,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_bad_python')
 
         if self.skip_ssh:
+            logging.debug('    requires ssh, skipping')
             return
 
         self.machines = [{'hostname':self.node, 'python':'no-such-python'}]

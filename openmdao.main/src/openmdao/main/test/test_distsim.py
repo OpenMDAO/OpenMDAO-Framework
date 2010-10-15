@@ -269,7 +269,7 @@ class TestCase(unittest.TestCase):
         """ Shut down server process. """
         if self.server is not None:
             logging.debug('terminating server pid %s', self.server.pid)
-            self.server.terminate(timeout=30)
+            self.server.terminate(timeout=10)
             self.server = None
         for path in glob.glob('factory_*'):
             shutil.rmtree(path)

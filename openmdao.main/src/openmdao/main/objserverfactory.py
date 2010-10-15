@@ -94,11 +94,11 @@ class ObjServerFactory(Factory):
             if not name:
                 name = 'Server_%d' % self._count
             manager = OpenMDAO_Manager(name=name)
-            register(ObjServer, manager)
+            register(ObjServer, manager, 'openmdao.main.objserverfactory')
             manager.start()
             self._logger.info("new server '%s' listening on %s",
                               name, manager.address)
-            server = manager.ObjServer(name=name, host=platform.node())
+            server = manager.openmdao_main_objserverfactory_ObjServer(name=name, host=platform.node())
 
         if typname:
             obj = server.create(typname, version, None, res_desc, **ctor_args)
@@ -115,7 +115,7 @@ class _ServiceManager(OpenMDAO_Manager):
     """
     pass
 
-register(ObjServerFactory, _ServiceManager)
+register(ObjServerFactory, _ServiceManager, 'openmdao.main.objserverfactory')
 
     
 class RemoteFile(object):
@@ -408,7 +408,8 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
             raise RuntimeError("can't connect to %s" % (location,))
         mgr = _ServiceManager(location, authkey, pubkey=pubkey)
         mgr.connect()
-        proxy = mgr.ObjServerFactory()
+        print dir(mgr)
+        proxy = mgr.openmdao_main_objserverfactory_ObjServerFactory()
         _PROXIES[location] = proxy
         return proxy
 

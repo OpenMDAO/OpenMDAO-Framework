@@ -279,9 +279,21 @@ def _public_methods(obj):
     return methods
 
 
-def register(cls, manager):
+def _make_typeid(obj):
     """
-    Register class `cls` proxy info with `manager`.
+    Returns a type ID string from `obj`'s module and class names
+    by replacing '.' with '_'.
+    """
+    if isinstance(obj, type):
+        typeid = '%s.%s' % (obj.__module__, obj.__name__)
+    else:
+        typeid = '%s.%s' % (obj.__class__.__module__, obj.__class__.__name__)
+    return typeid.replace('.', '_')
+
+def register(cls, manager, module=None):
+    """
+    Register class `cls` proxy info with `manager`. The class will be
+    registered under it's full path, with '.' replaced by '_'.
     Not typically called by user code.
 
     cls: class
@@ -289,8 +301,15 @@ def register(cls, manager):
 
     manager: :class:`OpenMDAO_Manager`
         Manager to register with.
+
+    module: string
+        Module name for registration. Necessary if `cls` might be defined
+        by module '__main__'.
     """
-    typeid = cls.__name__
+    if module is None:
+        module = cls.__module__
+    typeid = '%s.%s' % (module, cls.__name__)
+    typeid = typeid.replace('.', '_')
     exposed = _public_methods(cls)
     proxytype = _make_proxy_type(typeid, exposed)
     manager.register(typeid, callable=cls, exposed=exposed, proxytype=proxytype)
@@ -478,7 +497,7 @@ class OpenMDAO_Server(Server):
                         # TODO: avoid extra proxy if address is compatible
                         #       with our own.
                         typeid = res._token.typeid
-                        proxyid = res.__class__.__name__
+                        proxyid = _make_typeid(res)
                         self._logger.debug('Creating proxy for proxy %s',
                                            proxyid)
                         if proxyid not in self.registry:
@@ -488,14 +507,14 @@ class OpenMDAO_Server(Server):
                         if methodname in _SPECIALS:
                             if access_controller.need_proxy(obj, args[0], res):
                                 # Create proxy if in declared proxy types.
-                                typeid = res.__class__.__name__
+                                typeid = _make_typeid(res)
                                 proxyid = typeid
                                 if typeid not in self.registry:
                                     self.registry[typeid] = \
                                         (None, None, None, None)
                         elif need_proxy(function, res):
                             # Create proxy if in declared proxy types.
-                            typeid = res.__class__.__name__
+                            typeid = _make_typeid(res)
                             proxyid = typeid
                             if typeid not in self.registry:
                                 self.registry[typeid] = (None, None, None, None)
@@ -595,8 +614,14 @@ class OpenMDAO_Server(Server):
         """
         self.mutex.acquire()
         try:
-            callable, exposed, method_to_typeid, proxytype = \
-                self.registry[typeid]
+            try:
+                callable, exposed, method_to_typeid, proxytype = \
+                    self.registry[typeid]
+            except KeyError:
+                logging.critical('mp_support.create: registry')
+                for key, value in self.registry.items():
+                    logging.critical('    %s: %s', key, value)
+                raise
 
             if callable is None:
                 assert len(args) == 1 and not kwds
@@ -779,8 +804,7 @@ class ObjectManager(object):
     """
 
     def __init__(self, obj, address=None, serializer='pickle', authkey=None):
-        self._typeid = '%s.%s' % (obj.__class__.__module__,
-                                  obj.__class__.__name__)
+        self._typeid = _make_typeid(obj)
         self._ident = '%x' % id(obj)
         self._manager = OpenMDAO_Manager(address=address, serializer=serializer,
                                          authkey=authkey)
