@@ -443,11 +443,15 @@ class Component (Container):
         """
         
         super(Component, self).connect(srcpath, destpath, value)
-        if not srcpath.startswith('parent.') and srcpath not in self._valid_dict:
-            self._valid_dict[srcpath] = True
-        if not destpath.startswith('parent.'):
-            self._valid_dict[destpath] = False
-        self.config_changed(update_parent=False)
+        # if this is a cross boundary connection, create new _valid_dict entry for it
+        if srcpath.startswith('parent.') or destpath.startswith('parent.'):
+            if not srcpath.startswith('parent.'):
+                self._connected_outputs = None
+                if srcpath not in self._valid_dict:
+                    self._valid_dict[srcpath] = True
+            if not destpath.startswith('parent.'):
+                self._connected_inputs = None
+                self._valid_dict[destpath] = False
         
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)

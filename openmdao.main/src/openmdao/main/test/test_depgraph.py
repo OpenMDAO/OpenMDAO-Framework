@@ -292,14 +292,14 @@ class DepGraphTestCase(unittest.TestCase):
             self.top.sub.comp2.b = 4
         except TraitError, err:
             self.assertEqual(str(err), 
-                "sub.comp2: 'b' is already connected to source 'b2' and cannot be directly set")
+                "sub.comp2: 'b' is already connected to source 'parent.b2' and cannot be directly set")
         else:
             self.fail('TraitError expected')
         try:
             self.top.set('sub.comp2.b', 4)
         except TraitError, err:
             self.assertEqual(str(err), 
-                "sub.comp2: 'b' is connected to source 'b2' and cannot be set by source 'None'")
+                "sub.comp2: 'b' is connected to source 'parent.b2' and cannot be set by source 'None'")
         else:
             self.fail('TraitError expected')            
             

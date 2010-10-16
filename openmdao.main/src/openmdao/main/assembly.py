@@ -105,7 +105,7 @@ class Assembly (Component):
             self.connect(newname, pathname)
         else:
             self.connect(pathname, newname)
-
+            
         return newtrait
 
     #def get_dyn_trait(self, pathname, iotype):
@@ -317,7 +317,7 @@ class Assembly (Component):
         """
         parent = self.parent
         vset = set(varnames)
-        if compname == '@out':
+        if compname == '@self':
             destcomp = self
         else:
             destcomp = getattr(self, compname)
@@ -329,9 +329,9 @@ class Assembly (Component):
                 if len(invalid_srcs) > 0:
                     if parent:
                         parent.update_inputs(self.name, invalid_srcs)
-                    else:
-                        for name in invalid_srcs:
-                            self._valid_dict[name] = True
+                    # invalid inputs have been updated, so make them as valid
+                    for name in invalid_srcs:
+                        self._valid_dict[name] = True
             else:
                 srccomp = getattr(self, srccompname)
                 if not srccomp.is_valid():
@@ -347,15 +347,13 @@ class Assembly (Component):
                         (src,srccompname), type(err))
                 try:
                     if srccomp is self:
-                        # if it's a boundary input and it has a '.' in it,
-                        # then it's coming from outside of this scope
-                        #if '.' in src: 
-                            #srcname = 'parent.'+src
-                        #else:
                         srcname = src
                     else:
                         srcname = '.'.join([srccompname, src])
-                    destcomp.set(dest, srcval, src='parent.'+srcname)
+                    if destcomp is self:
+                        setattr(destcomp, dest, srcval)
+                    else:
+                        destcomp.set(dest, srcval, src='parent.'+srcname)
                 except Exception, exc:
                     if compname[0] == '@':
                         dname = dest
@@ -368,7 +366,7 @@ class Assembly (Component):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
         """
-        self.update_inputs('@out', outnames)
+        self.update_inputs('@self', outnames)
         
     def get_valids(self, names):
         """Returns a list of boolean values indicating whether the named
@@ -412,8 +410,8 @@ class Assembly (Component):
         """
         outs = set()
         compgraph = self._depgraph
-        if compname is None: # start at @in (boundary inputs)
-            compname = '@in'
+        if compname is None: # check boundary inputs
+            compname = '@self'
             if varnames is not None:
                 for name in self._depgraph.get_connected_inputs():
                     if name in varnames:

@@ -98,7 +98,8 @@ class DependencyGraph(object):
 
     def in_map(self, cname, varset):
         """Yield a tuple of lists of the form (compname, srclist, destlist) for each link,
-        where all dests in destlist are found in varset.
+        where all dests in destlist are found in varset.  If no dests are found in varset,
+        a tuple will not be returned at all for that link.
         """
         for u,v,data in self._graph.in_edges(cname, data=True):
             srcs = []
@@ -108,6 +109,8 @@ class DependencyGraph(object):
             for dest in matchset:
                 dests.append(dest)
                 srcs.append(link._dests[dest])
+            if not dests or not srcs:
+                continue
             yield (u, srcs, dests)
 
     def in_links(self, cname):
