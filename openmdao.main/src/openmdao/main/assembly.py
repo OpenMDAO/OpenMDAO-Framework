@@ -10,10 +10,6 @@ import cStringIO
 from enthought.traits.api import Instance, TraitError
 from enthought.traits.api import TraitType
 
-import networkx as nx
-from networkx.algorithms.traversal import is_directed_acyclic_graph, \
-                                          strongly_connected_components
-
 from openmdao.main.container import find_trait_and_value, get_trait
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
@@ -48,6 +44,10 @@ class Assembly (Component):
     def __init__(self, doc=None, directory=''):
         super(Assembly, self).__init__(doc=doc, directory=directory)
         
+        # dependency graph between us and our boundaries (bookkeeps connections between our
+        # variables and external ones).  This replaces self._depgraph from Container.
+        self._depgraph = DependencyGraph()
+        
         # default Driver executes its workflow once
         self.add('driver', Driver())
         
@@ -74,44 +74,44 @@ class Assembly (Component):
         return super(Assembly, self).remove(name)
 
 
-    #def create_passthrough(self, pathname, alias=None):
-        #"""Creates a PassthroughTrait that uses the trait indicated by
-        #pathname for validation (if it's not a property trait), adds it to
-        #self, and creates a connection between the two. If alias is *None,*
-        #the name of the "promoted" trait will be the last entry in its
-        #pathname. The trait specified by pathname must exist.
-        #"""
-        #if alias:
-            #newname = alias
-        #else:
-            #parts = pathname.split('.')
-            #newname = parts[-1]
+    def create_passthrough(self, pathname, alias=None):
+        """Creates a PassthroughTrait that uses the trait indicated by
+        pathname for validation (if it's not a property trait), adds it to
+        self, and creates a connection between the two. If alias is *None,*
+        the name of the "promoted" trait will be the last entry in its
+        pathname. The trait specified by pathname must exist.
+        """
+        if alias:
+            newname = alias
+        else:
+            parts = pathname.split('.')
+            newname = parts[-1]
 
-        #if newname in self.__dict__:
-            #self.raise_exception("'%s' already exists" %
-                                 #newname, TraitError)
-        #trait, val = find_trait_and_value(self, pathname)
-        #if not trait:
-            #self.raise_exception("the variable named '%s' can't be found" %
-                                 #pathname, TraitError)
-        #iotype = trait.iotype
-        ## the trait.trait_type stuff below is for the case where the trait is actually
-        ## a ctrait (very common). In that case, trait_type is the actual underlying
-        ## trait object
-        #if (getattr(trait,'get') or getattr(trait,'set') or
-            #getattr(trait.trait_type, 'get') or getattr(trait.trait_type,'set')):
-            #trait = None  # not sure how to validate using a property
-                          ## trait without setting it, so just don't use it
-        #newtrait = PassthroughTrait(iotype=iotype, validation_trait=trait)
-        #self.add_trait(newname, newtrait)
-        #setattr(self, newname, val)
+        if newname in self.__dict__:
+            self.raise_exception("'%s' already exists" %
+                                 newname, TraitError)
+        trait, val = find_trait_and_value(self, pathname)
+        if not trait:
+            self.raise_exception("the variable named '%s' can't be found" %
+                                 pathname, TraitError)
+        iotype = trait.iotype
+        # the trait.trait_type stuff below is for the case where the trait is actually
+        # a ctrait (very common). In that case, trait_type is the actual underlying
+        # trait object
+        if (getattr(trait,'get') or getattr(trait,'set') or
+            getattr(trait.trait_type, 'get') or getattr(trait.trait_type,'set')):
+            trait = None  # not sure how to validate using a property
+                          # trait without setting it, so just don't use it
+        newtrait = PassthroughTrait(iotype=iotype, validation_trait=trait)
+        self.add_trait(newname, newtrait)
+        setattr(self, newname, val)
 
-        #if iotype == 'in':
-            #self.connect(newname, pathname)
-        #else:
-            #self.connect(pathname, newname)
+        if iotype == 'in':
+            self.connect(newname, pathname)
+        else:
+            self.connect(pathname, newname)
 
-        #return newtrait
+        return newtrait
 
     #def get_dyn_trait(self, pathname, iotype):
         #"""Retrieves the named trait, attempting to create a PassthroughTrait
@@ -134,17 +134,6 @@ class Assembly (Component):
         
         return (compname, getattr(self, compname), varname)
 
-    #def _cross_boundary_connect(self, srcpath, destpath):
-        #super(Assembly, self)._cross_boundary_connect(srcpath, destpath)
-        #scope, _, restofpath = srcpath.partition('.')
-        #if scope == 'parent':
-            #self._depgraph.connect('@in.'+restofpath, destpath)
-        #else:
-            #scope, _, restofpath = destpath.partition('.')
-            #if scope == 'parent':
-                #self._depgraph.connect(srcpath, '@out.'+restofpath)
-        
-        
     def connect(self, srcpath, destpath, value=None):
         """Connect one src Variable to one destination Variable. This could be
         a normal connection between variables from two internal Components, or
@@ -240,8 +229,8 @@ class Assembly (Component):
         to_remove = []
         if varpath in self._depgraph: # varpath is a component name
             if varpath2 is not None:
-                self.raise_exception("%s is not a valid second argument" %
-                                     varpath2, RuntimeError)
+                self.raise_exception("disconnect: First arg '%s' is a Component name so the second arg '%s' is not allowed." %
+                                     (varpath,varpath2), RuntimeError)
             for u,v in self._depgraph.var_edges(varpath):
                 to_remove.append((u, v))
             for u,v in self._depgraph.var_in_edges(varpath):
@@ -272,11 +261,11 @@ class Assembly (Component):
                 to_remove.append((varpath, varpath2))
 
         for src,sink in to_remove:
-            sinkcomp,sinkvar = sink.split('.', 1)
-            if sinkcomp[0] != '@':  # sink is not on boundary
-                #getattr(self, sinkcomp).remove_source(sinkvar)
-                getattr(self, sinkcomp).disconnect(sinkvar)
-            self._depgraph.disconnect(src, sink)
+            super(Assembly, self).disconnect(src, sink)
+            #sinkcomp,sinkvar = sink.split('.', 1)
+            #if sinkcomp[0] != '@':  # sink is not on boundary
+                #getattr(self, sinkcomp).disconnect(sinkvar)
+            #self._depgraph.disconnect(src, sink)
 
     #def set_source(self, destname, srcname):
         #"""Mark the named io trait as a destination by registering a source
@@ -299,15 +288,19 @@ class Assembly (Component):
     def execute (self):
         """Runs driver and updates our boundary variables."""
         self.driver.run()
+        valids = self._valid_dict
         self._update_boundary_vars()
     
     def _update_boundary_vars (self):
         """Update output variables on our boundary."""
         valids = self._valid_dict
-        for srccompname,link in self._depgraph.in_links('@self'):
-            srccomp = getattr(self, srccompname)
+        for srccompname,link in self._depgraph.in_links('@out'):
+            if srccompname[0] == '@':
+                srccomp = self
+            else:
+                srccomp = getattr(self, srccompname)
             for dest,src in link._dests.items():
-                if valids[dest] is False:
+                if not dest.startswith('parent.') and valids[dest] is False:
                     setattr(self, dest, srccomp.get_wrapped_attr(src))
 
     def step(self):
@@ -335,7 +328,7 @@ class Assembly (Component):
         else:
             destcomp = getattr(self, compname)
         for srccompname,srcs,dests in self._depgraph.in_map(compname, vset):
-            if srccompname == '@in':  # boundary inputs
+            if srccompname[0] == '@':  # boundary inputs
                 srccompname = ''
                 srccomp = self
                 invalid_srcs = [k for k,v in self._valid_dict.items() if v is False and k in srcs]
@@ -362,10 +355,10 @@ class Assembly (Component):
                     if srccomp is self:
                         # if it's a boundary input and it has a '.' in it,
                         # then it's coming from outside of this scope
-                        if '.' in src: 
-                            srcname = 'parent.'+src
-                        else:
-                            srcname = src
+                        #if '.' in src: 
+                            #srcname = 'parent.'+src
+                        #else:
+                        srcname = src
                     else:
                         srcname = '.'.join([srccompname, src])
                     destcomp.set(dest, srcval, src='parent.'+srcname)
@@ -441,7 +434,7 @@ class Assembly (Component):
                 for destcname, link in compgraph.out_links(cname):
                     if link in visited: continue
                     
-                    if destcname == '@out':
+                    if destcname[0] == '@':
                         outs.update(link.get_dests())
                     else:
                         outnames = getattr(self, destcname).invalidate_deps(varnames=link.get_dests())
@@ -506,19 +499,11 @@ def asm_dump(asm):
         f.write('inputs: %s\n' % asm.list_inputs())
         f.write('outputs: %s\n' % asm.list_outputs())
         f.write('boundary ins: \n')
-        for name,link in asm._depgraph.out_links('@in'):
-            for src in link.get_srcs():
-                f.write('   %s\n' % src)
-        f.write('_sources:\n')
-        for dest,src in asm._sources.items():
-            f.write('   s: %s,  d: %s\n' % (src,dest))
+        for name in asm._depgraph.get_boundary_inputs():
+            f.write('   %s\n' % src)
         f.write('boundary outs: \n')
-        for name,link in asm._depgraph.in_links('@out'):
-            for dest in link.get_dests():
-                f.write('   %s\n' % dest)
-        f.write('_ext_dests:\n')
-        for src, destlst in asm._ext_dests.items():
-            f.write('   s: %s,  d: %s\n' % (src,destlst))
+        for name in asm._depgraph.get_boundary_outputs():
+            f.write('   %s\n' % dest)
         f.write('valids: %s\n' % asm._valid_dict)
     f = cStringIO.StringIO()
     _asm_dump(asm, f)

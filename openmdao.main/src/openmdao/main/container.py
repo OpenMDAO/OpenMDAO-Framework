@@ -157,13 +157,26 @@ class _ContainerDepends(object):
         self._srcs = {}
         
     def connect(self, srcpath, destpath, value=None):
-        self._srcs[srcpath] = destpath
+        if destpath in self._srcs:
+            raise RuntimeError("'%s' is already connected to source '%s'" %
+                               (destpath,self._srcs[destpath]))
+        self._srcs[destpath] = srcpath
+        
+    def disconnect(self, srcpath, destpath):
+        del self._srcs[destpath]
     
     def get_source(self, destname):
         """For a given destination name, return the connected source, 
         or None if not connected.
         """
         return self._srcs.get(destname)
+    
+    def get_boundary_inputs(self):
+        return [n for n in self._srcs.keys() if not n.startswith('parent.')]
+    
+    def get_boundary_outputs(self):
+        return [n for n in self._srcs.values() if not n.startswith('parent.')]
+
 
 class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
@@ -173,11 +186,6 @@ class Container(HasTraits):
     
     def __init__(self, doc=None, iotype=None):
         super(Container, self).__init__()
-        #self._sources = {}  # for checking that destination traits cannot be 
-        #                    # set by other objects. Key is destination name,
-        #                    # value is (upscopes, source_name)
-                            
-        #self._ext_dests = {} # outputs to outside our parent scope (keyed by source)
         
         self._depgraph = _ContainerDepends()
                           
@@ -262,9 +270,8 @@ class Container(HasTraits):
         return '.'.join(path[::-1])
             
     def connect(self, srcpath, destpath, value=None):
-        """Connect one src variable to one destination variable. This must be a 
-        passthrough connection, which connects across the scope boundary
-        of this object.  When a pathname begins with 'parent.', that indicates
+        """Connects one source variable to one destination variable. 
+        When a pathname begins with 'parent.', that indicates
         that it is referring to a variable outside of this object's scope.
         
         srcpath: str
@@ -286,42 +293,35 @@ class Container(HasTraits):
         if not destpath.startswith('parent.'):
             if not self.contains(destpath):
                 self.raise_exception("Can't find '%s'" % destpath, AttributeError)
-            sname = self._depgraph.get_source('@self', destpath)
+            sname = self._depgraph.get_source(destpath)
             if sname is not None:
                 self.raise_exception(
                     "'%s' is already connected to source '%s'" % 
-                    (destpath, sname), TraitError)
+                    (destpath, sname), RuntimeError)
             cname, _, restofpath = destpath.partition('.')
             if restofpath:
                 getattr(self, cname).connect('parent.'+srcpath, restofpath, value)
         
         self._depgraph.connect(srcpath, destpath)
                         
-    def disconnect(self, varpath, varpath2=None):
-        """If varpath2 is supplied, remove the connection between varpath and
-        varpath2. Otherwise, remove all connections to/from varpath in the 
-        current scope. If both paths are given, the first is assumed to be 
-        the source and the second is assumed to be the destination.
+    def disconnect(self, srcpath, destpath):
+        """Removes the connection between one source variable and one 
+        destination variable.
         """
-        if not self.contains(varpath):
-            self.raise_exception("Can't find '%s'" % varpath, AttributeError)
-        if varpath2 is None:
-            if varpath in self._sources:
-                del self._sources[varpath]
-            elif varpath in self._ext_dests:
-                del self._ext_dests[varpath]
-        else:
-            if not self.contains(varpath2):
-                self.raise_exception("Can't find '%s'" % varpath2, AttributeError)
-            if varpath.startswith('parent.'):
-                del self._sources[varpath2]
-            elif varpath2.startswith('parent.'):
-                self._ext_dests[varpath].remove(varpath2)
-                if len(self._ext_dests[varpath]) == 0:
-                    del self._ext_dests[varpath]
-            else:
-                self.raise_exception("Only cross-boundary connections are supported. Cannot disconnect '%s' from '%s'" %
-                                     (varpath, varpath2))
+        if not srcpath.startswith('parent.'):
+            if not self.contains(srcpath):
+                self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
+            cname, _, restofpath = srcpath.partition('.')
+            if restofpath:
+                getattr(self, cname).disconnect(restofpath, 'parent.'+destpath)
+        if not destpath.startswith('parent.'):
+            if not self.contains(destpath):
+                self.raise_exception("Can't find '%s'" % destpath, AttributeError)
+            cname, _, restofpath = destpath.partition('.')
+            if restofpath:
+                getattr(self, cname).disconnect('parent.'+srcpath, restofpath)
+        
+        self._depgraph.disconnect(srcpath, destpath)
 
     #
     #  HasTraits overrides
@@ -405,7 +405,7 @@ class Container(HasTraits):
         # when we call this directly from Assembly as part of setting this
         # attribute from an existing connection.
         if self.trait(name).iotype == 'in':
-            if old is not Undefined and self._depgraph.get_source('@self', name):
+            if old is not Undefined and self._depgraph.get_source(name):
                 # bypass the callback here and set it back to the old value
                 self._trait_change_notify(False)
                 try:
@@ -415,7 +415,7 @@ class Container(HasTraits):
                 self.raise_exception(
                     "'%s' is already connected to source '%s' and "
                     "cannot be directly set"%
-                    (name, self._sources[name]), TraitError)
+                    (name, self._depgraph.get_source(name)), TraitError)
             self._call_execute = True
             self._input_changed(name)
             
@@ -695,13 +695,9 @@ class Container(HasTraits):
                 return obj._array_get(restofpath, index)
      
     def _check_trait_settable(self, name, source=None, force=False):
-        if force:
-            src = None
-        else:
-            #src = self._sources.get(name, None)
-            src = self._depgraph.get_source('@self', name)
         trait = get_trait(self, name)
         if trait:
+            src = None if force else self._depgraph.get_source(name)
             if src is not None and src != source:
                 if trait.iotype != 'in':
                     self.raise_exception(

@@ -67,11 +67,11 @@ class Driver(Component):
 
         return True
 
-    def config_changed(self):
+    def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
         """
-        super(Driver, self).config_changed()
+        super(Driver, self).config_changed(update_parent)
         try:
             wfs = self._workflows
         except:

@@ -22,7 +22,6 @@ from openmdao.main.interfaces import IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-from openmdao.main.depgraph import DependencyGraph
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -112,10 +111,6 @@ class Component (Container):
         # contains validity flag for each io Trait (inputs are valid since they're not connected yet,
         # and outputs are invalid)
         self._valid_dict = dict([(name,t.iotype=='in') for name,t in self.class_traits().items() if t.iotype])
-        
-        # dependency graph between us and our boundaries (bookkeeps connections between our
-        # variables and external ones).  This replaces self._depgraph from Container.
-        self._depgraph = DependencyGraph()
         
         # Components with input CaseIterators will be forced to execute whenever run() is
         # called on them, even if they don't have any invalid inputs or outputs.
@@ -377,6 +372,8 @@ class Component (Container):
         self._expr_sources = None
         self._call_check_config = True
         self._call_execute = True
+        self._connected_inputs = None
+        self._connected_outputs = None
 
     def list_inputs(self, valid=None):
         """Return a list of names of input values. If valid is not None,
@@ -384,7 +381,7 @@ class Component (Container):
         """
         if self._input_names is None:
             nset = set([k for k,v in self.items(iotype='in')])
-            nset.update([s.replace('@self.','') for s in self._depgraph.get_boundary_inputs()])
+            nset.update([s for s in self._depgraph.get_boundary_inputs()])
             self._input_names = list(nset)
             
         if valid is None:
@@ -398,7 +395,7 @@ class Component (Container):
         """
         if self._output_names is None:
             nset = set([k for k,v in self.items(iotype='out')])
-            nset.update([s.replace('@self.','') for s in self._depgraph.get_boundary_outputs()])
+            nset.update([s.replace('@out.','') for s in self._depgraph.get_boundary_outputs()])
             self._output_names = list(nset)
             
         if valid is None:
@@ -426,10 +423,24 @@ class Component (Container):
         return self._connected_outputs
         
     def connect(self, srcpath, destpath, value=None):
+        """Connects one source variable to one destination variable. 
+        When a pathname begins with 'parent.', that indicates
+        that it is referring to a variable outside of this object's scope.
+        
+        srcpath: str
+            Pathname of source variable
+            
+        destpath: str
+            Pathname of destination variable
+
+        value: object, optional
+            A value used for validation by the destination variable
+        """
+        
         super(Component, self).connect(srcpath, destpath, value)
-        if not srcpath.startswith('parent.') and '.' in srcpath and srcpath not in self._valid_dict:
-            self._valid_dict[srcpath] = False
-        if not destpath.startswith('parent.') and '.' in destpath and destpath not in self._valid_dict:
+        if not srcpath.startswith('parent.') and srcpath not in self._valid_dict:
+            self._valid_dict[srcpath] = True
+        if not destpath.startswith('parent.'):
             self._valid_dict[destpath] = False
         self.config_changed(update_parent=False)
         

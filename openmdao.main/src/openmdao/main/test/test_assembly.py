@@ -106,31 +106,7 @@ class AssemblyTestCase(unittest.TestCase):
         # driver process definition
         top.driver.workflow.add([top.comp1,top.nested,top.comp2,top.comp3])
         nested.driver.workflow.add([nested.comp1])
-        
-    #def test_set_source(self):
-        #self.asm.set_source('nested.comp1.dummy_in.mult', 'comp3.rout')
-        #self.assertEqual(self.asm._sources['nested.comp1.dummy_in.mult'], 
-                         #'comp3.rout')
-        #self.assertEqual(self.asm.nested._sources['comp1.dummy_in.mult'], 
-                         #'parent.comp3.rout')
-        #self.assertEqual(self.asm.nested.comp1._sources['dummy_in.mult'], 
-                         #'parent.parent.comp3.rout')
-        #self.assertEqual(self.asm.nested.comp1.dummy_in._sources['mult'], 
-                         #'parent.parent.parent.comp3.rout')
-        
-        #self.asm.set('nested.comp1.dummy_in.mult', 33., src='comp3.rout')
-        #self.asm.nested.set('comp1.dummy_in.mult', 34., src='parent.comp3.rout')
-        #self.asm.nested.comp1.set('dummy_in.mult', 35., src='parent.parent.comp3.rout')
-        #self.asm.nested.comp1.dummy_in.set('mult', 36., src='parent.parent.parent.comp3.rout')
-        
-        #try:
-            #self.asm.set('nested.comp1.dummy_in.mult', 33.)
-        #except Exception as err:
-            #self.assertEqual(str(err), "nested.comp1.dummy: 'mult' is connected to source 'parent.parent.parent.comp3.rout' and cannot be set by source 'None'")
-        #else:
-            #self.fail("Exception expected")
-            
-        
+                
     def test_lazy_eval(self):
         top = set_as_top(Assembly())
         comp1 = top.add('comp1', Multiplier())
@@ -283,7 +259,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.create_passthrough('comp2.r')
         except RuntimeError, err:
-            self.assertEqual(str(err), ': comp2.r is already connected')
+            self.assertEqual(str(err), "comp2: 'r' is already connected to source 'parent.comp1.rout'")
         else:
             self.fail('RuntimeError expected')
         self.asm.set('comp1.s', 'some new string')
@@ -425,7 +401,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             asm.nested.connect('comp2.d', 'c')
         except RuntimeError, err:
-            self.assertEqual(str(err), 'nested: c is already connected')
+            self.assertEqual(str(err), "nested: 'c' is already connected to source 'comp1.c'")
         else:
             self.fail('RuntimeError expected')
         

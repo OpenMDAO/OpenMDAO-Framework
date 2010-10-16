@@ -5,8 +5,31 @@
 __all__ = ['Assembly']
 
 import networkx as nx
-from networkx.algorithms.traversal import is_directed_acyclic_graph, \
+from networkx.algorithms.traversal import topological_sort_recursive, \
                                           strongly_connected_components
+
+def _cvt_names_to_graph(srcpath, destpath):
+    srccompname, _, srcvarname = srcpath.partition('.')
+    destcompname, _, destvarname = destpath.partition('.')
+    
+    if srccompname == 'parent':  # cross-boundary input
+        srccompname = '@in'
+        srcvarname = srcpath
+    elif not srcvarname:  # connection to a boundary var
+        srcvarname = srccompname
+        srccompname = '@self'
+        
+    if destcompname == 'parent':  # cross-boundary output
+        destcompname = '@out'
+        destvarname = destpath
+    elif not destvarname:  # connection to a boundary var
+        destvarname = destcompname
+        destcompname = '@self'
+        
+    return (srccompname, srcvarname, destcompname, destvarname)
+
+#fake nodes for boundary connections
+_fakes = ['@in', '@out', '@self']
 
 class DependencyGraph(object):
     """
@@ -17,36 +40,34 @@ class DependencyGraph(object):
 
     def __init__(self):
         self._graph = nx.DiGraph()
-        self._graph.add_nodes_from(['@in', '@out', '@self']) #fake nodes for boundary connections
+        self._graph.add_nodes_from(_fakes) 
         
     def __contains__(self, compname):
         """Return True if this graph contains the given component."""
         return compname in self._graph
     
     def __len__(self):
-        return len(self._graph)-3  # subtract 3 because of the 3 'fake' nodes
+        return len(self._graph) - len(_fakes)
         
     def subgraph(self, nodelist):
         return self._graph.subgraph(nodelist)
     
     def copy_graph(self):
         graph = self._graph.copy()
-        graph.remove_nodes_from(['@in', '@out', '@self'])
+        graph.remove_nodes_from(_fakes)
         return graph
     
-    def get_source(self, cname, destvar):
-        for u,v,data in self._graph.in_edges(cname, data=True):
+    def get_source(self, destvar):
+        for u,v,data in self._graph.in_edges('@self', data=True):
             src = data['link']._dests.get(destvar)
             if src:
-                return src
+                if u[0]=='@':
+                    return src
+                else:
+                    return '.'.join([u,src])
+            
         return None
 
-    def iter(self, scope):
-        """Iterate through the nodes in dataflow order."""
-        for n in nx.topological_sort(self._graph):
-            if n[0] != '@':  # skip 'fake' nodes @in and @out
-                yield getattr(scope, n)
-            
     def add(self, comp):
         """Add the name of a Component to the graph."""
         self._graph.add_node(comp.name)
@@ -114,13 +135,21 @@ class DependencyGraph(object):
     def get_boundary_inputs(self):
         ins = []
         for u,v,data in self._graph.edges('@in', data=True):
-            ins.extend(['.'.join([v,dest]) for dest in data['link']._dests.keys()])
+            for n in data['link']._dests.keys():
+                if v[0] != '@':
+                    ins.append('.'.join([v,n]))
+                else:
+                    ins.append(n)
         return ins
     
     def get_boundary_outputs(self):
         outs = []
         for u,v,data in self._graph.in_edges('@out', data=True):
-            outs.extend(['.'.join([u,src]) for src in data['link']._srcs.keys()])
+            for n in data['link']._srcs.keys():
+                if u[0] != '@':
+                    outs.append('.'.join([u,n]))
+                else:
+                    outs.append(n)
         return outs
     
     def var_in_edges(self, name):
@@ -136,21 +165,8 @@ class DependencyGraph(object):
         *srccompname* to *destcompname*.
         """
         graph = self._graph
-        srccompname, _, srcvarname = srcpath.partition('.')
-        destcompname, _, destvarname = destpath.partition('.')
-        
-        if srccompname == 'parent':  # cross-boundary input
-            srccompname = '@in'
-            srcvarname = 'parent.'+srcvarname
-        elif not srcvarname:  # connection to a boundary var
-            srcvarname = srccompname
-            srccompname = '@self'
-        if destcompname == 'parent':  # cross-boundary output
-            destcompname = '@out'
-            destvarname = 'parent.'+destvarname
-        elif not destvarname:  # connection to a boundary var
-            destvarname = destcompname
-            destcompname = '@self'
+        srccompname, srcvarname, destcompname, destvarname = \
+                           _cvt_names_to_graph(srcpath, destpath)
         
         try:
             link = graph[srccompname][destcompname]['link']
@@ -158,26 +174,32 @@ class DependencyGraph(object):
             link=_Link()
             graph.add_edge(srccompname, destcompname, link=link)
             
-        if is_directed_acyclic_graph(graph):
+        nbunch = [n for n in graph if not n[0]=='@']
+        if not nbunch:
             link.connect(srcvarname, destvarname)
-        else:   # cycle found
-            # do a little extra work here to give more info to the user in the error message
-            strongly_connected = strongly_connected_components(graph)
-            if len(link) == 0:
-                graph.remove_edge(srccompname, destcompname)
-            for strcon in strongly_connected:
-                if len(strcon) > 1:
-                    raise RuntimeError(
-                        'circular dependency (%s) would be created by connecting %s to %s' %
-                                 (str(strcon), 
-                                  '.'.join([srccompname,srcvarname]), 
-                                  '.'.join([destcompname,destvarname])))
+        else:
+            graph2 = self._graph.subgraph(nbunch) #FIXME: have to do this because topo sort doesn't handle nbunch correctly
+            if topological_sort_recursive(graph2):
+                link.connect(srcvarname, destvarname)
+            else:   # cycle found
+                # do a little extra work here to give more info to the user in the error message
+                strongly_connected = strongly_connected_components(graph2)
+                if len(link) == 0:
+                    graph.remove_edge(srccompname, destcompname)
+                for strcon in strongly_connected:
+                    if len(strcon) > 1:
+                        raise RuntimeError(
+                            'circular dependency (%s) would be created by connecting %s to %s' %
+                                     (str(strcon), 
+                                      '.'.join([srccompname,srcvarname]), 
+                                      '.'.join([destcompname,destvarname])))
 
     def disconnect(self, srcpath, destpath):
         """Disconnect the given variables."""
         graph = self._graph
-        srccompname, srcvarname = srcpath.split('.', 1)
-        destcompname, destvarname = destpath.split('.', 1)
+        srccompname, srcvarname, destcompname, destvarname = \
+                           _cvt_names_to_graph(srcpath, destpath)
+        
         link = self._graph[srccompname][destcompname]['link']
         link.disconnect(srcvarname, destvarname)
         if len(link) == 0:

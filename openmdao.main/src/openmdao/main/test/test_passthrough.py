@@ -56,7 +56,12 @@ class PassthroughTestCase(unittest.TestCase):
         self._setup_simple()
         self.assertEqual(set(self.asm.c1.list_outputs()), set(['c','d']))
         self.assertTrue('c2.b' in self.asm.a1.list_inputs())
-        self.asm.run()
+        
+    def test_basics(self):
+        c = Simple()
+        c.connect('parent.c1.foo', 'a')
+        print c._depgraph.get_boundary_inputs()
+        
         
         
 if __name__ == "__main__":
