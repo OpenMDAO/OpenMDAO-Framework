@@ -19,6 +19,9 @@ class Simple(Component):
         self.c = 3
         self.d = -1
 
+    def getvals(self):
+        return (self.a, self.b, self.c, self.d)
+
     def execute(self):
         self.c = self.a + self.b
         self.d = self.a - self.b
@@ -56,11 +59,26 @@ class PassthroughTestCase(unittest.TestCase):
         self._setup_simple()
         self.assertEqual(set(self.asm.c1.list_outputs()), set(['c','d']))
         self.assertTrue('c2.b' in self.asm.a1.list_inputs())
+        self.asm.run()
+        self.assertEqual(self.asm.c3.getvals(), (-2,2,0,-4))
+        
+    def test_real_passthrough(self):
+        self._setup_simple()
+        self.asm.a1.create_passthrough('c2.a')
+        self.asm.a1.create_passthrough('c2.c')
+        self.asm.connect('c1.d', 'a1.a')
+        self.asm.connect('a1.c', 'c3.b')
+        self.asm.run()
+        self.assertEqual(self.asm.c3.getvals(), (-4,2,-2,-6))
         
     def test_basics(self):
         c = Simple()
         c.connect('parent.c1.foo', 'a')
-        print c._depgraph.get_boundary_inputs()
+        self.assertEqual(['a'], c._depgraph.get_connected_inputs())
+        self.assertEqual([], c._depgraph.get_connected_outputs())
+        c.connect('c', 'parent.c2.a')
+        self.assertEqual(['a'], c._depgraph.get_connected_inputs())
+        self.assertEqual(['c'], c._depgraph.get_connected_outputs())
         
         
         

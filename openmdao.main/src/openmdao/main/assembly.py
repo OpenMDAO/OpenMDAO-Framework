@@ -14,7 +14,6 @@ from openmdao.main.container import find_trait_and_value, get_trait
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression, ExpressionList
-from openmdao.main.depgraph import DependencyGraph
 
 _iodict = { 'out': 'output', 'in': 'input' }
 
@@ -43,10 +42,6 @@ class Assembly (Component):
     
     def __init__(self, doc=None, directory=''):
         super(Assembly, self).__init__(doc=doc, directory=directory)
-        
-        # dependency graph between us and our boundaries (bookkeeps connections between our
-        # variables and external ones).  This replaces self._depgraph from Container.
-        self._depgraph = DependencyGraph()
         
         # default Driver executes its workflow once
         self.add('driver', Driver())
@@ -294,13 +289,12 @@ class Assembly (Component):
     def _update_boundary_vars (self):
         """Update output variables on our boundary."""
         valids = self._valid_dict
-        for srccompname,link in self._depgraph.in_links('@out'):
-            if srccompname[0] == '@':
-                srccomp = self
-            else:
-                srccomp = getattr(self, srccompname)
+        for srccompname,link in self._depgraph.in_links('@self'):
+            if srccompname == '@in':
+                continue
+            srccomp = getattr(self, srccompname)
             for dest,src in link._dests.items():
-                if not dest.startswith('parent.') and valids[dest] is False:
+                if valids[dest] is False:
                     setattr(self, dest, srccomp.get_wrapped_attr(src))
 
     def step(self):
@@ -421,7 +415,7 @@ class Assembly (Component):
         if compname is None: # start at @in (boundary inputs)
             compname = '@in'
             if varnames is not None:
-                for name in self._depgraph.get_boundary_inputs():
+                for name in self._depgraph.get_connected_inputs():
                     if name in varnames:
                         self._valid_dict[name] = False
         visited = set()
@@ -499,10 +493,10 @@ def asm_dump(asm):
         f.write('inputs: %s\n' % asm.list_inputs())
         f.write('outputs: %s\n' % asm.list_outputs())
         f.write('boundary ins: \n')
-        for name in asm._depgraph.get_boundary_inputs():
+        for name in asm._depgraph.get_connected_inputs():
             f.write('   %s\n' % src)
         f.write('boundary outs: \n')
-        for name in asm._depgraph.get_boundary_outputs():
+        for name in asm._depgraph.get_connected_outputs():
             f.write('   %s\n' % dest)
         f.write('valids: %s\n' % asm._valid_dict)
     f = cStringIO.StringIO()

@@ -22,6 +22,7 @@ from openmdao.main.interfaces import IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
+from openmdao.main.depgraph import DependencyGraph
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -111,6 +112,10 @@ class Component (Container):
         # contains validity flag for each io Trait (inputs are valid since they're not connected yet,
         # and outputs are invalid)
         self._valid_dict = dict([(name,t.iotype=='in') for name,t in self.class_traits().items() if t.iotype])
+        
+        # dependency graph between us and our boundaries (bookkeeps connections between our
+        # variables and external ones).  This replaces self._depgraph from Container.
+        self._depgraph = DependencyGraph()
         
         # Components with input CaseIterators will be forced to execute whenever run() is
         # called on them, even if they don't have any invalid inputs or outputs.
@@ -381,7 +386,7 @@ class Component (Container):
         """
         if self._input_names is None:
             nset = set([k for k,v in self.items(iotype='in')])
-            nset.update([s for s in self._depgraph.get_boundary_inputs()])
+            nset.update([s for s in self._depgraph.get_connected_inputs()])
             self._input_names = list(nset)
             
         if valid is None:
@@ -395,7 +400,7 @@ class Component (Container):
         """
         if self._output_names is None:
             nset = set([k for k,v in self.items(iotype='out')])
-            nset.update([s.replace('@out.','') for s in self._depgraph.get_boundary_outputs()])
+            nset.update([s.replace('@out.','') for s in self._depgraph.get_connected_outputs()])
             self._output_names = list(nset)
             
         if valid is None:
@@ -413,13 +418,13 @@ class Component (Container):
     def _get_connected_inputs(self):
         """Return a list of names of connected input variables and passthroughs."""
         if self._connected_inputs is None:
-            self._connected_inputs = self._depgraph.get_boundary_inputs()
+            self._connected_inputs = self._depgraph.get_connected_inputs()
         return self._connected_inputs
             
     def _get_connected_outputs(self):
         """Return a list of names of connected output variables and passthroughs."""
         if self._connected_outputs is None:
-            self._connected_outputs = self._depgraph.get_boundary_outputs()
+            self._connected_outputs = self._depgraph.get_connected_outputs()
         return self._connected_outputs
         
     def connect(self, srcpath, destpath, value=None):

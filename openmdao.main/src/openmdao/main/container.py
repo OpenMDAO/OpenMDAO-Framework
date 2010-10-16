@@ -171,10 +171,10 @@ class _ContainerDepends(object):
         """
         return self._srcs.get(destname)
     
-    def get_boundary_inputs(self):
+    def get_connected_inputs(self):
         return [n for n in self._srcs.keys() if not n.startswith('parent.')]
     
-    def get_boundary_outputs(self):
+    def get_connected_outputs(self):
         return [n for n in self._srcs.values() if not n.startswith('parent.')]
 
 

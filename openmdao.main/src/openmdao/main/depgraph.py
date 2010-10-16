@@ -124,15 +124,33 @@ class DependencyGraph(object):
         """
         return [(v,data['link']) for u,v,data in self._graph.edges(cname, data=True)]
 
-    def var_edges(self, name):
+    def var_edges(self, name=None):
         """Return a list of outgoing edges connecting variables."""
+        if name is None:
+            names = self._graph.nodes()
+        else:
+            names = [name]
         edges = []
-        for u,v,data in self._graph.edges(name, data=True):
-            edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
-                                for dest,src in data['link']._dests.items()])
+        for name in names:
+            for u,v,data in self._graph.edges(name, data=True):
+                edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
+                                    for dest,src in data['link']._dests.items()])
         return edges
     
-    def get_boundary_inputs(self):
+    def var_in_edges(self, name=None):
+        """Return a list of incoming edges connecting variables."""
+        if name is None:
+            names = self._graph.nodes()
+        else:
+            names = [name]
+        edges = []
+        for name in names:
+            for u,v,data in self._graph.in_edges(name, data=True):
+                edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
+                                     for dest,src in data['link']._dests.items()])
+        return edges
+    
+    def get_connected_inputs(self):
         ins = []
         for u,v,data in self._graph.edges('@in', data=True):
             for n in data['link']._dests.keys():
@@ -142,7 +160,7 @@ class DependencyGraph(object):
                     ins.append(n)
         return ins
     
-    def get_boundary_outputs(self):
+    def get_connected_outputs(self):
         outs = []
         for u,v,data in self._graph.in_edges('@out', data=True):
             for n in data['link']._srcs.keys():
@@ -151,14 +169,6 @@ class DependencyGraph(object):
                 else:
                     outs.append(n)
         return outs
-    
-    def var_in_edges(self, name):
-        """Return a list of incoming edges connecting variables."""
-        edges = []
-        for u,v,data in self._graph.in_edges(name, data=True):
-            edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
-                                 for dest,src in data['link']._dests.items()])
-        return edges
     
     def connect(self, srcpath, destpath):
         """Add an edge to our Component graph from 
