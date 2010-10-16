@@ -108,15 +108,6 @@ class Assembly (Component):
             
         return newtrait
 
-    #def get_dyn_trait(self, pathname, iotype):
-        #"""Retrieves the named trait, attempting to create a PassthroughTrait
-        #on-the-fly if the specified trait doesn't exist.
-        #"""
-        #trait = get_trait(self, pathname)
-        #if trait is None:
-            #trait = self.create_passthrough(pathname)
-        #return trait
-
     def _split_varpath(self, path):
         """Return a tuple of compname,component,varname given a path
         name of the form 'compname.varname'. If the name is of the form 'varname'
@@ -146,8 +137,6 @@ class Assembly (Component):
             A value used for validation by the destination variable
         """
 
-        super(Assembly, self).connect(srcpath, destpath, value)
-        
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
@@ -175,11 +164,6 @@ class Assembly (Component):
                     ' must be an input variable',
                     RuntimeError)
                 
-        #sname = self._depgraph.get_source(destcompname, destvarname)
-        #if sname is not None:
-            #self.raise_exception('%s is already connected to %s' % (destpath, sname),
-                                 #RuntimeError)             
-            
         # test compatability (raises TraitError on failure)
         if desttrait and desttrait.validate is not None:
             try:
@@ -193,9 +177,6 @@ class Assembly (Component):
                 self.raise_exception("can't connect '%s' to '%s': %s" % 
                                      (srcpath,destpath,str(err)), TraitError)
             
-        #if destcomp is not self and srccomp is not self: # neither var is on boundary
-            #self._depgraph.connect(srcpath, destpath)
-        
         # invalidate destvar if necessary
         if destcomp is self and desttrait and desttrait.iotype == 'out': # boundary output
             if destcomp.get_valid(destvarname) and \
@@ -206,13 +187,14 @@ class Assembly (Component):
                     # Note that it's a dest var in this scope, but a src var in
                     # the parent scope.
                     self.parent.invalidate_deps(self.name, [destvarname], True)
-            #self._depgraph.connect(srcpath, '.'.join(['@out',destvarname]))
             self._valid_dict[destpath] = False
         elif srccomp is self and srctrait.iotype == 'in': # boundary input
-            #self._depgraph.connect('.'.join(['@in',srcpath]), destpath)
             pass
         else:
             destcomp.invalidate_deps(varnames=[destvarname], notify_parent=True)
+
+        super(Assembly, self).connect(srcpath, destpath, value)
+        
 
     def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and
@@ -257,28 +239,6 @@ class Assembly (Component):
 
         for src,sink in to_remove:
             super(Assembly, self).disconnect(src, sink)
-            #sinkcomp,sinkvar = sink.split('.', 1)
-            #if sinkcomp[0] != '@':  # sink is not on boundary
-                #getattr(self, sinkcomp).disconnect(sinkvar)
-            #self._depgraph.disconnect(src, sink)
-
-    #def set_source(self, destname, srcname):
-        #"""Mark the named io trait as a destination by registering a source
-        #for it, which will prevent it from being set directly or connected 
-        #to another source.
-        
-        #destname: str
-            #Name of the destination variable.
-            
-        #srcname: str
-            #Pathname of the source variable. The pathname may contain references
-            #to 'parent.' indicating that the source is from outside of the 
-            #immediate parent's scope.
-            
-        #"""
-        #super(Assembly, self).set_source(destname, srcname)
-        #if '.' in destname:
-            #self._depgraph.connect('@in.%s' % srcname, destname)
             
     def execute (self):
         """Runs driver and updates our boundary variables."""
@@ -483,21 +443,5 @@ def dump_iteration_tree(obj):
             _dump_iteration_tree(obj.driver, f, tablevel+3)
     f = cStringIO.StringIO()
     _dump_iteration_tree(obj, f, 0)
-    return f.getvalue()
-
-
-def asm_dump(asm):
-    def _asm_dump(asm, f):
-        f.write('inputs: %s\n' % asm.list_inputs())
-        f.write('outputs: %s\n' % asm.list_outputs())
-        f.write('boundary ins: \n')
-        for name in asm._depgraph.get_connected_inputs():
-            f.write('   %s\n' % src)
-        f.write('boundary outs: \n')
-        for name in asm._depgraph.get_connected_outputs():
-            f.write('   %s\n' % dest)
-        f.write('valids: %s\n' % asm._valid_dict)
-    f = cStringIO.StringIO()
-    _asm_dump(asm, f)
     return f.getvalue()
     

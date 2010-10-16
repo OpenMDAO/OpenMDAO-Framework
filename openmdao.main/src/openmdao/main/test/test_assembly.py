@@ -234,10 +234,6 @@ class AssemblyTestCase(unittest.TestCase):
         
     def test_passthrough_nested(self):
         self.asm.set('comp1.r', 8.)
-        #self.asm.nested.create_passthrough('comp1.r')
-        #self.asm.nested.create_passthrough('comp1.rout', 'foobar')
-        #self.asm.connect('comp1.rout', 'nested.r')
-        #self.asm.connect('nested.foobar','comp2.r')
         self.asm.connect('comp1.rout', 'nested.comp1.r')
         self.asm.connect('nested.comp1.rout','comp2.r')
         self.asm.run()

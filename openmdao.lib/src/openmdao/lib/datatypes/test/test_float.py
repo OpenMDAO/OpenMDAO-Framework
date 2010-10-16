@@ -85,18 +85,7 @@ class FloatTestCase(unittest.TestCase):
     def test_get(self):
         self.assertEqual(self.hobj.float1, 3.1415926)
         self.assertEqual(self.hobj.get('float1'), 3.1415926)
-        
-    #def test_set_attribute(self):
-        #self.hobj.float1.set("units", "ft**2")
-        #self.assertEqual(self.hobj.float1.units, "ft**2")
-        #try:
-            #self.hobj.float1.set("units", "inch**2", [2])
-        #except ValueError, err:
-            #self.assertEqual(str(err), 
-                #"h1.float1: array indexing of Variable attributes not supported")
-        #else:
-            #self.fail("ValueError expected")
-        
+                
     def test_array_assign(self):
         try:
             self.hobj.float1[3] = 1.3

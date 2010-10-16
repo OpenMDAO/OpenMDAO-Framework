@@ -154,6 +154,11 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(valids, [True, True, True, True])
         
         
+    def test_disconnect(self):
+        self.top.disconnect('comp7.c', 'sub.a3')
+        self.top.sub.disconnect('comp5.c', 'comp1.b')
+        self.fail('finish this test!')
+        
     def test_lazy1(self):
         self.top.run()
         run_counts = [self.top.get(x).run_count for x in allcomps]

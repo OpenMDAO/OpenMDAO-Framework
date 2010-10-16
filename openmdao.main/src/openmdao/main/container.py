@@ -73,84 +73,7 @@ push_exception_handler(handler = lambda o, t, ov, nv: None,
 # npsscomponent uses it...
 _namecheck_rgx = re.compile(
     '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
-    
-#class _DumbTmp(object):
-    #pass
-
-#class _PathProperty(TraitType):
-    #"""A trait that allows attributes in child objects to be referenced
-    #using an alias in a parent scope.  We don't use a delegate because
-    #we can't be sure that the attribute we want is found in a HasTraits
-    #object.
-    #"""
-    #def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
-        #ref_name = metadata.get('ref_name')
-        #if not ref_name:
-            #raise TraitError("_PathProperty constructor requires a"
-                             #" 'ref_name' argument.")
-        #self._names = ref_name.split('.')
-        #if len(self._names) < 2:
-            #raise TraitError("_PathProperty ref_name must have at least "
-                             #"two entries in the path."
-                             #" The given ref_name was '%s'" % ref_name)        
-        ##make weakref to a transient object to force a re-resolve later
-        ##without checking for self._ref being equal to None
-        #self._ref = weakref.ref(_DumbTmp()) 
-        #super(_PathProperty, self).__init__(default_value, **metadata)
-
-    #def __getstate__(self):
-        #state = self.__dict__.copy()
-        #state['_ref'] = self._ref()
-        #return state
-    
-    #def __setstate__(self, state):
-        #self.__dict__.update(state)
-        #if self._ref is None:
-            #self._ref = weakref.ref(_DumbTmp())
-        #else:
-            #self._ref = weakref.ref(self._ref)
-    
-    #def _resolve(self, obj):
-        #"""Try to resolve down to the last containing object in the path and
-        #store a weakref to that object.
-        #"""
-        ## TODO - need to handle only being able to resolve down to 
-        ##        the nearest proxy here
-        #try:
-            #for name in self._names[:-1]:
-                #obj = getattr(obj, name)
-        #except AttributeError:
-            #raise TraitError("_PathProperty cannot resolve path '%s'" % 
-                             #'.'.join(self._names))
-        #self._last_name = self._names[-1]
-        #self._ref = weakref.ref(obj)
-        #return obj
             
-    #def get(self, obj, name):
-        #"""Return the value of the referenced attribute."""
-        #return getattr(self._ref() or self._resolve(obj), self._last_name)
-
-    #def set(self, obj, name, value):
-        #"""Set the value of the referenced attribute."""
-        #if self.iotype == 'out':
-            #raise TraitError('%s is an output trait and cannot be set' % name)
-        
-        #if self.trait:
-            #value = self.trait.validate(obj, name, value)
-        
-        #setattr(self._ref() or self._resolve(obj), self._last_name, value)
-    
-        
-#def _tup_to_srcname(cont, tup):
-    #"""Convert (upscopes, srcname) to source name."""
-    #if tup is None:
-        #return None
-    #if tup[0] == 0:
-        #return tup[1]
-    #scopename = cont.parent.get_pathname().rsplit('.', tup[0])[0]
-    #return '%s.%s' % (scopename,tup[1])
-    
-        
 class _ContainerDepends(object):
     """An object that bookkeeps connections to/from Container variables."""
     def __init__(self):
@@ -308,6 +231,9 @@ class Container(HasTraits):
         """Removes the connection between one source variable and one 
         destination variable.
         """
+        srcpath = srcpath.replace('@in.','').replace('@out.','').replace('@self.','')
+        destpath = destpath.replace('@in.','').replace('@out.','').replace('@self.','')
+        
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
@@ -1011,17 +937,6 @@ class Container(HasTraits):
         trait: TraitType, optional
             A validation trait for the given attribute.
         """
-        #trait = get_trait(self, pathname)
-        #if trait:
-            #self.raise_exception("trait '%s' already exists" % pathname, NameError)
-        #objtrait, value = find_trait_and_value(self, pathname)
-        #if iotype is None and objtrait is not None:
-            #iotype = objtrait.iotype
-        #if trait is None:
-            #trait = objtrait
-        ## if we make it to here, object specified by pathname exists
-        #return _PathProperty(ref_name=pathname, iotype=iotype, 
-                            #trait=trait)
         self.raise_exception("Unable to create a new trait automatically", 
                              RuntimeError)
         
@@ -1052,18 +967,6 @@ class Container(HasTraits):
         self.raise_exception("Cannot locate variable named '%s'" %
                              pathname, AttributeError)
 
-    #def get_dyn_trait(self, name, iotype):
-        #"""Retrieves the named trait, attempting to create it on-the-fly if
-        #it doesn't already exist.
-        #"""
-        #trait = get_trait(self, name)
-        #if trait is None:
-            #try:
-                #trait = self._create_alias(name, iotype)
-            #except AttributeError:
-                #self.raise_exception("Cannot locate trait named '%s'" %
-                                     #name, NameError)
-        #return trait
 
     def _create_alias(self, path, io_status=None, trait=None, alias=None):
         """Create a trait that maps to some internal variable designated by a

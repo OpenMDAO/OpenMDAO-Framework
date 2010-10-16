@@ -99,13 +99,6 @@ class ContainerTestCase(unittest.TestCase):
     def test_get_attribute(self):
         self.assertEqual(self.root.get('c2.c22.c221').trait('number').iotype, 
                          'in')
-
-    #def test_keys(self):
-        #lst = [x for x in self.root.keys(recurse=True)]
-        #self.assertEqual(lst, 
-            #['c2', 'c2.c22', 'c2.c22.c221', 'c2.c22.c221.number', 'c2.c21', 'c1'])
-        #lst = [x for x in self.root.keys(recurse=True, iotype='in')]
-        #self.assertEqual(lst, ['c2.c22.c221.number'])
         
     def test_full_items(self):
         lst = map(lambda x: x[0], self.root.items(recurse=True))

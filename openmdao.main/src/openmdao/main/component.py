@@ -287,11 +287,11 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
-                print 'execute %s' % self.get_pathname()
+                #print 'execute %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
-            else:
-                print 'skipping %s' % self.get_pathname()
+            #else:
+            #    print 'skipping %s' % self.get_pathname()
         finally:
             if self.directory:
                 self.pop_dir()
@@ -1004,24 +1004,6 @@ class Component (Container):
     def stop (self):
         """Stop this component."""
         self._stop = True
-
-    #def set_source(self, destname, srcname):
-        #"""Mark the named io trait as a destination by registering a source
-        #for it, which will prevent it from being set directly or connected 
-        #to another source.
-        
-        #destname: str
-            #Name of the destination variable.
-            
-        #srcname: str
-            #Pathname of the source variable. The pathname may contain references
-            #to 'parent.' indicating that the source is from outside of the 
-            #immediate parent's scope.
-            
-        #"""
-        #super(Component, self).set_source(destname, srcname)
-        #if '.' in destname:
-            #self._valid_dict[destname] = False
 
     def get_valid(self, name):
         """Get the value of the validity flag for the io trait with the given

@@ -1,9 +1,6 @@
 """ Class definition for Assembly """
 
 
-#public symbols
-__all__ = ['Assembly']
-
 import networkx as nx
 from networkx.algorithms.traversal import topological_sort_recursive, \
                                           strongly_connected_components
