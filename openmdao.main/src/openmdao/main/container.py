@@ -134,13 +134,12 @@ class Container(HasTraits):
         for name, obj in self.items():
             if isinstance(obj, FileRef):
                 setattr(self, name, obj.copy(owner=self))
+                
+        # register callbacks for all of our 'in' traits
+        for name,trait in self.class_traits().items():
+            if trait.iotype == 'in':
+                self.on_trait_change(self._input_trait_modified, name)
 
-        # Call _io_trait_modified if any trait having 'iotype' metadata is
-        # changed. We originally used the decorator @on_trait_change for this,
-        # but it failed to be activated properly when our objects were
-        # unpickled.
-        self.on_trait_change(self._io_trait_modified, '+iotype')
-        
     @property
     def parent(self):
         """The parent Container of this Container."""
@@ -255,7 +254,7 @@ class Container(HasTraits):
     
     def __deepcopy__ ( self, memo ):
         """ Overrides deepcopy for HasTraits because otherwise we lose instance
-        traits when we copy.
+        traits when we copy. :(
         """
         id_self = id( self )
         if id_self in memo:
@@ -286,15 +285,23 @@ class Container(HasTraits):
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
         
-        # restore call to _io_trait_modified to catch changes to any trait
-        # having 'iotype' metadata
-        self.on_trait_change(self._io_trait_modified, '+iotype')
+        ## restore call to _io_trait_modified to catch changes to any trait
+        ## having 'iotype' metadata
+        #self.on_trait_change(self._io_trait_modified, '+iotype')
         
         # restore dynamically added traits, since they don't seem
         # to get restored automatically
+        traits = self.alltraits()
         for name, trait in self._added_traits.items():
-            self.add_trait(name, trait)
-         
+            if name not in traits:
+                self.add_trait(name, trait)
+        
+        # make sure all input callbacks are in place.  If callback is
+        # already there, this will have no effect. 
+        for name, trait in self.alltraits().items():
+            if trait.iotype == 'in':
+                self.on_trait_change(self._input_trait_modified, name)
+            
         # after unpickling, implicitly defined traits disappear, so we have to
         # recreate them by assigning them to themselves.       
         #TODO: I'm probably missing something. There has to be a better way to
@@ -312,6 +319,10 @@ class Container(HasTraits):
         super(Container, self).add_trait(name, trait)
         getattr(self, name)  # this causes (non-property) instance traits to show up in traits()
         
+        # if it's an input trait, register a callback to be called whenever it's changed
+        if trait.iotype == 'in':
+            self.on_trait_change(self._input_trait_modified, name)
+        
     def remove_trait(self, name):
         """Overrides HasTraits definition of remove_trait in order to
         keep track of dynamically added traits for serialization.
@@ -323,29 +334,34 @@ class Container(HasTraits):
             del self._added_traits[name]
         except KeyError:
             pass
+        
+        trait = self.trait(name)
+        if trait and trait.iotype == 'in':
+            self.on_trait_change(self._input_trait_modified, name, remove=True)
+
         super(Container, self).remove_trait(name)
             
     # call this if any trait having 'iotype' metadata is changed
-    def _io_trait_modified(self, obj, name, old, new):
+    def _input_trait_modified(self, obj, name, old, new):
         # setting old to Undefined is a kludge to bypass the destination check
         # when we call this directly from Assembly as part of setting this
         # attribute from an existing connection.
-        if self.trait(name).iotype == 'in':
-            if old is not Undefined and self._depgraph.get_source(name):
-                # bypass the callback here and set it back to the old value
-                self._trait_change_notify(False)
-                try:
-                    setattr(obj, name, old)
-                finally:
-                    self._trait_change_notify(True)
-                self.raise_exception(
-                    "'%s' is already connected to source '%s' and "
-                    "cannot be directly set"%
-                    (name, self._depgraph.get_source(name)), TraitError)
-            self._call_execute = True
-            self._input_changed(name)
+        if old is not Undefined and self._depgraph.get_source(name):
+            # bypass the callback here and set it back to the old value
+            self._trait_change_notify(False)
+            try:
+                setattr(obj, name, old)
+            finally:
+                self._trait_change_notify(True)
+            self.raise_exception(
+                "'%s' is already connected to source '%s' and "
+                "cannot be directly set"%
+                (name, self._depgraph.get_source(name)), TraitError)
+        self._call_execute = True
+        self._input_changed(name)
             
     def _input_changed(self, name):
+        # this is here so inherited classes can take actions when inputs are changed
         pass
 
     def get_wrapped_attr(self, name):
@@ -623,17 +639,18 @@ class Container(HasTraits):
     def _check_trait_settable(self, name, source=None, force=False):
         trait = get_trait(self, name)
         if trait:
-            src = None if force else self._depgraph.get_source(name)
-            if src is not None and src != source:
-                if trait.iotype != 'in':
-                    self.raise_exception(
-                        "'%s' is not an input trait and cannot be set" %
-                        name, TraitError)
-                else:
-                    self.raise_exception(
-                        "'%s' is connected to source '%s' and cannot be "
-                        "set by source '%s'" %
-                        (name,src,source), TraitError)
+            if trait.iotype == 'in':
+                src = None if force else self._depgraph.get_source(name)
+                if src is not None and src != source:
+                    if trait.iotype != 'in':
+                        self.raise_exception(
+                            "'%s' is not an input trait and cannot be set" %
+                            name, TraitError)
+                    else:
+                        self.raise_exception(
+                            "'%s' is connected to source '%s' and cannot be "
+                            "set by source '%s'" %
+                            (name,src,source), TraitError)
         else:
             self.raise_exception("object has no attribute '%s'" % name,
                                  TraitError)
@@ -670,20 +687,20 @@ class Container(HasTraits):
                 setattr(self, path, value)
             else:
                 if index is None:
-                    if trait is None:
-                        self.raise_exception("object has no attribute '%s'" %
-                                             path, TraitError)
-                    # bypass the callback here and call it manually after 
-                    # with a flag to tell it not to check if it's a destination
-                    self._trait_change_notify(False)
-                    try:
+                    if trait.iotype == 'in':
+                        # bypass the callback here and call it manually after 
+                        # with a flag to tell it not to check if it's a destination
+                        self._trait_change_notify(False)
+                        try:
+                            setattr(self, path, value)
+                        finally:
+                            self._trait_change_notify(True)
+                        # now manually call the notifier with old set to Undefined
+                        # to avoid the destination check
+                        self._input_trait_modified(self, path, Undefined, 
+                                               getattr(self, path))
+                    else:
                         setattr(self, path, value)
-                    finally:
-                        self._trait_change_notify(True)
-                    # now manually call the notifier with old set to Undefined
-                    # to avoid the destination check
-                    self._io_trait_modified(self, path, Undefined, 
-                                           getattr(self, path))
                 else:
                     self._array_set(path, value, index)
 
@@ -707,9 +724,9 @@ class Container(HasTraits):
             arr[index[length-1]] = value
                 
         # setting of individual Array values doesn't seem to trigger
-        # _io_trait_modified, so do it manually
+        # _input_trait_modified, so do it manually
         if old != value:
-            self._io_trait_modified(self, name, arr, arr)
+            self._input_trait_modified(self, name, arr, arr)
             
     def _array_get(self, name, index):
         arr = getattr(self, name)

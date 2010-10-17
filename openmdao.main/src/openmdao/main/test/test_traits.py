@@ -37,9 +37,12 @@ class MyHasTraits(HasTraits):
     def __init__(self, *args, **kwargs):
         super(MyHasTraits, self).__init__(*args, **kwargs)
         self.inst = MyClass()
+        
     
 class MyHasTraits2(MyHasTraits):
     pass
+
+
 
 class TraitsTestCase(unittest.TestCase):
 
@@ -201,6 +204,37 @@ class TraitsTestCase(unittest.TestCase):
         unresetable = mht.reset_traits(traits=['implicit_property'])
         self.assertEqual(unresetable, ['implicit_property'])
         self.assertEqual(mht.implicit_property, 999)
+        
+    def test_callbacks(self):
+        class CallbackTester(HasTraits):
+            num_callbacks = Int(0)
+            some_trait = Int()
+            
+            def _callback(self, obj, name, old, new):
+                self.num_callbacks += 1
+                
+        cbt = CallbackTester()
+        self.assertEqual(cbt.num_callbacks, 0)
+        
+        cbt.on_trait_change(cbt._callback, 'some_trait')
+        
+        cbt.some_trait = 3
+        self.assertEqual(cbt.num_callbacks, 1)
+        cbt.some_trait = 4
+        self.assertEqual(cbt.num_callbacks, 2)
+        
+        # verify that if the same callback is added twice, second is ignored
+        cbt.on_trait_change(cbt._callback, 'some_trait')
+        cbt.some_trait = 5
+        self.assertEqual(cbt.num_callbacks, 3)
+        
+        # make sure only one remove call is needed even if we've added same callback
+        # multiple times
+        cbt.on_trait_change(cbt._callback, 'some_trait', remove=True)
+        cbt.some_trait = 6
+        self.assertEqual(cbt.num_callbacks, 3)
+
+
         
 if __name__ == '__main__':
     unittest.main()

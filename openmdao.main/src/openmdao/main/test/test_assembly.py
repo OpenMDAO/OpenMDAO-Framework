@@ -217,11 +217,11 @@ class AssemblyTestCase(unittest.TestCase):
     def test_create_passthrough(self):
         self.asm.set('comp3.r', 75.4)
         self.asm.create_passthrough('comp3.rout')
-        self.assertEqual(self.asm.get('comp3.r'), 75.4)
-        self.assertEqual(self.asm.get('rout'), 0.0)
+        self.assertEqual(self.asm.comp3.r, 75.4)
+        self.assertEqual(self.asm.rout, 0.0)
         self.asm.run()
-        self.assertEqual(self.asm.get('comp3.rout'), 75.4*1.5)
-        self.assertEqual(self.asm.get('rout'), 75.4*1.5)
+        self.assertEqual(self.asm.comp3.rout, 75.4*1.5)
+        self.assertEqual(self.asm.rout, 75.4*1.5)
         
     def test_create_passthrough_already_exists(self):
         self.asm.create_passthrough('comp3.rout')
@@ -232,7 +232,7 @@ class AssemblyTestCase(unittest.TestCase):
         else:
             self.fail('expected TraitError')
         
-    def test_passthrough_nested(self):
+    def test_autopassthrough_nested(self):
         self.asm.set('comp1.r', 8.)
         self.asm.connect('comp1.rout', 'nested.comp1.r')
         self.asm.connect('nested.comp1.rout','comp2.r')
