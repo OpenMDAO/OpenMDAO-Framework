@@ -93,8 +93,7 @@ class ObjServerFactory(Factory):
             name = ctor_args.get('name', '')
             if not name:
                 name = 'Server_%d' % self._count
-            manager = OpenMDAO_Manager(name=name)
-            register(ObjServer, manager, 'openmdao.main.objserverfactory')
+            manager = _ServerManager(name=name)
             manager.start()
             self._logger.info("new server '%s' listening on %s",
                               name, manager.address)
@@ -109,13 +108,13 @@ class ObjServerFactory(Factory):
         return obj
 
 
-class _ServiceManager(OpenMDAO_Manager):
+class _FactoryManager(OpenMDAO_Manager):
     """
     A :class:`multiprocessing.Manager` which manages :class:`ObjServerFactory`.
     """
     pass
 
-register(ObjServerFactory, _ServiceManager, 'openmdao.main.objserverfactory')
+register(ObjServerFactory, _FactoryManager, 'openmdao.main.objserverfactory')
 
     
 class RemoteFile(object):
@@ -386,6 +385,15 @@ class ObjServer(object):
                                % (operation, path, self.root_dir))
 
 
+class _ServerManager(OpenMDAO_Manager):
+    """
+    A :class:`multiprocessing.Manager` which manages :class:`ObjServer`.
+    """
+    pass
+
+register(ObjServer, _ServerManager, 'openmdao.main.objserverfactory')
+
+    
 def connect(address, port, authkey='PublicKey', pubkey=None):
     """
     Connects to the :class:`ObjServerFactory` at `address` and `port`
@@ -406,7 +414,7 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
     except KeyError:
         if not OpenMDAO_Proxy.manager_is_alive(location):
             raise RuntimeError("can't connect to %s" % (location,))
-        mgr = _ServiceManager(location, authkey, pubkey=pubkey)
+        mgr = _FactoryManager(location, authkey, pubkey=pubkey)
         mgr.connect()
         print dir(mgr)
         proxy = mgr.openmdao_main_objserverfactory_ObjServerFactory()
@@ -517,9 +525,9 @@ def main():  #pragma no cover
     _LOGGER.setLevel(logging.DEBUG)
     address = (platform.node(), options.port)
     set_credentials(Credentials())
-    _LOGGER.info("Starting ServiceManager %s '%s'", address, authkey)
+    _LOGGER.info("Starting FactoryManager %s '%s'", address, authkey)
     current_process().authkey = authkey
-    manager = _ServiceManager(address, authkey, name='Factory')
+    manager = _FactoryManager(address, authkey, name='Factory')
 
     server = None
     retries = 0

@@ -559,7 +559,8 @@ class ClusterAllocator(object):  #pragma no cover
                 host_id = host[dash+1:]
 
             if host_ip not in self._allocators:
-                self._allocators[host_ip] = manager.LocalAllocator(host)
+                self._allocators[host_ip] = \
+                    manager.openmdao_main_resource_LocalAllocator(host)
                 self._logger.debug('LocalAllocator for %s at %s',
                                    slot.host.hostname, host_id)
 
