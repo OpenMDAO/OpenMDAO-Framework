@@ -716,7 +716,7 @@ class OpenMDAO_Manager(BaseManager):
             target=type(self)._run_server,
 #            args=(self._registry, self._address, self._authkey,
             args=(registry, self._address, self._authkey,
-                  self._serializer, self._name, writer),
+                  self._serializer, self._name, writer, get_credentials()),
             )
         ident = ':'.join(str(i) for i in self._process._identity)
         self._process.name = type(self).__name__  + '-' + ident
@@ -740,10 +740,13 @@ class OpenMDAO_Manager(BaseManager):
 
     # This happens on the remote server side and we'll check when using it.
     @classmethod
-    def _run_server(cls, registry, address, authkey, serializer, name, writer): #pragma no cover
+    def _run_server(cls, registry, address, authkey, serializer, name, writer,
+                    credentials): #pragma no cover
         """
         Create a server, report its address and public key, and run it.
         """
+        set_credentials(credentials)
+
         # Recreate registry proxytypes.
         for typeid, info in registry.items():
             callable, exposed, method_to_typeid, proxytype = info
