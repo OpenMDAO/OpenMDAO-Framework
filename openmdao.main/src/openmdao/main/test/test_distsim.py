@@ -284,8 +284,8 @@ class TestCase(unittest.TestCase):
         for typname, version in types:
             logging.debug('   %s %s', typname, version)
 
-        if sys.platform == 'win32':
-            raise nose.SkipTest()
+#        if sys.platform == 'win32':
+#            raise nose.SkipTest()
 
         # First a HollowSphere, accessed via get()/set().
         obj = self.factory.create(_MODULE+'.HollowSphere')
@@ -344,8 +344,8 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_model')
 
-        if sys.platform == 'win32':
-            raise nose.SkipTest()
+#        if sys.platform == 'win32':
+#            raise nose.SkipTest()
 
         # Create model and run it.
         box = self.factory.create(_MODULE+'.Box')
@@ -399,8 +399,8 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_access')
 
-        if sys.platform == 'win32':
-            raise nose.SkipTest()
+#        if sys.platform == 'win32':
+#            raise nose.SkipTest()
 
         # Create model and run it.
         box = self.factory.create(_MODULE+'.ProtectedBox')
@@ -474,8 +474,8 @@ class TestCase(unittest.TestCase):
             factory = connect(address, port, authkey=authkey)
             logging.debug('factory: %r', factory)
 
-            if sys.platform == 'win32':
-                raise nose.SkipTest()
+#            if sys.platform == 'win32':
+#                raise nose.SkipTest()
 
             # Create model and run it.
             box = factory.create(_MODULE+'.Box')
