@@ -65,15 +65,15 @@ class DependencyGraph(object):
             
         return None
 
-    def add(self, comp):
+    def add(self, name):
         """Add the name of a Component to the graph."""
-        self._graph.add_node(comp.name)
+        self._graph.add_node(name)
 
-    def remove(self, comp):
+    def remove(self, name):
         """Remove the name of a Component from the graph. It is not
         an error if the component is not found in the graph.
         """
-        self._graph.remove_node(comp.name)
+        self._graph.remove_node(name)
         
     def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).

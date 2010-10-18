@@ -53,7 +53,7 @@ class Assembly (Component):
         """
         obj = super(Assembly, self).add(name, obj)
         if isinstance(obj, Component):
-            self._depgraph.add(obj)
+            self._depgraph.add(obj.name)
         
         return obj
         
@@ -61,7 +61,7 @@ class Assembly (Component):
         """Remove the named container object from this assembly and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
-        self._depgraph.remove(cont)
+        self._depgraph.remove(name)
         for obj in self.__dict__.values():
             if obj is not cont and isinstance(obj, Driver):
                 obj.remove_from_workflow(cont)
@@ -120,7 +120,7 @@ class Assembly (Component):
         
         return (compname, getattr(self, compname), varname)
 
-    def connect(self, srcpath, destpath, value=Missing):
+    def connect(self, srcpath, destpath, value=Missing, src_iotype=None, dest_iotype=None):
         """Connect one src Variable to one destination Variable. This could be
         a normal connection between variables from two internal Components, or
         it could be a passthrough connection, which connects across the scope boundary
@@ -135,13 +135,22 @@ class Assembly (Component):
             
         value: object, optional
             A value used for validation by the destination variable
+            
+        src_iotype: str, optional
+            Either 'in' or 'out', indicating iotype of the source
+            
+        dest_iotype: str, optional
+            Either 'in' or 'out', indicating iotype of the destination
         """
 
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
         srctrait = srccomp.find_trait(srcvarname)
+        src_io = srctrait.iotype if srctrait else None
+            
         desttrait = destcomp.find_trait(destvarname)
+        dest_io = desttrait.iotype if desttrait else None
         
         if srccompname == destcompname:
             self.raise_exception(
@@ -151,19 +160,7 @@ class Assembly (Component):
            (desttrait.is_trait_type and (desttrait.is_trait_type(Expression) or desttrait.is_trait_type(ExpressionList))):
             self.raise_exception('Cannot connect %s to %s because one of them is an Expression or ExpressionList' %
                                  (srcpath,destpath), RuntimeError)
-        if srccomp is not self and destcomp is not self:
-            # it's not a passthrough, so must connect input to output
-            if srctrait and srctrait.iotype != 'out':
-                self.raise_exception(
-                    '.'.join([srccomp.get_pathname(),srcvarname])+
-                    ' must be an output variable',
-                    RuntimeError)
-            if desttrait and desttrait.iotype != 'in':
-                self.raise_exception(
-                    '.'.join([destcomp.get_pathname(),destvarname])+
-                    ' must be an input variable',
-                    RuntimeError)
-                
+
         # test compatability (raises TraitError on failure)
         if desttrait and desttrait.validate is not None:
             try:
@@ -187,13 +184,13 @@ class Assembly (Component):
                     # Note that it's a dest var in this scope, but a src var in
                     # the parent scope.
                     self.parent.invalidate_deps(self.name, [destvarname], True)
-            self._valid_dict[destpath] = False
         elif srccomp is self and srctrait.iotype == 'in': # boundary input
             pass
         else:
             destcomp.invalidate_deps(varnames=[destvarname], notify_parent=True)
 
-        super(Assembly, self).connect(srcpath, destpath, value)
+        super(Assembly, self).connect(srcpath, destpath, 
+                                      value=value, src_iotype=src_io, dest_iotype=dest_io)
         
 
     def disconnect(self, varpath, varpath2=None):

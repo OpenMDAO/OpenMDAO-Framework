@@ -189,7 +189,7 @@ class Container(HasTraits):
             name = obj.name
         return '.'.join(path[::-1])
             
-    def connect(self, srcpath, destpath, value=Missing):
+    def connect(self, srcpath, destpath, value=Missing, src_iotype=None, dest_iotype=None):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
         that it is referring to a variable outside of this object's scope.
@@ -202,6 +202,12 @@ class Container(HasTraits):
 
         value: object, optional
             A value used for validation by the destination variable
+            
+        src_iotype: str, optional
+            Either 'in' or 'out', indicating iotype of the source
+            
+        dest_iotype: str, optional
+            Either 'in' or 'out', indicating iotype of the destination
         """
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
@@ -228,7 +234,8 @@ class Container(HasTraits):
                     trait.validate(self, destpath, value)
 
         self._depgraph.connect(srcpath, destpath)
-                        
+
+
     def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one 
         destination variable.

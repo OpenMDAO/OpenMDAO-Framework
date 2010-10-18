@@ -82,6 +82,11 @@ class DirectoryContext(object):
         self.__dict__.update(state)
         self.component = weakref.ref(self.component)
 
+        
+        
+_iodict = { 'out': 'output', 'in': 'input' }
+
+
 
 class Component (Container):
     """This is the base class for all objects containing Traits that are \
@@ -427,7 +432,13 @@ class Component (Container):
             self._connected_outputs = self._depgraph.get_connected_outputs()
         return self._connected_outputs
         
-    def connect(self, srcpath, destpath, value=Missing):
+    
+    def _check_dflow_direction(self, name, iotype, expected):
+        if iotype is not None and iotype != expected:
+            self.raise_exception("%s must be an %s variable" % (name, _iodict[expected]),
+                                 RuntimeError)
+    
+    def connect(self, srcpath, destpath, value=Missing, src_iotype=None, dest_iotype=None):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
         that it is referring to a variable outside of this object's scope.
@@ -440,28 +451,62 @@ class Component (Container):
 
         value: object, optional
             A value used for validation by the destination variable
+            
+        src_iotype: str, optional
+            Either 'in' or 'out', indicating iotype of the source
+            
+        dest_iotype: str, optional
+            Either 'in' or 'out', indicating iotype of the destination
         """
         
-        super(Component, self).connect(srcpath, destpath, value)
-        # if this is a cross boundary connection, create new _valid_dict entry for it
-        if destpath.startswith('parent.'):
-            self._connected_outputs = None
-            if srcpath not in self._valid_dict:
-                self._valid_dict[srcpath] = True
-        elif srcpath.startswith('parent.'):
-            self._connected_inputs = None
-            self._valid_dict[destpath] = False
+        has_ext_src = srcpath.startswith('parent.')
+        has_ext_dest = destpath.startswith('parent.')
+        
+        if src_iotype is None:
+            trait = get_trait(self, srcpath)
+            src_iotype = trait.iotype if trait else None
+            
+        if dest_iotype is None:
+            trait = get_trait(self, destpath)
+            dest_iotype = trait.iotype if trait else None
+            
+        valids_update = None
+        
+        if not (has_ext_dest or has_ext_src):  # connect does not cross boundary
+            # source on boundary must be 'in', dest on boundary must be 'out'
+            self._check_dflow_direction(srcpath, src_iotype, 'out' if '.' in srcpath  else 'in')
+            self._check_dflow_direction(destpath, dest_iotype, 'in'  if '.' in destpath else 'out')
+            
+        else:  # cross-boundary connection
+            if has_ext_src:  # internal destination
+                self._check_dflow_direction(destpath, dest_iotype, 'in')
+                self._connected_inputs = None
+                valids_update = (destpath, False)
+            else: # internal source
+                self._check_dflow_direction(srcpath, src_iotype, 'out')
+                self._connected_outputs = None
+                if srcpath not in self._valid_dict:
+                    valids_update = (srcpath, True)
+                    
+        # don't pass src_iotype and dest_iotype down to Container because
+        # we check them differently than Container does
+        super(Component, self).connect(srcpath, destpath, value=value)
+        
+        # move this to after the super connect call so if theres a problem we don't have to undo it
+        if valids_update is not None:
+            self._valid_dict[valids_update[0]] = valids_update[1]
+        
         
     def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one 
         destination variable.
         """
         super(Component, self).disconnect(srcpath, destpath)
-        if '.' in destpath:
-            if not destpath.startswith('parent.') and destpath in self._valid_dict:
+        if destpath in self._valid_dict:
+            if '.' in destpath:
                 del self._valid_dict[destpath]
-        elif destpath in self._valid_dict:
-            self._valid_dict[destpath] = True  # disconnected inputs are always valid
+            else:
+                self._valid_dict[destpath] = True  # disconnected inputs are always valid
     
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
