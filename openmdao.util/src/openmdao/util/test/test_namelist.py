@@ -177,7 +177,7 @@ class TestCase(unittest.TestCase):
         except RuntimeError, err:
             self.assertEqual(str(err),
                              "Don't know how to handle array of" + \
-                                           "3 dimensions")
+                                           " 3 dimensions")
         else:
             self.fail('RuntimeError expected')        
 
