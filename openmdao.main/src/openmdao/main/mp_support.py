@@ -531,7 +531,6 @@ class OpenMDAO_Server(Server):
                                            typeid, self.address)
                         msg = ('#PROXY', (rexposed, token))
                     else:
-                        self._logger.debug("Returning '%s'", res)
                         msg = ('#RETURN', res)
 
             except AttributeError:
@@ -618,7 +617,7 @@ class OpenMDAO_Server(Server):
                 callable, exposed, method_to_typeid, proxytype = \
                     self.registry[typeid]
             except KeyError:
-                logging.critical('mp_support.create: registry')
+                logging.critical('mp_support.create: %r registry', typeid)
                 for key, value in self.registry.items():
                     logging.critical('    %s: %s', key, value)
                 raise
@@ -703,20 +702,20 @@ class OpenMDAO_Manager(BaseManager):
         # Pipe over which we will retrieve address of server.
         reader, writer = connection.Pipe(duplex=False)
 
-        # Make registry pickleable (for windows).
-        logging.critical('start: registry')
-        registry = {}
-        for typeid, info in self._registry.items():
-            logging.critical('    %s: %r', typeid, info)
-            callable, exposed, method_to_typeid, proxytype = info
-            if proxytype and proxytype != _auto_proxy:
-                registry[typeid] = \
-                    (callable, exposed, method_to_typeid, 'rebuild')
+        if sys.platform == 'win32':
+            # Make registry pickleable.
+            registry = {}
+            for typeid, info in self._registry.items():
+                callable, exposed, method_to_typeid, proxytype = info
+                if proxytype and proxytype != _auto_proxy:
+                    registry[typeid] = \
+                        (callable, exposed, method_to_typeid, 'rebuild')
+        else:
+            registry = self._registry
 
         # Spawn process which runs a server.
         self._process = Process(
             target=type(self)._run_server,
-#            args=(self._registry, self._address, self._authkey,
             args=(registry, self._address, self._authkey,
                   self._serializer, self._name, writer, get_credentials()),
             )
@@ -750,19 +749,14 @@ class OpenMDAO_Manager(BaseManager):
         """
         Create a server, report its address and public key, and run it.
         """
-        # (for Windows)
-        set_credentials(credentials)
-
-        # Recreate registry proxytypes (for windows).
-        for typeid, info in registry.items():
-            callable, exposed, method_to_typeid, proxytype = info
-            if proxytype == 'rebuild':
-                registry[typeid] = (callable, exposed, method_to_typeid,
-                                    _make_proxy_type(typeid, exposed))
-        logging.critical('start: registry')
-        for typeid, info in registry.items():
-            logging.critical('    %s: %r', typeid, info)
-
+        if sys.platform == 'win32':
+            set_credentials(credentials)
+            # Recreate registry proxytypes.
+            for typeid, info in registry.items():
+                callable, exposed, method_to_typeid, proxytype = info
+                if proxytype == 'rebuild':
+                    registry[typeid] = (callable, exposed, method_to_typeid,
+                                        _make_proxy_type(typeid, exposed))
         try:
             # Create server.
             server = cls._Server(registry, address, authkey, serializer, name)

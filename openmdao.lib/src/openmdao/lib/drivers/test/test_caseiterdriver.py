@@ -164,7 +164,6 @@ class TestCase(unittest.TestCase):
             self.fail('Expected RuntimeError')
 
     def test_concurrent(self):
-#        raise nose.SkipTest()
         # FIXME: temporarily disable this test on windows because it loops
         # over a set of tests forever when running under a virtualenv
 #        if sys.platform == 'win32':
@@ -197,7 +196,7 @@ class TestCase(unittest.TestCase):
                     ResourceAllocationManager.insert_allocator(0, cluster)
 
         self.run_cases(sequential=False)
-        time.sleep(1)  # Allow servers time to clean-up.
+        time.sleep(2)  # Allow servers time to clean-up.
         self.assertEqual(glob.glob('Sim-*'), [])
 
         logging.debug('')
