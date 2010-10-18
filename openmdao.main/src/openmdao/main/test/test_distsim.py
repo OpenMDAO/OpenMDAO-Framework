@@ -477,6 +477,7 @@ class TestCase(unittest.TestCase):
                         case = model.driver.recorder.cases.pop(0)
                         self.assertEqual(case.outputs[0][2], width*height*depth)
         finally:
+            logging.debug('terminating server pid %s', self.server.pid)
             server.terminate(timeout=30)
             server = None
 

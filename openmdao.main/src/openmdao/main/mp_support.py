@@ -147,9 +147,27 @@ class _SHA1(object):
 
 def _generate_key_pair():
     """ Returns RSA key containing both public and private keys. """
-    pool = RandomPool(2048, hash=_SHA1)
-    pool.stir()
-    return RSA.generate(2048, pool.get_bytes)
+    if sys.platform == 'win32':
+        home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
+    else:
+        home = os.environ['HOME']
+    key_dir = os.path.join(home, '.openmdao')
+    key_file = os.path.join(key_dir, 'keys')
+    try:
+        with open(key_file, 'rb') as inp:
+            key_pair = cPickle.load(inp)
+    except Exception:
+        pool = RandomPool(2048, hash=_SHA1)
+        pool.stir()
+        key_pair = RSA.generate(2048, pool.get_bytes)
+        if not os.path.exists(key_dir):
+            os.mkdir(key_dir)
+            os.chmod(key_dir, 0700)
+        with open(key_file, 'wb') as out:
+            cPickle.dump(key_pair, out)
+        os.chmod(key_file, 0600)
+    return key_pair
+
 
 def _encode_public_key(key):
     """ Return text representation of public key `key`. """

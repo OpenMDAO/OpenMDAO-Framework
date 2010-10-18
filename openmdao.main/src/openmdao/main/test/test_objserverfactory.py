@@ -38,9 +38,8 @@ class TestCase(unittest.TestCase):
         self.assertTrue('openmdao.test.ExecComp' in names)
 
         # Create a component.
-        if sys.platform != 'win32':
-            exec_comp = factory.create('openmdao.test.ExecComp')
-            exec_comp.run()
+        exec_comp = factory.create('openmdao.test.ExecComp')
+        exec_comp.run()
 
         # Force failed factory server startup via invalid port.
         server_dir = 'factory_startup'
