@@ -79,7 +79,7 @@ class _ContainerDepends(object):
     def __init__(self):
         self._srcs = {}
         
-    def connect(self, srcpath, destpath, value=None):
+    def connect(self, srcpath, destpath):
         if destpath in self._srcs:
             raise RuntimeError("'%s' is already connected to source '%s'" %
                                (destpath,self._srcs[destpath]))
@@ -105,8 +105,6 @@ class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
    
-    __ = Python()
-    
     def __init__(self, doc=None, iotype=None):
         super(Container, self).__init__()
         
@@ -191,7 +189,7 @@ class Container(HasTraits):
             name = obj.name
         return '.'.join(path[::-1])
             
-    def connect(self, srcpath, destpath, value=None):
+    def connect(self, srcpath, destpath, value=Missing):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
         that it is referring to a variable outside of this object's scope.
@@ -205,7 +203,6 @@ class Container(HasTraits):
         value: object, optional
             A value used for validation by the destination variable
         """
-        
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
@@ -223,7 +220,13 @@ class Container(HasTraits):
             cname, _, restofpath = destpath.partition('.')
             if restofpath:
                 getattr(self, cname).connect('parent.'+srcpath, restofpath, value)
-        
+            else:
+                if value is not Missing: #if we're given a value, use it for validation
+                    trait = get_trait(self, destpath)
+                    if trait is None:
+                        self.raise_exception("No trait '%s' found" % destpath, AttributeError)
+                    trait.validate(self, destpath, value)
+
         self._depgraph.connect(srcpath, destpath)
                         
     def disconnect(self, srcpath, destpath):
@@ -1081,12 +1084,12 @@ def get_default_name(obj, scope):
 def get_trait(obj, name):
     """obj is assumed to be a HasTraits object.  Returns the
     trait indicated by name, or None if not found.  No recursive
-    search is performed if name contains dots.
+    search is performed if name contains dots.  This is a replacement
+    for the trait() method on HasTraits objects, because that method
+    can return traits that shouldn't exist.
     """
     trait = obj.traits().get(name)
-    if trait: return trait
-    trait = obj._instance_traits().get(name)
-    return trait
+    return trait if trait else obj._instance_traits().get(name)
 
 def deep_hasattr(obj, pathname):
     """Returns True if the attrbute indicated by the give pathname

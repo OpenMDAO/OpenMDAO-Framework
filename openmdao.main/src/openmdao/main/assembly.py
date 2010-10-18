@@ -7,7 +7,7 @@ __all__ = ['Assembly']
 import cStringIO
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Instance, TraitError
+from enthought.traits.api import Instance, TraitError, Missing
 from enthought.traits.api import TraitType
 
 from openmdao.main.container import find_trait_and_value, get_trait
@@ -120,7 +120,7 @@ class Assembly (Component):
         
         return (compname, getattr(self, compname), varname)
 
-    def connect(self, srcpath, destpath, value=None):
+    def connect(self, srcpath, destpath, value=Missing):
         """Connect one src Variable to one destination Variable. This could be
         a normal connection between variables from two internal Components, or
         it could be a passthrough connection, which connects across the scope boundary

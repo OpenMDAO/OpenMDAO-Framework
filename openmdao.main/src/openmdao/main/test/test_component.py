@@ -7,22 +7,64 @@ import os.path
 import sys
 import stat
 import unittest
-import nose
 
-from openmdao.main.api import Component
+from enthought.traits.api import TraitError
 
+from openmdao.main.api import Component, Container
+from openmdao.lib.api import Float
+
+class MyComponent(Component):
+    x = Float(1., iotype='in')
+    xout = Float(2., iotype='out')
+    
+    def __init__(self, *args, **kwargs):
+        super(MyComponent, self).__init__(*args, **kwargs)
+        self.add('cont', Container())
+        self.cont.add_trait('dyntrait', Float(3.))
+    
+    def execute(self):
+        self.fout = self.f * 2.
 
 class TestCase(unittest.TestCase):
     """ Test of Component. """
 
-    def setUp(self):
-        """ Called before each test in this class. """
-        pass
+    def test_connect(self):
+        comp = MyComponent()
+        
+        # try connection with incompatible type
+        try:
+            comp.connect('parent.foo', 'x', 'blah')
+        except TraitError as err:
+            self.assertEqual(str(err), ": Trait 'x' must be a float, but a value of blah <type 'str'> was specified.")
+        else:
+            self.fail('TraitError expected')
+        self.assertEqual(comp._depgraph.get_source('x'), None)
+    
+        # try nested connection with incompatible type
+        vset = set(comp._valid_dict.keys())
+        try:
+            comp.connect('parent.foo', 'cont.dyntrait', 'blah')
+        except TraitError as err:
+            self.assertEqual(str(err), "cont: Trait 'dyntrait' must be a float, but a value of blah <type 'str'> was specified.")
+        else:
+            self.fail('TraitError expected')
+        self.assertEqual(comp._depgraph.get_source('x'), None)
+        self.assertEqual(vset, set(comp._valid_dict.keys()))
 
-    def tearDown(self):
-        """ Called after each test in this class. """
-        pass
-
+        comp.connect('parent.foo', 'x')
+        self.assertEqual(comp._depgraph.get_source('x'), 'parent.foo')
+        
+        comp.connect('xout', 'parent.bar')
+        self.assertEqual(comp._depgraph.get_source('xout'), None)
+        self.assertEqual(vset, set(comp._valid_dict.keys()))
+        
+        comp.connect('parent.blah', 'cont.dyntrait', 1.0)
+        # _valid_dict should have a new entry
+        self.assertEqual(set(comp._valid_dict.keys())-vset, set(['cont.dyntrait']))
+        
+        comp.disconnect('parent.blah', 'cont.dyntrait')
+        self.assertEqual(vset, set(comp._valid_dict.keys()))
+        
     def test_illegal_directory(self):
         logging.debug('')
         logging.debug('test_bad_directory')
@@ -105,7 +147,5 @@ class TestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    import nose
-    sys.argv.append('--cover-package=openmdao.main')
-    nose.runmodule()
+    unittest.main()
 

@@ -18,11 +18,6 @@ from openmdao.util.testutil import make_protected_dir
 # This is used to detect when we're the main module or not.
 MODULE_NAME = __name__
 
-class MyHasTraits(HasTraits):
-    def __init__(self, *args, **kwargs):
-        super(MyHasTraits, self).__init__(*args, **kwargs)
-        self.add_trait('dyntrait', Float(9., desc='some desc'))
-
 
 class MyContainer(Container):
     def __init__(self, *args, **kwargs):
@@ -58,14 +53,6 @@ class ContainerTestCase(unittest.TestCase):
         """this teardown function will be called after each test"""
         self.root = None
 
-    #def test_set_source(self):
-        #self.root.set_source('c2.c22.c221.number', 'c1.foo')
-        #self.assertEqual(self.root._sources['c2.c22.c221.number'], 'c1.foo')
-        #self.assertEqual(self.root.c2._sources['c22.c221.number'], 'parent.c1.foo')
-        #self.assertEqual(self.root.c2.c22._sources['c221.number'], 'parent.parent.c1.foo')
-        #self.assertEqual(self.root.c2.c22.c221._sources['number'], 'parent.parent.parent.c1.foo')
-        
-    
     def test_deepcopy(self):
         cont = MyContainer()
         self.assertEqual(cont.dyntrait, 9.)
@@ -74,6 +61,14 @@ class ContainerTestCase(unittest.TestCase):
         cont.dyntrait = 12.
         ccont2 = copy.deepcopy(cont)
         self.assertEqual(ccont2.dyntrait, 12.)
+        
+    def test_connect(self):
+        cont = MyContainer()
+        cont.connect('parent.foo', 'dyntrait')
+        self.assertEqual(cont._depgraph.get_source('dyntrait'), 'parent.foo')
+        
+        cont.disconnect('parent.foo', 'dyntrait')
+        self.assertEqual(cont._depgraph.get_source('dyntrait'), None)
         
     def test_add_bad_child(self):
         foo = Container()
@@ -135,21 +130,21 @@ class ContainerTestCase(unittest.TestCase):
     def test_iteration(self):
         names = [x.get_pathname() for n,x in self.root.items(recurse=True)
                                          if isinstance(x, Container)]
-        self.assertEqual(sorted(names),
-                         ['c1', 'c2', 'c2.c21', 
-                          'c2.c22', 'c2.c22.c221'])
+        self.assertEqual(set(names),
+                         set(['c1', 'c2', 'c2.c21', 
+                              'c2.c22', 'c2.c22.c221']))
         
         names = [x.get_pathname() for n,x in self.root.items()
                                          if isinstance(x, Container)]
-        self.assertEqual(sorted(names), ['c1', 'c2'])
+        self.assertEqual(set(names), set(['c1', 'c2']))
         
         names = [x.get_pathname() for n,x in self.root.items(recurse=True)
                                  if isinstance(x, Container) and x.parent==self.root]
-        self.assertEqual(sorted(names), ['c1', 'c2'])        
+        self.assertEqual(set(names), set(['c1', 'c2']))
 
         names = [x.get_pathname() for n,x in self.root.items(recurse=True)
                                  if isinstance(x, Container) and x.parent==self.root.c2]
-        self.assertEqual(sorted(names), ['c2.c21', 'c2.c22'])        
+        self.assertEqual(set(names), set(['c2.c21', 'c2.c22']))
 
     # TODO: all of these save/load test functions need to do more checking
     #       to verify that the loaded thing is equivalent to the saved thing

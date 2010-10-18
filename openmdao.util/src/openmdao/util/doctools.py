@@ -90,8 +90,7 @@ def get_traits_info(app, what, name, obj, options, lines):
     dicts = (keepers_instance, keepers_in, keepers_out, keepers_undefined)
     
     for dic in dicts:
-	sortedDict = _sortedDictVals(dic)
-	
+        sortedDict = _sortedDictVals(dic)
         for t, val in sortedDict:
             lines.append('')
             #Now just need to spit out the traits in the proper format into the documentation 
@@ -130,7 +129,6 @@ def get_traits_info(app, what, name, obj, options, lines):
                     lines.extend(['  *  %s:  %s' %(m, v)])
                     
             lines.append('')
-            
             
 def setup(app):
     """

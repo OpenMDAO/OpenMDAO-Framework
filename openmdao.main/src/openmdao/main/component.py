@@ -15,7 +15,7 @@ import weakref
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event, not_none
-from enthought.traits.api import Bool, List, Str, Int, Instance, Property, implements, TraitError
+from enthought.traits.api import Bool, List, Str, Int, Instance, Property, implements, TraitError, Missing
 
 from openmdao.main.container import Container, get_trait
 from openmdao.main.interfaces import IComponent, ICaseIterator
@@ -427,7 +427,7 @@ class Component (Container):
             self._connected_outputs = self._depgraph.get_connected_outputs()
         return self._connected_outputs
         
-    def connect(self, srcpath, destpath, value=None):
+    def connect(self, srcpath, destpath, value=Missing):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
         that it is referring to a variable outside of this object's scope.
@@ -444,15 +444,25 @@ class Component (Container):
         
         super(Component, self).connect(srcpath, destpath, value)
         # if this is a cross boundary connection, create new _valid_dict entry for it
-        if srcpath.startswith('parent.') or destpath.startswith('parent.'):
-            if not srcpath.startswith('parent.'):
-                self._connected_outputs = None
-                if srcpath not in self._valid_dict:
-                    self._valid_dict[srcpath] = True
-            if not destpath.startswith('parent.'):
-                self._connected_inputs = None
-                self._valid_dict[destpath] = False
+        if destpath.startswith('parent.'):
+            self._connected_outputs = None
+            if srcpath not in self._valid_dict:
+                self._valid_dict[srcpath] = True
+        elif srcpath.startswith('parent.'):
+            self._connected_inputs = None
+            self._valid_dict[destpath] = False
         
+    def disconnect(self, srcpath, destpath):
+        """Removes the connection between one source variable and one 
+        destination variable.
+        """
+        super(Component, self).disconnect(srcpath, destpath)
+        if '.' in destpath:
+            if not destpath.startswith('parent.') and destpath in self._valid_dict:
+                del self._valid_dict[destpath]
+        elif destpath in self._valid_dict:
+            self._valid_dict[destpath] = True  # disconnected inputs are always valid
+    
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency resulting from ExprEvaluators in this Component.
