@@ -79,55 +79,69 @@ class Namelist(object):
     def generate(self):
         """Create the input file."""
 
-        data = self.title + "\n"
+        data = []
+        data.append("%s\n" % self.title)
         for i in range(0, len(self.groups)):
             
-            data += self.groups[i] + "\n"
+            data.append("%s\n" % self.groups[i])
             
             for card in self.cards[i]:
                 
-                data += "  "
+                line = "  "
                 
                 if card.is_comment:
-                    data += card.value + "\n"
+                    line += "%s\n" % (card.value)
                     
                 elif isinstance(card.value, (int, float)):
-                    data += card.name + " = " + str(card.value) + "\n"
+                    line += "%s = %s\n" % (card.name, str(card.value))
                     
                 elif isinstance(card.value, (str)):
-                    data += card.name + " = '" + card.value + "'\n"
+                    line += "%s = '%s'\n" % (card.name, card.value)
                     
                 elif isinstance(card.value, (ndarray)):
                     
                     if len(card.value.shape) == 1:
-                        data += card.name + " = "
+                        line += card.name + " = "
                         sep = ""
                         for val in card.value:
-                            data += sep + str(val)
+                            line += sep + str(val)
                             sep = self.delimiter
-                        data += "\n"
+                        line += "\n"
                             
                     elif len(card.value.shape) == 2:
                         
                         for row in range(0,card.value.shape[0]):
-                            data += card.name + "(1," + str(row+1) + ") ="
+                            line += card.name + "(1," + str(row+1) + ") ="
                             for col in range(0,card.value.shape[1]):
-                                data += " " + str(card.value[row,col]) + \
+                                line += " " + str(card.value[row,col]) + \
                                          self.delimiter
-                            data += "\n"
+                            line += "\n"
                         
                     else:
                         raise RuntimeError("Don't know how to handle array of" + \
                                            "%s dimensions" \
                                            % len(card.value.shape))
                     
+                # The only list supported is the Enum Array
+                elif isinstance(card.value, list):
+                    line += card.name + " = "
+                    sep = ""
+                    for val in card.value:
+                        line += sep + str(val)
+                        sep = self.delimiter
+                    line += "\n"
+
                 else:
                     raise RuntimeError("Error generating input file. Don't" + \
                                        "know how to handle data in variable" + \
                                        "%s in group %s." % (card.name, self.groups[i]))
-                    
-            data += self.terminator + "\n"
 
+                data.append(line)
+
+            # A group with no cards is treated like a free-form entity.
+            if len(self.cards[i])>0:        
+                data.append("%s\n" % self.terminator)
+                
             
         infile = open(self.filename, 'w')
         infile.writelines(data)
