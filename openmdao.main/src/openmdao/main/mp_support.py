@@ -726,7 +726,10 @@ class OpenMDAO_Manager(BaseManager):
 
         # Get address of server.
         writer.close()
-        self._address = reader.recv()
+        reply = reader.recv()
+        if isinstance(reply, Exception):
+            raise RuntimeError('Server process startup failed: %s' % exc)
+        self._address = reply
         if self._authkey == 'PublicKey':
             self._pubkey = reader.recv()
         reader.close()
@@ -760,14 +763,18 @@ class OpenMDAO_Manager(BaseManager):
         for typeid, info in registry.items():
             logging.critical('    %s: %r', typeid, info)
 
-        # Create server.
-        server = cls._Server(registry, address, authkey, serializer, name)
-
-        # Inform parent process of the server's address.
-        writer.send(server.address)
-        if authkey == 'PublicKey':
-            writer.send(server.public_key)
-        writer.close()
+        try:
+            # Create server.
+            server = cls._Server(registry, address, authkey, serializer, name)
+        except Exception as exc:
+            writer.send(exc)
+        else:
+            # Inform parent process of the server's address.
+            writer.send(server.address)
+            if authkey == 'PublicKey':
+                writer.send(server.public_key)
+        finally:
+            writer.close()
 
         # Run the manager.
         util.info('manager serving at %r', server.address)

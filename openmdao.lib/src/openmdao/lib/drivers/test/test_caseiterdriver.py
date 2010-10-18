@@ -167,8 +167,8 @@ class TestCase(unittest.TestCase):
 #        raise nose.SkipTest()
         # FIXME: temporarily disable this test on windows because it loops
         # over a set of tests forever when running under a virtualenv
-        if sys.platform == 'win32':
-            raise nose.SkipTest()
+#        if sys.platform == 'win32':
+#            raise nose.SkipTest()
         # This can always test using a LocalAllocator (forked processes).
         # It can also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
