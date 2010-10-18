@@ -271,8 +271,8 @@ class TestCase(unittest.TestCase):
             logging.debug('terminating server pid %s', self.server.pid)
             self.server.terminate(timeout=10)
             self.server = None
-        for path in glob.glob('factory_*'):
-            shutil.rmtree(path)
+#        for path in glob.glob('factory_*'):
+#            shutil.rmtree(path)
 
     def test_1_client(self):
         logging.debug('')

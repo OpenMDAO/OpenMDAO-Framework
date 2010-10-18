@@ -704,9 +704,18 @@ class OpenMDAO_Manager(BaseManager):
         reader, writer = connection.Pipe(duplex=False)
 
         # Spawn process which runs a server.
+        logging.critical('start: registry')
+        registry = {}
+        for typeid, info in self._registry.items():
+            logging.critical('    %s: %r', typeid, info)
+            callable, exposed, method_to_typeid, proxytype = info
+            if proxytype and proxytype != _auto_proxy:
+                registry[typeid] = \
+                    (callable, exposed, method_to_typeid, 'rebuild')
         self._process = Process(
             target=type(self)._run_server,
-            args=(self._registry, self._address, self._authkey,
+#            args=(self._registry, self._address, self._authkey,
+            args=(registry, self._address, self._authkey,
                   self._serializer, self._name, writer),
             )
         ident = ':'.join(str(i) for i in self._process._identity)
@@ -735,6 +744,16 @@ class OpenMDAO_Manager(BaseManager):
         """
         Create a server, report its address and public key, and run it.
         """
+        # Recreate registry proxytypes.
+        for typeid, info in registry.items():
+            callable, exposed, method_to_typeid, proxytype = info
+            if proxytype == 'rebuild':
+                registry[typeid] = (callable, exposed, method_to_typeid,
+                                    _make_proxy_type(typeid, exposed))
+        logging.critical('start: registry')
+        for typeid, info in registry.items():
+            logging.critical('    %s: %r', typeid, info)
+
         # Create server.
         server = cls._Server(registry, address, authkey, serializer, name)
 
