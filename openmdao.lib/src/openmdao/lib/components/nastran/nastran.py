@@ -1,4 +1,7 @@
 """nastran.py defines NastranComponent.
+
+   See the Standard Library for additional information on the :ref:`NastranComponent`.
+    
 """
 
 from os import fdopen, remove, path
@@ -30,7 +33,7 @@ class NastranComponent(ExternalCode):
     to NastranMaker, NastranReplacer, and NastranParser. Your subclass
     must specify how to handle the input and output variables to NastranComponent
     by specifying nastran specific attributes on the traits. All of these
-    attributes are described in the README.
+    attributes are described further in the :ref:`NastranComponent<NastranComponent>` docs.
 
     Note: This component does nothing with external_files. If you want to deal with
     that, then do so in your subclass.
