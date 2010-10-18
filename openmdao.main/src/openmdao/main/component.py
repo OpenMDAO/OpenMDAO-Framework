@@ -433,12 +433,7 @@ class Component (Container):
         return self._connected_outputs
         
     
-    def _check_dflow_direction(self, name, iotype, expected):
-        if iotype is not None and iotype != expected:
-            self.raise_exception("%s must be an %s variable" % (name, _iodict[expected]),
-                                 RuntimeError)
-    
-    def connect(self, srcpath, destpath, value=Missing, src_iotype=None, dest_iotype=None):
+    def connect(self, srcpath, destpath):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
         that it is referring to a variable outside of this object's scope.
@@ -448,51 +443,25 @@ class Component (Container):
             
         destpath: str
             Pathname of destination variable
-
-        value: object, optional
-            A value used for validation by the destination variable
-            
-        src_iotype: str, optional
-            Either 'in' or 'out', indicating iotype of the source
-            
-        dest_iotype: str, optional
-            Either 'in' or 'out', indicating iotype of the destination
         """
         
         has_ext_src = srcpath.startswith('parent.')
         has_ext_dest = destpath.startswith('parent.')
         
-        if src_iotype is None:
-            trait = get_trait(self, srcpath)
-            src_iotype = trait.iotype if trait else None
-            
-        if dest_iotype is None:
-            trait = get_trait(self, destpath)
-            dest_iotype = trait.iotype if trait else None
-            
         valids_update = None
         
-        if not (has_ext_dest or has_ext_src):  # connect does not cross boundary
-            # source on boundary must be 'in', dest on boundary must be 'out'
-            self._check_dflow_direction(srcpath, src_iotype, 'out' if '.' in srcpath  else 'in')
-            self._check_dflow_direction(destpath, dest_iotype, 'in'  if '.' in destpath else 'out')
-            
-        else:  # cross-boundary connection
+        if has_ext_dest or has_ext_src:  # cross-boundary connection
             if has_ext_src:  # internal destination
-                self._check_dflow_direction(destpath, dest_iotype, 'in')
                 self._connected_inputs = None
                 valids_update = (destpath, False)
             else: # internal source
-                self._check_dflow_direction(srcpath, src_iotype, 'out')
                 self._connected_outputs = None
                 if srcpath not in self._valid_dict:
                     valids_update = (srcpath, True)
                     
-        # don't pass src_iotype and dest_iotype down to Container because
-        # we check them differently than Container does
-        super(Component, self).connect(srcpath, destpath, value=value)
+        super(Component, self).connect(srcpath, destpath)
         
-        # move this to after the super connect call so if theres a problem we don't have to undo it
+        # move this to after the super connect call so if there's a problem we don't have to undo it
         if valids_update is not None:
             self._valid_dict[valids_update[0]] = valids_update[1]
         

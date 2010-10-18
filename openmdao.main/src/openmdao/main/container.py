@@ -189,7 +189,7 @@ class Container(HasTraits):
             name = obj.name
         return '.'.join(path[::-1])
             
-    def connect(self, srcpath, destpath, value=Missing, src_iotype=None, dest_iotype=None):
+    def connect(self, srcpath, destpath):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
         that it is referring to a variable outside of this object's scope.
@@ -199,22 +199,13 @@ class Container(HasTraits):
             
         destpath: str
             Pathname of destination variable
-
-        value: object, optional
-            A value used for validation by the destination variable
-            
-        src_iotype: str, optional
-            Either 'in' or 'out', indicating iotype of the source
-            
-        dest_iotype: str, optional
-            Either 'in' or 'out', indicating iotype of the destination
         """
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
             cname, _, restofpath = srcpath.partition('.')
             if restofpath:
-                getattr(self, cname).connect(restofpath, 'parent.'+destpath, value)
+                getattr(self, cname).connect(restofpath, 'parent.'+destpath)
         if not destpath.startswith('parent.'):
             if not self.contains(destpath):
                 self.raise_exception("Can't find '%s'" % destpath, AttributeError)
@@ -225,14 +216,8 @@ class Container(HasTraits):
                     (destpath, sname), RuntimeError)
             cname, _, restofpath = destpath.partition('.')
             if restofpath:
-                getattr(self, cname).connect('parent.'+srcpath, restofpath, value)
-            else:
-                if value is not Missing: #if we're given a value, use it for validation
-                    trait = get_trait(self, destpath)
-                    if trait is None:
-                        self.raise_exception("No trait '%s' found" % destpath, AttributeError)
-                    trait.validate(self, destpath, value)
-
+                getattr(self, cname).connect('parent.'+srcpath, restofpath)
+                
         self._depgraph.connect(srcpath, destpath)
 
 
@@ -392,6 +377,7 @@ class Container(HasTraits):
                 return obj.get_wrapped_attr(restofpath)
             else:
                 return getattr(obj, restofpath)
+        
         trait = get_trait(self, name)
         if trait is None:
             self.raise_exception("trait '%s' does not exist" %
@@ -969,14 +955,17 @@ class Container(HasTraits):
         
     def find_trait(self, pathname):
         """Returns a trait if a trait with the given pathname exists.
-        If an attribute exists with the given
-        pathname but no trait is found, None will be returned. If
-        no attribute exists, an AttributeError will be raised.
+        If an attribute exists with the given pathname but no trait is found, 
+        or if pathname references a trait in a parent scope, None will be returned. If
+        no attribute exists with the given pathname within this scope, an AttributeError 
+        will be raised.
         
         pathname: str
             pathname of the desired trait
         """
         cname, _, restofpath = pathname.partition('.')
+        if cname == 'parent':
+            return None
         if restofpath:
             child = getattr(self, cname)
             if isinstance(child, Container):

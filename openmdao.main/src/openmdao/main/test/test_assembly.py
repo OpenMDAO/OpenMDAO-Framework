@@ -440,6 +440,28 @@ class AssemblyTestCase(unittest.TestCase):
         else:
             self.fail('expected Exception')
             
+    def test_assembly_connect_init(self):
+        class MyComp(Component):
+            ModulesInstallPath  = Str('', desc='', iotype='in')
+            
+            def execute(self):
+                print 'running MyComp'
+            
+            
+        class MyAsm(Assembly):    
+            ModulesInstallPath  = Str('C:/work/IMOO2/imoo/modules', desc='', iotype='in')
+        
+            def __init__(self):
+                super(MyAsm, self).__init__()
+                self.add('propulsion', MyComp())
+                self.driver.workflow.add(self.propulsion)
+                self.connect('ModulesInstallPath','propulsion.ModulesInstallPath')
+        
+        asm = set_as_top(MyAsm())
+        asm.run()
+        self.assertEqual(asm.ModulesInstallPath, 'C:/work/IMOO2/imoo/modules')
+        self.assertEqual(asm.propulsion.ModulesInstallPath, 'C:/work/IMOO2/imoo/modules')
+
         
 if __name__ == "__main__":
     unittest.main()

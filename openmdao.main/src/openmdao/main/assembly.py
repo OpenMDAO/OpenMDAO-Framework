@@ -120,7 +120,7 @@ class Assembly (Component):
         
         return (compname, getattr(self, compname), varname)
 
-    def connect(self, srcpath, destpath, value=Missing, src_iotype=None, dest_iotype=None):
+    def connect(self, srcpath, destpath):
         """Connect one src Variable to one destination Variable. This could be
         a normal connection between variables from two internal Components, or
         it could be a passthrough connection, which connects across the scope boundary
@@ -132,15 +132,6 @@ class Assembly (Component):
             
         destpath: str
             Pathname of destination variable
-            
-        value: object, optional
-            A value used for validation by the destination variable
-            
-        src_iotype: str, optional
-            Either 'in' or 'out', indicating iotype of the source
-            
-        dest_iotype: str, optional
-            Either 'in' or 'out', indicating iotype of the destination
         """
 
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
@@ -161,15 +152,24 @@ class Assembly (Component):
             self.raise_exception('Cannot connect %s to %s because one of them is an Expression or ExpressionList' %
                                  (srcpath,destpath), RuntimeError)
 
-        # test compatability (raises TraitError on failure)
+        if srccomp is not self and destcomp is not self:
+            # it's not a passthrough, so must connect input to output
+            if srctrait.iotype != 'out':
+                self.raise_exception(
+                    '.'.join([srccomp.get_pathname(),srcvarname])+
+                    ' must be an output variable',
+                    RuntimeError)
+            if desttrait.iotype != 'in':
+                self.raise_exception(
+                    '.'.join([destcomp.get_pathname(),destvarname])+
+                    ' must be an input variable',
+                    RuntimeError)
+
+        # test type compatability
         if desttrait and desttrait.validate is not None:
             try:
-                if desttrait.trait_type.get_val_meta_wrapper:
-                    desttrait.validate(destcomp, destvarname, 
-                                       srccomp.get_wrapped_attr(srcvarname))
-                else:
-                    desttrait.validate(destcomp, destvarname, 
-                                       srccomp.get(srcvarname))
+                desttrait.validate(destcomp, destvarname, 
+                                   srccomp.get_wrapped_attr(srcvarname))
             except TraitError, err:
                 self.raise_exception("can't connect '%s' to '%s': %s" % 
                                      (srcpath,destpath,str(err)), TraitError)
@@ -189,8 +189,7 @@ class Assembly (Component):
         else:
             destcomp.invalidate_deps(varnames=[destvarname], notify_parent=True)
 
-        super(Assembly, self).connect(srcpath, destpath, 
-                                      value=value, src_iotype=src_io, dest_iotype=dest_io)
+        super(Assembly, self).connect(srcpath, destpath)
         
 
     def disconnect(self, varpath, varpath2=None):

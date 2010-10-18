@@ -31,26 +31,9 @@ class TestCase(unittest.TestCase):
     def test_connect(self):
         comp = MyComponent()
         
-        # try connection with incompatible type
-        try:
-            comp.connect('parent.foo', 'x', 'blah')
-        except TraitError as err:
-            self.assertEqual(str(err), ": Trait 'x' must be a float, but a value of blah <type 'str'> was specified.")
-        else:
-            self.fail('TraitError expected')
         self.assertEqual(comp._depgraph.get_source('x'), None)
-    
-        # try nested connection with incompatible type
         vset = set(comp._valid_dict.keys())
-        try:
-            comp.connect('parent.foo', 'cont.dyntrait', 'blah')
-        except TraitError as err:
-            self.assertEqual(str(err), "cont: Trait 'dyntrait' must be a float, but a value of blah <type 'str'> was specified.")
-        else:
-            self.fail('TraitError expected')
-        self.assertEqual(comp._depgraph.get_source('x'), None)
-        self.assertEqual(vset, set(comp._valid_dict.keys()))
-
+        
         comp.connect('parent.foo', 'x')
         self.assertEqual(comp._depgraph.get_source('x'), 'parent.foo')
         
@@ -58,7 +41,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(comp._depgraph.get_source('xout'), None)
         self.assertEqual(vset, set(comp._valid_dict.keys()))
         
-        comp.connect('parent.blah', 'cont.dyntrait', 1.0)
+        comp.connect('parent.blah', 'cont.dyntrait')
         # _valid_dict should have a new entry
         self.assertEqual(set(comp._valid_dict.keys())-vset, set(['cont.dyntrait']))
         
