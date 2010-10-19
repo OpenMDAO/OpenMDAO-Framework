@@ -120,7 +120,7 @@ class FloatTestCase(unittest.TestCase):
         try:
             self.hobj.add_trait('badbounds', Float(98.0, low=100.0, high=0.0, iotype='in'))
         except TraitError, err:
-            errstring = "Lower bounds is greater than upper bounds."
+            errstring = "Lower bound is greater than upper bound."
             self.assertEqual(str(err), errstring)
         else:
             self.fail("Exception expected")

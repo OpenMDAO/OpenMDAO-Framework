@@ -13,7 +13,7 @@ from enthought.traits.api import TraitError
 from enthought.traits.api import Array as TraitArray
 from openmdao.units import PhysicalQuantity
 
-from openmdao.main.tvalwrapper import TraitValMetaWrapper
+from openmdao.main.tvalwrapper import TraitValWrapper
 
 class Array(TraitArray):
     """A variable wrapper for a numpy array with optional units.
@@ -70,7 +70,7 @@ class Array(TraitArray):
         
         # pylint: disable-msg=E1101
         # If both source and target have units, we need to process differently
-        if isinstance(value, TraitValMetaWrapper):
+        if isinstance(value, TraitValWrapper):
             valunits = value.metadata.get('units')
             if self.units and valunits and self.units != valunits:
                 return self._validate_with_metadata(obj, name, 
@@ -102,12 +102,12 @@ class Array(TraitArray):
         else:
             raise TraitError(msg)
 
-    def get_val_meta_wrapper(self):
-        """Return a TraitValMetaWrapper object.  Its value attribute
+    def get_val_wrapper(self):
+        """Return a TraitValWrapper object.  Its value attribute
         will be filled in by the caller.
         """
         # pylint: disable-msg=E1101
-        return TraitValMetaWrapper(units=self.units)
+        return TraitValWrapper(units=self.units)
             
     def _validate_with_metadata(self, obj, name, value, src_units):
         """Perform validation and unit conversion using metadata from

@@ -10,7 +10,6 @@ from sys import maxint
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Range, TraitError, TraitType
 
-    
 class Int(TraitType):
     """A variable wrapper for an integer valid within a
        specified range of values.
@@ -36,16 +35,16 @@ class Int(TraitType):
             high = maxint
             
         if low > high:
-            raise TraitError("Lower bounds is greater than upper bounds.")
+            raise TraitError("Lower bound is greater than upper bound.")
         
         if not isinstance(default_value, int):
             raise TraitError("Default value for an Int must be an integer.")
         
         if not isinstance(low, int):
-            raise TraitError("Lower bounds for an Int must be an integer.")
+            raise TraitError("Lower bound for an Int must be an integer.")
         
         if not isinstance(high, int):
-            raise TraitError("Upper bounds for an Int must be an integer.")
+            raise TraitError("Upper bound for an Int must be an integer.")
         
         # Put iotype in the metadata dictionary
         if iotype is not None:

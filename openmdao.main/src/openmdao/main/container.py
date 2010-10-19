@@ -360,7 +360,7 @@ class Container(HasTraits):
         pass
 
     def get_wrapped_attr(self, name):
-        """If the named trait can return a TraitValMetaWrapper, then this
+        """If the named trait can return a TraitValWrapper, then this
         function will return that, with the value set to the current value of
         the named variable. Otherwise, it functions like *getattr*, just
         returning the value of the named variable. Raises an exception if the
@@ -388,7 +388,7 @@ class Container(HasTraits):
         # from validate and one or two others, so we need to get access 
         # to the original trait which is held in the 'trait_type' attribute.
         ttype = trait.trait_type
-        getwrapper = getattr(ttype, 'get_val_meta_wrapper', None)
+        getwrapper = getattr(ttype, 'get_val_wrapper', None)
         val = getattr(self, name)
         # copy value if 'copy' found in metadata
         if ttype.copy:

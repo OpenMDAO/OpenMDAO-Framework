@@ -14,6 +14,7 @@ from openmdao.main.container import find_trait_and_value, get_trait
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression, ExpressionList
+from openmdao.main.tvalwrapper import TraitValWrapper
 
 _iodict = { 'out': 'output', 'in': 'input' }
 
@@ -138,10 +139,7 @@ class Assembly (Component):
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
         srctrait = srccomp.find_trait(srcvarname)
-        src_io = srctrait.iotype if srctrait else None
-            
         desttrait = destcomp.find_trait(destvarname)
-        dest_io = desttrait.iotype if desttrait else None
         
         if srccompname == destcompname:
             self.raise_exception(
@@ -166,13 +164,16 @@ class Assembly (Component):
                     RuntimeError)
 
         # test type compatability
-        if desttrait and desttrait.validate is not None:
-            try:
-                desttrait.validate(destcomp, destvarname, 
+        try:
+            if desttrait.trait_type.get_val_wrapper:
+                desttrait.validate(destcomp, destvarname,
                                    srccomp.get_wrapped_attr(srcvarname))
-            except TraitError, err:
-                self.raise_exception("can't connect '%s' to '%s': %s" % 
-                                     (srcpath,destpath,str(err)), TraitError)
+            else:
+                desttrait.validate(destcomp, destvarname,
+                                   srccomp.get(srcvarname))
+        except TraitError, err:
+            self.raise_exception("can't connect '%s' to '%s': %s" %
+                                 (srcpath,destpath,str(err)), TraitError)
             
         # invalidate destvar if necessary
         if destcomp is self and desttrait and desttrait.iotype == 'out': # boundary output
