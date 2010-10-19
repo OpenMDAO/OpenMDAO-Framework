@@ -14,8 +14,9 @@ import signal
 import socket
 import sys
 import time
+import traceback
 
-from multiprocessing import current_process, util
+from multiprocessing import current_process, active_children, util
 
 from openmdao.main.component import SimulationRoot
 from openmdao.main.container import Container
@@ -40,11 +41,15 @@ class ObjServerFactory(Factory):
 
     def __init__(self):
         super(ObjServerFactory, self).__init__()
-        self._count = 0
+        self._managers = []
         self._logger = logging.getLogger('ObjServerFactory')
         self._logger.info('PID: %d', os.getpid())
         print 'Factory PID:', os.getpid()
         sys.stdout.flush()
+
+    def managers(self):
+        """ List of created managers. """
+        return self._managers
 
     @rbac('*')
     def get_available_types(self, groups=None):
@@ -89,16 +94,16 @@ class ObjServerFactory(Factory):
                           res_desc, ctor_args)
 
         if server is None:
-            self._count += 1
             name = ctor_args.get('name', '')
             if not name:
-                name = 'Server_%d' % self._count
+                name = 'Server_%d' % (len(self._managers) + 1)
             manager = _ServerManager(name=name)
             manager.start()
+            self._managers.append(manager)
             self._logger.info("new server '%s' listening on %s",
                               name, manager.address)
-            server = manager.openmdao_main_objserverfactory_ObjServer(name=name, host=platform.node())
-
+            server = manager.openmdao_main_objserverfactory_ObjServer(name=name,
+                                                           host=platform.node())
         if typname:
             obj = server.create(typname, version, None, res_desc, **ctor_args)
         else:
@@ -397,7 +402,7 @@ register(ObjServer, _ServerManager, 'openmdao.main.objserverfactory')
 def connect(address, port, authkey='PublicKey', pubkey=None):
     """
     Connects to the :class:`ObjServerFactory` at `address` and `port`
-    using `key` and returns a proxy for it.
+    using `key` and returns a (shared) proxy for it.
 
     address: string
         IP address for server.
@@ -416,7 +421,6 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
             raise RuntimeError("can't connect to %s" % (location,))
         mgr = _FactoryManager(location, authkey, pubkey=pubkey)
         mgr.connect()
-        print dir(mgr)
         proxy = mgr.openmdao_main_objserverfactory_ObjServerFactory()
         _PROXIES[location] = proxy
         return proxy
@@ -537,7 +541,9 @@ def main():  #pragma no cover
         except socket.error as exc:
             if str(exc).find('Address already in use') >= 0:
                 if retries < 10:
-                    _LOGGER.debug('Address %s in use, retrying...', address)
+                    msg = 'Address %s in use, retrying...' % address
+                    _LOGGER.debug(msg)
+                    print msg
                     time.sleep(5)
                     retries += 1
                 else:
@@ -566,6 +572,17 @@ def _sigterm_handler(signum, frame):  #pragma no cover
     _LOGGER.info('sigterm_handler invoked')
     print 'sigterm_handler invoked'
     sys.stdout.flush()
+    try:
+        util._run_finalizers(0)
+        for p in active_children():
+            _LOGGER.debug('terminating a child process of manager')
+            p.terminate()
+        for p in active_children():
+            _LOGGER.debug('joining a child process of manager')
+            p.join()
+        util._run_finalizers()
+    except:
+        traceback.print_exc()
     _cleanup()
     sys.exit(1)
 

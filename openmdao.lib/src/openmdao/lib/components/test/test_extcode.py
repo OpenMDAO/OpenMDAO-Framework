@@ -20,6 +20,10 @@ from openmdao.lib.components.external_code import ExternalCode
 
 from openmdao.util.testutil import assert_raises, find_python
 
+
+# Used to disable tests when running full suite on Windows.
+_NAME = __name__
+
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
 
@@ -87,10 +91,10 @@ class TestCase(unittest.TestCase):
             os.remove(dummy)
 
     def test_remote(self):
-        # FIXME: temporarily disable this test on windows to get around
-        # a problem where a set of tests is run repeatedly for reasons unknown
-        if sys.platform == 'win32':
+        # FIXME: temporarily disable this test on Windows.
+        if _NAME != '__main__' and sys.platform == 'win32':
             raise nose.SkipTest()
+
         logging.debug('')
         logging.debug('test_remote')
 
@@ -286,7 +290,7 @@ class TestCase(unittest.TestCase):
             self.assertEqual(comp.timed_out, False)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import nose
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')

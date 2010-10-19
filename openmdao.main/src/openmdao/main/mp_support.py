@@ -145,6 +145,7 @@ class _SHA1(object):
         self.hash.update(data)
 
 
+# FIXME: current user isn't always the key we want.
 def _generate_key_pair():
     """ Returns RSA key containing both public and private keys. """
     if sys.platform == 'win32':

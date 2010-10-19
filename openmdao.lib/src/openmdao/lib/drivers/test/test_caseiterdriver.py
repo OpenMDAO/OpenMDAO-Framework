@@ -29,6 +29,9 @@ from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
 from openmdao.util.testutil import find_python
 
 
+# Used to disable tests when running full suite on Windows.
+_NAME = __name__
+
 # Users who have ssh configured correctly for testing.
 SSH_USERS = []
 
@@ -164,10 +167,10 @@ class TestCase(unittest.TestCase):
             self.fail('Expected RuntimeError')
 
     def test_concurrent(self):
-        # FIXME: temporarily disable this test on windows because it loops
-        # over a set of tests forever when running under a virtualenv
-        if sys.platform == 'win32':
+        # FIXME: temporarily disable this test on Windows.
+        if _NAME != '__main__' and sys.platform == 'win32':
             raise nose.SkipTest()
+
         # This can always test using a LocalAllocator (forked processes).
         # It can also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
@@ -342,7 +345,7 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()
