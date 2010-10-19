@@ -17,7 +17,7 @@ import weakref
 from enthought.traits.trait_base import not_event, not_none
 from enthought.traits.api import Bool, List, Str, Int, Instance, Property, implements, TraitError, Missing
 
-from openmdao.main.container import Container, get_trait
+from openmdao.main.container import Container
 from openmdao.main.interfaces import IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -334,7 +334,7 @@ class Component (Container):
         force call to *check_config* prior to execution when a trait is
         removed.
         """
-        trait = get_trait(self, name)
+        trait = self.get_trait(name)
         super(Component, self).remove_trait(name)
         self.config_changed()
         try:
@@ -764,7 +764,7 @@ class Component (Container):
                     continue
                 visited.add(id(obj))
                 if isinstance(obj, FileRef):
-                    ftrait = container.trait(name)
+                    ftrait = container.get_trait(name)
                     if self is scope:
                         file_vars.append((name, obj, ftrait))
                     else:

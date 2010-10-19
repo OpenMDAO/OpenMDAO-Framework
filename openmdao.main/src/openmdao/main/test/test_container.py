@@ -92,7 +92,7 @@ class ContainerTestCase(unittest.TestCase):
         self.assertEqual(num, 3.14)
 
     def test_get_attribute(self):
-        self.assertEqual(self.root.get('c2.c22.c221').trait('number').iotype, 
+        self.assertEqual(self.root.get('c2.c22.c221').get_trait('number').iotype, 
                          'in')
         
     def test_full_items(self):

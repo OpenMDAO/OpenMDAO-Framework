@@ -2,8 +2,10 @@
 
 import unittest
 import logging
+import nose
 
 from enthought.traits.api import TraitError
+from nose import SkipTest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
 from openmdao.main.expression import Expression
@@ -156,7 +158,8 @@ class DepGraphTestCase(unittest.TestCase):
     def test_disconnect(self):
         self.top.disconnect('comp7.c', 'sub.a3')
         self.top.sub.disconnect('comp5.c', 'comp1.b')
-        #self.fail('finish this test!')
+        # need to test behavior after disconnection to make sure validation/etc. handled properly
+        raise nose.SkipTest("disconnect test not finished yet!")
         
     def test_lazy1(self):
         self.top.run()

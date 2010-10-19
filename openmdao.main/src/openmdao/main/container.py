@@ -243,6 +243,19 @@ class Container(HasTraits):
         
         self._depgraph.disconnect(srcpath, destpath)
 
+    def get_trait ( self, name, copy = False ):
+        """Returns the trait indicated by name, or None if not found.  No recursive
+        search is performed if name contains dots.  This is a replacement
+        for the trait() method on HasTraits objects, because that method
+        can return traits that shouldn't exist.
+        """
+        trait = self.traits().get(name)
+        if not trait:
+            trait = self._instance_traits().get(name)
+        if copy and trait:
+            return self.trait(name, copy=copy)
+        return trait
+
     #
     #  HasTraits overrides
     #
@@ -302,7 +315,7 @@ class Container(HasTraits):
         #TODO: I'm probably missing something. There has to be a better way to
         #      do this...
         for name, val in self.__dict__.items():
-            if not self.trait(name) and not name.startswith('__'):
+            if not self.get_trait(name) and not name.startswith('__'):
                 setattr(self, name, val) # force def of implicit trait
 
     def add_trait(self, name, trait):
@@ -330,7 +343,7 @@ class Container(HasTraits):
         except KeyError:
             pass
         
-        trait = self.trait(name)
+        trait = self.get_trait(name)
         if trait and trait.iotype == 'in':
             self.on_trait_change(self._input_trait_modified, name, remove=True)
 
@@ -378,7 +391,7 @@ class Container(HasTraits):
             else:
                 return getattr(obj, restofpath)
         
-        trait = get_trait(self, name)
+        trait = self.get_trait(name)
         if trait is None:
             self.raise_exception("trait '%s' does not exist" %
                                  name, TraitError)
@@ -438,7 +451,7 @@ class Container(HasTraits):
             self.raise_exception(
                 'remove does not allow dotted path names like %s' %
                                  name, ValueError)
-        trait = get_trait(self, name)
+        trait = self.get_trait(name)
         if trait is not None:
             # for Instance traits, set their value to None but don't remove
             # the trait
@@ -594,7 +607,7 @@ class Container(HasTraits):
                                      AttributeError)
             return obj.get_metadata(restofpath, metaname)
             
-        t = get_trait(self, traitpath)
+        t = self.get_trait(traitpath)
         if not t:
             self.raise_exception("Couldn't find trait %s" % traitpath,
                                  AttributeError)
@@ -633,7 +646,7 @@ class Container(HasTraits):
                 return obj._array_get(restofpath, index)
      
     def _check_trait_settable(self, name, source=None, force=False):
-        trait = get_trait(self, name)
+        trait = self.get_trait(name)
         if trait:
             if trait.iotype == 'in':
                 src = None if force else self._depgraph.get_source(name)
@@ -974,7 +987,7 @@ class Container(HasTraits):
                 if deep_hasattr(child, restofpath):
                     return None
         else:
-            trait = get_trait(self, cname)
+            trait = self.get_trait(cname)
             if trait is not None:
                 return trait
             elif trait is None and self.contains(cname):
@@ -993,7 +1006,7 @@ class Container(HasTraits):
         """
         if alias is None:
             alias = path
-        oldtrait = get_trait(self, alias)
+        oldtrait = self.get_trait(alias)
         if oldtrait is None:
             newtrait = self._build_trait(path, iotype=io_status, trait=trait)
             self.add_trait(alias, newtrait)
@@ -1077,15 +1090,6 @@ def get_default_name(obj, scope):
         ver += 1
     return '%s%d' % (classname, ver)
         
-def get_trait(obj, name):
-    """obj is assumed to be a HasTraits object.  Returns the
-    trait indicated by name, or None if not found.  No recursive
-    search is performed if name contains dots.  This is a replacement
-    for the trait() method on HasTraits objects, because that method
-    can return traits that shouldn't exist.
-    """
-    trait = obj.traits().get(name)
-    return trait if trait else obj._instance_traits().get(name)
 
 def deep_hasattr(obj, pathname):
     """Returns True if the attrbute indicated by the give pathname
@@ -1110,7 +1114,7 @@ def find_trait_and_value(obj, pathname):
         for name in names[:-1]:
             obj = getattr(obj, name)
         if isinstance(obj, HasTraits):
-            objtrait = get_trait(obj, names[-1])
+            objtrait = obj.get_trait(names[-1])
         else:
             objtrait = None
         return (objtrait, getattr(obj, names[-1]))

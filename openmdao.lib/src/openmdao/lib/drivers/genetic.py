@@ -11,7 +11,6 @@ from pyevolve import G1DList, GAllele, GenomeBase
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
 from openmdao.main.api import Driver 
-from openmdao.main.container import get_trait
 from openmdao.lib.datatypes.enum import Enum
 from openmdao.lib.datatypes.float import Float
 from openmdao.lib.datatypes.int import Int
@@ -99,7 +98,7 @@ class Genetic(Driver):
             
             obj = getattr(self.parent, path)
            
-            t = get_trait(obj, target) #get the trait
+            t = obj.get_trait(target) #get the trait
                                  
             if (t and (t.is_trait_type(Float) or t.is_trait_type(Python))) \
                 or (array_test.search(target) and isinstance(val,float)):

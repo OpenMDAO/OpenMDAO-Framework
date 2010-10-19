@@ -234,6 +234,30 @@ class TraitsTestCase(unittest.TestCase):
         cbt.some_trait = 6
         self.assertEqual(cbt.num_callbacks, 3)
 
+    def test_dotted_names(self):
+        # traits can be registered using dotted names, but the result is that
+        # the trait can be looked up but the attribute cannot be accessed via
+        # normal python getattr
+        class HT(HasTraits):
+            some_trait = Int(2)
+            
+            def __init__(self, *args, **kwargs):
+                super(HT, self).__init__(*args, **kwargs)
+                self.add_trait('a.b', Int(6))
+                
+        ht = HT()
+        self.assertEqual(ht.some_trait, 2)
+        # even though trait is a.b, we cannot just access ht.a.b
+        try:
+            self.assertEqual(ht.a.b, 6)
+        except AttributeError as err:
+            pass
+        else:
+            self.fail('AttributeError expected')
+            
+        # but we can access the trait using a.b
+        trait = ht.trait('a.b')
+        self.assertTrue(trait.is_trait_type(Int))
 
         
 if __name__ == '__main__':

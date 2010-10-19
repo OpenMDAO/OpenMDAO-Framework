@@ -77,7 +77,7 @@ class IntTestCase(unittest.TestCase):
         self.assertEqual(3, self.hobj.int1)
 
         # check default value
-        self.assertEqual(98, self.hobj.trait('int1').default)
+        self.assertEqual(98, self.hobj.get_trait('int1').default)
 
         #check assignment with float
         try:

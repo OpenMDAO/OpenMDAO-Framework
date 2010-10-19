@@ -10,7 +10,7 @@ import cStringIO
 from enthought.traits.api import Instance, TraitError, Missing
 from enthought.traits.api import TraitType
 
-from openmdao.main.container import find_trait_and_value, get_trait
+from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression, ExpressionList

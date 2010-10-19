@@ -44,10 +44,10 @@ class ArrayTestCase(unittest.TestCase):
         # check starting value
         self.assertTrue(all(array([1.,2.,3.]) == self.hobj.arr1))
         # check default value
-        self.assertEqual([98.9], self.hobj.trait('arr1').trait_type.default_value)
+        self.assertEqual([98.9], self.hobj.get_trait('arr1').trait_type.default_value)
         
         # use convert_units to perform unit conversion
-        self.hobj.arr2 = convert_units(self.hobj.arr1, self.hobj.trait('arr1').units,
+        self.hobj.arr2 = convert_units(self.hobj.arr1, self.hobj.get_trait('arr1').units,
                                          'inch')
         self.assertAlmostEqual(12., self.hobj.arr2[0], 5)
         self.assertAlmostEqual(24., self.hobj.arr2[1], 5)

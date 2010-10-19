@@ -49,17 +49,17 @@ class FloatTestCase(unittest.TestCase):
         # check starting value
         self.assertEqual(3.1415926, self.hobj.float1)
         # check default value
-        self.assertEqual(98.9, self.hobj.trait('float1').default)
+        self.assertEqual(98.9, self.hobj.get_trait('float1').default)
         
         # use unit_convert to perform unit conversion
         self.hobj.float1 = 3.
-        self.hobj.float2 = convert_units(self.hobj.float1, self.hobj.trait('float1').units,
+        self.hobj.float2 = convert_units(self.hobj.float1, self.hobj.get_trait('float1').units,
                                          'inch')
         self.assertAlmostEqual(36., self.hobj.float2,5)
 
     def test_unit_conversion(self):
         self.hobj.float2 = 12.  # inches
-        self.hobj.float1 = convert_units(self.hobj.float2, self.hobj.trait('float2').units,
+        self.hobj.float1 = convert_units(self.hobj.float2, self.hobj.get_trait('float2').units,
                                          'ft')
         self.assertEqual(self.hobj.float1, 1.) # 12 inches = 1 ft
         
