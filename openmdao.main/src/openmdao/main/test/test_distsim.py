@@ -255,6 +255,7 @@ class TestCase(unittest.TestCase):
         self.server = None
         try:
             logging.debug('')
+            logging.debug('tester pid: %s', os.getpid())
             logging.debug('starting server...')
             self.server = start_server()
             self.address, self.port, self.key = read_server_config('server.cfg')

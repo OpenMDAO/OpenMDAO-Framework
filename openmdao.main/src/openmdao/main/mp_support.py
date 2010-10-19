@@ -33,6 +33,7 @@ import base64
 import ConfigParser
 import cPickle
 import errno
+import getpass
 import hashlib
 import inspect
 import logging
@@ -145,28 +146,59 @@ class _SHA1(object):
         self.hash.update(data)
 
 
-# FIXME: current user isn't always the key we want.
-def _generate_key_pair():
-    """ Returns RSA key containing both public and private keys. """
-    if sys.platform == 'win32':
-        home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
-    else:
-        home = os.environ['HOME']
-    key_dir = os.path.join(home, '.openmdao')
-    key_file = os.path.join(key_dir, 'keys')
-    try:
-        with open(key_file, 'rb') as inp:
-            key_pair = cPickle.load(inp)
-    except Exception:
-        pool = RandomPool(2048, hash=_SHA1)
-        pool.stir()
-        key_pair = RSA.generate(2048, pool.get_bytes)
-        if not os.path.exists(key_dir):
-            os.mkdir(key_dir)
-            os.chmod(key_dir, 0700)
-        with open(key_file, 'wb') as out:
-            cPickle.dump(key_pair, out)
-        os.chmod(key_file, 0600)
+def _generate_key_pair(credentials, logger=None):
+    """
+    Returns RSA key containing both public and private keys for the user
+    identified in `credentials`.  This can be an expensive operation, so
+    we avoid generating a new key pair whenever possible.
+    """
+    with _KEY_CACHE_LOCK:
+        # Look in previously generated keys.
+        try:
+            key_pair = _KEY_CACHE[credentials.user]
+        except KeyError:
+            # If key for current user (typical), check filesystem.
+            user, host = credentials.user.split('@')
+            if user == getpass.getuser() and host == socket.gethostname():
+                current_user = True
+                if sys.platform == 'win32':
+                    home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
+                else:
+                    home = os.environ['HOME']
+                key_dir = os.path.join(home, '.openmdao')
+                key_file = os.path.join(key_dir, 'keys')
+                try:
+                    with open(key_file, 'rb') as inp:
+                        key_pair = cPickle.load(inp)
+                except Exception:
+                    generate = True
+                else:
+                    generate = False
+            else:
+                current_user = False
+                generate = True
+
+            if generate:
+                if logger is None:
+                    logger = logging.getLogger()
+                logger.debug('generating public key...')
+                pool = RandomPool(2048, hash=_SHA1)
+                pool.stir()
+                key_pair = RSA.generate(2048, pool.get_bytes)
+                logger.debug('    done')
+
+                if current_user:
+                    # Save in protected file.
+# FIXME: this protection may not work on Windows!
+                    if not os.path.exists(key_dir):
+                        os.mkdir(key_dir)
+                        os.chmod(key_dir, 0700)
+                    with open(key_file, 'wb') as out:
+                        cPickle.dump(key_pair, out)
+                    os.chmod(key_file, 0600)
+
+            _KEY_CACHE[credentials.user] = key_pair
+
     return key_pair
 
 
@@ -366,9 +398,7 @@ class OpenMDAO_Server(Server):
         self._logger.debug('OpenMDAO_Server process %d started', os.getpid())
         self._authkey = authkey
         if authkey == 'PublicKey':
-            self._logger.debug('generating public key...')
-            self._key_pair = _generate_key_pair()
-            self._logger.debug('    done')
+            self._key_pair = _generate_key_pair(get_credentials(), self._logger)
         else:
             self._key_pair = None
         self._id_to_controller = {}
@@ -846,13 +876,17 @@ class ObjectManager(object):
     authkey: string
         Authorization key. Inherited from the current :class:`Process`
         object if not specified.
+
+    name: string
+        Name for server, used in log files, etc.
     """
 
-    def __init__(self, obj, address=None, serializer='pickle', authkey=None):
+    def __init__(self, obj, address=None, serializer='pickle', authkey=None,
+                 name=None):
         self._typeid = _make_typeid(obj)
         self._ident = '%x' % id(obj)
         self._manager = OpenMDAO_Manager(address=address, serializer=serializer,
-                                         authkey=authkey)
+                                         authkey=authkey, name=name)
         self._server = self._manager.get_server()
         self._exposed = _public_methods(obj)
         self._server.id_to_obj[self._ident] = (obj, self._exposed, None)
@@ -923,12 +957,7 @@ class OpenMDAO_Proxy(BaseProxy):
 
             if self._authkey == 'PublicKey':
                 # Send client public key, receive session key.
-                with _KEY_CACHE_LOCK:
-                    try:
-                        key_pair = _KEY_CACHE[credentials.user]
-                    except KeyError:
-                        key_pair = _generate_key_pair()
-                        _KEY_CACHE[credentials.user] = key_pair
+                key_pair = _generate_key_pair(credentials)
                 public_key = key_pair.publickey()
                 text = _encode_public_key(public_key)
 

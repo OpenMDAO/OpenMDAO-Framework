@@ -423,7 +423,11 @@ class Container(HasTraits):
         try:
             manager = self._managers[authkey]
         except KeyError:
-            manager = ObjectManager(self, authkey=authkey)
+            if self.name:
+                server_name='%s-cb' % self.name
+            else:
+                server_name='parent-cb'
+            manager = ObjectManager(self, authkey=authkey, name=server_name)
             self._managers[authkey] = manager
         return manager.proxy
 

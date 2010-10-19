@@ -41,15 +41,11 @@ class ObjServerFactory(Factory):
 
     def __init__(self):
         super(ObjServerFactory, self).__init__()
-        self._managers = []
+        self._count = 0
         self._logger = logging.getLogger('ObjServerFactory')
         self._logger.info('PID: %d', os.getpid())
         print 'Factory PID:', os.getpid()
         sys.stdout.flush()
-
-    def managers(self):
-        """ List of created managers. """
-        return self._managers
 
     @rbac('*')
     def get_available_types(self, groups=None):
@@ -94,12 +90,12 @@ class ObjServerFactory(Factory):
                           res_desc, ctor_args)
 
         if server is None:
+            self._count += 1
             name = ctor_args.get('name', '')
             if not name:
-                name = 'Server_%d' % (len(self._managers) + 1)
+                name = 'Server_%d' % self._count
             manager = _ServerManager(name=name)
             manager.start()
-            self._managers.append(manager)
             self._logger.info("new server '%s' listening on %s",
                               name, manager.address)
             server = manager.openmdao_main_objserverfactory_ObjServer(name=name,
@@ -178,14 +174,17 @@ class ObjServer(object):
         self.name = name or ('sim-%d' % self.pid)
         self.orig_dir = os.getcwd()
         self.root_dir = os.path.join(self.orig_dir, self.name)
-#        self._fix_logging()
-        self._logger = logging.getLogger(self.name)
         if os.path.exists(self.root_dir):
-            self._logger.warning('Removing existing directory %s',
-                                 self.root_dir)
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
+        sys.stdout = open('server.out', 'w')
+        sys.stderr = sys.stdout
+        self._fix_logging()
+        self._logger = logging.getLogger(self.name)
+        self._logger.info('PID: %d', os.getpid())
+        print 'ObjServer %s PID: %s' % (self.name, os.getpid())
+        sys.stdout.flush()
         util.Finalize(None, self.cleanup, exitpriority=-100)
         SimulationRoot.chroot(self.root_dir)
         self.tlo = None
@@ -202,8 +201,8 @@ class ObjServer(object):
         """ Cleanup this server's directory. """
         logging.shutdown()
         os.chdir(self.orig_dir)
-        if os.path.exists(self.root_dir):
-            shutil.rmtree(self.root_dir)
+#        if os.path.exists(self.root_dir):
+#            shutil.rmtree(self.root_dir)
 
     @rbac('owner', proxy_types=[object])
     def create(self, typname, version=None, server=None,
