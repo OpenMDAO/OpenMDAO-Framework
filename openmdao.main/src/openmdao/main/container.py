@@ -26,7 +26,7 @@ from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
                                  push_exception_handler, Python, TraitType, \
                                  Interface, Instance
 from enthought.traits.trait_handlers import NoDefaultSpecified
-from enthought.traits.has_traits import FunctionType
+from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
 from enthought.traits.trait_types import validate_implements
 
@@ -115,6 +115,7 @@ class Container(HasTraits):
         
         self._parent = None
         self._name = None
+        self._cached_traits_ = None
         
         self._call_tree_rooted = True
         
@@ -249,9 +250,10 @@ class Container(HasTraits):
         for the trait() method on HasTraits objects, because that method
         can return traits that shouldn't exist.
         """
-        trait = self.traits().get(name)
-        if not trait:
-            trait = self._instance_traits().get(name)
+        if self._cached_traits_ is None:
+            self._cached_traits_ = self.traits()
+            self._cached_traits_.update(self._instance_traits())
+        trait = self._cached_traits_.get(name)
         if copy and trait:
             return self.trait(name, copy=copy)
         return trait
@@ -268,12 +270,13 @@ class Container(HasTraits):
         if id_self in memo:
             return memo[ id_self ]
         result = super(Container, self).__deepcopy__(memo)
+        result._cached_traits_ = None
         olditraits = self._instance_traits()
         newtraits = result._instance_traits()
         newtraits.update(result.traits())
         for name, trait in olditraits.items():
             if trait.type is not 'event' and name not in newtraits:
-                result.add_trait(name, copy.copy(trait.trait_type))
+                result.add_trait(name, _clone_trait(trait))
                 setattr(result, name, getattr(self, name))
         return result
 
@@ -285,6 +288,7 @@ class Container(HasTraits):
             if trait.transient is not True:
                 dct[name] = trait
         state['_added_traits'] = dct
+        state['_cached_traits_'] = None
         
         return state
 
@@ -317,11 +321,14 @@ class Container(HasTraits):
         for name, val in self.__dict__.items():
             if not self.get_trait(name) and not name.startswith('__'):
                 setattr(self, name, val) # force def of implicit trait
+                
+        self._cached_traits_ = None
 
     def add_trait(self, name, trait):
         """Overrides HasTraits definition of *add_trait* in order to
         keep track of dynamically added traits for serialization.
         """
+        self._cached_traits_ = None
         #FIXME: saving our own list of added traits shouldn't be necessary...
         self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
@@ -335,6 +342,7 @@ class Container(HasTraits):
         """Overrides HasTraits definition of remove_trait in order to
         keep track of dynamically added traits for serialization.
         """
+        self._cached_traits_ = None
         # this just forces the regeneration (lazily) of the lists of
         # inputs, outputs, and containers
         self._trait_added_changed(name)
@@ -425,6 +433,8 @@ class Container(HasTraits):
             self.raise_exception('cannot make an object a child of itself',
                                  RuntimeError)
             
+        self._cached_traits_ = None # force regen of _cached_traits_
+
         if isinstance(obj, Container):
             obj.parent = self
             # if an old child with that name exists, remove it
