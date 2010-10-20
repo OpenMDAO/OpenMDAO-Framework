@@ -4,6 +4,7 @@
 from numpy import array
 from enthought.traits.api import Instance, ListStr, Event
 from enthought.traits.trait_base import not_none
+from enthought.traits.has_traits import _clone_trait
 
 from openmdao.main.api import Component, Case, obj_has_interface
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder
@@ -136,16 +137,16 @@ class MetaModel(Component):
             
         if newmodel:
             # query for inputs
-            traitdict = newmodel.alltraits(iotype='in')
+            traitdict = newmodel._alltraits(iotype='in')
             for name,trait in traitdict.items():
                 if self._eligible(name):
                     self._surrogate_input_names.append(name)
-                self.add_trait(name, trait.trait_type)
+                self.add_trait(name, _clone_trait(trait))
                 new_model_traitnames.add(name)
                 setattr(self, name, getattr(newmodel, name))
                 
             # now outputs
-            traitdict = newmodel.alltraits(iotype='out')
+            traitdict = newmodel._alltraits(iotype='out')
             for name,trait in traitdict.items():
                 if self._eligible(name):
                     self.add_trait(name, 

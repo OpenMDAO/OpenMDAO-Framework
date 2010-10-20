@@ -304,14 +304,14 @@ class Container(HasTraits):
         
         # restore dynamically added traits, since they don't seem
         # to get restored automatically
-        traits = self.alltraits()
+        traits = self._alltraits()
         for name, trait in self._added_traits.items():
             if name not in traits:
                 self.add_trait(name, trait)
         
         # make sure all input callbacks are in place.  If callback is
         # already there, this will have no effect. 
-        for name, trait in self.alltraits().items():
+        for name, trait in self._alltraits().items():
             if trait.iotype == 'in':
                 self.on_trait_change(self._input_trait_modified, name)
             
@@ -513,7 +513,7 @@ class Container(HasTraits):
             visited.add(id(self))
             if 'type' not in metadata:
                 metadata['type'] = not_event
-            match_dict = self.alltraits(**metadata)
+            match_dict = self._alltraits(**metadata)
             
             if recurse:
                 for name in self.list_containers():
@@ -546,13 +546,16 @@ class Container(HasTraits):
         """Return a list of names of child Containers."""
         return [n for n, v in self.items() if isinstance(v, Container)]
     
-    def alltraits(self, traits=None, **metadata):
+    def _alltraits(self, traits=None, **metadata):
         """This returns a dict that contains all traits (class and instance)
         that match the given metadata.
         """
         if traits is None:
-            traits = self.traits()  # don't pass **metadata here
-            traits.update(self._instance_traits())
+            if self._cached_traits_:
+                traits = self._cached_traits_
+            else:
+                traits = self.traits()  # don't pass **metadata here
+                traits.update(self._instance_traits())
             
         result = {}
         for name, trait in traits.items():
@@ -1008,7 +1011,7 @@ class Container(HasTraits):
                              pathname, AttributeError)
 
 
-    def _create_alias(self, path, io_status=None, trait=None, alias=None):
+    def create_alias(self, path, io_status=None, trait=None, alias=None):
         """Create a trait that maps to some internal variable designated by a
         dotted path. If a trait is supplied as an argument, use that trait as
         a validator for the aliased value. The resulting trait will have the
