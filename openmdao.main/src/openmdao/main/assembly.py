@@ -72,10 +72,10 @@ class Assembly (Component):
 
     def create_passthrough(self, pathname, alias=None):
         """Creates a PassthroughTrait that uses the trait indicated by
-        pathname for validation (if it's not a property trait), adds it to
-        self, and creates a connection between the two. If alias is *None,*
-        the name of the "promoted" trait will be the last entry in its
-        pathname. The trait specified by pathname must exist.
+        pathname for validation, adds it to self, and creates a connection
+        between the two. If alias is *None,* the name of the alias trait will
+        be the last entry in its pathname. The trait specified by pathname
+        must exist.
         """
         if alias:
             newname = alias

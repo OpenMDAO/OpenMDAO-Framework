@@ -226,6 +226,7 @@ class Container(HasTraits):
         """Removes the connection between one source variable and one 
         destination variable.
         """
+        # @in, @out, and @self all really refer to self, so replace them with ''
         srcpath = srcpath.replace('@in.','').replace('@out.','').replace('@self.','')
         destpath = destpath.replace('@in.','').replace('@out.','').replace('@self.','')
         
@@ -962,24 +963,7 @@ class Container(HasTraits):
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
         [x.pre_delete() for n,x in self.items() if isinstance(x, Container)]
-    
-    def _build_trait(self, pathname, iotype=None, trait=None):
-        """Asks the object to dynamically create a trait for the 
-        attribute given by pathname, based on whatever knowledge the
-        component has of that attribute.
-        
-        pathname: str
-            The dotted path to the specified attribute.
             
-        iotype: str, optional
-            The data direction, either 'in' or 'out'.
-            
-        trait: TraitType, optional
-            A validation trait for the given attribute.
-        """
-        self.raise_exception("Unable to create a new trait automatically", 
-                             RuntimeError)
-        
     def find_trait(self, pathname):
         """Returns a trait if a trait with the given pathname exists.
         If an attribute exists with the given pathname but no trait is found, 
@@ -988,7 +972,7 @@ class Container(HasTraits):
         will be raised.
         
         pathname: str
-            pathname of the desired trait
+            Pathname of the desired trait.  May contain dots.
         """
         cname, _, restofpath = pathname.partition('.')
         if cname == 'parent':
@@ -1011,32 +995,36 @@ class Container(HasTraits):
                              pathname, AttributeError)
 
 
-    def create_alias(self, path, io_status=None, trait=None, alias=None):
-        """Create a trait that maps to some internal variable designated by a
-        dotted path. If a trait is supplied as an argument, use that trait as
-        a validator for the aliased value. The resulting trait will have the
+    def create_alias(self, path, alias, iotype=None, trait=None):
+        """Create a trait that maps to some internal attribute. 
+        If a trait is supplied as an argument, use that trait as
+        a validator for the alias trait. The resulting trait will have the
         dotted path as its name (or alias if specified) and will be added to 
         self.  An exception will be raised if the trait already exists.
         """
-        if alias is None:
-            alias = path
-        oldtrait = self.get_trait(alias)
-        if oldtrait is None:
-            newtrait = self._build_trait(path, iotype=io_status, trait=trait)
-            self.add_trait(alias, newtrait)
-            return newtrait
-        else:
+        if '.' in alias:
+            self.raise_exception("Can't create alias '%s' because it's a dotted pathname"%
+                                 alias, NameError)
+        newtrait = self.get_trait(alias)
+        if newtrait is not None:
             self.raise_exception(
                 "Can't create alias '%s' because it already exists." % alias,
                 RuntimeError)
-    
+        
+        oldtrait = self.find_trait(path)
+        if oldtrait:
+            self.add_trait(alias, _clone_trait(oldtrait))
+        else:
+            self.raise_exception("Can't create alias of '%s' because it wasn't found" %
+                                 path, AttributeError)
+
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         full_msg = '%s: %s' % (self.get_pathname(), msg)
         self._logger.error(msg)
         raise exception_class(full_msg)
-
-
+    
+    
 # Some utility functions
 
         

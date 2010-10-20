@@ -63,7 +63,7 @@ def mod2dist(argv=None, groups= { 'openmdao.component': Component,
     The only required options are the desired version of the distribution and 
     the module to use to generate the distribution.  For example:
 
-    mod2dist -v 1.0 simple_adder.py    
+    mod2dist -v 1.0 simple_adder.py
     """
     parser = OptionParser()
     parser.usage = "mod2dist.py [options] <module_name>"

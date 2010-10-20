@@ -72,10 +72,7 @@ class IContainer(Interface):
         """Called after the hierarchy containing this Container has been
         defined back to the root. This does not guarantee that all sibling
         Containers have been defined. It also does not guarantee that this
-        component is fully configured to execute. Classes that override this
-        function must call their base class version.
-        
-        This version calls tree_rooted() on all of its child Containers.
+        component is fully configured to execute.
         """
             
     def revert_to_defaults(self, recurse=True):
@@ -189,11 +186,11 @@ class IContainer(Interface):
             pathname of the desired trait
         """
 
-    def create_alias(self, path, io_status=None, trait=None, alias=None):
+    def create_alias(self, path, alias, iotype=None, trait=None):
         """Create a trait that maps to some internal variable designated by a
         dotted path. If a trait is supplied as an argument, use that trait as
         a validator for the aliased value. The resulting trait will have the
-        dotted path as its name (or alias if specified) and will be added to 
+        alias as its name and will be added to 
         self.  An exception will be raised if the trait already exists.
         """
     
