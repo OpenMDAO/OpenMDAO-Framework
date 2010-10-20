@@ -38,11 +38,7 @@ class TestCase(unittest.TestCase):
 
         # List types.
         types = factory.get_available_types()
-        names = []
-        for name, version in types:
-            names.append(name)
-        self.assertTrue('openmdao.lib.CONMINdriver' in names)
-        self.assertTrue('openmdao.lib.pyevolvedriver' in names)
+        names = [name for name, version in types]
         self.assertTrue('openmdao.test.ExecComp' in names)
 
         # Create a component.
@@ -84,6 +80,7 @@ class TestCase(unittest.TestCase):
         cmd = 'dir' if sys.platform == 'win32' else 'ls'
         return_code, error_msg = \
             server.execute_command(cmd, None, 'cmd.out', None, None, 0, 10)
+        self.assertEqual(return_code, 0)
 
         return_code, error_msg = \
             server.execute_command('no-such-command', None, 'stdout', 'stderr',
@@ -152,9 +149,6 @@ class TestCase(unittest.TestCase):
 
         # Create another server with same name (=> same directory).
         server2 = ObjServer()
-
-        # Cleanup.
-        server2.cleanup()
 
 
 if __name__ == '__main__':

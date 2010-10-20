@@ -90,18 +90,18 @@ class ObjServerFactory(Factory):
                           res_desc, ctor_args)
 
         if server is None:
-
-# Helpful?
-            for handler in logging._handlerList:
-                handler.flush()
-            sys.stdout.flush()
-            sys.stderr.flush()
-
             self._count += 1
             name = ctor_args.get('name', '')
             if not name:
                 name = 'Server_%d' % self._count
             manager = _ServerManager(name=name)
+# Helpful?
+            if sys.platform == 'win32':  #pragma no cover
+                for handler in logging._handlerList:
+                    handler.flush()
+                sys.stdout.flush()
+                sys.stderr.flush()
+
             manager.start()
             self._logger.info("new server '%s' listening on %s",
                               name, manager.address)
@@ -185,16 +185,7 @@ class ObjServer(object):
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
-
-# Helpful?
-        for handler in logging._handlerList:
-            handler.flush()
-        sys.stdout.flush()
-        sys.stderr.flush()
-
-        sys.stdout = open('server.out', 'w')
-        sys.stderr = sys.stdout
-        self._fix_logging()
+        self._reset_logging()
         self._logger = logging.getLogger(self.name)
         self._logger.info('PID: %d', os.getpid())
         print 'ObjServer %s PID: %s' % (self.name, os.getpid())
@@ -203,8 +194,17 @@ class ObjServer(object):
         SimulationRoot.chroot(self.root_dir)
         self.tlo = None
 
-    def _fix_logging(self):
-        """ Reset logging after switching destination. """
+    def _reset_logging(self, filename='server.out'):
+        """ Reset stdout/stderr and logging after switching destination. """
+# Helpful?
+        if sys.platform == 'win32':  #pragma no cover
+            for handler in logging._handlerList:
+                handler.flush()
+            sys.stdout.flush()
+            sys.stderr.flush()
+
+        sys.stdout = open(filename, 'w')
+        sys.stderr = sys.stdout
         logging.root.handlers = []
         logging.basicConfig(level=logging.NOTSET, datefmt='%b %d %H:%M:%S',
             format='%(asctime)s %(levelname)s %(name)s: %(message)s',
@@ -230,7 +230,7 @@ class ObjServer(object):
                           ' res_desc %s, args %s', typname, version, server,
                           res_desc, ctor_args)
         obj = create(typname, version, server, res_desc, **ctor_args)
-        self._logger.info('    returning %r %d', obj, id(obj))
+        self._logger.info('    returning %s', obj)
         return obj
 
     @rbac('*')
@@ -424,8 +424,11 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
     port: int
         Server port.
 
-    key:
-        Server public key.
+    authkey:
+        Server authorization key.
+
+    pubkey:
+        Server public key, required if `authkey` is 'PublicKey'.
     """
     location = (address, port)
     try:
@@ -509,7 +512,7 @@ def main():  #pragma no cover
         Note that ports below 1024 typically require special privileges.
 
     prefix: string
-        Prefix for config and stdout/stderr files (default 'server').
+        Prefix for configuration and stdout/stderr files (default 'server').
 
     If ``prefix.key`` exists, it is read for an authorization key string.
     Otherwise public key authorization and encryption is used.
@@ -586,17 +589,17 @@ def _sigterm_handler(signum, frame):  #pragma no cover
     _LOGGER.info('sigterm_handler invoked')
     print 'sigterm_handler invoked'
     sys.stdout.flush()
-    try:
-        util._run_finalizers(0)
-        for p in active_children():
-            _LOGGER.debug('terminating a child process of manager')
-            p.terminate()
-        for p in active_children():
-            _LOGGER.debug('joining a child process of manager')
-            p.join()
-        util._run_finalizers()
-    except:
-        traceback.print_exc()
+#    try:
+#        util._run_finalizers(0)
+#        for p in active_children():
+#            _LOGGER.debug('terminating a child process of manager')
+#            p.terminate()
+#        for p in active_children():
+#            _LOGGER.debug('joining a child process of manager')
+#            p.join()
+#        util._run_finalizers()
+#    except:
+#        traceback.print_exc()
     _cleanup()
     sys.exit(1)
 

@@ -163,7 +163,7 @@ def _generate_key_pair(credentials, logger=None):
             user, host = credentials.user.split('@')
             if user == getpass.getuser() and host == socket.gethostname():
                 current_user = True
-                if sys.platform == 'win32':
+                if sys.platform == 'win32':  #pragma no cover
                     home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
                 else:
                     home = os.environ['HOME']
@@ -753,7 +753,7 @@ class OpenMDAO_Manager(BaseManager):
         # Pipe over which we will retrieve address of server.
         reader, writer = connection.Pipe(duplex=False)
 
-        if sys.platform == 'win32':
+        if sys.platform == 'win32':  #pragma no cover
             # Make registry pickleable.
             registry = {}
             for typeid, info in self._registry.items():
@@ -800,7 +800,7 @@ class OpenMDAO_Manager(BaseManager):
         """
         Create a server, report its address and public key, and run it.
         """
-        if sys.platform == 'win32':
+        if sys.platform == 'win32':  #pragma no cover
             set_credentials(credentials)
             # Recreate registry proxytypes.
             for typeid, info in registry.items():
@@ -1098,7 +1098,7 @@ class OpenMDAO_Proxy(BaseProxy):
     def manager_is_alive(address):
         """ Check whether manager is still alive. """
         addr_type = connection.address_type(address)
-        if addr_type == 'AF_PIPE':  # Windows
+        if addr_type == 'AF_PIPE':  #pragma no cover
             try:
                 win32.WaitNamedPipe(address, 10)  # 0.01 sec
             except WindowsError:

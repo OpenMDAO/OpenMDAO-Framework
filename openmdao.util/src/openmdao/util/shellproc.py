@@ -1,6 +1,7 @@
 import os.path
 import signal
 import subprocess
+import sys
 import time
 
 PIPE = subprocess.PIPE
@@ -127,12 +128,11 @@ class ShellProc(subprocess.Popen):
         return_code: int
             Return code from :meth:`poll`.
         """
+        error_msg = ''
         if return_code:
             if return_code > 0:
                 error_msg = ': %s' % os.strerror(return_code)
-            elif sys.platform == 'win32':
-                error_msg = '(return code %d)' % return_code
-            else:
+            elif sys.platform != 'win32':
                 sig = -return_code
                 if sig < signal.NSIG:
                     for item in signal.__dict__.keys():
@@ -140,12 +140,6 @@ class ShellProc(subprocess.Popen):
                             if getattr(signal, item) == sig:
                                 error_msg = ': %s' % item
                                 break
-                    else:
-                        error_msg = '(return code %d)' % return_code
-                else:
-                    error_msg = '(return code %d)' % return_code
-        else:
-            error_msg = ''
         return error_msg
 
 
