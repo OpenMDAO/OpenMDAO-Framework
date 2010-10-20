@@ -248,7 +248,8 @@ class Container(HasTraits):
         """Returns the trait indicated by name, or None if not found.  No recursive
         search is performed if name contains dots.  This is a replacement
         for the trait() method on HasTraits objects, because that method
-        can return traits that shouldn't exist.
+        can return traits that shouldn't exist. Do not use the trait() function
+        unless you are certain that the named trait exists.
         """
         if self._cached_traits_ is None:
             self._cached_traits_ = self.traits()
