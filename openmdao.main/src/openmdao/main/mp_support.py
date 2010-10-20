@@ -52,6 +52,8 @@ from multiprocessing.forking import Popen
 from multiprocessing.managers import BaseManager, BaseProxy, RebuildProxy, \
                                      Server, State, Token, convert_to_error, \
                                      dispatch, listener_client
+if sys.platform == 'win32':
+    from _multiprocessing import win32
 
 from openmdao.main.interfaces import obj_has_interface
 from openmdao.main.rbac import AccessController, RoleError, check_role, \
@@ -189,13 +191,13 @@ def _generate_key_pair(credentials, logger=None):
 
                 if current_user:
                     # Save in protected file.
-# FIXME: this protection may not work on Windows!
+# FIXME: this protection does *not* work on Windows!
                     if not os.path.exists(key_dir):
                         os.mkdir(key_dir)
-                        os.chmod(key_dir, 0700)
+                        os.chmod(key_dir, 0700)  # Read/Write/Execute
                     with open(key_file, 'wb') as out:
                         cPickle.dump(key_pair, out)
-                    os.chmod(key_file, 0600)
+                    os.chmod(key_file, 0600)     # Read/Write
 
             _KEY_CACHE[credentials.user] = key_pair
 
@@ -1096,16 +1098,19 @@ class OpenMDAO_Proxy(BaseProxy):
     def manager_is_alive(address):
         """ Check whether manager is still alive. """
         addr_type = connection.address_type(address)
-        if addr_type == 'AF_INET':
-            sock = socket.socket(socket.AF_INET)
-        elif addr_type == 'AF_UNIX':
-            sock = socket.socket(socket.AF_UNIX)
-        else:  # AF_PIPE (Windows)
-# TODO: handle Windows
-            sock = None
+        if addr_type == 'AF_PIPE':  # Windows
+            try:
+                win32.WaitNamedPipe(address, 10)  # 0.01 sec
+            except WindowsError:
+                alive = False
+            else:
+                alive = True
+        else:
+            if addr_type == 'AF_INET':
+                sock = socket.socket(socket.AF_INET)
+            elif addr_type == 'AF_UNIX':
+                sock = socket.socket(socket.AF_UNIX)
 
-        alive = True
-        if sock is not None:
             try:
                 sock.connect(address)
             except socket.error as exc:
@@ -1117,6 +1122,7 @@ class OpenMDAO_Proxy(BaseProxy):
                     raise
             else:
                 sock.close()
+                alive = True
         return alive
 
     def __reduce__(self):

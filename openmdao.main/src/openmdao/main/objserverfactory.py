@@ -60,7 +60,7 @@ class ObjServerFactory(Factory):
             self._logger.debug('    %s %s', typname, version)
         return types
 
-    @rbac('owner')
+    @rbac(('owner', 'user'))
     def create(self, typname, version=None, server=None,
                res_desc=None, **ctor_args):
         """
@@ -90,6 +90,13 @@ class ObjServerFactory(Factory):
                           res_desc, ctor_args)
 
         if server is None:
+
+# Helpful?
+            for handler in logging._handlerList:
+                handler.flush()
+            sys.stdout.flush()
+            sys.stderr.flush()
+
             self._count += 1
             name = ctor_args.get('name', '')
             if not name:
@@ -105,7 +112,7 @@ class ObjServerFactory(Factory):
         else:
             obj = server
 
-        self._logger.debug('create returning %r %d', obj, id(obj))
+        self._logger.debug('create returning %s', obj)
         return obj
 
 
@@ -178,6 +185,13 @@ class ObjServer(object):
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
+
+# Helpful?
+        for handler in logging._handlerList:
+            handler.flush()
+        sys.stdout.flush()
+        sys.stderr.flush()
+
         sys.stdout = open('server.out', 'w')
         sys.stderr = sys.stdout
         self._fix_logging()
@@ -190,7 +204,7 @@ class ObjServer(object):
         self.tlo = None
 
     def _fix_logging(self):
-        # Only want/need this for forked servers to reset log output.
+        """ Reset logging after switching destination. """
         logging.root.handlers = []
         logging.basicConfig(level=logging.NOTSET, datefmt='%b %d %H:%M:%S',
             format='%(asctime)s %(levelname)s %(name)s: %(message)s',
@@ -201,6 +215,7 @@ class ObjServer(object):
         """ Cleanup this server's directory. """
         logging.shutdown()
         os.chdir(self.orig_dir)
+# This probably should be optional in case we need post-mortem information.
 #        if os.path.exists(self.root_dir):
 #            shutil.rmtree(self.root_dir)
 
