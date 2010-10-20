@@ -2,8 +2,8 @@
 from enthought.traits.api import Instance, ListStr
 from enthought.traits.trait_base import not_none
 
-from openmdao.main.api import Component
-from openmdao.main.interfaces import IComponent, obj_has_interface
+from openmdao.main.api import Component, obj_has_interface
+from openmdao.main.interfaces import IComponent
 
 _mimic_class_traitnames = set(['includes', 'excludes', 'model'])
 

@@ -5,12 +5,10 @@ from numpy import array
 from enthought.traits.api import Instance, ListStr, Event
 from enthought.traits.trait_base import not_none
 
-from openmdao.main.api import Component, Case
+from openmdao.main.api import Component, Case, obj_has_interface
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder
 from openmdao.main.uncertain_distributions import UncertainDistribution, \
                                                   NormalDistribution
-
-from openmdao.main.interfaces import obj_has_interface
 
 class MetaModel(Component):
     """ A component that provides general Meta Modeling capability.

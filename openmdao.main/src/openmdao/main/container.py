@@ -1034,6 +1034,26 @@ class Container(HasTraits):
         raise exception_class(full_msg)
 
 
+# Some utility functions
+
+        
+def obj_has_interface(obj, *ifaces):
+    """Returns True if the specified object inherits from HasTraits and
+    claims it implements one or more of the specified interfaces. If
+    it is not a HasTraits object, then validate_implements() will be
+    called on the object, which is slower because it actually checks 
+    for the presence of all methods and attributes specified in the
+    interfaces.
+    """
+    if isinstance(obj, HasTraits):
+        return obj.has_traits_interface(*ifaces)
+    else:
+        for iface in ifaces:
+            if validate_implements(obj, iface):
+                return True
+    return False
+    
+
 def _get_entry_group(obj):
     """Return entry point group for given object type."""
     if _get_entry_group.group_map is None:

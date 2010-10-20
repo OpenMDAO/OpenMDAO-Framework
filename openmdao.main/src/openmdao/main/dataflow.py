@@ -3,7 +3,8 @@ import networkx as nx
 from networkx.algorithms.traversal import strongly_connected_components
 
 from openmdao.main.seqentialflow import SequentialWorkflow
-from openmdao.main.interfaces import IDriver, obj_has_interface
+from openmdao.main.interfaces import IDriver
+from openmdao.main.container import obj_has_interface
 
 __all__ = ['Dataflow']
 

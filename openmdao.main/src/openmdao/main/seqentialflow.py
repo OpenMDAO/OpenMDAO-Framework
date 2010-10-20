@@ -2,7 +2,8 @@
 from enthought.traits.api import implements
 
 from openmdao.main.workflow import Workflow
-from openmdao.main.interfaces import IComponent, obj_has_interface
+from openmdao.main.container import obj_has_interface
+from openmdao.main.interfaces import IComponent
 from openmdao.main.exceptions import RunStopped
 
 __all__ = ['SequentialWorkflow']

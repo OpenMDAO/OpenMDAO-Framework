@@ -8,6 +8,8 @@ Interfaces for the OpenMDAO project.
 
 from enthought.traits.api import Interface, Instance, Int
 
+from openmdao.main.workflow import Workflow
+
 # to check if an interface is implemented, you can call
 # validate_implements(obj, klass) from enthought.traits.trait_types
 # or if the object you're checking inherits from HasTraits, you can call 
@@ -20,56 +22,13 @@ from enthought.traits.api import Interface, Instance, Int
 class IComponent(Interface):
     """A marker interface for Components."""
     
-class IWorkflow(Interface):
-    """An object that can run a group of components in some order. """
-    
-    scope = Instance(IComponent, allow_none=True)
-    
-    def __iter__():
-        """Return an iterator object that iterates over components in
-        the desired execution order.
-        """
-        
-    def __contains__(self, comp):
-        """Return True if this workflow contains the given Component."""
-        
-    def __len__(self):
-        """Returns the number of components in this workflow."""
-        
-    def add(self, comp):
-        """Add the Component to this workflow."""
-        
-    def remove(self, comp):
-        """Remove the Component from this workflow.  Do not raise
-        an exception if the component is not found.
-        """
-        
-    def clear(self):
-        """Remove all Components from this workflow."""
-        
-    def contents(self):
-        """Return a list of all Components in this Workflow. No
-        ordering is assumed.
-        """
-
-    def run(self):
-        """ Run the components in the workflow. """
-    
-    def step(self):
-        """Run a single component in the Workflow."""
-
-    def stop(self):
-        """
-        Stop all components in this workflow.
-        We assume it's OK to to call stop() on something that isn't running.
-        """
         
 class IDriver(Interface):
     """A marker interface for Drivers. To make a usable IDriver plug-in,
     you must still inherit from Driver.
     """
     
-    workflow = Instance(IWorkflow, allow_none=True)
+    workflow = Instance(Workflow, allow_none=True)
     
     def iteration_set(self):
         """Return a set of names (not pathnames) containing all Components
@@ -364,7 +323,7 @@ class IHasObjective(Interface):
         """
     
 
-class HasObjectives(object): 
+class IHasObjectives(object): 
     """An Interface for objects having a multiple objectives."""
 
     def add_objectives(self, obj_iter):
@@ -400,18 +359,5 @@ class HasObjectives(object):
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency introduced by our objectives.
-        """            
+        """
         
-        
-def obj_has_interface(obj, *ifaces):
-    """Returns True if the specified object inherits from HasTraits and
-    implements one or more of the specified interfaces.
-    """
-    try:
-        if not obj.has_traits_interface(*ifaces):
-            return False
-    except Exception:
-        return False
-    return True
-    
-
