@@ -3,9 +3,7 @@
     example structures problem. This openMDAO component contains a three bar
     truss example referenced in CometBoards
 """
-import operator
-import math
-from numpy import zeros
+import os
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Assembly
@@ -29,13 +27,13 @@ class Bar3Truss(Assembly):
 
         nastran_command = "/msc/nastran/bin/nastran"
 
-        self.bar3_static.stdout = "/dev/null"
-        self.bar3_static.stderr = "/dev/null"
+        self.bar3_static.stdout = os.devnull
+        self.bar3_static.stderr = os.devnull
         self.bar3_static.nastran_filename = "vared_bar3.bdf"
         self.bar3_static.nastran_command = nastran_command
 
-        self.bar3_dynamic.stdout = "/dev/null"
-        self.bar3_dynamic.stderr = "/dev/null"
+        self.bar3_dynamic.stdout = os.devnull
+        self.bar3_dynamic.stderr = os.devnull
         self.bar3_dynamic.nastran_filename = "bar3_dyn.bdf"
         self.bar3_dynamic.nastran_command = nastran_command
 

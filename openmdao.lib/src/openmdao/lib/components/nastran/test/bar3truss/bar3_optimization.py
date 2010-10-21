@@ -4,6 +4,7 @@
 
 # Optimize the bar3 design using the driving_sim component.
 
+import os
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.api import Float, CONMINdriver, Genetic
@@ -42,8 +43,8 @@ class Bar3Optimization(Assembly):
 
         # Create Bar3_Truss component instances
         bartruss = Bar3Truss()
-        bartruss.stdout = "/dev/null"
-        bartruss.stderr = "/dev/null"
+        bartruss.stdout = os.devnull
+        bartruss.stderr = os.devnull
         bartruss.nastran_filename = "vared_bar3.bdf"
         bartruss.nastran_command = "/msc/nastran/bin/nastran"
         self.add('bar3_truss', bartruss)
