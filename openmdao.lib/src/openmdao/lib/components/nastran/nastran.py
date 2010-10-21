@@ -1,7 +1,5 @@
-"""nastran.py defines NastranComponent.
-
-   See the Standard Library for additional information on the :ref:`NastranComponent`.
-    
+"""``nastran.py`` defines NastranComponent.
+  
 """
 
 from os import fdopen, remove, path
@@ -27,27 +25,27 @@ from openmdao.lib.datatypes.int import Int
 from openmdao.lib.datatypes.array import Array
 
 class NastranComponent(ExternalCode):
-    """All Nastran-capable components should be subclasses of NastranComponent
+    """All Nastran-capable components should be subclasses of NastranComponent.
 
     By subclassing NastranComponent, any component should have easy access
     to NastranMaker, NastranReplacer, and NastranParser. Your subclass
     must specify how to handle the input and output variables to NastranComponent
-    by specifying nastran specific attributes on the traits. All of these
-    attributes are described further in the :ref:`NastranComponent<NastranComponent>` docs.
+    by specifying nastran-specific attributes on the traits. All of these
+    attributes are described further in the :ref:`NastranComponent` docs.
 
-    Note: This component does nothing with external_files. If you want to deal with
+    Note: This component does nothing with ``external_files``. If you want to deal with
     that, then do so in your subclass.
     """
 
 
     nastran_filename = Str(iotype="in", desc="Input filename with \
-                                              placeholder variables")
+                                              placeholder variables.")
     nastran_command = Str(iotype="in", desc="Location of nastran \
-                                             executable")
+                                             executable.")
     nastran_command_args = Str(iotype="in", desc="Arguments to the \
-                                                  nastran command")
+                                                  nastran command.")
 
-    output_filename = Str(iotype="out", desc="Output filename")
+    output_filename = Str(iotype="out", desc="Output filename.")
 
     delete_tmp_files = Bool(True, iotype="in", desc="Should I delete \
                             the temporary files?")
@@ -75,16 +73,16 @@ class NastranComponent(ExternalCode):
     def execute(self):
         """Runs the NastranComponent.
 
-        We are overiding ExternalCode's execute function. First we
+        We are overiding ExternalCode's execute function. First, we
         setup the input file (by running NastranReplacer and then
-        NastranMaker). Next we run Nastran by calling our
+        NastranMaker). Next, we run Nastran by calling our
         parent's execute function. Finally, we parse the data
         and set the output variables given to us.
 
         RuntimeError
             The component relies on ExternalCode which can throw all
-            sorts of RuntimeError like exceptions (RunStopped,
-            RunInterrupted also included)
+            sorts of RuntimeError-like exceptions (RunStopped,
+            RunInterrupted also included).
             
         Filesystem-type Errors
             NastranComponent makes a temporary directory with mkdtemp
@@ -95,7 +93,7 @@ class NastranComponent(ExternalCode):
         While there are no explicit parameters or return values for this
         function, it gets all the input it needs from the design
         variables that are connected to the subclass of NastranComponent.
-        This should be described pretty well in the README.
+        This should be described pretty well in the :ref:`documentation<NastranComponent>`.
 
         """
         # We are going to keep track of all the ways we
@@ -305,7 +303,7 @@ class NastranComponent(ExternalCode):
             This NastranMaker object already has all the variables that
             were specified in the traits.
 
-        The return will be ignored. Right after this function exits
+        The return will be ignored. Right after this function exits,
         the Nastran input file will be written out to a file.
         """
         pass
