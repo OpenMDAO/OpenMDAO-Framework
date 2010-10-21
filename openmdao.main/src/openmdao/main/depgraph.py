@@ -249,9 +249,9 @@ class _Link(object):
     
     def invalidate(self, destcomp, varlist=None):
         if varlist is None:
-            destcomp.set_valids(self._dests.keys(), False)
+            destcomp.set_valid(self._dests.keys(), False)
         else:
-            destcomp.set_valids(varlist, False)
+            destcomp.set_valid(varlist, False)
 
     def get_dests(self, srcs=None):
         """Return the list of destination vars that match the given source vars.

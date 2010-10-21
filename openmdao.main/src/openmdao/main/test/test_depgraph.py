@@ -118,16 +118,16 @@ class DepGraphTestCase(unittest.TestCase):
         top.driver.workflow.add(top.comp1)
         vars = ['a','b','c','d']
         self.assertEqual(top.comp1.run_count, 0)
-        valids = [top.comp1.get_valid(v) for v in vars]
+        valids = top.comp1.get_valid(vars)
         self.assertEqual(valids, [True, True, False, False])
         top.run()
         self.assertEqual(top.comp1.run_count, 1)
         self.assertEqual(top.comp1.c, 3)
         self.assertEqual(top.comp1.d, -1)
-        valids = [top.comp1.get_valid(v) for v in vars]
+        valids = top.comp1.get_valid(vars)
         self.assertEqual(valids, [True, True, True, True])
         top.set('comp1.a', 5)
-        valids = [top.comp1.get_valid(v) for v in vars]
+        valids = top.comp1.get_valid(vars)
         self.assertEqual(valids, [True, True, False, False])
         top.run()
         self.assertEqual(top.comp1.run_count, 2)
@@ -135,7 +135,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(top.comp1.d, 3)
         top.run()
         self.assertEqual(top.comp1.run_count, 2) # run_count shouldn't change
-        valids = [top.comp1.get_valid(v) for v in vars]
+        valids = top.comp1.get_valid(vars)
         self.assertEqual(valids, [True, True, True, True])
         
         # now add another comp and connect them
@@ -145,14 +145,14 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(top.comp2.run_count, 0)
         self.assertEqual(top.comp2.c, 3)
         self.assertEqual(top.comp2.d, -1)
-        valids = [top.comp2.get_valid(v) for v in vars]
+        valids = top.comp2.get_valid(vars)
         self.assertEqual(valids, [False, True, False, False])
         top.run()
         self.assertEqual(top.comp1.run_count, 2)
         self.assertEqual(top.comp2.run_count, 1)
         self.assertEqual(top.comp2.c, 9)
         self.assertEqual(top.comp2.d, 5)
-        valids = [top.comp2.get_valid(v) for v in vars]
+        valids = top.comp2.get_valid(vars)
         self.assertEqual(valids, [True, True, True, True])
         
     def test_disconnect(self):
@@ -180,10 +180,10 @@ class DepGraphTestCase(unittest.TestCase):
         self.top.run()        
         run_count = [self.top.get(x).run_count for x in allcomps]
         self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_count)
-        valids = [self.top.sub.comp6.get_valid(v) for v in vars]
+        valids = self.top.sub.comp6.get_valid(vars)
         self.assertEqual(valids, [True, True, True, True])
         self.top.sub.b6 = 3
-        valids = [self.top.sub.comp6.get_valid(v) for v in vars]
+        valids = self.top.sub.comp6.get_valid(vars)
         self.assertEqual(valids, [True, False, False, False])
         self.top.run()  
         # run_count should change only for comp6
@@ -199,24 +199,24 @@ class DepGraphTestCase(unittest.TestCase):
         self.top.run()        
         run_count = [self.top.get(x).run_count for x in allcomps]
         self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_count)
-        valids = [self.top.sub.comp3.get_valid(v) for v in vars]
+        valids = self.top.sub.comp3.get_valid(vars)
         self.assertEqual(valids, [True, True, True, True])
         self.top.comp7.a = 3
-        valids = [self.top.sub.comp1.get_valid(v) for v in vars]
+        valids = self.top.sub.comp1.get_valid(vars)
         self.assertEqual(valids, [True, False, False, False])
-        valids = [self.top.sub.comp2.get_valid(v) for v in vars]
+        valids = self.top.sub.comp2.get_valid(vars)
         self.assertEqual(valids, [True, True, True, True])
-        valids = [self.top.sub.comp3.get_valid(v) for v in vars]
+        valids = self.top.sub.comp3.get_valid(vars)
         self.assertEqual(valids, [False, True, False, False])
-        valids = [self.top.sub.comp4.get_valid(v) for v in vars]
+        valids = self.top.sub.comp4.get_valid(vars)
         self.assertEqual(valids, [False, True, False, False])
-        valids = [self.top.sub.comp5.get_valid(v) for v in vars]
+        valids = self.top.sub.comp5.get_valid(vars)
         self.assertEqual(valids, [False, True, False, False])
-        valids = [self.top.sub.comp6.get_valid(v) for v in vars]
+        valids = self.top.sub.comp6.get_valid(vars)
         self.assertEqual(valids, [False, True, False, False])
-        valids = [self.top.comp7.get_valid(v) for v in vars]
+        valids = self.top.comp7.get_valid(vars)
         self.assertEqual(valids, [True, True, False, False])
-        valids = [self.top.comp8.get_valid(v) for v in vars]
+        valids = self.top.comp8.get_valid(vars)
         self.assertEqual(valids, [False, False, False, False])
         self.top.run()  
         # run_count should change for all sub comps but comp2

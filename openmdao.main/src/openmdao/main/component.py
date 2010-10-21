@@ -397,7 +397,7 @@ class Component (Container):
         if valid is None:
             return self._input_names
         else:
-            return [n for n in self._input_names if self.get_valid(n)==valid]
+            return [n for n,v in zip(self._input_names, self.get_valid(self._input_names)) if v == valid]
         
     def list_outputs(self, valid=None):
         """Return a list of names of output values. If valid is not None,
@@ -411,7 +411,7 @@ class Component (Container):
         if valid is None:
             return self._output_names
         else:
-            return [n for n in self._output_names if self.get_valid(n)==valid]
+            return [n for n,v in zip(self._output_names, self.get_valid(self._output_names)) if v == valid]
         
     def list_containers(self):
         """Return a list of names of child Containers."""
@@ -1029,25 +1029,24 @@ class Component (Container):
         """Stop this component."""
         self._stop = True
 
-    def get_valid(self, name):
-        """Get the value of the validity flag for the io trait with the given
-        name.
+    def get_valid(self, names):
+        """Get the value of the validity flag for the specified variables.
+        Returns a list of bools.
+        
+        names: iterator of str
+            Names of variables whose validity is requested.
         """
-        try:
-            return self._valid_dict[name]
-        except KeyError:
-            self.raise_exception(
-                "cannot get valid flag of '%s' because it's not "
-                "an io trait." % name, RuntimeError)
-                
-    def get_valids(self, names):
-        """Get a list of validity flags for the io traits with the given
-        names.
-        """
+        ret = [0]*len(names)
         valids = self._valid_dict
-        return [valids[v] for v in names]
-
-    def set_valids(self, names, valid):
+        try:
+            for i,name in enumerate(names):
+                ret[i] = valids[name]
+        except KeyError as err:
+            self.raise_exception("get_valid failed: %s" % str(err), 
+                                 KeyError)
+        return ret
+                
+    def set_valid(self, names, valid):
         """Mark the io traits with the given names as valid or invalid."""
         valids = self._valid_dict
         for name in names:

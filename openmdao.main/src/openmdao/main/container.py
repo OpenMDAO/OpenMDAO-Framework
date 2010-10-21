@@ -100,6 +100,101 @@ class _ContainerDepends(object):
     def get_connected_outputs(self):
         return [n for n in self._srcs.values() if not n.startswith('parent.')]
 
+    
+class _DumbTmp(object):
+    pass
+
+class Alias(TraitType):
+    """A trait that allows attributes in child objects to be referenced
+    using an alias in a higher scope.  We don't use a delegate because
+    we can't be sure that the attribute we want is found in a HasTraits
+    object.
+    """
+    def __init__ ( self, path, **metadata ):
+        if len(path.split('.')) < 2:
+            raise TraitError("Alias path must have at least "
+                             "two entries in it."
+                             " The given path was '%s'" % path)
+        self._path = path
+        self._restofpath = ''
+        self._is_container = False
+            
+        #make weakref to a transient object to force a re-resolve later
+        #without checking for self._ref being equal to None
+        self._ref = weakref.ref(_DumbTmp())
+        super(Alias, self).__init__(NoDefaultSpecified, **metadata)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['_ref'] = None
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._ref = weakref.ref(_DumbTmp())
+
+    def _resolve(self, obj):
+        """Resolve down to the closest scoping Container in the path and
+        store a weakref to that object along with the rest of the pathname.
+        """
+        found = False
+        self._is_container = False
+        try:
+            names = self._path.split('.')
+            for i in range(len(names)-1):
+                obj = getattr(obj, names[i])
+                if not isinstance(obj, Container):
+                    break
+            else:
+                self._is_container = True
+                restofpath = names[-1]
+                found = True
+        except AttributeError:
+            restofpath = '.'.join(names[i:])
+            if isinstance(obj, Container):
+                self._is_container = True
+            
+        try:
+            if (self._is_container and obj.contains(restofpath)) or \
+                      (self._is_container is False and hasattr(obj, restofpath)):
+                self._restofpath = restofpath
+                found = True
+        except:
+            pass
+            
+        if not found:
+            raise TraitError("Alias cannot resolve path '%s'" % self._path)
+        
+        self._ref = weakref.ref(obj)
+        return obj
+
+    def get(self, obj, name):
+        """Return the value of the referenced attribute."""
+        ref = self._ref()
+        if not ref:
+            ref = self._resolve(obj)
+        if self._is_container:
+            return ref.get(self._restofpath) 
+        else:
+            return getattr(ref, self._restofpath)
+
+    def set(self, obj, name, value):
+        """Set the value of the referenced attribute."""
+        if self.iotype == 'out':
+            raise TraitError("Can't set output variable '%s'" % name)
+        
+        if self.trait:
+            value = self.trait.validate(obj, name, value)
+            
+        ref = self._ref()
+        if not ref:
+            ref = self._resolve(obj)
+
+        if self._is_container:
+            ref.set(self._restofpath, value)
+        else:
+            setattr(ref, self._restofpath, value)
+
 
 class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
@@ -994,7 +1089,6 @@ class Container(HasTraits):
         self.raise_exception("Cannot locate variable named '%s'" %
                              pathname, AttributeError)
 
-
     def create_alias(self, path, alias, iotype=None, trait=None):
         """Create a trait that maps to some internal attribute. 
         If a trait is supplied as an argument, use that trait as
@@ -1011,12 +1105,11 @@ class Container(HasTraits):
                 "Can't create alias '%s' because it already exists." % alias,
                 RuntimeError)
         
-        oldtrait = self.find_trait(path)
-        if oldtrait:
-            self.add_trait(alias, _clone_trait(oldtrait))
-        else:
+        if not self.contains(path):
             self.raise_exception("Can't create alias of '%s' because it wasn't found" %
                                  path, AttributeError)
+            
+        self.add_trait(alias, Alias(path, iotype=iotype, trait=trait))
 
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""

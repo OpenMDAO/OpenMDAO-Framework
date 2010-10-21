@@ -163,7 +163,7 @@ class MetaModel(Component):
     def update_inputs(self, compname, varnames):
         if compname != 'model':
             self.raise_exception("cannot update inputs for child named '%s'" % compname)
-        self.model.set_valids(varnames, True)
+        self.model.set_valid(varnames, True)
     
     def update_model_inputs(self):
         """Copy the values of the MetaModel's inputs into the inputs of the model.

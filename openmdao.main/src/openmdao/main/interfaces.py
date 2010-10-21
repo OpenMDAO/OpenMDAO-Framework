@@ -198,7 +198,121 @@ class IComponent(IContainer):
     """Interface for an IContainer object that can be executed to update the values of
     its output variables based on the values of its input variables.
     """
+
+    def check_config (self):
+        """Verify that this component is fully configured to execute.
+        This function is called once prior to the first execution of this
+        component and may be called explicitly at other times if desired. 
+        Classes that override this function must still call the base class
+        version.
+        """
+    
+    def tree_rooted(self):
+        """Calls the base class version of *tree_rooted()*, checks our
+        directory for validity, and creates the directory if it doesn't exist.
+        """
+
+    def run (self, force=False):
+        """Run this object. This should include fetching input variables,
+        executing, and updating output variables. Do not override this function.
+        """
+ 
+    def is_valid(self):
+        """Return False if any of our variables is invalid."""
+
+    def list_inputs(self, valid=None):
+        """Return a list of names of input values. If valid is not None,
+        the the list will contain names of inputs with matching validity.
+        """
         
+    def list_outputs(self, valid=None):
+        """Return a list of names of output values. If valid is not None,
+        the the list will contain names of outputs with matching validity.
+        """
+        
+    #def _get_connected_inputs(self):
+        #"""Return a list of names of connected input variables and passthroughs."""
+            
+    #def _get_connected_outputs(self):
+        #"""Return a list of names of connected output variables and passthroughs."""
+        
+    
+    def connect(self, srcpath, destpath):
+        """Connects one source variable to one destination variable. 
+        When a pathname begins with 'parent.', that indicates
+        that it is referring to a variable outside of this object's scope.
+        
+        srcpath: str
+            Pathname of source variable
+            
+        destpath: str
+            Pathname of destination variable
+        """
+        
+    def disconnect(self, srcpath, destpath):
+        """Removes the connection between one source variable and one 
+        destination variable.
+        """
+    
+    def get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency resulting from ExprEvaluators in this Component.
+        """
+
+    def get_expr_sources(self):
+        """Return a list of tuples containing the names of all upstream components that are 
+        referenced in any of our objectives, along with an initial exec_count of 0.
+        """
+
+    def get_abs_directory (self):
+        """Return absolute path of execution directory."""
+
+    def checkpoint (self, outstream, fmt=SAVE_CPICKLE):
+        """Save sufficient information for a restart. By default, this
+        just calls *save()*.
+        """
+
+    def restart (self, instream):
+        """Restore state using a checkpoint file. The checkpoint file is
+        typically a delta from a full saved state file. If checkpoint is
+        overridden, this should also be overridden.
+        """
+
+    def get_file_vars(self):
+        """Return list of (filevarname,filevarvalue,file trait) owned by this
+        component."""
+
+    def step (self):
+        """For Components that run other components (e.g., Assembly or Drivers),
+        this will run one Component and return. For simple components, it is
+        the same as *run()*.
+        """
+
+    def stop (self):
+        """Stop this component."""
+
+    def get_valid(self, names):
+        """Get the value of the validity flag for eash of the named io traits."""
+                
+    def set_valid(self, names, valid):
+        """Mark the io traits with the given names as valid or invalid."""
+            
+    def invalidate_deps(self, varnames=None, notify_parent=False):
+        """Invalidate all of our outputs if they're not invalid already.
+        For a typical Component, this will always be all or nothing, meaning
+        there will never be partial validation of outputs.  Components
+        supporting partial output validation must override this function.
+        
+        Returns None, indicating that all outputs are invalidated.
+        """
+
+    def update_outputs(self, outnames):
+        """Do what is necessary to make the specified output Variables valid.
+        For a simple Component, this will result in a *run()*.
+        """
+
+    
+    
 class IDriver(Interface):
     """A marker interface for Drivers. To make a usable IDriver plug-in,
     you must still inherit from Driver.

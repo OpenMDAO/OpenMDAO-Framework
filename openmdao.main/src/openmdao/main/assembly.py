@@ -177,8 +177,8 @@ class Assembly (Component):
             
         # invalidate destvar if necessary
         if destcomp is self and desttrait and desttrait.iotype == 'out': # boundary output
-            if destcomp.get_valid(destvarname) and \
-               srccomp.get_valid(srcvarname) is False:
+            if destcomp.get_valid([destvarname])[0] and \
+               srccomp.get_valid([srcvarname])[0] is False:
                 if self.parent:
                     # tell the parent that anyone connected to our boundary
                     # output is invalid.
@@ -240,11 +240,8 @@ class Assembly (Component):
     def execute (self):
         """Runs driver and updates our boundary variables."""
         self.driver.run()
-        valids = self._valid_dict
-        self._update_boundary_vars()
-    
-    def _update_boundary_vars (self):
-        """Update output variables on our boundary."""
+        
+        # now update boundary outputs
         valids = self._valid_dict
         for srccompname,link in self._depgraph.in_links('@self'):
             if srccompname == '@in':
@@ -253,7 +250,7 @@ class Assembly (Component):
             for dest,src in link._dests.items():
                 if valids[dest] is False:
                     setattr(self, dest, srccomp.get_wrapped_attr(src))
-
+    
     def step(self):
         """Execute a single child component and return."""
         self.driver.step()
@@ -325,27 +322,27 @@ class Assembly (Component):
         """
         self.update_inputs('@self', outnames)
         
-    def get_valids(self, names):
+    def get_valid(self, names):
         """Returns a list of boolean values indicating whether the named
         variables are valid (True) or invalid (False). Entries in names may
         specify either direct traits of self or those of direct children of
         self, but no deeper in the hierarchy than that.
         """
-        valids = []
+        ret = [0]*len(names)
         vdict = self._valid_dict
-        for name in names:
+        for i,name in enumerate(names):
             v = vdict.get(name, None)
             if v is not None:
-                valids.append(v)
+                ret[i] = v
             else:
                 tup = name.split('.', 1)
                 if len(tup) > 1:
                     comp = getattr(self, tup[0])
-                    valids.append(comp.get_valid(tup[1]))
+                    ret[i] = comp.get_valid([tup[1]])[0]
                 else:
-                    self.raise_exception("get_valids: unknown variable '%s'" %
+                    self.raise_exception("get_valid: unknown variable '%s'" %
                                          name, RuntimeError)
-        return valids
+        return ret
 
     def check_resolve(self, pathnames):
         """Returns True if all of the pathnames are resolvable starting from this
@@ -406,7 +403,7 @@ class Assembly (Component):
                         del partial_visited[link]
         
         if len(outs) > 0:
-            self.set_valids(outs, False)
+            self.set_valid(outs, False)
             if notify_parent and self.parent:
                 self.parent.invalidate_deps(compname=self.name, varnames=outs, notify_parent=True)
         return outs
