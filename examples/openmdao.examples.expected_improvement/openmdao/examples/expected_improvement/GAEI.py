@@ -1,3 +1,19 @@
+"""This example works through an implementation of the expected_improvement
+algorithm called Globaly Adjusted Expected Improvement (GAEI). GAEI extends 
+multi-objective expected improvement by considering the global pareto frontier 
+defined by the combination of pareto frontiers from a number of different
+concepts. In addition GAEI also considers the possible intersection of pareto
+fronteirs from each concept, looking for points that are both globally pareto 
+optimal and near the intersection of two pareto frontiers. 
+
+Each concept represents a different model, or a different analysis. Here 
+c1 and c2 are the two concepts. In this example we are looking for the pareto 
+optimal designs for c1 which will dominate the known pareto fronteir from c2. In 
+other words, assume that c2 is a well know concept with plenty of available data
+and we are evaluating c1 against it. We use GAEI to find the points where the 
+pareto frontier of c1 is better than that of c2 and specifically the points
+where those pareto frontiers intersect eachother. 
+"""
 import os
 from tempfile import mkdtemp
 import os.path
@@ -39,46 +55,45 @@ from numpy import meshgrid,array, pi,arange,cos,sin,linspace,remainder
 
 @add_delegate(HasStopConditions)
 class Iterator(Driver):
-    iterations = Int(10,iotype="in")
+    max_iterations = Int(10,iotype="in")
+    iteration = Int(0,iotypes="out")
     
     def start_iteration(self):
-        self._iterations = 0
+        self.iteration = 0
     
     def continue_iteration(self):
-        self._iterations += 1
-        if (self._iterations > 1) and self.should_stop():
+        self.iteration += 1
+        if (self.iteration > 1) and self.should_stop():
             return False
-        if self._iterations <= self.iterations: 
+        if self.iteration <= self.max_iterations: 
             return True
     
         return False
     
 class MyDriver(Driver):
+    """Custom driver to control max_iterations and make plots throught the iteration 
+    process"""
     def __init__(self,doc=None):
         super(MyDriver,self).__init__(doc)
         
+        #this is used for a custom case recording capability
         self.ins = ['c1.x']
         self.outs = ['c1.f1','c1.f2']
+    
+    def plot_results(self):
+        """function to plot the training data and pareto frontier every two
+        iterations"""
         
-    def execute(self):
-        self.set_events()
-        self.run_iteration()
-        print "x     : ", analysis.GAEI_opt.best_individual[0]
-        print "P_int : ", analysis.probInt.PInt
-        print "PI    : ", analysis.MOEI.PI
-        print "EI    : ", analysis.MOEI.EI
-        print
-        inputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.ins]
-        outputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.outs]
+        #calculation to setup the proper identifiers for subplot
+        base = analysis.iter.max_iterations/2*100+10
         
-        case = Case(inputs = inputs,
-                    outputs = outputs)
-        self.recorder.record(case)
-
-        base = analysis.iter.iterations/2*100+10
-        if remainder(analysis.iter._iterations,2.) == 0:
-            print "Iteration : ", analysis.iter._iterations
-            sp = analysis.iter._iterations/2+base
+        if analysis.iter.iteration % 2 == 0: 
+            print "Iteration : ", analysis.iter.iteration
+            
+            #subplot identifier 
+            sp = analysis.iter.iteration/2+base
+            
+            
             Z1_pred = []
             Z2_pred = []
             ZZ1_pred = []
@@ -113,7 +128,7 @@ class MyDriver(Driver):
             f1_iter = [case.mu for case in data_EI['c1.f1']][-2:]
             f2_iter = [case.mu for case in data_EI['c1.f2']][-2:]
             
-            t = 'Iteration ' + str(analysis.iter._iterations)
+            t = 'Iteration ' + str(analysis.iter.iteration)
             
             des1 = des.add_subplot(sp)
             des1.plot(X,Z1,'r')
@@ -129,7 +144,7 @@ class MyDriver(Driver):
             
             par1 = par.add_subplot(sp)
             par1.plot(Z1,Z2,'k')
-            par1.plot(Z1_pred,Z2_pred,'k--')
+            par1.plot(Z1_pred,Z2_pred,'k --')
             par1.scatter(f1_train,f2_train,s=8,c='k',zorder=10)
             par1.scatter(f1_iter,f2_iter,s=20,c='r',zorder=11)
             
@@ -141,16 +156,30 @@ class MyDriver(Driver):
             par1.set_xlim(-10,20)
             par1.set_ylim(-20,10)
             
-            if analysis.iter._iterations == 2:
+            if analysis.iter.iteration == 2:
                 des1.legend(('$f_1(x)$','$f_2(x)$','$f_1(x)$ Prediction','$f_2(x)$ Prediction'),loc=1,ncol=2,prop={'size':9})
                 par1.legend(('Concept A','Concept A Prediction'),loc=7,prop={'size':8})
                 des1.text(0.6,-10,t)
             else:
                 des1.text(0.05,13,t)
             
-            if analysis.iter._iterations == analysis.iter.iterations:
+            if analysis.iter.iteration == analysis.iter.max_iterations:
                 des1.set_xlabel('$x$',fontsize=15)
                 par1.set_xlabel('$f_1$',fontsize=10)
+                
+                
+    def execute(self):
+        self.set_events()
+        self.run_iteration()
+
+        inputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.ins]
+        outputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.outs]
+        
+        case = Case(inputs = inputs,
+                    outputs = outputs)
+        self.recorder.record(case)
+        
+        self.plot_results()
 
 class TwoMux(Component):
     one = Instance(NormalDistribution,iotype="in")
@@ -236,8 +265,8 @@ class Analysis(Assembly):
         self.GAEI_opt.elitism = True
         #self.GAEI_opt.seed = 1
         self.GAEI_opt.add_parameter("c1.x")
-        #self.GAEI_opt.add_objective("MOEI.EI*probInt.PInt")
-        self.GAEI_opt.add_objective("probInt.PInt")
+        self.GAEI_opt.add_objective("MOEI.EI*probInt.PInt")
+        #self.GAEI_opt.add_objective("probInt.PInt")
         self.GAEI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
@@ -246,7 +275,7 @@ class Analysis(Assembly):
         self.retrain.force_execute = True
         
         self.add("iter",Iterator())
-        self.iter.iterations = 12
+        self.iter.max_iterations = 12
         #self.iter.add_stop_condition('MOEI.EI <= .000001')
         
         self.add("muxer",TwoMux())
@@ -307,26 +336,7 @@ if __name__ == "__main__": #pragma: no cover
     #par = plt.figure()
     #des = plt.figure()    
     analysis.run()    
-    """
-    Z1_pred = []
-    Z2_pred = []
-    
-    for y in Y: 
-        analysis.c2.y = y
-        analysis.c2.execute()
-        Z1_pred.append(analysis.c2.f1.mu)
-        Z2_pred.append(analysis.c2.f2.mu)
-    
-    plt.figure()
-    plt.plot(Z1,Z2)
-    plt.plot(Z1_pred,Z2_pred,'r--')
-    
-    plt.figure()
-    plt.plot(Y,Z1,'g')
-    plt.plot(Y,Z2,'c')
-    plt.plot(Y,Z1_pred,'g--')
-    plt.plot(Y,Z2_pred,'c--')
-    """
+
     plt.show()
     analysis.cleanup()
     
