@@ -239,6 +239,7 @@ class ObjServer(object):
     def _cleanup(self):
         """ Cleanup this server's directory. """
         logging.shutdown()
+        sys.stdout.close()
         os.chdir(self.orig_dir)
         if self.remove_root and os.path.exists(self.root_dir):
             shutil.rmtree(self.root_dir)
