@@ -263,8 +263,8 @@ class Analysis(Assembly):
         self.GAEI_opt.generations = 20
         self.GAEI_opt.selection_method = "tournament"
         self.GAEI_opt.elitism = True
-        #self.GAEI_opt.seed = 1
         self.GAEI_opt.add_parameter("c1.x")
+        
         self.GAEI_opt.add_objective("MOEI.EI*probInt.PInt")
         #self.GAEI_opt.add_objective("probInt.PInt")
         self.GAEI_opt.force_execute = True
