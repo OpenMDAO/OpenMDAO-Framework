@@ -61,6 +61,8 @@ class ObjServerFactory(Factory):
         """ Shut-down all created :class:`ObjServers`. """
         for manager in self._managers:
             manager.shutdown()
+            del manager
+        self._managers = []
 
     @rbac('*')
     def get_available_types(self, groups=None):

@@ -430,8 +430,9 @@ class OpenMDAO_Server(Server):
         Handle requests from the proxies in a particular process/thread.
         This version supports dynamic proxy generation and credential checking.
         """
-        util.debug('starting server thread to service %r',
-                   threading.current_thread().name)
+        self._logger.debug('starting server thread to service %r',
+                           threading.current_thread().name)
+        self._logger.debug('current frames %s', sys._current_frames())
 
         recv = conn.recv
         send = conn.send
@@ -602,6 +603,7 @@ class OpenMDAO_Server(Server):
             except EOFError:
                 self._logger.debug('got EOF -- exiting thread serving %r',
                                    threading.current_thread().name)
+                self._logger.debug('current frames %s', sys._current_frames())
                 sys.exit(0)
 
             # Just being defensive, this should never happen.
