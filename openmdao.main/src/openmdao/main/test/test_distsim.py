@@ -247,7 +247,7 @@ class TestCase(unittest.TestCase):
         """ Start each server process in a unique directory. """
         global _SERVER_ID
         _SERVER_ID += 1
-        server_dir = 'factory_%d' % _SERVER_ID
+        server_dir = 'Factory_%d' % _SERVER_ID
         if os.path.exists(server_dir):
             shutil.rmtree(server_dir)
         os.mkdir(server_dir)
@@ -273,12 +273,12 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         """ Shut down server process. """
         if self.factory is not None:
-            del self.factory
+            self.factory.cleanup()
         if self.server is not None:
             logging.debug('terminating server pid %s', self.server.pid)
             self.server.terminate(timeout=10)
             self.server = None
-#        for path in glob.glob('factory_*'):
+#        for path in glob.glob('Factory_*'):
 #            shutil.rmtree(path)
 
     def test_1_client(self):
@@ -447,9 +447,13 @@ class TestCase(unittest.TestCase):
 
         spook = Credentials()
         spook.user = 'xyzzy@spooks-r-us.com'
+        saved = get_credentials()
         set_credentials(spook)
         i = model.box.secret
         model.box.proprietary_method()
+
+        # Reset credentials to allow factory shutdown.
+        set_credentials(saved)
 
     def test_4_authkey(self):
         # FIXME: temporarily disable this test on Windows.
@@ -464,7 +468,7 @@ class TestCase(unittest.TestCase):
         # but data is sent in the clear!?
         # This is standard multiprocessing behaviour.
         authkey = 'password'
-        server_dir = 'factory_authkey'
+        server_dir = 'Factory_authkey'
         if os.path.exists(server_dir):
             shutil.rmtree(server_dir)
         os.mkdir(server_dir)

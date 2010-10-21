@@ -232,19 +232,19 @@ class ResourceAllocationManager(object):
             Server to be released.
         """
         name = server.name
-        try:
-            server.cleanup()
-        # Just being defensive here.
-        except Exception:  #pragma no cover
-            trace = traceback.format_exc()
-            ram = ResourceAllocationManager.get_instance()
-            try:
-                ram._logger.warning('caught exception during cleanup of %s: %s',
-                                    name, trace)
-            except Exception:
-                print >> sys.stderr, \
-                      'RAM: caught exception logging cleanup of %s: %s', \
-                      name, trace
+#        try:
+#            server.shutdown()
+#        # Just being defensive here.
+#        except Exception:  #pragma no cover
+#            trace = traceback.format_exc()
+#            ram = ResourceAllocationManager.get_instance()
+#            try:
+#                ram._logger.warning('caught exception during cleanup of %s: %s',
+#                                    name, trace)
+#            except Exception:
+#                print >> sys.stderr, \
+#                      'RAM: caught exception logging cleanup of %s: %s', \
+#                      name, trace
         del server
 
 

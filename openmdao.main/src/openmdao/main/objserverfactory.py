@@ -41,11 +41,26 @@ class ObjServerFactory(Factory):
 
     def __init__(self):
         super(ObjServerFactory, self).__init__()
-        self._count = 0
+        self._managers = []
         self._logger = logging.getLogger('ObjServerFactory')
         self._logger.info('PID: %d', os.getpid())
         print 'Factory PID:', os.getpid()
         sys.stdout.flush()
+
+    @rbac('*')
+    def echo(self, *args):
+        """
+        Simply return the arguments. This can be useful for latency/thruput
+        masurements, connectivity testing, firewall keepalives, etc.
+        """
+        self._logger.debug("echo %s", args)
+        return args
+
+    @rbac('owner')
+    def cleanup(self):
+        """ Shut-down all created :class:`ObjServers`. """
+        for manager in self._managers:
+            manager.shutdown()
 
     @rbac('*')
     def get_available_types(self, groups=None):
@@ -90,11 +105,11 @@ class ObjServerFactory(Factory):
                           res_desc, ctor_args)
 
         if server is None:
-            self._count += 1
             name = ctor_args.get('name', '')
             if not name:
-                name = 'Server_%d' % self._count
+                name = 'Server_%d' % (len(self._managers) + 1)
             manager = _ServerManager(name=name)
+            self._managers.append(manager)
 # Helpful?
             if sys.platform == 'win32':  #pragma no cover
                 for handler in logging._handlerList:
@@ -107,6 +122,8 @@ class ObjServerFactory(Factory):
                               name, manager.address)
             server = manager.openmdao_main_objserverfactory_ObjServer(name=name,
                                                            host=platform.node())
+            server.remove_root = False
+
         if typname:
             obj = server.create(typname, version, None, res_desc, **ctor_args)
         else:
@@ -190,9 +207,10 @@ class ObjServer(object):
         self._logger.info('PID: %d', os.getpid())
         print 'ObjServer %s PID: %s' % (self.name, os.getpid())
         sys.stdout.flush()
-        util.Finalize(None, self.cleanup, exitpriority=-100)
+        util.Finalize(None, self._cleanup, exitpriority=-100)
         SimulationRoot.chroot(self.root_dir)
         self.tlo = None
+        self.remove_root = True
 
     def _reset_logging(self, filename='server.out'):
         """ Reset stdout/stderr and logging after switching destination. """
@@ -210,14 +228,21 @@ class ObjServer(object):
             format='%(asctime)s %(levelname)s %(name)s: %(message)s',
             filename='openmdao_log.txt', filemode='w')
 
-    @rbac('owner')
-    def cleanup(self):
+    def _cleanup(self):
         """ Cleanup this server's directory. """
         logging.shutdown()
         os.chdir(self.orig_dir)
-# This probably should be optional in case we need post-mortem information.
-#        if os.path.exists(self.root_dir):
-#            shutil.rmtree(self.root_dir)
+        if self.remove_root and os.path.exists(self.root_dir):
+            shutil.rmtree(self.root_dir)
+
+    @rbac('*')
+    def echo(self, *args):
+        """
+        Simply return the arguments. This can be useful for latency/thruput
+        masurements, connectivity testing, firewall keepalives, etc.
+        """
+        self._logger.debug("echo %s", args)
+        return args
 
     @rbac('owner', proxy_types=[object])
     def create(self, typname, version=None, server=None,
@@ -232,12 +257,6 @@ class ObjServer(object):
         obj = create(typname, version, server, res_desc, **ctor_args)
         self._logger.info('    returning %s', obj)
         return obj
-
-    @rbac('*')
-    def echo(self, *args):
-        """ Simply return the arguments. """
-        self._logger.debug("echo %s", args)
-        return args
 
     @rbac('owner')
     def execute_command(self, command, stdin, stdout, stderr, env_vars,
@@ -589,17 +608,6 @@ def _sigterm_handler(signum, frame):  #pragma no cover
     _LOGGER.info('sigterm_handler invoked')
     print 'sigterm_handler invoked'
     sys.stdout.flush()
-#    try:
-#        util._run_finalizers(0)
-#        for p in active_children():
-#            _LOGGER.debug('terminating a child process of manager')
-#            p.terminate()
-#        for p in active_children():
-#            _LOGGER.debug('joining a child process of manager')
-#            p.join()
-#        util._run_finalizers()
-#    except:
-#        traceback.print_exc()
     _cleanup()
     sys.exit(1)
 
