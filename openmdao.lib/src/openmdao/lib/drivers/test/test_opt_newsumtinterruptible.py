@@ -16,17 +16,6 @@ Paraboloid w non-lin const  | nonlinear |          0         |         1
 import sys
 import unittest
 
-# sys.path.append( "/home/hschilli/openmdao/sumt-new-driver-branch/devenv/"+
-#            "lib/python2.6/site-packages/nlpq-1.0-py2.6-linux-x86_64.egg" )
-# sys.path.append( "/home/hschilli/openmdao/sumt-new-driver-branch/devenv/"+
-#            "lib/python2.6/site-packages/newsumt-1.0-py2.6-linux-x86_64.egg" )
-
-
-# for p in sys.path:
-#     print p
-# sys.exit()
-
-
 import numpy
 
 # disable complaints about .__init__: Use super on an old style class
@@ -241,7 +230,6 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
         self.top = None
 
     def test_opt1(self):
-        '''standard test'''
         
         self.top.driver.add_objective('comp.result')
 
@@ -260,9 +248,9 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
                                self.top.comp.x[1], places=2)
     
     def test_missing_iside(self):
-        '''iside set so should default to no
-             side bounds. Should get same result
-             '''
+
+        # iside set so should default to no
+        #     side bounds. Should get same result
         
         self.top.driver.add_objective('comp.result')
 
@@ -282,7 +270,6 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
                                self.top.comp.x[1], places=2)
     
     def test_infinite_bounds(self):
-        '''test to see if code can handle infinite bounds'''
         
         self.top.driver.add_objective('comp.result')
 
@@ -327,7 +314,7 @@ class NEWSUMTdriverParaboloidWithLinearConstraintTestCase(unittest.TestCase):
         self.top = None
 
     def test_opt1(self):
-        '''straightforward test'''
+
         self.top.driver.add_objective( 'comp.result' )
         
         self.top.driver.add_parameters( [
@@ -369,7 +356,7 @@ class NEWSUMTdriverParaboloidWithNonLinearConstraintTestCase(unittest.TestCase):
         self.top = None
 
     def test_opt1(self):
-        '''straightforward test'''
+
         self.top.driver.add_objective( 'comp.result' )
 
         self.top.driver.add_parameters( [
@@ -417,7 +404,7 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
         self.top = None
 
     def test_opt1(self):
-        '''straightforward test'''
+
         self.top.driver.add_objective( 'comp.result' )
 
         self.top.driver.add_parameters( [
@@ -462,7 +449,7 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
         self.top = None
         
     def test_opt1(self):
-        '''straightforward test'''
+
         self.top.driver.add_objective('comp.result')
 
         self.top.driver.add_parameters( [
@@ -518,7 +505,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         self.top = None
         
     def test_opt1(self):
-        '''straightforward test'''
+
         self.top.driver.add_objective('comp.result')
         
         self.top.driver.add_parameters( [
@@ -541,7 +528,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
                                self.top.comp.x[1], places=2)
 
     def test_missing_ilin(self):
-        '''Test when user forgets to specify ilin'''
+        # Test when user forgets to specify ilin
         
         self.top.driver.add_objective('comp.result')
         
@@ -566,11 +553,11 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             self.fail('RuntimeError expected')
         
     def test_analytic_gradient_of_constraints(self):
-        '''see what happens if you ask NEWSUMT to use
-        analytics gradients of nonlinear constraints.
+        # see what happens if you ask NEWSUMT to use
+        # analytics gradients of nonlinear constraints.
 
-        The wrapped version does not support this yet. 
-        '''
+        #The wrapped version does not support this yet. 
+        
         self.top.driver.add_objective('comp.result')
         
         self.top.driver.add_parameters( [
@@ -596,7 +583,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             self.fail('RuntimeError expected')
 
     def test_bad_objective(self):
-        '''test if objective given is invalid'''
+        # test if objective given is invalid
         
         try:
             self.top.driver.add_objective( 'comp.missing' )
@@ -608,8 +595,8 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             self.fail('ValueError Exception expected')
 
     def test_no_design_vars(self):
-        '''test to see if code responds correctly to no
-             design vars'''
+        # test to see if code responds correctly to no
+        #   design vars
         
         self.top.driver.add_objective( 'comp.result' )
         try:
@@ -621,8 +608,8 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             self.fail('RuntimeError expected')
     
     def test_no_objective(self):
-        '''test to see how the code responds to no
-            objective function'''
+        # test to see how the code responds to no
+        #   objective function
         
         self.top.driver.add_parameters( [
             ('comp.x[0]', 0.0, 100.0),
@@ -642,12 +629,12 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             self.fail('Exception expected')
 
     def test_get_objective(self):
-        '''test getting the objective function'''
+        # test getting the objective function
         self.top.driver.add_objective( 'comp.result' )
         self.assertEqual('comp.result', self.top.driver.list_objective())
     
     def test_update_objective(self):
-        '''test'''
+
         try:
             self.top.driver.eval_objective()
         except Exception, err:
@@ -661,7 +648,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         
     
     def test_bad_design_vars(self):
-        '''test to see if the code handles bad design vars'''
+        # test to see if the code handles bad design vars
         try:
             map(self.top.driver.add_parameter, 
                 ['comp_bogus.x[0]', 'comp.x[1]'] )
@@ -673,7 +660,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             self.fail('AttributeError expected')
     
     def test_bad_constraint(self):
-        '''test to see how code handles bad constraints'''
+        # test to see how code handles bad constraints
         try:
             map(self.top.driver.add_constraint,[
                 'bogus.flimflam > 0.0',
@@ -686,7 +673,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             self.fail('ValueError expected')
             
     def test_bounds_swapped(self):
-        '''test for when lower and upper bounds are swapped'''
+        # test for when lower and upper bounds are swapped
         self.top.driver.add_objective( 'comp.result' )
 
 
@@ -704,9 +691,9 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             self.fail('ValueError expected')
         
     def test_max_iteration(self):
-        '''test to see if the driver really
-            does stop after the max given to it
-        '''
+        # test to see if the driver really
+        #   does stop after the max given to it
+
         self.top.driver.add_objective('comp.result' )
         
         self.top.driver.add_parameters( [
@@ -728,7 +715,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         self.assertEqual(self.top.driver.iter_count,2)
         
     def test_gradient_step_size_large(self):
-        '''Test that a larger value of fd step-size is less accurate'''
+        # Test that a larger value of fd step-size is less accurate
         
         self.top.driver.add_objective( 'comp.result' )
         
