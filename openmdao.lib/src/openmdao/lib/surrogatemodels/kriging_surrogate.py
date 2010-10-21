@@ -140,7 +140,6 @@ class KrigingSurrogate(HasTraits):
             cho = cho_solve(R_fact, rhs).T
             
             self.mu = dot(one,cho[0])/dot(one,cho[1])
-            #self.mu = dot(one,cho_solve(self.R_fact,Y))/dot(one,cho_solve(self.R_fact,one))
             self.sig2 = dot(Y-dot(one,self.mu),cho_solve(self.R_fact,(Y-dot(one,self.mu))))/self.n
             self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)))-sum(self.thetas)-sum(abs(self.thetas))
         except (linalg.LinAlgError,ValueError):
