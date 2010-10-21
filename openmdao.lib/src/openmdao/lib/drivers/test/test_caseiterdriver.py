@@ -199,15 +199,12 @@ class TestCase(unittest.TestCase):
                     ResourceAllocationManager.insert_allocator(0, cluster)
 
         self.run_cases(sequential=False)
-        time.sleep(2)  # Allow servers time to clean-up.
-        self.assertEqual(glob.glob('Sim-*'), [])
 
         logging.debug('')
         logging.debug('test_concurrent_errors')
         self.generate_cases(force_errors=True)
         self.model.driver._call_execute = True
         self.run_cases(sequential=False, forced_errors=True)
-        self.assertEqual(glob.glob('Sim-*'), [])
 
     @staticmethod
     def local_ssh_available():

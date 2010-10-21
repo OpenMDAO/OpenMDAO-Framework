@@ -47,6 +47,9 @@ class ObjServerFactory(Factory):
         print 'Factory PID:', os.getpid()
         sys.stdout.flush()
 
+        # By default child processes clean up their directory.
+        self.child_remove_root = True
+
     @rbac('*')
     def echo(self, *args):
         """
@@ -124,7 +127,7 @@ class ObjServerFactory(Factory):
                               name, manager.address)
             server = manager.openmdao_main_objserverfactory_ObjServer(name=name,
                                                            host=platform.node())
-            server.remove_root = False
+            server.remove_root = self.child_remove_root
 
         if typname:
             obj = server.create(typname, version, None, res_desc, **ctor_args)
@@ -198,18 +201,21 @@ class ObjServer(object):
         self.host = host
         self.pid = os.getpid()
         self.name = name or ('sim-%d' % self.pid)
+
         self.orig_dir = os.getcwd()
         self.root_dir = os.path.join(self.orig_dir, self.name)
         if os.path.exists(self.root_dir):
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
+
         self._reset_logging()
         self._logger = logging.getLogger(self.name)
         self._logger.info('PID: %d', os.getpid())
         print 'ObjServer %s PID: %s' % (self.name, os.getpid())
         sys.stdout.flush()
         util.Finalize(None, self._cleanup, exitpriority=-100)
+
         SimulationRoot.chroot(self.root_dir)
         self.tlo = None
         self.remove_root = True
