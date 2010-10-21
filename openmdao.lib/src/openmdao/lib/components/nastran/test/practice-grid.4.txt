@@ -1,0 +1,7 @@
+
+0
+0                                                  MAXIMUM  APPLIED LOADS
+  SUBCASE/
+  DAREA ID        T1             T2             T3             R1             R2             R3
+0        1   5.0000000E+04  1.0000000E+05  0.0000000E+00  0.0000000E+00  0.0000000E+00  0.0000000E+00
+1                                                                              JUNE  23, 2010  MSC.NASTRAN  2/15/06   PAGE    12

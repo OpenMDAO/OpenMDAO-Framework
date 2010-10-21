@@ -1147,13 +1147,29 @@ syntax includes an equal sign in the expression.
     OpenMDAO does not check for duplicate constraints, so be careful when
     adding them.
     
+Sometimes it is desirable to change the scaling on constraints, particularly for
+cases where the constrained variables are of disparate orders of magnitude. This
+can be done conveniently with the optional *scale* argument in the call to
+add_constraint.
+
+.. testcode:: Parameter_API
+
+    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore < .00001', scaler=10000.0)
+    
+Here, the constraint has been scaled up so that its value when passed to the optimizer
+is in a similar range (and hence similar weight) to the other constraints in the model. An
+optional *adder* argument was also added to shift both the left and right hand sides of
+a constraint, though the current OpenMDAO gradient optimizer (CONMINdriver) internally shifts
+all constraints to the origin, so this parameter is not needed.
+
+
 Constraints can be removed using ``remove_constraint``.  The same string used
 to add the constraint should be used to remove it. Whitespace within the expression
 is ignored.
 
 .. testcode:: Parameter_API2
 
-    self.driver.remove_constraint('dis1.y1 =0.0')
+    self.driver.remove_constraint('dis1.y1 = 0.0')
 
 A list of constraint expression strings can be obtained using ``list_constraints``.
 

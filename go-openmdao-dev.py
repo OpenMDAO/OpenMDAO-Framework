@@ -1160,7 +1160,7 @@ def _single_install(cmds, req, bin_dir):
 
 def after_install(options, home_dir):
     global logger
-    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'coverage==3.3.1', 'Pygments==1.3.1', 'pycrypto==2.0.1', 'ordereddict==1.1', 'Traits==3.3.0', 'PyYAML==3.09', 'Sphinx==1.0.1', 'Jinja2==2.4', 'virtualenv==1.4.6', 'Fabric==0.9.0', 'decorator==3.2.0', 'networkx==1.0.1', 'pyparsing==1.5.2', 'conmin==1.0.1', 'nose==0.11.3']
+    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'Pygments==1.3.1', 'pycrypto==2.0.1', 'ordereddict==1.1', 'Traits==3.3.0', 'PyYAML==3.09', 'Jinja2==2.4', 'Sphinx==1.0.4', 'virtualenv==1.4.6', 'Fabric==0.9.0', 'decorator==3.2.0', 'networkx==1.0.1', 'pyparsing==1.5.2', 'conmin==1.0.1', 'nose==0.11.3']
     cmds = []
     url = 'http://openmdao.org/dists'
     found = [c for c in cmds if url in c]
