@@ -292,7 +292,7 @@ class IComponent(IContainer):
         """Stop this component."""
 
     def get_valid(self, names):
-        """Get the value of the validity flag for eash of the named io traits."""
+        """Get the value of the validity flag for each of the named io traits."""
                 
     def set_valid(self, names, valid):
         """Mark the io traits with the given names as valid or invalid."""

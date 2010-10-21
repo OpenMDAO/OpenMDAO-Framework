@@ -176,18 +176,16 @@ class Assembly (Component):
                                  (srcpath,destpath,str(err)), TraitError)
             
         # invalidate destvar if necessary
-        if destcomp is self and desttrait and desttrait.iotype == 'out': # boundary output
+        if destcomp is self: # boundary output
             if destcomp.get_valid([destvarname])[0] and \
                srccomp.get_valid([srcvarname])[0] is False:
                 if self.parent:
                     # tell the parent that anyone connected to our boundary
                     # output is invalid.
-                    # Note that it's a dest var in this scope, but a src var in
-                    # the parent scope.
+                    # Note that a boundary output is a dest var in this scope, 
+                    # but a src var in the parent scope.
                     self.parent.invalidate_deps(self.name, [destvarname], True)
-        elif srccomp is self and srctrait.iotype == 'in': # boundary input
-            pass
-        else:
+        elif srccomp is not self:
             destcomp.invalidate_deps(varnames=[destvarname], notify_parent=True)
 
         super(Assembly, self).connect(srcpath, destpath)
