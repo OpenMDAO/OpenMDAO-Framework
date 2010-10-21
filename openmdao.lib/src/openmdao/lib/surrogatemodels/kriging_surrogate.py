@@ -27,6 +27,7 @@ class KrigingSurrogate(HasTraits):
         self.thetas = None
         
         self.R = None
+        self.R_fact = None
         self.mu = None
         self.sig2 = None
         self.log_likelihood = None
@@ -58,7 +59,29 @@ class KrigingSurrogate(HasTraits):
         r = exp(-r)
             
         one = ones(self.n)
-        
+        if self.R_fact is not None: 
+            #---CHOLESKY DECOMPOSTION ---
+            #f = self.mu+dot(r,cho_solve(self.R_fact,Y-dot(one,self.mu)))
+            #term1 = dot(r,cho_solve(self.R_fact,r))
+            #term2 = (1.0-dot(one,cho_solve(self.R_fact,r)))**2./dot(one,cho_solve(self.R_fact,one))
+            
+            rhs = vstack([(Y-dot(one, self.mu)), r, one]).T
+            R_fact = (self.R_fact[0].T,not self.R_fact[1])
+            cho = cho_solve(R_fact, rhs).T
+            
+            f = self.mu + dot(r, cho[0])
+            term1 = dot(r, cho[1])
+            term2 = (1.0 - dot(one, cho[1]))**2./dot(one, cho[2])
+            
+        else: 
+            #-----LSTSQ-------
+            rhs = vstack([(Y-dot(one, self.mu)), r, one]).T
+            lsq = lstsq(self.R.T, rhs)[0].T
+            
+            f = self.mu + dot(r, lsq[0])
+            term1 = dot(r, lsq[1])
+            term2 = (1.0 - dot(one, lsq[1]))**2./dot(one, lsq[2])
+        """
         #-----LSTSQ-------
         rhs = vstack([(Y-dot(one, self.mu)), r, one]).T
         lsq = lstsq(self.R.T, rhs)[0].T
@@ -66,17 +89,12 @@ class KrigingSurrogate(HasTraits):
         f = self.mu + dot(r, lsq[0])
         term1 = dot(r, lsq[1])
         term2 = (1.0 - dot(one, lsq[1]))**2./dot(one, lsq[2])
-        
-        #TODO: use cholesky if not ill-conditioned, otherwise use lsq
-        #---CHOLESKY DECOMPOSTION ---
-        #f = self.mu+dot(r,cho_solve(self.R_fact,Y-dot(one,self.mu)))
-        #term1 = dot(r,cho_solve(self.R_fact,r))
-        #term2 = (1.0-dot(one,cho_solve(self.R_fact,r)))**2./dot(one,cho_solve(self.R_fact,one))
-
+        """
         MSE = self.sig2*(1.0-term1+term2)
         RMSE = sqrt(abs(MSE))
         
         return NormalDistribution(f, RMSE)
+        
 
     def train(self,X,Y):
         """Train the surrogate model with the given set of inputs and outputs."""
@@ -115,12 +133,19 @@ class KrigingSurrogate(HasTraits):
         self.R = R
         one = ones(self.n)
         try:
+            
             self.R_fact = cho_factor(R)
-            self.mu = dot(one,cho_solve(self.R_fact,Y))/dot(one,cho_solve(self.R_fact,one))
+            rhs = vstack([Y, one]).T
+            R_fact = (self.R_fact[0].T,not self.R_fact[1])
+            cho = cho_solve(R_fact, rhs).T
+            
+            self.mu = dot(one,cho[0])/dot(one,cho[1])
+            #self.mu = dot(one,cho_solve(self.R_fact,Y))/dot(one,cho_solve(self.R_fact,one))
             self.sig2 = dot(Y-dot(one,self.mu),cho_solve(self.R_fact,(Y-dot(one,self.mu))))/self.n
             self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)))-sum(self.thetas)-sum(abs(self.thetas))
         except (linalg.LinAlgError,ValueError):
             #------LSTSQ---------
+            self.R_fact = None #reset this to none, so we know not to use cholesky
             rhs = vstack([Y, one]).T
             lsq = lstsq(self.R.T,rhs)[0].T
             self.mu = dot(one,lsq[0])/dot(one,lsq[1])
