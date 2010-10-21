@@ -506,7 +506,7 @@ class TestCase(unittest.TestCase):
                         self.assertEqual(case.outputs[0][2], width*height*depth)
         finally:
             if factory is not None:
-                del factory
+                factory.cleanup()
             logging.debug('terminating server (authkey %s) pid %s',
                           authkey, server.pid)
             server.terminate(timeout=10)
