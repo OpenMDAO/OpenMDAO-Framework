@@ -234,11 +234,6 @@ class Analysis(Assembly):
         self.filter_c1.criteria = ['f1','f2']
         self.filter_c1.case_sets = [self.c1.recorder.get_iterator()]
         self.filter_c1.force_execute = True
-
-        self.add("filter_other",ParetoFilter())
-        self.filter_other.criteria = ['f1','f2']
-        self.filter_other.case_sets = [self.c2.recorder.get_iterator()]
-        self.filter_other.force_execute = True
         
         #Driver Configuration
         self.add("DOE_trainer1",DOEdriver())
@@ -287,14 +282,14 @@ class Analysis(Assembly):
         self.DOE_trainer2.workflow.add(self.c2)
         
         self.iter.workflow = SequentialWorkflow()
-        self.iter.workflow.add([self.gfilter, self.filter_c1,self.filter_other,self.GAEI_opt, self.retrain])
+        self.iter.workflow.add([self.gfilter, self.filter_c1,self.GAEI_opt, self.retrain])
         
         self.GAEI_opt.workflow.add([self.c1,self.muxer,self.MOEI,self.probInt])
         self.retrain.workflow.add(self.c1)
         
         #Data Connections
-        self.connect("filter_c1.pareto_set","probInt.my_Pareto")
-        self.connect("filter_other.pareto_set","probInt.other_Pareto")
+        self.connect("filter_c1.pareto_set","probInt.primary_pareto")
+        self.connect("gfilter.pareto_set","probInt.global_pareto")
         self.connect("gfilter.pareto_set","MOEI.best_cases")
         self.connect("c1.f1","muxer.one")
         self.connect("c1.f2","muxer.two")

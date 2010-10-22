@@ -30,9 +30,9 @@ class ParetoFilter(Component):
                              "Find the pareto optimal subset.")
     
     pareto_set = Instance(ICaseIterator, iotype="out", 
-                          desc="resulting collection of pareto optimal cases")
+                          desc="resulting collection of pareto optimal cases",copy="shallow")
     dominated_set = Instance(ICaseIterator, iotype="out",
-                             desc="Resulting collection of dominated cases.")
+                             desc="Resulting collection of dominated cases.",copy="shallow")
     
     
     def _is_dominated(self, y1, y2):
