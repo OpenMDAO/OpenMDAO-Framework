@@ -158,9 +158,9 @@ class Component (Container):
             self._dir_context = DirectoryContext(self)
         return self._dir_context
 
-    def _input_changed(self, name):
+    def _input_updated(self, name):
         if self._valid_dict[name]:  # if var is not already invalid
-            self.invalidate_deps(varnames=[name], notify_parent=True)
+            self.invalidate_deps(varnames=name, notify_parent=True)
             
     def check_config (self):
         """Verify that this component is fully configured to execute.
@@ -1052,7 +1052,7 @@ class Component (Container):
         for name in names:
             valids[name] = valid
             
-    def invalidate_deps(self, varnames=None, notify_parent=False):
+    def invalidate_deps(self, varnames=set(), notify_parent=False):
         """Invalidate all of our outputs if they're not invalid already.
         For a typical Component, this will always be all or nothing, meaning
         there will never be partial validation of outputs.  Components
@@ -1060,28 +1060,34 @@ class Component (Container):
         
         Returns None, indicating that all outputs are invalidated.
         """
-        self._call_execute = True
-        
+        outs = self.list_outputs()
         valids = self._valid_dict
-        # if no varnames given, invalidat all connected inputs
-        if varnames is None:
-            for var in self._get_connected_inputs():
+        
+        # this assumes that all outputs are either valid or invalid
+        if outs and valids[outs[0]] is False:
+            # nothing to do because our outputs are already invalid
+            return []
+        
+        self._call_execute = True
+
+        if notify_parent: # our input was set
+            if self.parent:
+                # to avoid unnecessary construction of set() objects, when this
+                # method is called when an input is set, varnames is actually
+                # passed in as a string (the name of the variable that was set)
+                # so we construct the set before the call to invalidate_deps,
+                # but after we know we really need to call it.
+                self.parent.invalidate_deps(compname=self.name, 
+                                            varnames=set(varnames), notify_parent=True)
+        else:  # Our parent Assembly is calling this, so invalidate specified inputs
+               # The Assembly will only specify connected inputs, so no need to check
+            for var in varnames:
                 valids[var] = False
-        else:
-            vnset = set(varnames)
-            for var in self._get_connected_inputs():
-                if var in vnset:
-                    valids[var] = False
-        
-        valid_outs = self.list_outputs(valid=True)
-        
-        if notify_parent and self.parent and len(valid_outs) > 0:
-            self.parent.invalidate_deps(compname=self.name, 
-                                        varnames=None, notify_parent=True)
-        for out in valid_outs:
+                
+        for out in outs:
             valids[out] = False
             
-        return None 
+        return None  # None indicates that all of our outputs are invalid
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.

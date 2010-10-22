@@ -64,6 +64,10 @@ class PassthroughTestCase(unittest.TestCase):
         self.assertEqual(self.asm.c3.getvals(), (-2,2,0,-4))
         self.assertEqual([self.asm.c3._valid_dict[n] for n in varnames],
                          [True,True,True,True])
+        self.assertEqual([self.asm.a1.c2._valid_dict[n] for n in varnames],
+                         [True,True,True,True])
+        self.assertEqual([self.asm.c1._valid_dict[n] for n in varnames],
+                         [True,True,True,True])
         self.asm.c1.a = 6
         self.assertEqual([self.asm.c3._valid_dict[n] for n in varnames],
                          [False,False,False,False])

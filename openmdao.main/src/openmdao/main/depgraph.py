@@ -75,6 +75,46 @@ class DependencyGraph(object):
         """
         self._graph.remove_node(name)
         
+    def invalidate_deps(self, scope, cnames, varsets):
+        """Walk through all dependent nodes in the graph, invalidating all
+        variables that depend on input sets for the given component names.
+        
+        scope: Component
+            Scoping object containing this dependency graph.
+            
+        cnames: list of str
+            Names of starting nodes.
+            
+        varsets: list of sets of str
+            Sets of names of inputs to each starting node.
+        """
+        graph = self._graph
+        stack = []
+        for cname, varset in zip(cnames, varsets):
+            stack.append((cname, varset))
+        outset = set()  # set of changed boundary outputs
+        visited = set()
+        while(stack):
+            compname, varset = stack.pop()
+            for u,v,data in graph.edges(compname, data=True):
+                link = data['link']
+                if link not in visited:
+                    visited.add(link)
+                    if compname == '@self':
+                        inter = varset.intersection(link._srcs.keys())
+                        if inter:
+                            stack.append((v, inter))
+                    elif compname == '@out':
+                        outset.update(varset)
+                    else:
+                        comp = getattr(scope, compname)
+                        outs = comp.invalidate_deps(varnames=varset)
+                        if outs is None:
+                            stack.append((v, set(link._dests.keys())))
+                        elif outs:
+                            stack.append((v, outs))
+        return outset
+
     def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """

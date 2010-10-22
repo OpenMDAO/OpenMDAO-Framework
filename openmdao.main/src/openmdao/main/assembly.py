@@ -184,9 +184,9 @@ class Assembly (Component):
                     # output is invalid.
                     # Note that a boundary output is a dest var in this scope, 
                     # but a src var in the parent scope.
-                    self.parent.invalidate_deps(self.name, [destvarname], True)
+                    self.parent.invalidate_deps(self.name, set([destvarname]), True)
         elif srccomp is not self:
-            destcomp.invalidate_deps(varnames=[destvarname], notify_parent=True)
+            destcomp.invalidate_deps(varnames=set([destvarname]), notify_parent=True)
 
         super(Assembly, self).connect(srcpath, destpath)
         
@@ -356,54 +356,68 @@ class Assembly (Component):
                 return False
         return True
 
+    def _input_updated(self, name):
+        if self._valid_dict[name]:  # if var is not already invalid
+            self.invalidate_deps(varnames=set([name]), notify_parent=True)
+            
     def invalidate_deps(self, compname=None, varnames=None, notify_parent=False):
         """Mark all Variables invalid that depend on varnames. 
         Returns a list of our newly invalidated boundary outputs.
         """
-        outs = set()
-        stack = []
-        compgraph = self._depgraph
-        if compname is None: # check boundary inputs
-            compname = '@in'
-            #if varnames is not None:
-                #for name in compgraph.get_connected_inputs():
-                    #if name in varnames:
-                        #self._valid_dict[name] = False
+        #outs = set()
+        #stack = []
+        if compname is None: # start at boundary
+            inputs = []
+            compnames = []
+            for dcomp, link in self._depgraph.out_links('@in'):
+                if varnames is None:
+                    inter = set(link._dests.keys())
+                else:
+                    inter = varnames.intersection(link._dests.keys())
+                if dcomp == '@self':   # boundary input
+                    for dest in inter:
+                        self._valid_dict[name] = False
+                else:   # 'fake' boundary input
+                    for dest in inter:
+                        self._valid_dict['.'.join([dcomp,dest])] = False
+                compnames.append(dcomp)
+                inputs.append(inter)
+            outs = self._depgraph.invalidate_deps(self, compnames, inputs)
+        else:
+            outs = self._depgraph.invalidate_deps(self, [compname], [varnames])
                             
-        visited = set()
-        partial_visited = {}
-        if len(stack) == 0:
-            stack = [(compname, varnames)]
-        elif len(bvars) > 0:
-            stack.append((compname, bvars))
+        #visited = set()
+        #partial_visited = {}
+        #if len(stack) == 0:
+            #stack = [('@self', varnames)]
             
-        while len(stack) > 0:
-            cname, vnames = stack.pop()
-            if vnames is None:
-                for destcname, link in compgraph.out_links(cname):
-                    if link in visited: continue
+        #while len(stack) > 0:
+            #cname, vnames = stack.pop()
+            #if vnames is None:
+                #for destcname, link in compgraph.out_links(cname):
+                    #if link in visited: continue
                     
-                    if destcname[0] == '@':
-                        outs.update(link.get_dests())
-                    else:
-                        outnames = getattr(self, destcname).invalidate_deps(varnames=link.get_dests())
-                        stack.append((destcname, outnames))
-                    visited.add(link)
-            else:  # specific varnames are invalidated
-                for destcname, link in compgraph.out_links(cname):
-                    if link in visited: continue
-                    inputs = link.get_dests(varnames)
-                    if not inputs: continue
-                    if destcname == '@out':
-                        outs.update(inputs)
-                    else:
-                        outnames = getattr(self, destcname).invalidate_deps(varnames=inputs)
-                        stack.append((destcname, outnames))
-                    partial = partial_visited.setdefault(link, set())
-                    partial.update(inputs)
-                    if len(partial) == len(link._srcs):
-                        visited.add(link)
-                        del partial_visited[link]
+                    #if destcname[0] == '@':
+                        #outs.update(link.get_dests())
+                    #else:
+                        #outnames = getattr(self, destcname).invalidate_deps(varnames=link.get_dests())
+                        #stack.append((destcname, outnames))
+                    #visited.add(link)
+            #else:  # specific varnames are invalidated
+                #for destcname, link in compgraph.out_links(cname):
+                    #if link in visited: continue
+                    #inputs = link.get_dests(varnames)
+                    #if not inputs: continue
+                    #if destcname == '@out':
+                        #outs.update(inputs)
+                    #else:
+                        #outnames = getattr(self, destcname).invalidate_deps(varnames=inputs)
+                        #stack.append((destcname, outnames))
+                    #partial = partial_visited.setdefault(link, set())
+                    #partial.update(inputs)
+                    #if len(partial) == len(link._srcs):
+                        #visited.add(link)
+                        #del partial_visited[link]
         
         if len(outs) > 0:
             self.set_valid(outs, False)

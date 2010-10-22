@@ -471,9 +471,9 @@ class Container(HasTraits):
                 "cannot be directly set"%
                 (name, self._depgraph.get_source(name)), TraitError)
         self._call_execute = True
-        self._input_changed(name)
+        self._input_updated(name)
             
-    def _input_changed(self, name):
+    def _input_updated(self, name):
         # this is here so inherited classes can take actions when inputs are changed
         pass
 
