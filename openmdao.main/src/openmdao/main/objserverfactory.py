@@ -225,13 +225,14 @@ class ObjServer(object):
     directory at startup.
     """
 
-    def __init__(self, name='', host=''):
+    def __init__(self, name='', host='', reset_logging=True):
         self.host = host
         self.pid = os.getpid()
         self.name = name or ('sim-%d' % self.pid)
 
         self.root_dir = os.getcwd()
-        self._reset_logging()
+        if reset_logging:
+            self._reset_logging()
         self._logger = logging.getLogger(self.name)
         self._logger.info('PID: %d', os.getpid())
         print 'ObjServer %s PID: %s' % (self.name, os.getpid())
@@ -623,6 +624,7 @@ def main():  #pragma no cover
         server.serve_forever()
     finally:
         _cleanup()
+    sys.exit(0)
 
 
 def _sigterm_handler(signum, frame):  #pragma no cover

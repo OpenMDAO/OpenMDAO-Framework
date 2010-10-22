@@ -27,8 +27,8 @@ class TestCase(unittest.TestCase):
 
     def test_factory(self):
         # FIXME: temporarily disable this test on Windows.
-#        if _NAME != '__main__' and sys.platform == 'win32':
-#            raise nose.SkipTest()
+        if _NAME != '__main__' and sys.platform == 'win32':
+            raise nose.SkipTest()
 
         logging.debug('')
         logging.debug('test_factory')
@@ -39,6 +39,7 @@ class TestCase(unittest.TestCase):
         os.mkdir(testdir)
         os.chdir(testdir)
 
+        factory = None
         try:
             # Create a factory.
             set_credentials(Credentials())
@@ -58,6 +59,8 @@ class TestCase(unittest.TestCase):
                           globals(), locals(), RuntimeError,
                           'Server startup failed')
         finally:
+            if factory is not None:
+                factory.cleanup()
             os.chdir('..')
             if sys.platform == 'win32':
                 time.sleep(2)  # Wait for process shutdown.
@@ -75,7 +78,7 @@ class TestCase(unittest.TestCase):
 
         try:
             # Create a server.
-            server = ObjServer()
+            server = ObjServer(reset_logging=False)
 
             # Create a component.
             exec_comp = server.create('openmdao.test.ExecComp')
@@ -160,8 +163,6 @@ class TestCase(unittest.TestCase):
 
         finally:
             os.chdir('..')
-            if sys.platform == 'win32':
-                time.sleep(2)  # Wait for process shutdown.
             shutil.rmtree(testdir)
 
 
