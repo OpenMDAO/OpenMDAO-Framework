@@ -8,6 +8,7 @@ import logging
 import os.path
 import shutil
 import sys
+import time
 import unittest
 import nose
 
@@ -26,14 +27,18 @@ class TestCase(unittest.TestCase):
 
     def test_factory(self):
         # FIXME: temporarily disable this test on Windows.
-        if _NAME != '__main__' and sys.platform == 'win32':
-            raise nose.SkipTest()
+#        if _NAME != '__main__' and sys.platform == 'win32':
+#            raise nose.SkipTest()
 
         logging.debug('')
         logging.debug('test_factory')
 
-        os.mkdir('test_factory')
-        os.chdir('test_factory')
+        testdir = 'test_factory'
+        if os.path.exists(testdir):
+            shutil.rmtree(testdir)
+        os.mkdir(testdir)
+        os.chdir(testdir)
+
         try:
             # Create a factory.
             set_credentials(Credentials())
@@ -56,14 +61,18 @@ class TestCase(unittest.TestCase):
             os.chdir('..')
             if sys.platform == 'win32':
                 time.sleep(2)  # Wait for process shutdown.
-            shutil.rmtree('test_factory')
+            shutil.rmtree(testdir)
 
     def test_server(self):
         logging.debug('')
         logging.debug('test_server')
         
-        os.mkdir('test_server')
-        os.chdir('test_server')
+        testdir = 'test_server'
+        if os.path.exists(testdir):
+            shutil.rmtree(testdir)
+        os.mkdir(testdir)
+        os.chdir(testdir)
+
         try:
             # Create a server.
             server = ObjServer()
@@ -153,7 +162,7 @@ class TestCase(unittest.TestCase):
             os.chdir('..')
             if sys.platform == 'win32':
                 time.sleep(2)  # Wait for process shutdown.
-            shutil.rmtree('test_server')
+            shutil.rmtree(testdir)
 
 
 if __name__ == '__main__':
