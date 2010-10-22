@@ -249,7 +249,7 @@ def read_server_config(filename):
     Returns ``(address, port, key)``.
     """
     if not os.path.exists(filename):
-        raise IOError("No such file '%s'" % filename)
+        raise IOError('No such file %r' % filename)
     parser = ConfigParser.ConfigParser()
     parser.read(filename)
     section = 'ServerInfo'
@@ -832,6 +832,7 @@ class OpenMDAO_Manager(BaseManager):
         """
         if process.is_alive():
             util.info('sending shutdown message to manager')
+            logging.critical('sending shutdown message to manager')
             try:
                 conn = _Client(address, authkey=authkey)
                 try:
@@ -845,12 +846,15 @@ class OpenMDAO_Manager(BaseManager):
             # No good way to cause process to not shut down.
             if process.is_alive():  #pragma no cover
                 util.info('manager still alive')
+                logging.critical('manager still alive')
                 if hasattr(process, 'terminate'):
                     util.info('trying to `terminate()` manager process')
+                    logging.critical('trying to `terminate()` manager process')
                     process.terminate()
                     process.join(timeout=1)
                     if process.is_alive():
                         util.info('manager still alive after terminate')
+                        logging.critical('manager still alive after terminate')
 
         state.value = State.SHUTDOWN
         try:

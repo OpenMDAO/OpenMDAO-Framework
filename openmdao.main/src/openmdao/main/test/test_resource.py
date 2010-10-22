@@ -112,7 +112,7 @@ class TestCase(unittest.TestCase):
         # Ensure we aren't held up by local host load problems.
         local = ResourceAllocationManager.get_allocator(0)
         local.max_load = 10
-        self.assertEqual(local.get_name(), 'LocalHost')
+        self.assertEqual(local.name, 'LocalHost')
 
         hostnames = ResourceAllocationManager.get_hostnames({'n_cpus':1})
         self.assertEqual(hostnames[0], platform.node())

@@ -39,10 +39,10 @@ class ObjServerFactory(Factory):
     within those servers.
     """
 
-    def __init__(self):
+    def __init__(self, name='ObjServerFactory'):
         super(ObjServerFactory, self).__init__()
-        self._managers = []
-        self._logger = logging.getLogger('ObjServerFactory')
+        self._managers = {}
+        self._logger = logging.getLogger(name)
         self._logger.info('PID: %d', os.getpid())
         print 'Factory PID:', os.getpid()
         sys.stdout.flush()
@@ -56,16 +56,32 @@ class ObjServerFactory(Factory):
         Simply return the arguments. This can be useful for latency/thruput
         masurements, connectivity testing, firewall keepalives, etc.
         """
-        self._logger.debug("echo %s", args)
+        self._logger.debug('echo %s', args)
         return args
+
+# FIXME: ('owner', 'user') can create,
+#        whoever created should be the one to release, not just anybody.
+    @rbac(('owner', 'user'))
+    def release(self, server, remove_dir=True):
+        """ Shut-down :class:`ObjServer` `server`. """
+        try:
+            manager, root_dir = self._managers[server]
+        except KeyError:
+            raise ValueError('server %r not found', server)
+
+        manager.shutdown()
+        del manager
+        del self._managers[server]
+        if remove_dir and os.path.exists(root_dir):
+            shutil.rmtree(root_dir)
 
     @rbac('owner')
     def cleanup(self):
-        """ Shut-down all created :class:`ObjServers`. """
-        for manager in self._managers:
-            manager.shutdown()
-            del manager
-        self._managers = []
+        """ Shut-down all remaining :class:`ObjServers`. """
+        servers = self._managers.keys()
+        for server in servers:
+            self.release(server)
+        self._managers = {}
 
     @rbac('*')
     def get_available_types(self, groups=None):
@@ -86,6 +102,7 @@ class ObjServerFactory(Factory):
         """
         Create a new `typname` object in `server` or a new
         :class:`ObjectServer`.  Returns a proxy for for the new object.
+        Starts servers in a subdirectory of the current directory.
 
         typname: string
             Type of object to create. If null then a proxy for the new
@@ -105,7 +122,7 @@ class ObjServerFactory(Factory):
             Other constructor arguments.  If `name` is specified, that
             is used as the name of the :class:`ObjServer`.
         """
-        self._logger.info('create typname %s, version %s server %s,'
+        self._logger.info('create typname %r, version %r server %s,'
                           ' res_desc %s, args %s', typname, version, server,
                           res_desc, ctor_args)
 
@@ -114,7 +131,6 @@ class ObjServerFactory(Factory):
             if not name:
                 name = 'Server_%d' % (len(self._managers) + 1)
             manager = _ServerManager(name=name)
-            self._managers.append(manager)
 # Helpful?
             if sys.platform == 'win32':  #pragma no cover
                 for handler in logging._handlerList:
@@ -122,11 +138,23 @@ class ObjServerFactory(Factory):
                 sys.stdout.flush()
                 sys.stderr.flush()
 
-            manager.start()
-            self._logger.info("new server '%s' listening on %s",
-                              name, manager.address)
+            root_dir = name
+            count = 1
+            while os.path.exists(root_dir):
+                count += 1
+                root_dir = '%s_%d' % (name, count)
+            os.mkdir(root_dir)
+            os.chdir(root_dir)
+            try:
+                manager.start()
+            finally:
+                os.chdir('..')
+
+            self._logger.info('new server %s in dir %s listening on %s',
+                              name, root_dir, manager.address)
             server = manager.openmdao_main_objserverfactory_ObjServer(name=name,
                                                            host=platform.node())
+            self._managers[server] = (manager, root_dir)
             server.remove_root = self.child_remove_root
 
         if typname:
@@ -192,9 +220,9 @@ class RemoteFile(object):
 
 class ObjServer(object):
     """
-    An object which knows how to load a model.
-    Executes in a subdirectory of the parent factory's startup directory.
-    All remote file accesses must be within the tree rooted there.
+    An object which knows how to create other objects, load a model, etc.
+    All remote file accesses must be within the tree rooted in the current
+    directory at startup.
     """
 
     def __init__(self, name='', host=''):
@@ -202,19 +230,12 @@ class ObjServer(object):
         self.pid = os.getpid()
         self.name = name or ('sim-%d' % self.pid)
 
-        self.orig_dir = os.getcwd()
-        self.root_dir = os.path.join(self.orig_dir, self.name)
-        if os.path.exists(self.root_dir):
-            shutil.rmtree(self.root_dir)
-        os.mkdir(self.root_dir)
-        os.chdir(self.root_dir)
-
+        self.root_dir = os.getcwd()
         self._reset_logging()
         self._logger = logging.getLogger(self.name)
         self._logger.info('PID: %d', os.getpid())
         print 'ObjServer %s PID: %s' % (self.name, os.getpid())
         sys.stdout.flush()
-        util.Finalize(None, self._cleanup, exitpriority=-100)
 
         SimulationRoot.chroot(self.root_dir)
         self.tlo = None
@@ -236,21 +257,13 @@ class ObjServer(object):
             format='%(asctime)s %(levelname)s %(name)s: %(message)s',
             filename='openmdao_log.txt', filemode='w')
 
-    def _cleanup(self):
-        """ Cleanup this server's directory. """
-        logging.shutdown()
-        sys.stdout.close()
-        os.chdir(self.orig_dir)
-        if self.remove_root and os.path.exists(self.root_dir):
-            shutil.rmtree(self.root_dir)
-
     @rbac('*')
     def echo(self, *args):
         """
         Simply return the arguments. This can be useful for latency/thruput
         masurements, connectivity testing, firewall keepalives, etc.
         """
-        self._logger.debug("echo %s", args)
+        self._logger.debug('echo %s', args)
         return args
 
     @rbac('owner', proxy_types=[object])
@@ -260,7 +273,7 @@ class ObjServer(object):
         Returns an object of type *typname,* using the specified
         package version, server location, and resource description.
         """
-        self._logger.info('create typname %s, version %s server %s,'
+        self._logger.info('create typname %r, version %r server %s,'
                           ' res_desc %s, args %s', typname, version, server,
                           res_desc, ctor_args)
         obj = create(typname, version, server, res_desc, **ctor_args)
@@ -289,7 +302,7 @@ class ObjServer(object):
             Maximum time to wait for command completion. A value of zero
             implies no timeout.
         """
-        self._logger.debug("execute_command '%s'", command)
+        self._logger.debug('execute_command %r', command)
         for arg in (stdin, stdout, stderr):
             if isinstance(arg, basestring):
                 self._check_path(arg, 'execute_command')
@@ -331,7 +344,7 @@ class ObjServer(object):
         filename: string
             Name of ZipFile to create.
         """
-        self._logger.debug("pack_zipfile '%s'", filename)
+        self._logger.debug('pack_zipfile %r', filename)
         self._check_path(filename, 'pack_zipfile')
         return pack_zipfile(patterns, filename, self._logger)
 
@@ -343,7 +356,7 @@ class ObjServer(object):
         filename: string
             Name of ZipFile to unpack.
         """
-        self._logger.debug("unpack_zipfile '%s'", filename)
+        self._logger.debug('unpack_zipfile %r', filename)
         self._check_path(filename, 'unpack_zipfile')
         return unpack_zipfile(filename, self._logger)
 
@@ -358,7 +371,7 @@ class ObjServer(object):
         mode: int
             New mode bits (permissions).
         """
-        self._logger.debug("chmod '%s' %s", path, mode)
+        self._logger.debug('chmod %r %s', path, mode)
         self._check_path(path, 'chmod')
         try:
             return os.chmod(path, mode)
@@ -381,7 +394,7 @@ class ObjServer(object):
         bufsize: int
             Size of buffer to use.
         """
-        self._logger.debug("open '%s' %s %s", filename, mode, bufsize)
+        self._logger.debug('open %r %s %s', filename, mode, bufsize)
         self._check_path(filename, 'open')
         try:
             return RemoteFile(open(filename, mode, bufsize))
@@ -398,7 +411,7 @@ class ObjServer(object):
         path: string
             Path to file to remove.
         """
-        self._logger.debug("remove '%s'", path)
+        self._logger.debug('remove %r', path)
         self._check_path(path, 'remove')
         try:
             return os.remove(path)
@@ -415,7 +428,7 @@ class ObjServer(object):
         path: string
             Path to file to interrogate.
         """
-        self._logger.debug("stat '%s'", path)
+        self._logger.debug('stat %r', path)
         self._check_path(path, 'stat')
         try:
             return os.stat(path)
@@ -428,7 +441,7 @@ class ObjServer(object):
         """ Check if path is allowed to be used. """
         abspath = os.path.abspath(path)
         if not abspath.startswith(self.root_dir):
-            raise RuntimeError("Can't %s '%s', not within root %s"
+            raise RuntimeError("Can't %s %r, not within root %s"
                                % (operation, path, self.root_dir))
 
 
@@ -574,7 +587,7 @@ def main():  #pragma no cover
     _LOGGER.setLevel(logging.DEBUG)
     address = (platform.node(), options.port)
     set_credentials(Credentials())
-    _LOGGER.info("Starting FactoryManager %s '%s'", address, authkey)
+    _LOGGER.info('Starting FactoryManager %s %r', address, authkey)
     current_process().authkey = authkey
     manager = _FactoryManager(address, authkey, name='Factory')
 

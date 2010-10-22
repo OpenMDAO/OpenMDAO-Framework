@@ -239,10 +239,28 @@ class CaseIterDriverBase(Driver):
 
         # Continue until no servers are busy.
         while self._busy():
-            name, result = self._reply_queue.get()
-            self._in_use[name] = self._server_ready(name)
+            if not self._todo and not self._rerun and self._iter is None:
+                # Don't wait indefinitely for a server we don't need.
+                # This has happened with a server that got 'lost'
+                # in RAM.allocate()
+                timeout = 30
+            else:
+                timeout = None
+            try:
+                name, result = self._reply_queue.get(timeout=timeout)
+            # Hard to force worker to hang, which is handled here.
+            except Queue.Empty:  #pragma no cover
+                self._logger.error('Timeout waiting with nothing left to do:')
+                for name, in_use in self._in_use.items():
+                    if in_use:
+                        self._logger.error('    %s: %s %s', name,
+                                           self._servers[name],
+                                           self._server_info[name])
+            else:
+                self._in_use[name] = self._server_ready(name)
 
         # Shut-down (started) servers.
+        self._logger.critical('Shut-down (started) servers')
         for queue in self._queues.values():
             queue.put(None)
         for i in range(len(self._queues)):
@@ -448,7 +466,9 @@ class CaseIterDriverBase(Driver):
             result = request[0](request[1])
             self._reply_queue.put((name, result))
 
+        self._logger.critical('%s releasing server', name)
         RAM.release(server)
+        del server
         self._reply_queue.put((name, True))  # ACK shutdown.
 
     def _load_model(self, server):

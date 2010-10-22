@@ -44,6 +44,7 @@ class ResourceAllocationManager(object):
         self._allocations = 0
         self._allocators = []
         self._allocators.append(LocalAllocator('LocalHost'))
+        self._deployed_servers = {}
 
     @staticmethod
     def get_instance():
@@ -148,13 +149,14 @@ class ResourceAllocationManager(object):
                                                best_criteria)
                 if server is not None:
                     server_info = {
-                        'name'  :server.name,
+                        'name': name,
                         'pid':  server.pid,
                         'host': server.host
                     }
                     self._logger.debug('allocated %s pid %d on %s',
-                                       server_info['name'], server_info['pid'],
+                                       name, server_info['pid'],
                                        server_info['host'])
+                    self._deployed_servers[name] = (best_allocator, server, server_info)
                     return (server, server_info)
                 # Difficult to generate deployable request that won't deploy...
                 else:  #pragma no cover
@@ -231,21 +233,25 @@ class ResourceAllocationManager(object):
         server: :mod:`multiprocessing` proxy
             Server to be released.
         """
+        ram = ResourceAllocationManager.get_instance()
+        with ResourceAllocationManager._lock:
+            return ram._release(server)
+
+    def _release(self, server):
+        """ Release a server (proxy). """
         name = server.name
-#        try:
-#            server.shutdown()
-#        # Just being defensive here.
-#        except Exception:  #pragma no cover
-#            trace = traceback.format_exc()
-#            ram = ResourceAllocationManager.get_instance()
-#            try:
-#                ram._logger.warning('caught exception during cleanup of %s: %s',
-#                                    name, trace)
-#            except Exception:
-#                print >> sys.stderr, \
-#                      'RAM: caught exception logging cleanup of %s: %s', \
-#                      name, trace
+        try:
+            allocator = self._deployed_servers[name][0]
+        except KeyError:
+            self._logger.error('server %r not found', name)
+            return
+
+        try:
+            allocator.release(server)
+        except Exception as exc:
+            self._logger.error("Can't release %s: %s", server, exc)
         del server
+        del self._deployed_servers[name]
 
 
 class ResourceAllocator(ObjServerFactory):
@@ -255,14 +261,8 @@ class ResourceAllocator(ObjServerFactory):
     """
 
     def __init__(self, name):
-        super(ResourceAllocator, self).__init__()
+        super(ResourceAllocator, self).__init__(name)
         self.name = name
-        self._logger = logging.getLogger(name)
-
-    @rbac('*')
-    def get_name(self):
-        """ Returns this allocator's name. """
-        return self.name
 
     # To be implemented by real allocator.
     def max_servers(self, resource_desc):  #pragma no cover
@@ -632,7 +632,7 @@ class ClusterAllocator(object):  #pragma no cover
         except Exception, exc:
             msg = '%s\n%s' % (exc, traceback.format_exc())
             try:
-                name = allocator.get_name()
+                name = allocator.name
             except Exception:
                 name = '<unavailable>'
             self._logger.error('allocator %s.max_servers() caught exception %s',
@@ -776,7 +776,7 @@ class ClusterAllocator(object):  #pragma no cover
         except Exception, exc:
             msg = '%s\n%s' % (exc, traceback.format_exc())
             try:
-                name = allocator.get_name()
+                name = allocator.name
             except Exception:
                 name = '<unavailable>'
             self._logger.error('allocator %s.time_estimate() caught exception %s',
@@ -786,11 +786,11 @@ class ClusterAllocator(object):  #pragma no cover
         else:
             if estimate == 0:
                 self._logger.debug('allocator %s returned %g (%g)',
-                                   allocator.get_name(), estimate,
+                                   allocator.name, estimate,
                                    criteria['loadavgs'][0])
             else:
                 self._logger.debug('allocator %s returned %g',
-                                   allocator.get_name(), estimate)
+                                   allocator.name, estimate)
 
         return (allocator, estimate, criteria)
 
