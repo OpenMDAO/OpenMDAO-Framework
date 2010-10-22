@@ -27,21 +27,14 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-from openmdao.lib.components.metamodel import MetaModel
-from openmdao.lib.components.expected_improvement_multiobj import MultiObjExpectedImprovement
-from openmdao.lib.components.prob_intersect import ProbIntersect
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
-from openmdao.lib.components.pareto_filter import ParetoFilter
-from openmdao.lib.drivers.doedriver import DOEdriver
-from openmdao.lib.drivers.genetic import Genetic
-
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
-from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
-from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
-from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
-from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
+
 from openmdao.lib.api import Float, Int
+from openmdao.lib.api import MetaModel,MultiObjExpectedImprovement,\
+     ProbIntersect,ParetoFilter,DOEdriver,Genetic,CaseIteratorDriver,\
+     DBCaseRecorder,DumpCaseRecorder,DBCaseIterator
 
 from openmdao.examples.expected_improvement.alg_component1 import Alg_Component1
 from openmdao.examples.expected_improvement.alg_component3 import Alg_Component3
