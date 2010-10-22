@@ -177,7 +177,6 @@ class DependencyGraph(object):
         graph = self._graph
         srccompname, srcvarname, destcompname, destvarname = \
                            _cvt_names_to_graph(srcpath, destpath)
-        
         try:
             link = graph[srccompname][destcompname]['link']
         except KeyError:

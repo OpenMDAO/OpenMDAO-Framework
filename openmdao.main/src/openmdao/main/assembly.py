@@ -361,16 +361,21 @@ class Assembly (Component):
         Returns a list of our newly invalidated boundary outputs.
         """
         outs = set()
+        stack = []
         compgraph = self._depgraph
         if compname is None: # check boundary inputs
-            compname = '@self'
-            if varnames is not None:
-                for name in self._depgraph.get_connected_inputs():
-                    if name in varnames:
-                        self._valid_dict[name] = False
+            compname = '@in'
+            #if varnames is not None:
+                #for name in compgraph.get_connected_inputs():
+                    #if name in varnames:
+                        #self._valid_dict[name] = False
+                            
         visited = set()
         partial_visited = {}
-        stack = [(compname, varnames)]
+        if len(stack) == 0:
+            stack = [(compname, varnames)]
+        elif len(bvars) > 0:
+            stack.append((compname, bvars))
             
         while len(stack) > 0:
             cname, vnames = stack.pop()
