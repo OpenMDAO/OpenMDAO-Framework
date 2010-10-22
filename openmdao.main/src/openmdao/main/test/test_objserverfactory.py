@@ -54,6 +54,8 @@ class TestCase(unittest.TestCase):
                           'Server startup failed')
         finally:
             os.chdir('..')
+            if sys.platform == 'win32':
+                time.sleep(2)  # Wait for process shutdown.
             shutil.rmtree('test_factory')
 
     def test_server(self):
@@ -149,6 +151,8 @@ class TestCase(unittest.TestCase):
 
         finally:
             os.chdir('..')
+            if sys.platform == 'win32':
+                time.sleep(2)  # Wait for process shutdown.
             shutil.rmtree('test_server')
 
 
