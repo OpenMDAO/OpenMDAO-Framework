@@ -3,10 +3,8 @@
 from numpy import exp, abs, pi, array,isnan
 from scipy.special import erf
 
-from enthought.traits.api import Instance, Str, ListStr, Array
-
-from openmdao.lib.datatypes.enum import Enum
-from openmdao.lib.datatypes.float import Float
+from openmdao.lib.datatypes.api import Instance, Str, ListStr, Enum, \
+     Float, Array
 
 from openmdao.main.component import Component
 

@@ -5,10 +5,11 @@ from numpy import exp, abs, pi, array,isnan,sum,sqrt,argsort
 from scipy.special import erf
 from scipy.integrate import dblquad
 
-from enthought.traits.api import Instance, Str, ListStr, Array
+from enthought.traits.api import Instance, Str, ListStr
 
 from openmdao.lib.datatypes.enum import Enum
 from openmdao.lib.datatypes.float import Float
+from openmdao.lib.datatypes.array import Array
 
 from openmdao.main.component import Component
 

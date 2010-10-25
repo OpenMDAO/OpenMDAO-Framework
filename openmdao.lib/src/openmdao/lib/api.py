@@ -11,7 +11,7 @@ from openmdao.lib.datatypes.array import Array
 
 # Traits from Enthought
 from enthought.traits.api import Bool, List, Str, Instance, \
-                                 Complex, CBool, Dict
+                                 Complex, CBool, Dict, ListStr
 
 # Drivers
 from openmdao.lib.drivers.conmindriver import CONMINdriver
