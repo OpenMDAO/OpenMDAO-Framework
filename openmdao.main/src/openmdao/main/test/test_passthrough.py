@@ -56,6 +56,7 @@ class PassthroughTestCase(unittest.TestCase):
         top.connect('a1.c2.d', 'c3.a')
         
     def test_simple_passthrough(self):
+        print '-------------------------------'
         varnames = ['a','b','c','d']
         self._setup_simple()
         self.assertEqual(set(self.asm.c1.list_outputs()), set(['c','d']))
@@ -70,11 +71,12 @@ class PassthroughTestCase(unittest.TestCase):
                          [True,True,True,True])
         self.asm.c1.a = 6
         self.assertEqual([self.asm.c3._valid_dict[n] for n in varnames],
-                         [False,False,False,False])
+                         [False,True,False,False])
         self.assertEqual([self.asm.a1.c2._valid_dict[n] for n in varnames],
-                         [False,False,False,False])
+                         [True,False,False,False])
         self.asm.run()
-        self.assertEqual(self.asm.c3.getvals(), (-4,12,8,-16))
+        self.assertEqual(self.asm.c3.getvals(), (-7,2,-5,-9))
+        print '-------------------------------'
         
     def test_real_passthrough(self):
         self._setup_simple()
@@ -90,7 +92,9 @@ class PassthroughTestCase(unittest.TestCase):
         c.connect('parent.c1.foo', 'a')
         self.assertEqual(['a'], c._depgraph.get_connected_inputs())
         self.assertEqual([], c._depgraph.get_connected_outputs())
+        self.assertTrue('parent.c1.foo' in c._depgraph._graph['@exin']['@bin']['link']._srcs)
         c.connect('c', 'parent.c2.a')
+        self.assertTrue('parent.c2.a' in c._depgraph._graph['@bout']['@exout']['link']._dests)
         self.assertEqual(['a'], c._depgraph.get_connected_inputs())
         self.assertEqual(['c'], c._depgraph.get_connected_outputs())
         

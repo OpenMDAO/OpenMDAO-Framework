@@ -160,8 +160,12 @@ class Component (Container):
 
     def _input_updated(self, name):
         if self._valid_dict[name]:  # if var is not already invalid
-            self.invalidate_deps(varnames=name, notify_parent=True)
-            
+            names = [name]
+            outs = self.invalidate_deps(varnames=names)
+            if (outs is None) or outs:
+                if self.parent:
+                    self.parent.child_invalidated(self.name, outs)
+
     def check_config (self):
         """Verify that this component is fully configured to execute.
         This function is called once prior to the first execution of this
@@ -405,7 +409,7 @@ class Component (Container):
         """
         if self._output_names is None:
             nset = set([k for k,v in self.items(iotype='out')])
-            nset.update([s.replace('@out.','') for s in self._depgraph.get_connected_outputs()])
+            nset.update([s.replace('@exout.','') for s in self._depgraph.get_connected_outputs()])
             self._output_names = list(nset)
             
         if valid is None:
@@ -444,7 +448,7 @@ class Component (Container):
         destpath: str
             Pathname of destination variable
         """
-        
+        print 'Component.connect: %s' % self.get_pathname()
         has_ext_src = srcpath.startswith('parent.')
         has_ext_dest = destpath.startswith('parent.')
         
@@ -1052,11 +1056,13 @@ class Component (Container):
         for name in names:
             valids[name] = valid
             
-    def invalidate_deps(self, varnames=set(), notify_parent=False):
+    def invalidate_deps(self, varnames=None):
         """Invalidate all of our outputs if they're not invalid already.
         For a typical Component, this will always be all or nothing, meaning
-        there will never be partial validation of outputs.  Components
-        supporting partial output validation must override this function.
+        there will never be partial validation of outputs.  
+        
+        NOTE: Components supporting partial output validation must override
+        this function.
         
         Returns None, indicating that all outputs are invalidated.
         """
@@ -1064,25 +1070,17 @@ class Component (Container):
         valids = self._valid_dict
         
         # this assumes that all outputs are either valid or invalid
-        if outs and valids[outs[0]] is False:
+        if outs and (valids[outs[0]] is False):
             # nothing to do because our outputs are already invalid
             return []
         
         self._call_execute = True
 
-        if notify_parent: # our input was set
-            if self.parent:
-                # to avoid unnecessary construction of set() objects, when this
-                # method is called when an input is set, varnames is actually
-                # passed in as a string (the name of the variable that was set)
-                # so we construct the set before the call to invalidate_deps,
-                # but after we know we really need to call it.
-                self.parent.invalidate_deps(compname=self.name, 
-                                            varnames=set(varnames), notify_parent=True)
-        else:  # Our parent Assembly is calling this, so invalidate specified inputs
-               # The Assembly will only specify connected inputs, so no need to check
-            for var in varnames:
-                valids[var] = False
+        if varnames is None:
+            varnames = self.get_connected_inputs()
+
+        for var in varnames:
+            valids[var] = False
                 
         for out in outs:
             valids[out] = False

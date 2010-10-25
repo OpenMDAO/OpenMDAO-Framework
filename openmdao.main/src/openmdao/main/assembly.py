@@ -134,7 +134,7 @@ class Assembly (Component):
         destpath: str
             Pathname of destination variable
         """
-
+        print 'Assembly.connect: %s' % self.get_pathname()
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
@@ -175,8 +175,10 @@ class Assembly (Component):
             self.raise_exception("can't connect '%s' to '%s': %s" %
                                  (srcpath,destpath,str(err)), TraitError)
             
+        super(Assembly, self).connect(srcpath, destpath)
+
         # invalidate destvar if necessary
-        if destcomp is self: # boundary output
+        if destcomp is self or destcompname=='parent': # boundary output
             if destcomp.get_valid([destvarname])[0] and \
                srccomp.get_valid([srcvarname])[0] is False:
                 if self.parent:
@@ -184,11 +186,12 @@ class Assembly (Component):
                     # output is invalid.
                     # Note that a boundary output is a dest var in this scope, 
                     # but a src var in the parent scope.
-                    self.parent.invalidate_deps(self.name, set([destvarname]), True)
-        elif srccomp is not self:
-            destcomp.invalidate_deps(varnames=set([destvarname]), notify_parent=True)
+                    self.parent.child_invalidated(childname=self.name, outs=set([destvarname]))
+        else:
+            outs = destcomp.invalidate_deps(varnames=set([destvarname]))
+            if (outs is None) or outs:
+                bouts = self.child_invalidated(destcompname, outs)
 
-        super(Assembly, self).connect(srcpath, destpath)
         
 
     def disconnect(self, varpath, varpath2=None):
@@ -211,14 +214,14 @@ class Assembly (Component):
         else:   # varpath is not a component name
             if '.' not in varpath:
                 if varpath in self.list_inputs():
-                    varpath = '.'.join(['@in', varpath])
+                    varpath = '.'.join(['@exin', varpath])
                 else:
-                    varpath = '.'.join(['@out', varpath])
+                    varpath = '.'.join(['@exout', varpath])
             if varpath2 is not None and '.' not in varpath2:
                 if varpath2 in self.list_inputs():
-                    varpath2 = '.'.join(['@in', varpath2])
+                    varpath2 = '.'.join(['@exin', varpath2])
                 else:
-                    varpath2 = '.'.join(['@out', varpath2])
+                    varpath2 = '.'.join(['@exout', varpath2])
             
             cname, vname = varpath.split('.', 1)
             if varpath2 is None:  # remove all connections to varpath
@@ -241,9 +244,7 @@ class Assembly (Component):
         
         # now update boundary outputs
         valids = self._valid_dict
-        for srccompname,link in self._depgraph.in_links('@self'):
-            if srccompname == '@in':
-                continue
+        for srccompname,link in self._depgraph.in_links('@bout'):
             srccomp = getattr(self, srccompname)
             for dest,src in link._dests.items():
                 if valids[dest] is False:
@@ -269,12 +270,12 @@ class Assembly (Component):
         """
         parent = self.parent
         vset = set(varnames)
-        if compname == '@self':
+        if compname[0] == '@':
             destcomp = self
         else:
             destcomp = getattr(self, compname)
         for srccompname,srcs,dests in self._depgraph.in_map(compname, vset):
-            if srccompname[0] == '@':  # boundary inputs
+            if srccompname == '@bin' or srccompname == '@exin':  # boundary inputs
                 srccompname = ''
                 srccomp = self
                 invalid_srcs = [k for k,v in self._valid_dict.items() if v is False and k in srcs]
@@ -318,7 +319,7 @@ class Assembly (Component):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
         """
-        self.update_inputs('@self', outnames)
+        self.update_inputs('@bout', outnames)
         
     def get_valid(self, names):
         """Returns a list of boolean values indicating whether the named
@@ -358,71 +359,54 @@ class Assembly (Component):
 
     def _input_updated(self, name):
         if self._valid_dict[name]:  # if var is not already invalid
-            self.invalidate_deps(varnames=set([name]), notify_parent=True)
+            outs = self.invalidate_deps(varnames=set([name]))
+            if ((outs is None) or outs) and self.parent:
+                self.parent.child_invalidated(self.name, outs)
             
-    def invalidate_deps(self, compname=None, varnames=None, notify_parent=False):
+    def child_invalidated(self, childname, outs=None):
+        """Invalidate all variables that depend on the outputs provided
+        by the child that has been invalidated.
+        """
+        bouts = self._depgraph.invalidate_deps(self, [childname], [outs])
+        if bouts and self.parent:
+            self.parent.child_invalidated(self.name, bouts)
+
+        return bouts
+                    
+    def invalidate_deps(self, varnames=None):
         """Mark all Variables invalid that depend on varnames. 
         Returns a list of our newly invalidated boundary outputs.
         """
-        #outs = set()
-        #stack = []
-        if compname is None: # start at boundary
-            inputs = []
-            compnames = []
-            for dcomp, link in self._depgraph.out_links('@in'):
-                if varnames is None:
-                    inter = set(link._dests.keys())
-                else:
-                    inter = varnames.intersection(link._dests.keys())
-                if dcomp == '@self':   # boundary input
-                    for dest in inter:
-                        self._valid_dict[name] = False
-                else:   # 'fake' boundary input
-                    for dest in inter:
-                        self._valid_dict['.'.join([dcomp,dest])] = False
-                compnames.append(dcomp)
-                inputs.append(inter)
-            outs = self._depgraph.invalidate_deps(self, compnames, inputs)
-        else:
-            outs = self._depgraph.invalidate_deps(self, [compname], [varnames])
-                            
-        #visited = set()
-        #partial_visited = {}
-        #if len(stack) == 0:
-            #stack = [('@self', varnames)]
-            
-        #while len(stack) > 0:
-            #cname, vnames = stack.pop()
-            #if vnames is None:
-                #for destcname, link in compgraph.out_links(cname):
-                    #if link in visited: continue
-                    
-                    #if destcname[0] == '@':
-                        #outs.update(link.get_dests())
-                    #else:
-                        #outnames = getattr(self, destcname).invalidate_deps(varnames=link.get_dests())
-                        #stack.append((destcname, outnames))
-                    #visited.add(link)
-            #else:  # specific varnames are invalidated
-                #for destcname, link in compgraph.out_links(cname):
-                    #if link in visited: continue
-                    #inputs = link.get_dests(varnames)
-                    #if not inputs: continue
-                    #if destcname == '@out':
-                        #outs.update(inputs)
-                    #else:
-                        #outnames = getattr(self, destcname).invalidate_deps(varnames=inputs)
-                        #stack.append((destcname, outnames))
-                    #partial = partial_visited.setdefault(link, set())
-                    #partial.update(inputs)
-                    #if len(partial) == len(link._srcs):
-                        #visited.add(link)
-                        #del partial_visited[link]
+        if varnames is None:
+            varnames = self.get_connected_inputs()
+
+        self.set_valid(varnames, False)
+
+        # @exin is a little weird and we have to swap varnames for
+        # its sources that map to the varnames as destinations
+        newnames = set()
+        found = set()
         
-        if len(outs) > 0:
+        for destcomp, link in self._depgraph.out_links('@exin'):
+            for src,dests in link._srcs.items():
+                for dest in dests:
+                    if destcomp == '@bin':
+                        if dest in varnames:
+                            newnames.add(src)
+                            found.add(dest)
+                    else:
+                        name = '.'.join([destcomp,dest])
+                        if name in varnames:
+                            newnames.add(src)
+                            found.add(name)
+        outs = set()
+        if newnames:
+            outs.update(self._depgraph.invalidate_deps(self, ['@exin'], [newnames]))
+        orignames = set(varnames)-found
+        if orignames:
+            outs.update(self._depgraph.invalidate_deps(self, ['@bin'], [orignames]))
+        if outs:
             self.set_valid(outs, False)
-            if notify_parent and self.parent:
-                self.parent.invalidate_deps(compname=self.name, varnames=outs, notify_parent=True)
         return outs
     
     def exec_counts(self, compnames):

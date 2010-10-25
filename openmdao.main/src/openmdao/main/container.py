@@ -314,6 +314,7 @@ class Container(HasTraits):
             if restofpath:
                 getattr(self, cname).connect('parent.'+srcpath, restofpath)
                 
+        print self.get_pathname()+':'
         self._depgraph.connect(srcpath, destpath)
 
 
@@ -321,9 +322,9 @@ class Container(HasTraits):
         """Removes the connection between one source variable and one 
         destination variable.
         """
-        # @in, @out, and @self all really refer to self, so replace them with ''
-        srcpath = srcpath.replace('@in.','').replace('@out.','').replace('@self.','')
-        destpath = destpath.replace('@in.','').replace('@out.','').replace('@self.','')
+        # @exin, @exout, @bin, and @bout all really refer to self, so replace them with ''
+        srcpath = srcpath.replace('@exin.','').replace('@exout.','').replace('@bin.','')
+        destpath = destpath.replace('@exin.','').replace('@exout.','').replace('@bout.','')
         
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
