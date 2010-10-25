@@ -314,7 +314,6 @@ class Container(HasTraits):
             if restofpath:
                 getattr(self, cname).connect('parent.'+srcpath, restofpath)
                 
-        print self.get_pathname()+':'
         self._depgraph.connect(srcpath, destpath)
 
 

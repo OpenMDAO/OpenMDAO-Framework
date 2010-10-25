@@ -119,9 +119,11 @@ class DependencyGraph(object):
                             stack.append((dest, link.get_dests(varset)))
                     else:
                         comp = getattr(scope, dest)
-                        outs = comp.invalidate_deps(varnames=link.get_dests(varset))
-                        if (outs is None) or outs:
-                            stack.append((dest, outs))
+                        dests = link.get_dests(varset)
+                        if dests:
+                            outs = comp.invalidate_deps(varnames=dests)
+                            if (outs is None) or outs:
+                                stack.append((dest, outs))
         return outset
 
     def list_connections(self, show_passthrough=True):
@@ -246,8 +248,8 @@ class DependencyGraph(object):
                                  (str(strcon), 
                                   '.'.join([srccompname,srcvarname]), 
                                   '.'.join([destcompname,destvarname])))
-        print 'depgraph: connect %s to %s' % (srcpath, destpath)
-        print 'depgraph: OR connect %s.%s to %s.%s' % (srccompname,srcvarname, destcompname,destvarname)
+        #print 'depgraph: connect %s to %s' % (srcpath, destpath)
+        #print 'depgraph: OR connect %s.%s to %s.%s' % (srccompname,srcvarname, destcompname,destvarname)
 
     def disconnect(self, srcpath, destpath):
         """Disconnect the given variables."""

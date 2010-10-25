@@ -160,8 +160,7 @@ class Component (Container):
 
     def _input_updated(self, name):
         if self._valid_dict[name]:  # if var is not already invalid
-            names = [name]
-            outs = self.invalidate_deps(varnames=names)
+            outs = self.invalidate_deps(varnames=[name])
             if (outs is None) or outs:
                 if self.parent:
                     self.parent.child_invalidated(self.name, outs)
@@ -300,7 +299,7 @@ class Component (Container):
                 self.execute()
                 self._post_execute()
             #else:
-            #    print 'skipping %s' % self.get_pathname()
+                #print 'skipping %s' % self.get_pathname()
         finally:
             if self.directory:
                 self.pop_dir()
@@ -448,7 +447,6 @@ class Component (Container):
         destpath: str
             Pathname of destination variable
         """
-        print 'Component.connect: %s' % self.get_pathname()
         has_ext_src = srcpath.startswith('parent.')
         has_ext_dest = destpath.startswith('parent.')
         
@@ -1076,12 +1074,17 @@ class Component (Container):
         
         self._call_execute = True
 
+        # only invalidate connected inputs. inputs that are not connected
+        # should never be invalidated
+        connected_inputs = self._get_connected_inputs()
         if varnames is None:
-            varnames = self.get_connected_inputs()
+            for var in connected_inputs:
+                valids[var] = False
+        else:
+            for var in varnames:
+                if var in connected_inputs:
+                    valids[var] = False
 
-        for var in varnames:
-            valids[var] = False
-                
         for out in outs:
             valids[out] = False
             
@@ -1147,3 +1150,27 @@ class Component (Container):
              #"""
         #return None
 
+
+def _show_validity(comp, recurse=True, exclude=set(), valid=None):
+    """prints out validity status of all input and output traits
+    for the given object, optionally recursing down to all of its
+    Component children as well.
+    """
+    def _show_validity_(comp, recurse, exclude, valid, result):
+        pname = comp.get_pathname()
+        for name, val in comp._valid_dict.items():
+            if name not in exclude and (valid is None or val is valid):
+                if '.' in name:  # mark as fake boundary var
+                    result['.'.join([pname,'*%s*'%name])] = val
+                else:
+                    result['.'.join([pname,name])] = val
+        if recurse:
+            for name in comp.list_containers():
+                obj = getattr(comp, name)
+                if isinstance(obj, Component):
+                    _show_validity_(obj, recurse, exclude, valid, result)
+    result = {}
+    _show_validity_(comp, recurse, exclude, valid, result)
+    for name,val in sorted([(n,v) for n,v in result.items()], key=lambda v: v[0]):
+        print '%s: %s' % (name,val)
+    

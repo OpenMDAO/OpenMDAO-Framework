@@ -56,7 +56,6 @@ class PassthroughTestCase(unittest.TestCase):
         top.connect('a1.c2.d', 'c3.a')
         
     def test_simple_passthrough(self):
-        print '-------------------------------'
         varnames = ['a','b','c','d']
         self._setup_simple()
         self.assertEqual(set(self.asm.c1.list_outputs()), set(['c','d']))
@@ -76,7 +75,6 @@ class PassthroughTestCase(unittest.TestCase):
                          [True,False,False,False])
         self.asm.run()
         self.assertEqual(self.asm.c3.getvals(), (-7,2,-5,-9))
-        print '-------------------------------'
         
     def test_real_passthrough(self):
         self._setup_simple()

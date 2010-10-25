@@ -134,7 +134,6 @@ class Assembly (Component):
         destpath: str
             Pathname of destination variable
         """
-        print 'Assembly.connect: %s' % self.get_pathname()
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
@@ -275,16 +274,23 @@ class Assembly (Component):
         else:
             destcomp = getattr(self, compname)
         for srccompname,srcs,dests in self._depgraph.in_map(compname, vset):
-            if srccompname == '@bin' or srccompname == '@exin':  # boundary inputs
-                srccompname = ''
-                srccomp = self
-                invalid_srcs = [k for k,v in self._valid_dict.items() if v is False and k in srcs]
+            if srccompname[0] == '@':   # boundary inputs
+                invalid_srcs = []
+                if srccompname == '@bin':
+                    invalid_srcs = [s for s in srcs if self._valid_dict.get(s) is False]
+                else:   # srccompname == '@exin':  
+                    for d in dests:
+                        pname = '.'.join([compname,d])
+                        if self._valid_dict.get(pname) is False:
+                            invalid_srcs.append(pname)
                 if len(invalid_srcs) > 0:
                     if parent:
                         parent.update_inputs(self.name, invalid_srcs)
-                    # invalid inputs have been updated, so make them as valid
+                    # invalid inputs have been updated, so mark them as valid
                     for name in invalid_srcs:
                         self._valid_dict[name] = True
+                srccompname = ''
+                srccomp = self
             else:
                 srccomp = getattr(self, srccompname)
                 if not srccomp.is_valid():
@@ -319,7 +325,21 @@ class Assembly (Component):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
         """
-        self.update_inputs('@bout', outnames)
+        fakes = [n for n in outnames if '.' in n]
+        reals = [n for n in outnames if '.' not in n]
+        if reals:  # 'real' boundary outputs
+            self.update_inputs('@bout', reals)
+        if fakes:  # 'fake' boundary outputs  (passthroughs to internal variables)
+            compmap = {}
+            for name in fakes:
+                cname, _, varname = name.partition('.')
+                if cname in compmap:
+                    compmap[cname].append(varname)
+                else:
+                    compmap[cname] = [varname]
+            for cname, vnames in compmap.items():
+                getattr(self, cname).update_outputs(vnames)
+                self.set_valid(vnames, True)
         
     def get_valid(self, names):
         """Returns a list of boolean values indicating whether the named
