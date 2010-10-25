@@ -35,9 +35,6 @@ from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_raises, assert_rel_error
 
 
-# Used to disable tests when running full suite on Windows.
-_NAME = __name__
-
 # Used for naming classes we want to create instances of.
 _MODULE = 'openmdao.main.test.test_distsim'
 
@@ -282,10 +279,6 @@ class TestCase(unittest.TestCase):
             shutil.rmtree(path)
 
     def test_1_client(self):
-        # FIXME: temporarily disable this test on Windows.
-        if _NAME != '__main__' and sys.platform == 'win32':
-            raise nose.SkipTest()
-
         logging.debug('')
         logging.debug('test_client')
 
@@ -349,10 +342,6 @@ class TestCase(unittest.TestCase):
             self.fail('Expected RemoteError')
 
     def test_2_model(self):
-        # FIXME: temporarily disable this test on Windows.
-        if _NAME != '__main__' and sys.platform == 'win32':
-            raise nose.SkipTest()
-
         logging.debug('')
         logging.debug('test_model')
 
@@ -405,10 +394,6 @@ class TestCase(unittest.TestCase):
             self.fail('Expected RemoteError')
 
     def test_3_access(self):
-        # FIXME: temporarily disable this test on Windows.
-        if _NAME != '__main__' and sys.platform == 'win32':
-            raise nose.SkipTest()
-
         logging.debug('')
         logging.debug('test_access')
 
@@ -456,10 +441,6 @@ class TestCase(unittest.TestCase):
         set_credentials(saved)
 
     def test_4_authkey(self):
-        # FIXME: temporarily disable this test on Windows.
-        if _NAME != '__main__' and sys.platform == 'win32':
-            raise nose.SkipTest()
-
         logging.debug('')
         logging.debug('test_authkey')
 
@@ -513,10 +494,6 @@ class TestCase(unittest.TestCase):
             server = None
 
     def test_5_misc(self):
-        # FIXME: temporarily disable this test on Windows.
-        if _NAME != '__main__' and sys.platform == 'win32':
-            raise nose.SkipTest()
-
         logging.debug('')
         logging.debug('test_misc')
 

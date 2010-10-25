@@ -18,18 +18,10 @@ from openmdao.main.rbac import Credentials, set_credentials
 from openmdao.util.testutil import assert_raises
 
 
-# Used to disable tests when running full suite on Windows.
-_NAME = __name__
-
-
 class TestCase(unittest.TestCase):
     """ Test object service sub-objects for better test coverage. """
 
     def test_factory(self):
-        # FIXME: temporarily disable this test on Windows.
-        if _NAME != '__main__' and sys.platform == 'win32':
-            raise nose.SkipTest()
-
         logging.debug('')
         logging.debug('test_factory')
 
