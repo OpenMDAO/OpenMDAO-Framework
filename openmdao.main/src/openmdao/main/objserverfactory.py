@@ -145,9 +145,23 @@ class ObjServerFactory(Factory):
                 root_dir = '%s_%d' % (name, count)
             os.mkdir(root_dir)
             os.chdir(root_dir)
+
+            # On Windows, when running the full test suite under Nose,
+            # starting the process starts a new Nose test session, which
+            # will eventually get here and start a new Nose session, which...
+            if sys.platform == 'win32' and \
+               sys.modules['__main__'].__file__.endswith('openmdao_test-script.py'):  #pragma no cover
+                orig_main = sys.modules['__main__'].__file__
+                sys.modules['__main__'].__file__ = \
+                    pkg_resources.resource_filename('openmdao.main',
+                                                    'objserverfactory.py')
+            else:
+                orig_main = None
             try:
                 manager.start()
             finally:
+                if orig_main is not None:  #pragma no cover
+                    sys.modules['__main__'].__file__ = orig_main
                 os.chdir('..')
 
             self._logger.info('new server %s in dir %s listening on %s',
