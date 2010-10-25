@@ -129,7 +129,7 @@ class TestCase(unittest.TestCase):
         
         compare = "\n" + \
                   "&Test\n" + \
-                  "  array_var = 0.0, 0.0, 3.7\n" + \
+                  "  array_var = 0, 0, 3.70000004768372\n" + \
                   "/\n"
 
         self.assertEqual(contents, compare)
@@ -154,9 +154,9 @@ class TestCase(unittest.TestCase):
         
         compare = "\n" + \
                   "&Test\n" + \
-                  "  array_var(1,1) = 0.0,  3.7, \n" + \
-                  "array_var(1,2) = 0.0,  0.0, \n" + \
-                  "array_var(1,3) = 7.88,  0.0, \n" + \
+                  "  array_var(1,1) = 0,  3.70000004768372, \n" + \
+                  "array_var(1,2) = 0,  0, \n" + \
+                  "array_var(1,3) = 7.88000011444092,  0, \n" + \
                   "/\n"
 
         self.assertEqual(contents, compare)

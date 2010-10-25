@@ -530,5 +530,7 @@ class FileParser(object):
             else:
                 parsed = _parse_line().parseString(line)
                 data.append(parsed[(fieldstart-1):fieldend])
+                
+        return data
         
                 
