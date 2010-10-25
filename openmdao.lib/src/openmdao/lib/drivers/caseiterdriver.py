@@ -53,7 +53,7 @@ class CaseIterDriverBase(Driver):
         self._egg_required_distributions = None
         self._egg_orphan_modules = None
 
-        self._reply_queue = None  # Replies from server threads.
+        self._reply_q = None  # Replies from server threads.
         self._server_lock = None  # Lock for server data.
 
         # Various per-server data keyed by server name.
@@ -180,7 +180,7 @@ class CaseIterDriverBase(Driver):
 
         # Kick off initial wave of cases.
         self._server_lock = threading.Lock()
-        self._reply_queue = Queue.Queue()
+        self._reply_q = Queue.Queue()
         n_servers = 0
         while n_servers < max_servers:
             if self._stop:
@@ -205,7 +205,8 @@ class CaseIterDriverBase(Driver):
             self._server_cases[name] = None
             self._server_states[name] = _EMPTY
             server_thread = threading.Thread(target=self._service_loop,
-                                             args=(name, resources, credentials))
+                                             args=(name, resources,
+                                                   credentials, self._reply_q))
             server_thread.daemon = True
             server_thread.start()
 
@@ -213,7 +214,7 @@ class CaseIterDriverBase(Driver):
                 # Process any pending events.
                 while self._busy():
                     try:
-                        name, result = self._reply_queue.get(True, 0.1)
+                        name, result, exc = self._reply_q.get(True, 0.1)
                     except Queue.Empty:
                         break  # Timeout.
                     else:
@@ -227,7 +228,7 @@ class CaseIterDriverBase(Driver):
             # Don't start server processing until all servers are started,
             # otherwise we have egg removal issues.
             for name in self._in_use.keys():
-                name, result = self._reply_queue.get()
+                name, result, exc = self._reply_q.get()
                 if self._servers[name] is None:
                     self._logger.debug('server startup failed for %s', name)
                     self._in_use[name] = False
@@ -247,15 +248,21 @@ class CaseIterDriverBase(Driver):
             else:
                 timeout = None
             try:
-                name, result = self._reply_queue.get(timeout=timeout)
+                name, result, exc = self._reply_q.get(timeout=timeout)
             # Hard to force worker to hang, which is handled here.
             except Queue.Empty:  #pragma no cover
                 self._logger.error('Timeout waiting with nothing left to do:')
                 for name, in_use in self._in_use.items():
                     if in_use:
-                        self._logger.error('    %s: %s %s', name,
-                                           self._servers[name],
-                                           self._server_info[name])
+                        try:
+                            server = self._servers[name]
+                            info = self._server_info[name]
+                        except KeyError:
+                            self._logger.error('    %s: no startup reply', name)
+                        else:
+                            self._logger.error('    %s: %s %s', name,
+                                               self._servers[name],
+                                               self._server_info[name])
             else:
                 self._in_use[name] = self._server_ready(name)
 
@@ -265,7 +272,7 @@ class CaseIterDriverBase(Driver):
             queue.put(None)
         for i in range(len(self._queues)):
             try:
-                name, status = self._reply_queue.get(True, 1)
+                name, status, exc = self._reply_q.get(True, 1)
             # Hard to force worker to hang, which is handled here.
             except Queue.Empty:  #pragma no cover
                 pass
@@ -281,7 +288,7 @@ class CaseIterDriverBase(Driver):
 
     def _cleanup(self, remove_egg=True):
         """ Cleanup egg file if necessary. """
-        self._reply_queue = None
+        self._reply_q = None
         self._server_lock = None
 
         self._servers = {}
@@ -437,7 +444,7 @@ class CaseIterDriverBase(Driver):
                 if self.recorder is not None:
                     self.recorder.record(case)
 
-    def _service_loop(self, name, resource_desc, credentials):
+    def _service_loop(self, name, resource_desc, credentials, reply_q):
         """ Each server has an associated thread executing this. """
         set_credentials(credentials)
 
@@ -445,31 +452,41 @@ class CaseIterDriverBase(Driver):
         # Just being defensive, this should never happen.
         if server is None:  #pragma no cover
             self._logger.error('Server allocation for %s failed :-(', name)
-            self._reply_queue.put((name, False))
+            self._reply_q.put((name, False, None))
             return
         else:
+            # Clear egg re-use indicator.
             server_info['egg_file'] = None
 
-        request_queue = Queue.Queue()
+        request_q = Queue.Queue()
 
-        with self._server_lock:
-            self._servers[name] = server
-            self._server_info[name] = server_info
-            self._queues[name] = request_queue
+        try:
+            with self._server_lock:
+                self._servers[name] = server
+                self._server_info[name] = server_info
+                self._queues[name] = request_q
 
-        self._reply_queue.put((name, True))  # ACK startup.
+            reply_q.put((name, True, None))  # ACK startup.
 
-        while True:
-            request = request_queue.get()
-            if request is None:
-                break
-            result = request[0](request[1])
-            self._reply_queue.put((name, result))
-
-        self._logger.critical('%s releasing server', name)
-        RAM.release(server)
-        del server
-        self._reply_queue.put((name, True))  # ACK shutdown.
+            while True:
+                request = request_q.get()
+                if request is None:
+                    reply_q.put((name, True, None))  # ACK shutdown.
+                    break
+                req_exc = None
+                try:
+                    result = request[0](request[1])
+                except Exception as req_exc:
+                    self._logger.error('%s: %s caused %s', request[0], req_exc)
+                reply_q.put((name, result, req_exc))
+        except Exception as exc:  # pragma no cover
+            # This can easily happen if we take a long time to allocate and
+            # we get 'cleaned-up' before we get started.
+            self._logger.error('%s: %s', exc)
+        finally:
+            self._logger.debug('%s releasing server', name)
+            RAM.release(server)
+            del server
 
     def _load_model(self, server):
         """ Load a model into a server. """
