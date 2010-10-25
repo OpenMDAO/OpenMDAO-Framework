@@ -255,11 +255,12 @@ class Component (Container):
             for name in self.list_inputs():
                 valids[name] = True
         else:
-            invalid_ins = self.list_inputs(valid=False)
-            if len(invalid_ins) > 0:
+            valids = self._valid_dict
+            invalid_ins = [inp for inp in self._get_connected_inputs() 
+                                    if valids.get(inp) is False]
+            if invalid_ins:
                 self._call_execute = True
                 self.parent.update_inputs(self.name, invalid_ins)
-                valids = self._valid_dict
                 for name in invalid_ins:
                     valids[name] = True
             elif self._call_execute == False and len(self.list_outputs(valid=False)):
@@ -1067,24 +1068,24 @@ class Component (Container):
         outs = self.list_outputs()
         valids = self._valid_dict
         
+        self._call_execute = True
+
+        # only invalidate connected inputs. inputs that are not connected
+        # should never be invalidated
+        if varnames is None:
+            for var in self._get_connected_inputs():
+                valids[var] = False
+        else:
+            conn = self._get_connected_inputs()
+            for var in varnames:
+                if var in conn:
+                    valids[var] = False
+
         # this assumes that all outputs are either valid or invalid
         if outs and (valids[outs[0]] is False):
             # nothing to do because our outputs are already invalid
             return []
         
-        self._call_execute = True
-
-        # only invalidate connected inputs. inputs that are not connected
-        # should never be invalidated
-        connected_inputs = self._get_connected_inputs()
-        if varnames is None:
-            for var in connected_inputs:
-                valids[var] = False
-        else:
-            for var in varnames:
-                if var in connected_inputs:
-                    valids[var] = False
-
         for out in outs:
             valids[out] = False
             
