@@ -1,3 +1,6 @@
+"""Psudo package containing providing a central place to access all of the
+OpenMDAO datatypes standard library"""
+
 # Traits that we've modified
 from openmdao.lib.datatypes.enum import Enum
 from openmdao.lib.datatypes.float import Float

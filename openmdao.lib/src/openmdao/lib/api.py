@@ -17,6 +17,7 @@ from openmdao.lib.components.prob_intersect import ProbIntersect
 from openmdao.lib.components.pareto_filter import ParetoFilter
 from openmdao.lib.components.expected_improvement import ExpectedImprovement
 from openmdao.lib.components.expected_improvement_multiobj import MultiObjExpectedImprovement
+from openmdao.lib.components.mux import Mux, DeMux
 
 
 # CaseIterators

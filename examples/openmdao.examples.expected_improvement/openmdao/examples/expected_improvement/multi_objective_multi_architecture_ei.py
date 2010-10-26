@@ -1,9 +1,13 @@
+"""A sample problem showing the extention of the EGO algorithm to multiple 
+architecture concepts. Here there are two concepts used, and each one is has 
+sections of its own design space which are pareto dominant. EGO tailors sample 
+points in each architecture to focus on areas that are globally dominant, and 
+avoids areas that are locally dominant, but globally dominated"""
+
 import os
 from tempfile import mkdtemp
 import os.path
 import shutil
-
-from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array
 
 from openmdao.main.api import Assembly, Component, Driver, \
      SequentialWorkflow, Case
@@ -11,20 +15,16 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-from openmdao.lib.components.metamodel import MetaModel
-from openmdao.lib.components.expected_improvement_multiobj import MultiObjExpectedImprovement
-from openmdao.lib.components.prob_intersect import ProbIntersect
+from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array
+
+from openmdao.lib.api import MetaModel, MultiObjExpectedImprovement, Mux,\
+     ProbIntersect, ParetoFilter, DOEdriver, Genetic, CaseIteratorDriver,\
+     DBCaseIterator, DBCaseRecorder, DumpCaseRecorder
+
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
-from openmdao.lib.components.pareto_filter import ParetoFilter
-from openmdao.lib.drivers.doedriver import DOEdriver
-from openmdao.lib.drivers.genetic import Genetic
 
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
-from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
-from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
-from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
-from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
 
 
 from openmdao.examples.expected_improvement.alg_component1 import Alg_Component1
@@ -222,7 +222,6 @@ class Analysis(Assembly):
         self.MOEI_opt.elitism = True
         #self.MOEI_opt.seed = 1
         self.MOEI_opt.add_parameter("c1.x")
-        #self.MOEI_opt.add_objective("MOEI.PI")
         self.MOEI_opt.add_objective("MOEI.EI")
 
         self.MOEI_opt.force_execute = True
@@ -236,7 +235,7 @@ class Analysis(Assembly):
         self.iter.iterations = 12
         #self.iter.add_stop_condition('MOEI.EI <= .00001')
         
-        self.add("muxer",TwoMux())
+        self.add("muxer",Mux(2))
         
         #Iteration Heirarchy
         self.driver.workflow.add([self.DOE_trainer1, self.DOE_trainer2,self.iter])
@@ -252,9 +251,9 @@ class Analysis(Assembly):
         
         #Data Connections
         self.connect("gfilter.pareto_set","MOEI.best_cases")
-        self.connect("c1.f1","muxer.one")
-        self.connect("c1.f2","muxer.two")
-        self.connect("muxer.out","MOEI.predicted_values")
+        self.connect("c1.f1","muxer.input_1")
+        self.connect("c1.f2","muxer.input_2")
+        self.connect("muxer.output","MOEI.predicted_values")
 
         
     def cleanup(self):
