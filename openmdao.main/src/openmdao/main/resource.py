@@ -14,7 +14,11 @@ import time
 import traceback
 
 from openmdao.main import mp_distributing
-from openmdao.main.objserverfactory import ObjServerFactory, ObjServer
+from openmdao.main.mp_support import register
+from openmdao.main.objserverfactory import ObjServerFactory
+from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
+                               rbac
+
 from openmdao.util.eggloader import check_requirements
 from openmdao.util.wrkpool import WorkerPool
 
@@ -32,10 +36,15 @@ class ResourceAllocationManager(object):
     _RAM = None  # Singleton.
 
     def __init__(self):
+        credentials = get_credentials()
+        if credentials is None:
+            set_credentials(Credentials())
+
         self._logger = logging.getLogger('RAM')
         self._allocations = 0
         self._allocators = []
         self._allocators.append(LocalAllocator('LocalHost'))
+        self._deployed_servers = {}
 
     @staticmethod
     def get_instance():
@@ -140,15 +149,17 @@ class ResourceAllocationManager(object):
                                                best_criteria)
                 if server is not None:
                     server_info = {
-                        'name':server.get_name(),
-                        'pid':server.get_pid(),
-                        'host':server.get_host()
+                        'name': name,
+                        'pid':  server.pid,
+                        'host': server.host
                     }
                     self._logger.debug('allocated %s pid %d on %s',
-                                       server_info['name'], server_info['pid'],
+                                       name, server_info['pid'],
                                        server_info['host'])
+                    self._deployed_servers[name] = (best_allocator, server, server_info)
                     return (server, server_info)
-                else:
+                # Difficult to generate deployable request that won't deploy...
+                else:  #pragma no cover
                     deployment_retries += 1
                     if deployment_retries > 10:
                         self._logger.error('deployment failed too many times.')
@@ -157,7 +168,8 @@ class ResourceAllocationManager(object):
                     best_estimate = -1
             elif best_estimate != -1:
                 return (None, None)
-            else:
+            # Difficult to generate deployable request that won't deploy...
+            else:  #pragma no cover
                 time.sleep(1)  # Wait a bit between retries.
 
     @staticmethod
@@ -186,7 +198,8 @@ class ResourceAllocationManager(object):
                 return best_criteria['hostnames']
             elif best_score != -1:
                 return None
-            else:
+            # Difficult to generate deployable request that won't deploy...
+            else:  #pragma no cover
                 time.sleep(1)  # Wait a bit between retries.
 
     def _get_estimates(self, resource_desc, need_hostnames=False):
@@ -202,7 +215,8 @@ class ResourceAllocationManager(object):
             if (best_estimate == -2 and estimate >= -1) or \
                (best_estimate == 0  and estimate >  0) or \
                (best_estimate >  0  and estimate < best_estimate):
-                if need_hostnames and not 'hostnames' in criteria:
+                # All current allocators support 'hostnames'.
+                if need_hostnames and not 'hostnames' in criteria:  #pragma no cover
                     self._logger.debug("allocator %s is missing 'hostnames'",
                                        allocator.name)
                 else:
@@ -217,23 +231,30 @@ class ResourceAllocationManager(object):
         """
         Release a server (proxy).
 
-        server: :mod:`multiprocessing` proxy
+        server: :class:`OpenMDAO_Proxy`
             Server to be released.
         """
-        name = server.get_name()
+        ram = ResourceAllocationManager.get_instance()
+        with ResourceAllocationManager._lock:
+            return ram._release(server)
+
+    def _release(self, server):
+        """ Release a server (proxy). """
+        name = server.name
         try:
-            server.cleanup()
-        except Exception:
-            trace = traceback.format_exc()
-            ram = ResourceAllocationManager.get_instance()
-            try:
-                ram._logger.warning('caught exception during cleanup of %s: %s',
-                                    name, trace)
-            except Exception:
-                print >> sys.stderr, \
-                      'RAM: caught exception logging cleanup of %s: %s', \
-                      name, trace
+            allocator = self._deployed_servers[name][0]
+        # Just being defensive.
+        except KeyError:  #pragma no cover
+            self._logger.error('server %r not found', name)
+            return
+
+        try:
+            allocator.release(server)
+        # Just being defensive.
+        except Exception as exc:  #pragma no cover
+            self._logger.error("Can't release %s: %s", server, exc)
         del server
+        del self._deployed_servers[name]
 
 
 class ResourceAllocator(ObjServerFactory):
@@ -243,15 +264,11 @@ class ResourceAllocator(ObjServerFactory):
     """
 
     def __init__(self, name):
-        super(ResourceAllocator, self).__init__()
+        super(ResourceAllocator, self).__init__(name)
         self.name = name
-        self._logger = logging.getLogger(name)
 
-    def get_name(self):
-        """ Returns this allocator's name. """
-        return self.name
-
-    def max_servers(self, resource_desc):
+    # To be implemented by real allocator.
+    def max_servers(self, resource_desc):  #pragma no cover
         """
         Return the maximum number of servers which could be deployed for
         `resource_desc`.  The value needn't be exact, but performance may
@@ -263,7 +280,8 @@ class ResourceAllocator(ObjServerFactory):
         """
         raise NotImplementedError
 
-    def time_estimate(self, resource_desc):
+    # To be implemented by real allocator.
+    def time_estimate(self, resource_desc):  #pragma no cover
         """
         Return ``(estimate, criteria)`` indicating how well this resource
         allocator can satisfy the `resource_desc` request.  The estimate will
@@ -291,9 +309,7 @@ class ResourceAllocator(ObjServerFactory):
         resource_value: list
             List of Distributions.
         """
-        required = []
-        for dist in resource_value:
-            required.append(dist.as_requirement())
+        required = [dist.as_requirement() for dist in resource_value]
         not_avail = check_requirements(sorted(required), logger=self._logger)
         if not_avail:  # Distribution not found or version conflict.
             return (-2, {'required_distributions' : not_avail})
@@ -320,7 +336,8 @@ class ResourceAllocator(ObjServerFactory):
             return (-2, {'orphan_modules' : not_found})
         return (0, None)
 
-    def deploy(self, name, resource_desc, criteria):
+    # To be implemented by real allocator.
+    def deploy(self, name, resource_desc, criteria):  #pragma no cover
         """
         Deploy a server suitable for `resource_desc`.
         Returns a proxy to the deployed server.
@@ -353,10 +370,12 @@ class LocalAllocator(ResourceAllocator):
         else:
             try:
                 self.total_cpus = multiprocessing.cpu_count()
-            except NotImplementedError:
+            # Just being defensive (according to docs this could happen).
+            except NotImplementedError:  # pragma no cover
                 self.total_cpus = 1
         self.max_load = max(max_load, 0.5)  # Ensure > 0!
 
+    @rbac('*')
     def max_servers(self, resource_desc):
         """
         Returns `total_cpus` * `max_load` if `resource_desc` is supported,
@@ -370,6 +389,7 @@ class LocalAllocator(ResourceAllocator):
             return 0  # Incompatible with resource_desc.
         return max(int(self.total_cpus * self.max_load), 1)
 
+    @rbac('*')
     def time_estimate(self, resource_desc):
         """
         Returns ``(estimate, criteria)`` indicating how well this allocator can
@@ -394,7 +414,8 @@ class LocalAllocator(ResourceAllocator):
         # Check system load.
         try:
             loadavgs = os.getloadavg()
-        except AttributeError:
+        # Not available on Windows.
+        except AttributeError:  #pragma no cover
             criteria = {
                 'hostnames'  : [socket.gethostname()],
                 'total_cpus' : self.total_cpus,
@@ -411,7 +432,8 @@ class LocalAllocator(ResourceAllocator):
         }
         if (loadavgs[0] / self.total_cpus) < self.max_load:
             return (0, criteria)
-        else:
+        # Tests force max_load high to avoid other issues.
+        else:  #pragma no cover
             return (-1, criteria)  # Try again later.
 
     def _check_compatibility(self, resource_desc, log_failure):
@@ -470,6 +492,7 @@ class LocalAllocator(ResourceAllocator):
 
         return (0, {})
 
+    @rbac('*')
     def deploy(self, name, resource_desc, criteria):
         """
         Deploy a server suitable for `resource_desc`.
@@ -484,30 +507,19 @@ class LocalAllocator(ResourceAllocator):
         criteria: dict
             The dictionary returned by :meth:`time_estimate`.
         """
-        return self.create(typname='', name=name)
+        try:
+            return self.create(typname='', name=name)
+        # Shouldn't happen...
+        except Exception as exc:  #pragma no cover
+            self._logger.error('create failed: %s', exc)
+            return None
 
-    @staticmethod
-    def register(manager):
-        """
-        Register :class:`LocalAllocator` proxy info with `manager`.
-        Not typically called by user code.
-
-        manager: Manager
-            :mod:`multiprocessing` Manager to register with.
-        """
-        name = 'LocalAllocator'
-        ObjServer.register(manager)
-        method_to_typeid = {
-            'deploy': 'ObjServer',
-        }
-        manager.register(name, LocalAllocator,
-                         method_to_typeid=method_to_typeid)
-
-LocalAllocator.register(mp_distributing.Cluster)
-LocalAllocator.register(mp_distributing.HostManager)
+register(LocalAllocator, mp_distributing.Cluster)
+register(LocalAllocator, mp_distributing.HostManager)
 
 
-class ClusterAllocator(object):
+# Cluster allocation requires ssh configuration and multiple hosts.
+class ClusterAllocator(object):  #pragma no cover
     """
     Cluster-based resource allocator.  This allocator manages a collection
     of :class:`LocalAllocator`, one for each machine in the cluster.
@@ -532,10 +544,10 @@ class ClusterAllocator(object):
         for machine in machines:
             host = mp_distributing.Host(machine['hostname'],
                                         python=machine['python'])
-            LocalAllocator.register(host)
+            host.register(LocalAllocator)
             hosts.append(host)
 
-        self.cluster = mp_distributing.Cluster(hosts, [])
+        self.cluster = mp_distributing.Cluster(hosts, [], authkey='PublicKey')
         self.cluster.start()
         self._logger.debug('server listening on %s', self.cluster.address)
 
@@ -555,7 +567,8 @@ class ClusterAllocator(object):
                 host_id = host[dash+1:]
 
             if host_ip not in self._allocators:
-                self._allocators[host_ip] = manager.LocalAllocator(host)
+                self._allocators[host_ip] = \
+                    manager.openmdao_main_resource_LocalAllocator(host)
                 self._logger.debug('LocalAllocator for %s at %s',
                                    slot.host.hostname, host_id)
 
@@ -576,6 +589,7 @@ class ClusterAllocator(object):
         resource_desc: dict
             Description of required resources.
         """
+        credentials = get_credentials()
         with self._lock:
             # Drain _reply_q.
             while True:
@@ -590,7 +604,8 @@ class ClusterAllocator(object):
             for i, allocator in enumerate(self._allocators.values()):
                 if i < max_workers:
                     worker_q = WorkerPool.get()
-                    worker_q.put((self._get_count, (allocator, resource_desc),
+                    worker_q.put((self._get_count,
+                                  (allocator, resource_desc, credentials),
                                   {}, self._reply_q))
                 else:
                     todo.append(allocator)
@@ -609,22 +624,27 @@ class ClusterAllocator(object):
                     WorkerPool.release(worker_q)
                 else:
                     worker_q.put((self._get_count,
-                                  (next_allocator, resource_desc),
+                                  (next_allocator, resource_desc, credentials),
                                   {}, self._reply_q))
                 count = retval
                 if count:
                     total += count
             return total
 
-    def _get_count(self, allocator, resource_desc):
+    def _get_count(self, allocator, resource_desc, credentials):
         """ Get `max_servers` from an allocator. """
+        set_credentials(credentials)
         count = 0
         try:
             count = allocator.max_servers(resource_desc)
         except Exception, exc:
             msg = '%s\n%s' % (exc, traceback.format_exc())
-            self._logger.error('allocator %s caught exception %s',
-                               allocator.get_name(), msg)
+            try:
+                name = allocator.name
+            except Exception:
+                name = '<unavailable>'
+            self._logger.error('allocator %s.max_servers() caught exception %s',
+                               name, msg)
         return count
 
     def time_estimate(self, resource_desc):
@@ -648,6 +668,7 @@ class ClusterAllocator(object):
         resource_desc: dict
             Description of required resources.
         """
+        credentials = get_credentials()
         n_cpus = resource_desc.get('n_cpus', 0)
         if n_cpus:
             # Spread across LocalAllocators.
@@ -679,7 +700,7 @@ class ClusterAllocator(object):
                 if i < max_workers:
                     worker_q = WorkerPool.get()
                     worker_q.put((self._get_estimate,
-                                  (allocator, resource_desc),
+                                  (allocator, resource_desc, credentials),
                                   {}, self._reply_q))
                 else:
                     todo.append(allocator)
@@ -698,7 +719,7 @@ class ClusterAllocator(object):
                     WorkerPool.release(worker_q)
                 else:
                     worker_q.put((self._get_estimate,
-                                  (next_allocator, resource_desc),
+                                  (next_allocator, resource_desc, credentials),
                                   {}, self._reply_q))
 
                 if retval is None:
@@ -755,23 +776,29 @@ class ClusterAllocator(object):
 
             return (best_estimate, best_criteria)
 
-    def _get_estimate(self, allocator, resource_desc):
+    def _get_estimate(self, allocator, resource_desc, credentials):
         """ Get (estimate, criteria) from an allocator. """
+        set_credentials(credentials)
         try:
             estimate, criteria = allocator.time_estimate(resource_desc)
+        except Exception, exc:
+            msg = '%s\n%s' % (exc, traceback.format_exc())
+            try:
+                name = allocator.name
+            except Exception:
+                name = '<unavailable>'
+            self._logger.error('allocator %s.time_estimate() caught exception %s',
+                               name, msg)
+            estimate = None
+            criteria = None
+        else:
             if estimate == 0:
                 self._logger.debug('allocator %s returned %g (%g)',
-                                   allocator.get_name(), estimate,
+                                   allocator.name, estimate,
                                    criteria['loadavgs'][0])
             else:
                 self._logger.debug('allocator %s returned %g',
-                                   allocator.get_name(), estimate)
-        except Exception, exc:
-            msg = '%s\n%s' % (exc, traceback.format_exc())
-            self._logger.error('allocator %s caught exception %s',
-                               allocator.get_name(), msg)
-            estimate = None
-            criteria = None
+                                   allocator.name, estimate)
 
         return (allocator, estimate, criteria)
 
@@ -793,6 +820,7 @@ class ClusterAllocator(object):
         with self._lock:
             allocator = criteria['allocator']
             self._last_deployed = allocator
+            del criteria['allocator']  # Don't pass a proxy without a server!
         return allocator.deploy(name, resource_desc, criteria)
 
     def shutdown(self):

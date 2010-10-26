@@ -20,6 +20,7 @@ from enthought.traits.api import Bool, List, Str, Instance, implements, TraitErr
 from openmdao.main.container import Container
 from openmdao.main.interfaces import IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
+from openmdao.main.rbac import rbac
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 
@@ -261,6 +262,7 @@ class Component (Container):
             valids[name] = True
         self._call_execute = False
         
+    @rbac('*', 'owner')
     def run (self, force=False):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
@@ -328,6 +330,7 @@ class Component (Container):
         if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
             self._num_input_caseiters -= 1
 
+    @rbac(('owner', 'user'))
     def is_valid(self):
         """Return False if any of our variables is invalid."""
         if self._call_execute:
@@ -355,7 +358,8 @@ class Component (Container):
         
     def new_trait(self, name):
         pass
-        
+
+    @rbac(('owner', 'user'))
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
@@ -402,7 +406,8 @@ class Component (Container):
             self._container_names = [n for n,v in self.items() 
                                                    if isinstance(v,Container)]            
         return self._container_names
-            
+
+    @rbac(('owner', 'user'))
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency resulting from ExprEvaluators in this Component.
@@ -981,7 +986,8 @@ class Component (Container):
                 self.raise_exception(
                     "cannot set valid flag of '%s' because "
                     "it's not an io trait." % name, RuntimeError)
-            
+
+    @rbac(('owner', 'user'))
     def invalidate_deps(self, varnames=None, notify_parent=False):
         """Invalidate all of our outputs if they're not invalid already.
         For a typical Component, this will always be all or nothing, meaning

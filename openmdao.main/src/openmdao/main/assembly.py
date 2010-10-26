@@ -17,6 +17,8 @@ from networkx.algorithms.traversal import is_directed_acyclic_graph, \
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression, ExpressionList
+from openmdao.main.rbac import rbac
+
 
 class PassthroughTrait(TraitType):
     """A trait that can use another trait for validation, but otherwise is
@@ -285,6 +287,7 @@ class Assembly (Component):
         """
         return self.comp_graph.list_connections(show_passthrough)
 
+    @rbac('owner')
     def update_inputs(self, compname, varnames):
         """Transfer input data to input variables on the specified component.
         The varnames iterator is assumed to contain local names (no component name), 

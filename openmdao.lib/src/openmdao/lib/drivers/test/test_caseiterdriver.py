@@ -7,9 +7,11 @@ import logging
 import os.path
 import pkg_resources
 import platform
+import shutil
 import sys
+import time
 import unittest
-from nose import SkipTest
+import nose
 
 import random
 import numpy.random as numpy_random
@@ -17,12 +19,14 @@ import numpy.random as numpy_random
 from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly, Component, Case, set_as_top
+from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
+
 from openmdao.lib.api import Float, Bool, Array, ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
-from openmdao.main.eggchecker import check_save_load
+
 from openmdao.util.testutil import find_python
 
 
@@ -161,14 +165,13 @@ class TestCase(unittest.TestCase):
             self.fail('Expected RuntimeError')
 
     def test_concurrent(self):
-        # FIXME: temporarily disable this test on windows because it loops
-        # over a set of tests forever when running under a virtualenv
-        if sys.platform == 'win32':
-            raise SkipTest('test_concurrent skipped')
         # This can always test using a LocalAllocator (forked processes).
         # It can also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
         logging.debug('test_concurrent')
+
+        for path in glob.glob('Sim-*'):
+            shutil.rmtree(path)
 
         # Ensure we aren't held up by local host load problems.
         local = ResourceAllocationManager.get_allocator(0)
@@ -187,18 +190,18 @@ class TestCase(unittest.TestCase):
                 machines.append({'hostname':node, 'python':python})
             if machines:
                 name = node.replace('.', '_')
-                cluster = ClusterAllocator(name, machines)
-                ResourceAllocationManager.insert_allocator(0, cluster)
+                alloc = ResourceAllocationManager.get_allocator(0)
+                if alloc.name != name:  # Don't add multiple copies.
+                    cluster = ClusterAllocator(name, machines)
+                    ResourceAllocationManager.insert_allocator(0, cluster)
 
         self.run_cases(sequential=False)
-        self.assertEqual(glob.glob('Sim-*'), [])
 
         logging.debug('')
         logging.debug('test_concurrent_errors')
         self.generate_cases(force_errors=True)
         self.model.driver._call_execute = True
         self.run_cases(sequential=False, forced_errors=True)
-        self.assertEqual(glob.glob('Sim-*'), [])
 
     @staticmethod
     def local_ssh_available():
@@ -220,7 +223,7 @@ class TestCase(unittest.TestCase):
             return False
 
     def run_cases(self, sequential, forced_errors=False):
-        """ Evaluate cases, either sequentially or across  multiple servers. """
+        """ Evaluate cases, either sequentially or across multiple servers. """
         self.model.driver.sequential = sequential
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
@@ -336,8 +339,7 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
 
-if __name__ == "__main__":
-    import nose
+if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()

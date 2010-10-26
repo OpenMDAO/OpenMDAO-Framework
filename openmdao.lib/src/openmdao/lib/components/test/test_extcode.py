@@ -5,6 +5,7 @@ Test the ExternalCode component.
 import logging
 import os.path
 import pkg_resources
+import platform
 import shutil
 import sys
 import unittest
@@ -13,8 +14,12 @@ import nose
 from openmdao.main.api import Assembly, FileMetadata, SimulationRoot, set_as_top
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunInterrupted
-from openmdao.main.resource import ResourceAllocationManager
+from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
+
 from openmdao.lib.components.external_code import ExternalCode
+
+from openmdao.util.testutil import assert_raises, find_python
+
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -83,16 +88,25 @@ class TestCase(unittest.TestCase):
             os.remove(dummy)
 
     def test_remote(self):
-        # FIXME: temporarily disable this test on windows to get around
-        # a problem where a set of tests is run repeatedly for reasons unknown
-        if sys.platform == 'win32':
-            raise nose.SkipTest()
         logging.debug('')
         logging.debug('test_remote')
 
         # Ensure we aren't held up by local host load problems.
         local = ResourceAllocationManager.get_allocator(0)
         local.max_load = 10
+
+        # Exercise cluster deployment if on this GRC cluster front-end.
+        node = platform.node()
+        if node.startswith('gxterm'):
+            name = node.replace('.', '_')
+            alloc = ResourceAllocationManager.get_allocator(0)
+            if alloc.name != name:  # Don't add multiple copies.
+                python = find_python()
+                machines = []
+                for i in range(55):
+                    machines.append({'hostname':'gx%02d' % i, 'python':python})
+                cluster = ClusterAllocator(name, machines)
+                ResourceAllocationManager.insert_allocator(0, cluster)
 
         dummy = 'dummy_output'
         if os.path.exists(dummy):
@@ -122,7 +136,7 @@ class TestCase(unittest.TestCase):
 
     def test_bad_alloc(self):
         logging.debug('')
-        logging.debug('test_remote')
+        logging.debug('test_bad_alloc')
 
         extcode = set_as_top(ExternalCode())
         extcode.command = 'python sleep.py'
@@ -141,6 +155,10 @@ class TestCase(unittest.TestCase):
 
         extcode = set_as_top(ExternalCode())
 
+        assert_raises(self, "extcode.copy_inputs('Inputs', '*.inp')",
+                      globals(), locals(), RuntimeError,
+                      ": inputs_dir 'Inputs' does not exist")
+
         os.mkdir('Inputs')
         try:
             shutil.copy('sleep.py', os.path.join('Inputs', 'junk.inp'))
@@ -150,6 +168,10 @@ class TestCase(unittest.TestCase):
             shutil.rmtree('Inputs')
             if os.path.exists('junk.inp'):
                 os.remove('junk.inp')
+
+        assert_raises(self, "extcode.copy_results('Outputs', '*.dat')",
+                      globals(), locals(), RuntimeError,
+                      ": results_dir 'Outputs' does not exist")
 
         os.mkdir('Outputs')
         try:
@@ -261,7 +283,7 @@ class TestCase(unittest.TestCase):
             self.assertEqual(comp.timed_out, False)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import nose
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')

@@ -4,10 +4,12 @@ Test ShellProc functions.
 
 import logging
 import os.path
+import signal
 import sys
 import unittest
 
-from openmdao.util.shellproc import call, check_call, CalledProcessError
+from openmdao.util.shellproc import call, check_call, CalledProcessError, \
+                                    ShellProc
 
 
 class TestCase(unittest.TestCase):
@@ -58,10 +60,30 @@ class TestCase(unittest.TestCase):
             if os.path.exists('stderr'):
                 os.remove('stderr')
 
+    def test_errormsg(self):
+        logging.debug('')
+        logging.debug('test_errormsg')
+
+        cmd = 'dir' if sys.platform == 'win32' else 'ls'
+        try:
+            proc = ShellProc(cmd, stdout='stdout', stderr='stderr')
+            proc.wait()
+        finally:
+            if os.path.exists('stdout'):
+                os.remove('stdout')
+            if os.path.exists('stderr'):
+                os.remove('stderr')
+
+        msg = proc.error_message(-signal.SIGKILL)
+        if sys.platform == 'win32':
+            self.assertEqual(msg, '')
+        else:
+            self.assertEqual(msg, ': SIGKILL')
+
 
 if __name__ == '__main__':
     import nose
-    sys.argv.append('--cover-package=openmdao')
+    sys.argv.append('--cover-package=openmdao.util')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 
