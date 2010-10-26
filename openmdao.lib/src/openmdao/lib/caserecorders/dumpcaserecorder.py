@@ -1,7 +1,7 @@
 
 import sys
 
-from enthought.traits.api import implements
+from openmdao.lib.datatypes.api import implements
 
 from openmdao.main.interfaces import ICaseRecorder
 

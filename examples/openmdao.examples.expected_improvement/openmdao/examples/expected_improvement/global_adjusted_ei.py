@@ -19,7 +19,6 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
-from openmdao.lib.api import Instance, Str, Array
 
 from openmdao.main.api import Assembly, Component, Driver, \
      SequentialWorkflow, Case
@@ -27,24 +26,18 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-from openmdao.lib.components.metamodel import MetaModel
-from openmdao.lib.components.expected_improvement_multiobj import MultiObjExpectedImprovement
-from openmdao.lib.components.prob_intersect import ProbIntersect
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
-from openmdao.lib.components.pareto_filter import ParetoFilter
-from openmdao.lib.drivers.doedriver import DOEdriver
-from openmdao.lib.drivers.genetic import Genetic
-
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
-from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
-from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
-from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
-from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
-from openmdao.lib.api import Float, Int
+
+from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array
+
+from openmdao.lib.api import MetaModel,MultiObjExpectedImprovement,\
+     ProbIntersect,ParetoFilter,DOEdriver,Genetic,CaseIteratorDriver,\
+     DBCaseRecorder,DumpCaseRecorder,DBCaseIterator, Mux
 
 from openmdao.examples.expected_improvement.alg_component1 import Alg_Component1
-from openmdao.examples.expected_improvement.alg_component3 import Alg_Component3
+from openmdao.examples.expected_improvement.alg_component2 import Alg_Component2
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
@@ -67,8 +60,8 @@ class Iterator(Driver):
         return False
     
 class MyDriver(Driver):
-    """Custom driver to control max_iterations and make plots throught the iteration 
-    process"""
+    """Custom driver used to retrain the surrogate with the new point and plot
+    the results every other iteration. """
     def __init__(self,doc=None):
         super(MyDriver,self).__init__(doc)
         
@@ -77,8 +70,8 @@ class MyDriver(Driver):
         self.outs = ['c1.f1','c1.f2']
     
     def plot_results(self):
-        """function to plot the training data and pareto frontier every two
-        iterations"""
+        """plot the training data and pareto frontier every other
+        iteration"""
         
         #calculation to setup the proper identifiers for subplot
         base = analysis.iter.max_iterations/2*100+10
@@ -176,17 +169,10 @@ class MyDriver(Driver):
         self.recorder.record(case)
         
         self.plot_results()
-
-class TwoMux(Component):
-    one = Instance(NormalDistribution,iotype="in")
-    two = Instance(NormalDistribution,iotype="in")
-    out = Array(iotype="out")
-    def execute(self):
-        self.out = [self.one,self.two]
         
 class Analysis(Assembly):
     """
-    Implements an adaptive sampling scheme based on GAEI
+    Implements an adaptive sampling scheme based on GAEI.
     GAEI combines multiobjective EI with a measure of 
     probability that a new design point is close to a 
     Pareto intersection.
@@ -208,7 +194,7 @@ class Analysis(Assembly):
         #CONCEPT C2
         self.add("c2",MetaModel())
         self.c2.surrogate = KrigingSurrogate()
-        self.c2.model = Alg_Component3()
+        self.c2.model = Alg_Component2()
         self.c2.recorder = DBCaseRecorder(':memory:')
         self.c2.force_execute = True
         
@@ -269,7 +255,7 @@ class Analysis(Assembly):
         self.iter.max_iterations = 12
         #self.iter.add_stop_condition('MOEI.EI <= .000001')
         
-        self.add("muxer",TwoMux())
+        self.add("muxer",Mux(2))
         
         #Iteration Heirarchy
         self.driver.workflow.add([self.DOE_trainer1, self.DOE_trainer2,self.iter])
@@ -287,10 +273,10 @@ class Analysis(Assembly):
         self.connect("filter_c1.pareto_set","probInt.primary_pareto")
         self.connect("gfilter.pareto_set","probInt.global_pareto")
         self.connect("gfilter.pareto_set","MOEI.best_cases")
-        self.connect("c1.f1","muxer.one")
-        self.connect("c1.f2","muxer.two")
-        self.connect("muxer.out","MOEI.predicted_values")
-        self.connect("muxer.out","probInt.predicted_values")
+        self.connect("c1.f1","muxer.input_1")
+        self.connect("c1.f2","muxer.input_2")
+        self.connect("muxer.output","MOEI.predicted_values")
+        self.connect("muxer.output","probInt.predicted_values")
         
     def cleanup(self):
         shutil.rmtree(self._tdir, ignore_errors=True)
@@ -299,7 +285,6 @@ if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
     from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
-
     seed = None
     backend = None
     figname = None

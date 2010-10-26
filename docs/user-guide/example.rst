@@ -403,7 +403,7 @@ from its inputs. We must create the variables that define these inputs and outpu
 .. testcode:: Code2
 
     from openmdao.main.api import Component, convert_units
-    from openmdao.lib.api import Float, Int, Enum
+    from openmdao.lib.datatypes.api import Float, Int, Enum
 
     class Transmission(Component):
         """ A simple transmission model."""
@@ -609,7 +609,7 @@ Engine, and Chassis components.
 .. testcode:: Code5
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
 
     from openmdao.examples.enginedesign.transmission import Transmission
     from openmdao.examples.enginedesign.chassis import Chassis
@@ -646,7 +646,7 @@ Now that the components are instantiated in the assembly, they need to be hooked
 	# Note: This block of code does not display in the documentation.
 
 	from openmdao.main.api import Assembly
-	from openmdao.lib.api import Float
+	from openmdao.lib.datatypes.api import Float
 
 	from openmdao.examples.enginedesign.engine import Engine
 	from openmdao.examples.enginedesign.transmission import Transmission
@@ -740,10 +740,10 @@ Now these inputs are available to connect to the components, so we connect them 
 
 .. testsetup:: Code7b
 
-	from enthought.traits.api import implements, Interface
+	from openmdao.lib.datatypes.api import implements, Interface
 
 	from openmdao.main.api import Assembly
-	from openmdao.lib.api import Float, Int
+	from openmdao.lib.datatypes.api import Float, Int
 
 	from openmdao.examples.enginedesign.engine import Engine
 	from openmdao.examples.enginedesign.transmission import Transmission
@@ -925,7 +925,7 @@ A socket can be declared in the DrivingSim class using an *Instance* trait:
 .. testcode:: Socket_to_me
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import Float, Instance
+    from openmdao.lib.datatypes.api import Float, Instance
 
     from openmdao.examples.enginedesign.vehicle import Vehicle
 	

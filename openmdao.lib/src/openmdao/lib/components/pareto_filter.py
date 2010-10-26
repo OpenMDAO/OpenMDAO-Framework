@@ -1,10 +1,9 @@
 """ Pareto Filter -- finds non-dominated cases """
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Instance
+from openmdao.lib.datatypes.api import Instance, Array
 
 from openmdao.main.component import Component
-from openmdao.lib.datatypes.array import Array
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 

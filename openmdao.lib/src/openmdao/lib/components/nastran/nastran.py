@@ -10,10 +10,9 @@ from shutil import rmtree
 import re
 import copy
 
-from openmdao.lib.api import Float, Str, Bool
 from openmdao.lib.components.external_code import ExternalCode
 
-from enthought.traits.api import TraitError
+from openmdao.lib.datatypes.api import TraitError, Float, Int, Array, Str, Bool
 
 from openmdao.util.filewrap import FileParser
 
@@ -21,10 +20,6 @@ from nastran_replacer import NastranReplacer
 from nastran_maker import NastranMaker
 from nastran_parser import NastranParser
 from nastran_util import stringify, nastran_replace_inline
-
-from openmdao.lib.datatypes.float import Float
-from openmdao.lib.datatypes.int import Int
-from openmdao.lib.datatypes.array import Array
 
 class NastranComponent(ExternalCode):
     """All Nastran-capable components should be subclasses of NastranComponent

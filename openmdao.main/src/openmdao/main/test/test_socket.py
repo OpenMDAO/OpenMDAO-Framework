@@ -1,11 +1,10 @@
 
 import unittest
 
-from enthought.traits.api import TraitError
-
 from openmdao.main.api import Assembly, Component, Case
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.lib.api import  Int, Instance, ListCaseIterator
+from openmdao.lib.api import ListCaseIterator
+from openmdao.lib.datatypes.api import Int, Instance, TraitError
 
 class SocketComp(Assembly):
     iterator = Instance(ICaseIterator, allow_none=False, desc='cases to evaluate')

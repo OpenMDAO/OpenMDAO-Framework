@@ -45,7 +45,8 @@ can be directly set:
 .. testsetup:: parameter_interface
 
     from openmdao.main.api import Component, Assembly
-    from openmdao.lib.api import Float, Bool, CONMINdriver
+    from openmdao.lib.datatypes.api import Float, Bool
+    from openmdao.lib.api import CONMINdriver
     
     class GeoMan(Component):
 

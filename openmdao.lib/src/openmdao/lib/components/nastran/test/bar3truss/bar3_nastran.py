@@ -9,7 +9,7 @@ from numpy import zeros
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Assembly
-from openmdao.lib.api import Float
+from openmdao.lib.datatypes.api import Float
 
 from bar3_static_nastran import Bar3Static
 from bar3_dynamic_nastran import Bar3Dynamic

@@ -9,7 +9,7 @@ import unittest
 from numpy import float32 as numpy_float32
 from numpy import zeros
 
-from openmdao.lib.api import Float, Bool, Int, Str, Array, File
+from openmdao.lib.datatypes.api import Float, Bool, Int, Str, Array, File
 from openmdao.main.api import Container, Component
 from openmdao.util.namelist_util import Namelist
 

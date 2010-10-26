@@ -3,33 +3,27 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
-from openmdao.lib.api import Instance, Str, Array
+from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
 
 from openmdao.main.api import Assembly, Component, Driver, \
      SequentialWorkflow, Case
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.uncertain_distributions import NormalDistribution
+from openmdao.main.hasstopcond import HasStopConditions
 
-from openmdao.lib.components.metamodel import MetaModel
-from openmdao.lib.components.expected_improvement_multiobj import MultiObjExpectedImprovement
+from openmdao.lib.api import MetaModel, MultiObjExpectedImprovement,\
+     ParetoFilter, DOEdriver, Genetic, CaseIteratorDriver, DBCaseIterator,\
+     DBCaseRecorder, DumpCaseRecorder, Mux
+
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
-from openmdao.lib.components.pareto_filter import ParetoFilter
-from openmdao.lib.drivers.doedriver import DOEdriver
-from openmdao.lib.drivers.genetic import Genetic
 
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
-from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
-from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
-from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
-from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
-from openmdao.lib.api import Float, Int
 
 from openmdao.examples.expected_improvement.spiral_component import SpiralComponent
 
 from openmdao.util.decorators import add_delegate
-from openmdao.main.hasstopcond import HasStopConditions
 
 @add_delegate(HasStopConditions)
 class Iterator(Driver):
@@ -48,6 +42,9 @@ class Iterator(Driver):
         return False
     
 class MyDriver(Driver):
+    """Custom driver to retrain the MetaModel each iteration. Also records each 
+    retrain case"""
+    
     def __init__(self,doc=None):
         super(MyDriver,self).__init__(doc)
         
@@ -64,13 +61,6 @@ class MyDriver(Driver):
         case = Case(inputs = inputs,
                     outputs = outputs)
         self.recorder.record(case)
-
-class TwoMux(Component):
-    one = Instance(NormalDistribution,iotype="in")
-    two = Instance(NormalDistribution,iotype="in")
-    out = Array(iotype="out")
-    def execute(self):
-        self.out = [self.one,self.two]
         
 class Analysis(Assembly):
     def __init__(self,*args,**kwargs):
@@ -112,7 +102,6 @@ class Analysis(Assembly):
         self.MOEI_opt.add_parameter("spiral_meta_model.x")
         self.MOEI_opt.add_parameter("spiral_meta_model.y")
         self.MOEI_opt.add_objective("MOEI.EI")
-        #self.MOEI_opt.add_objective("MOEI.PI")
         self.MOEI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
@@ -124,7 +113,7 @@ class Analysis(Assembly):
         self.iter.iterations = 15
         self.iter.add_stop_condition('MOEI.EI <= .0001')
         
-        self.add("EI_mux",TwoMux())
+        self.add("EI_mux",Mux(2))
         
         #Iteration Heirarchy
         self.driver.workflow.add([self.DOE_trainer,self.iter])
@@ -139,11 +128,12 @@ class Analysis(Assembly):
         
         #Data Connections
         self.connect("filter.pareto_set","MOEI.best_cases")
-        self.connect("spiral_meta_model.f1_xy","EI_mux.one")
-        self.connect("spiral_meta_model.f2_xy","EI_mux.two")
-        self.connect("EI_mux.out","MOEI.predicted_values")
+        self.connect("spiral_meta_model.f1_xy","EI_mux.input_1")
+        self.connect("spiral_meta_model.f2_xy","EI_mux.input_2")
+        self.connect("EI_mux.output","MOEI.predicted_values")
         
     def cleanup(self):
+        """cleans up any files left in the temp directory from execution"""
         shutil.rmtree(self._tdir, ignore_errors=True)
 
 if __name__ == "__main__": #pragma: no cover
@@ -151,37 +141,23 @@ if __name__ == "__main__": #pragma: no cover
     from openmdao.main.api import set_as_top
     from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
     
-    #seed = None
-    #backend = None
-    #figname = None
-    #for arg in sys.argv[1:]:
-    #    if arg.startswith('--seed='):
-    #        import random
-    #        seed = int(arg.split('=')[1])
-    #        random.seed(seed)
-    #    if arg.startswith('--backend='):
-    #        backend = arg.split('=')[1]
-    #    if arg.startswith('--figname='):
-    #        figname = arg.split('=')[1]
-    #
-    
     import matplotlib
-    
-    #if backend is not None:
-    #    matplotlib.use(backend)
-    #elif sys.platform == 'win32':
-    #    matplotlib.use('WxAgg')
+    if sys.platform == 'win32':
+        matplotlib.use('WxAgg')
     
     from matplotlib import pyplot as plt, cm 
     from matplotlib.pylab import get_cmap
     from numpy import meshgrid,array, pi,arange,cos,sin
     
+    
+    #create the analysis
     analysis = Analysis()
-    
     set_as_top(analysis)
-    
+    #run the analysis
     analysis.run()
     
+    
+    #plot the samples points, along with the data from the function
     def f1(x,y):
         return cos(x)/x+sin(y)/y
         

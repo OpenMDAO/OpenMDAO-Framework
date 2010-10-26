@@ -5,7 +5,7 @@ import unittest
 from enthought.traits.api import TraitError, List
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.main.expression import Expression, ExpressionList
-from openmdao.lib.api import Float, Str, Instance
+from openmdao.lib.datatypes.api import Float, Str, Instance
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
 

@@ -46,7 +46,7 @@ Disciplines 1 and 2 were implemented in OpenMDAO as components.
 .. testcode:: Disciplines
 
     from openmdao.main.api import Component
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     
     class SellarDiscipline1(Component):
         """Component containing Discipline 1"""
@@ -146,7 +146,7 @@ to the outputs.
 .. testcode:: Broadcaster
 
     from openmdao.main.api import Component
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     
     class Broadcaster(Component):
         """Component that holds some design variables.

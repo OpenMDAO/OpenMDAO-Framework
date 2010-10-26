@@ -5,10 +5,8 @@ from numpy import exp, abs, pi, array,isnan,sum,sqrt,argsort
 from scipy.special import erf
 from scipy.integrate import dblquad
 
-from enthought.traits.api import Instance, Str, ListStr, Array
-
-from openmdao.lib.datatypes.enum import Enum
-from openmdao.lib.datatypes.float import Float
+from openmdao.lib.datatypes.api import Instance, Str, ListStr, Enum, \
+     Float, Array
 
 from openmdao.main.component import Component
 
@@ -28,7 +26,7 @@ class ProbIntersect(Component):
                     desc="Names of responses to maximize expected improvement around. \
                     Must be NormalDistribution type.")
     
-    predicted_values = Array(iotype="in",
+    predicted_values = Array(iotype="in",dtype=NormalDistribution,
                         desc="CaseIterator which contains a NormalDistribution for each \
                         response at a location where you wish to calculate EI.")
     
