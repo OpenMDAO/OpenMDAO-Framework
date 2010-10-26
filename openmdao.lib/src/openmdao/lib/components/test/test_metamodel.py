@@ -116,7 +116,7 @@ class MetaModelTestCase(unittest.TestCase):
         asm.comp1.b = 2.
         asm.run()
         assert_rel_error(self, asm.comp2.c, 6., 0.01)
-        assert_rel_error(self, asm.comp2.d, -2.12, 0.01)
+        assert_rel_error(self, asm.comp2.d, -2.12, 0.04)
         
         # set new model and verify disconnect
         asm.metamodel.model = Simple2()

@@ -399,6 +399,8 @@ class CaseIterDriverBase(Driver):
                 except Exception as exc:
                     msg = "Exception setting '%s': %s" % (name, exc)
                     self.raise_exception(msg, ServerError)
+            # FIXME: instead of setting individual inputs, we should
+            # set them all at once
             for name, index, value in case.inputs:
                 try:
                     self._model_set(server, name, index, value)

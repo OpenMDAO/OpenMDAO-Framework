@@ -764,18 +764,13 @@ class Container(HasTraits):
     def _check_trait_settable(self, name, source=None, force=False):
         trait = self.get_trait(name)
         if trait:
-            if trait.iotype == 'in':
-                src = None if force else self._depgraph.get_source(name)
+            if trait.iotype == 'in' and not force:
+                src = self._depgraph.get_source(name)
                 if src is not None and src != source:
-                    if trait.iotype != 'in':
-                        self.raise_exception(
-                            "'%s' is not an input trait and cannot be set" %
-                            name, TraitError)
-                    else:
-                        self.raise_exception(
-                            "'%s' is connected to source '%s' and cannot be "
-                            "set by source '%s'" %
-                            (name,src,source), TraitError)
+                    self.raise_exception(
+                        "'%s' is connected to source '%s' and cannot be "
+                        "set by source '%s'" %
+                        (name,src,source), TraitError)
         else:
             self.raise_exception("object has no attribute '%s'" % name,
                                  TraitError)

@@ -246,7 +246,7 @@ class Component (Container):
             self._call_execute = True
             # we're valid, but we're running anyway because of our input CaseIterators,
             # so we need to notify downstream comps so they grab our new outputs
-            self.invalidate_deps(notify_parent=True)
+            self.invalidate_deps()
 
         if self.parent is None: # if parent is None, we're not part of an Assembly
                                 # so Variable validity doesn't apply. Just execute.

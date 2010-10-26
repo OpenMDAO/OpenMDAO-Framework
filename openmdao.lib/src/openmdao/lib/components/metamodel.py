@@ -98,12 +98,14 @@ class MetaModel(Component):
                 # copy output to boudary
                 setattr(self, name, predicted)
             
-            
-    def invalidate_deps(self, compname=None, varnames=None, notify_parent=False):
+    def invalidate_deps(self, compname=None, varnames=None):
         if compname:  # we were called from our model, which expects to be in an Assembly
             return
-        super(MetaModel, self).invalidate_deps(varnames=varnames, notify_parent=notify_parent)
+        super(MetaModel, self).invalidate_deps(varnames=varnames)
         
+    def child_invalidated(self, childname, outs=None):
+        pass
+
     def exec_counts(self, compnames):
         # we force the run on our model, so it doesn't matter what we tell it the exec counts are
         return [0 for n in compnames]

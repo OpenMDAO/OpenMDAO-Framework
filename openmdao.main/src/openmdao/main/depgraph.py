@@ -99,33 +99,30 @@ class DependencyGraph(object):
         for cname, varset in zip(cnames, varsets):
             stack.append((cname, varset))
         outset = set()  # set of changed boundary outputs
-        visited = set()
         while(stack):
             src, varset = stack.pop()
             for dest,link in self.out_links(src):
-                if link not in visited:
-                    visited.add(link)
-                    if varset is None:
-                        srcvars = set(link._srcs.keys())
+                if varset is None:
+                    srcvars = set(link._srcs.keys())
+                else:
+                    srcvars = varset
+                if dest[0] == '@':  # fake destination node
+                    if dest == '@exout':
+                        if src == '@bout':
+                            outset.add(varset.intersection(link._srcs.keys()))
+                        bouts = ['.'.join([src,n]) for n in link._srcs.keys()]
+                        outset.update(bouts)
+                    elif dest == '@bout':
+                        outset.update(link.get_dests(varset))
                     else:
-                        srcvars = varset
-                    if dest[0] == '@':  # fake destination node
-                        if dest == '@exout':
-                            if src == '@bout':
-                                outset.add(varset.intersection(link._srcs.keys()))
-                            bouts = ['.'.join([src,n]) for n in link._srcs.keys()]
-                            outset.update(bouts)
-                        elif dest == '@bout':
-                            outset.update(link.get_dests(varset))
-                        else:
-                            stack.append((dest, link.get_dests(varset)))
-                    else:
-                        comp = getattr(scope, dest)
-                        dests = link.get_dests(varset)
-                        if dests:
-                            outs = comp.invalidate_deps(varnames=dests)
-                            if (outs is None) or outs:
-                                stack.append((dest, outs))
+                        stack.append((dest, link.get_dests(varset)))
+                else:
+                    comp = getattr(scope, dest)
+                    dests = link.get_dests(varset)
+                    if dests:
+                        outs = comp.invalidate_deps(varnames=dests)
+                        if (outs is None) or outs:
+                            stack.append((dest, outs))
         return outset
 
     def list_connections(self, show_passthrough=True):
@@ -147,7 +144,7 @@ class DependencyGraph(object):
         return conns
 
     def in_map(self, cname, varset):
-        """Yield a tuple of lists of the form (compname, srclist, destlist) for each link,
+        """Yield a tuple of lists of the form (srccompname, srclist, destlist) for each link,
         where all dests in destlist are found in varset.  If no dests are found in varset,
         a tuple will not be returned at all for that link.
         """

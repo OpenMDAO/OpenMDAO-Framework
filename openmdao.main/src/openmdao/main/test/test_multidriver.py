@@ -11,6 +11,7 @@ from openmdao.main.expression import Expression
 from openmdao.lib.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.main.hasobjective import HasObjective
+from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 
 from openmdao.main.component import _show_validity
@@ -28,22 +29,15 @@ class Adder(Component):
         super(Adder, self).__init__()
         self.runcount = 0
         
-    def _input_updated(self, name):
-        print '%s: %s set to %s' % (self.get_pathname(),name,getattr(self,name))
-        super(Adder, self)._input_updated(name)
-
     def execute(self):
         self.sum = self.x1 + self.x2
         self.runcount += 1
-        print 'Adder %s: x1: %s, x2: %s' % (self.name,self.x1,self.x2)
-        _show_validity(self, exclude=['directory','force_execute'], valid=False)
 
-@add_delegate(HasObjective)
+@add_delegate(HasObjective, HasParameters)
 class Summer(Driver):
     """Sums the objective over some number of iterations, feeding
     its current sum back into the specified parameter."""
     
-    design = Expression(iotype='out')
     max_iterations = Int(1, iotype='in')
     sum = Float(iotype='out')
     
@@ -57,10 +51,10 @@ class Summer(Driver):
     
     def start_iteration(self):
         self.itercount = 0
-        self.sum = 0.
+        self.sum = 0.001
         
     def pre_iteration(self):
-        self.design.set(self.sum)
+        self.set_parameters([self.sum])
     
     def post_iteration(self):
         self.sum += self.eval_objective()
@@ -84,18 +78,12 @@ class ExprComp(Component):
         self.runcount = 0
         self.expr = expr
         
-    def _input_updated(self, name):
-        print '%s: %s set to %s' % (self.get_pathname(),name,getattr(self,name))
-        super(ExprComp, self)._input_updated(name)
-
     def execute(self):
         global exec_order
         exec_order.append(self.name)
         x = self.x
         self.f_x = eval(self.expr)
         self.runcount += 1
-        print 'ExprComp %s: x: %s, f_x: %s' % (self.name,self.x,self.f_x)
-        _show_validity(self, exclude=['directory','force_execute'], valid=False)
     
 class ExprComp2(Component):
     """Evaluates an expression based on the inputs x & y and assigns it to f_xy"""
@@ -379,11 +367,11 @@ class MultiDriverTestCase(unittest.TestCase):
         top.add('C1', ExprComp(expr='x+1'))
         top.add('D1', Summer())
         top.D1.add_objective('C1.f_x')
-        top.D1.design = 'C1.x'
+        top.D1.add_parameter('C1.x', low=-999, high=999)
         top.D1.max_iterations = 3
         top.add('D2', Summer())
         top.D2.add_objective('C1.f_x')
-        top.D2.design = 'C1.x'
+        top.D2.add_parameter('C1.x', low=-999, high=999)
         top.D2.max_iterations = 2
         
         top.driver.workflow.add([top.D1, top.D2])
@@ -418,10 +406,10 @@ class MultiDriverTestCase(unittest.TestCase):
         top.add('C1', ExprComp(expr='x+1'))
         top.add('C2', ExprComp(expr='x+1'))
         top.D1.add_objective('C2.f_x')
-        top.D1.design = 'C1.x'
+        top.D1.add_parameter('C1.x', low=-999, high=999)
         top.D1.max_iterations = 2
         top.D2.add_objective('C1.f_x')
-        top.D2.design = 'C2.x'
+        top.D2.add_parameter('C2.x', low=-999, high=999)
         top.D2.max_iterations = 3
 
         top.driver.workflow.add([top.D1, top.D2])
@@ -463,11 +451,11 @@ class MultiDriverTestCase(unittest.TestCase):
         top.connect('C1.f_x', 'C2.x')
         top.add('D1', Summer())
         top.D1.add_objective('C1.f_x')
-        top.D1.design = 'C1.x'
+        top.D1.add_parameter('C1.x', low=-999, high=999)
         top.D1.max_iterations = 2
         top.add('D2', Summer())
         top.D2.add_objective('C2.f_xy')
-        top.D2.design = 'C2.y'
+        top.D2.add_parameter('C2.y', low=-999, high=999)
         top.D2.max_iterations = 3
         
         top.driver.workflow.add([top.D1, top.D2])
