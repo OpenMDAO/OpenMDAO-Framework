@@ -484,7 +484,7 @@ class Container(HasTraits):
             
     def _input_nocheck(self, name, old):
         """This method is substituted for _input_check to avoid source
-        checking suring a set() call when we've already verified the source.
+        checking during a set() call when we've already verified the source.
         """
         pass
     
@@ -852,10 +852,11 @@ class Container(HasTraits):
                 
         # setting of individual Array values doesn't seem to trigger
         # _input_trait_modified, so do it manually
-        # FIXME: I think there's a way to have this 'just work' using
-        #   a different callback signature...
+        # FIXME: if people register other callbacks on Arrays, they won't
+        #        be called if we do it this way
         if old != value:
-            self._input_trait_modified(self, name, arr, arr)
+            self._call_execute = True
+            self._input_updated(name)
             
     def _array_get(self, name, index):
         arr = getattr(self, name)
