@@ -19,7 +19,7 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
-from enthought.traits.api import Instance, Str, Array
+from openmdao.lib.api import Instance, Str, Array
 
 from openmdao.main.api import Assembly, Component, Driver, \
      SequentialWorkflow, Case
@@ -48,10 +48,6 @@ from openmdao.examples.expected_improvement.alg_component3 import Alg_Component3
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
-
-from matplotlib import pyplot as plt, cm
-from matplotlib.pylab import get_cmap
-from numpy import meshgrid,array, pi,arange,cos,sin,linspace,remainder
 
 @add_delegate(HasStopConditions)
 class Iterator(Driver):
@@ -303,6 +299,28 @@ if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
     from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
+
+    seed = None
+    backend = None
+    figname = None
+    for arg in sys.argv[1:]:
+        if arg.startswith('--seed='):
+            import random
+            seed = int(arg.split('=')[1])
+            random.seed(seed)
+        if arg.startswith('--backend='):
+            backend = arg.split('=')[1]
+        if arg.startswith('--figname='):
+            figname = arg.split('=')[1]
+    import matplotlib
+    if backend is not None:
+        matplotlib.use(backend)
+    elif sys.platform == 'win32':
+        matplotlib.use('WxAgg')
+
+	from matplotlib import pyplot as plt, cm
+	from matplotlib.pylab import get_cmap
+	from numpy import meshgrid,array, pi,arange,cos,sin,linspace,remainder
     
     analysis = Analysis()
     

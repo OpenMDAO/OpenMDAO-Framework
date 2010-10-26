@@ -3,7 +3,7 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
-from enthought.traits.api import Instance, Str, Array
+from openmdao.lib.api import Instance, Str, Array
 
 from openmdao.main.api import Assembly, Component, Driver, \
      SequentialWorkflow, Case
