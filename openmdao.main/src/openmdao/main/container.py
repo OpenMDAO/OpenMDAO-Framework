@@ -460,27 +460,38 @@ class Container(HasTraits):
 
         super(Container, self).remove_trait(name)
             
-    # call this if any trait having 'iotype' metadata is changed
+    # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
-        # setting old to Undefined is a kludge to bypass the destination check
-        # when we call this directly from Assembly as part of setting this
-        # attribute from an existing connection.
-        if old is not Undefined and self._depgraph.get_source(name):
+        self._input_check(name, old)
+        self._call_execute = True
+        self._input_updated(name)
+            
+    def _input_check(self, name, old):
+        """This raises an exception if the specified input is attached
+        to a source.
+        """
+        if self._depgraph.get_source(name):
             # bypass the callback here and set it back to the old value
             self._trait_change_notify(False)
             try:
-                setattr(obj, name, old)
+                setattr(self, name, old)
             finally:
                 self._trait_change_notify(True)
             self.raise_exception(
                 "'%s' is already connected to source '%s' and "
                 "cannot be directly set"%
                 (name, self._depgraph.get_source(name)), TraitError)
-        self._call_execute = True
-        self._input_updated(name)
             
+    def _input_nocheck(self, name, old):
+        """This method is substituted for _input_check to avoid source
+        checking suring a set() call when we've already verified the source.
+        """
+        pass
+    
     def _input_updated(self, name):
-        # this is here so inherited classes can take actions when inputs are changed
+        """This just exists so inherited classes can add behavior when
+        inputs are set.
+        """
         pass
 
     def get_wrapped_attr(self, name):
@@ -808,22 +819,13 @@ class Container(HasTraits):
             else:
                 if index is None:
                     if trait.iotype == 'in':
-                        # we need an equality check here to make the behavior the same
-                        # as a normal setattr. Normal behavior when using Traits is that
-                        # callbacks are not triggered unless the new trait value differs
-                        # from the old one.
-                        if getattr(self, path) != value:
-                            # bypass the callback here and call it manually after 
-                            # with a flag to tell it not to check the source
-                            self._trait_change_notify(False)
-                            try:
-                                setattr(self, path, value)
-                            finally:
-                                self._trait_change_notify(True)
-                            # now manually call the notifier with old set to Undefined
-                            # to avoid the source check
-                            self._input_trait_modified(self, path, Undefined, 
-                                                   getattr(self, path))
+                        # bypass input source checking
+                        chk = self._input_check
+                        self._input_check = self._input_nocheck
+                        try:
+                            setattr(self, path, value)
+                        finally:
+                            self._input_check = chk
                     else:
                         setattr(self, path, value)
                 else:
@@ -850,6 +852,8 @@ class Container(HasTraits):
                 
         # setting of individual Array values doesn't seem to trigger
         # _input_trait_modified, so do it manually
+        # FIXME: I think there's a way to have this 'just work' using
+        #   a different callback signature...
         if old != value:
             self._input_trait_modified(self, name, arr, arr)
             
