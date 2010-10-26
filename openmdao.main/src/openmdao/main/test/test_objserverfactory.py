@@ -131,12 +131,12 @@ class TestCase(unittest.TestCase):
             # Create a file using context.
             with server.open('xyzzy', 'w') as out:
                  out.write('Hello world!\n')
-                 out.flush()
 
             # Create another file using file proxy.
             out = server.open('fred', 'w')
             out.write('Hello fred!\n')
-            out.flush()
+            out.flush()  # Not really necessary, just for coverage.
+            out.close()
 
             # Zip it.
             server.pack_zipfile(['xyzzy', 'fred'], 'zipped')
