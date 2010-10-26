@@ -20,8 +20,8 @@ class TestBar3Truss(unittest.TestCase):
 
         static = Bar3Static()
         static.delete_tmp_files = False
-        static.stdout = "/dev/null"
-        static.stderr = "/dev/null"
+        static.stdout = os.devnull
+        static.stderr = os.devnull
         static.nastran_filename = "bar3truss/vared_bar3.bdf"
         #static.nastran_command = "/msc/nastran/bin/nastran"
         static.nastran_command = "python fake_nastran.py " + \
