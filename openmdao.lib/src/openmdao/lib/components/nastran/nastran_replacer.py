@@ -13,7 +13,7 @@ class NastranReplacer(object):
     def __init__(self, text):
         """Give it the text.
 
-        text : [str]
+        text: [str]
             The strings should be the individual lines without
             the newline
         """
@@ -21,18 +21,18 @@ class NastranReplacer(object):
 
     def replace(self, input_variables):
         """
-        Replace the input_variables in the text with the
+        Replace the ``input_variables`` in the text with the
         corresponding values.
 
-        input_variables: {variable_name : value}
-            We want to replace the instances of variable_name
-            with value. variable_name should be a string; value
-            should be a strigafiable object. Note that although
-            the actual variables are specified like %varname in
+        input_variables: {variable_name: value}
+            We want to replace the instances of ``variable_name``
+            with a value. ``variable_name`` should be a string; ``value``
+            should be a stringafiable object. Note that although
+            the actual variables are specified, like ``%varname`` in
             the Nastran file, the variable name here should just
             be ``varname``.
 
-        Changes self.text. Running this twice should probably
+        Changes ``self.text``. Running this twice should probably
         error out since it wouldn't find the variables it was meant
         to replace.
 
