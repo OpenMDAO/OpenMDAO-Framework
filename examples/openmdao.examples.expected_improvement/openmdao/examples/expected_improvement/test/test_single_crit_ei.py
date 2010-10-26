@@ -1,14 +1,13 @@
 import unittest
 from math import pi,cos
 
-from enthought.traits.api import Instance
+from openmdao.lib.datatypes.api import Instance, Float
 import numpy.random as numpy_random
 
 import random
 
 from openmdao.lib.drivers.single_crit_ei import SingleCritEI
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
-from openmdao.lib.datatypes.float import Float
 
 from openmdao.main.api import Assembly, Case, set_as_top, Component
 from openmdao.main.uncertain_distributions import NormalDistribution, UncertainDistribution

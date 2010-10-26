@@ -6,12 +6,11 @@ from scipy.special import erf
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array
-from enthought.traits.api import implements, Instance
+from openmdao.lib.datatypes.api import implements, Instance, Float
 
 from pyevolve import G1DList, GSimpleGA, GAllele, Consts
 from pyevolve import Initializators, Mutators, Crossovers, Selectors
 
-from openmdao.lib.datatypes.float import Float
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
 from openmdao.main.expression import Expression

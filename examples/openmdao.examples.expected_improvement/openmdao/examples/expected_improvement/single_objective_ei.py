@@ -23,7 +23,7 @@ from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
 from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
 from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
-from openmdao.lib.api import Float, Int
+from openmdao.lib.datatypes.api import Float, Int
 
 from openmdao.examples.expected_improvement.branin_component import BraninComponent
 

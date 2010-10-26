@@ -19,7 +19,6 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
-from enthought.traits.api import Array
 
 from openmdao.main.api import Assembly, Component, Driver, \
      SequentialWorkflow, Case
@@ -32,6 +31,7 @@ from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
 
 from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array
+
 from openmdao.lib.api import MetaModel,MultiObjExpectedImprovement,\
      ProbIntersect,ParetoFilter,DOEdriver,Genetic,CaseIteratorDriver,\
      DBCaseRecorder,DumpCaseRecorder,DBCaseIterator

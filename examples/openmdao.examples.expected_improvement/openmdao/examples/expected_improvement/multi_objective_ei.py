@@ -3,7 +3,7 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
-from enthought.traits.api import Instance, Str, Array
+from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
 
 from openmdao.main.api import Assembly, Component, Driver, \
      SequentialWorkflow, Case
@@ -24,7 +24,6 @@ from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
 from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
 from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
-from openmdao.lib.api import Float, Int
 
 from openmdao.examples.expected_improvement.spiral_component import SpiralComponent
 

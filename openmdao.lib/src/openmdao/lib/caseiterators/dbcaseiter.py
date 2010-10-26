@@ -2,7 +2,7 @@
 import sqlite3
 from cPickle import loads, UnpicklingError
 
-from enthought.traits.api import implements
+from openmdao.lib.datatypes.api import implements
 
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.api import Case

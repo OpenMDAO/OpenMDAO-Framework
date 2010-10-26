@@ -1,6 +1,4 @@
-from openmdao.lib.datatypes.api import Int, List
-from enthought.traits.trait_base import not_none
-from enthought.traits.api import Any
+from openmdao.lib.datatypes.api import Int, List, Any
 
 from openmdao.main.api import Component
 from openmdao.main.interfaces import IComponent, obj_has_interface

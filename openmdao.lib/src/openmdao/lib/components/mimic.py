@@ -1,5 +1,5 @@
 
-from enthought.traits.api import Instance, ListStr
+from openmdao.lib.datatypes.api import Instance, ListStr
 from enthought.traits.trait_base import not_none
 
 from openmdao.main.api import Component

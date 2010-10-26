@@ -7,8 +7,7 @@ __all__ = ['Assembly']
 import cStringIO
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Instance, TraitError
-from enthought.traits.api import TraitType
+from enthought.traits.api import Instance, TraitError, TraitType
 
 import networkx as nx
 from networkx.algorithms.traversal import is_directed_acyclic_graph, \

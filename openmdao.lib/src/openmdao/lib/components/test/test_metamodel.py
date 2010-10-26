@@ -2,9 +2,10 @@
 
 import unittest
 
-from enthought.traits.api import TraitError, HasTraits, implements
+from enthought.traits.api import HasTraits
+
+from openmdao.lib.datatypes.api import Float, TraitError, implements
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.api import Float
 from openmdao.main.interfaces import ICaseRecorder
 
 from openmdao.lib.components.metamodel import MetaModel

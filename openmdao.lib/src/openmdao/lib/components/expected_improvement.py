@@ -3,9 +3,7 @@
 from numpy import exp, abs, pi
 from scipy.special import erf
 
-from enthought.traits.api import Instance, Str
-
-from openmdao.lib.datatypes.float import Float
+from openmdao.lib.datatypes.api import Instance, Str, Float
 
 from openmdao.main.api import Component
 

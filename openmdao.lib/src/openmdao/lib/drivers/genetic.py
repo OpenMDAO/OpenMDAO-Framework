@@ -5,17 +5,12 @@
 import re
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Python
+from openmdao.lib.datatypes.api import Python, Enum, Float, Int, Bool, Instance
 
 from pyevolve import G1DList, GAllele, GenomeBase
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
 from openmdao.main.api import Driver 
-from openmdao.lib.datatypes.enum import Enum
-from openmdao.lib.datatypes.float import Float
-from openmdao.lib.datatypes.int import Int
-from enthought.traits.api import Bool, Instance
-
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.util.decorators import add_delegate

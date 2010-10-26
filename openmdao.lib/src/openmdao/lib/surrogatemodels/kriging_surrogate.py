@@ -8,7 +8,9 @@ from numpy.linalg import det, linalg, lstsq
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import fmin
 
-from enthought.traits.api import HasTraits, implements
+from enthought.traits.api import HasTraits
+
+from openmdao.lib.datatypes.api import implements
 
 from openmdao.main.interfaces import ISurrogate
 from openmdao.main.uncertain_distributions import NormalDistribution

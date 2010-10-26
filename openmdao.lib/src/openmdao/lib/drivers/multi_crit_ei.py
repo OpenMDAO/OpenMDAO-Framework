@@ -6,7 +6,7 @@ from math import exp, pi
 from numpy import array, min, isnan
 from scipy.special import erf
 
-from enthought.traits.api import implements, Instance, Str
+from openmdao.lib.datatypes.api import implements, Instance, Str
 
 from pyevolve import G1DList, GSimpleGA, GAllele, Consts
 from pyevolve import Initializators, Mutators, Crossovers
