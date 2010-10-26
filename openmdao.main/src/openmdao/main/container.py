@@ -340,6 +340,12 @@ class Container(HasTraits):
         
         self._depgraph.disconnect(srcpath, destpath)
 
+    #TODO: get rid of any notion of valid/invalid from Containers.  If they have
+    # no execute, they can have no inputs/outputs, which means that validity has
+    # no meaning for them.
+    def is_valid(self):
+        return True
+
     def get_trait ( self, name, copy = False ):
         """Returns the trait indicated by name, or None if not found.  No recursive
         search is performed if name contains dots.  This is a replacement
@@ -807,17 +813,22 @@ class Container(HasTraits):
             else:
                 if index is None:
                     if trait.iotype == 'in':
-                        # bypass the callback here and call it manually after 
-                        # with a flag to tell it not to check if it's a destination
-                        self._trait_change_notify(False)
-                        try:
-                            setattr(self, path, value)
-                        finally:
-                            self._trait_change_notify(True)
-                        # now manually call the notifier with old set to Undefined
-                        # to avoid the destination check
-                        self._input_trait_modified(self, path, Undefined, 
-                                               getattr(self, path))
+                        # we need an equality check here to make the behavior the same
+                        # as a normal setattr. Normal behavior when using Traits is that
+                        # callbacks are not triggered unless the new trait value differs
+                        # from the old one.
+                        if getattr(self, path) != value:
+                            # bypass the callback here and call it manually after 
+                            # with a flag to tell it not to check the source
+                            self._trait_change_notify(False)
+                            try:
+                                setattr(self, path, value)
+                            finally:
+                                self._trait_change_notify(True)
+                            # now manually call the notifier with old set to Undefined
+                            # to avoid the source check
+                            self._input_trait_modified(self, path, Undefined, 
+                                                   getattr(self, path))
                     else:
                         setattr(self, path, value)
                 else:

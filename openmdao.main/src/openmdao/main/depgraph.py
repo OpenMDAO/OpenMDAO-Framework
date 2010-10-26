@@ -115,6 +115,8 @@ class DependencyGraph(object):
                                 outset.add(varset.intersection(link._srcs.keys()))
                             bouts = ['.'.join([src,n]) for n in link._srcs.keys()]
                             outset.update(bouts)
+                        elif dest == '@bout':
+                            outset.update(link.get_dests(varset))
                         else:
                             stack.append((dest, link.get_dests(varset)))
                     else:

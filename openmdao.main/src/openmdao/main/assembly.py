@@ -400,8 +400,6 @@ class Assembly (Component):
         if varnames is None:
             varnames = self.get_connected_inputs()
 
-        self.set_valid(varnames, False)
-
         # @exin is a little weird and we have to swap varnames for
         # its sources that map to the varnames as destinations
         newnames = set()
@@ -419,6 +417,10 @@ class Assembly (Component):
                         if name in varnames:
                             newnames.add(src)
                             found.add(name)
+                            
+        if found:
+            self.set_valid(found, False)
+        
         outs = set()
         if newnames:
             outs.update(self._depgraph.invalidate_deps(self, ['@exin'], [newnames]))
