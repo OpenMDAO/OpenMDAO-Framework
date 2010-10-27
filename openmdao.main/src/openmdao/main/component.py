@@ -296,11 +296,11 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
-                #print 'execute %s' % self.get_pathname()
+                print 'execute: %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
-            #else:
-                #print 'skipping %s' % self.get_pathname()
+            else:
+                print 'skipping: %s' % self.get_pathname()
         finally:
             if self.directory:
                 self.pop_dir()
@@ -422,8 +422,13 @@ class Component (Container):
     def list_containers(self):
         """Return a list of names of child Containers."""
         if self._container_names is None:
-            self._container_names = [n for n,v in self.items() 
-                                                   if isinstance(v,Container)]
+            visited = set([id(self),id(self.parent)])
+            names = []
+            for n,v in self.__dict__.items():
+                if isinstance(v, Container) and id(v) not in visited:
+                    visited.add(id(v))
+                    names.append(n)
+            self._container_names = names
         return self._container_names
     
     def list_connected_inputs(self):

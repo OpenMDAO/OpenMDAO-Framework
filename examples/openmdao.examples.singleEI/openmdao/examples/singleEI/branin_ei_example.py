@@ -74,7 +74,7 @@ class Analysis(Assembly):
         self.EI_driver.criteria = "branin_meta_model.f_xy"
         self.EI_driver.add_parameter("branin_meta_model.x")
         self.EI_driver.add_parameter("branin_meta_model.y")
-        self.EI_driver.criterion = "branin_meta_model.f_xy"
+        #self.EI_driver.criterion = "branin_meta_model.f_xy"
         
         self.add("retrain",CaseIteratorDriver())
         self.retrain.sequential = True
@@ -165,6 +165,8 @@ if __name__ == "__main__": #pragma: no cover
                                       'branin_meta_model.x',
                                       'branin_meta_model.f_xy'])
     
+    print 'points in trainer.db: %s' % len(data_train['branin_meta_model.x'])
+
     plt.scatter(data_train['branin_meta_model.x'],
                 data_train['branin_meta_model.y'],s=30,c='#572E07',zorder=10)
     
@@ -174,6 +176,7 @@ if __name__ == "__main__": #pragma: no cover
                                       'branin_meta_model.f_xy'])
     
     count = len(data_EI['branin_meta_model.x'])
+    print 'points in retrain.db: %s' % count
     colors = arange(0,count)/count
     winter = get_cmap('spring')
     plt.scatter(data_EI['branin_meta_model.x'],data_EI['branin_meta_model.y'],
@@ -191,25 +194,25 @@ if __name__ == "__main__": #pragma: no cover
     if figname is not None:
         matplotlib.pylab.savefig(figname)
 
-    plt.figure()
-    Z2 = []
+    #plt.figure()
+    #Z2 = []
 
-    for x_row,y_row in zip(X,Y): 
-        row = []
-        for x,y in zip(x_row,y_row): 
-            analysis.branin_meta_model.x = x
-            analysis.branin_meta_model.y = y
-            analysis.branin_meta_model.execute()
-            row.append(analysis.branin_meta_model.f_xy.mu)
-        Z2.append(row)
-    Z2 = array(Z2)
-    plt.contour(X,Y,Z2,arange(1,200,2),zorder=1)
-    cb = plt.colorbar(shrink=.45)    
-    plt.axis([-5,10,0,15])
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title("Branin Meta Model Contours")
-    plt.text(10.9,11,"Meta Model\nFunction\nValue")
+    #for x_row,y_row in zip(X,Y): 
+        #row = []
+        #for x,y in zip(x_row,y_row): 
+            #analysis.branin_meta_model.x = x
+            #analysis.branin_meta_model.y = y
+            #analysis.branin_meta_model.execute()
+            #row.append(analysis.branin_meta_model.f_xy.mu)
+        #Z2.append(row)
+    #Z2 = array(Z2)
+    #plt.contour(X,Y,Z2,arange(1,200,2),zorder=1)
+    #cb = plt.colorbar(shrink=.45)    
+    #plt.axis([-5,10,0,15])
+    #plt.xlabel("x")
+    #plt.ylabel("y")
+    #plt.title("Branin Meta Model Contours")
+    #plt.text(10.9,11,"Meta Model\nFunction\nValue")
     
     plt.show()
 

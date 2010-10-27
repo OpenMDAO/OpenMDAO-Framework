@@ -400,10 +400,6 @@ class Container(HasTraits):
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
         
-        ## restore call to _io_trait_modified to catch changes to any trait
-        ## having 'iotype' metadata
-        #self.on_trait_change(self._io_trait_modified, '+iotype')
-        
         # restore dynamically added traits, since they don't seem
         # to get restored automatically
         traits = self._alltraits()
@@ -1180,14 +1176,14 @@ def _get_entry_group(obj):
 _get_entry_group.group_map = None  # Map from class/interface to group name.
 
 
-def dump(cont, recurse=False, stream=None):
-    """Print all items having iotype metadata and
+def dump(cont, recurse=False, stream=None, **metadata):
+    """Print all items having specified metadata and
     their corresponding values to the given stream. If the stream
     is not supplied, it defaults to *sys.stdout*.
     """
     pprint.pprint(dict([(n, str(v)) 
                     for n, v in cont.items(recurse=recurse, 
-                                          iotype=not_none)]),
+                                           **metadata)]),
                   stream)
 
 

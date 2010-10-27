@@ -48,7 +48,7 @@ class MetaModel(Component):
         
         # the following line will work for classes that inherit from MetaModel
         # as long as they declare their traits in the class body and not in
-        # the __init__ function.  If they need to dynamically create traits
+        # the __init__ function.  If they need to create traits dynamically
         # during initialization they'll have to provide the value of 
         # _mm_class_traitnames
         self._mm_class_traitnames = set(self.traits(iotype=not_none).keys())
@@ -143,9 +143,10 @@ class MetaModel(Component):
             for name,trait in traitdict.items():
                 if self._eligible(name):
                     self._surrogate_input_names.append(name)
-                self.add_trait(name, _clone_trait(trait))
-                new_model_traitnames.add(name)
-                setattr(self, name, getattr(newmodel, name))
+                if name not in self._mm_class_traitnames:
+                    self.add_trait(name, _clone_trait(trait))
+                    new_model_traitnames.add(name)
+                    setattr(self, name, getattr(newmodel, name))
                 
             # now outputs
             traitdict = newmodel._alltraits(iotype='out')
