@@ -74,11 +74,11 @@ class TestCase(unittest.TestCase):
             if os.path.exists('stderr'):
                 os.remove('stderr')
 
-        msg = proc.error_message(-signal.SIGKILL)
+        msg = proc.error_message(-signal.SIGTERM)
         if sys.platform == 'win32':
             self.assertEqual(msg, '')
         else:
-            self.assertEqual(msg, ': SIGKILL')
+            self.assertEqual(msg, ': SIGTERM')
 
 
 if __name__ == '__main__':

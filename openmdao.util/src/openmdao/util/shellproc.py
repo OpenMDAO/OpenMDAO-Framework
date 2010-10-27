@@ -67,8 +67,14 @@ class ShellProc(subprocess.Popen):
             self._err = stderr
 
         shell = isinstance(args, basestring)
-        subprocess.Popen.__init__(self, args, stdin=self._inp, stdout=self._out,
-                                  stderr=self._err, shell=shell, env=environ)
+
+        try:
+            subprocess.Popen.__init__(self, args, stdin=self._inp,
+                                      stdout=self._out, stderr=self._err,
+                                      shell=shell, env=environ)
+        except Exception:
+            self.close_files()
+            raise
 
     def close_files(self):
         """ Closes files that were implicitly opened. """
