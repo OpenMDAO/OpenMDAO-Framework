@@ -389,17 +389,19 @@ class Assembly (Component):
         found = set()
         
         for destcomp, link in self._depgraph.out_links('@exin'):
-            for src,dests in link._srcs.items():
-                for dest in dests:
-                    if destcomp == '@bin':
+            if destcomp == '@bin':
+                for src,dests in link._srcs.items():
+                    for dest in dests:
                         if dest in varnames:
                             newnames.add(src)
                             found.add(dest)
-                    else:
-                        name = '.'.join([destcomp,dest])
-                        if name in varnames:
+            else:
+                for src,dests in link._srcs.items():
+                    for dest in dests:
+                        dest = '.'.join([destcomp,dest])
+                        if dest in varnames:
                             newnames.add(src)
-                            found.add(name)
+                            found.add(dest)
                             
         if found:
             self.set_valid(found, False)
@@ -407,9 +409,12 @@ class Assembly (Component):
         outs = set()
         if newnames:
             outs.update(self._depgraph.invalidate_deps(self, ['@exin'], [newnames]))
-        orignames = set(varnames)-found
-        if orignames:
-            outs.update(self._depgraph.invalidate_deps(self, ['@bin'], [orignames]))
+
+        # need this to handle the case of unconnected boundary inputs that are set
+        unconnected_ins = set(varnames)-found
+        if unconnected_ins:
+            outs.update(self._depgraph.invalidate_deps(self, ['@bin'], [unconnected_ins]))
+
         if outs:
             self.set_valid(outs, False)
         return outs
