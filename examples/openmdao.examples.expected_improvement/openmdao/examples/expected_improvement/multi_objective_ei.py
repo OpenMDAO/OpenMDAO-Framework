@@ -137,17 +137,31 @@ class Analysis(Assembly):
         shutil.rmtree(self._tdir, ignore_errors=True)
 
 if __name__ == "__main__": #pragma: no cover
-    import sys
+     import sys
     from openmdao.main.api import set_as_top
     from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
     
+    seed = None
+    backend = None
+    figname = None
+    for arg in sys.argv[1:]:
+        if arg.startswith('--seed='):
+            import random
+            seed = int(arg.split('=')[1])
+            random.seed(seed)
+        if arg.startswith('--backend='):
+            backend = arg.split('=')[1]
+        if arg.startswith('--figname='):
+            figname = arg.split('=')[1]
     import matplotlib
-    if sys.platform == 'win32':
+    if backend is not None:
+        matplotlib.use(backend)
+    elif sys.platform == 'win32':
         matplotlib.use('WxAgg')
-    
     from matplotlib import pyplot as plt, cm 
     from matplotlib.pylab import get_cmap
-    from numpy import meshgrid,array, pi,arange,cos,sin
+    from mpl_toolkits.mplot3d import Axes3D
+    from numpy import meshgrid,array, pi,arange,cos
     
     
     #create the analysis

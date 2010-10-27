@@ -20,7 +20,7 @@ class ProbIntersect(Component):
     
     global_pareto = Instance(ICaseIterator, iotype="in",
                     desc="CaseIterator which contains all the points from the\
-                    globa pareto frontier")
+                    global pareto frontier")
                     
     criteria = ListStr(iotype="in",dtype="str",
                     desc="Names of responses to maximize expected improvement around. \
