@@ -21,7 +21,7 @@ import pkg_resources
 # easy install barfs without distutils import
 import distutils.command.build
 import setuptools.command.easy_install
-from enthought.traits.api import TraitType
+from openmdao.lib.datatypes.api import TraitType
 
 from openmdao.main.api import Component, Driver # , ResourceAllocator, CaseIterator
 

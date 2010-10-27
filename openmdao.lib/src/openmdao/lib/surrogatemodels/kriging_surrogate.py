@@ -8,7 +8,9 @@ from numpy.linalg import det, linalg, lstsq
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import fmin
 
-from enthought.traits.api import HasTraits, implements
+from enthought.traits.api import HasTraits
+
+from openmdao.lib.datatypes.api import implements
 
 from openmdao.main.interfaces import ISurrogate
 from openmdao.main.uncertain_distributions import NormalDistribution
@@ -27,6 +29,7 @@ class KrigingSurrogate(HasTraits):
         self.thetas = None
         
         self.R = None
+        self.R_fact = None
         self.mu = None
         self.sig2 = None
         self.log_likelihood = None
@@ -58,7 +61,29 @@ class KrigingSurrogate(HasTraits):
         r = exp(-r)
             
         one = ones(self.n)
-
+        if self.R_fact is not None: 
+            #---CHOLESKY DECOMPOSTION ---
+            #f = self.mu+dot(r,cho_solve(self.R_fact,Y-dot(one,self.mu)))
+            #term1 = dot(r,cho_solve(self.R_fact,r))
+            #term2 = (1.0-dot(one,cho_solve(self.R_fact,r)))**2./dot(one,cho_solve(self.R_fact,one))
+            
+            rhs = vstack([(Y-dot(one, self.mu)), r, one]).T
+            R_fact = (self.R_fact[0].T,not self.R_fact[1])
+            cho = cho_solve(R_fact, rhs).T
+            
+            f = self.mu + dot(r, cho[0])
+            term1 = dot(r, cho[1])
+            term2 = (1.0 - dot(one, cho[1]))**2./dot(one, cho[2])
+            
+        else: 
+            #-----LSTSQ-------
+            rhs = vstack([(Y-dot(one, self.mu)), r, one]).T
+            lsq = lstsq(self.R.T, rhs)[0].T
+            
+            f = self.mu + dot(r, lsq[0])
+            term1 = dot(r, lsq[1])
+            term2 = (1.0 - dot(one, lsq[1]))**2./dot(one, lsq[2])
+        """
         #-----LSTSQ-------
         rhs = vstack([(Y-dot(one, self.mu)), r, one]).T
         lsq = lstsq(self.R.T, rhs)[0].T
@@ -66,28 +91,27 @@ class KrigingSurrogate(HasTraits):
         f = self.mu + dot(r, lsq[0])
         term1 = dot(r, lsq[1])
         term2 = (1.0 - dot(one, lsq[1]))**2./dot(one, lsq[2])
-        
-        #f = self.mu+dot(r,lstsq(self.R,Y-dot(one,self.mu))[0])
-        #lsq = lstsq(self.R,r)[0]
-        #term1 = dot(r,lsq)
-        #term2 = (1.0-dot(one,lsq))**2./dot(one,lstsq(self.R,one)[0])
-        #---LU or CHOLESKY DECOMPOSTION ---
-        #R_fact = self.R_fact
-        #f = self.mu+dot(r,self.myfun(R_fact,Y-dot(one,self.mu)))
-        #term1 = dot(r,self.myfun(R_fact,r))
-        #term2 = (1.0-dot(one,self.myfun(R_fact,r)))**2./dot(one,self.myfun(R_fact,one))
-
+        """
         MSE = self.sig2*(1.0-term1+term2)
         RMSE = sqrt(abs(MSE))
         
         return NormalDistribution(f, RMSE)
+        
 
     def train(self,X,Y):
         """Train the surrogate model with the given set of inputs and outputs."""
         
         #TODO: Check if one training point will work... if not raise error
+        """self.X = []
+        self.Y = []
+        for ins,out in zip(X,Y): 
+            if ins not in self.X:
+                self.X.append(ins)
+                self.Y.append(out)
+            else: "duplicate training point" """
         self.X = X
         self.Y = Y
+              
         self.m = len(X[0])
         self.n = len(X)
         thetas = zeros(self.m)
@@ -111,21 +135,20 @@ class KrigingSurrogate(HasTraits):
         self.R = R
         one = ones(self.n)
         try:
+            
             self.R_fact = cho_factor(R)
-            self.myfun = cho_solve
-            self.mu = dot(one,self.myfun(self.R_fact,Y))/dot(one,self.myfun(self.R_fact,one))
-            self.sig2 = dot(Y-dot(one,self.mu),self.myfun(self.R_fact,(Y-dot(one,self.mu))))/self.n
+            rhs = vstack([Y, one]).T
+            R_fact = (self.R_fact[0].T,not self.R_fact[1])
+            cho = cho_solve(R_fact, rhs).T
+            
+            self.mu = dot(one,cho[0])/dot(one,cho[1])
+            self.sig2 = dot(Y-dot(one,self.mu),cho_solve(self.R_fact,(Y-dot(one,self.mu))))/self.n
             self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)))-sum(self.thetas)-sum(abs(self.thetas))
         except (linalg.LinAlgError,ValueError):
-            #---LU DECOMPOSITION---
-            #self.R_fact = lu_factor(R)
-            #self.myfun = lu_solve
-            #self.mu = dot(one,self.myfun(self.R_fact,Y))/dot(one,self.myfun(self.R_fact,one))
-            #self.sig2 = dot(Y-dot(one,self.mu),self.myfun(self.R_fact,(Y-dot(one,self.mu))))/self.n
             #------LSTSQ---------
+            self.R_fact = None #reset this to none, so we know not to use cholesky
             rhs = vstack([Y, one]).T
             lsq = lstsq(self.R.T,rhs)[0].T
-            
             self.mu = dot(one,lsq[0])/dot(one,lsq[1])
             self.sig2 = dot(Y-dot(one,self.mu),lstsq(self.R,Y-dot(one,self.mu))[0])/self.n
             self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)+1.e-16))-sum(self.thetas)

@@ -2,7 +2,7 @@
 import unittest
 
 from openmdao.main.api import Container, Component, Assembly, set_as_top
-from openmdao.lib.api import Float, Instance
+from openmdao.lib.datatypes.api import Float, Instance
 
 class DumbContainer2(Container):
     def __init__(self, *args, **kwargs):

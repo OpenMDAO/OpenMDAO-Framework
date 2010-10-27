@@ -226,7 +226,7 @@ class Component (Container):
             else:
                 self.check_path(path, check_dir=True)
 
-    def _pre_execute (self):
+    def _pre_execute (self, force=False):
         """Prepares for execution by calling *tree_rooted()* and *check_config()* if
         their "dirty" flags are set, and by requesting that the parent Assembly
         update this Component's invalid inputs.
@@ -240,31 +240,36 @@ class Component (Container):
             self.check_config()
             self._call_check_config = False
         
-        if not self.is_valid():
-            self._call_execute = True
-        elif self._num_input_caseiters > 0:
-            self._call_execute = True
-            # we're valid, but we're running anyway because of our input CaseIterators,
-            # so we need to notify downstream comps so they grab our new outputs
-            self.invalidate_deps()
-
-        if self.parent is None: # if parent is None, we're not part of an Assembly
-                                # so Variable validity doesn't apply. Just execute.
-            self._call_execute = True
-            valids = self._valid_dict
-            for name in self.list_inputs():
-                valids[name] = True
+        if force:
+            outs = self.invalidate_deps()
+            if (outs is None) or outs:
+                if self.parent: self.parent.child_invalidated(self.name)
         else:
-            valids = self._valid_dict
-            invalid_ins = [inp for inp in self.list_connected_inputs() 
-                                    if valids.get(inp) is False]
-            if invalid_ins:
+            if not self.is_valid():
                 self._call_execute = True
-                self.parent.update_inputs(self.name, invalid_ins)
-                for name in invalid_ins:
+            elif self._num_input_caseiters > 0:
+                self._call_execute = True
+                # we're valid, but we're running anyway because of our input CaseIterators,
+                # so we need to notify downstream comps so they grab our new outputs
+                self.invalidate_deps()
+    
+            if self.parent is None: # if parent is None, we're not part of an Assembly
+                                    # so Variable validity doesn't apply. Just execute.
+                self._call_execute = True
+                valids = self._valid_dict
+                for name in self.list_inputs():
                     valids[name] = True
-            elif self._call_execute == False and len(self.list_outputs(valid=False)):
-                self._call_execute = True
+            else:
+                valids = self._valid_dict
+                invalid_ins = [inp for inp in self.list_connected_inputs() 
+                                        if valids.get(inp) is False]
+                if invalid_ins:
+                    self._call_execute = True
+                    self.parent.update_inputs(self.name, invalid_ins)
+                    for name in invalid_ins:
+                        valids[name] = True
+                elif self._call_execute == False and len(self.list_outputs(valid=False)):
+                    self._call_execute = True
 
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
@@ -292,15 +297,18 @@ class Component (Container):
         if self.directory:
             self.push_dir()
 
+        if self.force_execute:
+            force = True
+
         self._stop = False
         try:
-            self._pre_execute()
-            if self._call_execute or force or self.force_execute:
-                print 'execute: %s' % self.get_pathname()
+            self._pre_execute(force)
+            if self._call_execute or force:
+                #print 'execute: %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
-            else:
-                print 'skipping: %s' % self.get_pathname()
+            #else:
+                #print 'skipping: %s' % self.get_pathname()
         finally:
             if self.directory:
                 self.pop_dir()

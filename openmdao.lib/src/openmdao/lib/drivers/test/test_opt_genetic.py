@@ -11,12 +11,11 @@ import numpy
 import random
 import numpy.random as numpy_random
 
-from enthought.traits.api import TraitError
+from openmdao.lib.datatypes.api import TraitError, Float, Array, Enum, Int, Str
 from pyevolve import Selectors
 
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.api import Float, Array, Enum, Int, Str
-from openmdao.lib.api import Genetic
+from openmdao.lib.drivers.genetic import Genetic
 from openmdao.main.eggchecker import check_save_load
 
 # pylint: disable-msg=E1101
@@ -195,9 +194,6 @@ class TestCase(unittest.TestCase):
             self.fail('RuntimeError expected')
 
     def test_0_low_high(self): 
-        from openmdao.main.api import Assembly,Component, set_as_top
-        from openmdao.lib.api import Genetic
-        from openmdao.lib.api import Float,Int,Enum
 
         class SomeComp(Component):
             """Arbitrary component with a few variables, but which does not really do 

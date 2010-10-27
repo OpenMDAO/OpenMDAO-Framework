@@ -7,7 +7,7 @@ from enthought.traits.api import TraitError
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.expression import Expression, ExpressionList
-from openmdao.lib.api import Float, Array
+from openmdao.lib.datatypes.api import Float, Array
 
 class RefComp(Component):   
     desvar = Expression(iotype='out')

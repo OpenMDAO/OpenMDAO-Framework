@@ -6,7 +6,7 @@ import unittest
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.exceptions import RunStopped
-from openmdao.lib.api import Int, Bool
+from openmdao.lib.datatypes.api import Int, Bool
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"

@@ -13,7 +13,8 @@ from numpy.testing import assert_equal
 from enthought.traits.api import Bool, Str, TraitError
 
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.api import File, Array
+from openmdao.lib.datatypes.file import File
+from openmdao.lib.datatypes.array import Array
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"

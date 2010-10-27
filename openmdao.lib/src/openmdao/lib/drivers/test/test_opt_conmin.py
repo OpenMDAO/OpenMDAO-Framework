@@ -5,11 +5,12 @@ Test the CONMIN optimizer component
 import unittest
 import numpy
 
-from enthought.traits.api import TraitError
+from openmdao.lib.datatypes.api import TraitError
 
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.api import Float, Array, CONMINdriver
+from openmdao.lib.datatypes.api import Float, Array, Str
+from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.util.testutil import assert_rel_error
 
 class OptRosenSuzukiComponent(Component):
@@ -40,6 +41,7 @@ class OptRosenSuzukiComponent(Component):
     
     x = Array(iotype='in', low=-10, high=99)
     result = Float(iotype='out')
+    obj_string = Str(iotype='out')
     
     # pylint: disable-msg=C0103
     def __init__(self, doc=None):
@@ -56,6 +58,7 @@ class OptRosenSuzukiComponent(Component):
                        self.x[1]**2 - 5.*self.x[1] +
                        2.*self.x[2]**2 - 21.*self.x[2] + 
                        self.x[3]**2 + 7.*self.x[3] + 50)
+        self.obj_string = "Bad"
 
 
 class CONMINdriverTestCase(unittest.TestCase):
@@ -166,15 +169,6 @@ class CONMINdriverTestCase(unittest.TestCase):
         else:
             self.fail('TraitError expected')
     
-    def test_bad_constraint(self):
-        try:
-            self.top.driver.add_constraint('bogus.flimflam < 1')
-        except ValueError, err:
-            self.assertEqual(str(err), 
-                "Constraint 'bogus.flimflam < 1' has an invalid left-hand-side.")
-        else:
-            self.fail('ValueError expected')
-            
     def test_scale_design_vector_size_mismatch(self):
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]'])
@@ -235,7 +229,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         # No test, just verifies that the syntax didn't fail.
 
     def test_linear_constraint_specification(self):
-        """ Note, just testing problem specification and setup """
+        # Note, just testing problem specification and setup
         
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter, 

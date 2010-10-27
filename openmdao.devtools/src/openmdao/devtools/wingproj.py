@@ -7,30 +7,7 @@ import logging
 from subprocess import Popen
 import ConfigParser
 
-def _find_files_and_dirs(pat, startdir):
-    for path, dirlist, filelist in os.walk(startdir):
-        for name in fnmatch.filter(filelist+dirlist, pat):
-            yield os.path.join(path, name)
-
-def _find_files(pat, startdir):
-    for path, dirlist, filelist in os.walk(startdir):
-        for name in fnmatch.filter(filelist, pat):
-            yield os.path.join(path, name)
-
-def _find_bzr(path=None):
-    if not path:
-        path = os.getcwd()
-    if not os.path.exists(path):
-        return None
-    while path:
-        if os.path.exists(os.path.join(path, '.bzr')):
-            return path
-        else:
-            pth = path
-            path = os.path.dirname(path)
-            if path == pth:
-                return None
-    return None
+from openmdao.util.fileutil import find_in_path, find_in_dir_list, find_files, find_up
 
 _LINE_WIDTH = 68
 
@@ -75,12 +52,8 @@ def _modify_wpr_file(fpath):
     f.write(content)
     f.close()
     
-
 def run_wing():
-    """Runs the Wing IDE after first setting up a profile containing
-    the files in the openmdao repository. It also adds all of our 
-    unit tests to the testing area.
-    """
+    """Runs the Wing IDE using our template project file."""
     wingpath = None
     projpath = ''
     for arg in sys.argv[1:]:
@@ -90,13 +63,23 @@ def run_wing():
             projpath = arg.split('=')[1]
     if not wingpath:
         if sys.platform == 'win32':
-            wingpath = 'wing.exe'
+            wname = 'wing.exe'
+            locs = [r'C:\Program Files (x86)\WingIDE 3.2']
         elif sys.platform == 'darwin':
-            wingpath = '/Applications/WingIDE.app/Contents/MacOS/wing'
-            if not os.path.exists(wingpath):
-                wingpath = '/Applications/Wing/WingIDE.app/Contents/MacOS/wing'
+            wname = 'wing'
+            locs = ['/Applications/WingIDE.app/Contents/MacOS',
+                    '/Applications/Wing/WingIDE.app/Contents/MacOS']
         else:
-            wingpath = 'wing3.2'
+            wname = 'wing3.2'
+            locs = ['/usr/bin', '/usr/sbin', '/usr/local/bin']
+            
+        wingpath = find_in_path(wname) # searches PATH
+        if not wingpath:
+            wingpath = find_in_dir_list(wname, locs) # look in common places
+        if not wingpath:
+            raise OSError("%s was not found in PATH or in any of the common places." %
+                          wname)
+
     if not os.path.isfile(projpath):
         venvdir = os.path.dirname(os.path.dirname(sys.executable))
         projpath = os.path.join(venvdir, 'etc', 'wingproj.wpr')
@@ -109,14 +92,17 @@ def run_wing():
     env = os.environ
     if sys.platform != 'win32':
         libs = env.get('LD_LIBRARY_PATH','').split(os.pathsep)
-        bzrtop = _find_bzr()
+        bzrtop = find_up('.bzr')
         if bzrtop:
-            sodirs = set([os.path.dirname(x) for x in _find_files('*.so',bzrtop)])
+            bzrtop = os.path.dirname(bzrtop)
+            sodirs = set([os.path.dirname(x) for x in find_files('*.so',bzrtop)])
             libs.extend(sodirs)
             env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
     
-    Popen([wingpath, projpath], env=env)
-
+    try:
+        Popen([wingpath, projpath], env=env)
+    except Exception as err:
+        print 'Failed to run wing executable (%s) using project (%s).' % (wingpath, projpath)
     
 if __name__ == '__main__':
     run_wing()

@@ -4,7 +4,7 @@ import sqlite3
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser
 
-from enthought.traits.api import implements
+from openmdao.lib.datatypes.api import implements
 
 from openmdao.main.interfaces import ICaseRecorder
 from openmdao.main.case import Case

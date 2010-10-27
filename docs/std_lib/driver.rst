@@ -28,7 +28,7 @@ prefer. See :ref:`Tutorial:-MDAO-Architectures` to learn how to broadcast variab
 
 .. testcode:: Broyden
 
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     from openmdao.main.api import Component
     
     class MIMOSystem(Component):
@@ -497,7 +497,7 @@ operate.
         from openmdao.lib.api import DOEdriver
         from openmdao.lib.doegenerators.full_factorial import FullFactorial
 
-        from openmdao.examples.singleEI.branin_component import BraninComponent
+        from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
         class Analysis(Assembly): 
             def __init__(self,doc=None): 
@@ -540,7 +540,7 @@ produce the square root of a number.
 
 .. testcode:: FPI
 
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     from openmdao.main.api import Component
     
     class Babylonian(Component):
@@ -643,7 +643,7 @@ You add design variables to Genetic using the ``add_parameter`` method.
 
     from openmdao.main.api import Assembly,Component, set_as_top
     from openmdao.lib.api import Genetic
-    from openmdao.lib.api import Float,Int,Enum
+    from openmdao.lib.datatypes.api import Float,Int,Enum
     
     class SomeComp(Component):
         """Arbitrary component with a few variables, but which does not really do 

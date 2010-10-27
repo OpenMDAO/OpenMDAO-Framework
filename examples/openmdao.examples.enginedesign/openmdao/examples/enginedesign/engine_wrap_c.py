@@ -11,7 +11,7 @@ from math import pi
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
-from openmdao.lib.api import Float, Int
+from openmdao.lib.datatypes.api import Float, Int
 
 from openmdao.examples.enginedesign.engineC import RunEngineCycle
 

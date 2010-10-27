@@ -10,12 +10,13 @@ import platform
 import sys
 import unittest
 
-from enthought.traits.api import TraitError, Event
+from openmdao.lib.datatypes.api import TraitError, Event
 
 from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
-from openmdao.lib.api import Float, Bool, Array, ListCaseIterator
+from openmdao.lib.datatypes.api import Float, Bool, Array
+from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.doedriver import DOEdriver
 from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
@@ -225,7 +226,8 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
     def run_cases(self, sequential, forced_errors=False):
-        """ Evaluate cases, either sequentially or across  multiple servers. """
+        # Evaluate cases, either sequentially or across  multiple servers.
+        
         self.model.driver.sequential = sequential
         results = ListCaseRecorder()
         self.model.driver.recorder = results
@@ -238,7 +240,8 @@ class TestCase(unittest.TestCase):
         self.verify_results(forced_errors)
 
     def verify_results(self, forced_errors=False):
-        """ Verify recorded results match expectations. """
+        # Verify recorded results match expectations.
+        
         for case in self.model.driver.recorder.cases:
             if forced_errors:
                 self.assertEqual(case.msg, 'driven: Forced error')

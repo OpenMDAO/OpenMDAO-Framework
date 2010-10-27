@@ -9,7 +9,7 @@ from nose import SkipTest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
 from openmdao.main.expression import Expression
-from openmdao.lib.api import Int
+from openmdao.lib.datatypes.api import Int
 from openmdao.main.hasobjective import HasObjective
 from openmdao.util.decorators import add_delegate
 

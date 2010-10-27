@@ -23,7 +23,7 @@ openmdao_packages = ['openmdao.util',
                      'examples/openmdao.examples.bar3simulation',
                      'examples/openmdao.examples.enginedesign',
                      'examples/openmdao.examples.mdao',
-                     'examples/openmdao.examples.singleEI'
+                     'examples/openmdao.examples.expected_improvement'
                     ]
     
 def adjust_options(options, args):
@@ -152,7 +152,7 @@ def after_install(options, home_dir):
                      'openmdao.examples.bar3simulation',
                      'openmdao.examples.enginedesign',
                      'openmdao.examples.mdao',
-                     'openmdao.examples.singleEI'
+                     'openmdao.examples.expected_improvement'
                     ]
 
     cmds = []

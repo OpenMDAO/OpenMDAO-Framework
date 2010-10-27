@@ -8,12 +8,11 @@ and was written by someone without much 'mool' knowledge.
 __all__ = ('MidFidelity',)
 
 
-from enthought.traits.api import TraitError
+from openmdao.lib.datatypes.api import TraitError, Float, Int, Array, Str, Instance
 
 import mool.Optimization.MidFiModel
 
 from openmdao.main.api import Assembly, Component
-from openmdao.lib.api import Float, Int, Array, Str, Instance
 
 import wrapper
 

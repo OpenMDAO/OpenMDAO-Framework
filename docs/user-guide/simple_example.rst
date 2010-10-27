@@ -84,7 +84,7 @@ paraboloid as an OpenMDAO component:
 .. testcode:: simple_component_Paraboloid
 
     from openmdao.main.api import Component
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -116,7 +116,8 @@ model containing this component.
 
 In Python, a class or function must be imported before it can be used. Most of
 what you need in OpenMDAO can be imported from: ``openmdao.main.api`` and
-``openmdao.lib.api``.
+``openmdao.lib.api``. You will find all of the different variable types in 
+``openmdao.lib.datatypes.api``. 
 
 The first two lines in the ``paraboloid.py`` module import the definitions
 of the Component class and the Float class. You will use these in the definition
@@ -126,9 +127,9 @@ Type these two lines into that file:
 .. testcode:: simple_component_Paraboloid_pieces
 
     from openmdao.main.api import Component
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     
-You could import many other objects from ``openmdao.main.api`` and ``openmdao.lib.api``, but you
+You could import many other objects from ``openmdao.main.api`` and ``openmdao.lib.datatypes.api``, but you
 are importing only the two classes that you need. This is a good idea because it helps to
 prevent any namespace collisions in your module. In other words:
 

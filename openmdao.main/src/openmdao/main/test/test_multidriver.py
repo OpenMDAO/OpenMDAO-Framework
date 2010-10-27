@@ -8,11 +8,12 @@ from math import sqrt
 from openmdao.main.api import Assembly, Component, Driver, \
                               Dataflow, SequentialWorkflow, set_as_top, dump_iteration_tree
 from openmdao.main.expression import Expression
-from openmdao.lib.api import Float, Int, Str
+from openmdao.lib.datatypes.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
+from openmdao.util.testutil import assert_rel_error
 
 from openmdao.main.component import _show_validity
 
@@ -177,10 +178,8 @@ class MultiDriverTestCase(unittest.TestCase):
                                self.top.driver1.eval_objective(), places=2)
         self.assertAlmostEqual(self.opt_design_vars[0], 
                                self.top.comp1.x, places=1)
-        self.assertAlmostEqual(self.opt_design_vars[1], 
-                               self.top.comp2.x, places=2)
-        self.assertAlmostEqual(self.opt_design_vars[2], 
-                               self.top.comp3.x, places=2)
+        assert_rel_error(self, self.opt_design_vars[1], self.top.comp2.x, 0.01)
+        assert_rel_error(self, self.opt_design_vars[2], self.top.comp3.x, 0.01)
         self.assertAlmostEqual(self.opt_design_vars[3], 
                                self.top.comp4.x, places=1)
         runcount = self.top.adder3.runcount
@@ -211,10 +210,8 @@ class MultiDriverTestCase(unittest.TestCase):
                                self.top.driver1.eval_objective(), places=2)
         self.assertAlmostEqual(self.opt_design_vars[0], 
                                self.top.comp1.x, places=1)
-        self.assertAlmostEqual(self.opt_design_vars[1], 
-                               self.top.comp2.x, places=2)
-        self.assertAlmostEqual(self.opt_design_vars[2], 
-                               self.top.comp3.x, places=2)
+        assert_rel_error(self, self.opt_design_vars[1], self.top.comp2.x, 0.01)
+        assert_rel_error(self, self.opt_design_vars[2], self.top.comp3.x, 0.01)
         self.assertAlmostEqual(self.opt_design_vars[3], 
                                self.top.comp4.x, places=1)
         self.assertAlmostEqual(-6.2498054387439232, 

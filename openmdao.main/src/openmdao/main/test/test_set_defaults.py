@@ -5,10 +5,9 @@ Test for setting input variables back to their default values.
 import unittest
 
 import numpy
-from enthought.traits.api import List
 
 from openmdao.main.api import Component, Assembly
-from openmdao.lib.api import Float, Array
+from openmdao.lib.datatypes.api import Float, Array, List
 
 class MyDefComp(Component):
     f_in = Float(3.14, iotype='in')

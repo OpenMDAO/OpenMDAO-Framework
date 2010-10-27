@@ -4,18 +4,22 @@
 
 import os.path
 import shutil
+import sys
+
+if '.' not in sys.path:
+    sys.path.append('.')
 
 # pylint: disable-msg=E0611,F0401
-from numpy import float32 as numpy_float32
+from numpy import float32, zeros
 
-import axod.axod as axod
+import axod as axod
 
 from openmdao.main.api import Component
-from openmdao.lib.api import Float, Array, Str
+from openmdao.lib.datatypes.api import Float, Array, Str
 
 __all__ = ('AxodComp',)
 
-
+_ZEROS48 = zeros((48,),float32)
 
 class AxodComp(Component):
     """ OpenMDAO component wrapper for AXOD. """
@@ -28,11 +32,11 @@ class AxodComp(Component):
     # 'float32' here could be just 'float', but AXOD is single-precision
     # so it just takes more space.  Not an issue with such small arrays,
     # but for larger data it may be important.
-    tott  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
-    totp  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
-    mflow = Array(dtype=numpy_float32, shape=(48,), iotype='out')
-    effs  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
-    effr  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
+    tott  = Array(_ZEROS48,dtype=float32, shape=(48,), iotype='out')
+    totp  = Array(_ZEROS48,dtype=float32, shape=(48,), iotype='out')
+    mflow = Array(_ZEROS48,dtype=float32, shape=(48,), iotype='out')
+    effs  = Array(_ZEROS48,dtype=float32, shape=(48,), iotype='out')
+    effr  = Array(_ZEROS48,dtype=float32, shape=(48,), iotype='out')
 
     def __init__(self, doc=None, directory='', input_filename=''):
         super(AxodComp, self).__init__(doc, directory)

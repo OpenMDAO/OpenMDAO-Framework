@@ -11,7 +11,7 @@ import unittest
 from enthought.traits.api import TraitError
 
 from openmdao.main.api import Component, Container
-from openmdao.lib.api import Float
+from openmdao.lib.datatypes.api import Float
 
 class MyComponent(Component):
     x = Float(1., iotype='in')

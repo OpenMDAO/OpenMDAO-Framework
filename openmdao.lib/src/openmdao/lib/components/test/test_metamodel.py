@@ -1,17 +1,15 @@
 # pylint: disable-msg=C0111,C0103
 
 import unittest
-import random
 
-import numpy.random as numpy_random
-from enthought.traits.api import TraitError, HasTraits, implements
+from enthought.traits.api import HasTraits
+
+from openmdao.lib.datatypes.api import Float, TraitError, implements
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.api import Float
 from openmdao.main.interfaces import ICaseRecorder
 
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
-
 
 from openmdao.util.testutil import assert_rel_error
 
@@ -63,10 +61,6 @@ class MyMetaModel(MetaModel):
     my_x = Float(1., iotype='in')
 
 class MetaModelTestCase(unittest.TestCase):
-        
-    def setUp(self):
-        random.seed(10)
-        numpy_random.seed(10)
 
     def test_model_change(self):
         metamodel = MetaModel()
@@ -105,18 +99,22 @@ class MetaModelTestCase(unittest.TestCase):
                               ('comp1.c', 'metamodel.a'), ('comp1.d', 'metamodel.b')]))
         
         # do some training
-        for i in range(10):
-            asm.comp1.a = random.uniform(1,8)
-            asm.comp1.b = random.uniform(3,10)
+        data = [1,2,3,4]        
+        
+        for a,b in zip(data[:-1],data[1:]):
+            asm.comp1.a = a
+            asm.comp1.b = b
             asm.metamodel.train_next = 1
             asm.run()
             
         # now run and get some results
         asm.comp1.a = 1.
         asm.comp1.b = 2.
+        
         asm.run()
-        assert_rel_error(self, asm.comp2.c, 6., 0.01)
-        assert_rel_error(self, asm.comp2.d, -2.12, 0.04)
+        
+        assert_rel_error(self, asm.comp2.c, 6, 0.02)
+        assert_rel_error(self, asm.comp2.d, -2, 0.02)
         
         # set new model and verify disconnect
         asm.metamodel.model = Simple2()

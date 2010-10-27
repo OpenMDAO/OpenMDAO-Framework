@@ -3,7 +3,7 @@ import Queue
 import sys
 import threading
 
-from enthought.traits.api import Bool, Instance
+from openmdao.lib.datatypes.api import Bool, Instance
 
 from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped

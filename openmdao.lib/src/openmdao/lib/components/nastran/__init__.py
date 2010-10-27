@@ -1,0 +1,1 @@
+from nastran import NastranComponent

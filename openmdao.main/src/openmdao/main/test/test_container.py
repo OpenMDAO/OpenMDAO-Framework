@@ -11,7 +11,7 @@ from enthought.traits.api import TraitError, HasTraits
 
 import openmdao.util.eggsaver as constants
 from openmdao.main.container import Container, get_default_name
-from openmdao.lib.api import Float
+from openmdao.lib.datatypes.api import Float, TraitError
 from openmdao.util.testutil import make_protected_dir
 
 # Various Pickle issues arise only when this test runs as the main module.

@@ -8,13 +8,11 @@ import stat
 import time
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Bool, Dict, Str
+from openmdao.lib.datatypes.api import Bool, Dict, Str, Float, Int
 
 from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 from openmdao.main.resource import ResourceAllocationManager as RAM
-from openmdao.lib.datatypes.float import Float
-from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
 
