@@ -191,8 +191,6 @@ class Assembly (Component):
             if (outs is None) or outs:
                 bouts = self.child_invalidated(destcompname, outs)
 
-        
-
     def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and
         varpath2. Otherwise, if varpath is the name of a trait, remove all
@@ -325,21 +323,12 @@ class Assembly (Component):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
         """
-        fakes = [n for n in outnames if '.' in n]
-        reals = [n for n in outnames if '.' not in n]
-        if reals:  # 'real' boundary outputs
-            self.update_inputs('@bout', reals)
-        if fakes:  # 'fake' boundary outputs  (passthroughs to internal variables)
-            compmap = {}
-            for name in fakes:
-                cname, _, varname = name.partition('.')
-                if cname in compmap:
-                    compmap[cname].append(varname)
-                else:
-                    compmap[cname] = [varname]
-            for cname, vnames in compmap.items():
-                getattr(self, cname).update_outputs(vnames)
-                self.set_valid(vnames, True)
+        simple, compmap = _partition_names_by_comp(outnames)
+        if simple:  # boundary outputs
+            self.update_inputs('@bout', simple)
+        for cname, vnames in compmap.items():  # auto passthroughs to internal variables
+            getattr(self, cname).update_outputs(vnames)
+            self.set_valid(vnames, True)
         
     def get_valid(self, names):
         """Returns a list of boolean values indicating whether the named
@@ -354,18 +343,21 @@ class Assembly (Component):
             ret.extend(comp.get_valid(vnames))
         return ret
 
-    def check_resolve(self, pathnames):
+    def check_resolve(self, names):
         """Returns True if all of the pathnames are resolvable starting from this
         Assembly.
         """
-        for name in pathnames:
-            tup = name.split('.', 1)
-            if len(tup) > 1:
-                comp = getattr(self, tup[0], None)
-                if comp is None or not comp.contains(tup[1]):
-                    return False
-            elif not hasattr(self, name):
+        simple, compmap = _partition_names_by_comp(names)
+        for name in simple:
+            if not hasattr(self, name):
                 return False
+        for cname,vnames in compmap.items():
+            comp = getattr(self, cname, None)
+            if comp is None:
+                return False
+            for vname in vnames:
+                if not comp.contains(vname):
+                    return False
         return True
 
     def _input_updated(self, name):
