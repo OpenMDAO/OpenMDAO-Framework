@@ -455,7 +455,7 @@ class CaseIterDriverBase(Driver):
         # Just being defensive, this should never happen.
         if server is None:  #pragma no cover
             self._logger.error('Server allocation for %s failed :-(', name)
-            self._reply_q.put((name, False, None))
+            reply_q.put((name, False, None))
             return
         else:
             # Clear egg re-use indicator.

@@ -824,8 +824,9 @@ class ClusterAllocator(object):  #pragma no cover
             del criteria['allocator']  # Don't pass a proxy without a server!
         server = allocator.deploy(name, resource_desc, criteria)
         self._deployed_servers[name] = (allocator, server)
+        return server
 
-    def release(server):
+    def release(self, server):
         """
         Release a server (proxy).
 
