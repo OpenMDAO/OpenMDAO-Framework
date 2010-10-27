@@ -101,18 +101,20 @@ class TestCase(unittest.TestCase):
             # Non-zero return code.
             return_code, error_msg = \
                 server.execute_command('no-such-command',
-                                       None, 'stdout', 'stderr', None, 0, 10)
+                                       None, 'stdout1', 'stderr1', None, 0, 10)
             self.assertNotEqual(return_code, 0)
 
             # Exception creating process.
-            try:
-                server.execute_command(['no-such-command'],
-                                       None, 'stdout', 'stderr', None, 0, 10)
-            except OSError as exc:
-                msg = '[Errno 2] No such file or directory'
-                self.assertEqual(str(exc), msg)
-            else:
-                self.fail('Expected OSError')
+# FIXME: despite the files being closed, Windows thinks they're in use :-(
+            if sys.platform != 'win32':
+                try:
+                    server.execute_command(['no-such-command'],
+                                           None, 'stdout2', 'stderr2', None, 0, 10)
+                except OSError as exc:
+                    msg = '[Errno 2] No such file or directory'
+                    self.assertEqual(str(exc), msg)
+                else:
+                    self.fail('Expected OSError')
 
             # Load a model.
             obj = server.load_model(egg_info[0])

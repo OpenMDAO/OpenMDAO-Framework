@@ -193,10 +193,7 @@ def call(args, stdin=None, stdout=None, stderr=None, env=None,
         A value of zero implies an infinite maximum wait.
     """
     process = ShellProc(args, stdin, stdout, stderr, env)
-    try:
-        return process.wait(poll_delay, timeout)
-    finally:
-        process.close_files()
+    return process.wait(poll_delay, timeout)
 
 
 def check_call(args, stdin=None, stdout=None, stderr=None, env=None,
@@ -228,11 +225,7 @@ def check_call(args, stdin=None, stdout=None, stderr=None, env=None,
         A value of zero implies an infinite maximum wait.
     """
     process = ShellProc(args, stdin, stdout, stderr, env)
-    try:
-        return_code, error_msg = process.wait(poll_delay, timeout)
-    finally:
-        process.close_files()
-
+    return_code, error_msg = process.wait(poll_delay, timeout)
     if return_code:
         raise CalledProcessError(return_code, args, error_msg)
 

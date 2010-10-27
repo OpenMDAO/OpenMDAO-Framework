@@ -326,7 +326,6 @@ class ObjServer(object):
 
         self._logger.debug('    PID = %d', process.pid)
         return_code, error_msg = process.wait(poll_delay, timeout)
-        process.close_files()
         self._logger.debug('    returning %s', (return_code, error_msg))
         return (return_code, error_msg)
 
