@@ -558,7 +558,38 @@ If the default value is not given, then the first value of the list is taken as 
     color2 = Enum(('Red', 'Yellow', 'Green'), iotype='in')
     
 This is the simplest form of the Enum constructor.
+
+It is also possible to produce a simple array that behaves like an Enum where each element of
+the array can only contain a value that is in the Enum. This kind of variable can be
+defined by creating a *List* of Enums.
     
+.. testcode:: enum_list_example
+
+    from openmdao.lib.datatypes.api import Enum, List
+    from openmdao.main.api import Component
+    
+    class Dice(Component):
+        roll = List( Enum(1, (1, 2, 3, 4, 5, 6)), iotype='in')
+        
+This example defines a variable named *roll* that can contain the values for any number
+of dice. Instead of giving a List as the default value, we've given it the definition
+for an Enum variable that has a default value of 1, and a set of valid values spanning
+the integers from 1 to 6. Note that the Enum doesn't need an iotype, but the List does.
+
+.. doctest:: enum_list_example
+
+    >>> my_dice = Dice()
+    >>> 
+    >>> # Valid
+    >>> my_dice.roll = [1, 6, 3, 2, 2]
+    >>>
+    >>> # Invalid
+    >>> my_dice.roll = [1, 6, 3, 2, 7]
+    Traceback (most recent call last):
+    ...
+    TraitError: : Trait 'roll' must be in (1, 2, 3, 4, 5, 6), but a value of 7 <type 'int'> was specified.
+
+
 .. index:: File Variables, File
 
 File Variables
