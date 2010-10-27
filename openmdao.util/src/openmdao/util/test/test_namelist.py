@@ -9,7 +9,8 @@ import unittest
 from numpy import float32 as numpy_float32
 from numpy import zeros
 
-from openmdao.lib.datatypes.api import Float, Bool, Int, Str, Array, File
+from openmdao.lib.datatypes.api import Float, Bool, Int, Str, Array, File, List, Enum
+
 from openmdao.main.api import Container, Component
 from openmdao.util.namelist_util import Namelist
 
@@ -20,6 +21,7 @@ class Var_Container(Container):
     int_var = Int(7777, iotype='in')
     float_var = Float(2.14543, iotype='in')
     text_var = Str("Hey", iotype='in')
+    list_enum_var = List(Enum(1,(1,2,3)), iotype='in')
 
 class Var_Component(Component):
     """Contains some vars"""
@@ -29,6 +31,7 @@ class Var_Component(Component):
     float_var = Float(-16.54, iotype='in')
     text_var = Str("This", iotype='in')
     array_var = Array(iotype='in')
+    list_enum_var = List(Enum(1,(1,2,3)), iotype='in')
     
     def __init__(self, directory=''):
         
@@ -52,6 +55,7 @@ class TestCase(unittest.TestCase):
     def test_writes(self):
 
         my_comp = Var_Component()
+        my_comp.list_enum_var = [1,2,1,3]
         sb = Namelist(my_comp)
         
         sb.set_filename(self.filename)
@@ -63,6 +67,7 @@ class TestCase(unittest.TestCase):
         sb.add_var("int_var")
         sb.add_var("float_var")
         sb.add_var("text_var")
+        sb.add_var("list_enum_var")
         
         sb.add_newvar("new_card", "new value")
         
@@ -78,6 +83,7 @@ class TestCase(unittest.TestCase):
                   "  int_var = 333\n" + \
                   "  float_var = -16.54\n" + \
                   "  text_var = 'This'\n" + \
+                  "  list_enum_var = 1, 2, 1, 3\n" + \
                   "  new_card = 'new value'\n" + \
                   "/\n"
 
@@ -86,6 +92,7 @@ class TestCase(unittest.TestCase):
     def test_container_write(self):
         
         my_comp = Var_Component()
+        my_comp.var_container.list_enum_var = [1,2,1,3]
         sb = Namelist(my_comp)
         
         sb.set_filename(self.filename)
@@ -101,6 +108,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual("text_var = 'Hey'" in contents, True)
         self.assertEqual("float_var = 2.14543" in contents, True)
         self.assertEqual("int_var = 7777" in contents, True)
+        self.assertEqual("list_enum_var = 1, 2, 1, 3" in contents, True)
 
         
     def test_1Darray_write(self):
@@ -170,7 +178,7 @@ class TestCase(unittest.TestCase):
         except RuntimeError, err:
             self.assertEqual(str(err),
                              "Don't know how to handle array of" + \
-                                           "3 dimensions")
+                                           " 3 dimensions")
         else:
             self.fail('RuntimeError expected')        
 
