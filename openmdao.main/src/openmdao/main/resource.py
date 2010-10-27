@@ -539,6 +539,7 @@ class ClusterAllocator(object):  #pragma no cover
         self._last_deployed = None
         self._logger = logging.getLogger(name)
         self._reply_q = Queue.Queue()
+        self._deployed_servers = {}
 
         hosts = []
         for machine in machines:
@@ -821,7 +822,29 @@ class ClusterAllocator(object):  #pragma no cover
             allocator = criteria['allocator']
             self._last_deployed = allocator
             del criteria['allocator']  # Don't pass a proxy without a server!
-        return allocator.deploy(name, resource_desc, criteria)
+        server = allocator.deploy(name, resource_desc, criteria)
+        self._deployed_servers[name] = (allocator, server)
+
+    def release(server):
+        """
+        Release a server (proxy).
+
+        server: :class:`OpenMDAO_Proxy`
+            Server to be released.
+        """
+        name = server.name
+        try:
+            allocator = self._deployed_servers[name][0]
+        except KeyError:
+            self._logger.error('server %r not found', name)
+            return
+
+        try:
+            allocator.release(server)
+        except Exception as exc:
+            self._logger.error("Can't release %s: %s", server, exc)
+        del server
+        del self._deployed_servers[name]
 
     def shutdown(self):
         """ Shutdown, releasing resources. """
