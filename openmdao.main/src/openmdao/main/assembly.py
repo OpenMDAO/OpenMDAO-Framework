@@ -380,38 +380,37 @@ class Assembly (Component):
         """Mark all Variables invalid that depend on varnames. 
         Returns a list of our newly invalidated boundary outputs.
         """
-        if varnames is None:
-            varnames = self.get_connected_inputs()
-
-        # @exin is a little weird and we have to swap varnames for
-        # its sources that map to the varnames as destinations
-        newnames = set()
-        found = set()
-        
+        ext_srcs = set()
+        bins = set()
+                            
+        # we have to find the sources for inputs from outside the boundary
         for destcomp, link in self._depgraph.out_links('@exin'):
-            if destcomp == '@bin':
+            if destcomp == '@bin':  # connection from external to the input boundary
                 for src,dests in link._srcs.items():
                     for dest in dests:
-                        if dest in varnames:
-                            newnames.add(src)
-                            found.add(dest)
-            else:
+                        if varnames is None or dest in varnames:
+                            ext_srcs.add(src)
+                            bins.add(dest)
+            else:  # connection from external to some internal component
                 for src,dests in link._srcs.items():
                     for dest in dests:
                         dest = '.'.join([destcomp,dest])
-                        if dest in varnames:
-                            newnames.add(src)
-                            found.add(dest)
-                            
-        if found:
-            self.set_valid(found, False)
+                        if varnames is None or dest in varnames:
+                            ext_srcs.add(src)
+                            bins.add(dest)
+        if bins:
+            self.set_valid(bins, False)
         
         outs = set()
-        if newnames:
-            outs.update(self._depgraph.invalidate_deps(self, ['@exin'], [newnames]))
+        if ext_srcs:
+            outs.update(self._depgraph.invalidate_deps(self, ['@exin'], [ext_srcs]))
 
-        # need this to handle the case of unconnected boundary inputs that are set
-        unconnected_ins = set(varnames)-found
+        # need this to handle the case of unconnected boundary inputs that have
+        # had their value changed
+        if varnames is None:
+            unconnected_ins = set(self.list_inputs())-bins
+        else:
+            unconnected_ins = set(varnames)-bins
         if unconnected_ins:
             outs.update(self._depgraph.invalidate_deps(self, ['@bin'], [unconnected_ins]))
 
