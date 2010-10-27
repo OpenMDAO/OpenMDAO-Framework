@@ -256,7 +256,7 @@ class Component (Container):
                 valids[name] = True
         else:
             valids = self._valid_dict
-            invalid_ins = [inp for inp in self._get_connected_inputs() 
+            invalid_ins = [inp for inp in self.list_connected_inputs() 
                                     if valids.get(inp) is False]
             if invalid_ins:
                 self._call_execute = True
@@ -395,13 +395,14 @@ class Component (Container):
         """
         if self._input_names is None:
             nset = set([k for k,v in self.items(iotype='in')])
-            nset.update([s for s in self._depgraph.get_connected_inputs()])
+            nset.update(self._depgraph.get_connected_inputs())
             self._input_names = list(nset)
             
         if valid is None:
             return self._input_names
         else:
-            return [n for n,v in zip(self._input_names, self.get_valid(self._input_names)) if v == valid]
+            valids = self._valid_dict
+            return [n for n in self._input_names if valids[n] == valid]
         
     def list_outputs(self, valid=None):
         """Return a list of names of output values. If valid is not None,
@@ -409,13 +410,14 @@ class Component (Container):
         """
         if self._output_names is None:
             nset = set([k for k,v in self.items(iotype='out')])
-            nset.update([s.replace('@exout.','') for s in self._depgraph.get_connected_outputs()])
+            nset.update(self._depgraph.get_connected_outputs())
             self._output_names = list(nset)
             
         if valid is None:
             return self._output_names
         else:
-            return [n for n,v in zip(self._output_names, self.get_valid(self._output_names)) if v == valid]
+            valids = self._valid_dict
+            return [n for n in self._output_names if valids[n] == valid]
         
     def list_containers(self):
         """Return a list of names of child Containers."""
@@ -424,19 +426,18 @@ class Component (Container):
                                                    if isinstance(v,Container)]
         return self._container_names
     
-    def _get_connected_inputs(self):
+    def list_connected_inputs(self):
         """Return a list of names of connected input variables and passthroughs."""
         if self._connected_inputs is None:
             self._connected_inputs = self._depgraph.get_connected_inputs()
         return self._connected_inputs
             
-    def _get_connected_outputs(self):
+    def list_connected_outputs(self):
         """Return a list of names of connected output variables and passthroughs."""
         if self._connected_outputs is None:
             self._connected_outputs = self._depgraph.get_connected_outputs()
         return self._connected_outputs
         
-    
     def connect(self, srcpath, destpath):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
@@ -1073,10 +1074,10 @@ class Component (Container):
         # only invalidate connected inputs. inputs that are not connected
         # should never be invalidated
         if varnames is None:
-            for var in self._get_connected_inputs():
+            for var in self.list_connected_inputs():
                 valids[var] = False
         else:
-            conn = self._get_connected_inputs()
+            conn = self.list_connected_inputs()
             for var in varnames:
                 if var in conn:
                     valids[var] = False

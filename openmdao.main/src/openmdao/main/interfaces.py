@@ -26,9 +26,29 @@ class IContainer(Interface):
     #parent = Instance(IContainer)
     name = Str('')
     
-    def get_pathname(self, rel_to_scope=None):
-        """ Return full path name to this container, relative to scope
-        *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
+    def add(self, name, obj, **kw_args):
+        """Add a Container object to this Container.
+        Returns the added Container object.
+        """
+        
+    def add_trait(self, name, trait):
+        """Overrides HasTraits definition of *add_trait* in order to
+        keep track of dynamically added traits for serialization.
+        """
+
+    def build_trait(self, pathname, iotype=None, trait=None):
+        """Asks the object to dynamically create a trait for the 
+        attribute given by pathname, based on whatever knowledge the
+        component has of that attribute.
+        
+        pathname: str
+            The dotted path to the specified attribute.
+            
+        iotype: str, optional
+            The data direction, either 'in' or 'out'.
+            
+        trait: TraitType, optional
+            A validation trait for the given attribute.
         """
         
     def connect(self, srcpath, destpath):
@@ -43,9 +63,43 @@ class IContainer(Interface):
             Pathname of destination variable
         """
         
+    def contains(self, path):
+        """Return True if the child specified by the given dotted path
+        name is contained in this Container. 
+        """
+    
+    def create_alias(self, path, alias, iotype=None, trait=None):
+        """Create a trait that maps to some internal variable designated by a
+        dotted path. If a trait is supplied as an argument, use that trait as
+        a validator for the aliased value. The resulting trait will have the
+        alias as its name and will be added to 
+        self.  An exception will be raised if the trait already exists.
+        """
+
     def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one 
         destination variable.
+        """
+        
+    def find_trait(self, pathname):
+        """Returns a trait if a trait with the given pathname exists.
+        If an attribute exists with the given pathname but no trait is found, 
+        or if pathname references a trait in a parent scope, None will be returned. If
+        no attribute exists with the given pathname within this scope, an AttributeError 
+        will be raised.
+        
+        pathname: str
+            pathname of the desired trait
+        """
+
+    def get(self, path, index=None):
+        """Return the object specified by the given 
+        path, which may contain '.' characters.  
+        """
+
+    def get_pathname(self, rel_to_scope=None):
+        """ Return full path name to this container, relative to scope
+        *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
         """
         
     def get_wrapped_attr(self, name):
@@ -58,46 +112,15 @@ class IContainer(Interface):
         'copy' are 'shallow' and 'deep'.
         """
         
-    def add(self, name, obj, **kw_args):
-        """Add a Container object to this Container.
-        Returns the added Container object.
+    def items(self, recurse=False, **metadata):
+        """Return a list of tuples of the form (rel_pathname, obj) for each
+        trait of this Container that matches the given metadata. If recurse is
+        True, also iterate through all child Containers of each Container
+        found.
         """
-        
-    def remove(self, name):
-        """Remove the specified child from this container and remove any
-        public trait objects that reference that child. Notify any
-        observers."""
-        
-    def tree_rooted(self):
-        """Called after the hierarchy containing this Container has been
-        defined back to the root. This does not guarantee that all sibling
-        Containers have been defined. It also does not guarantee that this
-        component is fully configured to execute.
-        """
-            
-    def revert_to_defaults(self, recurse=True):
-        """Sets the values of all of the inputs to their default values."""
-            
+
     def list_containers(self):
         """Return a list of names of child Containers."""
-
-    def contains(self, path):
-        """Return True if the child specified by the given dotted path
-        name is contained in this Container. 
-        """
-    
-    def get(self, path, index=None):
-        """Return the object specified by the given 
-        path, which may contain '.' characters.  
-        """
-
-    def set(self, path, value, index=None, src=None, force=False):
-        """Set the value of the Variable specified by the given path, which
-        may contain '.' characters. The Variable will be set to the given
-        value, subject to validation and constraints. *index*, if not None,
-        should be a list of ints, at most one for each array dimension of the
-        target value.
-        """ 
 
     def get_metadata(self, traitpath, metaname=None):
         """Retrieve the metadata associated with the trait found using
@@ -107,12 +130,39 @@ class IContainer(Interface):
         the trait, None is returned.
         """
         
+    def get_trait ( self, name, copy = False ):
+        """Returns the trait indicated by name, or None if not found.  No recursive
+        search is performed if name contains dots.  This is a replacement
+        for the trait() method on HasTraits objects, because that method
+        can return traits that shouldn't exist. Do not use the trait() function
+        unless you are certain that the named trait exists.
+        """
+
     def invoke(self, path, *args, **kwargs):
         """Call the callable specified by **path**, which may be a simple
         name or a dotted path, passing the given arguments to it, and 
         return the result.
         """
     
+    def pre_delete(self):
+        """Perform any required operations before being deleted."""
+    
+    def post_load(self):
+        """Perform any required operations after model has been loaded."""
+
+    def remove(self, name):
+        """Remove the specified child from this container and remove any
+        public trait objects that reference that child. Notify any
+        observers."""
+        
+    def remove_trait(self, name):
+        """Overrides HasTraits definition of remove_trait in order to
+        keep track of dynamically added traits for serialization.
+        """
+
+    def revert_to_defaults(self, recurse=True):
+        """Sets the values of all of the inputs to their default values."""
+            
     def save(self, outstream, fmt=SAVE_CPICKLE, proto=-1):
         """Save the state of this object and its children to the given
         output stream. Pure Python classes generally won't need to
@@ -130,69 +180,21 @@ class IContainer(Interface):
             Protocol used.
         """
 
-    def post_load(self):
-        """Perform any required operations after model has been loaded."""
+    def set(self, path, value, index=None, src=None, force=False):
+        """Set the value of the Variable specified by the given path, which
+        may contain '.' characters. The Variable will be set to the given
+        value, subject to validation and constraints. *index*, if not None,
+        should be a list of ints, at most one for each array dimension of the
+        target value.
+        """ 
 
-    def pre_delete(self):
-        """Perform any required operations before being deleted."""
-    
-    def get_trait ( self, name, copy = False ):
-        """Returns the trait indicated by name, or None if not found.  No recursive
-        search is performed if name contains dots.  This is a replacement
-        for the trait() method on HasTraits objects, because that method
-        can return traits that shouldn't exist. Do not use the trait() function
-        unless you are certain that the named trait exists.
+    def tree_rooted(self):
+        """Called after the hierarchy containing this Container has been
+        defined back to the root. This does not guarantee that all sibling
+        Containers have been defined. It also does not guarantee that this
+        component is fully configured to execute.
         """
-
-    def add_trait(self, name, trait):
-        """Overrides HasTraits definition of *add_trait* in order to
-        keep track of dynamically added traits for serialization.
-        """
-    def remove_trait(self, name):
-        """Overrides HasTraits definition of remove_trait in order to
-        keep track of dynamically added traits for serialization.
-        """
-
-    def items(self, recurse=False, **metadata):
-        """Return a list of tuples of the form (rel_pathname, obj) for each
-        trait of this Container that matches the given metadata. If recurse is
-        True, also iterate through all child Containers of each Container
-        found.
-        """
-
-    def _build_trait(self, pathname, iotype=None, trait=None):
-        """Asks the object to dynamically create a trait for the 
-        attribute given by pathname, based on whatever knowledge the
-        component has of that attribute.
-        
-        pathname: str
-            The dotted path to the specified attribute.
             
-        iotype: str, optional
-            The data direction, either 'in' or 'out'.
-            
-        trait: TraitType, optional
-            A validation trait for the given attribute.
-        """
-        
-    def find_trait(self, pathname):
-        """Returns a trait if a trait with the given pathname exists.
-        If an attribute exists with the given pathname but no trait is found, 
-        or if pathname references a trait in a parent scope, None will be returned. If
-        no attribute exists with the given pathname within this scope, an AttributeError 
-        will be raised.
-        
-        pathname: str
-            pathname of the desired trait
-        """
-
-    def create_alias(self, path, alias, iotype=None, trait=None):
-        """Create a trait that maps to some internal variable designated by a
-        dotted path. If a trait is supplied as an argument, use that trait as
-        a validator for the aliased value. The resulting trait will have the
-        alias as its name and will be added to 
-        self.  An exception will be raised if the trait already exists.
-        """
     
 class IComponent(IContainer):
     """Interface for an IContainer object that can be executed to update the values of
@@ -207,11 +209,6 @@ class IComponent(IContainer):
         version.
         """
     
-    def tree_rooted(self):
-        """Calls the base class version of *tree_rooted()*, checks our
-        directory for validity, and creates the directory if it doesn't exist.
-        """
-
     def run (self, force=False):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
@@ -230,10 +227,10 @@ class IComponent(IContainer):
         the the list will contain names of outputs with matching validity.
         """
         
-    #def _get_connected_inputs(self):
+    #def list_connected_inputs(self):
         #"""Return a list of names of connected input variables and passthroughs."""
             
-    #def _get_connected_outputs(self):
+    #def list_connected_outputs(self):
         #"""Return a list of names of connected output variables and passthroughs."""
         
     

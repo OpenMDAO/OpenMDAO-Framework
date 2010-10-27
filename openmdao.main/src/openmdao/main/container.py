@@ -1250,7 +1250,7 @@ def find_trait_and_value(obj, pathname):
 
 def create_io_traits(cont, obj_info, iotype='in'):
     """Create io trait(s) specified by the contents of obj_info. Calls
-    _build_trait() on the scoping object, which can be overridden by 
+    build_trait() on the scoping object, which can be overridden by 
     subclasses, to create each trait.
     
     obj_info is assumed to be either a string, a tuple, or an iterator
@@ -1288,4 +1288,4 @@ def create_io_traits(cont, obj_info, iotype='in'):
             cont.raise_exception('create_io_traits cannot add trait %s' % entry,
                                  TraitError)
         cont.add_trait(name, 
-                       cont._build_trait(ref_name, iostat, trait))
+                       cont.build_trait(ref_name, iostat, trait))

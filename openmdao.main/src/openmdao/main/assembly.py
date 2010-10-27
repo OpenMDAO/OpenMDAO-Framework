@@ -347,20 +347,11 @@ class Assembly (Component):
         specify either direct traits of self or those of direct children of
         self, but no deeper in the hierarchy than that.
         """
-        ret = [0]*len(names)
-        vdict = self._valid_dict
-        for i,name in enumerate(names):
-            v = vdict.get(name, None)
-            if v is not None:
-                ret[i] = v
-            else:
-                tup = name.split('.', 1)
-                if len(tup) > 1:
-                    comp = getattr(self, tup[0])
-                    ret[i] = comp.get_valid([tup[1]])[0]
-                else:
-                    self.raise_exception("get_valid: unknown variable '%s'" %
-                                         name, RuntimeError)
+        simple, compmap = _partition_names_by_comp(names)
+        ret = super(Assembly, self).get_valid(simple)
+        for cname, vnames in compmap.items():
+            comp = getattr(self, cname)
+            ret.extend(comp.get_valid(vnames))
         return ret
 
     def check_resolve(self, pathnames):
@@ -461,4 +452,21 @@ def dump_iteration_tree(obj):
     f = cStringIO.StringIO()
     _dump_iteration_tree(obj, f, 0)
     return f.getvalue()
-    
+
+
+def _partition_names_by_comp(names):
+    """Take an iterator of names and return a tuple of the form (namelist, compmap)
+    where namelist is a list of simple names (no dots) and compmap is a dict with component names
+    keyed to lists of variable names.  
+    """
+    simple = []
+    compmap = {}
+    for name in names:
+        parts = name.split('.', 1)
+        if len(parts) == 1:
+            simple.append(name)
+        else:
+            compmap.setdefault(parts[0], []).append(parts[1])
+    return (simple, compmap)
+
+
