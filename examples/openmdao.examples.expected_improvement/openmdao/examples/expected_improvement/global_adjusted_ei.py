@@ -226,7 +226,7 @@ class Analysis(Assembly):
         #Driver Configuration
         self.add("DOE_trainer1",DOEdriver())
         self.DOE_trainer1.sequential = True
-        self.DOE_trainer1.DOEgenerator = FullFactorial(4, 1)
+        self.DOE_trainer1.DOEgenerator = FullFactorial(num_levels=4)
         self.DOE_trainer1.add_parameter("c1.x")
         self.DOE_trainer1.add_event("c1.train_next")
         self.DOE_trainer1.case_outputs = ['c1.f1','c1.f2']
@@ -234,7 +234,7 @@ class Analysis(Assembly):
 
         self.add("DOE_trainer2",DOEdriver())
         self.DOE_trainer2.sequential = True
-        self.DOE_trainer2.DOEgenerator = FullFactorial(10, 1)
+        self.DOE_trainer2.DOEgenerator = FullFactorial(num_levels=10)
         self.DOE_trainer2.add_parameter("c2.y")
         self.DOE_trainer2.add_event("c2.train_next")
         self.DOE_trainer2.case_outputs = ['c2.f1','c2.f2']

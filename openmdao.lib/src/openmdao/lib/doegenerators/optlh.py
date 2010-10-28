@@ -127,14 +127,12 @@ class OptLatinHypercube(HasTraits):
     norm_method = Enum(["1-norm","2-norm"],
                     desc="Vector norm calculation method. '1-norm' is faster, but less accurate")
     
-    def __init__(self, num_samples=None, num_parameters=None, population=None,generations=None):
+    def __init__(self, num_samples=None, population=None,generations=None):
         super(OptLatinHypercube,self).__init__()
         
         self.qs = [1,2,5,10,20,50,100] #list of qs to try for Phi_q optimization
         if num_samples is not None:
             self.num_sample_points = num_samples
-        if num_parameters is not None:
-            self.num_parameters = num_parameters
         if population is not None:
             self.population = population
         if generations is not None: 
