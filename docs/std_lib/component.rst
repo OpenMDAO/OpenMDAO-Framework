@@ -23,8 +23,8 @@ Components
     .. testcode:: MetaModel_sockets
         
         from openmdao.main.api import Assembly
-        from openmdao.lib.api import MetaModel
-        from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
+        from openmdao.lib.components.api import MetaModel
+        from openmdao.lib.surrogatemodels.api import KrigingSurrogate
         
         class Simulation(Assembly):
             def __init__(self): 
@@ -42,8 +42,8 @@ Components
     .. testcode:: MetaModel_model
         
         from openmdao.main.api import Assembly
-        from openmdao.lib.api import MetaModel
-        from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
+        from openmdao.lib.components.api import MetaModel
+        from openmdao.lib.surrogatemodels.api import KrigingSurrogate
         from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
         class Simulation(Assembly):
@@ -76,8 +76,8 @@ Components
     .. testcode:: MetaModel_excludes
         
         from openmdao.main.api import Assembly
-        from openmdao.lib.api import MetaModel
-        from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
+        from openmdao.lib.components.api import MetaModel
+        from openmdao.lib.surrogatemodels.api import KrigingSurrogate
         from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
         class Simulation(Assembly):
@@ -99,8 +99,8 @@ Components
     .. testcode:: MetaModel_includes
         
         from openmdao.main.api import Assembly
-        from openmdao.lib.api import MetaModel
-        from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
+        from openmdao.lib.components.api import MetaModel
+        from openmdao.lib.surrogatemodels.api import KrigingSurrogate
         from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
         class Simulation(Assembly):
@@ -147,8 +147,8 @@ Components
     .. testcode:: MetaModel
         
         from openmdao.main.api import Assembly
-        from openmdao.lib.api import MetaModel
-        from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
+        from openmdao.lib.components.api import MetaModel
+        from openmdao.lib.surrogatemodels.api import KrigingSurrogate
         from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
         class Simulation(Assembly):
@@ -179,7 +179,8 @@ Components
     .. testcode:: MetaModel_Assembly
         
         from openmdao.main.api import Assembly
-        from openmdao.lib.api import DOEdriver, MetaModel
+        from openmdao.lib.drivers.api import DOEdriver
+        from openmdao.lib.components.api import MetaModel
         from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
         class Analysis(Assembly): 

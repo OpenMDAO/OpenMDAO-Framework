@@ -32,9 +32,11 @@ from openmdao.lib.doegenerators.full_factorial import FullFactorial
 
 from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array
 
-from openmdao.lib.api import MetaModel,MultiObjExpectedImprovement,\
-     ProbIntersect,ParetoFilter,DOEdriver,Genetic,CaseIteratorDriver,\
-     DBCaseRecorder,DumpCaseRecorder,DBCaseIterator, Mux
+from openmdao.lib.drivers.api import DOEdriver,Genetic,CaseIteratorDriver
+from openmdao.lib.components.api import MetaModel,MultiObjExpectedImprovement,\
+     ProbIntersect,ParetoFilter, Mux
+from openmdao.lib.caserecorders.api import DBCaseRecorder,DumpCaseRecorder
+from openmdao.lib.caseiterators.api import DBCaseIterator
 
 from openmdao.examples.expected_improvement.alg_component1 import Alg_Component1
 from openmdao.examples.expected_improvement.alg_component2 import Alg_Component2

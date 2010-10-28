@@ -46,7 +46,7 @@ can be directly set:
 
     from openmdao.main.api import Component, Assembly
     from openmdao.lib.datatypes.api import Float, Bool
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
     
     class GeoMan(Component):
 

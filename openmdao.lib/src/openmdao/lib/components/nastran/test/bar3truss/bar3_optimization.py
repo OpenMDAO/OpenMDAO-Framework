@@ -8,7 +8,7 @@ import os
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.datatypes.api import Float
-from openmdao.lib.api import CONMINdriver, Genetic
+from openmdao.lib.drivers.api import CONMINdriver, Genetic
 
 #from openmdao.examples.bar3simulation.bar3 import Bar3Truss
 #from openmdao.examples.bar3simulation.bar3_wrap_f import Bar3Truss

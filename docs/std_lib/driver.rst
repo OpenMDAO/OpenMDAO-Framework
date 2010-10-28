@@ -65,7 +65,7 @@ equations defined in MIMOSystem.
 
 .. testcode:: Broyden
 
-    from openmdao.lib.api import BroydenSolver
+    from openmdao.lib.drivers.api import BroydenSolver
     from openmdao.main.api import Assembly
     
     class SolutionAssembly(Assembly):
@@ -134,7 +134,7 @@ The default value for *algorithm* is ``"broyden2"``.
 
 .. testsetup:: Broyden3
 
-    from openmdao.lib.api import BroydenSolver
+    from openmdao.lib.drivers.api import BroydenSolver
     from openmdao.main.api import Assembly
     
     self = Assembly()
@@ -233,11 +233,11 @@ basic interface conforms to OpenMDAO's driver API, which is discussed in
 :ref:`Driver-API`, and covers how to assign design variables, constraints, and
 objectives.
 
-The OpenMDAO CONMIN driver can be imported from ``openmdao.lib.api``.
+The OpenMDAO CONMIN driver can be imported from ``openmdao.lib.drivers.api``.
 
 .. testcode:: CONMIN_load
 
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
 
 Typically, CONMIN will be used as a driver in the top level assembly, though it
 can be also used in a subassembly as part of a nested driver scheme. Using the
@@ -247,7 +247,7 @@ follows:
 .. testcode:: CONMIN_load
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
 
     class EngineOptimization(Assembly):
         """ Top level assembly for optimizing a vehicle. """
@@ -494,8 +494,8 @@ operate.
     .. testcode:: DOEdriver
     
         from openmdao.main.api import Assembly
-        from openmdao.lib.api import DOEdriver
-        from openmdao.lib.doegenerators.full_factorial import FullFactorial
+        from openmdao.lib.drivers.api import DOEdriver
+        from openmdao.lib.doegenerators.api import FullFactorial
 
         from openmdao.examples.expected_improvement.branin_component import BraninComponent
         
@@ -562,7 +562,7 @@ like this.
 
 .. testcode:: FPI
 
-    from openmdao.lib.api import FixedPointIterator
+    from openmdao.lib.drivers.api import FixedPointIterator
     from openmdao.main.api import Assembly
     
     class SolutionAssembly(Assembly):
@@ -620,11 +620,11 @@ on `Pyevolve <http://pyevolve.sourceforge.net/>`_. Genetic is a global optimizer
 is ideal for optimizing problems with integer or discrete design variables because it
 is a non-derivative based optimization method. 
 
-Genetic can be used in any simulation by importing it from ``openmdao.lib.api``:
+Genetic can be used in any simulation by importing it from ``openmdao.lib.drivers.api``:
 
 .. testcode:: Genetic_load
 
-    from openmdao.lib.api import Genetic
+    from openmdao.lib.drivers.api import Genetic
 
 .. index:: pair: design; variables
 .. index:: Float, Int, Enum
@@ -642,7 +642,7 @@ You add design variables to Genetic using the ``add_parameter`` method.
 .. testcode:: Genetic
 
     from openmdao.main.api import Assembly,Component, set_as_top
-    from openmdao.lib.api import Genetic
+    from openmdao.lib.drivers.api import Genetic
     from openmdao.lib.datatypes.api import Float,Int,Enum
     
     class SomeComp(Component):

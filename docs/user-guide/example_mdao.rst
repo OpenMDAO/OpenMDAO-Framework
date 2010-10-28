@@ -231,7 +231,7 @@ the top level optimization loop.
         from openmdao.examples.mdao.broadcaster import Broadcaster
         
         from openmdao.main.api import Assembly, set_as_top
-        from openmdao.lib.api import CONMINdriver, FixedPointIterator
+        from openmdao.lib.drivers.api import CONMINdriver, FixedPointIterator
         
         class SellarMDF(Assembly):
             """ Optimization of the Sellar problem using MDF
@@ -363,7 +363,7 @@ Finally, putting it all together gives:
         from openmdao.examples.mdao.broadcaster import Broadcaster
         
         from openmdao.main.api import Assembly, set_as_top
-        from openmdao.lib.api import CONMINdriver, FixedPointIterator
+        from openmdao.lib.drivers.api import CONMINdriver, FixedPointIterator
         
         class SellarMDF(Assembly):
             """ Optimization of the Sellar problem using MDF
@@ -448,7 +448,7 @@ looks like this:
 .. testcode:: MDF_parts
 
         # Don't forget to put the import in your header
-        from openmdao.lib.api import BroydenSolver
+        from openmdao.lib.drivers.api import BroydenSolver
 
         # Outer Loop - Global Optimization
         self.add('bcastr', Broadcaster())
@@ -527,7 +527,7 @@ are instantiated and the workflow is defined.
         from openmdao.examples.mdao.broadcaster import Broadcaster
         
         from openmdao.main.api import Assembly, set_as_top
-        from openmdao.lib.api import CONMINdriver
+        from openmdao.lib.drivers.api import CONMINdriver
         
         
         class SellarIDF(Assembly):
@@ -674,7 +674,7 @@ that there are three drivers, and we add each component to one of the three work
         from openmdao.examples.mdao.broadcaster import Broadcaster
         
         from openmdao.main.api import Assembly, set_as_top
-        from openmdao.lib.api import CONMINdriver
+        from openmdao.lib.drivers.api import CONMINdriver
 
         class SellarCO(Assembly):
             """Solution of the sellar analytical problem using CO.
