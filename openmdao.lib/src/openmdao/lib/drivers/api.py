@@ -1,6 +1,5 @@
-""" 
-Pseudo package containing plugins from the OpenMDAO Standard Library.
-"""
+"""Psudo package providing a central place to access all of the
+OpenMDAO drivers standard library"""
 
 # Drivers
 from openmdao.lib.drivers.conmindriver import CONMINdriver
