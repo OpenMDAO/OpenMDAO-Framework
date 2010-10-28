@@ -23,7 +23,7 @@ from openmdao.main.container import Container
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, \
-                                     register, write_server_config
+                                     register, write_server_config, keytype
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                rbac
 
@@ -39,11 +39,12 @@ class ObjServerFactory(Factory):
     within those servers.
     """
 
-    def __init__(self, name='ObjServerFactory'):
+    def __init__(self, name='ObjServerFactory', authkey=None):
         super(ObjServerFactory, self).__init__()
+        self._authkey = authkey
         self._managers = {}
         self._logger = logging.getLogger(name)
-        self._logger.info('PID: %d', os.getpid())
+        self._logger.info('PID: %d, %r', os.getpid(), keytype(self._authkey))
         print 'Factory PID:', os.getpid()
         sys.stdout.flush()
 
@@ -127,7 +128,7 @@ class ObjServerFactory(Factory):
             name = ctor_args.get('name', '')
             if not name:
                 name = 'Server_%d' % (len(self._managers) + 1)
-            manager = _ServerManager(name=name)
+            manager = _ServerManager(authkey=self._authkey, name=name)
 # Helpful?
             if sys.platform == 'win32':  #pragma no cover
                 for handler in logging._handlerList:
@@ -563,6 +564,7 @@ def main():  #pragma no cover
     port: int
         Server port (default of 0 implies next available port).
         Note that ports below 1024 typically require special privileges.
+        If port is negative, then a local pipe is used for communication.
 
     prefix: string
         Prefix for configuration and stdout/stderr files (default 'server').
@@ -597,9 +599,12 @@ def main():  #pragma no cover
         pass
 
     _LOGGER.setLevel(logging.DEBUG)
-    address = (platform.node(), options.port)
+    if options.port >= 0:
+        address = (platform.node(), options.port)
+    else:
+        address = None
     set_credentials(Credentials())
-    _LOGGER.info('Starting FactoryManager %s %r', address, authkey)
+    _LOGGER.info('Starting FactoryManager %s %r', address, keytype(authkey))
     current_process().authkey = authkey
     manager = _FactoryManager(address, authkey, name='Factory')
 

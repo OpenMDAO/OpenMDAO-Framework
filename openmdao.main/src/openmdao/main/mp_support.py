@@ -119,6 +119,18 @@ def has_interface(obj, *ifaces):
         return obj_has_interface(obj, *ifaces)
 
 
+def keytype(authkey):
+    """ Just returns a string showing the type of `authkey`. """
+    if authkey is None:
+        inherited = current_process().authkey
+        if inherited is None:
+            return 'None'
+        else:
+            return '%s (inherited)' % keytype(inherited)
+    else:
+        return authkey if authkey == 'PublicKey' else 'AuthKey'
+
+
 class _SHA1(object):
     """
     Just to get around a deprecation message when using the default
@@ -397,7 +409,8 @@ class OpenMDAO_Server(Server):
                                               serializer)
         name = name or 'OS_%d' % os.getpid()
         self._logger = logging.getLogger(name)
-        self._logger.debug('OpenMDAO_Server process %d started', os.getpid())
+        self._logger.debug('OpenMDAO_Server process %d started, %r',
+                           os.getpid(), keytype(authkey))
         self._authkey = authkey
         if authkey == 'PublicKey':
             self._key_pair = _generate_key_pair(get_credentials(), self._logger)
@@ -430,8 +443,9 @@ class OpenMDAO_Server(Server):
         Handle requests from the proxies in a particular process/thread.
         This version supports dynamic proxy generation and credential checking.
         """
-        self._logger.debug('starting server thread to service %r',
-                           threading.current_thread().name)
+        self._logger.debug('starting server thread to service %r, %s',
+                           threading.current_thread().name,
+                           keytype(self._authkey))
         recv = conn.recv
         send = conn.send
         id_to_obj = self.id_to_obj
@@ -893,6 +907,8 @@ class ObjectManager(object):
                  name=None):
         self._typeid = _make_typeid(obj)
         self._ident = '%x' % id(obj)
+        logging.debug('ObjectManager address %s, %r, name %r',
+                      address, keytype(authkey), name)
         self._manager = OpenMDAO_Manager(address=address, serializer=serializer,
                                          authkey=authkey, name=name)
         self._server = self._manager.get_server()
@@ -1250,7 +1266,7 @@ def _auto_proxy(token, serializer, manager=None, authkey=None,
             conn.close()
 
     ProxyType = _make_proxy_type('OpenMDAO_AutoProxy[%s]' % token.typeid,
-                                exposed)
+                                 exposed)
     proxy = ProxyType(token, serializer, manager=manager, authkey=authkey,
                       incref=incref, pubkey=pubkey)
     proxy._isauto = True

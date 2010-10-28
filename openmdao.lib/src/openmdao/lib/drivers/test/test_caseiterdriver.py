@@ -2,12 +2,9 @@
 Test CaseIteratorDriver.
 """
 
-import glob
 import logging
-import os.path
+import os
 import pkg_resources
-import platform
-import shutil
 import sys
 import time
 import unittest
@@ -27,11 +24,8 @@ from openmdao.lib.api import Float, Bool, Array, ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
 
-from openmdao.util.testutil import find_python
+from openmdao.test.cluster import init_cluster
 
-
-# Users who have ssh configured correctly for testing.
-SSH_USERS = []
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -119,10 +113,10 @@ class TestCase(unittest.TestCase):
         logging.debug('test_sequential')
         self.run_cases(sequential=True)
 
+    def test_sequential_errors(self):
         logging.debug('')
         logging.debug('test_sequential_errors')
         self.generate_cases(force_errors=True)
-        self.model.driver._call_execute = True
         self.run_cases(sequential=True, forced_errors=True)
 
     def test_run_stop_step_resume(self):
@@ -169,58 +163,22 @@ class TestCase(unittest.TestCase):
         # It can also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
         logging.debug('test_concurrent')
-
-        for path in glob.glob('Sim-*'):
-            shutil.rmtree(path)
-
-        # Ensure we aren't held up by local host load problems.
-        local = ResourceAllocationManager.get_allocator(0)
-        local.max_load = 10
-
-        if sys.platform != 'win32':
-            # ssh server not typically available on Windows.
-            machines = []
-            node = platform.node()
-            python = find_python()
-            if node.startswith('gxterm'):
-                # User environment assumed OK on this GRC cluster front-end.
-                for i in range(55):
-                    machines.append({'hostname':'gx%02d' % i, 'python':python})
-            elif self.local_ssh_available():
-                machines.append({'hostname':node, 'python':python})
-            if machines:
-                name = node.replace('.', '_')
-                alloc = ResourceAllocationManager.get_allocator(0)
-                if alloc.name != name:  # Don't add multiple copies.
-                    cluster = ClusterAllocator(name, machines)
-                    ResourceAllocationManager.insert_allocator(0, cluster)
-
+        init_cluster(encrypted=True)
         self.run_cases(sequential=False)
 
+    def test_concurrent_errors(self):
         logging.debug('')
         logging.debug('test_concurrent_errors')
+        init_cluster(encrypted=True)
         self.generate_cases(force_errors=True)
-        self.model.driver._call_execute = True
         self.run_cases(sequential=False, forced_errors=True)
 
-    @staticmethod
-    def local_ssh_available():
-        """ Return True if this user has an authorized key for this machine. """
-        user = os.environ['USER']
-# Avoid problems with users who don't have a valid environment.
-        if user not in SSH_USERS:
-            return False
-        home = os.environ['HOME']
-        node = platform.node()
-        keyfile = os.path.join(home, '.ssh', 'authorized_keys')
-        try:
-            with open(keyfile, 'r') as keys:
-                for line in keys:
-                    if line.find(user+'@'+node) > 0:
-                        return True
-                return False
-        except IOError:
-            return False
+    def test_unencrypted(self):
+        logging.debug('')
+        logging.debug('test_unencrypted')
+        name = init_cluster(encrypted=False)
+        self.model.driver.extra = {'allocator': name}
+        self.run_cases(sequential=False)
 
     def run_cases(self, sequential, forced_errors=False):
         """ Evaluate cases, either sequentially or across multiple servers. """
@@ -340,7 +298,7 @@ class TestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    sys.argv.append('--cover-package=openmdao')
+    sys.argv.append('--cover-package=openmdao.drivers')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 

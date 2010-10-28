@@ -5,7 +5,7 @@ import threading
 
 from enthought.traits.api import Bool, Instance
 
-from openmdao.main.api import Component, Driver
+from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.main.rbac import get_credentials, set_credentials
@@ -45,6 +45,7 @@ class CaseIterDriverBase(Driver):
 
     def __init__(self, *args, **kwargs):
         super(CaseIterDriverBase, self).__init__(*args, **kwargs)
+        self.extra = {}  # Extra resource requirements (unusual)
 
         self._iter = None  # Set to None when iterator is empty.
         self._replicants = 0
@@ -172,6 +173,8 @@ class CaseIterDriverBase(Driver):
             'required_distributions':self._egg_required_distributions,
             'orphan_modules':self._egg_orphan_modules,
             'python_version':sys.version[:3]}
+        if self.extra:
+            resources.update(self.extra)
         max_servers = RAM.max_servers(resources)
         self._logger.debug('max_servers %d', max_servers)
         if max_servers <= 0:
@@ -342,10 +345,10 @@ class CaseIterDriverBase(Driver):
             # Select case to run.
             elif self._todo:
                 self._logger.debug('    run startup case')
-                self._run_case(self._todo.pop(0), server)
+                in_use = self._run_case(self._todo.pop(0), server)
             elif self._rerun:
                 self._logger.debug('    rerun case')
-                self._run_case(self._rerun.pop(0), server, rerun=True)
+                in_use = self._run_case(self._rerun.pop(0), server, rerun=True)
             elif self._iter is None:
                 self._logger.debug('    no more cases')
                 in_use = False
@@ -360,7 +363,7 @@ class CaseIterDriverBase(Driver):
                     self._iter = None
                 else:
                     self._logger.debug('    run next case')
-                    self._run_case(case, server)
+                    in_use = self._run_case(case, server)
         
         elif state == _COMPLETE:
             case = self._server_cases[server]
@@ -413,7 +416,7 @@ class CaseIterDriverBase(Driver):
         return in_use
 
     def _run_case(self, case, server, rerun=False):
-        """ Setup and run a case. """
+        """ Setup and start a case. Returns True if started. """
         if not rerun:
             if not case.max_retries:
                 case.max_retries = self.max_retries
@@ -446,6 +449,9 @@ class CaseIterDriverBase(Driver):
                 case.msg = str(exc)
                 if self.recorder is not None:
                     self.recorder.record(case)
+            return False
+        else:
+            return True
 
     def _service_loop(self, name, resource_desc, credentials, reply_q):
         """ Each server has an associated thread executing this. """
@@ -475,12 +481,14 @@ class CaseIterDriverBase(Driver):
                 request = request_q.get()
                 if request is None:
                     break
-                req_exc = None
                 try:
                     result = request[0](request[1])
                 except Exception as req_exc:
                     self._logger.error('%s: %s caused %s', name,
                                        request[0], req_exc)
+                    result = None
+                else:
+                    req_exc = None
                 reply_q.put((name, result, req_exc))
         except Exception as exc:  # pragma no cover
             # This can easily happen if we take a long time to allocate and

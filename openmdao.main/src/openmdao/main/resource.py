@@ -94,6 +94,13 @@ class ResourceAllocationManager(object):
             return ram._allocators[index]
 
     @staticmethod
+    def list_allocators():
+        """ Return list of allocators. """
+        ram = ResourceAllocationManager.get_instance()
+        with ResourceAllocationManager._lock:
+            return ram._allocators
+
+    @staticmethod
     def max_servers(resource_desc):
         """
         Returns the maximum number of servers compatible with 'resource_desc`.
@@ -263,8 +270,8 @@ class ResourceAllocator(ObjServerFactory):
     resource and can deploy on that resource.
     """
 
-    def __init__(self, name):
-        super(ResourceAllocator, self).__init__(name)
+    def __init__(self, name, authkey='PublicKey'):
+        super(ResourceAllocator, self).__init__(name, authkey)
         self.name = name
 
     # To be implemented by real allocator.
@@ -310,7 +317,7 @@ class ResourceAllocator(ObjServerFactory):
             List of Distributions.
         """
         required = [dist.as_requirement() for dist in resource_value]
-        not_avail = check_requirements(sorted(required), logger=self._logger)
+        not_avail = check_requirements(sorted(required)) #, logger=self._logger)
         if not_avail:  # Distribution not found or version conflict.
             return (-2, {'required_distributions' : not_avail})
         return (0, None)
@@ -326,11 +333,11 @@ class ResourceAllocator(ObjServerFactory):
 #FIXME: shouldn't pollute the environment like this does.
         not_found = []
         for module in sorted(resource_value):
-            self._logger.debug("checking for 'orphan' module: %s", module)
+#            self._logger.debug("checking for 'orphan' module: %s", module)
             try:
                 __import__(module)
             except ImportError:
-                self._logger.info('    not found')
+#                self._logger.info('    not found')
                 not_found.append(module)
         if len(not_found) > 0:  # Can't import module(s).
             return (-2, {'orphan_modules' : not_found})
@@ -363,8 +370,9 @@ class LocalAllocator(ResourceAllocator):
     if another server may be started in :meth:`time_estimate`.
     """
 
-    def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0):
-        super(LocalAllocator, self).__init__(name)
+    def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0,
+                 authkey='PublicKey'):
+        super(LocalAllocator, self).__init__(name, authkey)
         if total_cpus > 0:
             self.total_cpus = total_cpus
         else:
@@ -484,6 +492,12 @@ class LocalAllocator(ResourceAllocator):
                         self._logger.debug('Rating failed: excluded host.')
                     return (-2, {key : value})
 
+            elif key == 'allocator':
+                 if self.name != value:
+                    if log_failure:
+                        self._logger.debug('Rating failed: wrong allocator.')
+                    return (-2, {key : value})
+
             else:
                 if log_failure:
                     self._logger.debug('Rating failed:' \
@@ -532,7 +546,7 @@ class ClusterAllocator(object):  #pragma no cover
     by load average is reasonable.
     """
 
-    def __init__(self, name, machines):
+    def __init__(self, name, machines, authkey='PublicKey'):
         self.name = name
         self._lock = threading.Lock()
         self._allocators = {}
@@ -548,7 +562,7 @@ class ClusterAllocator(object):  #pragma no cover
             host.register(LocalAllocator)
             hosts.append(host)
 
-        self.cluster = mp_distributing.Cluster(hosts, [], authkey='PublicKey')
+        self.cluster = mp_distributing.Cluster(hosts, [], authkey=authkey)
         self.cluster.start()
         self._logger.debug('server listening on %s', self.cluster.address)
 
@@ -591,6 +605,17 @@ class ClusterAllocator(object):  #pragma no cover
             Description of required resources.
         """
         credentials = get_credentials()
+
+        key = 'allocator'
+        value = resource_desc.get(key, '')
+        if value:
+            if self.name != value:
+                return (-2, {key: value})
+            else:
+                # Any host in our cluster is OK.
+                resource_desc = resource_desc.copy()
+                del resource_desc[key]
+
         with self._lock:
             # Drain _reply_q.
             while True:
@@ -670,6 +695,17 @@ class ClusterAllocator(object):  #pragma no cover
             Description of required resources.
         """
         credentials = get_credentials()
+
+        key = 'allocator'
+        value = resource_desc.get(key, '')
+        if value:
+            if self.name != value:
+                return (-2, {key: value})
+            else:
+                # Any host in our cluster is OK.
+                resource_desc = resource_desc.copy()
+                del resource_desc[key]
+
         n_cpus = resource_desc.get('n_cpus', 0)
         if n_cpus:
             # Spread across LocalAllocators.

@@ -14,11 +14,12 @@ import nose
 from openmdao.main.api import Assembly, FileMetadata, SimulationRoot, set_as_top
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunInterrupted
-from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
 from openmdao.lib.components.external_code import ExternalCode
 
-from openmdao.util.testutil import assert_raises, find_python
+from openmdao.test.cluster import init_cluster
+
+from openmdao.util.testutil import assert_raises
 
 
 # Capture original working directory so we can restore in tearDown().
@@ -90,23 +91,7 @@ class TestCase(unittest.TestCase):
     def test_remote(self):
         logging.debug('')
         logging.debug('test_remote')
-
-        # Ensure we aren't held up by local host load problems.
-        local = ResourceAllocationManager.get_allocator(0)
-        local.max_load = 10
-
-        # Exercise cluster deployment if on this GRC cluster front-end.
-        node = platform.node()
-        if node.startswith('gxterm'):
-            name = node.replace('.', '_')
-            alloc = ResourceAllocationManager.get_allocator(0)
-            if alloc.name != name:  # Don't add multiple copies.
-                python = find_python()
-                machines = []
-                for i in range(55):
-                    machines.append({'hostname':'gx%02d' % i, 'python':python})
-                cluster = ClusterAllocator(name, machines)
-                ResourceAllocationManager.insert_allocator(0, cluster)
+        init_cluster()
 
         dummy = 'dummy_output'
         if os.path.exists(dummy):
@@ -285,7 +270,7 @@ class TestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     import nose
-    sys.argv.append('--cover-package=openmdao')
+    sys.argv.append('--cover-package=openmdao.components')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 
