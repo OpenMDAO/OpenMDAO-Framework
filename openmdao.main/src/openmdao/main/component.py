@@ -319,6 +319,8 @@ class Component (Container):
         Returns the added Container object.
         """
         self.config_changed()
+        if isinstance(obj, Container) and not isinstance(obj, Component):
+            self._depgraph.add(name)
         return super(Component, self).add(name, obj)
         
     def remove(self, name):
@@ -326,6 +328,8 @@ class Component (Container):
         any child containers are removed.
         """
         obj = super(Component, self).remove(name)
+        if isinstance(obj, Container) and not isinstance(obj, Component):
+            self._depgraph.remove(name)
         self.config_changed()
         return obj
 
@@ -397,20 +401,37 @@ class Component (Container):
         self._connected_inputs = None
         self._connected_outputs = None
 
-    def list_inputs(self, valid=None):
-        """Return a list of names of input values. If valid is not None,
-        the the list will contain names of inputs with matching validity.
+    def list_inputs(self, valid=None, connected=None):
+        """Return a list of names of input values. 
+        
+        valid: bool, optional
+            If valid is not None, the list will contain names 
+            of inputs with matching validity.
+            
+        connected: bool, optional
+            If connected is not None, the list will contain names
+            of inputs with matching *external* connectivity status.
         """
         if self._input_names is None:
             nset = set([k for k,v in self.items(iotype='in')])
             nset.update(self._depgraph.get_connected_inputs())
             self._input_names = list(nset)
             
-        if valid is None:
-            return self._input_names
-        else:
-            valids = self._valid_dict
-            return [n for n in self._input_names if valids[n] == valid]
+        valids = self._valid_dict
+        ret = self._input_names
+        if valid is not None:
+            ret = [n for n in ret if valids[n] == valid]
+        if connected is not None:
+            srcs,dests = self._depgraph.get_mapping('@exin', '@bin')
+            if connected:
+                if srcs is None: 
+                    return []
+                else:
+                    return [n for n in ret if n in dests]
+            else:  # not connected
+                if dests is not None:
+                    return [n for n in ret if n not in dests]
+        return ret
         
     def list_outputs(self, valid=None):
         """Return a list of names of output values. If valid is not None,
@@ -462,23 +483,20 @@ class Component (Container):
         destpath: str
             Pathname of destination variable
         """
-        has_ext_src = srcpath.startswith('parent.')
-        has_ext_dest = destpath.startswith('parent.')
-        
         valids_update = None
         
-        if has_ext_dest or has_ext_src:  # cross-boundary connection
-            if has_ext_src:  # internal destination
-                self._connected_inputs = None
-                valids_update = (destpath, False)
-            else: # internal source
-                self._connected_outputs = None
-                if srcpath not in self._valid_dict:
-                    valids_update = (srcpath, True)
+        if srcpath.startswith('parent.'):  # internal destination
+            self._connected_inputs = None # force regen of connected input list later
+            valids_update = (destpath, False)
+        elif destpath.startswith('parent.'): # internal source
+            self._connected_outputs = None # force regen of connected output list later
+            if srcpath not in self._valid_dict:
+                valids_update = (srcpath, True)
                     
         super(Component, self).connect(srcpath, destpath)
         
-        # move this to after the super connect call so if there's a problem we don't have to undo it
+        # move this to after the super connect call so if there's a 
+        # problem we don't have to undo it
         if valids_update is not None:
             self._valid_dict[valids_update[0]] = valids_update[1]
         
@@ -1069,7 +1087,7 @@ class Component (Container):
         for name in names:
             valids[name] = valid
             
-    def invalidate_deps(self, varnames=None):
+    def invalidate_deps(self, varnames=None, force=False):
         """Invalidate all of our outputs if they're not invalid already.
         For a typical Component, this will always be all or nothing, meaning
         there will never be partial validation of outputs.  
@@ -1096,7 +1114,7 @@ class Component (Container):
                     valids[var] = False
 
         # this assumes that all outputs are either valid or invalid
-        if outs and (valids[outs[0]] is False):
+        if not force and outs and (valids[outs[0]] is False):
             # nothing to do because our outputs are already invalid
             return []
         

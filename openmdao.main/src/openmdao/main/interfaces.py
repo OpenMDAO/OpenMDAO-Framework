@@ -294,7 +294,7 @@ class IComponent(IContainer):
     def set_valid(self, names, valid):
         """Mark the io traits with the given names as valid or invalid."""
             
-    def invalidate_deps(self, varnames=None, notify_parent=False):
+    def invalidate_deps(self, varnames=None, force=False):
         """Invalidate all of our outputs if they're not invalid already.
         For a typical Component, this will always be all or nothing, meaning
         there will never be partial validation of outputs.  Components

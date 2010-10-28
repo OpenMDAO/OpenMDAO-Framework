@@ -121,7 +121,7 @@ class Assembly (Component):
         
         return (compname, getattr(self, compname), varname)
 
-    def connect(self, srcpath, destpath):
+    def connect(self, srcpath, destpath, srcvalid=None):
         """Connect one src Variable to one destination Variable. This could be
         a normal connection between variables from two internal Components, or
         it could be a passthrough connection, which connects across the scope boundary
@@ -174,22 +174,18 @@ class Assembly (Component):
             self.raise_exception("can't connect '%s' to '%s': %s" %
                                  (srcpath,destpath,str(err)), TraitError)
             
+        # get the current validity state of the destination before we connect
+        
         super(Assembly, self).connect(srcpath, destpath)
 
+        if destcomp is self or destcomp is self.parent or \
+           srccomp is self or srccomp is self.parent:
+            pass  # do nothing because the connection was started in a scope above us
         # invalidate destvar if necessary
-        if destcomp is self or destcompname=='parent': # boundary output
-            if destcomp.get_valid([destvarname])[0] and \
-               srccomp.get_valid([srcvarname])[0] is False:
-                if self.parent:
-                    # tell the parent that anyone connected to our boundary
-                    # output is invalid.
-                    # Note that a boundary output is a dest var in this scope, 
-                    # but a src var in the parent scope.
-                    self.parent.child_invalidated(childname=self.name, outs=set([destvarname]))
         else:
-            outs = destcomp.invalidate_deps(varnames=set([destvarname]))
+            outs = destcomp.invalidate_deps(varnames=set([destvarname]), force=True)
             if (outs is None) or outs:
-                bouts = self.child_invalidated(destcompname, outs)
+                bouts = self.child_invalidated(destcompname, outs, force=True)
 
     def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and
@@ -260,6 +256,19 @@ class Assembly (Component):
         """
         return self._depgraph.list_connections(show_passthrough)
 
+    def _cvt_input_srcs(self, sources):
+        srcs,dests = self._depgraph.get_mapping('@exin', '@bin')
+        if srcs is None:
+            return sources
+        else:
+            newsrcs = []
+            for s in sources:
+                if '.' in s:
+                    newsrcs.append(dests[s])
+                else:
+                    newsrcs.append(s)
+            return newsrcs
+        
     def update_inputs(self, compname, varnames):
         """Transfer input data to input variables on the specified component.
         The varnames iterator is assumed to contain local names (no component name), 
@@ -272,15 +281,8 @@ class Assembly (Component):
         else:
             destcomp = getattr(self, compname)
         for srccompname,srcs,dests in self._depgraph.in_map(compname, vset):
-            if srccompname[0] == '@':   # boundary inputs
-                invalid_srcs = []
-                if srccompname == '@bin':
-                    invalid_srcs = [s for s in srcs if self._valid_dict.get(s) is False]
-                else:   # srccompname == '@exin':  
-                    for d in dests:
-                        pname = '.'.join([compname,d])
-                        if self._valid_dict.get(pname) is False:
-                            invalid_srcs.append(pname)
+            if srccompname == '@bin':   # boundary inputs
+                invalid_srcs = [s for s in srcs if not self._valid_dict[s]]
                 if len(invalid_srcs) > 0:
                     if parent:
                         parent.update_inputs(self.name, invalid_srcs)
@@ -289,6 +291,7 @@ class Assembly (Component):
                         self._valid_dict[name] = True
                 srccompname = ''
                 srccomp = self
+                srcs = self._cvt_input_srcs(srcs)
             else:
                 srccomp = getattr(self, srccompname)
                 if not srccomp.is_valid():
@@ -366,53 +369,54 @@ class Assembly (Component):
             if ((outs is None) or outs) and self.parent:
                 self.parent.child_invalidated(self.name, outs)
             
-    def child_invalidated(self, childname, outs=None):
+    def child_invalidated(self, childname, outs=None, force=False):
         """Invalidate all variables that depend on the outputs provided
         by the child that has been invalidated.
         """
-        bouts = self._depgraph.invalidate_deps(self, [childname], [outs])
+        bouts = self._depgraph.invalidate_deps(self, [childname], [outs], force)
         if bouts and self.parent:
-            self.parent.child_invalidated(self.name, bouts)
-
+            self.parent.child_invalidated(self.name, bouts, force)
         return bouts
                     
-    def invalidate_deps(self, varnames=None):
+    def invalidate_deps(self, varnames=None, force=False):
         """Mark all Variables invalid that depend on varnames. 
         Returns a list of our newly invalidated boundary outputs.
-        """
-        ext_srcs = set()
-        bins = set()
-                            
-        # we have to find the sources for inputs from outside the boundary
-        for destcomp, link in self._depgraph.out_links('@exin'):
-            if destcomp == '@bin':  # connection from external to the input boundary
-                for src,dests in link._srcs.items():
-                    for dest in dests:
-                        if varnames is None or dest in varnames:
-                            ext_srcs.add(src)
-                            bins.add(dest)
-            else:  # connection from external to some internal component
-                for src,dests in link._srcs.items():
-                    for dest in dests:
-                        dest = '.'.join([destcomp,dest])
-                        if varnames is None or dest in varnames:
-                            ext_srcs.add(src)
-                            bins.add(dest)
-        if bins:
-            self.set_valid(bins, False)
         
-        outs = set()
-        if ext_srcs:
-            outs.update(self._depgraph.invalidate_deps(self, ['@exin'], [ext_srcs]))
-
-        # need this to handle the case of unconnected boundary inputs that have
-        # had their value changed
+        varnames: iter of str, optional
+            An iterator of names of destination variables.
+            
+        force: bool, optional
+            If True, force the invalidation to proceed beyond the 
+            boundary even if all outputs were already invalid.
+        """
+        valids = self._valid_dict
+        conn_ins = set(self.list_connected_inputs())
+        
+        # If varnames is None, we're being called from a parent Assembly
+        # as part of a higher level invalidation, so we only need to look
+        # at our connected inputs
         if varnames is None:
-            unconnected_ins = set(self.list_inputs())-bins
+            names = conn_ins
         else:
-            unconnected_ins = set(varnames)-bins
-        if unconnected_ins:
-            outs.update(self._depgraph.invalidate_deps(self, ['@bin'], [unconnected_ins]))
+            names = varnames
+        
+        # We only care about inputs that are changing from valid to invalid.
+        # If they're already invalid, then we've already done what we needed to do,
+        # unless force is True, in which case we continue with the invalidation.
+        if force:
+            invalidated_ins = names
+        else:
+            invalidated_ins = [n for n in names if valids[n] is True]
+            if not invalidated_ins:  # no newly invalidated inputs, so no outputs change status
+                return []
+
+        if varnames is None:
+            self.set_valid(invalidated_ins, False)
+        else: # only invalidate *connected* inputs, because unconnected inputs
+              # are always valid
+            self.set_valid([n for n in invalidated_ins if n in conn_ins], False)
+
+        outs = self._depgraph.invalidate_deps(self, ['@bin'], [invalidated_ins], force)
 
         if outs:
             self.set_valid(outs, False)

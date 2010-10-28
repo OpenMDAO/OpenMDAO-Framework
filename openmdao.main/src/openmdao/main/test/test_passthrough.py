@@ -4,6 +4,7 @@ import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.lib.datatypes.api import Int
+from openmdao.main.depgraph import dump_graph
 
 class Simple(Component):
     
