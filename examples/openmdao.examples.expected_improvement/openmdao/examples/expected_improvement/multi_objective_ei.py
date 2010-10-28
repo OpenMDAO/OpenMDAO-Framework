@@ -88,7 +88,7 @@ class Analysis(Assembly):
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
         self.DOE_trainer.sequential = True
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(25, 2)
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=25)
         self.DOE_trainer.add_parameter("spiral_meta_model.x")
         self.DOE_trainer.add_parameter("spiral_meta_model.y")
         self.DOE_trainer.add_event("spiral_meta_model.train_next")

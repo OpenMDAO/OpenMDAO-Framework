@@ -89,8 +89,8 @@ class Analysis(Assembly):
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
         self.DOE_trainer.sequential = True
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(10, 2)
-        #self.DOE_trainer.DOEgenerator = FullFactorial(5,2)
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=10)
+        #self.DOE_trainer.DOEgenerator = FullFactorial(num_levels=5)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
         self.DOE_trainer.add_event("branin_meta_model.train_next")

@@ -7,13 +7,13 @@ import copy
 NORMAL_LINE_LEN = 100
 
 class NastranParser(object):
-    """Provides access to the grids of Nastran output"""
+    """Provides access to the grids of Nastran output."""
 
     def __init__(self, text):
         """
         Give NastranParser the text to process.
 
-        text : [str]
+        text: [str]
             These lines should not include newlines.
             
         """
@@ -27,7 +27,7 @@ class NastranParser(object):
         """Parse the information!
 
         Try to parse grids and headers from the outfile
-        that was given to us before hand. The basic idea
+        that was given to us beforehand. The basic idea
         is that we split the entire file by pages. Nastran
         conveniently labels sections of the output by pages.
         Each of these pages is expected to have one grid. We
@@ -60,10 +60,10 @@ class NastranParser(object):
             # try to find header
             possibles = []
             for row, line in enumerate(page):
-                possibles.append({"score" : _header_score(line, row),
-                                  "row" : row,
-                                  "actual" : line,
-                                  "clean" : readable_header(line)})
+                possibles.append({"score": _header_score(line, row),
+                                  "row": row,
+                                  "actual": line,
+                                  "clean": readable_header(line)})
             headers.append(max(possibles,
                                key=operator.itemgetter("score")))
 
@@ -463,8 +463,8 @@ class NastranParser(object):
 
         You specify the grid you want with the header and a subcase.
         If you don't care about the subcase, set it to None. You
-        can also give it a dictionary of constrains and also specify
-        which columns you'd liked returned. The row_width optional
+        can also give it a dictionary of constraints and also specify
+        which columns you'd liked returned. The ``row_width`` optional
         attribute is useful if you have something that looks like:
 
             ELEMENT ID    PRICES
@@ -474,28 +474,28 @@ class NastranParser(object):
                            60.00
 
         As you can see, each element has two prices. In this case,
-        if we had a constraint that only selected the second element,
+        if we had a constraint that selected only the second element,
         we would want both prices returned. Therefore, we would set
-        row_width to 2.
+        ``row_width`` to 2.
 
-        header : str
+        header: str
             This can be the actual header or a part of the header
-            you want to select
+            you want to select.
             
-        subcase : None or int
-            If None, then just take the first on you see.
+        subcase: None or int
+            If None, then just take the first one you see.
             
-        constraints : { row_name : value }
+        constraints: { row_name: value }
             A dictionary of constraints. str: str
             
-        column_names : [ column_name ] or "*"
+        column_names: [ column_name ] or "*"
             Specify a list of column names, or the asterisk
             character, for all of them.
             
-        row_width : int
+        row_width: int
             Optional. Sometimes there are two values per
-            item, on difference rows. In that case, row_width=2.
-            If you specify the row_width,
+            item -- in different rows. In that case, ``row_width=2``.
+            If you specify the ``row_width``,
             the constraints won't get rid of good data.
             
         """
@@ -671,8 +671,8 @@ def _merge_columns(grid, columns_to_merge):
     """A helper function that merges columns
     in a grid.
 
-    grid : [[str]]
-    columns_to_merge : [(col1, col2)]
+    grid: [[str]]
+    columns_to_merge: [(col1, col2)]
         The columns must not overlap. Also, they must be
         increasing. So if we had something like:
         [(x,y), (w,z)], x<y<w<z must hold.
