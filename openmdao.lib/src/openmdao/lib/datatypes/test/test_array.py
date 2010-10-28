@@ -8,7 +8,7 @@ from numpy import array
 
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Component
-from openmdao.lib.api import Array
+from openmdao.lib.datatypes.array import Array
 from openmdao.units import convert_units
 
 class ArrayTestCase(unittest.TestCase):

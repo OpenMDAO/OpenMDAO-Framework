@@ -84,7 +84,7 @@ paraboloid as an OpenMDAO component:
 .. testcode:: simple_component_Paraboloid
 
     from openmdao.main.api import Component
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -116,7 +116,10 @@ model containing this component.
 
 In Python, a class or function must be imported before it can be used. Most of
 what you need in OpenMDAO can be imported from: ``openmdao.main.api`` and
-``openmdao.lib.api``.
+`the openmdao.lib api modules: ``openmdao.lib.caseiterators.api``,
+``openmdao.lib.caserecorders.api``,``openmdao.lib.components.api``, 
+``openmdao.lib.datatypes.api``,``openmdao.lib.doegenerators.api``,
+``openmdao.lib.drivers.api``,``openmdao.lib.surrogatemodels.api``.
 
 The first two lines in the ``paraboloid.py`` module import the definitions
 of the Component class and the Float class. You will use these in the definition
@@ -126,9 +129,9 @@ Type these two lines into that file:
 .. testcode:: simple_component_Paraboloid_pieces
 
     from openmdao.main.api import Component
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     
-You could import many other objects from ``openmdao.main.api`` and ``openmdao.lib.api``, but you
+You could import many other objects from ``openmdao.main.api`` and ``openmdao.lib.datatypes.api``, but you
 are importing only the two classes that you need. This is a good idea because it helps to
 prevent any namespace collisions in your module. In other words:
 
@@ -277,7 +280,7 @@ the Python file ``optimization_unconstrained.py``:
 .. testcode:: simple_model_Unconstrained
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
     from openmdao.examples.simple.paraboloid import Paraboloid
 
     class OptimizationUnconstrained(Assembly):
@@ -329,7 +332,7 @@ The OptimizationUnconstrained class is derived from Assembly instead of Componen
 .. testsetup:: simple_model_Unconstrained_pieces
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
     from openmdao.examples.simple.paraboloid import Paraboloid
     from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
     

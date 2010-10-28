@@ -2,10 +2,8 @@
 
 import unittest
 
-from enthought.traits.api import Event
-
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.api import Int
+from openmdao.lib.datatypes.api import Int, Event
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasevents import HasEvents
 

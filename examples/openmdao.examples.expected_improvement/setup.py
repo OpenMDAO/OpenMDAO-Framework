@@ -8,14 +8,13 @@ here = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.normpath(os.path.join(here,
                                                  'openmdao',
                                                  'examples',
-                                                 'singleEI')))
-
+                                                 'expected_improvement')))
 import releaseinfo
 version = releaseinfo.__version__
 
-setup(name='openmdao.examples.singleEI',
+setup(name='openmdao.examples.expected_improvement',
       version=version,
-      description="OpenMDAO examples - Single Objective Expected Improvement",
+      description="OpenMDAO examples - Problems using Expected Improvement (EI) adaptive sampling methods",
       long_description="""\
          """,
       classifiers=[

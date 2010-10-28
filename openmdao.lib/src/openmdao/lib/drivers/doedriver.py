@@ -5,7 +5,7 @@
 """
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import ListStr, Instance
+from openmdao.lib.datatypes.api import ListStr, Instance
 
 from openmdao.main.case import Case
 from openmdao.main.interfaces import IDOEgenerator

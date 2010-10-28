@@ -13,7 +13,7 @@ class ParetoFilterTests(unittest.TestCase):
         pf = ParetoFilter()
         x = [1,2,3,4,5,6,7,8,9,10]
         cases = [Case(outputs=[("x",None,x_0)]) for x_0 in x]
-        pf.case_set = ListCaseIterator(cases)
+        pf.case_sets = [ListCaseIterator(cases),]
         pf.criteria = ['x']
         pf.execute()
        
@@ -31,7 +31,7 @@ class ParetoFilterTests(unittest.TestCase):
         for x_0,y_0 in zip(x,y):
             cases.append(Case(outputs=[("x",None,x_0),("y",None,y_0)]))
         
-        pf.case_set = ListCaseIterator(cases)
+        pf.case_sets = [ListCaseIterator(cases),]
         pf.criteria = ['x','y']
         pf.execute()
 
@@ -51,7 +51,7 @@ class ParetoFilterTests(unittest.TestCase):
         for x_0,y_0 in zip(x,y):
             cases.append(Case(outputs=[("x",None,x_0),("y",None,y_0)]))
         
-        pf.case_set = ListCaseIterator(cases)
+        pf.case_sets = [ListCaseIterator(cases),]
         pf.criteria = ['x','y']
         pf.execute()
 
@@ -71,7 +71,7 @@ class ParetoFilterTests(unittest.TestCase):
         for x_0,y_0 in zip(x,y):
             cases.append(Case(outputs=[("x",None,x_0),("y",None,y_0)]))
             
-        pf.case_set = ListCaseIterator(cases)
+        pf.case_sets = [ListCaseIterator(cases),]
         pf.criteria = ['z','w']
         
         try:

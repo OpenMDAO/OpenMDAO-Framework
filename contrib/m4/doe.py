@@ -11,7 +11,7 @@ __all__ = ('DOE',)
 import mool.Optimization.DOE
 
 from openmdao.main.api import Case, ListCaseIterator
-from openmdao.lib.api import Int, Str
+from openmdao.lib.datatypes.api import Int, Str
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 
 

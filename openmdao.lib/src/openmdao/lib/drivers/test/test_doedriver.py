@@ -10,12 +10,13 @@ import platform
 import sys
 import unittest
 
-from enthought.traits.api import TraitError, Event
+from openmdao.lib.datatypes.api import TraitError, Event
 
 from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
-from openmdao.lib.api import Float, Bool, Array, ListCaseIterator
+from openmdao.lib.datatypes.api import Float, Bool, Array
+from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.doedriver import DOEdriver
 from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube

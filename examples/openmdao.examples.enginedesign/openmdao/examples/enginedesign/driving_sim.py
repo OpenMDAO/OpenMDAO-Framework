@@ -13,10 +13,9 @@ from csv import reader
 
 # pylint: disable-msg=E0611,F0401
 from pkg_resources import resource_stream
-from enthought.traits.api import TraitError
+from openmdao.lib.datatypes.api import TraitError, Float, Instance
 
 from openmdao.main.api import Assembly
-from openmdao.lib.api import Float, Instance
 
 from openmdao.examples.enginedesign.vehicle import Vehicle
 

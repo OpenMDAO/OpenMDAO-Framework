@@ -1,5 +1,6 @@
+from enthought.traits.api import HasTraits
 
-from enthought.traits.api import HasTraits, implements
+from openmdao.lib.datatypes.api import implements
 
 from openmdao.main.interfaces import ICaseIterator
 

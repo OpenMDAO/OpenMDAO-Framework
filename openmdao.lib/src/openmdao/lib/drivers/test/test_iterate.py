@@ -6,7 +6,8 @@ import unittest
 
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.api import Float, FixedPointIterator
+from openmdao.lib.datatypes.api import Float
+from openmdao.lib.drivers.iterate import FixedPointIterator
 
 class Simple1(Component):
     """ Testing convergence failure"""

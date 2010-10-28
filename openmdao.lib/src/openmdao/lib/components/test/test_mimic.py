@@ -2,9 +2,8 @@
 
 import unittest
 
-from enthought.traits.api import TraitError
+from openmdao.lib.datatypes.api import TraitError, Float
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.api import Float
 
 from openmdao.lib.components.mimic import Mimic
 

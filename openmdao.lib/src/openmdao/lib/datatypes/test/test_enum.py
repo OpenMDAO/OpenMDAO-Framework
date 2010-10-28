@@ -6,7 +6,7 @@ from enthought.traits.api import TraitError
 
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Container
-from openmdao.lib.api import Enum
+from openmdao.lib.datatypes.enum import Enum
 
 class IntTestCase(unittest.TestCase):
 
