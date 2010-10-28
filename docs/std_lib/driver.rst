@@ -512,7 +512,7 @@ operate.
                 
                 #use a full factorial DOE with 2 variables, and 3 levels
                 #   for each variable
-                self.driver.DOEgenerator = FullFactorial(3,2)
+                self.driver.DOEgenerator = FullFactorial(num_levels=3)
    
 The *min* and *max* metadata of the parameters are used to denote the range for
 each variable over which the DOE will span.

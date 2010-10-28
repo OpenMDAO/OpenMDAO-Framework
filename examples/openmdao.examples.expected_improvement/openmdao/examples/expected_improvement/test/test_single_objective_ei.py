@@ -34,7 +34,7 @@ class SingleObjectiveEITest(unittest.TestCase):
 
         analysis = Analysis()
         set_as_top(analysis)
-        analysis.DOE_trainer.DOEgenerator = FullFactorial(4, 2)
+        analysis.DOE_trainer.DOEgenerator = FullFactorial(num_levels=4)
         analysis.iter.iterations = 1
         analysis.run()
         # This test looks for the presence of at least one point close to

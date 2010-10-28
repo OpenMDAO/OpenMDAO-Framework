@@ -23,12 +23,10 @@ class FullFactorial(HasTraits):
     num_levels = Int(0, iotype="in", desc="number of levels of values for "
                                           "each parameter")
     
-    def __init__(self, num_levels=None, num_parameters=None, *args, **kwargs):
+    def __init__(self, num_levels=None, *args, **kwargs):
         
         super(FullFactorial, self).__init__(*args, **kwargs)
         
-        if num_parameters is not None: 
-            self.num_parameters = num_parameters
         if num_levels is not None: 
             self.num_levels = num_levels
     
