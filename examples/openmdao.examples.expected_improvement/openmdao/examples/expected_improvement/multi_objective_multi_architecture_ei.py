@@ -17,9 +17,11 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 
 from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array
 
-from openmdao.lib.api import MetaModel, MultiObjExpectedImprovement, Mux,\
-     ProbIntersect, ParetoFilter, DOEdriver, Genetic, CaseIteratorDriver,\
-     DBCaseIterator, DBCaseRecorder, DumpCaseRecorder
+from openmdao.lib.drivers.api import DOEdriver,Genetic,CaseIteratorDriver
+from openmdao.lib.components.api import MetaModel,MultiObjExpectedImprovement,\
+     ParetoFilter, Mux
+from openmdao.lib.caserecorders.api import DBCaseRecorder,DumpCaseRecorder
+from openmdao.lib.caseiterators.api import DBCaseIterator
 
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
 

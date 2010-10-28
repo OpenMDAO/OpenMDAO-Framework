@@ -267,7 +267,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
         text += "\nfrom openmdao.main.api import Component\n"
         
     sep = ""
-    text += "from openmdao.lib.api import "
+    text += "from openmdao.lib.datatypes.api import "
     for imp in imports:
         text += sep + imp
         sep = ", "

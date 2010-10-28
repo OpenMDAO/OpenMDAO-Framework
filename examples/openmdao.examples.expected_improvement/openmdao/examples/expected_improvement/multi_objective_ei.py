@@ -12,9 +12,11 @@ from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.hasstopcond import HasStopConditions
 
-from openmdao.lib.api import MetaModel, MultiObjExpectedImprovement,\
-     ParetoFilter, DOEdriver, Genetic, CaseIteratorDriver, DBCaseIterator,\
-     DBCaseRecorder, DumpCaseRecorder, Mux
+from openmdao.lib.components.api import MetaModel, MultiObjExpectedImprovement,\
+     ParetoFilter, Mux
+from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver 
+from openmdao.lib.caseiterators.api import DBCaseIterator
+from openmdao.lib.caserecorders import DBCaseRecorder, DumpCaseRecorder
 
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
 

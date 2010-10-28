@@ -8,7 +8,7 @@ from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
 from openmdao.examples.mdao.broadcaster import Broadcaster
 
 from openmdao.main.api import Assembly, set_as_top
-from openmdao.lib.api import CONMINdriver
+from openmdao.lib.drivers.api import CONMINdriver
 
 
 class SellarIDF(Assembly):

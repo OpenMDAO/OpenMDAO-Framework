@@ -147,7 +147,7 @@ def _sortedDictVals(unsorted_dict):
     return items
 
 if __name__ == '__main__': # pragma no cover
-    from openmdao.lib.api import ExternalCode
+    from openmdao.lib.components.api import ExternalCode
     lines = []
     get_traits_info(None, 'class', 'foo', ExternalCode, None, lines)
     for line in lines:

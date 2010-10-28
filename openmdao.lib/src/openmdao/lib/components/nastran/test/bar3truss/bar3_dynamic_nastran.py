@@ -1,6 +1,6 @@
 
 from openmdao.main.api import Component
-from openmdao.lib.api import Float
+from openmdao.lib.dataytpes.api import Float
 
 from openmdao.lib.components.nastran.nastran import NastranComponent
 
