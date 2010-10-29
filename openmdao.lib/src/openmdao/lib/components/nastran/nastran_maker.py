@@ -1,5 +1,5 @@
 """Defines NastranMaker, an intelligent bulk data replacer
-for Nastran files"""
+for Nastran files."""
 import re
 from nastran_util import stringify
 
@@ -7,8 +7,8 @@ class NastranMaker(object):
     """A object that performs specified replacements conforming
     to the Nastran format.
 
-    The goal of NastranMaker is to output a nastran file with
-    a set of variables replaced. It takes an existing nastran file
+    The goal of NastranMaker is to output a Nastran file with
+    a set of variables replaced. It takes an existing Nastran file
     and variables. In order to retain as much data as possible,
     it replaces the variables in long format, allowing for 16
     characters, instead of 8.
@@ -22,21 +22,24 @@ class NastranMaker(object):
     def set(self, name, cid, fieldnum, value):
         """Records what should be replaced where.
 
-        We don't actually want to do the replacing when we
-        are given the variables to replace. Instead, we'd like
+        Instead of doing the replacing as we 
+        are given the variables to replace, we'd like
         to do all the replacing at one time. Therefore, this
         function just records what should be replaced.
 
         name: str
         
+	
         cid: int or str
-        Specifies the id of the card
+	  Specifies the id of the card.
         
+	
         fieldnum: int
-        What field should we modify?
+          What field should we modify?
         
+	
         value: thing that can be passed to str
-        What value should we put in?
+          What value should we put in?
             
         """
         self.names.setdefault((name, cid), []).append({"fieldnum": fieldnum, "value":value})
@@ -48,7 +51,7 @@ class NastranMaker(object):
         name: str
         
         cid: int or str
-            Specifies the id of the card
+            Specifies the id of the card.
             
         attrs: [{fieldnum: value_to_insert}]
             We may have to change a few fields for a given
@@ -56,8 +59,8 @@ class NastranMaker(object):
             
         unique_int: int
             This integer is needed for writing out the
-            continuations in the Nastran file. Must be
-            unique within the file (!beware)
+            continuations in the Nastran file. It must be
+            unique within the file (!beware).
             
         """
         card = None
@@ -168,15 +171,15 @@ class NastranMaker(object):
         write out the finished product.
 
         file_handler: file-like object
-            Should provide a write and close function
+            Should provide a ``write`` and ``close`` function.
 
         unique_int: int
             Should be unique within the entire input file for Nastran
-            to work
+            to work.
 
-        This changes self.text and then prints self.text to a file. So,
-        calling write_to_file more than once is silly, although it shouldn't
-        actually change anything. Also note that the unique_int should
+        This changes ``self.text`` and then prints ``self.text`` to a file. So,
+        calling ``write_to_file`` more than once is unnecessary, although it shouldn't
+        actually change anything. Also note that the ``unique_int`` should
         be unique within the entire file."""
 
         self._output(unique_int)

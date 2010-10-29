@@ -1060,7 +1060,7 @@ socket in DrivingSim:
 .. testcode:: Code9
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
 
     from openmdao.examples.enginedesign.driving_sim import DrivingSim
 
@@ -1182,7 +1182,7 @@ the expression:
 .. testsetup:: Code10
 
 	from openmdao.main.api import Assembly
-	from openmdao.lib.api import CONMINdriver
+	from openmdao.lib.drivers.api import CONMINdriver
 
 	from openmdao.examples.enginedesign.driving_sim import DrivingSim
 

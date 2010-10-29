@@ -1,5 +1,5 @@
 """Defines helpful functions that are used in conjunction with
-NastranComponent"""
+NastranComponent."""
 import re
 
 # we have to replace the old_string and it's entire block
@@ -7,11 +7,11 @@ import re
 def nastran_replace_inline(big_string, old_string, new_string):
     """Find a string and replace it with another in one big string.
 
-    In big_string (probably a line), find old_string and replace
-    it with new_string. The trick is that because a lot of Nastran
-    is based on 8 character blocks, this will find the 8 character block
-    currently occupied by old_string and replace that entire block
-    with new_string.
+    In ``big_string`` (probably a line), find ``old_string`` and replace
+    it with ``new_string``. Because a lot of Nastran
+    is based on 8-character blocks, this will find the 8-character block
+    currently occupied by ``old_string`` and replace that entire block
+    with ``new_string``.
 
     big_string, old_string, new_string: str
 
@@ -23,14 +23,14 @@ def nastran_replace_inline(big_string, old_string, new_string):
 
 
 def stringify(thing, length=8):
-    """Convert thing to a string of a certain length.
+    """Convert ``thing`` to a string of a certain length.
 
     This function tries to make the best use of space. For
-    integers and floaters, it will try to get the most sig-
-    nicant digits while staying within ``length``. For
+    integers and floaters, it will try to get the most signicant 
+    digits while staying within ``length``. For
     everything else, we just try to stick in a string.
 
-    thing : anything
+    thing: anything
         What we want to convert to a string.
 
     """

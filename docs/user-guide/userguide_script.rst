@@ -48,10 +48,10 @@ the same syntax as loading any other Python module:
 .. testcode:: package
 
     from openmdao.main.api import Component, Assembly
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
 
 Here, the fundamental OpenMDAO component classes *Component* and *Assembly* are
-loaded from ``openmdao.main.api``, along with the CONMIN driver from ``openmdao.lib.api``.
+loaded from ``openmdao.main.api``, along with the CONMIN driver from ``openmdao.lib.drivers.api``.
 
 To simplify the imports, a selection of the most commonly used imports was
 placed in the pseudo-package ``openmdao.main.api``. You can obtain a complete
@@ -713,7 +713,7 @@ value of zero from being assigned, resulting in a division error. Of course, you
 could still get very large values for *pressure* if area is near machine zero.
 
 This units library can also be used to convert internal variables by importing
-the function ``convert_units`` from ``openmdao.lib.api``.
+the function ``convert_units`` from ``openmdao.main.api``.
 
     >>> from openmdao.main.api import convert_units
     >>> convert_units(12.0,'inch','ft')
@@ -817,7 +817,7 @@ Consider the top level assembly that was created for the
 .. testcode:: simple_model_Unconstrained_pieces
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
     from openmdao.examples.simple.paraboloid import Paraboloid
 
     class OptimizationUnconstrained(Assembly):
@@ -982,7 +982,7 @@ a new working directory for the Paraboloid component when it is instantiated.
 .. testcode:: simple_model_component_directory
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
     from openmdao.examples.simple.paraboloid import Paraboloid
 
     class OptimizationUnconstrained(Assembly):
@@ -1034,7 +1034,7 @@ the CONMINdriver optimizer.
 .. testcode:: Parameter_API
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
 
     class EngineOpt(Assembly):
         """ Top level assembly for optimizing a vehicle. """
@@ -1161,7 +1161,7 @@ syntax includes an equal sign in the expression.
 
 .. testsetup:: Parameter_API2
 
-    from openmdao.lib.api import BroydenSolver
+    from openmdao.lib.drivers.api import BroydenSolver
     from openmdao.main.api import Assembly
     from openmdao.examples.mdao.disciplines import SellarDiscipline1
     

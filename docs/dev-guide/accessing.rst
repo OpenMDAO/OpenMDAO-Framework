@@ -124,14 +124,17 @@ If you use Windows, please follow these instructions for SSH key creation and re
    Check to make sure your key is not created with a ``.ppk`` extension. If it has an extension, use
    Explorer to navigate to this file and rename it so it has NO extension.
 
+   *Keep your Putty Key Generator open for registering with Launchpad.*
+   
 
 *Registering the Key with Launchpad*
 +++++++++++++++++++++++++++++++++++++
 
-1. In your ``.ssh`` directory, create the file: ``id_rsa.pub``  
+1. In your ``.ssh`` directory, create an empty file called ``id_rsa.pub``. Keep this file open so you can copy Key
+   information into it.  
 
 2. Copy the string from the field titled *Public Key for pasting into OpenSSH authorized_keys file:* onto
-   your clipboard; then paste it into the newly-created ``id_rsa.pub`` file. Save this file.
+   your clipboard; then paste it into the newly created ``id_rsa.pub`` file. Save this file.
 
 3. Start a browser and navigate to ``Launchpad.net``. Log in to your Launchpad account. Once logged in, you can
    either edit your user information or  go directly to the URL:  

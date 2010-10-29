@@ -18,7 +18,8 @@ class TestCase(unittest.TestCase):
     
     def test_full_factorial(self): 
         
-        ff = FullFactorial(2,2)
+        ff = FullFactorial(num_levels=2)
+        ff.num_parameters = 2
         
         cases = [case for case in ff]
         
