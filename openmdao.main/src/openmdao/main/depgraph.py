@@ -188,7 +188,9 @@ class DependencyGraph(object):
         return [(v,data['link']) for u,v,data in self._graph.edges(cname, data=True)]
 
     def var_edges(self, name=None):
-        """Return a list of outgoing edges connecting variables."""
+        """Return a list of outgoing edges connecting variables, with 'fake'
+        node names converted to real names.
+        """
         if name is None:
             names = self._graph.nodes()
         else:
@@ -196,8 +198,14 @@ class DependencyGraph(object):
         edges = []
         for name in names:
             for u,v,data in self._graph.edges(name, data=True):
-                edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
-                                    for dest,src in data['link']._dests.items()])
+                lst = [('.'.join([u,src]), '.'.join([v,dest])) 
+                                    for dest,src in data['link']._dests.items()]
+                for u,v in lst:
+                    if u.startswith('@'):
+                        u = u.split('.', 1)[1]
+                    if v.startswith('@'):
+                        v = v.split('.', 1)[1]
+                edges.append((u,v))
         return edges
     
     def var_in_edges(self, name=None):
@@ -209,8 +217,14 @@ class DependencyGraph(object):
         edges = []
         for name in names:
             for u,v,data in self._graph.in_edges(name, data=True):
-                edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
-                                     for dest,src in data['link']._dests.items()])
+                lst = [('.'.join([u,src]), '.'.join([v,dest])) 
+                                     for dest,src in data['link']._dests.items()]
+                for u,v in lst:
+                    if u.startswith('@'):
+                        u = u.split('.', 1)[1]
+                    if v.startswith('@'):
+                        v = v.split('.', 1)[1]
+                edges.append((u,v))
         return edges
     
     def get_connected_inputs(self):
@@ -301,6 +315,15 @@ class DependencyGraph(object):
             link.disconnect('.'.join([destcompname,destvarname]), destvarname)
             if len(link) == 0:
                 self._graph.remove_edge('@bin', destcompname)
+        elif destcompname == '@exout' and srccompname != '@bout':
+            link = graph['@bout']['@exout']['link']
+            link.disconnect('.'.join([srccompname,srcvarname]), destvarname)
+            if len(link) == 0:
+                self._graph.remove_edge('@bout', '@exout')
+            link = graph[srccompname]['@bout']['link']
+            link.disconnect(srcvarname,'.'.join([srccompname,srcvarname]))
+            if len(link) == 0:
+                self._graph.remove_edge(srccompname, '@bout')
         else:
             link = self._graph[srccompname][destcompname]['link']
             link.disconnect(srcvarname, destvarname)

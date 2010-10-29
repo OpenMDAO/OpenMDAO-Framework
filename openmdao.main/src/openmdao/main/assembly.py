@@ -204,26 +204,24 @@ class Assembly (Component):
                 to_remove.append((u, v))
             
         else:   # varpath is not a component name
-            if '.' not in varpath:
-                if varpath in self.list_inputs():
-                    varpath = '.'.join(['@exin', varpath])
-                else:
-                    varpath = '.'.join(['@exout', varpath])
-            if varpath2 is not None and '.' not in varpath2:
-                if varpath2 in self.list_inputs():
-                    varpath2 = '.'.join(['@exin', varpath2])
-                else:
-                    varpath2 = '.'.join(['@exout', varpath2])
-            
-            cname, vname = varpath.split('.', 1)
             if varpath2 is None:  # remove all connections to varpath
-                dotvname = '.'+vname
-                for u,v in self._depgraph.var_edges(cname):
-                    if u.endswith(dotvname):
-                        to_remove.append((u, v))
-                for u,v in self._depgraph.var_in_edges(cname):
-                    if v.endswith(dotvname):
-                        to_remove.append((u, v))
+                cname, _, vname = varpath.partition('.')
+                if not vname:
+                    if cname in self.list_inputs():
+                        for u,v in self._depgraph.var_edges('@bin'):
+                            if u == varpath2:
+                                to_remove.append((u, v))
+                    else:
+                        for u,v in self._depgraph.var_in_edges('@bout'):
+                            if v == varpath2:
+                                to_remove.append((u, v))
+                else:
+                    for u,v in self._depgraph.var_edges(cname):
+                        if u == varpath2:
+                            to_remove.append((u, v))
+                    for u,v in self._depgraph.var_in_edges(cname):
+                        if v == varpath2:
+                            to_remove.append((u, v))
             else:
                 to_remove.append((varpath, varpath2))
 

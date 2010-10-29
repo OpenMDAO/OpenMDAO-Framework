@@ -92,14 +92,11 @@ class DepGraphTestCase(unittest.TestCase):
                                  sub.comp4,sub.comp5,sub.comp6])
 
         sub.create_passthrough('comp1.a', 'a1')
-        #sub.create_passthrough('comp3.a', 'a3')
         sub.create_passthrough('comp2.b', 'b2')
         sub.create_passthrough('comp4.b', 'b4')
         sub.create_passthrough('comp6.b', 'b6')
         sub.create_passthrough('comp2.c', 'c2')
-        #sub.create_passthrough('comp4.c', 'c4')
         sub.create_passthrough('comp1.d', 'd1')
-        #sub.create_passthrough('comp3.d', 'd3')
         sub.create_passthrough('comp5.d', 'd5')
         
         sub.connect('comp1.c', 'comp4.a')
@@ -156,11 +153,9 @@ class DepGraphTestCase(unittest.TestCase):
         valids = top.comp2.get_valid(vars)
         self.assertEqual(valids, [True, True, True, True])
         
-    #def test_disconnect(self):
-        #self.top.disconnect('comp7.c', 'sub.a3')
-        #self.top.sub.disconnect('comp5.c', 'comp1.b')
-        ## need to test behavior after disconnection to make sure validation/etc. handled properly
-        #raise nose.SkipTest("disconnect test not finished yet!")
+    def test_disconnect(self):
+        self.top.disconnect('comp7.c', 'sub.comp3.a')
+        self.top.disconnect('sub.comp4.c', 'comp8.a')
         
     def test_lazy1(self):
         self.top.run()

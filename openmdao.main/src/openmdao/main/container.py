@@ -321,10 +321,6 @@ class Container(HasTraits):
         """Removes the connection between one source variable and one 
         destination variable.
         """
-        # @exin, @exout, @bin, and @bout all really refer to self, so replace them with ''
-        srcpath = srcpath.replace('@exin.','').replace('@exout.','').replace('@bin.','')
-        destpath = destpath.replace('@exin.','').replace('@exout.','').replace('@bout.','')
-        
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)

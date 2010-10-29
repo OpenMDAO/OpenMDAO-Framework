@@ -8,6 +8,8 @@ import sys
 import stat
 import unittest
 
+from nose import SkipTest
+
 from enthought.traits.api import TraitError
 
 from openmdao.main.api import Component, Container
@@ -169,71 +171,71 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('expected NotImplemented')
  
-    #def test_config_changed(self):
-        #self.fail('')
+    def test_config_changed(self):
+        raise SkipTest()
     
-    #def test_tree_rooted(self):
-        #self.fail('')
+    def test_tree_rooted(self):
+        raise SkipTest()
 
-    #def test_add(self):
-        #self.fail('')
+    def test_add(self):
+        raise SkipTest()
     
-    #def test_remove(self):
-        #self.fail('')
+    def test_remove(self):
+        raise SkipTest()
     
-    #def test_add_trait(self):
-        #self.fail('')
+    def test_add_trait(self):
+        raise SkipTest()
         
-    #def test_remove_trait(self):
-        #self.fail('')
+    def test_remove_trait(self):
+        raise SkipTest()
 
-    #def test_is_valid(self):
-        #self.fail('')
+    def test_is_valid(self):
+        raise SkipTest()
 
-    #def test_list_inputs(self):
-        #self.fail('')
+    def test_list_inputs(self):
+        raise SkipTest()
        
-    #def test_list_outputs(self):
-        #self.fail('')
+    def test_list_outputs(self):
+        raise SkipTest()
         
-    #def test_list_containers(self):
-        #self.fail('')
+    def test_list_containers(self):
+        raise SkipTest()
     
-    #def test_disconnect(self):
-        #self.fail('')
+    def test_disconnect(self):
+        raise SkipTest()
     
-    #def test_get_expr_depends(self):
-        #self.fail('')
+    def test_get_expr_depends(self):
+        raise SkipTest()
 
-    #def test_get_expr_sources(self):
-        #self.fail('')
+    def test_get_expr_sources(self):
+        raise SkipTest()
 
-    #def test_check_path(self):
-        #self.fail('')
+    def test_check_path(self):
+        raise SkipTest()
     
-    #def get_abs_directory (self):
-        #self.fail('')
+    def get_abs_directory (self):
+        raise SkipTest()
 
-    #def test_push_dir(self):
-        #self.fail('')
+    def test_push_dir(self):
+        raise SkipTest()
 
-    #def test_pop_dir(self):
-        #self.fail('')
+    def test_pop_dir(self):
+        raise SkipTest()
 
-    #def test_stop(self):
-        #self.fail('')
+    def test_stop(self):
+        raise SkipTest()
 
-    #def test_invalidate_deps(self):
-        #self.fail('')
+    def test_invalidate_deps(self):
+        raise SkipTest()
 
-    #def test_update_outputs(self):
-        #self.fail('')
+    def test_update_outputs(self):
+        raise SkipTest()
         
-    #def test__get_log_level(self):
-        #self.fail('')
+    def test__get_log_level(self):
+        raise SkipTest()
 
-    #def test__set_log_level(self):
-        #self.fail('')
+    def test__set_log_level(self):
+        raise SkipTest()
 
 if __name__ == '__main__':
     unittest.main()
