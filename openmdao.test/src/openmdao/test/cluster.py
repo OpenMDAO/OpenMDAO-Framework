@@ -48,7 +48,9 @@ def init_cluster(encrypted=True, clean_dir=True):
 
     if node.startswith('gxterm'):
         # User environment assumed OK on this GRC cluster front-end.
-        for i in range(55):
+        # Using less than full machine (55 nodes) to allow multiple
+        # cluster testing without hitting limit on open files (sockets).
+        for i in range(20):
             machines.append({'hostname':'gx%02d' % i, 'python':python})
     elif local_ssh_available():
         machines.append({'hostname':node, 'python':python})

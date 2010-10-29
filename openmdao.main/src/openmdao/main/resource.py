@@ -610,7 +610,7 @@ class ClusterAllocator(object):  #pragma no cover
         value = resource_desc.get(key, '')
         if value:
             if self.name != value:
-                return (-2, {key: value})
+                return 0
             else:
                 # Any host in our cluster is OK.
                 resource_desc = resource_desc.copy()

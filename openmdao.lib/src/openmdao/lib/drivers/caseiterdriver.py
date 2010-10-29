@@ -69,6 +69,7 @@ class CaseIterDriverBase(Driver):
 
         self._todo = []   # Cases grabbed during server startup.
         self._rerun = []  # Cases that failed and should be retried.
+        self._generation = 0  # Used to keep worker names unique.
 
     def execute(self):
         """ Runs all cases and records results in `recorder`. """
@@ -184,6 +185,7 @@ class CaseIterDriverBase(Driver):
         # Kick off initial wave of cases.
         self._server_lock = threading.Lock()
         self._reply_q = Queue.Queue()
+        self._generation += 1
         n_servers = 0
         while n_servers < max_servers:
             if self._stop:
@@ -201,7 +203,7 @@ class CaseIterDriverBase(Driver):
 
             # Start server worker thread.
             n_servers += 1
-            name = '%s_%d' % (self.name, n_servers)
+            name = '%s_%d_%d' % (self.name, self._generation, n_servers)
             self._logger.debug('starting worker for %s', name)
             self._servers[name] = None
             self._in_use[name] = True

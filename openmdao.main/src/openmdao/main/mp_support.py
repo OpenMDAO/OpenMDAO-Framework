@@ -246,8 +246,12 @@ def write_server_config(server, filename):  #pragma no cover
     parser = ConfigParser.ConfigParser()
     section = 'ServerInfo'
     parser.add_section(section)
-    parser.set(section, 'address', str(server.address[0]))
-    parser.set(section, 'port', str(server.address[1]))
+    if connection.address_type(server.address) == 'AF_INET':
+        parser.set(section, 'address', str(server.address[0]))
+        parser.set(section, 'port', str(server.address[1]))
+    else:
+        parser.set(section, 'address', server.address)
+        parser.set(section, 'port', '-1')
     parser.set(section, 'key', server.public_key_text)
     with open(filename, 'w') as cfg:
         parser.write(cfg)
@@ -534,9 +538,10 @@ class OpenMDAO_Server(Server):
                         set_credentials(
                             access_controller.get_proxy_credentials(function,
                                                                    credentials))
-
-                self._logger.debug('Invoke %s %s %s', methodname, role,
-                                   get_credentials())
+                if methodname != 'echo':
+                    # 'echo' is used for performance tests, keepalives, etc.
+                    self._logger.debug('Invoke %s %s %s', methodname, role,
+                                       get_credentials())
                 try:
                     res = function(*args, **kwds)
                 except Exception as exc:

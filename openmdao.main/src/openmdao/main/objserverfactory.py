@@ -54,7 +54,6 @@ class ObjServerFactory(Factory):
         Simply return the arguments. This can be useful for latency/thruput
         masurements, connectivity testing, firewall keepalives, etc.
         """
-        self._logger.debug('echo %s', args)
         return args
 
 # FIXME: ('owner', 'user') can create,
@@ -276,7 +275,6 @@ class ObjServer(object):
         Simply return the arguments. This can be useful for latency/thruput
         masurements, connectivity testing, firewall keepalives, etc.
         """
-        self._logger.debug('echo %s', args)
         return args
 
     @rbac('owner', proxy_types=[object])
@@ -472,10 +470,10 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
     using `key` and returns a (shared) proxy for it.
 
     address: string
-        IP address for server.
+        IP address for server, or pipe filename.
 
     port: int
-        Server port.
+        Server port.  If < 0, `address` is a pipe filename.
 
     authkey:
         Server authorization key.
@@ -483,7 +481,10 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
     pubkey:
         Server public key, required if `authkey` is 'PublicKey'.
     """
-    location = (address, port)
+    if port < 0:
+        location = address
+    else:
+        location = (address, port)
     try:
         return _PROXIES[location]
     except KeyError:
@@ -616,13 +617,13 @@ def main():  #pragma no cover
         except socket.error as exc:
             if str(exc).find('Address already in use') >= 0:
                 if retries < 10:
-                    msg = 'Address %s in use, retrying...' % address
+                    msg = 'Address %s in use, retrying...' % (address,)
                     _LOGGER.debug(msg)
                     print msg
                     time.sleep(5)
                     retries += 1
                 else:
-                    msg = 'Address %s in use, too many retries.' % address
+                    msg = 'Address %s in use, too many retries.' % (address,)
                     _LOGGER.error(msg)
                     print msg
                     sys.exit(1)
