@@ -539,7 +539,7 @@ class Component (Container):
 
     def get_expr_sources(self):
         """Return a list of tuples containing the names of all upstream components that are 
-        referenced in any of our objectives, along with an initial exec_count of 0.
+        referenced in any of our ExprEvaluators, along with an initial exec_count of 0.
         """
         if self._expr_sources is None:
             self._expr_sources = [(v,0) for u,v in self.get_expr_depends() if v==self.name]

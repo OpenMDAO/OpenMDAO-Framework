@@ -151,7 +151,7 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('Expected ValueError')
 
-    def test_execute (self):
+    def test_execute(self):
         comp = Component()
         try:
             comp.execute()
@@ -160,7 +160,7 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('expected NotImplemented')
     
-    def test_run (self, force=False):
+    def test_run(self):
         comp = Component()
         try:
             comp.run()
@@ -169,40 +169,37 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('expected NotImplemented')
  
-    #def test_check_config (self):
+    #def test_config_changed(self):
         #self.fail('')
     
     #def test_tree_rooted(self):
         #self.fail('')
 
-    #def test_add(self, name, obj):
+    #def test_add(self):
         #self.fail('')
     
-    #def test_remove(self, name):
+    #def test_remove(self):
         #self.fail('')
     
-    #def test_add_trait(self, name, trait):
+    #def test_add_trait(self):
         #self.fail('')
         
-    #def test_remove_trait(self, name):
+    #def test_remove_trait(self):
         #self.fail('')
 
     #def test_is_valid(self):
         #self.fail('')
 
-    #def test_config_changed(self, update_parent=True):
-        #self.fail('')
-
-    #def test_list_inputs(self, valid=None, connected=None):
+    #def test_list_inputs(self):
         #self.fail('')
        
-    #def test_list_outputs(self, valid=None):
+    #def test_list_outputs(self):
         #self.fail('')
         
     #def test_list_containers(self):
         #self.fail('')
     
-    #def test_disconnect(self, srcpath, destpath):
+    #def test_disconnect(self):
         #self.fail('')
     
     #def test_get_expr_depends(self):
@@ -211,31 +208,31 @@ class TestCase(unittest.TestCase):
     #def test_get_expr_sources(self):
         #self.fail('')
 
-    #def test_check_path(self, path, check_dir=False):
+    #def test_check_path(self):
         #self.fail('')
     
     #def get_abs_directory (self):
         #self.fail('')
 
-    #def test_push_dir (self, directory=None):
+    #def test_push_dir(self):
         #self.fail('')
 
-    #def test_pop_dir (self):
+    #def test_pop_dir(self):
         #self.fail('')
 
-    #def test_stop (self):
+    #def test_stop(self):
         #self.fail('')
 
-    #def test_invalidate_deps(self, varnames=None, force=False):
+    #def test_invalidate_deps(self):
         #self.fail('')
 
-    #def test_update_outputs(self, outnames):
+    #def test_update_outputs(self):
         #self.fail('')
         
     #def test__get_log_level(self):
         #self.fail('')
 
-    #def test__set_log_level(self, level):
+    #def test__set_log_level(self):
         #self.fail('')
 
 if __name__ == '__main__':

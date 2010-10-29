@@ -65,10 +65,9 @@ class Assembly (Component):
         self._depgraph.remove(name)
         for obj in self.__dict__.values():
             if obj is not cont and isinstance(obj, Driver):
-                obj.remove_from_workflow(cont)
+                obj.workflow.remove(cont)
                     
         return super(Assembly, self).remove(name)
-
 
     def create_passthrough(self, pathname, alias=None):
         """Creates a PassthroughTrait that uses the trait indicated by

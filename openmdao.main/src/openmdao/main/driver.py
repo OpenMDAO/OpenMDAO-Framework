@@ -29,27 +29,9 @@ class Driver(Component):
     workflow = Instance(Workflow, allow_none=True)
     
     def __init__(self, doc=None):
-        self._workflows = []
         self._iter = None
         super(Driver, self).__init__(doc=doc)
-        self.add_workflow('workflow', Dataflow(self))
-        
-    def add_workflow(self, name, wf):
-        """Add a new Workflow with the given name to this Driver"""
-        if isinstance(wf, Workflow):
-            setattr(self, name, wf)
-            self._workflows.append(wf)
-        else:
-            self.raise_exception("'%s' is not a Workflow" % name,
-                                 TypeError)
-            
-    def remove_workflow(self, name):
-        wf = getattr(self, name, None)
-        try:
-            self._workflows.remove(wf)
-        except:
-            self.raise_exception("'%s' is not a member of the Workflow list" % name,
-                                 NameError)
+        self.workflow = Dataflow(self)
         
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
@@ -60,42 +42,20 @@ class Driver(Component):
             return False
 
         # force execution if any component in the workflow is invalid
-        for wf in self._workflows:
-            for comp in wf.contents():
-                if not comp.is_valid():
-                    return False
-
+        for comp in self.workflow.contents():
+            if not comp.is_valid():
+                return False
         return True
-
-    def config_changed(self, update_parent=True):
-        """Call this whenever the configuration of this Component changes,
-        for example, children are added or removed.
-        """
-        super(Driver, self).config_changed(update_parent)
-        try:
-            wfs = self._workflows
-        except:
-            pass  # early on, self._workflows may not exist yet
-        else:
-            for wf in wfs:
-                wf.config_changed()
-
-    def remove_from_workflow(self, component):
-        """Remove the specified component from our workflow(s).
-        """
-        for wf in self._workflows:
-            wf.remove(component)
 
     def iteration_set(self):
         """Return a set of all Components in our workflow(s), and 
         recursively in any workflow in any Driver in our workflow(s).
         """
         allcomps = set()
-        for wf in self._workflows:
-            for child in wf.contents():
-                allcomps.add(child)
-                if isinstance(child, Driver):
-                    allcomps.update(child.iteration_set())
+        for child in self.workflow.contents():
+            allcomps.add(child)
+            if isinstance(child, Driver):
+                allcomps.update(child.iteration_set())
         return allcomps
         
     def get_expr_depends(self):
