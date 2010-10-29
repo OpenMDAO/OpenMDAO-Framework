@@ -12,10 +12,11 @@ import shutil
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.api import DBCaseIterator, DBCaseRecorder, DumpCaseRecorder, ListCaseIterator
+from openmdao.lib.caseiterators.api import DBCaseIterator, ListCaseIterator
+from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder, case_db_to_dict 
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.main.uncertain_distributions import NormalDistribution
-from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
+
 from openmdao.main.caseiter import caseiter_to_dict
     
 class DBCaseRecorderTestCase(unittest.TestCase):

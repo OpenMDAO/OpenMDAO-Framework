@@ -5,7 +5,7 @@
 """
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import ListStr, Instance
+from openmdao.lib.datatypes.api import ListStr, Instance
 
 from openmdao.main.case import Case
 from openmdao.main.interfaces import IDOEgenerator
@@ -34,10 +34,8 @@ class DOEdriver(CaseIterDriverBase):
         
     def _get_cases(self):
         params = self.get_parameters().values()
-        if self.DOEgenerator.num_parameters != len(params):
-            self.raise_exception('Number of DOE values (%s) != number of '
-                                 'parameters (%s).'%
-                (self.DOEgenerator.num_parameters, len(params)), ValueError)
+        self.DOEgenerator.num_parameters = len(params)
+        
         for row in self.DOEgenerator:
             inputs = []
             for val, parameter in zip(row, params):

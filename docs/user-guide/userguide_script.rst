@@ -48,10 +48,10 @@ the same syntax as loading any other Python module:
 .. testcode:: package
 
     from openmdao.main.api import Component, Assembly
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
 
 Here, the fundamental OpenMDAO component classes *Component* and *Assembly* are
-loaded from ``openmdao.main.api``, along with the CONMIN driver from ``openmdao.lib.api``.
+loaded from ``openmdao.main.api``, along with the CONMIN driver from ``openmdao.lib.drivers.api``.
 
 To simplify the imports, a selection of the most commonly used imports was
 placed in the pseudo-package ``openmdao.main.api``. You can obtain a complete
@@ -139,7 +139,7 @@ A simple component that implements an equation with two inputs is shown below:
 .. testcode:: simple_component_Equation
 
     from openmdao.main.api import Component
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     
     class Equation(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -202,7 +202,7 @@ output would look like this:
 .. testcode:: creating_public_variables_1
 
     from openmdao.main.api import Component
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     
     class Simple(Component):
         """ A simple multiplication """
@@ -224,7 +224,7 @@ the variables *x* and *y*.
 .. testcode:: creating_public_variables_2
 
     from openmdao.main.api import Component
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     class Simple(Component):
         """ A simple multiplication """
         def execute(self):
@@ -248,7 +248,7 @@ The primary use of ``add_trait`` is to create a variable dynamically at some
 point after the component has been created (possibly during execution).
 
     >>> from openmdao.examples.simple.paraboloid import Paraboloid
-    >>> from openmdao.lib.api import Int
+    >>> from openmdao.lib.datatypes.api import Int
     >>> test=Paraboloid()
     >>> test.z
     Traceback (most recent call last):
@@ -400,7 +400,7 @@ capabilities. Either array can be n-dimensional and of potentially any type.
 Constructing an Array variable requires a couple of additional parameters that
 are illustrated in the following example:
 
-    >>> from openmdao.lib.api import Array
+    >>> from openmdao.lib.datatypes.api import Array
     >>> from numpy import array
     >>> from numpy import float as numpy_float
     >>> z = Array(array([[1.0,2.0],[3.0,5.0]]), dtype=numpy_float, shape=(2,2), iotype='in')
@@ -439,7 +439,7 @@ and calculates their dot product as an output.
     from numpy import array, sum, float   
     
     from openmdao.main.api import Component
-    from openmdao.lib.api import Array, Float
+    from openmdao.lib.datatypes.api import Array, Float
     
     class Dot(Component):
         """ A component that outputs a dot product of two arrays"""
@@ -487,7 +487,7 @@ colors:
 
 .. testcode:: enum_example2
 
-    from openmdao.lib.api import Enum
+    from openmdao.lib.datatypes.api import Enum
     from openmdao.main.api import Component
     
     class TrafficLight(Component):
@@ -515,7 +515,7 @@ strings to go along with the numbers the code expects.
 
 .. testcode:: enum_example
 
-    from openmdao.lib.api import Enum
+    from openmdao.lib.datatypes.api import Enum
     from openmdao.main.api import Component
     
     class TrafficLight(Component):
@@ -565,7 +565,7 @@ defined by creating a *List* of Enums.
     
 .. testcode:: enum_list_example
 
-    from openmdao.lib.api import Enum, List
+    from openmdao.lib.datatypes.api import Enum, List
     from openmdao.main.api import Component
     
     class Dice(Component):
@@ -605,7 +605,7 @@ by `FileMetadata`, which supports arbitrary user metadata.
 
 .. testcode:: filevar_example
 
-    from openmdao.lib.api import File
+    from openmdao.lib.datatypes.api import File
     
     text_file = File(path='source.txt', iotype='out', content_type='txt')
     binary_file = File(path='source.bin', iotype='out', binary=True,
@@ -638,7 +638,7 @@ and no copy will be made.
 .. testcode:: instance_example
 
     from openmdao.main.api import Component
-    from openmdao.lib.api import Instance
+    from openmdao.lib.datatypes.api import Instance
     from openmdao.main.interfaces import ICaseRecorder, ICaseIterator
     
     class Fred(Component):
@@ -692,7 +692,7 @@ component would look like this:
 .. testcode:: units_declare
 
     from openmdao.main.api import Component
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     
     class Pressure(Component):
         """Simple component to calculate pressure given force and area"""
@@ -713,7 +713,7 @@ value of zero from being assigned, resulting in a division error. Of course, you
 could still get very large values for *pressure* if area is near machine zero.
 
 This units library can also be used to convert internal variables by importing
-the function ``convert_units`` from ``openmdao.lib.api``.
+the function ``convert_units`` from ``openmdao.main.api``.
 
     >>> from openmdao.main.api import convert_units
     >>> convert_units(12.0,'inch','ft')
@@ -760,7 +760,7 @@ three variables that define two flight conditions:
 .. testcode:: variable_containers
 
     from openmdao.main.api import Component, Container
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
 
     class FlightCondition(Container):
         """Container of variables"""
@@ -817,7 +817,7 @@ Consider the top level assembly that was created for the
 .. testcode:: simple_model_Unconstrained_pieces
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
     from openmdao.examples.simple.paraboloid import Paraboloid
 
     class OptimizationUnconstrained(Assembly):
@@ -982,7 +982,7 @@ a new working directory for the Paraboloid component when it is instantiated.
 .. testcode:: simple_model_component_directory
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
     from openmdao.examples.simple.paraboloid import Paraboloid
 
     class OptimizationUnconstrained(Assembly):
@@ -1034,7 +1034,7 @@ the CONMINdriver optimizer.
 .. testcode:: Parameter_API
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.drivers.api import CONMINdriver
 
     class EngineOpt(Assembly):
         """ Top level assembly for optimizing a vehicle. """
@@ -1161,7 +1161,7 @@ syntax includes an equal sign in the expression.
 
 .. testsetup:: Parameter_API2
 
-    from openmdao.lib.api import BroydenSolver
+    from openmdao.lib.drivers.api import BroydenSolver
     from openmdao.main.api import Assembly
     from openmdao.examples.mdao.disciplines import SellarDiscipline1
     

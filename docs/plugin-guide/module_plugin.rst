@@ -19,7 +19,7 @@ need to function properly as an OpenMDAO component.
 
 .. testcode:: plugin_example
 
-    from openmdao.lib.api import Float
+    from openmdao.lib.datatypes.api import Float
     
     from openmdao.main.api import Component
 
@@ -44,16 +44,13 @@ SimpleAdder has three variables of type Float with the names *a*, *b*, and
 are inputs, so we specify that they have an iotype of *'in'*. Attribute
 c is an output, so it has an iotype of *'out'*.
 
-The Float variable is defined in the package ``openmdao.lib.api``, so we have to
-import it from there before we can use it. This  package defines a wide variety
-of traits, including basic types like *Int*, *Str*, and *Bool*; containers like
-*List* and *Dict*; and others. Variables are actually implemented using
-Enthought's Traits, and a larger selection of less commonly used traits are
-available by importing from the package ``enthought.traits.api``. To learn more
-about traits, see the  `Traits User Manual 
-<http://code.enthought.com/projects/traits/docs/html/traits_user_manual/index.html>`_
-and the list of  `available traits
-<http://code.enthought.com/projects/files/ETS32_API/enthought.traits.api.html>`_.
+The Float variable is defined in the package ``openmdao.lib.datatypes.api``, so 
+we have to import it from there before we can use it. This  package defines a 
+wide variety of traits, including basic types like *Int*, *Str*, and *Bool*; 
+containers like *List* and *Dict*; and others. Variables are actually 
+implemented using Enthought's Traits and to learn more about traits, see the  
+`Traits User Manual 
+<http://code.enthought.com/projects/traits/docs/html/traits_user_manual/index.html>`_.
 
 At this point, our SimpleAdder plugin is usable within OpenMDAO. We could simply
 import the module containing it and use it in a model; but we want more than
@@ -245,7 +242,7 @@ file called ``coord.py`` and placing the following code in it:
 
 ::
 
-    from enthought.traits.api import TraitType
+    from openmdao.lib.datatypes.api import TraitType
     
     class Coordinates(TraitType):
     

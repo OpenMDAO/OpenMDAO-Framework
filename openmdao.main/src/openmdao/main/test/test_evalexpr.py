@@ -21,7 +21,7 @@ import logging
 
 from openmdao.main.expreval import translate_expr, ExprEvaluator
 from openmdao.main.api import Assembly, Container, Component, set_as_top
-from openmdao.lib.api import Float, Array
+from openmdao.lib.datatypes.api import Float, Array
 
 class A(Container):
     b = Array(iotype='in')

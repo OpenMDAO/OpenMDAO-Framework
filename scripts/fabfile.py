@@ -168,7 +168,7 @@ def _testbranch():
         removeit="""rmdir /s /q"""
         env.shell="cmd /C"
 	user=env.user
-	env.user="ndc\\"+env.user   #need to preface username with ndc\\ to get into storm
+	# env.user="ndc\\"+env.user   #need to preface username with ndc\\ to get into storm
     else:
         devbindir='devenv/bin'
         unpacktar="tar xvf"

@@ -6,7 +6,7 @@ import unittest
 
 from numpy import array, isnan
 
-from openmdao.lib.api import Float, Bool, Int, Str, Array, File, List, Enum
+from openmdao.lib.datatypes.api import Float, Bool, Int, Str, Array, File, List, Enum
 from openmdao.main.api import Container, Component
 from openmdao.util.filewrap import InputFileGenerator, FileParser
 

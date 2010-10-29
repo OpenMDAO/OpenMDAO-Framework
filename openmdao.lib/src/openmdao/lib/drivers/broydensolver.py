@@ -14,15 +14,13 @@ import numpy
 from scipy.optimize.nonlin import norm
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import on_trait_change, TraitError
+from openmdao.lib.datatypes.api import on_trait_change, TraitError, \
+     Float, Int, Enum
                                  
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
-from openmdao.lib.datatypes.float import Float
-from openmdao.lib.datatypes.int import Int
-from openmdao.lib.datatypes.enum import Enum
 from openmdao.util.decorators import add_delegate
 
         

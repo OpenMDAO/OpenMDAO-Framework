@@ -10,12 +10,13 @@ import platform
 import sys
 import unittest
 
-from enthought.traits.api import TraitError, Event
+from openmdao.lib.datatypes.api import TraitError, Event
 
 from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
-from openmdao.lib.api import Float, Bool, Array, ListCaseIterator
+from openmdao.lib.datatypes.api import Float, Bool, Array
+from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.doedriver import DOEdriver
 from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
@@ -73,7 +74,7 @@ class MyModel(Assembly):
         self.add('driver', DOEdriver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add(self.driven)
-        self.driver.DOEgenerator = OptLatinHypercube(10,4)
+        self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
         self.driver.case_outputs = ['driven.rosen_suzuki']
         for name in ['x0', 'x1','x2', 'x3']:
             self.driver.add_parameter("driven.%s"%name,low=-10.,high=10.)
@@ -163,17 +164,6 @@ class TestCase(unittest.TestCase):
         self.model.driver.remove_parameter('driven.x1')
         lst = self.model.driver.list_parameters()
         self.assertEqual(lst, ['driven.x0','driven.x2','driven.x3'])
-    
-    def test_DOE_param_mismatch(self):
-        self.model.driver.remove_parameter('driven.x2')
-        results = ListCaseRecorder()
-        self.model.driver.recorder = results
-        try:
-            self.model.run()
-        except ValueError as err:
-            self.assertEqual(str(err), "driver: Number of DOE values (4) != number of parameters (3).")
-        else:
-            self.fail("expected ValueError")
 
     def test_no_event(self):
         logging.debug('')

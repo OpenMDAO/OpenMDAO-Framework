@@ -37,6 +37,11 @@ class Case(object):
                '    msg: %s' % \
                (self.ident, self.inputs, self.outputs,
                 self.max_retries, self.retries, self.msg)
+    
+    def __eq__(self,other): 
+        if self.inputs == other.inputs and self.outputs == other.outputs: 
+            return True
+        return False
 
     def apply_inputs(self, scope):
         """Set all of the inputs in this case to their specified values in

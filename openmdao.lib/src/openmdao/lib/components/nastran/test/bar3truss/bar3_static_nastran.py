@@ -4,7 +4,7 @@ from numpy import zeros
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
-from openmdao.lib.api import Float
+from openmdao.lib.datatypes.api import Float
 
 from openmdao.lib.components.nastran.nastran import NastranComponent
 

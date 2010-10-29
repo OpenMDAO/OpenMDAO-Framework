@@ -13,7 +13,7 @@ import sys
 import unittest
 import nose
 
-from enthought.traits.api import Callable, TraitError
+from enthought.traits.api import Callable
 
 from openmdao.main.api import Assembly, Component, Container, SAVE_PICKLE, \
                               SAVE_CPICKLE, set_as_top
@@ -22,7 +22,8 @@ from openmdao.main.filevar import FileMetadata
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
-from openmdao.lib.api import Int, Bool, List, Str, Array, Instance, File
+from openmdao.lib.datatypes.api import Int, Bool, List, Str, Array, Instance, \
+     File, TraitError
 from openmdao.util.testutil import assert_raises, find_python, \
                                    make_protected_dir
 
