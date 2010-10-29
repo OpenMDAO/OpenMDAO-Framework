@@ -10,7 +10,7 @@ from enthought.traits.trait_base import not_none
 
 from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
                       Optional, QuotedString, Suppress, Word, alphanums, \
-                      oneOf, nums
+                      oneOf, nums, TokenConverter
 
 from openmdao.util.filewrap import ToFloat, ToInteger
 
@@ -25,6 +25,20 @@ class Card(object):
         self.is_comment = is_comment
 
         
+class ToBool(TokenConverter):
+    """Converter for PyParsing that is used to turn a token into a Boolean."""
+    def postParse( self, instring, loc, tokenlist ):
+        """Converter to make token into a bool."""
+        
+        if tokenlist[0] in ['T', 'True', 'TRUE']:
+            return True
+        elif tokenlist[0] in ['F', 'False', 'FALSE']:
+            return False
+        else:
+            raise RuntimeError('Unexpected error while trying to identify a'
+                               ' Boolean value in the namelist.')
+
+    
 class Namelist(object):
     """Utility to ease the task of constructing a formatted output file."""
     
@@ -95,7 +109,7 @@ class Namelist(object):
         
         target_container = self.comp.get(varpath)
         for name in target_container.keys(iotype=not_none):
-            self.add_var(varpath+'.'+name)
+            self.add_var("%s.%s" % (varpath, name))
         
     def add_comment(self, comment):
         """Add a comment in the namelist.
@@ -113,17 +127,29 @@ class Namelist(object):
         data.append("%s\n" % self.title)
         for i, group_name in enumerate(self.groups):
             
-            data.append("%s\n" % group_name)
+            # Groups get a '&', freeform cards don't.
+            if self.cards[i]:
+                data.append("&%s\n" % group_name)
+            else:
+                data.append("%s\n" % group_name)
+                
             for card in self.cards[i]:
                 
                 if card.is_comment:
                     line = "  %s\n" % (card.value)
                     
+                elif isinstance(card.value, bool):
+                    if card.value == True:
+                        val = 'T'
+                    else:
+                        val = 'F'
+                    line = "  %s = %s\n" % (card.name, val)
+                    
                 elif isinstance(card.value, int):
                     line = "  %s = %s\n" % (card.name, str(card.value))
                     
                 elif isinstance(card.value, float):
-                    line = "  %s = %.15g\n" % (card.name, card.value)
+                    line = "  %s = %.16g\n" % (card.name, card.value)
                     
                 elif isinstance(card.value, str):
                     line = "  %s = '%s'\n" % (card.name, card.value)
@@ -138,7 +164,7 @@ class Namelist(object):
                         line = "  %s = " % (card.name)
                         sep = ""
                         for val in card.value:
-                            line += "%s%.15g" % (sep, val)
+                            line += "%s%.16g" % (sep, val)
                             sep = self.delimiter
                         line += "\n"
                             
@@ -148,7 +174,7 @@ class Namelist(object):
                         for row in range(0, card.value.shape[0]):
                             line += card.name + "(1," + str(row+1) + ") ="
                             for col in range(0, card.value.shape[1]):
-                                line += " %.15g%s" % (card.value[row, col], 
+                                line += " %.16g%s" % (card.value[row, col], 
                                                       self.delimiter)
                             line += "\n"
                         
@@ -218,13 +244,15 @@ class Namelist(object):
         
         numval = num_float | mixed_exp | num_int | nan
         strval =  QuotedString(quoteChar='"') | QuotedString(quoteChar="'")
-        #strval =  QuotedString
+        boolval = ToBool(oneOf("T TRUE True true F FALSE False false"))
         
         # Tokens for parsing a line of data
-        data_token = numval + ZeroOrMore(Suppress(',') + numval) | strval
+        numstr_token = numval + ZeroOrMore(Suppress(',') + numval) \
+                   | strval
+        data_token = numstr_token | boolval
         card_token = Word(alphanums).setResultsName("name") + Suppress('=') + \
                 data_token.setResultsName("value")
-        array_continuation_token = data_token.setResultsName("value")
+        array_continuation_token = numstr_token.setResultsName("value")
         
         # Comment Token
         comment_token = Literal("!")
@@ -233,10 +261,10 @@ class Namelist(object):
         
         current_group = None
         for line in data:
-            #line = line.strip()
+            line = line.strip()
             
             # blank line: do nothing
-            if not line.strip():
+            if not line:
                 continue
                 
             if current_group:
@@ -284,6 +312,10 @@ class Namelist(object):
                 else:
                     print "Comment ignored: %s" % line.rstrip('\n')
 
+                # Group ending '/' can also conclude a data line.
+                if line[-1] == '/':
+                    current_group = None
+                    
                 #print self.cards[-1][-1].name, self.cards[-1][-1].value
             else:
                 group_name = group_name_token.searchString(line)
@@ -306,22 +338,52 @@ class Namelist(object):
                     self.add_group(line.rstrip())
                     
 
-    def load_model(self, rules=None, ignore=[], single_group=-1):
+    def load_model(self, rules=None, ignore=None, single_group=-1):
         """Loads the current deck into an OpenMDAO component.
         
-        rules: Dict of Lists of Strings (Optional)
+        rules: dict of lists of strings (Optional)
         An optional dictionary of rules can be passed if the component has a
         hierarchy of containers for its input variables. If no rules dictionary
         is passed, load_model will attempt to find each namelist variable in the
         top level of the model hierarchy.
         
-        ignore: List of Strings (Optional)
+        ignore: list of strings (Optional)
         List of variable names that can safely be ignored.
         
         single_group: integer (Optional)
-        Just process one single namelist group. Useful if extra processing is
-        needed, or if multiple groups have the same name."""
+        Group id number to use for processing one single namelist group. Useful
+        if extra processing is needed, or if multiple groups have the same name.
+        
+        Returns a tuple containing the following values:
+        (empty_groups, unlisted_groups, unlinked_vars). These need to be
+        examined after calling load_model to make sure you loaded every
+        variable into your model.
+        
+        empty_groups: ordereddict( integer : string )
+        Names and ID number of groups that don't have cards. This includes 
+        strings found at the top level that aren't comments; these need to
+        be processed by your wrapper to determine how the information fits
+        into your component's variable hierarchy.
+        
+        unlisted_groups: ordereddict( integer : string )
+        This dictionary includes the names and ID number of groups that have
+        variables that couldn't be loaded because the group wasn't mentioned
+        in the rules dictionary.
+        
+        unlinked_vars: list containing all variable names that weren't found
+        in the component.
+        
+        """
 
+        # See Pylint W0102 for why we do this
+        if not ignore:
+            ignore = []
+        
+        if not self.groups:
+            msg = "Input file must be read with parse_file before " \
+                  "load_model can be executed."
+            raise RuntimeError(msg)
+            
         if single_group > -1:
             use_group = {single_group : self.groups[single_group]}.iteritems()
         else:
@@ -368,12 +430,15 @@ class Namelist(object):
                     if self.comp.contains(name):
                         found = True
                         varpath = name
+                    elif self.comp.contains(name.lower()):
+                        found = True
+                        varpath = name.lower()
                 
                 if not found:
-                   if name not in ignore and name.lower() not in ignore:
-                       unlinked_vars.append(group_name)
-                       print "Variable not found: " + \
-                             "%s in group %s." % (name, group_name)
+                    if name not in ignore and name.lower() not in ignore:
+                        unlinked_vars.append(name)
+                        print "Variable not found: " + \
+                              "%s in group %s." % (name, group_name)
 
                 else:
                     

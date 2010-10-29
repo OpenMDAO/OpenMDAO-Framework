@@ -1,15 +1,18 @@
 """
-Utilities for file wrapping.
+A collection of utilities for file wrapping.
 
 Note: This is a work in progress.
 """
 
 import re
-from pyparsing import CaselessLiteral, Combine, Literal, OneOrMore, Optional, \
+from pyparsing import CaselessLiteral, Combine, OneOrMore, Optional, \
                       TokenConverter, Word, nums, oneOf, printables
 
+from numpy import append, array, zeros
+
 class _SubHelper(object):
-    """Replaces file text at the correct word location in a line."""
+    """Replaces file text at the correct word location in a line. This
+    class contains the Helper Function that is passed to re.sub, etc."""
     
     def __init__(self):
         
@@ -17,6 +20,8 @@ class _SubHelper(object):
         self.replace_location = 0
         self.current_location = 0
         self.counter = 0
+        self.start_location = 0
+        self.end_location = 0
         
     def set(self, newtext, location):
         """Sets a new word location and value for replacement."""
@@ -42,7 +47,10 @@ class _SubHelper(object):
         self.current_location += 1
         
         if self.current_location == self.replace_location:
-            return str(self.newtext)
+            if isinstance(self.newtext, float):
+                return '%.16g' % self.newtext
+            else:
+                return str(self.newtext)
         else:
             return text.group()
         
@@ -57,7 +65,10 @@ class _SubHelper(object):
         if self.current_location >= self.start_location and \
            self.current_location <= self.end_location and \
            self.counter < end:
-            newval = str(self.newtext[self.counter])
+            if isinstance(self.newtext[self.counter], float):
+                return '%.16g' % self.newtext[self.counter]
+            else:
+                newval = str(self.newtext[self.counter])
             self.counter += 1
             return newval
         else:
@@ -65,15 +76,18 @@ class _SubHelper(object):
 
 
 class ToInteger(TokenConverter):
-    """Converter to make token into an integer."""
+    """Converter for PyParsing that is used to turn a token into an int."""
     def postParse( self, instring, loc, tokenlist ):
+        """Converter to make token into an integer."""
         return int(tokenlist[0])
 
 class ToFloat(TokenConverter):
-    """Converter to make token into a float."""
+    """Converter for PyParsing that is used to turn a token into a float."""
     def postParse( self, instring, loc, tokenlist ):
+        """Converter to make token into a float."""
         return float(tokenlist[0])
-        
+
+    
 def _parse_line():
     """Parse a single data line that may contain string or numerical data.
     Float and Int 'words' are converted to their appropriate type. 
@@ -176,7 +190,7 @@ class InputFileGenerator(object):
             
                 count -= 1
         else:
-            raise ValueError("0 is not valid for an anchor occurrence.")            
+            raise ValueError("0 is not valid for an anchor occurrence.") 
             
         raise RuntimeError("Could not find pattern %s in template file %s" % \
                            (anchor, self.template_filename))
@@ -250,7 +264,7 @@ class InputFileGenerator(object):
         if sub.counter < len(value):
             for val in value[sub.counter:]:
                 
-                newline = newline[:-1] + sep + str(val) + "\n"
+                newline = newline + sep + str(val)
         
             self.data[j] = newline
             
@@ -290,7 +304,7 @@ class InputFileGenerator(object):
             j = self.current_row + row
             line = self.data[j]
 
-            sub.set_array(value[i,:], field_start, field_end)
+            sub.set_array(value[i, :], field_start, field_end)
             field_start = 0
             
             newline = re.sub(self.reg, sub.replace_array, line)
@@ -359,7 +373,7 @@ class FileParser(object):
         file no matter the state of any previous anchor."""
         
         if not isinstance(occurrence, int):
-            raise ValueError("The value for occurrence must be an integer.")
+            raise ValueError("The value for occurrence must be an integer")
         
         instance = 0
         if occurrence > 0:
@@ -384,7 +398,7 @@ class FileParser(object):
             
                 count -= 1
         else:
-            raise ValueError("0 is not valid for an anchor occurrence.")            
+            raise ValueError("0 is not valid for an anchor occurrence.")
             
         raise RuntimeError("Could not find pattern %s in output file %s" % \
                            (anchor, self.filename))
@@ -400,7 +414,7 @@ class FileParser(object):
         row - number of lines offset from anchor line (0 is anchor line).
         This can be negative."""
         
-        return self.data[self.current_row + row]
+        return self.data[self.current_row + row].rstrip()
         
     def transfer_var(self, row, field, fieldend=None):
         """Grabs a single variable relative to the current anchor.
@@ -454,7 +468,7 @@ class FileParser(object):
         field -- Which field to transfer. Field 0 is the key.
         
         occurrence -- find nth instance of text; default is 1 (first value
-        field). Use -1 to find last occurence. Position 0 is the key
+        field). Use -1 to find last occurance. Position 0 is the key
         field, so it should not be used as a value for occurrence.
         
         rowoffset -- Optional row offset from the occurrence of key. This can
@@ -478,7 +492,8 @@ class FileParser(object):
                 row += 1
                 
         elif occurrence < 0:
-            for line in reversed(self.data[:current_row]):
+            row = -1
+            for line in reversed(self.data[self.current_row:]):
                 if line.find(key) > -1:
                     instance += -1
                     if instance == occurrence:
@@ -486,7 +501,7 @@ class FileParser(object):
             
                 row -= 1
         else:
-            raise ValueError("0 is not valid for an anchor occurrence.")
+            raise ValueError("0 is not valid for an keyvar occurrence.")
         
         j = self.current_row + row + rowoffset
         line = self.data[j]
@@ -511,7 +526,7 @@ class FileParser(object):
             
         lines = self.data[j1:j2]
 
-        data = []
+        data = zeros(shape=(0,0))
 
         for line in lines:
             if self.delimiter == "columns":
@@ -523,13 +538,14 @@ class FileParser(object):
                 
                 # data might have been split if it contains whitespace. If so,
                 # just return the whole string
-                if len(parsed) > 1:
-                    data.append(line)
-                else:
-                    data.append(parsed)
+                #if len(parsed) > 1:
+                #    data = append(data, array(line))
+                #else:
+                #    data = append(data, array(parsed))
+                data = append(data, array(parsed[:]))
             else:
                 parsed = _parse_line().parseString(line)
-                data.append(parsed[(fieldstart-1):fieldend])
+                data = append(data, array(parsed[(fieldstart-1):fieldend]))
                 
         return data
         
