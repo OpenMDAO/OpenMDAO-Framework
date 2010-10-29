@@ -390,7 +390,7 @@ class Assembly (Component):
             boundary even if all outputs were already invalid.
         """
         valids = self._valid_dict
-        conn_ins = set(self.list_connected_inputs())
+        conn_ins = set(self.list_inputs(connected=True))
         
         # If varnames is None, we're being called from a parent Assembly
         # as part of a higher level invalidation, so we only need to look

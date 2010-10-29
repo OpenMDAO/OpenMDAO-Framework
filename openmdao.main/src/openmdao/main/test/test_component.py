@@ -23,13 +23,35 @@ class MyComponent(Component):
         self.cont.add_trait('dyntrait', Float(3.))
     
     def execute(self):
-        self.fout = self.f * 2.
+        self.xout = self.x * 2.
 
 class TestCase(unittest.TestCase):
     """ Test of Component. """
 
-    def test_connect(self):
+    def setUp(self):
+        self.comp = MyComponent()
+
+    def test_get_valid(self):
         comp = MyComponent()
+        valids = comp.get_valid(['x','xout'])
+        self.assertEqual(valids, [True, False])
+        try:
+            comp.get_valid(['x', 'foobar'])
+        except KeyError as err:
+            self.assertEqual(str(err), "'foobar'")
+        else:
+            self.fail("Expected KeyError")
+
+    def test_set_valid(self):
+        comp = self.comp
+        valids = comp.get_valid(['x','xout'])
+        self.assertEqual(valids, [True, False])
+        comp.set_valid(['x','xout'], True)
+        newvalids = comp.get_valid(['x','xout'])
+        self.assertEqual(newvalids, [True, True])
+
+    def test_connect(self):
+        comp = self.comp
         
         self.assertEqual(comp._depgraph.get_source('x'), None)
         vset = set(comp._valid_dict.keys())
@@ -129,6 +151,92 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('Expected ValueError')
 
+    def test_execute (self):
+        comp = Component()
+        try:
+            comp.execute()
+        except NotImplementedError as err:
+            self.assertEqual(str(err), ".execute")
+        else:
+            self.fail('expected NotImplemented')
+    
+    def test_run (self, force=False):
+        comp = Component()
+        try:
+            comp.run()
+        except NotImplementedError as err:
+            self.assertEqual(str(err), ".execute")
+        else:
+            self.fail('expected NotImplemented')
+ 
+    #def test_check_config (self):
+        #self.fail('')
+    
+    #def test_tree_rooted(self):
+        #self.fail('')
+
+    #def test_add(self, name, obj):
+        #self.fail('')
+    
+    #def test_remove(self, name):
+        #self.fail('')
+    
+    #def test_add_trait(self, name, trait):
+        #self.fail('')
+        
+    #def test_remove_trait(self, name):
+        #self.fail('')
+
+    #def test_is_valid(self):
+        #self.fail('')
+
+    #def test_config_changed(self, update_parent=True):
+        #self.fail('')
+
+    #def test_list_inputs(self, valid=None, connected=None):
+        #self.fail('')
+       
+    #def test_list_outputs(self, valid=None):
+        #self.fail('')
+        
+    #def test_list_containers(self):
+        #self.fail('')
+    
+    #def test_disconnect(self, srcpath, destpath):
+        #self.fail('')
+    
+    #def test_get_expr_depends(self):
+        #self.fail('')
+
+    #def test_get_expr_sources(self):
+        #self.fail('')
+
+    #def test_check_path(self, path, check_dir=False):
+        #self.fail('')
+    
+    #def get_abs_directory (self):
+        #self.fail('')
+
+    #def test_push_dir (self, directory=None):
+        #self.fail('')
+
+    #def test_pop_dir (self):
+        #self.fail('')
+
+    #def test_stop (self):
+        #self.fail('')
+
+    #def test_invalidate_deps(self, varnames=None, force=False):
+        #self.fail('')
+
+    #def test_update_outputs(self, outnames):
+        #self.fail('')
+        
+    #def test__get_log_level(self):
+        #self.fail('')
+
+    #def test__set_log_level(self, level):
+        #self.fail('')
 
 if __name__ == '__main__':
     unittest.main()

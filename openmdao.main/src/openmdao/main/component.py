@@ -261,7 +261,7 @@ class Component (Container):
                     valids[name] = True
             else:
                 valids = self._valid_dict
-                invalid_ins = [inp for inp in self.list_connected_inputs() 
+                invalid_ins = [inp for inp in self.list_inputs(connected=True) 
                                         if valids.get(inp) is False]
                 if invalid_ins:
                     self._call_execute = True
@@ -393,13 +393,13 @@ class Component (Container):
             self.parent.config_changed(update_parent)
         self._input_names = None
         self._output_names = None
+        self._connected_inputs = None
+        self._connected_outputs = None
         self._container_names = None
         self._expr_depends = None
         self._expr_sources = None
         self._call_check_config = True
         self._call_execute = True
-        self._connected_inputs = None
-        self._connected_outputs = None
 
     def list_inputs(self, valid=None, connected=None):
         """Return a list of names of input values. 
@@ -412,41 +412,66 @@ class Component (Container):
             If connected is not None, the list will contain names
             of inputs with matching *external* connectivity status.
         """
-        if self._input_names is None:
+        if self._connected_inputs is None:
             nset = set([k for k,v in self.items(iotype='in')])
-            nset.update(self._depgraph.get_connected_inputs())
+            self._connected_inputs = self._depgraph.get_connected_inputs()
+            nset.update(self._connected_inputs)
             self._input_names = list(nset)
-            
+    
+        if valid is None:
+            if connected is None:
+                return self._input_names
+            elif connected is True:
+                return self._connected_inputs
+            else: # connected is False
+                return [n for n in self._input_names if n not in self._connected_inputs]
+        
         valids = self._valid_dict
         ret = self._input_names
-        if valid is not None:
-            ret = [n for n in ret if valids[n] == valid]
-        if connected is not None:
-            srcs,dests = self._depgraph.get_mapping('@exin', '@bin')
-            if connected:
-                if srcs is None: 
-                    return []
-                else:
-                    return [n for n in ret if n in dests]
-            else:  # not connected
-                if dests is not None:
-                    return [n for n in ret if n not in dests]
-        return ret
+        ret = [n for n in ret if valids[n] == valid]
+            
+        if connected is True:
+            return [n for n in ret if n in self._connected_inputs]
+        elif connected is False:
+            return [n for n in ret if n not in self._connected_inputs]
+
+        return ret # connected is None, valid is not None
         
-    def list_outputs(self, valid=None):
-        """Return a list of names of output values. If valid is not None,
-        the the list will contain names of outputs with matching validity.
+    def list_outputs(self, valid=None, connected=None):
+        """Return a list of names of output values. 
+        
+        valid: bool, optional
+            If valid is not None, the list will contain names 
+            of outputs with matching validity.
+            
+        connected: bool, optional
+            If connected is not None, the list will contain names
+            of outputs with matching *external* connectivity status.
         """
         if self._output_names is None:
             nset = set([k for k,v in self.items(iotype='out')])
-            nset.update(self._depgraph.get_connected_outputs())
+            self._connected_outputs = self._depgraph.get_connected_outputs()
+            nset.update(self._connected_outputs)
             self._output_names = list(nset)
             
         if valid is None:
-            return self._output_names
-        else:
-            valids = self._valid_dict
-            return [n for n in self._output_names if valids[n] == valid]
+            if connected is None:
+                return self._output_names
+            elif connected is True:
+                return self._connected_outputs
+            else: # connected is False
+                return [n for n in self._output_names if n not in self._connected_outputs]
+        
+        valids = self._valid_dict
+        ret = self._output_names
+        ret = [n for n in ret if valids[n] == valid]
+            
+        if connected is True:
+            return [n for n in ret if n in self._connected_outputs]
+        elif connected is False:
+            return [n for n in ret if n not in self._connected_outputs]
+
+        return ret # connected is None, valid is not None
         
     def list_containers(self):
         """Return a list of names of child Containers."""
@@ -460,18 +485,6 @@ class Component (Container):
             self._container_names = names
         return self._container_names
     
-    def list_connected_inputs(self):
-        """Return a list of names of connected input variables and passthroughs."""
-        if self._connected_inputs is None:
-            self._connected_inputs = self._depgraph.get_connected_inputs()
-        return self._connected_inputs
-            
-    def list_connected_outputs(self):
-        """Return a list of names of connected output variables and passthroughs."""
-        if self._connected_outputs is None:
-            self._connected_outputs = self._depgraph.get_connected_outputs()
-        return self._connected_outputs
-        
     def connect(self, srcpath, destpath):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
@@ -1071,15 +1084,8 @@ class Component (Container):
         names: iterator of str
             Names of variables whose validity is requested.
         """
-        ret = [0]*len(names)
         valids = self._valid_dict
-        try:
-            for i,name in enumerate(names):
-                ret[i] = valids[name]
-        except KeyError as err:
-            self.raise_exception("get_valid failed: %s" % str(err), 
-                                 KeyError)
-        return ret
+        return [valids[n] for n in names]
                 
     def set_valid(self, names, valid):
         """Mark the io traits with the given names as valid or invalid."""
@@ -1105,10 +1111,10 @@ class Component (Container):
         # only invalidate connected inputs. inputs that are not connected
         # should never be invalidated
         if varnames is None:
-            for var in self.list_connected_inputs():
+            for var in self.list_inputs(connected=True):
                 valids[var] = False
         else:
-            conn = self.list_connected_inputs()
+            conn = self.list_inputs(connected=True)
             for var in varnames:
                 if var in conn:
                     valids[var] = False
@@ -1129,7 +1135,6 @@ class Component (Container):
         """
         self.run()
         
-    # error reporting stuff
     def _get_log_level(self):
         """Return logging message level."""
         return self._logger.level

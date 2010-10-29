@@ -226,14 +226,7 @@ class IComponent(IContainer):
         """Return a list of names of output values. If valid is not None,
         the the list will contain names of outputs with matching validity.
         """
-        
-    #def list_connected_inputs(self):
-        #"""Return a list of names of connected input variables and passthroughs."""
             
-    #def list_connected_outputs(self):
-        #"""Return a list of names of connected output variables and passthroughs."""
-        
-    
     def connect(self, srcpath, destpath):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
