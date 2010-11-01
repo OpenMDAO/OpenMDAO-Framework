@@ -5,6 +5,10 @@ import networkx as nx
 from networkx.algorithms.traversal import topological_sort_recursive, \
                                           strongly_connected_components
 
+
+class AlreadyConnectedError(RuntimeError):
+    pass
+
 def _cvt_names_to_graph(srcpath, destpath):
     """Translates model pathnames into pathnames in term of
     our 'fake' graph nodes @exin, @bin, @bout, and @exout.
@@ -67,18 +71,28 @@ class DependencyGraph(object):
         graph.remove_nodes_from(_fakes)
         return graph
     
-    def get_source(self, destvar):
-        exin = self._graph['@exin']
-        if '@bin' in exin:
-            dests = exin['@bin']['link']._dests
-            src = dests.get(destvar)
-            if src: return src
-        
-        for u,v,data in self._graph.in_edges('@bout', data=True):
-            src = data['link']._dests.get(destvar)
+    def get_source(self, destpath):
+        cname, _, vname = destpath.partition('.')
+        if vname: # internal dest
+            for srccomp, link in self.in_links(cname):
+                src = link._dests.get(vname)
+                if src:
+                    if srccomp[0] == '@':
+                        return src
+                    else:
+                        return '.'.join([srccomp,src])
+        else: # boundary dest
+            try:
+                dests = self._graph['@exin']['@bin']['link']._dests
+            except KeyError:
+                dests = {}
+            src = dests.get(destpath)
             if src:
-                return '.'.join([u, src])
-            
+                return src
+            for u,v,data in self._graph.in_edges('@bout', data=True):
+                src = data['link']._dests.get(destpath)
+                if src:
+                    return '.'.join([u, src])
         return None
 
     def add(self, name):

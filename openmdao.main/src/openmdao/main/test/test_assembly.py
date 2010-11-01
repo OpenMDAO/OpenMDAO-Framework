@@ -255,7 +255,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.create_passthrough('comp2.r')
         except RuntimeError, err:
-            self.assertEqual(str(err), "comp2: 'r' is already connected to source 'parent.comp1.rout'")
+            self.assertEqual(str(err), ": 'comp2.r' is already connected to source 'comp1.rout'")
         else:
             self.fail('RuntimeError expected')
         self.asm.set('comp1.s', 'some new string')

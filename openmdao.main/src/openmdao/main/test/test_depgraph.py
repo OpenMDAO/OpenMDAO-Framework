@@ -3,76 +3,92 @@ from nose import SkipTest
 
 from openmdao.main.depgraph import DependencyGraph
 
+_fakes = ['@exin', '@bin', '@bout', '@exout']
+nodes = ['A', 'B', 'C', 'D']
+
+def skip():
+    #raise SkipTest()
+    pass
+
+
 class DepGraphTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.depgraph = DependencyGraph()
+        self.dep = dep = DependencyGraph()
+        for name in nodes:
+            dep.add(name)
 
-    def test_contains(self):
-        raise SkipTest()
-    
-    def test_len(self):
-        raise SkipTest()
+        # add some internal connections
+        dep.connect('A.c', 'B.a')
+        dep.connect('B.c', 'C.a')
+        dep.connect('C.c', 'D.a')
         
-    def test_subgraph(self):
-        raise SkipTest()
-    
-    def test_copy_graph(self):
-        raise SkipTest()
-    
+        dep.connect('parent.X.c', 'bound_a')
+        dep.connect('D.c', 'bound_c')
+        dep.connect('bound_c', 'parent.Y.a')
+
     def test_get_source(self):
-        raise SkipTest()
+        self.assertEqual(self.dep.get_source('B.a'), 'A.c')
+        self.assertEqual(self.dep.get_source('C.a'), 'B.c')
+        self.assertEqual(self.dep.get_source('D.a'), 'C.c')
+        self.assertEqual(self.dep.get_source('D.b'), None)
+        self.assertEqual(self.dep.get_source('bound_a'), 'parent.X.c')
+        self.assertEqual(self.dep.get_source('bound_c'), 'D.c')
 
     def test_add(self):
-        raise SkipTest()
-
+        for name in nodes:
+            self.assertTrue(name in self.dep)
+        for name in _fakes:
+            self.assertTrue(name in self.dep)
+        
     def test_remove(self):
-        raise SkipTest()
+        self.dep.remove('B')
+        self.assertTrue('B' not in self.dep)
         
     def test_invalidate_deps(self): 
-        raise SkipTest()
+        skip()
 
     def test_list_connections(self):
-        raise SkipTest()
+        skip()
     
     def test_in_map(self):
-        raise SkipTest()
+        skip()
             
     def test_get_mapping(self):
-        raise SkipTest()
+        skip()
 
     def test_in_links(self):
-        raise SkipTest()
+        skip()
     
     def test_out_links(self):
-        raise SkipTest()
+        skip()
 
     def var_edges(self):
-        raise SkipTest()
+        skip()
     
     def test_var_in_edges(self):
-        raise SkipTest()
+        skip()
     
     def test_get_connected_inputs(self):
-        raise SkipTest()
+        skip()
     
     def test_get_connected_outputs(self):
-        raise SkipTest()
+        skip()
     
     def test_connect(self):
-        raise SkipTest()
+        skip()
 
     def test_comp_connections(self):
-        raise SkipTest()
+        skip()
     
     def test_var_connections(self):
-        raise SkipTest()
+        skip()
     
     def test_connections_to(self):
-        raise SkipTest()
+        skip()
 
     def test_disconnect(self):
-        raise SkipTest()
+        skip()
         
         
 if __name__ == "__main__":
