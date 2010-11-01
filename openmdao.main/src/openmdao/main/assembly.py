@@ -209,18 +209,18 @@ class Assembly (Component):
                 if not vname:
                     if cname in self.list_inputs():
                         for u,v in self._depgraph.var_edges('@bin'):
-                            if u == varpath2:
+                            if u == varpath:
                                 to_remove.append((u, v))
                     else:
                         for u,v in self._depgraph.var_in_edges('@bout'):
-                            if v == varpath2:
+                            if v == varpath:
                                 to_remove.append((u, v))
                 else:
                     for u,v in self._depgraph.var_edges(cname):
-                        if u == varpath2:
+                        if u == varpath:
                             to_remove.append((u, v))
                     for u,v in self._depgraph.var_in_edges(cname):
-                        if v == varpath2:
+                        if v == varpath:
                             to_remove.append((u, v))
             else:
                 to_remove.append((varpath, varpath2))
