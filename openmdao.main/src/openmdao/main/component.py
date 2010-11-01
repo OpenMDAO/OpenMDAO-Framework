@@ -353,7 +353,7 @@ class Component (Container):
         trait = self.get_trait(name)
         super(Component, self).remove_trait(name)
         self.config_changed()
-        self._depgraph.remove_trait_connection(name)
+
         try:
             del self._valid_dict[name]
         except KeyError:

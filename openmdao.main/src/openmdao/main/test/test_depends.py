@@ -69,7 +69,7 @@ subouts = ['comp1.c', 'comp1.d',
 
 subvars = subins+subouts
 
-class DepGraphTestCase(unittest.TestCase):
+class DependsTestCase(unittest.TestCase):
 
     def setUp(self):
         global exec_order

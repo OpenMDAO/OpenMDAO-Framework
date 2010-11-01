@@ -41,6 +41,11 @@ class DependencyGraph(object):
     A dependency graph for Components.  Each edge contains a _Link object, which 
     maps all connected inputs and outputs between the two Components.  Graph
     nodes starting with '@' are abstract nodes that represent boundary connections.
+    
+    @exin is external to our input boundary
+    @bin is our input boundary
+    @bout is our output boundary
+    @exout is external to our output boundary
     """
 
     def __init__(self):
@@ -85,54 +90,7 @@ class DependencyGraph(object):
         an error if the component is not found in the graph.
         """
         self._graph.remove_node(name)
-        
-    def remove_trait_connection(self, name, cname=None):
-        """Remove any connections involving the named trait."""
-        found = False
-        if cname:
-            for u,v,data in self._graph.edges(cname):  # outbound links
-                link = data['link']
-                if name in link._srcs:
-                    dests = link._srcs[name]
-                    for dest in dests:
-                        del link._dests[dest]
-                    del link._srcs[name]
-                    found = True
-                    break
-
-            if not found:
-                for u,v,data in self._graph.in_edges(cname): # inbound links
-                    link = data['link']
-                    if name in link._dests:
-                        src = link._dests[name]
-                        link._srcs[src].remove(name)
-                        if len(link._srcs[src]) == 0:
-                            del link._srcs[src]
-                        del link._dests[name]
-                        break
-
-        # now check for auto-passthroughs at the boundary
-        if cname:
-            path = '.'.join([cname,name])
-        else:
-            path = name
-            
-        # check input boundary
-        srcs, dests = self.get_mapping('@exin', '@bin')
-        if dests and path in dests:
-            src = dests[path]
-            srcs[src].remove(path)
-            if len(srcs[src]) == 0:
-                del srcs[src]
-            del dests[path]
-            
-        # check output boundary
-        srcs, dests = self.get_mapping('@bout', '@exout')
-        if srcs and path in srcs:
-            for d in srcs[path]:
-                del dests[d]
-            del srcs[path]
-                            
+                                    
     def invalidate_deps(self, scope, cnames, varsets, force=False):
         """Walk through all dependent nodes in the graph, invalidating all
         variables that depend on output sets for the given component names.
@@ -396,6 +354,8 @@ class DependencyGraph(object):
                            _cvt_names_to_graph(srcpath, destpath)
         
         if srccompname == '@exin' and destcompname != '@bin':
+            # this is an auto-passthrough input, so there are two connections
+            # that must be removed (@exin to @bin and @bin to some internal component)
             link = graph['@exin']['@bin']['link']
             link.disconnect(srcvarname, '.'.join([destcompname,destvarname]))
             if len(link) == 0:
@@ -405,6 +365,8 @@ class DependencyGraph(object):
             if len(link) == 0:
                 self._graph.remove_edge('@bin', destcompname)
         elif destcompname == '@exout' and srccompname != '@bout':
+            # this is an auto-passthrough output, so there are two connections
+            # that must be removed (@bout to @exout and some internal component to @bout)
             link = graph['@bout']['@exout']['link']
             link.disconnect('.'.join([srccompname,srcvarname]), destvarname)
             if len(link) == 0:
