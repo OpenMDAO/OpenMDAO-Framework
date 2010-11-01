@@ -86,6 +86,53 @@ class DependencyGraph(object):
         """
         self._graph.remove_node(name)
         
+    def remove_trait_connection(self, name, cname=None):
+        """Remove any connections involving the named trait."""
+        found = False
+        if cname:
+            for u,v,data in self._graph.edges(cname):  # outbound links
+                link = data['link']
+                if name in link._srcs:
+                    dests = link._srcs[name]
+                    for dest in dests:
+                        del link._dests[dest]
+                    del link._srcs[name]
+                    found = True
+                    break
+
+            if not found:
+                for u,v,data in self._graph.in_edges(cname): # inbound links
+                    link = data['link']
+                    if name in link._dests:
+                        src = link._dests[name]
+                        link._srcs[src].remove(name)
+                        if len(link._srcs[src]) == 0:
+                            del link._srcs[src]
+                        del link._dests[name]
+                        break
+
+        # now check for auto-passthroughs at the boundary
+        if cname:
+            path = '.'.join([cname,name])
+        else:
+            path = name
+            
+        # check input boundary
+        srcs, dests = self.get_mapping('@exin', '@bin')
+        if dests and path in dests:
+            src = dests[path]
+            srcs[src].remove(path)
+            if len(srcs[src]) == 0:
+                del srcs[src]
+            del dests[path]
+            
+        # check output boundary
+        srcs, dests = self.get_mapping('@bout', '@exout')
+        if srcs and path in srcs:
+            for d in srcs[path]:
+                del dests[d]
+            del srcs[path]
+                            
     def invalidate_deps(self, scope, cnames, varsets, force=False):
         """Walk through all dependent nodes in the graph, invalidating all
         variables that depend on output sets for the given component names.
@@ -144,6 +191,8 @@ class DependencyGraph(object):
                 conns.extend([('.'.join([u,src]), '.'.join([v,dest])) for dest,src in link._dests.items()])
         return conns
 
+    
+    
     def in_map(self, cname, varset):
         """Yield a tuple of lists of the form (srccompname, srclist, destlist) for each link,
         where all dests in destlist are found in varset.  If no dests are found in varset,
@@ -205,7 +254,7 @@ class DependencyGraph(object):
                         u = u.split('.', 1)[1]
                     if v.startswith('@'):
                         v = v.split('.', 1)[1]
-                edges.append((u,v))
+                    edges.append((u,v))
         return edges
     
     def var_in_edges(self, name=None):
@@ -224,7 +273,7 @@ class DependencyGraph(object):
                         u = u.split('.', 1)[1]
                     if v.startswith('@'):
                         v = v.split('.', 1)[1]
-                edges.append((u,v))
+                    edges.append((u,v))
         return edges
     
     def get_connected_inputs(self):
@@ -299,6 +348,46 @@ class DependencyGraph(object):
                                      (str(strcon), 
                                       '.'.join([srccompname,srcvarname]), 
                                       '.'.join([destcompname,destvarname])))
+
+    def _comp_connections(self, cname):
+        """Returns a list of tuples of the form (srcpath, destpath) for all
+        connections to and from the specified component.
+        """
+        conns = self.var_edges(cname)
+        conns.extend(self.var_in_edges(cname))
+        return conns
+    
+    def _var_connections(self, path):
+        """Returns a list of tuples of the form (srcpath,destpath) for all
+        connections to and from the specified variable.
+        """
+        conns = []
+        cname, _, vname = path.partition('.')
+        if not vname:  # a boundary variable
+            for u,v in self.var_edges('@bin'):
+                if u == path:
+                    conns.append((u, v))
+            for u,v in self.var_in_edges('@bout'):
+                if v == path:
+                    conns.append((u, v))
+        else:
+            for u,v in self.var_edges(cname):
+                if u == path:
+                    conns.append((u, v))
+            for u,v in self.var_in_edges(cname):
+                if v == path:
+                    conns.append((u, v))
+        return conns
+    
+    def connections_to(self, path):
+        """Returns a list of tuples of the form (srcpath,destpath) for
+        all connections between the variable or component specified
+        by *path*.
+        """
+        if path in self._graph:
+            return self._comp_connections(path)
+        else:
+            return self._var_connections(path)
 
     def disconnect(self, srcpath, destpath):
         """Disconnect the given variables."""

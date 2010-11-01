@@ -193,40 +193,11 @@ class Assembly (Component):
         name of a Component, remove all connections from all of its inputs
         and outputs. 
         """
-        to_remove = []
-        if varpath in self._depgraph: # varpath is a component name
-            if varpath2 is not None:
-                self.raise_exception("disconnect: First arg '%s' is a Component name so the second arg '%s' is not allowed." %
-                                     (varpath,varpath2), RuntimeError)
-            for u,v in self._depgraph.var_edges(varpath):
-                to_remove.append((u, v))
-            for u,v in self._depgraph.var_in_edges(varpath):
-                to_remove.append((u, v))
-            
-        else:   # varpath is not a component name
-            if varpath2 is None:  # remove all connections to varpath
-                cname, _, vname = varpath.partition('.')
-                if not vname:
-                    if cname in self.list_inputs():
-                        for u,v in self._depgraph.var_edges('@bin'):
-                            if u == varpath:
-                                to_remove.append((u, v))
-                    else:
-                        for u,v in self._depgraph.var_in_edges('@bout'):
-                            if v == varpath:
-                                to_remove.append((u, v))
-                else:
-                    for u,v in self._depgraph.var_edges(cname):
-                        if u == varpath:
-                            to_remove.append((u, v))
-                    for u,v in self._depgraph.var_in_edges(cname):
-                        if v == varpath:
-                            to_remove.append((u, v))
-            else:
-                to_remove.append((varpath, varpath2))
-
-        for src,sink in to_remove:
-            super(Assembly, self).disconnect(src, sink)
+        if varpath2 is None:
+            for src,sink in self._depgraph.connections_to(varpath):
+                super(Assembly, self).disconnect(src, sink)
+        else:
+            super(Assembly, self).disconnect(varpath, varpath2)
             
     def execute (self):
         """Runs driver and updates our boundary variables."""

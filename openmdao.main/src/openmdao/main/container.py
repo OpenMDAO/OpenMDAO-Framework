@@ -337,7 +337,7 @@ class Container(HasTraits):
         self._depgraph.disconnect(srcpath, destpath)
 
     #TODO: get rid of any notion of valid/invalid from Containers.  If they have
-    # no execute, they can have no inputs/outputs, which means that validity has
+    # no execute, they can have no inputs/outputs, which means that validity should have
     # no meaning for them.
     def is_valid(self):
         return True
