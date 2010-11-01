@@ -225,11 +225,12 @@ class Assembly (Component):
         return self._depgraph.list_connections(show_passthrough)
 
     def _cvt_input_srcs(self, sources):
-        srcs,dests = self._depgraph.get_mapping('@exin', '@bin')
-        if srcs is None:
+        link = self._depgraph.get_link('@exin', '@bin')
+        if link is None:
             return sources
         else:
             newsrcs = []
+            dests = link._dests
             for s in sources:
                 if '.' in s:
                     newsrcs.append(dests[s])

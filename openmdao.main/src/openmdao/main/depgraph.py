@@ -149,16 +149,18 @@ class DependencyGraph(object):
         """Return a list of tuples of the form (outvarname, invarname).
         """
         conns = []
-        if show_passthrough:
-            nbunch = None
-        else:
-            nbunch = [g for g in self._graph.nodes() if g[0] != '@']
-        for u,v,data in self._graph.edges(nbunch, data=True):
+        for u,v,data in self._graph.edges(data=True):
             link = data['link']
-            if u == '@bin':
-                conns.extend([(src, '.'.join([v,dest])) for dest,src in link._dests.items()])
+            if v == '@bin' or u == '@bout': # leave out external connections to boundary
+                continue
+            elif u == '@bin':
+                if show_passthrough:
+                    conns.extend([(src, '.'.join([v,dest])) 
+                                  for dest,src in link._dests.items() if not '.' in src])
             elif v == '@bout':
-                conns.extend([('.'.join([u,src]), dest) for dest,src in link._dests.items()])
+                if show_passthrough:
+                    conns.extend([('.'.join([u,src]), dest) 
+                                  for dest,src in link._dests.items() if not '.' in dest])
             else:
                 conns.extend([('.'.join([u,src]), '.'.join([v,dest])) for dest,src in link._dests.items()])
         return conns
@@ -182,17 +184,14 @@ class DependencyGraph(object):
                 continue
             yield (u, srcs, dests)
             
-    def get_mapping(self, srcname, destname):
-        """Return a tuple of the form (srcs, dests) where srcs and dests
-        are dicts that map sources to destinations and destinations to
-        sources respectively.  If there is no connection between the
-        specified source and destination, (None,None) is returned.
+    def get_link(self, srcname, destname):
+        """Return the link between the two specified nodes.  If there is no 
+        connection then None is returned.
         """
         try:
-            link = self._graph[srcname][destname]['link']
+            return self._graph[srcname][destname]['link']
         except KeyError:
-            return (None,None)
-        return (link._srcs, link._dests)
+            return None
 
     def in_links(self, cname):
         """Return a list of the form [(compname,link), (compname2,link2)...]
@@ -250,18 +249,15 @@ class DependencyGraph(object):
     
     def get_connected_inputs(self):
         try:
-            link = self._graph['@exin']['@bin']['link']
+            return self._graph['@exin']['@bin']['link']._dests.keys()
         except KeyError:
             return []
-        
-        return link._dests.keys()
     
     def get_connected_outputs(self):
         try:
-            link = self._graph['@bout']['@exout']['link']
+            return self._graph['@bout']['@exout']['link']._srcs.keys()
         except KeyError:
             return []
-        return link._srcs.keys()
     
     def connect(self, srcpath, destpath):
         """Add an edge to our Component graph from 
@@ -271,6 +267,11 @@ class DependencyGraph(object):
         srccompname, srcvarname, destcompname, destvarname = \
                            _cvt_names_to_graph(srcpath, destpath)
         
+        oldsrc = self.get_source('.'.join([destcompname,destvarname]))
+        if oldsrc:
+            raise AlreadyConnectedError("%s is already connected to source %s" %
+                                        (destpath, oldsrc))
+                
         if srccompname == '@exin' and destcompname != '@bin':
             # this is an auto-passthrough input so we need 2 links
             if '@bin' not in graph['@exin']:
