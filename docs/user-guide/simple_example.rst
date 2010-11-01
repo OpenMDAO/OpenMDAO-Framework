@@ -45,7 +45,9 @@ the pieces needed for the model.
 If you have downloaded the latest release version from the website, the files you need should be
 here:
 
-    ``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.simple-X.X.X-######.egg/openmdao/examples/simple``
+:: 
+
+  openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.simple-X.X.X-######.egg/openmdao/examples/simple
     
 ``X.X.X`` is the current OpenMDAO version, and ``######`` is a string that
 contains the Python version and the operating system description. This path may
@@ -55,7 +57,10 @@ vary depending on your system and version, but there will be only one
 If you are a developer and have a branch from the source repository, the files you need will
 be here:
 
-    ``examples/openmdao.examples.simple/openmdao/examples/simple``
+::
+
+  examples/openmdao.examples.simple/openmdao/examples/simple
+  
     
 Getting Started
 ---------------

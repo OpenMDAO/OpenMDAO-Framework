@@ -10,7 +10,7 @@ SurrogateModels
 
 .. _KrigingSurrogate:
 
-*KrigingSurrogate*
+KrigingSurrogate
 ~~~~~~~~~~~~~~~~~~~
 
 (See the source documentation for more information on 

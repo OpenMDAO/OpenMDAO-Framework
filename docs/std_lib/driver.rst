@@ -10,7 +10,7 @@ Drivers
 
 .. _BroydenSolver:
 
-*BroydenSolver*
+BroydenSolver
 ~~~~~~~~~~~~~~~
 
 The BroydenSolver can be used to solve for the set of inputs
@@ -184,7 +184,7 @@ allowable mixing coefficient for adaptation. The default value is 1.0.
 
 .. _Case-iterator-driver:
 
-*CaseIteratorDriver*
+CaseIteratorDriver
 ~~~~~~~~~~~~~~~~~~~~~~
 
 (See the source documentation for more information on 
@@ -199,8 +199,8 @@ allowable mixing coefficient for adaptation. The default value is 1.0.
 
 .. _CONMINDriver:
 
-*CONMINDriver*
-~~~~~~~~~~~~~~~~~~~
+CONMINDriver
+~~~~~~~~~~~~~~~
 
 :term:`CONMIN` is a Fortran program written as a subroutine to solve
 linear or nonlinear constrained optimization problems. The basic optimization
@@ -219,8 +219,8 @@ unconstrained and a constrained optimization.)
 CONMIN has been included in the OpenMDAO standard library to provide users
 with a basic gradient-based optimization algorithm.
 
-Basic Interface
-+++++++++++++++
+*Basic Interface*
++++++++++++++++++
 
 The CONMIN code contains a number of different parameters and switches that
 are useful for controlling the optimization process. These can be subdivided
@@ -282,8 +282,8 @@ assigned in the ``__init__`` function. The specific syntax for all of these is
 discussed in :ref:`Driver-API`.
 
 
-Controlling the Optimization
-++++++++++++++++++++++++++++
+*Controlling the Optimization*
++++++++++++++++++++++++++++++++
 
 It is often necessary to control the convergence criteria for an optimization.
 The CONMIN driver allows control over both the number of iterations
@@ -427,8 +427,9 @@ iprint = 101  All of above plus a dump of the arguments passed to
 ============  ========================================================
 
 
-Advanced Options
-++++++++++++++++
+*Advanced Options*
+++++++++++++++++++
+
 The following options exercise some of the more advanced capabilities of CONMIN.
 The details given here briefly summarize the effects of these parameters; more
 information is available in the `CONMIN User's Manual <file:../../../plugin-guide/CONMIN_user_manual.html>`_.
@@ -477,7 +478,7 @@ used only for constrained problems.
 
 .. _DOEdriver:
 
-*DOEdriver*
+DOEdriver
 ~~~~~~~~~~~
 
 The DOEdriver provides the capability to execute a DOE on a workflow.
@@ -524,7 +525,7 @@ each variable over which the DOE will span.
 
 .. _FixedPointIterator:
 
-*FixedPointIterator*
+FixedPointIterator
 ~~~~~~~~~~~~~~~~~~~~
 
 The FixedPointIterator is a simple solver that can solve a single-input
@@ -612,7 +613,7 @@ coupled components is shown in :ref:`Tutorial-MDAO-Architectures` .
 
 .. _`Genetic`:
 
-*Genetic*
+Genetic
 ~~~~~~~~~
 
 :term:`Genetic` is a driver which performs optimization using a genetic algorithm based
@@ -629,8 +630,8 @@ Genetic can be used in any simulation by importing it from ``openmdao.lib.driver
 .. index:: pair: design; variables
 .. index:: Float, Int, Enum
 
-Design Variables
-++++++++++++++++
+*Design Variables*
+++++++++++++++++++
 
 IOtraits are added to Genetic and become optimization parameters. Genetic will vary the set of
 parameters to search for an optimum. Genetic supports three variable types:
@@ -697,8 +698,8 @@ Now, for ``comp.x`` the optimizer will only try values between 5.0 and 7.0. Note
 are applicable only to Float and Int variables. For Enum variables, `low` and `high`
 are not applicable.
 
-Configuration
-+++++++++++++
+*Configuration*
++++++++++++++++
 
 When setting the objective you can specify a single 
 variable name or a more complex function, such as 
