@@ -1187,7 +1187,7 @@ class Component (Container):
              #"""
         #return None
 
-
+#pragma no cover
 def _show_validity(comp, recurse=True, exclude=set(), valid=None):
     """prints out validity status of all input and output traits
     for the given object, optionally recursing down to all of its
