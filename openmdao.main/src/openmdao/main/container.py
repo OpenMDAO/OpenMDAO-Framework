@@ -419,7 +419,7 @@ class Container(HasTraits):
         return obj
 
     def get_proxy(self, authkey):
-        """ Return :class:`OpenMDAO_Proxy` for self. """
+        """ Return :class:`OpenMDAO_Proxy` for self usable via `authkey`. """
         try:
             manager = self._managers[authkey]
         except KeyError:

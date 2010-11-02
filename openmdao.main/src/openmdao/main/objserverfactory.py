@@ -58,16 +58,36 @@ class ObjServerFactory(Factory):
 
 # FIXME: ('owner', 'user') can create,
 #        whoever created should be the one to release, not just anybody.
+#        => record credentials at creation.
     @rbac(('owner', 'user'))
     def release(self, server, remove_dir=True):
         """ Shut-down :class:`ObjServer` `server`. """
+        self._logger.debug('release %r', server)
         try:
             manager, root_dir = self._managers[server]
         except KeyError:
-            raise ValueError('server %r not found' % server)
+            # Not identical to any of our proxies.
+            # Could still be a reference to the same remote object.
+            try:
+                server_host = server.host
+                server_pid = server.pid
+            except Exception as exc:
+                self._logger.error("release: can't identify server %r" % server)
+                raise ValueError("can't identify server %r" % server)
+
+            for key in self._managers.keys():
+                if key.host == server_host and key.pid == server_pid:
+                    manager, root_dir = self._managers[key]
+                    server = key
+                    break
+            else:
+                self._logger.error('release: server %r not found' % server)
+                for key in self._managers.keys():
+                    self._logger.debug('    %r', key)
+                raise ValueError('server %r not found' % server)
 
         manager.shutdown()
-        del manager
+        server._close.cancel()
         del self._managers[server]
         if remove_dir and os.path.exists(root_dir):
             shutil.rmtree(root_dir)
@@ -75,6 +95,7 @@ class ObjServerFactory(Factory):
     @rbac('owner')
     def cleanup(self):
         """ Shut-down all remaining :class:`ObjServers`. """
+        self._logger.debug('cleanup')
         servers = self._managers.keys()
         for server in servers:
             self.release(server)
@@ -141,7 +162,6 @@ class ObjServerFactory(Factory):
                 count += 1
                 root_dir = '%s_%d' % (name, count)
             os.mkdir(root_dir)
-            os.chdir(root_dir)
 
             # On Windows, when running the full test suite under Nose,
             # starting the process starts a new Nose test session, which
@@ -155,16 +175,14 @@ class ObjServerFactory(Factory):
             else:
                 orig_main = None
             try:
-                manager.start()
+                manager.start(cwd=root_dir)
             finally:
                 if orig_main is not None:  #pragma no cover
                     sys.modules['__main__'].__file__ = orig_main
-                os.chdir('..')
 
             self._logger.info('new server %s in dir %s listening on %s',
                               name, root_dir, manager.address)
-            server = manager.openmdao_main_objserverfactory_ObjServer(name=name,
-                                                           host=platform.node())
+            server = manager.openmdao_main_objserverfactory_ObjServer(name=name)
             self._managers[server] = (manager, root_dir)
 
         if typname:
@@ -235,8 +253,8 @@ class ObjServer(object):
     directory at startup.
     """
 
-    def __init__(self, name='', host='', reset_logging=True):
-        self.host = host
+    def __init__(self, name='', reset_logging=True):
+        self.host = platform.node()
         self.pid = os.getpid()
         self.name = name or ('sim-%d' % self.pid)
 

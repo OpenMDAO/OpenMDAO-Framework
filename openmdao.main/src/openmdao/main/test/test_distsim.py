@@ -374,18 +374,12 @@ class TestCase(unittest.TestCase):
         self.assertTrue(is_instance(model.box.parent, Assembly))
         self.assertTrue(has_interface(model.box.parent, IComponent))
 
-        # Cause server-side errors we can see.
+        # Upcall to use parent to resolve sibling.
+        # At one time this caused proxy problems.
+        source = model.box.parent.source
+        self.assertEqual(source.width_in, 1.)
 
-#FIXME: Shouldn't this be legal?
-        try:
-            source = model.box.parent.source
-        except RemoteError as exc:
-            msg = "AttributeError: attribute 'source' of"
-            logging.debug('msg: %s', msg)
-            logging.debug('exc: %s', exc)
-            self.assertTrue(msg in str(exc))
-        else:
-            self.fail('Expected RemoteError')
+        # Cause server-side errors we can see.
 
         try:
             box.cause_parent_error1()
@@ -510,6 +504,12 @@ class TestCase(unittest.TestCase):
     def test_5_misc(self):
         logging.debug('')
         logging.debug('test_misc')
+
+        # Try releasing a server twice.
+        server = self.factory.create('')
+        self.factory.release(server)
+        assert_raises(self, 'self.factory.release(server)', globals(), locals(),
+                      ValueError, "can't identify server ")
 
         # Check false return of has_interface().
         self.assertFalse(has_interface(self.factory, HasObjectives))

@@ -22,14 +22,15 @@ def init_messages():
 
 def run_test(name, server):
     """ Run latency & bandwidth test on `server`. """
-    result = server.echo(MESSAGE_DATA[0])  # 'prime' the connection.
+    for i in range(10):
+        server.echo(MESSAGE_DATA[0])  # 'prime' the connection.
 
     results = []
     reps = 10000
     for msg in MESSAGE_DATA:
         start = time.clock()
         for i in range(reps):
-            result = server.echo(msg)
+            server.echo(msg)
         et = time.clock() - start
 
         size = len(msg)
@@ -39,8 +40,8 @@ def run_test(name, server):
               % (reps, size, latency, thruput)
         results.append((size, latency, thruput))
 
-        if et > 3 and reps > 10:
-            reps /= 2
+        if et > 2 and reps >= 20:
+            reps /= int((et / 2) + 0.5)
 
     return results
 
@@ -101,22 +102,26 @@ def main():
                     thruput_results[size].append(thruput)
 
     # Write out results in X, Y1, Y2, ... format.
-    with open('latency', 'w') as out:
+    header = 'Bytes,En-S-1,En-S-2,En-P-1,En-P-2,Un-S-1,Un-S-2,Un-P-1,Un-P-2\n'
+
+    with open('latency.csv', 'w') as out:
+        out.write(header)
         for size in sorted(latency_results.keys()):
             out.write('%d' % size)
             for value in latency_results[size]:
                 out.write(', %g' % value)
             out.write('\n')
 
-    with open('thruput', 'w') as out:
+    with open('thruput.csv', 'w') as out:
+        out.write(header)
         for size in sorted(thruput_results.keys()):
             out.write('%d' % size)
             for value in thruput_results[size]:
                 out.write(', %g' % value)
             out.write('\n')
 
-#    for path in glob.glob('Echo_*'):
-#        shutil.rmtree(path)
+    for path in glob.glob('Echo_*'):
+        shutil.rmtree(path)
 
 
 if __name__ == '__main__':

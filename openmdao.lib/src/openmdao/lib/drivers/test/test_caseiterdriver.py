@@ -177,7 +177,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_unencrypted')
         name = init_cluster(encrypted=False)
-        self.model.driver.extra = {'allocator': name}
+        self.model.driver.extra_reqs = {'allocator': name}
         self.run_cases(sequential=False)
 
     def run_cases(self, sequential, forced_errors=False):

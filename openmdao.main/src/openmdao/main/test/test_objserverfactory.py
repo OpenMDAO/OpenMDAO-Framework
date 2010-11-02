@@ -59,7 +59,7 @@ class TestCase(unittest.TestCase):
             # OpenMDAO_Proxy as argument, string here is easier).
             assert_raises(self, "factory.release('xyzzy')",
                           globals(), locals(), ValueError,
-                          "server 'xyzzy' not found")
+                          "can't identify server 'xyzzy'")
         finally:
             if factory is not None:
                 factory.cleanup()
