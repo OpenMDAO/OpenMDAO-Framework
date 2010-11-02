@@ -191,6 +191,8 @@ class Analysis(Assembly):
         #Components
         #CONCEPTS
         #CONCEPT C1
+        model_criteria = [('c1.f1','c2.f1'),('c1.f2','c2.f2')]        
+        
         self.add("c1",MetaModel())
         self.c1.surrogate = KrigingSurrogate()
         self.c1.model = Alg_Component1()
@@ -206,20 +208,20 @@ class Analysis(Assembly):
         
         #SAMPLING CRITERIA CALCULATORS
         self.add("MOEI",MultiObjExpectedImprovement())
-        self.MOEI.criteria = ['f1','f2']
+        self.MOEI.criteria = model_criteria
         
         self.add("probInt",ProbIntersect())
-        self.probInt.criteria = ['f1','f2']           
+        self.probInt.criteria = model_criteria     
 
         #FILTERS
         self.add("gfilter",ParetoFilter()) #GLOBAL FILTER
-        self.gfilter.criteria = ['f1','f2']
+        self.gfilter.criteria = model_criteria
         self.gfilter.case_sets = [self.c1.recorder.get_iterator(), self.c2.recorder.get_iterator()]
         #self.gfilter.case_sets = [self.c1.recorder.get_iterator()]
         self.gfilter.force_execute = True
 
         self.add("filter_c1",ParetoFilter())
-        self.filter_c1.criteria = ['f1','f2']
+        self.filter_c1.criteria = model_criteria
         self.filter_c1.case_sets = [self.c1.recorder.get_iterator()]
         self.filter_c1.force_execute = True
         

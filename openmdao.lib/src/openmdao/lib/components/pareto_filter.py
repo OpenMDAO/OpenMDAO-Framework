@@ -16,9 +16,12 @@ class ParetoFilter(Component):
     
     # pylint: disable-msg=E1101
     criteria = Array([], iotype="in", dtype=str,
-                     desc="List of outputs from the case to consider for "
-                          "filtering. Note that only case outputs are allowed as "
-                          "criteria.")
+                     desc="""List of outputs from the case to consider for 
+                          filtering. Can also be a list of tuples, where each 
+                          tuple contains one of the possible criteria, this is 
+                          used when cases may be comming from multiple models. 
+                          Note that only case outputs are allowed as
+                          criteria.""")
     
     #case_set = Instance(ICaseIterator, iotype="in",
     #                    desc="CaseIterator with the cases to be filtered to "
@@ -57,13 +60,12 @@ class ParetoFilter(Component):
         #cases = [case for case in self.case_set]
         criteria_count = len(self.criteria)
         
+        flat_crit= self.criteria.ravel()
+        
         for case in cases:
             #TODO: Implement extraction of output from case, 'case.get_output('x')'
             outputs = []
-            for crit in self.criteria: 
-                outputs.extend([o[2] for o in case.outputs if crit in o[0]])
-            #outputs = [o[2] for o in case.outputs if o[0] in self.criteria]
-            
+            outputs = [o[2] for o in case.outputs if o[0] in flat_crit]
             if len(outputs) == criteria_count:
                 y_list.append(outputs)
         
