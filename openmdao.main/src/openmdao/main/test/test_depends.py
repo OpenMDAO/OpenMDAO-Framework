@@ -94,6 +94,7 @@ class DependsTestCase(unittest.TestCase):
         sub.create_passthrough('comp1.a', 'a1')
         sub.create_passthrough('comp2.b', 'b2')
         sub.create_passthrough('comp4.b', 'b4')
+        sub.create_passthrough('comp4.c', 'c4')
         sub.create_passthrough('comp6.b', 'b6')
         sub.create_passthrough('comp2.c', 'c2')
         sub.create_passthrough('comp1.d', 'd1')
@@ -105,9 +106,10 @@ class DependsTestCase(unittest.TestCase):
         sub.connect('comp3.c', 'comp5.a')
         sub.connect('comp4.d', 'comp6.a')
         
+        top.connect('sub.c4', 'comp8.a')
+        
         # 'auto' passthroughs
         top.connect('comp7.c', 'sub.comp3.a')
-        top.connect('sub.comp4.c', 'comp8.a')
         top.connect('sub.comp3.d', 'comp8.b')
 
     def test_simple(self):
@@ -155,7 +157,8 @@ class DependsTestCase(unittest.TestCase):
         
     def test_disconnect(self):
         self.top.disconnect('comp7.c', 'sub.comp3.a')
-        self.top.disconnect('sub.comp4.c', 'comp8.a')
+        #self.top.disconnect('sub.comp4.c', 'comp8.a')
+        self.top.disconnect('sub.c4', 'comp8.a')
         
     def test_lazy1(self):
         self.top.run()
@@ -224,9 +227,22 @@ class DependsTestCase(unittest.TestCase):
                              (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
     
     def test_lazy4(self):
-        self.top.run()        
+        self.top.run()
         self.top.sub.set('b2', 5)
-        self.top.run()  
+        self.assertEqual(self.top.sub.get_valid(subvars),
+                         [True,False,
+                          True,False,
+                          True,True,
+                          False,True,
+                          True,False,
+                          False,True,
+                          False,False,
+                          False,False,
+                          True,True,
+                          False,False,
+                          False,False,
+                          False,False])
+        self.top.run()
         # run_count should change for all sub comps but comp3 and comp7 
         self.assertEqual([2, 2, 1, 2, 2, 2, 1, 2], 
                          [self.top.get(x).run_count for x in allcomps])

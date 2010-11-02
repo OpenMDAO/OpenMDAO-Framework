@@ -11,7 +11,7 @@ from enthought.traits.api import TraitError, HasTraits
 
 import openmdao.util.eggsaver as constants
 from openmdao.main.container import Container, get_default_name
-from openmdao.lib.datatypes.api import Float, TraitError
+from openmdao.lib.datatypes.api import Float, List, Dict, TraitError
 from openmdao.util.testutil import make_protected_dir
 
 # Various Pickle issues arise only when this test runs as the main module.
@@ -90,6 +90,11 @@ class ContainerTestCase(unittest.TestCase):
         self.assertEqual(obj.get_pathname(), 'c2.c21')
         num = self.root.get('c2.c22.c221.number')
         self.assertEqual(num, 3.14)
+
+    def test_add_trait_w_subtrait(self):
+        obj = Container()
+        obj.add_trait('lst', List([1,2,3], iotype='in'))
+        obj.add_trait('dct', Dict({}, iotype='in'))
 
     def test_get_attribute(self):
         self.assertEqual(self.root.get('c2.c22.c221').get_trait('number').iotype, 

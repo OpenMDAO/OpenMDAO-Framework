@@ -24,7 +24,7 @@ class PassthroughTrait(TraitType):
     just a trait that lives on an Assembly boundary and can be connected
     to other traits within the Assembly.
     """
-    
+
     def validate(self, obj, name, value):
         """Validation for the PassThroughTrait"""
         if self.validation_trait:
@@ -305,14 +305,17 @@ class Assembly (Component):
     def get_valid(self, names):
         """Returns a list of boolean values indicating whether the named
         variables are valid (True) or invalid (False). Entries in names may
-        specify either direct traits of self or those of direct children of
-        self, but no deeper in the hierarchy than that.
+        specify either direct traits of self or those of children.
         """
-        simple, compmap = _partition_names_by_comp(names)
-        ret = super(Assembly, self).get_valid(simple)
-        for cname, vnames in compmap.items():
-            comp = getattr(self, cname)
-            ret.extend(comp.get_valid(vnames))
+        sup = super(Assembly,self)
+        ret = []
+        for name in names:
+            cname, _, vname = name.partition('.')
+            if vname:
+                comp = getattr(self, cname)
+                ret.extend(comp.get_valid(vname))
+            else:
+                ret.extend(sup.get_valid(name))
         return ret
 
     def check_resolve(self, names):

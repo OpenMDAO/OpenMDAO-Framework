@@ -423,6 +423,13 @@ class Container(HasTraits):
         """Overrides HasTraits definition of *add_trait* in order to
         keep track of dynamically added traits for serialization.
         """
+        # When a trait with sub-traits is added (like a List or Dict),
+        # HasTraits calls add_trait AGAIN for the sub-trait, so we
+        # just detect it here and pass it through
+        if name.endswith('_items') and trait.type == 'event':
+            super(Container, self).add_trait(name, trait)
+            return
+        
         self._cached_traits_ = None
         #FIXME: saving our own list of added traits shouldn't be necessary...
         self._added_traits[name] = trait
@@ -692,24 +699,24 @@ class Container(HasTraits):
                 return hasattr(obj, restofpath)
         return hasattr(self, path)
     
-    def invoke(self, path, *args, **kwargs):
-        """Call the callable specified by **path**, which may be a simple
-        name or a dotted path, passing the given arguments to it, and 
-        return the result.
-        """
-        if path:
-            childname, _, restofpath = path.partition('.')
-            if restofpath:
-                obj = getattr(self, childname, Missing)
-                if obj is Missing:
-                    self.raise_exception("object has no attribute '%s'" % childname, 
-                                         AttributeError)
-                return obj.invoke(restofpath, *args, **kwargs)
+    #def invoke(self, path, *args, **kwargs):
+        #"""Call the callable specified by **path**, which may be a simple
+        #name or a dotted path, passing the given arguments to it, and 
+        #return the result.
+        #"""
+        #if path:
+            #childname, _, restofpath = path.partition('.')
+            #if restofpath:
+                #obj = getattr(self, childname, Missing)
+                #if obj is Missing:
+                    #self.raise_exception("object has no attribute '%s'" % childname, 
+                                         #AttributeError)
+                #return obj.invoke(restofpath, *args, **kwargs)
             
-            return getattr(self, path)(*args, **kwargs)
-        else:
-            self.raise_exception("invoke: no path given",
-                                 RuntimeError)
+            #return getattr(self, path)(*args, **kwargs)
+        #else:
+            #self.raise_exception("invoke: no path given",
+                                 #RuntimeError)
     
     def get_metadata(self, traitpath, metaname=None):
         """Retrieve the metadata associated with the trait found using
@@ -1220,6 +1227,7 @@ def deep_hasattr(obj, pathname):
     except Exception:
         return False
     return hasattr(obj, parts[-1])
+
 
 def find_trait_and_value(obj, pathname):
     """Return a tuple of the form (trait, value) for the given dotted
