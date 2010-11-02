@@ -2,7 +2,7 @@
 Testing the file wrapping utilities.
 """
 
-import unittest
+import unittest, os
 
 from numpy import array, isnan
 
@@ -19,7 +19,10 @@ class TestCase(unittest.TestCase):
         self.filename = 'filename.dat'
 
     def tearDown(self):
-        pass
+        if os.path.exists(self.filename):
+            os.remove(self.filename)
+        if os.path.exists(self.templatename):
+            os.remove(self.templatename)
     
     def test_templated_input(self):
         
@@ -95,7 +98,7 @@ class TestCase(unittest.TestCase):
     def test_templated_input_arrays(self):
         
         template = "Anchor\n" + \
-                   "0 0 0 0 0"
+                   "0 0 0 0 0\n"
         
         outfile = open(self.templatename, 'w')
         outfile.write(template)
@@ -115,7 +118,37 @@ class TestCase(unittest.TestCase):
         infile.close()
         
         answer = "Anchor\n" + \
-                   "0 0 1 2 3 4 5"
+                   "0 0 1 2 3 4 5\n"
+    
+        self.assertEqual(answer, result)
+
+    def test_templated_input_2Darrays(self):
+        
+        template = "Anchor\n" + \
+                   "0 0 0 0 0\n" + \
+                   "0 0 0 0 0\n"
+        
+        outfile = open(self.templatename, 'w')
+        outfile.write(template)
+        outfile.close()
+        
+        gen = InputFileGenerator()
+        gen.set_template_file(self.templatename)
+        gen.set_generated_file(self.filename)
+        
+        gen.mark_anchor('Anchor')
+        var = array([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]])
+        gen.transfer_2Darray(var, 1, 2, 1, 5)
+        
+        gen.generate()
+        
+        infile = open(self.filename, 'r')
+        result = infile.read()
+        infile.close()
+        
+        answer = "Anchor\n" + \
+                   "1 2 3 4 5\n" + \
+                   "6 7 8 9 10\n"
     
         self.assertEqual(answer, result)
 
@@ -155,6 +188,8 @@ class TestCase(unittest.TestCase):
         gen.mark_anchor('Anchor',-1)
         val = gen.transfer_var(1, 8, 10)
         self.assertEqual(val, 'als')
+        val = gen.transfer_var(1, 17)
+        self.assertEqual(val, 333.444)
 
         # Test some errors
         try:
@@ -208,7 +243,15 @@ class TestCase(unittest.TestCase):
         try:
             gen.transfer_keyvar('Key1', 4, 0)
         except ValueError, err:
-            msg = "0 is not valid for an keyvar occurrence."
+            msg = "The value for occurrence must be a nonzero integer"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('ValueError expected')  
+
+        try:
+            gen.transfer_keyvar('Key1', 4, -3.4)
+        except ValueError, err:
+            msg = "The value for occurrence must be a nonzero integer"
             self.assertEqual(str(err), msg)
         else:
             self.fail('ValueError expected')  
@@ -241,7 +284,15 @@ class TestCase(unittest.TestCase):
         val = gen.transfer_array(1, 7, 1, 11)
         self.assertEqual(val[0], 4)
         self.assertEqual(val[2], 6)
-        
+
+        try:
+            gen.transfer_array(1, 7, 1)
+        except ValueError, err:
+            msg = "fieldend is missing, currently required"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('ValueError expected')  
+
             
 if __name__ == '__main__':
     import nose

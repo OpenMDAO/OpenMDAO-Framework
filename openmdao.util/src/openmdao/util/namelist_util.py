@@ -10,7 +10,7 @@ from enthought.traits.trait_base import not_none
 
 from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
                       Optional, QuotedString, Suppress, Word, alphanums, \
-                      oneOf, nums, TokenConverter
+                      oneOf, nums, TokenConverter, Group
 
 from openmdao.util.filewrap import ToFloat, ToInteger
 
@@ -30,9 +30,9 @@ class ToBool(TokenConverter):
     def postParse( self, instring, loc, tokenlist ):
         """Converter to make token into a bool."""
         
-        if tokenlist[0] in ['T', 'True', 'TRUE']:
+        if tokenlist[0] in ['T', 'True', 'TRUE', 'true']:
             return True
-        elif tokenlist[0] in ['F', 'False', 'FALSE']:
+        elif tokenlist[0] in ['F', 'False', 'FALSE', 'false']:
             return False
         else:
             raise RuntimeError('Unexpected error while trying to identify a'
@@ -64,7 +64,8 @@ class Namelist(object):
         self.filename = filename
         
     def set_title(self, title):
-        """Sets the title for the namelist.
+        """Sets the title for the namelist Note that a title is not
+        required.
         
         title: string
             The title card in the namelist - generally optional."""
@@ -84,7 +85,9 @@ class Namelist(object):
         
     def add_var(self, varpath):
         """Add an openmdao variable to the namelist.
-        varpath is the dotted path (e.g., comp1.comp2.var1)."""
+        
+        varpath: string
+        varpath is the dotted path (e.g., comp1.container1.var1)."""
         
         paths = varpath.split('.')
         name = paths[-1]
@@ -94,20 +97,25 @@ class Namelist(object):
         self.cards[self.currentgroup].append(Card(name, value))
         
     def add_newvar(self, name, value):
-        """Add a new private variable to the namelist.
+        """Add a new variable to the namelist.
         
         name: string
             Name of the variable to be added.
         
-        value: int, float, string, ndarray, list
+        value: int, float, string, ndarray, list, bool
             Value of the variable to be added."""
 
         self.cards[self.currentgroup].append(Card(name, value))
         
-    def add_container(self, varpath):
-        """Add every variable in an OpenMDAO container to the namelist."""
+    def add_container(self, varpath=''):
+        """Add every variable in an OpenMDAO container to the namelist. This
+        can be used it your component has containers of variables.
+        
+        varpath: string
+            dotted path of container in the data hierarchy"""
         
         target_container = self.comp.get(varpath)
+            
         for name in target_container.keys(iotype=not_none):
             self.add_var("%s.%s" % (varpath, name))
         
@@ -115,12 +123,15 @@ class Namelist(object):
         """Add a comment in the namelist.
         
         comment: string
-            Comment text to be added. Text should include comment character"""
+            Comment text to be added. Text should include comment character
+            if one is desired. (Note that a comment character isn't always
+            needed in a Namelist. It seems to figure out whether something
+            is a comment without it.)"""
         
         self.cards[self.currentgroup].append(Card("C", comment, 1))
         
     def generate(self):
-        """Create the input file. This should be called after all cards
+        """Generates the input file. This should be called after all cards
         and groups are added to the namelist."""
 
         data = []
@@ -211,7 +222,8 @@ class Namelist(object):
         
     def parse_file(self):
         """Parses an existing namelist file and creates a deck of cards to
-        hold the data."""
+        hold the data. After this is executed, you need to call the load_model()
+        method to extract the variables from this data structure."""
         
         infile = open(self.filename, 'r')
         data = infile.readlines()
@@ -245,13 +257,17 @@ class Namelist(object):
         numval = num_float | mixed_exp | num_int | nan
         strval =  QuotedString(quoteChar='"') | QuotedString(quoteChar="'")
         boolval = ToBool(oneOf("T TRUE True true F FALSE False false"))
+        fieldval = Word(alphanums)
         
         # Tokens for parsing a line of data
         numstr_token = numval + ZeroOrMore(Suppress(',') + numval) \
                    | strval
         data_token = numstr_token | boolval
-        card_token = Word(alphanums).setResultsName("name") + Suppress('=') + \
-                data_token.setResultsName("value")
+        
+        card_token = Group(fieldval("name") + \
+                           Suppress('=') + \
+                           data_token("value"))
+        multi_card_token = card_token + ZeroOrMore(Suppress(',') + card_token)
         array_continuation_token = numstr_token.setResultsName("value")
         
         # Comment Token
@@ -274,17 +290,19 @@ class Namelist(object):
                     pass
                 
                 # Process orindary cards
-                elif card_token.searchString(line):
-                    card = card_token.parseString(line)
-                    name = card.name
+                elif multi_card_token.searchString(line):
+                    cards = multi_card_token.parseString(line)
                     
-                    # Comma-delimited arrays
-                    if len(card) > 2:
-                        value = array(card[1:])
-                    else:
-                        value = card.value
+                    for card in cards:
+                        name = card[0]
+                    
+                        # Comma-delimited arrays
+                        if len(card) > 2:
+                            value = array(card[1:])
+                        else:
+                            value = card[1]
                         
-                    self.cards[-1].append(Card(name, value))
+                        self.cards[-1].append(Card(name, value))
                     
                 # Arrays can be continued on subsequent lines
                 # The value of the most recent card must be turned into an

@@ -107,7 +107,7 @@ class TestCase(unittest.TestCase):
                   "/\n"
 
         self.assertEqual(contents, compare)
-    
+        
     def test_read1(self):
         # Put variables in top container, so no rules_dict
 
@@ -115,9 +115,8 @@ class TestCase(unittest.TestCase):
                     "  \n" + \
                     "&OPTION\n" + \
                     "  This is a comment\n" + \
-                    "  INTVAR = 777\n" + \
+                    "  INTVAR = 777, floatvar = -3.14\n" + \
                     "  boolvar = T\n" + \
-                    "  floatvar = -3.14\n" + \
                     "  textvar = 'That'\n" + \
                     "  ! This is a comment too\n" + \
                     "  listenumvar = 3,3,2,2\n" + \

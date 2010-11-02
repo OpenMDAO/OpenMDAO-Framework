@@ -384,7 +384,7 @@ variables as follows:
 
     map(self.driver.add_constraint, ['driving_sim.stroke < driving_sim.bore',
                                'driving_sim.stroke * driving_sim.bore > 1.0'])
-    self.cons_is_linear = [1, 0]
+    self.driver.cons_is_linear = [1, 0]
 
 Here, the first constraint is linear, and the second constraint is nonlinear. If 
 *cons_is_linear* is not specified, then all the constraints are assumed to be
