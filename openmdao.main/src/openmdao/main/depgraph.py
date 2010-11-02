@@ -1,6 +1,6 @@
 """ Class definition for Assembly """
 
-import sys
+import StringIO
 
 import networkx as nx
 from networkx.algorithms.traversal import topological_sort_recursive, \
@@ -376,17 +376,26 @@ class DependencyGraph(object):
             if len(link) == 0:
                 self._graph.remove_edge(srccompname, '@bout')
         else:
-            link = self._graph[srccompname][destcompname]['link']
-            link.disconnect(srcvarname, destvarname)
-            if len(link) == 0:
-                self._graph.remove_edge(srccompname, destcompname)
+            link = self.get_link(srccompname, destcompname)
+            if link:
+                link.disconnect(srcvarname, destvarname)
+                if len(link) == 0:
+                    self._graph.remove_edge(srccompname, destcompname)
 
-    def dump(self, stream=sys.stdout):
+    def dump(self, stream=None):
         """Prints out a simple text representation of the graph."""
+        if stream is None:
+            strm = StringIO.StringIO()
+        else:
+            strm = stream
+            
         for u,v,data in self._graph.edges(data=True):
-            stream.write('%s -> %s\n' % (u,v))
+            strm.write('%s -> %s\n' % (u,v))
             for src,dests in data['link']._srcs.items():
-                stream.write('   %s : %s\n' % (src, dests))
+                strm.write('   %s : %s\n' % (src, dests))
+
+        if stream is None:
+            return strm.getvalue()
 
     #def push_data(self, srccompname, scope):
         #for destcompname, link in self.out_links(srccompname):
@@ -412,11 +421,12 @@ class _Link(object):
         self._dests[dest] = src
         
     def disconnect(self, src, dest):
-        del self._dests[dest]
-        dests = self._srcs[src]
-        dests.remove(dest)
-        if len(dests) == 0:
-            del self._srcs[src]
+        if dest in self._dests:
+            del self._dests[dest]
+            dests = self._srcs[src]
+            dests.remove(dest)
+            if len(dests) == 0:
+                del self._srcs[src]
     
     def get_dests(self, srcs=None):
         """Return the list of destination vars that match the given source vars.

@@ -147,3 +147,11 @@ class Driver(Component):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration
 
+    def config_changed(self, update_parent=True):
+        """Call this whenever the configuration of this Component changes,
+        for example, children are added or removed or dependencies may have
+        changed.
+        """
+        super(Driver, self).config_changed(update_parent)
+        if self.workflow is not None:
+            self.workflow.config_changed()

@@ -138,7 +138,6 @@ class Component (Container):
         self._input_names = None
         self._output_names = None
         self._container_names = None
-        self._expr_depends = None
         self._expr_sources = None
         self._connected_inputs = None
         self._connected_outputs = None
@@ -382,9 +381,9 @@ class Component (Container):
                         return False
         return True
 
-    def _trait_added_changed(self, name):
-        """Called any time a new trait is added to this container."""
-        self.config_changed()
+    #def _trait_added_changed(self, name):
+        #"""Called any time a new trait is added to this container."""
+        #self.config_changed()
         
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
@@ -397,7 +396,6 @@ class Component (Container):
         self._connected_inputs = None
         self._connected_outputs = None
         self._container_names = None
-        self._expr_depends = None
         self._expr_sources = None
         self._call_check_config = True
         self._call_execute = True
@@ -500,10 +498,9 @@ class Component (Container):
         valids_update = None
         
         if srcpath.startswith('parent.'):  # internal destination
-            self._connected_inputs = None # force regen of connected input list later
             valids_update = (destpath, False)
+            self.config_changed(update_parent=False)
         elif destpath.startswith('parent.'): # internal source
-            self._connected_outputs = None # force regen of connected output list later
             if srcpath not in self._valid_dict:
                 valids_update = (srcpath, True)
                     
@@ -513,7 +510,7 @@ class Component (Container):
         # problem we don't have to undo it
         if valids_update is not None:
             self._valid_dict[valids_update[0]] = valids_update[1]
-        
+            
         
     def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one 
@@ -525,6 +522,7 @@ class Component (Container):
                 del self._valid_dict[destpath]
             else:
                 self._valid_dict[destpath] = True  # disconnected inputs are always valid
+        self.config_changed(update_parent=False)
     
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)

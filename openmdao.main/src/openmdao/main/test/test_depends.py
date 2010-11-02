@@ -157,8 +157,16 @@ class DependsTestCase(unittest.TestCase):
         
     def test_disconnect(self):
         self.top.disconnect('comp7.c', 'sub.comp3.a')
-        #self.top.disconnect('sub.comp4.c', 'comp8.a')
-        self.top.disconnect('sub.c4', 'comp8.a')
+        self.top.sub.disconnect('c4')
+        self.top.disconnect('comp8')
+        
+    def test_disconnect2(self):
+        self.assertEqual(set(self.top.sub.list_outputs(connected=True)),
+                         set(['comp3.d','c4']))
+        self.top.disconnect('comp8')
+        self.assertEqual(self.top.sub.list_outputs(connected=True),
+                         [])
+        self.assertEqual(self.top.sub._depgraph.get_source('c4'), 'comp4.c')
         
     def test_lazy1(self):
         self.top.run()
@@ -275,16 +283,21 @@ class DependsTestCase(unittest.TestCase):
             
     def test_sequential(self):
         # verify that if components aren't connected they should execute in the
-        # order that they were added instead of hash order
+        # order that they were added to the workflow instead of hash order
+        global exec_order
         top = set_as_top(Assembly())
-        top.add('c1', Simple())
         top.add('c2', Simple())
+        top.add('c1', Simple())
         top.add('c3', Simple())
         top.add('c4', Simple())
         top.driver.workflow.add([top.c1,top.c2,top.c3,top.c4])
-        top.connect('c4.c', 'c3.a')  # force c4 to run before c3
         top.run()
-        self.assertEqual(exec_order, ['c1','c2','c4','c3'])
+        self.assertEqual(exec_order, ['c1','c2','c3','c4'])
+        top.connect('c4.c', 'c3.a')  # now make c3 depend on c4
+        exec_order = []
+        top.c4.a = 2  # makes c4 run again
+        top.run()
+        self.assertEqual(exec_order, ['c4','c3'])
         
         
     def test_expr_deps(self):

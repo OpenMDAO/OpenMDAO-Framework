@@ -120,7 +120,7 @@ class Assembly (Component):
         
         return (compname, getattr(self, compname), varname)
 
-    def connect(self, srcpath, destpath, srcvalid=None):
+    def connect(self, srcpath, destpath):
         """Connect one src Variable to one destination Variable. This could be
         a normal connection between variables from two internal Components, or
         it could be a passthrough connection, which connects across the scope boundary
@@ -172,10 +172,14 @@ class Assembly (Component):
         except TraitError, err:
             self.raise_exception("can't connect '%s' to '%s': %s" %
                                  (srcpath,destpath,str(err)), TraitError)
-            
-        # get the current validity state of the destination before we connect
-        
+                    
         super(Assembly, self).connect(srcpath, destpath)
+        
+        # if it's an internal connection, could change dependencies, so we have
+        # to call config_changed to notify our driver
+        if not srcpath.startswith('parent.') and not destpath.startswith('parent.') \
+           and '.' in srcpath and '.' in destpath:
+            self.config_changed(update_parent=False)
 
         if destcomp is self or destcomp is self.parent or \
            srccomp is self or srccomp is self.parent:
@@ -195,10 +199,25 @@ class Assembly (Component):
         """
         if varpath2 is None:
             for src,sink in self._depgraph.connections_to(varpath):
+                if src.startswith('@'):
+                    src = src.split('.',1)[1]
+                if sink.startswith('@'):
+                    sink = sink.split('.',1)[1]
                 super(Assembly, self).disconnect(src, sink)
         else:
             super(Assembly, self).disconnect(varpath, varpath2)
             
+    def config_changed(self, update_parent=True):
+        """Call this whenever the configuration of this Component changes,
+        for example, children are added or removed, connections are made
+        or removed, etc.
+        """
+        super(Assembly, self).config_changed(update_parent)
+        # driver must tell workflow that config has changed because
+        # dependencies may have changed
+        if self.driver is not None:
+            self.driver.config_changed(update_parent=False)
+        
     def execute (self):
         """Runs driver and updates our boundary variables."""
         self.driver.run()
