@@ -4,7 +4,6 @@ import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.lib.datatypes.api import Int
-from openmdao.main.depgraph import dump_graph
 
 class Simple(Component):
     
@@ -91,9 +90,9 @@ class PassthroughTestCase(unittest.TestCase):
         c.connect('parent.c1.foo', 'a')
         self.assertEqual(['a'], c._depgraph.get_connected_inputs())
         self.assertEqual([], c._depgraph.get_connected_outputs())
-        self.assertTrue('parent.c1.foo' in c._depgraph._graph['@exin']['@bin']['link']._srcs)
+        self.assertTrue('parent.c1.foo' in c._depgraph._graph['@xin']['@bin']['link']._srcs)
         c.connect('c', 'parent.c2.a')
-        self.assertTrue('parent.c2.a' in c._depgraph._graph['@bout']['@exout']['link']._dests)
+        self.assertTrue('parent.c2.a' in c._depgraph._graph['@bout']['@xout']['link']._dests)
         self.assertEqual(['a'], c._depgraph.get_connected_inputs())
         self.assertEqual(['c'], c._depgraph.get_connected_outputs())
         

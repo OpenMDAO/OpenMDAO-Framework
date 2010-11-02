@@ -225,7 +225,7 @@ class Assembly (Component):
         return self._depgraph.list_connections(show_passthrough)
 
     def _cvt_input_srcs(self, sources):
-        link = self._depgraph.get_link('@exin', '@bin')
+        link = self._depgraph.get_link('@xin', '@bin')
         if link is None:
             return sources
         else:
