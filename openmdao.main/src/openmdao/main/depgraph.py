@@ -337,12 +337,13 @@ class DependencyGraph(object):
         conns = []
         cname, _, vname = path.partition('.')
         if not vname:  # a boundary variable
-            for u,v in self.var_edges('@bin'):
-                if u == path:
-                    conns.append((u, v))
-            for u,v in self.var_in_edges('@bout'):
-                if v == path:
-                    conns.append((u, v))
+            for name in ['@bin', '@bout']:
+                for u,v in self.var_edges(name):
+                    if u == path:
+                        conns.append((u, v))
+                for u,v in self.var_in_edges(name):
+                    if v == path:
+                        conns.append((u, v))
         else:
             for u,v in self.var_edges(cname):
                 if u == path:
