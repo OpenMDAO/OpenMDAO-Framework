@@ -164,6 +164,18 @@ class Component (Container):
                 if self.parent:
                     self.parent.child_invalidated(self.name, outs)
 
+    def __getstate__(self):
+        """Return dict representing this container's state."""
+        state = super(Component, self).__getstate__()
+        state['_input_names'] = None
+        state['_output_names'] = None
+        state['_container_names'] = None
+        state['_expr_sources'] = None
+        state['_connected_inputs'] = None
+        state['_connected_outputs'] = None
+        
+        return state
+
     def check_config (self):
         """Verify that this component is fully configured to execute.
         This function is called once prior to the first execution of this
@@ -339,10 +351,11 @@ class Component (Container):
         """
         super(Component, self).add_trait(name, trait)
         self.config_changed()
-        if trait.iotype:
-            self._valid_dict[name] = trait.iotype=='in'
-        if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
-            self._num_input_caseiters += 1
+        if name not in self._valid_dict:
+            if trait.iotype:
+                self._valid_dict[name] = trait.iotype=='in'
+            if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+                self._num_input_caseiters += 1
         
     def remove_trait(self, name):
         """Overrides base definition of add_trait in order to

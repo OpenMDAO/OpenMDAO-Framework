@@ -398,6 +398,7 @@ class Container(HasTraits):
         
         # restore dynamically added traits, since they don't seem
         # to get restored automatically
+        self._cached_traits_ = None
         traits = self._alltraits()
         for name, trait in self._added_traits.items():
             if name not in traits:
@@ -414,7 +415,7 @@ class Container(HasTraits):
         #TODO: I'm probably missing something. There has to be a better way to
         #      do this...
         for name, val in self.__dict__.items():
-            if not self.get_trait(name) and not name.startswith('__'):
+            if not name.startswith('__') and not self.get_trait(name) :
                 setattr(self, name, val) # force def of implicit trait
                 
         self._cached_traits_ = None
