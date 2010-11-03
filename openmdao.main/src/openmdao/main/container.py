@@ -1064,11 +1064,13 @@ class Container(HasTraits):
 
     def post_load(self):
         """Perform any required operations after model has been loaded."""
-        [x.post_load() for n,x in self.items() if isinstance(x, Container)]
+        for name in self.list_containers():
+            getattr(self, name).post_load()
 
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
-        [x.pre_delete() for n,x in self.items() if isinstance(x, Container)]
+        for name in self.list_containers():
+            getattr(self, name).pre_delete()
             
     def find_trait(self, pathname):
         """Returns a trait if a trait with the given pathname exists.
@@ -1254,8 +1256,8 @@ def create_io_traits(cont, obj_info, iotype='in'):
     build_trait() on the scoping object, which can be overridden by 
     subclasses, to create each trait.
     
-    obj_info is assumed to be either a string, a tuple, or an iterator
-    that returns strings or tuples. Tuples must contain a name and an
+    obj_info is assumed to be either a string, a tuple, or a list
+    that contains strings or tuples. Tuples must contain a name and an
     alias, and my optionally contain an iotype and a validation trait.
     
     For example, the following are valid calls:
