@@ -1,8 +1,26 @@
 """
 Routines to help out with obtaining debugging information
 """
+
+import os
 import sys
 import re
+import linecache
+
+def traceit(frame, event, arg):
+    """A function useful for tracing Python execution. Wherever you want the 
+    tracing to start, insert a call to sys.settrace(traceit)."""
+    if event == "line":
+        lineno = frame.f_lineno
+        filename = frame.f_globals["__file__"]
+        if (filename.endswith(".pyc") or
+            filename.endswith(".pyo")):
+            filename = filename[:-1]
+        name = frame.f_globals["__name__"]
+        line = linecache.getline(filename, lineno)
+        print "%s:%s: %s" % (name, lineno, line.rstrip())
+    return traceit
+
 
 address_rgx = re.compile(' at 0x\w+')
 
