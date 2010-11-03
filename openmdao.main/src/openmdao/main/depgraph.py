@@ -1,5 +1,6 @@
 """ Class definition for Assembly """
 
+import sys
 import StringIO
 
 import networkx as nx
@@ -382,25 +383,12 @@ class DependencyGraph(object):
                 if len(link) == 0:
                     self._graph.remove_edge(srccompname, destcompname)
 
-    def dump(self, stream=None):
+    def dump(self, stream=sys.stdout):
         """Prints out a simple text representation of the graph."""
-        if stream is None:
-            strm = StringIO.StringIO()
-        else:
-            strm = stream
-            
         for u,v,data in self._graph.edges(data=True):
-            strm.write('%s -> %s\n' % (u,v))
+            stream.write('%s -> %s\n' % (u,v))
             for src,dests in data['link']._srcs.items():
-                strm.write('   %s : %s\n' % (src, dests))
-
-        if stream is None:
-            return strm.getvalue()
-
-    #def push_data(self, srccompname, scope):
-        #for destcompname, link in self.out_links(srccompname):
-            #link.push(scope, srccompname, destcompname)
-
+                stream.write('   %s : %s\n' % (src, dests))
 
             
 class _Link(object):
@@ -457,27 +445,4 @@ class _Link(object):
                     srcs.append(src)
             return srcs
 
-    #def push(self, scope, srccompname, destcompname):
-        #"""Push the values of all sources to their corresponding destinations
-        #for this link.
-        #"""
-        ## TODO: change to use multiset calls
-        #srccomp = getattr(scope, srccompname)
-        #destcomp = getattr(scope, destcompname)
-        
-        #for src,dests in self._srcs.items():
-            #for dest in dests:
-                #try:
-                    #srcval = srccomp.get_wrapped_attr(src)
-                #except Exception, err:
-                    #scope.raise_exception(
-                        #"error retrieving value for %s from '%s'" %
-                        #(src,srccompname), type(err))
-                #try:
-                    #srcname = '.'.join([srccompname,src])
-                    #destcomp.set(dest, srcval, src=srcname)
-                #except Exception, exc:
-                    #dname = '.'.join([destcompname,dest])
-                    #scope.raise_exception("cannot set '%s' from '%s': %s" % 
-                                          #(dname, srcname, exc), type(exc))
-        
+
