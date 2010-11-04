@@ -50,17 +50,6 @@ def set_as_top(cont):
     cont.tree_rooted()
     return cont
 
-def _deep_setattr(obj, path, value):
-    """A multi-level setattr, setting the value of an
-    attribute specified by a dotted path. For example,
-    deep_settattr(obj, 'a.b.c', value).
-    """
-    tup = path.split('.')
-    for name in tup[:-1]:
-        obj = getattr(obj, name)
-    setattr(obj, tup[-1], value)
-
-
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
 # re-raised.
@@ -93,14 +82,7 @@ class _ContainerDepends(object):
         or None if not connected.
         """
         return self._srcs.get(destname)
-    
-    def get_connected_inputs(self):
-        return [n for n in self._srcs.keys() if not n.startswith('parent.')]
-    
-    def get_connected_outputs(self):
-        return [n for n in self._srcs.values() if not n.startswith('parent.')]
 
-    
 class _DumbTmp(object):
     pass
 
