@@ -36,20 +36,20 @@ class IContainer(Interface):
         keep track of dynamically added traits for serialization.
         """
 
-    def build_trait(self, pathname, iotype=None, trait=None):
-        """Asks the object to dynamically create a trait for the 
-        attribute given by pathname, based on whatever knowledge the
-        component has of that attribute.
+    #def build_trait(self, pathname, iotype=None, trait=None):
+        #"""Asks the object to dynamically create a trait for the 
+        #attribute given by pathname, based on whatever knowledge the
+        #component has of that attribute.
         
-        pathname: str
-            The dotted path to the specified attribute.
+        #pathname: str
+            #The dotted path to the specified attribute.
             
-        iotype: str, optional
-            The data direction, either 'in' or 'out'.
+        #iotype: str, optional
+            #The data direction, either 'in' or 'out'.
             
-        trait: TraitType, optional
-            A validation trait for the given attribute.
-        """
+        #trait: TraitType, optional
+            #A validation trait for the given attribute.
+        #"""
         
     def connect(self, srcpath, destpath):
         """Connects one source variable to one destination variable. 
@@ -380,11 +380,12 @@ class IResourceAllocator (Interface):
 class ICaseIterator(Interface):
     """An iterator that returns Case objects."""
     
-    def __iter__():
-        """Return an iterator object."""
-        
-    def next():
-        """Return the next Case."""
+    # unfortunately we can't just use __iter__ here because
+    # double underscore members are ignored when the implementation
+    # is validated, meaning that ANY class would match this interface
+    # if we just used __iter__.
+    def get_iter():
+        """Return an iterator of Case objects."""
         
         
 class IDOEgenerator(Interface):

@@ -214,7 +214,8 @@ class Analysis(Assembly):
         #FILTERS
         self.add("gfilter",ParetoFilter()) #GLOBAL FILTER
         self.gfilter.criteria = ['f1','f2']
-        self.gfilter.case_sets = [self.c1.recorder.get_iterator(), self.c2.recorder.get_iterator()]
+        self.gfilter.case_sets = [self.c1.recorder.get_iterator(), 
+                                  self.c2.recorder.get_iterator()]
         #self.gfilter.case_sets = [self.c1.recorder.get_iterator()]
         self.gfilter.force_execute = True
 

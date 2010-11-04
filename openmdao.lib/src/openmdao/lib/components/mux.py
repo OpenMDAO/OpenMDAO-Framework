@@ -31,7 +31,7 @@ class Mux(Component):
         
 
 class DeMux(Component): 
-    """ Takes one Array input, and splits it into n indvidual outputs. This is a 
+    """ Takes one List input, and splits it into n indvidual outputs. This is a 
     logical demultiplexer. """
 
     n = Int(2,low=2,iotype="in",desc="number of items in the array to be \

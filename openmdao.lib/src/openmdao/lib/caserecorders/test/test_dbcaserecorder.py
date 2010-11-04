@@ -71,7 +71,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             outputs = [('comp1.z', None, i*1.5), ('comp2.normal', None, NormalDistribution(float(i),0.5))]
             recorder.record(Case(inputs=inputs, outputs=outputs, ident='case%s'%i))
         iterator = recorder.get_iterator()
-        for i,case in enumerate(iterator):
+        for i,case in enumerate(iterator.get_iter()):
             self.assertTrue(isinstance(case.outputs[1][2], NormalDistribution))
             self.assertEqual(case.outputs[1][2].mu, float(i))
             self.assertEqual(case.outputs[1][2].sigma, 0.5)
@@ -89,7 +89,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         iterator.selectors = ["value>=0","value<3"]
 
         count = 0
-        for i,case in enumerate(iterator):
+        for i,case in enumerate(iterator.get_iter()):
             count += 1
             for name,idx,value in case.inputs:
                 self.assertTrue(value >= 0 and value<3)

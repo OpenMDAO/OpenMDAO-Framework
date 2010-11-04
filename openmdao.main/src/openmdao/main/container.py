@@ -258,7 +258,7 @@ class Container(HasTraits):
         """The name of this Container."""
         if self._name is None:
             if self.parent:
-                self._name = findname(self.parent, self)
+                self._name = find_name(self.parent, self)
         return self._name
 
     @name.setter
@@ -346,8 +346,8 @@ class Container(HasTraits):
         """Returns the trait indicated by name, or None if not found.  No recursive
         search is performed if name contains dots.  This is a replacement
         for the trait() method on HasTraits objects, because that method
-        can return traits that shouldn't exist. Do not use the trait() function
-        unless you are certain that the named trait exists.
+        can return traits that shouldn't exist. DO NOT use the trait() function
+        as a way to determine the existence of a trait.
         """
         if self._cached_traits_ is None:
             self._cached_traits_ = self.traits()
@@ -508,7 +508,7 @@ class Container(HasTraits):
             if scopename == 'parent':
                 return self.parent.get_wrapped_attr(name[7:])
             obj = getattr(self, scopename)
-            if isinstance(obj, HasTraits):
+            if isinstance(obj, Container):
                 return obj.get_wrapped_attr(restofpath)
             else:
                 return getattr(obj, restofpath)
@@ -516,7 +516,7 @@ class Container(HasTraits):
         trait = self.get_trait(name)
         if trait is None:
             self.raise_exception("trait '%s' does not exist" %
-                                 name, TraitError)
+                                 name, AttributeError)
             
         # trait itself is most likely a CTrait, which doesn't have
         # access to member functions on the original trait, aside
@@ -570,11 +570,12 @@ class Container(HasTraits):
     def remove(self, name):
         """Remove the specified child from this container and remove any
         public trait objects that reference that child. Notify any
-        observers."""
+        observers.
+        """
         if '.' in name:
             self.raise_exception(
                 'remove does not allow dotted path names like %s' %
-                                 name, ValueError)
+                                 name, NameError)
         trait = self.get_trait(name)
         if trait is not None:
             # for Instance traits, set their value to None but don't remove
@@ -590,10 +591,10 @@ class Container(HasTraits):
                     self.raise_exception(str(err), RuntimeError)
             else:
                 self.remove_trait(name)
-            return obj       
+            return obj
         else:
             self.raise_exception("cannot remove container '%s': not found"%
-                                 name, TraitError)
+                                 name, AttributeError)
 
     def tree_rooted(self):
         """Called after the hierarchy containing this Container has been
@@ -624,8 +625,6 @@ class Container(HasTraits):
         """
         if id(self) not in visited:
             visited.add(id(self))
-            if 'type' not in metadata:
-                metadata['type'] = not_event
             match_dict = self._alltraits(**metadata)
             
             if recurse:
@@ -659,7 +658,7 @@ class Container(HasTraits):
         """Return a list of names of child Containers."""
         return [n for n, v in self.items() if isinstance(v, Container)]
     
-    def _alltraits(self, traits=None, **metadata):
+    def _alltraits(self, traits=None, events=False, **metadata):
         """This returns a dict that contains all traits (class and instance)
         that match the given metadata.
         """
@@ -669,10 +668,11 @@ class Container(HasTraits):
             else:
                 traits = self.traits()  # don't pass **metadata here
                 traits.update(self._instance_traits())
+                self._cached_traits_ = traits
             
         result = {}
         for name, trait in traits.items():
-            if trait.type is 'event':
+            if not events and trait.type is 'event':
                 continue
             for meta_name, meta_eval in metadata.items():
                 if type( meta_eval ) is FunctionType:
@@ -749,17 +749,7 @@ class Container(HasTraits):
         path, which may contain '.' characters.  
         """
         childname, _, restofpath = path.partition('.')
-        if not restofpath:
-            if index is None:
-                obj = getattr(self, path, Missing)
-                if obj is Missing:
-                    self.raise_exception(
-                        "object has no attribute '%s'" % path, 
-                        AttributeError)
-                return obj
-            else:
-                return self._array_get(path, index)
-        else:
+        if restofpath:
             obj = getattr(self, childname, Missing)
             if obj is Missing:
                 self.raise_exception(
@@ -771,6 +761,16 @@ class Container(HasTraits):
                 return getattr(obj, restofpath)
             else:
                 return obj._array_get(restofpath, index)
+        else:
+            if index is None:
+                obj = getattr(self, path, Missing)
+                if obj is Missing:
+                    self.raise_exception(
+                        "object has no attribute '%s'" % path, 
+                        AttributeError)
+                return obj
+            else:
+                return self._array_get(path, index)
      
     def _check_trait_settable(self, name, source=None, force=False):
         trait = self.get_trait(name)
@@ -794,9 +794,6 @@ class Container(HasTraits):
         should be a list of ints, at most one for each array dimension of the
         target value.
         """ 
-        if path is None:
-            self.raise_exception('set: no path specified', NameError)
-                    
         childname, _, restofpath = path.partition('.')
         if restofpath:
             obj = getattr(self, childname, Missing)
@@ -1171,13 +1168,12 @@ def _get_entry_group(obj):
 
     for cls, group in _get_entry_group.group_map:
         if issubclass(cls, Interface):
-            if validate_implements(obj, cls):
+            if obj_has_interface(obj, cls):
                 return group
         else:
             if isinstance(obj, cls):
                 return group
-
-    raise TypeError('No entry point group defined for %r' % obj)
+    return None
 
 _get_entry_group.group_map = None  # Map from class/interface to group name.
 
@@ -1193,9 +1189,10 @@ def dump(cont, recurse=False, stream=None, **metadata):
                   stream)
 
 
-def findname(parent, obj):
+def find_name(parent, obj):
     """Find the given object in the specified parent and return its name 
-    in the parent's __dict__.
+    in the parent's __dict__.  There could be multiple names bound to a
+    given object. Only the first name found is returned.
     
     Return '' if not found.
     """
@@ -1238,57 +1235,56 @@ def find_trait_and_value(obj, pathname):
     is not found in obj. If the value is found but has no trait, then (None, value) 
     is returned.
     """
-    if pathname:
-        names = pathname.split('.')
-        for name in names[:-1]:
-            obj = getattr(obj, name)
-        if isinstance(obj, HasTraits):
-            objtrait = obj.get_trait(names[-1])
-        else:
-            objtrait = None
-        return (objtrait, getattr(obj, names[-1]))
+    names = pathname.split('.')
+    for name in names[:-1]:
+        obj = getattr(obj, name)
+    if isinstance(obj, Container):
+        objtrait = obj.get_trait(names[-1])
+    elif isinstance(obj, HasTraits):
+        objtrait = obj.trait(names[-1])
     else:
-        return (None, None)
+        objtrait = None
+    return (objtrait, getattr(obj, names[-1]))
 
 
-def create_io_traits(cont, obj_info, iotype='in'):
-    """Create io trait(s) specified by the contents of obj_info. Calls
-    build_trait() on the scoping object, which can be overridden by 
-    subclasses, to create each trait.
+#def create_io_traits(cont, obj_info, iotype='in'):
+    #"""Create io trait(s) specified by the contents of obj_info. Calls
+    #build_trait() on the scoping object, which can be overridden by 
+    #subclasses, to create each trait.
     
-    obj_info is assumed to be either a string, a tuple, or a list
-    that contains strings or tuples. Tuples must contain a name and an
-    alias, and my optionally contain an iotype and a validation trait.
+    #obj_info is assumed to be either a string, a tuple, or a list
+    #that contains strings or tuples. Tuples must contain a name and an
+    #alias, and my optionally contain an iotype and a validation trait.
     
-    For example, the following are valid calls:
+    #For example, the following are valid calls:
 
-    create_io_traits(obj, 'foo')
-    create_io_traits(obj, ['foo','bar','baz'])
-    create_io_traits(obj, ('foo', 'foo_alias', 'in', some_trait))
-    create_io_traits(obj, [('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
-    """
-    if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
-        lst = [obj_info]
-    else:
-        lst = obj_info
+    #create_io_traits(obj, 'foo')
+    #create_io_traits(obj, ['foo','bar','baz'])
+    #create_io_traits(obj, ('foo', 'foo_alias', 'in', some_trait))
+    #create_io_traits(obj, [('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
+    #"""
+    #if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
+        #lst = [obj_info]
+    #else:
+        #lst = obj_info
 
-    for entry in lst:
-        iostat = iotype
-        trait = None
+    #for entry in lst:
+        #iostat = iotype
+        #trait = None
         
-        if isinstance(entry, basestring):
-            name = entry
-            ref_name = name
-        elif isinstance(entry, tuple):
-            name = entry[0]  # wrapper name
-            ref_name = entry[1] or name # internal name
-            try:
-                iostat = entry[2] # optional iotype
-                trait = entry[3]  # optional validation trait
-            except IndexError:
-                pass
-        else:
-            cont.raise_exception('create_io_traits cannot add trait %s' % entry,
-                                 TraitError)
-        cont.add_trait(name, 
-                       cont.build_trait(ref_name, iostat, trait))
+        #if isinstance(entry, basestring):
+            #name = entry
+            #ref_name = name
+        #elif isinstance(entry, tuple):
+            #name = entry[0]  # wrapper name
+            #ref_name = entry[1] or name # internal name
+            #try:
+                #iostat = entry[2] # optional iotype
+                #trait = entry[3]  # optional validation trait
+            #except IndexError:
+                #pass
+        #else:
+            #cont.raise_exception('create_io_traits cannot add trait %s' % entry,
+                                 #TraitError)
+        #cont.add_trait(name, 
+                       #cont.build_trait(ref_name, iostat, trait))

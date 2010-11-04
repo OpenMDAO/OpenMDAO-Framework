@@ -1,7 +1,7 @@
 """ Pareto Filter -- finds non-dominated cases """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Instance, Array
+from openmdao.lib.datatypes.api import Instance, List, ListStr
 
 from openmdao.main.component import Component
 from openmdao.main.interfaces import ICaseIterator
@@ -15,16 +15,16 @@ class ParetoFilter(Component):
     """
     
     # pylint: disable-msg=E1101
-    criteria = Array([], iotype="in", dtype=str,
-                     desc="List of outputs from the case to consider for "
-                          "filtering. Note that only case outputs are allowed as "
-                          "criteria.")
+    criteria = ListStr([], iotype="in",
+                       desc="List of outputs from the case to consider for "
+                            "filtering. Note that only case outputs are allowed as "
+                            "criteria.")
     
     #case_set = Instance(ICaseIterator, iotype="in",
     #                    desc="CaseIterator with the cases to be filtered to "
     #                         "Find the pareto optimal subset.")
                              
-    case_sets = Array([], iotype="in",
+    case_sets = List(ICaseIterator, value=[], iotype="in",
                         desc="CaseIterator with the cases to be filtered to "
                              "Find the pareto optimal subset.")
     
@@ -32,7 +32,6 @@ class ParetoFilter(Component):
                           desc="resulting collection of pareto optimal cases",copy="shallow")
     dominated_set = Instance(ICaseIterator, iotype="out",
                              desc="Resulting collection of dominated cases.",copy="shallow")
-    
     
     def _is_dominated(self, y1, y2):
         """Tests to see if the point y1 is dominated by the point y2. 
@@ -52,7 +51,7 @@ class ParetoFilter(Component):
         y_list = []
         cases = []
         for case_set in self.case_sets:
-            cases.extend([case for case in case_set])
+            cases.extend([case for case in case_set.get_iter()])
         
         #cases = [case for case in self.case_set]
         criteria_count = len(self.criteria)

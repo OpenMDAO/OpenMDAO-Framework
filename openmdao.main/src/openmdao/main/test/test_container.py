@@ -10,7 +10,9 @@ import copy
 from enthought.traits.api import TraitError, HasTraits
 
 import openmdao.util.eggsaver as constants
-from openmdao.main.container import Container, get_default_name
+from openmdao.main.container import Container, get_default_name, \
+                                    deep_hasattr, get_default_name, find_name, \
+                                    find_trait_and_value, _get_entry_group
 from openmdao.lib.datatypes.api import Float, List, Dict, TraitError
 from openmdao.util.testutil import make_protected_dir
 
@@ -70,6 +72,81 @@ class ContainerTestCase(unittest.TestCase):
         cont.disconnect('parent.foo', 'dyntrait')
         self.assertEqual(cont._depgraph.get_source('dyntrait'), None)
         
+    def test_find_trait_and_value(self):
+        class MyClass(object):
+            pass
+        class MyHT(HasTraits):
+            pass
+        
+        obj = MyClass()
+        obj.sub = MyClass()
+        obj.sub.sub = MyHT()
+        obj.sub.csub = Container()
+        obj.a = 1
+        obj.sub.b = 2
+        obj.sub.sub.c = 3
+        obj.sub.csub.add_trait('d',Float(4, iotype='in'))
+        result = find_trait_and_value(obj, 'sub.sub.c')
+        self.assertEqual(result[0].type, 'python')
+        self.assertEqual(result[1], 3)
+        result = find_trait_and_value(obj, 'sub.csub.d')
+        self.assertEqual(result[0].type, 'trait')
+        self.assertEqual(result[1], 4)
+        try:
+            result = find_trait_and_value(obj, 'sub.foo')
+        except AttributeError as err:
+            self.assertEqual(str(err), "'MyClass' object has no attribute 'foo'")
+        else:
+            self.fail("expected AttributeError")
+        
+    def test_deep_hasattr(self):
+        class MyClass(object):
+            pass
+        obj = MyClass()
+        obj.sub = MyClass()
+        obj.sub.sub = MyClass()
+        obj.a = 1
+        obj.sub.b = 2
+        obj.sub.sub.c = 3
+        self.assertEqual(deep_hasattr(obj,'a'), True)
+        self.assertEqual(deep_hasattr(obj,'z'), False)
+        self.assertEqual(deep_hasattr(obj,'sub'), True)
+        self.assertEqual(deep_hasattr(obj,'bus'), False)
+        self.assertEqual(deep_hasattr(obj,'sub.b'), True)
+        self.assertEqual(deep_hasattr(obj,'sub.y'), False)
+        self.assertEqual(deep_hasattr(obj,'sub.sub.c'), True)
+        self.assertEqual(deep_hasattr(obj,'sub.sub.d'), False)
+        self.assertEqual(deep_hasattr(obj,'sub.blah.foo.d'), False)
+        
+    def test_get_default_name(self):
+        class MyClass(object):
+            pass
+        parent = MyClass()
+        pname = get_default_name(parent, None)
+        self.assertEqual(pname, 'myclass1')
+        
+        for i in range(3):
+            obj = MyClass()
+            oname = get_default_name(obj, parent)
+            setattr(parent, oname, obj)
+            self.assertEqual(oname, "myclass%s" % (i+1))
+            
+    def test_find_name(self):
+        class MyClass(object):
+            pass
+        obj = MyClass()
+        obj2 = MyClass()
+        self.assertEqual(find_name(obj, obj2), '')
+        setattr(obj, 'foo', obj2)
+        self.assertEqual(find_name(obj, obj2), 'foo')
+        
+    def test_get_entry_group(self):
+        class MyClass(object):
+            pass
+        self.assertEqual(_get_entry_group(MyClass()), None)
+        self.assertEqual(_get_entry_group(Container()), 'openmdao.container')
+
+
     def test_add_bad_child(self):
         foo = Container()
         try:

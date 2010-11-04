@@ -3,7 +3,8 @@
 import unittest
 
 from enthought.traits.api import TraitError, Event
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, Driver, set_as_top
+from openmdao.main.container import _get_entry_group
 
 class EventComp(Component):
     doit = Event()
@@ -42,6 +43,9 @@ class DriverTestCase(unittest.TestCase):
             self.assertEqual(self.asm.evcomp.run_count, i+4)
             self.assertEqual(self.asm.evcomp.num_doits, i+1)
         
+    def test_get_entry_group(self):
+        self.assertEqual(_get_entry_group(Driver()), 'openmdao.driver')
+
         
 if __name__ == "__main__":
     unittest.main()

@@ -14,6 +14,7 @@ from enthought.traits.api import TraitError
 
 from openmdao.main.api import Component, Container
 from openmdao.lib.datatypes.api import Float
+from openmdao.main.container import _get_entry_group
 
 class MyComponent(Component):
     x = Float(1., iotype='in')
@@ -26,6 +27,10 @@ class MyComponent(Component):
     
     def execute(self):
         self.xout = self.x * 2.
+        
+        
+class DynComponent(Component):
+    pass
 
 class TestCase(unittest.TestCase):
     """ Test of Component. """
@@ -170,6 +175,10 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(err), ".execute")
         else:
             self.fail('expected NotImplemented')
+
+    def test_get_entry_group(self):
+        self.assertEqual(_get_entry_group(Component()), 'openmdao.component')
+
 
 if __name__ == '__main__':
     unittest.main()
