@@ -144,6 +144,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
     def test_get_available_types(self):
         types = [x[0] for x in get_available_types()]
         self.assertEqual(types, ['openmdao.lib.CONMINdriver',
+                                 'openmdao.lib.NEWSUMTdriver',
                                  'openmdao.lib.pyevolvedriver',
                                  'openmdao.test.ExecComp'])
         

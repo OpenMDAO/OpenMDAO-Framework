@@ -191,7 +191,7 @@ class NEWSUMTdriver(Driver):
                       initial step size of the one-dimensional \
                       minimization')
     
-    ifd = Int(0, iotype='in', desc='Flag for finite difference gradient control\
+    ifd = Int(4, iotype='in', desc='Flag for finite difference gradient control\
                       If 0, all gradients computed by user analysis program. \
                       If > 0, use default finite difference stepsize of 0.1. \
                       If < 0, use user defined finite difference stepsize.\
@@ -277,6 +277,11 @@ class NEWSUMTdriver(Driver):
 
         self.iter_count = 0
         
+        # Right now, we only support numerical gradient calculation
+        if self.ifd not in [4, -4]:
+            msg = 'NEWSUMT does not yet support analytic constraint gradients'
+            self.raise_exception(msg, RuntimeError)
+        
         # get the values of the parameters
         # check if any min/max constraints are violated by initial values
         for i, val in enumerate(self.get_parameters().values()):
@@ -310,6 +315,9 @@ class NEWSUMTdriver(Driver):
             else:
                 self.constraint_vals[i] = -( val[0]-val[1] )
 
+
+        # update objective
+        self._obj = self.eval_objective()
 
         # Call the interruptible version of SUMT in a loop that we manage
         self.isdone = False

@@ -513,11 +513,11 @@ basic interface conforms to OpenMDAO's driver API, which is discussed in
 :ref:`Driver-API`. This document covers how to assign design variables, constraints, and
 objectives.
 
-The OpenMDAO NEWSUMT driver can be imported from ``openmdao.lib.api``.
+The OpenMDAO NEWSUMT driver can be imported from ``openmdao.lib.drivers.api``.
 
 .. testcode:: NEWSUMT_load
 
-    from openmdao.lib.api import NEWSUMTdriver
+    from openmdao.lib.drivers.api import NEWSUMTdriver
 
 Typically, NEWSUMT will be used as a driver in the top level assembly, though it
 can be also used in a subassembly as part of a nested driver scheme. Using the
@@ -527,7 +527,7 @@ follows:
 .. testcode:: NEWSUMT_load
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.api import NEWSUMTdriver
+    from openmdao.lib.drivers.api import NEWSUMTdriver
 
     class EngineOptimization(Assembly):
         """ Top level assembly for optimizing a vehicle. """
