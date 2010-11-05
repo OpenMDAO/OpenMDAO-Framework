@@ -1,5 +1,7 @@
 """
     newsumtdriver.py - Driver for the NEWSUMT optimizer.
+    
+    (See Appendix B for additional information on the :ref:`NEWSUMTDriver`.)    
 """
 
 # disable complaints about Module 'numpy' has no 'array' member
@@ -104,7 +106,7 @@ def user_function(info,x,obj,dobj,ddobj,g,dg,n2,n3,n4,nrandm,niandm,driver):
     """
        Calculate the objective functions, constraints,
          and gradients of those. Call back to the driver
-         to get the values that were plugged
+         to get the values that were plugged 
          in.
 
     """
@@ -147,16 +149,16 @@ class NEWSUMTdriver(Driver):
         
     
 .. todo:: Make NEWSUMT's handling of user calculated gradients 
-          accessible through NEWSUMTdriver
+          accessible through NEWSUMTdriver.
             
-.. todo:: Check to see if this itmax public variable is needed.
-            NEWSUMT might handle it for us
+.. todo:: Check to see if this itmax variable is needed.
+            NEWSUMT might handle it for us.
             
     """
 
     fdcv = Array(dtype=numpy_float, value=zeros(0,'d'), iotype='in', 
         desc='Step size of the finite difference steps for each design \
-              variable')
+              variable.')
 
     ilin = Array(dtype=numpy_int, value=zeros(0,'i4'), iotype='in', 
         desc='Array designating whether each constraint is linear.')
@@ -167,31 +169,31 @@ class NEWSUMTdriver(Driver):
         bounds only, 3= lower and upper bounds.')
 
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before \
-                    termination')
+                    termination.')
 
     # Control parameters for NEWSUMT.
     # NEWSUMT has quite a few parameters to give the user control over aspects
     # of the solution. 
     epsgsn = Float(0.001, iotype='in', desc='Convergence criteria \
                       of the golden section algorithm used for the \
-                      one dimensional minimization')
+                      one dimensional minimization.')
     epsodm = Float(0.001, iotype='in', desc='Convergence criteria \
-                      of the unconstrained minimization')
+                      of the unconstrained minimization.')
     epsrsf = Float(0.001, iotype='in', desc='Convergence criteria \
-                      for the overall process')
+                      for the overall process.')
     g0 = Float(0.1, iotype='in', desc='Initial value of the transition \
-                      parameter')
+                      parameter.')
     ra = Float(1.0, iotype='in', desc='Penalty multiplier. Required if mflag=1')
     racut = Float(0.1, iotype='in', desc='Penalty multiplier decrease ratio. \
-                      Required if mflag=1')
+                      Required if mflag=1.')
     ramin = Float(1.0e-13, iotype='in', desc='Lower bound of \
                       penalty multiplier. \
-                      Required if mflag=1')
+                      Required if mflag=1.')
     stepmx = Float(2.0, iotype='in', desc='Maximum bound imposed on the \
                       initial step size of the one-dimensional \
-                      minimization')
+                      minimization.')
     
-    ifd = Int(4, iotype='in', desc='Flag for finite difference gradient control\
+    ifd = Int(4, iotype='in', desc='Flag for finite difference gradient control.\
                       If 0, all gradients computed by user analysis program. \
                       If > 0, use default finite difference stepsize of 0.1. \
                       If < 0, use user defined finite difference stepsize.\
@@ -207,19 +209,19 @@ class NEWSUMTdriver(Driver):
                       ')
     jprint = Int(0, iotype='in', desc='Print information during NEWSUMT \
                     solution. Higher values are more verbose. If 0,\
-                    print initial and final designs only')
-    lobj = Int(0, iotype='in', desc='If 1, linear objective function')
+                    print initial and final designs only.')
+    lobj = Int(0, iotype='in', desc='If 1, linear objective function.')
     maxgsn = Int(20, iotype='in', desc='Maximum allowable number of golden \
-                    section iterations used for 1D minimization')
+                    section iterations used for 1D minimization.')
     maxodm = Int(6, iotype='in', desc='Maximum allowable number of one \
-                     dimensional minimizations')
+                     dimensional minimizations.')
     maxrsf = Int(15, iotype='in', desc='Maximum allowable number of \
-                     unconstrained minimizations')
+                     unconstrained minimizations.')
     mflag = Int(15, iotype='in', desc='Flag for penalty multiplier. \
-                     If 0, initial value computed by NEWSUMT \
-                     If 1, initial value set by ra')
-    ndv = Int(0, iotype='in', desc='Number of design variables' )
-    ntce = Int(0, iotype='in', desc='Number of constraints considered' )
+                     If 0, initial value computed by NEWSUMT. \
+                     If 1, initial value set by ra.')
+    ndv = Int(0, iotype='in', desc='Number of design variables.' )
+    ntce = Int(0, iotype='in', desc='Number of constraints considered.' )
     
     def __init__(self, doc=None):
         super(NEWSUMTdriver, self).__init__( doc)
@@ -329,7 +331,7 @@ class NEWSUMTdriver(Driver):
         return not self.isdone and self.iter_count < self.itmax
 
     def pre_iteration(self):
-        """Checks or RunStopped and evaluates objective"""
+        """Checks or RunStopped and evaluates objective."""
         
         super(NEWSUMTdriver, self).pre_iteration()
         if self._stop:
@@ -337,7 +339,7 @@ class NEWSUMTdriver(Driver):
             
 
     def run_iteration(self):
-        """ The NEWSUMT driver iteration"""
+        """ The NEWSUMT driver iteration."""
 
         try:
             #redirect_fortran_stdout_to_null()
@@ -369,12 +371,12 @@ class NEWSUMTdriver(Driver):
         self.set_parameters(dvals)
         
     def _config_newsumt(self):
-        """Set up arrays for the FORTRAN newsumt routine, and perform some
+        """Set up arrays for the Fortran newsumt routine, and perform some
         validation and make sure that array sizes are consistent.
 
         .. todo:: Save and restore common block data so that
                     this code can be used in workflows where
-                    there are multiple instances of newsumt running
+                    there are multiple instances of newsumt running.
             
         """
 

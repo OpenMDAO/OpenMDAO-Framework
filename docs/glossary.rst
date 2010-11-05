@@ -258,6 +258,11 @@ Glossary
         A Python package for creating and manipulating graphs and networks.
 
 
+      **NEWSUMT** 
+        A Fortran subroutine for solving linear and nonlinear constrained or
+	unconstrained function minimization problems.
+	
+
       **NOSA**
         NASA Open Source Agreement. A software license approved by the Open
         Source Initiative (:term:`OSI`). The National Aeronautics and Space
