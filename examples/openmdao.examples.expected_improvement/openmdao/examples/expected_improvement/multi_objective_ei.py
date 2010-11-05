@@ -139,7 +139,7 @@ class Analysis(Assembly):
         shutil.rmtree(self._tdir, ignore_errors=True)
 
 if __name__ == "__main__": #pragma: no cover
-     import sys
+    import sys
     from openmdao.main.api import set_as_top
     from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
     

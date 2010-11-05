@@ -307,7 +307,8 @@ if __name__ == "__main__": #pragma: no cover
 
 	from matplotlib import pyplot as plt, cm
 	from matplotlib.pylab import get_cmap
-	from numpy import meshgrid,array, pi,arange,cos,sin,linspace,remainder
+	from numpy import meshgrid,array, pi,arange,cos,sin,linspace,seterr
+    seterr(all='ignore')
     
     analysis = Analysis()
     
