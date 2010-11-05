@@ -766,6 +766,17 @@ class Container(HasTraits):
         self.raise_exception("object has no attribute '%s'" % path, 
                              TraitError)
         
+    def _check_source(self, path, src):
+        """Raise an exception if the given source variable is not the one
+        that is connected to the destination variable specified by 'path'.
+        """
+        source = self._depgraph.get_source(path)
+        if source is not None and src != source:
+            self.raise_exception(
+                "'%s' is connected to source '%s' and cannot be "
+                "set by source '%s'" %
+                (path,source,src), TraitError)
+
     def set(self, path, value, index=None, src=None, force=False):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
@@ -797,28 +808,20 @@ class Container(HasTraits):
             
             if hasattr(self, path):
                 if trait.iotype == 'in' and not force:
-                    source = self._depgraph.get_source(path)
-                    if source is not None and src != source:
-                        self.raise_exception(
-                            "'%s' is connected to source '%s' and cannot be "
-                            "set by source '%s'" %
-                            (path,source,src), TraitError)
-                if trait.type == 'event':
-                    setattr(self, path, value)
-                else:
-                    if index is None:
-                        if trait.iotype == 'in':
-                            # bypass input source checking
-                            chk = self._input_check
-                            self._input_check = self._input_nocheck
-                            try:
-                                setattr(self, path, value)
-                            finally:
-                                self._input_check = chk
-                        else:
+                    self._check_source(path, src)
+                if index is None:
+                    if trait.iotype == 'in':
+                        # bypass input source checking
+                        chk = self._input_check
+                        self._input_check = self._input_nocheck
+                        try:
                             setattr(self, path, value)
+                        finally:
+                            self._input_check = chk
                     else:
-                        self._array_set(path, value, index)
+                        setattr(self, path, value)
+                else:
+                    self._array_set(path, value, index)
             else:
                 return self._set_failed(path, value, index, src, force)
 
@@ -1257,7 +1260,11 @@ def create_io_traits(cont, obj_info, iotype='in'):
     create_io_traits(obj, ['foo','bar','baz'])
     create_io_traits(obj, ('foo', 'foo_alias', 'in', some_trait))
     create_io_traits(obj, [('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
+    
+    The newly created traits are returned in a dict.
     """
+    iotraits = {}
+    
     if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
         lst = [obj_info]
     else:
@@ -1281,5 +1288,6 @@ def create_io_traits(cont, obj_info, iotype='in'):
         else:
             cont.raise_exception('create_io_traits cannot add trait %s' % entry,
                                  TraitError)
-        cont.add_trait(name, 
-                       cont.build_trait(ref_name, iostat, trait))
+        iotraits[name] = cont.build_trait(ref_name, iostat, trait)
+
+    return iotraits
