@@ -80,7 +80,7 @@ class TestCase(unittest.TestCase):
 
         try:
             # Create a server.
-            server = ObjServer(reset_logging=False)
+            server = ObjServer()
 
             # Create a component.
             exec_comp = server.create('openmdao.test.ExecComp')

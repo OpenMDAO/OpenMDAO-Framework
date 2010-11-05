@@ -45,7 +45,7 @@ class ObjServerFactory(Factory):
         self._managers = {}
         self._logger = logging.getLogger(name)
         self._logger.info('PID: %d, %r', os.getpid(), keytype(self._authkey))
-        print 'Factory PID:', os.getpid()
+        print 'Factory PID:', os.getpid(), keytype(self._authkey)
         sys.stdout.flush()
 
     @rbac('*')
@@ -89,7 +89,8 @@ class ObjServerFactory(Factory):
         manager.shutdown()
         server._close.cancel()
         del self._managers[server]
-        if remove_dir and os.path.exists(root_dir):
+        keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
+        if not keep_dirs and os.path.exists(root_dir):
             shutil.rmtree(root_dir)
 
     @rbac('owner')
@@ -174,13 +175,15 @@ class ObjServerFactory(Factory):
                                                     'objserverfactory.py')
             else:
                 orig_main = None
+            self._logger.debug('starting server %r in dir %s', name, root_dir)
             try:
                 manager.start(cwd=root_dir)
             finally:
+                self._logger.debug('   startup %r attempt complete', name)
                 if orig_main is not None:  #pragma no cover
                     sys.modules['__main__'].__file__ = orig_main
 
-            self._logger.info('new server %s in dir %s listening on %s',
+            self._logger.info('new server %r in dir %s listening on %s',
                               name, root_dir, manager.address)
             server = manager.openmdao_main_objserverfactory_ObjServer(name=name)
             self._managers[server] = (manager, root_dir)
@@ -253,18 +256,15 @@ class ObjServer(object):
     directory at startup.
     """
 
-    def __init__(self, name='', reset_logging=True):
+    def __init__(self, name=''):
         self.host = platform.node()
         self.pid = os.getpid()
         self.name = name or ('sim-%d' % self.pid)
 
         self.root_dir = os.getcwd()
-        # We only reset logging on the remote side.
-        if reset_logging:  #pragma no cover
-            self._reset_logging()
         self._logger = logging.getLogger(self.name)
         self._logger.info('PID: %d', os.getpid())
-        print 'ObjServer %s PID: %s' % (self.name, os.getpid())
+        print 'ObjServer %r PID: %d' % (self.name, os.getpid())
         sys.stdout.flush()
 
         SimulationRoot.chroot(self.root_dir)
@@ -354,7 +354,7 @@ class ObjServer(object):
         egg_filename: string
             Filename of egg to be loaded.
         """
-        self._logger.debug('load_model %s', egg_filename)
+        self._logger.debug('load_model %r', egg_filename)
         self._check_path(egg_filename, 'load_model')
         if self.tlo:
             self.tlo.pre_delete()
@@ -399,12 +399,12 @@ class ObjServer(object):
         mode: int
             New mode bits (permissions).
         """
-        self._logger.debug('chmod %r %s', path, mode)
+        self._logger.debug('chmod %r %o', path, mode)
         self._check_path(path, 'chmod')
         try:
             return os.chmod(path, mode)
         except Exception as exc:
-            self._logger.error('chmod %s %s in %s failed %s',
+            self._logger.error('chmod %r %o in %s failed %s',
                                path, mode, os.getcwd(), exc)
             raise
 
@@ -422,12 +422,12 @@ class ObjServer(object):
         bufsize: int
             Size of buffer to use.
         """
-        self._logger.debug('open %r %s %s', filename, mode, bufsize)
+        self._logger.debug('open %r %r %s', filename, mode, bufsize)
         self._check_path(filename, 'open')
         try:
             return RemoteFile(open(filename, mode, bufsize))
         except Exception as exc:
-            self._logger.error('open %s %s %s in %s failed %s',
+            self._logger.error('open %r %r %s in %s failed %s',
                                filename, mode, bufsize, os.getcwd(), exc)
             raise
 
@@ -444,7 +444,7 @@ class ObjServer(object):
         try:
             return os.remove(path)
         except Exception as exc:
-            self._logger.error('remove %s in %s failed %s',
+            self._logger.error('remove %r in %s failed %s',
                                path, os.getcwd(), exc)
             raise
 
@@ -461,7 +461,7 @@ class ObjServer(object):
         try:
             return os.stat(path)
         except Exception as exc:
-            self._logger.error('stat %s in %s failed %s',
+            self._logger.error('stat %r in %s failed %s',
                                path, os.getcwd(), exc)
             raise
 
@@ -557,7 +557,7 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=60):
                 error_msg = proc.error_message(return_code)
                 raise RuntimeError('Server startup failed %s' % error_msg)
             retry += 1
-            if retry < 10*timeout:
+            if retry < 50*timeout:  # ~5 sec.
                 time.sleep(.1)
             # Hard to cause a startup timeout.
             else:  #pragma no cover

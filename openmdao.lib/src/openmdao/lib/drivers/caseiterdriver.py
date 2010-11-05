@@ -253,7 +253,7 @@ class CaseIterDriverBase(Driver):
                 # Don't wait indefinitely for a server we don't need.
                 # This has happened with a server that got 'lost'
                 # in RAM.allocate()
-                timeout = 30
+                timeout = 60
             try:
                 name, result, exc = self._reply_q.get(timeout=timeout)
             # Hard to force worker to hang, which is handled here.
@@ -281,7 +281,7 @@ class CaseIterDriverBase(Driver):
             queue.put(None)
         for i in range(len(self._queues)):
             try:
-                name, status, exc = self._reply_q.get(True, 2)
+                name, status, exc = self._reply_q.get(True, 60)
             # Hard to force worker to hang, which is handled here.
             except Queue.Empty:  #pragma no cover
                 pass

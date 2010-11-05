@@ -119,8 +119,7 @@ class ResourceAllocationManager(object):
         total = 0
         for allocator in self._allocators:
             count = allocator.max_servers(resource_desc)
-            self._logger.debug('allocator %s returned %d',
-                               allocator.name, count)
+            self._logger.debug('%r returned %d', allocator._name, count)
             total += count
         return total
 
@@ -151,7 +150,7 @@ class ResourceAllocationManager(object):
             if best_estimate >= 0:
                 self._allocations += 1
                 name = 'Sim-%d' % self._allocations
-                self._logger.debug('deploying on %s', best_allocator.name)
+                self._logger.debug('deploying on %r', best_allocator._name)
                 server = best_allocator.deploy(name, resource_desc,
                                                best_criteria)
                 if server is not None:
@@ -217,15 +216,14 @@ class ResourceAllocationManager(object):
 
         for allocator in self._allocators:
             estimate, criteria = allocator.time_estimate(resource_desc)
-            self._logger.debug('allocator %s returned %g',
-                               allocator.name, estimate)
+            self._logger.debug('%r returned %g', allocator._name, estimate)
             if (best_estimate == -2 and estimate >= -1) or \
                (best_estimate == 0  and estimate >  0) or \
                (best_estimate >  0  and estimate < best_estimate):
                 # All current allocators support 'hostnames'.
                 if need_hostnames and not 'hostnames' in criteria:  #pragma no cover
-                    self._logger.debug("allocator %s is missing 'hostnames'",
-                                       allocator.name)
+                    self._logger.debug("%r is missing 'hostnames'",
+                                       allocator._name)
                 else:
                     best_estimate = estimate
                     best_criteria = criteria
@@ -376,6 +374,8 @@ class LocalAllocator(ResourceAllocator):
     def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0,
                  authkey='PublicKey'):
         super(LocalAllocator, self).__init__(name, authkey)
+        self._name = name  # To allow looking like a proxy.
+        self.pid = os.getpid()  # We may be a process on a remote host.
         if total_cpus > 0:
             self.total_cpus = total_cpus
         else:
@@ -550,7 +550,8 @@ class ClusterAllocator(object):  #pragma no cover
     """
 
     def __init__(self, name, machines, authkey='PublicKey'):
-        self.name = name
+        self.name = name   # Duplication to look like both a server and proxy.
+        self._name = name
         self._lock = threading.Lock()
         self._allocators = {}
         self._last_deployed = None
@@ -585,10 +586,12 @@ class ClusterAllocator(object):  #pragma no cover
                 host_id = host[dash+1:]
 
             if host_ip not in self._allocators:
-                self._allocators[host_ip] = \
-                    manager.openmdao_main_resource_LocalAllocator(host)
-                self._logger.debug('LocalAllocator for %s at %s',
-                                   slot.host.hostname, host_id)
+                allocator = manager.openmdao_main_resource_LocalAllocator(host)
+                allocator._name = allocator.name
+                self._allocators[host_ip] = allocator
+                self._logger.debug('%s allocator %r ident %s pid %s',
+                                   slot.host.hostname, allocator._name,
+                                   allocator._id, allocator.pid)
 
     def __getitem__(self, i):
         return self._allocators[i]
@@ -666,14 +669,10 @@ class ClusterAllocator(object):  #pragma no cover
         count = 0
         try:
             count = allocator.max_servers(resource_desc)
-        except Exception, exc:
-            msg = '%s\n%s' % (exc, traceback.format_exc())
-            try:
-                name = allocator.name
-            except Exception:
-                name = '<unavailable>'
-            self._logger.error('allocator %s.max_servers() caught exception %s',
-                               name, msg)
+        except Exception:
+            msg = traceback.format_exc()
+            self._logger.error('%r max_servers() caught exception %s',
+                               allocator._name, msg)
         return count
 
     def time_estimate(self, resource_desc):
@@ -821,24 +820,18 @@ class ClusterAllocator(object):  #pragma no cover
         set_credentials(credentials)
         try:
             estimate, criteria = allocator.time_estimate(resource_desc)
-        except Exception, exc:
-            msg = '%s\n%s' % (exc, traceback.format_exc())
-            try:
-                name = allocator.name
-            except Exception:
-                name = '<unavailable>'
-            self._logger.error('allocator %s.time_estimate() caught exception %s',
-                               name, msg)
+        except Exception:
+            msg = traceback.format_exc()
+            self._logger.error('%r time_estimate() caught exception %s',
+                               allocator._name, msg)
             estimate = None
             criteria = None
         else:
             if estimate == 0:
-                self._logger.debug('allocator %s returned %g (%g)',
-                                   allocator.name, estimate,
-                                   criteria['loadavgs'][0])
+                self._logger.debug('%r returned %g (%g)', allocator._name,
+                                   estimate, criteria['loadavgs'][0])
             else:
-                self._logger.debug('allocator %s returned %g',
-                                   allocator.name, estimate)
+                self._logger.debug('%r returned %g', allocator._name, estimate)
 
         return (allocator, estimate, criteria)
 
@@ -861,8 +854,18 @@ class ClusterAllocator(object):  #pragma no cover
             allocator = criteria['allocator']
             self._last_deployed = allocator
             del criteria['allocator']  # Don't pass a proxy without a server!
-        server = allocator.deploy(name, resource_desc, criteria)
-        self._deployed_servers[name] = (allocator, server)
+        try:
+            server = allocator.deploy(name, resource_desc, criteria)
+        except Exception as exc:
+            self._logger.error('%r deploy() failed for %s: %s',
+                               allocator._name, name, exc)
+            return None
+
+        if server is None:
+            self._logger.error('%r deployment failed for %s',
+                               allocator._name, name)
+        else:
+            self._deployed_servers[name] = (allocator, server)
         return server
 
     def release(self, server):

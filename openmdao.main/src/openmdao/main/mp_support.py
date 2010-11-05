@@ -41,7 +41,7 @@ import os.path
 import socket
 import sys
 import threading
-from traceback import format_exc
+import traceback
 
 from Crypto.Cipher import AES
 from Crypto.PublicKey import RSA
@@ -174,7 +174,7 @@ def _generate_key_pair(credentials, logger=None):
         except KeyError:
             # If key for current user (typical), check filesystem.
             user, host = credentials.user.split('@')
-            if user == getpass.getuser() and host == socket.gethostname():
+            if user == getpass.getuser():
                 current_user = True
                 if sys.platform == 'win32':  #pragma no cover
                     home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
@@ -203,7 +203,8 @@ def _generate_key_pair(credentials, logger=None):
 
                 if current_user:
                     # Save in protected file.
-# FIXME: need method for protected files on Windows
+# FIXME: need method for protected files on Windows.
+#        Default does not necessarily ensure privacy.
                     if sys.platform != 'win32':
                         if not os.path.exists(key_dir):
                             os.mkdir(key_dir)
@@ -411,10 +412,11 @@ class OpenMDAO_Server(Server):
     def __init__(self, registry, address, authkey, serializer, name=None):
         super(OpenMDAO_Server, self).__init__(registry, address, authkey,
                                               serializer)
-        name = name or 'OS_%d' % os.getpid()
+        self.name = name or 'OMS_%d' % os.getpid()
+        self.host = socket.gethostname()
         self._logger = logging.getLogger(name)
-        self._logger.debug('OpenMDAO_Server process %d started, %r',
-                           os.getpid(), keytype(authkey))
+        self._logger.info('OpenMDAO_Server process %d started, %r',
+                          os.getpid(), keytype(authkey))
         self._authkey = authkey
         if authkey == 'PublicKey':
             self._key_pair = _generate_key_pair(get_credentials(), self._logger)
@@ -476,7 +478,14 @@ class OpenMDAO_Server(Server):
                 obj = exposed = gettypeid = None
                 request = _decrypt(recv(), session_key)
                 ident, methodname, args, kwds, credentials = request
-                obj, exposed, gettypeid = id_to_obj[ident]
+                self._logger.debug('request %s %s %s', ident, methodname, credentials)
+                self._logger.debug('id_to_obj:\n%s', self.debug_info(conn))
+                try:
+                    obj, exposed, gettypeid = id_to_obj[ident]
+                except KeyError:
+                    msg = 'No object for ident %s' % ident
+                    self._logger.error(msg)
+                    raise KeyError('%s %s: %s' % (self.host, self.name, msg))
 
                 if methodname not in exposed:
                     if methodname == '__getattr__':
@@ -564,10 +573,12 @@ class OpenMDAO_Server(Server):
 
                     # Proxy pass-through only happens remotely.
                     if isinstance(res, BaseProxy):  #pragma no cover
+                        res._incref(finalize=False)
                         if self._address_type == 'AF_INET' or \
                            connection.address_type(res._token.address) == 'AF_INET':
                             # Create proxy for proxy.
                             # (res may be unreachable by our client)
+#                            self.incref(res._id)
                             typeid = res._token.typeid
                             proxyid = _make_typeid(res)
                             self._logger.debug('Creating proxy for proxy %s',
@@ -577,7 +588,6 @@ class OpenMDAO_Server(Server):
                                     (None, None, None, _auto_proxy)
                         else:
                             # Propagate the proxy info.
-                            res._incref()
                             msg = ('#PROXY', (res._exposed_, res._token))
                     elif access_controller is not None:
                         if methodname in _SPECIALS:
@@ -613,9 +623,9 @@ class OpenMDAO_Server(Server):
             except AttributeError:
                 # Just being defensive, this should never happen.
                 if methodname is None:  #pragma no cover
-                    msg = ('#TRACEBACK', format_exc())
+                    msg = ('#TRACEBACK', traceback.format_exc())
                 else:
-                    orig_traceback = format_exc()
+                    orig_traceback = traceback.format_exc()
                     try:
                         fallback_func = self.fallback_mapping[methodname]
                         result = fallback_func(
@@ -632,10 +642,10 @@ class OpenMDAO_Server(Server):
 
             # Just being defensive, this should never happen.
             except Exception:  #pragma no cover
-                trace = format_exc()
-                self._logger.debug('serve_client exception, method %s',
+                trace = traceback.format_exc()
+                self._logger.error('serve_client exception, method %s',
                                    methodname)
-                self._logger.debug(trace)
+                self._logger.error(trace)
                 msg = ('#TRACEBACK', trace)
 
             try:
@@ -645,10 +655,10 @@ class OpenMDAO_Server(Server):
                     send(_encrypt(('#UNSERIALIZABLE', repr(msg)), session_key))
             # Just being defensive, this should never happen.
             except Exception as exc: #pragma no cover
-                self._logger.info('exception in thread serving %r',
-                                  threading.current_thread().name)
-                self._logger.info(' ... message was %r', msg)
-                self._logger.info(' ... exception was %r', exc)
+                self._logger.error('exception in thread serving %r',
+                                   threading.current_thread().name)
+                self._logger.error(' ... message was %r', msg)
+                self._logger.error(' ... exception was %r', exc)
                 conn.close()
                 sys.exit(1)
 
@@ -690,6 +700,28 @@ class OpenMDAO_Server(Server):
 
     Server.fallback_mapping['__has_interface__'] = _fallback_hasinterface
 
+    def debug_info(self, c):
+        """ Return string representing state of id_to_obj mapping. """
+        self.mutex.acquire()
+        try:
+            result = []
+            keys = self.id_to_obj.keys()
+            keys.sort()
+            for ident in keys:
+                if ident != 0:
+                    obj = self.id_to_obj[ident][0]
+                    if isinstance(obj, BaseProxy):
+                        obj_str = '%s proxy for %s %s' \
+                                  % (keytype(obj._authkey), obj._id,
+                                     obj._token.typeid)
+                    else:
+                        obj_str = str(obj)[:75]
+                    result.append('  %s:       refcount=%s\n    %s' %
+                                  (ident, self.id_to_refcount[ident], obj_str))
+            return '\n'.join(result)
+        finally:
+            self.mutex.release()
+
     def create(self, c, typeid, *args, **kwds):
         """
         Create a new shared object and return its id.
@@ -730,10 +762,21 @@ class OpenMDAO_Server(Server):
             # object for it can be created.  The caller of create()
             # is responsible for doing a decref once the Proxy object
             # has been created.
+            self._logger.critical('create: %r %s', obj, ident)
             self.incref(c, ident)
             return ident, tuple(exposed)
         finally:
             self.mutex.release()
+
+    def decref(self, c, ident):
+        """ Just to log object disposal. """
+        before = self.id_to_obj.keys()
+        if not ident in before:
+            self._logger.critical('decref: object %s missing', ident)
+        super(OpenMDAO_Server, self).decref(c, ident)
+        after = self.id_to_obj.keys()
+        if not ident in before:
+            self._logger.critical('decref: object %s removed', ident)
 
 
 class OpenMDAO_Manager(BaseManager):
@@ -809,12 +852,18 @@ class OpenMDAO_Manager(BaseManager):
 
         # Get address of server.
         writer.close()
-        if not reader.poll(10):
+        for retry in range(10):
+            if reader.poll(1):
+                break
+            if not self._process.is_alive():
+                raise RuntimeError('Server process exited: %s' \
+                                   % self._process.exitcode)
+        else:
             self._process.terminate()
             raise RuntimeError('Server process startup timed-out')
         reply = reader.recv()
         if isinstance(reply, Exception):
-            raise RuntimeError('Server process startup failed: %s' % exc)
+            raise RuntimeError('Server process startup failed: %s' % reply)
         self._address = reply
         if self._authkey == 'PublicKey':
             self._pubkey = reader.recv()
@@ -836,18 +885,35 @@ class OpenMDAO_Manager(BaseManager):
         """
         Create a server, report its address and public key, and run it.
         """
-        if sys.platform == 'win32':
-            set_credentials(credentials)
-            # Recreate registry proxytypes.
-            for typeid, info in registry.items():
-                callable, exposed, method_to_typeid, proxytype = info
-                if proxytype == 'rebuild':
-                    registry[typeid] = (callable, exposed, method_to_typeid,
-                                        _make_proxy_type(typeid, exposed))
         try:
+            if sys.platform == 'win32':
+                set_credentials(credentials)
+                # Recreate registry proxytypes.
+                for typeid, info in registry.items():
+                    callable, exposed, method_to_typeid, proxytype = info
+                    if proxytype == 'rebuild':
+                        registry[typeid] = (callable, exposed, method_to_typeid,
+                                            _make_proxy_type(typeid, exposed))
+
             # If specified, move to new directory.
             if cwd is not None:
                 os.chdir(cwd)
+
+                # Reset stdout & stderr.
+                for handler in logging._handlerList:
+                    handler.flush()
+                sys.stdout.flush()
+                sys.stderr.flush()
+                sys.stdout = open('stdout', 'w')
+                sys.stderr = open('stderr', 'w')
+
+                # Reset logging.
+                logging.root.handlers = []
+                logging.basicConfig(level=logging.NOTSET,
+                    datefmt='%b %d %H:%M:%S',
+                    format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+                    filename='openmdao_log.txt', filemode='w')
+
             # Create server.
             server = cls._Server(registry, address, authkey, serializer, name)
         except Exception as exc:
@@ -969,7 +1035,12 @@ class OpenMDAO_Proxy(BaseProxy):
             pubkey = None
         else:
             del kwds['pubkey']
+
         super(OpenMDAO_Proxy, self).__init__(*args, **kwds)
+
+        if self._authkey == 'PublicKey' and get_credentials() is None:
+            raise RuntimeError('PublicKey proxy requires credentials')
+            
         if self._manager is None:
             self._pubkey = pubkey
         else:
@@ -990,6 +1061,8 @@ class OpenMDAO_Proxy(BaseProxy):
                 msg = 'No credentials for PublicKey authentication of %s' \
                       % methodname
                 logging.error(msg)
+                for line in traceback.format_stack():
+                    logging.error(line.rstrip())
                 raise RuntimeError(msg)
         try:
             conn = self._tls.connection
@@ -1085,7 +1158,7 @@ class OpenMDAO_Proxy(BaseProxy):
             return proxy
         raise convert_to_error(kind, result)
 
-    def _incref(self):
+    def _incref(self, finalize=True):
         """
         This version avoids a hang in _Client if the server no longer exists.
         """
@@ -1095,17 +1168,19 @@ class OpenMDAO_Proxy(BaseProxy):
         conn = self._Client(self._token.address, authkey=self._authkey)
         dispatch(conn, None, 'incref', (self._id,))
         util.debug('INCREF %r', self._token.id)
+        logging.critical('INCREF %r %r', self._token.typeid, self._token.id)
 
         self._idset.add(self._id)
 
         state = self._manager and self._manager._state
 
-        self._close = util.Finalize(
-            self, OpenMDAO_Proxy._decref,
-            args=(self._token, self._authkey, state,
-                  self._tls, self._idset, self._Client),
-            exitpriority=10
-            )
+        if finalize:
+            self._close = util.Finalize(
+                self, OpenMDAO_Proxy._decref,
+                args=(self._token, self._authkey, state,
+                      self._tls, self._idset, self._Client),
+                exitpriority=10
+                )
 
     @staticmethod
     def _decref(token, authkey, state, tls, idset, _Client):
@@ -1121,18 +1196,22 @@ class OpenMDAO_Proxy(BaseProxy):
                 # tell manager this process no longer cares about referent
                 try:
                     util.debug('DECREF %r', token.id)
+                    logging.critical('DECREF %r %r', token.typeid, token.id)
                     conn = _Client(token.address, authkey=authkey)
                     dispatch(conn, None, 'decref', (token.id,))
                 except Exception as exc:
                     util.debug('... decref failed %s', exc)
+                    logging.critical('... decref failed %s', exc)
         else:
             util.debug('DECREF %r -- manager already shutdown', token.id)
+            logging.critical('DECREF %r %r -- manager already shutdown',
+                             token.typeid, token.id)
 
         # check whether we can close this thread's connection because
         # the process owns no more references to objects for this manager
         if not idset and hasattr(tls, 'connection'):
-            logging.debug('thread %r has no more proxies so closing conn',
-                          threading.current_thread().name)
+            logging.debug('thread %r has no more %r proxies so closing conn',
+                          threading.current_thread().name, token.typeid)
             tls.connection.close()
             del tls.connection
 

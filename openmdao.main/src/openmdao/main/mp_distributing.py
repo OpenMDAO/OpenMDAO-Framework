@@ -31,7 +31,7 @@ from multiprocessing import current_process, managers
 from multiprocessing import util, connection, forking
 
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server, \
-                                     register, decode_public_key
+                                     register, decode_public_key, keytype
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials
 
 from openmdao.util.wrkpool import WorkerPool
@@ -45,8 +45,6 @@ else:
     _SSH = ['ssh']
 
 # Logging.
-#util.log_to_stderr(logging.DEBUG)
-#_LOGGER = util.get_logger()
 _LOGGER = logging.getLogger('mp_distributing')
 
 
@@ -397,44 +395,39 @@ def main():  #pragma no cover
     """ Code which runs a host manager. """
     sys.stdout = open('stdout', 'w')
     sys.stderr = open('stderr', 'w')
-    _LOGGER.setLevel(logging.DEBUG)
 
-    out = open('debug.out', 'w')
+    util.log_to_stderr(logging.DEBUG)
+# Avoid root masking us?
+    logging.getLogger().setLevel(logging.DEBUG)
+
     import platform
     hostname = platform.node()
     pid = os.getpid()
     ident = '(%s:%d)' % (hostname, pid)
-    _LOGGER.debug('%s main startup', ident)
-    out.write('%s main startup\n'% ident)
-    out.flush()
+    print '%s main startup' % ident
 
     # Get data from parent over stdin.
     data = cPickle.load(sys.stdin)
     sys.stdin.close()
-    _LOGGER.debug('%s data received', ident)
-    out.write('%s data received\n' % ident)
-    out.flush()
-
-    if data['authkey'] == 'PublicKey':
-        _LOGGER.debug('%s using PublicKey authentication', ident)
-        out.write('%s using PublicKey authentication\n' % ident)
-        out.flush()
+    print '%s data received' % ident
+    print '%s using %s authentication' % (ident, keytype(data['authkey']))
 
     exc = None
     try:
         # Update HostManager registry.
         dct = data['registry']
-        out.write('%s registry:' % ident)
+        print '%s registry:' % ident
         for name in dct.keys():
             module = dct[name]
-            out.write('    %s: %s\n' % (name, module))
-            out.flush()
+            print'    %s: %s' % (name, module)
             mod = __import__(module, fromlist=name)
             cls = getattr(mod, name)
             register(cls, HostManager)
 
         # Set some stuff.
-        _LOGGER.setLevel(data['dist_log_level'])
+        print '%s preparing to fork, log level %d' \
+              % (ident, data['dist_log_level'])
+        util.get_logger().setLevel(data['dist_log_level'])
         forking.prepare(data)
 
         # Create Server for a `HostManager` object.
@@ -444,14 +437,10 @@ def main():  #pragma no cover
                                  data['authkey'], 'pickle', name)
         current_process()._server = server
     except Exception as exc:
-        _LOGGER.error('%s', exc)
+        print '%s caught exception: %s' % (ident, exc)
 
     # Report server address and public key back to parent.
-    _LOGGER.debug('%s connecting to parent at %s',
-                  ident, data['parent_address'])
-    out.write('%s connecting to parent at %s\n'
-              % (ident, data['parent_address']))
-    out.flush()
+    print '%s connecting to parent at %s' % (ident, data['parent_address'])
     conn = connection.Client(data['parent_address'], authkey=data['authkey'])
     if exc:
         conn.send((data['index'], None, str(exc)))
@@ -465,14 +454,15 @@ def main():  #pragma no cover
 
     # Register a cleanup function.
     def cleanup(directory):
-        _LOGGER.debug('%s removing directory %s', ident, directory)
-        shutil.rmtree(directory)
-        _LOGGER.debug('%s shutting down host manager', ident)
+        keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
+        if not keep_dirs and os.path.exists(root_dir):
+            print '%s removing directory %s' % (ident, directory)
+            shutil.rmtree(directory)
+        print '%s shutting down host manager' % ident
     util.Finalize(None, cleanup, args=[data['dir']], exitpriority=0)
 
     # Start host manager.
-    _LOGGER.debug('%s remote host manager starting in %s', ident, data['dir'])
-    out.write('%s remote host manager starting in %s\n' % (ident, data['dir']))
-    out.flush()
+    print '%s remote host manager starting in %s' % (ident, data['dir'])
+    sys.stdout.flush()
     server.serve_forever()
 
