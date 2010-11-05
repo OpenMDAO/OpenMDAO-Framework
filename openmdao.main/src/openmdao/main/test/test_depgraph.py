@@ -150,7 +150,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.dep.connect('bound_a', 'A.a')
         self.dep.disconnect('bound_a') # this should disconnect extern to bound_a and 
                                        # bound_a to A.a, completely removing the
-                                       # linke between @bin and A.
+                                       # link between @bin and A.
         link = self.dep.get_link('@xin', '@bin')
         self.assertTrue('bound_a' not in link._dests)
         link = self.dep.get_link('@bin', 'A')

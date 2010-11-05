@@ -725,6 +725,14 @@ class Container(HasTraits):
         else:
             return getattr(t, metaname)
         
+    def _get_failed(self, path, index=None):
+        """If get() cannot locate the variable specified by the given
+        path, raise an exception.  Inherited classes can override this
+        to return the value of the specified variable.
+        """
+        self.raise_exception(
+            "object has no attribute '%s'" % path, 
+            AttributeError)
         
     def get(self, path, index=None):
         """Return the object specified by the given 
@@ -734,9 +742,7 @@ class Container(HasTraits):
         if restofpath:
             obj = getattr(self, childname, Missing)
             if obj is Missing:
-                self.raise_exception(
-                    "object has no attribute '%s'" % childname, 
-                    AttributeError)
+                self._get_failed(path, index)
             if isinstance(obj, Container):
                 return obj.get(restofpath, index)
             elif index is None:
@@ -747,28 +753,19 @@ class Container(HasTraits):
             if index is None:
                 obj = getattr(self, path, Missing)
                 if obj is Missing:
-                    self.raise_exception(
-                        "object has no attribute '%s'" % path, 
-                        AttributeError)
+                    self._get_failed(path, index)
                 return obj
             else:
                 return self._array_get(path, index)
      
-    def _check_trait_settable(self, name, source=None, force=False):
-        trait = self.get_trait(name)
-        if trait:
-            if trait.iotype == 'in' and not force:
-                src = self._depgraph.get_source(name)
-                if src is not None and src != source:
-                    self.raise_exception(
-                        "'%s' is connected to source '%s' and cannot be "
-                        "set by source '%s'" %
-                        (name,src,source), TraitError)
-        else:
-            self.raise_exception("object has no attribute '%s'" % name,
-                                 TraitError)
-        return trait
-
+    def _set_failed(self, path, value, index=None, src=None, force=False):
+        """If set() cannot locate the specified variable, raise an exception.
+        Inherited classes can override this to locate the variable elsewhere
+        and set its value.
+        """
+        self.raise_exception("object has no attribute '%s'" % path, 
+                             TraitError)
+        
     def set(self, path, value, index=None, src=None, force=False):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
@@ -780,8 +777,7 @@ class Container(HasTraits):
         if restofpath:
             obj = getattr(self, childname, Missing)
             if obj is Missing:
-                self.raise_exception("object has no attribute '%s'" % childname, 
-                                     TraitError)
+                return self._set_failed(path, value, index, src, force)
             if isinstance(obj, Container):
                 if src is not None:
                     src = 'parent.'+src
@@ -792,27 +788,42 @@ class Container(HasTraits):
             else:
                 obj._array_set(restofpath, value, index)
         else:
-            trait = self._check_trait_settable(path, src, force)
-            if trait.type == 'event':
+            trait = self.get_trait(path)
+            
+            # event traits are write-only so hasattr can't find them
+            if trait and trait.type == 'event':
                 setattr(self, path, value)
-            else:
-                if index is None:
-                    if trait.iotype == 'in':
-                        # bypass input source checking
-                        chk = self._input_check
-                        self._input_check = self._input_nocheck
-                        try:
-                            setattr(self, path, value)
-                        finally:
-                            self._input_check = chk
-                    else:
-                        setattr(self, path, value)
+                return
+            
+            if hasattr(self, path):
+                if trait.iotype == 'in' and not force:
+                    source = self._depgraph.get_source(path)
+                    if source is not None and src != source:
+                        self.raise_exception(
+                            "'%s' is connected to source '%s' and cannot be "
+                            "set by source '%s'" %
+                            (path,source,src), TraitError)
+                if trait.type == 'event':
+                    setattr(self, path, value)
                 else:
-                    self._array_set(path, value, index)
+                    if index is None:
+                        if trait.iotype == 'in':
+                            # bypass input source checking
+                            chk = self._input_check
+                            self._input_check = self._input_nocheck
+                            try:
+                                setattr(self, path, value)
+                            finally:
+                                self._input_check = chk
+                        else:
+                            setattr(self, path, value)
+                    else:
+                        self._array_set(path, value, index)
+            else:
+                return self._set_failed(path, value, index, src, force)
 
     def _array_set(self, name, value, index):
         arr = getattr(self, name)
-        
         length = len(index)
         if length == 1:
             old = arr[index[0]]
@@ -838,7 +849,9 @@ class Container(HasTraits):
             self._input_updated(name)
             
     def _array_get(self, name, index):
-        arr = getattr(self, name)
+        arr = getattr(self, name, Missing)
+        if arr is Missing:
+            return self._get_failed(name, index)
         length = len(index)
         if length == 1:
             return arr[index[0]]
@@ -1229,44 +1242,44 @@ def find_trait_and_value(obj, pathname):
     return (objtrait, getattr(obj, names[-1]))
 
 
-#def create_io_traits(cont, obj_info, iotype='in'):
-    #"""Create io trait(s) specified by the contents of obj_info. Calls
-    #build_trait() on the scoping object, which can be overridden by 
-    #subclasses, to create each trait.
+def create_io_traits(cont, obj_info, iotype='in'):
+    """Create io trait(s) specified by the contents of obj_info. Calls
+    build_trait() on the scoping object, which can be overridden by 
+    subclasses, to create each trait.
     
-    #obj_info is assumed to be either a string, a tuple, or a list
-    #that contains strings or tuples. Tuples must contain a name and an
-    #alias, and my optionally contain an iotype and a validation trait.
+    obj_info is assumed to be either a string, a tuple, or a list
+    that contains strings or tuples. Tuples must contain a name and an
+    alias, and my optionally contain an iotype and a validation trait.
     
-    #For example, the following are valid calls:
+    For example, the following are valid calls:
 
-    #create_io_traits(obj, 'foo')
-    #create_io_traits(obj, ['foo','bar','baz'])
-    #create_io_traits(obj, ('foo', 'foo_alias', 'in', some_trait))
-    #create_io_traits(obj, [('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
-    #"""
-    #if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
-        #lst = [obj_info]
-    #else:
-        #lst = obj_info
+    create_io_traits(obj, 'foo')
+    create_io_traits(obj, ['foo','bar','baz'])
+    create_io_traits(obj, ('foo', 'foo_alias', 'in', some_trait))
+    create_io_traits(obj, [('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
+    """
+    if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
+        lst = [obj_info]
+    else:
+        lst = obj_info
 
-    #for entry in lst:
-        #iostat = iotype
-        #trait = None
+    for entry in lst:
+        iostat = iotype
+        trait = None
         
-        #if isinstance(entry, basestring):
-            #name = entry
-            #ref_name = name
-        #elif isinstance(entry, tuple):
-            #name = entry[0]  # wrapper name
-            #ref_name = entry[1] or name # internal name
-            #try:
-                #iostat = entry[2] # optional iotype
-                #trait = entry[3]  # optional validation trait
-            #except IndexError:
-                #pass
-        #else:
-            #cont.raise_exception('create_io_traits cannot add trait %s' % entry,
-                                 #TraitError)
-        #cont.add_trait(name, 
-                       #cont.build_trait(ref_name, iostat, trait))
+        if isinstance(entry, basestring):
+            name = entry
+            ref_name = name
+        elif isinstance(entry, tuple):
+            name = entry[0]  # wrapper name
+            ref_name = entry[1] or name # internal name
+            try:
+                iostat = entry[2] # optional iotype
+                trait = entry[3]  # optional validation trait
+            except IndexError:
+                pass
+        else:
+            cont.raise_exception('create_io_traits cannot add trait %s' % entry,
+                                 TraitError)
+        cont.add_trait(name, 
+                       cont.build_trait(ref_name, iostat, trait))
