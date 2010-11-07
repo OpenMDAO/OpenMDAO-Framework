@@ -10,8 +10,8 @@ Drivers
 
 .. _BroydenSolver:
 
-*BroydenSolver*
-~~~~~~~~~~~~~~~
+BroydenSolver
+~~~~~~~~~~~~~~
 
 The BroydenSolver can be used to solve for the set of inputs
 (independents) that are needed to to make a model satisfy an equation (the
@@ -176,16 +176,15 @@ allowable mixing coefficient for adaptation. The default value is 1.0.
 
     self.driver.alphamax = 1.0
     
-(See the source documentation for more information on
- :ref:`BroydenSolver<openmdao.lib.drivers.broydensolver.py>`.)
+(See the source documentation for more information on :ref:`BroydenSolver<openmdao.lib.drivers.broydensolver.py>`.)
 
 
 .. index:: Case Iterator Driver
 
 .. _Case-iterator-driver:
 
-*CaseIteratorDriver*
-~~~~~~~~~~~~~~~~~~~~~~
+CaseIteratorDriver
+~~~~~~~~~~~~~~~~~~~~
 
 (See the source documentation for more information on 
 :ref:`CaseIterDriver<openmdao.lib.drivers.caseiterdriver.py>`.)
@@ -199,8 +198,8 @@ allowable mixing coefficient for adaptation. The default value is 1.0.
 
 .. _CONMINDriver:
 
-*CONMINDriver*
-~~~~~~~~~~~~~~~~~~~
+CONMINDriver
+~~~~~~~~~~~~~~
 
 :term:`CONMIN` is a Fortran program written as a subroutine to solve
 linear or nonlinear constrained optimization problems. The basic optimization
@@ -219,8 +218,8 @@ unconstrained and a constrained optimization.)
 CONMIN has been included in the OpenMDAO standard library to provide users
 with a basic gradient-based optimization algorithm.
 
-Basic Interface
-+++++++++++++++
+*Basic Interface*
++++++++++++++++++
 
 The CONMIN code contains a number of different parameters and switches that
 are useful for controlling the optimization process. These can be subdivided
@@ -275,15 +274,15 @@ follows:
 
 This first section of code defines an assembly called *EngineOptimization.*
 This assembly contains a DrivingSim component and a CONMIN driver, both of
-which are created and added inside the ``__init__`` function with *add*. The
+which are created and added inside the ``__init__`` function with ``add``. The
 DrivingSim component is also added to the driver's workflow. The objective
 function, design variables, constraints, and any CONMIN parameters are also
 assigned in the ``__init__`` function. The specific syntax for all of these is
 discussed in :ref:`Driver-API`.
 
 
-Controlling the Optimization
-++++++++++++++++++++++++++++
+*Controlling the Optimization*
+++++++++++++++++++++++++++++++
 
 It is often necessary to control the convergence criteria for an optimization.
 The CONMIN driver allows control over both the number of iterations
@@ -384,7 +383,7 @@ variables as follows:
 
     map(self.driver.add_constraint, ['driving_sim.stroke < driving_sim.bore',
                                'driving_sim.stroke * driving_sim.bore > 1.0'])
-    self.cons_is_linear = [1, 0]
+    self.driver.cons_is_linear = [1, 0]
 
 Here, the first constraint is linear, and the second constraint is nonlinear. If 
 *cons_is_linear* is not specified, then all the constraints are assumed to be
@@ -427,8 +426,8 @@ iprint = 101  All of above plus a dump of the arguments passed to
 ============  ========================================================
 
 
-Advanced Options
-++++++++++++++++
+*Advanced Options*
+++++++++++++++++++
 The following options exercise some of the more advanced capabilities of CONMIN.
 The details given here briefly summarize the effects of these parameters; more
 information is available in the `CONMIN User's Manual <file:../../../plugin-guide/CONMIN_user_manual.html>`_.
@@ -465,7 +464,7 @@ will be "pushed" towards the feasible region and is, in effect, a penalty
 parameter. If in a given problem, a feasible solution cannot be obtained with
 the default value, phi should be increased, and the problem run again. If a
 feasible solution cannot be obtained with phi = 100, it is probable that no
-feasible solution exists. The default value of 5.0 is usually adequate. Phi is
+feasible solution exists. The default value of 5.0 is usually adequate. Phiis
 used only for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.
@@ -473,11 +472,266 @@ used only for constrained problems.
 (See the source documentation for more information on 
 :ref:`CONMINdriver<openmdao.lib.drivers.conmindriver.py>`.)
 
+
+.. index:: NEWSUMTDriver
+
+.. _NEWSUMTDriver:
+
+NEWSUMTDriver
+~~~~~~~~~~~~~~
+
+:term:`NEWSUMT` is a Fortran subroutine for solving linear and nonlinear constrained or unconstrained
+function minimization problems. It has been included in the OpenMDAO standard library to provide users
+with a basic gradient-based optimization algorithm.
+
+
+The minimization algorithm used in NEWSUMT is a sequence of unconstrained minimizations technique (SUMT)
+where the modified Newton's method is used for unconstrained function minimizations.
+
+If analytic gradients of the
+objective or constraint functions are not available, this information is
+calculated by finite difference. 
+
+NEWSUMT treats inequality constraints in a way that is especially well suited to engineering design applications.
+
+More information on NEWSUMT can be found in the `NEWSUMT Users Guide <file:../../../plugin-guide/newsumt-manual.pdf>`_.
+
+
+*Basic Interface*
++++++++++++++++++
+
+The NEWSUMT code contains a number of different parameters and switches that
+are useful for controlling the optimization process. These can be subdivided
+into those parameters that will be used in a typical optimization problem and
+those that are more likely to be used by an expert user.
+
+For the simplest possible unconstrained optimization problem, NEWSUMT just needs
+an objective function and one or more decision variables (parameters.) The
+basic interface conforms to OpenMDAO's driver API, which is discussed in 
+:ref:`Driver-API`. This document covers how to assign design variables, constraints, and
+objectives.
+
+The OpenMDAO NEWSUMT driver can be imported from ``openmdao.lib.drivers.api``.
+
+.. testcode:: NEWSUMT_load
+
+    from openmdao.lib.drivers.api import NEWSUMTdriver
+
+Typically, NEWSUMT will be used as a driver in the top level assembly, though it
+can be also used in a subassembly as part of a nested driver scheme. Using the
+OpenMDAO script interface, a simple optimization problem can be set up as
+follows:
+
+.. testcode:: NEWSUMT_load
+
+    from openmdao.main.api import Assembly
+    from openmdao.lib.drivers.api import NEWSUMTdriver
+
+    class EngineOptimization(Assembly):
+        """ Top level assembly for optimizing a vehicle. """
+    
+        def __init__(self):
+            """ Creates a new Assembly containing a DrivingSim and an optimizer"""
+        
+            super(EngineOptimization, self).__init__()
+
+            # Create DrivingSim component instances
+            self.add('driving_sim', DrivingSim())
+
+            # Create NEWSUMT Optimizer instance
+            self.add('driver', NEWSUMTdriver())
+        
+            # add DrivingSim to workflow
+            driver.workflow.add(self.driving_sim)
+        
+            # CONMIN Design Variables 
+            self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
+            self.driver.add_parameter('driving_sim.bore', low=65. , high=100.)
+
+            # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
+            self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
+
+This first section of code defines an assembly called *EngineOptimization.*
+This assembly contains a DrivingSim component and a NEWSUMT driver, both of
+which are created and added inside the ``__init__`` function with ``add``. The
+DrivingSim component is also added to the driver's workflow. The objective
+function, design variables, constraints, and any NEWSUMT parameters are also
+assigned in the ``__init__`` function. The specific syntax for all of these is
+discussed in :ref:`Driver-API`.
+
+
+*Basic Parameters*
+++++++++++++++++++
+
+This section contains the basic parameters for NEWSUMT. One of the most important parameters in
+NEWSUMT is *ifd*. It is a flag for finite difference gradient control. The following table gives the
+possible values for ifd.
+
+=========    ================================================
+IFD Value    Descriptive Information 
+=========    ================================================
+0            All gradients computed by user analysis program
+---------    ------------------------------------------------
+> 0          Use default finite difference stepsize of 0.1
+---------    ------------------------------------------------
+< 0          Use user defined finite difference stepsize.
+             The array fdcv specifies these stepsizes.
+---------    ------------------------------------------------
+1            Gradient of objective function computed by finite differences
+---------    ------------------------------------------------
+2            Gradient of all constraints computed by finite differences
+---------    ------------------------------------------------
+3            Gradient of nonlinear constraints computed by finite differences
+---------    ------------------------------------------------
+4            Combination of 1 and 2
+---------    ------------------------------------------------
+5            Combination of 1 and 3
+=========    ================================================
+
+NEWSUMT can calculate the gradient of both the objective functions and of the constraints
+using a finite difference approximation. This is the current default behavior of the OpenMDAO
+driver. The NEWSUMT code can also accept user-calculated gradients, but these are not yet
+supported in OpenMDAO.  In NEWSUMT, the array *fdcv* defines the step size of the finite 
+difference steps for each design variable.
+
+.. testcode:: NEWSUMT_show
+
+        self.driver.fdcv = [0.1,0.1]
+
+.. note::
+   The default values of *fdcv* are set to 0.01. This may be too
+   large for some problems and will manifest itself by converging to a value that
+   is not the minimum. It is important to evaluate the scale of the objective
+   function around the optimum so that these can be chosen well.
+
+
+When using NEWSUMT, you should specify which constraints are linear. Use the
+integer array *ilin* to designate whether a constraint is linear. A value of 0 indicates
+that that constraint is non-linear, while a value of 1 indicates that that the constraint is
+linear. 
+
+.. testcode:: NEWSUMT_show
+
+    map(self.driver.add_constraint, ['driving_sim.stroke < driving_sim.bore',
+                               'driving_sim.stroke * driving_sim.bore > 1.0'])
+    self.driver.ilin_linear = [1, 0]
+
+
+Similarly, NEWSUMT has a flag parameter to indicate 
+whether the objective function is linear or nonlinear. Setting
+*lobj* to 1 indicates a linear objective function. Setting it
+to 0 indicates a nonlinear objective function.
+
+.. testcode:: NEWSUMT_show
+
+        self.driver.lobj = 0
+
+The *jprint* parameter can be used to display diagnostic
+messages. These messages are currently sent to the standard
+output.
+
+.. testcode:: NEWSUMT_show
+
+        self.driver.jprint = 0
+
+Higher positive values of *jprint* turn on the display of more levels of output, as summarized below.
+
+============  ========================================================
+Value         Result
+============  ========================================================
+jprint = -1   All output is suppressed, including warnings
+------------  --------------------------------------------------------
+jprint = 0    Print initial and final designs only
+------------  --------------------------------------------------------
+jprint = 1    Print brief results of analysis for initial and final designs 
+              together with minimal intermediate information
+------------  --------------------------------------------------------
+jprint = 2    Detailed printing
+------------  --------------------------------------------------------
+jprint = 3    Debugging printing
+============  ========================================================
+
+
+*Controlling the Optimization*
+++++++++++++++++++++++++++++++
+
+NEWSUMT provides a variety of parameters to control the convergence criteria for an optimization.
+
+The maximum number of iterations is specified by setting the *itmax* parameter.
+The default value is 10.
+
+.. testsetup:: NEWSUMT_show
+    
+    from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+    self = EngineOptimization()
+
+.. testcode:: NEWSUMT_show
+
+        self.driver.itmax = 30
+
+The convergence tolerance is controlled with six parameters. The following
+table summarizes these parameters.
+
+=========  ===================================================  =======
+Parameter  Description                                          Default
+=========  ===================================================  =======
+epsgsn     Convergence criteria of the golden section           0.001
+           algorithm used for the one-dimensional minimization
+---------  ---------------------------------------------------  -------
+epsodm     Convergence criteria of the unconstrained            0.001
+           minimization
+---------  ---------------------------------------------------  -------
+epsrsf     Convergence criteria for the overall process         0.001
+---------  ---------------------------------------------------  -------
+maxgsn     Maximum allowable number of golden section           20
+           iterations used for 1D minimization
+---------  ---------------------------------------------------  -------
+maxodm     Maximum allowable number of one-dimensional          6
+           minimizations
+---------  ---------------------------------------------------  -------
+maxrsf     Maximum allowable number of unconstrained            15
+           minimizations
+=========  ===================================================  =======
+
+.. testcode:: NEWSUMT_show
+
+        self.driver.epsgsn = .000001
+        self.driver.maxgsn = 40
+
+
+*Advanced Options* 
+++++++++++++++++++ 
+
+There are additional options for advanced users.  More information on these parameters can be
+found in the `NEWSUMT Users Guide <file:../../../plugin-guide/newsumt-manual.pdf>`_.
+
+
+=========  ===========================================  =======
+Parameter  Description                                  Default
+=========  ===========================================  =======
+mflag      Flag for penalty multiplier.                 15
+           If 0, initial value computed by NEWSUMT.
+           If 1, initial value set by `ra`
+---------  -------------------------------------------  -------
+ra         Penalty multiplier. Required if mflag=1      1.0
+---------  -------------------------------------------  -------
+racut      Penalty multiplier decrease ratio.           0.1
+           Required if mflag=1
+---------  -------------------------------------------  -------
+ramin      Lower bound of penalty multiplier.           1.0e-13
+           Required if mflag=1
+---------  -------------------------------------------  -------
+g0         Initial value of the transition parameter    0.1
+=========  ===========================================  =======
+
+(See the source documentation for more information on the :ref:`NEWSUMTDriver<openmdao.lib.drivers.newsumtdriver.py>`.)
+
+
 .. index:: DOEdriver, design of experiments
 
 .. _DOEdriver:
 
-*DOEdriver*
+DOEdriver
 ~~~~~~~~~~~
 
 The DOEdriver provides the capability to execute a DOE on a workflow.
@@ -517,14 +771,13 @@ operate.
 The *min* and *max* metadata of the parameters are used to denote the range for
 each variable over which the DOE will span.
                 
-(See the source documentation for more information on 
-:ref:`DOEdriver<openmdao.lib.drivers.doedriver.py>`.)
+(See the source documentation for more information on :ref:`DOEdriver<openmdao.lib.drivers.doedriver.py>`.)
 
 .. index:: Fixed Point Iterator
 
 .. _FixedPointIterator:
 
-*FixedPointIterator*
+FixedPointIterator
 ~~~~~~~~~~~~~~~~~~~~
 
 The FixedPointIterator is a simple solver that can solve a single-input
@@ -604,16 +857,15 @@ specifies the number of iterations to run. The default value for
 A more useful example in which the FixedPointIterator is used to converge two
 coupled components is shown in :ref:`Tutorial-MDAO-Architectures` .
 
-(See the source documentation for more information on 
-:ref:`FixedPointIterator<openmdao.lib.drivers.iterate.py>`.)
+(See the source documentation for more information on :ref:`FixedPointIterator<openmdao.lib.drivers.iterate.py>`.)
 
 .. index:: Genetic
 
 
 .. _`Genetic`:
 
-*Genetic*
-~~~~~~~~~
+Genetic
+~~~~~~~~
 
 :term:`Genetic` is a driver which performs optimization using a genetic algorithm based
 on `Pyevolve <http://pyevolve.sourceforge.net/>`_. Genetic is a global optimizer and
@@ -629,8 +881,8 @@ Genetic can be used in any simulation by importing it from ``openmdao.lib.driver
 .. index:: pair: design; variables
 .. index:: Float, Int, Enum
 
-Design Variables
-++++++++++++++++
+*Design Variables*
+++++++++++++++++++
 
 IOtraits are added to Genetic and become optimization parameters. Genetic will vary the set of
 parameters to search for an optimum. Genetic supports three variable types:
@@ -697,8 +949,8 @@ Now, for ``comp.x`` the optimizer will only try values between 5.0 and 7.0. Note
 are applicable only to Float and Int variables. For Enum variables, `low` and `high`
 are not applicable.
 
-Configuration
-+++++++++++++
+*Configuration*
++++++++++++++++
 
 When setting the objective you can specify a single 
 variable name or a more complex function, such as 
