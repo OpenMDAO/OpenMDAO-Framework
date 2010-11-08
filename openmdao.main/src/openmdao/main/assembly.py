@@ -136,34 +136,36 @@ class Assembly (Component):
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
-        srctrait = srccomp.find_trait(srcvarname)
-        desttrait = destcomp.find_trait(destvarname)
+        src_io = 'in' if srccomp is self else 'out'
+        dest_io = 'out' if destcomp is self else 'in'
+        
+        srctrait = srccomp.get_dyn_trait(srcvarname, src_io)
+        desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
         
         if srccompname == destcompname:
             self.raise_exception(
                 'Cannot connect %s to %s. Both are on same component.' %
                                  (srcpath, destpath), RuntimeError)
-        if srctrait and desttrait and (srctrait.is_trait_type and (srctrait.is_trait_type(Expression) or srctrait.is_trait_type(ExpressionList))) or \
-           (desttrait.is_trait_type and (desttrait.is_trait_type(Expression) or desttrait.is_trait_type(ExpressionList))):
-            self.raise_exception('Cannot connect %s to %s because one of them is an Expression or ExpressionList' %
-                                 (srcpath,destpath), RuntimeError)
 
-        if srccomp is not self and destcomp is not self:
-            # it's not a passthrough, so must connect input to output
-            if srctrait.iotype != 'out':
-                self.raise_exception(
-                    '.'.join([srccomp.get_pathname(),srcvarname])+
-                    ' must be an output variable',
-                    RuntimeError)
-            if desttrait.iotype != 'in':
-                self.raise_exception(
-                    '.'.join([destcomp.get_pathname(),destvarname])+
-                    ' must be an input variable',
-                    RuntimeError)
+        #if srccomp is not self and destcomp is not self:
+            ## it's not a passthrough, so must connect input to output
+            #if srctrait.iotype != 'out':
+                #self.raise_exception(
+                    #'.'.join([srccomp.get_pathname(),srcvarname])+
+                    #' must be an output variable',
+                    #RuntimeError)
+            #if desttrait.iotype != 'in':
+                #self.raise_exception(
+                    #'.'.join([destcomp.get_pathname(),destvarname])+
+                    #' must be an input variable',
+                    #RuntimeError)
 
         # test type compatability
+        ttype = desttrait.trait_type
+        if not ttype:
+            ttype = desttrait
         try:
-            if desttrait.trait_type.get_val_wrapper:
+            if ttype.get_val_wrapper:
                 desttrait.validate(destcomp, destvarname,
                                    srccomp.get_wrapped_attr(srcvarname))
             else:

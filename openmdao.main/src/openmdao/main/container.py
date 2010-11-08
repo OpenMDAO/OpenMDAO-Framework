@@ -31,6 +31,7 @@ from enthought.traits.trait_base import not_none, not_event
 from enthought.traits.trait_types import validate_implements
 
 from openmdao.main.filevar import FileRef
+from openmdao.lib.datatypes.api import Float
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -283,7 +284,9 @@ class Container(HasTraits):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
             cname, _, restofpath = srcpath.partition('.')
             if restofpath:
-                getattr(self, cname).connect(restofpath, 'parent.'+destpath)
+                child = getattr(self, cname)
+                if isinstance(child, Container):
+                    child.connect(restofpath, 'parent.'+destpath)
         if not destpath.startswith('parent.'):
             if not self.contains(destpath):
                 self.raise_exception("Can't find '%s'" % destpath, AttributeError)
@@ -294,7 +297,9 @@ class Container(HasTraits):
                     (destpath, sname), RuntimeError)
             cname, _, restofpath = destpath.partition('.')
             if restofpath:
-                getattr(self, cname).connect('parent.'+srcpath, restofpath)
+                child = getattr(self, cname)
+                if isinstance(child, Container):
+                    child.connect('parent.'+srcpath, restofpath)
                 
         self._depgraph.connect(srcpath, destpath)
 
@@ -505,15 +510,13 @@ class Container(HasTraits):
         # from validate and one or two others, so we need to get access 
         # to the original trait which is held in the 'trait_type' attribute.
         ttype = trait.trait_type
-        getwrapper = getattr(ttype, 'get_val_wrapper', None)
+        getwrapper = ttype.get_val_wrapper
         val = getattr(self, name)
         # copy value if 'copy' found in metadata
         if ttype.copy:
             val = _copydict[ttype.copy](val)
         if getwrapper is not None:
-            wrapper = getwrapper()
-            wrapper.value = val
-            return wrapper
+            return getwrapper(val)
         
         return val
         
@@ -742,7 +745,7 @@ class Container(HasTraits):
         if restofpath:
             obj = getattr(self, childname, Missing)
             if obj is Missing:
-                self._get_failed(path, index)
+                return self._get_failed(path, index)
             if isinstance(obj, Container):
                 return obj.get(restofpath, index)
             elif index is None:
@@ -753,7 +756,7 @@ class Container(HasTraits):
             if index is None:
                 obj = getattr(self, path, Missing)
                 if obj is Missing:
-                    self._get_failed(path, index)
+                    return self._get_failed(path, index)
                 return obj
             else:
                 return self._array_get(path, index)
@@ -1067,12 +1070,13 @@ class Container(HasTraits):
         for name in self.list_containers():
             getattr(self, name).pre_delete()
             
-    def find_trait(self, pathname):
-        """Returns a trait if a trait with the given pathname exists.
-        If an attribute exists with the given pathname but no trait is found, 
-        or if pathname references a trait in a parent scope, None will be returned. If
-        no attribute exists with the given pathname within this scope, an AttributeError 
-        will be raised.
+    def get_dyn_trait(self, pathname, io):
+        """Returns a trait if a trait with the given pathname exists, possibly
+        creating it 'on-the-fly'. If an attribute exists with the given
+        pathname but no trait is found or can be created, or if pathname
+        references a trait in a parent scope, None will be returned. If no
+        attribute exists with the given pathname within this scope, an
+        AttributeError will be raised.
         
         pathname: str
             Pathname of the desired trait.  May contain dots.
@@ -1083,13 +1087,18 @@ class Container(HasTraits):
         if restofpath:
             child = getattr(self, cname)
             if isinstance(child, Container):
-                return child.find_trait(restofpath)
+                return child.get_dyn_trait(restofpath, io)
             else:
                 if deep_hasattr(child, restofpath):
                     return None
         else:
             trait = self.get_trait(cname)
             if trait is not None:
+                if trait.iotype != io:
+                    self.raise_exception(
+                        '.'.join([self.get_pathname(),pathname])+
+                        ' must be an %s variable' % _iodict[io],
+                        RuntimeError)
                 return trait
             elif trait is None and self.contains(cname):
                 return None

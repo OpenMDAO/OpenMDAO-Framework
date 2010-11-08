@@ -145,12 +145,12 @@ class Float(TraitType):
                                (name, info, value, vtype)
         obj.raise_exception(msg, TraitError)
 
-    def get_val_wrapper(self):
+    def get_val_wrapper(self, value):
         """Return a TraitValWrapper object.  Its value attribute
         will be filled in by the caller.
         """
         # pylint: disable-msg=E1101
-        return TraitValWrapper(units=self.units)
+        return TraitValWrapper(value, units=self.units)
             
     def _validate_with_metadata(self, obj, name, value, srcmeta):
         """Perform validation and unit conversion using metadata from

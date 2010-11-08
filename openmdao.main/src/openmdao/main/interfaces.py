@@ -81,12 +81,13 @@ class IContainer(Interface):
         destination variable.
         """
         
-    def find_trait(self, pathname):
-        """Returns a trait if a trait with the given pathname exists.
-        If an attribute exists with the given pathname but no trait is found, 
-        or if pathname references a trait in a parent scope, None will be returned. If
-        no attribute exists with the given pathname within this scope, an AttributeError 
-        will be raised.
+    def get_dyn_trait(self, pathname):
+        """Returns a trait if a trait with the given pathname exists, possibly
+        creating the trait 'on-the-fly'. If an attribute exists with the given
+        pathname but no trait is found or can be created, or if pathname
+        references a trait in a parent scope, None will be returned. If no
+        attribute exists with the given pathname within this scope, an
+        AttributeError will be raised.
         
         pathname: str
             pathname of the desired trait

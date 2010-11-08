@@ -274,7 +274,7 @@ class DependencyGraph(object):
             else:
                 link = graph['@bout']['@xout']['link']
             link.connect('.'.join([srccompname,srcvarname]), destvarname)
-            if '@bout' not in graph[srccompname]:
+            if srccompname not in graph or '@bout' not in graph[srccompname]:
                 link = _Link(srccompname, '@bout')
                 graph.add_edge(srccompname, '@bout', link=link)
             else:
