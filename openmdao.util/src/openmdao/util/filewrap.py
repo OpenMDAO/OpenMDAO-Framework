@@ -368,7 +368,7 @@ class FileParser(object):
         self.filename = []
         self.data = []
         
-        self.delimiter = " \n\t\r"
+        self.delimiter = " \t"
         
         self.current_row = 0
         
@@ -390,10 +390,10 @@ class FileParser(object):
         
         delimiter: str
             A string containing characters to be used as delimiters. The
-            default value is ' \n\t\r'. which means that spaces, tabs, and
-            linebreaks are not taken as data, but instead mark the boundaries.
-            Note that the parser is smart enough to recognize characters within
-            quotes as non-delimiters."""
+            default value is ' \t'. which means that spaces and tabs are not
+            taken as data, but instead mark the boundaries. Note that the
+            parser is smart enough to recognize characters within quotes as
+            non-delimiters."""
         
         self.delimiter = delimiter
         if delimiter != "columns":
@@ -571,6 +571,14 @@ class FileParser(object):
         
         rowend: integer (optional)
         row number to end. If not set, then only one row is grabbed.
+        
+        Setting the delimiter to 'columns' elicits some special behavior
+        from this method. Normally, the extraction process wraps around
+        at the end of a line and continues grabbing each field at the start of
+        a newline. When the delimiter is set to columns, the paramters
+        (rowstart, fieldstart, rowend, fieldend) demark a box, and all
+        values in that box are retrieved. Note that standard whitespace
+        is the secondary delmiter in this case.
         """
         
         j1 = self.current_row + rowstart
@@ -587,7 +595,7 @@ class FileParser(object):
 
         data = zeros(shape=(0, 0))
 
-        for line in lines:
+        for i, line in enumerate(lines):
             if self.delimiter == "columns":
                 line = line[(fieldstart-1):fieldend]
                 
@@ -604,7 +612,11 @@ class FileParser(object):
                 data = append(data, array(parsed[:]))
             else:
                 parsed = _parse_line().parseString(line)
-                data = append(data, array(parsed[(fieldstart-1):fieldend]))
+                if i == j2-j1-1:
+                    data = append(data, array(parsed[(fieldstart-1):fieldend]))
+                else:
+                    data = append(data, array(parsed[(fieldstart-1):]))
+                fieldstart = 1
                 
         return data
         

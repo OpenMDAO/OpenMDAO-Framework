@@ -260,8 +260,8 @@ class TestCase(unittest.TestCase):
     def test_output_parse_array(self):
         
         data = "Anchor\n" + \
-               "1 2 3 4 5 6 7 8\n" + \
-               "11 22 33 44 55 66 77 88\n"
+               "10 20 30 40 50 60 70 80\n" + \
+               "11 21 31 41 51 61 71 81\n"
         
         outfile = open(self.filename, 'w')
         outfile.write(data)
@@ -273,17 +273,20 @@ class TestCase(unittest.TestCase):
         
         gen.mark_anchor('Anchor')
         val = gen.transfer_array(1, 1, 1, 8)
-        self.assertEqual(val[0], 1)
-        self.assertEqual(val[7], 8)
+        self.assertEqual(val[0], 10)
+        self.assertEqual(val[7], 80)
         val = gen.transfer_array(1, 5, 2, 6)
-        self.assertEqual(val[0], 5)
-        self.assertEqual(val[3], 66)
+        self.assertEqual(val[0], 50)
+        self.assertEqual(val[9], 61)
         
         # Now, let's try column delimiters
         gen.set_delimiters('columns')
-        val = gen.transfer_array(1, 7, 1, 11)
-        self.assertEqual(val[0], 4)
-        self.assertEqual(val[2], 6)
+        val = gen.transfer_array(1, 7, 1, 15)
+        self.assertEqual(val[0], 30)
+        self.assertEqual(val[2], 50)
+        val = gen.transfer_array(1, 10, 2, 18)
+        self.assertEqual(val[0], 40)
+        self.assertEqual(val[5], 61)
 
         try:
             gen.transfer_array(1, 7, 1)
