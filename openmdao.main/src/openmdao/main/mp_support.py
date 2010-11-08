@@ -1,7 +1,6 @@
 """
 This module defines modified versions of some classes and functions defined in
 :mod:`multiprocessing.managers` to support OpenMDAO distributed simulations.
-Unfortunately, there's a lot of code duplication here.
 
 Channel communication can be secured by setting `authkey` to 'PublicKey'.
 When `authkey` is 'PublicKey', an additional session establishment protocol
@@ -28,6 +27,12 @@ Assuming the credentials check passes, the server will set it's credentials
 to those specified by the :class:`AccessController` during the execution of the
 method.
 """
+
+# Unfortunately, there's a lot of multiprocessing package code duplication here.# And a lot of this should be done at a lower layer. But then we'd be
+# duplicating connection.py code as well as (more) managers.py code. Another
+# alternative is to just use our own conection.py and managers.py (and whatever
+# else might bleed in) as our private multiprocessing package.
+# No obvious 'best' alternative.
 
 import base64
 import ConfigParser
@@ -173,6 +178,7 @@ def _generate_key_pair(credentials, logger=None):
             key_pair = _KEY_CACHE[credentials.user]
         except KeyError:
             # If key for current user (typical), check filesystem.
+# TODO: file lock to protect from separate processes.
             user, host = credentials.user.split('@')
             if user == getpass.getuser():
                 current_user = True
@@ -841,29 +847,40 @@ class OpenMDAO_Manager(BaseManager):
             registry = self._registry
 
         # Spawn process which runs a server.
+        credentials = get_credentials()
+        if self._authkey == 'PublicKey':
+            if credentials is None:
+                raise RuntimeError('PublicKey authentication requires user'
+                                   ' credentials')
+            # Ensure we have a key pair. Key generation can take a long time
+            # and we don't want to use an excessive startup timeout value.
+            _generate_key_pair(credentials)
+
         self._process = Process(
             target=type(self)._run_server,
             args=(registry, self._address, self._authkey,
-                  self._serializer, self._name, writer, get_credentials(), cwd),
+                  self._serializer, self._name, writer, credentials, cwd),
             )
         ident = ':'.join(str(i) for i in self._process._identity)
         self._process.name = type(self).__name__  + '-' + ident
         self._process.start()
+        pid = self._process.pid
 
         # Get address of server.
         writer.close()
-        for retry in range(10):
+        for retry in range(5):
             if reader.poll(1):
                 break
             if not self._process.is_alive():
-                raise RuntimeError('Server process exited: %s' \
-                                   % self._process.exitcode)
+                raise RuntimeError('Server process %d exited: %s'
+                                   % (pid, self._process.exitcode))
         else:
             self._process.terminate()
-            raise RuntimeError('Server process startup timed-out')
+            raise RuntimeError('Server process %d startup timed-out' % pid)
         reply = reader.recv()
         if isinstance(reply, Exception):
-            raise RuntimeError('Server process startup failed: %s' % reply)
+            raise RuntimeError('Server process %d startup failed: %s'
+                               % (pid, reply))
         self._address = reply
         if self._authkey == 'PublicKey':
             self._pubkey = reader.recv()
@@ -885,6 +902,10 @@ class OpenMDAO_Manager(BaseManager):
         """
         Create a server, report its address and public key, and run it.
         """
+#        out = open('run_server.%d' % os.getpid(), 'w')
+#        out.write('run_server %s %s %s %s %s\n' \
+#                  % (address, keytype(authkey), name, credentials, cwd))
+#        out.flush()
         try:
             if sys.platform == 'win32':
                 set_credentials(credentials)
@@ -898,6 +919,8 @@ class OpenMDAO_Manager(BaseManager):
             # If specified, move to new directory.
             if cwd is not None:
                 os.chdir(cwd)
+#                out.write('past chdir\n')
+#                out.flush()
 
                 # Reset stdout & stderr.
                 for handler in logging._handlerList:
@@ -906,6 +929,8 @@ class OpenMDAO_Manager(BaseManager):
                 sys.stderr.flush()
                 sys.stdout = open('stdout', 'w')
                 sys.stderr = open('stderr', 'w')
+#                out.write('past redirect\n')
+#                out.flush()
 
                 # Reset logging.
                 logging.root.handlers = []
@@ -913,22 +938,36 @@ class OpenMDAO_Manager(BaseManager):
                     datefmt='%b %d %H:%M:%S',
                     format='%(asctime)s %(levelname)s %(name)s: %(message)s',
                     filename='openmdao_log.txt', filemode='w')
+#                out.write('past logging\n')
+#                out.flush()
 
             # Create server.
+#            out.write('before create\n')
+#            out.flush()
             server = cls._Server(registry, address, authkey, serializer, name)
+#            out.write('after create\n')
+#            out.flush()
         except Exception as exc:
+#            out.write('exception %s\n' % exc)
+#            out.flush()
             writer.send(exc)
             return
         else:
             # Inform parent process of the server's address.
+#            out.write('send address\n')
+#            out.flush()
             writer.send(server.address)
             if authkey == 'PublicKey':
+#                out.write('send key\n')
+#                out.flush()
                 writer.send(server.public_key)
         finally:
             writer.close()
 
         # Run the manager.
         util.info('manager serving at %r', server.address)
+#        out.write('serve_forever\n')
+#        out.flush()
         server.serve_forever()
 
     @staticmethod

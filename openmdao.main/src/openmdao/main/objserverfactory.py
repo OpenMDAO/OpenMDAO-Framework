@@ -45,8 +45,6 @@ class ObjServerFactory(Factory):
         self._managers = {}
         self._logger = logging.getLogger(name)
         self._logger.info('PID: %d, %r', os.getpid(), keytype(self._authkey))
-        print 'Factory PID:', os.getpid(), keytype(self._authkey)
-        sys.stdout.flush()
 
     @rbac('*')
     def echo(self, *args):

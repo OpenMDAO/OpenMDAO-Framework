@@ -8,7 +8,7 @@ from enthought.traits.api import Bool, Instance
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
-from openmdao.main.rbac import get_credentials, set_credentials
+from openmdao.main.rbac import Credentials, get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer
@@ -170,7 +170,10 @@ class CaseIterDriverBase(Driver):
 
     def _start(self):
         """ Start evaluating cases concurrently. """
+        # Need credentials in case we're using a PublicKey server.
         credentials = get_credentials()
+        if credentials is None:
+            credentials = Credentials()
 
         # Determine maximum number of servers available.
         resources = {
@@ -332,13 +335,16 @@ class CaseIterDriverBase(Driver):
         in_use = True
 
         if state == _EMPTY:
-            if self._more_to_go(stepping):
-                self._logger.debug('    load_model')
-                self._load_model(server)
-                self._server_states[server] = _LOADING
+            if server is None or server in self._queues:
+                if self._more_to_go(stepping):
+                    self._logger.debug('    load_model')
+                    self._load_model(server)
+                    self._server_states[server] = _LOADING
+                else:
+                    self._logger.debug('    no more cases')
+                    in_use = False
             else:
-                self._logger.debug('    no more cases')
-                in_use = False
+                in_use = False  # Never started.
 
         elif state == _LOADING:
             exc = self._model_status(server)

@@ -367,8 +367,9 @@ class LocalAllocator(ResourceAllocator):
     Purely local resource allocator. If `total_cpus` is >0, then that is
     taken as the number of cpus/cores available.  Otherwise the number is
     taken from :meth:`multiprocessing.cpu_count`.  The `max_load`
-    parameter specifies the maximum cpu-adjusted load allowed when determining
-    if another server may be started in :meth:`time_estimate`.
+    parameter specifies the maximum cpu-adjusted load allowed when reporting
+    :meth:`max_servers` and when determining if another server may be started
+    in :meth:`time_estimate`.
     """
 
     def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0,
