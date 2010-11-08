@@ -464,7 +464,7 @@ will be "pushed" towards the feasible region and is, in effect, a penalty
 parameter. If in a given problem, a feasible solution cannot be obtained with
 the default value, phi should be increased, and the problem run again. If a
 feasible solution cannot be obtained with phi = 100, it is probable that no
-feasible solution exists. The default value of 5.0 is usually adequate. Phiis
+feasible solution exists. The default value of 5.0 is usually adequate. Phi is
 used only for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.

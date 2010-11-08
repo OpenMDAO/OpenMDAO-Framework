@@ -379,7 +379,9 @@ needed for the model.
 If you have downloaded the latest release version from the website, the files you need should be
 here:
 
-    ``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign``
+::
+
+  openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign
 
 ``X.X.X`` is the current OpenMDAO version, and ``######`` is a string that
 contains the Python version and the operating system description. This path will 
@@ -389,7 +391,9 @@ vary depending on your system and version, but there will be only one
 If you are a developer and have a branch from the source repository, the files you need will be
 here:
 
-    ``examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign``
+::
+
+  examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign
 
 The three engine models have been implemented in ``transmission.py, engine.py,`` and ``chassis.py``. It will
 be useful to browse these files as you learn some of the basic concepts in this tutorial.
