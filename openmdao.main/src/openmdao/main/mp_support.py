@@ -484,8 +484,9 @@ class OpenMDAO_Server(Server):
                 obj = exposed = gettypeid = None
                 request = _decrypt(recv(), session_key)
                 ident, methodname, args, kwds, credentials = request
-                self._logger.debug('request %s %s %s', ident, methodname, credentials)
-                self._logger.debug('id_to_obj:\n%s', self.debug_info(conn))
+#                self._logger.debug('request %s %s %s',
+#                                   ident, methodname, credentials)
+#                self._logger.debug('id_to_obj:\n%s', self.debug_info(conn))
                 try:
                     obj, exposed, gettypeid = id_to_obj[ident]
                 except KeyError:
@@ -642,8 +643,8 @@ class OpenMDAO_Server(Server):
                         msg = ('#TRACEBACK', orig_traceback)
 
             except EOFError:
-                self._logger.debug('got EOF -- exiting thread serving %r',
-                                   threading.current_thread().name)
+                util.debug('got EOF -- exiting thread serving %r',
+                           threading.current_thread().name)
                 sys.exit(0)
 
             # Just being defensive, this should never happen.
@@ -768,7 +769,6 @@ class OpenMDAO_Server(Server):
             # object for it can be created.  The caller of create()
             # is responsible for doing a decref once the Proxy object
             # has been created.
-            self._logger.critical('create: %r %s', obj, ident)
             self.incref(c, ident)
             return ident, tuple(exposed)
         finally:
@@ -777,12 +777,8 @@ class OpenMDAO_Server(Server):
     def decref(self, c, ident):
         """ Just to log object disposal. """
         before = self.id_to_obj.keys()
-        if not ident in before:
-            self._logger.critical('decref: object %s missing', ident)
         super(OpenMDAO_Server, self).decref(c, ident)
         after = self.id_to_obj.keys()
-        if not ident in before:
-            self._logger.critical('decref: object %s removed', ident)
 
 
 class OpenMDAO_Manager(BaseManager):
@@ -875,7 +871,7 @@ class OpenMDAO_Manager(BaseManager):
                 raise RuntimeError('Server process %d exited: %s'
                                    % (pid, self._process.exitcode))
         else:
-            self._process.terminate()
+#            self._process.terminate()
             raise RuntimeError('Server process %d startup timed-out' % pid)
         reply = reader.recv()
         if isinstance(reply, Exception):
@@ -1100,8 +1096,8 @@ class OpenMDAO_Proxy(BaseProxy):
                 msg = 'No credentials for PublicKey authentication of %s' \
                       % methodname
                 logging.error(msg)
-                for line in traceback.format_stack():
-                    logging.error(line.rstrip())
+#                for line in traceback.format_stack():
+#                    logging.error(line.rstrip())
                 raise RuntimeError(msg)
         try:
             conn = self._tls.connection
@@ -1206,8 +1202,9 @@ class OpenMDAO_Proxy(BaseProxy):
 
         conn = self._Client(self._token.address, authkey=self._authkey)
         dispatch(conn, None, 'incref', (self._id,))
-        util.debug('INCREF %r', self._token.id)
-        logging.critical('INCREF %r %r', self._token.typeid, self._token.id)
+# Enable this with care. While testing CaseIteratorDriver it can cause a
+# deadlock in logging.
+#        util.debug('INCREF %r', self._token.id)
 
         self._idset.add(self._id)
 
@@ -1235,22 +1232,18 @@ class OpenMDAO_Proxy(BaseProxy):
                 # tell manager this process no longer cares about referent
                 try:
                     util.debug('DECREF %r', token.id)
-                    logging.critical('DECREF %r %r', token.typeid, token.id)
                     conn = _Client(token.address, authkey=authkey)
                     dispatch(conn, None, 'decref', (token.id,))
                 except Exception as exc:
                     util.debug('... decref failed %s', exc)
-                    logging.critical('... decref failed %s', exc)
         else:
             util.debug('DECREF %r -- manager already shutdown', token.id)
-            logging.critical('DECREF %r %r -- manager already shutdown',
-                             token.typeid, token.id)
 
         # check whether we can close this thread's connection because
         # the process owns no more references to objects for this manager
         if not idset and hasattr(tls, 'connection'):
-            logging.debug('thread %r has no more %r proxies so closing conn',
-                          threading.current_thread().name, token.typeid)
+            util.debug('thread %r has no more %r proxies so closing conn',
+                       threading.current_thread().name, token.typeid)
             tls.connection.close()
             del tls.connection
 

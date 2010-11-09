@@ -177,7 +177,6 @@ class ObjServerFactory(Factory):
             try:
                 manager.start(cwd=root_dir)
             finally:
-                self._logger.debug('   startup %r attempt complete', name)
                 if orig_main is not None:  #pragma no cover
                     sys.modules['__main__'].__file__ = orig_main
 

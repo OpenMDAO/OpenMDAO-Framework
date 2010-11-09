@@ -259,10 +259,8 @@ class ResourceAllocationManager(object):
         # Just being defensive.
         except Exception as exc:  #pragma no cover
             self._logger.error("Can't release %s: %s", server, exc)
-        self._logger.debug('allocator released')
         server._close.cancel()
         del self._deployed_servers[name]
-        self._logger.debug('release complete')
 
 
 class ResourceAllocator(ObjServerFactory):
@@ -883,15 +881,12 @@ class ClusterAllocator(object):  #pragma no cover
             self._logger.error('server %r not found', name)
             return
 
-        self._logger.debug('release %s', server)
         try:
             allocator.release(server)
         except Exception as exc:
             self._logger.error("Can't release %s: %s", server, exc)
-        self._logger.debug('allocator released')
         server._close.cancel()
         del self._deployed_servers[name]
-        self._logger.debug('release complete')
 
     def shutdown(self):
         """ Shutdown, releasing resources. """
