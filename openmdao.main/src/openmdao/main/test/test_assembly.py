@@ -4,7 +4,6 @@ import unittest
 
 from enthought.traits.api import TraitError
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.main.expression import Expression, ExpressionList
 from openmdao.lib.datatypes.api import Float, Str, Instance, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
@@ -79,11 +78,6 @@ class DummyComp(Component):
         self.sout = self.s[::-1]
         # pylint: disable-msg=E1101
         self.dummy.execute()
-
-@add_delegate(HasObjective)
-class SimpleDriver(Driver):
-    obj = Expression(iotype='in')
-    constr = ExpressionList(iotype='in')
 
 class AssemblyTestCase(unittest.TestCase):
 
@@ -277,14 +271,14 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual(': comp2.rout must be an input variable',
+            self.assertEqual('comp2: rout must be an input variable',
                              str(err))
         else:
             self.fail('exception expected')
         try:
             self.asm.connect('comp1.r','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual(': comp1.r must be an output variable',
+            self.assertEqual('comp1: r must be an output variable',
                              str(err))
         else:
             self.fail('RuntimeError expected')
@@ -421,24 +415,6 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(conns, [('comp1.rout', 'comp2.r')])
         self.asm.run()
         
-    def test_expr_connection(self):
-        top = set_as_top(Assembly())
-        top.driver = SimpleDriver()
-        top.add('comp1', DummyComp())
-        try:
-            top.connect('comp1.sout', 'driver.obj')
-        except Exception as err:
-            self.assertEqual(str(err), 
-                ': Cannot connect comp1.sout to driver.obj because one of them is an Expression or ExpressionList')
-        else:
-            self.fail('expected Exception')
-        try:
-            top.connect('comp1.slistout', 'driver.constr')
-        except Exception as err:
-            self.assertEqual(str(err), 
-                ': Cannot connect comp1.slistout to driver.constr because one of them is an Expression or ExpressionList')
-        else:
-            self.fail('expected Exception')
             
     def test_assembly_connect_init(self):
         class MyComp(Component):

@@ -68,7 +68,7 @@ class Dataflow(SequentialWorkflow):
         scope = self.scope
         graph = scope._depgraph.copy_graph()
         
-        # add any dependencies due to Expressions or ExpressionLists
+        # add any dependencies due to ExprEvaluators
         for comp in self._nodes:
             graph.add_edges_from([tup for tup in comp.get_expr_depends()])
             

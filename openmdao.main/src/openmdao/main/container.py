@@ -31,6 +31,7 @@ from enthought.traits.trait_base import not_none, not_event
 from enthought.traits.trait_types import validate_implements
 
 from openmdao.main.filevar import FileRef
+from openmdao.main.treeproxy import TreeProxy
 from openmdao.lib.datatypes.api import Float
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
@@ -792,7 +793,7 @@ class Container(HasTraits):
             obj = getattr(self, childname, Missing)
             if obj is Missing:
                 return self._set_failed(path, value, index, src, force)
-            if isinstance(obj, Container):
+            if isinstance(obj, (Container,TreeProxy)):
                 if src is not None:
                     src = 'parent.'+src
                 obj.set(restofpath, value, index, src=src, 
@@ -809,8 +810,8 @@ class Container(HasTraits):
                 setattr(self, path, value)
                 return
             
-            if hasattr(self, path):
-                if trait.iotype == 'in' and not force:
+            if trait:
+                if not force and trait.iotype == 'in' :
                     self._check_source(path, src)
                 if index is None:
                     if trait.iotype == 'in':
@@ -834,12 +835,6 @@ class Container(HasTraits):
         if length == 1:
             old = arr[index[0]]
             arr[index[0]] = value
-        elif length == 2:
-            old = arr[index[0]][index[1]]
-            arr[index[0]][index[1]] = value
-        elif length == 3:
-            old = arr[index[0]][index[1]][index[2]]
-            arr[index[0]][index[1]][index[2]] = value
         else:
             for idx in index[:-1]:
                 arr = arr[idx]
@@ -858,17 +853,9 @@ class Container(HasTraits):
         arr = getattr(self, name, Missing)
         if arr is Missing:
             return self._get_failed(name, index)
-        length = len(index)
-        if length == 1:
-            return arr[index[0]]
-        elif length == 2:
-            return arr[index[0]][index[1]]
-        elif length == 3:
-            return arr[index[0]][index[1]][index[2]]
-        else:
-            for idx in index:
-                arr = arr[idx]
-            return arr
+        for idx in index:
+            arr = arr[idx]
+        return arr
     
     def save_to_egg(self, name, version, py_dir=None, src_dir=None,
                     src_files=None, child_objs=None, dst_dir=None,
@@ -1095,10 +1082,9 @@ class Container(HasTraits):
             trait = self.get_trait(cname)
             if trait is not None:
                 if trait.iotype != io:
-                    self.raise_exception(
-                        '.'.join([self.get_pathname(),pathname])+
-                        ' must be an %s variable' % _iodict[io],
-                        RuntimeError)
+                    self.raise_exception('%s must be an %s variable' % 
+                                         (pathname, _iodict[io]),
+                                         RuntimeError)
                 return trait
             elif trait is None and self.contains(cname):
                 return None

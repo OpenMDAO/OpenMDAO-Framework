@@ -13,7 +13,6 @@ from enthought.traits.api import TraitType
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
-from openmdao.main.expression import Expression, ExpressionList
 from openmdao.main.tvalwrapper import TraitValWrapper
 
 _iodict = { 'out': 'output', 'in': 'input' }
@@ -136,58 +135,60 @@ class Assembly (Component):
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
-        src_io = 'in' if srccomp is self else 'out'
-        dest_io = 'out' if destcomp is self else 'in'
-        
-        srctrait = srccomp.get_dyn_trait(srcvarname, src_io)
-        desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
-        
-        if srccompname == destcompname:
-            self.raise_exception(
-                'Cannot connect %s to %s. Both are on same component.' %
-                                 (srcpath, destpath), RuntimeError)
-
-        #if srccomp is not self and destcomp is not self:
-            ## it's not a passthrough, so must connect input to output
-            #if srctrait.iotype != 'out':
-                #self.raise_exception(
-                    #'.'.join([srccomp.get_pathname(),srcvarname])+
-                    #' must be an output variable',
-                    #RuntimeError)
-            #if desttrait.iotype != 'in':
-                #self.raise_exception(
-                    #'.'.join([destcomp.get_pathname(),destvarname])+
-                    #' must be an input variable',
-                    #RuntimeError)
-
-        # test type compatability
-        ttype = desttrait.trait_type
-        if not ttype:
-            ttype = desttrait
-        try:
-            if ttype.get_val_wrapper:
-                desttrait.validate(destcomp, destvarname,
-                                   srccomp.get_wrapped_attr(srcvarname))
+        if srccomp is not self.parent and destcomp is not self.parent:
+            if destcomp is self:
+                dest_io = 'out'
             else:
-                desttrait.validate(destcomp, destvarname,
-                                   srccomp.get(srcvarname))
-        except TraitError, err:
-            self.raise_exception("can't connect '%s' to '%s': %s" %
-                                 (srcpath,destpath,str(err)), TraitError)
+                dest_io = 'in'
+            if srccomp is self:
+                src_io = 'in'
+            else:
+                src_io = 'out'
+            
+            srctrait = srccomp.get_dyn_trait(srcvarname, src_io)
+            desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
+            
+            if srccompname == destcompname:
+                self.raise_exception(
+                    'Cannot connect %s to %s. Both are on same component.' %
+                                     (srcpath, destpath), RuntimeError)
+    
+            #if srccomp is not self and destcomp is not self:
+                ## it's not a passthrough, so must connect input to output
+                #if srctrait.iotype != 'out':
+                    #self.raise_exception(
+                        #'.'.join([srccomp.get_pathname(),srcvarname])+
+                        #' must be an output variable',
+                        #RuntimeError)
+                #if desttrait.iotype != 'in':
+                    #self.raise_exception(
+                        #'.'.join([destcomp.get_pathname(),destvarname])+
+                        #' must be an input variable',
+                        #RuntimeError)
+    
+            # test type compatability
+            ttype = desttrait.trait_type
+            if not ttype:
+                ttype = desttrait
+            try:
+                if ttype.get_val_wrapper:
+                    desttrait.validate(destcomp, destvarname,
+                                       srccomp.get_wrapped_attr(srcvarname))
+                else:
+                    desttrait.validate(destcomp, destvarname,
+                                       srccomp.get(srcvarname))
+            except TraitError, err:
+                self.raise_exception("can't connect '%s' to '%s': %s" %
+                                     (srcpath,destpath,str(err)), TraitError)
                     
         super(Assembly, self).connect(srcpath, destpath)
         
         # if it's an internal connection, could change dependencies, so we have
         # to call config_changed to notify our driver
-        if not srcpath.startswith('parent.') and not destpath.startswith('parent.') \
-           and '.' in srcpath and '.' in destpath:
-            self.config_changed(update_parent=False)
+        if srccomp is not self.parent and destcomp is not self.parent:
+            if srccomp is not self and destcomp is not self:
+                self.config_changed(update_parent=False)
 
-        if destcomp is self or destcomp is self.parent or \
-           srccomp is self or srccomp is self.parent:
-            pass  # do nothing because the connection was started in a scope above us
-        # invalidate destvar if necessary
-        else:
             outs = destcomp.invalidate_deps(varnames=set([destvarname]), force=True)
             if (outs is None) or outs:
                 bouts = self.child_invalidated(destcompname, outs, force=True)

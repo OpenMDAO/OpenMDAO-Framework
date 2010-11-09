@@ -410,7 +410,7 @@ class IUncertainVariable(Interface):
         """Calculates the expected value of the uncertainty distribution"""
     
     def sample():
-        """Generates a random number from an uncertainty distribution"""
+        """Generates a random number from an uncertain distribution"""
 
 class ICaseRecorder(Interface):
     """A recorder of Cases."""
@@ -664,3 +664,47 @@ class IHasObjectives(object):
         for each dependency introduced by our objectives.
         """
         
+
+class IOpaqueTree(Interface):
+    """An interface to an opaque object that is structured internally as a 
+    tree.
+    """
+    
+    def get(pathname, index=None):
+        """Return the object with the given dotted pathname. Raise an AttributeError
+        if the object does not exist or is not returnable.
+        
+        pathname: str
+            Dotted name specifying an object within the tree
+            
+        index: tuple of int, optional
+            If not None, this indicates that the pathname is a container and the
+            index indicates an element within that container.
+        """
+        
+    def set(pathname, value, index=None):
+        """Set the value of the object with the given dotted pathname to the given
+        value. If index is not None, then set the value of the array entry specified
+        by the index.
+        
+        pathname: str
+            Dotted name specifying an object within the tree
+            
+        value: a builtin type
+            The value to assign the specified object to
+
+        index: tuple, optional
+            If not None, this indicates that the pathname is a container and the
+            index indicates an element within that container. Values within the 
+            tuple may be ints or strings.
+        """
+        
+    def invoke(pathname, *args, **kwargs):
+        """Invoke the function specified by the given dotted pathname with the specified
+        arguments.
+        """
+        
+    def exists(pathname):
+        """Return True if an object with the given dotted pathname exists."""
+        
+    
