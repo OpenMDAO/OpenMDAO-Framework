@@ -39,14 +39,10 @@ from openmdao.lib.caserecorders.api import DBCaseRecorder,DumpCaseRecorder
 from openmdao.lib.caseiterators.api import DBCaseIterator
 
 from openmdao.examples.expected_improvement.alg_component1 import Alg_Component1
-from openmdao.examples.expected_improvement.alg_component3 import Alg_Component3
+from openmdao.examples.expected_improvement.alg_component2 import Alg_Component2
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
-
-from matplotlib import pyplot as plt, cm
-from matplotlib.pylab import get_cmap
-from numpy import meshgrid,array, pi,arange,cos,sin,linspace,remainder
 
 @add_delegate(HasStopConditions)
 class Iterator(Driver):
@@ -202,7 +198,7 @@ class Analysis(Assembly):
         #CONCEPT C2
         self.add("c2",MetaModel())
         self.c2.surrogate = KrigingSurrogate()
-        self.c2.model = Alg_Component3()
+        self.c2.model = Alg_Component2()
         self.c2.recorder = DBCaseRecorder(':memory:')
         self.c2.force_execute = True
         
@@ -293,6 +289,28 @@ if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
     from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
+    seed = None
+    backend = None
+    figname = None
+    for arg in sys.argv[1:]:
+        if arg.startswith('--seed='):
+            import random
+            seed = int(arg.split('=')[1])
+            random.seed(seed)
+        if arg.startswith('--backend='):
+            backend = arg.split('=')[1]
+        if arg.startswith('--figname='):
+            figname = arg.split('=')[1]
+    import matplotlib
+    if backend is not None:
+        matplotlib.use(backend)
+    elif sys.platform == 'win32':
+        matplotlib.use('WxAgg')
+
+	from matplotlib import pyplot as plt, cm
+	from matplotlib.pylab import get_cmap
+	from numpy import meshgrid,array, pi,arange,cos,sin,linspace,seterr
+    seterr(all='ignore')
     
     analysis = Analysis()
     
