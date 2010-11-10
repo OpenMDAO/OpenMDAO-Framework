@@ -434,7 +434,7 @@ array in a template to add more terms.
     10.1 20.2 3.141592653589793
     A B C
 
-The named argument 'sep' is used to define what separate to include between the
+The named argument 'sep' is used to define what seperate to include between the
 additional terms of the array. Future revisions of InputFileGenerator will
 hopefully be able to detect this automatically.
 
@@ -799,7 +799,7 @@ characters space (' ') and tab ('\t'). The newline characters ('\n' and '\r') ar
 always removed regardless of the delimiter status.
 
 One common case that will require a change in the default delimiter is the comma
-separated file (i.e, csv). Here's an example of such an output file:
+seperated file (i.e, csv). Here's an example of such an output file:
 
 ::
 

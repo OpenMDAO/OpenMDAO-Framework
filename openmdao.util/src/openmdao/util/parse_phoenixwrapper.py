@@ -360,16 +360,15 @@ def parse_phoenixwrapper(infile, outfile, compname):
 
     openmdao.write(vars[""])
     
-    if constructs[""] != "":
-        text = "\n"
-        text += tab + "def __init__(self, directory=''):\n"
-        text += tab + tab + '"""Constructor for the %s component"""' % compname
-        text += "\n\n"
-        text += tab + tab + "super(%s, self).__init__(directory)" % compname
-        text += "\n\n"
-        text += tab + tab + "# Variable Containers\n"
-        openmdao.write(text)
-        openmdao.write(constructs[""])
+    text = "\n"
+    text += tab + "def __init__(self, directory=''):\n"
+    text += tab + tab + '"""Constructor for the %s component"""' % compname
+    text += "\n\n"
+    text += tab + tab + "super(%s, self).__init__(directory)" % compname
+    text += "\n\n"
+    text += tab + tab + "# Variable Containers\n"
+    openmdao.write(text)
+    openmdao.write(constructs[""])
     
     print "Stats: %d groups, %d variables." % (len(groups), count_var)
     
