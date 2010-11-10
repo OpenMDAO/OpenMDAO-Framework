@@ -387,7 +387,7 @@ print tempdir"'''
 def _copy_to_remote(hostname, files, python):  #pragma no cover
     """ Copy files to remote directory, returning directory path. """
     cmd = copy.copy(_SSH)
-    cmd.extend([hostname, python, '-c', _UNZIP_CODE.replace("\n", ';')])
+    cmd.extend([hostname, python, '-c', _UNZIP_CODE.replace('\n', ';')])
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                             stderr=subprocess.PIPE)
     archive = tarfile.open(fileobj=proc.stdin, mode='w|gz')

@@ -265,9 +265,8 @@ class TestCase(unittest.TestCase):
         finally:
             os.chdir('..')
 
-        # Don't clobber Windows keys until we have protection fixed.
-        if _SERVER_ID == 1 and sys.platform != 'win32':
-            # Force a key generation.
+        # Force a key generation.
+        if _SERVER_ID == 1:
             if sys.platform == 'win32':
                 home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
             else:

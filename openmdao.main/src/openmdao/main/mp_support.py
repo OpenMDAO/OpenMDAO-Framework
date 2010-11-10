@@ -60,6 +60,14 @@ from multiprocessing.managers import BaseManager, BaseProxy, RebuildProxy, \
 
 if sys.platform == 'win32':  #pragma no cover
     from _multiprocessing import win32
+    try:
+        import win32api
+        import win32security
+        import ntsecuritycon
+    except ImportError:
+        _HAVE_PYWIN32 = False
+    else:
+        _HAVE_PYWIN32 = True
 
 from openmdao.main.interfaces import obj_has_interface
 from openmdao.main.rbac import AccessController, RoleError, check_role, \
@@ -209,19 +217,56 @@ def _generate_key_pair(credentials, logger=None):
 
                 if current_user:
                     # Save in protected file.
-# FIXME: need method for protected files on Windows.
-#        Default does not necessarily ensure privacy.
-                    if sys.platform != 'win32':
+                    if sys.platform == 'win32' and not _HAVE_PYWIN32: #pragma no cover
+                        logger.debug('No pywin32, not saving keyfile')
+                    else:
                         if not os.path.exists(key_dir):
                             os.mkdir(key_dir)
-                            os.chmod(key_dir, 0700)  # Read/Write/Execute
+                        _make_private(key_dir)
                         with open(key_file, 'wb') as out:
                             cPickle.dump(key_pair, out)
-                        os.chmod(key_file, 0600)     # Read/Write
+                        _make_private(key_file)
 
             _KEY_CACHE[credentials.user] = key_pair
 
     return key_pair
+
+def _make_private(path):
+    """ Make `path` accessible only by 'owner'. """
+    if sys.platform == 'win32':  #pragma no cover
+        # Find the SIDs for various groups and user.
+        everyone, domain, type = \
+            win32security.LookupAccountName('', 'Everyone')
+        admins, domain, type = \
+            win32security.LookupAccountName('', 'Administrators')
+        system, domain, type = \
+            win32security.LookupAccountName('', 'System')
+        user, domain, type = \
+            win32security.LookupAccountName('', win32api.GetUserName())
+
+        # Find the DACL part of the Security Descriptor for the file
+        sd = win32security.GetFileSecurity(path,
+                                        win32security.DACL_SECURITY_INFORMATION)
+
+        # Create a blank DACL and add the ACEs we want.
+        dacl = win32security.ACL()
+        dacl.AddAccessAllowedAce(win32security.ACL_REVISION,
+                                 ntsecuritycon.FILE_ALL_ACCESS, user)
+        dacl.AddAccessDeniedAce(win32security.ACL_REVISION, 
+                                ntsecuritycon.FILE_ALL_ACCESS, admins)
+        dacl.AddAccessDeniedAce(win32security.ACL_REVISION, 
+                                ntsecuritycon.FILE_ALL_ACCESS, everyone)
+        dacl.AddAccessDeniedAce(win32security.ACL_REVISION, 
+                                ntsecuritycon.FILE_ALL_ACCESS, system)
+
+        # Put our new DACL into the Security Descriptor and update the file
+        # with the updated SD.
+        sd.SetSecurityDescriptorDacl(1, dacl, 0)
+        win32security.SetFileSecurity(path,
+                                      win32security.DACL_SECURITY_INFORMATION,
+                                      sd)
+    else:
+        os.chmod(path, 0700)  # Read/Write/Execute
 
 
 def _encode_public_key(key):
