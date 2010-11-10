@@ -222,7 +222,7 @@ class InputFileGenerator(object):
         This can be negative.
         
         field - which word in line to replace, as denoted by delimiter(s)"""
-        
+
         j = self.current_row + row
         line = self.data[j]
         

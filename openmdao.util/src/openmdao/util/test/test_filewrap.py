@@ -49,7 +49,7 @@ class TestCase(unittest.TestCase):
         gen.reset_anchor()
         gen.transfer_var('55', 3, 2)
         gen.mark_anchor('C 77')
-        gen.transfer_var('1.3e-37', -3, 6)
+        gen.transfer_var(1.3e-37, -3, 6)
         gen.clearline(-5)
         gen.mark_anchor('Anchor', -1)
         gen.transfer_var('8.7', 1, 5)

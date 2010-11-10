@@ -73,7 +73,9 @@ needed for the model relative to the install directory:
 
 If you have downloaded the latest release version from the website, you should find the files you need here:
 
-	``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.bar3simulation-X.X.X-######.egg/openmdao/examples/bar3simulation``
+::
+
+  openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.bar3simulation-X.X.X-######.egg/openmdao/examples/bar3simulation
 	
 X.X.X is the current OpenMDAO version, and ###### is a string that contains the Python version and the
 Operating System description. This path will vary depending on your system and version, but there will be
@@ -81,7 +83,9 @@ only one *bar3simulation* in your distribution.
 
 If you are a developer and have a branch from the source repository, you will find the files you need here:
 
-	``examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation``
+::
+  
+  examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation
 	
 Note that a Fortran compiler is required. The instructions presented here are
 applicable to the UNIX and Mac OS X environments. There may be some differences on the Windows

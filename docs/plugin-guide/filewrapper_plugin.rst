@@ -22,6 +22,9 @@ function.
 Presently, the only way to create a file-wrapped component involves writing some
 Python code, so a basic knowledge of Python is required to proceed.
 
+
+.. _`A-Note-on-Precision`:
+
 A Note on Precision
 ---------------------
 
@@ -238,8 +241,28 @@ for cases where only a small number of the possible variables and settings are
 being exposed to manipulation by outside components.
 
 OpenMDAO includes a basic templating capability that allows a template file to
-be read, and fields to be replaced with new values.
+be read, fields to be replaced with new values, and an input file to be
+generated so that the external application can read it. Suppose we have an
+input file that contains some integer, floating point, and string inputs:
 
+::
+
+    INPUT
+    1 2 3
+    INPUT
+    10.1 20.2 30.3
+    A B C
+    
+This is a valid input file for our application, and it can also be used as a
+template file. The templating object is called `InputFileGenerator`, and it
+includes methods that can replace specific fields as measured by their row
+and field numbers. 
+
+To use the InputFileGenerator object, first instantiate it and give it the
+name of the template file, and the name of the output file that we want to
+produce. (Note that this code will need to be placed in the execute function
+of your component *before* the external code has been run. See :ref:`Running the
+External Code`.) The code will generally look like this:
 
 ::
 
@@ -249,6 +272,171 @@ be read, and fields to be replaced with new values.
     parser.set_template_file('mytemplate.txt')
     parser.set_generated_file('myinput.txt')
     
+    # (Call functions to poke new values here)
+    
+    parser.generate()
+
+When the template file is set, it is read into memory so that all subesquent
+replacements are done without writing the intermediate file to the disk. Once
+all replacements have been made, the generate method is called to create the
+input file.
+
+.. testcode:: Parse_Input
+    :hide:
+    
+    from openmdao.util.filewrap import InputFileGenerator
+    parser = InputFileGenerator()
+    from openmdao.main.api import Component
+    self = Component()
+    
+    # A way to "cheat" and do this without a file.
+    parser.data = []
+    parser.data.append("INPUT")
+    parser.data.append("1 2 3")
+    parser.data.append("INPUT")
+    parser.data.append("10.1 20.2 30.3")
+    parser.data.append("A B C")
+
+Let's say we want to grab the replace the second integer with a 7. The code
+would look like this.
+    
+.. testcode:: Parse_Input
+
+    parser.mark_anchor("INPUT")
+    parser.transfer_var(7, 1, 2)
+    
+.. testcode:: Parse_Input
+    :hide:
+    
+    for datum in parser.data:
+        print datum
+    
+.. testoutput:: Parse_Input
+
+    INPUT
+    1 7 3
+    INPUT
+    10.1 20.2 30.3
+    A B C
+    
+The method `mark_anchor` is used to define an anchor, which becomes the
+starting point for the `transfer_var` method. Here, we find the 2nd field in
+the 1st line down from the anchor, and replace it with the new value.
+
+Now, what if we want to replace the third value of the floating point numbers
+after the second INPUT statement. An additional argument can be passed to the
+`mark_anchor` method to tell it to start at the 2nd instance of the text
+fragment "INPUT".
+
+.. testcode:: Parse_Input
+
+    parser.mark_anchor("INPUT", 2)
+    
+    my_var = 3.1415926535897932
+    parser.transfer_var(my_var, 1, 3)
+    
+.. testcode:: Parse_Input
+    :hide:
+    
+    for datum in parser.data:
+        print datum
+    
+.. testoutput:: Parse_Input
+
+    INPUT
+    1 7 3
+    INPUT
+    10.1 20.2 3.141592653589793
+    A B C
+    
+Note that we are able to pass a floating point value to `transfer_var` and still
+keep 15 digits of precision. See :ref:`A-Note-on-Precision` for a discussion on
+why this is important.
+    
+We can also count backwards from the bottom of the file by passing a negative
+number. Here, the second instance of "INPUT" from the bottom brings us
+back to the first one.
+
+.. testcode:: Parse_Input
+
+    parser.mark_anchor("INPUT", -2)
+    parser.transfer_var("99999", 1, 1)
+    
+.. testcode:: Parse_Input
+    :hide:
+    
+    for datum in parser.data:
+        print datum
+    
+.. testoutput:: Parse_Input
+
+    INPUT
+    99999 7 3
+    INPUT
+    10.1 20.2 3.141592653589793
+    A B C
+    
+There is also a method for replacing an entire array of values. Let's try
+replacing the set of three integers.
+
+.. testcode:: Parse_Input
+
+    from numpy import array
+    
+    array_val = array([123, 456, 789])
+
+    parser.mark_anchor("INPUT")
+    parser.transfer_array(array_val, 1, 1, 3)
+    
+.. testcode:: Parse_Input
+    :hide:
+    
+    for datum in parser.data:
+        print datum.rstrip()
+    
+.. testoutput:: Parse_Input
+
+    INPUT
+    123 456 789
+    INPUT
+    10.1 20.2 3.141592653589793
+    A B C
+
+The method `transfer_array` takes 4 required inputs. The first is an array
+of values that will become the new values in the file. The second is the
+starting row after the anchor. The third is the starting field that will be
+replaced, and the fourth is the ending field. The new array replaces the
+block of fields spanned by starting field and ending field.
+
+It is also possible to use the transfer_array method to 'stretch' an existing
+array in a template to add more terms.
+
+.. testcode:: Parse_Input
+
+    from numpy import array
+    
+    array_val = array([11, 22, 33, 44, 55, 66])
+
+    parser.mark_anchor("INPUT")
+    parser.transfer_array(array_val, 1, 1, 3, sep=' ')
+    
+.. testcode:: Parse_Input
+    :hide:
+    
+    for datum in parser.data:
+        print datum.rstrip()
+    
+.. testoutput:: Parse_Input
+
+    INPUT
+    11 22 33 44 55 66
+    INPUT
+    10.1 20.2 3.141592653589793
+    A B C
+
+The named argument 'sep' is used to define what separate to include between the
+additional terms of the array. Future revisions of InputFileGenerator will
+hopefully be able to detect this automatically.
 
 The input file templating capability that comes with OpenMDAO is basic but
 quite functional. If you need a more powerful templating engine, particularly
@@ -431,7 +619,7 @@ some number of fields away from an 'anchor' point.
     
 To use the FileParser object, first instantiate it and give it the name of the
 output file. (Note that this code will need to be placed in the execute
-function of your component after the external code has been run. See
+function of your component *after* the external code has been run. See
 :ref:`Running the External Code`.)
 
 .. testcode:: Parse_Output
@@ -518,7 +706,7 @@ word "DISPLACEMENT".
     
 Now, what if we want to grab the value of stress from the second load case. An
 additional argument can be passed to the `mark_anchor` method to tell it to
-stop at the 2nd instance of the text fragment "LOAD CASE".
+start at the 2nd instance of the text fragment "LOAD CASE".
 
 .. testcode:: Parse_Output
 

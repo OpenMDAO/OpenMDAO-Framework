@@ -69,13 +69,16 @@ Guide.*  These requirements are described below.
       Make sure to put the ``bin`` directory of the mingw32 install in your path.
       You can find mingw32 `here`__.
       
-      If you intend to use mingw32 as a Visual C++ replacement, you must create a file in your
-      home directory called ``pydistutils.cfg`` that contains the following lines:
+      If you intend to use mingw32 as a Visual C++ replacement, you must do two things when installing it:
+            
+      - Check the C++ compiler installation option to get g++ (required to run OpenMDAO)
       
-      ::
+      - Create a file in your home directory called ``pydistutils.cfg`` that contains the following lines:
       
-         [build_ext]
-         compiler=mingw32
+        ::
+      
+          [build_ext]
+          compiler=mingw32
 
          
          

@@ -1,6 +1,6 @@
 """
 Parses the variable definition section of a Phoenix Integration ModelCenter
-component wrapper.
+component wrapper and generates an OpenMDAO component stub.
 """
 
 from pyparsing import Suppress, Word, alphanums, dictOf, oneOf, printables, \
