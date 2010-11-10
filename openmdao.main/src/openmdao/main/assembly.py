@@ -136,14 +136,8 @@ class Assembly (Component):
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
         if srccomp is not self.parent and destcomp is not self.parent:
-            if destcomp is self:
-                dest_io = 'out'
-            else:
-                dest_io = 'in'
-            if srccomp is self:
-                src_io = 'in'
-            else:
-                src_io = 'out'
+            dest_io = 'out' if destcomp is self else 'in'
+            src_io = 'in' if srccomp is self else 'out'
             
             srctrait = srccomp.get_dyn_trait(srcvarname, src_io)
             desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
@@ -152,19 +146,6 @@ class Assembly (Component):
                 self.raise_exception(
                     'Cannot connect %s to %s. Both are on same component.' %
                                      (srcpath, destpath), RuntimeError)
-    
-            #if srccomp is not self and destcomp is not self:
-                ## it's not a passthrough, so must connect input to output
-                #if srctrait.iotype != 'out':
-                    #self.raise_exception(
-                        #'.'.join([srccomp.get_pathname(),srcvarname])+
-                        #' must be an output variable',
-                        #RuntimeError)
-                #if desttrait.iotype != 'in':
-                    #self.raise_exception(
-                        #'.'.join([destcomp.get_pathname(),destvarname])+
-                        #' must be an input variable',
-                        #RuntimeError)
     
             # test type compatability
             ttype = desttrait.trait_type
