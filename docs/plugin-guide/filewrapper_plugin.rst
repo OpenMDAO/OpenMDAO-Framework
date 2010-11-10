@@ -220,6 +220,48 @@ check it with this attribute.
 Generating the Input File - Templated File I/O
 ----------------------------------------------
 
+There are two different ways to generate an input file for an external
+application. The first way is to write the file completely from scratch
+using the new values that are contained in the component's variables. There
+is not much that can be done to aid with this task, as it requires knowlege
+of the file format and can be completed using Python's standard formatted
+output. One exception to this is the FORTRAN namelist, which is more of a
+standard output format. Some tools to help create namelist input files
+are given in the next section.
+
+The second way to generate an input file is by templating. A template file is
+a sample input file which can be processed by a templating engine to insert
+new values in the appropriate locations. Often the template file is a valid
+input file before being processed, though other times it contains directives
+or conditional logic to guide the generation. Obvously this method works well
+for cases where only a small number of the possible variables and settings are
+being exposed to manipulation by outside components.
+
+OpenMDAO includes a basic templating capability that allows a template file to
+be read, and fields to be replaced with new values.
+
+
+::
+
+    from openmdao.util.filewrap import InputFileGenerator
+
+    parser = FileParser()
+    parser.set_template_file('mytemplate.txt')
+    parser.set_generated_file('myinput.txt')
+    
+
+The input file templating capability that comes with OpenMDAO is basic but
+quite functional. If you need a more powerful templating engine, particularly
+one that allows the inclusion of logic in your template files, then it may be
+beneficial to consider one of the community-developed engines such as mako_
+or django_.
+
+.. _mako: http://www.makotemplates.org/
+
+.. _django: http://docs.djangoproject.com/en/dev/topics/templates/
+
+.. todo:: Include some examples with one of the templating engines.
+
 Generating the Input File - FORTRAN Namelists
 ---------------------------------------------
 
@@ -381,6 +423,8 @@ to locate and extract a set of characters that is some number of lines and
 some number of fields away from an 'anchor' point.
 
 ::
+
+    from openmdao.util.filewrap import FileParser
 
     parser = FileParser()
     parser.set_file('myoutput.txt')
