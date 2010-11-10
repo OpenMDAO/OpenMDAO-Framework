@@ -153,14 +153,18 @@ class Assembly (Component):
                 ttype = desttrait
             try:
                 if ttype.get_val_wrapper:
-                    desttrait.validate(destcomp, destvarname,
-                                       srccomp.get_wrapped_attr(srcvarname))
+                    srcval = srccomp.get_wrapped_attr(srcvarname)
                 else:
-                    desttrait.validate(destcomp, destvarname,
-                                       srccomp.get(srcvarname))
+                    srcval = srccomp.get(srcvarname)
+                if ttype.validate:
+                    ttype.validate(destcomp, destvarname, srcval)
+                else:
+                    pass  # no validate function on destination trait. Most likely
+                          # it's a property trait.  No way to validate without
+                          # unknown side effects.
             except TraitError, err:
                 self.raise_exception("can't connect '%s' to '%s': %s" %
-                                     (srcpath,destpath,str(err)), TraitError)
+                                     (srcpath, destpath, str(err)), TraitError)
                     
         super(Assembly, self).connect(srcpath, destpath)
         

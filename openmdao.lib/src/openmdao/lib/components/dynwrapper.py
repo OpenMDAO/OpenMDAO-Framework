@@ -37,7 +37,7 @@ class DynWrapper(Component):
     def execute(self):
         """ Perform operations associated with running the component. """
         pass
-    def build_trait(self, ref_name, iotype=None, trait=None, alias=None):
+    def build_trait(self, ref_name, iotype=None, trait=None):
         # create appropriate trait based on the name, iotype, and whatever
         # internal information that self._top can provide
         pass

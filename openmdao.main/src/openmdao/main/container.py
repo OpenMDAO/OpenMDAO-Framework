@@ -745,14 +745,13 @@ class Container(HasTraits):
         childname, _, restofpath = path.partition('.')
         if restofpath:
             obj = getattr(self, childname, Missing)
-            if obj is Missing:
+            if obj is Missing or not isinstance(obj, Container):
                 return self._get_failed(path, index)
-            if isinstance(obj, Container):
-                return obj.get(restofpath, index)
-            elif index is None:
-                return getattr(obj, restofpath)
-            else:
-                return obj._array_get(restofpath, index)
+            return obj.get(restofpath, index)
+            #elif index is None:
+                #return getattr(obj, restofpath)
+            #else:
+                #return obj._array_get(restofpath, index)
         else:
             if index is None:
                 obj = getattr(self, path, Missing)
@@ -791,30 +790,18 @@ class Container(HasTraits):
         childname, _, restofpath = path.partition('.')
         if restofpath:
             obj = getattr(self, childname, Missing)
-            if obj is Missing:
+            if obj is Missing or not isinstance(obj, Container):
                 return self._set_failed(path, value, index, src, force)
-            if isinstance(obj, (Container,TreeProxy)):
-                if src is not None:
-                    src = 'parent.'+src
-                obj.set(restofpath, value, index, src=src, 
-                        force=force)
-            elif index is None:
-                setattr(obj, restofpath, value)
-            else:
-                obj._array_set(restofpath, value, index)
+            if src is not None:
+                src = 'parent.'+src
+            obj.set(restofpath, value, index, src=src, force=force)
         else:
             trait = self.get_trait(path)
-            
-            # event traits are write-only so hasattr can't find them
-            if trait and trait.type == 'event':
-                setattr(self, path, value)
-                return
-            
             if trait:
-                if not force and trait.iotype == 'in' :
-                    self._check_source(path, src)
-                if index is None:
-                    if trait.iotype == 'in':
+                if trait.iotype == 'in': # setting an input, so have to check source
+                    if not force:
+                        self._check_source(path, src)
+                    if index is None:
                         # bypass input source checking
                         chk = self._input_check
                         self._input_check = self._input_nocheck
@@ -822,10 +809,12 @@ class Container(HasTraits):
                             setattr(self, path, value)
                         finally:
                             self._input_check = chk
-                    else:
-                        setattr(self, path, value)
-                else:
+                    else:  # array index specified
+                        self._array_set(path, value, index)
+                elif index:  # array index specified for output
                     self._array_set(path, value, index)
+                else: # output
+                    setattr(self, path, value)
             else:
                 return self._set_failed(path, value, index, src, force)
 
@@ -1057,33 +1046,39 @@ class Container(HasTraits):
         for name in self.list_containers():
             getattr(self, name).pre_delete()
             
-    def get_dyn_trait(self, pathname, io):
+    def get_dyn_trait(self, pathname, iotype=None, trait=None):
         """Returns a trait if a trait with the given pathname exists, possibly
-        creating it 'on-the-fly'. If an attribute exists with the given
-        pathname but no trait is found or can be created, or if pathname
-        references a trait in a parent scope, None will be returned. If no
-        attribute exists with the given pathname within this scope, an
+        creating it 'on-the-fly' and adding its Container. If an attribute exists
+        with the given pathname but no trait is found or can be created, or if
+        pathname references a trait in a parent scope, None will be returned.
+        If no attribute exists with the given pathname within this scope, an
         AttributeError will be raised.
         
         pathname: str
             Pathname of the desired trait.  May contain dots.
+            
+        iotype: str, optional
+            Expected iotype of the trait.
+            
+        trait: TraitType, optional
+            Trait to be used for validation
         """
-        cname, _, restofpath = pathname.partition('.')
-        if cname == 'parent':
+        if pathname.startswith('parent.'):
             return None
+        cname, _, restofpath = pathname.partition('.')
         if restofpath:
             child = getattr(self, cname)
             if isinstance(child, Container):
-                return child.get_dyn_trait(restofpath, io)
+                return child.get_dyn_trait(restofpath, iotype, trait)
             else:
                 if deep_hasattr(child, restofpath):
                     return None
         else:
             trait = self.get_trait(cname)
             if trait is not None:
-                if trait.iotype != io:
+                if trait.iotype != iotype:
                     self.raise_exception('%s must be an %s variable' % 
-                                         (pathname, _iodict[io]),
+                                         (pathname, _iodict[iotype]),
                                          RuntimeError)
                 return trait
             elif trait is None and self.contains(cname):
@@ -1091,28 +1086,6 @@ class Container(HasTraits):
             
         self.raise_exception("Cannot locate variable named '%s'" %
                              pathname, AttributeError)
-
-    #def create_alias(self, path, alias, iotype=None, trait=None):
-        #"""Create a trait that maps to some internal attribute. 
-        #If a trait is supplied as an argument, use that trait as
-        #a validator for the alias trait. The resulting trait will have the
-        #dotted path as its name (or alias if specified) and will be added to 
-        #self.  An exception will be raised if the trait already exists.
-        #"""
-        #if '.' in alias:
-            #self.raise_exception("Can't create alias '%s' because it's a dotted pathname"%
-                                 #alias, NameError)
-        #newtrait = self.get_trait(alias)
-        #if newtrait is not None:
-            #self.raise_exception(
-                #"Can't create alias '%s' because it already exists." % alias,
-                #RuntimeError)
-        
-        #if not self.contains(path):
-            #self.raise_exception("Can't create alias of '%s' because it wasn't found" %
-                                 #path, AttributeError)
-            
-        #self.add_trait(alias, Alias(path, iotype=iotype, trait=trait))
 
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""

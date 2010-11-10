@@ -81,7 +81,7 @@ class IContainer(Interface):
         destination variable.
         """
         
-    def get_dyn_trait(self, pathname):
+    def get_dyn_trait(self, pathname, iotype=None, trait=None):
         """Returns a trait if a trait with the given pathname exists, possibly
         creating the trait 'on-the-fly'. If an attribute exists with the given
         pathname but no trait is found or can be created, or if pathname
@@ -90,7 +90,13 @@ class IContainer(Interface):
         AttributeError will be raised.
         
         pathname: str
-            pathname of the desired trait
+            Pathname of the desired trait.  May contain dots.
+            
+        iotype: str, optional
+            Expected iotype of the trait.
+            
+        trait: TraitType, optional
+            Trait to be used for validation
         """
 
     def get(self, path, index=None):
