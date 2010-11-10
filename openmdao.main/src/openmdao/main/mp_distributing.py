@@ -178,7 +178,13 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
         del self.shutdown
 
     def _start_hosts(self, address, credentials):
-        """ Start host managers. """
+        """
+        Start host managers. Sequence for each host is:
+        1. Check connectivity via simple 'ssh' call.
+        2. Send startup files.
+        3. Invoke remote Python process. (state 'started')
+        4. Receive remote connection information. (state 'up')
+        """
         # Start first set of hosts.
         todo = []
         max_workers = 5  # Somewhat related to listener backlog.
@@ -199,7 +205,7 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                 _LOGGER.error(trace)
                 raise exc
 
-            _LOGGER.debug('Host %s state %s', host.hostname, host.state)
+            _LOGGER.debug('Host %r state %s', host.hostname, host.state)
             try:
                 next_host = todo.pop(0)
             except IndexError:
@@ -300,14 +306,16 @@ class Host(object):  #pragma no cover
                                      stderr=subprocess.PIPE)
         data = dict(
             name='BoostrappingHost', index=index,
-            dist_log_level=_LOGGER.getEffectiveLevel(),
+            # Avoid lots of SUBDEBUG messages.
+            dist_log_level=max(_LOGGER.getEffectiveLevel(), logging.DEBUG),
             dir=self.tempdir, authkey=str(authkey), parent_address=address,
-            registry=self.registry
+            registry=self.registry,
+            keep_dirs=os.environ.get('OPENMDAO_KEEPDIRS', '0')
             )
         cPickle.dump(data, self.proc.stdin, cPickle.HIGHEST_PROTOCOL)
         self.proc.stdin.close()
 # TODO: put timeout in accept() to avoid this hack.
-        time.sleep(1)  # Give the proc time to register startup problems.
+        time.sleep(0.5)  # Give the proc time to register startup problems.
         self.poll()
         if self.state != 'failed':
             self.state = 'started'
@@ -317,7 +325,7 @@ class Host(object):  #pragma no cover
         if self.proc is not None and self.state != 'failed':
             self.proc.poll()
             if self.proc.returncode is not None:
-                _LOGGER.error('Host %s in dir %s exited, returncode %s',
+                _LOGGER.error('Host %r in dir %s exited, returncode %s',
                               self.hostname, self.tempdir, self.proc.returncode)
                 for line in self.proc.stdout:
                     _LOGGER.error('>    %s', line.rstrip())
@@ -340,7 +348,7 @@ def _check_ssh(hostname):  #pragma no cover
         elif proc.returncode == 0:
             return
         else:
-            msg = "ssh to '%s' failed, returncode %s" \
+            msg = "ssh to %r failed, returncode %s" \
                   % (hostname, proc.returncode)
             _LOGGER.error(msg)
             for line in proc.stdout:
@@ -353,7 +361,7 @@ def _check_ssh(hostname):  #pragma no cover
         proc.poll()
         if proc.returncode is None:
             time.sleep(1)
-        msg = "ssh to '%s' timed-out, returncode %s" \
+        msg = "ssh to %r timed-out, returncode %s" \
               % (hostname, proc.returncode)
         _LOGGER.error(msg)
         for line in proc.stdout:
@@ -361,7 +369,7 @@ def _check_ssh(hostname):  #pragma no cover
         raise RuntimeError(msg)
 
     # Total zombie...
-    msg = "ssh to '%s' is a zombie, PID %s" % (hostname, proc.pid)
+    msg = "ssh to %r is a zombie, PID %s" % (hostname, proc.pid)
     _LOGGER.error(msg)
     for line in proc.stdout:
         _LOGGER.error('   >%s', line.rstrip())
@@ -377,7 +385,7 @@ print tempdir"'''
 
 # Requires ssh configuration.
 def _copy_to_remote(hostname, files, python):  #pragma no cover
-    """ Copy files to remote directory, returning name of directory. """
+    """ Copy files to remote directory, returning directory path. """
     cmd = copy.copy(_SSH)
     cmd.extend([hostname, python, '-c', _UNZIP_CODE.replace("\n", ';')])
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
@@ -410,7 +418,10 @@ def main():  #pragma no cover
     data = cPickle.load(sys.stdin)
     sys.stdin.close()
     print '%s data received' % ident
-    print '%s using %s authentication' % (ident, keytype(data['authkey']))
+    authkey = data['authkey']
+    print '%s using %s authentication' % (ident, keytype(authkey))
+    log_level = data['dist_log_level']
+    os.environ['OPENMDAO_KEEPDIRS'] = data['keep_dirs']
 
     exc = None
     try:
@@ -425,23 +436,23 @@ def main():  #pragma no cover
             register(cls, HostManager)
 
         # Set some stuff.
-        print '%s preparing to fork, log level %d' \
-              % (ident, data['dist_log_level'])
-        util.get_logger().setLevel(data['dist_log_level'])
+        print '%s preparing to fork, log level %d' % (ident, log_level)
+        util.get_logger().setLevel(log_level)
         forking.prepare(data)
 
         # Create Server for a `HostManager` object.
         set_credentials(Credentials())
         name = '%d[%d]' % (data['index'], pid)
+        logging.getLogger(name).setLevel(log_level)
         server = OpenMDAO_Server(HostManager._registry, (hostname, 0),
-                                 data['authkey'], 'pickle', name)
+                                 authkey, 'pickle', name)
         current_process()._server = server
     except Exception as exc:
         print '%s caught exception: %s' % (ident, exc)
 
     # Report server address and public key back to parent.
     print '%s connecting to parent at %s' % (ident, data['parent_address'])
-    conn = connection.Client(data['parent_address'], authkey=data['authkey'])
+    conn = connection.Client(data['parent_address'], authkey=authkey)
     if exc:
         conn.send((data['index'], None, str(exc)))
     else:
@@ -450,12 +461,14 @@ def main():  #pragma no cover
 
     # Set name etc.
     current_process()._name = 'Host-%s:%s' % server.address
+    current_process().authkey = authkey
+    logging.getLogger(current_process()._name).setLevel(log_level)
     util._run_after_forkers()
 
     # Register a cleanup function.
     def cleanup(directory):
         keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
-        if not keep_dirs and os.path.exists(root_dir):
+        if not keep_dirs and os.path.exists(directory):
             print '%s removing directory %s' % (ident, directory)
             shutil.rmtree(directory)
         print '%s shutting down host manager' % ident

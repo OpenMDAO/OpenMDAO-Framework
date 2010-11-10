@@ -66,7 +66,9 @@ class TestCase(unittest.TestCase):
             os.chdir('..')
             if sys.platform == 'win32':
                 time.sleep(2)  # Wait for process shutdown.
-            shutil.rmtree(testdir)
+            keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
+            if not keep_dirs:
+                shutil.rmtree(testdir)
 
     def test_server(self):
         logging.debug('')

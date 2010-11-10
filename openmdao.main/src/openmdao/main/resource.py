@@ -43,7 +43,8 @@ class ResourceAllocationManager(object):
         self._logger = logging.getLogger('RAM')
         self._allocations = 0
         self._allocators = []
-        self._allocators.append(LocalAllocator('LocalHost'))
+        self._allocators.append(LocalAllocator('LocalHost',
+                                               authkey='PublicKey'))
         self._deployed_servers = {}
 
     @staticmethod
@@ -159,10 +160,11 @@ class ResourceAllocationManager(object):
                         'pid':  server.pid,
                         'host': server.host
                     }
-                    self._logger.debug('allocated %s pid %d on %s',
-                                       name, server_info['pid'],
-                                       server_info['host'])
-                    self._deployed_servers[name] = (best_allocator, server, server_info)
+                    self._logger.info('allocated %r pid %d on %s',
+                                      name, server_info['pid'],
+                                      server_info['host'])
+                    self._deployed_servers[id(server)] = \
+                        (best_allocator, server, server_info)
                     return (server, server_info)
                 # Difficult to generate deployable request that won't deploy...
                 else:  #pragma no cover
@@ -245,22 +247,22 @@ class ResourceAllocationManager(object):
 
     def _release(self, server):
         """ Release a server (proxy). """
-        name = server.name
         try:
-            allocator = self._deployed_servers[name][0]
+            allocator, server, server_info = self._deployed_servers[id(server)]
         # Just being defensive.
         except KeyError:  #pragma no cover
-            self._logger.error('server %r not found', name)
+            self._logger.error('server %r not found', server)
             return
 
-        self._logger.debug('release %s', server)
+        self._logger.info('release %r pid %d on %s', server_info['name'],
+                          server_info['pid'], server_info['host'])
         try:
             allocator.release(server)
         # Just being defensive.
         except Exception as exc:  #pragma no cover
-            self._logger.error("Can't release %s: %s", server, exc)
+            self._logger.error("Can't release %r: %s", server_info['name'], exc)
         server._close.cancel()
-        del self._deployed_servers[name]
+        del self._deployed_servers[id(server)]
 
 
 class ResourceAllocator(ObjServerFactory):
@@ -269,7 +271,12 @@ class ResourceAllocator(ObjServerFactory):
     resource and can deploy on that resource.
     """
 
-    def __init__(self, name, authkey='PublicKey'):
+    def __init__(self, name, authkey=None):
+        if authkey is None:
+            authkey = multiprocessing.current_process().authkey
+            if authkey is None:
+                authkey = 'PublicKey'
+                multiprocessing.current_process().authkey = authkey
         super(ResourceAllocator, self).__init__(name, authkey)
         self.name = name
 
@@ -371,7 +378,7 @@ class LocalAllocator(ResourceAllocator):
     """
 
     def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0,
-                 authkey='PublicKey'):
+                 authkey=None):
         super(LocalAllocator, self).__init__(name, authkey)
         self._name = name  # To allow looking like a proxy.
         self.pid = os.getpid()  # We may be a process on a remote host.
@@ -548,7 +555,13 @@ class ClusterAllocator(object):  #pragma no cover
     by load average is reasonable.
     """
 
-    def __init__(self, name, machines, authkey='PublicKey'):
+    def __init__(self, name, machines, authkey=None):
+        if authkey is None:
+            authkey = multiprocessing.current_process().authkey
+            if authkey is None:
+                authkey = 'PublicKey'
+                multiprocessing.current_process().authkey = authkey
+
         self.name = name   # Duplication to look like both a server and proxy.
         self._name = name
         self._lock = threading.Lock()
@@ -576,21 +589,18 @@ class ClusterAllocator(object):  #pragma no cover
             except AttributeError:
                 host = 'localhost'
                 host_ip = '127.0.0.1'
-                host_id = host_ip
             else:
                 # 'host' is 'Host-<ipaddr>:<port>
                 dash = host.index('-')
                 colon = host.index(':')
                 host_ip = host[dash+1:colon]
-                host_id = host[dash+1:]
 
             if host_ip not in self._allocators:
                 allocator = manager.openmdao_main_resource_LocalAllocator(host)
                 allocator._name = allocator.name
                 self._allocators[host_ip] = allocator
-                self._logger.debug('%s allocator %r ident %s pid %s',
-                                   slot.host.hostname, allocator._name,
-                                   allocator._id, allocator.pid)
+                self._logger.debug('%s allocator %r pid %s', slot.host.hostname,
+                                   allocator._name, allocator.pid)
 
     def __getitem__(self, i):
         return self._allocators[i]
@@ -864,7 +874,7 @@ class ClusterAllocator(object):  #pragma no cover
             self._logger.error('%r deployment failed for %s',
                                allocator._name, name)
         else:
-            self._deployed_servers[name] = (allocator, server)
+            self._deployed_servers[id(server)] = (allocator, server)
         return server
 
     def release(self, server):
@@ -874,19 +884,18 @@ class ClusterAllocator(object):  #pragma no cover
         server: :class:`OpenMDAO_Proxy`
             Server to be released.
         """
-        name = server.name
         try:
-            allocator = self._deployed_servers[name][0]
+            allocator = self._deployed_servers[id(server)][0]
         except KeyError:
-            self._logger.error('server %r not found', name)
+            self._logger.error('server %r not found', server)
             return
 
         try:
             allocator.release(server)
         except Exception as exc:
-            self._logger.error("Can't release %s: %s", server, exc)
+            self._logger.error("Can't release %r: %s", server, exc)
         server._close.cancel()
-        del self._deployed_servers[name]
+        del self._deployed_servers[id(server)]
 
     def shutdown(self):
         """ Shutdown, releasing resources. """

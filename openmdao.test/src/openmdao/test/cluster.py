@@ -23,7 +23,7 @@ def init_cluster(encrypted=True, clean_dir=True):
     adds a cluster using encrypted or unencrypted communication.
     Returns the name of the configured cluster.
     """
-    authkey = 'PublicKey' if encrypted else 'in-the-clear'
+    authkey = 'PublicKey' if encrypted else 'AuthKey'
     allocators = ResourceAllocationManager.list_allocators()
 
     if len(allocators) == 1:

@@ -451,6 +451,61 @@ class OpenMDAO_Server(Server):
         else:
             return ''
 
+    def handle_request(self, c):
+        """
+        Handle a new connection.
+        This version avoids getting upset if it can't deliver a challenge.
+        This is to deal with immediately closed connections caused by
+        :meth:`manager_is_alive` which are used to avoid getting hung trying
+        to connect to a manager which is no longer there.
+        """
+        funcname = result = request = None
+
+        try:
+            connection.deliver_challenge(c, self.authkey)
+        except (EOFError, IOError):
+            c.close()
+            return
+        except Exception:
+            msg = ('#TRACEBACK', traceback.format_exc())
+            try:
+                c.send(msg)
+            except Exception, e:
+                pass
+            util.info('Failure to send message: %r', msg)
+            util.info(' ... request was %r', request)
+            util.info(' ... exception was %r', e)
+            c.close()
+            return
+
+        try:
+            connection.answer_challenge(c, self.authkey)
+            request = c.recv()
+            ignore, funcname, args, kwds = request
+            assert funcname in self.public, '%r unrecognized' % funcname
+            func = getattr(self, funcname)
+        except Exception:
+            msg = ('#TRACEBACK', traceback.format_exc())
+        else:
+            try:
+                result = func(c, *args, **kwds)
+            except Exception:
+                msg = ('#TRACEBACK', traceback.format_exc())
+            else:
+                msg = ('#RETURN', result)
+        try:
+            c.send(msg)
+        except Exception, e:
+            try:
+                c.send(('#TRACEBACK', traceback.format_exc()))
+            except Exception:
+                pass
+            util.info('Failure to send message: %r', msg)
+            util.info(' ... request was %r', request)
+            util.info(' ... exception was %r', e)
+
+        c.close()
+
     def serve_client(self, conn):
         """
         Handle requests from the proxies in a particular process/thread.
@@ -561,7 +616,15 @@ class OpenMDAO_Server(Server):
                     self._logger.debug('Invoke %s %s %s', methodname, role,
                                        get_credentials())
                 try:
-                    res = function(*args, **kwds)
+                    try:
+                        res = function(*args, **kwds)
+                    except AttributeError as exc:
+                        if isinstance(obj, BaseProxy) and \
+                           methodname == '__getattribute__':
+                            # Avoid an extra round-trip.
+                            res = obj.__getattr__(*args, **kwds)
+                        else:
+                            raise
                 except Exception as exc:
                     self._logger.error('%s %s %s: %s', methodname, role,
                                        get_credentials(), exc)
@@ -580,12 +643,9 @@ class OpenMDAO_Server(Server):
 
                     # Proxy pass-through only happens remotely.
                     if isinstance(res, BaseProxy):  #pragma no cover
-                        res._incref(finalize=False)
-                        if self._address_type == 'AF_INET' or \
-                           connection.address_type(res._token.address) == 'AF_INET':
+                        if self._address_type == 'AF_INET':
                             # Create proxy for proxy.
                             # (res may be unreachable by our client)
-#                            self.incref(res._id)
                             typeid = res._token.typeid
                             proxyid = _make_typeid(res)
                             self._logger.debug('Creating proxy for proxy %s',
@@ -595,6 +655,7 @@ class OpenMDAO_Server(Server):
                                     (None, None, None, _auto_proxy)
                         else:
                             # Propagate the proxy info.
+                            res._close.cancel()  # Don't decref when reaped.
                             msg = ('#PROXY', (res._exposed_, res._token))
                     elif access_controller is not None:
                         if methodname in _SPECIALS:
@@ -871,7 +932,7 @@ class OpenMDAO_Manager(BaseManager):
                 raise RuntimeError('Server process %d exited: %s'
                                    % (pid, self._process.exitcode))
         else:
-#            self._process.terminate()
+            self._process.terminate()
             raise RuntimeError('Server process %d startup timed-out' % pid)
         reply = reader.recv()
         if isinstance(reply, Exception):
@@ -898,10 +959,6 @@ class OpenMDAO_Manager(BaseManager):
         """
         Create a server, report its address and public key, and run it.
         """
-#        out = open('run_server.%d' % os.getpid(), 'w')
-#        out.write('run_server %s %s %s %s %s\n' \
-#                  % (address, keytype(authkey), name, credentials, cwd))
-#        out.flush()
         try:
             if sys.platform == 'win32':
                 set_credentials(credentials)
@@ -915,8 +972,6 @@ class OpenMDAO_Manager(BaseManager):
             # If specified, move to new directory.
             if cwd is not None:
                 os.chdir(cwd)
-#                out.write('past chdir\n')
-#                out.flush()
 
                 # Reset stdout & stderr.
                 for handler in logging._handlerList:
@@ -925,8 +980,6 @@ class OpenMDAO_Manager(BaseManager):
                 sys.stderr.flush()
                 sys.stdout = open('stdout', 'w')
                 sys.stderr = open('stderr', 'w')
-#                out.write('past redirect\n')
-#                out.flush()
 
                 # Reset logging.
                 logging.root.handlers = []
@@ -934,36 +987,22 @@ class OpenMDAO_Manager(BaseManager):
                     datefmt='%b %d %H:%M:%S',
                     format='%(asctime)s %(levelname)s %(name)s: %(message)s',
                     filename='openmdao_log.txt', filemode='w')
-#                out.write('past logging\n')
-#                out.flush()
 
             # Create server.
-#            out.write('before create\n')
-#            out.flush()
             server = cls._Server(registry, address, authkey, serializer, name)
-#            out.write('after create\n')
-#            out.flush()
         except Exception as exc:
-#            out.write('exception %s\n' % exc)
-#            out.flush()
             writer.send(exc)
             return
         else:
             # Inform parent process of the server's address.
-#            out.write('send address\n')
-#            out.flush()
             writer.send(server.address)
             if authkey == 'PublicKey':
-#                out.write('send key\n')
-#                out.flush()
                 writer.send(server.public_key)
         finally:
             writer.close()
 
         # Run the manager.
         util.info('manager serving at %r', server.address)
-#        out.write('serve_forever\n')
-#        out.flush()
         server.serve_forever()
 
     @staticmethod
@@ -1034,8 +1073,10 @@ class ObjectManager(object):
                                          authkey=authkey, name=name)
         self._server = self._manager.get_server()
         self._exposed = _public_methods(obj)
-        self._server.id_to_obj[self._ident] = (obj, self._exposed, None)
-        self._server.id_to_refcount[self._ident] = 1
+
+        with self._server.mutex:
+            self._server.id_to_obj[self._ident] = (obj, self._exposed, None)
+            self._server.id_to_refcount[self._ident] = 1
 
         self._server_thread = threading.Thread(target=self._run_server)
         self._server_thread.daemon = True
@@ -1053,6 +1094,7 @@ class ObjectManager(object):
             self._proxy = _auto_proxy(token, self._manager._serializer,
                                       exposed=self._exposed, authkey=authkey,
                                       pubkey=pubkey)
+            self._server.incref(None, self._ident)
         return self._proxy
 
     def _run_server(self):
@@ -1193,30 +1235,30 @@ class OpenMDAO_Proxy(BaseProxy):
             return proxy
         raise convert_to_error(kind, result)
 
-    def _incref(self, finalize=True):
+    def _incref(self):
         """
         This version avoids a hang in _Client if the server no longer exists.
         """
         if not OpenMDAO_Proxy.manager_is_alive(self._token.address):
-            raise RuntimeError('Cannot connect to manager')
+            raise RuntimeError('Cannot connect to manager at %r' 
+                               % (self._token.address))
 
         conn = self._Client(self._token.address, authkey=self._authkey)
         dispatch(conn, None, 'incref', (self._id,))
 # Enable this with care. While testing CaseIteratorDriver it can cause a
-# deadlock in logging.
+# deadlock in logging (called via BaseProxy._after_fork()).
 #        util.debug('INCREF %r', self._token.id)
 
         self._idset.add(self._id)
 
         state = self._manager and self._manager._state
 
-        if finalize:
-            self._close = util.Finalize(
-                self, OpenMDAO_Proxy._decref,
-                args=(self._token, self._authkey, state,
-                      self._tls, self._idset, self._Client),
-                exitpriority=10
-                )
+        self._close = util.Finalize(
+            self, OpenMDAO_Proxy._decref,
+            args=(self._token, self._authkey, state,
+                  self._tls, self._idset, self._Client),
+            exitpriority=10
+            )
 
     @staticmethod
     def _decref(token, authkey, state, tls, idset, _Client):

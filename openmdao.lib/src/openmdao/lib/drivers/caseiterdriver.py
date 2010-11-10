@@ -289,7 +289,8 @@ class CaseIterDriverBase(Driver):
             except Queue.Empty:  #pragma no cover
                 pass
             else:
-                del self._queues[name]
+                if name in self._queues:  # 'Stale' worker can reply *late*.
+                    del self._queues[name]
         # Hard to force worker to hang, which is handled here.
         for name in self._queues.keys():  #pragma no cover
             self._logger.warning('Timeout waiting for %r to shut-down.', name)

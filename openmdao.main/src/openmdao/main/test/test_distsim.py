@@ -289,8 +289,10 @@ class TestCase(unittest.TestCase):
             logging.debug('terminating server pid %s', self.server.pid)
             self.server.terminate(timeout=10)
             self.server = None
-        for path in glob.glob('Factory_*'):
-            shutil.rmtree(path)
+        keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
+        if not keep_dirs:
+            for path in glob.glob('Factory_*'):
+                shutil.rmtree(path)
 
     def test_1_client(self):
         logging.debug('')
