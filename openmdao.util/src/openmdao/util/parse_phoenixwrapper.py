@@ -278,6 +278,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
 
     # Create all missing containers
     constructs = {}
+    constructs[""] = ""
     for group in sorted(groups):
         
         constructs[group] = ""
