@@ -705,6 +705,10 @@ class Container(HasTraits):
             #self.raise_exception("invoke: no path given",
                                  #RuntimeError)
     
+    def _get_metadata_failed(self, traitpath, metaname):
+        self.raise_exception("Couldn't find metadata for trait %s" % traitpath,
+                             AttributeError)
+
     def get_metadata(self, traitpath, metaname=None):
         """Retrieve the metadata associated with the trait found using
         traitpath.  If metaname is None, return the entire metadata dictionary
@@ -715,15 +719,13 @@ class Container(HasTraits):
         childname, _, restofpath = traitpath.partition('.')
         if restofpath:
             obj = getattr(self, childname, Missing)
-            if obj is Missing:
-                self.raise_exception("object has no attribute '%s'" % childname, 
-                                     AttributeError)
+            if obj is Missing or not isinstance(obj, Container):
+                return self._get_metadata_failed(traitpath, metaname)
             return obj.get_metadata(restofpath, metaname)
             
         t = self.get_trait(traitpath)
         if not t:
-            self.raise_exception("Couldn't find trait %s" % traitpath,
-                                 AttributeError)
+            return self._get_metadata_failed(traitpath, metaname)
         if metaname is None:
             return t.trait_type._metadata.copy()
         else:
@@ -1229,10 +1231,8 @@ def create_io_traits(cont, obj_info, iotype='in'):
     create_io_traits(obj, ('foo', 'foo_alias', 'in', some_trait))
     create_io_traits(obj, [('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
     
-    The newly created traits are returned in a dict.
+    The newly created traits are added to the specified Container.
     """
-    iotraits = {}
-    
     if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
         lst = [obj_info]
     else:
@@ -1256,6 +1256,4 @@ def create_io_traits(cont, obj_info, iotype='in'):
         else:
             cont.raise_exception('create_io_traits cannot add trait %s' % entry,
                                  TraitError)
-        iotraits[name] = cont.build_trait(ref_name, iostat, trait)
-
-    return iotraits
+        cont.add_trait(name, cont.build_trait(ref_name, iostat, trait))

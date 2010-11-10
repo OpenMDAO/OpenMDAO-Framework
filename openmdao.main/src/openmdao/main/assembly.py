@@ -84,21 +84,29 @@ class Assembly (Component):
         if newname in self.__dict__:
             self.raise_exception("'%s' already exists" %
                                  newname, TraitError)
-        trait, val = find_trait_and_value(self, pathname)
-        if not trait:
-            self.raise_exception("the variable named '%s' can't be found" %
-                                 pathname, TraitError)
-        iotype = trait.iotype
-        # the trait.trait_type stuff below is for the case where the trait is actually
-        # a ctrait (very common). In that case, trait_type is the actual underlying
-        # trait object
-        if (getattr(trait,'get') or getattr(trait,'set') or
-            getattr(trait.trait_type, 'get') or getattr(trait.trait_type,'set')):
-            trait = None  # not sure how to validate using a property
-                          # trait without setting it, so just don't use it
+        parts = pathname.split('.', 1)
+        if len(parts) < 2:
+            self.raise_exception('destination of passthrough must be a dotted path',
+                                 NameError)
+        comp = getattr(self, parts[0])
+        trait = comp.get_trait(parts[1])
+        if trait:
+            iotype = trait.iotype
+            ttype = trait.trait_type
+            if ttype is None:
+                ttype = trait
+            
+            if not trait.validate:
+                trait = None  # no validate function, so just don't use trait for validation
+        else:
+            if not self.contains(pathname):
+                self.raise_exception("the variable named '%s' can't be found" %
+                                     pathname, TraitError)
+            iotype = self.get_metadata(pathname, 'iotype')
+            
         newtrait = PassthroughTrait(iotype=iotype, validation_trait=trait)
         self.add_trait(newname, newtrait)
-        setattr(self, newname, val)
+        setattr(self, newname, self.get(pathname))
 
         if iotype == 'in':
             self.connect(newname, pathname)
@@ -289,7 +297,9 @@ class Assembly (Component):
                     if destcomp is self:
                         setattr(destcomp, dest, srcval)
                     else:
-                        destcomp.set(dest, srcval, src='parent.'+srcname)
+                        #destcomp.set(dest, srcval, src='parent.'+srcname)
+                        # don't need to do source checking here unless we've messed up our bookkeeping
+                        destcomp.set(dest, srcval, force=True)
                 except Exception, exc:
                     if compname[0] == '@':
                         dname = dest
