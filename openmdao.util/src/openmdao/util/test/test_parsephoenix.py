@@ -4,8 +4,6 @@ Testing the ParsePhoenixWrapper utility.
 
 import unittest, os
 
-from numpy import array, isnan
-
 from openmdao.util.parse_phoenixwrapper import parse_phoenixwrapper
 
 
