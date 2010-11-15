@@ -296,9 +296,10 @@ class Component (Container):
         
         # make our output Variables valid again
         valids = self._valid_dict
-        invalid_outs = self.list_outputs(valid=False)
-        for name in invalid_outs:
+        for name in self.list_outputs(valid=False):
             valids[name] = True
+        #for name in self.list_inputs(valid=False):
+            #valids[name] = True
         self._call_execute = False
         
     def run (self, force=False):
