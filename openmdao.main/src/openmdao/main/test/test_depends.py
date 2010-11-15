@@ -33,12 +33,10 @@ class Simple(Component):
         self.b = 2
         self.c = 3
         self.d = -1
-        self.run_count = 0
 
     def execute(self):
         global exec_order
         exec_order.append(self.name)
-        self.run_count += 1
         self.c = self.a + self.b
         self.d = self.a - self.b
 
@@ -116,11 +114,11 @@ class DependsTestCase(unittest.TestCase):
         top.add('comp1', Simple())
         top.driver.workflow.add(top.comp1)
         vars = ['a','b','c','d']
-        self.assertEqual(top.comp1.run_count, 0)
+        self.assertEqual(top.comp1.exec_count, 0)
         valids = top.comp1.get_valid(vars)
         self.assertEqual(valids, [True, True, False, False])
         top.run()
-        self.assertEqual(top.comp1.run_count, 1)
+        self.assertEqual(top.comp1.exec_count, 1)
         self.assertEqual(top.comp1.c, 3)
         self.assertEqual(top.comp1.d, -1)
         valids = top.comp1.get_valid(vars)
@@ -129,11 +127,11 @@ class DependsTestCase(unittest.TestCase):
         valids = top.comp1.get_valid(vars)
         self.assertEqual(valids, [True, True, False, False])
         top.run()
-        self.assertEqual(top.comp1.run_count, 2)
+        self.assertEqual(top.comp1.exec_count, 2)
         self.assertEqual(top.comp1.c, 7)
         self.assertEqual(top.comp1.d, 3)
         top.run()
-        self.assertEqual(top.comp1.run_count, 2) # run_count shouldn't change
+        self.assertEqual(top.comp1.exec_count, 2) # exec_count shouldn't change
         valids = top.comp1.get_valid(vars)
         self.assertEqual(valids, [True, True, True, True])
         
@@ -141,14 +139,14 @@ class DependsTestCase(unittest.TestCase):
         top.add('comp2', Simple())
         top.driver.workflow.add(top.comp2)
         top.connect('comp1.c', 'comp2.a')
-        self.assertEqual(top.comp2.run_count, 0)
+        self.assertEqual(top.comp2.exec_count, 0)
         self.assertEqual(top.comp2.c, 3)
         self.assertEqual(top.comp2.d, -1)
         valids = top.comp2.get_valid(vars)
         self.assertEqual(valids, [False, True, False, False])
         top.run()
-        self.assertEqual(top.comp1.run_count, 2)
-        self.assertEqual(top.comp2.run_count, 1)
+        self.assertEqual(top.comp1.exec_count, 2)
+        self.assertEqual(top.comp2.exec_count, 1)
         self.assertEqual(top.comp2.c, 9)
         self.assertEqual(top.comp2.d, 5)
         valids = top.comp2.get_valid(vars)
@@ -169,32 +167,32 @@ class DependsTestCase(unittest.TestCase):
         
     def test_lazy1(self):
         self.top.run()
-        run_counts = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_counts)
+        exec_counts = [self.top.get(x).exec_count for x in allcomps]
+        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], exec_counts)
         outs = [(5,-3),(3,-1),(5,1),(7,3),(4,6),(5,1),(3,-1),(8,6)]
         newouts = []
         for comp in allcomps:
             newouts.append((self.top.get(comp+'.c'),self.top.get(comp+'.d')))
         self.assertEqual(outs, newouts)
         self.top.run()  
-        # run_count should stay at 1 for all comps
+        # exec_count should stay at 1 for all comps
         self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], 
-                         [self.top.get(x).run_count for x in allcomps])
+                         [self.top.get(x).exec_count for x in allcomps])
         
     def test_lazy2(self):
         vars = ['a','b','c','d']
         self.top.run()        
-        run_count = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_count)
+        exec_count = [self.top.get(x).exec_count for x in allcomps]
+        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], exec_count)
         valids = self.top.sub.comp6.get_valid(vars)
         self.assertEqual(valids, [True, True, True, True])
         self.top.sub.b6 = 3
         valids = self.top.sub.comp6.get_valid(vars)
         self.assertEqual(valids, [True, False, False, False])
         self.top.run()  
-        # run_count should change only for comp6
-        run_count = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([1, 1, 1, 1, 1, 2, 1, 1], run_count)
+        # exec_count should change only for comp6
+        exec_count = [self.top.get(x).exec_count for x in allcomps]
+        self.assertEqual([1, 1, 1, 1, 1, 2, 1, 1], exec_count)
         outs = [(5,-3),(3,-1),(5,1),(7,3),(4,6),(6,0),(3,-1),(8,6)]
         for comp,vals in zip(allcomps,outs):
             self.assertEqual((comp,vals[0],vals[1]), 
@@ -203,8 +201,8 @@ class DependsTestCase(unittest.TestCase):
     def test_lazy3(self):
         vars = ['a','b','c','d']
         self.top.run()        
-        run_count = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_count)
+        exec_count = [self.top.get(x).exec_count for x in allcomps]
+        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], exec_count)
         valids = self.top.sub.comp3.get_valid(vars)
         self.assertEqual(valids, [True, True, True, True])
         self.top.comp7.a = 3
@@ -225,9 +223,9 @@ class DependsTestCase(unittest.TestCase):
         valids = self.top.comp8.get_valid(vars)
         self.assertEqual(valids, [False, False, False, False])
         self.top.run()  
-        # run_count should change for all sub comps but comp2
-        run_count = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([2, 1, 2, 2, 2, 2, 2, 2], run_count)
+        # exec_count should change for all sub comps but comp2
+        exec_count = [self.top.get(x).exec_count for x in allcomps]
+        self.assertEqual([2, 1, 2, 2, 2, 2, 2, 2], exec_count)
         outs = [(7,-5),(3,-1),(7,3),(9,5),(6,8),(7,3),(5,1),(12,6)]
         for comp,vals in zip(allcomps,outs):
             self.assertEqual((comp,vals[0],vals[1]), 
@@ -250,9 +248,9 @@ class DependsTestCase(unittest.TestCase):
                           False,False,
                           False,False])
         self.top.run()
-        # run_count should change for all sub comps but comp3 and comp7 
+        # exec_count should change for all sub comps but comp3 and comp7 
         self.assertEqual([2, 2, 1, 2, 2, 2, 1, 2], 
-                         [self.top.get(x).run_count for x in allcomps])
+                         [self.top.get(x).exec_count for x in allcomps])
         outs = [(2,0),(6,-4),(5,1),(4,0),(1,9),(2,-2),(3,-1),(5,3)]
         for comp,vals in zip(allcomps,outs):
             self.assertEqual((comp,vals[0],vals[1]), 
@@ -264,8 +262,8 @@ class DependsTestCase(unittest.TestCase):
         # now run sub.comp1 directly to make sure it will force
         # running of all components that supply its inputs
         self.top.sub.comp1.run()
-        run_count = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([2, 1, 2, 1, 2, 1, 2, 1], run_count)
+        exec_count = [self.top.get(x).exec_count for x in allcomps]
+        self.assertEqual([2, 1, 2, 1, 2, 1, 2, 1], exec_count)
         outs = [(7,-5),(3,-1),(7,3),(7,3),(6,8),(5,1),(5,-3),(8,6)]
         for comp,vals in zip(allcomps,outs):
             self.assertEqual((comp,vals[0],vals[1]), 
@@ -273,8 +271,8 @@ class DependsTestCase(unittest.TestCase):
             
         # now run comp8 directly, which should force sub.comp4 to run
         self.top.comp8.run()
-        run_count = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([2, 1, 2, 2, 2, 1, 2, 2], run_count)
+        exec_count = [self.top.get(x).exec_count for x in allcomps]
+        self.assertEqual([2, 1, 2, 2, 2, 1, 2, 2], exec_count)
         outs = [(7,-5),(3,-1),(7,3),(9,5),(6,8),(5,1),(5,-3),(12,6)]
         for comp,vals in zip(allcomps,outs):
             self.assertEqual((comp,vals[0],vals[1]), 

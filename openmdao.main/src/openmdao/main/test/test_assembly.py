@@ -18,10 +18,8 @@ class Multiplier(Component):
         self.rval_in = 4.
         self.rval_out = 7.
         self.mult = 1.5
-        self.run_count = 0
 
     def execute(self):
-        self.run_count += 1
         self.rval_out = self.rval_in * self.mult
         
 class Simple(Component):
@@ -37,10 +35,8 @@ class Simple(Component):
         self.b = 5.
         self.c = 7.
         self.d = 1.5
-        self.run_count = 0
 
     def execute(self):
-        self.run_count += 1
         self.c = self.a + self.b
         self.d = self.a - self.b
 
@@ -116,8 +112,8 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(top.get('comp1.rval_out'), 10.)
         self.assertEqual(top.get('comp2.rval_in'), 10.)
         self.assertEqual(top.get('comp2.rval_out'), 40.)
-        self.assertEqual(top.comp1.run_count, 1)
-        self.assertEqual(top.comp2.run_count, 1)
+        self.assertEqual(top.comp1.exec_count, 1)
+        self.assertEqual(top.comp2.exec_count, 1)
         
         # now change an input (mult) on comp2. This should only 
         # cause comp2 to execute when we run next time.
@@ -126,8 +122,8 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(top.get('comp1.rval_out'), 10.)
         self.assertEqual(top.get('comp2.rval_in'), 10.)
         self.assertEqual(top.get('comp2.rval_out'), 30.)
-        self.assertEqual(top.comp1.run_count, 1)
-        self.assertEqual(top.comp2.run_count, 2)
+        self.assertEqual(top.comp1.exec_count, 1)
+        self.assertEqual(top.comp2.exec_count, 2)
         
      
     def test_data_passing(self):
@@ -315,7 +311,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             bar = self.asm.comp1.get_metadata('bogus', 'bar')
         except Exception as err:
-            self.assertEqual(str(err), "comp1: Couldn't find trait bogus")
+            self.assertEqual(str(err), "comp1: Couldn't find metadata for trait bogus")
         else:
             self.fail("Exception expected")
             

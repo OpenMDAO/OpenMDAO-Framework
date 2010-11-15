@@ -912,12 +912,15 @@ class Component (Container):
                 if not exists(name):
                     os.mkdir(name)
                 os.chdir(name)
-            # TODO: (maybe) Seems like we should make top.directory relative
-            # here # instead of absolute, but it doesn't work...
-            #top.directory = relpath(os.getcwd(), SimulationRoot.get_root())
-            top.directory = os.getcwd()
             
             try:
+                top._trait_change_notify(False)
+                
+                # TODO: (maybe) Seems like we should make top.directory relative
+                # here # instead of absolute, but it doesn't work...
+                #top.directory = relpath(os.getcwd(), SimulationRoot.get_root())
+                top.directory = os.getcwd()
+                
                 # Create any missing subdirectories.
                 for component in [c for n,c in top.items(recurse=True)
                                               if isinstance(c, Component)]:
@@ -934,6 +937,7 @@ class Component (Container):
                         package = instream[:dot]
                     top._restore_files(package, rel_path, [], observer=observer)
             finally:
+                top._trait_change_notify(True)
                 os.chdir(orig_dir)
                 if name and not glob.glob(join(name, '*')):
                     # Cleanup unused directory.

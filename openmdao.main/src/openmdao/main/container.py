@@ -423,7 +423,6 @@ class Container(HasTraits):
         #FIXME: saving our own list of added traits shouldn't be necessary...
         self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
-        getattr(self, name)  # this causes (non-property) instance traits to show up in traits()
         
         # if it's an input trait, register a callback to be called whenever it's changed
         if trait.iotype == 'in':
@@ -624,8 +623,12 @@ class Container(HasTraits):
                             yield ('.'.join([name, chname]), child)
                             
             for name, trait in match_dict.items():
-                obj = getattr(self, name)
-                if id(obj) not in visited:
+                obj = getattr(self, name, Missing)
+                # In some components with complex loading behavior (like NPSSComponent), 
+                # we can have a temporary situation during loading
+                # where there are traits that don't point to anything,
+                # so check for them here and skip them if they don't point to anything.
+                if obj is not Missing and id(obj) not in visited:
                     if isinstance(obj, Container):
                         if not recurse:
                             yield (name, obj)
@@ -811,6 +814,7 @@ class Container(HasTraits):
                             setattr(self, path, value)
                         finally:
                             self._input_check = chk
+                        self._input_updated(path)
                     else:  # array index specified
                         self._array_set(path, value, index)
                 elif index:  # array index specified for output
