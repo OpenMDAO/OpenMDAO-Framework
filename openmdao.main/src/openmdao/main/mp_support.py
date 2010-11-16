@@ -133,7 +133,12 @@ def has_interface(obj, *ifaces):
 
 
 def keytype(authkey):
-    """ Just returns a string showing the type of `authkey`. """
+    """
+    Just returns a string showing the type of `authkey`.
+
+    authkey: string
+        Key to report type of.
+    """
     if authkey is None:
         return '%s (inherited)' % keytype(current_process().authkey)
     else:
@@ -264,14 +269,19 @@ def _make_private(path):
 
 
 def _encode_public_key(key):
-    """ Return text representation of public key `key`. """
+    """ Return base64 text representation of public key `key`. """
     # Just being defensive, this should never happen.
     if key.has_private():  #pragma no cover
         key = key.publickey()
     return base64.b64encode(cPickle.dumps(key, cPickle.HIGHEST_PROTOCOL))
 
 def decode_public_key(text):
-    """ Return public key from text representation. """
+    """
+    Return public key from text representation.
+
+    text: string
+        base64 encoded key data.
+    """
     return cPickle.loads(base64.b64decode(text))
 
 
@@ -400,9 +410,6 @@ def _make_typeid(obj):
     Returns a type ID string from `obj`'s module and class names
     by replacing '.' with '_'.
     """
-#    if isinstance(obj, type):
-#        typeid = '%s.%s' % (obj.__module__, obj.__name__)
-#    else:
     typeid = '%s.%s' % (obj.__class__.__module__, obj.__class__.__name__)
     return typeid.replace('.', '_')
 
@@ -491,9 +498,13 @@ class OpenMDAO_Server(Server):
         else:
             return ''
 
-    def handle_request(self, c):
+    def handle_request(self, conn):
         """
         Handle a new connection.
+
+        conn: socket or pipe
+            Connection to process.
+
         This version avoids getting upset if it can't deliver a challenge.
         This is to deal with immediately closed connections caused by
         :meth:`manager_is_alive` which are used to avoid getting hung trying
@@ -502,26 +513,26 @@ class OpenMDAO_Server(Server):
         funcname = result = request = None
 
         try:
-            connection.deliver_challenge(c, self.authkey)
+            connection.deliver_challenge(conn, self.authkey)
         except (EOFError, IOError):
-            c.close()
+            conn.close()
             return
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
         except Exception:  #pragma no cover
             msg = ('#TRACEBACK', traceback.format_exc())
             try:
-                c.send(msg)
-            except Exception, e:
+                conn.send(msg)
+            except Exception as exc:
                 pass
             util.info('Failure to send message: %r', msg)
             util.info(' ... request was %r', request)
-            util.info(' ... exception was %r', e)
-            c.close()
+            util.info(' ... exception was %r', exc)
+            conn.close()
             return
 
         try:
-            connection.answer_challenge(c, self.authkey)
-            request = c.recv()
+            connection.answer_challenge(conn, self.authkey)
+            request = conn.recv()
             ignore, funcname, args, kwds = request
             assert funcname in self.public, '%r unrecognized' % funcname
             func = getattr(self, funcname)
@@ -530,29 +541,33 @@ class OpenMDAO_Server(Server):
             msg = ('#TRACEBACK', traceback.format_exc())
         else:
             try:
-                result = func(c, *args, **kwds)
+                result = func(conn, *args, **kwds)
             # Hard to cause this to happen. It rarely happens, and then at shutdown.
             except Exception:  #pragma no cover
                 msg = ('#TRACEBACK', traceback.format_exc())
             else:
                 msg = ('#RETURN', result)
         try:
-            c.send(msg)
+            conn.send(msg)
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
-        except Exception, e:  #pragma no cover
+        except Exception as exc:  #pragma no cover
             try:
-                c.send(('#TRACEBACK', traceback.format_exc()))
+                conn.send(('#TRACEBACK', traceback.format_exc()))
             except Exception:
                 pass
             util.info('Failure to send message: %r', msg)
             util.info(' ... request was %r', request)
-            util.info(' ... exception was %r', e)
+            util.info(' ... exception was %r', exc)
 
-        c.close()
+        conn.close()
 
     def serve_client(self, conn):
         """
         Handle requests from the proxies in a particular process/thread.
+
+        conn: socket or pipe
+            Connection to process.
+
         This version supports dynamic proxy generation and credential checking.
         """
         self._logger.debug('starting server thread to service %r, %s',
@@ -814,8 +829,15 @@ class OpenMDAO_Server(Server):
     Server.fallback_mapping['__has_interface__'] = _fallback_hasinterface
 
     # This is for low-level debugging of servers.
-    def debug_info(self, c):  #pragma no cover
-        """ Return string representing state of id_to_obj mapping. """
+    def debug_info(self, conn):  #pragma no cover
+        """
+        Return string representing state of id_to_obj mapping.
+
+        conn: socket or pipe
+            Unused.
+
+        This version handles proxies in a special manner.
+        """
         self.mutex.acquire()
         try:
             result = []
@@ -836,9 +858,16 @@ class OpenMDAO_Server(Server):
         finally:
             self.mutex.release()
 
-    def create(self, c, typeid, *args, **kwds):
+    def create(self, conn, typeid, *args, **kwds):
         """
         Create a new shared object and return its id.
+
+        conn: socket or pipe
+            Connection to process.
+
+        typeid: string
+            Identifier string for type of object to be created.
+
         This version uses :func:`_public_methods`.
         """
         self.mutex.acquire()
@@ -877,16 +906,10 @@ class OpenMDAO_Server(Server):
             # object for it can be created.  The caller of create()
             # is responsible for doing a decref once the Proxy object
             # has been created.
-            self.incref(c, ident)
+            self.incref(conn, ident)
             return ident, tuple(exposed)
         finally:
             self.mutex.release()
-
-    def decref(self, c, ident):
-        """ Just to log object disposal. """
-        before = self.id_to_obj.keys()
-        super(OpenMDAO_Server, self).decref(c, ident)
-        after = self.id_to_obj.keys()
 
 
 class OpenMDAO_Manager(BaseManager):
@@ -932,6 +955,10 @@ class OpenMDAO_Manager(BaseManager):
     def start(self, cwd=None):
         """
         Spawn a server process for this manager object.
+
+        cwd: string
+            Directory to start in.
+
         This version retrieves the server's public key.
         """
         assert self._state.value == State.INITIAL
@@ -1151,7 +1178,18 @@ class ObjectManager(object):
 
 
 class OpenMDAO_Proxy(BaseProxy):
-    """ Sends credentials and provides dynamic result proxy generation. """
+    """
+    Proxy for a remote object.
+
+    args: tuple
+        Passed to :class:`BaseProxy`.
+
+    kwds: dict
+        If it contains `pubkey`, then that value is used for the remote public
+        key, and the entry is removed before being passed to :class:`BaseProxy`.
+
+    This version sends credentials and provides dynamic result proxy generation.
+    """
 
     def __init__(self, *args, **kwds):
         try:
@@ -1342,7 +1380,13 @@ class OpenMDAO_Proxy(BaseProxy):
 
     @staticmethod
     def manager_is_alive(address):
-        """ Check whether manager is still alive. """
+        """
+        Check whether manager is still alive.
+
+        address: tuple or string
+            A :mod:`multiprocessing` address specifying an Internet address or
+            a pipe.
+        """
         addr_type = connection.address_type(address)
         if addr_type == 'AF_PIPE':  #pragma no cover
             try:

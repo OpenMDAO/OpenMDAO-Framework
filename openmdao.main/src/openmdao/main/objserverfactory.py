@@ -37,6 +37,12 @@ class ObjServerFactory(Factory):
     """
     An :class:`ObjServerFactory` creates :class:`ObjServers` and objects
     within those servers.
+
+    name: string
+        Name of factory, used in log messages, etc.
+
+    authkey: string
+        Authorization key passed-on to :class:`ObjServer` servers.
     """
 
     def __init__(self, name='ObjServerFactory', authkey=None):
@@ -58,8 +64,16 @@ class ObjServerFactory(Factory):
 #        whoever created should be the one to release, not just anybody.
 #        => record credentials at creation.
     @rbac(('owner', 'user'))
-    def release(self, server, remove_dir=True):
-        """ Shut-down :class:`ObjServer` `server`. """
+    def release(self, server):
+        """
+        Shut-down :class:`ObjServer` `server`.
+
+        server: :class:`ObjServer`
+            Server to be shut down.
+
+        The environment variable ``OPENMDAO_KEEPDIRS`` can be used to avoid
+        having the server directory tree removed.
+        """
         self._logger.debug('release %r', server)
         try:
             manager, root_dir = self._managers[server]
@@ -251,6 +265,9 @@ class ObjServer(object):
     An object which knows how to create other objects, load a model, etc.
     All remote file accesses must be within the tree rooted in the current
     directory at startup.
+
+    name: string
+        Name of server, used in log messages, etc.
     """
 
     def __init__(self, name=''):
@@ -298,6 +315,7 @@ class ObjServer(object):
         """
         Returns an object of type *typname,* using the specified
         package version, server location, and resource description.
+        All arguments are passed to :meth:`factorymanager.create`.
         """
         self._logger.info('create typname %r, version %r server %s,'
                           ' res_desc %s, args %s', typname, version, server,
@@ -575,7 +593,7 @@ def main():  #pragma no cover
     """
     OpenMDAO factory service process.
 
-    Usage: python objserver.py [--port=number][--prefix=name]
+    Usage: python objserverfactory.py [--port=number][--prefix=name]
 
     port: int
         Server port (default of 0 implies next available port).

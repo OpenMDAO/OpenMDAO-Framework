@@ -28,8 +28,8 @@ class ResourceAllocationManager(object):
     The allocation manager maintains a list of :class:`ResourceAllocator`
     which are used to select the "best fit" for a particular resource request.
     The manager is initialized with a :class:`LocalAllocator` for the local
-    host. Additional allocators can be added and the manager will look for the
-    best fit across all the allocators.
+    host, using `authkey` of 'PublicKey'. Additional allocators can be added
+    and the manager will look for the best fit across all the allocators.
     """
 
     _lock = threading.Lock()
@@ -269,6 +269,12 @@ class ResourceAllocator(ObjServerFactory):
     """
     Base class for allocators. Allocators estimate the suitability of a
     resource and can deploy on that resource.
+
+    name: string
+        Name of allocator, used in log messages, etc.
+
+    authkey: string
+        Authorization key for this allocator and any deployed servers.
     """
 
     def __init__(self, name, authkey=None):
@@ -369,12 +375,23 @@ class ResourceAllocator(ObjServerFactory):
 
 class LocalAllocator(ResourceAllocator):
     """
-    Purely local resource allocator. If `total_cpus` is >0, then that is
-    taken as the number of cpus/cores available.  Otherwise the number is
-    taken from :meth:`multiprocessing.cpu_count`.  The `max_load`
-    parameter specifies the maximum cpu-adjusted load allowed when reporting
-    :meth:`max_servers` and when determining if another server may be started
-    in :meth:`time_estimate`.
+    Purely local resource allocator.
+
+    name: string
+        Name of allocator, used in log messages, etc.
+
+    total_cpus: int
+        If >0, then that is taken as the number of cpus/cores available.
+        Otherwise the number is taken from :meth:`multiprocessing.cpu_count`.
+
+    max_load: float
+        Specifies the maximum cpu-adjusted load (obtained from
+        :meth:`os.getloadavg`) allowed when reporting :meth:`max_servers` and
+        when determining if another server may be started in
+        :meth:`time_estimate`.
+
+    authkey: string
+        Authorization key for this allocator and any deployed servers.
     """
 
     def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0,
@@ -546,10 +563,18 @@ class ClusterAllocator(object):  #pragma no cover
     """
     Cluster-based resource allocator.  This allocator manages a collection
     of :class:`LocalAllocator`, one for each machine in the cluster.
-    `machines` is a list of dictionaries providing configuration data for each
-    machine in the cluster.  At a minimum, each dictionary must specify a host
-    address in 'hostname' and the path to the OpenMDAO python command in
-    'python'.
+
+    name: string
+        Name of allocator, used in log messages, etc.
+
+    machines: list(dict)
+        Dictionaries providing configuration data for each machine in the
+        cluster.  At a minimum, each dictionary must specify a host
+        address in 'hostname' and the path to the OpenMDAO Python command in
+        'python'.
+
+    authkey: string
+        Authorization key to be passed-on to remote servers.
 
     We assume that machines in the cluster are similar enough that ranking
     by load average is reasonable.
@@ -578,7 +603,7 @@ class ClusterAllocator(object):  #pragma no cover
             host.register(LocalAllocator)
             hosts.append(host)
 
-        self.cluster = mp_distributing.Cluster(hosts, [], authkey=authkey)
+        self.cluster = mp_distributing.Cluster(hosts, authkey=authkey)
         self.cluster.start()
         self._logger.debug('server listening on %s', self.cluster.address)
 

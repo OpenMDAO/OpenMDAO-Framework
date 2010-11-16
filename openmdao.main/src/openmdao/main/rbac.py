@@ -21,6 +21,13 @@ identifier string. Mapping from credentials to roles can become fairly involved
 in a real system, typically with site-specific configuration. The default role
 mapping here just returns the roles 'owner' or 'user' based on whether the
 credentials match those in effect when the controller object was created.
+
+.. warning::
+
+    Credentials are currently just a user identifier string and are trivially
+    forgeable. This access control scheme should *not* be relied upon until
+    credentials have been updated to a more secure form.
+
 """
 
 import fnmatch

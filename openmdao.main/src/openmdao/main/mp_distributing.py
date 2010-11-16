@@ -1,16 +1,10 @@
 """
 This module is based on the *distributing.py* file example which was
 (temporarily) posted with the multiprocessing module documentation.
-"""
 
-#
-# Module to allow spawning of processes on foreign host
-#
-# Depends on `multiprocessing` package -- tested with `processing-0.60`
-#
-# Copyright (c) 2006-2008, R Oudkerk
-# All rights reserved.
-#
+This code assumes `ssh` has been set-up on all hosts such that no user
+intervention for passwords or passphrases is required.
+"""
 
 import copy
 import cPickle
@@ -51,7 +45,15 @@ _LOGGER = logging.getLogger('mp_distributing')
 # This is used by Cluster, which also isn't covered.
 # Cluster allocation requires ssh configuration and multiple hosts.
 class HostManager(OpenMDAO_Manager):  #pragma no cover
-    """ Manager used for spawning processes on a remote host. """
+    """
+    Manager used for spawning processes on a remote host.
+
+    address: (ip_addr, port) or string referring to pipe.
+        Address to use to connect back to parent.
+
+    authkey: string
+        Authorization key, passed to :class:`OpenMDAO_Manager`.
+    """
 
     def __init__(self, address, authkey):
         super(HostManager, self).__init__(address, authkey)
@@ -59,7 +61,15 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
 
     @classmethod
     def from_address(cls, address, authkey):
-        """ Return manager given an address. """
+        """
+        Return manager given an address.
+
+        address: (ip_addr, port) or string referring to pipe.
+            Address to connect to.
+
+        authkey: string
+            Authorization key.
+        """
         manager = cls(address, authkey)
         conn = connection.Client(address, authkey=authkey)
         try:
@@ -90,12 +100,23 @@ class HostManager(OpenMDAO_Manager):  #pragma no cover
 
 # Cluster allocation requires ssh configuration and multiple hosts.
 class Cluster(OpenMDAO_Manager):  #pragma no cover
-    """ Represents a collection of hosts. """
+    """
+    Represents a collection of hosts.
 
-    def __init__(self, hostlist, modules, authkey=None):
+    hostlist: list(:class:`Host`)
+        Hosts which are to be members of the cluster.
+
+    modules: list(string)
+        Names of modules to be sent to each host.
+
+    authkey: string
+        Authorization key, passed to :class:`OpenMDAO_Manager`.
+    """
+
+    def __init__(self, hostlist, modules=None, authkey=None):
         super(Cluster, self).__init__(authkey=authkey)
         self._hostlist = hostlist
-        self._modules = modules
+        self._modules = modules or []
         if __name__ not in modules:
             modules.append(__name__)
         files = [sys.modules[name].__file__ for name in modules]
@@ -172,8 +193,6 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
             else:
                 break
 
-        self._slotlist = [_Slot(host) for host in self._hostlist
-                                               if host.state == 'up']
         self._base_shutdown = self.shutdown
         del self.shutdown
 
@@ -235,32 +254,18 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                 host.manager.shutdown()
         self._base_shutdown()
 
-    def __getitem__(self, i):
-        return self._slotlist[i]
-
-    def __len__(self):
-        return len(self._slotlist)
-
-    def __iter__(self):
-        return iter(self._slotlist)
-
-
-# Used by Cluster, which isn't covered.
-class _Slot(object):  #pragma no cover
-    """ Class representing a notional cpu in the cluster. """
-
-    def __init__(self, host):
-        self.host = host
-
 
 # Requires ssh configuration.
 class Host(object):  #pragma no cover
     """
     Represents a host to use as a node in a cluster.
-    `hostname` gives the name of the host.
-    `python` is the path the the Python command to be used on `hostname`.
-    ssh is used to log in to the host. To log in as a different user use
-    a host name of the form: "username@somewhere.org".
+
+    hostname: string
+        Name of the host. `ssh` is used to log into the host. To log in as a
+        different user use a host name of the form: "username@somewhere.org".
+
+    python: string
+        Path the the Python command to be used on `hostname`.
     """
 
     def __init__(self, hostname, python=None):
@@ -277,13 +282,34 @@ class Host(object):  #pragma no cover
         self.tempdir = None
 
     def register(self, cls):
-        """ Register proxy info to be sent to remote process. """
+        """
+        Register proxy info to be sent to remote server.
+
+        cls: class
+            Class to be registered.
+        """
         name = cls.__name__
         module = cls.__module__
         self.registry[name] = module
 
     def start_manager(self, index, authkey, address, files):
-        """ Launch remote manager process. """
+        """
+        Launch remote manager process via `ssh`.
+        The environment variable ``OPENMDAO_KEEPDIRS`` can be used to avoid
+        removal of the temporary directory used on the host.
+
+        index: int
+            Index in parent cluster.
+
+        authkey: string
+            Authorization key used to connect to host server.
+
+        address: (ip_addr, port) or string referring to pipe.
+            Address to use to connect back to parent.
+
+        files: list(string)
+            Files to be sent to support server startup.
+        """
         try:
             _check_ssh(self.hostname)
         except Exception:
@@ -341,7 +367,7 @@ def _check_ssh(hostname):  #pragma no cover
     cmd.extend([hostname, 'date'])
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT)
-    for retry in range(150):  # ~15 seconds based on sleep() below.
+    for retry in range(100):  # ~10 seconds based on sleep() below.
         proc.poll()
         if proc.returncode is None:
             time.sleep(0.1)
@@ -400,12 +426,18 @@ def _copy_to_remote(hostname, files, python):  #pragma no cover
 
 # Runs on the remote host.
 def main():  #pragma no cover
-    """ Code which runs a host manager. """
+    """
+    Code which runs a host manager.
+    Expects configuration data from parent on `stdin`.
+    Replies with address and optionally public key.
+    The environment variable ``OPENMDAO_KEEPDIRS`` can be used to avoid
+    removal of the temporary directory used here.
+    """
     sys.stdout = open('stdout', 'w')
     sys.stderr = open('stderr', 'w')
 
     util.log_to_stderr(logging.DEBUG)
-# Avoid root masking us?
+    # Avoid root possibly masking us.
     logging.getLogger().setLevel(logging.DEBUG)
 
     import platform
@@ -440,7 +472,7 @@ def main():  #pragma no cover
         util.get_logger().setLevel(log_level)
         forking.prepare(data)
 
-        # Create Server for a `HostManager` object.
+        # Create Server for a HostManager object.
         set_credentials(Credentials())
         name = '%d[%d]' % (data['index'], pid)
         logging.getLogger(name).setLevel(log_level)
