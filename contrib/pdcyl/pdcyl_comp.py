@@ -9,14 +9,16 @@ from numpy import int32 as numpy_int32
 from numpy import float32 as numpy_float32
 from numpy import array, zeros
 
-from openmdao.lib.datatypes.api import Array, Enum, Float, Int, Str
+from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str
 from openmdao.lib.components.api import ExternalCode
 from openmdao.main.api import FileMetadata
+from openmdao.util.filewrap import FileParser
 
 class PdcylComp(ExternalCode):
     """ OpenMDAO component wrapper for PDCYL. """
 
-    icalc   = Int(0, iotype='in', desc='print switch')
+    icalc   = Bool(False, iotype='in', desc='Print switch. Set to True for verbose output.')
+    title   = Str("PDCYl Component", iotype='in', desc='Title of the analysis')
     
     # Wing geometry
     # --------------------
@@ -68,9 +70,11 @@ class PdcylComp(ExternalCode):
     frab    = Float(iotype='in', desc='Fineness ratio of the after-body section   (length/diameter)')
     bodl    = Float(iotype='in', units='ft', desc='Length of the fuselage  ')
     bdmax   = Float(iotype='in', units='ft', desc='Maximum diameter of fuselage')
-    vbod    = Float(iotype='in', units='ft**3', desc='Fuselage total volume ')
-    volnose = Float(iotype='in', units='ft**3', desc='Nose Volume')                
-    voltail = Float(iotype='in', units='ft**3', desc='Tail volume ')
+    # These vars are listed in the pdcyl code, but they are never read in. Not sure 
+    # what that's all about.
+    #vbod    = Float(iotype='in', units='ft**3', desc='Fuselage total volume ')
+    #volnose = Float(iotype='in', units='ft**3', desc='Nose Volume')                
+    #voltail = Float(iotype='in', units='ft**3', desc='Tail volume ')
     
     # Structural Concept
     # --------------------
@@ -86,41 +90,27 @@ class PdcylComp(ExternalCode):
     #                 ! 6 - Truss-core sandwich, frames, best buckling
     #                 ! 8 - Truss-core sandwich, no frames, best buckling
     #                 ! 9 - Truss-core sandwich, no frames, buckling-min. gage-pressure compromise
-    kcont   = Array(zeros([11]), iotype='in', dtype=numpy_int32, shape = (12,), desc='Structural Geometry Concept Top')
-    kconb   = Array(zeros([12]), iotype='in', dtype=numpy_int32, shape = (12,), desc='Structural Geometry Concept Bottom')
+    kcont   = Enum([2, 3, 4, 5, 6, 8, 9], iotype='in', desc='Structural Geometry Concept Top')
+    kconb   = Enum([2, 3, 4, 5, 6, 8, 9], iotype='in', desc='Structural Geometry Concept Bottom')
 
     # Material properties
     # -------------------
-#   ftst    = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   ftsb    = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   fcst    = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   fcsb    = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   est     = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   esb     = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   eft     = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   efb     = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   dst     = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   dsb     = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   dft     = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   dfb     = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   tmgt    = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-#   tmgb    = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-    ftst    = Float(iotype='in', desc='input as ftst(1) ')
-    ftsb    = Float(iotype='in', desc='input as ftsb(1) ') 
-    fcst    = Float(iotype='in', desc='input as fcst(1) ') 
-    fcsb    = Float(iotype='in', desc='input as fcsb(1) ') 
-    est     = Float(iotype='in', desc='input as est(1) ')
-    esb     = Float(iotype='in', desc='input as esb(1) ') 
-    eft     = Float(iotype='in', desc='input as eft(1) ')
-    efb     = Float(iotype='in', desc='input as efb(1) ') 
-    dst     = Float(iotype='in', desc='input as dst(1) ') 
-    dsb     = Float(iotype='in', desc='input as dsb(1) ') 
-    dft     = Float(iotype='in', desc='input as dft(1) ') 
-    dfb     = Float(iotype='in', desc='input as dfb(1) ') 
-    tmgt    = Float(iotype='in', desc='input as tmgt(1) ') 
-    tmgb    = Float(iotype='in', desc='input as tmgb(1) ')
-    kde     = Float(iotype='in', desc='Knock-down factor for modulus')
-    kdf     = Float(iotype='in', desc='Knock-down factor for strength')
+    ftst   = Float(iotype='in', desc="Tensile Strength on Top")
+    ftsb   = Float(iotype='in', desc="Tensile Strength on Bottom")
+    fcst   = Float(iotype='in', desc="Compressive Strength on Top")
+    fcsb   = Float(iotype='in', desc="Compressive Strength on Bottom")
+    est    = Float(iotype='in', desc="Young's Modulus for the shells Top")
+    esb    = Float(iotype='in', desc="Young's Modulus for the shells Bottom")
+    eft    = Float(iotype='in', desc="Young's Modulus for the frames Top")
+    efb    = Float(iotype='in', desc="Young's Modulus for the frames Bottom")
+    dst    = Float(iotype='in', desc="Density of shell material on Top")
+    dsb    = Float(iotype='in', desc="Density of shell material on Bottom")
+    dft    = Float(iotype='in', desc="Density of frame material on Top")
+    dfb    = Float(iotype='in', desc="Density of frame material on Bottom")
+    tmgt   = Float(iotype='in', desc="Minimum gage thickness Top")
+    tmgb   = Float(iotype='in', desc="Minimum gage thickness Bottom")
+    kde    = Float(iotype='in', desc="Knock-down factor for modulus")
+    kdf    = Float(iotype='in', desc="Knock-down factor for strength")
     
     # Geometric parameters
     # --------------------
@@ -142,11 +132,9 @@ class PdcylComp(ExternalCode):
     ultlf   = Float(iotype='in', desc='Ultimate load factor (usually 1.5*DESLF)')
     axac    = Float(iotype='in', desc='Axial acceleration')
     cman    = Float(iotype='in', desc=' Weight fraction at maneuver')
-    iload   = Int(iotype='in', desc='1 - Analyze maneuver only,2 - Analyze maneuver and landing only')
-    #pgt     = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-    #pgb     = Array(_ZEROS12,dtype=float,shape=(12,),iotype='in')
-    pgt     = Float(iotype='in', desc=' input as pgt(1)') 
-    pgb     = Float(iotype='in', desc=' input as pgb(1)')
+    iload   = Enum([1, 2, 3], iotype='in', desc='1 - Analyze maneuver only; 2 - Analyze maneuver and landing only; 3 - Analyze bump, landing and maneuver')
+    pgt     = Float(iotype='in', desc="Fuselage gage pressure on top")
+    pgb     = Float(iotype='in', desc="Fuselage gage pressure on bottom")
     wfbump  = Float(iotype='in', desc=' Weight fraction at bump')
     wfland  = Float(iotype='in', desc=' Weight fraction at landing')
     
@@ -181,6 +169,12 @@ class PdcylComp(ExternalCode):
     wcw     = Float(iotype='in', desc='Factor in weight equation for nonoptimal weights')
     wca     = Float(iotype='in', desc='Factor in weight equation for nonoptimal weights')
     nwing   = Int(iotype='in', desc='Number of wing segments for analysis')
+    
+    # Outputs
+    # --------------------
+    wfuselaget = Float(iotype='out', units='lb', desc='Total fuselage weight')
+    wwingt     = Float(iotype='out', units='lb', desc='Total wing weight')
+    
 
     
     def __init__(self, directory=''):
@@ -200,6 +194,105 @@ class PdcylComp(ExternalCode):
             FileMetadata(path=self.stderr),
         ]
         
+                # Dictionary contains location of every numeric scalar variable
+        fields = {}
+        fields[8]   = 'wsweep'
+        fields[9]   = 'war'
+        fields[10]  = 'wtaper'
+        fields[11]  = 'wtcroot'
+        fields[12]  = 'wtctip'
+        fields[13]  = 'warea'
+        fields[15]  = 'ps'
+        fields[16]  = 'tmgw'
+        fields[17]  = 'effw'
+        fields[18]  = 'effc'
+        fields[19]  = 'esw'
+        fields[20]  = 'fcsw'
+        fields[21]  = 'dsw'
+        fields[22]  = 'kdew'
+        fields[23]  = 'kdfw'
+        fields[25]  = 'istama'
+        fields[27]  = 'cs1'
+        fields[28]  = 'cs2'
+        fields[29]  = 'uwwg'
+        fields[30]  = 'xwloc1'
+        fields[32]  = 'claqr'
+        fields[33]  = 'ifuel'
+        fields[35]  = 'cwman'
+        fields[36]  = 'cf'
+        fields[40]  = 'itail'
+        fields[42]  = 'uwt'
+        fields[43]  = 'clrt'
+        fields[44]  = 'harea'
+        fields[49]  = 'frn'
+        fields[50]  = 'frab'
+        fields[51]  = 'bodl'
+        fields[52]  = 'bdmax'
+        fields[54]  = 'ckf'
+        fields[55]  = 'ec'
+        fields[56]  = 'kgc'
+        fields[57]  = 'kgw'
+        fields[58]  = 'kcont'
+        fields[59]  = 'kconb'
+        fields[67]  = 'ftst'
+        fields[68]  = 'ftsb'
+        fields[69]  = 'fcst'
+        fields[70]  = 'fcsb'
+        fields[71]  = 'est'
+        fields[72]  = 'esb'
+        fields[73]  = 'eft'
+        fields[74]  = 'efb'
+        fields[75]  = 'dst'
+        fields[76]  = 'dsb'
+        fields[77]  = 'dft'
+        fields[78]  = 'dfb'
+        fields[79]  = 'tmgt'
+        fields[80]  = 'tmgb'
+        fields[81]  = 'kde'
+        fields[82]  = 'kdf'
+        fields[84]  = 'clbr1'
+        fields[85]  = 'icyl'
+        fields[90]  = 'neng'
+        fields[91]  = 'nengwing'
+        fields[92]  = 'wfp'
+        fields[93]  = 'clrw1'
+        fields[95]  = 'clrw2'
+        fields[96]  = 'clrw3'
+        fields[100] = 'deslf'
+        fields[101] = 'ultlf'
+        fields[102] = 'axac'
+        fields[103] = 'cman'
+        fields[104] = 'iload'
+        fields[107] = 'pgt'
+        fields[108] = 'pgb'
+        fields[109] = 'wfbump'
+        fields[110] = 'wfland'
+        fields[114] = 'vsink'
+        fields[115] = 'stroke'
+        fields[116] = 'clrg1'
+        fields[117] = 'clrg2'
+        fields[118] = 'wfgr1'
+        fields[119] = 'wfgr2'
+        fields[120] = 'igear'
+        fields[122] = 'gfrl'
+        fields[123] = 'clrgw1'
+        fields[124] = 'clrgw2'
+        fields[129] = 'wgto'
+        fields[130] = 'wtff'
+        fields[131] = 'cbum'
+        fields[132] = 'clan'
+        fields[136] = 'ischrenk'
+        fields[138] = 'icomnd'
+        fields[140] = 'wgno'
+        fields[141] = 'slfmb'
+        fields[142] = 'wmis'
+        fields[143] = 'wsur'
+        fields[144] = 'wcw'
+        fields[145] = 'wca'
+        fields[146] = 'nwing'
+
+        self._fields = fields
+        
     def execute(self):
         """Run PDCYL."""
         
@@ -215,13 +308,163 @@ class PdcylComp(ExternalCode):
     def generate_input(self):
         """Creates the PDCYL custom input file."""
         
-        pass
+        data = []
+        form = "%.15g %s\n"
+        
+        # It turns out to be simple and quick to generate a new input file each
+        # time, rather than poking values into a template.
+        
+        data.append("\n\n")
+        data.append(self.title)
+        data.append("\n\n")
+        
+        if self.icalc == True:
+            icalc = 3
+        else:
+            icalc = 0
+            
+        data.append("%d icalc print switch" % icalc)
+        data.append("\n\n\n")
+
+        data.append("Wing geometry:\n")
+        for nline in range(8, 14):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+        
+        data.append("Material properties:\n")
+        for nline in range(15, 24):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+            
+        data.append("Geometric properties:\n")
+        name = self._fields[25]
+        data.append(form % (self.get(name), name))
+        data.append("\n")
+        for nline in range(27, 31):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+            
+        data.append("Structural concept:\n")
+        for nline in range(32, 34):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+        data.append("\n")
+        for nline in range(35, 37):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+        
+        data.append("\n\n")
+        data.append("Tails:\n")
+        name = self._fields[40]
+        data.append(form % (self.get(name), name))
+        data.append("\n")
+        for nline in range(42, 45):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+        
+        data.append("\n\n\n")
+        data.append("Fuselage geometry:\n")
+        for nline in range(49, 53):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+            
+        data.append("Structural concept:\n")
+        for nline in range(54, 60):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+            
+        data.append("\n\n\n\n\n\n")
+        data.append("Material properties:\n")
+        for nline in range(67, 83):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))        
+        
+        data.append("Geometric parameters:\n")
+        for nline in range(84, 86):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+            
+        data.append("\n\n\n")
+        data.append("Engines:\n")
+        for nline in range(90, 94):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+        data.append("\n")
+        for nline in range(95, 97):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+            
+        data.append("\n\n")
+        data.append("Loads:\n")
+        for nline in range(100, 105):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+        data.append("\n\n")
+        for nline in range(107, 111):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+            
+        data.append("\n\n")
+        data.append("Landing gear:\n")
+        for nline in range(114, 121):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+        data.append("\n\n")
+        for nline in range(122, 125):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+
+        data.append("\n\n\n")
+        data.append("Weights:\n")
+        for nline in range(129, 133):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+        
+        data.append("\n\n")
+        data.append("Factors:\n")
+        name = self._fields[136]
+        data.append(form % (self.get(name), name))
+        data.append("\n")
+        name = self._fields[138]
+        data.append(form % (self.get(name), name))
+        data.append("\n")
+        for nline in range(140, 147):
+            name = self._fields[nline]
+            data.append(form % (self.get(name), name))
+        
+        outfile = open(self.stdin, 'w')
+        outfile.writelines(data)
+        outfile.close()
+
         
     def parse_output(self):
         """Parses the PCYL output file and extracts data."""
         
-        pass
+        infile = FileParser()
+        infile.set_file(self.stdout)
         
+        self.wwingt = infile.transfer_keyvar("Total Wing Structural Weight", 1)
+        self.wfuselaget = infile.transfer_keyvar("Fuselage Total Structural Weight", 1)
+        
+    def load_model(self, filename):
+        """Reads in an existing PDCYL input file and populates the variable
+        tree with its values."""
+        
+        infile = FileParser()
+        infile.set_file(filename)
+        
+        # Title is a string
+        self.title = infile.transfer_line(2)
+
+        # Print flag becomes a Bool
+        if infile.transfer_var(4, 1) == 3:
+            self.icalc = True
+        else:
+            self.icalc = False
+        
+        # Named variables in dictionary
+        for key, val in self._fields.iteritems():
+            self.set(val, infile.transfer_var(key, 1))
 
 if __name__ == "__main__": # pragma: no cover         
 
