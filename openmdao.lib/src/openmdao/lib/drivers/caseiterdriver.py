@@ -227,7 +227,8 @@ class CaseIterDriverBase(Driver):
                     except Queue.Empty:
                         break  # Timeout.
                     else:
-                        if self._servers[name] is None:
+                        # Difficult to force startup failure.
+                        if self._servers[name] is None:  #pragma nocover
                             self._logger.debug('server startup failed for %r',
                                                name)
                             self._in_use[name] = False
@@ -344,7 +345,8 @@ class CaseIterDriverBase(Driver):
                 else:
                     self._logger.debug('    no more cases')
                     in_use = False
-            else:
+            # Difficult to force startup failure.
+            else:  #pragma nocover
                 in_use = False  # Never started.
 
         elif state == _LOADING:
@@ -552,7 +554,8 @@ class CaseIterDriverBase(Driver):
             try:
                 filexfer(None, self._egg_file,
                          self._servers[server], self._egg_file, 'b')
-            except Exception as exc:
+            # Difficult to force model file transfer error.
+            except Exception as exc:  #pragma nocover
                 self._logger.error('server %r filexfer of %r failed: %s',
                                    server, self._egg_file, exc)
                 self._top_levels[server] = None
@@ -562,7 +565,8 @@ class CaseIterDriverBase(Driver):
                 self._server_info[server]['egg_file'] = self._egg_file
         try:
             tlo = self._servers[server].load_model(self._egg_file)
-        except Exception as exc:
+        # Difficult to force model file transfer error.
+        except Exception as exc:  #pragma nocover
             self._logger.error('server.load_model of %r failed: %s',
                                self._egg_file, exc)
             self._top_levels[server] = None

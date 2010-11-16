@@ -26,6 +26,7 @@ from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
 
 from openmdao.test.cluster import init_cluster
 
+from openmdao.util.testutil import assert_raises
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -295,6 +296,18 @@ class TestCase(unittest.TestCase):
         # Check response to no recorder set.
         self.model.driver.iterator = ListCaseIterator([])
         self.model.run()
+
+    def test_noresource(self):
+        logging.debug('')
+        logging.debug('test_noresource')
+
+        # Check response to unsupported resource.
+        self.model.driver.extra_reqs = {'no-such-resource': 0}
+        self.model.driver.sequential = False
+        self.model.driver.iterator = ListCaseIterator([])
+        assert_raises(self, 'self.model.run()', globals(), locals(),
+                      RuntimeError,
+                      'driver: No servers supporting required resources')
 
 
 if __name__ == '__main__':

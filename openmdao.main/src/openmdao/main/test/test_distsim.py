@@ -5,11 +5,12 @@ Test distributed simulation.
 import glob
 import logging
 from math import pi
-from multiprocessing import AuthenticationError
+from multiprocessing import AuthenticationError, current_process
 from multiprocessing.managers import RemoteError
 import os
 import shutil
 import sys
+import traceback
 import unittest
 import nose
 
@@ -17,12 +18,13 @@ from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly, Case, Component, Container, Driver, \
                               set_as_top
+from openmdao.main.container import get_closest_proxy
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.interfaces import IComponent
 from openmdao.main.mp_support import has_interface, is_instance, \
-                                     read_server_config, _SHA1
-from openmdao.main.objserverfactory import connect, start_server
+                                     read_server_config, _SHA1, keytype
+from openmdao.main.objserverfactory import connect, start_server, RemoteFile
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
 
@@ -52,6 +54,9 @@ class Box(ExecComp):
             'surface_area = (width*(height+depth) + depth*height)*2',
             'volume = width*height*depth'])
         self.pid = os.getpid()
+        # For get_closest_proxy().
+        sub = self.add('subcontainer', Container())
+        sub.add_trait('subvar', Int())
 
     def execute(self):
         print 'Box.execute(), %f %f %f on %d' \
@@ -61,6 +66,14 @@ class Box(ExecComp):
     def no_rbac(self):
         pass
 
+    @rbac('owner', proxy_types=[RemoteFile])
+    def open_in_parent(self, path, mode):
+        try:
+            return self.parent.open(path, mode)
+        except Exception as exc:
+            self._logger.debug('open_in_parent() caught %s:', exc)
+            self._logger.debug(traceback.format_exc())
+
     @rbac('owner')
     def cause_parent_error1(self):
         return self.parent.no_such_variable
@@ -68,6 +81,10 @@ class Box(ExecComp):
     @rbac('owner')
     def cause_parent_error2(self):
         return self.parent.get_proxy()
+
+    @rbac('owner')
+    def cause_parent_error3(self):
+        return self.parent.xyzzy()
 
 
 class HollowSphere(Component):
@@ -131,6 +148,9 @@ class BoxSource(ExecComp):
         super(BoxSource, self).__init__(['width_out  = width_in',
                                          'height_out = height_in',
                                          'depth_out  = depth_in'])
+        # For get_closest_proxy().
+        sub = self.add('subcontainer', Container())
+        sub.add_trait('subvar', Int())
 
 class BoxSink(ExecComp):
     """ Just a pass-through for :class:`BoxDriver` result values. """
@@ -163,6 +183,16 @@ class Model(Assembly):
 
         self.driver.add_objective('sink.volume_out')
         self.driver.add_objective('sink.area_out')
+
+    @rbac('owner', proxy_types=[RemoteFile])
+    def open(self, path, mode):
+        """ Return opened file. """
+        return RemoteFile(open(path, mode))
+
+    @rbac('xyzzy')
+    def xyzzy(self):
+        """ No access by 'owner', etc. """
+        return None
 
 
 class Protector(AccessController):
@@ -380,6 +410,20 @@ class TestCase(unittest.TestCase):
         source = model.box.parent.source
         self.assertEqual(source.width_in, 1.)
 
+        # Proxy resolution.
+        obj, path = get_closest_proxy(model, 'box.subcontainer.subvar')
+        self.assertEqual(obj, model.box)
+        self.assertEqual(path, 'subcontainer')
+
+        obj, path = get_closest_proxy(model, 'source.subcontainer.subvar')
+        self.assertEqual(obj, model.source.subcontainer)
+        self.assertEqual(path, '')
+
+        # Observable proxied type.
+        tmp = model.box.open_in_parent('tmp', 'w')
+        tmp.close()
+        os.remove('tmp')
+
         # Cause server-side errors we can see.
 
         try:
@@ -396,6 +440,16 @@ class TestCase(unittest.TestCase):
             box.cause_parent_error2()
         except RemoteError as exc:
             msg = "AttributeError: method 'get_proxy' of"
+            logging.debug('msg: %s', msg)
+            logging.debug('exc: %s', exc)
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('Expected RemoteError')
+
+        try:
+            box.cause_parent_error3()
+        except RemoteError as exc:
+            msg = "RoleError: xyzzy(): No access for role 'owner'"
             logging.debug('msg: %s', msg)
             logging.debug('exc: %s', exc)
             self.assertTrue(msg in str(exc))

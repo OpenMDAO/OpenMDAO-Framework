@@ -75,18 +75,26 @@ class TestCase(unittest.TestCase):
         extcode.timeout = 5
         extcode.command = 'python sleep.py 1 %s' % dummy
         extcode.env_vars = {'SLEEP_DATA': 'Hello world!'}
+        extcode.external_files.extend((
+            FileMetadata(path='sleep.py', input=True),
+            FileMetadata(path=dummy, output=True)
+        ))
 
         extcode.run()
 
         self.assertEqual(extcode.return_code, 0)
         self.assertEqual(extcode.timed_out, False)
         self.assertEqual(os.path.exists(dummy), True)
-        try:
-            with open(dummy, 'r') as inp:
-                data = inp.readline().rstrip()
-            self.assertEqual(data, extcode.env_vars['SLEEP_DATA'])
-        finally:
-            os.remove(dummy)
+        with open(dummy, 'r') as inp:
+            data = inp.readline().rstrip()
+        self.assertEqual(data, extcode.env_vars['SLEEP_DATA'])
+
+        # Now show that existing outputs are removed before execution.
+        extcode.command = 'python sleep.py 1'
+        extcode.run()
+        msg = "[Errno 2] No such file or directory: 'dummy_output'"
+        assert_raises(self, "open(dummy, 'r')", globals(), locals(),
+                      IOError, msg)
 
     def test_remote(self):
         logging.debug('')

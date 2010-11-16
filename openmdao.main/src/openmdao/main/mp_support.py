@@ -135,11 +135,7 @@ def has_interface(obj, *ifaces):
 def keytype(authkey):
     """ Just returns a string showing the type of `authkey`. """
     if authkey is None:
-        inherited = current_process().authkey
-        if inherited is None:
-            return 'None'
-        else:
-            return '%s (inherited)' % keytype(inherited)
+        return '%s (inherited)' % keytype(current_process().authkey)
     else:
         return authkey if authkey == 'PublicKey' else 'AuthKey'
 
@@ -203,7 +199,8 @@ def _generate_key_pair(credentials, logger=None):
                     generate = True
                 else:
                     generate = False
-            else:
+            # Difficult to run test as non-current user.
+            else:  #pragma no cover
                 current_user = False
                 generate = True
 
@@ -222,10 +219,15 @@ def _generate_key_pair(credentials, logger=None):
                     else:
                         if not os.path.exists(key_dir):
                             os.mkdir(key_dir)
-                        _make_private(key_dir)
+                        _make_private(key_dir)  # Private while writing keyfile.
                         with open(key_file, 'wb') as out:
                             cPickle.dump(key_pair, out)
-                        _make_private(key_file)
+                        try:
+                            _make_private(key_file)
+                        # Hard to cause (recoverable) error here.
+                        except Exception:  #pragma no cover
+                            os.remove(key_file)  # Remove unsecured file.
+                            raise
 
             _KEY_CACHE[credentials.user] = key_pair
 
@@ -234,15 +236,11 @@ def _generate_key_pair(credentials, logger=None):
 def _make_private(path):
     """ Make `path` accessible only by 'owner'. """
     if sys.platform == 'win32':  #pragma no cover
-        # Find the SIDs for various groups and user.
-        everyone, domain, type = \
-            win32security.LookupAccountName('', 'Everyone')
-        admins, domain, type = \
-            win32security.LookupAccountName('', 'Administrators')
-        system, domain, type = \
-            win32security.LookupAccountName('', 'System')
+        # Find the SIDs for user and system.
         user, domain, type = \
             win32security.LookupAccountName('', win32api.GetUserName())
+        system, domain, type = \
+            win32security.LookupAccountName('', 'System')
 
         # Find the DACL part of the Security Descriptor for the file
         sd = win32security.GetFileSecurity(path,
@@ -252,12 +250,8 @@ def _make_private(path):
         dacl = win32security.ACL()
         dacl.AddAccessAllowedAce(win32security.ACL_REVISION,
                                  ntsecuritycon.FILE_ALL_ACCESS, user)
-        dacl.AddAccessDeniedAce(win32security.ACL_REVISION, 
-                                ntsecuritycon.FILE_ALL_ACCESS, admins)
-        dacl.AddAccessDeniedAce(win32security.ACL_REVISION, 
-                                ntsecuritycon.FILE_ALL_ACCESS, everyone)
-        dacl.AddAccessDeniedAce(win32security.ACL_REVISION, 
-                                ntsecuritycon.FILE_ALL_ACCESS, system)
+        dacl.AddAccessAllowedAce(win32security.ACL_REVISION, 
+                                 ntsecuritycon.FILE_ALL_ACCESS, system)
 
         # Put our new DACL into the Security Descriptor and update the file
         # with the updated SD.
@@ -406,10 +400,10 @@ def _make_typeid(obj):
     Returns a type ID string from `obj`'s module and class names
     by replacing '.' with '_'.
     """
-    if isinstance(obj, type):
-        typeid = '%s.%s' % (obj.__module__, obj.__name__)
-    else:
-        typeid = '%s.%s' % (obj.__class__.__module__, obj.__class__.__name__)
+#    if isinstance(obj, type):
+#        typeid = '%s.%s' % (obj.__module__, obj.__name__)
+#    else:
+    typeid = '%s.%s' % (obj.__class__.__module__, obj.__class__.__name__)
     return typeid.replace('.', '_')
 
 def register(cls, manager, module=None):
@@ -484,7 +478,8 @@ class OpenMDAO_Server(Server):
         """ Public key for session establishment. """
         if self._authkey == 'PublicKey':
             return self._key_pair.publickey()
-        else:
+        # Just being defensive.
+        else:  #pragma no cover
             raise RuntimeError('No public key available')
 
     # This happens on the remote server side and we'll check when connecting.
@@ -511,7 +506,8 @@ class OpenMDAO_Server(Server):
         except (EOFError, IOError):
             c.close()
             return
-        except Exception:
+        # Hard to cause this to happen. It rarely happens, and then at shutdown.
+        except Exception:  #pragma no cover
             msg = ('#TRACEBACK', traceback.format_exc())
             try:
                 c.send(msg)
@@ -529,18 +525,21 @@ class OpenMDAO_Server(Server):
             ignore, funcname, args, kwds = request
             assert funcname in self.public, '%r unrecognized' % funcname
             func = getattr(self, funcname)
-        except Exception:
+        # Hard to cause this to happen. It rarely happens, and then at shutdown.
+        except Exception:  #pragma no cover
             msg = ('#TRACEBACK', traceback.format_exc())
         else:
             try:
                 result = func(c, *args, **kwds)
-            except Exception:
+            # Hard to cause this to happen. It rarely happens, and then at shutdown.
+            except Exception:  #pragma no cover
                 msg = ('#TRACEBACK', traceback.format_exc())
             else:
                 msg = ('#RETURN', result)
         try:
             c.send(msg)
-        except Exception, e:
+        # Hard to cause this to happen. It rarely happens, and then at shutdown.
+        except Exception, e:  #pragma no cover
             try:
                 c.send(('#TRACEBACK', traceback.format_exc()))
             except Exception:
@@ -589,7 +588,8 @@ class OpenMDAO_Server(Server):
 #                self._logger.debug('id_to_obj:\n%s', self.debug_info(conn))
                 try:
                     obj, exposed, gettypeid = id_to_obj[ident]
-                except KeyError:
+                # Hard to cause this to happen.
+                except KeyError:  #pragma no cover
                     msg = 'No object for ident %s' % ident
                     self._logger.error(msg)
                     raise KeyError('%s %s: %s' % (self.host, self.name, msg))
@@ -813,7 +813,8 @@ class OpenMDAO_Server(Server):
 
     Server.fallback_mapping['__has_interface__'] = _fallback_hasinterface
 
-    def debug_info(self, c):
+    # This is for low-level debugging of servers.
+    def debug_info(self, c):  #pragma no cover
         """ Return string representing state of id_to_obj mapping. """
         self.mutex.acquire()
         try:
@@ -845,7 +846,8 @@ class OpenMDAO_Server(Server):
             try:
                 callable, exposed, method_to_typeid, proxytype = \
                     self.registry[typeid]
-            except KeyError:
+            # Just being defensive.
+            except KeyError:  #pragma no cover
                 logging.error('mp_support.create: %r registry', typeid)
                 for key, value in self.registry.items():
                     logging.error('    %s: %s', key, value)
@@ -976,7 +978,8 @@ class OpenMDAO_Manager(BaseManager):
             if not self._process.is_alive():
                 raise RuntimeError('Server process %d exited: %s'
                                    % (pid, self._process.exitcode))
-        else:
+        # Hard to cause a timeout.
+        else:  #pragma no cover
             self._process.terminate()
             raise RuntimeError('Server process %d startup timed-out' % pid)
         reply = reader.recv()
@@ -1183,8 +1186,6 @@ class OpenMDAO_Proxy(BaseProxy):
                 msg = 'No credentials for PublicKey authentication of %s' \
                       % methodname
                 logging.error(msg)
-#                for line in traceback.format_stack():
-#                    logging.error(line.rstrip())
                 raise RuntimeError(msg)
         try:
             conn = self._tls.connection
@@ -1266,6 +1267,9 @@ class OpenMDAO_Proxy(BaseProxy):
             return result
         elif kind == '#PROXY':
             exposed, token = result
+            # Proxy passthru only happens remotely.
+            if self._manager is None:  #pragma no cover
+                self._manager = OpenMDAO_Manager()
             try:
                 proxytype = self._manager._registry[token.typeid][-1]
             except KeyError:
@@ -1284,7 +1288,8 @@ class OpenMDAO_Proxy(BaseProxy):
         """
         This version avoids a hang in _Client if the server no longer exists.
         """
-        if not OpenMDAO_Proxy.manager_is_alive(self._token.address):
+        # Hard to cause this to happen.
+        if not OpenMDAO_Proxy.manager_is_alive(self._token.address):  #pragma no cover
             raise RuntimeError('Cannot connect to manager at %r' 
                                % (self._token.address))
 
@@ -1321,7 +1326,8 @@ class OpenMDAO_Proxy(BaseProxy):
                     util.debug('DECREF %r', token.id)
                     conn = _Client(token.address, authkey=authkey)
                     dispatch(conn, None, 'decref', (token.id,))
-                except Exception as exc:
+                # Hard to cause this to happen.
+                except Exception as exc:  #pragma no cover
                     util.debug('... decref failed %s', exc)
         else:
             util.debug('DECREF %r -- manager already shutdown', token.id)

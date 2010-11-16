@@ -423,7 +423,8 @@ class Container(HasTraits):
         try:
             manager = self._managers[authkey]
         except KeyError:
-            if self.name:
+            # Only happens on remote side.
+            if self.name:  #pragma nocover
                 server_name='%s-cb' % self.name
             else:
                 server_name='parent-cb'
