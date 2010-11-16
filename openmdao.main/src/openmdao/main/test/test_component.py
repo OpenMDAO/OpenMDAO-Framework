@@ -29,9 +29,6 @@ class MyComponent(Component):
         self.xout = self.x * 2.
         
         
-class DynComponent(Component):
-    pass
-
 class TestCase(unittest.TestCase):
     """ Test of Component. """
 

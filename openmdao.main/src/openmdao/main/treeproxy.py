@@ -6,7 +6,18 @@ class TreeProxy(object):
     structured local object so that normal python attribute access will work
     to access objects inside of the opaque object's tree.
     
-    The opaque object must implement the IOpaqueTree interface.
+    The opaque object must implement the following interface which is checked
+    only via duck typing:
+    
+    ::
+    
+        def get(pathname, index=None)
+        def set(pathname, value, index=None)
+        def call(pathname, *args, **kwargs)
+        def __contains__(pathname)
+    
+    where pathname is a dot separated name, and index is a tuple of element
+    indices, e.g., (2,1) or ('mykey',).
     """
     def __init__(self, root, path):
         object.__setattr__(self, '_root', weakref.ref(root))
@@ -47,14 +58,27 @@ class TreeProxy(object):
                 raise err
 
     def __contains__(self, name):
-        return self._root().contains(self._path + name)
+        return self._root().__contains__(self._path + name)
     
     def __getitem__(self, key):
-        raise NotImplemented('__getitem__')
+        return self._root().get(self._path, index=(key,))
     
     def __call__(self, *args, **kwargs):
-        raise NotImplemented('__call__')
+        return self._root().call(self._path[:-1], *args, **kwargs)
     
     def set(self, name, value, index=None, src=None, force=False):
         self._root.set(self._path + name, value)
 
+
+def all_tree_names(pathnames):
+    """Returns the set of all names, including intermediate names,
+    given a list of pathnames. For example, given the pathname 'a.b.c',
+    it would return set(['a', 'a.b', 'a.b.c'])
+    """
+    allnames = set()
+    for key in pathnames:
+        parts = key.split('.')
+        for i in range(len(parts)):
+            path = '.'.join(parts[:i+1])
+            allnames.add(path)
+    return allnames

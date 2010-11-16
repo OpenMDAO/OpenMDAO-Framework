@@ -7,19 +7,26 @@ import StringIO
 import nose
 import copy
 
-from enthought.traits.api import TraitError, HasTraits
+from enthought.traits.api import TraitError, HasTraits, TraitType
 
 import openmdao.util.eggsaver as constants
 from openmdao.main.container import Container, get_default_name, \
                                     deep_hasattr, get_default_name, find_name, \
-                                    find_trait_and_value, _get_entry_group
-from openmdao.lib.datatypes.api import Float, List, Dict, TraitError
+                                    find_trait_and_value, _get_entry_group, \
+                                    create_io_traits
+from openmdao.lib.datatypes.api import Float, Int, Bool, List, Dict, TraitError
 from openmdao.util.testutil import make_protected_dir
 
 # Various Pickle issues arise only when this test runs as the main module.
 # This is used to detect when we're the main module or not.
 MODULE_NAME = __name__
 
+class DumbTrait(TraitType):
+    def validate(self, obj, name, value):
+        """Validation for the PassThroughTrait"""
+        if self.validation_trait:
+            return self.validation_trait.validate(obj, name, value)
+        return value
 
 class MyContainer(Container):
     def __init__(self, *args, **kwargs):
@@ -27,6 +34,24 @@ class MyContainer(Container):
         self.add_trait('dyntrait', Float(9., desc='some desc'))
 
 
+class MyBuilderContainer(Container):
+    def build_trait(self, ref_name, iotype=None, trait=None):
+        if iotype is None:
+            iostat = 'in'
+        else:
+            iostat = iotype
+            
+        if trait is None:
+            if ref_name.startswith('f'):
+                trait = Float(0.0, iotype=iostat, ref_name=ref_name)
+            elif ref_name.startswith('i'):
+                trait = Int(0, iotype=iostat, ref_name=ref_name)
+            else:
+                self.raise_exception("can't determine type of variable '%s'"
+                                         % ref_name, RuntimeError)
+        return trait
+    
+    
 class ContainerTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -63,6 +88,23 @@ class ContainerTestCase(unittest.TestCase):
         cont.dyntrait = 12.
         ccont2 = copy.deepcopy(cont)
         self.assertEqual(ccont2.dyntrait, 12.)
+        
+    def test_build_trait(self):
+        mbc = MyBuilderContainer()
+        obj_info = ['f_in', ('f_out', 'f_out_internal', 'out'),
+                    'i_in', 'i_out',
+                    ('b_out', 'b_out_internal', 'out', Bool())
+            ]
+        create_io_traits(mbc, obj_info)
+        create_io_traits(mbc, 'foobar')
+        self.assertTrue(mbc.get_trait('b_out').is_trait_type(Bool))
+        self.assertTrue(mbc.get_trait('f_out').is_trait_type(Float))
+        self.assertEqual(mbc.get_trait('f_out').iotype, 'out')
+        self.assertTrue(mbc.get_trait('i_in').is_trait_type(Int))
+        self.assertEqual(mbc.get_trait('f_in').iotype, 'in')
+        self.assertTrue(mbc.get_trait('foobar').is_trait_type(Float))
+        self.assertEqual(mbc.get_trait('foobar').iotype, 'in')
+
         
     def test_connect(self):
         cont = MyContainer()
@@ -198,8 +240,8 @@ class ContainerTestCase(unittest.TestCase):
         cont = Container()
         cont.add('container1', Container())
         cont.add('container2', Container())
-        cc = Container()
-        self.assertEqual(get_default_name(cc, cont), 'container3')
+        self.assertEqual(get_default_name(Container(), cont), 'container3')
+        self.assertEqual(get_default_name(Container(), None), 'container1')
         
     def test_bad_get(self):
         try:

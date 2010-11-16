@@ -31,7 +31,7 @@ from enthought.traits.trait_base import not_none, not_event
 from enthought.traits.trait_types import validate_implements
 
 from openmdao.main.filevar import FileRef
-from openmdao.main.treeproxy import TreeProxy
+#from openmdao.main.treeproxy import TreeProxy
 from openmdao.lib.datatypes.api import Float
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
@@ -1225,24 +1225,27 @@ def create_io_traits(cont, obj_info, iotype='in'):
     subclasses, to create each trait.
     
     obj_info is assumed to be either a string, a tuple, or a list
-    that contains strings or tuples. Tuples must contain a name and an
-    alias, and my optionally contain an iotype and a validation trait.
+    that contains strings and/or tuples. Tuples must contain a name and an
+    'internal' name, and may optionally contain an iotype and a validation trait.
+    The first name is the one that will be used to access the trait's attribute
+    in the Container, while the second name represents some alternate naming 
+    scheme within the Container.
     
     For example, the following are valid calls:
 
     create_io_traits(obj, 'foo')
     create_io_traits(obj, ['foo','bar','baz'])
-    create_io_traits(obj, ('foo', 'foo_alias', 'in', some_trait))
+    create_io_traits(obj, ('foo', 'foo_alias', 'in', some_trait), 'bar')
     create_io_traits(obj, [('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
     
     The newly created traits are added to the specified Container.
     """
     if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
-        lst = [obj_info]
+        it = [obj_info]
     else:
-        lst = obj_info
+        it = obj_info
 
-    for entry in lst:
+    for entry in it:
         iostat = iotype
         trait = None
         
