@@ -73,7 +73,12 @@ class Float(TraitType):
 
             if low > high:
                 raise TraitError("Lower bounds is greater than upper bounds.")
-        
+            
+            if default_value > high or default_value < low:
+                msg = "Default value is outside of bounds [%s, %s]." % \
+                    (str(low), str(high))
+                raise TraitError(msg)
+                
             # Range can be float or int, so we need to force these to be float.
             default_value = float(default_value)
                 
@@ -103,7 +108,8 @@ class Float(TraitType):
         
         # pylint: disable-msg=E1101
         # If both source and target have units, we need to process differently
-        if isinstance(value, TraitValMetaWrapper) and value.metadata.has_key('units'):
+        if isinstance(value, TraitValMetaWrapper) and \
+           value.metadata.has_key('units'):
             if self.units and value.metadata['units']:
                 return self._validate_with_metadata(obj, name, 
                                                     value.value, 
@@ -118,7 +124,7 @@ class Float(TraitType):
             self.error(obj, name, value)
 
     def error(self, obj, name, value):
-        """Returns a string describing the type handled by Float."""
+        """Returns an informative and descriptive error string."""
         
         # pylint: disable-msg=E1101
         if self.low is None and self.high is None:

@@ -72,6 +72,16 @@ class IntTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
         
+    def test_default_value(self):
+        try:
+            self.hobj.add_trait('out_of_bounds',
+                                Int(5, low=3, high=4))
+        except TraitError, err:
+            self.assertEqual(str(err), 
+                "Default value is outside of bounds [3, 4].")
+        else:
+            self.fail('TraitError expected')
+            
     def test_assignment(self):
         # check starting value
         self.assertEqual(3, self.hobj.int1)
