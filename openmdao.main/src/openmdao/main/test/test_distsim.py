@@ -2,6 +2,7 @@
 Test distributed simulation.
 """
 
+import cPickle
 import glob
 import logging
 from math import pi
@@ -595,7 +596,7 @@ class TestCase(unittest.TestCase):
         # Unpickleable argument.
         code = compile('3 + 4', '<string>', 'eval')
         assert_raises(self, 'self.factory.echo(code)', globals(), locals(),
-                      TypeError, "can't pickle code objects")
+                      cPickle.PicklingError, "Can't pickle <type 'code'>")
 
 
 if __name__ == '__main__':

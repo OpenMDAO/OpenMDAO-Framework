@@ -607,24 +607,24 @@ class ClusterAllocator(object):  #pragma no cover
         self.cluster.start()
         self._logger.debug('server listening on %s', self.cluster.address)
 
-        for slot in self.cluster:
-            manager = slot.host.manager
+        for host in self.cluster:
+            manager = host.manager
             try:
-                host = manager._name
+                name = manager._name
             except AttributeError:
-                host = 'localhost'
+                name = 'localhost'
                 host_ip = '127.0.0.1'
             else:
                 # 'host' is 'Host-<ipaddr>:<port>
-                dash = host.index('-')
-                colon = host.index(':')
-                host_ip = host[dash+1:colon]
+                dash = name.index('-')
+                colon = name.index(':')
+                host_ip = name[dash+1:colon]
 
             if host_ip not in self._allocators:
-                allocator = manager.openmdao_main_resource_LocalAllocator(host)
+                allocator = manager.openmdao_main_resource_LocalAllocator(name)
                 allocator._name = allocator.name
                 self._allocators[host_ip] = allocator
-                self._logger.debug('%s allocator %r pid %s', slot.host.hostname,
+                self._logger.debug('%s allocator %r pid %s', host.hostname,
                                    allocator._name, allocator.pid)
 
     def __getitem__(self, i):

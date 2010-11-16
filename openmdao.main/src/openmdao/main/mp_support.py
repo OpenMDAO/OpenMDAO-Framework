@@ -69,6 +69,8 @@ if sys.platform == 'win32':  #pragma no cover
     else:
         _HAVE_PYWIN32 = True
 
+from enthought.traits.trait_handlers import TraitDictObject
+
 from openmdao.main.interfaces import obj_has_interface
 from openmdao.main.rbac import AccessController, RoleError, check_role, \
                                rbac_methods, need_proxy, \
@@ -1264,40 +1266,17 @@ class OpenMDAO_Proxy(BaseProxy):
 # For some reason pickling the env_vars dictionary causes:
 #    PicklingError: Can't pickle <class 'openmdao.main.mp_support.ObjServer'>:
 #                     attribute lookup openmdao.main.mp_support.ObjServer failed
-# Possibly some Trait feature?
+# The reported type is not in the (current) Dict items.
+# Apparently this is some Traits 'feature'.
         new_args = []
         for arg in args:
-            if isinstance(arg, dict):
+            if isinstance(arg, TraitDictObject):
                 new_args.append(dict(arg))
             else:
                 new_args.append(arg)
-# Cause error
-#        new_args = args
 
-        try:
-            conn.send(_encrypt((self._id, methodname, new_args, kwds,
-                                credentials), session_key))
-        except cPickle.PicklingError as exc:
-            print 'mp_suppport._callmethod: %s, %s' % (methodname, exc)
-            print '    args:', len(new_args)
-            for arg in new_args:
-                print '        %r' % arg,
-                try:
-                    cPickle.dumps(arg)
-                except cPickle.PicklingError as exc:
-                    print '-- error', exc
-                else:
-                    print '-- ok'
-            print '    kwds:', len(kwds)
-            for key, val in kwds.items():
-                print '        %s: %r' % (key, val),
-                try:
-                    cPickle.dumps(val)
-                except cPickle.PicklingError as exc:
-                    print '-- error', exc
-                else:
-                    print '-- ok'
-            raise
+        conn.send(_encrypt((self._id, methodname, new_args, kwds,
+                            credentials), session_key))
 
         kind, result = _decrypt(conn.recv(), session_key)
 
@@ -1333,9 +1312,9 @@ class OpenMDAO_Proxy(BaseProxy):
 
         conn = self._Client(self._token.address, authkey=self._authkey)
         dispatch(conn, None, 'incref', (self._id,))
-# Enable this with care. While testing CaseIteratorDriver it can cause a
-# deadlock in logging (called via BaseProxy._after_fork()).
-#        util.debug('INCREF %r', self._token.id)
+        # Enable this with care. While testing CaseIteratorDriver it can cause a
+        # deadlock in logging (called via BaseProxy._after_fork()).
+        #util.debug('INCREF %r', self._token.id)
 
         self._idset.add(self._id)
 

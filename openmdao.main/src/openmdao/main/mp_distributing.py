@@ -116,7 +116,7 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
     def __init__(self, hostlist, modules=None, authkey=None):
         super(Cluster, self).__init__(authkey=authkey)
         self._hostlist = hostlist
-        self._modules = modules or []
+        modules = modules or []
         if __name__ not in modules:
             modules.append(__name__)
         files = [sys.modules[name].__file__ for name in modules]
@@ -125,6 +125,16 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                 files[i] = filename[:-1]
         self._files = [os.path.abspath(filename) for filename in files]
         self._reply_q = Queue.Queue()
+        self._up = []
+
+    def __getitem__(self, i):
+        return self._up[i]
+
+    def __iter__(self):
+        return iter(self._up)
+
+    def __len__(self):
+        return len(self._up)
 
     def start(self):
         """ Start this manager and all remote managers. """
@@ -170,6 +180,7 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                             decode_public_key(pubkey_text)
                     host_processed = True
                     _LOGGER.debug('Host %s is now up', other_host.hostname)
+                    self._up.append(other_host)
 
             # See if there are still hosts to wait for.
             waiting = []
@@ -192,6 +203,8 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
                         break
             else:
                 break
+
+        self._up = sorted(self._up, key=lambda host: host.hostname)
 
         self._base_shutdown = self.shutdown
         del self.shutdown
