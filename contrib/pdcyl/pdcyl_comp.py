@@ -22,8 +22,7 @@ class PdcylComp(ExternalCode):
     
     # Wing geometry
     # --------------------
-    wsweep  = Float(iotype='in', units='deg',
-                 desc='Wing sweep referenced to the leading edge')
+    wsweep  = Float(iotype='in', units='deg', desc='Wing sweep referenced to the leading edge')
     war     = Float(iotype='in', desc='Wing Aspect Ratio')
     wtaper  = Float(iotype='in', desc=' Wing taper ratio')
     wtcroot = Float(iotype='in', desc=' Wing thickness-to-cord at root')
