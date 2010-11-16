@@ -298,8 +298,9 @@ class Component (Container):
         valids = self._valid_dict
         for name in self.list_outputs(valid=False):
             valids[name] = True
-        #for name in self.list_inputs(valid=False):
-            #valids[name] = True
+        # make sure our inputs are valid too
+        for name in self.list_inputs(valid=False):
+            valids[name] = True
         self._call_execute = False
         
     def run (self, force=False):
