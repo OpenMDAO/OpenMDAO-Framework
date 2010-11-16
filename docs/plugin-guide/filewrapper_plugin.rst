@@ -1,3 +1,6 @@
+.. index:: plugin; building using a file wrapper
+
+.. index:: file wrapper
 
 .. _Building-a-Plugin-Using-a-File-Wrapper:
 
@@ -5,22 +8,24 @@ Building a Plugin that Contains a File Wrapper
 ==============================================
 
 For many legacy codes, the only viable way to include them in an MDAO process
-is through file-wrapping. In a file-wrapped component, the inputs are passed
-and the outputs are extracted via input and output files. In order to
+is through file wrapping. In a file-wrapped component, the inputs are passed
+and the outputs are extracted via input and output files. To
 facilitate this process, OpenMDAO includes several utilities that will be
 described in this section.
 
-There are three phases during the execution of a file-wrapped component:
+The execution of a file-wrapped component consists of the following three phases:
 
-- Generating an input file that contains OpenMDAO variable values.
+- Generating an input file that contains OpenMDAO variable values
 - Executing the external code
 - Parsing the output file and extracting values to place in OpenMDAO
 
-A file-wrapped component must perform all three of these tasks in its 'execute'
+A file-wrapped component must perform all three of these tasks in its ``execute``
 function.
 
-Presently, the only way to create a file-wrapped component involves writing some
-Python code, so a basic knowledge of Python is required to proceed.
+Presently, to create a file-wrapped component you must write some
+Python code, so you need a basic knowledge of Python to proceed.
+
+.. index:: precision in file-wrapped component
 
 
 .. _`A-Note-on-Precision`:
@@ -28,10 +33,9 @@ Python code, so a basic knowledge of Python is required to proceed.
 A Note on Precision
 ---------------------
 
-In a file-wrapped component, all key inputs for the external code come from
-an intermediate file that must be written. It is important to be careful to
-prevent the loss of precision when generating the input file. Consider a 
-Variable with 15 digits of precision.
+In a file-wrapped component, all key inputs for the external code come from an intermediate file
+that must be written. When generating the input file, it is important to prevent the loss of
+precision. Consider a variable with 15 digits of precision.
 
 .. doctest:: precision
 
@@ -54,12 +58,12 @@ Variable with 15 digits of precision.
     
 If the variable's value in the input file is created using the `print`
 statement, only 11 digits of precision are in the generated output. The same
-is true if we convert the value to a string and use string output formatting.
+is true if you convert the value to a string and use string output formatting.
 Printing the variable as a floating point number with no format string gives
-even less precision. In order to output the full precision of a variable, the
-decimal precision must be specified using formatted output (i.e., '%.16f').
+even less precision. To output the full precision of a variable, you must specify
+decimal precision using formatted output (i.e., ``"%.16f"``).
 
-All of this quibbling over the 11th-15th decimal place may sound unnecessary,
+Quibbling over the 11th--15th decimal place may sound unnecessary,
 but some applications are sensitive to changes of this magnitude. Moreover, it
 is important to consider how your component may be used during optimization. A
 gradient optimizer will often use a finite-difference scheme to calculate the
@@ -68,33 +72,34 @@ subjected to small increments and decrements. A loss of precision here can
 completely change the calculated gradient and prevent the optimizer from
 reaching a correct minimum value.
 
-The file-wrapping utilities in OpenMDAO use '%.16g'. If you write your own
+The file-wrapping utilities in OpenMDAO use ``"%.16g"``. If you write your own
 custom input-file generator for a new component, you should use this format
 for the floating point variables.
 
-Precision is also important when parsing the output, although the file parsing
-utilities always grab the entire number. However, some codes limit the number
-of digits of precision in their output files for human-readability. In such a
-case, you should check the manual for your external application to see if
-there is a flag to tell the code to output the full precision.
-    
+Precision is also important when parsing the output, although the file-parsing
+utilities always grab the entire number. However, some codes limit the number of
+digits of precision in their output files for human readability. In such a case,
+you should check your external application's manual to see if there is a flag for
+telling the code to output the full precision.
+
+.. index:: ExternalCode component
 
 .. _`Running-the-External-Code`:
 
 Running the External Code
 -------------------------
 
-The ExternalCode component takes care of the mundane tasks associated with the
-execution of the external application. These include:
+The ExternalCode component takes care of the mundane tasks associated with 
+executing the external application. These include:
 
 - Making the system call using the Subprocess module
-- Redirecting stdin, stdout, and stderr to the user's specification
+- Redirecting `stdin, stdout,` and `stderr` to the user's specification
 - Capturing error codes
 - Defining environment variables
 - Handling timeout and polling
 - Running the code on a remote server if required (forthcoming)
 
-So, we recommended that you always derive your file-wrapped component from
+So, we recommend that you always derive your file-wrapped component from
 the `ExternalCode` base class. The following example shows how you would
 do this for a simple component.
 
@@ -125,37 +130,37 @@ do this for a simple component.
 
 This component still needs one more piece of information -- the command
 string that runs the external code. The ExternalCode object has an attribute
-named `command` which takes the command string. So, if we want to execute a
-code that we normally would run by typing this at the command prompt:
+named `command` which takes the command string. So, if you want to execute a
+code that you normally run by typing
 
 ::
 
         /usr/bin/externalcode -v -r1
 
-then we need to set the command attribute as follows:
+at the command prompt, then you need to set the command attribute as follows:
 
 .. testcode:: External_Code
 
     MyComp = WrappedComp()
     MyComp.command = '/usr/bin/externalcode -v -r1'
     
-Note, you could also declare this in the `__init__` function of WrappedComp,
-if it is something that you don't expect will need to be changed by the user.
-The same is true of the other attributes described below.
+Note that you could also declare this in the ``__init__`` function of WrappedComp if it
+is something that you don't expect the user will need to change. The same is true
+of the other attributes described below.
 
 This example is ready to execute, although it is missing the code that writes
-out the input file and parse the output file. Subsequent sections explain how
+out the input file and parses the output file. Subsequent sections explain how
 to write these.
 
-The ExternalCode object also allows you to specify stdout, stdin, and stderr. For
-example, what if your application handled input and output on the command line
-using stdout and stdin as such:
-            
+The ExternalCode object also allows you to specify `stdout, stdin,` and `stderr`.
+For example, if your application handled input and output on the command line
+using `stdout` and `stdin` as such:
+
 ::
 
         /usr/bin/externalcode -v -r1 < myinput.txt > myoutput.txt
         
-We can tell ExternalCode to append these to our command line by setting the
+you can tell ExternalCode to append these to your command line by setting the
 following attributes:
 
 .. testcode:: External_Code
@@ -165,35 +170,35 @@ following attributes:
     MyComp.stdout = 'myoutput.txt'
     MyComp.stderr = 'myerror.log'
     
-Note that we don't just paste it all into the command string, particularly if
-we want to assure cross-platform compatibility. We also went ahead and
-captured the stderr output into a file called myerror.log.
+Note that you don't just paste everything into the command string, particularly if you
+want to assure cross-platform compatibility. In the example, we captured the
+`stderr` output into a file called ``myerror.log``.
 
-If you would like to redirect stderr to stdout, you can use the following:
+If you would like to redirect `stderr` to `stdout,` you can use the following:
 
 .. testcode:: External_Code
 
     MyComp.stderr = MyComp.STDOUT
     
-Note the capital letters in STDOUT. We've saved the special symbol STDOUT that
+Note the capital letters in ``STDOUT``. We've saved the special symbol ``STDOUT`` that
 is given in the subprocess module as a convenience.
 
 Sometimes execution of a code requires you to set environment variables,
-possibly to define paths that are needed to search for dynamic libraries, etc.
+possibly for defining paths that are needed to search for dynamic libraries, etc.
 The ExternalCode allows you to define variables for the execution environment
-using the dictionary `env_vars`.
+using the dictionary ``env_vars``.
 
 .. testcode:: External_Code
 
     MyComp.env_vars = { 'LIBRARY_PATH' : '/usr/local/lib' }
     
 The ExternalCode component also allows you to manage the polling rate and the
-timeout values. Timeout is a measure of maximum time to wait for the code to
+timeout values. `Timeout` is a measure of the maximum time to wait for the code to
 complete its execution. If a component takes longer than the given timeout value,
 then the process will end with a timeout error. Note that the default
 timeout is 0, which means no timeout. The polling rate can also be adjusted
-by setting the poll_delay attribute. Note that if it is not set, an internally
-computed value is used (and this value is most likely fine.)
+by setting the ``poll_delay`` attribute. Note that if it is not set, an internally
+computed value is used (and this value will most likely be fine.)
 
 .. testcode:: External_Code
 
@@ -201,12 +206,11 @@ computed value is used (and this value is most likely fine.)
     MyComp.poll_delay = 10
 
 This capability proved useful in a recent case with an analysis code that
-occasionally got caught in an infinite loop. It was known that a single
-execution of that code never exceeded 1 minute, so a 60 second timeout was
-used to terminate the execution so that the inputs could be tweaked and tried
-again. The poll_delay attribute is mainly useful for reducing the rate that
-the process is polled. There is no reason to poll every second if the code
-normally takes hours to run.
+occasionally got caught in an infinite loop. A single execution of that code had
+never exceeded 1 minute, so a 60-second timeout was used to terminate the execution
+so that the inputs could be tweaked and tried again. The ``poll_delay`` attribute is
+mainly useful for reducing the polling rate. There is no reason
+to poll every second if the code normally takes hours to run.
 
 Finally, if your code returns some kind of error or status code, you should
 check it with this attribute.
@@ -219,30 +223,35 @@ check it with this attribute.
     :hide:
 
     0
+    
+.. index:: input file; for external application
+
 
 Generating the Input File - Templated File I/O
 ----------------------------------------------
 
-There are two different ways to generate an input file for an external
-application. The first way is to write the file completely from scratch
-using the new values that are contained in the component's variables. There
-is not much that can be done to aid with this task, as it requires knowlege
-of the file format and can be completed using Python's standard formatted
-output. One exception to this is the FORTRAN namelist, which is more of a
-standard output format. Some tools to help create namelist input files
-are given in the next section.
+You can generate an input file for an external application two different ways. The
+first way is to write the file completely from scratch using the new values that are
+contained in the component's variables. Not much can be done to aid with this task, as
+it requires knowledge of the file format and can be completed using Python's standard
+formatted output. One exception to this is the Fortran namelist, which is more of a
+standard output format. The next section mentions some tools to help create namelist
+input files.
 
-The second way to generate an input file is by templating. A template file is
+
+.. index:: templating; for generating input file
+
+The second way to generate an input file is by templating. A *template* file is
 a sample input file which can be processed by a templating engine to insert
 new values in the appropriate locations. Often the template file is a valid
-input file before being processed, though other times it contains directives
-or conditional logic to guide the generation. Obvously this method works well
+input file before being processed, although other times it contains directives
+or conditional logic to guide the generation. Obviously this method works well
 for cases where only a small number of the possible variables and settings are
-being exposed to manipulation by outside components.
+being manipulated by outside components.
 
 OpenMDAO includes a basic templating capability that allows a template file to
 be read, fields to be replaced with new values, and an input file to be
-generated so that the external application can read it. Suppose we have an
+generated so that the external application can read it. Suppose you have an
 input file that contains some integer, floating point, and string inputs:
 
 ::
@@ -253,16 +262,16 @@ input file that contains some integer, floating point, and string inputs:
     10.1 20.2 30.3
     A B C
     
-This is a valid input file for our application, and it can also be used as a
-template file. The templating object is called `InputFileGenerator`, and it
+This is a valid input file for your application, and it can also be used as a
+template file. The templating object is called `InputFileGenerator,` and it
 includes methods that can replace specific fields as measured by their row
 and field numbers. 
 
-To use the InputFileGenerator object, first instantiate it and give it the
-name of the template file, and the name of the output file that we want to
-produce. (Note that this code will need to be placed in the execute function
-of your component *before* the external code has been run. See :ref:`Running the
-External Code`.) The code will generally look like this:
+To use the InputFileGenerator object, first instantiate it and give it the name of
+the template file and the name of the output file that you want to produce. (Note
+that this code must be placed in the ``execute`` function of your component
+*before* the external code is run. See :ref:`Running-the-External-Code`.) The
+code will generally look like this:
 
 ::
 
@@ -276,9 +285,9 @@ External Code`.) The code will generally look like this:
     
     parser.generate()
 
-When the template file is set, it is read into memory so that all subesquent
+When the template file is set, it is read into memory so that all subsequent
 replacements are done without writing the intermediate file to the disk. Once
-all replacements have been made, the generate method is called to create the
+all replacements have been made, the ``generate`` method is called to create the
 input file.
 
 .. testcode:: Parse_Input
@@ -297,7 +306,7 @@ input file.
     parser.data.append("10.1 20.2 30.3")
     parser.data.append("A B C")
 
-Let's say we want to grab the replace the second integer with a 7. The code
+Let's say you want to grab and replace the second integer with a 7. The code
 would look like this.
     
 .. testcode:: Parse_Input
@@ -318,15 +327,17 @@ would look like this.
     INPUT
     10.1 20.2 30.3
     A B C
-    
-The method `mark_anchor` is used to define an anchor, which becomes the
-starting point for the `transfer_var` method. Here, we find the 2nd field in
-the 1st line down from the anchor, and replace it with the new value.
+ 
+.. index:: mark_anchor
+   
+The method ``mark_anchor`` is used to define an anchor, which becomes the
+starting point for the ``transfer_var`` method. Here you find the second field in
+the first line down from the anchor and replace it with the new value.
 
-Now, what if we want to replace the third value of the floating point numbers
-after the second INPUT statement. An additional argument can be passed to the
-`mark_anchor` method to tell it to start at the 2nd instance of the text
-fragment "INPUT".
+Now, what if you want to replace the third value of the floating point numbers
+after the second ``INPUT`` statement. An additional argument can be passed to the
+``mark_anchor`` method to tell it to start at the second instance of the text
+fragment ``"INPUT"``.
 
 .. testcode:: Parse_Input
 
@@ -349,12 +360,12 @@ fragment "INPUT".
     10.1 20.2 3.141592653589793
     A B C
     
-Note that we are able to pass a floating point value to `transfer_var` and still
-keep 15 digits of precision. See :ref:`A-Note-on-Precision` for a discussion on
+Note that you are able to pass a floating point value to ``transfer_var`` and still
+keep 15 digits of precision. See :ref:`A-Note-on-Precision` for a discussion of
 why this is important.
     
-We can also count backwards from the bottom of the file by passing a negative
-number. Here, the second instance of "INPUT" from the bottom brings us
+You can also count backwards from the bottom of the file by passing a negative
+number. Here, the second instance of ``"INPUT"`` from the bottom brings you
 back to the first one.
 
 .. testcode:: Parse_Input
@@ -376,8 +387,8 @@ back to the first one.
     10.1 20.2 3.141592653589793
     A B C
     
-There is also a method for replacing an entire array of values. Let's try
-replacing the set of three integers.
+There is also a method for replacing an entire array of values. Try
+replacing the set of three integers as follows:
 
 .. testcode:: Parse_Input
 
@@ -402,13 +413,15 @@ replacing the set of three integers.
     10.1 20.2 3.141592653589793
     A B C
 
-The method `transfer_array` takes 4 required inputs. The first is an array
+.. index:: transfer_array
+
+The method ``transfer_array`` takes four required inputs. The first is an array
 of values that will become the new values in the file. The second is the
 starting row after the anchor. The third is the starting field that will be
 replaced, and the fourth is the ending field. The new array replaces the
-block of fields spanned by starting field and ending field.
+block of fields spanned by the starting field and the ending field.
 
-It is also possible to use the transfer_array method to 'stretch' an existing
+You can also use the ``transfer_array`` method to `stretch` an existing
 array in a template to add more terms.
 
 .. testcode:: Parse_Input
@@ -434,15 +447,14 @@ array in a template to add more terms.
     10.1 20.2 3.141592653589793
     A B C
 
-The named argument 'sep' is used to define what seperate to include between the
+The named argument `sep` defines which separator to include between the
 additional terms of the array. Future revisions of InputFileGenerator will
 hopefully be able to detect this automatically.
 
-The input file templating capability that comes with OpenMDAO is basic but
-quite functional. If you need a more powerful templating engine, particularly
-one that allows the inclusion of logic in your template files, then it may be
-beneficial to consider one of the community-developed engines such as mako_
-or django_.
+The input file templating capability that comes with OpenMDAO is basic but quite
+functional. If you need a more powerful templating engine, particularly one that
+allows the inclusion of logic in your template files, then you may want to consider
+one of the community-developed engines, such as mako_ or django_.
 
 .. _mako: http://www.makotemplates.org/
 
@@ -450,13 +462,16 @@ or django_.
 
 .. todo:: Include some examples with one of the templating engines.
 
-Generating the Input File - FORTRAN Namelists
+
+..index:: Fortran namelists
+
+Generating the Input File - Fortran Namelists
 ---------------------------------------------
 
-Since legacy FORTRAN are expected to be a frequent candidate for
-file-wrapping, a library for reading and generating FORTRAN namelist files has
-been included. The syntax for a namelist varies somewhat, depending on the
-FORTRAN implementation, but the format generally looks like this:
+Since legacy Fortran codes are expected to be frequent candidates for
+file wrapping, OpenMDAO includes a library for reading and generating Fortran
+namelist. The syntax for a namelist varies somewhat depending on the
+Fortran implementation, but the format generally looks like this:
 
 ::
 
@@ -473,14 +488,13 @@ FORTRAN implementation, but the format generally looks like this:
     ACHAR = 'aaa' 'bbb' 'ccc' ' ddd', 
     ABOOL = T T F F/
 
-The namelist utility includes functions to generate a valid namelist file from
-a component's set of input variables. There are also functions that can be
-used to parse a namelist file, and load the variable data back into an
-OpenMDAO component's variables (which can be useful for populating a component
-with new values.)
+The namelist utility includes functions to generate a valid namelist file from a
+component's set of input variables. Other functions can parse a
+namelist file and load the variable data back into an OpenMDAO component's
+variables (which can be useful for populating a component with new values).
 
-For example, let's consider a component whose inputs include 5 variables of
-various types. A component that writes out the an input file as a single
+For example, consider a component whose inputs include five variables of
+various types. A component that writes out an input file as a single
 namelist called `MAIN` would look like this:
 
 .. testcode:: Namelist
@@ -530,65 +544,67 @@ namelist called `MAIN` would look like this:
             # Generate the input file for FLOPS
             sb.generate()
 
-Note that this component is derived from ExternalCode, and uses a few of its
-features, so it is important to read :ref:`Running the External Code` before
+Note that this component is derived from ExternalCode and uses a few of its
+features, so it is important to read :ref:`Running-the-External-Code` before
 proceeding.
 
-In the `execute` method, a *Namelist* object is instantiated. This object
+In the ``execute`` method, a *Namelist* object is instantiated. This object
 allows you to sequentially build up a namelist input file. The only argument
-is 'self', which is passed because the Namelist object needs to access your
+is `self`, which is passed because the Namelist object needs to access your
 component's OpenMDAO variables in order to automatically determine the data
-type. The `set_filename` method is used to set the name of the input file that
-will be written. Here, we just pass it the variable self.stdin, which is part
+type. The ``set_filename`` method is used to set the name of the input file that
+will be written. Here, you just pass it the variable ``self.stdin``, which is part
 of the ExternalCode API.
 
-The first card we create for the Namelist is the title card, which is
-optionally assigned with the `set_title` method. After this, the first
-namelist group is declared with the `add_group` method. Subsequent variables
-are added to this namelist grouping. If `add_group` is called again, the
-current group is closed and any further variables are added to the new one.
+The first card you create for the Namelist is the title card, which is
+optionally assigned with the ``set_title`` method. After this, the first
+namelist group is declared with the ``add_group`` method. Subsequent variables
+are added to this namelist grouping. If ``add_group`` is called again, the
+current group is closed, and any further variables are added to the new one.
 
-The `add_var` method is used to add a variable to the Namelist. The only
+The ``add_var`` method is used to add a variable to the Namelist. The only
 needed argument is the variable's name in the component. The variable's type
 is used to determine what kind of namelist variable to output. If you need to
 add something to the namelist that isn't contained in one of the component's
-variables, then use the add_new_var method, giving it a name and a value as
+variables, then use the ``add_new_var`` method, giving it a name and a value as
 arguments.
 
-There is also an add_comment method that let's you add a comment to the
-namelist. Of course, this isn't an essential function, but there are time you
+Another method, ``add_comment``, lets you add a comment to the
+namelist. Of course, this isn't an essential function, but there are times you
 may want to add comments to enhance readability. The comment text should
 include the comment character. Note that the namelist format doesn't require a
 comment character, but it's still a good practice.
 
-Finally, once every variable, group, and comment has been assigned, use the
-`generate` method to create the input file. If a variable was entered
+Finally, once every variable, group, and comment have been assigned, use the
+``generate`` method to create the input file. If a variable was entered
 incorrectly, or if you have given it a variable type that it doesn't know how
-to handle (e.g., and Instance or a custom variable), an exception will be
-raised. Otherwise, the input file is created, and your `execute` function can
+to handle (e.g., an Instance or a custom variable), an exception will be
+raised. Otherwise, the input file is created, and your ``execute`` function can
 move on to running your code.
 
-Parsing a Namelist File
-~~~~~~~~~~~~~~~~~~~~~~~~
+*Parsing a Namelist File*
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Namelist object also includes some functions to parse a namelist file and
-load the variable values into a component's list of variables. This can be
-useful for loading in models that were developed when your code was executed
+The Namelist object also includes some functions for parsing a namelist file and
+loading the variable values into a component's list of variables. Doing this 
+can be useful for loading in models that were developed when your code was executed
 standalone.
 
 .. todo:: Write about the namelist parsing functions.
+
+.. index:: parsing output file (for external code)
 
 Parsing the Output File
 -----------------------
 
 When an external code is executed, it typically outputs the results into a
 file. OpenMDAO includes a few things to ease the task of extracting the
-important information out of a file.
+important information from a file.
 
-Basic Extraction
-~~~~~~~~~~~~~~~~
+*Basic Extraction*
+~~~~~~~~~~~~~~~~~~~
 
-Let's consider an application that produces the following as part of its
+Consider an application that produces the following as part of its
 text-file output:
 
 ::
@@ -600,15 +616,15 @@ text-file output:
     STRESS 11 22 33 44 55 66
     DISPLACEMENT 1.0 2.0 3.0 4.0 5.0
 
-As part of our file wrap, we need to reach into this file and grab the
-information that is needed by other downstream components in the model.
-OpenMDAO includes an object called `FileParser`, which contains functions to
-parse a file, grab the fields you specify, and apply them to the appropriate
-data type. For this to work, the file has to have some general format that
-would allow us to locate the piece of data we need relative to some constant
-feature in the file. In other words, the main capability of the FileParser is
-to locate and extract a set of characters that is some number of lines and
-some number of fields away from an 'anchor' point.
+As part of the file wrap, you need to reach into this file and grab the information
+that is needed by downstream components in the model. OpenMDAO includes an
+object called `FileParser`, which contains functions for parsing a file, grabbing
+the fields you specify, and applying them to the appropriate data type. For this to
+work, the file must have some general format that would allow you to locate the
+piece of data you need relative to some constant feature in the file. In other
+words, the main capability of the FileParser is to locate and extract a set of
+characters that is some number of lines and some number of fields away from an
+`anchor` point.
 
 ::
 
@@ -618,9 +634,9 @@ some number of fields away from an 'anchor' point.
     parser.set_file('myoutput.txt')
     
 To use the FileParser object, first instantiate it and give it the name of the
-output file. (Note that this code will need to be placed in the execute
-function of your component *after* the external code has been run. See
-:ref:`Running the External Code`.)
+output file. (Note that this code must be placed in your component's
+``execute`` function *after* the external code has been run. See
+:ref:`Running-the-External-Code`.)
 
 .. testcode:: Parse_Output
     :hide:
@@ -639,10 +655,10 @@ function of your component *after* the external code has been run. See
     parser.data.append("STRESS 11 22 33 44 55 66")
     parser.data.append("DISPLACEMENT 1.0 2.0 3.0 4.0 5.0")
 
-Let's say we want to grab the first "STRESS" value from each load case in the
-file snippet shown above. The code would look like this. (Note: the print
-statement is only there for display in this example.)
-    
+Say you want to grab the first ``STRESS`` value from each load case in the file
+snippet shown above. The code would look like this. (Note: in this example the print
+statement is there only for display.)
+
 .. testcode:: Parse_Output
 
     parser.mark_anchor("LOAD CASE")
@@ -655,43 +671,43 @@ statement is only there for display in this example.)
 
     1.3334e+07 is a <type 'float'>
     
-The method `mark_anchor` is used to define an anchor, which becomes the
-starting point for the `transfer_var` method. Here, we grab the value from the
-2nd field in the 1st line down from the anchor. The parser is smart enough to
-recognize the number as floating point, and to create a Python float variable.
+The method ``mark_anchor`` is used to define an anchor, which becomes the
+starting point for the ``transfer_var`` method. Here, you grab the value from the
+second field in the first line down from the anchor. The parser is smart enough to
+recognize the number as floating point and to create a Python float variable.
 The final statement assigns this value to the component variable `xreal`.
 
-The third value of stress is NaN. If we want to grab that element:
+The third value of ``STRESS`` is `NaN`. If you want to grab that element, you can type
+this:
 
-.. testcode:: Parse_Output
+::
 
     parser.mark_anchor("LOAD CASE")
     var = parser.transfer_var(1, 4)
     
     print "%g" % var
 
-.. testoutput:: Parse_Output
+::
 
     nan
     
-Python also has built-in values for nan and inf that are valid for *float*
-variables. The parser can recognize them when it encounters them in a file.
-This gives you the ability to catch numerical numerical overflows, underflows,
-etc. and take action. Numpy includes the functions `isnan` and `isinf` to test
-for "nan" and "inf" respectively.
+Python also has built-in values for `nan` and `inf` that are valid for float variables. The parser
+recognizes them when it encounters them in a file. This allows you to catch numerical overflows,
+underflows, etc., and take action. Numpy includes the functions ``isnan`` and ``isinf`` to test for
+`nan` and `inf` respectively.
 
-.. testcode:: Parse_Output
+::
 
     from numpy import isnan, isinf
     
     print isnan(var)
     
-.. testoutput:: Parse_Output
+::
 
     True
 
-When the data is not a number, it is recognized as a string. Let's grab the
-word "DISPLACEMENT".
+When the data is not a number, it is recognized as a string. Grab the
+word ``DISPLACEMENT``.
     
 .. testcode:: Parse_Output
 
@@ -704,9 +720,9 @@ word "DISPLACEMENT".
 
     DISPLACEMENT
     
-Now, what if we want to grab the value of stress from the second load case. An
-additional argument can be passed to the `mark_anchor` method to tell it to
-start at the 2nd instance of the text fragment "LOAD CASE".
+Now, what if you want to grab the value of stress from the second load case? An
+additional argument can be passed to the ``mark_anchor`` method telling it to
+start at the second instance of the text fragment ``"LOAD CASE"``.
 
 .. testcode:: Parse_Output
 
@@ -719,8 +735,8 @@ start at the 2nd instance of the text fragment "LOAD CASE".
 
     11
     
-We can also count backwards from the bottom of the file by passing a negative
-number. Here, the second instance of "LOAD CASE" from the bottom brings us
+You can also count backwards from the bottom of the file by passing a negative
+number. Here, the second instance of ``"LOAD CASE"`` from the bottom brings us
 back to the first one.
 
 .. testcode:: Parse_Output
@@ -735,10 +751,10 @@ back to the first one.
     1.3334e+07
     
 
-Array Extraction
-~~~~~~~~~~~~~~~~
+*Array Extraction*
+~~~~~~~~~~~~~~~~~~
 
-Let's consider the same application that produces the following as part of its
+Now consider the same application that produces the following as part of its
 text-file output:
 
 ::
@@ -750,8 +766,8 @@ text-file output:
     STRESS 11 22 33 44 55 66
     DISPLACEMENT 1.0 2.0 3.0 4.0 5.0
 
-This time, we'd like to grab all of the displacements in one read, and store
-them as an array. This can be done with the `transfer_array` method.
+This time, grab all of the displacements in one read and store
+them as an array. You can do this with the ``transfer_array`` method.
 
 .. testcode:: Parse_Output
 
@@ -764,9 +780,9 @@ them as an array. This can be done with the `transfer_array` method.
 
     [ 2.1      4.6      3.1      2.22234]
 
-The `transfer_array` method takes 4 arguments -- starting row, starting field,
+The ``transfer_array`` method takes four arguments: starting row, starting field,
 ending row, and ending field. The parser extracts all values from the starting
-row and field and continuing until it hits the ending field in the ending row.
+row and field and continues until it hits the ending field in the ending row.
 These values are all placed in a 1D array. When extracting multiple lines, if
 a line break is hit, the parser continues reading from the next line until the
 last line is hit. The following extraction illustrates this:
@@ -782,24 +798,26 @@ last line is hit. The following extraction illustrates this:
 
     ['39342000.0' 'nan' '265400.0' 'DISPLACEMENT' '2.1' '4.6' '3.1']
     
-With the inclusion of "DISPLACEMENT", this is returned as an array of strings, so
-care must be taken.
+With the inclusion of ``'DISPLACEMENT'``, this is returned as an array of strings,
+so you must be careful.
 
 Functions to extract multi-dimensional arrays are forthcoming. For now, please
-use `transfer_var` and `transfer_array` to read the data and load it into your
+use ``transfer_var`` and ``transfer_array`` to read the data and load it into your
 array.
 
-Delimiters
-~~~~~~~~~~
+.. index:: delimiters
 
-When the parser counts fields in a line of output, it determines the field boundaries
-by comparing against a set of delimiters. These delimiters can be changed using the
-`set_delimiters` method. By default, the delimiters are the general white space
-characters space (' ') and tab ('\t'). The newline characters ('\n' and '\r') are also
-always removed regardless of the delimiter status.
+*Delimiters*
+~~~~~~~~~~~~
+
+When the parser counts fields in a line of output, it determines the field
+boundaries by comparing against a set of delimiters. These delimiters can be
+changed using the ``set_delimiters`` method. By default, the delimiters are the
+general white space characters space (" ") and tab ("\t"). The newline characters
+("\n" and "\r") are always removed regardless of the delimiter status.
 
 One common case that will require a change in the default delimiter is the comma
-seperated file (i.e, csv). Here's an example of such an output file:
+separated file (i.e, csv). Here's an example of such an output file:
 
 ::
 
@@ -813,7 +831,7 @@ seperated file (i.e, csv). Here's an example of such an output file:
     parser.data.append("CASE 1")
     parser.data.append("3,7,2,4,5,6")
     
-If we try grabbing the first element without changing the delimiters:
+Try grabbing the first element without changing the delimiters:
 
 .. testcode:: Parse_Output
 
@@ -826,9 +844,9 @@ If we try grabbing the first element without changing the delimiters:
 
     ,7,2,4,5,6
     
-What happend here is slightly confusing, but the main point is that the parser
+What happened here is slightly confusing, but the main point is that the parser
 did not handle this as expected because commas were not in the set of
-delimiters. Now let's specify commas as our delimiter.
+delimiters. Now specify commas as your delimiter.
 
 .. testcode:: Parse_Output
 
@@ -842,7 +860,7 @@ delimiters. Now let's specify commas as our delimiter.
 
     7
 
-With the correct delimiter set, we extract the 2nd integer as expected.
+With the correct delimiter set, you extract the second integer as expected.
     
-Special Case Delimiter - Columns
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*Special Case Delimiter - Columns*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
