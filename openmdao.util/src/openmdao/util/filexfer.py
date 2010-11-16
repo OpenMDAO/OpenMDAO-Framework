@@ -15,8 +15,6 @@ def filexfer(src_server, src_path, dst_server, dst_path, mode=''):
     respective object must support :meth:`open`, :meth:`stat`, and
     :meth:`chmod`.
 
-    `mode` specifies any :meth:`open` mode settings in addition to 'r' or 'w'.
-
     After the copy has completed, permission bits from :meth:`stat` are set
     via :meth:`chmod`.
 
