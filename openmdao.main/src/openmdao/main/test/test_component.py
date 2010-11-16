@@ -91,7 +91,7 @@ class TestCase(unittest.TestCase):
 
     def test_protected_directory(self):
         if sys.platform == 'win32':
-            raise nose.SkipTest("Windows box has permission problems with this test")
+            raise SkipTest("Windows box has permission problems with this test")
         
         logging.debug('')
         logging.debug('test_protected_directory')
