@@ -35,9 +35,6 @@ class Int(TraitType):
         if high is None:
             high = maxint
             
-        if low > high:
-            raise TraitError("Lower bounds is greater than upper bounds.")
-        
         if not isinstance(default_value, int):
             raise TraitError("Default value for an Int must be an integer.")
         
@@ -47,6 +44,14 @@ class Int(TraitType):
         if not isinstance(high, int):
             raise TraitError("Upper bounds for an Int must be an integer.")
         
+        if low > high:
+            raise TraitError("Lower bounds is greater than upper bounds.")
+        
+        if default_value > high or default_value < low:
+            msg = "Default value is outside of bounds [%s, %s]." % \
+                (str(low), str(high))
+            raise TraitError(msg)
+                
         # Put iotype in the metadata dictionary
         if iotype is not None:
             metadata['iotype'] = iotype
@@ -77,7 +82,7 @@ class Int(TraitType):
             self.error(obj, name, value)
 
     def error(self, obj, name, value):
-        """Returns a string describing the type handled by Int."""
+        """Returns an informative and descriptive error string."""
         
         # pylint: disable-msg=E1101
         right = left = '='

@@ -20,9 +20,9 @@ class Array(TraitArray):
     The unit applies to the entire array."""
     
     def __init__(self, default_value=None, dtype = None, shape = None,
-                 iotype=None, desc=None, units=None,  **metadata):
+                 iotype=None, desc=None, units=None, **metadata):
         
-        # Determine defalt_value if unspecified
+        # Determine default_value if unspecified
         if default_value is None:
             default_value = array([])
         elif isinstance(default_value, ndarray):
@@ -45,16 +45,25 @@ class Array(TraitArray):
         if units is not None:
             metadata['units'] = units
             
-        # If there are units, test them by creating a physical quantity
-        if 'units' in metadata:
+            # Since there are units, test them by creating a physical quantity
             try:
                 pq = PhysicalQuantity(0., metadata['units'])
             except:
                 raise TraitError("Units of '%s' are invalid" %
                                  metadata['units'])
             
-        super(Array, self).__init__(dtype=dtype, shape=shape, 
-                                    value=default_value, **metadata)
+        # Put shape in the metadata dictionary
+        if shape is not None:
+            metadata['shape'] = shape
+            
+            # Make sure default matches the shape.
+            if default_value.shape != shape:
+                msg = "Shape of the default value does not match the " \
+                      "shape attribute."
+                raise TraitError(msg)
+            
+        super(Array, self).__init__(dtype=dtype, value=default_value, \
+                                    **metadata)
 
 
     def validate(self, obj, name, value):
@@ -79,18 +88,22 @@ class Array(TraitArray):
             self.error(obj, name, value)
 
     def error(self, obj, name, value):
-        """Returns a string describing the type handled by Array."""
+        """Returns an informative and descriptive error string."""
+        
+        wtype = "value"
+        wvalue = value
+        info = "a numpy array"
         
         # pylint: disable-msg=E1101
-        if self.units:
-            info = "a numpy array having units compatible " \
-                   "with '%s'" % self.units
-        else:
-            info = "a numpy array."
-
+        if self.shape and value.shape:
+            if self.shape != value.shape:
+                info += " of shape %s" % str(self.shape)
+                wtype = "shape"
+                wvalue = str(value.shape)
+            
         vtype = type( value )
-        msg = "Trait '%s' must be %s, but a value of %s %s was specified." % \
-                               (name, info, value, vtype)
+        msg = "Trait '%s' must be %s, but a %s of %s (%s) was specified." % \
+                               (name, info, wtype, wvalue, vtype)
         obj.raise_exception(msg, TraitError)
 
     def get_val_meta_wrapper(self):
