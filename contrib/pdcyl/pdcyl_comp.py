@@ -5,11 +5,7 @@ PDCYL is a structural esimation code that was pulled from ACSYNT.
 """
 
 # pylint: disable-msg=E0611,F0401
-from numpy import int32 as numpy_int32
-from numpy import float32 as numpy_float32
-from numpy import array, zeros
-
-from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str
+from openmdao.lib.datatypes.api import Bool, Enum, Float, Int, Str
 from openmdao.lib.components.api import ExternalCode
 from openmdao.main.api import FileMetadata
 from openmdao.util.filewrap import FileParser
@@ -193,7 +189,7 @@ class PdcylComp(ExternalCode):
             FileMetadata(path=self.stderr),
         ]
         
-                # Dictionary contains location of every numeric scalar variable
+        # Dictionary contains location of every numeric scalar variable
         fields = {}
         fields[8]   = 'wsweep'
         fields[9]   = 'war'
