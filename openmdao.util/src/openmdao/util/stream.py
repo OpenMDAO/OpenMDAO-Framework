@@ -1,5 +1,5 @@
-import logging
 import struct
+import sys
 
 import numpy
 
@@ -51,6 +51,13 @@ class Stream(object):
             self.integer_8 = integer_8
             self.unformatted = unformatted
             self.recordmark_8 = recordmark_8
+            self.need_byteswap = False
+            if self.big_endian:
+                if sys.byteorder == 'little':
+                    self.need_byteswap = True
+            else:
+                if sys.byteorder == 'big':
+                    self.need_byteswap = True
         else:
             # Ensure sanity.
             self.big_endian = False
@@ -58,6 +65,11 @@ class Stream(object):
             self.integer_8 = False
             self.unformatted = False
             self.recordmark_8 = False
+            self.need_byteswap = False
+
+    def close(self):
+        """ Close underlying file. """
+        return self.file.close()
 
     def reclen_ints(self, count):
         """
@@ -98,16 +110,16 @@ class Stream(object):
         if full_record and self.unformatted:
             reclen = self.read_recordmark()
             if reclen != self.reclen_ints(1):
-                logging.warning('unexpected recordlength %d', reclen)
+                raise RuntimeError('unexpected recordlength %d' % reclen)
 
         data = self.read_ints(1)[0]
 
         if full_record and self.unformatted:
             reclen2 = self.read_recordmark()
             if reclen2 != reclen:
-                logging.warning('mismatched recordlength %d vs. %d',
-                                reclen2, reclen)
-        return data
+                raise RuntimeError('mismatched recordlength %d vs. %d'
+                                   % (reclen2, reclen))
+        return int(data)
 
     def read_ints(self, shape, order='C', full_record=False):
         """
@@ -129,19 +141,19 @@ class Stream(object):
         if full_record and self.unformatted:
             reclen = self.read_recordmark()
             if reclen != self.reclen_ints(count):
-                logging.warning('unexpected recordlength %d', reclen)
+                raise RuntimeError('unexpected recordlength %d' % reclen)
 
         sep = '' if self.binary else ' '
         dtype = numpy.int64 if self.integer_8 else numpy.int32
         data = numpy.fromfile(self.file, dtype=dtype, count=count, sep=sep)
-        if self.big_endian:
+        if self.need_byteswap:
             data.byteswap(True)
 
         if full_record and self.unformatted:
             reclen2 = self.read_recordmark()
             if reclen2 != reclen:
-                logging.warning('mismatched recordlength %d vs. %d',
-                                reclen2, reclen)
+                raise RuntimeError('mismatched recordlength %d vs. %d'
+                                   % (reclen2, reclen))
 
         return data.reshape(shape, order=order) if reshape else data
 
@@ -156,16 +168,16 @@ class Stream(object):
         if full_record and self.unformatted:
             reclen = self.read_recordmark()
             if reclen != self.reclen_floats(1):
-                logging.warning('unexpected recordlength %d', reclen)
+                raise RuntimeError('unexpected recordlength %d' % reclen)
 
         data = self.read_floats(1)[0]
 
         if full_record and self.unformatted:
             reclen2 = self.read_recordmark()
             if reclen2 != reclen:
-                logging.warning('mismatched recordlength %d vs. %d',
-                                reclen2, reclen)
-        return data
+                raise RuntimeError('mismatched recordlength %d vs. %d'
+                                   %  (reclen2, reclen))
+        return float(data)
 
     def read_floats(self, shape, order='C', full_record=False):
         """
@@ -187,19 +199,19 @@ class Stream(object):
         if full_record and self.unformatted:
             reclen = self.read_recordmark()
             if reclen != self.reclen_floats(count):
-                logging.warning('unexpected recordlength %d', reclen)
+                raise RuntimeError('unexpected recordlength %d' % reclen)
 
         sep = '' if self.binary else ' '
         dtype = numpy.float32 if self.single_precision else numpy.float64
         data = numpy.fromfile(self.file, dtype=dtype, count=count, sep=sep)
-        if self.big_endian:
+        if self.need_byteswap:
             data.byteswap(True)
 
         if full_record and self.unformatted:
             reclen2 = self.read_recordmark()
             if reclen2 != reclen:
-                logging.warning('mismatched recordlength %d vs. %d',
-                                reclen2, reclen)
+                raise RuntimeError('mismatched recordlength %d vs. %d'
+                                   %  (reclen2, reclen))
 
         return data.reshape(shape, order=order) if reshape else data
 
@@ -214,7 +226,7 @@ class Stream(object):
     ######## Output Operations ########
 
 
-    def write_int(self, value, sep=' ', fmt='%s', full_record=False):
+    def write_int(self, value, fmt='%d', sep='', full_record=False):
         """
         Writes an integer.
 
@@ -235,10 +247,10 @@ class Stream(object):
             self.file.write(fmt % value)
             if full_record:
                 self.file.write('\n')
-            else:
+            elif sep:
                 self.file.write(sep)
 
-    def write_ints(self, data, order='C', sep=' ', fmt='%s', linecount=0,
+    def write_ints(self, data, order='C', fmt='%d', sep=' ', linecount=0,
                    full_record=False):
         """
         Writes an integer array.
@@ -263,6 +275,9 @@ class Stream(object):
             If True, then write surrounding recordmarks.
             Only meaningful if `unformatted`.
         """
+        if not isinstance(data, numpy.ndarray):
+            data = numpy.array(data)
+
         if self.binary:
             if full_record and self.unformatted:
                 self.write_recordmark(self.reclen_ints(data.size))
@@ -274,20 +289,20 @@ class Stream(object):
             elif data.itemsize != _SZ_INT:
                 arr = numpy.array(data, dtype=numpy.int32)
 
-            if self.big_endian:
+            if self.need_byteswap:
                 arr.byteswap(True)
             try:
                 self.file.write(arr.tostring(order=order))
             finally:
-                if self.big_endian:
+                if self.need_byteswap:
                     arr.byteswap(True)
 
             if full_record and self.unformatted:
                 self.write_recordmark(self.reclen_ints(data.size))
         else:
-            self.write_array(data, order, sep, fmt, linecount)
+            self.write_array(data, order, fmt, sep, linecount)
 
-    def write_float(self, value, sep=' ', fmt='%s', full_record=False):
+    def write_float(self, value, fmt='%.16g', sep='', full_record=False):
         """
         Writes a float.
 
@@ -297,22 +312,22 @@ class Stream(object):
         """
         if self.binary:
             if full_record and self.unformatted:
-                self.write_recordmark(self.reclen_ints(1))
+                self.write_recordmark(self.reclen_floats(1))
 
             fmt = '>' if self.big_endian else '<'
             fmt += 'f' if self.single_precision else 'd'
             self.file.write(struct.pack(fmt, value))
 
             if full_record and self.unformatted:
-                self.write_recordmark(self.reclen_ints(1))
+                self.write_recordmark(self.reclen_floats(1))
         else:
             self.file.write(fmt % value)
             if full_record:
                 self.file.write('\n')
-            else:
+            elif sep:
                 self.file.write(sep)
 
-    def write_floats(self, data, order='C', sep=' ', fmt='%s', linecount=0,
+    def write_floats(self, data, order='C', fmt='%.16g', sep=' ', linecount=0,
                      full_record=False):
         """
         Writes a float array.
@@ -337,6 +352,9 @@ class Stream(object):
             If True, then write surrounding recordmarks.
             Only meaningful if `unformatted`.
         """
+        if not isinstance(data, numpy.ndarray):
+            data = numpy.array(data)
+
         if self.binary:
             if full_record and self.unformatted:
                 self.write_recordmark(self.reclen_floats(data.size))
@@ -348,20 +366,20 @@ class Stream(object):
             elif data.itemsize != _SZ_DOUBLE:
                 arr = numpy.array(data, dtype=numpy.float64)
 
-            if self.big_endian:
+            if self.need_byteswap:
                 arr.byteswap(True)
             try:
                 self.file.write(arr.tostring(order=order))
             finally:
-                if self.big_endian:
+                if self.need_byteswap:
                     arr.byteswap(True)
 
             if full_record and self.unformatted:
                 self.write_recordmark(self.reclen_floats(data.size))
         else:
-            self.write_array(data, order, sep, fmt, linecount)
+            self.write_array(data, order, fmt, sep, linecount)
 
-    def write_array(self, data, order='C', sep=' ', fmt='%s', linecount=0):
+    def write_array(self, data, order='C', fmt='%s', sep=' ', linecount=0):
         """
         Writes array as text.
 
@@ -398,13 +416,14 @@ class Stream(object):
 
         count = 0
         while True:
-            _write(sep)
             _write(fmt % _item(*indices))
             count += 1
             if linecount > 0:
                 if count >= linecount:
                     _write('\n')
                     count = 0
+            if count:
+                _write(sep)
 
             for i in sequence:
                 indices[i] += 1
