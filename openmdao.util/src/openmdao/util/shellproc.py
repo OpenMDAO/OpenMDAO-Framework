@@ -1,6 +1,7 @@
 import os.path
 import signal
 import subprocess
+import sys
 import time
 
 PIPE = subprocess.PIPE
@@ -15,23 +16,36 @@ class CalledProcessError(subprocess.CalledProcessError):
         self.errormsg = errormsg
 
     def __str__(self):
-        return "Command '%s' returned non-zero exit status %d: %s" \
+        return 'Command %r returned non-zero exit status %d: %s' \
                 % (self.cmd, self.returncode, self.errormsg)
 
 
 class ShellProc(subprocess.Popen):
     """
     A slight modification to :class:`subprocess.Popen`.
-    Sets the ``shell`` argument True, updates a copy of ``os.environ`` with
-    `env`, and opens files for any stream which is a :class:`basestring`.
+    If `args` is a string then the ``shell`` argument is set True.
+    Updates a copy of ``os.environ`` with `env`, and opens files for any
+    stream which is a :class:`basestring`.
+
+    args: string or list
+        If a string, then this is the command line to execute and the
+        :class:`subprocess.Popen` ``shell`` argument is set True.
+        Otherwise this is a list of arguments, the first is the command
+        to execute.
+
+    stdin, stdout, stderr: string, file, or int
+        Specify handling of corresponding stream. If a string, a file
+        of that name is opened. Otherwise see the :mod:`subprocess`
+        documentation.
+
+    env: dict
+        Environment variables for the command.
     """
 
     def __init__(self, args, stdin=None, stdout=None, stderr=None, env=None):
+        environ = os.environ.copy()
         if env:
-            environ = os.environ.copy()
             environ.update(env)
-        else:
-            environ = None
 
         self._stdin_arg  = stdin
         self._stdout_arg = stdout
@@ -52,8 +66,15 @@ class ShellProc(subprocess.Popen):
         else:
             self._err = stderr
 
-        subprocess.Popen.__init__(self, args, stdin=self._inp, stdout=self._out,
-                                  stderr=self._err, shell=True, env=environ)
+        shell = isinstance(args, basestring)
+
+        try:
+            subprocess.Popen.__init__(self, args, stdin=self._inp,
+                                      stdout=self._out, stderr=self._err,
+                                      shell=shell, env=environ)
+        except Exception:
+            self.close_files()
+            raise
 
     def close_files(self):
         """ Closes files that were implicitly opened. """
@@ -63,6 +84,20 @@ class ShellProc(subprocess.Popen):
             self._out.close()
         if isinstance(self._stderr_arg, basestring):
             self._err.close()
+
+    def terminate(self, timeout=None):
+        """
+        Stop child process. If `timeout` is specified then :meth:`wait` will
+        be called to wait for the process to terminate.
+
+        timeout: float (seconds)
+            Maximum time to wait for the process to stop.
+            A value of zero implies an infinite maximum wait.
+
+        """
+        super(ShellProc, self).terminate()
+        if timeout is not None:
+            self.wait(timeout=timeout)
 
     def wait(self, poll_delay=0., timeout=0.):
         """
@@ -79,7 +114,6 @@ class ShellProc(subprocess.Popen):
             A value of zero implies an infinite maximum wait.
         """
         return_code = None
-        error_msg = ''
         try:
             if poll_delay <= 0:
                 poll_delay = max(0.1, timeout/100.)
@@ -92,36 +126,55 @@ class ShellProc(subprocess.Popen):
                 npolls -= 1
                 if (timeout > 0) and (npolls < 0):
                     self.terminate()
-                    error_msg = 'Timed out'
                     break
                 time.sleep(poll_delay)
                 return_code = self.poll()
-
-            if return_code:
-                if return_code > 0:
-                    error_msg = ': %s' % os.strerror(return_code)
-                else:
-                    sig = -return_code
-                    if sig < signal.NSIG:
-                        for item in signal.__dict__.keys():
-                            if item.startswith('SIG'):
-                                if getattr(signal, item) == sig:
-                                    error_msg = ': %s' % item
-                                    break
         finally:
             self.close_files()
 
-        self.errormsg = error_msg  # returncode set by self.poll().
-        return (return_code, error_msg)
+        # self.returncode set by self.poll().
+        if return_code is not None:
+            self.errormsg = self.error_message(return_code)
+        else:
+            self.errormsg = 'Timed out'
+        return (return_code, self.errormsg)
+
+    def error_message(self, return_code):
+        """
+        Return error message for `return_code`.
+        The error messages are derived from the operating system definitions,
+        some programs don't necessarily return exit codes conforming to these
+        definitions.
+
+        return_code: int
+            Return code from :meth:`poll`.
+        """
+        error_msg = ''
+        if return_code:
+            if return_code > 0:
+                error_msg = ': %s' % os.strerror(return_code)
+            elif sys.platform != 'win32':
+                sig = -return_code
+                if sig < signal.NSIG:
+                    for item in signal.__dict__.keys():
+                        if item.startswith('SIG'):
+                            if getattr(signal, item) == sig:
+                                error_msg = ': %s' % item
+                                break
+        return error_msg
 
 
 def call(args, stdin=None, stdout=None, stderr=None, env=None,
          poll_delay=0., timeout=0.):
     """
-    Run command with arguments. Returns ``(return_code, error_msg)``.
+    Run command with arguments.
+    Returns ``(return_code, error_msg)``.
 
-    args: list
-        List of arguments for the command.
+    args: string or list
+        If a string, then this is the command line to execute and the
+        :class:`subprocess.Popen` ``shell`` argument is set True.
+        Otherwise this is a list of arguments, the first is the command
+        to execute.
 
     stdin, stdout, stderr: string, file, or int
         Specify handling of corresponding stream. If a string, a file
@@ -140,11 +193,7 @@ def call(args, stdin=None, stdout=None, stderr=None, env=None,
         A value of zero implies an infinite maximum wait.
     """
     process = ShellProc(args, stdin, stdout, stderr, env)
-    try:
-        return_code, error_msg = process.wait(poll_delay, timeout)
-    finally:
-        process.close_files()
-    return (return_code, error_msg)
+    return process.wait(poll_delay, timeout)
 
 
 def check_call(args, stdin=None, stdout=None, stderr=None, env=None,
@@ -153,8 +202,11 @@ def check_call(args, stdin=None, stdout=None, stderr=None, env=None,
     Run command with arguments.
     If non-zero `return_code`, raises :class:`CalledProcessError`.
 
-    args: list
-        List of arguments for the command.
+    args: string or list
+        If a string, then this is the command line to execute and the
+        :class:`subprocess.Popen` ``shell`` argument is set True.
+        Otherwise this is a list of arguments, the first is the command
+        to execute.
 
     stdin, stdout, stderr: string, file, or int
         Specify handling of corresponding stream. If a string, a file
@@ -173,11 +225,7 @@ def check_call(args, stdin=None, stdout=None, stderr=None, env=None,
         A value of zero implies an infinite maximum wait.
     """
     process = ShellProc(args, stdin, stdout, stderr, env)
-    try:
-        return_code, error_msg = process.wait(poll_delay, timeout)
-    finally:
-        process.close_files()
-
+    return_code, error_msg = process.wait(poll_delay, timeout)
     if return_code:
         raise CalledProcessError(return_code, args, error_msg)
 
