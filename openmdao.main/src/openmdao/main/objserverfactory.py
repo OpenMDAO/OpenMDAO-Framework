@@ -43,6 +43,9 @@ class ObjServerFactory(Factory):
 
     authkey: string
         Authorization key passed-on to :class:`ObjServer` servers.
+
+    The environment variable ``OPENMDAO_KEEPDIRS`` can be used to avoid
+    having server directory trees removed when servers are shut-down.
     """
 
     def __init__(self, name='ObjServerFactory', authkey=None):
@@ -70,9 +73,6 @@ class ObjServerFactory(Factory):
 
         server: :class:`ObjServer`
             Server to be shut down.
-
-        The environment variable ``OPENMDAO_KEEPDIRS`` can be used to avoid
-        having the server directory tree removed.
         """
         self._logger.debug('release %r', server)
         try:
@@ -162,13 +162,6 @@ class ObjServerFactory(Factory):
             if not name:
                 name = 'Server_%d' % (len(self._managers) + 1)
             manager = _ServerManager(authkey=self._authkey, name=name)
-# Helpful?
-            if sys.platform == 'win32':  #pragma no cover
-                for handler in logging._handlerList:
-                    handler.flush()
-                sys.stdout.flush()
-                sys.stderr.flush()
-
             root_dir = name
             count = 1
             while os.path.exists(root_dir):
@@ -287,13 +280,6 @@ class ObjServer(object):
     # We only reset logging on the remote side.
     def _reset_logging(self, filename='server.out'):  #pragma no cover
         """ Reset stdout/stderr and logging after switching destination. """
-# Helpful?
-        if sys.platform == 'win32':
-            for handler in logging._handlerList:
-                handler.flush()
-            sys.stdout.flush()
-            sys.stderr.flush()
-
         sys.stdout = open(filename, 'w')
         sys.stderr = sys.stdout
         logging.root.handlers = []
