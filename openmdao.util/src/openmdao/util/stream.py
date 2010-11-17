@@ -125,6 +125,13 @@ class Stream(object):
         """
         Returns integers as a :mod:`numpy` array of `shape`.
 
+        shape: tuple(int)
+            Dimensions of returned array.
+
+        order: string
+            If 'C', the data is in row-major order.
+            If 'Fortran', the data is in column-major order.
+
         full_record: bool
             If True, then read surrounding recordmarks.
             Only meaningful if `unformatted`.
@@ -183,6 +190,13 @@ class Stream(object):
         """
         Returns floats as a :mod:`numpy` array of `shape`.
 
+        shape: tuple(int)
+            Dimensions of returned array.
+
+        order: string
+            If 'C', the data is in row-major order.
+            If 'Fortran', the data is in column-major order.
+
         full_record: bool
             If True, then read surrounding recordmarks.
             Only meaningful if `unformatted`.
@@ -230,8 +244,18 @@ class Stream(object):
         """
         Writes an integer.
 
-        If `full_record`, then write surrounding
-        recordmarks. Only meaningful if `unformatted`.
+        value: int
+            Value to be written.
+
+        fmt: string
+            Format to use when writing as text.
+
+        sep: string
+            Appended to stream after writing `value`.
+
+        full_record: bool
+            If True, then write surrounding recordmarks.
+            Only meaningful if `unformatted`.
         """
         if self.binary:
             if full_record and self.unformatted:
@@ -262,11 +286,11 @@ class Stream(object):
             If 'C', the data is written in row-major order.
             If 'Fortran', the data is written in column-major order.
 
-        sep: string
-            Separator between items.
-
         fmt: string
             Format specifier for each item.
+
+        sep: string
+            Separator between items.
 
         linecount: int
             If > zero, then at most `linecount` values are written per line.
@@ -306,6 +330,15 @@ class Stream(object):
         """
         Writes a float.
 
+        value: float
+            Value to be written.
+
+        fmt: string
+            Format to use when writing as text.
+
+        sep: string
+            Appended to stream after writing `value`.
+
         full_record: bool
             If True, then write surrounding recordmarks.
             Only meaningful if `unformatted`.
@@ -339,11 +372,11 @@ class Stream(object):
             If 'C', the data is written in row-major order.
             If 'Fortran', the data is written in column-major order.
 
-        sep: string
-            Separator between items.
-
         fmt: string
             Format specifier for each item.
+
+        sep: string
+            Separator between items.
 
         linecount: int
             If > zero, then at most `linecount` values are written per line.
@@ -390,11 +423,11 @@ class Stream(object):
             If 'C', the data is written in row-major order.
             If 'Fortran', the data is written in column-major order.
 
-        sep: string
-            Separator between items.
-
         fmt: string
             Format specifier for each item.
+
+        sep: string
+            Separator between items.
 
         linecount: int
             If > zero, then at most `linecount` values are written per line.
