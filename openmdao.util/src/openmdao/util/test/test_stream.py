@@ -84,7 +84,8 @@ class TestCase(unittest.TestCase):
             stream = Stream(out)
             stream.write_int(4, sep=' ')
             stream.write_int(2, full_record=True)
-        self.assertEqual(os.path.getsize(self.filename), 4)
+        size = 5 if sys.platform == 'win32' else 4  # CR LF
+        self.assertEqual(os.path.getsize(self.filename), size)
         with open(self.filename, 'r') as inp:
             new_data = inp.read()
             self.assertEqual(new_data, '4 2\n')
@@ -339,7 +340,8 @@ class TestCase(unittest.TestCase):
             stream = Stream(out)
             stream.write_float(4., sep=' ')
             stream.write_float(2., full_record=True)
-        self.assertEqual(os.path.getsize(self.filename), 4)
+        size = 5 if sys.platform == 'win32' else 4  # CR LF
+        self.assertEqual(os.path.getsize(self.filename), size)
         with open(self.filename, 'r') as inp:
             new_data = inp.read()
             self.assertEqual(new_data, '4 2\n')
