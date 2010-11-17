@@ -18,7 +18,7 @@ class ArrayTestCase(unittest.TestCase):
         self.hobj = Component()
         self.hobj.add_trait('arr1',Array(array([98.9]), iotype='in', units='ft'))
         self.hobj.add_trait('arr2', Array(array([13.2]), iotype='out', units='inch'))
-        self.hobj.add_trait('arr3', Array(iotype='in', units='kg'))
+        self.hobj.add_trait('arr3', Array(iotype='in', units='kg', desc='stuff'))
         
         self.hobj.arr1 = [1.0, 2.0, 3.0]
         self.hobj.arr2 = [[1.,2.],[3.,4.]]
@@ -118,7 +118,32 @@ class ArrayTestCase(unittest.TestCase):
             self.assertEqual(str(err), "Default value should be a numpy array, not a <type 'str'>.")
         else:
             self.fail('TraitError expected')
+            
+    def test_shapes(self):
 
+        self.hobj.add_trait('sh1', Array(array([[2.0, 4.5],[3.14, 2.5]]), iotype='in', units='kg', shape=(2,2)))
+        self.assertEqual(self.hobj.sh1[1][1], 2.5)
+        
+        try:
+            self.hobj.add_trait('sh1', Array(array([2.0, 2.5]), iotype='in', units='kg', shape=(2,2)))
+        except TraitError, err:
+            msg = "Shape of the default value does not match the shape attribute."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('TraitError expected')
+            
+        self.hobj.sh1 = array([[9.0, 11.0], [1.0, 2.0]])
+        self.assertEqual(self.hobj.sh1[1][1], 2.0)
+        
+        try:
+            self.hobj.sh1 = array([[11.0, 2.0]])
+        except TraitError, err:
+            msg = ": Trait 'sh1' must be a numpy array of shape (2, 2), but a shape of (1, 2) (<type 'numpy.ndarray'>) was specified."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('TraitError expected')
+            
+        
 if __name__ == "__main__":
     unittest.main()
 

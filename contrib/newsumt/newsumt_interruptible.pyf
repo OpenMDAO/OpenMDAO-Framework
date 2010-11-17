@@ -1,0 +1,157 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module newsum__user__routines 
+    interface newsum_user_interface 
+        subroutine analys(e_1_e,x0,obj,dobj,ddobj,g,gb,dg,n1,n2,n3,n4,ran,nrandm,ian,niandm) ! in :newsumt:newsumt.f:newsum:unknown_interface
+            intent(in) analys
+            integer :: e_1_e
+            double precision dimension(n1),intent(in) :: x0
+            double precision intent(in,out) :: obj
+            double precision dimension(n1),intent(in,out),depend(n1) :: dobj
+            double precision dimension(n3),intent(in,out),depend(n3) :: ddobj
+            double precision dimension(n2),intent(in,out),depend(n2) :: g
+            double precision dimension(n2),intent(hide),depend(n2) :: gb
+            double precision dimension(n4),intent(in,out),depend(n4) :: dg
+            integer optional,intent(in),check(len(x0)>=n1),depend(x0) :: n1=len(x0)
+            integer intent(in) :: n2
+            integer intent(in) :: n3
+            integer intent(in) :: n4
+            double precision dimension(nrandm),intent(hide),depend(nrandm) :: ran
+            integer intent(in) :: nrandm
+            integer dimension(niandm),intent(hide),depend(niandm) :: ian
+            integer intent(in) :: niandm
+        end subroutine analys
+    end interface newsum_user_interface
+end python module newsum__user__routines
+python module newsumtinterruptible ! in 
+    interface  ! in :newsumt
+        block data  ! in :newsumt:newsumt.f
+            double precision optional,dimension(11) :: tt=0.0d0
+            double precision optional :: fdch=0.05d0
+            double precision :: sm
+            double precision optional :: tftn=0.0d0
+            integer :: iflag
+            integer optional :: iftn=0
+            integer optional :: isigno=0
+            integer :: jflag
+            integer :: kflag
+            integer :: nflag
+            integer :: nonlc
+            integer :: iobjct
+            integer :: iobapr
+            integer :: iobgrd
+            integer :: iconst
+            integer :: icongr
+            integer :: inlcgr
+            integer :: icgapr
+            double precision optional :: c=0.2d0
+            double precision optional :: epsgsn=0.001d0
+            double precision optional :: epsodm=0.001d0
+            double precision optional :: epsrsf=0.005d0
+            double precision optional :: g0=0.1d0
+            double precision optional :: p=0.5d0
+            double precision optional :: ra=1.0d0
+            double precision optional :: racut=0.1d0
+            double precision optional :: ramin=1.d-13
+            double precision optional :: stepmx=2.0d0
+            integer optional :: ifd=0
+            integer optional :: jprint=1
+            integer optional :: jsigng=1
+            integer optional :: lobj=0
+            integer optional :: maxgsn=20
+            integer optional :: maxodm=6
+            integer optional :: maxrsf=15
+            integer optional :: mflag=0
+            integer :: ndv
+            integer :: ntce
+            integer optional :: iflapp=0
+            common /contrl/ c,epsgsn,epsodm,epsrsf,g0,p,ra,racut,ramin,stepmx,ifd,jprint,jsigng,lobj,maxgsn,maxodm,maxrsf,mflag,ndv,ntce,iflapp
+        end block data 
+        subroutine newsuminterruptible(analys,bl,bu,ddobj,dg,dh,dobj,fdcv,fmin,g,gb,g1,g2,g3,obj,objmin,s,sn,x,x0,iik,ilin,iside,n1,n2,n3,n4,ran,nrandm,ian,niandm,isdone,resume) ! in :newsumt:newsumt.f
+            use newsum__user__routines
+            external analys
+            double precision dimension(n1),intent(in),depend(n1) :: bl
+            double precision dimension(n1),intent(in),depend(n1) :: bu
+            double precision dimension(n3),intent(inplace),depend(n3) :: ddobj
+            double precision dimension(n4),intent(inplace),depend(n4) :: dg
+            double precision dimension(n1),intent(inplace),depend(n1) :: dh
+            double precision dimension(n1),intent(inplace),depend(n1) :: dobj
+            double precision dimension(n1),intent(inplace),depend(n1) :: fdcv
+            double precision intent(out) :: fmin
+            double precision dimension(n2),intent(inplace),depend(n2) :: g
+            double precision dimension(n2),intent(inplace),depend(n2) :: gb
+            double precision dimension(n2),intent(inplace),depend(n2) :: g1
+            double precision dimension(n2),intent(inplace),depend(n2) :: g2
+            double precision dimension(n2),intent(inplace),depend(n2) :: g3
+            double precision intent(in,out) :: obj
+            double precision intent(in,out) :: objmin
+            double precision dimension(n1),intent(inplace),depend(n1) :: s
+            double precision dimension(n1),intent(inplace),depend(n1) :: sn
+            ! These next line needs an explanation. 
+            ! In the newsumt documentation, the variable x is described
+            ! as an internally necessary array to store alternative
+            ! design. But the newsumt documentation does not list
+            ! an official output variable giving the resulting 
+            ! output design variables. I guess they expect you to 
+            ! look at the outputs it prints to get that value. 
+            ! It turns out that x is the x variable that is the 
+            ! resulting design variable output optimized during this
+            ! iteration.
+            double precision dimension(n1),intent(in,out),depend(n1) :: x
+            double precision dimension(n1),intent(in,out),depend(n1) :: x0
+            integer dimension(n1),intent(inplace),depend(n1) :: iik
+            integer dimension(n2),intent(in),depend(n2) :: ilin
+            integer dimension(n1),intent(in),depend(n1) :: iside
+            integer intent(in) :: n1
+            integer intent(in) :: n2
+            !integer optional,intent(in),check(len(bl)>=n1),depend(bl) :: n1=len(x0)
+            !integer optional,intent(in),check(len(ilin)>=n2),depend(ilin) :: n2=len(ilin)
+            integer intent(in) :: n3
+            integer intent(in) :: n4
+            double precision dimension(nrandm),intent(inplace),depend(nrandm) :: ran
+            integer intent(in) :: nrandm
+            integer dimension(niandm),intent(inplace),depend(niandm) :: ian
+            integer intent(in) :: niandm
+            logical intent(in,out) :: isdone
+            logical intent(in,out) :: resume
+
+            double precision :: c
+            double precision :: epsgsn
+            double precision :: epsodm
+            double precision :: epsrsf
+            double precision :: g0
+            double precision :: p
+            double precision :: ra
+            double precision :: racut
+            double precision :: ramin
+            double precision :: stepmx
+            integer :: ifd
+            integer :: jprint
+            integer :: jsigng
+            integer :: lobj
+            integer :: maxgsn
+            integer :: maxodm
+            integer :: maxrsf
+            integer :: mflag
+            integer :: ndv
+            integer :: ntce
+            integer :: iflapp
+            common /contrl/ c,epsgsn,epsodm,epsrsf,g0,p,ra,racut,ramin,stepmx,ifd,jprint,jsigng,lobj,maxgsn,maxodm,maxrsf,mflag,ndv,ntce,iflapp
+
+            integer :: iobjct
+            integer :: iobapr
+            integer :: iobgrd
+            integer :: iconst
+            integer :: icongr
+            integer :: inlcgr
+            integer :: icgapr
+            common/countr/iobjct, iobapr, iobgrd, iconst, icongr, inlcgr, icgapr
+
+
+        end subroutine newsuminterruptible
+    end interface 
+end python module newsumtinterruptible
+
+! This file was auto-generated with f2py (version:2).
+! See http://cens.ioc.ee/projects/f2py2e/

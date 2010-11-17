@@ -15,10 +15,10 @@ class FloatTestCase(unittest.TestCase):
         """this setup function will be called before each test in this class"""
         self.hobj = Container()
         self.hobj.add_trait('float1', 
-                            Float(98.9, low=0., high=99.,
+                            Float(98.9, low=0., high=99.0, desc="Stuff",
                                   iotype='in', units='ft'))
         self.hobj.add_trait('float2', 
-                            Float(13.2, iotype='out', units='inch'))
+                            Float(13.2, iotype='out', units='inch', low=-9999.))
         self.hobj.add_trait('float3', 
                             Float(low=0., high=99.,
                                        iotype='in', units='kg'))
@@ -180,13 +180,24 @@ class FloatTestCase(unittest.TestCase):
     def test_default_value_type(self):
         try:
             self.hobj.add_trait('bad_default',
-                                Float('Bad Wolf', low=3, high=4))
+                                Float('Bad Wolf'))
         except TraitError, err:
             self.assertEqual(str(err), 
                 "Default value should be a float.")
         else:
             self.fail('TraitError expected')
 
+    def test_default_value(self):
+        try:
+            self.hobj.add_trait('out_of_bounds',
+                                Float(5.0, low=3, high=4))
+        except TraitError, err:
+            self.assertEqual(str(err), 
+                "Default value is outside of bounds [3.0, 4.0].")
+        else:
+            self.fail('TraitError expected')
+            
+            
 if __name__ == "__main__":
     unittest.main()
 

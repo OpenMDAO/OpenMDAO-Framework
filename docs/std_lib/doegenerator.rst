@@ -15,7 +15,7 @@ mandatory socket that takes a DOEgenerator. This DOEgenerator contains the algor
 that is used to select the design points that will be exectued by the DOEdriver. OpenMDAO
 includes several kinds of DOEdrivers which are listed below.
 
-*FullFactorial*
+FullFactorial
 ~~~~~~~~~~~~~~~
 
 The FullFactorial DOEgenerator implements a full factorial Design of Experiments. In
@@ -30,7 +30,7 @@ parameters at the requested resolution.
 
 .. OptLatinHypercube:
 
-*OptLatinHypercube*
+OptLatinHypercube
 ~~~~~~~~~~~~~~~~~~~
 
 The OptLatinHypercube component implements an algorithm that produces an optimal

@@ -10,7 +10,7 @@ Components
 
 .. _MetaModel:
 
-*MetaModel*
+MetaModel
 ~~~~~~~~~~~
 
     MetaModel is a class which supports generalized meta modeling capabilities. There are two 
@@ -213,15 +213,15 @@ Components
 
 .. _`NastranComponent`:
 
-*MSC NastranComponent*
-~~~~~~~~~~~~~~~~~~~~~~~
+MSC NastranComponent
+~~~~~~~~~~~~~~~~~~~~~~
 
 The following documentation refers to the MSC (MacNeal-Schwendler Corporation) Nastran Component. This component is
 a wrapper for MSC Nastran, but it does not include the MSC Nastran executable. You need to have installed MSC Nastran
 with a valid license before this wrapper will work. 
 
-Overview
----------
+*Overview*
+----------
 
 If you are creating a component that is supposed to call Nastran to calculate your component's outputs,
 you must do four things: 
@@ -238,8 +238,8 @@ output don't change, it should work for any version.
 
 .. index:: NastranComponent
 
-Subclassing NastranComponent 
--------------------------------- 
+*Subclassing NastranComponent* 
+------------------------------
 
 All of NastranComponent's logic is in the ``execute`` function. The ``execute`` function reads the traits that are
 connected to it (both input and output variables). It uses NastranReplacer and then NastranMaker to update
@@ -254,7 +254,7 @@ source documentation, :ref:`here<openmdao.lib.components.nastran.nastran.py>`.
 
 .. index:: NastranMaker
 
-Controlling Nastran's Input
+*Controlling Nastran's Input*
 ------------------------------
 
 To control what Nastran solves, you have to change certain variables in the Nastran input file.
@@ -264,7 +264,7 @@ the variables. There are two ways of specifying the input variables: via Nastran
 
 .. index:: NastranReplacer
 
-*NastranReplacer (the Crude Way)* 
+NastranReplacer (the Crude Way) 
 +++++++++++++++++++++++++++++++++ 
 
 NastranReplacer looks at the Nastran input file and replaces all instances of ``%varname`` with the current
@@ -291,7 +291,7 @@ the bulk data format. Replacing bulk data with NastranReplacer is highly discour
 
 .. index:: NastranMaker
 
-*NastranMaker*
+NastranMaker
 ++++++++++++++
 
 Using NastranMaker does not rely on placeholder variables; instead, you must provide the `keyword, the id,` and
@@ -325,7 +325,7 @@ id, so in this case, it is 8. In this example, there are two attributes, with va
 something about this ``PSHELL``. As an example, for a ``PSHELL``, the second argument (4) dictates which
 material card you're referencing, and the third argument (3) specifies the thickness.
 
-Parsing Nastran's Output
+*Parsing Nastran's Output*
 ---------------------------
 The goal is to set output variables to certain values in Nastran's output. As with Nastran's input, there
 are two ways of going about it: one involves instructing the parser to pick out a certain location denoted
@@ -333,7 +333,7 @@ by its distance from a certain anchor; the other way attempts to intelligently p
 most pages of output have. The second way will not work for every case, but it's a much cleaner solution if
 it works.
 
-*NastranOutput (the Crude Way)*
+NastranOutput (the Crude Way)
 +++++++++++++++++++++++++++++++ 
  
 Although this method is generally not recommended, sometimes it is necessary to use it. When specifying the
@@ -352,7 +352,7 @@ the results in through ``nastran_func``, it will not know where the helper funct
 
 .. index:: NastranParser
 
-*NastranParser*
+NastranParser
 +++++++++++++++
 
 NastranParser tries to parse the grid out of each page of output. It identifies 1) a header for the page, then
@@ -421,8 +421,8 @@ inconsistencies in parsing, you could isolate the particular grid you are parsin
 
 .. index:: NastranComponent
 
-NastranComponent
------------------
+*NastranComponent*
+------------------
 
 We've gone over the parts that make NastranComponent work, but what about NastranComponent itself?
 Essentially, it just passes off the work to its subparts. You should be aware of some additional information
