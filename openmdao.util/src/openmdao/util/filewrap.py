@@ -1,15 +1,20 @@
 """
-Utilities for file wrapping.
+A collection of utilities for file wrapping.
 
 Note: This is a work in progress.
 """
 
 import re
-from pyparsing import CaselessLiteral, Combine, Literal, OneOrMore, Optional, \
-                      TokenConverter, Word, nums, oneOf, printables
+from pyparsing import CaselessLiteral, Combine, OneOrMore, Optional, \
+                      TokenConverter, Word, nums, oneOf, printables, \
+                      ParserElement
+
+# pylint: disable-msg=E0611,F0401
+from numpy import append, array, zeros
 
 class _SubHelper(object):
-    """Replaces file text at the correct word location in a line."""
+    """Replaces file text at the correct word location in a line. This
+    class contains the Helper Function that is passed to re.sub, etc."""
     
     def __init__(self):
         
@@ -17,6 +22,8 @@ class _SubHelper(object):
         self.replace_location = 0
         self.current_location = 0
         self.counter = 0
+        self.start_location = 0
+        self.end_location = 0
         
     def set(self, newtext, location):
         """Sets a new word location and value for replacement."""
@@ -42,7 +49,10 @@ class _SubHelper(object):
         self.current_location += 1
         
         if self.current_location == self.replace_location:
-            return str(self.newtext)
+            if isinstance(self.newtext, float):
+                return '%.16g' % self.newtext
+            else:
+                return str(self.newtext)
         else:
             return text.group()
         
@@ -57,7 +67,10 @@ class _SubHelper(object):
         if self.current_location >= self.start_location and \
            self.current_location <= self.end_location and \
            self.counter < end:
-            newval = str(self.newtext[self.counter])
+            if isinstance(self.newtext[self.counter], float):
+                return '%.16g' % self.newtext[self.counter]
+            else:
+                newval = str(self.newtext[self.counter])
             self.counter += 1
             return newval
         else:
@@ -65,15 +78,18 @@ class _SubHelper(object):
 
 
 class ToInteger(TokenConverter):
-    """Converter to make token into an integer."""
+    """Converter for PyParsing that is used to turn a token into an int."""
     def postParse( self, instring, loc, tokenlist ):
+        """Converter to make token into an integer."""
         return int(tokenlist[0])
 
 class ToFloat(TokenConverter):
-    """Converter to make token into a float."""
+    """Converter for PyParsing that is used to turn a token into a float."""
     def postParse( self, instring, loc, tokenlist ):
+        """Converter to make token into a float."""
         return float(tokenlist[0])
-        
+
+    
 def _parse_line():
     """Parse a single data line that may contain string or numerical data.
     Float and Int 'words' are converted to their appropriate type. 
@@ -122,7 +138,11 @@ class InputFileGenerator(object):
         self.current_row = 0
     
     def set_template_file(self, filename):
-        """Set the name of the template file to be used."""
+        """Set the name of the template file to be used The template
+        file is also read into memory when this method is called.
+        
+        filename: str
+            Name of the template file to be used."""
         
         self.template_filename = filename
         
@@ -131,13 +151,19 @@ class InputFileGenerator(object):
         templatefile.close()
 
     def set_generated_file(self, filename):
-        """Set the name of the file that will be generated."""
+        """Set the name of the file that will be generated.
+        
+        filename: str
+            Name of the input file to be generated."""
         
         self.output_filename = filename
 
     def set_delimiters(self, delimiter):
         """Lets you change the delimiter that is used to identify field
-        boundaries."""
+        boundaries.
+        
+        delimiter: str
+            A string containing characters to be used as delimiters."""
         
         self.delimiter = delimiter
         self.reg = re.compile('[^' + delimiter + '\n]+')
@@ -146,10 +172,12 @@ class InputFileGenerator(object):
         """Marks the location of a landmark, which lets you describe data by
         relative position.
         
-        anchor: text to search for
+        anchor: str
+            Text string to search for
         
-        occurence: find nth instance of text; default is 1 (first). Use -1 to
-        find last occurence."""
+        occurrence: integer
+            Find nth instance of text; default is 1 (first). Use -1 to
+            find the last occurrence."""
         
         if not isinstance(occurrence, int):
             raise ValueError("The value for occurrence must be an integer")
@@ -176,7 +204,7 @@ class InputFileGenerator(object):
             
                 count -= 1
         else:
-            raise ValueError("0 is not valid for an anchor occurrence.")            
+            raise ValueError("0 is not valid for an anchor occurrence.") 
             
         raise RuntimeError("Could not find pattern %s in template file %s" % \
                            (anchor, self.template_filename))
@@ -194,7 +222,7 @@ class InputFileGenerator(object):
         This can be negative.
         
         field - which word in line to replace, as denoted by delimiter(s)"""
-        
+
         j = self.current_row + row
         line = self.data[j]
         
@@ -210,20 +238,26 @@ class InputFileGenerator(object):
         current anchor. This should generally be used for one-dimensional
         or free form arrays.
         
-        value - array of values to insert.
+        value: float, integer, bool, str
+            array of values to insert.
         
-        row_start - starting row for inserting the array. This is relative
-        to the anchor, and can be negative.
+        row_start: integer
+            starting row for inserting the array. This is relative
+            to the anchor, and can be negative.
         
-        field_start - starting field in the given row_start as denoted by 
-        delimiter(s). 
+        field_start: integer
+            starting field in the given row_start as denoted by 
+            delimiter(s). 
         
-        field_end - the final field the array uses in row_end. 
-        We need this to figure out if the template is too small or large
+        field_end: integer
+            the final field the array uses in row_end. 
+            We need this to figure out if the template is too small or large
         
-        row_end - Optional. Use if the array wraps to cover additional lines.
+        row_end: integer (Optional)
+            Use if the array wraps to cover additional lines.
         
-        sep - Optional. Separator to use if we go beyond the template."""
+        sep: integer (Optional)
+            Separator to use if we go beyond the template."""
         
         # Simplified input for single-line arrays
         if row_end == None:
@@ -250,7 +284,7 @@ class InputFileGenerator(object):
         if sub.counter < len(value):
             for val in value[sub.counter:]:
                 
-                newline = newline[:-1] + sep + str(val) + "\n"
+                newline = newline.rstrip() + sep + str(val)
         
             self.data[j] = newline
             
@@ -260,7 +294,9 @@ class InputFileGenerator(object):
             
             # TODO - Figure out how to handle this.
             # Ideally, we'd remove the extra field placeholders
-            pass
+            raise ValueError("Array is too small for the template.")
+        
+        self.data[j] += "\n"
         
     def transfer_2Darray(self, value, row_start, row_end, field_start,
                        field_end, sep=", "):
@@ -268,20 +304,26 @@ class InputFileGenerator(object):
         current anchor. This method is specialized for 2D arrays, where each
         row of the array is on its own line.
         
-        value - array of values to insert.
+        value: ndarray
+            array of values to insert.
         
-        row_start - Starting row for inserting the array. This is relative
-        to the anchor, and can be negative.
+        row_start: integer
+            Starting row for inserting the array. This is relative
+            to the anchor, and can be negative.
         
-        row_end - Final row for the array, relative to the anchor.
+        row_end: integer
+            Final row for the array, relative to the anchor.
         
-        field_start - starting field in the given row_start as denoted by 
-        delimiter(s). 
+        field_start: integer
+            starting field in the given row_start as denoted by 
+            delimiter(s). 
         
-        field_end - the final field the array uses in row_end. 
-        We need this to figure out if the template is too small or large
+        field_end: integer
+            the final field the array uses in row_end. 
+            We need this to figure out if the template is too small or large
         
-        sep - Optional. Separator to use if we go beyond the template"""
+        sep: str (Optional) (Currently Unsupported)
+            Seperator to append between values if we go beyond the template"""
 
         sub = _SubHelper()
         i = 0
@@ -290,18 +332,23 @@ class InputFileGenerator(object):
             j = self.current_row + row
             line = self.data[j]
 
-            sub.set_array(value[i,:], field_start, field_end)
-            field_start = 0
+            sub.set_array(value[i, :], field_start, field_end)
             
             newline = re.sub(self.reg, sub.replace_array, line)
             self.data[j] = newline
             
+            sub.current_location = 0
+            sub.counter = 0
             i += 1
+            
+        # TODO - Note, we currently can't handle going beyond the end of
+        #        the template line
 
     def clearline(self, row):
         """Replace the contents of a row with the newline character.
         
-        row - row number to clear, relative to current anchor."""
+        row: integer
+            row number to clear, relative to current anchor."""
 
         self.data[self.current_row + row] = "\n"
         
@@ -321,13 +368,15 @@ class FileParser(object):
         self.filename = []
         self.data = []
         
-        self.delimiter = " "
-        #self.reg = re.compile('[^ \n]+')
+        self.delimiter = " \t"
         
         self.current_row = 0
         
     def set_file(self, filename):
-        """Set the name of the file that will be generated."""
+        """Set the name of the file that will be generated.
+        
+        filename: str
+            Name of the input file to be generated."""
         
         self.filename = filename
         
@@ -337,14 +386,18 @@ class FileParser(object):
 
     def set_delimiters(self, delimiter):
         """Lets you change the delimiter that is used to identify field
-        boundaries."""
+        boundaries.
         
-        if delimiter not in [" ", "columns"]:
-            raise NotImplementedError('Only " " and "columns" are currently' + \
-                                      ' implemented as delimiters')
+        delimiter: str
+            A string containing characters to be used as delimiters. The
+            default value is ' \t'. which means that spaces and tabs are not
+            taken as data, but instead mark the boundaries. Note that the
+            parser is smart enough to recognize characters within quotes as
+            non-delimiters."""
         
         self.delimiter = delimiter
-        #self.reg = re.compile('[^' + delimiter + '\n]+')
+        if delimiter != "columns":
+            ParserElement.setDefaultWhitespaceChars(str(delimiter))
         
     def mark_anchor(self, anchor, occurrence=1):
         """Marks the location of a landmark, which lets you describe data by
@@ -352,14 +405,16 @@ class FileParser(object):
         location. If you want to restart the search for the anchor at the file
         beginning, then call reset_anchor() before mark_anchor. 
         
-        anchor: The text you want to search for.
+        anchor: str
+            The text you want to search for.
         
-        occurence: find nth instance of text; default is 1 (first). Use -1 to
-        find last occurence. Reverse searches always start at the end of the
-        file no matter the state of any previous anchor."""
+        occurrence: integer
+            find nth instance of text; default is 1 (first). Use -1 to
+            find last occurence. Reverse searches always start at the end
+            of the file no matter the state of any previous anchor."""
         
         if not isinstance(occurrence, int):
-            raise ValueError("The value for occurrence must be an integer.")
+            raise ValueError("The value for occurrence must be an integer")
         
         instance = 0
         if occurrence > 0:
@@ -384,7 +439,7 @@ class FileParser(object):
             
                 count -= 1
         else:
-            raise ValueError("0 is not valid for an anchor occurrence.")            
+            raise ValueError("0 is not valid for an anchor occurrence.")
             
         raise RuntimeError("Could not find pattern %s in output file %s" % \
                            (anchor, self.filename))
@@ -397,31 +452,38 @@ class FileParser(object):
     def transfer_line(self, row):
         """Returns a whole line, relative to current anchor.
         
-        row - number of lines offset from anchor line (0 is anchor line).
-        This can be negative."""
+        row: integer
+            number of lines offset from anchor line (0 is anchor line).
+            This can be negative."""
         
-        return self.data[self.current_row + row]
+        return self.data[self.current_row + row].rstrip()
         
     def transfer_var(self, row, field, fieldend=None):
         """Grabs a single variable relative to the current anchor.
         
-        --- If the delimiter is " " ---
+        --- If the delimiter is a set of chars (e.g., ", ") ---
         
-        row - number of lines offset from anchor line (0 is anchor line).
-        This can be negative.
+        row: integer
+            number of lines offset from anchor line (0 is anchor line).
+            This can be negative.
         
-        field - which word in line to retrieve.
+        field: integer
+            which word in line to retrieve.
         
         fieldend - IGNORED
         
         --- If the delimiter is "columns" ---
         
-        row - number of lines offset from anchor line (0 is anchor line).
-        This can be negative.
+        row: integer
+            number of lines offset from anchor line (0 is anchor line).
+            This can be negative.
         
-        field - character position to start
+        field: integer
+            character position to start
         
-        fieldend - position of last character to return"""
+        fieldend: integer (optional)
+            position of last character to return. If omitted, the end of
+            the line is used"""
         
         j = self.current_row + row
         line = self.data[j]
@@ -429,9 +491,9 @@ class FileParser(object):
         if self.delimiter == "columns":
             
             if not fieldend:
-                fieldend = fieldstart
-            
-            line = line[(field-1):(fieldend)]
+                line = line[(field-1):]
+            else:
+                line = line[(field-1):(fieldend)]
             
             # Let pyparsing figure out if this is a number, and return it
             # as a float or int as appropriate
@@ -451,20 +513,24 @@ class FileParser(object):
         """Searches for a key relative to the current anchor and then grabs
         a field from that line.
         
-        field -- Which field to transfer. Field 0 is the key.
+        field: integer
+            Which field to transfer. Field 0 is the key.
         
-        occurrence -- find nth instance of text; default is 1 (first value
-        field). Use -1 to find last occurence. Position 0 is the key
-        field, so it should not be used as a value for occurrence.
+        occurrence: integer
+            find nth instance of text; default is 1 (first value
+            field). Use -1 to find last occurance. Position 0 is the key
+            field, so it should not be used as a value for occurrence.
         
-        rowoffset -- Optional row offset from the occurrence of key. This can
-        also be negative.
+        rowoffset: integer (Optional)
+            Optional row offset from the occurrence of key. This can
+            also be negative.
         
         You can do the same thing with a call to mark_anchor and transfer_var.
         This function just combines them for convenience."""
 
-        if not isinstance(occurrence, int):
-            raise ValueError("The value for occurrence must be an integer")
+        if not isinstance(occurrence, int) or occurrence==0:
+            msg = "The value for occurrence must be a nonzero integer"
+            raise ValueError(msg)
         
         instance = 0
         if occurrence > 0:
@@ -478,15 +544,14 @@ class FileParser(object):
                 row += 1
                 
         elif occurrence < 0:
-            for line in reversed(self.data[:current_row]):
+            row = -1
+            for line in reversed(self.data[self.current_row:]):
                 if line.find(key) > -1:
                     instance += -1
                     if instance == occurrence:
                         break
             
                 row -= 1
-        else:
-            raise ValueError("0 is not valid for an anchor occurrence.")
         
         j = self.current_row + row + rowoffset
         line = self.data[j]
@@ -497,6 +562,23 @@ class FileParser(object):
 
     def transfer_array(self, rowstart, fieldstart, rowend=None, fieldend=None):
         """Grabs an array of variables relative to the current anchor.
+        
+        rowstart: integer
+        Row number to start, relative to the current anchor
+        
+        fieldstart: integer
+        field number to start
+        
+        rowend: integer (optional)
+        row number to end. If not set, then only one row is grabbed.
+        
+        Setting the delimiter to 'columns' elicits some special behavior
+        from this method. Normally, the extraction process wraps around
+        at the end of a line and continues grabbing each field at the start of
+        a newline. When the delimiter is set to columns, the paramters
+        (rowstart, fieldstart, rowend, fieldend) demark a box, and all
+        values in that box are retrieved. Note that standard whitespace
+        is the secondary delmiter in this case.
         """
         
         j1 = self.current_row + rowstart
@@ -507,13 +589,13 @@ class FileParser(object):
             j2 = j1
             
         if not fieldend:
-            fieldend = fieldstart
+            raise ValueError("fieldend is missing, currently required")
             
         lines = self.data[j1:j2]
 
-        data = []
+        data = zeros(shape=(0, 0))
 
-        for line in lines:
+        for i, line in enumerate(lines):
             if self.delimiter == "columns":
                 line = line[(fieldstart-1):fieldend]
                 
@@ -523,12 +605,19 @@ class FileParser(object):
                 
                 # data might have been split if it contains whitespace. If so,
                 # just return the whole string
-                if len(parsed) > 1:
-                    data.append(line)
-                else:
-                    data.append(parsed)
+                #if len(parsed) > 1:
+                #    data = append(data, array(line))
+                #else:
+                #    data = append(data, array(parsed))
+                data = append(data, array(parsed[:]))
             else:
                 parsed = _parse_line().parseString(line)
-                data.append(parsed[(fieldstart-1):fieldend])
+                if i == j2-j1-1:
+                    data = append(data, array(parsed[(fieldstart-1):fieldend]))
+                else:
+                    data = append(data, array(parsed[(fieldstart-1):]))
+                fieldstart = 1
+                
+        return data
         
                 
