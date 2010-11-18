@@ -60,14 +60,16 @@ def get_closest_proxy(start_scope, pathname):
     Returns a tuple containing (proxy_or_parent, rest_of_pathname)
     """
     obj = start_scope
-    names = pathname.split('.')[:-1]
-    while isinstance(obj, Container):
-        try:
-            name = names.pop(0)
-        except IndexError:
+    names = pathname.split('.')
+    i = -1
+    for i,name in enumerate(names[:-1]):
+        if isinstance(obj, Container):
+            obj = getattr(obj, name)
+        else:
             break
-        obj = getattr(obj, name)
-    return (obj, '.'.join(names))
+    else:
+        i += 1
+    return (obj, '.'.join(names[i:]))
 
 
 # this causes any exceptions occurring in trait handlers to be re-raised.

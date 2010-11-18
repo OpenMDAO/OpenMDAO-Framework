@@ -414,11 +414,15 @@ class TestCase(unittest.TestCase):
         # Proxy resolution.
         obj, path = get_closest_proxy(model, 'box.subcontainer.subvar')
         self.assertEqual(obj, model.box)
-        self.assertEqual(path, 'subcontainer')
+        self.assertEqual(path, 'subcontainer.subvar')
 
         obj, path = get_closest_proxy(model, 'source.subcontainer.subvar')
         self.assertEqual(obj, model.source.subcontainer)
-        self.assertEqual(path, '')
+        self.assertEqual(path, 'subvar')
+
+        obj, path = get_closest_proxy(model.source.subcontainer, 'subvar')
+        self.assertEqual(obj, model.source.subcontainer)
+        self.assertEqual(path, 'subvar')
 
         # Observable proxied type.
         tmp = model.box.open_in_parent('tmp', 'w')
