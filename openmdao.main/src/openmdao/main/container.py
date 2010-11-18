@@ -32,7 +32,7 @@ from enthought.traits.trait_base import not_none, not_event
 from openmdao.main.filevar import FileRef
 from openmdao.lib.datatypes.api import Float
 
-from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface
+from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
 
 from openmdao.util.log import Logger, logger, LOG_DEBUG
@@ -1143,6 +1143,10 @@ class Container(HasTraits):
         self._logger.error(msg)
         raise exception_class(full_msg)
     
+
+# By default we always proxy Containers.
+CLASSES_TO_PROXY.append(Container)
+
     
 # Some utility functions
 
