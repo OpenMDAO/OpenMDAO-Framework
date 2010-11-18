@@ -559,8 +559,8 @@ If the default value is not given, then the first value of the list is taken as 
     
 This is the simplest form of the Enum constructor.
 
-It is also possible to produce a simple array that behaves like an Enum where each element of
-the array can only contain a value that is in the Enum. This kind of variable can be
+It is also possible to produce a simple array that behaves like an Enum, where each element of
+the array can contain only a value that is in the Enum. This kind of variable can be
 defined by creating a *List* of Enums.
     
 .. testcode:: enum_list_example
@@ -573,8 +573,8 @@ defined by creating a *List* of Enums.
         
 This example defines a variable named *roll* that can contain the values for any number
 of dice. Instead of giving a List as the default value, we've given it the definition
-for an Enum variable that has a default value of 1, and a set of valid values spanning
-the integers from 1 to 6. Note that the Enum doesn't need an iotype, but the List does.
+for an Enum variable that has a default value of 1 and a set of valid values spanning
+the integers 1 to 6. Note that the Enum doesn't need an iotype, but the List does.
 
 .. doctest:: enum_list_example
 
