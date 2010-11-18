@@ -7,14 +7,16 @@ __all__ = ["Driver"]
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import implements, List, Instance
 
-from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, IHasEvents
+from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, \
+                                     IHasEvents, obj_has_interface
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
-from openmdao.main.container import obj_has_interface
+from openmdao.main.mp_support import is_instance
+from openmdao.main.rbac import rbac
 
 @add_delegate(HasEvents)
 class Driver(Component):
@@ -53,10 +55,11 @@ class Driver(Component):
         allcomps = set()
         for child in self.workflow.contents():
             allcomps.add(child)
-            if isinstance(child, Driver):
+            if is_instance(child, Driver):
                 allcomps.update(child.iteration_set())
         return allcomps
         
+    @rbac(('owner', 'user'))
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name,
         dest_comp_name) for each dependency introduced by any ExprEvaluators

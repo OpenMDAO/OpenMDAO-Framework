@@ -6,7 +6,8 @@ Interfaces for the OpenMDAO project.
 # pylint: disable-msg=E0213,E0211,W0232
 
 
-from enthought.traits.api import Interface, Instance, Int, Str
+from enthought.traits.api import Interface, Instance, Int, Str, HasTraits
+from enthought.traits.trait_types import validate_implements
 
 from openmdao.main.workflow import Workflow
 from openmdao.main.constants import SAVE_CPICKLE
@@ -671,3 +672,20 @@ class IHasObjectives(object):
         """
         
 
+        
+def obj_has_interface(obj, *ifaces):
+    """Returns True if the specified object inherits from HasTraits and
+    claims it implements one or more of the specified interfaces. If
+    it is not a HasTraits object, then validate_implements() will be
+    called on the object, which is slower because it actually checks 
+    for the presence of all methods and attributes specified in the
+    interfaces.
+    """
+    if isinstance(obj, HasTraits):
+        return obj.has_traits_interface(*ifaces)
+    else:
+        for iface in ifaces:
+            if validate_implements(obj, iface):
+                return True
+    return False
+    

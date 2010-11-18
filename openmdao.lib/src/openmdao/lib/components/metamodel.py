@@ -6,10 +6,11 @@ from openmdao.lib.datatypes.api import Instance, ListStr, Event
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
-from openmdao.main.api import Component, Case, obj_has_interface
+from openmdao.main.api import Component, Case
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder
 from openmdao.main.uncertain_distributions import UncertainDistribution, \
                                                   NormalDistribution
+from openmdao.main.mp_support import has_interface
 
 class MetaModel(Component):
     """ A component that provides general Meta Modeling capability.
@@ -119,7 +120,7 @@ class MetaModel(Component):
         # TODO: disconnect traits corresponding to old model (or leave them if the new model has the same ones?)
         # TODO: check for nested MMs?  Is this a problem?
         # TODO: check for name collisions between MetaModel class traits and traits from model
-        if newmodel is not None and not obj_has_interface(newmodel, IComponent):
+        if newmodel is not None and not has_interface(newmodel, IComponent):
             self.raise_exception('model of type %s does not implement the IComponent interface' % type(newmodel).__name__,
                                  TypeError)
 

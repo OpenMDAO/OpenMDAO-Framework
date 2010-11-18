@@ -7,38 +7,42 @@ import sys
 import unittest
 
 from numpy import float32 as numpy_float32
-from numpy import zeros
+from numpy import array, zeros
 
 from openmdao.lib.datatypes.api import Float, Bool, Int, Str, Array, File, List, Enum
 
 from openmdao.main.api import Container, Component
-from openmdao.util.namelist_util import Namelist
+from openmdao.util.namelist_util import Namelist, ToBool
 
-class Var_Container(Container):
+class VarContainer(Container):
     """Contains some vars"""
 
-    bool_var = Bool(True, iotype='in')
-    int_var = Int(7777, iotype='in')
-    float_var = Float(2.14543, iotype='in')
-    text_var = Str("Hey", iotype='in')
-    list_enum_var = List(Enum(1,(1,2,3)), iotype='in')
+    boolvar = Bool(True, iotype='in')
+    intvar = Int(7777, iotype='in')
+    floatvar = Float(2.14543, iotype='in')
+    textvar = Str("Hey", iotype='in')
+    listenumvar = List(Enum(1,(1,2,3)), iotype='in')
 
-class Var_Component(Component):
+class VarComponent(Component):
     """Contains some vars"""
 
-    bool_var = Bool(False, iotype='in')
-    int_var = Int(333, iotype='in')
-    float_var = Float(-16.54, iotype='in')
-    text_var = Str("This", iotype='in')
-    array_var = Array(iotype='in')
-    list_enum_var = List(Enum(1,(1,2,3)), iotype='in')
+    boolvar = Bool(False, iotype='in')
+    intvar = Int(333, iotype='in')
+    floatvar = Float(-16.54, iotype='in')
+    textvar = Str("This", iotype='in')
+    arrayvar = Array(iotype='in')
+    arrayvarsplit = Array(iotype='in')
+    arrayvarsplit2 = Array(iotype='in')
+    arrayvarzerod = Array(zeros(shape=(0,0)), iotype='in')
+    arraysmall = Array(iotype='in')
+    listenumvar = List(Enum(1,(1,2,3)), iotype='in')
     
     def __init__(self, directory=''):
         
-        super(Var_Component, self).__init__(directory)
+        super(VarComponent, self).__init__(directory)
 
         # Variable Containers
-        self.add('var_container',  Var_Container())
+        self.add('varcontainer',  VarContainer())
 
     
     
@@ -52,24 +56,38 @@ class TestCase(unittest.TestCase):
         if os.path.exists(self.filename):
             os.remove(self.filename)
 
+    def test_forgot_to_read(self):
+        
+        my_comp = VarComponent()
+        sb = Namelist(my_comp)
+        try:
+            sb.load_model()
+        except RuntimeError, err:
+            msg = "Input file must be read with parse_file before " \
+                  "load_model can be executed."
+            self.assertEqual(str(err),msg)
+        else:
+            self.fail('RuntimeError expected')        
+
     def test_writes(self):
 
-        my_comp = Var_Component()
-        my_comp.list_enum_var = [1,2,1,3]
+        my_comp = VarComponent()
+        my_comp.listenumvar = [1,2,1,3]
         sb = Namelist(my_comp)
         
         sb.set_filename(self.filename)
         sb.set_title("Testing")
 
-        sb.add_group('&OPTION')
+        sb.add_group('FREEFORM')
+        sb.add_group('OPTION')
         sb.add_comment("This is a comment")
-        sb.add_var("bool_var")
-        sb.add_var("int_var")
-        sb.add_var("float_var")
-        sb.add_var("text_var")
-        sb.add_var("list_enum_var")
+        sb.add_var("boolvar")
+        sb.add_var("intvar")
+        sb.add_var("floatvar")
+        sb.add_var("textvar")
+        sb.add_var("listenumvar")
         
-        sb.add_newvar("new_card", "new value")
+        sb.add_newvar("newcard", "new value")
         
         sb.generate()
         
@@ -77,51 +95,179 @@ class TestCase(unittest.TestCase):
         contents = f.read()
         
         compare = "Testing\n" + \
+                  "FREEFORM\n" + \
                   "&OPTION\n" + \
                   "  This is a comment\n" + \
-                  "  bool_var = False\n" + \
-                  "  int_var = 333\n" + \
-                  "  float_var = -16.54\n" + \
-                  "  text_var = 'This'\n" + \
-                  "  list_enum_var = 1, 2, 1, 3\n" + \
-                  "  new_card = 'new value'\n" + \
+                  "  boolvar = F\n" + \
+                  "  intvar = 333\n" + \
+                  "  floatvar = -16.54\n" + \
+                  "  textvar = 'This'\n" + \
+                  "  listenumvar = 1, 2, 1, 3\n" + \
+                  "  newcard = 'new value'\n" + \
                   "/\n"
 
         self.assertEqual(contents, compare)
         
+    def test_read1(self):
+        # Put variables in top container, so no rules_dict
+
+        namelist1 = "Testing\n" + \
+                    "  \n" + \
+                    "&OPTION\n" + \
+                    "  This is a comment\n" + \
+                    "  INTVAR = 777, floatvar = -3.14\n" + \
+                    "  boolvar = T\n" + \
+                    "  textvar = 'That'\n" + \
+                    "  ! This is a comment too\n" + \
+                    "  listenumvar = 3,3,2,2\n" + \
+                    "  arrayvar = 3.5, 7.76, 1.23\n" + \
+                    "  arrayvarsplit = 3.5, 7.76\n" + \
+                    "                  5.45, 22.0\n" + \
+                    "                  1.23\n" + \
+                    "  arrayvarsplit2 = 1\n" + \
+                    "                   2\n" + \
+                    "                   3\n" + \
+                    "  arraysmall = 1.75\n" + \
+                    "/\n"
+
+        outfile = open(self.filename, 'w')
+        outfile.write(namelist1)
+        outfile.close()
+        
+        my_comp = VarComponent()
+        sb = Namelist(my_comp)
+        sb.set_filename(self.filename)
+
+        sb.parse_file()
+        
+        sb.load_model()
+        
+        self.assertEqual(sb.title, 'Testing')
+        self.assertEqual(my_comp.intvar, 777)
+        self.assertEqual(my_comp.boolvar, True)
+        self.assertEqual(my_comp.floatvar, -3.14)
+        self.assertEqual(my_comp.textvar, 'That')
+        self.assertEqual(my_comp.listenumvar, [3,3,2,2])
+        self.assertEqual(my_comp.arrayvar[0], 3.5)
+        self.assertEqual(my_comp.arrayvar[1], 7.76)
+        self.assertEqual(my_comp.arrayvar[2], 1.23)
+        self.assertEqual(my_comp.arrayvarsplit[0], 3.5)
+        self.assertEqual(my_comp.arrayvarsplit[1], 7.76)
+        self.assertEqual(my_comp.arrayvarsplit[2], 5.45)
+        self.assertEqual(my_comp.arrayvarsplit[3], 22.0)
+        self.assertEqual(my_comp.arrayvarsplit[4], 1.23)
+        self.assertEqual(my_comp.arrayvarsplit2[0], 1)
+        self.assertEqual(my_comp.arrayvarsplit2[1], 2)
+        self.assertEqual(my_comp.arrayvarsplit2[2], 3)
+        self.assertEqual(my_comp.arraysmall[0], 1.75)
+        self.assertEqual(len(my_comp.arraysmall), 1)
+        
+    def test_read2(self):
+        # Put variables in container, using rules_dict
+
+        namelist1 = "Testing\n" + \
+                    "  \n" + \
+                    "&OPTION\n" + \
+                    "  This is a comment\n" + \
+                    "  intvar = 777\n" + \
+                    "  boolvar = F\n" + \
+                    "  floatvar = -3.14\n" + \
+                    "  extravar = 555\n" + \
+                    "  TEXTVAR = 'That'\n" + \
+                    "  ! This is a comment too\n" + \
+                    "  listenumvar = 3,3,2,2\n" + \
+                    "/\n" + \
+                    "&NODICT\n" + \
+                    "  noval = 0\n" + \
+                    "/\n" + \
+                    "FREEFORM\n"
+
+        outfile = open(self.filename, 'w')
+        outfile.write(namelist1)
+        outfile.close()
+        
+        my_comp = VarComponent()
+        sb = Namelist(my_comp)
+        sb.set_filename(self.filename)
+
+        sb.parse_file()
+        
+        rules_dict = { "OPTION" : ["varcontainer"] }
+        n1, n2, n3 = sb.load_model(rules_dict)
+        
+        self.assertEqual(n1[2], 'FREEFORM')
+        self.assertEqual(n2[1], 'NODICT')
+        self.assertEqual(n3, ['extravar'])
+        self.assertEqual(my_comp.varcontainer.intvar, 777)
+        self.assertEqual(my_comp.varcontainer.boolvar, False)
+        self.assertEqual(my_comp.varcontainer.floatvar, -3.14)
+        self.assertEqual(my_comp.varcontainer.textvar, 'That')
+        self.assertEqual(my_comp.varcontainer.listenumvar, [3,3,2,2])
+        
+    def test_read3(self):
+        # Parse a single group in a deck with non-unique group names
+
+        namelist1 = "Testing\n" + \
+                    "$GROUP\n" + \
+                    "  intvar = 99\n" + \
+                    "$END\n" + \
+                    "$GROUP\n" + \
+                    "  floatvar = 3.5e-23\n" + \
+                    "$END\n"
+        
+        outfile = open(self.filename, 'w')
+        outfile.write(namelist1)
+        outfile.close()
+        
+        my_comp = VarComponent()
+        sb = Namelist(my_comp)
+        sb.set_filename(self.filename)
+
+        sb.parse_file()
+        
+        sb.load_model(single_group=1)
+
+        # Unchanged
+        self.assertEqual(my_comp.intvar, 333)
+        # Changed
+        self.assertEqual(my_comp.floatvar, 3.5e-23)
+        
+        
     def test_container_write(self):
         
-        my_comp = Var_Component()
-        my_comp.var_container.list_enum_var = [1,2,1,3]
+        my_comp = VarComponent()
+        my_comp.varcontainer.listenumvar = [1,2,1,3]
         sb = Namelist(my_comp)
         
         sb.set_filename(self.filename)
-        sb.add_group('&Test')
-        sb.add_container("var_container")
+        sb.add_group('Test')
+        sb.add_container("varcontainer")
         
         sb.generate()
         
         f = open(self.filename, 'r')
         contents = f.read()
         
-        self.assertEqual("bool_var = True" in contents, True)
-        self.assertEqual("text_var = 'Hey'" in contents, True)
-        self.assertEqual("float_var = 2.14543" in contents, True)
-        self.assertEqual("int_var = 7777" in contents, True)
-        self.assertEqual("list_enum_var = 1, 2, 1, 3" in contents, True)
+        self.assertEqual("boolvar = T" in contents, True)
+        self.assertEqual("textvar = 'Hey'" in contents, True)
+        self.assertEqual("floatvar = 2.14543" in contents, True)
+        self.assertEqual("intvar = 7777" in contents, True)
+        self.assertEqual("listenumvar = 1, 2, 1, 3" in contents, True)
 
         
     def test_1Darray_write(self):
         
-        my_comp = Var_Component()
+        my_comp = VarComponent()
         sb = Namelist(my_comp)
         
-        my_comp.array_var = zeros(3, dtype=numpy_float32)
-        my_comp.array_var[2] = 3.7
+        my_comp.arrayvar = zeros(3, dtype=numpy_float32)
+        my_comp.arrayvar[2] = 3.7
         
         sb.set_filename(self.filename)
-        sb.add_group('&Test')
-        sb.add_var("array_var")
+        sb.add_group('Test')
+        sb.add_var("arrayvar")
+        # This should be ignored because it is zero-D
+        sb.add_var("arrayvarzerod")
         
         sb.generate()
         
@@ -130,23 +276,23 @@ class TestCase(unittest.TestCase):
         
         compare = "\n" + \
                   "&Test\n" + \
-                  "  array_var = 0.0, 0.0, 3.7\n" + \
+                  "  arrayvar = 0, 0, 3.700000047683716\n" + \
                   "/\n"
 
         self.assertEqual(contents, compare)
 
     def test_2Darray_write(self):
         
-        my_comp = Var_Component()
+        my_comp = VarComponent()
         sb = Namelist(my_comp)
         
-        my_comp.array_var = zeros([3,2], dtype=numpy_float32)
-        my_comp.array_var[0,1] = 3.7
-        my_comp.array_var[2,0] = 7.88
+        my_comp.arrayvar = zeros([3,2], dtype=numpy_float32)
+        my_comp.arrayvar[0,1] = 3.7
+        my_comp.arrayvar[2,0] = 7.88
         
         sb.set_filename(self.filename)
-        sb.add_group('&Test')
-        sb.add_var("array_var")
+        sb.add_group('Test')
+        sb.add_var("arrayvar")
         
         sb.generate()
         
@@ -155,23 +301,23 @@ class TestCase(unittest.TestCase):
         
         compare = "\n" + \
                   "&Test\n" + \
-                  "  array_var(1,1) = 0.0,  3.7, \n" + \
-                  "array_var(1,2) = 0.0,  0.0, \n" + \
-                  "array_var(1,3) = 7.88,  0.0, \n" + \
+                  "  arrayvar(1,1) = 0,  3.700000047683716, \n" + \
+                  "arrayvar(1,2) = 0,  0, \n" + \
+                  "arrayvar(1,3) = 7.880000114440918,  0, \n" + \
                   "/\n"
 
         self.assertEqual(contents, compare)
 
     def test_unsupported_array(self):
         
-        my_comp = Var_Component()
+        my_comp = VarComponent()
         sb = Namelist(my_comp)
         
-        my_comp.array_var = zeros([2,2,2], dtype=numpy_float32)
+        my_comp.arrayvar = zeros([2,2,2], dtype=numpy_float32)
         
         sb.set_filename(self.filename)
-        sb.add_group('&Test')
-        sb.add_var("array_var")
+        sb.add_group('Test')
+        sb.add_var("arrayvar")
         
         try:
             sb.generate()
@@ -184,12 +330,12 @@ class TestCase(unittest.TestCase):
 
     def test_unsupported_traits(self):
         
-        my_comp = Var_Component()
+        my_comp = VarComponent()
         my_comp.add_trait('unsupported', File(iotype='in'))
         sb = Namelist(my_comp)
         
         sb.set_filename(self.filename)
-        sb.add_group('&Test')
+        sb.add_group('Test')
         sb.add_var("unsupported")
         
         try:
@@ -198,10 +344,21 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(err),
                              "Error generating input file. Don't" + \
                              "know how to handle data in variable" + \
-                             "unsupported in group &Test.")
+                             "unsupported in group Test.")
         else:
             self.fail('RuntimeError expected')        
 
+    def test_bool_token_error(self):
+            
+        try:
+            token = ToBool('Junk')
+            token.postParse(0, 0, ["Junk"])
+        except RuntimeError, err:
+            msg = "Unexpected error while trying to identify a Boolean value in the namelist."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('RuntimeError expected')        
+            
 if __name__ == '__main__':
     import nose
     sys.argv.append('--cover-package=openmdao')

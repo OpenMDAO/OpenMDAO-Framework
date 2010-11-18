@@ -14,6 +14,8 @@ from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
 from openmdao.main.tvalwrapper import TraitValWrapper
+from openmdao.main.rbac import rbac
+from openmdao.main.mp_support import is_instance
 
 _iodict = { 'out': 'output', 'in': 'input' }
 
@@ -52,7 +54,7 @@ class Assembly (Component):
         Returns the added object.
         """
         obj = super(Assembly, self).add(name, obj)
-        if isinstance(obj, Component):
+        if is_instance(obj, Component):
             self._depgraph.add(obj.name)
         
         return obj
@@ -63,7 +65,7 @@ class Assembly (Component):
         cont = getattr(self, name)
         self._depgraph.remove(name)
         for obj in self.__dict__.values():
-            if obj is not cont and isinstance(obj, Driver):
+            if obj is not cont and is_instance(obj, Driver):
                 obj.workflow.remove(cont)
                     
         return super(Assembly, self).remove(name)
@@ -127,6 +129,7 @@ class Assembly (Component):
         
         return (compname, getattr(self, compname), varname)
 
+    @rbac(('owner', 'user'))
     def connect(self, srcpath, destpath):
         """Connect one src Variable to one destination Variable. This could be
         a normal connection between variables from two internal Components, or
@@ -186,6 +189,7 @@ class Assembly (Component):
             if (outs is None) or outs:
                 bouts = self.child_invalidated(destcompname, outs, force=True)
 
+    @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and
         varpath2. Otherwise, if varpath is the name of a trait, remove all
@@ -253,6 +257,7 @@ class Assembly (Component):
                     newsrcs.append(s)
             return newsrcs
         
+    @rbac('owner')
     def update_inputs(self, compname, varnames):
         """Transfer input data to input variables on the specified component.
         The varnames iterator is assumed to contain local names (no component name), 
@@ -422,18 +427,18 @@ def dump_iteration_tree(obj):
     drivers.
     """
     def _dump_iteration_tree(obj, f, tablevel):
-        if isinstance(obj, Driver):
+        if is_instance(obj, Driver):
             f.write(' '*tablevel)
             f.write(obj.get_pathname())
             f.write('\n')
             for comp in obj.workflow:
-                if isinstance(comp, Driver) or isinstance(comp, Assembly):
+                if is_instance(comp, Driver) or is_instance(comp, Assembly):
                     _dump_iteration_tree(comp, f, tablevel+3)
                 else:
                     f.write(' '*(tablevel+3))
                     f.write(comp.get_pathname())
                     f.write('\n')
-        elif isinstance(obj, Assembly):
+        elif is_instance(obj, Assembly):
             f.write(' '*tablevel)
             f.write(obj.get_pathname())
             f.write('\n')

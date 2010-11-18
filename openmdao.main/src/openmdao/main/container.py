@@ -28,15 +28,17 @@ from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
-from enthought.traits.trait_types import validate_implements
 
 from openmdao.main.filevar import FileRef
-#from openmdao.main.treeproxy import TreeProxy
 from openmdao.lib.datatypes.api import Float
+
+from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface
+from openmdao.main.rbac import rbac
+
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
-from openmdao.main.interfaces import ICaseIterator, IResourceAllocator
+from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, obj_has_interface
 
 _copydict = {
     'deep': copy.deepcopy,
@@ -51,6 +53,22 @@ def set_as_top(cont):
     """
     cont.tree_rooted()
     return cont
+
+def get_closest_proxy(start_scope, pathname):
+    """Resolve down to the closest in-process parent object
+    of the object indicated by pathname.
+    Returns a tuple containing (proxy_or_parent, rest_of_pathname)
+    """
+    obj = start_scope
+    names = pathname.split('.')[:-1]
+    while isinstance(obj, Container):
+        try:
+            name = names.pop(0)
+        except IndexError:
+            break
+        obj = getattr(obj, name)
+    return (obj, '.'.join(names))
+
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
@@ -187,6 +205,7 @@ class Container(HasTraits):
     def __init__(self, doc=None, iotype=None):
         super(Container, self).__init__()
         
+        self._managers = {}  # Object manager for remote access by authkey.
         self._depgraph = _ContainerDepends()
                           
         # for keeping track of dynamically added traits for serialization
@@ -234,7 +253,7 @@ class Container(HasTraits):
     def _branch_moved(self):
         self._call_tree_rooted = True
         for n,cont in self.items():
-            if isinstance(cont, Container):
+            if is_instance(cont, Container):
                 cont._branch_moved()
  
     @property
@@ -269,6 +288,7 @@ class Container(HasTraits):
             name = obj.name
         return '.'.join(path[::-1])
             
+    @rbac(('owner', 'user'))
     def connect(self, srcpath, destpath):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
@@ -286,7 +306,7 @@ class Container(HasTraits):
             cname, _, restofpath = srcpath.partition('.')
             if restofpath:
                 child = getattr(self, cname)
-                if isinstance(child, Container):
+                if is_instance(child, Container):
                     child.connect(restofpath, 'parent.'+destpath)
         if not destpath.startswith('parent.'):
             if not self.contains(destpath):
@@ -299,12 +319,13 @@ class Container(HasTraits):
             cname, _, restofpath = destpath.partition('.')
             if restofpath:
                 child = getattr(self, cname)
-                if isinstance(child, Container):
+                if is_instance(child, Container):
                     child.connect('parent.'+srcpath, restofpath)
                 
         self._depgraph.connect(srcpath, destpath)
 
 
+    @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one 
         destination variable.
@@ -481,6 +502,7 @@ class Container(HasTraits):
         """
         pass
 
+    @rbac(('owner', 'user'))
     def get_wrapped_attr(self, name):
         """If the named trait can return a TraitValWrapper, then this
         function will return that, with the value set to the current value of
@@ -495,7 +517,7 @@ class Container(HasTraits):
             if scopename == 'parent':
                 return self.parent.get_wrapped_attr(name[7:])
             obj = getattr(self, scopename)
-            if isinstance(obj, Container):
+            if is_instance(obj, Container):
                 return obj.get_wrapped_attr(restofpath)
             else:
                 return getattr(obj, restofpath)
@@ -534,8 +556,11 @@ class Container(HasTraits):
             
         self._cached_traits_ = None # force regen of _cached_traits_
 
-        if isinstance(obj, Container):
-            obj.parent = self
+        if is_instance(obj, Container):
+            if isinstance(obj, OpenMDAO_Proxy):
+                obj.parent = self.get_proxy(obj._authkey)
+            else:
+                obj.parent = self
             # if an old child with that name exists, remove it
             if self.contains(name) and getattr(self, name):
                 self.remove(name)
@@ -551,6 +576,20 @@ class Container(HasTraits):
                     "' object is not an instance of Container.",
                     TypeError)
         return obj
+
+    def get_proxy(self, authkey):
+        """ Return :class:`OpenMDAO_Proxy` for self usable via `authkey`. """
+        try:
+            manager = self._managers[authkey]
+        except KeyError:
+            # Only happens on remote side.
+            if self.name:  #pragma nocover
+                server_name='%s-cb' % self.name
+            else:
+                server_name='parent-cb'
+            manager = ObjectManager(self, authkey=authkey, name=server_name)
+            self._managers[authkey] = manager
+        return manager.proxy
         
     def remove(self, name):
         """Remove the specified child from this container and remove any
@@ -566,7 +605,7 @@ class Container(HasTraits):
             # for Instance traits, set their value to None but don't remove
             # the trait
             obj = getattr(self, name)
-            if obj is not None and not isinstance(obj, Container):
+            if obj is not None and not is_instance(obj, Container):
                 self.raise_exception('attribute %s is not a Container' % name,
                                      RuntimeError)
             if trait.is_trait_type(Instance):
@@ -581,6 +620,7 @@ class Container(HasTraits):
             self.raise_exception("cannot remove container '%s': not found"%
                                  name, AttributeError)
 
+    @rbac(('owner', 'user'))
     def tree_rooted(self):
         """Called after the hierarchy containing this Container has been
         defined back to the root. This does not guarantee that all sibling
@@ -629,7 +669,7 @@ class Container(HasTraits):
                 # where there are traits that don't point to anything,
                 # so check for them here and skip them if they don't point to anything.
                 if obj is not Missing and id(obj) not in visited:
-                    if isinstance(obj, Container):
+                    if is_instance(obj, Container):
                         if not recurse:
                             yield (name, obj)
                     elif trait.iotype is not None:
@@ -645,7 +685,7 @@ class Container(HasTraits):
         
     def list_containers(self):
         """Return a list of names of child Containers."""
-        return [n for n, v in self.items() if isinstance(v, Container)]
+        return [n for n, v in self.items() if is_instance(v, Container)]
     
     def _alltraits(self, traits=None, events=False, **metadata):
         """This returns a dict that contains all traits (class and instance)
@@ -674,6 +714,7 @@ class Container(HasTraits):
 
         return result
     
+    @rbac(('owner', 'user'))
     def contains(self, path):
         """Return True if the child specified by the given dotted path
         name is contained in this Container. 
@@ -683,7 +724,7 @@ class Container(HasTraits):
             obj = getattr(self, childname, Missing)
             if obj is Missing:
                 return False
-            elif isinstance(obj, Container):
+            elif is_instance(obj, Container):
                 return obj.contains(restofpath)
             else:
                 return hasattr(obj, restofpath)
@@ -722,7 +763,7 @@ class Container(HasTraits):
         childname, _, restofpath = traitpath.partition('.')
         if restofpath:
             obj = getattr(self, childname, Missing)
-            if obj is Missing or not isinstance(obj, Container):
+            if obj is Missing or not is_instance(obj, Container):
                 return self._get_metadata_failed(traitpath, metaname)
             return obj.get_metadata(restofpath, metaname)
             
@@ -743,6 +784,7 @@ class Container(HasTraits):
             "object has no attribute '%s'" % path, 
             AttributeError)
         
+    @rbac(('owner', 'user'))
     def get(self, path, index=None):
         """Return the object specified by the given 
         path, which may contain '.' characters.  
@@ -750,7 +792,7 @@ class Container(HasTraits):
         childname, _, restofpath = path.partition('.')
         if restofpath:
             obj = getattr(self, childname, Missing)
-            if obj is Missing or not isinstance(obj, Container):
+            if obj is Missing or not is_instance(obj, Container):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
             #elif index is None:
@@ -785,6 +827,7 @@ class Container(HasTraits):
                 "set by source '%s'" %
                 (path,source,src), TraitError)
 
+    @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
@@ -795,7 +838,7 @@ class Container(HasTraits):
         childname, _, restofpath = path.partition('.')
         if restofpath:
             obj = getattr(self, childname, Missing)
-            if obj is Missing or not isinstance(obj, Container):
+            if obj is Missing or not is_instance(obj, Container):
                 return self._set_failed(path, value, index, src, force)
             if src is not None:
                 src = 'parent.'+src
@@ -1052,6 +1095,7 @@ class Container(HasTraits):
         for name in self.list_containers():
             getattr(self, name).pre_delete()
             
+    @rbac(('owner', 'user'))
     def get_dyn_trait(self, pathname, iotype=None, trait=None):
         """Returns a trait if a trait with the given pathname exists, possibly
         creating it 'on-the-fly' and adding its Container. If an attribute exists
@@ -1074,7 +1118,7 @@ class Container(HasTraits):
         cname, _, restofpath = pathname.partition('.')
         if restofpath:
             child = getattr(self, cname)
-            if isinstance(child, Container):
+            if is_instance(child, Container):
                 return child.get_dyn_trait(restofpath, iotype, trait)
             else:
                 if deep_hasattr(child, restofpath):
@@ -1102,23 +1146,6 @@ class Container(HasTraits):
     
 # Some utility functions
 
-        
-def obj_has_interface(obj, *ifaces):
-    """Returns True if the specified object inherits from HasTraits and
-    claims it implements one or more of the specified interfaces. If
-    it is not a HasTraits object, then validate_implements() will be
-    called on the object, which is slower because it actually checks 
-    for the presence of all methods and attributes specified in the
-    interfaces.
-    """
-    if isinstance(obj, HasTraits):
-        return obj.has_traits_interface(*ifaces)
-    else:
-        for iface in ifaces:
-            if validate_implements(obj, iface):
-                return True
-    return False
-    
 
 def _get_entry_group(obj):
     """Return entry point group for given object type."""
@@ -1210,7 +1237,7 @@ def find_trait_and_value(obj, pathname):
     names = pathname.split('.')
     for name in names[:-1]:
         obj = getattr(obj, name)
-    if isinstance(obj, Container):
+    if is_instance(obj, Container):
         objtrait = obj.get_trait(names[-1])
     elif isinstance(obj, HasTraits):
         objtrait = obj.trait(names[-1])

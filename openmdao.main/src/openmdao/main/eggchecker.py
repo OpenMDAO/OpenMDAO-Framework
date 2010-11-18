@@ -62,8 +62,6 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
     
     try:
         print '\nUnpacking %s in subprocess...' % egg_name
-        env = os.environ
-        env['OPENMDAO_INSTALL'] = '0'
         if logfile:
             stdout = open(logfile, 'w')
         else:
@@ -81,7 +79,7 @@ Component.load_from_eggfile(r'%s')
         out.close()
         args = [python, unpacker]
 
-        retcode = subprocess.call(args, env=env,
+        retcode = subprocess.call(args, env=os.environ,
                                   stdout=stdout, stderr=stderr)
         print '    retcode', retcode
         if retcode == 0:

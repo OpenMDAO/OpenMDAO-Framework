@@ -4,7 +4,7 @@ from networkx.algorithms.traversal import strongly_connected_components
 
 from openmdao.main.seqentialflow import SequentialWorkflow
 from openmdao.main.interfaces import IDriver
-from openmdao.main.container import obj_has_interface
+from openmdao.main.mp_support import has_interface
 
 __all__ = ['Dataflow']
 
@@ -82,7 +82,7 @@ class Dataflow(SequentialWorkflow):
         itersets = {}
         for comp in self._nodes:
             cname = comp.name
-            if obj_has_interface(comp, IDriver):
+            if has_interface(comp, IDriver):
                 iterset = [c.name for c in comp.iteration_set()]
                 itersets[cname] = iterset
                 removes.update(iterset)

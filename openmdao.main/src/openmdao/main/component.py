@@ -23,6 +23,8 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
+from openmdao.main.rbac import rbac
+from openmdao.main.mp_support import is_instance
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -188,6 +190,7 @@ class Component (Container):
                 self.raise_exception("required plugin '%s' is not present" %
                                      name, TraitError)
     
+    @rbac(('owner', 'user'))
     def tree_rooted(self):
         """Calls the base class version of *tree_rooted()*, checks our
         directory for validity, and creates the directory if it doesn't exist.
@@ -303,6 +306,7 @@ class Component (Container):
             valids[name] = True
         self._call_execute = False
         
+    @rbac('*', 'owner')
     def run (self, force=False):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
@@ -332,7 +336,7 @@ class Component (Container):
         Returns the added Container object.
         """
         self.config_changed()
-        if isinstance(obj, Container) and not isinstance(obj, Component):
+        if is_instance(obj, Container) and not is_instance(obj, Component):
             self._depgraph.add(name)
         return super(Component, self).add(name, obj)
         
@@ -341,7 +345,7 @@ class Component (Container):
         any child containers are removed.
         """
         obj = super(Component, self).remove(name)
-        if isinstance(obj, Container) and not isinstance(obj, Component):
+        if is_instance(obj, Container) and not is_instance(obj, Component):
             self._depgraph.remove(name)
         self.config_changed()
         return obj
@@ -376,6 +380,7 @@ class Component (Container):
         if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
             self._num_input_caseiters -= 1
 
+    @rbac(('owner', 'user'))
     def is_valid(self):
         """Return False if any of our variables is invalid."""
         if self._call_execute:
@@ -395,11 +400,8 @@ class Component (Container):
                             self._expr_sources[i] = (tup[0], count)
                         return False
         return True
-
-    #def _trait_added_changed(self, name):
-        #"""Called any time a new trait is added to this container."""
-        #self.config_changed()
         
+    @rbac(('owner', 'user'))
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
@@ -493,12 +495,13 @@ class Component (Container):
             visited = set([id(self),id(self.parent)])
             names = []
             for n,v in self.__dict__.items():
-                if isinstance(v, Container) and id(v) not in visited:
+                if is_instance(v, Container) and id(v) not in visited:
                     visited.add(id(v))
                     names.append(n)
             self._container_names = names
         return self._container_names
     
+    @rbac(('owner', 'user'))
     def connect(self, srcpath, destpath):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
@@ -527,6 +530,7 @@ class Component (Container):
             self._valid_dict[valids_update[0]] = valids_update[1]
             
         
+    @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one 
         destination variable.
@@ -539,6 +543,7 @@ class Component (Container):
                 self._valid_dict[destpath] = True  # disconnected inputs are always valid
         self.config_changed(update_parent=False)
     
+    @rbac(('owner', 'user'))
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency resulting from ExprEvaluators in this Component.
@@ -551,6 +556,7 @@ class Component (Container):
                     conn_list.extend(delegate.get_expr_depends())
         return conn_list
 
+    @rbac(('owner', 'user'))
     def get_expr_sources(self):
         """Return a list of tuples containing the names of all upstream components that are 
         referenced in any of our ExprEvaluators, along with an initial exec_count of 0.
@@ -582,7 +588,7 @@ class Component (Container):
             if self._call_tree_rooted:
                 self.raise_exception("can't call get_abs_directory before hierarchy is defined",
                                      RuntimeError)
-            if self.parent is not None and isinstance(self.parent, Component):
+            if self.parent is not None and is_instance(self.parent, Component):
                 parent_dir = self.parent.get_abs_directory()
             else:
                 parent_dir = SimulationRoot.get_root()
@@ -690,7 +696,7 @@ class Component (Container):
         # we do that after adjusting a parent, things can go bad.
         components = [self]
         components.extend([obj for n,obj in self.items(recurse=True)
-                                               if isinstance(obj, Component)])
+                                               if is_instance(obj, Component)])
         try:
             for comp in sorted(components, reverse=True,
                                key=lambda comp: comp.get_pathname()):
@@ -711,7 +717,7 @@ class Component (Container):
             # parent weakrefs seems to prevent reconstruction in load().
             if child_objs is not None:
                 for child in child_objs:
-                    if not isinstance(child, Component):
+                    if not is_instance(child, Component):
                         continue
                     rel_path = child.directory
                     obj = child.parent
@@ -720,7 +726,7 @@ class Component (Container):
                         observer.exception(msg)
                         raise RuntimeError(msg)
                     while obj.parent is not None and \
-                          isinstance(obj.parent, Component):
+                          is_instance(obj.parent, Component):
                         rel_path = join(obj.directory, rel_path)
                         obj = obj.parent
                     child._rel_dir_path = rel_path
@@ -833,8 +839,8 @@ class Component (Container):
                         rel_path = container.get_pathname(rel_to_scope=scope)
                         file_vars.append(('.'.join((rel_path, name)),
                                           obj, ftrait))
-                elif isinstance(obj, Container) and \
-                     not isinstance(obj, Component):
+                elif is_instance(obj, Container) and \
+                     not is_instance(obj, Component):
                     _recurse_get_file_vars(obj, file_vars, visited, scope)
 
         file_vars = []
@@ -887,7 +893,7 @@ class Component (Container):
             raise
 
         observer.logger = top._logger
-        if isinstance(top, Component):
+        if is_instance(top, Component):
             # Get path relative to real top before we clobber directory attr.
             if top_obj:
                 rel_path = '.'
@@ -896,7 +902,7 @@ class Component (Container):
                     rel_path = top.directory
                     obj = top.parent
                     while obj.parent is not None and \
-                          isinstance(obj.parent, Component):
+                          is_instance(obj.parent, Component):
                         rel_path = join(obj.directory, rel_path)
                         obj = obj.parent
                 elif '_rel_dir_path' in top.traits():
@@ -925,7 +931,7 @@ class Component (Container):
                 
                 # Create any missing subdirectories.
                 for component in [c for n,c in top.items(recurse=True)
-                                              if isinstance(c, Component)]:
+                                              if is_instance(c, Component)]:
                     directory = component.get_abs_directory()
                     if not exists(directory):
                         os.makedirs(directory)
@@ -977,7 +983,7 @@ class Component (Container):
                                      ftrait.binary, file_list, from_egg)
             if from_egg:
                 for component in [c for n,c in self.items(recurse=False)
-                                              if isinstance(c, Component)]:
+                                              if is_instance(c, Component)]:
                     path = rel_path
                     if component.directory:
                         # Always use '/' for resources.
@@ -1111,6 +1117,7 @@ class Component (Container):
         for name in names:
             valids[name] = valid
             
+    @rbac(('owner', 'user'))
     def invalidate_deps(self, varnames=None, force=False):
         """Invalidate all of our outputs if they're not invalid already.
         For a typical Component, this will always be all or nothing, meaning
@@ -1223,7 +1230,7 @@ def _show_validity(comp, recurse=True, exclude=set(), valid=None): #pragma no co
         if recurse:
             for name in comp.list_containers():
                 obj = getattr(comp, name)
-                if isinstance(obj, Component):
+                if is_instance(obj, Component):
                     _show_validity_(obj, recurse, exclude, valid, result)
     result = {}
     _show_validity_(comp, recurse, exclude, valid, result)

@@ -1,10 +1,11 @@
 """
 Parses the variable definition section of a Phoenix Integration ModelCenter
-component wrapper.
+component wrapper and generates an OpenMDAO component stub.
 """
 
 from pyparsing import Suppress, Word, alphanums, dictOf, oneOf, printables, \
-                      removeQuotes, sglQuotedString, commaSeparatedList
+                      removeQuotes, sglQuotedString, commaSeparatedList, \
+                      ParseResults
 
 #public symbols
 __all__ = ["parse_phoenixwrapper"]
@@ -17,7 +18,7 @@ def _parse_phoenixline():
              Word(printables).setResultsName("type") + \
              oneOf(""" input output """).setResultsName("iotype") + \
              dictOf(Word(alphanums), Suppress("=")+ \
-             (Word(alphanums+","+'-')|commaSeparatedList)) )
+             (Word(alphanums+","+'-'+'.')|commaSeparatedList)) )
     
     return data
 
@@ -99,13 +100,10 @@ def _gen_publicvar(data):
     
     try:
         trait = _phoenix2trait[data.type]
-    except KeyError, err:
-        raise KeyError('Unhandled Modelcenter input type - %s' % err)
-    
-    try:
-        iotype = "iotype='" + _phoenix2iotype[data.iotype] + "'"
-    except KeyError, err:
-        raise KeyError('Invalid iotype - %s' % err)
+    except KeyError:
+        raise KeyError("Unhandled Modelcenter input type - %s" % data.type)
+
+    iotype = "iotype='" + _phoenix2iotype[data.iotype] + "'"
     
     # Arrays use the Array trait, which has no default value
     default = ""
@@ -153,29 +151,32 @@ def _gen_publicvar(data):
             if unit in _unit_full_replace:
                 unit = _unit_full_replace[unit]
             else:
-                for unitMC, unitOP in _unit_part_replace.iteritems():
-                    unit = unit.replace(unitMC, unitOP)
+                for unit_mc, unit_op in _unit_part_replace.iteritems():
+                    unit = unit.replace(unit_mc, unit_op)
                 
             var += sep + "units='" + unit + "'"
     
     if data.description:
-        try:
-            var += sep + "doc=" + data.description
-        # Sometimes they forget to close the quote on a long description
-        # This messes up the parse
-        except TypeError:
-            var += sep + "doc=" + data.description[0]
-            for docpiece in data.description[1:]:
-                var += sep + docpiece
-                
-            var += "'"
+        
+        # if you don't end with a quote, comma-seperated lists get
+        # screwed up.
+        if isinstance(data.description, ParseResults):
+            desc = data.description[0]
+            for item in data.description[1:]:
+                desc += ', ' + item
+            desc += "'"
+        else:
+            desc = data.description
+            
+        var += sep + "doc=" + desc
+
     
     if data.enumAliases:
         aliases = data.enumAliases
         
         # remove pesky quotes in Enum alias list
-        for i,v in enumerate(aliases):
-            aliases[i] = aliases[i].strip("'")
+        for i, v in enumerate(aliases):
+            aliases[i] = v.strip("'")
             
         var += sep + "aliases=" + str(tuple(aliases))
             
@@ -208,8 +209,8 @@ def parse_phoenixwrapper(infile, outfile, compname):
     count_var = 0
     imports = []
     numpy_imports = []
-    vars = {}
-    vars[group] = ""
+    variables = {}
+    variables[group] = ""
     tab = "    "
     
     for line in phoenixdata.split("\n"):
@@ -232,22 +233,23 @@ def parse_phoenixwrapper(infile, outfile, compname):
             group = group.name
             if group not in groups:
                 groups.append(group)
-                vars[group] = ""
-            continue
+                variables[group] = ""
+                
+        else:
     
-        # Variable
-        fields = _parse_phoenixline().parseString(line)
-        count_var += 1
-
-        (varline, trait, dtype) = _gen_publicvar(fields)
-
-        if trait not in imports:
-            imports.append(trait)
-        
-        if dtype and dtype not in numpy_imports:
-            numpy_imports.append(dtype)
-        
-        vars[group] += tab + varline
+            # Variable
+            fields = _parse_phoenixline().parseString(line)
+            count_var += 1
+    
+            (varline, trait, dtype) = _gen_publicvar(fields)
+    
+            if trait not in imports:
+                imports.append(trait)
+            
+            if dtype and dtype not in numpy_imports:
+                numpy_imports.append(dtype)
+            
+            variables[group] += tab + varline
 
     # Write output file
     
@@ -261,7 +263,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
     for imp in numpy_imports:
         text += "from numpy import %s as numpy_%s\n" % (imp, imp)
         
-    if len(groups) > 1:
+    if len(groups) > 0:
         text += "\nfrom openmdao.main.api import Component, Container\n"
     else:
         text += "\nfrom openmdao.main.api import Component\n"
@@ -278,6 +280,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
 
     # Create all missing containers
     constructs = {}
+    constructs[""] = ""
     for group in sorted(groups):
         
         constructs[group] = ""
@@ -290,7 +293,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
             sep = "."
             if fullname not in groups:
                 groups.append(fullname)
-                vars[fullname] = ""
+                variables[fullname] = ""
                 constructs[fullname] = ""
 
                 
@@ -308,46 +311,40 @@ def parse_phoenixwrapper(infile, outfile, compname):
                 sep = "."
 
         childname = containers[-1]
-        #text = tab + tab + "self." + childname + " = " + compname + "_" + \
-        #       container_name + "()\n"
-        text = tab + tab + "self.add('" + childname + "',  " + compname + "_" + \
-               container_name + "())\n"
+        text = tab + tab + "self.add('%s',  %s_%s())\n" % \
+                            (childname, compname, container_name)
 
-        try:
-            constructs[parentname] += text
-        except KeyError:
-            constructs[parentname] = text
+        constructs[parentname] += text
 
     # Write the variables.
     for group in sorted(groups, reverse=True):
 
         # Do top level last.
-        if group == "":
-            continue
+        if group != "":
         
-        container_name = compname + "_" + group.replace(".","_")
-        text = "\n\n"
-        text += "class " + container_name + "(Container):\n"
-        
-        text += tab + '"""Container for %s"""\n\n' % str(group)
-        text += tab + "# OpenMDAO Variables\n"
-        openmdao.write(text)
-    
-        openmdao.write(vars[group])
-        
-        # Write the constructors.
-        if constructs[group] != "":
-            text = "\n"
-            text += tab + "def __init__(self, directory=''):\n"
-            text += tab + tab + '"""Constructor for the %s component"""' \
-                    % container_name
-            text += "\n\n"
-            text += tab + tab + "super(%s, self).__init__(directory)" \
-                    % container_name
-            text += "\n\n"
-            text += tab + tab + "# Variable Containers\n"
+            container_name = compname + "_" + group.replace(".","_")
+            text = "\n\n"
+            text += "class " + container_name + "(Container):\n"
+            
+            text += tab + '"""Container for %s"""\n\n' % str(group)
+            text += tab + "# OpenMDAO Variables\n"
             openmdao.write(text)
-            openmdao.write(constructs[group])
+        
+            openmdao.write(variables[group])
+            
+            # Write the constructors.
+            if constructs[group] != "":
+                text = "\n"
+                text += tab + "def __init__(self, directory=''):\n"
+                text += tab + tab + '"""Constructor for the %s component"""' \
+                        % container_name
+                text += "\n\n"
+                text += tab + tab + "super(%s, self).__init__(directory)" \
+                        % container_name
+                text += "\n\n"
+                text += tab + tab + "# Variable Containers\n"
+                openmdao.write(text)
+                openmdao.write(constructs[group])
         
     # Top level class of the Wrapper.
     text = "\n\n"
@@ -357,18 +354,17 @@ def parse_phoenixwrapper(infile, outfile, compname):
     text += tab + "# OpenMDAO Variables\n"
     openmdao.write(text)
 
-    openmdao.write(vars[""])
+    openmdao.write(variables[""])
     
-    if constructs[""] != "":
-        text = "\n"
-        text += tab + "def __init__(self, directory=''):\n"
-        text += tab + tab + '"""Constructor for the %s component"""' % compname
-        text += "\n\n"
-        text += tab + tab + "super(%s, self).__init__(directory)" % compname
-        text += "\n\n"
-        text += tab + tab + "# Variable Containers\n"
-        openmdao.write(text)
-        openmdao.write(constructs[""])
+    text = "\n"
+    text += tab + "def __init__(self, directory=''):\n"
+    text += tab + tab + '"""Constructor for the %s component"""' % compname
+    text += "\n\n"
+    text += tab + tab + "super(%s, self).__init__(directory)" % compname
+    text += "\n\n"
+    text += tab + tab + "# Variable Containers\n"
+    openmdao.write(text)
+    openmdao.write(constructs[""])
     
     print "Stats: %d groups, %d variables." % (len(groups), count_var)
     

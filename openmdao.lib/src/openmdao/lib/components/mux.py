@@ -1,6 +1,6 @@
 from openmdao.lib.datatypes.api import Int, List, Any
 
-from openmdao.main.api import Component, obj_has_interface
+from openmdao.main.api import Component
 from openmdao.main.interfaces import IComponent
 
 

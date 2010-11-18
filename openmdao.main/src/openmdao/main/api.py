@@ -11,7 +11,7 @@ from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
 
 from openmdao.main.container import Container, set_as_top, get_default_name, \
-                                    obj_has_interface, create_io_traits
+                                    create_io_traits
 from openmdao.main.component import Component, SimulationRoot
 from openmdao.main.assembly import Assembly, dump_iteration_tree
 from openmdao.main.driver import Driver
