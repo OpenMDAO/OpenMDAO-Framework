@@ -99,8 +99,12 @@ class WorkerPool(object):
             retval = None
             try:
                 retval = callable(*args, **kwargs)
-            except Exception, exc:
-                trace = traceback.format_exc()
+            except Exception as exc:
+                # Sometimes we have issues at shutdown.
+                try:
+                    trace = traceback.format_exc()
+                except Exception:  #pragma no cover
+                    return
 
             request_q.task_done()
             if reply_q is not None:

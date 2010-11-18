@@ -34,10 +34,14 @@ from enthought.traits.trait_base import not_none, not_event
 from enthought.traits.trait_types import validate_implements
 
 from openmdao.main.filevar import FileRef
+from openmdao.main.interfaces import ICaseIterator, IResourceAllocator
+from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
+                                     is_instance, CLASSES_TO_PROXY
+from openmdao.main.rbac import rbac
+
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
-from openmdao.main.interfaces import ICaseIterator, IResourceAllocator
 
 _copydict = {
     None: lambda obj: obj,
@@ -62,17 +66,21 @@ def _deep_setattr(obj, path, value):
         obj = getattr(obj, name)
     setattr(obj, tup[-1], value)
 
+def get_closest_proxy(start_scope, pathname):
+    """Resolve down to the closest in-process parent object
+    of the object indicated by pathname.
+    Returns a tuple containing (proxy_or_parent, rest_of_pathname)
+    """
+    obj = start_scope
+    names = pathname.split('.')[:-1]
+    while isinstance(obj, Container):
+        try:
+            name = names.pop(0)
+        except IndexError:
+            break
+        obj = getattr(obj, name)
+    return (obj, '.'.join(names))
 
-# TODO: implement get_closest_proxy, along with a way to detect
-# when a Container is proxy so we can differentiate between
-# failure to find an attribute vs. failure to find a local
-# version of the attribute
-#def get_closest_proxy(start_scope, pathname):
-    #"""Resolve down to the closest in-process parent object
-    #of the object indicated by pathname.
-    #Returns a tuple containing (proxy_or_parent, rest_of_pathname)
-    #"""
-    
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
@@ -168,6 +176,7 @@ class Container(HasTraits):
     
     def __init__(self, doc=None):
         super(Container, self).__init__()
+        self._managers = {}  # Object manager for remote access by authkey.
         self._sources = {}  # for checking that destination traits cannot be 
                           # set by other objects
         # for keeping track of dynamically added traits for serialization
@@ -341,6 +350,7 @@ class Container(HasTraits):
         """Set logging message level."""
         self._logger.level = level
 
+    @rbac(('owner', 'user'))
     def get_wrapped_attr(self, name):
         """If the named trait can return a TraitValMetaWrapper, then this
         function will return that, with the value set to the current value of
@@ -387,8 +397,11 @@ class Container(HasTraits):
             self.raise_exception('cannot make an object a child of itself',
                                  RuntimeError)
             
-        if isinstance(obj, Container):
-            obj.parent = self
+        if is_instance(obj, Container):
+            if isinstance(obj, OpenMDAO_Proxy):
+                obj.parent = self.get_proxy(obj._authkey)
+            else:
+                obj.parent = self
             # if an old child with that name exists, remove it
             if self.contains(name) and getattr(self, name):
                 self.remove(name)
@@ -404,7 +417,21 @@ class Container(HasTraits):
                     "' object is not an instance of Container.",
                     TypeError)
         return obj
-        
+
+    def get_proxy(self, authkey):
+        """ Return :class:`OpenMDAO_Proxy` for self usable via `authkey`. """
+        try:
+            manager = self._managers[authkey]
+        except KeyError:
+            # Only happens on remote side.
+            if self.name:  #pragma nocover
+                server_name='%s-cb' % self.name
+            else:
+                server_name='parent-cb'
+            manager = ObjectManager(self, authkey=authkey, name=server_name)
+            self._managers[authkey] = manager
+        return manager.proxy
+
     def remove(self, name):
         """Remove the specified child from this container and remove any
         public trait objects that reference that child. Notify any
@@ -599,7 +626,7 @@ class Container(HasTraits):
         else:
             return getattr(t, metaname)
         
-        
+    @rbac(('owner', 'user'))
     def get(self, path, index=None):
         """Return the object specified by the given 
         path, which may contain '.' characters.  
@@ -630,7 +657,8 @@ class Container(HasTraits):
                 return getattr(obj, '.'.join(tup[1:]))
             else:
                 return obj._array_get('.'.join(tup[1:]), index)
-     
+
+    @rbac(('owner', 'user'))
     def set_source(self, name, source):
         """Mark the named io trait as a destination by registering a source
         for it, which will prevent it from being set directly or connected 
@@ -671,6 +699,7 @@ class Container(HasTraits):
                                  TraitError)
         return trait
 
+    @rbac(('owner', 'user'))
     def set(self, path, value, index=None, srcname=None, force=False):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
@@ -1045,7 +1074,8 @@ class Container(HasTraits):
                                      TraitError)
             self.add_trait(name, 
                            self._build_trait(ref_name, iostat, trait))
-        
+
+    @rbac(('owner', 'user'))
     def get_dyn_trait(self, name, iotype=None):
         """Retrieves the named trait, attempting to create it on-the-fly if
         it doesn't already exist.
@@ -1083,6 +1113,10 @@ class Container(HasTraits):
         full_msg = '%s: %s' % (self.get_pathname(), msg)
         self._logger.error(msg)
         raise exception_class(full_msg)
+
+
+# By default we always proxy Containers.
+CLASSES_TO_PROXY.append(Container)
 
 
 def _get_entry_group(obj):
