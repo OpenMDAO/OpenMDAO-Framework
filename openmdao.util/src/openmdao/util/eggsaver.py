@@ -100,7 +100,8 @@ copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
 def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                 src_files=None, dst_dir=None, fmt=SAVE_CPICKLE, proto=-1,
-                logger=None, use_setuptools=False, observer=None):
+                logger=None, use_setuptools=False, observer=None,
+                need_requirements=True):
     """
     Save state and other files to an egg. Analyzes the objects saved for
     distribution dependencies.  Modules not found in any distribution are
@@ -136,6 +137,11 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
 
     observer: callable
         Will be called via an :class:`EggObserver` intermediary.
+
+    need_requirements: bool
+        If True, distributions required by the egg will be determined.
+        This can be set False if the egg is just being used for distribution
+        within the local host.
 
     Returns ``(egg_filename, required_distributions, orphan_modules)``.
     """
@@ -187,9 +193,14 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
 
     tmp_dir = None
     try:
-        # Determine distributions and local modules required.
-        required_distributions, local_modules, orphan_modules = \
-            _get_distributions(objs, py_dir, logger, observer)
+        if need_requirements:
+            # Determine distributions and local modules required.
+            required_distributions, local_modules, orphan_modules = \
+                _get_distributions(objs, py_dir, logger, observer)
+        else:
+            required_distributions = set()
+            local_modules = set()
+            orphan_modules = set()
 
         # Ensure module corresponding to __main__ is local if it was used.
         # (Test script embedded in egg is an example of how this might occur)
@@ -197,7 +208,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
         if fixup_objects:  #pragma no cover
             # Something references __main__.
             main_mod = sys.modules['__main__'].__file__
-            local_modules.add(main_mod)
+            local_modules.add(os.path.abspath(main_mod))
 
         logger.debug('    py_dir: %s', py_dir)
         logger.debug('    src_dir: %s', src_dir)
@@ -206,6 +217,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
             mod = module
             if mod.startswith(py_dir):
                 mod = mod[len(py_dir)+1:]
+            logger.debug('        %s', mod)
 
         # Move to scratch area.
         tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)

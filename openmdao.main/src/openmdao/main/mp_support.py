@@ -225,7 +225,8 @@ def _generate_key_pair(credentials, logger=None):
                             os.mkdir(key_dir)
                         _make_private(key_dir)  # Private while writing keyfile.
                         with open(key_file, 'wb') as out:
-                            cPickle.dump(key_pair, out)
+                            cPickle.dump(key_pair, out,
+                                         cPickle.HIGHEST_PROTOCOL)
                         try:
                             _make_private(key_file)
                         # Hard to cause (recoverable) error here.

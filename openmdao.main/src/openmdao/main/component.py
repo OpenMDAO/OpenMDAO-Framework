@@ -506,7 +506,8 @@ class Component (Container):
 
     def save_to_egg(self, name, version, py_dir=None, require_relpaths=True,
                     child_objs=None, dst_dir=None, fmt=SAVE_CPICKLE,
-                    proto=-1, use_setuptools=False, observer=None):
+                    proto=-1, use_setuptools=False, observer=None,
+                    need_requirements=True):
         """Save state and other files to an egg. Typically used to copy all or
         part of a simulation to another user or machine. By specifying child
         components in `child_objs`, it will be possible to create instances of
@@ -546,6 +547,9 @@ class Component (Container):
 
         observer: callable
             Will be called via an :class:`EggObserver`.
+
+        need_requirements: bool
+            Passed to :meth:`eggsaver.save_to_egg`.
 
         After collecting files and possibly modifying their paths, this
         calls :meth:`container.save_to_egg`.
