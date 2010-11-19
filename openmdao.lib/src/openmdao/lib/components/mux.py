@@ -14,17 +14,23 @@ class Mux(Component):
     def __init__(self,n=2,*args,**kwargs): 
         super(Mux,self).__init__(*args,**kwargs)
         self.n = n
+        self._inputs = []
         self._n_changed(n,n) #just to initialize it
         
     def _n_changed(self,old,new):
-        self._inputs = []
         
+        for name in self._inputs: 
+            print "test"
+            if self.parent:
+                self.parent.disconnect('.'.join([self.name,name]))
+            self.remove_trait(name)
+        self._inputs = []
         #build the inputs
         for i in xrange(new): 
             name = "input_%d"%(i+1)
             self.add_trait(name, Any(iotype="in"))
             self._inputs.append(name)
-            
+        print self._inputs    
     def execute(self): 
         self.output = [getattr(self,inp) for inp in self._inputs]
         
@@ -40,11 +46,17 @@ class DeMux(Component):
     def __init__(self,n=2,*args,**kwargs): 
         super(DeMux,self).__init__(*args,**kwargs)
         self.n = n
+        self._outputs = []
         self._n_changed(n,n)
         
     def _n_changed(self,old,new): 
-        self._outputs = []
         
+        
+        for name in self._outputs: 
+            if self.parent:
+                self.parent.disconnect('.'.join([self.name,name]))
+            self.remove_trait(name)        
+        self._outputs = []
         for i in xrange(new): 
             name = "output_%d"%(i+1)
             self.add_trait(name,Any(iotype="out"))
