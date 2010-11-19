@@ -35,6 +35,13 @@ def run_openmdao_suite():
                 if opt not in args:
                     args.append(opt)
 
+            # Better coverage if we clobber cached data.
+            base = os.path.expanduser('~/.openmdao')
+            for name in ('eggsaver.dat', 'keys'):
+                path = os.path.join(base, name)
+                if os.path.exists(path):
+                    os.remove(path)
+
     # this tells it to enable the console in the environment so that
     # the logger will print output to stdout. This helps greatly when 
     # debugging openmdao scripts running in separate processes.

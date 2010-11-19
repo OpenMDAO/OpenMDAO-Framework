@@ -82,9 +82,8 @@ def local_ssh_available():
         # Avoid problems with users who don't have a valid environment.
         return False
 
-    home = os.environ['HOME']
     node = platform.node()
-    keyfile = os.path.join(home, '.ssh', 'authorized_keys')
+    keyfile = os.path.expanduser(os.path.join('~', '.ssh', 'authorized_keys'))
     try:
         with open(keyfile, 'r') as keys:
             for line in keys:

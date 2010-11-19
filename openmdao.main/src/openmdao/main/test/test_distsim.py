@@ -298,14 +298,9 @@ class TestCase(unittest.TestCase):
 
         # Force a key generation.
         if _SERVER_ID == 1:
-            if sys.platform == 'win32':
-                home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
-            else:
-                home = os.environ['HOME']
-            key_dir = os.path.join(home, '.openmdao')
-            key_file = os.path.join(key_dir, 'keys')
-            if os.path.exists(key_file):
-                os.remove(key_file)
+            keyfile = os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
+            if os.path.exists(keyfile):
+                os.remove(keyfile)
 
         set_credentials(Credentials())
         self.factory = connect(self.address, self.port, pubkey=self.key)
