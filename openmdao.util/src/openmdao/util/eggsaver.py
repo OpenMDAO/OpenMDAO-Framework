@@ -99,8 +99,7 @@ copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
 
 def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
-                src_files=None, dst_dir=None, fmt=SAVE_CPICKLE, proto=-1,
-                logger=None, use_setuptools=False, observer=None,
+                src_files=None, dst_dir=None, logger=None, observer=None,
                 need_requirements=True):
     """
     Save state and other files to an egg. Analyzes the objects saved for
@@ -124,16 +123,6 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
 
     dst_dir: string
         The directory to write the egg in.
-
-    fmt: int
-        Passed to :meth:`save`.
-
-    proto: int
-        Passed to :meth:`save`.
-
-    use_setuptools: bool
-        If True, then :func:`eggwriter.write_via_setuptools` is called rather
-        than :func:`eggwriter.write`.
 
     observer: callable
         Will be called via an :class:`EggObserver` intermediary.
@@ -259,8 +248,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
 
                 # Save state of object hierarchy.
                 state_name, state_path = \
-                    _write_state_file(name, obj, clean_name, fmt, proto,
-                                      logger, observer)
+                    _write_state_file(name, obj, clean_name, logger, observer)
                 src_files.add(state_name)
                 cleanup_files.append(state_path)
 
@@ -283,16 +271,9 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
             doc = root.__doc__ or ''
             entry_map = _create_entry_map(entry_info)
             orphans = [mod for mod, path in orphan_modules]
-            if use_setuptools:
-                eggwriter.write_via_setuptools(name, version, doc,
-                                               entry_map, src_files,
-                                               required_distributions,
-                                               orphans, dst_dir, logger,
-                                               observer.observer)
-            else:
-                eggwriter.write(name, version, doc, entry_map,
-                                src_files, required_distributions,
-                                orphans, dst_dir, logger, observer.observer)
+            eggwriter.write(name, version, doc, entry_map,
+                            src_files, required_distributions,
+                            orphans, dst_dir, logger, observer.observer)
         finally:
             for path in cleanup_files:
                 if os.path.exists(path):
@@ -741,20 +722,12 @@ def _process_found_modules(py_dir, finder_info, modules, distributions,
                         orphans.add((name, path))
 
 
-def _write_state_file(dst_dir, root, name, fmt, proto, logger, observer):
+def _write_state_file(dst_dir, root, name, logger, observer):
     """ Write state of `root` and its children. Returns (filename, path). """
-    if fmt is SAVE_CPICKLE or fmt is SAVE_PICKLE:
-        state_name = name+'.pickle'
-    elif fmt is SAVE_LIBYAML or fmt is SAVE_YAML:
-        state_name = name+'.yaml'
-    else:
-        msg = "Unknown format '%s'." % fmt
-        observer.exception(msg)
-        raise RuntimeError(msg)
-
+    state_name = name+'.pickle'
     state_path = os.path.join(dst_dir, state_name)
     try:
-        save(root, state_path, fmt, proto, logger)
+        save(root, state_path, SAVE_CPICKLE, -1, logger)
     except Exception as exc:
         msg = "Can't save to '%s': %s" % (state_path, exc)
         observer.exception(msg)
@@ -765,11 +738,6 @@ def _write_state_file(dst_dir, root, name, fmt, proto, logger, observer):
 
 def _write_loader_script(path, state_name, package, top):
     """ Write script used for loading object(s). """
-    if state_name.endswith('.pickle'):
-        fmt = 'SAVE_CPICKLE'
-    else:
-        fmt = 'SAVE_LIBYAML'
-
     if state_name.startswith(package):
         pkg_arg = ''
     else:
@@ -788,7 +756,7 @@ if not '.' in sys.path:
     sys.path.append('.')
 
 try:
-    from openmdao.main.api import Component, %(fmt)s
+    from openmdao.main.api import Component, SAVE_CPICKLE
 except ImportError:
     print 'No OpenMDAO distribution available.'
     if __name__ != '__main__':
@@ -798,8 +766,7 @@ except ImportError:
 
 def load(**kwargs):
     '''Create object(s) from state file.'''
-    return Component.load('%(name)s',
-                          %(fmt)s%(pkg)s%(top)s, **kwargs)
+    return Component.load('%(name)s', SAVE_CPICKLE%(pkg)s%(top)s, **kwargs)
 
 def main():
     '''Load state and run.'''
@@ -808,7 +775,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-""" % {'name':state_name, 'fmt':fmt, 'pkg':pkg_arg, 'top':top_arg})
+""" % {'name':state_name, 'pkg':pkg_arg, 'top':top_arg})
     out.close()
 
 

@@ -48,14 +48,18 @@ class DrivenComponent(Component):
     y = Array([1., 1., 1., 1.], iotype='in')
     raise_error = Bool(False, iotype='in')
     stop_exec = Bool(False, iotype='in')
+    sleep = Float(0., iotype='in')
+
     rosen_suzuki = Float(0., iotype='out')
     sum_y = Float(0., iotype='out')
-        
+
     def __init__(self, *args, **kwargs):
         super(DrivenComponent, self).__init__(*args, **kwargs)
 
     def execute(self):
         """ Compute results from input vector. """
+        if self.sleep:
+            time.sleep(self.sleep)
         self.rosen_suzuki = rosen_suzuki(self.x)
         self.sum_y = sum(self.y)
         if self.raise_error:
@@ -185,6 +189,9 @@ class TestCase(unittest.TestCase):
     def run_cases(self, sequential, forced_errors=False):
         """ Evaluate cases, either sequentially or across multiple servers. """
         self.model.driver.sequential = sequential
+        if not sequential:
+            # Try to ensure more than one worker is used.
+            self.model.driven.sleep = 0.2
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
         self.model.driver.recorder = results

@@ -171,8 +171,6 @@ def _dist_from_eggfile(filename, logger, observer):
                 if not fname.startswith(name) and \
                    not fname.startswith('EGG-INFO'):  #pragma no cover
                     continue
-                if fname.endswith('.pyc') or fname.endswith('.pyo'):
-                    continue  # Don't assume compiled OK for this platform.
                 total_files += 1
                 total_bytes += info.file_size
         else:
@@ -187,8 +185,6 @@ def _dist_from_eggfile(filename, logger, observer):
             if not fname.startswith(name) and \
                not fname.startswith('EGG-INFO'):  #pragma no cover
                 continue
-            if fname.endswith('.pyc') or fname.endswith('.pyo'):
-                continue  # Don't assume compiled OK for this platform.
 
             observer.extract(fname, files/total_files, size/total_bytes)
             dirname = os.path.dirname(fname)

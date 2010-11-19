@@ -505,8 +505,7 @@ class Component (Container):
         self.load(instream)
 
     def save_to_egg(self, name, version, py_dir=None, require_relpaths=True,
-                    child_objs=None, dst_dir=None, fmt=SAVE_CPICKLE,
-                    proto=-1, use_setuptools=False, observer=None,
+                    child_objs=None, dst_dir=None, observer=None,
                     need_requirements=True):
         """Save state and other files to an egg. Typically used to copy all or
         part of a simulation to another user or machine. By specifying child
@@ -535,15 +534,6 @@ class Component (Container):
 
         dst_dir: string
             The directory to write the egg in.
-
-        fmt: int
-            Passed to :meth:`eggsaver.save`.
-
-        proto: int
-            Passed to :meth:`eggsaver.save`.
-
-        use_setuptools: bool
-            Passed to :meth:`eggsaver.save_to_egg`.
 
         observer: callable
             Will be called via an :class:`EggObserver`.
@@ -606,8 +596,8 @@ class Component (Container):
 
             return super(Component, self).save_to_egg(
                        name, version, py_dir, src_dir, src_files,
-                       child_objs, dst_dir, fmt, proto, use_setuptools,
-                       observer.observer)
+                       child_objs, dst_dir, observer.observer,
+                       need_requirements)
         finally:
             # If any component config has been modified, restore it.
             for comp, path in fixup_dirs:

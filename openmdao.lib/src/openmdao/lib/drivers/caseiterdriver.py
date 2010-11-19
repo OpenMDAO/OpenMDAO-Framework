@@ -154,11 +154,11 @@ class CaseIterDriverBase(Driver):
                 # If only local host will be used, we can skip determining
                 # distributions required by the egg.
                 allocators = RAM.list_allocators()
-                if len(allocators) == 1 and \
-                   isinstance(allocators[0], LocalAllocator):
-                    need_reqs = False
-                else:
-                    need_reqs = True
+                need_reqs = False
+                for allocator in allocators:
+                    if not isinstance(allocator, LocalAllocator):
+                        need_reqs = True
+                        break
 
                 driver = self.parent.driver
                 self.parent.add('driver', Driver()) # this driver will execute the workflow once
