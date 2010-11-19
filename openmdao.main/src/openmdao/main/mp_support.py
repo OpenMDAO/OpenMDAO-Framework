@@ -28,7 +28,8 @@ to those specified by the :class:`AccessController` during the execution of the
 method.
 """
 
-# Unfortunately, there's a lot of multiprocessing package code duplication here.# And a lot of this should be done at a lower layer. But then we'd be
+# Unfortunately, there's a lot of multiprocessing package code duplication here.
+# And a lot of this should be done at a lower layer. But then we'd be
 # duplicating connection.py code as well as (more) managers.py code. Another
 # alternative is to just use our own conection.py and managers.py (and whatever
 # else might bleed in) as our private multiprocessing package.

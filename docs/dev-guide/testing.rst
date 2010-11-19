@@ -48,7 +48,7 @@ Test Coverage
 -------------
 
 A Python package called `coverage 
-<http://nedbatchelder.com/code/modules/rees-coverage.html>`_, which is accessible through
+<http://nedbatchelder.com/code/coverage/>`_, which is accessible through
 ``openmdao_test``, makes it easy to determine if your tests cover every
 line of code in your source files.  To get a coverage report for the openmdao
 package, go to the ``devenv`` directory and type the following:
@@ -118,6 +118,16 @@ clear the coverage database by issuing the following command:
 .. index: pair: tests; adding
 .. index: pair: tests; unit
 .. index: unittest
+
+
+Note that the ``coverage`` package is not included with openmdao, so to use it you'll
+have to install it in your openmdao environment like this:
+
+::
+
+   easy_install coverage
+
+
 
 Adding New Tests
 ----------------

@@ -20,6 +20,10 @@ class VehicleTestCase(unittest.TestCase):
         self.model.pre_delete()
         self.model = None
         
+    def test_disconnect(self):
+        self.model.test_vehicle.disconnect('tire_circumerence')
+        self.model.test_vehicle.disconnect('velocity','transmission.velocity')
+
     def test_runvehicle(self):
         
         self.model.test_vehicle.current_gear = 3

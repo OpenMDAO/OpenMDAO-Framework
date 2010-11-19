@@ -95,7 +95,7 @@ class Genetic(Driver):
             
             obj = getattr(self.parent, path)
             
-            t = obj.traits().get(target) #get the trait
+            t = obj.get_trait(target) #get the trait
             
             if (t and (t.is_trait_type(Float) or t.is_trait_type(Python))) \
                 or (array_test.search(target) and isinstance(val,float)):

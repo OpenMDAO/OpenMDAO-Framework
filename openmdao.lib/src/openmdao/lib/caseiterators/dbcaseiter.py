@@ -54,7 +54,7 @@ class DBCaseIterator(object):
             self._connection.close()
         self._connection = sqlite3.connect(value)
 
-    def __iter__(self):
+    def get_iter(self):
         return self._next_case()
 
     def _next_case(self):

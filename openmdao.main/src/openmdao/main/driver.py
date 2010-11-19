@@ -7,14 +7,16 @@ __all__ = ["Driver"]
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import implements, List, Instance
 
-from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, IHasEvents,\
-                                     obj_has_interface 
+from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, \
+                                     IHasEvents, obj_has_interface
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
+from openmdao.main.mp_support import is_instance
+from openmdao.main.rbac import rbac
 
 @add_delegate(HasEvents)
 class Driver(Component):
@@ -29,75 +31,35 @@ class Driver(Component):
     workflow = Instance(Workflow, allow_none=True)
     
     def __init__(self, doc=None):
-        self._workflows = []
         self._iter = None
         super(Driver, self).__init__(doc=doc)
-        self.add_workflow('workflow', Dataflow(self))
-        
-    def add_workflow(self, name, wf):
-        """Add a new Workflow with the given name to this Driver"""
-        if isinstance(wf, Workflow):
-            setattr(self, name, wf)
-            self._workflows.append(wf)
-        else:
-            self.raise_exception("'%s' is not a Workflow" % name,
-                                 TypeError)
-            
-    def remove_workflow(self, name):
-        wf = getattr(self, name, None)
-        try:
-            self._workflows.remove(wf)
-        except:
-            self.raise_exception("'%s' is not a member of the Workflow list" % name,
-                                 NameError)
+        self.workflow = Dataflow(self)
         
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
-        or if any of our variables is invalid, or if any 
-        variable referenced by any of our Expressions is invalid.
+        or if any of our variables is invalid.
         """
         if super(Driver, self).is_valid() is False:
             return False
 
         # force execution if any component in the workflow is invalid
-        for wf in self._workflows:
-            for comp in wf.contents():
-                if not comp.is_valid():
-                    return False
-
+        for comp in self.workflow.contents():
+            if not comp.is_valid():
+                return False
         return True
-
-    def config_changed(self):
-        """Call this whenever the configuration of this Component changes,
-        for example, children are added or removed.
-        """
-        super(Driver, self).config_changed()
-        try:
-            wfs = self._workflows
-        except:
-            pass  # early on, self._workflows may not exist yet
-        else:
-            for wf in wfs:
-                wf.config_changed()
-
-    def remove_from_workflow(self, component):
-        """Remove the specified component from our workflow(s).
-        """
-        for wf in self._workflows:
-            wf.remove(component)
 
     def iteration_set(self):
         """Return a set of all Components in our workflow(s), and 
         recursively in any workflow in any Driver in our workflow(s).
         """
         allcomps = set()
-        for wf in self._workflows:
-            for child in wf.contents():
-                allcomps.add(child)
-                if isinstance(child, Driver):
-                    allcomps.update(child.iteration_set())
+        for child in self.workflow.contents():
+            allcomps.add(child)
+            if is_instance(child, Driver):
+                allcomps.update(child.iteration_set())
         return allcomps
         
+    @rbac(('owner', 'user'))
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name,
         dest_comp_name) for each dependency introduced by any ExprEvaluators
@@ -187,3 +149,11 @@ class Driver(Component):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration
 
+    def config_changed(self, update_parent=True):
+        """Call this whenever the configuration of this Component changes,
+        for example, children are added or removed or dependencies may have
+        changed.
+        """
+        super(Driver, self).config_changed(update_parent)
+        if self.workflow is not None:
+            self.workflow.config_changed()

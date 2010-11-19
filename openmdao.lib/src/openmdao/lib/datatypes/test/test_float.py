@@ -49,17 +49,17 @@ class FloatTestCase(unittest.TestCase):
         # check starting value
         self.assertEqual(3.1415926, self.hobj.float1)
         # check default value
-        self.assertEqual(98.9, self.hobj.trait('float1').default)
+        self.assertEqual(98.9, self.hobj.get_trait('float1').default)
         
         # use unit_convert to perform unit conversion
         self.hobj.float1 = 3.
-        self.hobj.float2 = convert_units(self.hobj.float1, self.hobj.trait('float1').units,
+        self.hobj.float2 = convert_units(self.hobj.float1, self.hobj.get_trait('float1').units,
                                          'inch')
         self.assertAlmostEqual(36., self.hobj.float2,5)
 
     def test_unit_conversion(self):
         self.hobj.float2 = 12.  # inches
-        self.hobj.float1 = convert_units(self.hobj.float2, self.hobj.trait('float2').units,
+        self.hobj.float1 = convert_units(self.hobj.float2, self.hobj.get_trait('float2').units,
                                          'ft')
         self.assertEqual(self.hobj.float1, 1.) # 12 inches = 1 ft
         
@@ -85,18 +85,7 @@ class FloatTestCase(unittest.TestCase):
     def test_get(self):
         self.assertEqual(self.hobj.float1, 3.1415926)
         self.assertEqual(self.hobj.get('float1'), 3.1415926)
-        
-    #def test_set_attribute(self):
-        #self.hobj.float1.set("units", "ft**2")
-        #self.assertEqual(self.hobj.float1.units, "ft**2")
-        #try:
-            #self.hobj.float1.set("units", "inch**2", [2])
-        #except ValueError, err:
-            #self.assertEqual(str(err), 
-                #"h1.float1: array indexing of Variable attributes not supported")
-        #else:
-            #self.fail("ValueError expected")
-        
+                
     def test_array_assign(self):
         try:
             self.hobj.float1[3] = 1.3
@@ -131,7 +120,7 @@ class FloatTestCase(unittest.TestCase):
         try:
             self.hobj.add_trait('badbounds', Float(98.0, low=100.0, high=0.0, iotype='in'))
         except TraitError, err:
-            errstring = "Lower bounds is greater than upper bounds."
+            errstring = "Lower bound is greater than upper bound."
             self.assertEqual(str(err), errstring)
         else:
             self.fail("Exception expected")

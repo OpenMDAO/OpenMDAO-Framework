@@ -543,7 +543,7 @@ We can also access the list of indices and the list of aliases directly from the
 
 .. doctest:: enum_example
 
-    >>> color_trait = test.trait('color')
+    >>> color_trait = test.get_trait('color')
     >>> color_trait.aliases
     ('Red', 'Yellow', 'Green')
     >>> color_trait.values

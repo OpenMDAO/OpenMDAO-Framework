@@ -19,7 +19,7 @@ class ListCaseIterator(HasTraits):
     def __getitem__(self, key):
         return self._cases[key]
 
-    def __iter__(self):
+    def get_iter(self):
         return self._next_case()
     
     def __len__(self):

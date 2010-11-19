@@ -13,7 +13,7 @@ from enthought.traits.api import TraitType, Range, TraitError
 from enthought.traits.api import Float as TraitFloat
 from openmdao.units import PhysicalQuantity
 
-from openmdao.main.tvalwrapper import TraitValMetaWrapper
+from openmdao.main.tvalwrapper import TraitValWrapper
 
 from openmdao.main.uncertain_distributions import UncertainDistribution
 
@@ -72,13 +72,12 @@ class Float(TraitType):
                 high = float(high)
 
             if low > high:
-                raise TraitError("Lower bounds is greater than upper bounds.")
-            
+                raise TraitError("Lower bound is greater than upper bound.")
+        
             if default_value > high or default_value < low:
-                msg = "Default value is outside of bounds [%s, %s]." % \
-                    (str(low), str(high))
-                raise TraitError(msg)
-                
+                raise TraitError("Default value is outside of bounds [%s, %s]." %
+                                 (str(low), str(high)))
+                     
             # Range can be float or int, so we need to force these to be float.
             default_value = float(default_value)
                 
@@ -108,8 +107,7 @@ class Float(TraitType):
         
         # pylint: disable-msg=E1101
         # If both source and target have units, we need to process differently
-        if isinstance(value, TraitValMetaWrapper) and \
-           value.metadata.has_key('units'):
+        if isinstance(value, TraitValWrapper) and value.metadata.has_key('units'):
             if self.units and value.metadata['units']:
                 return self._validate_with_metadata(obj, name, 
                                                     value.value, 
@@ -124,7 +122,7 @@ class Float(TraitType):
             self.error(obj, name, value)
 
     def error(self, obj, name, value):
-        """Returns an informative and descriptive error string."""
+        """Returns a descriptive error string."""
         
         # pylint: disable-msg=E1101
         if self.low is None and self.high is None:
@@ -151,12 +149,12 @@ class Float(TraitType):
                                (name, info, value, vtype)
         obj.raise_exception(msg, TraitError)
 
-    def get_val_meta_wrapper(self):
-        """Return a TraitValMetaWrapper object.  Its value attribute
+    def get_val_wrapper(self, value):
+        """Return a TraitValWrapper object.  Its value attribute
         will be filled in by the caller.
         """
         # pylint: disable-msg=E1101
-        return TraitValMetaWrapper(units=self.units)
+        return TraitValWrapper(value, units=self.units)
             
     def _validate_with_metadata(self, obj, name, value, srcmeta):
         """Perform validation and unit conversion using metadata from

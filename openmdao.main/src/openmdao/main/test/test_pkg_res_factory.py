@@ -142,11 +142,11 @@ class PkgResFactoryTestCase(unittest.TestCase):
         self.assertEqual(mybar.version, '1.0')
         
     def test_get_available_types(self):
-        types = [x[0] for x in get_available_types()]
-        self.assertEqual(types, ['openmdao.lib.CONMINdriver',
-                                 'openmdao.lib.NEWSUMTdriver',
-                                 'openmdao.lib.pyevolvedriver',
-                                 'openmdao.test.ExecComp'])
+        types = set([x[0] for x in get_available_types()])
+        self.assertTrue(types.issuperset(set(['openmdao.lib.CONMINdriver',
+                                              'openmdao.lib.pyevolvedriver',
+                                              'openmdao.lib.NEWSUMTdriver',
+                                              'openmdao.test.ExecComp'])))
         
 if __name__ == "__main__":
     unittest.main()

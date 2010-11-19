@@ -280,8 +280,8 @@ class Datain(Container):
                             #print  'name=',name,'  value= ',value,'  for * variable'
                             ii = 0
                             while ii < nfld:
-                                 self.set(name,value,[ii])
-                                 ii = ii + 1
+                                self.set(name,value,[ii])
+                                ii = ii + 1
                         else:
                             #print ' name=',name,' val =',val,'  befoe attrval........'
                             attrval = getattr(self,name)

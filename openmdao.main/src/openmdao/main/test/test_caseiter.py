@@ -4,6 +4,7 @@ from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 from openmdao.main.api import Case
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.caseiter import caseiter_to_dict
+from openmdao.main.container import _get_entry_group
 
 class CaseIterTestCase(unittest.TestCase):
 
@@ -43,6 +44,10 @@ class CaseIterTestCase(unittest.TestCase):
                 self.assertTrue(isinstance(value[0], NormalDistribution))
             else:
                 self.assertTrue(isinstance(value[0], float))
+
+    def test_get_entry_group(self):
+        self.assertEqual(_get_entry_group(self.caseiter), 'openmdao.case_iterator')
+
 
 if __name__ == "__main__":
     unittest.main()

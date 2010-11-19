@@ -629,6 +629,6 @@ class CaseIteratorDriver(CaseIterDriverBase):
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
         if self.iterator is not None:
-            return self.iterator.__iter__()
+            return self.iterator.get_iter()
         else:
             self.raise_exception("iterator has not been set", ValueError)

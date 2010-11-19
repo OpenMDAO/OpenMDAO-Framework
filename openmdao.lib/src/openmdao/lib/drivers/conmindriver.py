@@ -16,12 +16,8 @@ from numpy import int as numpy_int
 import conmin.conmin as conmin
 
 from openmdao.main.api import Case, Driver
-from openmdao.main.expression import ExpressionList
 from openmdao.main.exceptions import RunStopped
-from openmdao.lib.datatypes.array import Array
-from openmdao.lib.datatypes.enum import Enum
-from openmdao.lib.datatypes.float import Float
-from openmdao.lib.datatypes.int import Int
+from openmdao.lib.datatypes.api import Array, Enum, Float, Int, Str, List
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
@@ -210,7 +206,7 @@ class CONMINdriver(Driver):
                       'indicate convergence (relative or absolute).')
         
     # Extra variables for printing
-    printvars = ExpressionList(iotype='in', desc='List of extra variables to'
+    printvars = List(Str, iotype='in', desc='List of extra variables to'
                                'output in the recorder.')
     
     def __init__(self, doc=None):
@@ -399,10 +395,9 @@ class CONMINdriver(Driver):
                 for var, val in zip(self.get_parameters().keys(), dvals):
                     case_input.append([var, None, val])
                     
-                for var in self.printvars:
-                    case_input.append([var, None, var.evaluate()])
-            
                 case_output = []
+                for var in self.printvars:
+                    case_output.append([var, None, self.get(var)])
                 case_output.append(["objective", None, self.cnmn1.obj])
             
                 for i, val in enumerate(self.constraint_vals):

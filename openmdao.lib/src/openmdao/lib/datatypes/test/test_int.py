@@ -51,7 +51,7 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.add_trait('inta', Int(98, low=0.01, high=99, iotype='in'))
         except TraitError, err:
-            errstring = "Lower bounds for an Int must be an integer."
+            errstring = "Lower bound for an Int must be an integer."
             self.assertEqual(str(err), errstring)
         else:
             self.fail("Exception expected")
@@ -59,7 +59,7 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.add_trait('inta', Int(98, low=0, high=99.9, iotype='in'))
         except TraitError, err:
-            errstring = "Upper bounds for an Int must be an integer."
+            errstring = "Upper bound for an Int must be an integer."
             self.assertEqual(str(err), errstring)
         else:
             self.fail("Exception expected")
@@ -67,7 +67,7 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.add_trait('badbounds', Int(98, low=100, high=0, iotype='in'))
         except TraitError, err:
-            errstring = "Lower bounds is greater than upper bounds."
+            errstring = "Lower bound is greater than upper bound."
             self.assertEqual(str(err), errstring)
         else:
             self.fail("Exception expected")
@@ -87,7 +87,7 @@ class IntTestCase(unittest.TestCase):
         self.assertEqual(3, self.hobj.int1)
 
         # check default value
-        self.assertEqual(98, self.hobj.trait('int1').default)
+        self.assertEqual(98, self.hobj.get_trait('int1').default)
 
         #check assignment with float
         try:

@@ -116,7 +116,7 @@ class Namelist(object):
         
         target_container = self.comp.get(varpath)
             
-        for name in target_container.keys(iotype=not_none):
+        for name,val in target_container.items(iotype=not_none):
             self.add_var("%s.%s" % (varpath, name))
         
     def add_comment(self, comment):

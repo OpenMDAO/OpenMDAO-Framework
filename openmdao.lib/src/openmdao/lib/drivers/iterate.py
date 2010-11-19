@@ -7,10 +7,9 @@ are used as termination criteria.
 # pylint: disable-msg=E0611,F0401
 from numpy import zeros
 
-from openmdao.lib.datatypes.float import Float
-from openmdao.lib.datatypes.int import Int
+from openmdao.lib.datatypes.api import Float, Int, Str
 from openmdao.main.api import Driver
-from openmdao.main.expression import Expression
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exceptions import RunStopped
 
 class FixedPointIterator(Driver):
@@ -19,15 +18,14 @@ class FixedPointIterator(Driver):
     change and number of iterations are used as termination criterea."""
 
     # pylint: disable-msg=E1101
-    x_out = Expression(iotype='in', desc='loop output to pass to input.') 
-    x_in = Expression(iotype='out', 
-                            desc='loop input, taken from the input.')
+    x_out = Str(iotype='in', desc='loop output to pass to input.') 
+    x_in = Str(iotype='out', desc='loop input, taken from the input.')
     
-    max_iteration = Int(25, iotype='in', desc='Maximum number of \
-                                         iterations before termination.')
+    max_iteration = Int(25, iotype='in', desc='Maximum number of '
+                                         'iterations before termination.')
     
-    tolerance = Float(0.00001, iotype='in', desc='Absolute convergence \
-                                            tolerance between iterations.')
+    tolerance = Float(0.00001, iotype='in', desc='Absolute convergence '
+                                            'tolerance between iterations.')
 
 
     def __init__(self, doc=None):
@@ -35,7 +33,16 @@ class FixedPointIterator(Driver):
         
         self.history = zeros(0)
         self.current_iteration = 0
+        self._x_out_expr = None
+        self._x_in_expr = None
         
+        
+    def _x_out_changed(self, oldval, newval):
+        self._x_out_expr = ExprEvaluator(newval, scope=self)
+    
+    def _x_in_changed(self, oldval, newval):
+        self._x_in_expr = ExprEvaluator(newval, scope=self, single_name=True)
+    
     def execute(self):
         """Perform the iteration."""
 
@@ -44,7 +51,7 @@ class FixedPointIterator(Driver):
         
         self.current_iteration = 0
         history = zeros(self.max_iteration)
-        history[0] = self.x_out.evaluate()
+        history[0] = self._x_out_expr.evaluate()
         unconverged = True
 
         while unconverged:
@@ -60,14 +67,14 @@ class FixedPointIterator(Driver):
                 
             # Pass output to input
             val0 = history[self.current_iteration]
-            self.x_in.set(val0)
+            self._x_in_expr.set(val0)
 
             # run the workflow
             self.run_iteration()
             self.current_iteration += 1
         
             # check convergence
-            history[self.current_iteration] = self.x_out.evaluate()
+            history[self.current_iteration] = self._x_out_expr.evaluate()
             val1 = history[self.current_iteration]
             
             if abs(val1-val0) < self.tolerance:

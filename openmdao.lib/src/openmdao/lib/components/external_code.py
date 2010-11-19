@@ -47,7 +47,7 @@ class ExternalCode(Component):
 
         self.stdin  = None
         self.stdout = None
-        self.stderr = None
+        self.stderr = "error.out"
 
         self._process = None
         self._server = None
@@ -89,8 +89,18 @@ class ExternalCode(Component):
                     self.timed_out = True
                     self.raise_exception('Timed out', RunInterrupted)
             elif return_code:
+
+                if isinstance(self.stderr, str):
+                    stderrfile = open(self.stderr, 'r')
+                    error_desc = stderrfile.read()
+                    stderrfile.close()
+                    
+                    err_fragment = "\nError Output:\n%s" % error_desc
+                else:
+                    err_fragment = error_msg
+                    
                 self.raise_exception('return_code = %d%s' \
-                                     % (return_code, error_msg), RuntimeError)
+                    % (return_code, err_fragment), RuntimeError)
         finally:
             self.return_code = -999999 if return_code is None else return_code
 

@@ -83,7 +83,7 @@ class Vehicle(Assembly):
 
         # Create input and output ports at the assembly level
         # pylint: disable-msg=E1101
-        # "Instance of <class> has no <attr> member"        
+        # "Instance of <class> has no <attr> member"
         
         # Promoted From Engine
         self.create_passthrough('engine.stroke')
@@ -129,8 +129,8 @@ class Vehicle(Assembly):
         self.connect('engine.engine_weight','chassis.mass_engine')
 
 
-        
-if __name__ == "__main__": # pragma: no cover    
+
+if __name__ == "__main__": # pragma: no cover
     
     from openmdao.main.api import set_as_top
     
@@ -142,7 +142,6 @@ if __name__ == "__main__": # pragma: no cover
     our_vehicle.velocity = 20.0*(26.8224/60.0)
     our_vehicle.throttle = 1.0
     our_vehicle.run()
-    print our_vehicle.acceleration
     
     def prz(vehicle):
         """ Printing the results"""

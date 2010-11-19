@@ -164,13 +164,13 @@ class HasConstraintsTestCase(unittest.TestCase):
 
     def test_constraint_scaler_adder(self):
         drv = self.asm.add('driver', MyDriver())
-        self.asm.comp1.a = 3
-        self.asm.comp1.b = 5
-        drv.add_constraint('comp1.a < comp1.b', scaler=3000.0, adder=100.0)
+        self.asm.comp1.a = 3000
+        self.asm.comp1.b = 5000
+        drv.add_constraint('comp1.a < comp1.b', scaler=1.0/1000.0, adder=-4000.0)
         result = drv.eval_ineq_constraints()
         
-        self.assertEqual(result[0][0], 9100.)
-        self.assertEqual(result[0][1], 15100.)
+        self.assertEqual(result[0][0], -1.0)
+        self.assertEqual(result[0][1], 1.0)
         
         try:
             drv.add_constraint('comp1.a < comp1.b', scaler=-5.0)

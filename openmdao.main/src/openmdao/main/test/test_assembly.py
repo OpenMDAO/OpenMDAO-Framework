@@ -2,10 +2,9 @@
 
 import unittest
 
-from enthought.traits.api import TraitError, List
+from enthought.traits.api import TraitError
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.main.expression import Expression, ExpressionList
-from openmdao.lib.datatypes.api import Float, Str, Instance
+from openmdao.lib.datatypes.api import Float, Str, Instance, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
 
@@ -19,10 +18,8 @@ class Multiplier(Component):
         self.rval_in = 4.
         self.rval_out = 7.
         self.mult = 1.5
-        self.run_count = 0
 
     def execute(self):
-        self.run_count += 1
         self.rval_out = self.rval_in * self.mult
         
 class Simple(Component):
@@ -38,10 +35,8 @@ class Simple(Component):
         self.b = 5.
         self.c = 7.
         self.d = 1.5
-        self.run_count = 0
 
     def execute(self):
-        self.run_count += 1
         self.c = self.a + self.b
         self.d = self.a - self.b
 
@@ -80,11 +75,6 @@ class DummyComp(Component):
         # pylint: disable-msg=E1101
         self.dummy.execute()
 
-@add_delegate(HasObjective)
-class SimpleDriver(Driver):
-    obj = Expression(iotype='in')
-    constr = ExpressionList(iotype='in')
-
 class AssemblyTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -106,7 +96,7 @@ class AssemblyTestCase(unittest.TestCase):
         # driver process definition
         top.driver.workflow.add([top.comp1,top.nested,top.comp2,top.comp3])
         nested.driver.workflow.add([nested.comp1])
-        
+                
     def test_lazy_eval(self):
         top = set_as_top(Assembly())
         comp1 = top.add('comp1', Multiplier())
@@ -122,8 +112,8 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(top.get('comp1.rval_out'), 10.)
         self.assertEqual(top.get('comp2.rval_in'), 10.)
         self.assertEqual(top.get('comp2.rval_out'), 40.)
-        self.assertEqual(top.comp1.run_count, 1)
-        self.assertEqual(top.comp2.run_count, 1)
+        self.assertEqual(top.comp1.exec_count, 1)
+        self.assertEqual(top.comp2.exec_count, 1)
         
         # now change an input (mult) on comp2. This should only 
         # cause comp2 to execute when we run next time.
@@ -132,8 +122,8 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(top.get('comp1.rval_out'), 10.)
         self.assertEqual(top.get('comp2.rval_in'), 10.)
         self.assertEqual(top.get('comp2.rval_out'), 30.)
-        self.assertEqual(top.comp1.run_count, 1)
-        self.assertEqual(top.comp2.run_count, 2)
+        self.assertEqual(top.comp1.exec_count, 1)
+        self.assertEqual(top.comp2.exec_count, 2)
         
      
     def test_data_passing(self):
@@ -154,7 +144,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.comp2.r = 44
         except TraitError, err:
-            self.assertEqual(str(err), "comp2: 'r' is already connected to source 'comp1.rout'"+
+            self.assertEqual(str(err), "comp2: 'r' is already connected to source 'parent.comp1.rout'"+
                                        " and cannot be directly set")
         else:
             self.fail("Expected a TraitError when setting a connected input")
@@ -191,7 +181,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.comp2.r = 44
         except TraitError, err:
-            self.assertEqual(str(err), "comp2: 'r' is already connected to source 'comp1.rout'"+
+            self.assertEqual(str(err), "comp2: 'r' is already connected to source 'parent.comp1.rout'"+
                                        " and cannot be directly set")
         else:
             self.fail("Expected a TraitError when setting a connected input")
@@ -217,11 +207,11 @@ class AssemblyTestCase(unittest.TestCase):
     def test_create_passthrough(self):
         self.asm.set('comp3.r', 75.4)
         self.asm.create_passthrough('comp3.rout')
-        self.assertEqual(self.asm.get('comp3.r'), 75.4)
-        self.assertEqual(self.asm.get('rout'), 0.0)
+        self.assertEqual(self.asm.comp3.r, 75.4)
+        self.assertEqual(self.asm.rout, 0.0)
         self.asm.run()
-        self.assertEqual(self.asm.get('comp3.rout'), 75.4*1.5)
-        self.assertEqual(self.asm.get('rout'), 75.4*1.5)
+        self.assertEqual(self.asm.comp3.rout, 75.4*1.5)
+        self.assertEqual(self.asm.rout, 75.4*1.5)
         
     def test_create_passthrough_already_exists(self):
         self.asm.create_passthrough('comp3.rout')
@@ -232,12 +222,10 @@ class AssemblyTestCase(unittest.TestCase):
         else:
             self.fail('expected TraitError')
         
-    def test_passthrough_nested(self):
+    def test_autopassthrough_nested(self):
         self.asm.set('comp1.r', 8.)
-        self.asm.nested.create_passthrough('comp1.r')
-        self.asm.nested.create_passthrough('comp1.rout', 'foobar')
-        self.asm.connect('comp1.rout', 'nested.r')
-        self.asm.connect('nested.foobar','comp2.r')
+        self.asm.connect('comp1.rout', 'nested.comp1.r')
+        self.asm.connect('nested.comp1.rout','comp2.r')
         self.asm.run()
         self.assertEqual(self.asm.get('comp1.rout'), 12.)
         self.assertEqual(self.asm.get('comp2.rout'), 27.)
@@ -257,7 +245,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.create_passthrough('comp2.r')
         except RuntimeError, err:
-            self.assertEqual(str(err), ': comp2.r is already connected')
+            self.assertEqual(str(err), ": 'comp2.r' is already connected to source 'comp1.rout'")
         else:
             self.fail('RuntimeError expected')
         self.asm.set('comp1.s', 'some new string')
@@ -279,14 +267,14 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual(': comp2.rout must be an input variable',
+            self.assertEqual('comp2: rout must be an input variable',
                              str(err))
         else:
             self.fail('exception expected')
         try:
             self.asm.connect('comp1.r','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual(': comp1.r must be an output variable',
+            self.assertEqual('comp1: r must be an output variable',
                              str(err))
         else:
             self.fail('RuntimeError expected')
@@ -303,9 +291,9 @@ class AssemblyTestCase(unittest.TestCase):
     def test_metadata_link(self):
         try:
             self.asm.connect('comp1.rout.units','comp2.s')
-        except NameError, err:
+        except AttributeError, err:
             self.assertEqual(str(err), 
-                    "comp1: Cannot locate trait named 'rout.units'")
+                    "comp1: Cannot locate variable named 'rout.units'")
         else:
             self.fail('NameError expected')
             
@@ -323,20 +311,10 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             bar = self.asm.comp1.get_metadata('bogus', 'bar')
         except Exception as err:
-            self.assertEqual(str(err), "comp1: Couldn't find trait bogus")
+            self.assertEqual(str(err), "comp1: Couldn't find metadata for trait bogus")
         else:
             self.fail("Exception expected")
             
-    def test_value_link(self):
-        try:
-            self.asm.connect('comp1.rout.value','comp2.r2')
-        except NameError, err:
-            self.assertEqual(str(err), 
-                    "comp1: Cannot locate trait named 'rout.value'")
-        else:
-            self.fail('NameError expected')
-        
-     
     def test_circular_dependency(self):
         self.asm.connect('comp1.rout','comp2.r')
         try:
@@ -385,15 +363,15 @@ class AssemblyTestCase(unittest.TestCase):
         # until we run, the values of comp1.a and comp2.b won't change
         self.assertEqual(asm.nested.comp1.a, 4.)
         self.assertEqual(asm.nested.comp2.b, 5.)
-        self.assertEqual(asm.nested.comp2.get_valid('b'), False)
+        self.assertEqual(asm.nested.comp2.get_valid(['b']), [False])
         asm.run()
         self.assertEqual(asm.nested.comp1.a, 0.5)
         self.assertEqual(asm.nested.comp2.b, 0.5)
-        self.assertEqual(asm.nested.comp1.get_valid('a'), True)
-        self.assertEqual(asm.nested.comp2.get_valid('b'), True)
+        self.assertEqual(asm.nested.comp1.get_valid(['a']), [True])
+        self.assertEqual(asm.nested.comp2.get_valid(['b']), [True])
         asm.nested.a = 999.
-        self.assertEqual(asm.nested.comp1.get_valid('a'), False)
-        self.assertEqual(asm.nested.comp2.get_valid('b'), False)
+        self.assertEqual(asm.nested.comp1.get_valid(['a']), [False])
+        self.assertEqual(asm.nested.comp2.get_valid(['b']), [False])
         self.assertEqual(asm.nested.comp1.a, 0.5)
         self.assertEqual(asm.nested.comp2.b, 0.5)
         asm.run()
@@ -409,7 +387,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             asm.nested.connect('comp2.d', 'c')
         except RuntimeError, err:
-            self.assertEqual(str(err), 'nested: c is already connected')
+            self.assertEqual(str(err), "nested: 'c' is already connected to source 'comp1.c'")
         else:
             self.fail('RuntimeError expected')
         
@@ -433,25 +411,29 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(conns, [('comp1.rout', 'comp2.r')])
         self.asm.run()
         
-    def test_expr_connection(self):
-        top = set_as_top(Assembly())
-        top.driver = SimpleDriver()
-        top.add('comp1', DummyComp())
-        try:
-            top.connect('comp1.sout', 'driver.obj')
-        except Exception as err:
-            self.assertEqual(str(err), 
-                ': Cannot connect comp1.sout to driver.obj because one of them is an Expression or ExpressionList')
-        else:
-            self.fail('expected Exception')
-        try:
-            top.connect('comp1.slistout', 'driver.constr')
-        except Exception as err:
-            self.assertEqual(str(err), 
-                ': Cannot connect comp1.slistout to driver.constr because one of them is an Expression or ExpressionList')
-        else:
-            self.fail('expected Exception')
             
+    def test_assembly_connect_init(self):
+        class MyComp(Component):
+            ModulesInstallPath  = Str('', desc='', iotype='in')
+            
+            def execute(self):
+                print 'running MyComp'
+            
+            
+        class MyAsm(Assembly):    
+            ModulesInstallPath  = Str('C:/work/IMOO2/imoo/modules', desc='', iotype='in')
+        
+            def __init__(self):
+                super(MyAsm, self).__init__()
+                self.add('propulsion', MyComp())
+                self.driver.workflow.add(self.propulsion)
+                self.connect('ModulesInstallPath','propulsion.ModulesInstallPath')
+        
+        asm = set_as_top(MyAsm())
+        asm.run()
+        self.assertEqual(asm.ModulesInstallPath, 'C:/work/IMOO2/imoo/modules')
+        self.assertEqual(asm.propulsion.ModulesInstallPath, 'C:/work/IMOO2/imoo/modules')
+
         
 if __name__ == "__main__":
     unittest.main()

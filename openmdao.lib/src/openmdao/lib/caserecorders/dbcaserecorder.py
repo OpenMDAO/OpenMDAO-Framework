@@ -12,8 +12,8 @@ from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
 
 
 class DBCaseRecorder(object):
-    """Records Cases to a relational DB (sqlite). Values other than floats
-    or ints are pickled and are opaque to SQL queries.
+    """Records Cases to a relational DB (sqlite). Values other than floats,
+    ints or strings are pickled and are opaque to SQL queries.
     """
     
     implements(ICaseRecorder)
