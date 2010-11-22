@@ -129,15 +129,18 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
     try:
         loader = dist.load_entry_point(entry_group, entry_name)
         return loader(name=instance_name, observer=observer.observer)
-    except pkg_resources.DistributionNotFound as exc:
+    # Difficult to generate egg in test process that causes this.
+    except pkg_resources.DistributionNotFound as exc:  #pragma no cover
         observer.exception('Distribution not found: %s' % exc)
         check_requirements(dist.requires(), logger=logger, indent_level=1)
         raise exc
-    except pkg_resources.VersionConflict as exc:
+    # Difficult to generate egg in test process that causes this.
+    except pkg_resources.VersionConflict as exc:  #pragma no cover
         observer.exception('Version conflict: %s' % exc)
         check_requirements(dist.requires(), logger=logger, indent_level=1)
         raise exc
-    except Exception as exc:
+    # Difficult to generate egg in test process that causes this.
+    except Exception as exc:  #pragma no cover
         observer.exception('Loader exception:')
         logger.exception('')
         raise exc
