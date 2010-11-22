@@ -1,24 +1,22 @@
 """
-A simple egg server that borrows heavily from Ian Bicking's tutorial at
+A simple python distribution server that borrows heavily from Ian Bicking's tutorial at
 http://pythonpaste.org/webob/file-example.html.
 
-Usage: python eggsrv.py --eggdir=<top level egg dir> --log=<my log file> --port=<port>
+Usage: python findlinksrv.py --dir=<top level dir> --log=<my log file> --port=<port>
 
-eggdir can have any structure. The server will recursively search for any *.egg and *.tar.gz
-files under the top directory.
+dir can have any structure. The server will recursively search for any python
+distributions under the top directory.
 
-The egg server will automatically handle the addition of new distributions to the 
-egg directory structure.
+The server will automatically handle the addition of new distributions to the 
+distribution directory.
     
 MD5 checksums are calculated and added to each file URL.
 
-This egg server does NOT function as a package index. It is intended to be
-specified in the 'find-links' list in a buildout config file (or as an
-easy_install -f option). By using it in this way the Python Package Index can
-still be used as a fallback when a given package is not found in this server.
-
-For a similiar implementation of an egg server that DOES function as a package
-index, see eggsrv.py (should be found in the same directory as this file).
+This server does NOT function as a package index. It is intended to be
+specified in the 'find-links' list in a buildout config file or as a -f option
+to easy_install or pip install. By using it in this way the Python Package
+Index can still be used as a fallback when a given package is not found in
+this server.
 
 """
 
@@ -34,9 +32,6 @@ import wsgiref.util
 import hashlib
 import fnmatch
 from threading import Lock
-
-
-logger = None
 
 
 def find_files(pats, startdir):
@@ -127,7 +122,7 @@ def file_md5(fpath):
         f.close()
 
 
-class EggServer(object):
+class DistServer(object):
     def __init__(self, topdir):
         self.topdir = os.path.abspath(topdir)
         self.file_cache = {}
@@ -143,7 +138,8 @@ class EggServer(object):
         self.lock.acquire()
         file_cache = self.file_cache
         try:
-            for f in find_files(["*.egg","*.tar.gz"], self.topdir):
+            flist = sorted(find_files(["*.egg","*.tar.gz"], self.topdir), key=str.lower)
+            for f in flist:
                 checksum = file_md5(f)
                 basef = os.path.basename(f)
                 dirname = wsgiref.util.request_uri(environ)
@@ -161,10 +157,8 @@ class EggServer(object):
         return app(environ, start_response)
         
     def __call__(self, environ, start_response):
-        global logger
-        if logger:
-            logger.info(environ['REMOTE_ADDR']+': <-- '+
-                         wsgiref.util.request_uri(environ))
+        logging.info(environ['REMOTE_ADDR']+': <-- '+
+                     wsgiref.util.request_uri(environ))
                      
         pth = environ['PATH_INFO']
         
@@ -176,7 +170,7 @@ class EggServer(object):
             try:
                 cached_fname = self.file_cache.get(fpath, '')
                 if os.path.isfile(cached_fname):
-                    print 'serving file: ',cached_fname
+                    logging.info('serving file: '+cached_fname)
                     return self.file_response(environ, start_response, cached_fname)
                 elif cached_fname != '':
                     del self.file_cache[fpath]
@@ -189,7 +183,7 @@ class EggServer(object):
                 self.lock.acquire()
                 self.file_cache[fpath] = f
                 self.lock.release()
-                print 'serving file: ',f
+                logging.info('serving file: '+f)
                 return self.file_response(environ, start_response, f)
             else:
                 start_response('404 Not Found', [('Content-Type', 'text/html')])
@@ -205,43 +199,35 @@ def setup_logger(fname):
                         filename=fname,
                         filemode='a')
                         
-    return logging.getLogger('')
+    logging.getLogger('').setLevel(logging.INFO)
 
 
-def check_eggdir(name):
+def check_distdir(name):
     if name is None or os.path.isdir(name) is False:
         raise RuntimeError(str(name)+' is not a directory')
-     
-    dirs = [d for d in os.listdir(name) if os.path.isdir(os.path.join(name, d))]
-    for d in dirs:
-        for f in os.listdir(os.path.join(name, d)):
-            if d != f[0:len(d)]:
-                raise RuntimeError('directory '+name+' does not have the correct format '+
-                                   d+' != '+f[0:len(d)])
-                                       
 
 if __name__ == '__main__': # pragma no cover
     parser = OptionParser()
     parser.add_option("","--log", action="store", type="string", dest="log",
                       help="a file to log results to")
-    parser.add_option("","--eggdir", action="store", type="string", dest="eggdir",
+    parser.add_option("","--dir", action="store", type="string", dest="distdir",
                       help="the directory where distributions are kept",
                         default=".")
-    parser.add_option("", "--port", action="store", type="int", dest="port", default=31001,
-                      help="the port that the egg server will listen to")
+    parser.add_option("", "--port", action="store", type="int", dest="port", default=8000,
+                      help="the port that the server will listen to")
     (options, args) = parser.parse_args()
     
-    eggdir = os.path.abspath(options.eggdir)
+    distdir = os.path.abspath(options.distdir)
     
-    if not os.path.isdir(eggdir):
-        print >> sys.stderr, eggdir,'is not an accessible directory'
+    if not os.path.isdir(distdir):
+        print >> sys.stderr, distdir,'is not an accessible directory'
         parser.print_help()
         sys.exit(-1)
     
     if options.log:
-        logger = setup_logger(options.log)
+        setup_logger(options.log)
         
-    app = EggServer(eggdir)
+    app = DistServer(distdir)
     
     httpserver.serve(app, host=platform.uname()[1], port=options.port)
 
