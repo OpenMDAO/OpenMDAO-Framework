@@ -194,12 +194,8 @@ def _generate_key_pair(credentials, logger=None):
             user, host = credentials.user.split('@')
             if user == getpass.getuser():
                 current_user = True
-                if sys.platform == 'win32':  #pragma no cover
-                    home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
-                else:
-                    home = os.environ['HOME']
-                key_dir = os.path.join(home, '.openmdao')
-                key_file = os.path.join(key_dir, 'keys')
+                key_file = \
+                    os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
                 try:
                     with open(key_file, 'rb') as inp:
                         key_pair = cPickle.load(inp)
@@ -225,11 +221,13 @@ def _generate_key_pair(credentials, logger=None):
                     if sys.platform == 'win32' and not _HAVE_PYWIN32: #pragma no cover
                         logger.debug('No pywin32, not saving keyfile')
                     else:
+                        key_dir = os.path.dirname(key_file)
                         if not os.path.exists(key_dir):
                             os.mkdir(key_dir)
                         _make_private(key_dir)  # Private while writing keyfile.
                         with open(key_file, 'wb') as out:
-                            cPickle.dump(key_pair, out)
+                            cPickle.dump(key_pair, out,
+                                         cPickle.HIGHEST_PROTOCOL)
                         try:
                             _make_private(key_file)
                         # Hard to cause (recoverable) error here.
