@@ -348,12 +348,12 @@ def make_typeid(obj):
     return typeid.replace('.', '_')
 
 
-def is_legal_connection(conn, allowed_hosts, logger):
+def is_legal_connection(address, allowed_hosts, logger):
     """
-    Return True if `conn` is from an allowed host.
+    Return True if `address` is from an allowed host.
 
-    conn: :class:`_multiprocessing.Connection`
-        Connection to be checked.
+    address: string
+        Connection address to be checked.
 
     allowed_hosts: list(string)
         IPv4 address patterns to check against. If a pattern ends with '.'
@@ -363,14 +363,6 @@ def is_legal_connection(conn, allowed_hosts, logger):
     logger: :class:`logging.Logger`
         Used to output warnings about rejected connections.
     """
-    # This attempt at creating a socket object won't necessarily work.
-    sock = socket.fromfd(conn.fileno(), socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        address = sock.getpeername()
-    except socket.error:
-        # Presumably a pipe (AF_UNIX, AF_PIPE).
-        return True
-
     if address and connection.address_type(address) == 'AF_INET':
         logger.debug('Checking connection from %r', address)
         logger.debug('    allowed_hosts %r', allowed_hosts)

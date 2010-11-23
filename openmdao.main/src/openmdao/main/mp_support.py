@@ -178,6 +178,39 @@ class OpenMDAO_Server(Server):
         else:
             return ''
 
+    def serve_forever(self):
+        """
+        Run the server forever.
+        This version supports host connection filtering.
+        Connection filtering allows for PublicKey servers which aren't
+        accessible by just any host.
+        """
+        current_process()._manager_server = self
+        try:
+            try:
+                while 1:
+                    try:
+                        conn = self.listener.accept()
+                    except (OSError, IOError):
+                        continue
+
+                    address = self.listener.last_accepted
+                    if address:
+                        if not is_legal_connection(address, self._allowed_hosts,
+                                                   self._logger):
+                            conn.close()
+                            continue
+
+                    t = threading.Thread(target=self.handle_request,
+                                         args=(conn,))
+                    t.daemon = True
+                    t.start()
+            except (KeyboardInterrupt, SystemExit):
+                pass
+        finally:
+            self.stop = 999
+            self.listener.close()
+
     def handle_request(self, conn):
         """
         Handle a new connection.
@@ -192,10 +225,7 @@ class OpenMDAO_Server(Server):
         """
         funcname = result = request = None
 
-        if not is_legal_connection(conn, self._allowed_hosts, self._logger):
-            conn.close()
-            return
-
+# Another round of challenges? Seems this already happened during accept().
         try:
             connection.deliver_challenge(conn, self.authkey)
         except (EOFError, IOError):
