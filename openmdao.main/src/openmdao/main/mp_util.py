@@ -22,7 +22,6 @@ from multiprocessing import current_process, connection
 from multiprocessing.managers import BaseProxy, dispatch, listener_client
 
 if sys.platform == 'win32':  #pragma no cover
-    from _multiprocessing import win32
     try:
         import win32api
         import win32security
