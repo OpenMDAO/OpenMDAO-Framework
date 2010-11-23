@@ -5,7 +5,8 @@ http://pythonpaste.org/webob/file-example.html.
 Usage: python findlinksrv.py --dir=<top level dir> --log=<my log file> --port=<port>
 
 dir can have any structure. The server will recursively search for any python
-distributions under the top directory.
+distributions (.egg files and .tar.gz files are assumed to be python dists) 
+under the top directory.
 
 The server will automatically handle the addition of new distributions to the 
 distribution directory.
