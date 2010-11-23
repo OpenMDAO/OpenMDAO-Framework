@@ -23,8 +23,8 @@ from openmdao.main.container import get_closest_proxy
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.interfaces import IComponent
-from openmdao.main.mp_support import has_interface, is_instance, \
-                                     read_server_config, _SHA1, keytype
+from openmdao.main.mp_support import has_interface, is_instance
+from openmdao.main.mp_util import read_server_config, _SHA1, keytype
 from openmdao.main.objserverfactory import connect, start_server, RemoteFile
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
