@@ -5,8 +5,7 @@ http://pythonpaste.org/webob/file-example.html.
 Usage: python findlinksrv.py --dir=<top level dir> --log=<my log file> --port=<port>
 
 dir can have any structure. The server will recursively search for any python
-distributions (.egg files and .tar.gz files are assumed to be python dists) 
-under the top directory.
+distributions under the top directory.
 
 The server will automatically handle the addition of new distributions to the 
 distribution directory.
@@ -211,10 +210,10 @@ if __name__ == '__main__': # pragma no cover
     parser = OptionParser()
     parser.add_option("","--log", action="store", type="string", dest="log",
                       help="a file to log results to")
-    parser.add_option("","--dir", action="store", type="string", dest="distdir",
-                      help="the directory where distributions are kept",
-                        default=".")
-    parser.add_option("", "--port", action="store", type="int", dest="port", default=8000,
+    parser.add_option("-d","--dir", action="store", type="string", 
+                      dest="distdir",
+                      help="the directory where distributions are kept")
+    parser.add_option("", "--port", action="store", type="int", dest="port",
                       help="the port that the server will listen to")
     (options, args) = parser.parse_args()
     
