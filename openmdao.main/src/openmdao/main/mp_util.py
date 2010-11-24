@@ -10,6 +10,7 @@ import hashlib
 import inspect
 import logging
 import os.path
+import re
 import socket
 import sys
 import threading
@@ -379,7 +380,49 @@ def is_legal_connection(address, allowed_hosts, logger):
         return True
 
 def read_allowed_hosts(path):
-    """ Return allowed hosts data read from `path`. """
+    """
+    Return allowed hosts data read from `path`.
+
+    path: string
+        Path to allowed hosts file (typically 'hosts.allow').
+
+    The file should contain IPv4 host addresses, IPv4 domain addresses,
+    or hostnames, one per line. Blank lines are ignored, and '#' marks the
+    start of a comment which continues to the end of the line.
+    """
+    ipv4_host = re.compile(r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$')
+    ipv4_domain = re.compile(r'([0-9]+\.){1,3}$')
+
+    count = 0
     allowed_hosts = []
+    with open(path, 'r') as inp:
+        for line in inp:
+            count += 1
+            hash = line.find('#')
+            if hash >= 0:
+                line = line[:hash]
+            line = line.strip()
+            if not line:
+                continue
+
+            if ipv4_host.match(line):
+                logging.debug('%s line %d: ipv4_host %r',
+                              path, count, line)
+                allowed_hosts.append(line)
+            elif ipv4_domain.match(line):
+                logging.debug('%s line %d: ipv4_domain %r',
+                              path, count, line)
+                allowed_hosts.append(line)
+
+            try:
+                addr = socket.gethostbyname(line)
+            except socket.gaierror:
+                logging.error('%s line %d: unrecognized host %r',
+                              path, count, line)
+            else:
+                logging.debug('%s line %d: host %r at %r',
+                              path, count, line, addr)
+                allowed_hosts.append(addr)
+
     return allowed_hosts
 

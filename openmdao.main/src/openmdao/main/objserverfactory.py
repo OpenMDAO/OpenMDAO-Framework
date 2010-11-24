@@ -23,9 +23,10 @@ from openmdao.main.container import Container
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, register
-from openmdao.main.mp_util import keytype, write_server_config
+from openmdao.main.mp_util import keytype, read_allowed_hosts, \
+                                  write_server_config
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
-                               rbac
+                               rbac, RoleError
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc, STDOUT
@@ -63,9 +64,6 @@ class ObjServerFactory(Factory):
         """
         return args
 
-# FIXME: ('owner', 'user') can create,
-#        whoever created should be the one to release, not just anybody.
-#        => record credentials at creation.
     @rbac(('owner', 'user'))
     def release(self, server):
         """
@@ -76,7 +74,7 @@ class ObjServerFactory(Factory):
         """
         self._logger.debug('release %r', server)
         try:
-            manager, root_dir = self._managers[server]
+            manager, root_dir, owner = self._managers[server]
         except KeyError:
             # Not identical to any of our proxies.
             # Could still be a reference to the same remote object.
@@ -89,7 +87,7 @@ class ObjServerFactory(Factory):
 
             for key in self._managers.keys():
                 if key.host == server_host and key.pid == server_pid:
-                    manager, root_dir = self._managers[key]
+                    manager, root_dir, owner = self._managers[key]
                     server = key
                     break
             else:
@@ -97,6 +95,9 @@ class ObjServerFactory(Factory):
                 for key in self._managers.keys():
                     self._logger.debug('    %r', key)
                 raise ValueError('server %r not found' % server)
+
+        if get_credentials().user != owner.user:
+            raise RoleError('only the owner can release')
 
         manager.shutdown()
         server._close.cancel()
@@ -109,9 +110,15 @@ class ObjServerFactory(Factory):
     def cleanup(self):
         """ Shut-down all remaining :class:`ObjServers`. """
         self._logger.debug('cleanup')
+        cleanup_creds = get_credentials()
         servers = self._managers.keys()
         for server in servers:
-            self.release(server)
+            # Cleanup overrides release() 'owner' protection.
+            set_credentials(self._managers[server][2])
+            try:
+                self.release(server)
+            finally:
+                set_credentials(cleanup_creds)
         self._managers = {}
 
     @rbac('*')
@@ -190,7 +197,8 @@ class ObjServerFactory(Factory):
             self._logger.info('new server %r in dir %s listening on %s',
                               name, root_dir, manager.address)
             server = manager.openmdao_main_objserverfactory_ObjServer(name=name)
-            self._managers[server] = (manager, root_dir)
+            owner = get_credentials()
+            self._managers[server] = (manager, root_dir, owner)
 
         if typname:
             obj = server.create(typname, version, None, res_desc, **ctor_args)
@@ -516,7 +524,8 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
         return proxy
 
 
-def start_server(authkey='PublicKey', port=0, prefix='server', timeout=60):
+def start_server(authkey='PublicKey', port=0, prefix='server',
+                 allowed_hosts=None, timeout=60):
     """
     Start an :class:`ObjServerFactory` service in a separate process
     in the current directory.
@@ -525,7 +534,9 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=60):
         Authorization key, must be matched by clients.
 
     port: int
-        Port to use, or zero for next avaiable port.
+        Server port (default of 0 implies next available port).
+        Note that ports below 1024 typically require special privileges.
+        If port is negative, then a local pipe is used for communication.
 
     prefix: string
         Prefix for server config file and stdout/stderr file.
@@ -536,14 +547,22 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=60):
 
     Returns :class:`ShellProc`.
     """
+    if allowed_hosts is None and port >= 0:
+        allowed_hosts = [socket.gethostbyname(socket.gethostname())]
+
     server_key = prefix+'.key'
     server_cfg = prefix+'.cfg'
     server_out = prefix+'.out'
     for path in (server_cfg, server_out):
         if os.path.exists(path):
             os.remove(path)
+
     with open(server_key, 'w') as out:
         out.write('%s\n' % authkey)
+
+    with open('hosts.allow', 'w') as out:
+        for pattern in allowed_hosts:
+            out.write('%s\n' % pattern)
 
     factory_path = pkg_resources.resource_filename('openmdao.main',
                                                    'objserverfactory.py')
@@ -551,8 +570,10 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=60):
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
 
     try:
+        # Wait for valid server_cfg file.
         retry = 0
-        while not os.path.exists(server_cfg):
+        while (not os.path.exists(server_cfg)) or \
+              (os.path.getsize(server_cfg) == 0):
             return_code = proc.poll()
             if return_code:
                 error_msg = proc.error_message(return_code)
@@ -579,7 +600,10 @@ def main():  #pragma no cover
     """
     OpenMDAO factory service process.
 
-    Usage: python objserverfactory.py [--port=number][--prefix=name]
+    Usage: python objserverfactory.py [--hosts=filename][--port=number][--prefix=name]
+
+    hosts: string
+        Filename for allowed hosts specification. Default 'hosts.allow'.
 
     port: int
         Server port (default of 0 implies next available port).
@@ -595,6 +619,9 @@ def main():  #pragma no cover
     public key information.
     """
     parser = optparse.OptionParser()
+    parser.add_option('--hosts', action='store', type='str',
+                      default='hosts.allow',
+                      help='server port (0 implies next available port)')
     parser.add_option('--port', action='store', type='int', default=0,
                       help='server port (0 implies next available port)')
     parser.add_option('--prefix', action='store', default='server',
@@ -610,6 +637,7 @@ def main():  #pragma no cover
     global _SERVER_CFG
     _SERVER_CFG = server_cfg
 
+    # Get authkey.
     authkey = 'PublicKey'
     try:
         with open(server_key, 'r') as inp:
@@ -618,6 +646,28 @@ def main():  #pragma no cover
     except IOError:
         pass
 
+    # Get allowed_hosts.
+    if os.path.exists(options.hosts):
+        try:
+            allowed_hosts = read_allowed_hosts(options.hosts)
+        except Exception as exc:
+            msg = "Can't read allowed hosts file %r: %s" % (options.hosts, exc)
+            _LOGGER.error(msg)
+            print msg
+            sys.exit(1)
+    else:
+        msg = 'Allowed hosts file %r does not exist.' % options.hosts
+        _LOGGER.error(msg)
+        print msg
+        sys.exit(1)
+
+    if not allowed_hosts:
+        msg = 'No allowed hosts!?.'
+        _LOGGER.error(msg)
+        print msg
+        sys.exit(1)
+
+    # Get address and create manager.
     _LOGGER.setLevel(logging.DEBUG)
     if options.port >= 0:
         address = (platform.node(), options.port)
@@ -626,8 +676,10 @@ def main():  #pragma no cover
     set_credentials(Credentials())
     _LOGGER.info('Starting FactoryManager %s %r', address, keytype(authkey))
     current_process().authkey = authkey
-    manager = _FactoryManager(address, authkey, name='Factory')
+    manager = _FactoryManager(address, authkey, name='Factory',
+                              allowed_hosts=allowed_hosts)
 
+    # Get server, retry if specified address is in use.
     server = None
     retries = 0
     while server is None:
@@ -649,12 +701,14 @@ def main():  #pragma no cover
             else:
                 raise
 
+    # Record configuration.
     write_server_config(server, _SERVER_CFG)
     msg = 'Serving on %s' % (server.address,)
     _LOGGER.info(msg)
     print msg
     sys.stdout.flush()
 
+    # And away we go...
     signal.signal(signal.SIGTERM, _sigterm_handler)
     try:
         server.serve_forever()

@@ -145,9 +145,6 @@ class OpenMDAO_Server(Server):
                                               serializer)
         self.name = name or 'OMS_%d' % os.getpid()
         self.host = socket.gethostname()
-        if allowed_hosts is None and address is not None and \
-           connection.address_type(address) == 'AF_INET':
-            allowed_hosts = [socket.gethostbyname(socket.gethostname())]
         self._allowed_hosts = allowed_hosts or []
         self._logger = logging.getLogger(name)
         self._logger.info('OpenMDAO_Server process %d started, %r',
@@ -656,18 +653,20 @@ class OpenMDAO_Manager(BaseManager):
     _Server = OpenMDAO_Server
 
     def __init__(self, address=None, authkey=None, serializer='pickle',
-                 pubkey=None, name=None):
+                 pubkey=None, name=None, allowed_hosts=None):
         super(OpenMDAO_Manager, self).__init__(address, authkey, serializer)
         self._pubkey = pubkey
         self._name = name
+        self._allowed_hosts = allowed_hosts
 
     def get_server(self):
         """
         Return a server object with :meth:`serve_forever` and address attribute.
         """
         assert self._state.value == State.INITIAL
-        return OpenMDAO_Server(self._registry, self._address,
-                               self._authkey, self._serializer, self._name)
+        return OpenMDAO_Server(self._registry, self._address, self._authkey,
+                               self._serializer, self._name,
+                               self._allowed_hosts)
 
     def start(self, cwd=None):
         """
@@ -707,7 +706,8 @@ class OpenMDAO_Manager(BaseManager):
         self._process = Process(
             target=type(self)._run_server,
             args=(registry, self._address, self._authkey,
-                  self._serializer, self._name, writer, credentials, cwd),
+                  self._serializer, self._name, self._allowed_hosts,
+                  writer, credentials, cwd),
             )
         ident = ':'.join(str(i) for i in self._process._identity)
         self._process.name = type(self).__name__  + '-' + ident
@@ -746,8 +746,8 @@ class OpenMDAO_Manager(BaseManager):
 
     # This happens on the remote server side and we'll check when using it.
     @classmethod
-    def _run_server(cls, registry, address, authkey, serializer, name, writer,
-                    credentials, cwd=None): #pragma no cover
+    def _run_server(cls, registry, address, authkey, serializer, name,
+                    allowed_hosts, writer, credentials, cwd=None): #pragma no cover
         """
         Create a server, report its address and public key, and run it.
         """
@@ -781,7 +781,8 @@ class OpenMDAO_Manager(BaseManager):
                     filename='openmdao_log.txt', filemode='w')
 
             # Create server.
-            server = cls._Server(registry, address, authkey, serializer, name)
+            server = cls._Server(registry, address, authkey, serializer, name,
+                                 allowed_hosts)
         except Exception as exc:
             writer.send(exc)
             return
