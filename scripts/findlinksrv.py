@@ -170,7 +170,6 @@ class DistServer(object):
             try:
                 cached_fname = self.file_cache.get(fpath, '')
                 if os.path.isfile(cached_fname):
-                    logging.info('serving file: '+cached_fname)
                     return self.file_response(environ, start_response, cached_fname)
                 elif cached_fname != '':
                     del self.file_cache[fpath]
