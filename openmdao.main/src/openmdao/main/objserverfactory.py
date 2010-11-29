@@ -72,7 +72,12 @@ class ObjServerFactory(Factory):
         server: :class:`ObjServer`
             Server to be shut down.
         """
+        try:
+            address = server._token.address
+        except AttributeError:
+            address = 'not-a-proxy'
         self._logger.debug('release %r', server)
+        self._logger.debug('        at %r', address)
         try:
             manager, root_dir, owner = self._managers[server]
         except KeyError:
@@ -82,8 +87,9 @@ class ObjServerFactory(Factory):
                 server_host = server.host
                 server_pid = server.pid
             except Exception as exc:
-                self._logger.error("release: can't identify server %r" % server)
-                raise ValueError("can't identify server %r" % server)
+                self._logger.error("release: can't identify server at %r",
+                                   address)
+                raise ValueError("can't identify server at %r" % address)
 
             for key in self._managers.keys():
                 if key.host == server_host and key.pid == server_pid:
@@ -91,9 +97,10 @@ class ObjServerFactory(Factory):
                     server = key
                     break
             else:
-                self._logger.error('release: server %r not found' % server)
+                self._logger.error('release: server %r not found', server)
                 for key in self._managers.keys():
                     self._logger.debug('    %r', key)
+                    self._logger.debug('    at %r', key._token.address)
                 raise ValueError('server %r not found' % server)
 
         if get_credentials().user != owner.user:
@@ -205,7 +212,7 @@ class ObjServerFactory(Factory):
         else:
             obj = server
 
-        self._logger.debug('create returning %s', obj)
+        self._logger.debug('create returning %s at %r', obj, obj._token.address)
         return obj
 
 
@@ -541,6 +548,9 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
     prefix: string
         Prefix for server config file and stdout/stderr file.
 
+    allowed_hosts: list(string)
+        Host address patterns to check against. Required if `port` >= 0.
+
     timeout: int
         Seconds to wait for server to start. Note that public key generation
         can take a while.
@@ -560,9 +570,10 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
     with open(server_key, 'w') as out:
         out.write('%s\n' % authkey)
 
-    with open('hosts.allow', 'w') as out:
-        for pattern in allowed_hosts:
-            out.write('%s\n' % pattern)
+    if port >= 0:
+        with open('hosts.allow', 'w') as out:
+            for pattern in allowed_hosts:
+                out.write('%s\n' % pattern)
 
     factory_path = pkg_resources.resource_filename('openmdao.main',
                                                    'objserverfactory.py')
@@ -615,6 +626,11 @@ def main():  #pragma no cover
 
     If ``prefix.key`` exists, it is read for an authorization key string.
     Otherwise public key authorization and encryption is used.
+
+    Allowed hosts *must* be specified if `port` is >= 0. Only allowed hosts
+    may connect to the server.  :func:`mp_util.read_allowed_hosts` is used to
+    read the allowed hosts file.
+
     Once initialized ``prefix.cfg`` is written with address, port, and
     public key information.
     """
@@ -646,26 +662,30 @@ def main():  #pragma no cover
     except IOError:
         pass
 
-    # Get allowed_hosts.
-    if os.path.exists(options.hosts):
-        try:
-            allowed_hosts = read_allowed_hosts(options.hosts)
-        except Exception as exc:
-            msg = "Can't read allowed hosts file %r: %s" % (options.hosts, exc)
+    if options.port >= 0:
+        # Get allowed_hosts.
+        if os.path.exists(options.hosts):
+            try:
+                allowed_hosts = read_allowed_hosts(options.hosts)
+            except Exception as exc:
+                msg = "Can't read allowed hosts file %r: %s" \
+                      % (options.hosts, exc)
+                _LOGGER.error(msg)
+                print msg
+                sys.exit(1)
+        else:
+            msg = 'Allowed hosts file %r does not exist.' % options.hosts
+            _LOGGER.error(msg)
+            print msg
+            sys.exit(1)
+
+        if not allowed_hosts:
+            msg = 'No allowed hosts!?.'
             _LOGGER.error(msg)
             print msg
             sys.exit(1)
     else:
-        msg = 'Allowed hosts file %r does not exist.' % options.hosts
-        _LOGGER.error(msg)
-        print msg
-        sys.exit(1)
-
-    if not allowed_hosts:
-        msg = 'No allowed hosts!?.'
-        _LOGGER.error(msg)
-        print msg
-        sys.exit(1)
+        allowed_hosts = None
 
     # Get address and create manager.
     _LOGGER.setLevel(logging.DEBUG)

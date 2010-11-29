@@ -364,8 +364,6 @@ def is_legal_connection(address, allowed_hosts, logger):
         Used to output warnings about rejected connections.
     """
     if address and connection.address_type(address) == 'AF_INET':
-        logger.debug('Checking connection from %r', address)
-        logger.debug('    allowed_hosts %r', allowed_hosts)
         host_addr = address[0]
         for pattern in allowed_hosts:
             if pattern[-1] == '.':  # Any host in domain.
@@ -406,23 +404,23 @@ def read_allowed_hosts(path):
                 continue
 
             if ipv4_host.match(line):
-                logging.debug('%s line %d: ipv4_host %r',
+                logging.debug('%s line %d: IPv4 host %r',
                               path, count, line)
                 allowed_hosts.append(line)
             elif ipv4_domain.match(line):
-                logging.debug('%s line %d: ipv4_domain %r',
+                logging.debug('%s line %d: IPv4 domain %r',
                               path, count, line)
                 allowed_hosts.append(line)
-
-            try:
-                addr = socket.gethostbyname(line)
-            except socket.gaierror:
-                logging.error('%s line %d: unrecognized host %r',
-                              path, count, line)
             else:
-                logging.debug('%s line %d: host %r at %r',
-                              path, count, line, addr)
-                allowed_hosts.append(addr)
+                try:
+                    addr = socket.gethostbyname(line)
+                except socket.gaierror:
+                    logging.error('%s line %d: unrecognized host %r',
+                                  path, count, line)
+                else:
+                    logging.debug('%s line %d: host %r at %r',
+                                  path, count, line, addr)
+                    allowed_hosts.append(addr)
 
     return allowed_hosts
 

@@ -137,6 +137,9 @@ class OpenMDAO_Server(Server):
 
     name: string
         Name for server, used in log files, etc.
+
+    allowed_hosts: list(string)
+        Host address patterns to check against.
     """
 
     def __init__(self, registry, address, authkey, serializer, name=None,
@@ -225,7 +228,6 @@ class OpenMDAO_Server(Server):
         """
         funcname = result = request = None
 
-# Another round of challenges? Seems this already happened during accept().
         try:
             connection.deliver_challenge(conn, self.authkey)
         except (EOFError, IOError):
@@ -310,7 +312,16 @@ class OpenMDAO_Server(Server):
             try:
                 ident = methodname = args = kwds = credentials = None
                 obj = exposed = gettypeid = None
-                request = decrypt(recv(), session_key)
+                try:
+                    request = decrypt(recv(), session_key)
+                except Exception as exc:
+                    trace = traceback.format_exc()
+                    msg = "Can't decrypt/unpack request. This could be the" \
+                          " result of referring to a dead server."
+                    self._logger.error(msg)
+                    self._logger.error(trace)
+                    raise RuntimeError(msg)
+
                 ident, methodname, args, kwds, credentials = request
 #                self._logger.debug('request %s %s %s',
 #                                   ident, methodname, credentials)
@@ -648,6 +659,9 @@ class OpenMDAO_Manager(BaseManager):
 
     name: string
         Name for server, used in log files, etc.
+
+    allowed_hosts: list(string)
+        Host address patterns to check against.
     """
 
     _Server = OpenMDAO_Server
@@ -854,16 +868,20 @@ class ObjectManager(object):
 
     name: string
         Name for server, used in log files, etc.
+
+    allowed_hosts: list(string)
+        Host address patterns to check against.
     """
 
     def __init__(self, obj, address=None, serializer='pickle', authkey=None,
-                 name=None):
+                 name=None, allowed_hosts=None):
         self._typeid = make_typeid(obj)
         self._ident = '%x' % id(obj)
         logging.debug('ObjectManager address %s, %r, name %r, ident %r',
                       address, keytype(authkey), name, self._ident)
         self._manager = OpenMDAO_Manager(address=address, serializer=serializer,
-                                         authkey=authkey, name=name)
+                                         authkey=authkey, name=name,
+                                         allowed_hosts=allowed_hosts)
         self._server = self._manager.get_server()
         self._exposed = public_methods(obj)
 
