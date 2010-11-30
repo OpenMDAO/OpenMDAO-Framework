@@ -117,7 +117,10 @@ class HasEqConstraints(_HasConstraintsBase):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
         
-        expr_string: str
+        
+	*Parameters:*
+	
+	expr_string: str
             Expression string containing the constraint.
         
         scaler: float, optional

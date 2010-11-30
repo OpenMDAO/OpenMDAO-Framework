@@ -410,7 +410,7 @@ class FileParser(object):
         
         occurrence: integer
             find nth instance of text; default is 1 (first). Use -1 to
-            find last occurence. Reverse searches always start at the end
+            find last occurrence. Reverse searches always start at the end
             of the file no matter the state of any previous anchor."""
         
         if not isinstance(occurrence, int):

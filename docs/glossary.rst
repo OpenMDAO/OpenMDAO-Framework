@@ -108,7 +108,13 @@ Glossary
       **DLL**
         Dynamically Loadable Library 
 
+	
+      **docstring**
+      	A string that describes a module, function, class, or method definition. The docstring is a
+	special attribute of an object. Docstrings are used to document OpenMDAO code as well as
+	many packages written Python.
 
+      
       **docutils**
         Docutils is a modular system for processing documentation into useful
         formats, such as HTML, XML, and LaTeX. For input Docutils supports
