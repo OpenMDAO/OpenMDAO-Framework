@@ -242,17 +242,19 @@ class ResourceAllocationManager(object):
             Server to be released.
         """
         ram = ResourceAllocationManager.get_instance()
-        with ResourceAllocationManager._lock:
-            return ram._release(server)
+        return ram._release(server)
 
     def _release(self, server):
         """ Release a server (proxy). """
-        try:
-            allocator, server, server_info = self._deployed_servers[id(server)]
-        # Just being defensive.
-        except KeyError:  #pragma no cover
-            self._logger.error('server %r not found', server)
-            return
+        with ResourceAllocationManager._lock:
+            try:
+                allocator, server, server_info = \
+                    self._deployed_servers[id(server)]
+            # Just being defensive.
+            except KeyError:  #pragma no cover
+                self._logger.error('server %r not found', server)
+                return
+            del self._deployed_servers[id(server)]
 
         self._logger.info('release %r pid %d on %s', server_info['name'],
                           server_info['pid'], server_info['host'])
@@ -262,7 +264,6 @@ class ResourceAllocationManager(object):
         except Exception as exc:  #pragma no cover
             self._logger.error("Can't release %r: %s", server_info['name'], exc)
         server._close.cancel()
-        del self._deployed_servers[id(server)]
 
 
 class ResourceAllocator(ObjServerFactory):
@@ -909,18 +910,19 @@ class ClusterAllocator(object):  #pragma no cover
         server: :class:`OpenMDAO_Proxy`
             Server to be released.
         """
-        try:
-            allocator = self._deployed_servers[id(server)][0]
-        except KeyError:
-            self._logger.error('server %r not found', server)
-            return
+        with self._lock:
+            try:
+                allocator = self._deployed_servers[id(server)][0]
+            except KeyError:
+                self._logger.error('server %r not found', server)
+                return
+            del self._deployed_servers[id(server)]
 
         try:
             allocator.release(server)
         except Exception as exc:
             self._logger.error("Can't release %r: %s", server, exc)
         server._close.cancel()
-        del self._deployed_servers[id(server)]
 
     def shutdown(self):
         """ Shutdown, releasing resources. """

@@ -1,6 +1,7 @@
 import os.path
 import Queue
 import sys
+import thread
 import threading
 
 from openmdao.lib.datatypes.api import Bool, Instance
@@ -217,7 +218,13 @@ class CaseIterDriverBase(Driver):
                                              args=(name, resources,
                                                    credentials, self._reply_q))
             server_thread.daemon = True
-            server_thread.start()
+            try:
+                server_thread.start()
+            except thread.error:
+                self._logger.warning('worker thread startup failed for %r',
+                                     name)
+                self._in_use[name] = False
+                break
 
             if sys.platform != 'win32':
                 # Process any pending events.

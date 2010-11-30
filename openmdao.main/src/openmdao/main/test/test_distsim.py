@@ -26,7 +26,8 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.interfaces import IComponent
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.mp_util import read_server_config, _SHA1, keytype, \
-                                  read_allowed_hosts, is_legal_connection
+                                  read_allowed_hosts, is_legal_connection, \
+                                  generate_key_pair, _KEY_CACHE
 from openmdao.main.objserverfactory import connect, start_server, RemoteFile
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
@@ -276,9 +277,9 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Start server process. """
         global _SERVER_ID
+        _SERVER_ID += 1
 
         # Start each server process in a unique directory.
-        _SERVER_ID += 1
         server_dir = 'Factory_%d' % _SERVER_ID
         if os.path.exists(server_dir):
             shutil.rmtree(server_dir)
@@ -299,17 +300,6 @@ class TestCase(unittest.TestCase):
             logging.debug('server key: %s', self.key)
         finally:
             os.chdir('..')
-
-        # Force a key generation.
-        if _SERVER_ID == 1:
-            if sys.platform == 'win32':
-                home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
-            else:
-                home = os.environ['HOME']
-            key_dir = os.path.join(home, '.openmdao')
-            key_file = os.path.join(key_dir, 'keys')
-            if os.path.exists(key_file):
-                os.remove(key_file)
 
         set_credentials(Credentials())
         self.factory = connect(self.address, self.port, pubkey=self.key)
@@ -618,6 +608,20 @@ class TestCase(unittest.TestCase):
         code = compile('3 + 4', '<string>', 'eval')
         assert_raises(self, 'self.factory.echo(code)', globals(), locals(),
                       cPickle.PicklingError, "Can't pickle <type 'code'>")
+
+        # Force a key generation.
+        if sys.platform == 'win32':
+            home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
+        else:
+            home = os.environ['HOME']
+        key_dir = os.path.join(home, '.openmdao')
+        key_file = os.path.join(key_dir, 'keys')
+        if os.path.exists(key_file):
+            os.remove(key_file)
+        credentials = Credentials()
+        if credentials.user in _KEY_CACHE:
+            del _KEY_CACHE[credentials.user]
+        generate_key_pair(Credentials())
 
     def test_6_allowed_hosts(self):
         logging.debug('')
