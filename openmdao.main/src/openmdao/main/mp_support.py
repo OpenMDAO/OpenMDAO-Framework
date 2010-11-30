@@ -51,7 +51,7 @@ import traceback
 
 from Crypto.Cipher import AES
 from Crypto.PublicKey import RSA
-from Crypto.Util.randpool import RandomPool
+from Crypto.Random import get_random_bytes
 
 from multiprocessing import Process, current_process, connection, util
 from multiprocessing.forking import Popen
@@ -148,36 +148,6 @@ def keytype(authkey):
         return authkey if authkey == 'PublicKey' else 'AuthKey'
 
 
-class _SHA1(object):
-    """
-    Just to get around a deprecation message when using the default
-    :class:`RandomPool` hash.
-    """
-
-    digest_size = None
-
-    def __init__(self):
-        self.hash = hashlib.sha1()
-        if _SHA1.digest_size is None:
-            _SHA1.digest_size = self.hash.digest_size
-
-    @staticmethod
-    def new(data=None):
-        """ Return new hash object, optionally initialized with `data`. """
-        obj = _SHA1()
-        if data:
-            obj.update(data)
-        return obj
-
-    def digest(self):
-        """ Return hash result. """
-        return self.hash.digest()
-
-    def update(self, data):
-        """ Update hash with `data`. """
-        self.hash.update(data)
-
-
 def _generate_key_pair(credentials, logger=None):
     """
     Returns RSA key containing both public and private keys for the user
@@ -215,9 +185,7 @@ def _generate_key_pair(credentials, logger=None):
             if generate:
                 logger = logger or logging.getLogger()
                 logger.debug('generating public key...')
-                pool = RandomPool(2048, hash=_SHA1)
-                pool.stir()
-                key_pair = RSA.generate(2048, pool.get_bytes)
+                key_pair = RSA.generate(2048, get_random_bytes)
                 logger.debug('    done')
 
                 if current_user:
