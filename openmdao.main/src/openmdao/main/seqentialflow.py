@@ -18,9 +18,7 @@ class SequentialWorkflow(Workflow):
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
-        scope = self.scope
-        for name in self._names:
-            yield getattr(scope, name)
+        return self.contents().__iter__()
     
     def __len__(self):
         return len(self._names)

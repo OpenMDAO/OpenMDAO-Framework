@@ -20,7 +20,6 @@ class Dataflow(SequentialWorkflow):
 
     def __iter__(self):
         """Iterate through the nodes in dataflow order."""
-        scope = self.scope
         graph = self._get_collapsed_graph()
         topsort = nx.topological_sort(graph)
         if topsort is None:
@@ -28,8 +27,10 @@ class Dataflow(SequentialWorkflow):
             strcon = strongly_connected_components(graph)
             scope.raise_exception('circular dependency (%s) found' % str(strcon[0]),
                                   RuntimeError)
-        for n in topsort:
-            yield getattr(scope, n)
+        # resolve all of the components up front so if there's a problem it'll fail early
+        # and not waste time running components
+        scope = self.scope
+        return [getattr(scope, n) for n in topsort].__iter__()
 
     def add(self, comp):
         """ Add a new component to the workflow. """
