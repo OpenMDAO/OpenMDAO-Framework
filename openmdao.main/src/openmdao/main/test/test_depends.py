@@ -84,9 +84,9 @@ class DependsTestCase(unittest.TestCase):
         sub.add('comp5', Simple())
         sub.add('comp6', Simple())
 
-        top.driver.workflow.add([top.comp7, top.sub, top.comp8])
-        sub.driver.workflow.add([sub.comp1,sub.comp2,sub.comp3,
-                                 sub.comp4,sub.comp5,sub.comp6])
+        top.driver.workflow.add(['comp7', 'sub', 'comp8'])
+        sub.driver.workflow.add(['comp1','comp2','comp3',
+                                 'comp4','comp5','comp6'])
 
         sub.create_passthrough('comp1.a', 'a1')
         sub.create_passthrough('comp2.b', 'b2')
@@ -112,7 +112,7 @@ class DependsTestCase(unittest.TestCase):
     def test_simple(self):
         top = set_as_top(Assembly())
         top.add('comp1', Simple())
-        top.driver.workflow.add(top.comp1)
+        top.driver.workflow.add('comp1')
         vars = ['a','b','c','d']
         self.assertEqual(top.comp1.exec_count, 0)
         valids = top.comp1.get_valid(vars)
@@ -137,7 +137,7 @@ class DependsTestCase(unittest.TestCase):
         
         # now add another comp and connect them
         top.add('comp2', Simple())
-        top.driver.workflow.add(top.comp2)
+        top.driver.workflow.add('comp2')
         top.connect('comp1.c', 'comp2.a')
         self.assertEqual(top.comp2.exec_count, 0)
         self.assertEqual(top.comp2.c, 3)
@@ -287,7 +287,7 @@ class DependsTestCase(unittest.TestCase):
         top.add('c1', Simple())
         top.add('c3', Simple())
         top.add('c4', Simple())
-        top.driver.workflow.add([top.c1,top.c2,top.c3,top.c4])
+        top.driver.workflow.add(['c1','c2','c3','c4'])
         top.run()
         self.assertEqual(exec_order, ['c1','c2','c3','c4'])
         top.connect('c4.c', 'c3.a')  # now make c3 depend on c4
@@ -305,9 +305,9 @@ class DependsTestCase(unittest.TestCase):
         top.add('c2', Simple())
         top.add('c3', Simple())
         
-        top.driver.workflow.add([top.driver1,top.driver2,top.c3])
-        top.driver1.workflow.add(top.c2)
-        top.driver2.workflow.add(top.c1)
+        top.driver.workflow.add(['driver1','driver2','c3'])
+        top.driver1.workflow.add('c2')
+        top.driver2.workflow.add('c1')
         
         top.connect('c1.c', 'c2.a')
         top.driver1.add_objective("c2.c*c2.d")

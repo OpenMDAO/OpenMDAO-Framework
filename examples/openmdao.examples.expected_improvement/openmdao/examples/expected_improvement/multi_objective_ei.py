@@ -118,15 +118,15 @@ class Analysis(Assembly):
         self.add("EI_mux",Mux(2))
         
         #Iteration Heirarchy
-        self.driver.workflow.add([self.DOE_trainer,self.iter])
+        self.driver.workflow.add(['DOE_trainer', 'iter'])
         
-        self.DOE_trainer.workflow.add(self.spiral_meta_model)
+        self.DOE_trainer.workflow.add('spiral_meta_model')
         
         self.iter.workflow = SequentialWorkflow()
-        self.iter.workflow.add([self.filter, self.MOEI_opt, self.retrain])
+        self.iter.workflow.add(['filter', 'MOEI_opt', 'retrain'])
         
-        self.MOEI_opt.workflow.add([self.spiral_meta_model,self.EI_mux,self.MOEI])
-        self.retrain.workflow.add(self.spiral_meta_model)
+        self.MOEI_opt.workflow.add(['spiral_meta_model', 'EI_mux', 'MOEI'])
+        self.retrain.workflow.add('spiral_meta_model')
         
         #Data Connections
         self.connect("filter.pareto_set","MOEI.best_cases")

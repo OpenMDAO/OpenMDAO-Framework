@@ -138,9 +138,9 @@ class MultiDriverTestCase(unittest.TestCase):
         top.connect('adder1.sum', 'adder3.x1')
         top.connect('adder2.sum', 'adder3.x2')
         
-        top.driver.workflow.add(drv)
-        drv.workflow.add([top.comp1,top.comp2,top.comp3,top.comp4,
-                          top.adder1, top.adder2, top.adder3])
+        top.driver.workflow.add('driver1')
+        drv.workflow.add(['comp1','comp2','comp3','comp4',
+                          'adder1', 'adder2', 'adder3'])
         
         drv.itmax = 30
         drv.add_objective('adder3.sum+50.')
@@ -196,8 +196,8 @@ class MultiDriverTestCase(unittest.TestCase):
         self.top.add('comp2a', ExprComp(expr='x-5.0*sqrt(x)'))
         self.top.connect('comp1a.f_x', 'comp2a.x')
         
-        self.top.driver.workflow.add(drv)
-        drv.workflow.add([self.top.comp1a, self.top.comp2a])
+        self.top.driver.workflow.add('driver1a')
+        drv.workflow.add(['comp1a', 'comp2a'])
         
         drv.itmax = 40
         drv.add_objective('comp2a.f_x')
@@ -251,8 +251,8 @@ class MultiDriverTestCase(unittest.TestCase):
         nested.create_passthrough('comp1.x')
         nested.create_passthrough('comp4.f_xy')
         
-        outer_driver.workflow.add(nested)
-        inner_driver.workflow.add([nested.comp1,nested.comp2,nested.comp3,nested.comp4])
+        outer_driver.workflow.add('nested')
+        inner_driver.workflow.add(['comp1','comp2','comp3','comp4'])
 
         ## create one driver for testing
         #inner_driver = self.top.add('driver1', CONMINdriver())
@@ -320,8 +320,8 @@ class MultiDriverTestCase(unittest.TestCase):
         top.connect('comp2.f_x', 'comp4.x')
         
         # Driver process definition
-        outer_driver.workflow.add(inner_driver)
-        inner_driver.workflow.add([top.comp1,top.comp2,top.comp3,top.comp4])
+        outer_driver.workflow.add('driver1')
+        inner_driver.workflow.add(['comp1','comp2','comp3','comp4'])
         
         inner_driver.itmax = 30
         inner_driver.fdch = .000001
@@ -370,9 +370,9 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.add_parameter('C1.x', low=-999, high=999)
         top.D2.max_iterations = 2
         
-        top.driver.workflow.add([top.D1, top.D2])
-        top.D1.workflow.add(top.C1)
-        top.D2.workflow.add(top.C1)
+        top.driver.workflow.add(['D1', 'D2'])
+        top.D1.workflow.add('C1')
+        top.D2.workflow.add('C1')
         
         top.run()
         
@@ -408,9 +408,9 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.add_parameter('C2.x', low=-999, high=999)
         top.D2.max_iterations = 3
 
-        top.driver.workflow.add([top.D1, top.D2])
-        top.D1.workflow.add([top.C1, top.C2])
-        top.D2.workflow.add([top.C1, top.C2])
+        top.driver.workflow.add(['D1', 'D2'])
+        top.D1.workflow.add(['C1', 'C2'])
+        top.D2.workflow.add(['C1', 'C2'])
         
         top.run()
         
@@ -454,9 +454,9 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.add_parameter('C2.y', low=-999, high=999)
         top.D2.max_iterations = 3
         
-        top.driver.workflow.add([top.D1, top.D2])
-        top.D1.workflow = SequentialWorkflow(members=[top.C1])
-        top.D2.workflow = SequentialWorkflow(members=[top.C2])
+        top.driver.workflow.add(['D1', 'D2'])
+        top.D1.workflow = SequentialWorkflow(top.D1, members=['C1'])
+        top.D2.workflow = SequentialWorkflow(top.D1, members=['C2'])
         
         top.run()
         self.assertEqual(top.D2.runcount, 1)

@@ -13,18 +13,10 @@ class Dataflow(SequentialWorkflow):
     A Dataflow consists of a collection of Components which are executed in 
     data flow order.
     """
-    def __init__(self, parent, scope=None, members=None):
+    def __init__(self, parent=None, scope=None, members=None):
         """ Create an empty flow. """
-        super(Dataflow, self).__init__(members)
-        self.parent = parent
-        self._scope = scope
+        super(Dataflow, self).__init__(parent, scope, members)
         self._collapsed_graph = None
-
-    @property
-    def scope(self):
-        if self._scope is None:
-            self._scope = self.parent.parent
-        return self._scope
 
     def __iter__(self):
         """Iterate through the nodes in dataflow order."""
@@ -68,8 +60,10 @@ class Dataflow(SequentialWorkflow):
         scope = self.scope
         graph = scope._depgraph.copy_graph()
         
+        contents = self.contents()
+        
         # add any dependencies due to ExprEvaluators
-        for comp in self._nodes:
+        for comp in contents:
             graph.add_edges_from([tup for tup in comp.get_expr_depends()])
             
         collapsed_graph = graph.copy()
@@ -77,10 +71,10 @@ class Dataflow(SequentialWorkflow):
         # find all of the incoming and outgoing edges to/from all of the components
         # in each driver's iteration set so we can add edges to/from the driver
         # in our collapsed graph
-        cnames = set([c.name for c in self._nodes])
+        cnames = set(self._nodes)
         removes = set()
         itersets = {}
-        for comp in self._nodes:
+        for comp in contents:
             cname = comp.name
             if has_interface(comp, IDriver):
                 iterset = [c.name for c in comp.iteration_set()]
@@ -112,14 +106,14 @@ class Dataflow(SequentialWorkflow):
         last = len(self._nodes)-1
         if last > 0:
             to_add = []
-            for i,comp in enumerate(self._nodes):
-                if collapsed_graph.degree(comp.name) == 0:
+            for i,cname in enumerate(self._nodes):
+                if collapsed_graph.degree(cname) == 0:
                     if i < last:
                         for n in self._nodes[i+1:]:
-                            to_add.append((comp.name, n.name))
+                            to_add.append((cname, n))
                     else:
                         for n in self._nodes[0:i]:
-                            to_add.append((n.name, comp.name))
+                            to_add.append((n, cname))
             collapsed_graph.add_edges_from(to_add)
         
         self._collapsed_graph = collapsed_graph.subgraph(cnames-removes)

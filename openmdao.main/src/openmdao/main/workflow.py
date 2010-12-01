@@ -11,15 +11,35 @@ class Workflow(object):
     in some order.
     """
 
-    def __init__(self, members=None):
+    def __init__(self, parent=None, scope=None, members=None):
         """ Create an workflow. If members is not None,
-        iterate through members and add them to the workflow."""
+        iterate through members and add them to the workflow.
+        
+        members: list of str (optional)
+        """
         self._iterator = None
         self._stop = False
+        self._parent = parent
+        self._scope = scope
         if members:
             for member in members:
+                if not isinstance(member, basestring):
+                    raise TypeError("Components must be added to a workflow by name.")
                 self.add(member)
 
+    @property
+    def scope(self):
+        if self._scope is None and self._parent is not None:
+            self._scope = self._parent.parent
+        if self._scope is None:
+            raise RuntimeError("workflow has no scope!")
+        return self._scope
+    
+    @scope.setter
+    def scope(self, scope):
+        self._scope = scope
+        self.config_changed()
+    
     def run(self):
         """ Run through the nodes in the workflow list. """
         self._stop = False
@@ -53,7 +73,7 @@ class Workflow(object):
         self._stop = True
 
     def add(self, comp):
-        """ Add a new component to the workflow. """
+        """ Add a new component to the workflow by name."""
         raise NotImplemented("This Workflow has no 'add' function")
     
     def config_changed(self):
@@ -63,7 +83,7 @@ class Workflow(object):
         pass
         
     def remove(self, comp):
-        """Remove a component from this Workflow"""
+        """Remove a component from this Workflow by name."""
         raise NotImplemented("This Workflow has no 'remove' function")
 
     def contents(self):

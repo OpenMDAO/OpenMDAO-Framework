@@ -61,7 +61,7 @@ class Middle(Assembly):
         super(Middle, self).__init__(*args, **kwargs)
 
         self.add('passthrough', Passthrough(directory='Passthrough'))
-        self.driver.workflow.add(self.passthrough)
+        self.driver.workflow.add('passthrough')
 
         self.create_passthrough('passthrough.text_in')
         self.create_passthrough('passthrough.binary_in')
@@ -101,7 +101,7 @@ class Model(Assembly):
         self.add('source', Source(directory='Source'))
         self.add('middle', Middle(directory='Middle'))
         self.add('sink', Sink(directory='Sink'))
-        self.driver.workflow.add([self.source,self.middle,self.sink])
+        self.driver.workflow.add(['source','middle','sink'])
 
         self.connect('source.text_file', 'middle.text_in')
         self.connect('source.binary_file', 'middle.binary_in')

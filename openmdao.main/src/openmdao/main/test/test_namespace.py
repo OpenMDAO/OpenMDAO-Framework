@@ -46,7 +46,7 @@ class NamespaceTestCase(unittest.TestCase):
         self.asm = set_as_top(Assembly())
         self.asm.add('scomp1', SimpleComp())
         self.asm.add('scomp2', SimpleComp())
-        self.asm.driver.workflow.add([self.asm.scomp1,self.asm.scomp2])
+        self.asm.driver.workflow.add(['scomp1','scomp2'])
     
     def test_pass_container(self):
         #scomp1                   scomp2

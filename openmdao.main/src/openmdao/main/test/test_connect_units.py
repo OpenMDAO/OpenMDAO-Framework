@@ -105,7 +105,7 @@ class VariableTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('oneinp', Oneinp())
         self.top.add('oneout', Oneout())
-        self.top.driver.workflow.add([self.top.oneinp, self.top.oneout])
+        self.top.driver.workflow.add(['oneinp', 'oneout'])
 
     def test_var1(self):
         #  connect to same type variables....

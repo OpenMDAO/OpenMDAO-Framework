@@ -192,7 +192,7 @@ MetaModel
                 self.branin_meta_model.model = BraninComponent()
                 
                 self.add('driver',DOEdriver())
-                self.driver.workflow.add(self.branin_meta_model)
+                self.driver.workflow.add('branin_meta_model')
                 self.driver.add_event('branin_meta_model.train_next')
                 
     When the ``train_next`` event is not set, MetaModel automatically runs in predict mode. 

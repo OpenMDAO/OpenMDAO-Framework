@@ -71,7 +71,7 @@ class MyModel(Assembly):
         super(MyModel, self).__init__(*args, **kwargs)
         self.add('driver', CaseIteratorDriver())
         self.add('driven', DrivenComponent())
-        self.driver.workflow.add(self.driven)
+        self.driver.workflow.add('driven')
 
 
 class TestCase(unittest.TestCase):

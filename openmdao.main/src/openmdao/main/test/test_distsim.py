@@ -167,9 +167,9 @@ class Model(Assembly):
     def __init__(self, box):
         super(Model, self).__init__()
         self.add('driver', BoxDriver())
-        self.driver.workflow.add(self.add('source', BoxSource()))
-        self.driver.workflow.add(self.add('box', box))
-        self.driver.workflow.add(self.add('sink', BoxSink()))
+        self.driver.workflow.add(self.add('source', BoxSource()).name)
+        self.driver.workflow.add(self.add('box', box).name)
+        self.driver.workflow.add(self.add('sink', BoxSink()).name)
 
         self.driver.add_parameter('source.width_in',  low=1e-99, high=1e99)
         self.driver.add_parameter('source.height_in', low=1e-99, high=1e99)

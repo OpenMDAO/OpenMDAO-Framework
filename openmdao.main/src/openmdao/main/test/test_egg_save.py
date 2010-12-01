@@ -191,7 +191,7 @@ class Oddball(Assembly):
         super(Oddball, self).__init__(*args, **kwargs)
         self.add('oddcomp', OddballComponent())
         self.add('oddcont', OddballContainer())
-        self.driver.workflow.add(self.oddcomp)
+        self.driver.workflow.add('oddcomp')
         self.thing_to_call = self.instance_method
         self.list_to_call = [[self.instance_method, ()],
                              [Assembly.get_pathname, (self,)]]
@@ -266,7 +266,7 @@ class Model(Assembly):
         self.add('Oddball', Oddball(directory='Oddball'))
         self.add('Sink', Sink(directory='Sink'))
         
-        self.driver.workflow.add([self.Source,self.Oddball,self.Sink])
+        self.driver.workflow.add(['Source','Oddball','Sink'])
 
         self.connect('Source.text_file', 'Sink.text_file')
         self.connect('Source.binary_file', 'Sink.binary_file')
