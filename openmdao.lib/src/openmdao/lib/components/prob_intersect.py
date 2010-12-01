@@ -39,7 +39,7 @@ class ProbIntersect(Component):
     def _calcDist(self,p1,y_star_other):
         """Computes the minimum distance from a point in 
         primary_pareto to other_pareto. Uses this information
-        to set limits of integration for _calcInt
+        to set limits of integration for _calcInt.
         """
         
         dists = []

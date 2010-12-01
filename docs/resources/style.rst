@@ -21,7 +21,7 @@ OpenMDAO uses documentation strings, or `docstrings,` written in `reStructuredTe
 <http://docutils.sourceforge.net/rst.html>`_ (reST) to document code. Please follow the docstring
 standard described below. 
 
-We would like to acknowlege the NumPy/SciPy standard, which we referred to
+We would like to acknowledge the NumPy/SciPy standard, which we referred to
 heavily when developing our own standard.
 
 
@@ -44,12 +44,15 @@ A docstring may be one line or spread over several lines. Line length should not
 ++++++++++++++++++++++++++
 
 The following sections can be included in a docstring, but in may cases, are optional. You cannot use
-actual underlined headings to identify each section of a docstring because Sphinx will complain. It is
-possible to use italics (or bold) for a "heading," but you have to be careful with Sphinx. You must
-leave a blank line between the section name (e.g., Parameters, Raises) and any parameters or other
-information. Also, if you plan to include a code example in the user docs, be aware that a
-"heading" could cause issues with Sphinx. We have used italicized headings (indicated by the
-asterisks) in some examples. You may omit headings and just follow the general order below.
+underlined headings to identify sections of a docstring because Sphinx will complain. It is possible
+to use italics (or bold) for a section heading, but you have to be careful with Sphinx. You must leave
+a blank line between the section heading (e.g., *Parameters, Raises*) and any parameters or other
+information. Also, if you plan to include a code example in the user docs, be aware that a heading
+could cause issues with Sphinx. We have used italicized headings (indicated by the asterisks) in some
+examples to show how it is done. It is easier to omit headings, and in most cases, the information
+will be clear to users; however, for optional sections, such as *Raises, Notes, References,* and
+*Examples,* they are desirable.
+
 
 1. **Short Summary**
 
@@ -74,7 +77,7 @@ asterisks) in some examples. You may omit headings and just follow the general o
 
    This section should consist of a few sentences that clarify functionality. It may not be needed. 
    Do not use it to discuss implementation details or background theory. You can put that information
-   in a note if you choose. You may refer to the parameters and the function name, but put parameter
+   in a notes section if you choose. You may refer to the parameters and the function name, but put parameter
    descriptions together in their own area.
 
 
@@ -108,8 +111,11 @@ asterisks) in some examples. You may omit headings and just follow the general o
          Separator to append between values if we go beyond the template.
      
      
-   Do not put a space before the colon. Indent the description.
-   
+   Do not put a space before the colon. Indent the description. Capitalize the first word of the
+   description for consistency, even though it is not a complete sentence. A period at the end is
+   preferred, also for consistency, especially since at times the sentence fragment is followed by a
+   complete sentence.
+
    If a keyword argument is not necessary, put ``optional`` (lower case) after it in parentheses::
 
      x: int(optional)
@@ -151,13 +157,14 @@ asterisks) in some examples. You may omit headings and just follow the general o
      LinAlgException
           If the matrix is not numerically invertible.
    
-   Use this section for errors that are not obvious or that have a good chance of getting raised.
+   You may want to include this section for errors that are not obvious or that have a good chance of
+   getting raised.
 
 
 6. **Notes (optional)**
 
-   This section is for providing additional information about the code. Include information you think
-   will be helpful to users, such as:
+   This section is for providing additional information about the code. Include a *Notes* section if
+   you think will be helpful to users. It might include information such as:
 
  - Implementation details or background theory
    
@@ -172,7 +179,7 @@ asterisks) in some examples. You may omit headings and just follow the general o
 7. **References (optional)**
 
    References should augment the docstring and not be required to understand it. If you cited
-   references in the *Notes* section using the text ``[1]_, [2]_, etc.``, you can include the actual
+   references in the *Notes* section using the text ``[1]_, [2]_``, you can include the actual
    references in this section. For example, to cite the article below, include it as follows::
 
        .. [1] Keane, A. J., "Statistical Improvement Criteria for Use in Multiobjective Design
@@ -243,7 +250,7 @@ asterisks) in some examples. You may omit headings and just follow the general o
 
     .. note:: Note text.
 
-  Use these sparingly, as they are seldom necessary. One situation in which a warning could be useful is
+  These are seldom necessary. One situation in which a warning could be useful is
   for marking a known bug that has not yet been fixed.
 
   .. note:: A note directive is different from the *Notes* section in the docstring. A note will appear

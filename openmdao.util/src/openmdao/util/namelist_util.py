@@ -366,7 +366,7 @@ class Namelist(object):
              top level of the model hierarchy.
         
         ignore: list of strings (optional)
-        List of variable names that can safely be ignored.
+             List of variable names that can safely be ignored.
         
         single_group: integer (optional)
              Group id number to use for processing one single namelist group. Useful

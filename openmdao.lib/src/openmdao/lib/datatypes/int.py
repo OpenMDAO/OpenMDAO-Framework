@@ -1,5 +1,5 @@
 """
-Trait for floating point variables, with optional min and max
+Trait for floating point variables, with optional min and max.
 """
 
 #public symbols
