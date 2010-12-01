@@ -71,7 +71,7 @@ class Dataflow(SequentialWorkflow):
         # find all of the incoming and outgoing edges to/from all of the components
         # in each driver's iteration set so we can add edges to/from the driver
         # in our collapsed graph
-        cnames = set(self._nodes)
+        cnames = set(self._names)
         removes = set()
         itersets = {}
         for comp in contents:
@@ -103,16 +103,16 @@ class Dataflow(SequentialWorkflow):
         # mimic a SequentialWorkflow in cases where nodes aren't connected.
         # Edges are added from each degree 0 node to all nodes after it in
         # sequence order.
-        last = len(self._nodes)-1
+        last = len(self._names)-1
         if last > 0:
             to_add = []
-            for i,cname in enumerate(self._nodes):
+            for i,cname in enumerate(self._names):
                 if collapsed_graph.degree(cname) == 0:
                     if i < last:
-                        for n in self._nodes[i+1:]:
+                        for n in self._names[i+1:]:
                             to_add.append((cname, n))
                     else:
-                        for n in self._nodes[0:i]:
+                        for n in self._names[0:i]:
                             to_add.append((n, cname))
             collapsed_graph.add_edges_from(to_add)
         

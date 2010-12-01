@@ -13,25 +13,25 @@ class SequentialWorkflow(Workflow):
     
     def __init__(self, parent=None, scope=None, members=None):
         """ Create an empty flow. """
-        self._nodes = []
+        self._names = []
         super(SequentialWorkflow, self).__init__(parent, scope, members)
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
         scope = self.scope
-        for name in self._nodes:
+        for name in self._names:
             yield getattr(scope, name)
     
     def __len__(self):
-        return len(self._nodes)
+        return len(self._names)
     
     def __contains__(self, comp):
-        return comp in self._nodes
+        return comp in self._names
     
     def contents(self):
         """Returns a list of all component objects in the workflow."""
         scope = self.scope
-        return [getattr(scope, name) for name in self._nodes]
+        return [getattr(scope, name) for name in self._names]
 
     def add(self, compnames):
         """ Add new component(s) to the end of the workflow by name. """
@@ -43,7 +43,7 @@ class SequentialWorkflow(Workflow):
             raise TypeError("Components must be added by name to a workflow.")
         for node in nodes:
             if isinstance(node, basestring):
-                self._nodes.append(node)
+                self._names.append(node)
             else:
                 raise TypeError("Components must be added by name to a workflow.")
         
@@ -54,10 +54,10 @@ class SequentialWorkflow(Workflow):
         if not isinstance(compname, basestring):
             raise TypeError("Components must be removed by name from a workflow.")
         try:
-            self._nodes.remove(compname)
+            self._names.remove(compname)
         except ValueError:
             pass
 
     def clear(self):
         """Remove all components from this workflow."""
-        self._nodes = []
+        self._names = []
