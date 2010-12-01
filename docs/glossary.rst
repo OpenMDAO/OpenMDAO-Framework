@@ -481,9 +481,9 @@ Glossary
         A Bazaar nickname for a particular revision. A tag is typically used to mark
         a release of the software so you can easily refer to it later. Tags are stored in the
         branch and are propagated when the branch is pushed, pulled or merged. If your branch is
-        associated with a Trac ticket, you should apply a tag (corresponding to your ticket
-        number) to your branch after committing final changes and before you push it to Launchpad
-        and propose a merge.
+        associated with a Trac ticket, the SCM will apply a tag (corresponding to your ticket
+        number) when she merges your branch.
+   
    
       **Tempita**
         Tempita is a small templating language for text substitution.
