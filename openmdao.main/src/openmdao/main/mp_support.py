@@ -43,6 +43,7 @@ import os
 import socket
 import sys
 import threading
+import time
 import traceback
 
 from multiprocessing import Process, current_process, connection, util
@@ -60,7 +61,8 @@ from openmdao.main.interfaces import obj_has_interface
 from openmdao.main.mp_util import decode_public_key, decrypt, \
                                   encode_public_key, encrypt, \
                                   is_legal_connection, generate_key_pair, \
-                                  keytype, make_typeid, public_methods, SPECIALS
+                                  keytype, make_typeid, public_methods, \
+                                  SPECIALS, HAVE_PYWIN32
 from openmdao.main.rbac import AccessController, RoleError, check_role, \
                                rbac_methods, need_proxy, \
                                get_credentials, set_credentials
@@ -226,11 +228,13 @@ class OpenMDAO_Server(Server):
         connections caused by :meth:`manager_is_alive` which are used to avoid
         getting hung trying to connect to a manager which is no longer there.
         """
+        self._logger.debug('handle_request on %r', conn)
         funcname = result = request = None
 
         try:
             connection.deliver_challenge(conn, self.authkey)
         except (EOFError, IOError):
+            self._logger.debug('deliver_challenge error: %r', exc)
             conn.close()
             return
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
@@ -256,6 +260,7 @@ class OpenMDAO_Server(Server):
         except Exception:  #pragma no cover
             msg = ('#TRACEBACK', traceback.format_exc())
         else:
+            self._logger.debug('handle_request %r', funcname)
             try:
                 result = func(conn, *args, **kwds)
             # Hard to cause this to happen. It rarely happens, and then at shutdown.
@@ -275,6 +280,7 @@ class OpenMDAO_Server(Server):
             util.info(' ... request was %r', request)
             util.info(' ... exception was %r', exc)
 
+        self._logger.debug('handle_request closing %r', conn)
         conn.close()
 
     def serve_client(self, conn):
@@ -312,8 +318,9 @@ class OpenMDAO_Server(Server):
             try:
                 ident = methodname = args = kwds = credentials = None
                 obj = exposed = gettypeid = None
+                data = recv()
                 try:
-                    request = decrypt(recv(), session_key)
+                    request = decrypt(data, session_key)
                 except Exception as exc:
                     trace = traceback.format_exc()
                     msg = "Can't decrypt/unpack request. This could be the" \
@@ -411,7 +418,7 @@ class OpenMDAO_Server(Server):
                         else:
                             raise
                 except Exception as exc:
-                    self._logger.error('%s %s %s: %s', methodname, role,
+                    self._logger.error('%s %s %s: %r', methodname, role,
                                        get_credentials(), exc)
                     msg = ('#ERROR', exc)
                 else:
@@ -668,6 +675,13 @@ class OpenMDAO_Manager(BaseManager):
 
     def __init__(self, address=None, authkey=None, serializer='pickle',
                  pubkey=None, name=None, allowed_hosts=None):
+# FIXME: this shouldn't be required, but using a pipe causes problems with
+#        test_distsim).
+        if address is None and sys.platform == 'win32' and not HAVE_PYWIN32:
+            ip_addr = socket.gethostbyname(socket.gethostname())
+            address = (ip_addr, 0)
+            allowed_hosts = [ip_addr]
+
         super(OpenMDAO_Manager, self).__init__(address, authkey, serializer)
         self._pubkey = pubkey
         self._name = name
@@ -713,9 +727,13 @@ class OpenMDAO_Manager(BaseManager):
             if credentials is None:
                 raise RuntimeError('PublicKey authentication requires user'
                                    ' credentials')
-            # Ensure we have a key pair. Key generation can take a long time
-            # and we don't want to use an excessive startup timeout value.
-            generate_key_pair(credentials)
+            if sys.platform == 'win32' and not HAVE_PYWIN32:
+                timeout = 120
+            else:
+                # Ensure we have a key pair. Key generation can take a long time
+                # and we don't want to use an excessive startup timeout value.
+                generate_key_pair(credentials)
+                timeout = 5
 
         self._process = Process(
             target=type(self)._run_server,
@@ -730,7 +748,8 @@ class OpenMDAO_Manager(BaseManager):
 
         # Get address of server.
         writer.close()
-        for retry in range(5):
+        start = time.time()
+        for retry in range(timeout):
             if reader.poll(1):
                 break
             if not self._process.is_alive():
@@ -738,8 +757,10 @@ class OpenMDAO_Manager(BaseManager):
                                    % (pid, self._process.exitcode))
         # Hard to cause a timeout.
         else:  #pragma no cover
+            et = time.time() - start
             self._process.terminate()
-            raise RuntimeError('Server process %d startup timed-out' % pid)
+            raise RuntimeError('Server process %d startup timed-out in %.2f' \
+                               % (pid, et))
         reply = reader.recv()
         if isinstance(reply, Exception):
             raise RuntimeError('Server process %d startup failed: %s'
@@ -748,6 +769,8 @@ class OpenMDAO_Manager(BaseManager):
         if self._authkey == 'PublicKey':
             self._pubkey = reader.recv()
         reader.close()
+        et = time.time() - start
+        logging.debug('Server process %d startup in %.2f', et)
 
         # Register a finalizer.
         self._state.value = State.STARTED
