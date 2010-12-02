@@ -60,6 +60,12 @@ use it, you must have compilers (C and Fortran) on your system.
 
 - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
 
+Not required, but highly recommended:
+
+- `pywin32 <http://sourceforge.net/projects/pywin32/files/>`_
+
+This will improve distributed simulation startup time by allowing
+public/private key pairs to be stored securely.
 
 **Mac OS X**:
 
