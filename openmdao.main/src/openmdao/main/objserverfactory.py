@@ -24,7 +24,7 @@ from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, register
 from openmdao.main.mp_util import keytype, read_allowed_hosts, \
-                                  write_server_config
+                                  write_server_config, HAVE_PYWIN32
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                rbac, RoleError
 
@@ -89,7 +89,7 @@ class ObjServerFactory(Factory):
             except Exception as exc:
                 self._logger.error("release: can't identify server at %r",
                                    address)
-                raise ValueError("can't identify server at %r" % address)
+                raise ValueError("can't identify server at %r" % (address,))
 
             for key in self._managers.keys():
                 if key.host == server_host and key.pid == server_pid:
@@ -532,7 +532,7 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
 
 
 def start_server(authkey='PublicKey', port=0, prefix='server',
-                 allowed_hosts=None, timeout=60):
+                 allowed_hosts=None, timeout=None):
     """
     Start an :class:`ObjServerFactory` service in a separate process
     in the current directory.
@@ -553,12 +553,20 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
 
     timeout: int
         Seconds to wait for server to start. Note that public key generation
-        can take a while.
+        can take a while. The default value of None will use an internally
+        computed value based on host type (and for Windows, the availability
+        of pyWin32).
 
     Returns :class:`ShellProc`.
     """
     if allowed_hosts is None and port >= 0:
         allowed_hosts = [socket.gethostbyname(socket.gethostname())]
+
+    if timeout is None:
+        if sys.platform == 'win32' and not HAVE_PYWIN32:
+            timeout = 120
+        else:
+            timeout = 30
 
     server_key = prefix+'.key'
     server_cfg = prefix+'.cfg'
@@ -590,7 +598,7 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
                 error_msg = proc.error_message(return_code)
                 raise RuntimeError('Server startup failed %s' % error_msg)
             retry += 1
-            if retry < 50*timeout:  # ~5 sec.
+            if retry < 10*timeout:
                 time.sleep(.1)
             # Hard to cause a startup timeout.
             else:  #pragma no cover
