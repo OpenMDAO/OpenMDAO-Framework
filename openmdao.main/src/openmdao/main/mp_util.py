@@ -28,9 +28,11 @@ if sys.platform == 'win32':  #pragma no cover
         import win32security
         import ntsecuritycon
     except ImportError:
-        _HAVE_PYWIN32 = False
+        HAVE_PYWIN32 = False
     else:
-        _HAVE_PYWIN32 = True
+        HAVE_PYWIN32 = True
+else:
+    HAVE_PYWIN32 = False
 
 from openmdao.main.interfaces import obj_has_interface
 from openmdao.main.rbac import rbac_methods
@@ -136,7 +138,7 @@ def generate_key_pair(credentials, logger=None):
 
                 if current_user:
                     # Save in protected file.
-                    if sys.platform == 'win32' and not _HAVE_PYWIN32: #pragma no cover
+                    if sys.platform == 'win32' and not HAVE_PYWIN32: #pragma no cover
                         logger.debug('No pywin32, not saving keyfile')
                     else:
                         if not os.path.exists(key_dir):
