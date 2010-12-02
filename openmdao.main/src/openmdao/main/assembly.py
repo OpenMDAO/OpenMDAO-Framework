@@ -106,7 +106,11 @@ class Assembly (Component):
                                      pathname, TraitError)
             iotype = self.get_metadata(pathname, 'iotype')
             
-        newtrait = PassthroughTrait(iotype=iotype, validation_trait=trait)
+        metadata = self.get_metadata(pathname)
+        if "validation_trait" in metadata: 
+            newtrait = PassthroughTrait(**metadata)
+        else: 
+            newtrait = PassthroughTrait(validation_trait=trait,**metadata)
         self.add_trait(newname, newtrait)
         setattr(self, newname, self.get(pathname))
 

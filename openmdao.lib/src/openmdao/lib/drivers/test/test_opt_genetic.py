@@ -31,7 +31,17 @@ class SphereFunction(Component):
 
     def execute(self):
         """ calculate the sume of the squares for the list of numbers """
-        self.total = self.x**2+self.y**2+self.z**2
+        self.total = self.x**2+self.y**2+int(self.z)**2
+        
+class Asmb(Assembly): 
+    def __init__(self,*args,**kwargs):
+        super(Asmb,self).__init__(*args,**kwargs)
+        self.add('sphere',SphereFunction())
+        self.driver.workflow.add(self.sphere)
+        self.create_passthrough('sphere.x')
+        self.create_passthrough('sphere.y')
+        self.create_passthrough('sphere.z')
+        self.create_passthrough('sphere.total')
 
 class SphereFunctionArray(Component):
     total = Float(0., iotype='out')
@@ -65,7 +75,7 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         self.top = None
-
+               
     def test_optimizeSphere_set_high_low(self):
         self.top.add('comp', SphereFunction())
         self.top.driver.workflow.add(self.top.comp)
@@ -91,7 +101,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(y, 0)
         self.assertEqual(z, 0)
 
-
+    
     def test_optimizeSphere(self):
         self.top.add('comp', SphereFunction())
         self.top.driver.workflow.add(self.top.comp)
@@ -130,6 +140,31 @@ class TestCase(unittest.TestCase):
                              "given. One or the other must be specified.")
         else: 
             self.fail('TypeError expected')
+            
+    def test_optimizeSphereAssemblyPassthrough(self): 
+        self.top.add('comp', Asmb())
+        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.add_objective("comp.total")
+
+        self.top.driver.add_parameter('comp.x')
+        self.top.driver.add_parameter('comp.y')
+        self.top.driver.add_parameter('comp.z')
+
+        #self.top.driver.seed = 123
+
+        self.top.driver.mutation_rate = .02
+        self.top.driver.generations = 1
+        self.top.driver.opt_type = "minimize"
+
+
+        self.top.run()
+
+        self.assertAlmostEqual(self.top.driver.best_individual.score,
+                               .1920,places = 4)
+        x,y,z = [x for x in self.top.driver.best_individual] 
+        self.assertAlmostEqual(x, -0.4381, places = 4)
+        self.assertEqual(y, 0)
+        self.assertEqual(z, 0)
 
     def test_optimizeSpherearray(self):
         self.top.add('comp', SphereFunctionArray())
