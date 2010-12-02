@@ -22,7 +22,7 @@ OpenMDAO uses documentation strings, or `docstrings,` written in `reStructuredTe
 standard described below. 
 
 We would like to acknowledge the NumPy/SciPy standard, which we referred to
-heavily when developing our own standard.
+frequently when developing our own standard.
 
 
 *Docstring*
@@ -43,45 +43,22 @@ A docstring may be one line or spread over several lines. Line length should not
 *Sections of a Docstring*
 ++++++++++++++++++++++++++
 
-The following sections can be included in a docstring, but in may cases, are optional. You cannot use
-underlined headings to identify sections of a docstring because Sphinx will complain. It is possible
-to use italics (or bold) for a section heading, but you have to be careful with Sphinx. You must leave
-a blank line between the section heading (e.g., *Parameters, Raises*) and any parameters or other
-information. Also, if you plan to include a code example in the user docs, be aware that a heading
-could cause issues with Sphinx. We have used italicized headings (indicated by the asterisks) in some
-examples to show how it is done. It is easier to omit headings, and in most cases, the information
-will be clear to users; however, for optional sections, such as *Raises, Notes, References,* and
-*Examples,* they are desirable.
+The following sections can be included in a docstring, but in many cases, are optional. 
 
 
-1. **Short Summary**
+1. **Summary (required)**
 
-   A one-line summary that does not use variable names or the function name, for example::
+   You need at least a one-line summary that does not use variable names or the function name, for
+   example::
 
      class ExternalCode(Component):
           """ Run an external code as a component. """
 
-   The function signature is normally found by introspection and displayed by the ``help`` function. 
-   For some functions (notably those written in C), the signature is not available, so you have to
-   specify it as the first line of the docstring::
-
-     """
-     add(a, b)
-
-     The sum of two numbers.
-
-     """
-     
-
-2. **Extended Summary**
-
-   This section should consist of a few sentences that clarify functionality. It may not be needed. 
-   Do not use it to discuss implementation details or background theory. You can put that information
-   in a notes section if you choose. You may refer to the parameters and the function name, but put parameter
-   descriptions together in their own area.
+   You may want a longer summary (a few sentences) to clarify functionality. Do not discuss
+   implementation details or background theory in the summary.
 
 
-3. **Parameters**
+2. **Parameters (required)**
 
    These are descriptions of the function arguments, keywords, and their respective types. Parameters
    should follow the docstring summary. For the parameter types, be as precise as possible. A few
@@ -110,45 +87,54 @@ will be clear to users; however, for optional sections, such as *Raises, Notes, 
      sep: str (optional) (Currently unsupported)
          Separator to append between values if we go beyond the template.
      
-     
-   Do not put a space before the colon. Indent the description. Capitalize the first word of the
-   description for consistency, even though it is not a complete sentence. A period at the end is
-   preferred, also for consistency, especially since at times the sentence fragment is followed by a
-   complete sentence.
+   
+   - Do not put a space before the colon. 
 
-   If a keyword argument is not necessary, put ``optional`` (lower case) after it in parentheses::
+   - Indent the description four spaces. 
+   
+   - For consistency, please capitalize the first word of the description and put a period at the end,
+     even though it is not a complete sentence. In many cases, the first part of the description,
+     although a sentence fragment, will be followed by a sentence.  
 
-     x: int(optional)
+  In the above example, we italicized *Parameters* (indicated by the single asterisk on either side of
+  the word) and used it as a heading for the parameters section. We did this merely to show how it can
+  be done. Parameters and returns should be clear to users, so section headings aren't required. On
+  the other hand, you might want them for the optional sections.    
 
-   Optional keyword parameters have default values that are displayed in brackets as part of the
-   function signature::
+  If a keyword argument is not necessary, put ``optional`` (lower case) after it in parentheses::
+
+     x: int (optional)
+
+  Optional keyword parameters have default values that are displayed in brackets as part of the
+  function signature::
 
      include_errors: bool (optional) [False] 
   
-   Default values can also be explained in the description::
+  Default values can also be explained in the description::
 
-     Multiplicative scale factor applied to both sides of the constraint's boolean expression. It
-     should be a positive nonzero value. Default is unity (1.0).
+    scaler: float (optional) 
+        Multiplicative scale factor applied to both sides of the constraint's boolean expression. It
+	should be a positive nonzero value. Default is unity (1.0).
 
-   When a parameter can assume only one of a fixed set of values, those values can be listed in
-   braces::
+  When a parameter can assume only one of a fixed set of values, those values can be listed in
+  braces::
 
      order: {'C', 'F', 'A'}
          Description of order.         
 
-   When two or more input parameters have exactly the same type, shape, and description, they can
-   be combined::
+  When two or more input parameters have exactly the same type, shape, and description, they can
+  be combined::
 
-     x1, x2: array_like
-         Input arrays, description of x1, x2.  
+    x1, x2: array_like
+        Input arrays, description of x1, x2.  
 	 
    
-4. **Returns**
+3. **Returns (required, if any)**
 
-   Any returns should follow the parameter; use a format similar to that for parameters.
+   Any returns should follow the parameters. Use the same format as for parameters.
    
 
-5. **Raises (optional)**
+4. **Raises (optional)**
 
    This section lists errors that get raised and under what conditions::
       
@@ -157,30 +143,21 @@ will be clear to users; however, for optional sections, such as *Raises, Notes, 
      LinAlgException
           If the matrix is not numerically invertible.
    
-   You may want to include this section for errors that are not obvious or that have a good chance of
+   You may want to include this section for errors that aren't obvious or that have a good chance of
    getting raised.
 
 
-6. **Notes (optional)**
+5. **Notes (optional)**
 
-   This section is for providing additional information about the code. Include a *Notes* section if
-   you think will be helpful to users. It might include information such as:
+   This section is for additional information about the code. Include any information that will be
+   helpful to users.
 
- - Implementation details or background theory
-   
- - Infrequently used parameters to avoid cluttering up the parameters section (if it is crowded).
-   (Alternatively, you can include all parameters in the parameters section and mention in the
-   description that the parameter is infrequently used.)
+6. **References (optional)**
 
- - References to functions that users may be unaware of or have no easy means of discovering. Good
-   candidates are routines whose docstrings further explain parameters used by this function.
-     
-        
-7. **References (optional)**
-
-   References should augment the docstring and not be required to understand it. If you cited
-   references in the *Notes* section using the text ``[1]_, [2]_``, you can include the actual
-   references in this section. For example, to cite the article below, include it as follows::
+   References should augment the docstring and not be required to understand it. If you have a *Notes*
+   section and happened to cite references in it using the reST text ``[1]_, [2]_``, you can
+   include the actual references in this section. For example, to cite the article below, include it
+   as follows::
 
        .. [1] Keane, A. J., "Statistical Improvement Criteria for Use in Multiobjective Design
 	  Optimization," AIAA JOURNAL, Vol. 44, 2006, pp. 879-891.
@@ -190,14 +167,14 @@ will be clear to users; however, for optional sections, such as *Raises, Notes, 
    .. [1] Keane, A. J., "Statistical Improvement Criteria for Use in Multiobjective Design
 	  Optimization," AIAA JOURNAL, Vol. 44, 2006, pp. 879-891.
 
-   Referencing sources of a temporary nature, such as web pages, is discouraged. Follow the `citation
-   format of the IEEE <http://www.ieee.org/pubs/transactions/auinfo03.pdf>`_, which states that
-   references are numbered, starting from one, in the order in which they are cited.
-   
+   If possible, avoid referencing sources of a temporary nature, such as web pages. Follow the
+   `citation format of the IEEE <http://www.ieee.org/pubs/transactions/auinfo03.pdf>`_, which states
+   that references are numbered, starting from one, in the order in which they are cited.
 
-8. **Examples (optional)**
 
-   This section should illustrate usage. Use the doctest format.
+7. **Examples (optional)**
+
+   This section should illustrate usage. Use the Python doctest format.
 
    When providing multiple examples, separate them by blank lines. Leave blank lines
    above and below the comments explaining the examples::
@@ -220,26 +197,14 @@ will be clear to users; however, for optional sections, such as *Raises, Notes, 
 - When referring to functions in the same sub-module, no prefix is needed; the tree is searched
   upwards for a match.
 
-- Add prefixes to functions from other sub-modules appropriately. For example, while documenting
-  the ``random`` module, refer to a function in ``fft`` by::
+- Add prefixes to functions from other sub-modules appropriately. For example, when documenting
+  the ``scipy.random`` module, refer to a function in ``scipy.fft`` by::
 
     fft.fft2: 2-D fast discrete Fourier transform
 
 - When referring to an entirely different module::
 
     scipy.random.norm: Random variates, PDFs, etc.
-
-- Functions may be listed without descriptions; this is preferable if the functionality is clear
-  from the function name::
-
-    See the following functions
-    func_a: Function a with its description.
-    func_b, func_c_, func_d
-    func_e
-
-- Line spacing and indentation are important. New paragraphs are marked with a blank line. Indentation in
-  paragraphs indicates that the output is indented. Sphinx will complain if a paragraph appears to be
-  indented for no reason.
 
 - If there are points in the docstring that deserve special emphasis, you can use the reST directives
   for a note or warning. Syntax is:
@@ -250,11 +215,15 @@ will be clear to users; however, for optional sections, such as *Raises, Notes, 
 
     .. note:: Note text.
 
-  These are seldom necessary. One situation in which a warning could be useful is
-  for marking a known bug that has not yet been fixed.
+  It is seldom necessary to use either directive, but one situation in which a warning might be useful
+  is for marking a known bug that has not yet been fixed.
 
-  .. note:: A note directive is different from the *Notes* section in the docstring. A note will appear
-         in gray box.
+  .. note:: A note directive is different from the *Notes* section of a docstring. A note will
+     appear in a gray box.
+     
+- Line spacing and indentation are important. New paragraphs are marked with a blank line. Indentation in
+  paragraphs indicates that the output is indented. Sphinx will complain if a paragraph appears to be
+  indented for no reason.
 
 
 General Documentation Issues
@@ -264,6 +233,9 @@ General Documentation Issues
 
 *Underlines (and Overlines)*
 ++++++++++++++++++++++++++++
+
+This section pertains only to the user documents, not source code. You should never use underlines
+in source code as Sphinx will complain. 
 
 **- Document title:**
 
