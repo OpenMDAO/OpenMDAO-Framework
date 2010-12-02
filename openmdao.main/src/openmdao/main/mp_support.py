@@ -233,12 +233,12 @@ class OpenMDAO_Server(Server):
 
         try:
             connection.deliver_challenge(conn, self.authkey)
-        except (EOFError, IOError):
+        except (EOFError, IOError) as exc:
             self._logger.debug('deliver_challenge error: %r', exc)
             conn.close()
             return
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
-        except Exception:  #pragma no cover
+        except Exception as exc:  #pragma no cover
             msg = ('#TRACEBACK', traceback.format_exc())
             try:
                 conn.send(msg)
@@ -734,6 +734,8 @@ class OpenMDAO_Manager(BaseManager):
                 # and we don't want to use an excessive startup timeout value.
                 generate_key_pair(credentials)
                 timeout = 5
+        else:
+            timeout = 5
 
         self._process = Process(
             target=type(self)._run_server,
