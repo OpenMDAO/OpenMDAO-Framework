@@ -61,6 +61,9 @@ class TestCase(unittest.TestCase):
         for directory in ('a', 'b'):
             if os.path.exists(directory):
                 shutil.rmtree(directory)
+        if os.path.exists("error.out"):
+            os.remove("error.out")
+                
         SimulationRoot.chroot(ORIG_DIR)
         
     def test_normal(self):
