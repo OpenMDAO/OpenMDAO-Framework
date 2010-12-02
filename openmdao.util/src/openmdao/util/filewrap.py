@@ -87,7 +87,7 @@ class ToFloat(TokenConverter):
     """Converter for PyParsing that is used to turn a token into a float."""
     def postParse( self, instring, loc, tokenlist ):
         """Converter to make token into a float."""
-        return float(tokenlist[0])
+        return float(tokenlist[0].replace('D', 'E'))
 
     
 def _parse_line():
@@ -98,7 +98,7 @@ def _parse_line():
     digits = Word(nums)
     dot = "."
     sign = oneOf("+ -")
-    ee = CaselessLiteral('E')
+    ee = CaselessLiteral('E') | CaselessLiteral('D')
 
     num_int = ToInteger(Combine( Optional(sign) + digits ))
     

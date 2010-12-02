@@ -5,7 +5,7 @@ Utilities for reading and writing Fortran namelists.
 # pylint: disable-msg=E0611,F0401
 import ordereddict
 
-from numpy import ndarray, array, append
+from numpy import ndarray, array, append, vstack
 from enthought.traits.trait_base import not_none
 
 from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
@@ -238,7 +238,7 @@ class Namelist(object):
         digits = Word(nums)
         dot = "."
         sign = oneOf("+ -")
-        ee = CaselessLiteral('E')
+        ee = CaselessLiteral('E') | CaselessLiteral('D')
     
         num_int = ToInteger(Combine( Optional(sign) + digits ))
         
@@ -269,6 +269,11 @@ class Namelist(object):
                            data_token("value"))
         multi_card_token = card_token + ZeroOrMore(Suppress(',') + card_token)
         array_continuation_token = numstr_token.setResultsName("value")
+        array2D_token = fieldval("name") + Suppress("(") + \
+                        Suppress(num_int) + Suppress(',') + \
+                        num_int("index") + Suppress(')') + \
+                        Suppress('=') + numval + \
+                        ZeroOrMore(Suppress(',') + numval)
         
         # Comment Token
         comment_token = Literal("!")
@@ -277,6 +282,7 @@ class Namelist(object):
         
         current_group = None
         for line in data:
+            line_base = line
             line = line.strip()
             
             # blank line: do nothing
@@ -302,6 +308,21 @@ class Namelist(object):
                         else:
                             value = card[1]
                         
+                        self.cards[-1].append(Card(name, value))
+                    
+                # Catch 2D arrays like -> X(1,1) = 3,4,5
+                elif array2D_token.searchString(line):
+                    card = array2D_token.parseString(line)
+                    
+                    name = card[0]
+                    index = card[1]
+                    value = array(card[2:])
+                    
+                    if index > 1:
+                        old_value = self.cards[-1][-1].value
+                        new_value = vstack((old_value, value))
+                        self.cards[-1][-1].value = new_value
+                    else:
                         self.cards[-1].append(Card(name, value))
                     
                 # Arrays can be continued on subsequent lines
@@ -348,12 +369,14 @@ class Namelist(object):
                 # If there is an ungrouped card at the start, take it as the
                 # title for the analysis
                 elif len(self.cards) == 0 and self.title == '':
-                    self.title = line.rstrip()
+                    self.title = line
                     
                 # All other ungrouped cards are saved as free-form (card-less)
                 # groups.
+                # Note that we can't lstrip because column spacing might be
+                # important.
                 else:
-                    self.add_group(line.rstrip())
+                    self.add_group(line_base.rstrip())
                     
 
     def load_model(self, rules=None, ignore=None, single_group=-1):
@@ -410,8 +433,24 @@ class Namelist(object):
         empty_groups = ordereddict.OrderedDict()
         unlisted_groups = ordereddict.OrderedDict()
         unlinked_vars = []
+        used_groups = []
         for i, group_name in use_group:
             
+            # Report all groups with no cards
+            if len(self.cards[i]) == 0:        
+                empty_groups[i] = group_name
+                continue
+            
+            # If a group_name appears twice, we really don't know where to
+            # stick the variables, and there are potential data overwrite
+            # issues. Those cases have to be handled individually.
+            if group_name in used_groups:
+                unlisted_groups[i] = group_name
+                continue
+            else:
+                used_groups.append(group_name)
+                
+            # Process the cards in this group
             for card in self.cards[i]:
                 
                 name = card.name
@@ -474,10 +513,6 @@ class Namelist(object):
                     self.comp.set(varpath, value)
                     
                     #print varpath, value
-                
-            # Report all groups with no cards
-            if len(self.cards[i]) == 0:        
-                empty_groups[i] = group_name
                 
         return empty_groups, unlisted_groups, unlinked_vars
 

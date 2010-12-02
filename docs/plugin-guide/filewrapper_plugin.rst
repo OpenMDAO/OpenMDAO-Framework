@@ -124,7 +124,7 @@ do this for a simple component.
             # (Prepare input file here)
 
             #Execute the component
-            super(Wrapped_Comp, self).execute()
+            super(WrappedComp, self).execute()
             
             # (Parse output file here)
 
