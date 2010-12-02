@@ -274,10 +274,24 @@ class ProtectedBox(Box):
 class TestCase(unittest.TestCase):
     """ Test distributed simulation. """
 
+    def run(self, result=None):
+        """
+        Record the :class:`TestResult` used so we can conditionally cleanup
+        directories in :meth:`tearDown`.
+        """
+        self.test_result = result or unittest.TestResult()
+        return super(TestCase, self).run(self.test_result)
+
     def setUp(self):
         """ Start server process. """
         global _SERVER_ID
         _SERVER_ID += 1
+
+        self.n_errors = len(self.test_result.errors)
+        self.n_failures = len(self.test_result.failures)
+
+        # Ensure we control directory cleanup.
+        os.environ['OPENMDAO_KEEPDIRS'] = '1'
 
         # Start each server process in a unique directory.
         server_dir = 'Factory_%d' % _SERVER_ID
@@ -285,6 +299,7 @@ class TestCase(unittest.TestCase):
             shutil.rmtree(server_dir)
         os.mkdir(server_dir)
         os.chdir(server_dir)
+        self.server_dirs = [server_dir]
         self.server = None
         try:
             logging.debug('')
@@ -313,10 +328,12 @@ class TestCase(unittest.TestCase):
             logging.debug('terminating server pid %s', self.server.pid)
             self.server.terminate(timeout=10)
             self.server = None
-        keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
-        if not keep_dirs:
-            for path in glob.glob('Factory_*'):
-                shutil.rmtree(path)
+
+        # Cleanup only if there weren't any new errors or failures.
+        if len(self.test_result.errors) == self.n_errors and \
+           len(self.test_result.failures) == self.n_failures:
+            for server_dir in self.server_dirs:
+                shutil.rmtree(server_dir)
 
     def test_1_client(self):
         logging.debug('')
@@ -516,6 +533,7 @@ class TestCase(unittest.TestCase):
             shutil.rmtree(server_dir)
         os.mkdir(server_dir)
         os.chdir(server_dir)
+        self.server_dirs.append(server_dir)
         try:
             logging.debug('starting server (authkey %s)...', authkey)
             server = start_server(authkey=authkey, timeout=30)
