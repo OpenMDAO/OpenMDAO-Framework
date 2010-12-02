@@ -12,10 +12,21 @@ class Workflow(object):
     """
 
     def __init__(self, parent=None, scope=None, members=None):
-        """ Create an workflow. If members is not None,
-        iterate through members and add them to the workflow.
+        """Create a Workflow.
         
+        parent: Driver (optional)
+            The Driver that contains this Workflow.  This option is normally
+            passed instead of scope because scope usually isn't known at
+            initialization time.  If scope is not provided, it will be
+            set to parent.parent, which should be the Assembly that contains
+            the parent Driver.
+            
+        scope: Component (optional)
+            The scope can be explicitly specified here, but this is not 
+            typically known at initialization time.
+
         members: list of str (optional)
+            A list of names of Components to add to this workflow.
         """
         self._iterator = None
         self._stop = False
@@ -29,6 +40,9 @@ class Workflow(object):
 
     @property
     def scope(self):
+        """The scoping Component that is used to resolve the Component names in 
+        this Workflow.
+        """
         if self._scope is None and self._parent is not None:
             self._scope = self._parent.parent
         if self._scope is None:
@@ -41,7 +55,7 @@ class Workflow(object):
         self.config_changed()
     
     def run(self):
-        """ Run through the nodes in the workflow list. """
+        """ Run the Components in this Workflow. """
         self._stop = False
         self._iterator = self.__iter__()
         for node in self._iterator:
@@ -51,7 +65,7 @@ class Workflow(object):
         self._iterator = None
             
     def step(self):
-        """Run a single component in the Workflow."""
+        """Run a single component in this Workflow."""
         if self._iterator is None:
             self._iterator = self.__iter__()
             
@@ -65,10 +79,10 @@ class Workflow(object):
 
     def stop(self):
         """
-        Stop all nodes.
+        Stop all Components in this Workflow.
         We assume it's OK to to call stop() on something that isn't running.
         """
-        for comp in self.__iter__():
+        for comp in self.contents():
             comp.stop()
         self._stop = True
 
@@ -87,13 +101,15 @@ class Workflow(object):
         raise NotImplemented("This Workflow has no 'remove' function")
 
     def contents(self):
-        """Returns a list of all components in the workflow.
+        """Returns a list containing all Components in the workflow.
         No ordering is assumed.
         """
         raise NotImplemented("This Workflow has no 'contents' function")
 
     def __iter__(self):
-        """Returns an iterator over the components in the workflow."""
+        """Returns an iterator over the components in the workflow in
+        some order.
+        """
         raise NotImplemented("This Workflow has no '__iter__' function")
     
     def __len__(self):

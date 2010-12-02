@@ -32,18 +32,18 @@ class Dataflow(SequentialWorkflow):
         scope = self.scope
         return [getattr(scope, n) for n in topsort].__iter__()
 
-    def add(self, comp):
-        """ Add a new component to the workflow. """
-        super(Dataflow, self).add(comp)
+    def add(self, compname):
+        """ Add a new component to the workflow by name. """
+        super(Dataflow, self).add(compname)
         self.config_changed()
 
-    def remove(self, comp):
-        """Remove a component from this Workflow"""
-        super(Dataflow, self).remove(comp)
+    def remove(self, compname):
+        """Remove a component from this Workflow by name."""
+        super(Dataflow, self).remove(compname)
         self.config_changed()
 
     def config_changed(self):
-        """Notifies the Workflow that workflow configuration (dependencies, etc.)
+        """Notifies the Workflow that its configuration (dependencies, etc.)
         has changed.
         """
         self._collapsed_graph = None
