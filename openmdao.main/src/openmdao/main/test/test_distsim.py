@@ -24,7 +24,7 @@ from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.interfaces import IComponent
 from openmdao.main.mp_support import has_interface, is_instance, \
-                                     read_server_config, _SHA1, keytype
+                                     read_server_config, keytype
 from openmdao.main.objserverfactory import connect, start_server, RemoteFile
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
@@ -298,14 +298,9 @@ class TestCase(unittest.TestCase):
 
         # Force a key generation.
         if _SERVER_ID == 1:
-            if sys.platform == 'win32':
-                home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
-            else:
-                home = os.environ['HOME']
-            key_dir = os.path.join(home, '.openmdao')
-            key_file = os.path.join(key_dir, 'keys')
-            if os.path.exists(key_file):
-                os.remove(key_file)
+            keyfile = os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
+            if os.path.exists(keyfile):
+                os.remove(keyfile)
 
         set_credentials(Credentials())
         self.factory = connect(self.address, self.port, pubkey=self.key)
@@ -591,11 +586,6 @@ class TestCase(unittest.TestCase):
         assert_raises(self, "read_server_config('no-such-file')",
                       globals(), locals(), IOError,
                       "No such file 'no-such-file'")
-
-        # Exercise SHA wrapper.
-        sha1 = _SHA1.new('abc')
-        self.assertEqual(sha1.digest(),
-                         '\xa9\x99>6G\x06\x81j\xba>%qxP\xc2l\x9c\xd0\xd8\x9d')
 
         # Unpickleable argument.
         code = compile('3 + 4', '<string>', 'eval')

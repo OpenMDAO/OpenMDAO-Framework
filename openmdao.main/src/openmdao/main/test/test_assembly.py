@@ -44,6 +44,7 @@ class DummyComp(Component):
     
     r = Float(iotype='in')
     r2 = Float(iotype='in')
+    r3 = Float(iotype='in',desc="some random variable",low=-1.0,high=1.0,other_meta_data="test")
     s = Str(iotype='in')
     rout = Float(iotype='out', units='ft')
     r2out = Float(iotype='out')
@@ -211,6 +212,15 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.run()
         self.assertEqual(self.asm.comp3.rout, 75.4*1.5)
         self.assertEqual(self.asm.rout, 75.4*1.5)
+        
+        self.asm.create_passthrough('comp3.r3')
+        metadata = self.asm.get_metadata('r3')
+        print metadata
+        self.assertEqual(metadata['iotype'],'in')
+        self.assertEqual(metadata['desc'],'some random variable')
+        self.assertEqual(metadata['low'],-1.0)
+        self.assertEqual(metadata['high'],1.0)
+        self.assertEqual(metadata['other_meta_data'],'test')
         
     def test_create_passthrough_already_exists(self):
         self.asm.create_passthrough('comp3.rout')
