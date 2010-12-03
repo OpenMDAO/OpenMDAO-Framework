@@ -47,6 +47,7 @@ import os.path
 import socket
 import sys
 import threading
+import time
 import traceback
 
 from Crypto.Cipher import AES
@@ -69,6 +70,8 @@ if sys.platform == 'win32':  #pragma no cover
         _HAVE_PYWIN32 = False
     else:
         _HAVE_PYWIN32 = True
+else:
+    _HAVE_PYWIN32 = False
 
 from enthought.traits.trait_handlers import TraitDictObject
 
@@ -565,7 +568,17 @@ class OpenMDAO_Server(Server):
             try:
                 ident = methodname = args = kwds = credentials = None
                 obj = exposed = gettypeid = None
-                request = _decrypt(recv(), session_key)
+                data = recv()
+                try:
+                    request = _decrypt(data, session_key)
+                except Exception as exc:
+                    trace = traceback.format_exc()
+                    msg = "Can't decrypt/unpack request. This could be the" \
+                          " result of referring to a dead server."
+                    self._logger.error(msg)
+                    self._logger.error(trace)
+                    raise RuntimeError(msg)
+
                 ident, methodname, args, kwds, credentials = request
 #                self._logger.debug('request %s %s %s',
 #                                   ident, methodname, credentials)
@@ -655,7 +668,7 @@ class OpenMDAO_Server(Server):
                         else:
                             raise
                 except Exception as exc:
-                    self._logger.error('%s %s %s: %s', methodname, role,
+                    self._logger.error('%s %s %s: %r', methodname, role,
                                        get_credentials(), exc)
                     msg = ('#ERROR', exc)
                 else:
@@ -909,6 +922,13 @@ class OpenMDAO_Manager(BaseManager):
 
     def __init__(self, address=None, authkey=None, serializer='pickle',
                  pubkey=None, name=None):
+# FIXME: this shouldn't be required, but using a pipe causes problems with
+#        test_distsim).
+        if address is None and sys.platform == 'win32' and not _HAVE_PYWIN32:
+            ip_addr = socket.gethostbyname(socket.gethostname())
+            address = (ip_addr, 0)
+            allowed_hosts = [ip_addr]
+
         super(OpenMDAO_Manager, self).__init__(address, authkey, serializer)
         self._pubkey = pubkey
         self._name = name
@@ -952,9 +972,15 @@ class OpenMDAO_Manager(BaseManager):
             if credentials is None:
                 raise RuntimeError('PublicKey authentication requires user'
                                    ' credentials')
-            # Ensure we have a key pair. Key generation can take a long time
-            # and we don't want to use an excessive startup timeout value.
-            _generate_key_pair(credentials)
+            if sys.platform == 'win32' and not _HAVE_PYWIN32:
+                timeout = 120
+            else:
+                # Ensure we have a key pair. Key generation can take a long time
+                # and we don't want to use an excessive startup timeout value.
+                _generate_key_pair(credentials)
+                timeout = 5
+        else:
+            timeout = 5
 
         self._process = Process(
             target=type(self)._run_server,
@@ -968,7 +994,8 @@ class OpenMDAO_Manager(BaseManager):
 
         # Get address of server.
         writer.close()
-        for retry in range(5):
+        start = time.time()
+        for retry in range(timeout):
             if reader.poll(1):
                 break
             if not self._process.is_alive():
@@ -976,8 +1003,10 @@ class OpenMDAO_Manager(BaseManager):
                                    % (pid, self._process.exitcode))
         # Hard to cause a timeout.
         else:  #pragma no cover
+            et = time.time() - start
             self._process.terminate()
-            raise RuntimeError('Server process %d startup timed-out' % pid)
+            raise RuntimeError('Server process %d startup timed-out in %.2f' \
+                               % (pid, et))
         reply = reader.recv()
         if isinstance(reply, Exception):
             raise RuntimeError('Server process %d startup failed: %s'
@@ -986,6 +1015,8 @@ class OpenMDAO_Manager(BaseManager):
         if self._authkey == 'PublicKey':
             self._pubkey = reader.recv()
         reader.close()
+        et = time.time() - start
+        logging.debug('Server process %d startup in %.2f', et)
 
         # Register a finalizer.
         self._state.value = State.STARTED
@@ -1351,7 +1382,8 @@ class OpenMDAO_Proxy(BaseProxy):
                 sock.connect(address)
             except socket.error as exc:
                 if exc.args[0] == errno.ECONNREFUSED or \
-                   exc.args[0] == errno.ENOENT:
+                   exc.args[0] == errno.ENOENT or \
+                   exc.args[0] == -2:  # gaierror(-2, Name or service not known)
                     alive = False
                 # Just being defensive.
                 else:  #pragma no cover
