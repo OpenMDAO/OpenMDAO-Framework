@@ -116,13 +116,13 @@ class Model(Assembly):
         """ Sets passthrough paths to absolute to exercise code. """
         super(Model, self).tree_rooted()
 
-        self.middle.passthrough.trait('text_in').trait_type._metadata['local_path'] = \
+        self.middle.passthrough.get_trait('text_in').trait_type._metadata['local_path'] = \
             os.path.join(self.middle.passthrough.get_abs_directory(),
-                         self.middle.passthrough.trait('text_in').local_path)
+                         self.middle.passthrough.get_trait('text_in').local_path)
 
-        self.middle.passthrough.trait('text_out').trait_type._metadata['path'] = \
+        self.middle.passthrough.get_trait('text_out').trait_type._metadata['path'] = \
             os.path.join(self.middle.passthrough.get_abs_directory(),
-                         self.middle.passthrough.trait('text_out').path)
+                         self.middle.passthrough.get_trait('text_out').path)
 
 
 class TestCase(unittest.TestCase):

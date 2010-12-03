@@ -36,7 +36,7 @@ class SimpleCaseIterDriver(Driver):
     
     def execute(self):
         """ Run each case in `iterator` and record results in `recorder`. """
-        for case in self.iterator:
+        for case in self.iterator.get_iter():
             self._run_case(case)
             self.recorder.record(case)
 

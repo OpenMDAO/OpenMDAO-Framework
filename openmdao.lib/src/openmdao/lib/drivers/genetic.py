@@ -4,11 +4,13 @@
 
 import re
 
-# pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Python, Enum, Float, Int, Bool, Instance
+from numpy import float32, float64, int32, int64, array
 
 from pyevolve import G1DList, GAllele, GenomeBase
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
+
+# pylint: disable-msg=E0611,F0401
+from openmdao.lib.datatypes.api import Python, Enum, Float, Int, Bool, Instance
 
 from openmdao.main.api import Driver 
 from openmdao.main.hasparameters import HasParameters
@@ -95,21 +97,28 @@ class Genetic(Driver):
             
             obj = getattr(self.parent, path)
             
-            t = obj.traits().get(target) #get the trait
+            t = obj.get_trait(target) #get the trait
+                      
+            metadata = obj.get_metadata(target.split('[')[0])
             
-            if (t and (t.is_trait_type(Float) or t.is_trait_type(Python))) \
-                or (array_test.search(target) and isinstance(val,float)):
-                allele = GAllele.GAlleleRange(begin=low, end=high, real=True)
-                alleles.add(allele)
-                
-            elif (t and (t.is_trait_type(Int) or t.is_trait_type(Python))) \
-                  or (array_test.search(target) and isinstance(val,int)):
-                allele = GAllele.GAlleleRange(begin=low, end=high, real=False)
-                alleles.add(allele)                
+            #then it's a float or an int, or a member of an array
+            if ('low' in metadata or 'high' in metadata) or array_test.search(target): 
+                if isinstance(val,(float,float32,float64)):                
+                    #some kind of float
+                    allele = GAllele.GAlleleRange(begin=low, end=high, real=True)
+                #some kind of int    
+                if isinstance(val,(int,int32,int64)):
+                    allele = GAllele.GAlleleRange(begin=low, end=high, real=False)           
                     
-            elif t and t.is_trait_type(Enum): 
+            elif "values" in metadata and isinstance(metadata['values'],(list,tuple,array,set)):
                 allele = GAllele.GAlleleList(t.values)
+
+            if allele:     
                 alleles.add(allele)
+            else: 
+                self.raise_exception("%s is not a float, int, or enumerated \
+                datatype. Only these 3 types are allowed"%target,ValueError)
+                
         self.count = count
         return alleles
                 

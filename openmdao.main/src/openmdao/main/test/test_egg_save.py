@@ -307,11 +307,8 @@ class TestCase(unittest.TestCase):
             # On Windows, sometimes get 'Directory not empty'.
             logging.error('    files: %s', os.listdir(path))
 
-    def save_load(self, fmt, use_setuptools=False):
-        """
-        Save to egg using `fmt` and reload.
-        Writes egg natively or via setuptools.
-        """
+    def save_load(self):
+        """ Save to egg and reload. """
         global SOURCE_INIT, SINK_INIT
 
         # Verify initial state.
@@ -336,51 +333,44 @@ class TestCase(unittest.TestCase):
         global OBSERVATIONS
         OBSERVATIONS = []
         egg_info = self.model.save_to_egg(self.model.name, next_egg(),
-                                          py_dir=PY_DIR, fmt=fmt,
+                                          py_dir=PY_DIR,
                                           child_objs=self.child_objs,
-                                          use_setuptools=use_setuptools,
                                           observer=observer)
         self.egg_name = egg_info[0]
 
         # Check observations.
-        if use_setuptools:
-            expected = [
-                ('add', 'write-via-setuptools'),
-                ('complete', 'Egg_TestModel-1.2.3-py%d.%d.egg' % sys.version_info[:2]),
-            ]
-        else:
-            expected = [
-                ('add', 'EGG-INFO/PKG-INFO'),
-                ('add', 'EGG-INFO/dependency_links.txt'),
-                ('add', 'EGG-INFO/entry_points.txt'),
-                ('add', 'EGG-INFO/not-zip-safe'),
-                ('add', 'EGG-INFO/requires.txt'),
-                ('add', 'EGG-INFO/openmdao_orphans.txt'),
-                ('add', 'EGG-INFO/top_level.txt'),
-                ('add', 'EGG-INFO/SOURCES.txt'),
-                ('add', 'Egg_TestModel/Egg_TestModel.pickle'),
-                ('add', 'Egg_TestModel/Egg_TestModel_loader.py'),
-                ('add', 'Egg_TestModel/Oddball.pickle'),
-                ('add', 'Egg_TestModel/Oddball_loader.py'),
-                ('add', 'Egg_TestModel/Oddball_oddcomp.pickle'),
-                ('add', 'Egg_TestModel/Oddball_oddcomp_loader.py'),
-                ('add', 'Egg_TestModel/Oddball_oddcont.pickle'),
-                ('add', 'Egg_TestModel/Oddball_oddcont_loader.py'),
-                ('add', 'Egg_TestModel/Sink.pickle'),
-                ('add', 'Egg_TestModel/Sink_loader.py'),
-                ('add', 'Egg_TestModel/Source.pickle'),
-                ('add', 'Egg_TestModel/Source/hello'),
-                ('add', 'Egg_TestModel/Source/xyzzy'),
-                ('add', 'Egg_TestModel/Source_loader.py'),
-                ('add', 'Egg_TestModel/__init__.py'),
-                ('add', 'Egg_TestModel/sub/data2'),
-                ('add', 'Egg_TestModel/sub/data4'),
-            ]
+        expected = [
+            ('add', 'EGG-INFO/PKG-INFO'),
+            ('add', 'EGG-INFO/dependency_links.txt'),
+            ('add', 'EGG-INFO/entry_points.txt'),
+            ('add', 'EGG-INFO/not-zip-safe'),
+            ('add', 'EGG-INFO/requires.txt'),
+            ('add', 'EGG-INFO/openmdao_orphans.txt'),
+            ('add', 'EGG-INFO/top_level.txt'),
+            ('add', 'EGG-INFO/SOURCES.txt'),
+            ('add', 'Egg_TestModel/Egg_TestModel.pickle'),
+            ('add', 'Egg_TestModel/Egg_TestModel_loader.py'),
+            ('add', 'Egg_TestModel/Oddball.pickle'),
+            ('add', 'Egg_TestModel/Oddball_loader.py'),
+            ('add', 'Egg_TestModel/Oddball_oddcomp.pickle'),
+            ('add', 'Egg_TestModel/Oddball_oddcomp_loader.py'),
+            ('add', 'Egg_TestModel/Oddball_oddcont.pickle'),
+            ('add', 'Egg_TestModel/Oddball_oddcont_loader.py'),
+            ('add', 'Egg_TestModel/Sink.pickle'),
+            ('add', 'Egg_TestModel/Sink_loader.py'),
+            ('add', 'Egg_TestModel/Source.pickle'),
+            ('add', 'Egg_TestModel/Source/hello'),
+            ('add', 'Egg_TestModel/Source/xyzzy'),
+            ('add', 'Egg_TestModel/Source_loader.py'),
+            ('add', 'Egg_TestModel/__init__.py'),
+            ('add', 'Egg_TestModel/sub/data2'),
+            ('add', 'Egg_TestModel/sub/data4'),
+        ]
 
-            # Add our file if we're not considered part of an egg.
-            if sys.modules[self.__module__].__file__.find('.egg') < 0:
-                expected.append(('add', 'Egg_TestModel/test_egg_save.py'))
-            expected.append(('complete', 'Egg_TestModel-1.2.3-py%d.%d.egg' % sys.version_info[:2]))
+        # Add our file if we're not considered part of an egg.
+        if sys.modules[self.__module__].__file__.find('.egg') < 0:
+            expected.append(('add', 'Egg_TestModel/test_egg_save.py'))
+        expected.append(('complete', 'Egg_TestModel-1.2.3-py%d.%d.egg' % sys.version_info[:2]))
 
         self.assertEqual(len(OBSERVATIONS), len(expected))
         for i, observation in enumerate(OBSERVATIONS):
@@ -458,16 +448,12 @@ class TestCase(unittest.TestCase):
             expected.append(('complete', None))
 
             self.assertEqual(len(OBSERVATIONS), len(expected))
-            if use_setuptools:  # No control on order, so sort on name.
-                expected.sort(key=lambda item: item[1])
-                OBSERVATIONS.sort(key=lambda item: item[1])
             for i, observation in enumerate(OBSERVATIONS):
                 state, string, file_fraction, byte_fraction = observation
                 self.assertEqual(state,  expected[i][0])
                 self.assertEqual(string, expected[i][1])
-                if not use_setuptools:  # Sort messes-up this comparison.
-                    self.assertEqual(file_fraction,
-                                     float(i)/float(len(expected)-1))
+                self.assertEqual(file_fraction,
+                                 float(i)/float(len(expected)-1))
 
             # Verify initial state.
             self.assertEqual(SOURCE_INIT, False)
@@ -502,27 +488,10 @@ class TestCase(unittest.TestCase):
             os.chdir(orig_dir)
             shutil.rmtree(test_dir)
 
-    def test_save_load_cpickle(self):
+    def test_save_load(self):
         logging.debug('')
-        logging.debug('test_save_load_cpickle')
-        self.save_load(SAVE_CPICKLE)
-
-    def test_save_load_pickle(self):
-        logging.debug('')
-        logging.debug('test_save_load_pickle')
-        self.save_load(SAVE_PICKLE)
-
-# Fails to load. It appears you can't have more than one level of
-# back-pointers when loading YAML. (A component works, but an assembly doesn't)
-#    def test_save_load_yaml(self):
-#        logging.debug('')
-#        logging.debug('test_save_load_yaml')
-#        self.save_load(SAVE_LIBYAML)
-
-    def test_save_with_setuptools(self):
-        logging.debug('')
-        logging.debug('test_save_with_setuptools')
-        self.save_load(SAVE_CPICKLE, use_setuptools=True)
+        logging.debug('test_save_load')
+        self.save_load()
 
     def test_save_bad_name(self):
         logging.debug('')
@@ -613,16 +582,6 @@ class TestCase(unittest.TestCase):
         code = 'self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)'
         msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"
         assert_raises(self, code, globals(), locals(), ValueError, msg)
-
-    def test_save_bad_format(self):
-        logging.debug('')
-        logging.debug('test_save_bad_format')
-
-        # Attempt to save in unknown format.
-        code = "self.model.save_to_egg(self.model.name, next_egg()," \
-               " py_dir=PY_DIR, fmt='unknown')"
-        assert_raises(self, code, globals(), locals(), RuntimeError,
-                      "Egg_TestModel: Unknown format 'unknown'.")
 
     def test_save_bad_function(self):
         logging.debug('')
@@ -1063,8 +1022,13 @@ comp.run()
 
 
 if __name__ == '__main__':
-    import nose
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
+
+    # Clobber cache so we have a known state.
+    path = os.path.expanduser(os.path.join('~', '.openmdao', 'eggsaver.dat'))
+    if os.path.exists(path):
+        os.remove(path)
+
     nose.runmodule()
 

@@ -1,5 +1,6 @@
 from itertools import chain
 
+
 def caseiter_to_dict(caseiter, varnames, include_errors=False):
     """
     Retrieve the values of specified variables from cases in a CaseIterator.
@@ -26,7 +27,7 @@ def caseiter_to_dict(caseiter, varnames, include_errors=False):
     
     vardict = dict([(name,[]) for name in varnames])
 
-    for case in caseiter:
+    for case in caseiter.get_iter():
         casedict = {}
         if include_errors is False and case.msg:
             continue  # case reported an error or warning message

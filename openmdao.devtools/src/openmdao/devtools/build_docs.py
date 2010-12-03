@@ -339,7 +339,7 @@ def _make_license_table(docdir, reqs=None):
     
 def _compare_traits_path(x, y):
     if os.path.basename(x) > os.path.basename(y):
-       return 1
+        return 1
     elif os.path.basename(x) < os.path.basename(y):
         return -1
     else:

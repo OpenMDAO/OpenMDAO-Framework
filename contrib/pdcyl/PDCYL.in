@@ -1,0 +1,148 @@
+
+
+Advanced single-aisle civil transport
+
+3 icalc print switch
+
+
+Wing geometry:
+29.396 wsweep
+9.45 war
+0.23734 wtaper
+0.145 wtcroot
+0.104 wtctip
+1343.8 warea
+Material properties:
+1 ps
+0.02 tmgw
+0.656 effw
+1.03 effc
+10700000 esw
+54000 fcsw
+0.101 dsw
+1 kdew
+1 kdfw
+Geometric properties:
+2 istama
+
+0.1 cs1
+0.3 cs2
+10.0729 uwwg
+0.36709 xwloc1
+Structural concept:
+0.001 claqr
+2 ifuel
+
+1 cwman
+6.25e-05 cf
+
+
+Tails:
+1 itail
+
+6.05034 uwt
+0.89589 clrt
+408.5716 harea
+
+
+
+Fuselage geometry:
+1.47628 frn
+1.96838 frab
+124.75 bodl
+12.6754 bdmax
+Structural concept:
+5.24 ckf
+2.36 ec
+0.368 kgc
+0.505 kgw
+4 kcont
+4 kconb
+
+
+
+
+
+
+Material properties:
+58500 ftst
+58500 ftsb
+54000 fcst
+54000 fcsb
+10700000 est
+10700000 esb
+10700000 eft
+10700000 efb
+0.101 dst
+0.101 dsb
+0.101 dft
+0.101 dfb
+0.071 tmgt
+0.071 tmgb
+1 kde
+1 kdf
+Geometric parameters:
+1.1 clbr1
+1 icyl
+
+
+
+Engines:
+2 neng
+2 nengwing
+0.09585 wfp
+0.28131 clrw1
+
+0.999 clrw2
+0.999 clrw3
+
+
+Loads:
+2.5 deslf
+3.75 ultlf
+0 axac
+1 cman
+3 iload
+
+
+0.466 pgt
+13.65 pgb
+0.001 wfbump
+0.9 wfland
+
+
+Landing gear:
+10 vsink
+1.5 stroke
+0.1075 clrg1
+0.51753 clrg2
+0.00568 wfgr1
+0.04385 wfgr2
+2 igear
+
+
+0.001 gfrl
+0.16639 clrgw1
+0 clrgw2
+
+
+
+Weights:
+153798.7031 wgto
+0.23456 wtff
+1 cbum
+0.86 clan
+
+
+Factors:
+1 ischrenk
+
+1 icomnd
+
+1 wgno
+1.2 slfmb
+0 wmis
+0 wsur
+1 wcw
+0 wca
+40 nwing

@@ -4,13 +4,13 @@
 from numpy import array
 from openmdao.lib.datatypes.api import Instance, ListStr, Event
 from enthought.traits.trait_base import not_none
+from enthought.traits.has_traits import _clone_trait
 
 from openmdao.main.api import Component, Case
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder
 from openmdao.main.uncertain_distributions import UncertainDistribution, \
                                                   NormalDistribution
-
-from openmdao.main.interfaces import obj_has_interface
+from openmdao.main.mp_support import has_interface
 
 class MetaModel(Component):
     """ A component that provides general Meta Modeling capability.
@@ -49,7 +49,7 @@ class MetaModel(Component):
         
         # the following line will work for classes that inherit from MetaModel
         # as long as they declare their traits in the class body and not in
-        # the __init__ function.  If they need to dynamically create traits
+        # the __init__ function.  If they need to create traits dynamically
         # during initialization they'll have to provide the value of 
         # _mm_class_traitnames
         self._mm_class_traitnames = set(self.traits(iotype=not_none).keys())
@@ -99,12 +99,14 @@ class MetaModel(Component):
                 # copy output to boudary
                 setattr(self, name, predicted)
             
-            
-    def invalidate_deps(self, compname=None, varnames=None, notify_parent=False):
+    def invalidate_deps(self, compname=None, varnames=None, force=False):
         if compname:  # we were called from our model, which expects to be in an Assembly
             return
-        super(MetaModel, self).invalidate_deps(varnames=varnames, notify_parent=notify_parent)
+        super(MetaModel, self).invalidate_deps(varnames=varnames)
         
+    def child_invalidated(self, childname, outs=None, force=False):
+        pass
+
     def exec_counts(self, compnames):
         # we force the run on our model, so it doesn't matter what we tell it the exec counts are
         return [0 for n in compnames]
@@ -118,7 +120,7 @@ class MetaModel(Component):
         # TODO: disconnect traits corresponding to old model (or leave them if the new model has the same ones?)
         # TODO: check for nested MMs?  Is this a problem?
         # TODO: check for name collisions between MetaModel class traits and traits from model
-        if newmodel is not None and not obj_has_interface(newmodel, IComponent):
+        if newmodel is not None and not has_interface(newmodel, IComponent):
             self.raise_exception('model of type %s does not implement the IComponent interface' % type(newmodel).__name__,
                                  TypeError)
 
@@ -142,9 +144,10 @@ class MetaModel(Component):
             for name,trait in traitdict.items():
                 if self._eligible(name):
                     self._surrogate_input_names.append(name)
-                self.add_trait(name, trait.trait_type)
-                new_model_traitnames.add(name)
-                setattr(self, name, getattr(newmodel, name))
+                if name not in self._mm_class_traitnames:
+                    self.add_trait(name, _clone_trait(trait))
+                    new_model_traitnames.add(name)
+                    setattr(self, name, getattr(newmodel, name))
                 
             # now outputs
             traitdict = newmodel._alltraits(iotype='out')
@@ -164,7 +167,7 @@ class MetaModel(Component):
     def update_inputs(self, compname, varnames):
         if compname != 'model':
             self.raise_exception("cannot update inputs for child named '%s'" % compname)
-        self.model.set_valids(varnames, True)
+        self.model.set_valid(varnames, True)
     
     def update_model_inputs(self):
         """Copy the values of the MetaModel's inputs into the inputs of the model.

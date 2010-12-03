@@ -48,7 +48,7 @@ Test Coverage
 -------------
 
 A Python package called `coverage 
-<http://nedbatchelder.com/code/modules/rees-coverage.html>`_, which is accessible through
+<http://nedbatchelder.com/code/coverage/>`_, which is accessible through
 ``openmdao_test``, makes it easy to determine if your tests cover every
 line of code in your source files.  To get a coverage report for the openmdao
 package, go to the ``devenv`` directory and type the following:
@@ -118,6 +118,16 @@ clear the coverage database by issuing the following command:
 .. index: pair: tests; adding
 .. index: pair: tests; unit
 .. index: unittest
+
+
+Note that the ``coverage`` package is not included with openmdao, so to use it you'll
+have to install it in your openmdao environment like this:
+
+::
+
+   easy_install coverage
+
+
 
 Adding New Tests
 ----------------
@@ -340,18 +350,19 @@ More details on the literalinclude directive can be found at http://sphinx.pocoo
 *Helpful Tips*
 ++++++++++++++
 
-* Indentation is not preserved between code blocks in the same group. This means that all functions and
-  class definitions effectively close when the block ends. If you need to show code from the middle of a
-  function class, you may have to get creative in what you place in your testsetup block (e.g., defining
-  *self* as something.)
-
 * Tracebacks don't have to be accurately reproduced (and they can't be
   anyway). Handle these by replacing the traceback with ellipses:
 
     >>> my_engine.set("RPM",7500)
     Traceback (most recent call last):
         ...
-    TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of 7500 <type 'int'> was specified.
+    TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value 
+    of 7500 <type 'int'> was specified.
+
+* Indentation is not preserved between code blocks in the same group. This means that all functions and
+  class definitions effectively close when the block ends. If you need to show code from the middle of a
+  function class, you may have to get creative in what you place in your testsetup block (e.g., defining
+  *self* as something.)
 
 * Care should be taken to assure that each block of code is being tested. One way to do this is to
   purposefully introduce an error into a block to verify that it is caught.

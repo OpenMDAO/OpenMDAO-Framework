@@ -1,5 +1,3 @@
-"""Computes the probability that any given point from the primary concept 
-will interesect the pareto frontiers of some other concpets""" 
 
 from numpy import exp, abs, pi, array,isnan,sum,sqrt,argsort
 from scipy.special import erf
@@ -14,24 +12,29 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 class ProbIntersect(Component):
+    """Computes the probability that any given point from the primary concept 
+    will interesect the pareto frontiers of some other concepts.
+    """ 
     primary_pareto = Instance(ICaseIterator, iotype="in",
-                    desc="CaseIterator which contains only Pareto optimal cases \
-                    belonging to the same model as predicted_values")
+                    desc="CaseIterator which contains only Pareto optimal cases "
+                         "belonging to the same model as predicted_values")
     
     global_pareto = Instance(ICaseIterator, iotype="in",
-                    desc="CaseIterator which contains all the points from the\
-                    global pareto frontier")
+                    desc="CaseIterator which contains all the points from the "
+                         "global pareto frontier")
                     
-    criteria = Array(iotype="in",
-                    desc="Names of responses to maximize expected improvement around. \
-                    Must be NormalDistribution type.")
+    criteria = ListStr(iotype="in",dtype="str",
+                       desc="Names of responses to maximize expected improvement around. "
+                            "Must be NormalDistribution type.")
     
     predicted_values = Array(iotype="in",dtype=NormalDistribution,
-                        desc="CaseIterator which contains a NormalDistribution for each \
-                        response at a location where you wish to calculate EI.")
+                             desc="CaseIterator which contains a NormalDistribution "
+                                  "for each response at a location where you wish to "
+                                  "calculate EI.")
     
-    PInt = Float(0.0, iotype="out", desc="The probability that a candidate point \
-                                        is close to Pareto intersection")
+    PInt = Float(0.0, iotype="out", 
+                 desc="The probability that a candidate point is close to Pareto "
+                      "intersection")
 
     def _calcDist(self,p1,y_star_other):
         """Computes the minimum distance from a point in 
@@ -102,27 +105,35 @@ class ProbIntersect(Component):
         #y_star is a 2D list of pareto points belonging
         #to the same model as predicted_values
         y_star = []
-        y_star_other = []        
+        y_star_other = []
+
+        c = []
         
         #find the pareto points which are in the global_pareto but not in the primary_pareto
         other_pareto = [case for case in self.global_pareto if case not in self.primary_pareto]
-        criteria_count = len(self.criteria)
-        flat_crit = self.criteria.ravel()
-        for case in self.primary_pareto:    
-            c = [o[2] for o in case.outputs if o[0] in flat_crit]
-            if len(c) == criteria_count :
-                y_star.append(c)       
+        
+        for case in self.primary_pareto:
 
-        if not y_star: #empty y_star set means no cases met the criteria!
-            self.raise_exception('no cases in the provided primary case set had output '
-                 'matching the provided criteria, %s'%self.criteria, ValueError)
+            for objective in case.outputs:
+                for crit in self.criteria:
+                    if crit in objective[0]:
+                        #TODO: criteria needs at least two things matching
+                        #objective names in CaseIterator outputs, error otherwise
+                        c.append(objective[2])
+            if c != [] :
+                y_star.append(c)
+            c = []
+
 
         for case in other_pareto:
-            c = [o[2] for o in case.outputs if o[0] in flat_crit]
-            if len(c) == criteria_count :
-                y_star_other.append(c)          
-
-        if not y_star_other: #empty y_star set means no cases met the criteria!
-            self.raise_exception('no cases in the provided global pareto set had output '
-                 'matching the provided criteria, %s'%self.criteria, ValueError)
+            for objective in case.outputs:
+                for crit in self.criteria:
+                    if crit in objective[0]:
+                        #TODO: criteria needs at least two things matching
+                        #objective names in CaseIterator outputs, error otherwise
+                        c.append(objective[2])
+            if c != [] :
+                y_star_other.append(c)
+            c = []        
+        
         self.PInt = self._calcProbInt(y_star,y_star_other)

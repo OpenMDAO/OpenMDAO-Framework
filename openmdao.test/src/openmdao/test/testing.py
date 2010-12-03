@@ -16,9 +16,13 @@ def run_openmdao_suite():
     
     break_check = ['--help', '-h', '--all']
     
+    covpkg = False # if True, --cover-package was specified by the user
+    
     # check for args not starting with '-'
     args = sys.argv
     for i, arg in enumerate(args):
+        if arg.startswith('--cover-package'):
+            covpkg = True
         if (i>0 and not arg.startswith('-')) or arg in break_check:
             break
     else:  # no non '-' args, so assume they want to run the whole test suite
@@ -29,11 +33,18 @@ def run_openmdao_suite():
     
     if '--with-coverage' in args:
         args.append('--cover-erase')
-        if '--all' in args:
+        if '--all' in args and not covpkg:
             for pkg in tlist:
                 opt = '--cover-package=%s' % pkg
                 if opt not in args:
                     args.append(opt)
+
+            # Better coverage if we clobber cached data.
+            base = os.path.expanduser('~/.openmdao')
+            for name in ('eggsaver.dat', 'keys'):
+                path = os.path.join(base, name)
+                if os.path.exists(path):
+                    os.remove(path)
 
     # this tells it to enable the console in the environment so that
     # the logger will print output to stdout. This helps greatly when 

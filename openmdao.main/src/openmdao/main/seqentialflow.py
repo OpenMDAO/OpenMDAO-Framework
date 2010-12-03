@@ -2,8 +2,9 @@
 from enthought.traits.api import implements
 
 from openmdao.main.workflow import Workflow
-from openmdao.main.interfaces import IComponent, obj_has_interface
+from openmdao.main.interfaces import IComponent
 from openmdao.main.exceptions import RunStopped
+from openmdao.main.mp_support import has_interface
 
 __all__ = ['SequentialWorkflow']
 
@@ -33,13 +34,13 @@ class SequentialWorkflow(Workflow):
         """ Add new component(s) to the end of the workflow. """
         if isinstance(comp, list) or isinstance(comp, tuple):
             nodes = comp
-        elif obj_has_interface(comp, IComponent):
+        elif has_interface(comp, IComponent):
             nodes = [comp]
         else:
             raise TypeError("adding a non-Component to a workflow (%s)" %
                             type(comp))
         for node in nodes:
-            if obj_has_interface(node, IComponent):
+            if has_interface(node, IComponent):
                 self._nodes.append(node)
             else:
                 raise TypeError("Cannot add object of type %s to a workflow" % type(node))

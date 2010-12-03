@@ -8,7 +8,8 @@ import yaml
 try:
     from yaml import CLoader as Loader
     _libyaml = True
-except ImportError:
+# Test machines have libyaml.
+except ImportError:  #pragma no cover
     from yaml import Loader
     _libyaml = False
 
@@ -20,7 +21,7 @@ import zipfile
 from openmdao.util.log import NullLogger
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.eggsaver import SAVE_CPICKLE, SAVE_PICKLE, SAVE_YAML, \
-                                   SAVE_LIBYAML, EGG_SERVER_URL
+                                   SAVE_LIBYAML
 
 __all__ = ('load', 'load_from_eggfile', 'load_from_eggpkg',
            'check_requirements')
@@ -55,7 +56,8 @@ def load_from_eggfile(filename, entry_group, entry_name, logger=None,
 
     egg_dir, dist = _dist_from_eggfile(filename, logger, observer)
 
-    if not '.' in sys.path:
+    # Just being defensive, '.' is typically in the path.
+    if not '.' in sys.path:  #pragma no cover
         sys.path.append('.')
     orig_dir = os.getcwd()
     os.chdir(egg_dir)
@@ -96,7 +98,7 @@ def load_from_eggpkg(package, entry_group, entry_name, instance_name=None,
                  entry_name, package, os.getcwd())
     try:
         dist = pkg_resources.get_distribution(package)
-    except pkg_resources.DistributionNotFound, exc:
+    except pkg_resources.DistributionNotFound as exc:
         logger.error('Distribution not found: %s', exc)
         raise exc
     return _load_from_distribution(dist, entry_group, entry_name, instance_name,
@@ -127,15 +129,18 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
     try:
         loader = dist.load_entry_point(entry_group, entry_name)
         return loader(name=instance_name, observer=observer.observer)
-    except pkg_resources.DistributionNotFound, exc:
+    # Difficult to generate egg in test process that causes this.
+    except pkg_resources.DistributionNotFound as exc:  #pragma no cover
         observer.exception('Distribution not found: %s' % exc)
         check_requirements(dist.requires(), logger=logger, indent_level=1)
         raise exc
-    except pkg_resources.VersionConflict, exc:
+    # Difficult to generate egg in test process that causes this.
+    except pkg_resources.VersionConflict as exc:  #pragma no cover
         observer.exception('Version conflict: %s' % exc)
         check_requirements(dist.requires(), logger=logger, indent_level=1)
         raise exc
-    except Exception, exc:
+    # Difficult to generate egg in test process that causes this.
+    except Exception as exc:  #pragma no cover
         observer.exception('Loader exception:')
         logger.exception('')
         raise exc
@@ -165,11 +170,10 @@ def _dist_from_eggfile(filename, logger, observer):
             total_bytes = 0.
             for info in archive.infolist():
                 fname = info.filename
+                # Just being defensive.
                 if not fname.startswith(name) and \
-                   not fname.startswith('EGG-INFO'):
+                   not fname.startswith('EGG-INFO'):  #pragma no cover
                     continue
-                if fname.endswith('.pyc') or fname.endswith('.pyo'):
-                    continue  # Don't assume compiled OK for this platform.
                 total_files += 1
                 total_bytes += info.file_size
         else:
@@ -180,11 +184,10 @@ def _dist_from_eggfile(filename, logger, observer):
         size = 0.
         for info in archive.infolist():
             fname = info.filename
+            # Just being defensive.
             if not fname.startswith(name) and \
-               not fname.startswith('EGG-INFO'):
+               not fname.startswith('EGG-INFO'):  #pragma no cover
                 continue
-            if fname.endswith('.pyc') or fname.endswith('.pyo'):
-                continue  # Don't assume compiled OK for this platform.
 
             observer.extract(fname, files/total_files, size/total_bytes)
             dirname = os.path.dirname(fname)
@@ -224,12 +227,14 @@ def _dist_from_eggfile(filename, logger, observer):
             logger.debug("    checking for 'orphan' module: %s", mod)
             try:
                 __import__(mod)
-            except ImportError:
+            # Difficult to generate a distribution that can't be reloaded.
+            except ImportError:  #pragma no cover
                 logger.error("Can't import %s, which didn't have a known"
                              " distribution when the egg was written.", mod)
                 orphan_names.append(mod)
                 errors += 1
-        if errors:
+        # Difficult to generate a distribution that can't be reloaded.
+        if errors:  #pragma no cover
             plural = 's' if errors > 1 else ''
             msg = "Couldn't import %d 'orphan' module%s: %s." \
                   % (errors, plural, orphan_names)
@@ -262,13 +267,15 @@ def check_requirements(required, logger=None, indent_level=0):
             dist = None
             try:
                 dist = working_set.find(req)
-            except pkg_resources.VersionConflict:
+            # Difficult to generate a distribution that can't be reloaded.
+            except pkg_resources.VersionConflict:  #pragma no cover
                 dist = working_set.by_key[req.key]
                 logger.debug('%sconflicts with %s %s', indent2,
                              dist.project_name, dist.version)
                 not_avail.append(req)
             else:
-                if dist is None:
+                # Difficult to generate a distribution that can't be reloaded.
+                if dist is None:  #pragma no cover
                     logger.debug('%sno distribution found', indent2)
                     not_avail.append(req)
                 else: 
@@ -339,7 +346,8 @@ def load(instream, fmt=SAVE_CPICKLE, package=None, logger=None):
     elif fmt is SAVE_YAML:
         top = yaml.load(instream)
     elif fmt is SAVE_LIBYAML:
-        if _libyaml is False:
+        # Test machines have libyaml.
+        if _libyaml is False:  #pragma no cover
             logger.warning('libyaml not available, using yaml instead')
         top = yaml.load(instream, Loader=Loader)
     else:

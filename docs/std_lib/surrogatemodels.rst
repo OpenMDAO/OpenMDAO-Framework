@@ -10,8 +10,8 @@ SurrogateModels
 
 .. _KrigingSurrogate:
 
-*KrigingSurrogate*
-~~~~~~~~~~~~~~~~~~~
+KrigingSurrogate
+~~~~~~~~~~~~~~~~~
 
 (See the source documentation for more information on 
 :ref:`KrigingSurrogate<openmdao.lib.surrogatemodels.kriging_surrogate.py>`.)

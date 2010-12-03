@@ -31,7 +31,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_load')
 
-        self.model.driving_sim.bore = 95.
+        self.model.driving_sim.bore = 95
         self.model.driving_sim.spark_angle = -35.368341874
         self.model.driver.itmax = 1
 

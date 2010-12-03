@@ -39,10 +39,14 @@ from openmdao.lib.caserecorders.api import DBCaseRecorder,DumpCaseRecorder
 from openmdao.lib.caseiterators.api import DBCaseIterator
 
 from openmdao.examples.expected_improvement.alg_component1 import Alg_Component1
-from openmdao.examples.expected_improvement.alg_component2 import Alg_Component2
+from openmdao.examples.expected_improvement.alg_component3 import Alg_Component3
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
+
+from matplotlib import pyplot as plt, cm
+from matplotlib.pylab import get_cmap
+from numpy import meshgrid,array, pi,arange,cos,sin,linspace,remainder
 
 @add_delegate(HasStopConditions)
 class Iterator(Driver):
@@ -187,8 +191,6 @@ class Analysis(Assembly):
         #Components
         #CONCEPTS
         #CONCEPT C1
-        model_criteria = [('c1.f1','c2.f1'),('c1.f2','c2.f2')]        
-        
         self.add("c1",MetaModel())
         self.c1.surrogate = KrigingSurrogate()
         self.c1.model = Alg_Component1()
@@ -198,26 +200,27 @@ class Analysis(Assembly):
         #CONCEPT C2
         self.add("c2",MetaModel())
         self.c2.surrogate = KrigingSurrogate()
-        self.c2.model = Alg_Component2()
+        self.c2.model = Alg_Component3()
         self.c2.recorder = DBCaseRecorder(':memory:')
         self.c2.force_execute = True
         
         #SAMPLING CRITERIA CALCULATORS
         self.add("MOEI",MultiObjExpectedImprovement())
-        self.MOEI.criteria = model_criteria
+        self.MOEI.criteria = ['f1','f2']
         
         self.add("probInt",ProbIntersect())
-        self.probInt.criteria = model_criteria     
+        self.probInt.criteria = ['f1','f2']           
 
         #FILTERS
         self.add("gfilter",ParetoFilter()) #GLOBAL FILTER
-        self.gfilter.criteria = model_criteria
-        self.gfilter.case_sets = [self.c1.recorder.get_iterator(), self.c2.recorder.get_iterator()]
+        self.gfilter.criteria = ['f1','f2']
+        self.gfilter.case_sets = [self.c1.recorder.get_iterator(), 
+                                  self.c2.recorder.get_iterator()]
         #self.gfilter.case_sets = [self.c1.recorder.get_iterator()]
         self.gfilter.force_execute = True
 
         self.add("filter_c1",ParetoFilter())
-        self.filter_c1.criteria = model_criteria
+        self.filter_c1.criteria = ['f1','f2']
         self.filter_c1.case_sets = [self.c1.recorder.get_iterator()]
         self.filter_c1.force_execute = True
         
@@ -289,28 +292,6 @@ if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
     from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
-    seed = None
-    backend = None
-    figname = None
-    for arg in sys.argv[1:]:
-        if arg.startswith('--seed='):
-            import random
-            seed = int(arg.split('=')[1])
-            random.seed(seed)
-        if arg.startswith('--backend='):
-            backend = arg.split('=')[1]
-        if arg.startswith('--figname='):
-            figname = arg.split('=')[1]
-    import matplotlib
-    if backend is not None:
-        matplotlib.use(backend)
-    elif sys.platform == 'win32':
-        matplotlib.use('WxAgg')
-
-	from matplotlib import pyplot as plt, cm
-	from matplotlib.pylab import get_cmap
-	from numpy import meshgrid,array, pi,arange,cos,sin,linspace,seterr
-    seterr(all='ignore')
     
     analysis = Analysis()
     

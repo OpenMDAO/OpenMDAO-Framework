@@ -3,7 +3,8 @@ import networkx as nx
 from networkx.algorithms.traversal import strongly_connected_components
 
 from openmdao.main.seqentialflow import SequentialWorkflow
-from openmdao.main.interfaces import IDriver, obj_has_interface
+from openmdao.main.interfaces import IDriver
+from openmdao.main.mp_support import has_interface
 
 __all__ = ['Dataflow']
 
@@ -65,9 +66,9 @@ class Dataflow(SequentialWorkflow):
         
         to_add = []
         scope = self.scope
-        graph = scope.comp_graph.copy_graph()
+        graph = scope._depgraph.copy_graph()
         
-        # add any dependencies due to Expressions or ExpressionLists
+        # add any dependencies due to ExprEvaluators
         for comp in self._nodes:
             graph.add_edges_from([tup for tup in comp.get_expr_depends()])
             
@@ -81,7 +82,7 @@ class Dataflow(SequentialWorkflow):
         itersets = {}
         for comp in self._nodes:
             cname = comp.name
-            if obj_has_interface(comp, IDriver):
+            if has_interface(comp, IDriver):
                 iterset = [c.name for c in comp.iteration_set()]
                 itersets[cname] = iterset
                 removes.update(iterset)

@@ -38,6 +38,7 @@ class EngineOptimization(Assembly):
         self.driver.itmax = 30
         
         # CONMIN Objective 
+        #self.driver.add_objective('driving_sim.accel_time')
         self.driver.add_objective('driving_sim.accel_time')
         
         # CONMIN Design Variables 
