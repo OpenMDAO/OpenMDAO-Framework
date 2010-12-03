@@ -1382,8 +1382,7 @@ class OpenMDAO_Proxy(BaseProxy):
                 sock.connect(address)
             except socket.error as exc:
                 if exc.args[0] == errno.ECONNREFUSED or \
-                   exc.args[0] == errno.ENOENT or \
-                   exc.args[0] == -2:  # gaierror(-2, Name or service not known)
+                   exc.args[0] == errno.ENOENT:
                     alive = False
                 # Just being defensive.
                 else:  #pragma no cover

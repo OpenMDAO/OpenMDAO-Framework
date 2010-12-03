@@ -612,7 +612,7 @@ class TestCase(unittest.TestCase):
         # Try to connect to wrong port (assuming junk_port isn't being used!)
         address = socket.gethostname()
         junk_port = 12345
-        assert_raises(self, 'connect(self.address, junk_port, pubkey=self.key)',
+        assert_raises(self, 'connect(address, junk_port, pubkey=self.key)',
                       globals(), locals(), RuntimeError, "can't connect to ")
 
         # Try to read config from non-existent file.
