@@ -10,6 +10,7 @@ from multiprocessing import AuthenticationError, current_process
 from multiprocessing.managers import RemoteError
 import os
 import shutil
+import socket
 import sys
 import traceback
 import unittest
@@ -23,8 +24,10 @@ from openmdao.main.container import get_closest_proxy
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.interfaces import IComponent
-from openmdao.main.mp_support import has_interface, is_instance, \
-                                     read_server_config, keytype
+from openmdao.main.mp_support import has_interface, is_instance
+from openmdao.main.mp_util import read_server_config, keytype, \
+                                  read_allowed_hosts, is_legal_connection, \
+                                  generate_key_pair, _KEY_CACHE
 from openmdao.main.objserverfactory import connect, start_server, RemoteFile
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
@@ -81,7 +84,7 @@ class Box(ExecComp):
 
     @rbac('owner')
     def cause_parent_error2(self):
-        return self.parent.get_proxy()
+        return self.parent.get_trait('no-such-trait')
 
     @rbac('owner')
     def cause_parent_error3(self):
@@ -271,23 +274,41 @@ class ProtectedBox(Box):
 class TestCase(unittest.TestCase):
     """ Test distributed simulation. """
 
+    def run(self, result=None):
+        """
+        Record the :class:`TestResult` used so we can conditionally cleanup
+        directories in :meth:`tearDown`.
+        """
+        self.test_result = result or unittest.TestResult()
+        return super(TestCase, self).run(self.test_result)
+
     def setUp(self):
         """ Start server process. """
         global _SERVER_ID
+        _SERVER_ID += 1
+
+        self.n_errors = len(self.test_result.errors)
+        self.n_failures = len(self.test_result.failures)
+
+        # Ensure we control directory cleanup.
+        self.keepdirs = os.environ.get('OPENMDAO_KEEPDIRS', '0')
+        os.environ['OPENMDAO_KEEPDIRS'] = '1'
 
         # Start each server process in a unique directory.
-        _SERVER_ID += 1
         server_dir = 'Factory_%d' % _SERVER_ID
         if os.path.exists(server_dir):
             shutil.rmtree(server_dir)
         os.mkdir(server_dir)
         os.chdir(server_dir)
+        self.server_dirs = [server_dir]
         self.server = None
         try:
             logging.debug('')
             logging.debug('tester pid: %s', os.getpid())
             logging.debug('starting server...')
-            self.server = start_server()
+            # Exercise both AF_INET and AF_UNIX/AF_PIPE.
+            port = -1 if _SERVER_ID & 1 else 0
+            self.server = start_server(port=port)
             self.address, self.port, self.key = read_server_config('server.cfg')
             logging.debug('server pid: %s', self.server.pid)
             logging.debug('server address: %s', self.address)
@@ -296,28 +317,27 @@ class TestCase(unittest.TestCase):
         finally:
             os.chdir('..')
 
-        # Force a key generation.
-        if _SERVER_ID == 1:
-            keyfile = os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
-            if os.path.exists(keyfile):
-                os.remove(keyfile)
-
         set_credentials(Credentials())
         self.factory = connect(self.address, self.port, pubkey=self.key)
         logging.debug('factory: %r', self.factory)
 
     def tearDown(self):
         """ Shut down server process. """
-        if self.factory is not None:
-            self.factory.cleanup()
-        if self.server is not None:
-            logging.debug('terminating server pid %s', self.server.pid)
-            self.server.terminate(timeout=10)
-            self.server = None
-        keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
-        if not keep_dirs:
-            for path in glob.glob('Factory_*'):
-                shutil.rmtree(path)
+        try:
+            if self.factory is not None:
+                self.factory.cleanup()
+            if self.server is not None:
+                logging.debug('terminating server pid %s', self.server.pid)
+                self.server.terminate(timeout=10)
+                self.server = None
+
+            # Cleanup only if there weren't any new errors or failures.
+            if len(self.test_result.errors) == self.n_errors and \
+               len(self.test_result.failures) == self.n_failures:
+                for server_dir in self.server_dirs:
+                    shutil.rmtree(server_dir)
+        finally:
+            os.environ['OPENMDAO_KEEPDIRS'] = self.keepdirs
 
     def test_1_client(self):
         logging.debug('')
@@ -439,7 +459,7 @@ class TestCase(unittest.TestCase):
         try:
             box.cause_parent_error2()
         except RemoteError as exc:
-            msg = "AttributeError: method 'get_proxy' of"
+            msg = "AttributeError: method 'get_trait' of"
             logging.debug('msg: %s', msg)
             logging.debug('exc: %s', exc)
             self.assertTrue(msg in str(exc))
@@ -517,6 +537,7 @@ class TestCase(unittest.TestCase):
             shutil.rmtree(server_dir)
         os.mkdir(server_dir)
         os.chdir(server_dir)
+        self.server_dirs.append(server_dir)
         try:
             logging.debug('starting server (authkey %s)...', authkey)
             server = start_server(authkey=authkey, timeout=30)
@@ -560,11 +581,23 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_misc')
 
-        # Try releasing a server twice.
+        # Try releasing a server twice. Depending on timing, this could
+        # result in a ValueError trying to identify the server to release or
+        # a RemoteError where the request can't be unpacked. The timing seems
+        # to be sensitive to AF_INET/AF_UNIX connection type.
         server = self.factory.create('')
         self.factory.release(server)
-        assert_raises(self, 'self.factory.release(server)', globals(), locals(),
-                      ValueError, "can't identify server ")
+        msg1 = "can't identify server "
+        msg2 = "RuntimeError: Can't decrypt/unpack request." \
+               " This could be the result of referring to a dead server."
+        try:
+            self.factory.release(server)
+        except ValueError as exc:
+            self.assertEqual(str(exc)[:len(msg1)], msg1)
+        except RemoteError as exc:
+            self.assertTrue(msg2 in str(exc))
+        else:
+            self.fail('Expected ValueError or RemoteError')
 
         # Check false return of has_interface().
         self.assertFalse(has_interface(self.factory, HasObjectives))
@@ -577,9 +610,10 @@ class TestCase(unittest.TestCase):
                       globals(), locals(), RuntimeError, msg)
         set_credentials(credentials)
 
-        # Try to connect to wrong port (assuming port+1 isn't being used!)
-        port = self.port + 1
-        assert_raises(self, 'connect(self.address, port, pubkey=self.key)',
+        # Try to connect to wrong port (assuming junk_port isn't being used!)
+        address = socket.gethostname()
+        junk_port = 12345
+        assert_raises(self, 'connect(address, junk_port, pubkey=self.key)',
                       globals(), locals(), RuntimeError, "can't connect to ")
 
         # Try to read config from non-existent file.
@@ -591,6 +625,64 @@ class TestCase(unittest.TestCase):
         code = compile('3 + 4', '<string>', 'eval')
         assert_raises(self, 'self.factory.echo(code)', globals(), locals(),
                       cPickle.PicklingError, "Can't pickle <type 'code'>")
+
+        # Force a key generation.
+        key_file = os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
+        if os.path.exists(key_file):
+            os.remove(key_file)
+        credentials = Credentials()
+        if credentials.user in _KEY_CACHE:
+            del _KEY_CACHE[credentials.user]
+        generate_key_pair(credentials)
+
+    def test_6_allowed_hosts(self):
+        logging.debug('')
+        logging.debug('test_allowed_hosts')
+
+        hostname = socket.gethostname()
+        host_ipv4 = socket.gethostbyname(hostname)
+        dot = host_ipv4.rfind('.')
+        domain_ipv4 = host_ipv4[:dot+1]
+
+        with open('hosts.allow', 'w') as out:
+            out.write("""
+# Local host IPv4.
+%s
+
+# Local domain IPv4.
+%s
+
+# Local host name.
+%s
+
+# Gibberish.
+$^&*
+""" % (host_ipv4, domain_ipv4, hostname))
+
+        try:
+            allowed_hosts = read_allowed_hosts('hosts.allow')
+        finally:
+            os.remove('hosts.allow')
+
+        # Check read data.
+        self.assertEqual(len(allowed_hosts), 3)
+        self.assertEqual(allowed_hosts[0], host_ipv4)
+        self.assertEqual(allowed_hosts[1], domain_ipv4)
+        self.assertEqual(allowed_hosts[2], host_ipv4)
+
+        # Check AF_INET addresses.
+        logger = logging.getLogger()
+        self.assertTrue(is_legal_connection((host_ipv4, 0),
+                                            allowed_hosts, logger))
+        domain_host = domain_ipv4 + '123'
+        self.assertTrue(is_legal_connection((domain_host, 0),
+                                            allowed_hosts, logger))
+        self.assertFalse(is_legal_connection(('0.0.0.0', 0),
+                                            allowed_hosts, logger))
+
+        # Check AF_UNIX address.
+        self.assertTrue(is_legal_connection('/tmp/pipe',
+                                            allowed_hosts, logger))
 
 
 if __name__ == '__main__':
