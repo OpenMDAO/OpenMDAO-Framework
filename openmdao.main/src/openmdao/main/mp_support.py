@@ -190,7 +190,7 @@ def _generate_key_pair(credentials, logger=None):
                 if current_user:
                     # Save in protected file.
                     if sys.platform == 'win32' and not _HAVE_PYWIN32: #pragma no cover
-                        logger.debug('No pywin32, not saving keyfile')
+                        logger.warning('No pywin32, not saving keyfile')
                     else:
                         key_dir = os.path.dirname(key_file)
                         if not os.path.exists(key_dir):
@@ -1015,7 +1015,7 @@ class OpenMDAO_Manager(BaseManager):
             self._pubkey = reader.recv()
         reader.close()
         et = time.time() - start
-        logging.debug('Server process %d startup in %.2f', et)
+        logging.debug('Server process %d startup in %.2f', pid, et)
 
         # Register a finalizer.
         self._state.value = State.STARTED

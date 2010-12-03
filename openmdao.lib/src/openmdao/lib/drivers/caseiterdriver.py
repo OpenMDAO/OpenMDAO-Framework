@@ -243,7 +243,7 @@ class CaseIterDriverBase(Driver):
                 # Process any pending events.
                 while self._busy():
                     try:
-                        name, result, exc = self._reply_q.get(True, 0.1)
+                        name, result, exc = self._reply_q.get(True, 0.01)
                     except Queue.Empty:
                         break  # Timeout.
                     else:
