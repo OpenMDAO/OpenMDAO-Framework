@@ -968,7 +968,7 @@ class OpenMDAO_Manager(BaseManager):
 
         # Get address of server.
         writer.close()
-        for retry in range(5):
+        for retry in range(60):
             if reader.poll(1):
                 break
             if not self._process.is_alive():

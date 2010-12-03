@@ -118,15 +118,15 @@ class Analysis(Assembly):
         self.iter.add_stop_condition('EI.EI <= .0001')
         
         #Iteration Heirarchy
-        self.driver.workflow.add([self.DOE_trainer,self.iter])
+        self.driver.workflow.add(['DOE_trainer', 'iter'])
         
-        self.DOE_trainer.workflow.add(self.branin_meta_model)
+        self.DOE_trainer.workflow.add('branin_meta_model')
         
         self.iter.workflow = SequentialWorkflow()
-        self.iter.workflow.add([self.filter, self.EI_opt, self.retrain])
+        self.iter.workflow.add(['filter', 'EI_opt', 'retrain'])
         
-        self.EI_opt.workflow.add([self.branin_meta_model,self.EI])
-        self.retrain.workflow.add(self.branin_meta_model)
+        self.EI_opt.workflow.add(['branin_meta_model','EI'])
+        self.retrain.workflow.add('branin_meta_model')
         
         #Data Connections
         self.connect("filter.pareto_set","EI.best_case")

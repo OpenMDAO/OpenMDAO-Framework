@@ -27,7 +27,7 @@ class OptimizationConstrained(Assembly):
         self.add('driver', CONMINdriver())
         
         # Driver process definition
-        self.driver.workflow.add(self.paraboloid)
+        self.driver.workflow.add('paraboloid')
         
         # CONMIN Flags
         self.driver.iprint = 0

@@ -215,7 +215,7 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('comp', ParaboloidComponent())
         self.top.add('driver', NEWSUMTdriver())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
         self.top.driver.ifd = 4 
         self.top.driver.iside = numpy.array( [3,3], dtype=int )
@@ -298,7 +298,7 @@ class NEWSUMTdriverParaboloidWithLinearConstraintTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('comp', ParaboloidComponent())
         self.top.add('driver', NEWSUMTdriver())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
         self.top.driver.ifd = 4 
         self.top.driver.iside = numpy.array( [3,3], dtype=int )
@@ -341,7 +341,7 @@ class NEWSUMTdriverParaboloidWithNonLinearConstraintTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('comp', ParaboloidComponent())
         self.top.add('driver', NEWSUMTdriver())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 300
         self.top.driver.ifd = 4 
         self.top.driver.iside = numpy.array( [3,3], dtype=int )
@@ -384,7 +384,7 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('comp', ConstrainedBettsComponent())
         self.top.add('driver', NEWSUMTdriver())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 3000
         # use finite differences for gradients for objective
         #      and constraint functions
@@ -434,7 +434,7 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('comp', OptRosenSuzukiComponent())
         self.top.add('driver', NEWSUMTdriver())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
         self.top.driver.ifd = 4
         self.top.driver.iside = numpy.array( [3,3,3,3], dtype=int )
@@ -487,7 +487,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('comp', Example1FromManualComponent())
         self.top.add('driver', NEWSUMTdriver())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 100
         self.top.driver.ifd = 4
         self.top.driver.iside = numpy.array( [1,1], dtype=int )

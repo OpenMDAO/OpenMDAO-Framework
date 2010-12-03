@@ -303,7 +303,7 @@ the Python file ``optimization_unconstrained.py``:
             self.add('paraboloid', Paraboloid())
 
             # Driver process definition
-            self.driver.workflow.add(self.paraboloid)
+            self.driver.workflow.add('paraboloid')
 
             # CONMIN Flags
             self.driver.iprint = 0
@@ -393,7 +393,7 @@ that contains a list of the components that the driver tells to run. We can add 
 .. testcode:: simple_model_Unconstrained_pieces
 
             # Iteration Hierarchy
-            self.driver.workflow.add(self.paraboloid)
+            self.driver.workflow.add('paraboloid')
 
 For this problem, you want to minimize ``f_xy``. In optimization, this is called
 the *objective function*. In OpenMDAO, you define the ``objective`` function by

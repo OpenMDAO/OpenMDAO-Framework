@@ -89,7 +89,7 @@ class SellarBroyden(Assembly):
         
         self.add('dis1', SellarDiscipline1())
         self.add('dis2', SellarDiscipline2())
-        self.driver.workflow.add([self.dis1, self.dis2])
+        self.driver.workflow.add(['dis1', 'dis2'])
 
         self.connect('dis1.y1','dis2.y1')
         
@@ -162,7 +162,7 @@ class DumbAssembly(Assembly):
         self.add('driver', BroydenSolver())
         
         self.add('dis1', DumbComp())
-        self.driver.workflow.add([self.dis1])
+        self.driver.workflow.add(['dis1'])
 
         # solver connections
         self.driver.add_parameter('dis1.x1', low=-9.e99, high=9.e99)
@@ -186,7 +186,7 @@ class MIMOBroyden(Assembly):
         self.add('driver', BroydenSolver())
         
         self.add('dis1', MIMOEquation())
-        self.driver.workflow.add([self.dis1])
+        self.driver.workflow.add(['dis1'])
 
         # solver connections
         self.driver.add_parameter('dis1.x1', low=-9.e99, high=9.e99)
