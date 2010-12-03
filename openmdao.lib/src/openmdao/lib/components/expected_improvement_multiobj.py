@@ -16,7 +16,7 @@ class MultiObjExpectedImprovement(Component):
                     desc="CaseIterator which contains only Pareto optimal cases \
                     according to criteria")
     
-    criteria = ListStr(iotype="in",dtype="str",
+    criteria = Array(iotype="in",
                     desc="Names of responses to maximize expected improvement around. \
                     Must be NormalDistribution type.")
     
@@ -99,21 +99,21 @@ class MultiObjExpectedImprovement(Component):
         the model at a given point.
         """
         
+        criteria_count = len(self.criteria)
+        
+        flat_crit= self.criteria.ravel()
+        
         #y_star is a 2D list of pareto points
         y_star = []
         c = []
         
         for case in self.best_cases:
-
-            for objective in case.outputs :
-                for crit in self.criteria: 
-                    if crit in objective[0]:
-                        #TODO: criteria needs at least two things matching
-                        #objective names in CaseIterator outputs, error otherwise
-                        c.append(objective[2])
-            if c != [] :
+            c = [o[2] for o in case.outputs if o[0] in flat_crit]
+            if len(c) == criteria_count :
                 y_star.append(c)
-            c = []
+        if not y_star: #empty y_star set means no cases met the criteria!
+            self.raise_exception('no cases in the provided case_set had output '
+                 'matching the provided criteria, %s'%self.criteria, ValueError)
         mu = [objective.mu for objective in self.predicted_values]
         sig = [objective.sigma for objective in self.predicted_values]
 
