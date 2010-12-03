@@ -18,7 +18,7 @@ def caseiter_to_dict(caseiter, varnames, include_errors=False):
     varnames: list[str]
         iterator of names of variables to be retrieved.
         
-    include_errors: bool, optional [False]
+    include_errors: bool (optional) [False]
         If True, include data from cases that reported an error.
         
     """

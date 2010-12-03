@@ -6,31 +6,236 @@
 Style Guide 
 ===========
 
-This document provides some general guidelines for writing documentation. It is by no means
-inclusive.
+This document provides some general guidelines for writing documentation, both code and user
+documents. It is by no means inclusive.
 
 For Python coding conventions, please refer to the `Python Style Guide
 <http://www.python.org/dev/peps/pep-0008/>`_.
 
-.. index:: docstrings standard
+.. index:: docstring standard
 
 Standard for Coding Docstrings
 ------------------------------
 
-A documentation string (docstring) is a string that describes a module, function, class, or
-method definition. NumPy, SciPy, and SciKits already follow a common convention for docstrings
-that provides consistency. Since an acceptable standard already exists, the OpenMDAO project will
-follow it.
+OpenMDAO uses documentation strings, or `docstrings,` written in `reStructuredText
+<http://docutils.sourceforge.net/rst.html>`_ (reST) to document code. Please follow the docstring
+standard described below. 
 
-Please refer to NumPy's `Docstring Standard
-<http://projects.scipy.org/numpy/wiki/CodingStyleGuidelines#docstring-standard>`_ when coding
-docstrings.
+We would like to acknowledge the NumPy/SciPy standard, which we referred to
+frequently when developing our own standard.
 
+
+*Docstring*
++++++++++++
+
+A docstring describes a module, function, class, or method definition. A docstring is a special
+attribute of an object (``object.__doc__``) and, for consistency, is surrounded by triple
+double-quotes, for example::
+
+   """A simple iteration driver. Basically runs a workflow, passing the output 
+   to the input for the next iteration. Relative change and number of 
+   iterations are used as termination criteria. 
+   """
+
+A docstring may be one line or spread over several lines. Line length should not exceed 80 characters.
+
+
+*Sections of a Docstring*
+++++++++++++++++++++++++++
+
+The following sections can be included in a docstring, but in many cases, are optional. 
+
+
+1. **Summary (required)**
+
+   You need at least a one-line summary that does not use variable names or the function name, for
+   example::
+
+     class ExternalCode(Component):
+          """ Run an external code as a component. """
+
+   You may want a longer summary (a few sentences) to clarify functionality. Do not discuss
+   implementation details or background theory in the summary.
+
+
+2. **Parameters (required)**
+
+   These are descriptions of the function arguments, keywords, and their respective types. Parameters
+   should follow the docstring summary. For the parameter types, be as precise as possible. A few
+   examples of parameters, their types, and descriptions follow::
+
+     *Parameters*
+       
+     value: ndarray
+         Array of values to insert.
+        
+     row_start: integer
+         Starting row for inserting the array. This is relative
+         to the anchor, and can be negative.
+        
+     row_end: integer
+         Final row for the array, relative to the anchor.
+        
+     field_start: integer
+         Starting field in the given row_start as denoted by 
+         delimiter(s). 
+        
+     field_end: integer
+         The final field the array uses in row_end. 
+         We need this to figure out if the template is too small or large.
+        
+     sep: str (optional) (Currently unsupported)
+         Separator to append between values if we go beyond the template.
+     
+   
+   - Do not put a space before the colon. 
+
+   - Indent the description four spaces. 
+   
+   - For consistency, please capitalize the first word of the description and put a period at the end,
+     even though it is not a complete sentence. In many cases, the first part of the description,
+     although a sentence fragment, will be followed by a sentence.  
+
+  In the above example, we italicized *Parameters* (indicated by the single asterisk on either side of
+  the word) and used it as a heading for the parameters section. We did this merely to show how it can
+  be done. Parameters and returns should be clear to users, so section headings aren't required. On
+  the other hand, you might want them for the optional sections.    
+
+  If a keyword argument is not necessary, put ``optional`` (lower case) after it in parentheses::
+
+     x: int (optional)
+
+  Optional keyword parameters have default values that are displayed in brackets as part of the
+  function signature::
+
+     include_errors: bool (optional) [False] 
+  
+  Default values can also be explained in the description::
+
+    scaler: float (optional) 
+        Multiplicative scale factor applied to both sides of the constraint's boolean expression. It
+	should be a positive nonzero value. Default is unity (1.0).
+
+  When a parameter can assume only one of a fixed set of values, those values can be listed in
+  braces::
+
+     order: {'C', 'F', 'A'}
+         Description of order.         
+
+  When two or more input parameters have exactly the same type, shape, and description, they can
+  be combined::
+
+    x1, x2: array_like
+        Input arrays, description of x1, x2.  
+	 
+   
+3. **Returns (required, if any)**
+
+   Any returns should follow the parameters. Use the same format as for parameters.
+   
+
+4. **Raises (optional)**
+
+   This section lists errors that get raised and under what conditions::
+      
+     *Raises*
+     
+     LinAlgException
+          If the matrix is not numerically invertible.
+   
+   You may want to include this section for errors that aren't obvious or that have a good chance of
+   getting raised.
+
+
+5. **Notes (optional)**
+
+   This section is for additional information about the code. Include any information that will be
+   helpful to users.
+
+6. **References (optional)**
+
+   References should augment the docstring and not be required to understand it. If you have a *Notes*
+   section and happened to cite references in it using the reST text ``[1]_, [2]_``, you can
+   include the actual references in this section. For example, to cite the article below, include it
+   as follows::
+
+       .. [1] Keane, A. J., "Statistical Improvement Criteria for Use in Multiobjective Design
+	  Optimization," AIAA JOURNAL, Vol. 44, 2006, pp. 879-891.
+
+   It will be rendered as:
+
+   .. [1] Keane, A. J., "Statistical Improvement Criteria for Use in Multiobjective Design
+	  Optimization," AIAA JOURNAL, Vol. 44, 2006, pp. 879-891.
+
+   If possible, avoid referencing sources of a temporary nature, such as web pages. Follow the
+   `citation format of the IEEE <http://www.ieee.org/pubs/transactions/auinfo03.pdf>`_, which states
+   that references are numbered, starting from one, in the order in which they are cited.
+
+
+7. **Examples (optional)**
+
+   This section should illustrate usage. Use the Python doctest format.
+
+   When providing multiple examples, separate them by blank lines. Leave blank lines
+   above and below the comments explaining the examples::
+
+     >>> np.add(1, 2)
+     3
+
+     Comment explaining the second example
+
+     >>> np.add([1, 2], [3, 4])
+     array([4, 6])
+
+   You do not need to use the doctest markup ``<BLANKLINE>`` to indicate empty lines in the
+   output.
+   
+   
+*Other Information*
++++++++++++++++++++
+   
+- When referring to functions in the same sub-module, no prefix is needed; the tree is searched
+  upwards for a match.
+
+- Add prefixes to functions from other sub-modules appropriately. For example, when documenting
+  the ``scipy.random`` module, refer to a function in ``scipy.fft`` by::
+
+    fft.fft2: 2-D fast discrete Fourier transform
+
+- When referring to an entirely different module::
+
+    scipy.random.norm: Random variates, PDFs, etc.
+
+- If there are points in the docstring that deserve special emphasis, you can use the reST directives
+  for a note or warning. Syntax is:
+
+  ::
+
+    .. warning:: Warning text.
+
+    .. note:: Note text.
+
+  It is seldom necessary to use either directive, but one situation in which a warning might be useful
+  is for marking a known bug that has not yet been fixed.
+
+  .. note:: A note directive is different from the *Notes* section of a docstring. A note will
+     appear in a gray box.
+     
+- Line spacing and indentation are important. New paragraphs are marked with a blank line. Indentation in
+  paragraphs indicates that the output is indented. Sphinx will complain if a paragraph appears to be
+  indented for no reason.
+
+
+General Documentation Issues
+----------------------------
 
 .. index:: underlines in reST
 
-Underlines (and Overlines)
---------------------------
+*Underlines (and Overlines)*
+++++++++++++++++++++++++++++
+
+This section pertains only to the user documents, not source code. You should never use underlines
+in source code as Sphinx will complain. 
 
 **- Document title:**
 
@@ -115,8 +320,8 @@ The tech writer will review new documentation to make sure you are consistent.
 Although, if you are not consistent, Sphinx will complain when you try to build. 
 
          
-Italics
--------
+*Italics*
+++++++++++
 
 Use italics for the following:
 
@@ -133,33 +338,33 @@ Use italics for the following:
 
 .. index:: Python; capitalization
 
-Capitalization 
----------------
+*Capitalization* 
+++++++++++++++++
 
-*Class Names*
-+++++++++++++
+Class Names
+~~~~~~~~~~~~~
 
 Always capitalize class names (e.g., Component, Assembly, Driver, Engine, etc.).
 Sometimes, a  class represents a concept having the same name. In that case, the name
 of the concept would generally *not* be capitalized. 
 
-*Fortran*
-+++++++++
+Fortran
+~~~~~~~~~
 
 Capitalize only the first letter of *Fortran* unless you are
 referring to a version earlier than Fortran 90, when it was known as FORTRAN (e.g.,
 FORTRAN 77).
 
 
-*HTML*
-++++++
+HTML
+~~~~~~
 
 This initialism stands for *HyperText Markup Language* and should be typed in
 all caps.
 
 
-*Python* 
-++++++++
+Python 
+~~~~~~
 
 Capitalize *Python* when referring to the programming language, for example, a
 *Python* module. However, *python* should be lower case when it refers to an
@@ -169,15 +374,15 @@ This rule also applies to other programming languages or software programs; for 
 ``Enthought, Inc.`` is capitalized, but ``enthoughts.traits.api`` is not. 
 
 
-*reStructuredText*
-++++++++++++++++++
+reStructuredText
+~~~~~~~~~~~~~~~~~
 
 Please capitalize the appropriate letters and type it as one word:
 reStructuredText.
 
 
-*website*
-+++++++++
+website
+~~~~~~~
 
 In our OpenMDAO documents, we will not capitalize *website* but use all lower case letters
 (one word). Please **do not** use any of the following variants: *Web site, web site,* or
@@ -189,8 +394,8 @@ unhyphenated forms as they become more familiar (e.g., email, online). The main 
 consistency, so please be consistent and use *website.* 
 
 
-Numbers 
--------
+*Numbers*
++++++++++
 
 *  Write out numbers between zero and nine (0--9) when they are modifiers (two
    assemblies). 
@@ -200,8 +405,8 @@ Numbers
 
 .. _Using-Inline-Literal-Text:
 
-Inline Literal Text
---------------------
+*Inline Literal Text*
++++++++++++++++++++++
 
 Inline literal test is designated by back quotes (the same computer key as the
 tilde) enclosing the specified text. ``Inline literal text`` can be used in many
@@ -226,8 +431,8 @@ Additionally, if a word or phrase contains an underscore (_) or a dot (.), use l
 is easier to read, e.g., ``_init_`` function, ``self.driver``, and ``optimization_constrained.py``.
 
 
-Abbreviations and Acronyms
---------------------------
+*Abbreviations and Acronyms*
++++++++++++++++++++++++++++++
 
 An acronym is a pronounceable word formed from the  initial letter or letters of major
 parts of a compound term. An abbreviation is usually formed in the same way but is not
@@ -283,8 +488,8 @@ index for all OpenMDAO user documents.
 3D - Abbreviation for three-dimensional. No hyphen in the abbreviation.
 
 
-Hyphens and Dashes
-------------------
+*Hyphens and Dashes*
++++++++++++++++++++++
 
 **- Hyphen:**
 
@@ -324,8 +529,8 @@ Use an en dash (--) for the following:
 
 In reST an en dash is formed by typing two hyphens (minus signs).
 
-Comma (in a Compound Sentence)
--------------------------------
+*Comma (in a Compound Sentence)*
+++++++++++++++++++++++++++++++++++
 
 * Use a comma before "and" when you have a compound sentence, for example:
 
@@ -345,13 +550,4 @@ Comma (in a Compound Sentence)
     
  | In this case the sentence has one subject *(some)* but two verbs *(were derived*
    and *are*). It is not a compound sentence.
-
-
-Login vs Log in
----------------
-
-The verb is *Log in* and *Log into* as "Log *in* using the password provided" or
-"Log *into* the MDAO eRoom." The noun or adjective is *Login,* e.g., "You will need
-valid *Login* credentials to use the system." (not logon, log, log-in, etc.)
-
 

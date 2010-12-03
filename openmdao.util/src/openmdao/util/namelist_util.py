@@ -359,34 +359,34 @@ class Namelist(object):
     def load_model(self, rules=None, ignore=None, single_group=-1):
         """Loads the current deck into an OpenMDAO component.
         
-        rules: dict of lists of strings (Optional)
-        An optional dictionary of rules can be passed if the component has a
-        hierarchy of containers for its input variables. If no rules dictionary
-        is passed, load_model will attempt to find each namelist variable in the
-        top level of the model hierarchy.
+        rules: dict of lists of strings (optional)
+             An optional dictionary of rules can be passed if the component has a
+             hierarchy of containers for its input variables. If no rules dictionary
+             is passed, load_model will attempt to find each namelist variable in the
+             top level of the model hierarchy.
         
-        ignore: list of strings (Optional)
-        List of variable names that can safely be ignored.
+        ignore: list of strings (optional)
+             List of variable names that can safely be ignored.
         
-        single_group: integer (Optional)
-        Group id number to use for processing one single namelist group. Useful
-        if extra processing is needed, or if multiple groups have the same name.
+        single_group: integer (optional)
+             Group id number to use for processing one single namelist group. Useful
+             if extra processing is needed, or if multiple groups have the same name.
         
-        Returns a tuple containing the following values:
-        (empty_groups, unlisted_groups, unlinked_vars). These need to be
-        examined after calling load_model to make sure you loaded every
-        variable into your model.
+             Returns a tuple containing the following values:
+             (empty_groups, unlisted_groups, unlinked_vars). These need to be
+             examined after calling load_model to make sure you loaded every
+             variable into your model.
         
         empty_groups: ordereddict( integer : string )
-        Names and ID number of groups that don't have cards. This includes 
-        strings found at the top level that aren't comments; these need to
-        be processed by your wrapper to determine how the information fits
-        into your component's variable hierarchy.
+             Names and ID number of groups that don't have cards. This includes 
+             strings found at the top level that aren't comments; these need to
+             be processed by your wrapper to determine how the information fits
+             into your component's variable hierarchy.
         
         unlisted_groups: ordereddict( integer : string )
-        This dictionary includes the names and ID number of groups that have
-        variables that couldn't be loaded because the group wasn't mentioned
-        in the rules dictionary.
+             This dictionary includes the names and ID number of groups that have
+             variables that couldn't be loaded because the group wasn't mentioned
+             in the rules dictionary.
         
         unlinked_vars: list containing all variable names that weren't found
         in the component.

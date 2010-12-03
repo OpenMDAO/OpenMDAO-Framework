@@ -1102,10 +1102,10 @@ class Container(HasTraits):
         pathname: str
             Pathname of the desired trait.  May contain dots.
             
-        iotype: str, optional
+        iotype: str (optional)
             Expected iotype of the trait.
             
-        trait: TraitType, optional
+        trait: TraitType (optional)
             Trait to be used for validation
         """
         if pathname.startswith('parent.'):
