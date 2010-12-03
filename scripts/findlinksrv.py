@@ -5,7 +5,7 @@ http://pythonpaste.org/webob/file-example.html.
 Usage: python findlinksrv.py --dir=<top level dir> --log=<my log file> --port=<port>
 
 dir can have any structure. The server will recursively search for any python
-distributions under the top directory.
+distributions (actually, anything ending in .egg or .tar.gz) under the top directory.
 
 The server will automatically handle the addition of new distributions to the 
 distribution directory.
@@ -201,10 +201,6 @@ def setup_logger(fname):
     logging.getLogger('').setLevel(logging.INFO)
 
 
-def check_distdir(name):
-    if name is None or os.path.isdir(name) is False:
-        raise RuntimeError(str(name)+' is not a directory')
-
 if __name__ == '__main__': # pragma no cover
     parser = OptionParser()
     parser.add_option("","--log", action="store", type="string", dest="log",
@@ -229,5 +225,6 @@ if __name__ == '__main__': # pragma no cover
     app = DistServer(distdir)
     
     httpserver.serve(app, host=platform.uname()[1], port=options.port)
+    
 
 

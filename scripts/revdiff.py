@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-This script runs a diff program (meld2.4 is the default) on different revisions
+This script runs a diff program (meld is the default) on different revisions
 of a file in a bazaar repository.
 """
 
@@ -15,7 +15,7 @@ parser = OptionParser()
 parser.add_option("-r", "--revision", action="append", type="string", dest='revnos', 
                   help="revision number") 
 parser.add_option("-d", "--differ", action="store", type="string", dest='differ',
-                  help="diff program", default="meld2.4") 
+                  help="diff program", default="meld") 
 
 (options, args) = parser.parse_args()
 
@@ -39,15 +39,14 @@ elif len(revnos) == 1:  # diff given revno with latest
     revnos.append(-1)
     
 try:
-    cmd2 = options.differ
+    cmd = options.differ
     for num in revnos:
-        name = os.path.join(dirname, args[0] + ".%s" % num)
-        cmd2 = cmd2 + ' ' + name
-        cmd = "bzr cat -r %s" % num + " " + args[0] + " > " + name
-        os.system(cmd)
+        name = os.path.join(dirname, "%s.%s" % (args[0], num))
+        cmd = cmd + ' ' + name
+        os.system("bzr cat -r %s %s > %s" % (num, args[0], name))
 
     # perform the diff
-    os.system(cmd2)
+    os.system(cmd)
 finally:
     shutil.rmtree(dirname)
 

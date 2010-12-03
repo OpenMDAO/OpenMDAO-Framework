@@ -11,10 +11,7 @@ The user will have the option to update the file_x.OTHER or the file_x.THIS
 version  of file_x, and will be prompted after the graphical merge to determine
 which one should be used to overwrite file_x.
 
-NOTE: meld2.4 must be in your path for this to work!
-
-
-usage: gmerge.py filename
+usage: conrez.py filename
 
 """
 
@@ -74,7 +71,7 @@ def get_repo_dir():
     abspath = os.path.abspath(os.getcwd())    
 
     
-def gmerge(conflict_file, merge_tool='meld2.4'):   
+def gmerge(conflict_file, merge_tool):
     """Perform a graphical merge using the specified merge tool, then
     call bzr resolve on the merged file if confirmed by the user.
     """ 
@@ -172,7 +169,7 @@ def gmerge(conflict_file, merge_tool='meld2.4'):
     os.remove(tmp_this_file)
 
 
-def merge_all():
+def merge_all(merge_tool):
     startdir = os.getcwd()
     path = os.path.abspath('.')
     rest = path
@@ -193,20 +190,21 @@ def merge_all():
         for line in out.splitlines():
             if line.startswith('Text conflict'):
                 name = line.split()[3]
-                gmerge(name)
+                gmerge(name, merge_tool)
     finally:
         os.chdir(startdir)
 
 
 if __name__ == '__main__':
     parser = OptionParser()
-#    parser.add_option("-a","--all", action="store_true", dest="all",
-#         help="if set, graphically merge all conflict files in the repository")
     parser.add_option("-f", "", action="store", type="string", dest="fname",
                       help="specify name of file to merge manually")
     parser.add_option("","--log", action="store", type="string", dest="log",
                       help="specify log file name (defaults to gmerge.log)",
                       default='gmerge.log')
+    parser.add_option("","--using", action="store", type="string", dest="merge_tool",
+                      help="specify the merge tool to use",
+                      default='meld')
     (options, args) = parser.parse_args(sys.argv[1:])
 
 
@@ -232,7 +230,7 @@ if __name__ == '__main__':
     app = GmergeApp(redirect = False)
     
     if options.fname:
-        gmerge(options.fname)
+        gmerge(options.fname, options.merge_tool)
     else:
-        merge_all()
+        merge_all(options.merge_tool)
 
