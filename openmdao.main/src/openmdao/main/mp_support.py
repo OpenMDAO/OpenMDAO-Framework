@@ -927,7 +927,6 @@ class OpenMDAO_Manager(BaseManager):
         if address is None and sys.platform == 'win32' and not _HAVE_PYWIN32:
             ip_addr = socket.gethostbyname(socket.gethostname())
             address = (ip_addr, 0)
-            allowed_hosts = [ip_addr]
 
         super(OpenMDAO_Manager, self).__init__(address, authkey, serializer)
         self._pubkey = pubkey
