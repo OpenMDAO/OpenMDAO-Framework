@@ -339,7 +339,7 @@ class OpenMDAO_Server(Server):
                 except KeyError:  #pragma no cover
                     msg = 'No object for ident %s' % ident
                     self._logger.error(msg)
-                    raise KeyError('%s %s: %s' % (self.host, self.name, msg))
+                    raise KeyError('%s %r: %s' % (self.host, self.name, msg))
 
                 if methodname not in exposed:
                     if methodname == '__getattr__':
@@ -772,7 +772,7 @@ class OpenMDAO_Manager(BaseManager):
             self._pubkey = reader.recv()
         reader.close()
         et = time.time() - start
-        logging.debug('Server process %d startup in %.2f', et)
+        logging.debug('Server process %d startup in %.2f', pid, et)
 
         # Register a finalizer.
         self._state.value = State.STARTED

@@ -262,7 +262,7 @@ class ResourceAllocationManager(object):
             allocator.release(server)
         # Just being defensive.
         except Exception as exc:  #pragma no cover
-            self._logger.error("Can't release %r: %s", server_info['name'], exc)
+            self._logger.error("Can't release %r: %r", server_info['name'], exc)
         server._close.cancel()
 
 
@@ -552,7 +552,7 @@ class LocalAllocator(ResourceAllocator):
             return self.create(typname='', name=name)
         # Shouldn't happen...
         except Exception as exc:  #pragma no cover
-            self._logger.error('create failed: %s', exc)
+            self._logger.error('create failed: %r', exc)
             return None
 
 register(LocalAllocator, mp_distributing.Cluster)
@@ -606,7 +606,7 @@ class ClusterAllocator(object):  #pragma no cover
 
         self.cluster = mp_distributing.Cluster(hosts, authkey=authkey)
         self.cluster.start()
-        self._logger.debug('server listening on %s', self.cluster.address)
+        self._logger.debug('server listening on %r', (self.cluster.address,))
 
         for host in self.cluster:
             manager = host.manager
@@ -892,7 +892,7 @@ class ClusterAllocator(object):  #pragma no cover
         try:
             server = allocator.deploy(name, resource_desc, criteria)
         except Exception as exc:
-            self._logger.error('%r deploy() failed for %s: %s',
+            self._logger.error('%r deploy() failed for %s: %r',
                                allocator._name, name, exc)
             return None
 
@@ -921,7 +921,7 @@ class ClusterAllocator(object):  #pragma no cover
         try:
             allocator.release(server)
         except Exception as exc:
-            self._logger.error("Can't release %r: %s", server, exc)
+            self._logger.error("Can't release %r: %r", server, exc)
         server._close.cancel()
 
     def shutdown(self):

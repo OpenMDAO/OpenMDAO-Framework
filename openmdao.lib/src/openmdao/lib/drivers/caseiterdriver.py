@@ -243,7 +243,7 @@ class CaseIterDriverBase(Driver):
                 # Process any pending events.
                 while self._busy():
                     try:
-                        name, result, exc = self._reply_q.get(True, 0.1)
+                        name, result, exc = self._reply_q.get(True, 0.01)
                     except Queue.Empty:
                         break  # Timeout.
                     else:
@@ -374,7 +374,7 @@ class CaseIterDriverBase(Driver):
             if exc is None:
                 in_use = self._start_next_case(server, stepping)
             else:
-                self._logger.debug('    exception while loading: %s', exc)
+                self._logger.debug('    exception while loading: %r', exc)
                 in_use = self._start_processing(server, stepping)
 
         elif state == _EXECUTING:
@@ -392,7 +392,7 @@ class CaseIterDriverBase(Driver):
                         self._logger.debug('    %s', msg)
                         case.msg = '%s: %s' % (self.get_pathname(), msg)
             else:
-                self._logger.debug('    exception while executing: %s', exc)
+                self._logger.debug('    exception while executing: %r', exc)
                 case.msg = str(exc)
 
             # Record the data.
@@ -544,7 +544,7 @@ class CaseIterDriverBase(Driver):
                 try:
                     result = request[0](request[1])
                 except Exception as req_exc:
-                    self._logger.error('%r: %s caused %s', name,
+                    self._logger.error('%r: %s caused %r', name,
                                        request[0], req_exc)
                     result = None
                 else:
@@ -554,7 +554,7 @@ class CaseIterDriverBase(Driver):
             # This can easily happen if we take a long time to allocate and
             # we get 'cleaned-up' before we get started.
             if self._server_lock is not None:
-                self._logger.error('%r: %s', name, exc)
+                self._logger.error('%r: %r', name, exc)
         finally:
             self._logger.debug('%r releasing server', name)
             RAM.release(server)
@@ -576,7 +576,7 @@ class CaseIterDriverBase(Driver):
                          self._servers[server], self._egg_file, 'b')
             # Difficult to force model file transfer error.
             except Exception as exc:  #pragma nocover
-                self._logger.error('server %r filexfer of %r failed: %s',
+                self._logger.error('server %r filexfer of %r failed: %r',
                                    server, self._egg_file, exc)
                 self._top_levels[server] = None
                 self._exceptions[server] = exc
@@ -587,7 +587,7 @@ class CaseIterDriverBase(Driver):
             tlo = self._servers[server].load_model(self._egg_file)
         # Difficult to force load error.
         except Exception as exc:  #pragma nocover
-            self._logger.error('server.load_model of %r failed: %s',
+            self._logger.error('server.load_model of %r failed: %r',
                                self._egg_file, exc)
             self._top_levels[server] = None
             self._exceptions[server] = exc
@@ -616,7 +616,7 @@ class CaseIterDriverBase(Driver):
                 self.workflow.run()
             except Exception as exc:
                 self._exceptions[server] = exc
-                self._logger.critical('Caught exception: %s' % exc)
+                self._logger.critical('Caught exception: %r' % exc)
         else:
             self._queues[server].put((self._remote_model_execute, server))
 
@@ -626,7 +626,7 @@ class CaseIterDriverBase(Driver):
             self._top_levels[server].run()
         except Exception as exc:
             self._exceptions[server] = exc
-            self._logger.error('Caught exception from server %r, PID %d on %s: %s',
+            self._logger.error('Caught exception from server %r, PID %d on %s: %r',
                                self._server_info[server]['name'],
                                self._server_info[server]['pid'],
                                self._server_info[server]['host'], exc)
