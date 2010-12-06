@@ -30,8 +30,11 @@ credentials match those in effect when the controller object was created.
 
 """
 
+import copy
+import cPickle
 import fnmatch
 import getpass
+import hashlib
 import inspect
 import socket
 import threading
@@ -52,6 +55,7 @@ class Credentials(object):
 
     def __init__(self):
         self.user = '%s@%s' % (getpass.getuser(), socket.gethostname())
+        self.signers = []
 
     def __eq__(self, other):
         return self.user == other.user
@@ -59,11 +63,38 @@ class Credentials(object):
     def __str__(self):
         return self.user
 
+    def encode(self, key_pair):
+        """
+        Return ``(data, signature)`` signed by current user.
+        """
+        creds = copy.copy(self)
+        creds.signers.append('%s@%s' \
+                             % (getpass.getuser(), socket.gethostname()))
+
+        data = cPickle.dumps(creds, cPickle.HIGHEST_PROTOCOL)
+        hash = hashlib.sha1(data).hexdigest()
+# May require chunking.
+        signature = key_pair.encrypt(hash)
+
+        return (data, signature)
+
+    @staticmethod
+    def decode(tpl, pub_key):
+        """
+        Return :class:`Credentials` object from `tpl`.
+        """
+        data, signature = tpl
+        data_hash = hashlib.sha1(data).hexdigest()
+# May require dechunking.
+        sig_hash = pub_key.decrypt(signature)
+        if data_hash != sig_hash:
+            raise RuntimeError('invalid credentials')
+        return cPickle.loads(data)
+
 
 def set_credentials(credentials):
     """ Set the current thread's credentials. """
     threading.current_thread().credentials = credentials
-
 
 def get_credentials():
     """ Get the current thread's credentials. """

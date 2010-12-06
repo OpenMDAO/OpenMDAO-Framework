@@ -27,7 +27,8 @@ from openmdao.main.interfaces import IComponent
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.mp_util import read_server_config, keytype, \
                                   read_allowed_hosts, is_legal_connection, \
-                                  generate_key_pair, _KEY_CACHE
+                                  generate_key_pair, _KEY_CACHE, \
+                                  _is_private, HAVE_PYWIN32
 from openmdao.main.objserverfactory import connect, start_server, RemoteFile
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
@@ -634,6 +635,15 @@ class TestCase(unittest.TestCase):
         if credentials.user in _KEY_CACHE:
             del _KEY_CACHE[credentials.user]
         generate_key_pair(credentials)
+
+        # Check privacy.
+        if sys.platform == 'win32' or HAVE_PYWIN32:
+            self.assertTrue(_is_private(key_file))
+            if sys.platform == 'win32':
+                public_file = os.environ['COMSPEC']
+            else:
+                public_file = '/bin/sh'
+            self.assertFalse(_is_private(public_file))
 
     def test_6_allowed_hosts(self):
         logging.debug('')

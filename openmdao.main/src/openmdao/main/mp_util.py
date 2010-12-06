@@ -82,13 +82,18 @@ def generate_key_pair(credentials, logger=None):
                 current_user = True
                 key_file = \
                     os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
-                try:
-                    with open(key_file, 'rb') as inp:
-                        key_pair = cPickle.load(inp)
-                except Exception:
-                    generate = True
+                if _is_private(key_file):
+                    try:
+                        with open(key_file, 'rb') as inp:
+                            key_pair = cPickle.load(inp)
+                    except Exception:
+                        generate = True
+                    else:
+                        generate = False
                 else:
-                    generate = False
+                    logger.warning('Insecure keyfile! Regenerating keys.')
+                    os.remove(key_file)
+                    generate = True
             # Difficult to run test as non-current user.
             else:  #pragma no cover
                 current_user = False
@@ -122,6 +127,38 @@ def generate_key_pair(credentials, logger=None):
             _KEY_CACHE[credentials.user] = key_pair
 
     return key_pair
+
+def _is_private(path):
+    """ Return True if `path` is accessible only by 'owner'. """
+    if not os.path.exists(path):
+        return True  # Nonexistent file is secure ;-)
+
+    if sys.platform == 'win32':  #pragma no cover
+        if not HAVE_PYWIN32:
+            return False  # No way to know.
+
+        # Find the SIDs for user and system.
+        user, domain, type = \
+            win32security.LookupAccountName('', win32api.GetUserName())
+        system, domain, type = \
+            win32security.LookupAccountName('', 'System')
+
+        # Find the DACL part of the Security Descriptor for the file
+        sd = win32security.GetFileSecurity(path,
+                                        win32security.DACL_SECURITY_INFORMATION)
+        dacl = sd.GetSecurityiDescriptorDacl()
+
+        # Verify the DACL contains just the two entries we expect.
+        count = dacl.GetAceCount()
+        if count != 2:
+            return False
+        for i in range(count):
+            ace = dacl.GetAce(i)
+            if ace[2] != user and ace[2] != system:
+                return False
+        return True
+    else:
+        return (os.stat(path).st_mode & 0077) == 0
 
 def _make_private(path):
     """ Make `path` accessible only by 'owner'. """
