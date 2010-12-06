@@ -83,15 +83,15 @@ class KrigingSurrogate(HasTraits):
             f = self.mu + dot(r, lsq[0])
             term1 = dot(r, lsq[1])
             term2 = (1.0 - dot(one, lsq[1]))**2./dot(one, lsq[2])
-        """
-        #-----LSTSQ-------
-        rhs = vstack([(Y-dot(one, self.mu)), r, one]).T
-        lsq = lstsq(self.R.T, rhs)[0].T
-        
-        f = self.mu + dot(r, lsq[0])
-        term1 = dot(r, lsq[1])
-        term2 = (1.0 - dot(one, lsq[1]))**2./dot(one, lsq[2])
-        """
+            """
+      #-----LSTSQ-------
+      rhs = vstack([(Y-dot(one, self.mu)), r, one]).T
+      lsq = lstsq(self.R.T, rhs)[0].T
+      
+      f = self.mu + dot(r, lsq[0])
+      term1 = dot(r, lsq[1])
+      term2 = (1.0 - dot(one, lsq[1]))**2./dot(one, lsq[2])
+      """
         MSE = self.sig2*(1.0-term1+term2)
         RMSE = sqrt(abs(MSE))
         
