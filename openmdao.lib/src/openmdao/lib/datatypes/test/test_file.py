@@ -64,7 +64,7 @@ class Middle(Assembly):
         super(Middle, self).__init__(*args, **kwargs)
 
         self.add('passthrough', Passthrough(directory='Passthrough'))
-        self.driver.workflow.add(self.passthrough)
+        self.driver.workflow.add('passthrough')
 
         self.create_passthrough('passthrough.text_in')
         self.create_passthrough('passthrough.binary_in')
@@ -104,7 +104,7 @@ class Model(Assembly):
         self.add('source', Source(directory='Source'))
         self.add('middle', Middle(directory='Middle'))
         self.add('sink', Sink(directory='Sink'))
-        self.driver.workflow.add([self.source,self.middle,self.sink])
+        self.driver.workflow.add(['source','middle','sink'])
 
         self.connect('source.text_file', 'middle.text_in')
         self.connect('source.binary_file', 'middle.binary_in')
@@ -119,13 +119,13 @@ class Model(Assembly):
         """ Sets passthrough paths to absolute to exercise code. """
         super(Model, self).tree_rooted()
 
-        self.middle.passthrough.trait('text_in').trait_type._metadata['local_path'] = \
+        self.middle.passthrough.get_trait('text_in').trait_type._metadata['local_path'] = \
             os.path.join(self.middle.passthrough.get_abs_directory(),
-                         self.middle.passthrough.trait('text_in').local_path)
+                         self.middle.passthrough.get_trait('text_in').local_path)
 
-        self.middle.passthrough.trait('text_out').trait_type._metadata['path'] = \
+        self.middle.passthrough.get_trait('text_out').trait_type._metadata['path'] = \
             os.path.join(self.middle.passthrough.get_abs_directory(),
-                         self.middle.passthrough.trait('text_out').path)
+                         self.middle.passthrough.get_trait('text_out').path)
 
 
 class TestCase(unittest.TestCase):

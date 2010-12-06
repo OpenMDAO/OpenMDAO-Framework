@@ -73,7 +73,7 @@ class MyModel(Assembly):
         super(MyModel, self).__init__(*args, **kwargs)
         self.add('driver', DOEdriver())
         self.add('driven', DrivenComponent())
-        self.driver.workflow.add(self.driven)
+        self.driver.workflow.add('driven')
         self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
         self.driver.case_outputs = ['driven.rosen_suzuki']
         for name in ['x0', 'x1','x2', 'x3']:
@@ -188,7 +188,7 @@ class TestCase(unittest.TestCase):
 
         self.assertEqual(len(results), self.model.driver.DOEgenerator.num_sample_points)
         msg = "driver: Exception getting 'driven.sum_z': " \
-            "'DrivenComponent' object has no attribute 'sum_z'"
+            "driven: object has no attribute 'sum_z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)
 

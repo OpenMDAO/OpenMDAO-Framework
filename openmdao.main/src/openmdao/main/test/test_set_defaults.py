@@ -36,12 +36,12 @@ class SetDefaultsTestCase(unittest.TestCase):
         comp.f_in = 42.
         comp.arr_in = numpy.array([88., 32.])
         comp.list_in = [1,2,3]
-        self.assertEqual(comp.get_valid('f_out'), False)
+        self.assertEqual(comp.get_valid(['f_out']), [False])
         comp.run()
-        self.assertEqual(comp.get_valid('f_out'), True)
+        self.assertEqual(comp.get_valid(['f_out']), [True])
         comp.revert_to_defaults()
         # make sure reverting to defaults invalidates our outputs
-        self.assertEqual(comp.get_valid('f_out'), False)
+        self.assertEqual(comp.get_valid(['f_out']), [False])
         self.assertEqual(0., comp.f_in)
         self.assertTrue(numpy.all(numpy.zeros(0,'d')==comp.arr_in))
         self.assertEqual([], comp.list_in)
@@ -52,12 +52,12 @@ class SetDefaultsTestCase(unittest.TestCase):
         comp.f_in = 42.
         comp.arr_in = numpy.array([88., 32.])
         self.assertFalse(numpy.all(numpy.array([1.,2.,3.])==comp.arr_in))
-        self.assertEqual(comp.get_valid('f_out'), False)
+        self.assertEqual(comp.get_valid(['f_out']), [False])
         comp.run()
-        self.assertEqual(comp.get_valid('f_out'), True)
+        self.assertEqual(comp.get_valid(['f_out']), [True])
         comp.revert_to_defaults()
         # make sure reverting to defaults invalidates our outputs
-        self.assertEqual(comp.get_valid('f_out'), False)
+        self.assertEqual(comp.get_valid(['f_out']), [False])
         self.assertEqual(3.14, comp.f_in)
         self.assertTrue(numpy.all(numpy.array([1.,2.,3.])==comp.arr_in))
         

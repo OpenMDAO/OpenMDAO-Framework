@@ -31,13 +31,14 @@ class EngineOptimization(Assembly):
         self.driving_sim.add('vehicle', Vehicle())
         
         # add DrivingSim to workflow
-        driver.workflow.add(self.driving_sim)
+        driver.workflow.add('driving_sim')
 
         # CONMIN Flags
         self.driver.iprint = 0
         self.driver.itmax = 30
         
         # CONMIN Objective 
+        #self.driver.add_objective('driving_sim.accel_time')
         self.driver.add_objective('driving_sim.accel_time')
         
         # CONMIN Design Variables 

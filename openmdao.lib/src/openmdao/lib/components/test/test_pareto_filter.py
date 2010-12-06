@@ -77,7 +77,7 @@ class ParetoFilterTests(unittest.TestCase):
         try:
             pf.execute()
         except ValueError,err: 
-            self.assertEqual(str(err),": no cases in the provided case_set had output matching the provided criteria, ['z' 'w']")
+            self.assertEqual(str(err),": no cases in the provided case_set had output matching the provided criteria, ['z', 'w']")
         else: 
             self.fail("expected ValueError")
 

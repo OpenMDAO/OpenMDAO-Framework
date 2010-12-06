@@ -51,8 +51,8 @@ class Constraint(object):
     def evaluate(self):
         """Returns a tuple of the form (lhs, rhs, comparator, is_violated)."""
         
-        lhs = self.lhs.evaluate()*self.scaler + self.adder
-        rhs = self.rhs.evaluate()*self.scaler + self.adder
+        lhs = (self.lhs.evaluate() + self.adder)*self.scaler
+        rhs = (self.rhs.evaluate() + self.adder)*self.scaler
         return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
         
 
@@ -117,15 +117,18 @@ class HasEqConstraints(_HasConstraintsBase):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
         
-        expr_string: str
+        
+	*Parameters:*
+	
+	expr_string: str
             Expression string containing the constraint.
         
-        scaler: float, optional
+        scaler: float (optional)
             Multiplicative scale factor applied to both sides of the
             constraint's boolean expression. It should be a positive nonzero
             value. Default is unity (1.0)
             
-        adder: float, optional
+        adder: float (optional)
             Additive scale factor applied to both sides of the constraint's
             boolean expression. Default is no additive shift (0.0)
         """
@@ -177,12 +180,12 @@ class HasIneqConstraints(_HasConstraintsBase):
         expr_string: str
             Expression string containing the constraint.
         
-        scaler: float, optional
+        scaler: float (optional)
             Multiplicative scale factor applied to both sides of the
             constraint's boolean expression. It should be a positive nonzero
             value. Default is unity (1.0)
             
-        adder: float, optional
+        adder: float (optional)
             Additive scale factor applied to both sides of the constraint's
             boolean expression. Default is no additive shift (0.0)
         """
@@ -236,12 +239,12 @@ class HasConstraints(object):
         expr_string: str
             Expression string containing the constraint.
         
-        scaler: float, optional
+        scaler: float (optional)
             Multiplicative scale factor applied to both sides of the
             constraint's boolean expression. It should be a positive nonzero
             value. Default is unity (1.0)
             
-        adder: float, optional
+        adder: float (optional)
             Additive scale factor applied to both sides of the constraint's
             boolean expression. Default is no additive shift (0.0)
         """

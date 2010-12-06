@@ -43,6 +43,7 @@ Component, Driver, and TraitType plugins for OpenMDAO
           'setuptools',
           'openmdao.main',
           'conmin==1.0.1',
+          'newsumt==1.0.0',
           'Pyevolve==0.6',
           'ordereddict',
           'scipy',
@@ -50,6 +51,7 @@ Component, Driver, and TraitType plugins for OpenMDAO
       entry_points="""
       [openmdao.driver]
       openmdao.lib.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
+      openmdao.lib.NEWSUMTdriver = openmdao.lib.drivers.newsumtdriver:NEWSUMTdriver
       openmdao.lib.pyevolvedriver = openmdao.lib.drivers.pyevolvedriver:pyevolvedriver
       """,
       )

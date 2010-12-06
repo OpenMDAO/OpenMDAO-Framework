@@ -47,6 +47,7 @@ setup(name='openmdao.main',
           'decorator',
           'openmdao.units',
           'openmdao.util',
+          'pycrypto',
       ],
       entry_points = {
           "console_scripts": [

@@ -5,17 +5,21 @@ from openmdao.main.api import Container, Component, Assembly, set_as_top
 from openmdao.lib.datatypes.api import Float, Instance
 
 class DumbContainer2(Container):
-    x = Float(1., iotype='in')
-    y = Float(2., iotype='in')
-    z = Float(3., iotype='in')
+    def __init__(self, *args, **kwargs):
+        super(DumbContainer2, self).__init__(*args, **kwargs)
+        iotype = kwargs.get('iotype', None)
+        self.add_trait('x', Float(1., iotype=iotype))
+        self.add_trait('y', Float(2., iotype=iotype))
+        self.add_trait('z', Float(3., iotype=iotype))
     
 class DumbContainer(Container):
-    v1 = Float(1., iotype='in')
-    v2 = Float(2., iotype='in')
-    v3 = Float(3., iotype='in')
     def __init__(self, *args, **kwargs):
         super(DumbContainer, self).__init__(*args, **kwargs)
-        self.add('cont', DumbContainer2())
+        iotype = kwargs.get('iotype', None)
+        self.add('cont', DumbContainer2(iotype=iotype))
+        self.add_trait('v1', Float(1., iotype=iotype))
+        self.add_trait('v2', Float(2., iotype=iotype))
+        self.add_trait('v3', Float(3., iotype=iotype))
     
     
 class SimpleComp(Component):
@@ -25,8 +29,8 @@ class SimpleComp(Component):
     
     def __init__(self, *args, **kwargs):
         super(SimpleComp, self).__init__(*args, **kwargs)
-        self.add('cont_in', DumbContainer())
-        self.add('cont_out', DumbContainer())
+        self.add('cont_in', DumbContainer(iotype='in'))
+        self.add('cont_out', DumbContainer(iotype='out'))
     
     def execute(self):
         for name in ['v1', 'v2', 'v3']:
@@ -36,14 +40,13 @@ class SimpleComp(Component):
             setattr(self.cont_out.cont, name, 
                     self.mult*getattr(self.cont_in.cont, name))
 
-
 class NamespaceTestCase(unittest.TestCase):
 
     def setUp(self):
         self.asm = set_as_top(Assembly())
         self.asm.add('scomp1', SimpleComp())
         self.asm.add('scomp2', SimpleComp())
-        self.asm.driver.workflow.add([self.asm.scomp1,self.asm.scomp2])
+        self.asm.driver.workflow.add(['scomp1','scomp2'])
     
     def test_pass_container(self):
         #scomp1                   scomp2

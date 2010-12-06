@@ -11,6 +11,7 @@ from openmdao.lib.datatypes.api import Int, Bool
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
 
+dummyval = 1
 
 class TestComponent(Component):
     """
@@ -37,14 +38,17 @@ class Model(Assembly):
         self.add('comp_b', TestComponent())
         self.add('comp_c', TestComponent())
         
-        self.driver.workflow.add([self.comp_a,self.comp_b,self.comp_c])
+        self.driver.workflow.add(['comp_a','comp_b','comp_c'])
 
         self.connect('comp_a.total_executions', 'comp_b.dummy_input')
         self.connect('comp_b.total_executions', 'comp_c.dummy_input')
 
     def rerun(self):
         """ Called to force the model to run. """
-        self.comp_a.set('dummy_input', 0)
+        global dummyval
+        dummyval += 1  # force dummyval to be different than last time so
+                       # comp1 will be invalidated
+        self.comp_a.set('dummy_input', dummyval)
         self.run()
 
 

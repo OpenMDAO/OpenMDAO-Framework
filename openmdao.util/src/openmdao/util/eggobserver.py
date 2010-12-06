@@ -33,7 +33,7 @@ class EggObserver(object):
             proceed = True
             try:
                 proceed = self.observer('analyze', path, -1, -1)
-            except Exception, exc:
+            except Exception as exc:
                 self.logger.debug('Exception calling observer: %s', exc)
             else:
                 if not proceed:
@@ -59,7 +59,7 @@ class EggObserver(object):
             try:
                 proceed = self.observer('add', path, file_fraction,
                                         byte_fraction)
-            except Exception, exc:
+            except Exception as exc:
                 self.logger.debug('Exception calling observer: %s', exc)
             else:
                 if not proceed:
@@ -85,7 +85,7 @@ class EggObserver(object):
             try:
                 proceed = self.observer('copy', path, file_fraction,
                                         byte_fraction)
-            except Exception, exc:
+            except Exception as exc:
                 self.logger.debug('Exception calling observer: %s', exc)
             else:
                 if not proceed:
@@ -111,7 +111,7 @@ class EggObserver(object):
             try:
                 proceed = self.observer('extract', path, file_fraction,
                                         byte_fraction)
-            except Exception, exc:
+            except Exception as exc:
                 self.logger.debug('Exception calling observer: %s', exc)
             else:
                 if not proceed:
@@ -127,7 +127,7 @@ class EggObserver(object):
         if self.observer is not None:
             try:
                 self.observer('complete', path, 1, 1)
-            except Exception, exc:
+            except Exception as exc:
                 self.logger.debug('Exception calling observer: %s', exc)
 
     def exception(self, msg):
@@ -141,6 +141,6 @@ class EggObserver(object):
         if self.observer is not None:
             try:
                 self.observer('except', msg, -1, -1)
-            except Exception, exc:
+            except Exception as exc:
                 self.logger.debug('Exception calling observer: %s', exc)
 

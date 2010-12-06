@@ -14,7 +14,7 @@ def rand_latin_hypercube(n, k, edges=False):
        Desired number of points.
     k: int
        Number of design variables (dimensions).
-    edges: bool, optional
+    edges: bool (optional)
        if Edges=True, the extreme bins will have their centres on the
        edges of the domain; otherwise the bins will be entirely 
        contained within the domain (default setting).

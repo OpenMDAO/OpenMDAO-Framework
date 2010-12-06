@@ -1,7 +1,7 @@
 """ Pareto Filter -- finds non-dominated cases """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Instance, Array
+from openmdao.lib.datatypes.api import Instance, List, ListStr
 
 from openmdao.main.component import Component
 from openmdao.main.interfaces import ICaseIterator
@@ -15,16 +15,16 @@ class ParetoFilter(Component):
     """
     
     # pylint: disable-msg=E1101
-    criteria = Array([], iotype="in", dtype=str,
-                     desc="List of outputs from the case to consider for "
-                          "filtering. Note that only case outputs are allowed as "
-                          "criteria.")
+    criteria = ListStr([], iotype="in",
+                       desc="List of outputs from the case to consider for "
+                            "filtering. Note that only case outputs are allowed as "
+                            "criteria.")
     
     #case_set = Instance(ICaseIterator, iotype="in",
     #                    desc="CaseIterator with the cases to be filtered to "
     #                         "Find the pareto optimal subset.")
                              
-    case_sets = Array([], iotype="in",
+    case_sets = List(ICaseIterator, value=[], iotype="in",
                         desc="CaseIterator with the cases to be filtered to "
                              "Find the pareto optimal subset.")
     
@@ -32,7 +32,6 @@ class ParetoFilter(Component):
                           desc="resulting collection of pareto optimal cases",copy="shallow")
     dominated_set = Instance(ICaseIterator, iotype="out",
                              desc="Resulting collection of dominated cases.",copy="shallow")
-    
     
     def _is_dominated(self, y1, y2):
         """Tests to see if the point y1 is dominated by the point y2. 
@@ -52,7 +51,7 @@ class ParetoFilter(Component):
         y_list = []
         cases = []
         for case_set in self.case_sets:
-            cases.extend([case for case in case_set])
+            cases.extend([case for case in case_set.get_iter()])
         
         #cases = [case for case in self.case_set]
         criteria_count = len(self.criteria)
@@ -102,93 +101,60 @@ class ParetoFilter(Component):
         self.dominated_set = ListCaseIterator(dominated_set)
     
 if __name__ == "__main__": # pragma: no cover  
-    import sys    
+    
     # pylint: disable-msg=C0103, E1101
-    seed = None
-    backend = None
-    figname = None
-    for arg in sys.argv[1:]:
-        if arg.startswith('--seed='):
-            import random
-            seed = int(arg.split('=')[1])
-            random.seed(seed)
-        if arg.startswith('--backend='):
-            backend = arg.split('=')[1]
-        if arg.startswith('--figname='):
-            figname = arg.split('=')[1]
-    import matplotlib
-    if backend is not None:
-        matplotlib.use(backend)
-    elif sys.platform == 'win32':
-        matplotlib.use('WxAgg')
-
+    
     from matplotlib import pyplot as py
-    from mpl_toolkits.mplot3d import Axes3D    
+    from mpl_toolkits.mplot3d import Axes3D
     from numpy import random
     random.seed(10)
-    from openmdao.lib.datatypes.api import Float
+    
     from openmdao.main.case import Case
-
-    class f_2d(Component):
-        n = Float(iotype="in")
-        cases = Instance(ListCaseIterator,iotype="out")
-        
-        def __init__(self,n):
-            self.n = n
-        
-        def execute(self):
-            x = random.uniform(-1, 0, self.n)
-            y = -(1-x**2)**0.5*random.random(self.n)
-            cases = []
-            for x_0, y_0 in zip(x, y):  
-                cases.append(Case(outputs=[("x", 0, x_0), ("y", 1, y_0)]))
-            self.cases = ListCaseIterator(cases)
-
-    class f_3d(Component):
-        n = Float(iotype="in")
-        cases = Instance(ListCaseIterator,iotype="out")
-
-        def __init__(self,n):
-            self.n = n
-            
-        def execute(self):
-            x = random.uniform(-1, 0, self.n)
-            y = -(1-x**2)**0.5*random.random(self.n)
-            z = -(1-x**2-y**2)**0.5*random.random(self.n)
-            cases = []
-            for x_0, y_0, z_0 in zip(x, y, z):
-                cases.append(Case(outputs=[("x", 0, x_0),("y", 1, y_0),("z", 1, z_0)]))
-            self.cases = ListCaseIterator(cases)
-            
-    # 2D PARETO FILTERING EXAMPLE        
-    example_2d = f_2d(500)
-    example_2d.execute()
-    pf2d = ParetoFilter()
-    pf2d.case_sets = [example_2d.cases]
-    pf2d.criteria = ['x', 'y']
-    pf2d.execute()
+    pf = ParetoFilter()
+    
+    # 2D PARETO FILTERING EXAMPLE
+    n = 1000
+    x = random.uniform(-1, 0, n)
+    y = -(1-x**2)**0.5*random.random(n)
+    cases = []
+    for x_0, y_0 in zip(x, y):
+        cases.append(Case(outputs=[("x", 0, x_0), ("y", 1, y_0)]))
+    
+    pf.case_set = ListCaseIterator(cases)
+    pf.criteria = ['x', 'y']
+    pf.execute()
     
     x_p, y_p = zip(*[(case.outputs[0][2], case.outputs[1][2]) \
-                    for case in pf2d.pareto_set])
+                    for case in pf.pareto_set])
     x_dom, y_dom = zip(*[(case.outputs[0][2], case.outputs[1][2]) \
-                        for case in pf2d.dominated_set])
-
+                        for case in pf.dominated_set])
+    
     py.figure()
+    py.scatter(x, y, s=5)
     py.scatter(x_dom, y_dom, c='', edgecolor='b', s=80)
     py.scatter(x_p, y_p, c='', edgecolors='r', s=80)
-    
+    py.show()
+    exit()
     #3D PARETO FILTERING EXAMPLE
-    example_3d = f_3d(500)
-    example_3d.execute()
-    pf3d = ParetoFilter()
-    pf3d.case_sets = [example_3d.cases]
-    pf3d.criteria = ['x', 'y','z']
-    pf3d.execute()
+    n = 1000
+    x = random.uniform(-1, 0, n)
+    y = -(1-x**2)**0.5*random.random(n)
+    z = -(1-x**2-y**2)**0.5*random.random(n)
+    doe = zip(x, y, z)
+    
+    cases = []
+    for x_0, y_0, z_0 in zip(x, y, z):
+        cases.append(Case(outputs=[("x", 0, x_0),
+                                   ("y", 1, y_0),
+                                   ("z", 1, z_0)]))
+    
+    pf.case_set = ListCaseIterator(cases)
+    pf.execute()
     
     y_star3D = [(case.outputs[0][2], case.outputs[1][2], case.outputs[2][2]) \
-                for case in pf3d.pareto_set]
+                for case in pf.pareto_set]
     y_dom3D = [(case.outputs[0][2], case.outputs[1][2], case.outputs[2][2]) \
-               for case in pf3d.dominated_set]    
+               for case in pf.dominated_set]    
     x_p, y_p, z_p = zip(*y_star3D)
     x_dom, y_dom, z_dom = zip(*y_dom3D)
 

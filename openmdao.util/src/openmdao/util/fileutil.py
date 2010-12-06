@@ -9,7 +9,6 @@ import shutil
 import fnmatch
 from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
-from subprocess import Popen,PIPE,STDOUT
 
 def find_in_dir_list(fname, dirlist, exts=('',)):
     """Search the given list of directories for the specified file.
@@ -98,7 +97,7 @@ def find_up(name, path=None):
     name: str
         Base name of the file or directory being searched for
         
-    path: str, optional
+    path: str (optional)
         Starting directory.  If not supplied, current directory is used.
     """
     if not path:

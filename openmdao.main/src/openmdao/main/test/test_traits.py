@@ -5,6 +5,7 @@ about how these things work.
 """
 
 import unittest
+import copy
 
 from enthought.traits.api import HasTraits, TraitType
 from openmdao.lib.datatypes.api import Int, Instance
@@ -36,9 +37,12 @@ class MyHasTraits(HasTraits):
     def __init__(self, *args, **kwargs):
         super(MyHasTraits, self).__init__(*args, **kwargs)
         self.inst = MyClass()
+        
     
 class MyHasTraits2(MyHasTraits):
     pass
+
+
 
 class TraitsTestCase(unittest.TestCase):
 
@@ -61,6 +65,14 @@ class TraitsTestCase(unittest.TestCase):
         mht2.copy_traits(mht, traits=['inst'])
         self.assertEqual(mht2.inst.val, mht.inst.val)
         self.assertFalse(mht2.inst is mht.inst)
+        self.assertEqual(mht2.dyntrait, mht.dyntrait)
+        
+    def test_deepcopy(self):
+        mht = MyHasTraits()
+        mht.add_trait('dyntrait', Int(9))
+        getattr(mht, 'dyntrait')
+        mht2 = copy.deepcopy(mht)
+        self.assertEqual(mht2.dyntrait, 9)
 
     def test_trait_names(self):
         mht = MyHasTraits()
@@ -192,6 +204,61 @@ class TraitsTestCase(unittest.TestCase):
         unresetable = mht.reset_traits(traits=['implicit_property'])
         self.assertEqual(unresetable, ['implicit_property'])
         self.assertEqual(mht.implicit_property, 999)
+        
+    def test_callbacks(self):
+        class CallbackTester(HasTraits):
+            num_callbacks = Int(0)
+            some_trait = Int()
+            
+            def _callback(self, obj, name, old, new):
+                self.num_callbacks += 1
+                
+        cbt = CallbackTester()
+        self.assertEqual(cbt.num_callbacks, 0)
+        
+        cbt.on_trait_change(cbt._callback, 'some_trait')
+        
+        cbt.some_trait = 3
+        self.assertEqual(cbt.num_callbacks, 1)
+        cbt.some_trait = 4
+        self.assertEqual(cbt.num_callbacks, 2)
+        
+        # verify that if the same callback is added twice, second is ignored
+        cbt.on_trait_change(cbt._callback, 'some_trait')
+        cbt.some_trait = 5
+        self.assertEqual(cbt.num_callbacks, 3)
+        
+        # make sure only one remove call is needed even if we've added same callback
+        # multiple times
+        cbt.on_trait_change(cbt._callback, 'some_trait', remove=True)
+        cbt.some_trait = 6
+        self.assertEqual(cbt.num_callbacks, 3)
+
+    def test_dotted_names(self):
+        # traits can be registered using dotted names, but the result is that
+        # the trait can be looked up but the attribute cannot be accessed via
+        # normal python getattr
+        class HT(HasTraits):
+            some_trait = Int(2)
+            
+            def __init__(self, *args, **kwargs):
+                super(HT, self).__init__(*args, **kwargs)
+                self.add_trait('a.b', Int(6))
+                
+        ht = HT()
+        self.assertEqual(ht.some_trait, 2)
+        # even though trait is a.b, we cannot just access ht.a.b
+        try:
+            self.assertEqual(ht.a.b, 6)
+        except AttributeError as err:
+            pass
+        else:
+            self.fail('AttributeError expected')
+            
+        # but we can access the trait using a.b
+        trait = ht.trait('a.b')
+        self.assertTrue(trait.is_trait_type(Int))
+
         
 if __name__ == '__main__':
     unittest.main()

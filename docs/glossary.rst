@@ -108,7 +108,13 @@ Glossary
       **DLL**
         Dynamically Loadable Library 
 
+	
+      **docstring**
+      	A string that describes a module, function, class, or method definition. The docstring is a
+	special attribute of an object. Docstrings are used to document OpenMDAO code as well as
+	many packages written Python.
 
+      
       **docutils**
         Docutils is a modular system for processing documentation into useful
         formats, such as HTML, XML, and LaTeX. For input Docutils supports
@@ -257,6 +263,11 @@ Glossary
       **networkx**
         A Python package for creating and manipulating graphs and networks.
 
+
+      **NEWSUMT** 
+        A Fortran subroutine for solving linear and nonlinear constrained or
+	unconstrained function minimization problems.
+	
 
       **NOSA**
         NASA Open Source Agreement. A software license approved by the Open
@@ -470,9 +481,9 @@ Glossary
         A Bazaar nickname for a particular revision. A tag is typically used to mark
         a release of the software so you can easily refer to it later. Tags are stored in the
         branch and are propagated when the branch is pushed, pulled or merged. If your branch is
-        associated with a Trac ticket, you should apply a tag (corresponding to your ticket
-        number) to your branch after committing final changes and before you push it to Launchpad
-        and propose a merge.
+        associated with a Trac ticket, the SCM will apply a tag (corresponding to your ticket
+        number) when she merges your branch.
+   
    
       **Tempita**
         Tempita is a small templating language for text substitution.

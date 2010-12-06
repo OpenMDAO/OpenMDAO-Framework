@@ -543,7 +543,7 @@ We can also access the list of indices and the list of aliases directly from the
 
 .. doctest:: enum_example
 
-    >>> color_trait = test.trait('color')
+    >>> color_trait = test.get_trait('color')
     >>> color_trait.aliases
     ('Red', 'Yellow', 'Green')
     >>> color_trait.values
@@ -559,8 +559,8 @@ If the default value is not given, then the first value of the list is taken as 
     
 This is the simplest form of the Enum constructor.
 
-It is also possible to produce a simple array that behaves like an Enum where each element of
-the array can only contain a value that is in the Enum. This kind of variable can be
+It is also possible to produce a simple array that behaves like an Enum, where each element of
+the array can contain only a value that is in the Enum. This kind of variable can be
 defined by creating a *List* of Enums.
     
 .. testcode:: enum_list_example
@@ -573,8 +573,8 @@ defined by creating a *List* of Enums.
         
 This example defines a variable named *roll* that can contain the values for any number
 of dice. Instead of giving a List as the default value, we've given it the definition
-for an Enum variable that has a default value of 1, and a set of valid values spanning
-the integers from 1 to 6. Note that the Enum doesn't need an iotype, but the List does.
+for an Enum variable that has a default value of 1 and a set of valid values spanning
+the integers 1 to 6. Note that the Enum doesn't need an iotype, but the List does.
 
 .. doctest:: enum_list_example
 
@@ -794,7 +794,7 @@ Here, the container ``FlightCondition`` was defined, containing three variables.
 The component ``AircraftSim`` is also defined with a variable *weight* and
 two variable containers *fcc1* and *fcc2*. We can access weight through ``self.weight``; 
 likewise, we can access the airspeed of the second flight condition through
-``self.fcc2.airspeed``. You can also add containers to containers.
+``self.fcc2.airspeed``. We can also add containers to containers.
 
 An interesting thing about this example is that we've
 implemented a data structure with this container and used it to create
@@ -835,7 +835,7 @@ Consider the top level assembly that was created for the
             self.add('paraboloid', Paraboloid())
     
             # Add to driver's workflow
-            self.driver.workflow.add(self.paraboloid)
+            self.driver.workflow.add('paraboloid')
         
 
 We can see here that components that comprise the top level of this model are
@@ -1051,7 +1051,7 @@ the CONMINdriver optimizer.
             self.add('driver', CONMINdriver())
         
             # add DrivingSim to workflow
-            driver.workflow.add(self.driving_sim)
+            driver.workflow.add('driving_sim')
 
 We add design variables to the driver ``self.driver`` using the ``add_parameter``
 function. 
@@ -1178,20 +1178,19 @@ syntax includes an equal sign in the expression.
     OpenMDAO does not check for duplicate constraints, so be careful when
     adding them.
     
-Sometimes it is desirable to change the scaling on constraints, particularly for
-cases where the constrained variables are of disparate orders of magnitude. This
-can be done conveniently with the optional *scale* argument in the call to
-add_constraint.
+Sometimes you want to change the scaling on constraints, particularly for
+cases where the constrained variables are of disparate orders of magnitude. You can do this 
+conveniently with the optional ``scale`` argument in the call to ``add_constraint``.
 
 .. testcode:: Parameter_API
 
     self.driver.add_constraint('driving_sim.stroke - driving_sim.bore < .00001', scaler=10000.0)
     
-Here, the constraint has been scaled up so that its value when passed to the optimizer
-is in a similar range (and hence similar weight) to the other constraints in the model. An
-optional *adder* argument was also added to shift both the left and right hand sides of
-a constraint, though the current OpenMDAO gradient optimizer (CONMINdriver) internally shifts
-all constraints to the origin, so this parameter is not needed.
+Here, the constraint has been scaled up so that when its value is passed to the optimizer, it is in
+a similar range (and hence, of similar weight) as the other constraints in the model. Although an 
+optional ``adder`` argument was also added to shift both the left- and the right-hand sides of a
+constraint, the current OpenMDAO gradient optimizer (CONMINdriver) internally shifts all
+constraints to the origin, so this parameter is not needed.
 
 
 Constraints can be removed using ``remove_constraint``.  The same string used
@@ -1233,7 +1232,7 @@ the function are expressed in the scope of the local assembly that contains the
 driver.
 
 For drivers that only operate on a single objective (e.g., CONMIN), you can
-replace the current objective by calling add_objective with the new objective as an argument.
+replace the current objective by calling ``add_objective`` with the new objective as an argument.
 
 .. testcode:: Parameter_API
 

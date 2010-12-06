@@ -2,14 +2,13 @@
 Test CaseIteratorDriver.
 """
 
-import glob
 import logging
-import os.path
+import os
 import pkg_resources
-import platform
 import sys
+import time
 import unittest
-from nose import SkipTest
+import nose
 
 import random
 import numpy.random as numpy_random
@@ -17,18 +16,18 @@ import numpy.random as numpy_random
 from openmdao.lib.datatypes.api import TraitError
 
 from openmdao.main.api import Assembly, Component, Case, set_as_top
+from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
+
 from openmdao.lib.datatypes.api import Float, Bool, Array
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
-from openmdao.main.eggchecker import check_save_load
-from openmdao.util.testutil import find_python
 
+from openmdao.test.cluster import init_cluster
 
-# Users who have ssh configured correctly for testing.
-SSH_USERS = []
+from openmdao.util.testutil import assert_raises
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -49,14 +48,18 @@ class DrivenComponent(Component):
     y = Array([1., 1., 1., 1.], iotype='in')
     raise_error = Bool(False, iotype='in')
     stop_exec = Bool(False, iotype='in')
+    sleep = Float(0., iotype='in')
+
     rosen_suzuki = Float(0., iotype='out')
     sum_y = Float(0., iotype='out')
-        
+
     def __init__(self, *args, **kwargs):
         super(DrivenComponent, self).__init__(*args, **kwargs)
 
     def execute(self):
         """ Compute results from input vector. """
+        if self.sleep:
+            time.sleep(self.sleep)
         self.rosen_suzuki = rosen_suzuki(self.x)
         self.sum_y = sum(self.y)
         if self.raise_error:
@@ -72,7 +75,7 @@ class MyModel(Assembly):
         super(MyModel, self).__init__(*args, **kwargs)
         self.add('driver', CaseIteratorDriver())
         self.add('driven', DrivenComponent())
-        self.driver.workflow.add(self.driven)
+        self.driver.workflow.add('driven')
 
 
 class TestCase(unittest.TestCase):
@@ -116,10 +119,10 @@ class TestCase(unittest.TestCase):
         logging.debug('test_sequential')
         self.run_cases(sequential=True)
 
+    def test_sequential_errors(self):
         logging.debug('')
         logging.debug('test_sequential_errors')
         self.generate_cases(force_errors=True)
-        self.model.driver._call_execute = True
         self.run_cases(sequential=True, forced_errors=True)
 
     def test_run_stop_step_resume(self):
@@ -162,67 +165,33 @@ class TestCase(unittest.TestCase):
             self.fail('Expected RuntimeError')
 
     def test_concurrent(self):
-        # FIXME: temporarily disable this test on windows because it loops
-        # over a set of tests forever when running under a virtualenv
-        if sys.platform == 'win32':
-            raise SkipTest('test_concurrent skipped')
         # This can always test using a LocalAllocator (forked processes).
         # It can also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
         logging.debug('test_concurrent')
-
-        # Ensure we aren't held up by local host load problems.
-        local = ResourceAllocationManager.get_allocator(0)
-        local.max_load = 10
-
-        if sys.platform != 'win32':
-            # ssh server not typically available on Windows.
-            machines = []
-            node = platform.node()
-            python = find_python()
-            if node.startswith('gxterm'):
-                # User environment assumed OK on this GRC cluster front-end.
-                for i in range(55):
-                    machines.append({'hostname':'gx%02d' % i, 'python':python})
-            elif self.local_ssh_available():
-                machines.append({'hostname':node, 'python':python})
-            if machines:
-                name = node.replace('.', '_')
-                cluster = ClusterAllocator(name, machines)
-                ResourceAllocationManager.insert_allocator(0, cluster)
-
+        init_cluster(encrypted=True)
         self.run_cases(sequential=False)
-        self.assertEqual(glob.glob('Sim-*'), [])
 
+    def test_concurrent_errors(self):
         logging.debug('')
         logging.debug('test_concurrent_errors')
+        init_cluster(encrypted=True)
         self.generate_cases(force_errors=True)
-        self.model.driver._call_execute = True
         self.run_cases(sequential=False, forced_errors=True)
-        self.assertEqual(glob.glob('Sim-*'), [])
 
-    @staticmethod
-    def local_ssh_available():
-        """ Return True if this user has an authorized key for this machine. """
-        user = os.environ['USER']
-# Avoid problems with users who don't have a valid environment.
-        if user not in SSH_USERS:
-            return False
-        home = os.environ['HOME']
-        node = platform.node()
-        keyfile = os.path.join(home, '.ssh', 'authorized_keys')
-        try:
-            with open(keyfile, 'r') as keys:
-                for line in keys:
-                    if line.find(user+'@'+node) > 0:
-                        return True
-                return False
-        except IOError:
-            return False
+    def test_unencrypted(self):
+        logging.debug('')
+        logging.debug('test_unencrypted')
+        name = init_cluster(encrypted=False)
+        self.model.driver.extra_reqs = {'allocator': name}
+        self.run_cases(sequential=False)
 
     def run_cases(self, sequential, forced_errors=False):
-        """ Evaluate cases, either sequentially or across  multiple servers. """
+        """ Evaluate cases, either sequentially or across multiple servers. """
         self.model.driver.sequential = sequential
+        if not sequential:
+            # Try to ensure more than one worker is used.
+            self.model.driven.sleep = 0.2
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
         self.model.driver.recorder = results
@@ -310,7 +279,7 @@ class TestCase(unittest.TestCase):
 
         self.assertEqual(len(results), len(cases))
         msg = "driver: Exception getting 'driven.sum_z': " \
-            "'DrivenComponent' object has no attribute 'sum_z'"
+            "driven: object has no attribute 'sum_z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)
 
@@ -336,10 +305,21 @@ class TestCase(unittest.TestCase):
         self.model.driver.iterator = ListCaseIterator([])
         self.model.run()
 
+    def test_noresource(self):
+        logging.debug('')
+        logging.debug('test_noresource')
 
-if __name__ == "__main__":
-    import nose
-    sys.argv.append('--cover-package=openmdao')
+        # Check response to unsupported resource.
+        self.model.driver.extra_reqs = {'no-such-resource': 0}
+        self.model.driver.sequential = False
+        self.model.driver.iterator = ListCaseIterator([])
+        assert_raises(self, 'self.model.run()', globals(), locals(),
+                      RuntimeError,
+                      'driver: No servers supporting required resources')
+
+
+if __name__ == '__main__':
+    sys.argv.append('--cover-package=openmdao.drivers')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 

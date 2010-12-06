@@ -40,7 +40,7 @@ class HasEventsTestCase(unittest.TestCase):
         self.asm = set_as_top(Assembly())
         self.asm.add('driver', MyDriver())
         self.asm.add('comp1', MyEvComp())
-        self.asm.driver.workflow.add(self.asm.comp1)
+        self.asm.driver.workflow.add('comp1')
         
     def test_event(self):
         self.asm.run()

@@ -1,324 +1,214 @@
-# pylint: disable-msg=C0111,C0103
-
 import unittest
-import logging
+import StringIO
 
-from enthought.traits.api import TraitError
+from openmdao.main.depgraph import DependencyGraph
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
-from openmdao.main.expression import Expression
-from openmdao.lib.datatypes.api import Int
-from openmdao.main.hasobjective import HasObjective
-from openmdao.util.decorators import add_delegate
+_fakes = ['@xin', '@bin', '@bout', '@xout']
+nodes = ['A', 'B', 'C', 'D']
 
-exec_order = []
-
-@add_delegate(HasObjective)
-class DumbDriver(Driver):
-    def execute(self):
-        global exec_order
-        exec_order.append(self.name)
-        super(DumbDriver, self).execute()
-
-class Simple(Component):
-    a = Int(iotype='in')
-    b = Int(iotype='in')
-    c = Int(iotype='out')
-    d = Int(iotype='out')
-    
-    def __init__(self):
-        super(Simple, self).__init__()
-        self.a = 1
-        self.b = 2
-        self.c = 3
-        self.d = -1
-        self.run_count = 0
-
-    def execute(self):
-        global exec_order
-        exec_order.append(self.name)
-        self.run_count += 1
-        self.c = self.a + self.b
-        self.d = self.a - self.b
-
-allcomps = ['sub.comp1','sub.comp2','sub.comp3','sub.comp4','sub.comp5','sub.comp6',
-            'comp7','comp8']
-
-topouts = ['sub.c2', 'sub.c4', 'sub.d1', 'sub.d3','sub.d5'
-           'comp7.c', 'comp7.d','comp8.c', 'comp8.d']
-
-topins = ['sub.a1', 'sub.a3', 'sub.b2', 'sub.b4','sub.b6'
-          'comp7.a', 'comp7.b','comp8.a', 'comp8.b']
-
-subins = ['comp1.a', 'comp1.b',
-          'comp2.a', 'comp2.b',
-          'comp3.a', 'comp3.b',
-          'comp4.a', 'comp4.b',
-          'comp5.a', 'comp5.b',
-          'comp6.a', 'comp6.b',]
-
-subouts = ['comp1.c', 'comp1.d',
-           'comp2.c', 'comp2.d',
-           'comp3.c', 'comp3.d',
-           'comp4.c', 'comp4.d',
-           'comp5.c', 'comp5.d',
-           'comp6.c', 'comp6.d',]
-
-
-subvars = subins+subouts
 
 class DepGraphTestCase(unittest.TestCase):
 
     def setUp(self):
-        global exec_order
-        exec_order = []
-        top = set_as_top(Assembly())
-        self.top = top
-        top.add('sub', Assembly())
-        top.add('comp7', Simple())
-        top.add('comp8', Simple())
-        sub = top.sub
-        sub.add('comp1', Simple())
-        sub.add('comp2', Simple())
-        sub.add('comp3', Simple())
-        sub.add('comp4', Simple())
-        sub.add('comp5', Simple())
-        sub.add('comp6', Simple())
+        self.dep = dep = DependencyGraph()
+        for name in nodes:
+            dep.add(name)
 
-        top.driver.workflow.add([top.comp7, top.sub, top.comp8])
-        sub.driver.workflow.add([sub.comp1,sub.comp2,sub.comp3,
-                                 sub.comp4,sub.comp5,sub.comp6])
+        # an internal connection
+        dep.connect('A.c', 'B.a')
+        
+        # boundary connections
+        dep.connect('parent.X.c', 'bound_a')
+        dep.connect('B.c', 'bound_c')
+        dep.connect('bound_c', 'parent.Y.a')
+        
+        # auto-passthroughs
+        dep.connect('parent.X.d', 'B.b')
+        dep.connect('B.d', 'parent.Y.b')
 
-        sub.create_passthrough('comp1.a', 'a1')
-        sub.create_passthrough('comp3.a', 'a3')
-        sub.create_passthrough('comp2.b', 'b2')
-        sub.create_passthrough('comp4.b', 'b4')
-        sub.create_passthrough('comp6.b', 'b6')
-        sub.create_passthrough('comp2.c', 'c2')
-        sub.create_passthrough('comp4.c', 'c4')
-        sub.create_passthrough('comp1.d', 'd1')
-        sub.create_passthrough('comp3.d', 'd3')
-        sub.create_passthrough('comp5.d', 'd5')
-        
-        sub.connect('comp1.c', 'comp4.a')
-        sub.connect('comp5.c', 'comp1.b')
-        sub.connect('comp2.d', 'comp5.b')
-        sub.connect('comp3.c', 'comp5.a')
-        sub.connect('comp4.d', 'comp6.a')
-        
-        top.connect('comp7.c', 'sub.a3')
-        top.connect('sub.c4', 'comp8.a')
-        top.connect('sub.d3', 'comp8.b')
+    def test_get_source(self):
+        self.assertEqual(self.dep.get_source('B.a'), 'A.c')
+        self.assertEqual(self.dep.get_source('A.b'), None)
+        self.assertEqual(self.dep.get_source('bound_a'), 'parent.X.c')
+        self.assertEqual(self.dep.get_source('bound_c'), 'B.c')
 
-    def test_simple(self):
-        top = set_as_top(Assembly())
-        top.add('comp1', Simple())
-        top.driver.workflow.add(top.comp1)
-        vars = ['a','b','c','d']
-        self.assertEqual(top.comp1.run_count, 0)
-        valids = [top.comp1.get_valid(v) for v in vars]
-        self.assertEqual(valids, [True, True, False, False])
-        top.run()
-        self.assertEqual(top.comp1.run_count, 1)
-        self.assertEqual(top.comp1.c, 3)
-        self.assertEqual(top.comp1.d, -1)
-        valids = [top.comp1.get_valid(v) for v in vars]
-        self.assertEqual(valids, [True, True, True, True])
-        top.set('comp1.a', 5)
-        valids = [top.comp1.get_valid(v) for v in vars]
-        self.assertEqual(valids, [True, True, False, False])
-        top.run()
-        self.assertEqual(top.comp1.run_count, 2)
-        self.assertEqual(top.comp1.c, 7)
-        self.assertEqual(top.comp1.d, 3)
-        top.run()
-        self.assertEqual(top.comp1.run_count, 2) # run_count shouldn't change
-        valids = [top.comp1.get_valid(v) for v in vars]
-        self.assertEqual(valids, [True, True, True, True])
+    def test_add(self):
+        for name in nodes:
+            self.assertTrue(name in self.dep)
+        for name in _fakes:
+            self.assertTrue(name in self.dep)
         
-        # now add another comp and connect them
-        top.add('comp2', Simple())
-        top.driver.workflow.add(top.comp2)
-        top.connect('comp1.c', 'comp2.a')
-        self.assertEqual(top.comp2.run_count, 0)
-        self.assertEqual(top.comp2.c, 3)
-        self.assertEqual(top.comp2.d, -1)
-        valids = [top.comp2.get_valid(v) for v in vars]
-        self.assertEqual(valids, [False, True, False, False])
-        top.run()
-        self.assertEqual(top.comp1.run_count, 2)
-        self.assertEqual(top.comp2.run_count, 1)
-        self.assertEqual(top.comp2.c, 9)
-        self.assertEqual(top.comp2.d, 5)
-        valids = [top.comp2.get_valid(v) for v in vars]
-        self.assertEqual(valids, [True, True, True, True])
+    def test_remove(self):
+        self.dep.remove('B')
+        self.assertTrue('B' not in self.dep)
         
-        
-    def test_lazy1(self):
-        self.top.run()
-        run_counts = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_counts)
-        outs = [(5,-3),(3,-1),(5,1),(7,3),(4,6),(5,1),(3,-1),(8,6)]
-        newouts = []
-        for comp in allcomps:
-            newouts.append((self.top.get(comp+'.c'),self.top.get(comp+'.d')))
-        self.assertEqual(outs, newouts)
-        self.top.run()  
-        # run_count should stay at 1 for all comps
-        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], 
-                         [self.top.get(x).run_count for x in allcomps])
-        
-    def test_lazy2(self):
-        vars = ['a','b','c','d']
-        self.top.run()        
-        run_count = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_count)
-        valids = [self.top.sub.comp6.get_valid(v) for v in vars]
-        self.assertEqual(valids, [True, True, True, True])
-        self.top.sub.b6 = 3
-        valids = [self.top.sub.comp6.get_valid(v) for v in vars]
-        self.assertEqual(valids, [True, False, False, False])
-        self.top.run()  
-        # run_count should change only for comp6
-        run_count = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([1, 1, 1, 1, 1, 2, 1, 1], run_count)
-        outs = [(5,-3),(3,-1),(5,1),(7,3),(4,6),(6,0),(3,-1),(8,6)]
-        for comp,vals in zip(allcomps,outs):
-            self.assertEqual((comp,vals[0],vals[1]), 
-                             (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
-            
-    def test_lazy3(self):
-        vars = ['a','b','c','d']
-        self.top.run()        
-        run_count = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_count)
-        valids = [self.top.sub.comp3.get_valid(v) for v in vars]
-        self.assertEqual(valids, [True, True, True, True])
-        self.top.comp7.a = 3
-        valids = [self.top.sub.comp1.get_valid(v) for v in vars]
-        self.assertEqual(valids, [True, False, False, False])
-        valids = [self.top.sub.comp2.get_valid(v) for v in vars]
-        self.assertEqual(valids, [True, True, True, True])
-        valids = [self.top.sub.comp3.get_valid(v) for v in vars]
-        self.assertEqual(valids, [False, True, False, False])
-        valids = [self.top.sub.comp4.get_valid(v) for v in vars]
-        self.assertEqual(valids, [False, True, False, False])
-        valids = [self.top.sub.comp5.get_valid(v) for v in vars]
-        self.assertEqual(valids, [False, True, False, False])
-        valids = [self.top.sub.comp6.get_valid(v) for v in vars]
-        self.assertEqual(valids, [False, True, False, False])
-        valids = [self.top.comp7.get_valid(v) for v in vars]
-        self.assertEqual(valids, [True, True, False, False])
-        valids = [self.top.comp8.get_valid(v) for v in vars]
-        self.assertEqual(valids, [False, False, False, False])
-        self.top.run()  
-        # run_count should change for all sub comps but comp2
-        run_count = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([2, 1, 2, 2, 2, 2, 2, 2], run_count)
-        outs = [(7,-5),(3,-1),(7,3),(9,5),(6,8),(7,3),(5,1),(12,6)]
-        for comp,vals in zip(allcomps,outs):
-            self.assertEqual((comp,vals[0],vals[1]), 
-                             (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
+    def test_list_connections(self):
+        self.assertEqual(set(self.dep.list_connections()), 
+                         set([('A.c','B.a'), ('B.c','bound_c')]))
+        self.assertEqual(set(self.dep.list_connections(show_passthrough=False)), 
+                         set([('A.c','B.a')]))
     
-    def test_lazy4(self):
-        self.top.run()        
-        self.top.sub.set('b2', 5)
-        self.top.run()  
-        # run_count should change for all sub comps but comp3 and comp7 
-        self.assertEqual([2, 2, 1, 2, 2, 2, 1, 2], 
-                         [self.top.get(x).run_count for x in allcomps])
-        outs = [(2,0),(6,-4),(5,1),(4,0),(1,9),(2,-2),(3,-1),(5,3)]
-        for comp,vals in zip(allcomps,outs):
-            self.assertEqual((comp,vals[0],vals[1]), 
-                             (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
-    
-    def test_lazy_inside_out(self):
-        self.top.run()        
-        self.top.comp7.b = 4
-        # now run sub.comp1 directly to make sure it will force
-        # running of all components that supply its inputs
-        self.top.sub.comp1.run()
-        run_count = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([2, 1, 2, 1, 2, 1, 2, 1], run_count)
-        outs = [(7,-5),(3,-1),(7,3),(7,3),(6,8),(5,1),(5,-3),(8,6)]
-        for comp,vals in zip(allcomps,outs):
-            self.assertEqual((comp,vals[0],vals[1]), 
-                             (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
-            
-        # now run comp8 directly, which should force sub.comp4 to run
-        self.top.comp8.run()
-        run_count = [self.top.get(x).run_count for x in allcomps]
-        self.assertEqual([2, 1, 2, 2, 2, 1, 2, 2], run_count)
-        outs = [(7,-5),(3,-1),(7,3),(9,5),(6,8),(5,1),(5,-3),(12,6)]
-        for comp,vals in zip(allcomps,outs):
-            self.assertEqual((comp,vals[0],vals[1]), 
-                             (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
-            
-    def test_sequential(self):
-        # verify that if components aren't connected they should execute in the
-        # order that they were added instead of hash order
-        top = set_as_top(Assembly())
-        top.add('c1', Simple())
-        top.add('c2', Simple())
-        top.add('c3', Simple())
-        top.add('c4', Simple())
-        top.driver.workflow.add([top.c1,top.c2,top.c3,top.c4])
-        top.connect('c4.c', 'c3.a')  # force c4 to run before c3
-        top.run()
-        self.assertEqual(exec_order, ['c1','c2','c4','c3'])
-        
-        
-    def test_expr_deps(self):
-        top = set_as_top(Assembly())
-        driver1 = top.add('driver1', DumbDriver())
-        driver2 = top.add('driver2', DumbDriver())
-        top.add('c1', Simple())
-        top.add('c2', Simple())
-        top.add('c3', Simple())
-        
-        top.driver.workflow.add([top.driver1,top.driver2,top.c3])
-        top.driver1.workflow.add(top.c2)
-        top.driver2.workflow.add(top.c1)
-        
-        top.connect('c1.c', 'c2.a')
-        top.driver1.add_objective("c2.c*c2.d")
-        top.driver2.add_objective("c1.c")
-        top.run()
-        self.assertEqual(exec_order, ['driver2','c1','driver1','c2','c3'])
-        
+    def test_get_link(self):
+        link = self.dep.get_link('A', 'D')
+        self.assertEqual(link, None)
+        link = self.dep.get_link('A', 'B')
+        self.assertEqual(link._srcs.keys(), ['c'])
 
-    def test_set_already_connected(self):
+    def test_get_connected_inputs(self):
+        self.assertEqual(set(self.dep.get_connected_inputs()), set(['bound_a','B.b']))
+    
+    def test_get_connected_outputs(self):
+        self.assertEqual(set(self.dep.get_connected_outputs()), set(['bound_c', 'B.d']))
+    
+    def test_already_connected(self):
+        # internal connection
         try:
-            self.top.sub.comp2.b = 4
-        except TraitError, err:
-            self.assertEqual(str(err), 
-                "sub.comp2: 'b' is already connected to source 'b2' and cannot be directly set")
+            self.dep.connect('A.d', 'B.a')
+        except Exception as err:
+            self.assertEqual(str(err), 'B.a is already connected to source A.c')
         else:
-            self.fail('TraitError expected')
-        try:
-            self.top.set('sub.comp2.b', 4)
-        except TraitError, err:
-            self.assertEqual(str(err), 
-                "sub.comp2: 'b' is connected to source 'b2' and cannot be set by source 'None'")
-        else:
-            self.fail('TraitError expected')            
+            self.fail('Exception expected')
             
+        # input boundary connection
+        try:
+            self.dep.connect('parent.foo.bar', 'bound_a')
+        except Exception as err:
+            self.assertEqual(str(err), 'bound_a is already connected to source parent.X.c')
+        else:
+            self.fail('Exception expected')
+
+        # internal to boundary output connection
+        try:
+            self.dep.connect('B.d', 'bound_c')
+        except Exception as err:
+            self.assertEqual(str(err), 'bound_c is already connected to source B.c')
+        else:
+            self.fail('Exception expected')
+
+    def test_connections_to(self):
+        self.dep.connect('bound_a', 'A.a')
+
+        self.assertEqual(set(self.dep.connections_to('bound_c')),
+                         set([('@bout.bound_c','@xout.parent.Y.a'),
+                              ('B.c', '@bout.bound_c')]))
+        self.assertEqual(set(self.dep.connections_to('bound_a')),
+                         set([('@xin.parent.X.c','@bin.bound_a'),
+                              ('@bin.bound_a','A.a')]))
         
+        self.dep.connect('A.c', 'C.b')
+        self.assertEqual(set(self.dep.connections_to('A.c')),
+                         set([('A.c','C.b'),('A.c','B.a')]))
+        
+        # unconnected var should return an empty list
+        self.assertEqual(self.dep.connections_to('D.b'),[])
+
+        # now test component connections
+        self.assertEqual(set(self.dep.connections_to('B')),
+                         set([('@bin.B.b','B.b'),
+                              ('A.c','B.a'),
+                              ('B.c','@bout.bound_c'),
+                              ('B.d','@bout.B.d')]))
+
+    def test_var_edges(self):
+        self.assertEqual(set(self.dep.var_edges()),
+                         set([('@bout.B.d','@xout.parent.Y.b'),
+                              ('@bout.bound_c','@xout.parent.Y.a'),
+                              ('A.c','B.a'),
+                              ('B.c','@bout.bound_c'),
+                              ('B.d','@bout.B.d'),
+                              ('@xin.parent.X.d','@bin.B.b'),
+                              ('@xin.parent.X.c','@bin.bound_a'),
+                              ('@bin.B.b','B.b')]))
+        self.assertEqual(set(self.dep.var_edges('B')),
+                         set([('B.c','@bout.bound_c'),
+                              ('B.d','@bout.B.d')]))
+        self.assertEqual(set(self.dep.var_edges('@xin')),
+                         set([('@xin.parent.X.c','@bin.bound_a'),
+                              ('@xin.parent.X.d','@bin.B.b')]))
+        self.assertEqual(self.dep.var_edges('@xout'),[])
+        self.assertEqual(self.dep.var_edges('blah'),[])
+
+    def test_var_in_edges(self):
+        self.assertEqual(set(self.dep.var_in_edges()),
+                         set([('@bout.B.d','@xout.parent.Y.b'),
+                              ('@bout.bound_c','@xout.parent.Y.a'),
+                              ('A.c','B.a'),
+                              ('B.c','@bout.bound_c'),
+                              ('B.d','@bout.B.d'),
+                              ('@xin.parent.X.d','@bin.B.b'),
+                              ('@xin.parent.X.c','@bin.bound_a'),
+                              ('@bin.B.b','B.b')]))
+        self.assertEqual(set(self.dep.var_in_edges('B')),
+                         set([('A.c','B.a'),('@bin.B.b','B.b')]))
+        self.assertEqual(set(self.dep.var_in_edges('@xout')),
+                         set([('@bout.B.d','@xout.parent.Y.b'),
+                              ('@bout.bound_c','@xout.parent.Y.a')]))
+        self.assertEqual(self.dep.var_in_edges('@xin'),[])
+        self.assertEqual(self.dep.var_in_edges('blah'),[])
+
+    def test_disconnect(self):
+        self.dep.connect('bound_a', 'A.a')
+        self.dep.disconnect('bound_a') # this should disconnect extern to bound_a and 
+                                       # bound_a to A.a, completely removing the
+                                       # link between @bin and A.
+        link = self.dep.get_link('@xin', '@bin')
+        self.assertTrue('bound_a' not in link._dests)
+        link = self.dep.get_link('@bin', 'A')
+        self.assertEqual(link, None)
+        
+        # now if we delete the auto passthrough from parent.X.d to B.b,
+        # there should be no link at all between @xin and @bin, or between
+        # @bin and B.
+        self.dep.disconnect('parent.X.d', 'B.b')
+        link = self.dep.get_link('@xin', '@bin')
+        self.assertEqual(link, None)
+        link = self.dep.get_link('@bin', 'B')
+        self.assertEqual(link, None)
+        
+        # not test a similar situation on the output side
+        self.dep.disconnect('bound_c')
+        link = self.dep.get_link('@bout', '@xout')
+        self.assertTrue('bound_c' not in link._srcs)
+        
+        self.dep.disconnect('B.d', 'parent.Y.b')
+        link = self.dep.get_link('@bout', '@xout')
+        self.assertEqual(link, None)
+        link = self.dep.get_link('B', '@bout')
+        self.assertEqual(link, None)
+        
+    def test_link(self):
+        self.dep.connect('B.d', 'C.b')
+        self.dep.connect('B.c', 'C.a')
+        link = self.dep.get_link('B', 'C')
+        self.assertEqual(set(link.get_srcs()), set(['c','d']))
+        self.assertEqual(set(link.get_srcs('b')), set(['d']))
+        self.assertEqual(link.get_srcs('foo'), [])
+
+        self.assertEqual(set(link.get_dests()), set(['a','b']))
+        self.assertEqual(set(link.get_dests('c')), set(['a']))
+        self.assertEqual(link.get_dests('foo'), [])
+        
+    def test_dump(self):
+        s = StringIO.StringIO()
+        self.dep.dump(s)
+        lines = s.getvalue().split('\n')
+        expected = ["A -> B",
+                    "   c : ['a']",
+                    "B -> @bout",
+                    "   c : ['bound_c']",
+                    "   d : ['B.d']",
+                    "@bin -> B",
+                    "   B.b : ['b']",
+                    "@xin -> @bin",
+                    "   parent.X.c : ['bound_a']",
+                    "   parent.X.d : ['B.b']",
+                    "@bout -> @xout",
+                    "   bound_c : ['parent.Y.a']",
+                    "   B.d : ['parent.Y.b']"]
+        for line, expect in zip(lines, expected):
+            self.assertEqual(line, expect)
+
 if __name__ == "__main__":
-    
-    #import cProfile
-    #cProfile.run('unittest.main()', 'profout')
-    
-    #import pstats
-    #p = pstats.Stats('profout')
-    #p.strip_dirs()
-    #p.sort_stats('time')
-    #p.print_stats()
-    #print '\n\n---------------------\n\n'
-    #p.print_callers()
-    #print '\n\n---------------------\n\n'
-    #p.print_callees()
-        
     unittest.main()
 
 

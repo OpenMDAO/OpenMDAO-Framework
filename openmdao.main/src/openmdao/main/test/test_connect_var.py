@@ -65,7 +65,7 @@ class VariableTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('oneinp', Oneinp())
         self.top.add('oneout', Oneout())
-        self.top.driver.workflow.add([self.top.oneinp, self.top.oneout])
+        self.top.driver.workflow.add(['oneinp', 'oneout'])
 
     def tearDown(self):
         self.top = None
@@ -112,9 +112,9 @@ class VariableTestCase(unittest.TestCase):
         self.assertEqual(27,self.top.oneinp.ratio2)
 
     def test_var4(self):
-        self.top.oneout.ratio1 = 12.0   
+        self.top.oneout.ratio1 = 12.0
         try:
-            self.top.connect('oneout.ratio1','oneinp.ratio2')  # float to int   
+            self.top.connect('oneout.ratio1','oneinp.ratio2')  # float to int
         except TraitError, err:
             msg = "but a value of 12.0 <type 'float'> was specified"
             self.assertTrue( msg in str(err))

@@ -379,7 +379,9 @@ needed for the model.
 If you have downloaded the latest release version from the website, the files you need should be
 here:
 
-    ``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign``
+::
+
+  openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign
 
 ``X.X.X`` is the current OpenMDAO version, and ``######`` is a string that
 contains the Python version and the operating system description. This path will 
@@ -389,7 +391,9 @@ vary depending on your system and version, but there will be only one
 If you are a developer and have a branch from the source repository, the files you need will be
 here:
 
-    ``examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign``
+::
+
+  examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign
 
 The three engine models have been implemented in ``transmission.py, engine.py,`` and ``chassis.py``. It will
 be useful to browse these files as you learn some of the basic concepts in this tutorial.
@@ -630,7 +634,7 @@ Engine, and Chassis components.
             self.add('chassis', Chassis())
 
             # Set up the workflow
-            self.driver.workflow.add([self.transmission, self.engine, self.chassis])
+            self.driver.workflow.add(['transmission', 'engine', 'chassis'])
 
 The Engine, Transmission, and Chassis components all need to be imported so
 their instances can be created; they can be added to the assembly
@@ -667,7 +671,7 @@ Now that the components are instantiated in the assembly, they need to be hooked
 	        self.add('chassis', Chassis())
 
 	        # Set up the workflow
-	        self.driver.workflow.add([self.transmission, self.engine, self.chassis])
+	        self.driver.workflow.add(['transmission', 'engine', 'chassis'])
 
 	# This is a trick to get around a limitation in Sphinx's doctest, where
 	# there is no way to preserve the indentation level between code
@@ -770,7 +774,7 @@ Now these inputs are available to connect to the components, so we connect them 
 	        self.add('chassis', Chassis())
 
 	        # Set up the workflow
-	        self.driver.workflow.add([self.transmission, self.engine, self.chassis])
+	        self.driver.workflow.add(['transmission', 'engine', 'chassis'])
 
 	self = Vehicle()
 
@@ -1004,7 +1008,7 @@ case, the socket is named *vehicle,* so the function should be named ``_vehicle_
         """Callback whenever a new Vehicle is added to the DrivingSim
         """
         
-        self.driver.workflow.add(newvehicle)
+        self.driver.workflow.add(newvehicle.name)
         
         # set up interface to the framework  
         # pylint: disable-msg=E1101
@@ -1082,7 +1086,7 @@ socket in DrivingSim:
             self.driving_sim.vehicle = Vehicle()
         
             # add DrivingSim to workflow
-            self.driver.workflow.add(self.driving_sim)
+            self.driver.workflow.add('driving_sim')
 
             # CONMIN Flags
             self.driver.iprint = 1
@@ -1201,7 +1205,7 @@ the expression:
         	self.add('driver', CONMINdriver())
 
 	        # add DrivingSim to workflow
-	        self.driver.workflow.add(self.driving_sim)
+	        self.driver.workflow.add('driving_sim')
 
 	self = EngineOptimization()
 	

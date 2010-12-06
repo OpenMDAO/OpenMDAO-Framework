@@ -7,12 +7,14 @@ from math import sqrt
 
 from openmdao.main.api import Assembly, Component, Driver, \
                               Dataflow, SequentialWorkflow, set_as_top, dump_iteration_tree
-from openmdao.main.expression import Expression
 from openmdao.lib.datatypes.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.main.hasobjective import HasObjective
+from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
+
+from openmdao.main.component import _show_validity
 
 exec_order = []
 
@@ -31,12 +33,11 @@ class Adder(Component):
         self.sum = self.x1 + self.x2
         self.runcount += 1
 
-@add_delegate(HasObjective)
+@add_delegate(HasObjective, HasParameters)
 class Summer(Driver):
     """Sums the objective over some number of iterations, feeding
     its current sum back into the specified parameter."""
     
-    design = Expression(iotype='out')
     max_iterations = Int(1, iotype='in')
     sum = Float(iotype='out')
     
@@ -50,10 +51,10 @@ class Summer(Driver):
     
     def start_iteration(self):
         self.itercount = 0
-        self.sum = 0.
+        self.sum = 0.001
         
     def pre_iteration(self):
-        self.design.set(self.sum)
+        self.set_parameters([self.sum])
     
     def post_iteration(self):
         self.sum += self.eval_objective()
@@ -137,9 +138,9 @@ class MultiDriverTestCase(unittest.TestCase):
         top.connect('adder1.sum', 'adder3.x1')
         top.connect('adder2.sum', 'adder3.x2')
         
-        top.driver.workflow.add(drv)
-        drv.workflow.add([top.comp1,top.comp2,top.comp3,top.comp4,
-                          top.adder1, top.adder2, top.adder3])
+        top.driver.workflow.add('driver1')
+        drv.workflow.add(['comp1','comp2','comp3','comp4',
+                          'adder1', 'adder2', 'adder3'])
         
         drv.itmax = 30
         drv.add_objective('adder3.sum+50.')
@@ -156,11 +157,22 @@ class MultiDriverTestCase(unittest.TestCase):
         self.opt_objective = 6.
         self.opt_design_vars = [0., 1., 2., -1.]
         
-
-    def test_one_driver(self):
+    def test_invalidation(self):
         global exec_order
+        print "*** test_invalidation ***"
         self.rosen_setUp()
         self.top.run()
+        self.top.comp1.x = 12.3
+        self.assertEqual([False, True, False], [self.top.adder1._valid_dict[n] for n in ['x1','x2','sum']])
+        self.top.comp2.x = 32.1
+        self.assertEqual([False, False, False], [self.top.adder1._valid_dict[n] for n in ['x1','x2','sum']])
+        
+    def test_one_driver(self):
+        global exec_order
+        print "*** test_one_driver ***"
+        self.rosen_setUp()
+        self.top.run()
+        print '*** run finished ***'
         self.assertAlmostEqual(self.opt_objective, 
                                self.top.driver1.eval_objective(), places=2)
         self.assertAlmostEqual(self.opt_design_vars[0], 
@@ -177,14 +189,15 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertTrue(runcount+2 <= self.top.adder3.runcount)
         
     def test_2_drivers(self):
+        print "*** test_2_drivers ***"
         self.rosen_setUp()
         drv = self.top.add('driver1a', CONMINdriver())
         self.top.add('comp1a', ExprComp(expr='x**2'))
         self.top.add('comp2a', ExprComp(expr='x-5.0*sqrt(x)'))
         self.top.connect('comp1a.f_x', 'comp2a.x')
         
-        self.top.driver.workflow.add(drv)
-        drv.workflow.add([self.top.comp1a, self.top.comp2a])
+        self.top.driver.workflow.add('driver1a')
+        drv.workflow.add(['comp1a', 'comp2a'])
         
         drv.itmax = 40
         drv.add_objective('comp2a.f_x')
@@ -208,6 +221,7 @@ class MultiDriverTestCase(unittest.TestCase):
 
         
     def test_2_nested_assemblies(self):
+        print "*** test_2_nested_assemblies ***"
         #
         # Solve (x-3)^2 + xy + (y+4)^2 = 3
         # using two optimizers nested. The inner loop optimizes y
@@ -237,8 +251,8 @@ class MultiDriverTestCase(unittest.TestCase):
         nested.create_passthrough('comp1.x')
         nested.create_passthrough('comp4.f_xy')
         
-        outer_driver.workflow.add(nested)
-        inner_driver.workflow.add([nested.comp1,nested.comp2,nested.comp3,nested.comp4])
+        outer_driver.workflow.add('nested')
+        inner_driver.workflow.add(['comp1','comp2','comp3','comp4'])
 
         ## create one driver for testing
         #inner_driver = self.top.add('driver1', CONMINdriver())
@@ -278,6 +292,7 @@ class MultiDriverTestCase(unittest.TestCase):
             '            nested.comp4\n')
 
     def test_2_nested_drivers_same_assembly(self):
+        print "*** test_2_nested_drivers_same_assembly ***"
         #
         # Solve (x-3)^2 + xy + (y+4)^2 = 3
         # using two optimizers nested. The inner loop optimizes y
@@ -305,8 +320,8 @@ class MultiDriverTestCase(unittest.TestCase):
         top.connect('comp2.f_x', 'comp4.x')
         
         # Driver process definition
-        outer_driver.workflow.add(inner_driver)
-        inner_driver.workflow.add([top.comp1,top.comp2,top.comp3,top.comp4])
+        outer_driver.workflow.add('driver1')
+        inner_driver.workflow.add(['comp1','comp2','comp3','comp4'])
         
         inner_driver.itmax = 30
         inner_driver.fdch = .000001
@@ -342,21 +357,22 @@ class MultiDriverTestCase(unittest.TestCase):
         #       |      |
         #       |<-----D2
         #
+        print "*** test_2drivers_same_iterset ***"
         global exec_order
         top = set_as_top(Assembly())
         top.add('C1', ExprComp(expr='x+1'))
         top.add('D1', Summer())
         top.D1.add_objective('C1.f_x')
-        top.D1.design = 'C1.x'
+        top.D1.add_parameter('C1.x', low=-999, high=999)
         top.D1.max_iterations = 3
         top.add('D2', Summer())
         top.D2.add_objective('C1.f_x')
-        top.D2.design = 'C1.x'
+        top.D2.add_parameter('C1.x', low=-999, high=999)
         top.D2.max_iterations = 2
         
-        top.driver.workflow.add([top.D1, top.D2])
-        top.D1.workflow.add(top.C1)
-        top.D2.workflow.add(top.C1)
+        top.driver.workflow.add(['D1', 'D2'])
+        top.D1.workflow.add('C1')
+        top.D2.workflow.add('C1')
         
         top.run()
         
@@ -379,21 +395,22 @@ class MultiDriverTestCase(unittest.TestCase):
         #              |<---D2
         #
         global exec_order
+        print "*** test_2drivers_discon_same_iterset ***"
         top = set_as_top(Assembly())
         top.add('D1', Summer())
         top.add('D2', Summer())
         top.add('C1', ExprComp(expr='x+1'))
         top.add('C2', ExprComp(expr='x+1'))
         top.D1.add_objective('C2.f_x')
-        top.D1.design = 'C1.x'
+        top.D1.add_parameter('C1.x', low=-999, high=999)
         top.D1.max_iterations = 2
         top.D2.add_objective('C1.f_x')
-        top.D2.design = 'C2.x'
+        top.D2.add_parameter('C2.x', low=-999, high=999)
         top.D2.max_iterations = 3
 
-        top.driver.workflow.add([top.D1, top.D2])
-        top.D1.workflow.add([top.C1, top.C2])
-        top.D2.workflow.add([top.C1, top.C2])
+        top.driver.workflow.add(['D1', 'D2'])
+        top.D1.workflow.add(['C1', 'C2'])
+        top.D2.workflow.add(['C1', 'C2'])
         
         top.run()
         
@@ -422,6 +439,7 @@ class MultiDriverTestCase(unittest.TestCase):
         #          |    |
         #          |<---C2
         global exec_order
+        print "*** test_2peer_drivers ***"
         top = set_as_top(Assembly())
         top.add('C1', ExprComp(expr='x+1'))
         top.add('C2', ExprComp2(expr='x+y'))
@@ -429,16 +447,16 @@ class MultiDriverTestCase(unittest.TestCase):
         top.connect('C1.f_x', 'C2.x')
         top.add('D1', Summer())
         top.D1.add_objective('C1.f_x')
-        top.D1.design = 'C1.x'
+        top.D1.add_parameter('C1.x', low=-999, high=999)
         top.D1.max_iterations = 2
         top.add('D2', Summer())
         top.D2.add_objective('C2.f_xy')
-        top.D2.design = 'C2.y'
+        top.D2.add_parameter('C2.y', low=-999, high=999)
         top.D2.max_iterations = 3
         
-        top.driver.workflow.add([top.D1, top.D2])
-        top.D1.workflow = SequentialWorkflow(members=[top.C1])
-        top.D2.workflow = SequentialWorkflow(members=[top.C2])
+        top.driver.workflow.add(['D1', 'D2'])
+        top.D1.workflow = SequentialWorkflow(top.D1, members=['C1'])
+        top.D2.workflow = SequentialWorkflow(top.D1, members=['C2'])
         
         top.run()
         self.assertEqual(top.D2.runcount, 1)
