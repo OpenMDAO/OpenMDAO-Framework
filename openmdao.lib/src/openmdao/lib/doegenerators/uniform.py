@@ -1,8 +1,6 @@
 """ DOEgenerator that performs a uniform space-filling Design of Experiments. Plugs
 into the DOEgenerator socket on a DOEdriver."""
 
-from itertools import product
-
 # pylint: disable-msg=E0611,F0401
 from numpy import linspace,random
 from enthought.traits.api import HasTraits
@@ -23,17 +21,26 @@ class Uniform(HasTraits):
     num_samples = Int(0, iotype="in", desc="number of total samples in "
                                               "the DOE")
     
-    def __init__(self, num_levels=None, *args, **kwargs):
+    def __init__(self, num_samples=None, *args, **kwargs):
         
         super(Uniform, self).__init__(*args, **kwargs)
         
-        if num_levels is not None: 
-            self.num_levels = num_levels
+        self.num = 0
+        
+        if num_samples is not None: 
+            self.num_samples = num_samples
     
     def __iter__(self):
         """Return an iterator over our sets of input values"""
         
         #return product(*[linspace(0., 1., self.num_levels) \
         #                for i in range(self.num_parameters)])
-        return [random.uniform(0.,1.,self.num_parameters) \
-                                           for i in range(self.num_samples)]
+        return self
+                                           
+    def next(self):
+        if self.num < self.num_samples:
+            self.num = self.num+1
+            return random.uniform(0,1,self.num_parameters)
+        else:
+            raise StopIteration()
+            
