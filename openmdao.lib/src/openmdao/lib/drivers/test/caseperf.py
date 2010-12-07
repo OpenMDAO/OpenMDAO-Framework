@@ -99,17 +99,6 @@ class Sleeper(Component):
         time.sleep(self.delay)
 
 
-class SimpleCID(Assembly):
-    """ Directly executes cases sequentially. """
-
-    def __init__(self):
-        """ Create assembly with Sleeper as sole component. """
-        super(SimpleCID, self).__init__()
-        self.add('sleeper', Sleeper())
-        self.add('driver', SimpleCaseIterDriver())
-        self.driver.workflow.add(self.sleeper)
-
-
 class CID(Assembly):
     """ Executes via CaseIteratorDriver. """
 
@@ -147,16 +136,17 @@ def main():
 
     # Save to an egg to avoid analysis overhead during run_test().
     print '\nInitializing egg module analysis'
-    template = Case(inputs=[('sleeper.delay', None, 1)])
+    template = Case(inputs=[('sleeper.delay', None, 0.01)])
     model.driver.iterator = Iterator(template)
-    model.driver.recorder = Recorder(model.driver.iterator, 1)
+    model.driver.recorder = Recorder(model.driver.iterator, 1000)
     start = time.time()
     egg_filename, required_distributions, orphan_modules = \
         model.save_to_egg('caseperf', '0')
     et = time.time() - start
-    print '    done in %.2f\n' % et
+    print '    done in %.2f' % et
     os.remove(egg_filename)
 
+    print
     results = run_test(model, initial, limit, max_servers)
     record_results(results)
 
@@ -166,7 +156,7 @@ def run_test(model, initial, limit, max_servers):
     results = []
     duration = initial
     while duration < limit:
-        print 'run_test delay %s' % duration
+        print 'run test, delay %s' % duration
         template = Case(inputs=[('sleeper.delay', None, duration)])
         model.driver.iterator = Iterator(template)
         model.driver.recorder = Recorder(model.driver.iterator, duration)

@@ -382,6 +382,7 @@ def is_legal_connection(address, allowed_hosts, logger):
         # Presumably a pipe (AF_UNIX, AF_PIPE).
         return True
 
+
 def read_allowed_hosts(path):
     """
     Return allowed hosts data read from `path`.

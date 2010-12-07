@@ -164,6 +164,7 @@ class OpenMDAO_Server(Server):
         for cls in CLASSES_TO_PROXY:
             self._access_controller.class_proxy_required(cls)
         self._address_type = connection.address_type(self.address)
+        self._cred_cache = {}
 
     @property
     def public_key(self):
@@ -228,13 +229,11 @@ class OpenMDAO_Server(Server):
         connections caused by :meth:`manager_is_alive` which are used to avoid
         getting hung trying to connect to a manager which is no longer there.
         """
-        self._logger.debug('handle_request on %r', conn)
         funcname = result = request = None
 
         try:
             connection.deliver_challenge(conn, self.authkey)
         except (EOFError, IOError) as exc:
-            self._logger.debug('deliver_challenge error: %r', exc)
             conn.close()
             return
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
@@ -260,7 +259,6 @@ class OpenMDAO_Server(Server):
         except Exception:  #pragma no cover
             msg = ('#TRACEBACK', traceback.format_exc())
         else:
-            self._logger.debug('handle_request %r', funcname)
             try:
                 result = func(conn, *args, **kwds)
             # Hard to cause this to happen. It rarely happens, and then at shutdown.
@@ -268,6 +266,7 @@ class OpenMDAO_Server(Server):
                 msg = ('#TRACEBACK', traceback.format_exc())
             else:
                 msg = ('#RETURN', result)
+
         try:
             conn.send(msg)
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
@@ -280,7 +279,6 @@ class OpenMDAO_Server(Server):
             util.info(' ... request was %r', request)
             util.info(' ... exception was %r', exc)
 
-        self._logger.debug('handle_request closing %r', conn)
         conn.close()
 
     def serve_client(self, conn):
@@ -328,7 +326,12 @@ class OpenMDAO_Server(Server):
 #                self._logger.debug('id_to_obj:\n%s', self.debug_info(conn))
 
                 if self._authkey == 'PublicKey':
-                    credentials = Credentials.verify(credentials, client_key)
+                    tpl = credentials
+                    try:
+                        credentials = self._cred_cache[tpl]
+                    except KeyError:
+                        credentials = Credentials.verify(tpl, client_key)
+                        self._cred_cache[tpl] = credentials
 
                 try:
                     obj, exposed, gettypeid = id_to_obj[ident]
@@ -991,13 +994,15 @@ class OpenMDAO_Proxy(BaseProxy):
 
         super(OpenMDAO_Proxy, self).__init__(*args, **kwds)
 
-        if self._authkey == 'PublicKey' and get_credentials() is None:
-            raise RuntimeError('PublicKey proxy requires credentials')
+#        if self._authkey == 'PublicKey' and get_credentials() is None:
+#            raise RuntimeError('PublicKey proxy requires credentials')
             
         if self._manager is None:
             self._pubkey = pubkey
         else:
             self._pubkey = self._manager._pubkey
+
+        self._cred_cache = {}
 
     def _callmethod(self, methodname, args=None, kwds=None):
         """
@@ -1045,7 +1050,12 @@ class OpenMDAO_Proxy(BaseProxy):
                 new_args.append(arg)
 
         if self._authkey == 'PublicKey':
-            credentials = credentials.sign(key_pair)
+            user = credentials.user
+            try:
+                credentials = self._cred_cache[user]
+            except KeyError:
+                credentials = credentials.sign(key_pair)
+                self._cred_cache[user] = credentials
 
         conn.send(encrypt((self._id, methodname, new_args, kwds, credentials),
                           session_key))
