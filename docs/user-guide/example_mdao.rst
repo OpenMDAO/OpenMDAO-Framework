@@ -254,7 +254,7 @@ the top level optimization loop.
                 # Outer Loop - Global Optimization
                 self.add('bcastr', Broadcaster())
                 self.add('fixed_point_iterator', FixedPointIterator())
-                self.driver.workflow.add([self.bcastr, self.fixed_point_iterator])
+                self.driver.workflow.add(['bcastr', 'fixed_point_iterator'])
                 
 So far nothing is really new in terms of syntax. Note that the top level driver is
 always named ``'driver'``. However, all other drivers can be given any valid name. For this
@@ -274,7 +274,7 @@ workflow of ``'driver'``, we add them to the workflow of ``'fixed_point_iterator
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
         self.add('dis1', SellarDiscipline1())
         self.add('dis2', SellarDiscipline2())
-        self.fixed_point_iterator.workflow.add([self.dis1, self.dis2])
+        self.fixed_point_iterator.workflow.add(['dis1', 'dis2'])
         
 Now the iteration hierarchy is finished. We still need to hook up the data connections
 and set up the CONMIN optimization and the fixed point iteration.
@@ -386,12 +386,12 @@ Finally, putting it all together gives:
                 # Outer Loop - Global Optimization
                 self.add('bcastr', Broadcaster())
                 self.add('fixed_point_iterator', FixedPointIterator())
-                self.driver.workflow.add([self.bcastr, self.fixed_point_iterator])
+                self.driver.workflow.add(['bcastr', 'fixed_point_iterator'])
         
                 # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
                 self.add('dis1', SellarDiscipline1())
                 self.add('dis2', SellarDiscipline2())
-                self.fixed_point_iterator.workflow.add([self.dis1, self.dis2])
+                self.fixed_point_iterator.workflow.add(['dis1', 'dis2'])
                 
                 # Make all connections
                 self.connect('bcastr.z1','dis1.z1')
@@ -453,7 +453,7 @@ looks like this:
         # Outer Loop - Global Optimization
         self.add('bcastr', Broadcaster())
         self.add('solver', BroydenSolver())
-        self.driver.workflow.add([self.bcastr, self.solver])
+        self.driver.workflow.add(['bcastr', 'solver'])
 
 Next, we set up our parameters for the inner loop. The Broyden solver can be
 connected using the standard driver interface. It can take multiple inputs and outputs
@@ -553,7 +553,7 @@ are instantiated and the workflow is defined.
                 self.add('dis2', SellarDiscipline2())
                 
                 # Driver process definition
-                self.driver.workflow.add([self.bcastr, self.dis1, self.dis2])
+                self.driver.workflow.add(['bcastr', 'dis1', 'dis2'])
                 
                 # Make all connections
                 self.connect('bcastr.z1','dis1.z1')
@@ -695,16 +695,16 @@ that there are three drivers, and we add each component to one of the three work
                 self.add('bcastr', Broadcaster())
                 self.add('localopt1', CONMINdriver())
                 self.add('localopt2', CONMINdriver())
-                self.driver.workflow.add([self.bcastr, self.localopt1, 
-                                          self.localopt2])
+                self.driver.workflow.add(['bcastr', 'localopt1', 
+                                          'localopt2'])
                 
                 # Local Optimization 1
                 self.add('dis1', SellarDiscipline1())
-                self.localopt1.workflow.add(self.dis1)
+                self.localopt1.workflow.add('dis1')
                 
                 # Local Optimization 2
                 self.add('dis2', SellarDiscipline2())
-                self.localopt2.workflow.add(self.dis2)
+                self.localopt2.workflow.add('dis2')
 
 Notice that there are no data connections, so we never need to call ``self.connect``.
 

@@ -45,10 +45,10 @@ class IContainer(Interface):
         #pathname: str
             #The dotted path to the specified attribute.
             
-        #iotype: str, optional
+        #iotype: str (optional)
             #The data direction, either 'in' or 'out'.
             
-        #trait: TraitType, optional
+        #trait: TraitType (optional)
             #A validation trait for the given attribute.
         #"""
         
@@ -93,10 +93,10 @@ class IContainer(Interface):
         pathname: str
             Pathname of the desired trait.  May contain dots.
             
-        iotype: str, optional
+        iotype: str (optional)
             Expected iotype of the trait.
             
-        trait: TraitType, optional
+        trait: TraitType (optional)
             Trait to be used for validation
         """
 
@@ -460,10 +460,10 @@ class IHasParameters(Interface):
         
         param_name: str 
             Name of the parameter to add.
-        low: number, optional
+        low: number (optional)
             Minimum allowed value the optimzier can use for this parameter. If not specified, 
             then the *low* value from the variable is used. 
-        high: number, optional
+        high: number (optional)
             Maximum allowed value the optimizer can use for this parameter. If not specified, 
             then the *high* value from the variable is used.
         """

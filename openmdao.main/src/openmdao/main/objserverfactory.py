@@ -23,7 +23,8 @@ from openmdao.main.container import Container
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, \
-                                     register, write_server_config, keytype
+                                     register, write_server_config, keytype, \
+                                     _HAVE_PYWIN32
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                rbac
 
@@ -93,7 +94,7 @@ class ObjServerFactory(Factory):
                     server = key
                     break
             else:
-                self._logger.error('release: server %r not found' % server)
+                self._logger.error('release: server %r not found', server)
                 for key in self._managers.keys():
                     self._logger.debug('    %r', key)
                 raise ValueError('server %r not found' % server)
@@ -516,7 +517,7 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
         return proxy
 
 
-def start_server(authkey='PublicKey', port=0, prefix='server', timeout=60):
+def start_server(authkey='PublicKey', port=0, prefix='server', timeout=None):
     """
     Start an :class:`ObjServerFactory` service in a separate process
     in the current directory.
@@ -525,23 +526,34 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=60):
         Authorization key, must be matched by clients.
 
     port: int
-        Port to use, or zero for next avaiable port.
+        Server port (default of 0 implies next available port).
+        Note that ports below 1024 typically require special privileges.
+        If port is negative, then a local pipe is used for communication.
 
     prefix: string
         Prefix for server config file and stdout/stderr file.
 
     timeout: int
         Seconds to wait for server to start. Note that public key generation
-        can take a while.
+        can take a while. The default value of None will use an internally
+        computed value based on host type (and for Windows, the availability
+        of pyWin32).
 
     Returns :class:`ShellProc`.
     """
+    if timeout is None:
+        if sys.platform == 'win32' and not _HAVE_PYWIN32:
+            timeout = 120
+        else:
+            timeout = 30
+
     server_key = prefix+'.key'
     server_cfg = prefix+'.cfg'
     server_out = prefix+'.out'
     for path in (server_cfg, server_out):
         if os.path.exists(path):
             os.remove(path)
+
     with open(server_key, 'w') as out:
         out.write('%s\n' % authkey)
 
@@ -551,14 +563,16 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=60):
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
 
     try:
+        # Wait for valid server_cfg file.
         retry = 0
-        while not os.path.exists(server_cfg):
+        while (not os.path.exists(server_cfg)) or \
+              (os.path.getsize(server_cfg) == 0):
             return_code = proc.poll()
             if return_code:
                 error_msg = proc.error_message(return_code)
                 raise RuntimeError('Server startup failed %s' % error_msg)
             retry += 1
-            if retry < 50*timeout:  # ~5 sec.
+            if retry < 10*timeout:
                 time.sleep(.1)
             # Hard to cause a startup timeout.
             else:  #pragma no cover
@@ -610,6 +624,7 @@ def main():  #pragma no cover
     global _SERVER_CFG
     _SERVER_CFG = server_cfg
 
+    # Get authkey.
     authkey = 'PublicKey'
     try:
         with open(server_key, 'r') as inp:
@@ -618,6 +633,7 @@ def main():  #pragma no cover
     except IOError:
         pass
 
+    # Get address and create manager.
     _LOGGER.setLevel(logging.DEBUG)
     if options.port >= 0:
         address = (platform.node(), options.port)
@@ -628,6 +644,7 @@ def main():  #pragma no cover
     current_process().authkey = authkey
     manager = _FactoryManager(address, authkey, name='Factory')
 
+    # Get server, retry if specified address is in use.
     server = None
     retries = 0
     while server is None:
@@ -649,12 +666,14 @@ def main():  #pragma no cover
             else:
                 raise
 
+    # Record configuration.
     write_server_config(server, _SERVER_CFG)
     msg = 'Serving on %s' % (server.address,)
     _LOGGER.info(msg)
     print msg
     sys.stdout.flush()
 
+    # And away we go...
     signal.signal(signal.SIGTERM, _sigterm_handler)
     try:
         server.serve_forever()

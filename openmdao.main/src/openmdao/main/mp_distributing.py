@@ -458,6 +458,7 @@ def main():  #pragma no cover
     pid = os.getpid()
     ident = '(%s:%d)' % (hostname, pid)
     print '%s main startup' % ident
+    sys.stdout.flush()
 
     # Get data from parent over stdin.
     data = cPickle.load(sys.stdin)
@@ -465,10 +466,12 @@ def main():  #pragma no cover
     print '%s data received' % ident
     authkey = data['authkey']
     print '%s using %s authentication' % (ident, keytype(authkey))
+    sys.stdout.flush()
     log_level = data['dist_log_level']
     os.environ['OPENMDAO_KEEPDIRS'] = data['keep_dirs']
 
     exc = None
+    server = None
     try:
         # Update HostManager registry.
         dct = data['registry']
@@ -482,6 +485,7 @@ def main():  #pragma no cover
 
         # Set some stuff.
         print '%s preparing to fork, log level %d' % (ident, log_level)
+        sys.stdout.flush()
         util.get_logger().setLevel(log_level)
         forking.prepare(data)
 
@@ -491,12 +495,12 @@ def main():  #pragma no cover
         logging.getLogger(name).setLevel(log_level)
         server = OpenMDAO_Server(HostManager._registry, (hostname, 0),
                                  authkey, 'pickle', name)
-        current_process()._server = server
     except Exception as exc:
         print '%s caught exception: %s' % (ident, exc)
 
     # Report server address and public key back to parent.
     print '%s connecting to parent at %s' % (ident, data['parent_address'])
+    sys.stdout.flush()
     conn = connection.Client(data['parent_address'], authkey=authkey)
     if exc:
         conn.send((data['index'], None, str(exc)))
@@ -504,7 +508,12 @@ def main():  #pragma no cover
         conn.send((data['index'], server.address, server.public_key_text))
     conn.close()
 
+    if exc:
+        print '%s exiting' % ident
+        sys.exit(1)
+
     # Set name etc.
+    current_process()._server = server
     current_process()._name = 'Host-%s:%s' % server.address
     current_process().authkey = authkey
     logging.getLogger(current_process()._name).setLevel(log_level)

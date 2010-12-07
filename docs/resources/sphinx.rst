@@ -1,12 +1,12 @@
 .. index:: Sphinx, reStructuredText
 
-- `Sphinx-and-reStructredText`:
+.. _Sphinx-and-reStructuredText:
 
 Sphinx and reStructuredText
 ===========================
 
 OpenMDAO uses :term:`reStructuredText` (reST), a plaintext markup language that is part of the Docutils
-text-processing system, to create documentation files. Sphinx is a Python documentation generator
+text-processing system, to create user documents and to document source code. Sphinx is a Python documentation generator
 that converts reST to HTML. While reST provides the basic structure (Docutils is the parsing and translating
 suite), Sphinx has specific directives that are used with reST to produce the desired results. For more
 information, please see the references that follow.

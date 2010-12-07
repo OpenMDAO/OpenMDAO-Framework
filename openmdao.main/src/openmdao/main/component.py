@@ -420,11 +420,11 @@ class Component (Container):
     def list_inputs(self, valid=None, connected=None):
         """Return a list of names of input values. 
         
-        valid: bool, optional
+        valid: bool (optional)
             If valid is not None, the list will contain names 
             of inputs with matching validity.
             
-        connected: bool, optional
+        connected: bool (optional)
             If connected is not None, the list will contain names
             of inputs with matching *external* connectivity status.
         """
@@ -456,11 +456,11 @@ class Component (Container):
     def list_outputs(self, valid=None, connected=None):
         """Return a list of names of output values. 
         
-        valid: bool, optional
+        valid: bool (optional)
             If valid is not None, the list will contain names 
             of outputs with matching validity.
             
-        connected: bool, optional
+        connected: bool (optional)
             If connected is not None, the list will contain names
             of outputs with matching *external* connectivity status.
         """
@@ -636,8 +636,8 @@ class Component (Container):
         self.load(instream)
 
     def save_to_egg(self, name, version, py_dir=None, require_relpaths=True,
-                    child_objs=None, dst_dir=None, fmt=SAVE_CPICKLE,
-                    proto=-1, use_setuptools=False, observer=None):
+                    child_objs=None, dst_dir=None, observer=None,
+                    need_requirements=True):
         """Save state and other files to an egg. Typically used to copy all or
         part of a simulation to another user or machine. By specifying child
         components in `child_objs`, it will be possible to create instances of
@@ -666,17 +666,11 @@ class Component (Container):
         dst_dir: string
             The directory to write the egg in.
 
-        fmt: int
-            Passed to :meth:`eggsaver.save`.
-
-        proto: int
-            Passed to :meth:`eggsaver.save`.
-
-        use_setuptools: bool
-            Passed to :meth:`eggsaver.save_to_egg`.
-
         observer: callable
             Will be called via an :class:`EggObserver`.
+
+        need_requirements: bool
+            Passed to :meth:`eggsaver.save_to_egg`.
 
         After collecting files and possibly modifying their paths, this
         calls :meth:`container.save_to_egg`.
@@ -733,8 +727,8 @@ class Component (Container):
 
             return super(Component, self).save_to_egg(
                        name, version, py_dir, src_dir, src_files,
-                       child_objs, dst_dir, fmt, proto, use_setuptools,
-                       observer.observer)
+                       child_objs, dst_dir, observer.observer,
+                       need_requirements)
         finally:
             # If any component config has been modified, restore it.
             for comp, path in fixup_dirs:

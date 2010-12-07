@@ -32,12 +32,12 @@ class SellarMDF(Assembly):
         # Outer Loop - Global Optimization
         self.add('bcastr', Broadcaster())
         self.add('solver', BroydenSolver())
-        self.driver.workflow.add([self.bcastr, self.solver])
+        self.driver.workflow.add(['bcastr', 'solver'])
 
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
         self.add('dis1', SellarDiscipline1())
         self.add('dis2', SellarDiscipline2())
-        self.solver.workflow.add([self.dis1, self.dis2])
+        self.solver.workflow.add(['dis1', 'dis2'])
         
         # Make all connections
         self.connect('bcastr.z1','dis1.z1')

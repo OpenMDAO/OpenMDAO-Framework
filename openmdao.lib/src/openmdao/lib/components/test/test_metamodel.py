@@ -88,7 +88,7 @@ class MetaModelTestCase(unittest.TestCase):
         asm.metamodel.surrogate = KrigingSurrogate()
         asm.metamodel.model = Simple()
         asm.metamodel.recorder = DumbRecorder()
-        asm.driver.workflow.add([asm.metamodel,asm.comp1,asm.comp2])
+        asm.driver.workflow.add(['metamodel','comp1','comp2'])
         
         asm.connect('comp1.c','metamodel.a')
         asm.connect('comp1.d','metamodel.b')

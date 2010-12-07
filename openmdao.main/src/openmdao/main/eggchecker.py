@@ -14,7 +14,7 @@ __all__ = ('check_save_load',)
 
 
 def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
-                    fmt=SAVE_CPICKLE, logfile=None):
+                    logfile=None):
     """Convenience routine to check that saving & reloading `comp` works.
 
     comp: Component
@@ -28,9 +28,6 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
 
     cleanup: bool
         If True, the scratch directory will be removed after the test.
-
-    fmt: int
-        The format for the saved state file.
 
     logfile: string or None
         Name of file for logging progress.
@@ -46,7 +43,7 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
     comp.log_level = LOG_DEBUG
     name = comp.name or get_default_name(comp, comp.parent)
     start = time.time()
-    egg_info = comp.save_to_egg(name, 'CSL.1', py_dir=py_dir, fmt=fmt)
+    egg_info = comp.save_to_egg(name, 'CSL.1', py_dir=py_dir)
     egg_name = egg_info[0]
     elapsed = time.time() - start
     size = os.path.getsize(egg_name)

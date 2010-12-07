@@ -74,7 +74,7 @@ can be directly set:
             self.add('driver', CONMINdriver())
 
             # add geo_manipulator to workflow
-            self.driver.workflow.add(self.geo_manipulator)
+            self.driver.workflow.add('geo_manipulator')
 
     self = TLA()
     geo_manipulator = GeoMan()

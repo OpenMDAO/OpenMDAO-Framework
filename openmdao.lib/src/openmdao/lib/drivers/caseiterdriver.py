@@ -1,6 +1,7 @@
 import os.path
 import Queue
 import sys
+import thread
 import threading
 
 from openmdao.lib.datatypes.api import Bool, Instance
@@ -10,6 +11,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
+from openmdao.main.resource import LocalAllocator
 from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer
 
@@ -149,15 +151,27 @@ class CaseIterDriverBase(Driver):
                 # Must do this before creating any locks or queues.
                 self._replicants += 1
                 version = 'replicant.%d' % (self._replicants)
+
+                # If only local host will be used, we can skip determining
+                # distributions required by the egg.
+                allocators = RAM.list_allocators()
+                need_reqs = False
+                for allocator in allocators:
+                    if not isinstance(allocator, LocalAllocator):
+                        need_reqs = True
+                        break
+
                 driver = self.parent.driver
                 self.parent.add('driver', Driver()) # this driver will execute the workflow once
                 self.parent.driver.workflow = self.workflow
                 try:
                     #egg_info = self.model.save_to_egg(self.model.name, version)
                     # FIXME: what name should we give to the egg?
-                    egg_info = self.parent.save_to_egg(self.name, version)
+                    egg_info = self.parent.save_to_egg(self.name, version,
+                                                    need_requirements=need_reqs)
                 finally:
                     self.parent.driver = driver
+
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
@@ -217,13 +231,19 @@ class CaseIterDriverBase(Driver):
                                              args=(name, resources,
                                                    credentials, self._reply_q))
             server_thread.daemon = True
-            server_thread.start()
+            try:
+                server_thread.start()
+            except thread.error:
+                self._logger.warning('worker thread startup failed for %r',
+                                     name)
+                self._in_use[name] = False
+                break
 
             if sys.platform != 'win32':
                 # Process any pending events.
                 while self._busy():
                     try:
-                        name, result, exc = self._reply_q.get(True, 0.1)
+                        name, result, exc = self._reply_q.get(True, 0.01)
                     except Queue.Empty:
                         break  # Timeout.
                     else:
