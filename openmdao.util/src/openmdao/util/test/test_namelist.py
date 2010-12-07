@@ -132,7 +132,7 @@ class TestCase(unittest.TestCase):
                     "                   3\n" + \
                     "  arraysmall = 1.75\n" + \
                     "  expvar1 = 1.5e-12\n" + \
-                    "  expvar2 = 1.5D12\n" + \
+                    "  expvar2 = -1.5D12\n" + \
                     "/\n"
 
         outfile = open(self.filename, 'w')
@@ -152,7 +152,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(my_comp.boolvar, True)
         self.assertEqual(my_comp.floatvar, -3.14)
         self.assertEqual(my_comp.expvar1, 1.5e-12)
-        self.assertEqual(my_comp.expvar2, 1.5e12)
+        self.assertEqual(my_comp.expvar2, -1.5e12)
         self.assertEqual(my_comp.textvar, 'That')
         self.assertEqual(my_comp.listenumvar, [3,3,2,2])
         self.assertEqual(my_comp.arrayvar[0], 3.5)
@@ -315,7 +315,7 @@ class TestCase(unittest.TestCase):
         
         compare = "\n" + \
                   "&Test\n" + \
-                  "  arrayvar = 0, 0, 3.700000047683716\n" + \
+                  "  arrayvar = 0.0, 0.0, 3.700000047683716\n" + \
                   "/\n"
 
         self.assertEqual(contents, compare)
@@ -340,9 +340,9 @@ class TestCase(unittest.TestCase):
         
         compare = "\n" + \
                   "&Test\n" + \
-                  "  arrayvar(1,1) = 0,  3.700000047683716, \n" + \
-                  "arrayvar(1,2) = 0,  0, \n" + \
-                  "arrayvar(1,3) = 7.880000114440918,  0, \n" + \
+                  "  arrayvar(1,1) = 0.0,  3.700000047683716, \n" + \
+                  "arrayvar(1,2) = 0.0,  0.0, \n" + \
+                  "arrayvar(1,3) = 7.880000114440918,  0.0, \n" + \
                   "/\n"
 
         self.assertEqual(contents, compare)

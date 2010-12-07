@@ -14,6 +14,17 @@ from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
 
 from openmdao.util.filewrap import ToFloat, ToInteger
 
+def _getformat(val):
+    # Returns the output format for a floating point number.
+    # The general format is used with 16 places of accuracy, except for when
+    # the floating point value is an integer, in which case a decimal point
+    # followed by a single zero is used.
+    
+    if int(val) == val:
+        return "%.1f"
+    else:
+        return "%.16g"
+
 
 class Card(object):
     """ Data object that stores the value of a single card for a namelist."""
@@ -160,7 +171,8 @@ class Namelist(object):
                     line = "  %s = %s\n" % (card.name, str(card.value))
                     
                 elif isinstance(card.value, float):
-                    line = "  %s = %.16g\n" % (card.name, card.value)
+                    fstring = "  %s = " + _getformat(card.value) + "\n"
+                    line =  fstring % (card.name, card.value)
                     
                 elif isinstance(card.value, str):
                     line = "  %s = '%s'\n" % (card.name, card.value)
@@ -175,7 +187,8 @@ class Namelist(object):
                         line = "  %s = " % (card.name)
                         sep = ""
                         for val in card.value:
-                            line += "%s%.16g" % (sep, val)
+                            fstring = "%s" + _getformat(val)
+                            line += fstring % (sep, val)
                             sep = self.delimiter
                         line += "\n"
                             
@@ -185,8 +198,9 @@ class Namelist(object):
                         for row in range(0, card.value.shape[0]):
                             line += card.name + "(1," + str(row+1) + ") ="
                             for col in range(0, card.value.shape[1]):
-                                line += " %.16g%s" % (card.value[row, col], 
-                                                      self.delimiter)
+                                val = card.value[row, col]
+                                fstring = " " + _getformat(val) + "%s"
+                                line += fstring % (val, self.delimiter)
                             line += "\n"
                         
                     else:
