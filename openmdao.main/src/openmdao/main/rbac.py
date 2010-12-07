@@ -39,6 +39,8 @@ import inspect
 import socket
 import threading
 
+from Crypto.Random import get_random_bytes
+
 
 class RoleError(Exception):
     """
@@ -63,7 +65,7 @@ class Credentials(object):
     def __str__(self):
         return self.user
 
-    def encode(self, key_pair):
+    def sign(self, key_pair):
         """
         Return ``(data, signature)`` signed by current user.
         """
@@ -72,22 +74,18 @@ class Credentials(object):
                              % (getpass.getuser(), socket.gethostname()))
 
         data = cPickle.dumps(creds, cPickle.HIGHEST_PROTOCOL)
-        hash = hashlib.sha1(data).hexdigest()
-# May require chunking.
-        signature = key_pair.encrypt(hash)
-
+        hash = hashlib.sha256(data).digest()
+        signature = key_pair.sign(hash, get_random_bytes)
         return (data, signature)
 
     @staticmethod
-    def decode(tpl, pub_key):
+    def verify(tpl, pub_key):
         """
         Return :class:`Credentials` object from `tpl`.
         """
         data, signature = tpl
-        data_hash = hashlib.sha1(data).hexdigest()
-# May require dechunking.
-        sig_hash = pub_key.decrypt(signature)
-        if data_hash != sig_hash:
+        hash = hashlib.sha256(data).digest()
+        if not pub_key.verify(hash, signature):
             raise RuntimeError('invalid credentials')
         return cPickle.loads(data)
 

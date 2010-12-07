@@ -11,6 +11,7 @@ import threading
 import unittest
 import nose
 
+from openmdao.main.mp_util import generate_key_pair
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                need_proxy, rbac, rbac_methods, check_role, \
                                AccessController, RoleError
@@ -86,6 +87,14 @@ class TestCase(unittest.TestCase):
         self.assertEqual(get_credentials(), None)
         set_credentials(owner)
         self.assertEqual(get_credentials(), owner)
+
+        # Sign/verify.
+        key_pair = generate_key_pair(owner)
+        data, signature = user.sign(key_pair)
+        creds = Credentials.verify((data, signature), key_pair.publickey())
+        assert_raises(self, 'Credentials.verify((data[:-1], signature),'
+                            '                   key_pair.publickey())',
+                      globals(), locals(), RuntimeError, 'invalid credentials')
 
     def test_decorator(self):
         logging.debug('')

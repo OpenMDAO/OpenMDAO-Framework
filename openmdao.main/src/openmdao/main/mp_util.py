@@ -146,7 +146,7 @@ def _is_private(path):
         # Find the DACL part of the Security Descriptor for the file
         sd = win32security.GetFileSecurity(path,
                                         win32security.DACL_SECURITY_INFORMATION)
-        dacl = sd.GetSecurityiDescriptorDacl()
+        dacl = sd.GetSecurityDescriptorDacl()
 
         # Verify the DACL contains just the two entries we expect.
         count = dacl.GetAceCount()

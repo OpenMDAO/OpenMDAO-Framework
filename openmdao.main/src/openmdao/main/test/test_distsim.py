@@ -25,10 +25,7 @@ from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.interfaces import IComponent
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.mp_util import read_server_config, keytype, \
-                                  read_allowed_hosts, is_legal_connection, \
-                                  generate_key_pair, _KEY_CACHE, \
-                                  _is_private, HAVE_PYWIN32
+from openmdao.main.mp_util import read_server_config
 from openmdao.main.objserverfactory import connect, start_server, RemoteFile
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
@@ -518,11 +515,12 @@ class TestCase(unittest.TestCase):
         spook.user = 'xyzzy@spooks-r-us.com'
         saved = get_credentials()
         set_credentials(spook)
-        i = model.box.secret
-        model.box.proprietary_method()
-
-        # Reset credentials to allow factory shutdown.
-        set_credentials(saved)
+        try:
+            i = model.box.secret
+            model.box.proprietary_method()
+        finally:
+            # Reset credentials to allow factory shutdown.
+            set_credentials(saved)
 
     def test_4_authkey(self):
         logging.debug('')
@@ -617,82 +615,10 @@ class TestCase(unittest.TestCase):
         assert_raises(self, 'connect(address, junk_port, pubkey=self.key)',
                       globals(), locals(), RuntimeError, "can't connect to ")
 
-        # Try to read config from non-existent file.
-        assert_raises(self, "read_server_config('no-such-file')",
-                      globals(), locals(), IOError,
-                      "No such file 'no-such-file'")
-
         # Unpickleable argument.
         code = compile('3 + 4', '<string>', 'eval')
         assert_raises(self, 'self.factory.echo(code)', globals(), locals(),
                       cPickle.PicklingError, "Can't pickle <type 'code'>")
-
-        # Force a key generation.
-        key_file = os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
-        if os.path.exists(key_file):
-            os.remove(key_file)
-        credentials = Credentials()
-        if credentials.user in _KEY_CACHE:
-            del _KEY_CACHE[credentials.user]
-        generate_key_pair(credentials)
-
-        # Check privacy.
-        if sys.platform == 'win32' or HAVE_PYWIN32:
-            self.assertTrue(_is_private(key_file))
-            if sys.platform == 'win32':
-                public_file = os.environ['COMSPEC']
-            else:
-                public_file = '/bin/sh'
-            self.assertFalse(_is_private(public_file))
-
-    def test_6_allowed_hosts(self):
-        logging.debug('')
-        logging.debug('test_allowed_hosts')
-
-        hostname = socket.gethostname()
-        host_ipv4 = socket.gethostbyname(hostname)
-        dot = host_ipv4.rfind('.')
-        domain_ipv4 = host_ipv4[:dot+1]
-
-        with open('hosts.allow', 'w') as out:
-            out.write("""
-# Local host IPv4.
-%s
-
-# Local domain IPv4.
-%s
-
-# Local host name.
-%s
-
-# Gibberish.
-$^&*
-""" % (host_ipv4, domain_ipv4, hostname))
-
-        try:
-            allowed_hosts = read_allowed_hosts('hosts.allow')
-        finally:
-            os.remove('hosts.allow')
-
-        # Check read data.
-        self.assertEqual(len(allowed_hosts), 3)
-        self.assertEqual(allowed_hosts[0], host_ipv4)
-        self.assertEqual(allowed_hosts[1], domain_ipv4)
-        self.assertEqual(allowed_hosts[2], host_ipv4)
-
-        # Check AF_INET addresses.
-        logger = logging.getLogger()
-        self.assertTrue(is_legal_connection((host_ipv4, 0),
-                                            allowed_hosts, logger))
-        domain_host = domain_ipv4 + '123'
-        self.assertTrue(is_legal_connection((domain_host, 0),
-                                            allowed_hosts, logger))
-        self.assertFalse(is_legal_connection(('0.0.0.0', 0),
-                                            allowed_hosts, logger))
-
-        # Check AF_UNIX address.
-        self.assertTrue(is_legal_connection('/tmp/pipe',
-                                            allowed_hosts, logger))
 
 
 if __name__ == '__main__':
