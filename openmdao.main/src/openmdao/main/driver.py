@@ -55,6 +55,7 @@ class Driver(Component):
     def check_config (self):
         """Verify that our workflow is able to resolve all of its components."""
         # workflow will raise an exception if it can't resolve a Component
+        super(Driver, self).check_config()
         try:
             comps = self.workflow.get_components()
         except AttributeError as err:

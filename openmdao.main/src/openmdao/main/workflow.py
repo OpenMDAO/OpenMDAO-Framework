@@ -105,7 +105,9 @@ class Workflow(object):
         raise NotImplementedError("This Workflow has no 'get_names' function")
 
     def get_components(self):
-        """Returns a list of all component objects in the workflow."""
+        """Returns a list of all component objects in the workflow. No ordering
+        is assumed.
+        """
         scope = self.scope
         return [getattr(scope, name) for name in self.get_names()]
 
