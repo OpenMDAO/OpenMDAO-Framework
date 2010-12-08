@@ -9,22 +9,20 @@ from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 from openmdao.lib.surrogatemodels.api import KrigingSurrogate
-from openmdao.lib.doegenerators.api import OptLatinHypercube
-from openmdao.lib.doegenerators.api import FullFactorial
+from openmdao.lib.doegenerators.api import OptLatinHypercube,FullFactorial
 from openmdao.lib.doegenerators.uniform import Uniform
 
-from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array, List, implements
+from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array, List
 
 from openmdao.lib.components.api import MetaModel,MultiObjExpectedImprovement,\
      ProbIntersect,ParetoFilter, Mux
-from openmdao.lib.drivers.api import DOEdriver,Genetic,CaseIteratorDriver
+from openmdao.lib.drivers.api import DOEdriver,Genetic,CaseIteratorDriver,FixedPointIterator
 from openmdao.lib.caserecorders.api import DBCaseRecorder,DumpCaseRecorder
 from openmdao.lib.caseiterators.api import DBCaseIterator
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
-
-from numpy import sqrt,sort
+from openmdao.main.hasparameters import HasParameters
 
 from openmdao.main.interfaces import IDOEgenerator
 
@@ -39,37 +37,30 @@ class ConceptA(Component):
     def execute(self):
         self.f1 = (self.x+20.)*self.y
         self.f2 =  (10./(self.x+4)+5.)*self.z*self.y
-       
-class DOEGenGen(Driver):
 
-    n = Int(0,iotype='in',desc='number of samples in the DOE')
-    DOEgen = Instance(IDOEgenerator,iotype='out')
-
-    def __init__(self,doc=None):
-        super(DOEGenGen,self).__init__(doc)
-        print self.n
-        
-    def execute(self):
-        self.DOEgen = Uniform(num_samples=self.n)
-
-class Iterator(Driver):
+class DOE_Maker(Component):
 
     cases = List([],iotype='in',desc='list of integers of maximum sample size')
-    n = Int(0,iotype='out',desc='max sample size of current iteration')
+    DOEgen = Instance(IDOEgenerator,iotype='out')
+        
+    def execute(self):
+        n = self.cases.pop()
+        print 'training cases = ',n
+        self.DOEgen = Uniform(num_samples=n)
+
+@add_delegate(HasStopConditions)       
+class Iterator(Driver):
     
     def start_iteration(self):
-        self.iterations = len(self.cases)
         self._iterations = 0
         
     def continue_iteration(self):
         self._iterations +=1
-        if self._iterations > 1:
+        if self.should_stop():
             return False
-        if self._iterations <= self.iterations:
-            self.n = self.cases[self._iterations-1]
-            print self.n
+        else:
             return True
-            
+
         return False
 
 class Analysis(Assembly):
@@ -86,36 +77,35 @@ class Analysis(Assembly):
         self.A.recorder = DBCaseRecorder(':memory:')
         self.A.force_execute = True
 
+        self.add('DOE_maker',DOE_Maker())
+        self.DOE_maker.cases = [10,20]
+        self.DOE_maker.force_execute = True
+
         #Drivers
         self.add("trainA",DOEdriver())
         self.trainA.sequential = True
         self.trainA.add_parameter("A.x")
         self.trainA.add_parameter("A.y")
         self.trainA.add_parameter("A.z")
-        #self.trainA.DOEgenerator = Uniform()        
         self.trainA.add_event("A.train_next")
         self.trainA.case_outputs = ['A.f1','A.f2']
         self.trainA.recorder = DBCaseRecorder(os.path.join(self._tdir,'A.db'))
         self.trainA.force_execute = True
         
-        self.add('DOEgengen',DOEGenGen())
-        self.DOEgengen.force_execute = True
-        
         self.add('iter',Iterator())
-        self.iter.iters_per_case = 1
-        self.iter.cases = [10,15,20]
-        self.iter.force_execute = True
-
+        self.iter.add_stop_condition('len(DOE_maker.cases)==0')
+        
         #Iteration Hierarchy
         self.driver.workflow.add(['iter'])
-        
-        self.iter.workflow.add(['DOEgengen','trainA'])
-        
+        #self.driver.workflow = SequentialWorkflow()
+
+        self.iter.workflow = SequentialWorkflow()
+        self.iter.workflow.add(['DOE_maker','trainA'])
+
         self.trainA.workflow.add('A')
         
         #Data Connections
-        self.connect('iter.n','DOEgengen.n')
-        self.connect('DOEgengen.DOEgen','trainA.DOEgenerator')
+        self.connect('DOE_maker.DOEgen','trainA.DOEgenerator')
         
     def cleanup(self):
         shutil.rmtree(self._tdir, ignore_errors=True)
