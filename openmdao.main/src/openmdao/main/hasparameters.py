@@ -33,10 +33,10 @@ class HasParameters(object):
         name: string
             Name of the variable the driver should vary during execution.
             
-        low: float, optional
+        low: float (optional)
             Minimum allowed value of the parameter.
             
-        high: float, optional
+        high: float (optional)
             Maximum allowed value of the parameter.
         
         If neither "low" nor "high" is specified, the min and max will

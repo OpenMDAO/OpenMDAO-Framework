@@ -16,10 +16,10 @@ class UncertainDistribution(object):
         return getattr(self, self.default_val_method)()
     
     def sample(self): 
-        raise NotImplemented('The %s class has no sample() method' % self.__class__.__name__)
+        raise NotImplementedError('The %s class has no sample() method' % self.__class__.__name__)
     
     def expected(self): 
-        raise NotImplemented('The %s class has no expected() method' % self.__class__.__name__)
+        raise NotImplementedError('The %s class has no expected() method' % self.__class__.__name__)
 
 
 class NormalDistribution(UncertainDistribution): 

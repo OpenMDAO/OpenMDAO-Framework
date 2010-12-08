@@ -1,5 +1,5 @@
 """
-Trait for enumerations, with optional alias list
+Trait for enumerations, with optional alias list.
 """
 
 #public symbols

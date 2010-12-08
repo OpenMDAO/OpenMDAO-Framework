@@ -31,7 +31,7 @@ class EngineOptimization(Assembly):
         self.driving_sim.add('vehicle', Vehicle())
         
         # add DrivingSim to workflow
-        driver.workflow.add(self.driving_sim)
+        driver.workflow.add('driving_sim')
 
         # CONMIN Flags
         self.driver.iprint = 0

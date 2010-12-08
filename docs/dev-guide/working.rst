@@ -92,39 +92,7 @@ Running Tests
 
 For detailed information on running tests on your branch, please see :ref:`Testing`.
 
-.. index:: tagging a branch
 
-.. _`Tagging-Your-Branch`:
-
-Tagging Your Branch
---------------------
-
-If your branch is associated with a Trac ticket, you may tag your branch after you commit the final changes
-and before pushing it up to Launchpad. However, in most cases the SCM will tag the branch when she
-merges. To tag a branch, type the following: 
-
-::
-
-   bzr tag T<ticket_number>
-   
-where ``<ticket_number>`` is the Trac ticket number assigned to the bug, enhancement, or
-requirement that was submitted for the issue you are working on your branch. 
-
-Bazaar will return a message:
-
-::   
-
-   Created tag T<ticket_number>
-
-To see what tags have been created and the revision number related to each tag, you can
-type:
-
-::
-  
-   bzr tags 
-   
-Bazaar will return a list of ticket numbers (left column) and the revision number
-associated with each ticket (right column).
 
 .. _Merging-to-Your-Branch:
 
@@ -302,10 +270,9 @@ of the development trunk until one of the reviewers approves it, and it is merge
 your branch may be reviewed by a senior developer and a tech writer (if there are
 documentation changes).
 
-If your branch is associated with a :term:`Trac` ticket, you should :term:`tag` your branch with the
-related ticket number before pushing it to Launchpad. For more information about submitting a ticket in
-Trac, go to the `OpenMDAO Development page <http://openmdao.org/wiki/Development>`_ on our website.
-For instructions on tagging a branch, click :ref:`here <Tagging-Your-Branch>`.
+If your branch is associated with a :term:`Trac` ticket, the SCM will :term:`tag` your branch with the
+related ticket number when she merges it. For more information about submitting a ticket in Trac, go to
+the `OpenMDAO Development page <http://openmdao.org/wiki/Development>`_ on our website. 
 
 On the branch to be pushed, type the following command, replacing ``userid`` with your
 Launchpad userid and replacing ``branch_name`` with the name of the branch you are

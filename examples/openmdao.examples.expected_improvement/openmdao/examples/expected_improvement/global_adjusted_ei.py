@@ -265,16 +265,16 @@ class Analysis(Assembly):
         self.add("muxer",Mux(2))
         
         #Iteration Heirarchy
-        self.driver.workflow.add([self.DOE_trainer1, self.DOE_trainer2,self.iter])
+        self.driver.workflow.add(['DOE_trainer1', 'DOE_trainer2', 'iter'])
         
-        self.DOE_trainer1.workflow.add(self.c1)
-        self.DOE_trainer2.workflow.add(self.c2)
+        self.DOE_trainer1.workflow.add('c1')
+        self.DOE_trainer2.workflow.add('c2')
         
         self.iter.workflow = SequentialWorkflow()
-        self.iter.workflow.add([self.gfilter, self.filter_c1,self.GAEI_opt, self.retrain])
+        self.iter.workflow.add(['gfilter', 'filter_c1', 'GAEI_opt', 'retrain'])
         
-        self.GAEI_opt.workflow.add([self.c1,self.muxer,self.MOEI,self.probInt])
-        self.retrain.workflow.add(self.c1)
+        self.GAEI_opt.workflow.add(['c1', 'muxer', 'MOEI', 'probInt'])
+        self.retrain.workflow.add('c1')
         
         #Data Connections
         self.connect("filter_c1.pareto_set","probInt.primary_pareto")

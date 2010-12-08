@@ -13,22 +13,13 @@ class Dataflow(SequentialWorkflow):
     A Dataflow consists of a collection of Components which are executed in 
     data flow order.
     """
-    def __init__(self, parent, scope=None, members=None):
+    def __init__(self, parent=None, scope=None, members=None):
         """ Create an empty flow. """
-        super(Dataflow, self).__init__(members)
-        self.parent = parent
-        self._scope = scope
+        super(Dataflow, self).__init__(parent, scope, members)
         self._collapsed_graph = None
-
-    @property
-    def scope(self):
-        if self._scope is None:
-            self._scope = self.parent.parent
-        return self._scope
 
     def __iter__(self):
         """Iterate through the nodes in dataflow order."""
-        scope = self.scope
         graph = self._get_collapsed_graph()
         topsort = nx.topological_sort(graph)
         if topsort is None:
@@ -36,21 +27,23 @@ class Dataflow(SequentialWorkflow):
             strcon = strongly_connected_components(graph)
             scope.raise_exception('circular dependency (%s) found' % str(strcon[0]),
                                   RuntimeError)
-        for n in topsort:
-            yield getattr(scope, n)
+        # resolve all of the components up front so if there's a problem it'll fail early
+        # and not waste time running components
+        scope = self.scope
+        return [getattr(scope, n) for n in topsort].__iter__()
 
-    def add(self, comp):
-        """ Add a new component to the workflow. """
-        super(Dataflow, self).add(comp)
+    def add(self, compname):
+        """ Add a new component to the workflow by name. """
+        super(Dataflow, self).add(compname)
         self.config_changed()
 
-    def remove(self, comp):
-        """Remove a component from this Workflow"""
-        super(Dataflow, self).remove(comp)
+    def remove(self, compname):
+        """Remove a component from this Workflow by name."""
+        super(Dataflow, self).remove(compname)
         self.config_changed()
 
     def config_changed(self):
-        """Notifies the Workflow that workflow configuration (dependencies, etc.)
+        """Notifies the Workflow that its configuration (dependencies, etc.)
         has changed.
         """
         self._collapsed_graph = None
@@ -68,8 +61,10 @@ class Dataflow(SequentialWorkflow):
         scope = self.scope
         graph = scope._depgraph.copy_graph()
         
+        contents = self.get_components()
+        
         # add any dependencies due to ExprEvaluators
-        for comp in self._nodes:
+        for comp in contents:
             graph.add_edges_from([tup for tup in comp.get_expr_depends()])
             
         collapsed_graph = graph.copy()
@@ -77,10 +72,10 @@ class Dataflow(SequentialWorkflow):
         # find all of the incoming and outgoing edges to/from all of the components
         # in each driver's iteration set so we can add edges to/from the driver
         # in our collapsed graph
-        cnames = set([c.name for c in self._nodes])
+        cnames = set(self._names)
         removes = set()
         itersets = {}
-        for comp in self._nodes:
+        for comp in contents:
             cname = comp.name
             if has_interface(comp, IDriver):
                 iterset = [c.name for c in comp.iteration_set()]
@@ -109,17 +104,17 @@ class Dataflow(SequentialWorkflow):
         # mimic a SequentialWorkflow in cases where nodes aren't connected.
         # Edges are added from each degree 0 node to all nodes after it in
         # sequence order.
-        last = len(self._nodes)-1
+        last = len(self._names)-1
         if last > 0:
             to_add = []
-            for i,comp in enumerate(self._nodes):
-                if collapsed_graph.degree(comp.name) == 0:
+            for i,cname in enumerate(self._names):
+                if collapsed_graph.degree(cname) == 0:
                     if i < last:
-                        for n in self._nodes[i+1:]:
-                            to_add.append((comp.name, n.name))
+                        for n in self._names[i+1:]:
+                            to_add.append((cname, n))
                     else:
-                        for n in self._nodes[0:i]:
-                            to_add.append((n.name, comp.name))
+                        for n in self._names[0:i]:
+                            to_add.append((n, cname))
             collapsed_graph.add_edges_from(to_add)
         
         self._collapsed_graph = collapsed_graph.subgraph(cnames-removes)

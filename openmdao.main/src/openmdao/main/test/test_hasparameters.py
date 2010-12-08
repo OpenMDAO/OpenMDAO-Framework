@@ -26,7 +26,7 @@ class HasParametersTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('driver', MyDriver())
         self.top.add('comp', ExecComp(exprs=['c=x+y','d=x-y']))
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         
     def test_set_params(self):
         self.top.driver.add_parameters([('comp.x', 0., 1.e99), 

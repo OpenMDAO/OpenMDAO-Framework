@@ -1,6 +1,7 @@
 import os.path
 import Queue
 import sys
+import thread
 import threading
 
 from openmdao.lib.datatypes.api import Bool, Instance
@@ -179,7 +180,7 @@ class CaseIterDriverBase(Driver):
         
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
-        raise NotImplemented('get_case_iterator')
+        raise NotImplementedError('get_case_iterator')
 
     def _start(self):
         """ Start evaluating cases concurrently. """
@@ -230,13 +231,19 @@ class CaseIterDriverBase(Driver):
                                              args=(name, resources,
                                                    credentials, self._reply_q))
             server_thread.daemon = True
-            server_thread.start()
+            try:
+                server_thread.start()
+            except thread.error:
+                self._logger.warning('worker thread startup failed for %r',
+                                     name)
+                self._in_use[name] = False
+                break
 
             if sys.platform != 'win32':
                 # Process any pending events.
                 while self._busy():
                     try:
-                        name, result, exc = self._reply_q.get(True, 0.1)
+                        name, result, exc = self._reply_q.get(True, 0.01)
                     except Queue.Empty:
                         break  # Timeout.
                     else:

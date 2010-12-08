@@ -73,7 +73,7 @@ class MyModel(Assembly):
         super(MyModel, self).__init__(*args, **kwargs)
         self.add('driver', DOEdriver())
         self.add('driven', DrivenComponent())
-        self.driver.workflow.add(self.driven)
+        self.driver.workflow.add('driven')
         self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
         self.driver.case_outputs = ['driven.rosen_suzuki']
         for name in ['x0', 'x1','x2', 'x3']:

@@ -49,8 +49,8 @@ class PassthroughTestCase(unittest.TestCase):
         top.add('c3', Simple())
             
         # iteration hierarchy
-        top.driver.workflow.add([top.c1,top.a1,top.c3])
-        a1.driver.workflow.add([a1.c2])
+        top.driver.workflow.add(['c1','a1','c3'])
+        a1.driver.workflow.add(['c2'])
         
         top.connect('c1.c', 'a1.c2.b')
         top.connect('a1.c2.d', 'c3.a')

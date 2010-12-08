@@ -38,7 +38,7 @@ class Model(Assembly):
         self.add('comp_b', TestComponent())
         self.add('comp_c', TestComponent())
         
-        self.driver.workflow.add([self.comp_a,self.comp_b,self.comp_c])
+        self.driver.workflow.add(['comp_a','comp_b','comp_c'])
 
         self.connect('comp_a.total_executions', 'comp_b.dummy_input')
         self.connect('comp_b.total_executions', 'comp_c.dummy_input')
@@ -62,6 +62,14 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         """ Called after each test. """
         pass
+
+    def test_bad_workflow_reference(self):
+        self.model.driver.workflow.add('foobar')
+        try:
+            self.model.run()
+        except AttributeError as err:
+            self.assertEqual(str(err), 
+                "driver: Component in workflow failed to resolve: 'Model' object has no attribute 'foobar'")
 
     def test_simple(self):
         self.assertEqual(self.model.comp_a.total_executions, 0)

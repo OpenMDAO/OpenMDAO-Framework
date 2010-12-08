@@ -134,13 +134,13 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
     varnames: list[str]
         iterator of names of variables to be retrieved.
         
-    case_sql: str, optional
+    case_sql: str (optional)
         SQL syntax that will be placed in the WHERE clause for Case retrieval.
         
-    var_sql: str, optional
+    var_sql: str (optional)
         SQL syntax that will be placed in the WHERE clause for variable retrieval.
     
-    include_errors: bool, optional [False]
+    include_errors: bool (optional) [False]
         if True, include data from cases that reported an error
         
     """
@@ -239,22 +239,22 @@ def displayXY(dbname, xnames, ynames, case_sql=None, var_sql=None,
     ynames: list[str]
         Names of Y variables.
         
-    case_sql: str, optional
+    case_sql: str (optional)
         SQL syntax that will be placed in the WHERE clause for Case retrieval.
         
-    var_sql: str, optional
+    var_sql: str (optional)
         SQL syntax that will be placed in the WHERE clause for variable retrieval.
         
-    title: str, optional
+    title: str (optional)
         Plot title.
         
-    grid: bool, optional
+    grid: bool (optional)
         If True, a grid is drawn on the plot.
         
-    xlabel: str, optional
+    xlabel: str (optional)
         X axis label.
         
-    ylabel: str, optional
+    ylabel: str (optional)
         Y axis label.
     """
     try:
