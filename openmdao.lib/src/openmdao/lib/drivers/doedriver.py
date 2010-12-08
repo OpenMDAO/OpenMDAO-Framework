@@ -21,7 +21,7 @@ class DOEdriver(CaseIterDriverBase):
         super(DOEdriver, self).__init__(*args, **kwargs)
     
     # pylint: disable-msg=E1101
-    DOEgenerator = Instance(IDOEgenerator, iotype='in', required=True,
+    DOEgenerator = Instance(IDOEgenerator, iotype='in',
                             desc='Iterator supplying normalized DOE values')
     
     case_outputs = ListStr([], iotype='in', 
