@@ -118,15 +118,15 @@ class Analysis(Assembly):
         self.add("EI_mux",Mux(2))
         
         #Iteration Heirarchy
-        self.driver.workflow.add([self.DOE_trainer,self.iter])
+        self.driver.workflow.add(['DOE_trainer', 'iter'])
         
-        self.DOE_trainer.workflow.add(self.spiral_meta_model)
+        self.DOE_trainer.workflow.add('spiral_meta_model')
         
         self.iter.workflow = SequentialWorkflow()
-        self.iter.workflow.add([self.filter, self.MOEI_opt, self.retrain])
+        self.iter.workflow.add(['filter', 'MOEI_opt', 'retrain'])
         
-        self.MOEI_opt.workflow.add([self.spiral_meta_model,self.EI_mux,self.MOEI])
-        self.retrain.workflow.add(self.spiral_meta_model)
+        self.MOEI_opt.workflow.add(['spiral_meta_model', 'EI_mux', 'MOEI'])
+        self.retrain.workflow.add('spiral_meta_model')
         
         #Data Connections
         self.connect("filter.pareto_set","MOEI.best_cases")
@@ -143,13 +143,27 @@ if __name__ == "__main__": #pragma: no cover
     from openmdao.main.api import set_as_top
     from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
     
+    seed = None
+    backend = None
+    figname = None
+    for arg in sys.argv[1:]:
+        if arg.startswith('--seed='):
+            import random
+            seed = int(arg.split('=')[1])
+            random.seed(seed)
+        if arg.startswith('--backend='):
+            backend = arg.split('=')[1]
+        if arg.startswith('--figname='):
+            figname = arg.split('=')[1]
     import matplotlib
-    if sys.platform == 'win32':
+    if backend is not None:
+        matplotlib.use(backend)
+    elif sys.platform == 'win32':
         matplotlib.use('WxAgg')
-    
     from matplotlib import pyplot as plt, cm 
     from matplotlib.pylab import get_cmap
-    from numpy import meshgrid,array, pi,arange,cos,sin
+    from mpl_toolkits.mplot3d import Axes3D
+    from numpy import meshgrid,array, pi,arange,cos
     
     
     #create the analysis

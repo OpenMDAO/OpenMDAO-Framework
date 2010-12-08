@@ -56,7 +56,6 @@ class Assembly (Component):
         obj = super(Assembly, self).add(name, obj)
         if is_instance(obj, Component):
             self._depgraph.add(obj.name)
-        
         return obj
         
     def remove(self, name):
@@ -66,7 +65,7 @@ class Assembly (Component):
         self._depgraph.remove(name)
         for obj in self.__dict__.values():
             if obj is not cont and is_instance(obj, Driver):
-                obj.workflow.remove(cont)
+                obj.workflow.remove(name)
                     
         return super(Assembly, self).remove(name)
 
@@ -106,7 +105,11 @@ class Assembly (Component):
                                      pathname, TraitError)
             iotype = self.get_metadata(pathname, 'iotype')
             
-        newtrait = PassthroughTrait(iotype=iotype, validation_trait=trait)
+        metadata = self.get_metadata(pathname)
+        if "validation_trait" in metadata: 
+            newtrait = PassthroughTrait(**metadata)
+        else: 
+            newtrait = PassthroughTrait(validation_trait=trait,**metadata)
         self.add_trait(newname, newtrait)
         setattr(self, newname, self.get(pathname))
 
@@ -376,10 +379,10 @@ class Assembly (Component):
         """Mark all Variables invalid that depend on varnames. 
         Returns a list of our newly invalidated boundary outputs.
         
-        varnames: iter of str, optional
+        varnames: iter of str (optional)
             An iterator of names of destination variables.
             
-        force: bool, optional
+        force: bool (optional)
             If True, force the invalidation to proceed beyond the 
             boundary even if all outputs were already invalid.
         """

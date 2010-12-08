@@ -35,6 +35,10 @@ class Driver(Component):
         super(Driver, self).__init__(doc=doc)
         self.workflow = Dataflow(self)
         
+    def _workflow_changed(self, oldwf, newwf):
+        if newwf is not None:
+            newwf._parent = self
+
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
         or if any of our variables is invalid.

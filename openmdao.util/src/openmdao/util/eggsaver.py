@@ -15,25 +15,30 @@ Also note that YAML format doesn't handle more than one layer of back-pointers,
 so it's only suitable for very flat object networks.
 """
 
+# Note that handling __main__ module references is exercised during testing by
+# running in separate process, so no coverage will be reported by this process.
+# Consequently, there are a lot of '#pragma no cover' annotations where
+# __main__ handling is involved.
+
 import pickle
 import cPickle
 import yaml
 try:
     from yaml import CDumper as Dumper
     _libyaml = True
-except ImportError:
+# Test machines have libyaml.
+except ImportError:  #pragma no cover
     from yaml import Dumper
     _libyaml = False
 
 import copy_reg
 import datetime
-import glob
+import fnmatch
 import inspect
 import modulefinder
 import os.path
 import pkg_resources
 import shutil
-import site
 import sys
 import tempfile
 import types
@@ -47,13 +52,6 @@ SAVE_LIBYAML = 2
 SAVE_PICKLE  = 3
 SAVE_CPICKLE = 4
 
-EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
-
-_SITE_LIB = os.path.dirname(site.__file__)
-_SITE_PKG = os.path.join(_SITE_LIB, 'site-packages')
-if sys.platform == 'win32':
-    _SITE_LIB = _SITE_LIB.lower()
-    _SITE_PKG = _SITE_PKG.lower()
 
 # Code from the net.  More flexible, but doesn't handle __main__ as well.
 #
@@ -84,7 +82,7 @@ def _pickle_method(method):
     else:
         # TODO: handle __main__ for im_class.__module__.
         im_class = method.im_class
-        if im_class.__module__ == '__main__':
+        if im_class.__module__ == '__main__':  #pragma no cover
             raise RuntimeError('_pickle_method: %r with module __main__ (%s)'
                                % (method, im_self))
     return _unpickle_method, (name, im_self, im_class)
@@ -101,8 +99,8 @@ copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
 
 def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
-                src_files=None, dst_dir=None, fmt=SAVE_CPICKLE, proto=-1,
-                logger=None, use_setuptools=False, observer=None):
+                src_files=None, dst_dir=None, logger=None, observer=None,
+                need_requirements=True):
     """
     Save state and other files to an egg. Analyzes the objects saved for
     distribution dependencies.  Modules not found in any distribution are
@@ -126,18 +124,13 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     dst_dir: string
         The directory to write the egg in.
 
-    fmt: int
-        Passed to :meth:`save`.
-
-    proto: int
-        Passed to :meth:`save`.
-
-    use_setuptools: bool
-        If True, then :func:`eggwriter.write_via_setuptools` is called rather
-        than :func:`eggwriter.write`.
-
     observer: callable
         Will be called via an :class:`EggObserver` intermediary.
+
+    need_requirements: bool
+        If True, distributions required by the egg will be determined.
+        This can be set False if the egg is just being used for distribution
+        within the local host.
 
     Returns ``(egg_filename, required_distributions, orphan_modules)``.
     """
@@ -151,12 +144,12 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
         py_dir = orig_dir
     else:
         py_dir = os.path.realpath(py_dir)
-    if sys.platform == 'win32':
+    if sys.platform == 'win32':  #pragma no cover
         py_dir = py_dir.lower()
 
     if src_dir:
         src_dir = os.path.realpath(src_dir)
-        if sys.platform == 'win32':
+        if sys.platform == 'win32':  #pragma no cover
             src_dir = src_dir.lower()
 
     src_files = src_files or set()
@@ -189,16 +182,22 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
 
     tmp_dir = None
     try:
-        # Determine distributions and local modules required.
-        required_distributions, local_modules, orphan_modules = \
-            _get_distributions(objs, py_dir, logger, observer)
+        if need_requirements:
+            # Determine distributions and local modules required.
+            required_distributions, local_modules, orphan_modules = \
+                _get_distributions(objs, py_dir, logger, observer)
+        else:
+            required_distributions = set()
+            local_modules = set()
+            orphan_modules = set()
 
         # Ensure module corresponding to __main__ is local if it was used.
         # (Test script embedded in egg is an example of how this might occur)
         fixup_objects, fixup_classes, fixup_modules = fixup
-        if fixup_objects:  # Something references __main__.
+        if fixup_objects:  #pragma no cover
+            # Something references __main__.
             main_mod = sys.modules['__main__'].__file__
-            local_modules.add(main_mod)
+            local_modules.add(os.path.abspath(main_mod))
 
         logger.debug('    py_dir: %s', py_dir)
         logger.debug('    src_dir: %s', src_dir)
@@ -207,6 +206,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
             mod = module
             if mod.startswith(py_dir):
                 mod = mod[len(py_dir)+1:]
+            logger.debug('        %s', mod)
 
         # Move to scratch area.
         tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
@@ -225,7 +225,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                             os.makedirs(subdir)
                     src = os.path.join(src_dir, path)
                     dst = os.path.join(name, path)
-                    if sys.platform == 'win32':
+                    if sys.platform == 'win32':  #pragma no cover
                         shutil.copy2(src, dst)
                     else:
                         os.symlink(src, dst)
@@ -248,8 +248,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
 
                 # Save state of object hierarchy.
                 state_name, state_path = \
-                    _write_state_file(name, obj, clean_name, fmt, proto,
-                                      logger, observer)
+                    _write_state_file(name, obj, clean_name, logger, observer)
                 src_files.add(state_name)
                 cleanup_files.append(state_path)
 
@@ -272,16 +271,9 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
             doc = root.__doc__ or ''
             entry_map = _create_entry_map(entry_info)
             orphans = [mod for mod, path in orphan_modules]
-            if use_setuptools:
-                eggwriter.write_via_setuptools(name, version, doc,
-                                               entry_map, src_files,
-                                               required_distributions,
-                                               orphans, dst_dir, logger,
-                                               observer.observer)
-            else:
-                eggwriter.write(name, version, doc, entry_map,
-                                src_files, required_distributions,
-                                orphans, dst_dir, logger, observer.observer)
+            eggwriter.write(name, version, doc, entry_map,
+                            src_files, required_distributions,
+                            orphans, dst_dir, logger, observer.observer)
         finally:
             for path in cleanup_files:
                 if os.path.exists(path):
@@ -311,7 +303,8 @@ def _get_objects(root, logger):
                 else:
                     return  # Some non-container primitive.
             container = state
-        except Exception, exc:
+        # Just being defensive.
+        except Exception as exc:  #pragma no cover
             logger.error("During save_to_egg, _get_objects error %s: %s",
                          type(obj), exc)
             return
@@ -363,7 +356,7 @@ def _check_objects(objs, logger, observer):
 #        # (Debug) actually try to pickle.
 #        try:
 #            cPickle.dumps(obj)
-#        except Exception, exc:
+#        except Exception as exc:
 #            logger.error("Can't pickle obj %r %s:",
 #                         obj, obj.__class__.__name__)
 #            logger.error('    %s', exc)
@@ -386,7 +379,7 @@ def _verify_objects(root, logger, observer):
         except AttributeError:
             continue
 
-        if mod == '__main__':
+        if mod == '__main__':  #pragma no cover
             msg = "Can't save, unable to patch __main__ module reference in" \
                   " obj %r, container %r index %s" % (obj, container, index)
             observer.exception(msg)
@@ -407,53 +400,20 @@ def _fix_objects(objs, observer):
                 mod = obj.__module__
             except AttributeError:
                 continue  # No module entry to fix.
+
             if inspect.isclass(obj):
                 cls = obj
             else:
                 cls = obj.__class__
+
             if mod is None:
                 # Needed after switching to Traits for some reason.
                 mod = cls.__module__
-            if mod != '__main__':
-                continue
 
-            classname = cls.__name__
-            if classname in ('function', 'type'):
-                msg = "Can't save: reference to %s defined in main module %r" \
-                      % (classname, obj)
-                observer.exception(msg)
-                raise RuntimeError(msg)
-            mod = cls.__module__
-            if mod == '__main__' and (classname not in fixup_classes.keys()):
-                mod, module = _find_in_main(classname)
-                if mod:
-                    new = getattr(module, classname)
-                    fixup_classes[classname] = (cls, new)
-                    fixup_modules.add(mod)
-                else:
-                    msg = "Can't find module for '%s'" % classname
-                    observer.exception(msg)
-                    raise RuntimeError(msg)
-
-            if inspect.isclass(obj):
-                if isinstance(container, tuple):
-                    msg = "Can't save: reference to class %s defined in main" \
-                          " module is contained in a tuple." % classname
-                    observer.exception(msg)
-                    raise RuntimeError(msg)
-                else:
-                    container[index] = fixup_classes[classname][1]
-            else:
-                try:
-                    obj.__class__ = fixup_classes[classname][1]
-                except KeyError:
-                    msg = "Can't fix %r, classname %s, module %s" \
-                          % (obj, classname, mod)
-                    observer.exception(msg)
-                    raise RuntimeError(msg)
-                obj.__module__ = obj.__class__.__module__
-
-            fixup_objects.append((obj, container, index))
+            if mod == '__main__':  #pragma no cover
+                _fix_object(obj, container, index, cls, observer,
+                            fixup_classes, fixup_modules)
+                fixup_objects.append((obj, container, index))
         except Exception:
             _restore_objects((fixup_objects, fixup_classes, fixup_modules))
             raise
@@ -461,7 +421,49 @@ def _fix_objects(objs, observer):
     return (fixup_objects, fixup_classes, fixup_modules)
 
 
-def _find_in_main(classname):
+def _fix_object(obj, container, index, cls, observer,
+                fixup_classes, fixup_modules):  #pragma no cover
+    """ Fixup one object related to __main__. """
+    classname = cls.__name__
+    if classname in ('function', 'type'):
+        msg = "Can't save: reference to %s defined in main module %r" \
+              % (classname, obj)
+        observer.exception(msg)
+        raise RuntimeError(msg)
+
+    mod = cls.__module__
+    if mod == '__main__' and (classname not in fixup_classes.keys()):
+        mod, module = _find_in_main(classname)
+        if mod:
+            new = getattr(module, classname)
+            fixup_classes[classname] = (cls, new)
+            fixup_modules.add(mod)
+        else:
+            msg = "Can't find module for '%s'" % classname
+            observer.exception(msg)
+            raise RuntimeError(msg)
+
+    if inspect.isclass(obj):
+        if isinstance(container, tuple):
+            msg = "Can't save: reference to class %s defined in main" \
+                  " module is contained in a tuple." % classname
+            observer.exception(msg)
+            raise RuntimeError(msg)
+        else:
+            container[index] = fixup_classes[classname][1]
+    else:
+        try:
+            obj.__class__ = fixup_classes[classname][1]
+        except KeyError:
+            msg = "Can't fix %r, classname %s, module %s" \
+                  % (obj, classname, mod)
+            observer.exception(msg)
+            raise RuntimeError(msg)
+        else:
+            obj.__module__ = obj.__class__.__module__
+
+
+def _find_in_main(classname):  #pragma no cover
     """ Try to get 'real' module for __main__ class. """
     filename = sys.modules['__main__'].__file__
     if filename.endswith('.py'):
@@ -477,7 +479,7 @@ def _find_in_main(classname):
     return (None, None)
 
 
-def _restore_objects(fixup):
+def _restore_objects(fixup):  #pragma no cover
     """ Restore objects, classes, & sys.modules for __main__ imports. """
     fixup_objects, fixup_classes, fixup_modules = fixup
 
@@ -506,6 +508,7 @@ def _get_distributions(objs, py_dir, logger, observer):
     orphans = set()
     modules = set(['__builtin__'])
     prefixes = set()
+    not_found = set()
 
     if _get_distributions.excludes is None:
         # Exclude Python standard library from ModuleFinder analysis.
@@ -526,10 +529,8 @@ def _get_distributions(objs, py_dir, logger, observer):
         except AttributeError:
             logger.debug('    module %s has no __file__', name)
             continue
-        if sys.platform == 'win32':
+        if sys.platform == 'win32':  #pragma no cover
             path = path.lower()
-        if path.startswith(_SITE_LIB) and not path.startswith(_SITE_PKG):
-            continue
         found = False
         for prefix in prefixes:
             if path.startswith(prefix):
@@ -544,37 +545,47 @@ def _get_distributions(objs, py_dir, logger, observer):
             path = path[:egg+4]
             _process_egg(path, distributions, prefixes, logger)
         else:
-            # Use module finder to get the modules this object requires.
+            # Use ModuleFinder to get the modules this object requires.
             if path.endswith('.pyc') or path.endswith('.pyo'):
                 path = path[:-1]
-            if not os.path.exists(path):
+            # Just being defensive.
+            if not os.path.exists(path):  #pragma no cover
                 logger.warning("    module path '%s' does not exist", path)
                 continue
 
             if not os.path.isabs(path):
                 path = os.path.join(os.getcwd(), path)
 
-            finder_items = None
-            if path in _get_distributions.saved.keys():
-                logger.debug("    reusing analysis of '%s'", path)
-                finder_items = _get_distributions.saved[path]
-            else:
+            finder_info = None
+            try:
+                finder_info = _DistCache.lookup(path)
+            except KeyError:
                 observer.analyze(path)
                 finder = modulefinder.ModuleFinder(
                                           excludes=_get_distributions.excludes)
                 try:
                     finder.run_script(path)
-                except Exception:
+                # Just being defensive.
+                except Exception:  #pragma no cover
                     logger.exception("ModuleFinder for '%s'" % path)
                 else:
-                    finder_items = finder.modules.items()
-                    _get_distributions.saved[path] = finder_items
+                    finder_info = []
+                    for name, module in finder.modules.items():
+                        try:
+                            filename = module.__file__
+                        # Just defensive, ModuleFinder should exclude these.
+                        except AttributeError:  #pragma no cover
+                            filename = None
+                        finder_info.append((name, filename))
+                    _DistCache.record(path, finder_info)
+            else:
+                logger.debug("    reusing analysis of '%s'", path)
 
-            if finder_items:
-                _process_found_modules(py_dir, finder_items, modules,
+            if finder_info:
+                _process_found_modules(py_dir, finder_info, modules,
                                        distributions, prefixes, local_modules,
-                                       orphans, logger)
-
+                                       orphans, not_found, logger)
+    _DistCache.save()
     distributions = sorted(distributions, key=lambda dist: dist.project_name)
     logger.debug('    required distributions:')
     for dist in distributions:
@@ -582,31 +593,55 @@ def _get_distributions(objs, py_dir, logger, observer):
     return (distributions, local_modules, orphans)
 
 _get_distributions.excludes = None  # Modules to exclude from analysis.
-_get_distributions.saved = {}       # Saved results, keyed by module path.
 
 
 def _get_standard_modules():
     """ Return list of module names in the Python standard library. """
-    excl_dirs = []
-    if sys.platform == 'win32':
-        prefx = os.path.join(sys.prefix, 'Lib')
-        excl_dirs = [prefx, os.path.join(sys.prefix, 'DLLs')]
-        exts = ['*.py', '*.py?', '*.dll']
+    # Find library directories.
+    if sys.platform == 'win32':  #pragma no cover
+        lib_dir = os.path.join(sys.prefix, 'Lib')
+        obj_dir = os.path.join(sys.prefix, 'DLLs')
+        obj_pattern = '*.dll'
+        roots = [lib_dir, obj_dir]
     else:
-        prefx = os.path.join(sys.prefix, 'lib', 'python'+sys.version[0:3])
-        excl_dirs = [prefx, os.path.join(prefx, 'lib-dynload'),
-                     #prefx+'.zip',
-                     os.path.join(prefx, 'plat-'+sys.platform),
-                     os.path.join(prefx, 'site-packages')]
-        exts = ['*.py', '*.py?', '*.so']
-    excludes = set()
-    for ext in exts:
-        for edir in excl_dirs:
-            pattern = os.path.join(edir, ext)
-            excludes.update([os.path.basename(p)[:-(len(ext)-1)]
-                             for p in glob.glob(pattern)])
-          
-    excludes.update(sys.builtin_module_names)
+        lib_dir = os.path.join(sys.prefix, 'lib', 'python'+sys.version[0:3])
+        obj_dir = 'lib-dynload'
+        obj_pattern = '*.so'
+        roots = [lib_dir]
+
+    # Find 'real' sys.prefix (not that of virtualenv).
+    orig_prefix = None
+    with open(os.path.join(lib_dir, 'orig-prefix.txt'), 'r') as inp:
+        orig_prefix = inp.read()
+
+    # Add to roots.
+    if orig_prefix:
+        for root in tuple(roots):
+            roots.append(orig_prefix + root[len(sys.prefix):])
+
+    # Now scan for modules.
+    excludes = set(sys.builtin_module_names)
+    for root in roots:
+        for dirpath, dirnames, filenames in os.walk(root):
+            if 'test' in dirnames:
+                dirnames.remove('test')
+            if dirpath == root:
+                path = ''
+                if 'site-packages' in dirnames:
+                    dirnames.remove('site-packages')
+            else:
+                path = dirpath[len(root)+1:]
+                if path == obj_dir:
+                    path = ''
+            for name in filenames:
+                if fnmatch.fnmatch(name, '*.py*') or \
+                   fnmatch.fnmatch(name, obj_pattern):
+                    name = os.path.join(path, name[:name.rfind('.')])
+                    name = name.replace(os.sep, '.')
+                    if name.endswith('.__init__'):
+                        name = name[:name.rfind('.')]
+                    excludes.add(name)
+ 
     return list(excludes)
 
 
@@ -626,26 +661,22 @@ def _process_egg(path, distributions, prefixes, logger):
             prefixes.add(loc)
 
 
-def _process_found_modules(py_dir, finder_items, modules, distributions,
-                           prefixes, local_modules, orphans, logger):
+def _process_found_modules(py_dir, finder_info, modules, distributions,
+                           prefixes, local_modules, orphans, not_found, logger):
     """ Use ModuleFinder data to update distributions and local_modules. """
     working_set = pkg_resources.WorkingSet()
     py_version = 'python%s' % sys.version[:3]
-    not_found = set()
 
-    for name, module in sorted(finder_items, key=lambda item: item[0]):
+    for name, path in sorted(finder_info, key=lambda item: item[0]):
         if name in modules:
             continue
         if name != '__main__':
             modules.add(name)
-        try:
-            path = module.__file__
-        except AttributeError:
-            continue
-        if not path:
+        # Just being defensive, ModuleFinder hsould be excluding these.
+        if not path:  #pragma no cover
             continue
 
-        if sys.platform == 'win32':
+        if sys.platform == 'win32':  #pragma no cover
             path = path.lower()
         dirpath = os.path.realpath(os.path.dirname(path))
         if dirpath.startswith(py_dir):
@@ -654,8 +685,6 @@ def _process_found_modules(py_dir, finder_items, modules, distributions,
             continue
 
         # Skip modules in distributions we already know about.
-        if path.startswith(_SITE_LIB) and not path.startswith(_SITE_PKG):
-            continue
         found = False
         for prefix in prefixes:
             if path.startswith(prefix):
@@ -684,28 +713,22 @@ def _process_found_modules(py_dir, finder_items, modules, distributions,
                 # that was never successfully imported.
                 try:
                     __import__(name)
-                except ImportError:
+                # Difficult to cause this.
+                except ImportError:  #pragma no cover
                     logger.debug('Skipping %s, not importable.' % name)
                 else:
-                    logger.warning('No distribution found for %s.', name)
-                    orphans.add((name, path))
+                    if (name, path) not in orphans:
+                        logger.warning('No distribution found for %s.', name)
+                        orphans.add((name, path))
 
 
-def _write_state_file(dst_dir, root, name, fmt, proto, logger, observer):
+def _write_state_file(dst_dir, root, name, logger, observer):
     """ Write state of `root` and its children. Returns (filename, path). """
-    if fmt is SAVE_CPICKLE or fmt is SAVE_PICKLE:
-        state_name = name+'.pickle'
-    elif fmt is SAVE_LIBYAML or fmt is SAVE_YAML:
-        state_name = name+'.yaml'
-    else:
-        msg = "Unknown format '%s'." % fmt
-        observer.exception(msg)
-        raise RuntimeError(msg)
-
+    state_name = name+'.pickle'
     state_path = os.path.join(dst_dir, state_name)
     try:
-        save(root, state_path, fmt, proto, logger)
-    except Exception, exc:
+        save(root, state_path, SAVE_CPICKLE, -1, logger)
+    except Exception as exc:
         msg = "Can't save to '%s': %s" % (state_path, exc)
         observer.exception(msg)
         raise type(exc)(msg)
@@ -715,11 +738,6 @@ def _write_state_file(dst_dir, root, name, fmt, proto, logger, observer):
 
 def _write_loader_script(path, state_name, package, top):
     """ Write script used for loading object(s). """
-    if state_name.endswith('.pickle'):
-        fmt = 'SAVE_CPICKLE'
-    else:
-        fmt = 'SAVE_LIBYAML'
-
     if state_name.startswith(package):
         pkg_arg = ''
     else:
@@ -738,7 +756,7 @@ if not '.' in sys.path:
     sys.path.append('.')
 
 try:
-    from openmdao.main.api import Component, %(fmt)s
+    from openmdao.main.api import Component, SAVE_CPICKLE
 except ImportError:
     print 'No OpenMDAO distribution available.'
     if __name__ != '__main__':
@@ -748,8 +766,7 @@ except ImportError:
 
 def load(**kwargs):
     '''Create object(s) from state file.'''
-    return Component.load('%(name)s',
-                          %(fmt)s%(pkg)s%(top)s, **kwargs)
+    return Component.load('%(name)s', SAVE_CPICKLE%(pkg)s%(top)s, **kwargs)
 
 def main():
     '''Load state and run.'''
@@ -758,7 +775,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-""" % {'name':state_name, 'fmt':fmt, 'pkg':pkg_arg, 'top':top_arg})
+""" % {'name':state_name, 'pkg':pkg_arg, 'top':top_arg})
     out.close()
 
 
@@ -821,7 +838,7 @@ def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None):
             mode = 'w'
         try:
             outstream = open(outstream, mode)
-        except IOError, exc:
+        except IOError as exc:
             raise type(exc)("Can't save to '%s': %s" %
                             (outstream, exc.strerror))
     if fmt is SAVE_CPICKLE:
@@ -831,9 +848,74 @@ def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None):
     elif fmt is SAVE_YAML:
         yaml.dump(root, outstream)
     elif fmt is SAVE_LIBYAML:
-        if _libyaml is False:
+        # Test machines have libyaml.
+        if _libyaml is False:  #pragma no cover
             logger.warning('libyaml not available, using yaml instead')
         yaml.dump(root, outstream, Dumper=Dumper)
     else:
         raise RuntimeError("Can't save object using format '%s'" % fmt)
+
+
+class _DistCache(object):
+    """ Retains known required distributions for modules. """
+
+    _cache = None
+    _dirty = False
+
+    @staticmethod
+    def lookup(path):
+        """ Return known required distributions for `path`. """
+        if _DistCache._cache is None:
+            _DistCache._load()
+        return _DistCache._cache[_DistCache._key(path)]
+
+    @staticmethod
+    def record(path, dists):
+        """ Record required distributions for `path`. """
+        _DistCache._cache[_DistCache._key(path)] = dists
+        _DistCache._dirty = True
+
+    @staticmethod
+    def save():
+        """ Save required distributions data to file. """
+        if _DistCache._dirty:
+            out = _DistCache._open('wb')
+            cPickle.dump(_DistCache._cache, out, cPickle.HIGHEST_PROTOCOL)
+            out.close()
+            _DistCache._dirty = False
+
+    @staticmethod
+    def _key(path):
+        """ Return ``(path, mod_time)``. """
+        path = os.path.realpath(path)
+        info = os.stat(path)
+        return (path, info.st_mtime)
+
+    @staticmethod
+    def _load():
+        """ Load required distributions data from file. """
+        _DistCache._cache = {}
+        try:
+            inp = _DistCache._open('rb')
+        except Exception:
+            return
+
+        # Full test with coverage removes cache at start, so we won't get here.
+        try:  #pragma no cover
+            _DistCache._cache = cPickle.load(inp)
+        except Exception:  #pragma no cover
+            return
+        finally:  #pragma no cover
+            inp.close()
+
+    @staticmethod
+    def _open(mode):
+        """ Return opened file for '~/.openmdao/eggsaver.dat'. """
+        filename = \
+            os.path.expanduser(os.path.join('~', '.openmdao', 'eggsaver.dat'))
+        dirname = os.path.dirname(filename)
+        # Full test with coverage leaves directory intact.
+        if not os.path.exists(dirname):  #pragma no cover
+            os.mkdir(dirname)
+        return open(filename, mode)
 

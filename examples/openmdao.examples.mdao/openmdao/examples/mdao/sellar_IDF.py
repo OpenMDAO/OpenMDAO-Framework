@@ -34,7 +34,7 @@ class SellarIDF(Assembly):
         self.add('dis2', SellarDiscipline2())
         
         # Driver process definition
-        self.driver.workflow.add([self.bcastr, self.dis1, self.dis2])
+        self.driver.workflow.add(['bcastr', 'dis1', 'dis2'])
         
         # Make all connections
         self.connect('bcastr.z1','dis1.z1')

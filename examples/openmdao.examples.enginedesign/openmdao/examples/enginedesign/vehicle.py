@@ -79,7 +79,7 @@ class Vehicle(Assembly):
         self.add('chassis', Chassis())
         
         # Set up the workflow
-        self.driver.workflow.add([self.transmission, self.engine, self.chassis])
+        self.driver.workflow.add(['transmission', 'engine', 'chassis'])
 
         # Create input and output ports at the assembly level
         # pylint: disable-msg=E1101
@@ -136,7 +136,7 @@ if __name__ == "__main__": # pragma: no cover
     
     top = set_as_top(Assembly())
     our_vehicle = top.add('Testing', Vehicle())
-    top.driver.workflow.add(our_vehicle)
+    top.driver.workflow.add('Testing')
     
     our_vehicle.current_gear = 1
     our_vehicle.velocity = 20.0*(26.8224/60.0)

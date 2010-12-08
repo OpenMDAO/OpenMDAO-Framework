@@ -51,7 +51,7 @@ import traceback
 
 from Crypto.Cipher import AES
 from Crypto.PublicKey import RSA
-from Crypto.Util.randpool import RandomPool
+from Crypto.Random import get_random_bytes
 
 from multiprocessing import Process, current_process, connection, util
 from multiprocessing.forking import Popen
@@ -148,36 +148,6 @@ def keytype(authkey):
         return authkey if authkey == 'PublicKey' else 'AuthKey'
 
 
-class _SHA1(object):
-    """
-    Just to get around a deprecation message when using the default
-    :class:`RandomPool` hash.
-    """
-
-    digest_size = None
-
-    def __init__(self):
-        self.hash = hashlib.sha1()
-        if _SHA1.digest_size is None:
-            _SHA1.digest_size = self.hash.digest_size
-
-    @staticmethod
-    def new(data=None):
-        """ Return new hash object, optionally initialized with `data`. """
-        obj = _SHA1()
-        if data:
-            obj.update(data)
-        return obj
-
-    def digest(self):
-        """ Return hash result. """
-        return self.hash.digest()
-
-    def update(self, data):
-        """ Update hash with `data`. """
-        self.hash.update(data)
-
-
 def _generate_key_pair(credentials, logger=None):
     """
     Returns RSA key containing both public and private keys for the user
@@ -194,12 +164,8 @@ def _generate_key_pair(credentials, logger=None):
             user, host = credentials.user.split('@')
             if user == getpass.getuser():
                 current_user = True
-                if sys.platform == 'win32':  #pragma no cover
-                    home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
-                else:
-                    home = os.environ['HOME']
-                key_dir = os.path.join(home, '.openmdao')
-                key_file = os.path.join(key_dir, 'keys')
+                key_file = \
+                    os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
                 try:
                     with open(key_file, 'rb') as inp:
                         key_pair = cPickle.load(inp)
@@ -215,9 +181,7 @@ def _generate_key_pair(credentials, logger=None):
             if generate:
                 logger = logger or logging.getLogger()
                 logger.debug('generating public key...')
-                pool = RandomPool(2048, hash=_SHA1)
-                pool.stir()
-                key_pair = RSA.generate(2048, pool.get_bytes)
+                key_pair = RSA.generate(2048, get_random_bytes)
                 logger.debug('    done')
 
                 if current_user:
@@ -225,11 +189,13 @@ def _generate_key_pair(credentials, logger=None):
                     if sys.platform == 'win32' and not _HAVE_PYWIN32: #pragma no cover
                         logger.debug('No pywin32, not saving keyfile')
                     else:
+                        key_dir = os.path.dirname(key_file)
                         if not os.path.exists(key_dir):
                             os.mkdir(key_dir)
                         _make_private(key_dir)  # Private while writing keyfile.
                         with open(key_file, 'wb') as out:
-                            cPickle.dump(key_pair, out)
+                            cPickle.dump(key_pair, out,
+                                         cPickle.HIGHEST_PROTOCOL)
                         try:
                             _make_private(key_file)
                         # Hard to cause (recoverable) error here.
@@ -1002,7 +968,7 @@ class OpenMDAO_Manager(BaseManager):
 
         # Get address of server.
         writer.close()
-        for retry in range(5):
+        for retry in range(60):
             if reader.poll(1):
                 break
             if not self._process.is_alive():

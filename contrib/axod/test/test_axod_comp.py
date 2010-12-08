@@ -119,8 +119,8 @@ class TestCase(unittest.TestCase):
         self.top.add('axodcompn',AxodCompn(input_filename='one_stage.inp'))
         self.top.add('nextdata',next_data())
 
-        #self.top.driver.workflow.add([self.top.tempdata, self.top.axodcompn])
-        self.top.driver.workflow.add([self.top.tempdata, self.top.axodcompn, self.top.nextdata])
+        #self.top.driver.workflow.add(['tempdata', 'axodcompn'])
+        self.top.driver.workflow.add(['tempdata', 'axodcompn', 'nextdata'])
         self.top.connect('tempdata.ttout', 'axodcompn.Case1.Stage1.ttin') 
         self.top.connect('tempdata.ptout', 'axodcompn.Case1.Stage1.ptin') 
         self.top.connect('axodcompn.hpower', 'nextdata.hpower') 
