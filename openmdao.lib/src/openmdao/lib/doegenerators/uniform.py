@@ -22,22 +22,20 @@ class Uniform(HasTraits):
                                               "the DOE")
     
     def __init__(self, num_samples=None, *args, **kwargs):
-        
+    
         super(Uniform, self).__init__(*args, **kwargs)
         
         self.num = 0
         
         if num_samples is not None: 
             self.num_samples = num_samples
-    
+        
     def __iter__(self):
         """Return an iterator over our sets of input values"""
-        
-        #return product(*[linspace(0., 1., self.num_levels) \
-        #                for i in range(self.num_parameters)])
         return self
                                            
     def next(self):
+        print 'num samples', self.num_samples
         if self.num < self.num_samples:
             self.num = self.num+1
             return random.uniform(0,1,self.num_parameters)
