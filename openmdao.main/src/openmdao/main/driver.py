@@ -48,6 +48,11 @@ class Driver(Component):
                 return False
         return True
 
+    def check_config (self):
+        """Verify that our workflow is able to resolve all of its components."""
+        # workflow will raise an exception if it can't resolve a Component
+        comps = self.workflow.contents()
+
     def iteration_set(self):
         """Return a set of all Components in our workflow(s), and 
         recursively in any workflow in any Driver in our workflow(s).

@@ -278,7 +278,8 @@ def main():
         shutil.move(os.path.join(topdir,'docs','_build'), 
                     os.path.join(destdir,'_build'))
         if not options.test:
-            check_call(['bzr', 'commit', '-m', '"updating release info and sphinx config files"'])
+            check_call(['bzr', 'commit', '-m', 
+                        '"updating release info and sphinx config files for release %s"' % options.version])
 
         for project_name in openmdao_packages:
             pdir = os.path.join(topdir, 
