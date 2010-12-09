@@ -7,24 +7,14 @@ from openmdao.main.api import Assembly, Component, Driver, \
      SequentialWorkflow, Case
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.expreval import ExprEvaluator
-
-from openmdao.lib.components.metamodel import MetaModel
-from openmdao.lib.components.expected_improvement import ExpectedImprovement
-from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
-from openmdao.lib.components.pareto_filter import ParetoFilter
-from openmdao.lib.drivers.doedriver import DOEdriver
-from openmdao.lib.drivers.genetic import Genetic
-
-from openmdao.lib.doegenerators.optlh import OptLatinHypercube
-from openmdao.lib.doegenerators.full_factorial import FullFactorial
-from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
-from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
-from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
-from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
+from openmdao.lib.components.api import  MetaModel,ExpectedImprovement,ParetoFilter
+from openmdao.lib.surrogatemodels.api import KrigingSurrogate
+from openmdao.lib.doegenerators.api import OptLatinHypercube,FullFactorial
+from openmdao.lib.drivers.api import CaseIteratorDriver,DOEdriver,Genetic
+from openmdao.lib.caserecorders.api import DBCaseRecorder,DumpCaseRecorder
+from openmdao.lib.caseiterators.api import DBCaseIterator
 from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
-
 from openmdao.examples.expected_improvement.branin_component import BraninComponent
-
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
         

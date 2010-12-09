@@ -35,7 +35,6 @@ class Uniform(HasTraits):
         return self
                                            
     def next(self):
-        print 'num samples', self.num_samples
         if self.num < self.num_samples:
             self.num = self.num+1
             return random.uniform(0,1,self.num_parameters)

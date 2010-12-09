@@ -92,15 +92,11 @@ class Analysis(Assembly):
         self.trainA.recorder = DBCaseRecorder(os.path.join(self._tdir,'A.db'))
         self.trainA.force_execute = True
         
-        self.add('iter',Iterator())
-        self.iter.add_stop_condition('len(DOE_maker.cases)==0')
+        self.add('driver',Iterator())
+        self.driver.add_stop_condition('len(DOE_maker.cases)==0')
         
         #Iteration Hierarchy
-        self.driver.workflow.add(['iter'])
-        #self.driver.workflow = SequentialWorkflow()
-
-        self.iter.workflow = SequentialWorkflow()
-        self.iter.workflow.add(['DOE_maker','trainA'])
+        self.driver.workflow.add(['DOE_maker','trainA'])
 
         self.trainA.workflow.add('A')
         
