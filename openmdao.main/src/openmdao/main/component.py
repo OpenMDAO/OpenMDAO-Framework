@@ -250,10 +250,6 @@ class Component (Container):
         if self._call_tree_rooted:
             self.tree_rooted()
             
-        if self._call_check_config:
-            self.check_config()
-            self._call_check_config = False
-        
         if force:
             outs = self.invalidate_deps()
             if (outs is None) or outs:
@@ -286,6 +282,11 @@ class Component (Container):
                     valids[name] = True
             elif self._call_execute == False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
+                
+        if self._call_check_config:
+            self.check_config()
+            self._call_check_config = False
+
 
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
