@@ -29,13 +29,11 @@ class SingleObjectiveEITest(unittest.TestCase):
         Selectors.GRouletteWheel.cachePopID = None
         Selectors.GRouletteWheel.cacheWheel = None
 
-        random.seed(10)
-        numpy_random.seed(10)
 
         analysis = Analysis()
         set_as_top(analysis)
-        analysis.DOE_trainer.DOEgenerator = FullFactorial(num_levels=4)
-        analysis.iter.iterations = 1
+        #analysis.DOE_trainer.DOEgenerator = FullFactorial(num_levels=10)
+        
         analysis.run()
         # This test looks for the presence of at least one point close to
         # each optimum.
@@ -44,9 +42,17 @@ class SingleObjectiveEITest(unittest.TestCase):
         #print analysis.branin_meta_model.x
         #print analysis.branin_meta_model.y
         
-        self.assertAlmostEqual(analysis.branin_meta_model.x,8.0,1)
-        self.assertAlmostEqual(analysis.branin_meta_model.y,1.8,1)
-        
+        points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
+        errors = []
+        for x,y,z in points: 
+            analysis.branin_meta_model.x = x
+            analysis.branin_meta_model.y = y
+            analysis.branin_meta_model.execute()
+            
+            errors.append((analysis.branin_meta_model.f_xy.mu - z)/z*100)
+        avg_error = sum(errors)/float(len(errors))
+        print avg_error, errors
+        self.assertTrue(avg_error <= 25)
 if __name__=="__main__": #pragma: no cover
     unittest.main()
 
