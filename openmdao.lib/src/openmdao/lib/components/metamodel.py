@@ -37,6 +37,7 @@ class MetaModel(Component):
 
     # when fired, the next execution will train the metamodel
     train_next = Event()
+    reset_training_data = Event()
     
     def __init__(self, *args, **kwargs):
         super(MetaModel, self).__init__(*args, **kwargs)
@@ -57,7 +58,10 @@ class MetaModel(Component):
     def _train_next_fired(self):
         self._train = True
         self._new_train_data = True
-
+    
+    def _reset_training_data_fired(self):
+        self.update_model(self.model, self.model)
+        
     def execute(self):
         """If the training flag is set, train the metamodel. Otherwise, 
         predict outputs.

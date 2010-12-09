@@ -196,6 +196,26 @@ class MetaModelTestCase(unittest.TestCase):
             self.fail('Expected Exception')
         self.assertEqual(metamodel.includes, [])
         
+    def test_reset_training_data_event(self):
+        metamodel = MetaModel()
+        metamodel.name = 'meta'
+        metamodel.surrogate = KrigingSurrogate()
+        metamodel.model = Simple()
+        metamodel.recorder = DumbRecorder()
+        simple = Simple()
+        
+        metamodel.a = 1.
+        metamodel.b = 2.
+        metamodel.train_next = True
+        metamodel.run()
+        
+        metamodel.a = 2.
+        metamodel.b = 3.
+        metamodel.train_next = True
+        metamodel.run()
+        
+        
+        
 if __name__ == "__main__":
     unittest.main()
 
