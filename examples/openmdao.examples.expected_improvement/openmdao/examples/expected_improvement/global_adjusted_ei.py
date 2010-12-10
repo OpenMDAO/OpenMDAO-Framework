@@ -32,7 +32,7 @@ from openmdao.lib.doegenerators.full_factorial import FullFactorial
 
 from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array
 
-from openmdao.lib.drivers.api import DOEdriver,Genetic,CaseIteratorDriver
+from openmdao.lib.drivers.api import DOEdriver,Genetic,CaseIteratorDriver, IterateUntil
 from openmdao.lib.components.api import MetaModel,MultiObjExpectedImprovement,\
      ProbIntersect,ParetoFilter, Mux
 from openmdao.lib.caserecorders.api import DBCaseRecorder,DumpCaseRecorder
@@ -47,23 +47,6 @@ from openmdao.main.hasstopcond import HasStopConditions
 from matplotlib import pyplot as plt, cm
 from matplotlib.pylab import get_cmap
 from numpy import meshgrid,array, pi,arange,cos,sin,linspace,remainder
-
-@add_delegate(HasStopConditions)
-class Iterator(Driver):
-    max_iterations = Int(10,iotype="in")
-    iteration = Int(0,iotypes="out")
-    
-    def start_iteration(self):
-        self.iteration = 0
-    
-    def continue_iteration(self):
-        self.iteration += 1
-        if (self.iteration > 1) and self.should_stop():
-            return False
-        if self.iteration <= self.max_iterations: 
-            return True
-    
-        return False
     
 class MyDriver(Driver):
     """Custom driver used to retrain the surrogate with the new point and plot
@@ -258,7 +241,7 @@ class Analysis(Assembly):
         self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
         self.retrain.force_execute = True
         
-        self.add("iter",Iterator())
+        self.add("iter",IterateUntil())
         self.iter.max_iterations = 12
         #self.iter.add_stop_condition('MOEI.EI <= .000001')
         

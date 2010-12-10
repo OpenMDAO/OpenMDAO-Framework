@@ -22,23 +22,6 @@ from openmdao.examples.expected_improvement.branin_component import BraninCompon
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
         
-@add_delegate(HasStopConditions)
-class Iterator(Driver):
-    iterations = Int(10,iotype="in")
-    
-    def start_iteration(self):
-        self._iterations = 0
-    
-    def continue_iteration(self):
-        self._iterations += 1
-        if (self._iterations > 1) and self.should_stop():
-            return False
-        if self._iterations <= self.iterations: 
-            return True
-        
-        return False
-
-   
     
 class MyDriver(Driver): 
     def __init__(self,doc=None):
