@@ -60,6 +60,7 @@ class MetaModel(Component):
         self._new_train_data = True
     
     def _reset_training_data_fired(self):
+        self._training_input_history = []
         self.update_model(self.model, self.model)
         
     def execute(self):

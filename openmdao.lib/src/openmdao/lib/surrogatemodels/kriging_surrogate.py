@@ -33,7 +33,7 @@ class KrigingSurrogate(HasTraits):
         self.mu = None
         self.sig2 = None
         self.log_likelihood = None
-        
+
         self.X = X
         self.Y = Y
 
@@ -100,18 +100,16 @@ class KrigingSurrogate(HasTraits):
 
     def train(self,X,Y):
         """Train the surrogate model with the given set of inputs and outputs."""
-        
         #TODO: Check if one training point will work... if not raise error
         """self.X = []
         self.Y = []
-        for ins,out in zip(X,Y): 
+        for ins,out in zip(X,Y):
             if ins not in self.X:
                 self.X.append(ins)
                 self.Y.append(out)
             else: "duplicate training point" """
         self.X = X
         self.Y = Y
-              
         self.m = len(X[0])
         self.n = len(X)
         thetas = zeros(self.m)

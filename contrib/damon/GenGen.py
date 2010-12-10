@@ -42,10 +42,14 @@ class DOE_Maker(Component):
 
     cases = List([],iotype='in',desc='list of integers of maximum sample size')
     DOEgen = Instance(IDOEgenerator,iotype='out')
-        
+    
+    def __init__(self,doc=None):
+        super(DOE_Maker,self).__init__(doc)
+        self.force_execute = True
+    
     def execute(self):
         n = self.cases.pop()
-        print 'training cases = ',n
+        print 'Number of training cases = ',n
         self.DOEgen = Uniform(num_samples=n)
 
 @add_delegate(HasStopConditions)       
@@ -63,6 +67,14 @@ class Iterator(Driver):
 
         return False
 
+class Res(Component):
+    def execute(self):
+        analysis.A.x = 0
+        analysis.A.y = 1
+        analysis.A.z = 1
+        analysis.A.execute()
+        print analysis.A.f1.mu
+        
 class Analysis(Assembly):
 
     def __init__(self,*args,**kwargs):
@@ -75,11 +87,10 @@ class Analysis(Assembly):
         self.A .surrogate = KrigingSurrogate()
         self.A.model = ConceptA()
         self.A.recorder = DBCaseRecorder(':memory:')
-        self.A.force_execute = True
 
         self.add('DOE_maker',DOE_Maker())
-        self.DOE_maker.cases = [10,20]
-        self.DOE_maker.force_execute = True
+        self.DOE_maker.cases = [10]*3
+        #self.DOE_maker.force_execute = True
 
         #Drivers
         self.add("trainA",DOEdriver())
@@ -90,14 +101,17 @@ class Analysis(Assembly):
         self.trainA.add_event("A.train_next")
         self.trainA.case_outputs = ['A.f1','A.f2']
         self.trainA.recorder = DBCaseRecorder(os.path.join(self._tdir,'A.db'))
-        self.trainA.force_execute = True
         
         self.add('driver',Iterator())
         self.driver.add_stop_condition('len(DOE_maker.cases)==0')
+        self.driver.add_event('A.reset_training_data')
+        
+        self.add('res',Res())
+        #self.res.force_execute = True
         
         #Iteration Hierarchy
-        self.driver.workflow.add(['DOE_maker','trainA'])
-
+        self.driver.workflow.add(['DOE_maker','trainA','res'])
+        #self.driver.workflow.add(['DOE_maker','trainA'])
         self.trainA.workflow.add('A')
         
         #Data Connections
@@ -113,5 +127,4 @@ if __name__ == "__main__": #pragma: no cover
     analysis.run()
     analysis.cleanup()
     
-
     
