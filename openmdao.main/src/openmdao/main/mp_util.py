@@ -2,47 +2,26 @@
 Multiprocessing support utilities.
 """
 
-import base64
 import ConfigParser
 import cPickle
-import getpass
-import hashlib
 import inspect
 import logging
 import os.path
 import re
 import socket
-import sys
-import threading
 
 from Crypto.Cipher import AES
-from Crypto.PublicKey import RSA
-from Crypto.Random import get_random_bytes
 
 from multiprocessing import current_process, connection
 from multiprocessing.managers import BaseProxy, dispatch, listener_client
 
-if sys.platform == 'win32':  #pragma no cover
-    try:
-        import win32api
-        import win32security
-        import ntsecuritycon
-    except ImportError:
-        HAVE_PYWIN32 = False
-    else:
-        HAVE_PYWIN32 = True
-else:
-    HAVE_PYWIN32 = False
-
 from openmdao.main.interfaces import obj_has_interface
 from openmdao.main.rbac import rbac_methods
 
+from openmdao.util.publickey import decode_public_key
+
 # Names of attribute access methods requiring special handling.
 SPECIALS = ('__getattribute__', '__getattr__', '__setattr__', '__delattr__')
-
-# Cache of client key pairs indexed by user (from credentials).
-_KEY_CACHE = {}
-_KEY_CACHE_LOCK = threading.Lock()
 
 
 def keytype(authkey):
@@ -56,160 +35,6 @@ def keytype(authkey):
         return '%s (inherited)' % keytype(current_process().authkey)
     else:
         return authkey if authkey == 'PublicKey' else 'AuthKey'
-
-
-def generate_key_pair(credentials, logger=None):
-    """
-    Returns RSA key containing both public and private keys for the user
-    identified in `credentials`.  This can be an expensive operation, so
-    we avoid generating a new key pair whenever possible.
-
-    credentials: :class:`rbac.Credentials`
-        Credentials of user.
-
-    logger: :class:`logging.Logger`
-        Used for debug messages.
-    """
-    with _KEY_CACHE_LOCK:
-        # Look in previously generated keys.
-        try:
-            key_pair = _KEY_CACHE[credentials.user]
-        except KeyError:
-            # If key for current user (typical), check filesystem.
-# TODO: file lock to protect from separate processes.
-            user, host = credentials.user.split('@')
-            if user == getpass.getuser():
-                current_user = True
-                key_file = \
-                    os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
-                if _is_private(key_file):
-                    try:
-                        with open(key_file, 'rb') as inp:
-                            key_pair = cPickle.load(inp)
-                    except Exception:
-                        generate = True
-                    else:
-                        generate = False
-                else:
-                    logger.warning('Insecure keyfile! Regenerating keys.')
-                    os.remove(key_file)
-                    generate = True
-            # Difficult to run test as non-current user.
-            else:  #pragma no cover
-                current_user = False
-                generate = True
-
-            if generate:
-                logger = logger or logging.getLogger()
-                logger.debug('generating public key...')
-                key_pair = RSA.generate(2048, get_random_bytes)
-                logger.debug('    done')
-
-                if current_user:
-                    # Save in protected file.
-                    if sys.platform == 'win32' and not HAVE_PYWIN32: #pragma no cover
-                        logger.debug('No pywin32, not saving keyfile')
-                    else:
-                        key_dir = os.path.dirname(key_file)
-                        if not os.path.exists(key_dir):
-                            os.mkdir(key_dir)
-                        _make_private(key_dir)  # Private while writing keyfile.
-                        with open(key_file, 'wb') as out:
-                            cPickle.dump(key_pair, out,
-                                         cPickle.HIGHEST_PROTOCOL)
-                        try:
-                            _make_private(key_file)
-                        # Hard to cause (recoverable) error here.
-                        except Exception:  #pragma no cover
-                            os.remove(key_file)  # Remove unsecured file.
-                            raise
-
-            _KEY_CACHE[credentials.user] = key_pair
-
-    return key_pair
-
-def _is_private(path):
-    """ Return True if `path` is accessible only by 'owner'. """
-    if not os.path.exists(path):
-        return True  # Nonexistent file is secure ;-)
-
-    if sys.platform == 'win32':  #pragma no cover
-        if not HAVE_PYWIN32:
-            return False  # No way to know.
-
-        # Find the SIDs for user and system.
-        user, domain, type = \
-            win32security.LookupAccountName('', win32api.GetUserName())
-        system, domain, type = \
-            win32security.LookupAccountName('', 'System')
-
-        # Find the DACL part of the Security Descriptor for the file
-        sd = win32security.GetFileSecurity(path,
-                                        win32security.DACL_SECURITY_INFORMATION)
-        dacl = sd.GetSecurityDescriptorDacl()
-
-        # Verify the DACL contains just the two entries we expect.
-        count = dacl.GetAceCount()
-        if count != 2:
-            return False
-        for i in range(count):
-            ace = dacl.GetAce(i)
-            if ace[2] != user and ace[2] != system:
-                return False
-        return True
-    else:
-        return (os.stat(path).st_mode & 0077) == 0
-
-def _make_private(path):
-    """ Make `path` accessible only by 'owner'. """
-    if sys.platform == 'win32':  #pragma no cover
-        # Find the SIDs for user and system.
-        user, domain, type = \
-            win32security.LookupAccountName('', win32api.GetUserName())
-        system, domain, type = \
-            win32security.LookupAccountName('', 'System')
-
-        # Find the DACL part of the Security Descriptor for the file
-        sd = win32security.GetFileSecurity(path,
-                                        win32security.DACL_SECURITY_INFORMATION)
-
-        # Create a blank DACL and add the ACEs we want.
-        dacl = win32security.ACL()
-        dacl.AddAccessAllowedAce(win32security.ACL_REVISION,
-                                 ntsecuritycon.FILE_ALL_ACCESS, user)
-        dacl.AddAccessAllowedAce(win32security.ACL_REVISION, 
-                                 ntsecuritycon.FILE_ALL_ACCESS, system)
-
-        # Put our new DACL into the Security Descriptor and update the file
-        # with the updated SD.
-        sd.SetSecurityDescriptorDacl(1, dacl, 0)
-        win32security.SetFileSecurity(path,
-                                      win32security.DACL_SECURITY_INFORMATION,
-                                      sd)
-    else:
-        os.chmod(path, 0700)  # Read/Write/Execute
-
-
-def encode_public_key(key):
-    """
-    Return base64 text representation of public key `key`.
-
-    key: public key
-        Public part of key pair.
-    """
-    # Just being defensive, this should never happen.
-    if key.has_private():  #pragma no cover
-        key = key.publickey()
-    return base64.b64encode(cPickle.dumps(key, cPickle.HIGHEST_PROTOCOL))
-
-def decode_public_key(text):
-    """
-    Return public key from text representation.
-
-    text: string
-        base64 encoded key data.
-    """
-    return cPickle.loads(base64.b64decode(text))
 
 
 # This happens on the remote server side and we'll check when connecting.

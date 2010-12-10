@@ -4,6 +4,7 @@ Test distributed simulation.
 
 import cPickle
 import glob
+import hashlib
 import logging
 from math import pi
 from multiprocessing import AuthenticationError, current_process
@@ -15,6 +16,8 @@ import sys
 import traceback
 import unittest
 import nose
+
+from Crypto.Random import get_random_bytes
 
 from enthought.traits.api import TraitError
 
@@ -36,6 +39,7 @@ from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
 from openmdao.test.execcomp import ExecComp
 
 from openmdao.util.decorators import add_delegate
+from openmdao.util.publickey import generate_key_pair
 from openmdao.util.testutil import assert_raises, assert_rel_error
 
 
@@ -200,12 +204,6 @@ class Model(Assembly):
 class Protector(AccessController):
     """ Special :class:`AccessController` to protect secrets. """
 
-    def __init__(self):
-        set_credentials(Credentials())  # Ensure something is current.
-        super(Protector, self).__init__()
-        self.owner = Credentials()
-        self.owner.user = 'xyzzy@spooks-r-us.com'
-
     def check_access(self, role, methodname, obj, attr):
         if not role:
             raise RoleError('No access by null role')
@@ -224,8 +222,6 @@ class Protector(AccessController):
             return True
         return False
 
-PROTECTOR = Protector()
-
 
 class ProtectedBox(Box):
     """ Box which can be used but the innards are hidden. """
@@ -234,36 +230,38 @@ class ProtectedBox(Box):
 
     def __init__(self):
         super(ProtectedBox, self).__init__()
+        # Protector will use current credentials as 'owner'.
+        self.protector = Protector()
 
     @rbac('owner')
     def proprietary_method(self):
         pass
 
     def get_access_controller(self):
-        return PROTECTOR
+        return self.protector
 
     @rbac(('owner', 'user'))
     def get(self, path, index=None):
-        if PROTECTOR.user_attribute(self, path):
+        if self.protector.user_attribute(self, path):
             return super(ProtectedBox, self).get(path, index)
         raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
 
     @rbac(('owner', 'user'))
     def get_dyn_trait(self, name, iotype=None):
-        if PROTECTOR.user_attribute(self, name):
+        if self.protector.user_attribute(self, name):
             return super(ProtectedBox, self).get_dyn_trait(name, iotype)
         raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
 
     @rbac(('owner', 'user'))
     def get_wrapped_attr(self, name):
-        if PROTECTOR.user_attribute(self, name):
+        if self.protector.user_attribute(self, name):
             return super(ProtectedBox, self).get_wrapped_attr(name)
         raise RoleError("No get_wrapped_attr access to '%s' by role '%s'"
                         % (attr, role))
 
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, srcname=None, force=False):
-        if PROTECTOR.user_attribute(self, path):
+        if self.protector.user_attribute(self, path):
             return super(ProtectedBox, self).set(path, value, index, srcname, force)
         raise RoleError("No set access to '%s' by role '%s'"
                         % (attr, role))
@@ -478,8 +476,22 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_access')
 
+        # This 'spook' creation is only for testing.
+        # Normally the protector would run with regular credentials
+        # in effect at the proprietary site.
+        user = 'spooky@spooks-r-us.com'
+        key_pair = generate_key_pair(user)
+        data = '\n'.join([user, '0', key_pair.publickey().exportKey()])
+        hash = hashlib.sha256(data).digest()
+        signature = key_pair.sign(hash, get_random_bytes)
+        spook = Credentials(data, signature)
+
         # Create model and run it.
+        saved = get_credentials()
+        set_credentials(spook)
         box = self.factory.create(_MODULE+'.ProtectedBox')
+        set_credentials(saved)
+
         model = set_as_top(Model(box))
         model.run()
 
@@ -511,8 +523,6 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('Expected RemoteError')
 
-        spook = Credentials()
-        spook.user = 'xyzzy@spooks-r-us.com'
         saved = get_credentials()
         set_credentials(spook)
         try:

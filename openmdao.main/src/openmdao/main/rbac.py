@@ -24,22 +24,33 @@ credentials match those in effect when the controller object was created.
 
 .. warning::
 
-    Credentials are currently just a user identifier string and are trivially
-    forgeable. This access control scheme should *not* be relied upon until
-    credentials have been updated to a more secure form.
+    Credentials as currently defined are quite weak unless the receiver has
+    a list of known client keys.  This access control scheme should *not* be
+    relied upon unless the receiving server verifies that the Credentials
+    public key matches what is expected.
 
 """
 
-import copy
-import cPickle
 import fnmatch
 import getpass
 import hashlib
 import inspect
 import socket
+import sys
 import threading
 
+from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
+
+from openmdao.util.publickey import generate_key_pair, HAVE_PYWIN32
+
+# Verified credentials keyed by encoding tuple.
+_VERIFY_CACHE = {}
+
+
+class CredentialsError(Exception):
+    """ Raised when decoding/verifying received credentials. """
+    pass
 
 
 class RoleError(Exception):
@@ -52,47 +63,108 @@ class RoleError(Exception):
 
 class Credentials(object):
     """
-    Currently contains just a single `user` attribute of the form ``user@host``.
+    Credentials are used to certify that a message is from a particular user
+    on a particular host.  The scheme here is quite weak unless the receiver
+    has a list of known client keys.
+
+    Essentially all we can prove here is that *someone* *somewhere* created
+    a correctly formed credential. Without known client keys at the receiving
+    end the best we can do is detect when more than one client claims the
+    same identity.
+
+    If the receiver does keep a list of known client keys, then the information
+    here will support strict authorization.
     """
 
-    def __init__(self):
-        self.user = '%s@%s' % (getpass.getuser(), socket.gethostname())
-        self.signers = []
+    def __init__(self, data=None, signature=None):
+        # We don't use cPickle here because we'd rather not have to trust
+        # the sender until after we've checked their credentials.
+
+        if data is None and signature is None:
+            # Create our credentials.
+            self.user = '%s@%s' % (getpass.getuser(), socket.gethostname())
+            self.transient = (sys.platform == 'win32') and not HAVE_PYWIN32
+            key_pair = generate_key_pair(self.user)
+            self.public_key = key_pair.publickey()
+            self.data = '\n'.join([self.user, str(int(self.transient)),
+                                   self.public_key.exportKey()])
+            hash = hashlib.sha256(self.data).digest()
+            self.signature = key_pair.sign(hash, get_random_bytes)
+        else:
+            # Recreate remote user credentials.
+            lines = data.split('\n')
+            if len(lines) < 3:
+                raise CredentialsError('Invalid data')
+            self.user = lines[0]
+            self.transient = bool(int(lines[1]))
+            try:
+                self.public_key = RSA.importKey('\n'.join(lines[2:]))
+            except Exception:
+                raise CredentialsError('Invalid key')
+            self.data = data
+            hash = hashlib.sha256(data).digest()
+            try:
+                if not self.public_key.verify(hash, signature):
+                    raise CredentialsError('Invalid signature')
+            except Exception:
+                raise CredentialsError('Invalid signature')
+            self.signature = signature
 
     def __eq__(self, other):
-        return self.user == other.user
+        if isinstance(other, Credentials):
+            return self.user == other.user and \
+                   self.signature == other.signature
+        else:
+            return False
 
     def __str__(self):
-        return self.user
+        # 'transient' is just an aid to let some Windows users know their
+        # credentials will change on-the-fly.
+        transient = ' (transient)' if self.transient else ''
+        return '%s%s' % (self.user, transient)
 
-    def sign(self, key_pair):
-        """
-        Return ``(data, signature)`` signed by current user.
-        """
-        creds = copy.copy(self)
-        creds.signers.append('%s@%s' \
-                             % (getpass.getuser(), socket.gethostname()))
-
-        data = cPickle.dumps(creds, cPickle.HIGHEST_PROTOCOL)
-        hash = hashlib.sha256(data).digest()
-        signature = key_pair.sign(hash, get_random_bytes)
-        return (data, signature)
+    def encode(self):
+        """ Return object to be sent: ``(data, signature)``. """
+        return (self.data, self.signature)
 
     @staticmethod
-    def verify(tpl, pub_key):
+    def decode(encoded):
         """
-        Return :class:`Credentials` object from `tpl`.
+        Return :class:`Credentials` object from `encoded`.
+        The :attr:`public_key` should be checked against the expected value
+        if it is available.
+
+        encoded: tuple.
+            Data received, returned by (remote) :meth:`encode`.
         """
-        data, signature = tpl
-        hash = hashlib.sha256(data).digest()
-        if not pub_key.verify(hash, signature):
-            raise RuntimeError('invalid credentials')
-        return cPickle.loads(data)
+        data, signature = encoded
+        return Credentials(data, signature)
+
+    @staticmethod
+    def verify(encoded):
+        """
+        Verify that `encoded` is a valid encoded credentials object and that
+        its public key matches the public key we've already seen, if any.
+
+        Returns :class:`Credentials` object from `encoded`.
+        """
+        try:
+            return _VERIFY_CACHE[encoded]
+        except KeyError:
+            credentials = Credentials.decode(encoded)
+            user = credentials.user
+            for cred in _VERIFY_CACHE.values():
+                if cred.user == user:
+                    raise CredentialsError('Public key mismatch for %r' % user)
+            else:
+                _VERIFY_CACHE[encoded] = credentials
+            return credentials
 
 
 def set_credentials(credentials):
     """ Set the current thread's credentials. """
     threading.current_thread().credentials = credentials
+    return credentials
 
 def get_credentials():
     """ Get the current thread's credentials. """

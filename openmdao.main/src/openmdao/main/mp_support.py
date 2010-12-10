@@ -58,14 +58,15 @@ if sys.platform == 'win32':  #pragma no cover
 from enthought.traits.trait_handlers import TraitDictObject
 
 from openmdao.main.interfaces import obj_has_interface
-from openmdao.main.mp_util import decode_public_key, decrypt, \
-                                  encode_public_key, encrypt, \
-                                  is_legal_connection, generate_key_pair, \
+from openmdao.main.mp_util import decrypt, encrypt, is_legal_connection, \
                                   keytype, make_typeid, public_methods, \
-                                  SPECIALS, HAVE_PYWIN32
+                                  SPECIALS
 from openmdao.main.rbac import AccessController, RoleError, check_role, \
                                rbac_methods, need_proxy, \
                                Credentials, get_credentials, set_credentials
+
+from openmdao.util.publickey import decode_public_key, encode_public_key, \
+                                    generate_key_pair, HAVE_PYWIN32
 
 # Classes which require proxying (used by default AccessController)
 # Used to break import loop between this and openmdao.main.container.
@@ -156,7 +157,11 @@ class OpenMDAO_Server(Server):
                           os.getpid(), keytype(authkey))
         self._authkey = authkey
         if authkey == 'PublicKey':
-            self._key_pair = generate_key_pair(get_credentials(), self._logger)
+            # While we may be 'owned' by some remote user, use default
+            # credentials for getting our key pair. This avoids generation
+            # overhead and also issues with propagating our public key
+            # back through a proxy.
+            self._key_pair = generate_key_pair(Credentials().user, self._logger)
         else:
             self._key_pair = None
         self._id_to_controller = {}
@@ -164,7 +169,6 @@ class OpenMDAO_Server(Server):
         for cls in CLASSES_TO_PROXY:
             self._access_controller.class_proxy_required(cls)
         self._address_type = connection.address_type(self.address)
-        self._cred_cache = {}
 
     @property
     def public_key(self):
@@ -326,13 +330,12 @@ class OpenMDAO_Server(Server):
 #                self._logger.debug('id_to_obj:\n%s', self.debug_info(conn))
 
                 if self._authkey == 'PublicKey':
-                    tpl = credentials
+                    encoded = credentials
                     try:
-                        credentials = self._cred_cache[tpl]
-                    except KeyError:
-                        credentials = Credentials.verify(tpl, client_key)
-                        self._cred_cache[tpl] = credentials
-
+                        credentials = Credentials.verify(encoded)
+                    except Exception as exc:
+                        self._logger.error('%r' % exc)
+                        raise
                 try:
                     obj, exposed, gettypeid = id_to_obj[ident]
                 # Hard to cause this to happen.
@@ -439,14 +442,33 @@ class OpenMDAO_Server(Server):
 
     def _init_session(self, conn):
         """ Receive client public key, send session key. """
-        chunks = conn.recv()
-        text = ''
-        for chunk in chunks:
-            text += self._key_pair.decrypt(chunk)
-        client_key = decode_public_key(text)
-        session_key = hashlib.sha1(str(id(conn))).hexdigest()
-        data = client_key.encrypt(session_key, '')
-        conn.send(data)
+        try:
+            n, e, chunks = conn.recv()
+        except Exception as exc:
+            self._logger.error("Can't receive key data: %r", exc)
+            raise
+
+        if e != self._key_pair.e or n != self._key_pair.n:
+            self._logger.error('Server key mismatch')
+            raise RuntimeError('Server key mismatch')
+
+        try:
+            text = ''
+            for chunk in chunks:
+                text += self._key_pair.decrypt(chunk)
+            client_key = decode_public_key(text)
+        except Exception as exc:
+            self._logger.error("Can't recreate client key: %r", exc)
+            raise
+
+        try:
+            session_key = hashlib.sha1(str(id(conn))).hexdigest()
+            data = client_key.encrypt(session_key, '')
+            conn.send(data)
+        except Exception as exc:
+            self._logger.error("Can't send session key: %r", exc)
+            raise
+
         return (client_key, session_key)
 
     def _check_access(self, ident, methodname, function, args, credentials):
@@ -675,6 +697,11 @@ class OpenMDAO_Server(Server):
         finally:
             self.mutex.release()
 
+    def shutdown(self, conn):
+        """ Shutdown this process. """
+        self._logger.debug('received shutdown request')
+        super(OpenMDAO_Server, self).shutdown(conn)
+
 
 class OpenMDAO_Manager(BaseManager):
     """
@@ -762,9 +789,6 @@ class OpenMDAO_Manager(BaseManager):
             if sys.platform == 'win32' and not HAVE_PYWIN32:
                 timeout = 120
             else:
-                # Ensure we have a key pair. Key generation can take a long time
-                # and we don't want to use an excessive startup timeout value.
-                generate_key_pair(credentials)
                 timeout = 5
         else:
             timeout = 5
@@ -1002,8 +1026,6 @@ class OpenMDAO_Proxy(BaseProxy):
         else:
             self._pubkey = self._manager._pubkey
 
-        self._cred_cache = {}
-
     def _callmethod(self, methodname, args=None, kwds=None):
         """
         Try to call a method of the referrent and return a copy of the result.
@@ -1030,10 +1052,8 @@ class OpenMDAO_Proxy(BaseProxy):
             if self._authkey == 'PublicKey':
                 self._init_session(conn)
             else:
-                self._tls.key_pair = ''
                 self._tls.session_key = ''
 
-        key_pair = self._tls.key_pair
         session_key = self._tls.session_key
 
 # FIXME: Bizarre problem evidenced by test_extcode.py (Python 2.6.1)
@@ -1051,14 +1071,17 @@ class OpenMDAO_Proxy(BaseProxy):
 
         if self._authkey == 'PublicKey':
             user = credentials.user
-            try:
-                credentials = self._cred_cache[user]
-            except KeyError:
-                credentials = credentials.sign(key_pair)
-                self._cred_cache[user] = credentials
+            credentials = credentials.encode()
+        else:
+            user = ''
 
-        conn.send(encrypt((self._id, methodname, new_args, kwds, credentials),
-                          session_key))
+        try:
+            conn.send(encrypt((self._id, methodname, new_args, kwds,
+                               credentials), session_key))
+        except IOError as exc:
+            logging.error('_callmethod %s %s exception: %r, address %r',
+                          methodname, user, exc, self._token.address)
+            raise
 
         kind, result = decrypt(conn.recv(), session_key)
 
@@ -1085,8 +1108,8 @@ class OpenMDAO_Proxy(BaseProxy):
 
     def _init_session(self, conn):
         """ Send client public key, receive session key. """
-        self._tls.key_pair = generate_key_pair(Credentials())
-        public_key = self._tls.key_pair.publickey()
+        key_pair = generate_key_pair(get_credentials().user)
+        public_key = key_pair.publickey()
         text = encode_public_key(public_key)
 
         server_key = self._pubkey
@@ -1096,15 +1119,16 @@ class OpenMDAO_Proxy(BaseProxy):
                   % (methodname, args, kwds)
             logging.error(msg)
             raise RuntimeError(msg)
+
         chunk_size = server_key.size() / 8
         chunks = []
         while text:
             chunks.append(server_key.encrypt(text[:chunk_size], ''))
             text = text[chunk_size:]
-        conn.send(chunks)
+        conn.send((server_key.n, server_key.e, chunks))
 
         data = conn.recv()
-        self._tls.session_key = self._tls.key_pair.decrypt(data)
+        self._tls.session_key = key_pair.decrypt(data)
 
     def _incref(self):
         """

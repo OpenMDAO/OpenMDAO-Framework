@@ -11,11 +11,11 @@ import threading
 import unittest
 import nose
 
-from openmdao.main.mp_util import generate_key_pair
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                need_proxy, rbac, rbac_methods, check_role, \
-                               AccessController, RoleError
+                               AccessController, CredentialsError, RoleError
 
+from openmdao.util.publickey import generate_key_pair
 from openmdao.util.testutil import assert_raises
 
 
@@ -78,6 +78,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(user, owner)
         user.user = 'anyone@hostname'
         self.assertNotEqual(user, owner)
+        self.assertNotEqual(user, 'xyzzy')
 
         # Thread storage.
         try:
@@ -89,12 +90,33 @@ class TestCase(unittest.TestCase):
         self.assertEqual(get_credentials(), owner)
 
         # Sign/verify.
-        key_pair = generate_key_pair(owner)
-        data, signature = user.sign(key_pair)
-        creds = Credentials.verify((data, signature), key_pair.publickey())
-        assert_raises(self, 'Credentials.verify((data[:-1], signature),'
-                            '                   key_pair.publickey())',
-                      globals(), locals(), RuntimeError, 'invalid credentials')
+        encoded = owner.encode()
+        Credentials.verify(encoded)  # 'First sighting'.
+        Credentials.verify(encoded)  # Cached verification.
+        data, signature = encoded
+
+        assert_raises(self, 'Credentials.verify((data[:1], signature))',
+                      globals(), locals(), CredentialsError, 'Invalid data')
+
+        assert_raises(self, 'Credentials.verify((data[:-1], signature))',
+                      globals(), locals(), CredentialsError, 'Invalid signature')
+
+        assert_raises(self, 'Credentials.verify((data, signature[:-1]))',
+                      globals(), locals(), CredentialsError, 'Invalid signature')
+
+        newline = data.find('\n')  # .user
+        newline = data.find('\n', newline+1)  # .transient
+        # Expecting '-'
+        mangled = data[:newline+1] + '*' + data[newline+2:]
+        assert_raises(self, 'Credentials.verify((mangled, signature))',
+                      globals(), locals(), CredentialsError, 'Invalid key')
+
+        # Detect mismatched key.
+        generate_key_pair(owner.user, overwrite_cache=True)
+        spook = Credentials()
+        encoded = spook.encode()
+        assert_raises(self, 'Credentials.verify(encoded)', globals(), locals(),
+                      CredentialsError, 'Public key mismatch')
 
     def test_decorator(self):
         logging.debug('')

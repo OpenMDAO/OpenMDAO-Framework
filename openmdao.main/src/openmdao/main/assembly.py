@@ -261,7 +261,7 @@ class Assembly (Component):
                     newsrcs.append(s)
             return newsrcs
         
-    @rbac('owner')
+    @rbac(('owner', 'user'))
     def update_inputs(self, compname, varnames):
         """Transfer input data to input variables on the specified component.
         The varnames iterator is assumed to contain local names (no component name), 

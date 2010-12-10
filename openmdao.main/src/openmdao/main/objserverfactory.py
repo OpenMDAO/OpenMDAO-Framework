@@ -24,11 +24,12 @@ from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, register
 from openmdao.main.mp_util import keytype, read_allowed_hosts, \
-                                  write_server_config, HAVE_PYWIN32
+                                  write_server_config
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                rbac, RoleError
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
+from openmdao.util.publickey import HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT
 
 _PROXIES = {}
@@ -194,17 +195,20 @@ class ObjServerFactory(Factory):
                                                     'objserverfactory.py')
             else:
                 orig_main = None
-            self._logger.debug('starting server %r in dir %s', name, root_dir)
+
+            owner = get_credentials()
+            self._logger.debug('%s starting server %r in dir %s',
+                               owner, name, root_dir)
             try:
                 manager.start(cwd=root_dir)
             finally:
                 if orig_main is not None:  #pragma no cover
                     sys.modules['__main__'].__file__ = orig_main
 
-            self._logger.info('new server %r in dir %s listening on %s',
-                              name, root_dir, manager.address)
+            self._logger.info('new server %r for %s', name, owner)
+            self._logger.info('    in dir %s', root_dir)
+            self._logger.info('    listening on %s', manager.address)
             server = manager.openmdao_main_objserverfactory_ObjServer(name=name)
-            owner = get_credentials()
             self._managers[server] = (manager, root_dir, owner)
 
         if typname:
@@ -756,7 +760,8 @@ def _sigterm_handler(signum, frame):  #pragma no cover
 
 def _cleanup():  #pragma no cover
     """ Cleanup in preparation to shut down. """
-    if os.path.exists(_SERVER_CFG):
+    keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
+    if not keep_dirs and os.path.exists(_SERVER_CFG):
         os.remove(_SERVER_CFG)
 
 

@@ -9,13 +9,10 @@ import sys
 import unittest
 import nose
 
-from openmdao.main.mp_util import read_server_config, \
-                                  read_allowed_hosts, is_legal_connection, \
-                                  generate_key_pair, _KEY_CACHE, \
-                                  _is_private, HAVE_PYWIN32
-from openmdao.main.rbac import Credentials
+from openmdao.main.mp_util import read_server_config, read_allowed_hosts, \
+                                  is_legal_connection
 
-from openmdao.util.testutil import assert_raises, assert_rel_error
+from openmdao.util.testutil import assert_raises
 
 
 class TestCase(unittest.TestCase):
@@ -29,28 +26,6 @@ class TestCase(unittest.TestCase):
         assert_raises(self, "read_server_config('no-such-file')",
                       globals(), locals(), IOError,
                       "No such file 'no-such-file'")
-
-    def test_keyfile(self):
-        logging.debug('')
-        logging.debug('test_key')
-
-        # Force a key generation.
-        key_file = os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
-        if os.path.exists(key_file):
-            os.remove(key_file)
-        credentials = Credentials()
-        if credentials.user in _KEY_CACHE:
-            del _KEY_CACHE[credentials.user]
-        key_pair = generate_key_pair(credentials)
-
-        # Check privacy.
-        if sys.platform != 'win32' or HAVE_PYWIN32:
-            self.assertTrue(_is_private(key_file))
-            if sys.platform == 'win32':
-                public_file = os.environ['COMSPEC']
-            else:
-                public_file = '/bin/sh'
-            self.assertFalse(_is_private(public_file))
 
     def test_allowed_hosts(self):
         logging.debug('')

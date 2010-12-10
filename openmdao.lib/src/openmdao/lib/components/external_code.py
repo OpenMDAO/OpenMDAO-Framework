@@ -248,7 +248,7 @@ class ExternalCode(Component):
             if not os.path.exists(inputs_dir):
                 self.raise_exception("inputs_dir '%s' does not exist" \
                                      % inputs_dir, RuntimeError)
-            self.copy_files(inputs_dir, patterns)
+            self._copy(inputs_dir, patterns)
 
     def copy_results(self, results_dir, patterns):
         """
@@ -269,9 +269,9 @@ class ExternalCode(Component):
             if not os.path.exists(results_dir):
                 self.raise_exception("results_dir '%s' does not exist" \
                                      % results_dir, RuntimeError)
-            self.copy_files(results_dir, patterns)
+            self._copy(results_dir, patterns)
 
-    def copy_files(self, directory, patterns):
+    def _copy(self, directory, patterns):
         """
         Copy files from `directory` that match `patterns`
         to the current directory and ensure they are writable.
