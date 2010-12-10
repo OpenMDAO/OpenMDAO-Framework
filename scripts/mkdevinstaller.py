@@ -38,7 +38,7 @@ def adjust_options(options, args):
 
 def _single_install(cmds, req, bin_dir):
     cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
-        # pip seems more robust than easy_install, but won't install from binary distribs :(
+        # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     logger.debug("running command: %%s" %% ' '.join(cmdline))
     subprocess.check_call(cmdline)
