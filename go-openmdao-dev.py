@@ -1187,7 +1187,7 @@ def after_install(options, home_dir):
  'openmdao.units': '',
  'openmdao.util': ''}
 
-            try:
+        try:
             for pkg, pdir in openmdao_packages.items():
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 

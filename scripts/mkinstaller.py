@@ -63,7 +63,7 @@ def main(options):
         startdir = os.getcwd()
         absbin = os.path.abspath(bin_dir)
         openmdao_packages = %s
-            try:
+        try:
             for pkg, pdir in openmdao_packages.items():
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
