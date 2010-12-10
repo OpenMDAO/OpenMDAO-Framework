@@ -1127,20 +1127,7 @@ def create_bootstrap_script(extra_text, python_version=''):
 
 
 
-# dict of openmdao packages and their parent directories
-openmdao_packages = {'openmdao.devtools': '',
- 'openmdao.examples.bar3simulation': 'examples',
- 'openmdao.examples.enginedesign': 'examples',
- 'openmdao.examples.expected_improvement': 'examples',
- 'openmdao.examples.mdao': 'examples',
- 'openmdao.examples.simple': 'examples',
- 'openmdao.lib': '',
- 'openmdao.main': '',
- 'openmdao.test': '',
- 'openmdao.units': '',
- 'openmdao.util': ''}
 
-    
 
 def adjust_options(options, args):
     major_version = sys.version_info[:2]
@@ -1188,7 +1175,19 @@ def after_install(options, home_dir):
         topdir = os.path.abspath(os.path.dirname(__file__))
         startdir = os.getcwd()
         absbin = os.path.abspath(bin_dir)
-        try:
+        openmdao_packages = {'openmdao.devtools': '',
+ 'openmdao.examples.bar3simulation': 'examples',
+ 'openmdao.examples.enginedesign': 'examples',
+ 'openmdao.examples.expected_improvement': 'examples',
+ 'openmdao.examples.mdao': 'examples',
+ 'openmdao.examples.simple': 'examples',
+ 'openmdao.lib': '',
+ 'openmdao.main': '',
+ 'openmdao.test': '',
+ 'openmdao.units': '',
+ 'openmdao.util': ''}
+
+            try:
             for pkg, pdir in openmdao_packages.items():
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 

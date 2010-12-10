@@ -54,12 +54,16 @@ def main(options):
     url = 'http://openmdao.org/dists'
     if options.dev:
         openmdao_packages['openmdao.devtools'] = ''
+        sout = StringIO.StringIO()
+        pprint.pprint(openmdao_packages, sout)
+        pkgstr = sout.getvalue()
         make_dev_eggs = """
         # now install dev eggs for all of the openmdao packages
         topdir = os.path.abspath(os.path.dirname(__file__))
         startdir = os.getcwd()
         absbin = os.path.abspath(bin_dir)
-        try:
+        openmdao_packages = %s
+            try:
             for pkg, pdir in openmdao_packages.items():
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
@@ -67,7 +71,7 @@ def main(options):
                 subprocess.check_call(cmdline)
         finally:
             os.chdir(startdir)
-        """
+        """ % pkgstr
         wing = """
     # copy the wing project file into the virtualenv
     proj_template = join(topdir,'config','wing_proj_template.wpr')
@@ -86,9 +90,7 @@ def main(options):
 
     script_str = """
 
-# dict of openmdao packages and their parent directories
-openmdao_packages = %(openmdao_packages)s
-    
+
 %(adjust_options)s
 
 def _single_install(cmds, req, bin_dir):
@@ -194,9 +196,6 @@ def after_install(options, home_dir):
 
     reqs = ['numpy', 'scipy'] + list(reqs)  # force numpy to be installed first (f2py requires it)
     
-    sout = StringIO.StringIO()
-    pprint.pprint(openmdao_packages, sout)
-    openmdao_packages = sout.getvalue()
     optdict = { 
         'reqs': reqs, 
         'cmds':cmds, 
@@ -205,7 +204,6 @@ def after_install(options, home_dir):
         'make_dev_eggs': make_dev_eggs,
         'wing': wing,
         'adjust_options': get_adjust_options(options),
-        'openmdao_packages': openmdao_packages,
     }
     
     dest = os.path.abspath(options.dest)
