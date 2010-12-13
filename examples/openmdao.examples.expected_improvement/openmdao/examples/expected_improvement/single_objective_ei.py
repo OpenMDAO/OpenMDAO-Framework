@@ -56,6 +56,7 @@ class Analysis(Assembly):
         self.branin_meta_model.recorder = DBCaseRecorder(':memory:')
         self.branin_meta_model.force_execute = True        
         
+        
         self.add("EI",ExpectedImprovement())
         self.EI.criteria = "branin_meta_model.f_xy"
         
