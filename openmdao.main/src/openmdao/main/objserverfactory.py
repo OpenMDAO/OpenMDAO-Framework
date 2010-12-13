@@ -25,8 +25,7 @@ from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, register
 from openmdao.main.mp_util import keytype, read_allowed_hosts, \
                                   write_server_config
-from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
-                               rbac, RoleError
+from openmdao.main.rbac import get_credentials, set_credentials, rbac, RoleError
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
 from openmdao.util.publickey import HAVE_PYWIN32
@@ -705,7 +704,6 @@ def main():  #pragma no cover
         address = (platform.node(), options.port)
     else:
         address = None
-    set_credentials(Credentials())
     _LOGGER.info('Starting FactoryManager %s %r', address, keytype(authkey))
     current_process().authkey = authkey
     manager = _FactoryManager(address, authkey, name='Factory',

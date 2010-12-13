@@ -9,7 +9,7 @@ from openmdao.lib.datatypes.api import Bool, Instance
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
-from openmdao.main.rbac import Credentials, get_credentials, set_credentials
+from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
 from openmdao.lib.datatypes.int import Int
@@ -186,8 +186,6 @@ class CaseIterDriverBase(Driver):
         """ Start evaluating cases concurrently. """
         # Need credentials in case we're using a PublicKey server.
         credentials = get_credentials()
-        if credentials is None:
-            credentials = Credentials()
 
         # Determine maximum number of servers available.
         resources = {

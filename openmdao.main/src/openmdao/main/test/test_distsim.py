@@ -313,7 +313,6 @@ class TestCase(unittest.TestCase):
         finally:
             os.chdir('..')
 
-        set_credentials(Credentials())
         self.factory = connect(self.address, self.port, pubkey=self.key)
         logging.debug('factory: %r', self.factory)
 
@@ -559,7 +558,6 @@ class TestCase(unittest.TestCase):
 
         factory = None
         try:
-            set_credentials(Credentials())
             assert_raises(self, 'connect(address, port, pubkey=key)',
                           globals(), locals(), AuthenticationError,
                           'digest sent was rejected')

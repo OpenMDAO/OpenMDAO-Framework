@@ -214,7 +214,12 @@ class OpenMDAO_Server(Server):
                     t = threading.Thread(target=self.handle_request,
                                          args=(conn,))
                     t.daemon = True
-                    t.start()
+                    try:
+                        t.start()
+                    except Exception as exc:
+                        self._logger.error("Can't start server thread: %r", exc)
+                        conn.close()
+                        continue
             except (KeyboardInterrupt, SystemExit):
                 pass
         finally:
@@ -782,17 +787,6 @@ class OpenMDAO_Manager(BaseManager):
 
         # Spawn process which runs a server.
         credentials = get_credentials()
-        if self._authkey == 'PublicKey':
-            if credentials is None:
-                raise RuntimeError('PublicKey authentication requires user'
-                                   ' credentials')
-            if sys.platform == 'win32' and not HAVE_PYWIN32:
-                timeout = 120
-            else:
-                timeout = 5
-        else:
-            timeout = 5
-
         self._process = Process(
             target=type(self)._run_server,
             args=(registry, self._address, self._authkey,
@@ -805,6 +799,14 @@ class OpenMDAO_Manager(BaseManager):
         pid = self._process.pid
 
         # Get address of server.
+        if self._authkey == 'PublicKey':
+            if sys.platform == 'win32' and not HAVE_PYWIN32:
+                timeout = 120
+            else:
+                timeout = 5
+        else:
+            timeout = 5
+
         writer.close()
         start = time.time()
         for retry in range(timeout):
@@ -1018,9 +1020,6 @@ class OpenMDAO_Proxy(BaseProxy):
 
         super(OpenMDAO_Proxy, self).__init__(*args, **kwds)
 
-#        if self._authkey == 'PublicKey' and get_credentials() is None:
-#            raise RuntimeError('PublicKey proxy requires credentials')
-            
         if self._manager is None:
             self._pubkey = pubkey
         else:

@@ -26,7 +26,7 @@ from multiprocessing import util, connection, forking
 
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Server, \
                                      register, decode_public_key, keytype
-from openmdao.main.rbac import Credentials, get_credentials, set_credentials
+from openmdao.main.rbac import get_credentials, set_credentials
 
 from openmdao.util.wrkpool import WorkerPool
 
@@ -490,7 +490,6 @@ def main():  #pragma no cover
         forking.prepare(data)
 
         # Create Server for a HostManager object.
-        set_credentials(Credentials())
         name = '%d[%d]' % (data['index'], pid)
         logging.getLogger(name).setLevel(log_level)
         server = OpenMDAO_Server(HostManager._registry, (hostname, 0),

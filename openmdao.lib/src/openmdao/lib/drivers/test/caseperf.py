@@ -1,5 +1,5 @@
 """
-CaseIterator performance analysis.
+CaseIteratorDriver performance analysis.
 
 What we want to know is at what point is concurrent execution 'worthwhile'.
 Initial definition of 'worthwhile' could be reduced overall wall time.
@@ -34,17 +34,17 @@ from openmdao.lib.datatypes.api import Float, implements
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.lib.drivers.api import CaseIteratorDriver
 
-from openmdao.util.testutil import find_python
+from openmdao.test.cluster import init_cluster
 
 MAX_TRIALS = 1000
 
 
 class Iterator(HasTraits):
+    """ Just keeps returning `case` until told to stop. """
 
     implements(ICaseIterator)
 
     def __init__(self, case):
-        """ Just keeps returning `case` until told to stop. """
         super(Iterator, self).__init__()
         self.case = case
         self.stop = False
@@ -53,18 +53,18 @@ class Iterator(HasTraits):
         return self._next_case()
 
     def _next_case(self):
-        """ Generator which just returns list items in-order"""
+        """ Generator which just returns copies of the given case. """
         while not self.stop:
             yield copy.copy(self.case)
         raise StopIteration
 
 
 class Recorder(HasTraits):
+    """ Consumes cases until elapsed time is < #cases * delay. """
 
     implements(ICaseRecorder)
 
     def __init__(self, iterator, delay):
-        """ Consumes cases until elapsed time is < #cases * delay. """
         super(Recorder, self).__init__()
         self.iterator = iterator
         self.delay = delay
@@ -73,7 +73,7 @@ class Recorder(HasTraits):
         self.payoff_case = -1
 
     def record(self, case):
-        """ Record the case and possibly tell the iterator to stop. """
+        """ Check elapsed time and possibly tell the iterator to stop. """
         self.n_cases += 1
         et = time.time() - self.start
         if et < (self.n_cases * self.delay):
@@ -102,31 +102,49 @@ class Sleeper(Component):
 class CID(Assembly):
     """ Executes via CaseIteratorDriver. """
 
-    def __init__(self):
+    def __init__(self, extra_reqs=None):
         """ Create assembly with Sleeper as sole component. """
         super(CID, self).__init__()
         self.add('sleeper', Sleeper())
         self.add('driver', CaseIteratorDriver())
+        self.driver.extra_reqs = extra_reqs
         self.driver.workflow.add(self.sleeper)
         self.driver.log_level = logging.DEBUG
 
 
 def main():
-    """
-    CaseIteratorDriver performance characterization.
-    Need curves showing time-to-completion for various model durations
-    """
+    """ CaseIteratorDriver performance characterization. """
+    name = platform.node()
+    dot = name.find('.')
+    if dot > 0:
+        name = name[:dot]
+
+    setup_cluster(encrypted=True)
+    run_suite({}, name=name)
+
+    allocator_name = setup_cluster(encrypted=False)
+    run_suite({'allocator': allocator_name}, name+'-unencrypted')
+
+
+def setup_cluster(encrypted=True):
+    """ Use openmdao.testing.cluster.init_cluster, but fix 'max_load'. """
+    name = init_cluster(encrypted)
+    for allocator in ResourceAllocationManager.list_allocators():
+        if allocator.name == 'LocalHost':
+            allocator.max_load = 1.
+    return name
+
+
+def run_suite(resource_desc=None, name=None):
+    """ Run suite of tests using `resource_desc` and resord under `name`. """
+    resource_desc = resource_desc or {}
+    name = name or ''
+    print '\n%s' % name
 
     initial = 0.01
     limit = 20
     results = {}
 
-    if platform.node().startswith('gxterm'):
-        # Initialize cluster allocator.
-        use_gx(20)
-        resource_desc = {'allocator': 'GX'}
-    else:
-        resource_desc = {}
     max_servers = ResourceAllocationManager.max_servers(resource_desc)
     print 'max servers', max_servers
 
@@ -148,7 +166,7 @@ def main():
 
     print
     results = run_test(model, initial, limit, max_servers)
-    record_results(results)
+    record_results(results, name)
 
 
 def run_test(model, initial, limit, max_servers):
@@ -182,37 +200,13 @@ def run_test(model, initial, limit, max_servers):
     return results
 
 
-def record_results(results):
+def record_results(results, name=None):
     """ Records results for test. """
-    hostname = platform.node()
-    dot = hostname.find('.')
-    if dot > 0:
-        hostname = hostname[:dot]
-
-    with open('%s.csv' % hostname, 'w') as out:
+    with open('%s.csv' % name, 'w') as out:
         out.write('duration, payoff_case\n')
         for duration, payoff_case, n_cases, et in results:
             if payoff_case > 0:
                 out.write('%.2f, %d\n' % (duration, payoff_case))
-
-
-def use_gx(n_hosts=55):
-    """ Install GX allocator for `n_hosts`. """
-    # This has the side-effet of setting credentials.
-    for allocator in ResourceAllocationManager.list_allocators():
-        if isinstance(allocator, ClusterAllocator):
-            return
-
-    machines = []
-    python = find_python()
-    for i in range(n_hosts):
-        machines.append({'hostname':'gx%02d' % i, 'python':python})
-    print '\nInitializing GX cluster allocator'
-    start = time.time()
-    cluster = ClusterAllocator('GX', machines)
-    et = time.time() - start
-    print '    done in %.2f' % et
-    ResourceAllocationManager.insert_allocator(0, cluster)
 
 
 if __name__ == '__main__':

@@ -171,7 +171,8 @@ def get_credentials():
     try:
         return threading.current_thread().credentials
     except AttributeError:
-        return None
+        credentials = Credentials()
+        return set_credentials(credentials)
 
 
 # For some reason use of a class as a decorator doesn't count as coverage.
@@ -257,8 +258,6 @@ class AccessController(object):
 
     def __init__(self):
         self.owner = get_credentials()
-        if self.owner is None:
-            raise RoleError('No current credentials')
         self.credentials_map = {}
         self.set_proxy_credentials('owner', self.owner)
         self.attr_proxy_map = {}

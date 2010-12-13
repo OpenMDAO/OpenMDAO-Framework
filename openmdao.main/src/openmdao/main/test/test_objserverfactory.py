@@ -14,7 +14,6 @@ import nose
 
 from openmdao.main.objserverfactory import ObjServerFactory, ObjServer, \
                                            start_server
-from openmdao.main.rbac import Credentials, set_credentials
 from openmdao.util.testutil import assert_raises
 
 
@@ -34,7 +33,6 @@ class TestCase(unittest.TestCase):
         factory = None
         try:
             # Create a factory.
-            set_credentials(Credentials())
             factory = ObjServerFactory()
 
             # Echo some arguments.

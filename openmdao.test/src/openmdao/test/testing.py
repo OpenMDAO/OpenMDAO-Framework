@@ -51,8 +51,8 @@ def run_openmdao_suite():
     # debugging openmdao scripts running in separate processes.
     if '--enable_console' in args:
         args.remove('--enable_console')
-        os.environ['OPENMDAO_ENABLE_CONSOLE'] = 'TRUE'
-        
+        os.environ['OPENMDAO_ENABLE_CONSOLE'] = '1'
+
     if '--all' in args:
         args.remove('--all')
         args.extend(tlist)

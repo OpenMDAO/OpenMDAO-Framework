@@ -85,8 +85,6 @@ class TestCase(unittest.TestCase):
             del threading.current_thread().credentials  # Ensure empty.
         except AttributeError:
             pass
-        self.assertEqual(get_credentials(), None)
-        set_credentials(owner)
         self.assertEqual(get_credentials(), owner)
 
         # Sign/verify.
@@ -155,12 +153,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_access_controller')
 
         # Credential-to-role mapping.
-        set_credentials(None)
-        assert_raises(self, 'AccessController()', globals(), locals(),
-                      RoleError, 'No current credentials')
-
-        owner = Credentials()
-        set_credentials(owner)
+        owner = get_credentials()
         controller = AccessController()
         self.assertEqual(controller.get_role(None), '')
         self.assertEqual(controller.get_role(owner), 'owner')

@@ -16,8 +16,7 @@ import traceback
 from openmdao.main import mp_distributing
 from openmdao.main.mp_support import register
 from openmdao.main.objserverfactory import ObjServerFactory
-from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
-                               rbac
+from openmdao.main.rbac import get_credentials, set_credentials, rbac
 
 from openmdao.util.eggloader import check_requirements
 from openmdao.util.wrkpool import WorkerPool
@@ -36,10 +35,6 @@ class ResourceAllocationManager(object):
     _RAM = None  # Singleton.
 
     def __init__(self):
-        credentials = get_credentials()
-        if credentials is None:
-            set_credentials(Credentials())
-
         self._logger = logging.getLogger('RAM')
         self._allocations = 0
         self._allocators = []

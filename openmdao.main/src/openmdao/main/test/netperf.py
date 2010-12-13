@@ -9,7 +9,6 @@ import time
 
 from openmdao.main.mp_util import read_server_config
 from openmdao.main.objserverfactory import connect, start_server
-from openmdao.main.rbac import Credentials, set_credentials
 
 
 MESSAGE_DATA = []
@@ -48,7 +47,6 @@ def run_test(name, server):
 
 def main():
     """ Run latency & thruput tests on various server configurations. """
-    set_credentials(Credentials())
     init_messages()
     latency_results = {}
     thruput_results = {}
