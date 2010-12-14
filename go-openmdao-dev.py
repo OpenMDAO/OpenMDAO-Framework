@@ -1176,12 +1176,12 @@ def adjust_options(options, args):
     global openmdao_added_reqs
     major_version = sys.version_info[:2]
     if major_version != (2,6):
-        logger.error('ERROR: python major version must be 2.6. yours is %s' % str(major_version))
+        print 'ERROR: python major version must be 2.6. yours is %s' % str(major_version)
         sys.exit(-1)
 
     for arg in args:
         if not arg.startswith('-'):
-            logger.error('ERROR: no args allowed that start without a dash (-)')
+            print 'ERROR: no args allowed that start without a dash (-)'
             sys.exit(-1)
     args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <top>/devenv
 
@@ -1194,7 +1194,7 @@ def adjust_options(options, args):
                 else:  # assume it's a url
                     openmdao_added_reqs.extend(_get_reqs_from_url(entry))
             except Exception:
-                logger.error("'%s' does not specify a valid requirements file or url" % entry)
+                print "'%s' does not specify a valid requirements file or url" % entry
                 sys.exit(-1)
 
 
