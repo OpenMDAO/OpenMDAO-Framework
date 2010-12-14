@@ -1131,28 +1131,40 @@ openmdao_prereqs = ['numpy', 'scipy']
 
 openmdao_added_reqs = []
 
+# requirements files have the following format:
+#
+# - python style comments are allowed  '#'
+# - blank lines are allowed
+# - each non-comment, non-blank line begins with a requirement string
+#    followed by an optional url of a 'find-links' server where
+#    the required package can be found.  Whitespace is NOT allowed
+#    within a requirement string.
+
 def _get_reqs_from_filelike(f):
     reqs = []
     for line in f:
+        line = line.split('#')[0]
         line = line.strip()
-        if line.startswith('#'):  # skip comment lines
-            continue
         if not line:  # skip blank lines
             continue
         parts = line.split()
         if len(parts) == 1:
             parts.append(None)
+        elif len(parts) > 2:
+            raise RuntimeError("invalid format for line '%s'" % line)
+        logger.debug("requirement: %s,  find-links: %s" % (parts[0],parts[1]))
         reqs.append((parts[0], parts[1]))
     return reqs
 
 def _get_reqs_from_file(name):
     with open(name, 'r') as f:
+        logger.info("Reading requirements from file: %s" % name)
         return _get_reqs_from_filelike(f)
-    
+
 def _get_reqs_from_url(url):
     import urllib2
     with urllib2.urlopen(url) as f:
-        print "Reading requirements from URL: %s" % f.geturl()
+        logger.info("Reading requirements from URL: %s" % f.geturl())
         return _get_reqs_from_filelike(f)
 
 def extend_parser(parser):
@@ -1164,12 +1176,12 @@ def adjust_options(options, args):
     global openmdao_added_reqs
     major_version = sys.version_info[:2]
     if major_version != (2,6):
-        print 'ERROR: python major version must be 2.6. yours is %s' % str(major_version)
+        logger.error('ERROR: python major version must be 2.6. yours is %s' % str(major_version))
         sys.exit(-1)
 
     for arg in args:
         if not arg.startswith('-'):
-            print 'no args allowed that start without a dash (-)'
+            logger.error('ERROR: no args allowed that start without a dash (-)')
             sys.exit(-1)
     args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <top>/devenv
 
@@ -1182,7 +1194,7 @@ def adjust_options(options, args):
                 else:  # assume it's a url
                     openmdao_added_reqs.extend(_get_reqs_from_url(entry))
             except Exception:
-                print "ERROR: '%s' does not specify a valid requirements file or url" % entry
+                logger.error('%s' does not specify a valid requirements file or url" % entry)
                 sys.exit(-1)
 
 
@@ -1216,8 +1228,8 @@ def after_install(options, home_dir):
         except ImportError:
             failed_imports.append(pkg)
     if failed_imports:
-        print "ERROR: the following prerequisites could not be imported: %s." % failed_imports
-        print "These must be installed in the system level python before installing OpenMDAO."
+        logger.error("ERROR: the following prerequisites could not be imported: %s." % failed_imports)
+        logger.error("These must be installed in the system level python before installing OpenMDAO.")
         sys.exit(-1)
         
     cmds = ['-f',url]
@@ -1259,7 +1271,7 @@ def after_install(options, home_dir):
             os.chdir(startdir)
         
     except Exception as err:
-        print "ERROR: build failed"
+        logger.error("ERROR: build failed: %s" % str(err))
         sys.exit(-1)
         
     if sys.platform != 'win32':

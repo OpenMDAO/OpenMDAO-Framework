@@ -42,7 +42,7 @@ def get_adjust_options(options):
         code = """
     for arg in args:
         if not arg.startswith('-'):
-            print 'no args allowed that start without a dash (-)'
+            logger.error('ERROR: no args allowed that start without a dash (-)')
             sys.exit(-1)
     args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <top>/devenv
 """
@@ -58,7 +58,7 @@ def adjust_options(options, args):
     global openmdao_added_reqs
     major_version = sys.version_info[:2]
     if major_version != (2,6):
-        print 'ERROR: python major version must be 2.6. yours is %%s' %% str(major_version)
+        logger.error('ERROR: python major version must be 2.6. yours is %%s' %% str(major_version))
         sys.exit(-1)
 %s
 
@@ -191,8 +191,8 @@ def after_install(options, home_dir):
         except ImportError:
             failed_imports.append(pkg)
     if failed_imports:
-        print "ERROR: the following prerequisites could not be imported: %%s." %% failed_imports
-        print "These must be installed in the system level python before installing OpenMDAO."
+        logger.error("ERROR: the following prerequisites could not be imported: %%s." %% failed_imports)
+        logger.error("These must be installed in the system level python before installing OpenMDAO.")
         sys.exit(-1)
         
     cmds = ['-f',url]
@@ -209,7 +209,7 @@ def after_install(options, home_dir):
 
 %(make_dev_eggs)s
     except Exception as err:
-        print "ERROR: build failed: %%s" %% str(err)
+        logger.error("ERROR: build failed: %%s" %% str(err))
         sys.exit(-1)
         
     if sys.platform != 'win32':
