@@ -58,7 +58,7 @@ def adjust_options(options, args):
     global openmdao_added_reqs
     major_version = sys.version_info[:2]
     if major_version != (2,6):
-        print 'ERROR: python major version must be 2.6. yours is %s' % str(major_version)
+        print 'ERROR: python major version must be 2.6. yours is %%s' %% str(major_version)
         sys.exit(-1)
 %s
 
@@ -140,7 +140,7 @@ def _get_reqs_from_file(name):
 def _get_reqs_from_url(url):
     import urllib2
     with urllib2.urlopen(url) as f:
-        print "Reading requirements from URL: %s" % f.geturl()
+        print "Reading requirements from URL: %%s" %% f.geturl()
         return _get_reqs_from_filelike(f)
 
 def extend_parser(parser):
@@ -179,7 +179,7 @@ def after_install(options, home_dir):
         except ImportError:
             failed_imports.append(pkg)
     if failed_imports:
-        print "ERROR: the following prerequisites could not be imported: %s." % failed_imports
+        print "ERROR: the following prerequisites could not be imported: %%s." %% failed_imports
         print "These must be installed in the system level python before installing OpenMDAO."
         sys.exit(-1)
         
