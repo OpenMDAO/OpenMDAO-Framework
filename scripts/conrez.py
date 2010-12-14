@@ -199,10 +199,10 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("-f", "", action="store", type="string", dest="fname",
                       help="specify name of file to merge manually")
-    parser.add_option("","--log", action="store", type="string", dest="log",
+    parser.add_option("--log", action="store", type="string", dest="log",
                       help="specify log file name (defaults to gmerge.log)",
                       default='gmerge.log')
-    parser.add_option("","--using", action="store", type="string", dest="merge_tool",
+    parser.add_option("--using", action="store", type="string", dest="merge_tool",
                       help="specify the merge tool to use",
                       default='meld')
     (options, args) = parser.parse_args(sys.argv[1:])

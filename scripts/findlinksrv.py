@@ -203,12 +203,12 @@ def setup_logger(fname):
 
 if __name__ == '__main__': # pragma no cover
     parser = OptionParser()
-    parser.add_option("","--log", action="store", type="string", dest="log",
+    parser.add_option("--log", action="store", type="string", dest="log",
                       help="a file to log results to")
     parser.add_option("-d","--dir", action="store", type="string", 
                       dest="distdir",
                       help="the directory where distributions are kept")
-    parser.add_option("", "--port", action="store", type="int", dest="port",
+    parser.add_option("--port", action="store", type="int", dest="port",
                       help="the port that the server will listen to")
     (options, args) = parser.parse_args()
     

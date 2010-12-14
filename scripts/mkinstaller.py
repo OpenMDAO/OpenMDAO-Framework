@@ -11,14 +11,35 @@ import pprint
 import StringIO
 from pkg_resources import working_set, Requirement
 
+#
+#      EDIT THE FOLLOWING TWO LISTS TO CONTROL THE PACKAGES THAT WILL BE
+#      INCLUDED IN THE OPENMDAO RELEASE AND DEVELOPMENT ENVIRONMENTS
+#
+# list of packages that must be pre-installed before openmdao can be installed
+openmdao_prereqs = ['numpy', 'scipy']
+
+# list of tuples of openmdao packages and their parent directory relative to 
+# the top of the repository.  The directory only has meaning for a dev install and
+# is ignored in the user install. '' should be used instead of '.' to indicate 
+# that the parent dir is the top of the repository.
+openmdao_packages = [('openmdao.util', ''), 
+                     ('openmdao.units', ''), 
+                     ('openmdao.main', ''), 
+                     ('openmdao.lib', ''), 
+                     ('openmdao.test', ''),
+                     ('openmdao.examples.simple', 'examples'),
+                     ('openmdao.examples.bar3simulation', 'examples'),
+                     ('openmdao.examples.enginedesign', 'examples'),
+                     ('openmdao.examples.mdao', 'examples'),
+                     ('openmdao.examples.expected_improvement', 'examples'),
+                    ]
+
 def get_adjust_options(options):
+    """Return a string containing the definition of the adjust_options function
+    that will be included in the generated virtualenv bootstrapping script.
+    """
     if options.dev:
-        return """
-def adjust_options(options, args):
-    major_version = sys.version_info[:2]
-    if major_version != (2,6):
-        print 'ERROR: python major version must be 2.6. yours is %s' % str(major_version)
-        sys.exit(-1)
+        code = """
     for arg in args:
         if not arg.startswith('-'):
             print 'no args allowed that start without a dash (-)'
@@ -26,34 +47,38 @@ def adjust_options(options, args):
     args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <top>/devenv
 """
     else:
-        return """
-def adjust_options(options, args):
-    if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
-        print 'ERROR: python version must be >= 2.6 and <= 3.0. yours is %s' % sys.version.split(' ')[0]
-        sys.exit(-1)
+        code = """
     # name of virtualenv defaults to openmdao-<version>
     if len(args) == 0:
         args.append('openmdao-%%s' %% '%(version)s')
 """
     
+    return """
+def adjust_options(options, args):
+    global openmdao_added_reqs
+    major_version = sys.version_info[:2]
+    if major_version != (2,6):
+        print 'ERROR: python major version must be 2.6. yours is %s' % str(major_version)
+        sys.exit(-1)
+%s
+
+    if options.reqs:
+        for entry in options.reqs:
+            try:
+                if os.path.exists(entry):  # a local file
+                    openmdao_added_reqs.extend(_get_reqs_from_file(entry))
+                else:  # assume it's a url
+                    openmdao_added_reqs.extend(_get_reqs_from_url(entry))
+            except Exception:
+                print "ERROR: '%%s' does not specify a valid requirements file or url" %% entry
+                sys.exit(-1)
+""" % code
+
 def main(options):
-    
-    # dict of openmdao packages mapped to their parent directory. '' means cwd
-    openmdao_packages = {'openmdao.util': '', 
-                         'openmdao.units': '', 
-                         'openmdao.main': '', 
-                         'openmdao.lib': '', 
-                         'openmdao.test': '',
-                         'openmdao.examples.simple': 'examples',
-                         'openmdao.examples.bar3simulation': 'examples',
-                         'openmdao.examples.enginedesign': 'examples',
-                         'openmdao.examples.mdao': 'examples',
-                         'openmdao.examples.expected_improvement': 'examples',
-                        }
     
     url = 'http://openmdao.org/dists'
     if options.dev:
-        openmdao_packages['openmdao.devtools'] = ''
+        openmdao_packages.append(('openmdao.devtools', ''))
         sout = StringIO.StringIO()
         pprint.pprint(openmdao_packages, sout)
         pkgstr = sout.getvalue()
@@ -64,7 +89,7 @@ def main(options):
         absbin = os.path.abspath(bin_dir)
         openmdao_packages = %s
         try:
-            for pkg, pdir in openmdao_packages.items():
+            for pkg, pdir in openmdao_packages:
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
                            'develop', '-N'] + cmds
@@ -90,6 +115,37 @@ def main(options):
 
     script_str = """
 
+openmdao_prereqs = %(openmdao_prereqs)s
+
+openmdao_added_reqs = []
+
+def _get_reqs_from_filelike(f):
+    reqs = []
+    for line in f:
+        line = line.strip()
+        if line.startswith('#'):  # skip comment lines
+            continue
+        if not line:  # skip blank lines
+            continue
+        parts = line.split()
+        if len(parts) == 1:
+            parts.append(None)
+        reqs.append((parts[0], parts[1]))
+    return reqs
+
+def _get_reqs_from_file(name):
+    with open(name, 'r') as f:
+        return _get_reqs_from_filelike(f)
+    
+def _get_reqs_from_url(url):
+    import urllib2
+    with urllib2.urlopen(url) as f:
+        print "Reading requirements from URL: %s" % f.geturl()
+        return _get_reqs_from_filelike(f)
+
+def extend_parser(parser):
+    parser.add_option("--reqs", action="append", type="string", dest='reqs', 
+                      help="specify file with additional requirements", default=[])
 
 %(adjust_options)s
 
@@ -101,13 +157,10 @@ def _single_install(cmds, req, bin_dir):
     subprocess.check_call(cmdline)
 
 def after_install(options, home_dir):
-    global logger
+    global logger, openmdao_prereqs, openmdao_added_reqs
+    
     reqs = %(reqs)s
-    cmds = %(cmds)s
     url = '%(url)s'
-    found = [c for c in cmds if url in c]
-    if not found:
-        cmds.extend(['-f',url])
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
         lib_dir = join(home_dir, 'Lib')
@@ -118,8 +171,28 @@ def after_install(options, home_dir):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
+        
+    failed_imports = []
+    for pkg in openmdao_prereqs:
+        try:
+            __import__(pkg)
+        except ImportError:
+            failed_imports.append(pkg)
+    if failed_imports:
+        print "ERROR: the following prerequisites could not be imported: %s." % failed_imports
+        print "These must be installed in the system level python before installing OpenMDAO."
+        sys.exit(-1)
+        
+    cmds = ['-f',url]
     try:
         for req in reqs:
+            _single_install(cmds, req, bin_dir)
+        
+        for req, flink in openmdao_added_reqs:
+            if flink:
+                cmds = ['-f', flink]
+            else:
+                cmds = ['-f', url]
             _single_install(cmds, req, bin_dir)
 
 %(make_dev_eggs)s
@@ -178,12 +251,11 @@ def after_install(options, home_dir):
     print "\\nto activate your environment and start using OpenMDAO."
     """
     
-    cmds = []
     reqs = set()
     
     version = '?.?.?'
-    dists = working_set.resolve([Requirement.parse(r) for r in openmdao_packages])
-    excludes = set(['setuptools', 'distribute', 'numpy', 'scipy'])
+    dists = working_set.resolve([Requirement.parse(r[0]) for r in openmdao_packages])
+    excludes = set(['setuptools', 'distribute']+openmdao_prereqs)
     for dist in dists:
         if dist.project_name == 'openmdao.main':
             version = dist.version
@@ -194,16 +266,16 @@ def after_install(options, home_dir):
             else:
                 reqs.add('%s' % dist.as_requirement())
 
-    reqs = ['numpy', 'scipy'] + list(reqs)  # force numpy to be installed first (f2py requires it)
+    reqs = openmdao_prereqs + list(reqs)
     
     optdict = { 
         'reqs': reqs, 
-        'cmds':cmds, 
         'version': version, 
         'url': url ,
         'make_dev_eggs': make_dev_eggs,
         'wing': wing,
         'adjust_options': get_adjust_options(options),
+        'openmdao_prereqs': openmdao_prereqs,
     }
     
     dest = os.path.abspath(options.dest)
@@ -219,9 +291,9 @@ def after_install(options, home_dir):
 if __name__ == '__main__':
     from optparse import OptionParser
     parser = OptionParser()
-    parser.add_option("", "--dev", action="store_true", dest='dev', 
+    parser.add_option("--dev", action="store_true", dest='dev', 
                       help="if present, a development script will be generated instead of a release script")
-    parser.add_option("", "--dest", action="store", type="string", dest='dest', 
+    parser.add_option("--dest", action="store", type="string", dest='dest', 
                       help="specify destination directory", default='.')
     parser.add_option("-t", "--test", action="store_true", dest="test",
                       help="if present, generated installer will point to /OpenMDAO/test_server/dists")

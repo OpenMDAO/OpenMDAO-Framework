@@ -237,7 +237,7 @@ def main():
                       help="directory where distributions will be placed")
     parser.add_option("-t", "--test", action="store_true", dest="test",
                       help="if present, release will be a test release (no repo tag, commit not required)")
-    parser.add_option("","--version", action="store", type="string", dest="version",
+    parser.add_option("--version", action="store", type="string", dest="version",
                       help="version string applied to all openmdao distributions")
     (options, args) = parser.parse_args(sys.argv[1:])
     
