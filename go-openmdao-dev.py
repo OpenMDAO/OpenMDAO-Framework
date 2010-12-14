@@ -1129,50 +1129,12 @@ def create_bootstrap_script(extra_text, python_version=''):
 
 openmdao_prereqs = ['numpy', 'scipy']
 
-openmdao_added_reqs = []
-
-# requirements files have the following format:
-#
-# - python style comments are allowed  '#'
-# - blank lines are allowed
-# - each non-comment, non-blank line begins with a requirement string
-#    followed by an optional url of a 'find-links' server where
-#    the required package can be found.  Whitespace is NOT allowed
-#    within a requirement string.
-
-def _get_reqs_from_filelike(f):
-    reqs = []
-    for line in f:
-        line = line.split('#')[0]
-        line = line.strip()
-        if not line:  # skip blank lines
-            continue
-        parts = line.split()
-        if len(parts) == 1:
-            parts.append(None)
-        elif len(parts) > 2:
-            raise RuntimeError("invalid format for line '%s'" % line)
-        reqs.append((parts[0], parts[1]))
-    return reqs
-
-def _get_reqs_from_file(name):
-    with open(name, 'r') as f:
-        print "Reading requirements from file: %s" % name
-        return _get_reqs_from_filelike(f)
-
-def _get_reqs_from_url(url):
-    import urllib2
-    with urllib2.urlopen(url) as f:
-        print "Reading requirements from URL: %s" % f.geturl()
-        return _get_reqs_from_filelike(f)
-
 def extend_parser(parser):
     parser.add_option("--reqs", action="append", type="string", dest='reqs', 
                       help="specify file with additional requirements", default=[])
 
 
 def adjust_options(options, args):
-    global openmdao_added_reqs
     major_version = sys.version_info[:2]
     if major_version != (2,6):
         print 'ERROR: python major version must be 2.6. yours is %s' % str(major_version)
@@ -1185,16 +1147,6 @@ def adjust_options(options, args):
     args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <top>/devenv
 
 
-    if options.reqs:
-        for entry in options.reqs:
-            try:
-                if os.path.exists(entry):  # a local file
-                    openmdao_added_reqs.extend(_get_reqs_from_file(entry))
-                else:  # assume it's a url
-                    openmdao_added_reqs.extend(_get_reqs_from_url(entry))
-            except Exception as err:
-                print "'%s' does not specify a valid requirements file or url: %s" % (entry, str(err))
-                sys.exit(-1)
 
 
 def _single_install(cmds, req, bin_dir):
@@ -1206,7 +1158,7 @@ def _single_install(cmds, req, bin_dir):
     subprocess.check_call(cmdline)
 
 def after_install(options, home_dir):
-    global logger, openmdao_prereqs, openmdao_added_reqs
+    global logger, openmdao_prereqs
     
     reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'Pygments==1.3.1', 'ordereddict==1.1', 'Traits==3.3.0', 'pycrypto==2.3', 'PyYAML==3.09', 'Jinja2==2.4', 'Sphinx==1.0.4', 'virtualenv==1.4.6', 'Fabric==0.9.0', 'newsumt==1.0.0', 'networkx==1.0.1', 'decorator==3.2.0', 'conmin==1.0.1', 'pyparsing==1.5.2', 'nose==0.11.3']
     url = 'http://openmdao.org/dists'
@@ -1231,19 +1183,11 @@ def after_install(options, home_dir):
         logger.error("ERROR: the following prerequisites could not be imported: %s." % failed_imports)
         logger.error("These must be installed in the system level python before installing OpenMDAO.")
         sys.exit(-1)
-        
-    cmds = ['-f',url]
+    
     try:
         for req in reqs:
             _single_install(cmds, req, bin_dir)
         
-        for req, flink in openmdao_added_reqs:
-            if flink:
-                cmds = ['-f', flink]
-            else:
-                cmds = ['-f', url]
-            _single_install(cmds, req, bin_dir)
-
 
         # now install dev eggs for all of the openmdao packages
         topdir = os.path.abspath(os.path.dirname(__file__))
@@ -1270,6 +1214,11 @@ def after_install(options, home_dir):
         finally:
             os.chdir(startdir)
         
+
+        # add packages from any specified requirements files
+        if options.reqs:
+            subprocess.check_call([join(bin_dir, 'add_reqs'), '-f', url] + options.reqs)
+
     except Exception as err:
         logger.error("ERROR: build failed: %s" % str(err))
         sys.exit(-1)
@@ -1281,8 +1230,8 @@ def after_install(options, home_dir):
                 for name in fnmatch.filter(filelist, pat):
                     yield os.path.join(path, name)
 
-       # in order to find all of our shared libraries,
-       # put their directories in LD_LIBRARY_PATH
+       # in order to find all of our shared libraries, modify the activate
+       # script to put their directories in LD_LIBRARY_PATH
         pkgdir = os.path.join(lib_dir, 'site-packages')
         sofiles = [os.path.abspath(x) for x in _find_files('*.so',pkgdir)]
                       
@@ -1295,7 +1244,7 @@ def after_install(options, home_dir):
         subdict = { 'libpath': 'LD_LIBRARY_PATH',
                     'add_on': os.pathsep.join(final)
                     }
-
+                    
         if len(final) > 0:
             activate_template = '\n'.join([
             'export PATH',
