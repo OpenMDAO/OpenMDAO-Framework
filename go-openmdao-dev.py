@@ -1193,8 +1193,8 @@ def adjust_options(options, args):
                     openmdao_added_reqs.extend(_get_reqs_from_file(entry))
                 else:  # assume it's a url
                     openmdao_added_reqs.extend(_get_reqs_from_url(entry))
-            except Exception:
-                print "'%s' does not specify a valid requirements file or url" % entry
+            except Exception as err:
+                print "'%s' does not specify a valid requirements file or url: %s" % (entry, str(err))
                 sys.exit(-1)
 
 
