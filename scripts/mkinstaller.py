@@ -147,6 +147,7 @@ def after_install(options, home_dir):
         logger.error("These must be installed in the system level python before installing OpenMDAO.")
         sys.exit(-1)
     
+    cmds = ['-f', url]
     try:
         for req in reqs:
             _single_install(cmds, req, bin_dir)
