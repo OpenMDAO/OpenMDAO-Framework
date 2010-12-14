@@ -1152,19 +1152,18 @@ def _get_reqs_from_filelike(f):
             parts.append(None)
         elif len(parts) > 2:
             raise RuntimeError("invalid format for line '%s'" % line)
-        logger.debug("requirement: %s,  find-links: %s" % (parts[0],parts[1]))
         reqs.append((parts[0], parts[1]))
     return reqs
 
 def _get_reqs_from_file(name):
     with open(name, 'r') as f:
-        logger.info("Reading requirements from file: %s" % name)
+        print "Reading requirements from file: %s" % name
         return _get_reqs_from_filelike(f)
 
 def _get_reqs_from_url(url):
     import urllib2
     with urllib2.urlopen(url) as f:
-        logger.info("Reading requirements from URL: %s" % f.geturl())
+        print "Reading requirements from URL: %s" % f.geturl()
         return _get_reqs_from_filelike(f)
 
 def extend_parser(parser):
@@ -1199,6 +1198,7 @@ def adjust_options(options, args):
 
 
 def _single_install(cmds, req, bin_dir):
+    global logger
     cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]

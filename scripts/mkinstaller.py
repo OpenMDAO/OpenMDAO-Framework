@@ -13,7 +13,7 @@ from pkg_resources import working_set, Requirement
 
 #
 #      EDIT THE FOLLOWING TWO LISTS TO CONTROL THE PACKAGES THAT WILL BE
-#      INCLUDED IN THE OPENMDAO RELEASE AND DEVELOPMENT ENVIRONMENTS
+#      REQUIRED FOR THE OPENMDAO RELEASE AND DEVELOPMENT ENVIRONMENTS
 #
 # list of packages that must be pre-installed before openmdao can be installed
 openmdao_prereqs = ['numpy', 'scipy']
@@ -55,23 +55,12 @@ def get_adjust_options(options):
     
     return """
 def adjust_options(options, args):
-    global openmdao_added_reqs
     major_version = sys.version_info[:2]
     if major_version != (2,6):
         print 'ERROR: python major version must be 2.6. yours is %%s' %% str(major_version)
         sys.exit(-1)
 %s
 
-    if options.reqs:
-        for entry in options.reqs:
-            try:
-                if os.path.exists(entry):  # a local file
-                    openmdao_added_reqs.extend(_get_reqs_from_file(entry))
-                else:  # assume it's a url
-                    openmdao_added_reqs.extend(_get_reqs_from_url(entry))
-            except Exception as err:
-                print "'%%s' does not specify a valid requirements file or url: %%s" %% (entry, str(err))
-                sys.exit(-1)
 """ % code
 
 def main(options):
@@ -117,44 +106,6 @@ def main(options):
 
 openmdao_prereqs = %(openmdao_prereqs)s
 
-openmdao_added_reqs = []
-
-# requirements files have the following format:
-#
-# - python style comments are allowed  '#'
-# - blank lines are allowed
-# - each non-comment, non-blank line begins with a requirement string
-#    followed by an optional url of a 'find-links' server where
-#    the required package can be found.  Whitespace is NOT allowed
-#    within a requirement string.
-
-def _get_reqs_from_filelike(f):
-    reqs = []
-    for line in f:
-        line = line.split('#')[0]
-        line = line.strip()
-        if not line:  # skip blank lines
-            continue
-        parts = line.split()
-        if len(parts) == 1:
-            parts.append(None)
-        elif len(parts) > 2:
-            raise RuntimeError("invalid format for line '%%s'" %% line)
-        logger.debug("requirement: %%s,  find-links: %%s" %% (parts[0],parts[1]))
-        reqs.append((parts[0], parts[1]))
-    return reqs
-
-def _get_reqs_from_file(name):
-    with open(name, 'r') as f:
-        logger.info("Reading requirements from file: %%s" %% name)
-        return _get_reqs_from_filelike(f)
-
-def _get_reqs_from_url(url):
-    import urllib2
-    with urllib2.urlopen(url) as f:
-        logger.info("Reading requirements from URL: %%s" %% f.geturl())
-        return _get_reqs_from_filelike(f)
-
 def extend_parser(parser):
     parser.add_option("--reqs", action="append", type="string", dest='reqs', 
                       help="specify file with additional requirements", default=[])
@@ -162,6 +113,7 @@ def extend_parser(parser):
 %(adjust_options)s
 
 def _single_install(cmds, req, bin_dir):
+    global logger
     cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
@@ -169,7 +121,7 @@ def _single_install(cmds, req, bin_dir):
     subprocess.check_call(cmdline)
 
 def after_install(options, home_dir):
-    global logger, openmdao_prereqs, openmdao_added_reqs
+    global logger, openmdao_prereqs
     
     reqs = %(reqs)s
     url = '%(url)s'
@@ -194,20 +146,17 @@ def after_install(options, home_dir):
         logger.error("ERROR: the following prerequisites could not be imported: %%s." %% failed_imports)
         logger.error("These must be installed in the system level python before installing OpenMDAO.")
         sys.exit(-1)
-        
-    cmds = ['-f',url]
+    
     try:
         for req in reqs:
             _single_install(cmds, req, bin_dir)
         
-        for req, flink in openmdao_added_reqs:
-            if flink:
-                cmds = ['-f', flink]
-            else:
-                cmds = ['-f', url]
-            _single_install(cmds, req, bin_dir)
-
 %(make_dev_eggs)s
+
+        # add packages from any specified requirements files
+        if options.reqs:
+            subprocess.check_call([join(bin_dir, 'add_reqs'), '-f', url] + options.reqs)
+
     except Exception as err:
         logger.error("ERROR: build failed: %%s" %% str(err))
         sys.exit(-1)
@@ -219,8 +168,8 @@ def after_install(options, home_dir):
                 for name in fnmatch.filter(filelist, pat):
                     yield os.path.join(path, name)
 
-       # in order to find all of our shared libraries,
-       # put their directories in LD_LIBRARY_PATH
+       # in order to find all of our shared libraries, modify the activate
+       # script to put their directories in LD_LIBRARY_PATH
         pkgdir = os.path.join(lib_dir, 'site-packages')
         sofiles = [os.path.abspath(x) for x in _find_files('*.so',pkgdir)]
                       
@@ -233,7 +182,7 @@ def after_install(options, home_dir):
         subdict = { 'libpath': 'LD_LIBRARY_PATH',
                     'add_on': os.pathsep.join(final)
                     }
-
+                    
         if len(final) > 0:
             activate_template = '\\n'.join([
             'export PATH',
