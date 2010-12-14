@@ -14,11 +14,10 @@ from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, Ite
 
 from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
 from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder
+
 from openmdao.lib.caseiterators.api import DBCaseIterator
 from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
-
 from openmdao.examples.expected_improvement.branin_component import BraninComponent
-
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
         
