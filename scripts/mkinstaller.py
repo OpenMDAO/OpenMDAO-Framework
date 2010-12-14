@@ -70,7 +70,7 @@ def adjust_options(options, args):
                 else:  # assume it's a url
                     openmdao_added_reqs.extend(_get_reqs_from_url(entry))
             except Exception:
-                print "ERROR: '%%s' does not specify a valid requirements file or url" %% entry
+                logger.error('%%s' does not specify a valid requirements file or url" %% entry)
                 sys.exit(-1)
 """ % code
 
@@ -148,7 +148,7 @@ def _get_reqs_from_file(name):
     with open(name, 'r') as f:
         logger.info("Reading requirements from file: %%s" %% name)
         return _get_reqs_from_filelike(f)
-    
+
 def _get_reqs_from_url(url):
     import urllib2
     with urllib2.urlopen(url) as f:
