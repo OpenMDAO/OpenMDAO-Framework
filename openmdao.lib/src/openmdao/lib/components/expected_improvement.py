@@ -42,7 +42,7 @@ class ExpectedImprovement(Component):
                 target = output[2]
                 break
                 
-        if not target: 
+        if target is False: 
             self.raise_exception("best_case did not have an output which "
                                  "matched the criteria, '%s'"%self.criteria,
                                  ValueError)  
