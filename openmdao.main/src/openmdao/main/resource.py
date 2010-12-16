@@ -632,7 +632,9 @@ class ClusterAllocator(object):  #pragma no cover
                 host_ip = name[dash+1:colon]
 
             if host_ip not in self._allocators:
-                allocator = manager.openmdao_main_resource_LocalAllocator(name)
+                allocator = \
+                    manager.openmdao_main_resource_LocalAllocator(name=name,
+                                                        allow_shell=allow_shell)
                 allocator._name = allocator.name
                 self._allocators[host_ip] = allocator
                 self._logger.debug('%s allocator %r pid %s', host.hostname,
