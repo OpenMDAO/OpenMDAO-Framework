@@ -590,7 +590,7 @@ class ClusterAllocator(object):  #pragma no cover
     by load average is reasonable.
     """
 
-    def __init__(self, name, machines, authkey=None):
+    def __init__(self, name, machines, authkey=None, allow_shell=False):
         if authkey is None:
             authkey = multiprocessing.current_process().authkey
             if authkey is None:
