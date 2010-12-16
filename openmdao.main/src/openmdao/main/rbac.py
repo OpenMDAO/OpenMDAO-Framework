@@ -76,13 +76,15 @@ class Credentials(object):
     here will support strict authorization.
     """
 
+    user_host = '%s@%s' % (getpass.getuser(), socket.gethostname())
+
     def __init__(self, data=None, signature=None):
         # We don't use cPickle here because we'd rather not have to trust
         # the sender until after we've checked their credentials.
 
         if data is None and signature is None:
             # Create our credentials.
-            self.user = '%s@%s' % (getpass.getuser(), socket.gethostname())
+            self.user = Credentials.user_host
             self.transient = (sys.platform == 'win32') and not HAVE_PYWIN32
             key_pair = generate_key_pair(self.user)
             self.public_key = key_pair.publickey()

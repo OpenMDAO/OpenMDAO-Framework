@@ -161,7 +161,8 @@ class OpenMDAO_Server(Server):
             # credentials for getting our key pair. This avoids generation
             # overhead and also issues with propagating our public key
             # back through a proxy.
-            self._key_pair = generate_key_pair(Credentials().user, self._logger)
+            self._key_pair = generate_key_pair(Credentials.user_host,
+                                               self._logger)
         else:
             self._key_pair = None
         self._id_to_controller = {}
@@ -738,7 +739,7 @@ class OpenMDAO_Manager(BaseManager):
     _Server = OpenMDAO_Server
 
     def __init__(self, address=None, authkey=None, serializer='pickle',
-                 pubkey=None, name=None, allowed_hosts=None):
+                 pubkey=None, name=None, allowed_hosts=None, **kwargs):
 # FIXME: this shouldn't be required, but using a pipe causes problems with
 #        test_distsim).
         if address is None and sys.platform == 'win32' and not HAVE_PYWIN32:
@@ -1034,13 +1035,6 @@ class OpenMDAO_Proxy(BaseProxy):
         args = args or ()
         kwds = kwds or {}
 
-        credentials = get_credentials()
-        if self._authkey == 'PublicKey':
-            if credentials is None or not credentials.user:
-                msg = 'No credentials for PublicKey authentication of %s' \
-                      % methodname
-                logging.error(msg)
-                raise RuntimeError(msg)
         try:
             conn = self._tls.connection
         except AttributeError:
@@ -1068,6 +1062,7 @@ class OpenMDAO_Proxy(BaseProxy):
             else:
                 new_args.append(arg)
 
+        credentials = get_credentials()
         if self._authkey == 'PublicKey':
             user = credentials.user
             credentials = credentials.encode()
@@ -1107,7 +1102,7 @@ class OpenMDAO_Proxy(BaseProxy):
 
     def _init_session(self, conn):
         """ Send client public key, receive session key. """
-        key_pair = generate_key_pair(get_credentials().user)
+        key_pair = generate_key_pair(Credentials.user_host)
         public_key = key_pair.publickey()
         text = encode_public_key(public_key)
 
@@ -1131,6 +1126,7 @@ class OpenMDAO_Proxy(BaseProxy):
 
     def _incref(self):
         """
+        Tell server to increment its reference count.
         This version avoids a hang in _Client if the server no longer exists.
         """
         # Hard to cause this to happen.
@@ -1158,6 +1154,7 @@ class OpenMDAO_Proxy(BaseProxy):
     @staticmethod
     def _decref(token, authkey, state, tls, idset, _Client):
         """
+        Tell server to decrement its reference count.
         This version avoids a hang in _Client if the server no longer exists.
         """
         idset.discard(token.id)

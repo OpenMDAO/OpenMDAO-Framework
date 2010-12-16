@@ -99,7 +99,7 @@ class TestCase(unittest.TestCase):
     def test_remote(self):
         logging.debug('')
         logging.debug('test_remote')
-        init_cluster()
+        init_cluster(allow_shell=True)
 
         dummy = 'dummy_output'
         if os.path.exists(dummy):

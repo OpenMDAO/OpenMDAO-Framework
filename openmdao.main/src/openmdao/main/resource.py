@@ -27,8 +27,9 @@ class ResourceAllocationManager(object):
     The allocation manager maintains a list of :class:`ResourceAllocator`
     which are used to select the "best fit" for a particular resource request.
     The manager is initialized with a :class:`LocalAllocator` for the local
-    host, using `authkey` of 'PublicKey'. Additional allocators can be added
-    and the manager will look for the best fit across all the allocators.
+    host, using `authkey` of 'PublicKey', and allowing 'shell' access.
+    Additional allocators can be added and the manager will look for the best
+    fit across all the allocators.
     """
 
     _lock = threading.Lock()
@@ -39,7 +40,8 @@ class ResourceAllocationManager(object):
         self._allocations = 0
         self._allocators = []
         self._allocators.append(LocalAllocator('LocalHost',
-                                               authkey='PublicKey'))
+                                               authkey='PublicKey',
+                                               allow_shell=True))
         self._deployed_servers = {}
 
     @staticmethod
@@ -271,15 +273,19 @@ class ResourceAllocator(ObjServerFactory):
 
     authkey: string
         Authorization key for this allocator and any deployed servers.
+
+    allow_shell: bool
+        If True, :meth:`execute_command` and :meth:`load_model` are allowed
+        in created servers. Use with caution!
     """
 
-    def __init__(self, name, authkey=None):
+    def __init__(self, name, authkey=None, allow_shell=False):
         if authkey is None:
             authkey = multiprocessing.current_process().authkey
             if authkey is None:
                 authkey = 'PublicKey'
                 multiprocessing.current_process().authkey = authkey
-        super(ResourceAllocator, self).__init__(name, authkey)
+        super(ResourceAllocator, self).__init__(name, authkey, allow_shell)
         self.name = name
 
     # To be implemented by real allocator.
@@ -388,11 +394,15 @@ class LocalAllocator(ResourceAllocator):
 
     authkey: string
         Authorization key for this allocator and any deployed servers.
+
+    allow_shell: bool
+        If True, :meth:`execute_command` and :meth:`load_model` are allowed
+        in created servers. Use with caution!
     """
 
     def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0,
-                 authkey=None):
-        super(LocalAllocator, self).__init__(name, authkey)
+                 authkey=None, allow_shell=False):
+        super(LocalAllocator, self).__init__(name, authkey, allow_shell)
         self._name = name  # To allow looking like a proxy.
         self.pid = os.getpid()  # We may be a process on a remote host.
         if total_cpus > 0:
@@ -572,6 +582,10 @@ class ClusterAllocator(object):  #pragma no cover
     authkey: string
         Authorization key to be passed-on to remote servers.
 
+    allow_shell: bool
+        If True, :meth:`execute_command` and :meth:`load_model` are allowed
+        in created servers. Use with caution!
+
     We assume that machines in the cluster are similar enough that ranking
     by load average is reasonable.
     """
@@ -599,7 +613,8 @@ class ClusterAllocator(object):  #pragma no cover
             host.register(LocalAllocator)
             hosts.append(host)
 
-        self.cluster = mp_distributing.Cluster(hosts, authkey=authkey)
+        self.cluster = mp_distributing.Cluster(hosts, authkey=authkey,
+                                               allow_shell=allow_shell)
         self.cluster.start()
         self._logger.debug('server listening on %r', (self.cluster.address,))
 

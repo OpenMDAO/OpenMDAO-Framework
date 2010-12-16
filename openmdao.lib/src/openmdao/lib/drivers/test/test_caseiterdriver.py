@@ -169,20 +169,20 @@ class TestCase(unittest.TestCase):
         # It can also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
         logging.debug('test_concurrent')
-        init_cluster(encrypted=True)
+        init_cluster(encrypted=True, allow_shell=True)
         self.run_cases(sequential=False)
 
     def test_concurrent_errors(self):
         logging.debug('')
         logging.debug('test_concurrent_errors')
-        init_cluster(encrypted=True)
+        init_cluster(encrypted=True, allow_shell=True)
         self.generate_cases(force_errors=True)
         self.run_cases(sequential=False, forced_errors=True)
 
     def test_unencrypted(self):
         logging.debug('')
         logging.debug('test_unencrypted')
-        name = init_cluster(encrypted=False)
+        name = init_cluster(encrypted=False, allow_shell=True)
         self.model.driver.extra_reqs = {'allocator': name}
         self.run_cases(sequential=False)
 

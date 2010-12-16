@@ -67,7 +67,8 @@ class CaseIterDriverBase(Driver):
         self._server_states = {}
         self._server_cases = {}
         self._exceptions = {}
-
+        self._load_failures = {}
+ 
         self._todo = []   # Cases grabbed during server startup.
         self._rerun = []  # Cases that failed and should be retried.
         self._generation = 0  # Used to keep worker names unique.
@@ -225,6 +226,7 @@ class CaseIterDriverBase(Driver):
             self._in_use[name] = True
             self._server_cases[name] = None
             self._server_states[name] = _EMPTY
+            self._load_failures[name] = 0
             server_thread = threading.Thread(target=self._service_loop,
                                              args=(name, resources,
                                                    credentials, self._reply_q))
@@ -335,6 +337,7 @@ class CaseIterDriverBase(Driver):
         self._server_states = {}
         self._server_cases = {}
         self._exceptions = {}
+        self._load_failures = {}
 
         self._todo = []
         self._rerun = []
@@ -373,7 +376,13 @@ class CaseIterDriverBase(Driver):
                 in_use = self._start_next_case(server, stepping)
             else:
                 self._logger.debug('    exception while loading: %r', exc)
-                in_use = self._start_processing(server, stepping)
+                self._load_failures[server] += 1
+                if self._load_failures[server] < 3:
+                    in_use = self._start_processing(server, stepping)
+                else:
+                    self._logger.debug('    too many load failures')
+                    self._server_states[server] = _EMPTY
+                    in_use = False
 
         elif state == _EXECUTING:
             case = self._server_cases[server]

@@ -609,14 +609,6 @@ class TestCase(unittest.TestCase):
         # Check false return of has_interface().
         self.assertFalse(has_interface(self.factory, HasObjectives))
 
-        # Check that credentials are required.
-        credentials = get_credentials()
-        set_credentials(None)
-        msg = 'No credentials for PublicKey authentication of get_available_types'
-        assert_raises(self, 'self.factory.get_available_types()',
-                      globals(), locals(), RuntimeError, msg)
-        set_credentials(credentials)
-
         # Try to connect to wrong port (assuming junk_port isn't being used!)
         address = socket.gethostname()
         junk_port = 12345

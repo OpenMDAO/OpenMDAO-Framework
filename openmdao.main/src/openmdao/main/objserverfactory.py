@@ -45,16 +45,22 @@ class ObjServerFactory(Factory):
     authkey: string
         Authorization key passed-on to :class:`ObjServer` servers.
 
+    allow_shell: bool
+        If True, :meth:`execute_command` and :meth:`load_model` are allowed
+        in created servers. Use with caution!
+
     The environment variable ``OPENMDAO_KEEPDIRS`` can be used to avoid
     having server directory trees removed when servers are shut-down.
     """
 
-    def __init__(self, name='ObjServerFactory', authkey=None):
+    def __init__(self, name='ObjServerFactory', authkey=None, allow_shell=False):
         super(ObjServerFactory, self).__init__()
         self._authkey = authkey
+        self._allow_shell = allow_shell
         self._managers = {}
         self._logger = logging.getLogger(name)
-        self._logger.info('PID: %d, %r', os.getpid(), keytype(self._authkey))
+        self._logger.info('PID: %d, %r, allow_shell %s', os.getpid(),
+                          keytype(self._authkey), allow_shell)
 
     @rbac('*')
     def echo(self, *args):
@@ -207,7 +213,8 @@ class ObjServerFactory(Factory):
             self._logger.info('new server %r for %s', name, owner)
             self._logger.info('    in dir %s', root_dir)
             self._logger.info('    listening on %s', manager.address)
-            server = manager.openmdao_main_objserverfactory_ObjServer(name=name)
+            server = manager.openmdao_main_objserverfactory_ObjServer(name=name,
+                                                  allow_shell=self._allow_shell)
             self._managers[server] = (manager, root_dir, owner)
 
         if typname:
@@ -279,20 +286,28 @@ class ObjServer(object):
 
     name: string
         Name of server, used in log messages, etc.
+
+    allow_shell: bool
+        If True, :meth:`execute_command` and :meth:`load_model` are allowed.
+        Use with caution!
     """
 
-    def __init__(self, name=''):
+    def __init__(self, name='', allow_shell=False):
+        self._allow_shell = allow_shell
+
         self.host = platform.node()
         self.pid = os.getpid()
         self.name = name or ('sim-%d' % self.pid)
 
-        self.root_dir = os.getcwd()
+        self._root_dir = os.getcwd()
         self._logger = logging.getLogger(self.name)
-        self._logger.info('PID: %d', os.getpid())
-        print 'ObjServer %r PID: %d' % (self.name, os.getpid())
+        self._logger.info('PID: %d, allow_shell %s',
+                          os.getpid(), self._allow_shell)
+        print 'ObjServer %r PID: %d, allow_shell %s' \
+              % (self.name, os.getpid(), self._allow_shell)
         sys.stdout.flush()
 
-        SimulationRoot.chroot(self.root_dir)
+        SimulationRoot.chroot(self._root_dir)
         self.tlo = None
 
     # We only reset logging on the remote side.
@@ -351,6 +366,11 @@ class ObjServer(object):
             implies no timeout.
         """
         self._logger.debug('execute_command %r', command)
+        if not self._allow_shell:
+            self._logger.error('attempt to execute %r by %r', command,
+                               get_credentials().user)
+            raise RuntimeError('shell access is not allowed by this server')
+
         for arg in (stdin, stdout, stderr):
             if isinstance(arg, basestring):
                 self._check_path(arg, 'execute_command')
@@ -374,6 +394,10 @@ class ObjServer(object):
             Filename of egg to be loaded.
         """
         self._logger.debug('load_model %r', egg_filename)
+        if not self._allow_shell:
+            self._logger.error('attempt to load %r by %r', egg_filename,
+                               get_credentials().user)
+            raise RuntimeError('shell access is not allowed by this server')
         self._check_path(egg_filename, 'load_model')
         if self.tlo:
             self.tlo.pre_delete()
@@ -487,9 +511,9 @@ class ObjServer(object):
     def _check_path(self, path, operation):
         """ Check if path is allowed to be used. """
         abspath = os.path.abspath(path)
-        if not abspath.startswith(self.root_dir):
+        if not abspath.startswith(self._root_dir):
             raise RuntimeError("Can't %s %r, not within root %s"
-                               % (operation, path, self.root_dir))
+                               % (operation, path, self._root_dir))
 
 
 class _ServerManager(OpenMDAO_Manager):
@@ -535,7 +559,7 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
 
 
 def start_server(authkey='PublicKey', port=0, prefix='server',
-                 allowed_hosts=None, timeout=None):
+                 allowed_hosts=None, allow_shell=False, timeout=None):
     """
     Start an :class:`ObjServerFactory` service in a separate process
     in the current directory.
@@ -553,6 +577,9 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
 
     allowed_hosts: list(string)
         Host address patterns to check against. Required if `port` >= 0.
+
+    allow_shell: bool
+        If True, :meth:`execute_command` is allowed. Use with caution!
 
     timeout: int
         Seconds to wait for server to start. Note that public key generation
@@ -589,6 +616,8 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
     factory_path = pkg_resources.resource_filename('openmdao.main',
                                                    'objserverfactory.py')
     args = ['python', factory_path, '--port', str(port), '--prefix', prefix]
+    if allow_shell:
+        args.append('--allow-shell')
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
 
     try:
@@ -622,7 +651,10 @@ def main():  #pragma no cover
     """
     OpenMDAO factory service process.
 
-    Usage: python objserverfactory.py [--hosts=filename][--port=number][--prefix=name]
+    Usage: python objserverfactory.py [--allow-shell][--hosts=filename][--port=number][--prefix=name]
+
+    allow-shell:
+        Allows access to :meth:`execute_command`.
 
     hosts: string
         Filename for allowed hosts specification. Default 'hosts.allow'.
@@ -646,6 +678,8 @@ def main():  #pragma no cover
     public key information.
     """
     parser = optparse.OptionParser()
+    parser.add_option('--allow-shell', action='store_true', default=False,
+                      help='allows access to execute_command(), use with care!')
     parser.add_option('--hosts', action='store', type='str',
                       default='hosts.allow',
                       help='server port (0 implies next available port)')
@@ -705,9 +739,12 @@ def main():  #pragma no cover
     else:
         address = None
     _LOGGER.info('Starting FactoryManager %s %r', address, keytype(authkey))
+    if options.allow_shell:
+        _LOGGER.warning('Shell access is ALLOWED')
     current_process().authkey = authkey
     manager = _FactoryManager(address, authkey, name='Factory',
-                              allowed_hosts=allowed_hosts)
+                              allowed_hosts=allowed_hosts,
+                              allow_shell=options.allow_shell)
 
     # Get server, retry if specified address is in use.
     server = None
