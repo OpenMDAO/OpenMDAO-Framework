@@ -100,7 +100,10 @@ def main(options):
         wing = ''
 
     if options.test:
-        url = 'file://%s/dists' % os.environ['HOME']
+        if sys.platform == 'win32':
+            url = 'file://%s/dists' % os.environ['HOMEDRIVE']+os.environ['HOMEPATH']
+        else:
+            url = 'file://%s/dists' % os.environ['HOME']
 
     script_str = """
 
