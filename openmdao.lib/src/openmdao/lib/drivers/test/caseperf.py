@@ -128,7 +128,7 @@ def main():
 
 def setup_cluster(encrypted=True):
     """ Use openmdao.testing.cluster.init_cluster, but fix 'max_load'. """
-    name = init_cluster(encrypted)
+    name = init_cluster(encrypted, allow_shell=True)
     for allocator in ResourceAllocationManager.list_allocators():
         if allocator.name == 'LocalHost':
             allocator.max_load = 1.
@@ -183,19 +183,23 @@ def run_test(model, initial, limit, max_servers):
         model.run()
         et = time.time() - start
         n_cases = model.driver.recorder.n_cases
-        print '    %d cases done in %.2f (%.2f sec/case)' \
-              % (n_cases, et, et/n_cases)
-        if n_cases < MAX_TRIALS:
-            payoff_case = model.driver.recorder.payoff_case
-            if payoff_case < n_cases:
-                print '    payoff at %d' % payoff_case
-            results.append((duration, payoff_case, n_cases, et))
-            if payoff_case == 2 or n_cases <= (max_servers + 1):
-                print '    (minimum case limit)'
-                break
+        if n_cases > 0:
+            print '    %d cases done in %.2f (%.2f sec/case)' \
+                  % (n_cases, et, et/n_cases)
+            if n_cases < MAX_TRIALS:
+                payoff_case = model.driver.recorder.payoff_case
+                if payoff_case < n_cases:
+                    print '    payoff at %d' % payoff_case
+                results.append((duration, payoff_case, n_cases, et))
+                if payoff_case == 2 or n_cases <= (max_servers + 1):
+                    print '    (minimum case limit)'
+                    break
+            else:
+                print '    no concurrency advantage'
+            duration *= 2.
         else:
-            print '    no concurrency advantage'
-        duration *= 2.
+            print '    no successful cases, aborting'
+            break
 
     return results
 

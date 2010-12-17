@@ -202,7 +202,8 @@ class OpenMDAO_Server(Server):
                 while 1:
                     try:
                         conn = self.listener.accept()
-                    except (OSError, IOError):
+                    # Hard to cause this to happen.
+                    except (OSError, IOError):  #pragma no cover
                         continue
 
                     address = self.listener.last_accepted
@@ -217,11 +218,13 @@ class OpenMDAO_Server(Server):
                     t.daemon = True
                     try:
                         t.start()
-                    except Exception as exc:
+                    # Don't want to cause this to happen.
+                    except Exception as exc:  #pragma no cover
                         self._logger.error("Can't start server thread: %r", exc)
                         conn.close()
                         continue
-            except (KeyboardInterrupt, SystemExit):
+            # Don't want to cause this to happen.
+            except (KeyboardInterrupt, SystemExit):  #pragma no cover
                 pass
         finally:
             self.stop = 999
@@ -448,9 +451,10 @@ class OpenMDAO_Server(Server):
 
     def _init_session(self, conn):
         """ Receive client public key, send session key. """
+        # Hard to cause exceptions to happen where we'll see them.
         try:
             n, e, chunks = conn.recv()
-        except Exception as exc:
+        except Exception as exc:  #pragma no cover
             self._logger.error("Can't receive key data: %r", exc)
             raise
 
@@ -463,7 +467,7 @@ class OpenMDAO_Server(Server):
             for chunk in chunks:
                 text += self._key_pair.decrypt(chunk)
             client_key = decode_public_key(text)
-        except Exception as exc:
+        except Exception as exc:  #pragma no cover
             self._logger.error("Can't recreate client key: %r", exc)
             raise
 
@@ -471,7 +475,7 @@ class OpenMDAO_Server(Server):
             session_key = hashlib.sha1(str(id(conn))).hexdigest()
             data = client_key.encrypt(session_key, '')
             conn.send(data)
-        except Exception as exc:
+        except Exception as exc:  #pragma no cover
             self._logger.error("Can't send session key: %r", exc)
             raise
 
@@ -703,7 +707,8 @@ class OpenMDAO_Server(Server):
         finally:
             self.mutex.release()
 
-    def shutdown(self, conn):
+    # Will only be seen on remote.
+    def shutdown(self, conn):  #pragma no cover
         """ Shutdown this process. """
         self._logger.debug('received shutdown request')
         super(OpenMDAO_Server, self).shutdown(conn)
@@ -742,7 +747,7 @@ class OpenMDAO_Manager(BaseManager):
                  pubkey=None, name=None, allowed_hosts=None, **kwargs):
 # FIXME: this shouldn't be required, but using a pipe causes problems with
 #        test_distsim).
-        if address is None and sys.platform == 'win32' and not HAVE_PYWIN32:
+        if address is None and sys.platform == 'win32' and not HAVE_PYWIN32:  #pragma no cover
             ip_addr = socket.gethostbyname(socket.gethostname())
             address = (ip_addr, 0)
             allowed_hosts = [ip_addr]
@@ -801,7 +806,7 @@ class OpenMDAO_Manager(BaseManager):
 
         # Get address of server.
         if self._authkey == 'PublicKey':
-            if sys.platform == 'win32' and not HAVE_PYWIN32:
+            if sys.platform == 'win32' and not HAVE_PYWIN32:  #pragma no cover
                 timeout = 120
             else:
                 timeout = 5
@@ -910,7 +915,8 @@ class OpenMDAO_Manager(BaseManager):
                     dispatch(conn, None, 'shutdown')
                 finally:
                     conn.close()
-            except Exception:
+            # Just being defensive here.
+            except Exception:  #pragma no cover
                 pass
 
             process.join(timeout=2)
@@ -987,7 +993,7 @@ class ObjectManager(object):
             authkey = self._server._authkey
             pubkey = self._server.public_key if authkey == 'PublicKey' else None
             self._proxy = _auto_proxy(token, self._manager._serializer,
-                                      exposed=self._exposed, authkey=authkey,
+                                      authkey=authkey, exposed=self._exposed,
                                       pubkey=pubkey)
             self._server.incref(None, self._ident)
         return self._proxy
@@ -1040,7 +1046,13 @@ class OpenMDAO_Proxy(BaseProxy):
         except AttributeError:
             curr_thread = threading.current_thread()
             util.debug('thread %r does not own a connection', curr_thread.name)
-            self._connect()
+            try:
+                self._connect()
+            except Exception as exc:
+                msg = "Can't connect to server at %r: %r" \
+                      % (self._token.address, exc)
+                logging.error(msg)
+                raise RuntimeError(msg)
             conn = self._tls.connection
             if self._authkey == 'PublicKey':
                 self._init_session(conn)
@@ -1073,9 +1085,9 @@ class OpenMDAO_Proxy(BaseProxy):
             conn.send(encrypt((self._id, methodname, new_args, kwds,
                                credentials), session_key))
         except IOError as exc:
-            logging.error('_callmethod %s %s exception: %r, address %r',
-                          methodname, user, exc, self._token.address)
-            raise
+            msg = "Can't send to server at %r: %r" % (self._token.address, exc)
+            logging.error(msg)
+            raise RuntimeError(msg)
 
         kind, result = decrypt(conn.recv(), session_key)
 
@@ -1230,13 +1242,9 @@ class OpenMDAO_Proxy(BaseProxy):
             # Can't pickle an AuthenticationString.
             kwds['authkey'] = 'PublicKey'
 
-        if getattr(self, '_isauto', False):
-            kwds['exposed'] = self._exposed_
-            return (RebuildProxy,
-                    (_auto_proxy, self._token, self._serializer, kwds))
-        else:
-            return (RebuildProxy,
-                    (type(self), self._token, self._serializer, kwds))
+        kwds['exposed'] = self._exposed_
+        return (RebuildProxy,
+                (_auto_proxy, self._token, self._serializer, kwds))
 
 
 def register(cls, manager, module=None):
@@ -1348,20 +1356,6 @@ def _auto_proxy(token, serializer, manager=None, authkey=None,
     Return an auto-proxy for `token`.
     This version uses :func:`_make_proxy_type`.
     """
-    _Client = listener_client[serializer][1]
-
-    if authkey is None and manager is not None:
-        authkey = manager._authkey
-    if authkey is None:
-        authkey = current_process().authkey
-
-    if exposed is None:
-        conn = _Client(token.address, authkey=authkey)
-        try:
-            exposed = dispatch(conn, None, 'get_methods', (token,))
-        finally:
-            conn.close()
-
     ProxyType = _make_proxy_type('OpenMDAO_AutoProxy[%s]' % token.typeid,
                                  exposed)
     proxy = ProxyType(token, serializer, manager=manager, authkey=authkey,

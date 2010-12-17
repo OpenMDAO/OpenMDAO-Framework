@@ -44,6 +44,8 @@ def generate_key_pair(user_host, logger=None, overwrite_cache=False):
         If True, a new key is generated and forced into the cache of existing
         known keys.  Used for testing.
     """
+    logger = logger or NullLogger()
+
     with _KEY_CACHE_LOCK:
         if overwrite_cache:
             key_pair = _generate(user_host, logger)
@@ -106,7 +108,6 @@ def generate_key_pair(user_host, logger=None, overwrite_cache=False):
 
 def _generate(user_host, logger):
     """ Return new key. """
-    logger = logger or logging.getLogger()
     logger.debug('generating public key for %r...', user_host)
     if sys.platform == 'win32' and not HAVE_PYWIN32: #pragma no cover
         strength = 1024  # Much quicker to generate.
@@ -222,9 +223,16 @@ def authorized_keys(filename=None, logger=None):
 
     with open(filename, 'r') as inp:
         for line in inp:
+            line = line.rstrip()
+            sharp = line.find('#')
+            if sharp >= 0:
+                line = line[:sharp]
+            if not line:
+                continue
+
             fields = line.split()
             if len(fields) != 3:
-                logger.debug('bad line:')
+                logger.debug('bad line (require exactly 3 fields):')
                 logger.debug(line)
                 continue
 

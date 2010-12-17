@@ -588,6 +588,19 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_misc')
 
+        # Try using a server after being released, server never used before.
+        server = self.factory.create('')
+        self.factory.release(server)
+        assert_raises(self, "server.echo('hello')", globals(), locals(),
+                      RuntimeError, "Can't connect to server at")
+
+        # Try using a server after being released, server has been used before.
+        server = self.factory.create('')
+        reply = server.echo('hello')
+        self.factory.release(server)
+        assert_raises(self, "server.echo('hello')", globals(), locals(),
+                      RuntimeError, "Can't send to server at")
+
         # Try releasing a server twice. Depending on timing, this could
         # result in a ValueError trying to identify the server to release or
         # a RemoteError where the request can't be unpacked. The timing seems
