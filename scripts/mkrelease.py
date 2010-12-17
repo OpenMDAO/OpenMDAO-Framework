@@ -303,9 +303,9 @@ def main():
         print 'creating bootstrapping installer script go-openmdao.py'
         installer = os.path.join(topdir, 'scripts','mkinstaller.py')
         if options.test:
-            check_call([sys.executable, installer, '-t', '-d', destdir])
+            check_call([sys.executable, installer, '-t', '--dest=%s'%destdir])
         else:
-            check_call([sys.executable, installer, '-d', destdir])
+            check_call([sys.executable, installer, '--dest=%s'%destdir])
         
         # tag the current revision with the release version id
         if not options.test:
