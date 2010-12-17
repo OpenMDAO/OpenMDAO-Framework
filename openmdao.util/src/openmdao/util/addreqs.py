@@ -14,24 +14,26 @@ import subprocess
 #
 # - python style comments are allowed  '#'
 # - blank lines are allowed
-# - each non-comment, non-blank line begins with a requirement string
-#    followed by an optional url of a 'find-links' server where
-#    the required package can be found.  Whitespace is NOT allowed
-#    within a requirement string.
+# - each non-comment, non-blank line is either:
+#    -f followed by a URL pointing to a find-links server
+#        OR
+#
+#    a standard setuptools/distribute/buildout style requirement string, e.g.,
+#    mypkg >1.2, <2.1
 
 def _get_reqs_from_filelike(f):
     reqs = []
+    flink = None
     for line in f:
         line = line.split('#')[0]
         line = line.strip()
         if not line:  # skip blank lines
             continue
-        parts = line.split()
-        if len(parts) == 1:
-            parts.append(None)
-        elif len(parts) > 2:
-            raise RuntimeError("invalid format for line '%s'" % line)
-        reqs.append((parts[0], parts[1]))
+        if line.startswith('-f'):
+            flink = line[2:].strip()
+            continue
+        else:
+            reqs.append((line, flink))
     return reqs
 
 def _get_reqs_from_file(name):

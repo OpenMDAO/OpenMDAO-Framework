@@ -167,22 +167,22 @@ def _testbranch():
         pyversion="python"   #for some reason, on storm the python2.6 alias doesn't work on storm
         removeit="""rmdir /s /q"""
         env.shell="cmd /C"
-	user=env.user
-	# env.user="ndc\\"+env.user   #need to preface username with ndc\\ to get into storm
+        user=env.user
+        # env.user="ndc\\"+env.user   #need to preface username with ndc\\ to get into storm
     else:
         devbindir='devenv/bin'
         unpacktar="tar xvf"
         pyversion="python2.6"
         removeit="rm -rf"
-	env.shell="/bin/bash -l -c"
+        env.shell="/bin/bash -l -c"
 
     #Copy exported branch tarfile to desired test platform in user's root dir
     filetocopy = os.path.join(branchdir, 'testbranch.tar.gz')
     if env.host not in winplatforms:     #if we are not remoting into a windows host
         #remove any previous testbranches on remote host
         run('%s testbranch' % removeit)  
-	#copy exported branch tartile to test platform in user's root dir 
-	put(filetocopy, 'testbranch.tar.gz')
+        #copy exported branch tartile to test platform in user's root dir 
+        put(filetocopy, 'testbranch.tar.gz')
         #unpack the tarfile
         run('%s testbranch.tar.gz' % unpacktar)  
         with cd('testbranch'):
@@ -195,12 +195,12 @@ def _testbranch():
                 print("Please wait while the environment is activated and the tests are run")
                 run('source activate && echo $PATH && echo environment activated, please wait while tests run && openmdao_test -x')
                 print('Tests completed on %s' % env.host)
- 	
+         
     else:  #we're remoting into windows (storm)
         #remove any previous testbranches on remote host
         run("""if exist testbranch/nul rmdir /s /q testbranch""")
         run("""if exist testbranch.tar del testbranch.tar""")
-        #copy exported branch tartile to test platform (storm) in user's root dir	
+        #copy exported branch tartile to test platform (storm) in user's root dir        
         filedestination = user + """@storm.grc.nasa.gov:testbranch.tar.gz"""
         local('scp %s %s' % (filetocopy, filedestination))  
         #unpack the tarfile
@@ -243,8 +243,8 @@ def testbranch(runlocal="False", ignoreBzrStatus="False"):
         print("skipping tests on %s" % currenthost)
     else:
         print('running tests on %s' % remotehost)
-	#Check for uncommitted changes first
-	uncommittedChanges=local('bzr status -SV')
+        #Check for uncommitted changes first
+        uncommittedChanges=local('bzr status -SV')
         if uncommittedChanges: 
             if ignoreBzrStatus.lower() == "false": #raise error if uncommitted changes on current branch 
                 raise RuntimeError("There are uncommitted changes on this branch.  Please commit changes then restart this script.")

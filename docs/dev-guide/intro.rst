@@ -159,16 +159,17 @@ ________________________________
 
 After you've created your branch, run ``python go-openmdao-dev.py`` from the top directory of your
 branch to set up your development environment. (The ``devenv`` directory that is created is not part
-of the source repository.) The script will check the version of Python you are running. You must be
-running a version greater than or equal to 2.6 but less than 3.0. (To find out which Python version
+of the source repository.) The script will check the version of Python you are running. Currently 
+you must be running version 2.6. (To find out which Python version
 you are running, you can type ``python --version``.)
 
-.. note:: On Windows, you need to run the installer from a command window that has
-   the Visual Studio environment variables set.  The easiest way to do this is to
-   select the *Visual Studio 2008 Command Prompt* from the *Visual Studio Tools* menu
-   under *Microsoft Visual C++ 2008 Express Edition* in the Start menu. If you're
-   using something other than the Express edition, then the name of the Start menu 
-   option will be slightly different, i.e., replace "Express" with "Professional" or
+.. note:: If you're using Visual Studio on Windows, you need to run the installer from a 
+   command window that has the Visual Studio environment variables set. The
+   easiest way to do this is to select the *Visual Studio 2008 Command Prompt*
+   from the *Visual Studio Tools* menu under *Microsoft Visual C++ 2008
+   Express Edition* in the Start menu. If you're using something other than
+   the Express edition, then the name of the Start menu option will be
+   slightly different, i.e., replace "Express" with "Professional" or
    "Standard."
 
 ::
@@ -257,7 +258,7 @@ The directory structure of your repository should look like this:
     be released separately from OpenMDAO. These distributions may or may not depend upon
     OpenMDAO. Distributions that have not yet been approved to be part of
     ``openmdao.lib`` can live here -- as long as their license is compatible with NOSA. No
-    proprietary code or GPL code can live in the OpenMDAO repository.
+    proprietary code or GPL code should be placed in the OpenMDAO repository.
 
 ``devenv``
     The directory containing the OpenMDAO virtual environment. Note that
