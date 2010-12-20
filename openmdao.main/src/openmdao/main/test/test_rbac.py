@@ -89,32 +89,33 @@ class TestCase(unittest.TestCase):
 
         # Sign/verify.
         encoded = owner.encode()
-        Credentials.verify(encoded)  # 'First sighting'.
-        Credentials.verify(encoded)  # Cached verification.
+        Credentials.verify(encoded, allowed_users=None)  # 'First sighting'.
+        Credentials.verify(encoded, allowed_users=None)  # Cached verification.
         data, signature = encoded
 
-        assert_raises(self, 'Credentials.verify((data[:1], signature))',
+        assert_raises(self, 'Credentials.verify((data[:1], signature), None)',
                       globals(), locals(), CredentialsError, 'Invalid data')
 
-        assert_raises(self, 'Credentials.verify((data[:-1], signature))',
+        assert_raises(self, 'Credentials.verify((data[:-1], signature), None)',
                       globals(), locals(), CredentialsError, 'Invalid signature')
 
-        assert_raises(self, 'Credentials.verify((data, signature[:-1]))',
+        assert_raises(self, 'Credentials.verify((data, signature[:-1]), None)',
                       globals(), locals(), CredentialsError, 'Invalid signature')
 
         newline = data.find('\n')  # .user
         newline = data.find('\n', newline+1)  # .transient
         # Expecting '-'
         mangled = data[:newline+1] + '*' + data[newline+2:]
-        assert_raises(self, 'Credentials.verify((mangled, signature))',
+        assert_raises(self, 'Credentials.verify((mangled, signature), None)',
                       globals(), locals(), CredentialsError, 'Invalid key')
 
         # Detect mismatched key.
         generate_key_pair(owner.user, overwrite_cache=True)
         spook = Credentials()
         encoded = spook.encode()
-        assert_raises(self, 'Credentials.verify(encoded)', globals(), locals(),
-                      CredentialsError, 'Public key mismatch')
+        assert_raises(self, 'Credentials.verify(encoded, None)',
+                      globals(), locals(), CredentialsError,
+                      'Public key mismatch')
 
     def test_decorator(self):
         logging.debug('')

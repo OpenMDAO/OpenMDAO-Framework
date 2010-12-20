@@ -328,7 +328,8 @@ class TestCase(unittest.TestCase):
 
             # Cleanup only if there weren't any new errors or failures.
             if len(self.test_result.errors) == self.n_errors and \
-               len(self.test_result.failures) == self.n_failures:
+               len(self.test_result.failures) == self.n_failures and \
+               not int(self.keepdirs):
                 for server_dir in self.server_dirs:
                     shutil.rmtree(server_dir)
         finally:
@@ -595,11 +596,20 @@ class TestCase(unittest.TestCase):
                       RuntimeError, "Can't connect to server at")
 
         # Try using a server after being released, server has been used before.
+        # This usually results in a "Can't send" error, but sometimes gets a
+        # "Can't connect" error, based on timing.
         server = self.factory.create('')
         reply = server.echo('hello')
         self.factory.release(server)
-        assert_raises(self, "server.echo('hello')", globals(), locals(),
-                      RuntimeError, "Can't send to server at")
+        msg1 = "Can't send to server at"
+        msg2 = "Can't connect to server at"
+        try:
+            reply = server.echo('hello')
+        except RuntimeError as exc:
+            if str(exc)[:len(msg1)] != msg1 and str(exc)[:len(msg1)] != msg1:
+                self.fail('Expected send/connect error, got %r' % exc)
+        else:
+            self.fail('Expected RuntimeError')
 
         # Try releasing a server twice. Depending on timing, this could
         # result in a ValueError trying to identify the server to release or

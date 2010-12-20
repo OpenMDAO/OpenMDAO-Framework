@@ -143,18 +143,29 @@ class OpenMDAO_Server(Server):
 
     allowed_hosts: list(string)
         Host address patterns to check against.
+
+    allowed_users: dict
+        Dictionary of users and corresponding public keys allowed access.
+        If None, any user may access. If empty, no user may access.
     """
 
     def __init__(self, registry, address, authkey, serializer, name=None,
-                 allowed_hosts=None):
+                 allowed_hosts=None, allowed_users=None):
         super(OpenMDAO_Server, self).__init__(registry, address, authkey,
                                               serializer)
         self.name = name or 'OMS_%d' % os.getpid()
         self.host = socket.gethostname()
         self._allowed_hosts = allowed_hosts or []
+        self._allowed_users = allowed_users
         self._logger = logging.getLogger(name)
         self._logger.info('OpenMDAO_Server process %d started, %r',
                           os.getpid(), keytype(authkey))
+        if allowed_hosts is not None:
+            self._logger.debug('allowed_hosts: %s', sorted(allowed_hosts))
+        if allowed_users is not None:
+            self._logger.debug('allowed_users: %s',
+                               sorted(allowed_users.values()))
+
         self._authkey = authkey
         if authkey == 'PublicKey':
             # While we may be 'owned' by some remote user, use default
@@ -338,13 +349,14 @@ class OpenMDAO_Server(Server):
 #                                   ident, methodname, credentials)
 #                self._logger.debug('id_to_obj:\n%s', self.debug_info(conn))
 
-                if self._authkey == 'PublicKey':
-                    encoded = credentials
-                    try:
-                        credentials = Credentials.verify(encoded)
-                    except Exception as exc:
-                        self._logger.error('%r' % exc)
-                        raise
+                # Decode and verify valid credentials.
+                try:
+                    credentials = Credentials.verify(credentials,
+                                                     self._allowed_users)
+                except Exception as exc:
+                    self._logger.error('%r' % exc)
+                    raise
+
                 try:
                     obj, exposed, gettypeid = id_to_obj[ident]
                 # Hard to cause this to happen.
@@ -739,12 +751,17 @@ class OpenMDAO_Manager(BaseManager):
 
     allowed_hosts: list(string)
         Host address patterns to check against.
+
+    allowed_users: dict
+        Dictionary of users and corresponding public keys allowed access.
+        If None, any user may access. If empty, no user may access.
     """
 
     _Server = OpenMDAO_Server
 
     def __init__(self, address=None, authkey=None, serializer='pickle',
-                 pubkey=None, name=None, allowed_hosts=None, **kwargs):
+                 pubkey=None, name=None, allowed_hosts=None, allowed_users=None,
+                 **kwargs):
 # FIXME: this shouldn't be required, but using a pipe causes problems with
 #        test_distsim).
         if address is None and sys.platform == 'win32' and not HAVE_PYWIN32:  #pragma no cover
@@ -756,6 +773,7 @@ class OpenMDAO_Manager(BaseManager):
         self._pubkey = pubkey
         self._name = name
         self._allowed_hosts = allowed_hosts
+        self._allowed_users = allowed_users
 
     def get_server(self):
         """
@@ -764,7 +782,7 @@ class OpenMDAO_Manager(BaseManager):
         assert self._state.value == State.INITIAL
         return OpenMDAO_Server(self._registry, self._address, self._authkey,
                                self._serializer, self._name,
-                               self._allowed_hosts)
+                               self._allowed_hosts, self._allowed_users)
 
     def start(self, cwd=None):
         """
@@ -797,7 +815,7 @@ class OpenMDAO_Manager(BaseManager):
             target=type(self)._run_server,
             args=(registry, self._address, self._authkey,
                   self._serializer, self._name, self._allowed_hosts,
-                  writer, credentials, cwd),
+                  self._allowed_users, writer, credentials, cwd),
             )
         ident = ':'.join(str(i) for i in self._process._identity)
         self._process.name = type(self).__name__  + '-' + ident
@@ -850,7 +868,8 @@ class OpenMDAO_Manager(BaseManager):
     # This happens on the remote server side and we'll check when using it.
     @classmethod
     def _run_server(cls, registry, address, authkey, serializer, name,
-                    allowed_hosts, writer, credentials, cwd=None): #pragma no cover
+                    allowed_hosts, allowed_users, writer, credentials,
+                    cwd=None): #pragma no cover
         """
         Create a server, report its address and public key, and run it.
         """
@@ -885,7 +904,7 @@ class OpenMDAO_Manager(BaseManager):
 
             # Create server.
             server = cls._Server(registry, address, authkey, serializer, name,
-                                 allowed_hosts)
+                                 allowed_hosts, allowed_users)
         except Exception as exc:
             writer.send(exc)
             return
@@ -961,17 +980,22 @@ class ObjectManager(object):
 
     allowed_hosts: list(string)
         Host address patterns to check against.
+
+    allowed_users: dict
+        Dictionary of users and corresponding public keys allowed access.
+        If None, any user may access. If empty, no user may access.
     """
 
     def __init__(self, obj, address=None, serializer='pickle', authkey=None,
-                 name=None, allowed_hosts=None):
+                 name=None, allowed_hosts=None, allowed_users=None):
         self._typeid = make_typeid(obj)
         self._ident = '%x' % id(obj)
         logging.debug('ObjectManager address %s, %r, name %r, ident %r',
                       address, keytype(authkey), name, self._ident)
         self._manager = OpenMDAO_Manager(address=address, serializer=serializer,
                                          authkey=authkey, name=name,
-                                         allowed_hosts=allowed_hosts)
+                                         allowed_hosts=allowed_hosts,
+                                         allowed_users=allowed_users)
         self._server = self._manager.get_server()
         self._exposed = public_methods(obj)
 
@@ -1074,16 +1098,9 @@ class OpenMDAO_Proxy(BaseProxy):
             else:
                 new_args.append(arg)
 
-        credentials = get_credentials()
-        if self._authkey == 'PublicKey':
-            user = credentials.user
-            credentials = credentials.encode()
-        else:
-            user = ''
-
         try:
             conn.send(encrypt((self._id, methodname, new_args, kwds,
-                               credentials), session_key))
+                               get_credentials().encode()), session_key))
         except IOError as exc:
             msg = "Can't send to server at %r: %r" % (self._token.address, exc)
             logging.error(msg)

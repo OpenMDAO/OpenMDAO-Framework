@@ -28,7 +28,8 @@ from openmdao.main.mp_util import keytype, read_allowed_hosts, \
 from openmdao.main.rbac import get_credentials, set_credentials, rbac, RoleError
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
-from openmdao.util.publickey import HAVE_PYWIN32
+from openmdao.util.publickey import read_authorized_keys, \
+                                    write_authorized_keys, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT
 
 _PROXIES = {}
@@ -559,7 +560,8 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
 
 
 def start_server(authkey='PublicKey', port=0, prefix='server',
-                 allowed_hosts=None, allow_shell=False, timeout=None):
+                 allowed_hosts=None, allowed_users=None, allow_shell=False,
+                 timeout=None):
     """
     Start an :class:`ObjServerFactory` service in a separate process
     in the current directory.
@@ -577,6 +579,10 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
 
     allowed_hosts: list(string)
         Host address patterns to check against. Required if `port` >= 0.
+
+    allowed_users: dict
+        Dictionary of users and corresponding public keys allowed access.
+        If None, any user may access. If empty, no user may access.
 
     allow_shell: bool
         If True, :meth:`execute_command` is allowed. Use with caution!
@@ -616,8 +622,16 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
     factory_path = pkg_resources.resource_filename('openmdao.main',
                                                    'objserverfactory.py')
     args = ['python', factory_path, '--port', str(port), '--prefix', prefix]
+
+    if allowed_users is not None:
+        write_authorized_keys(allowed_users, 'users.allow', logging.getLogger())
+        args.extend(['--users', 'users.allow'])
+    else:
+        args.append('--allow-public')
+
     if allow_shell:
         args.append('--allow-shell')
+
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
 
     try:
@@ -651,13 +665,22 @@ def main():  #pragma no cover
     """
     OpenMDAO factory service process.
 
-    Usage: python objserverfactory.py [--allow-shell][--hosts=filename][--port=number][--prefix=name]
+    Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--users=filename][--port=number][--prefix=name]
+
+    allow-public:
+        Allows access by anyone from any allowed host.
+        Use with care!
 
     allow-shell:
-        Allows access to :meth:`execute_command`.
+        Allows access to :meth:`execute_command` and :meth:`load_model`.
+        Use with care!
 
     hosts: string
         Filename for allowed hosts specification. Default 'hosts.allow'.
+
+    users: string
+        Filename for allowed users specification.
+        Default '~/.ssh/authorized_keys'
 
     port: int
         Server port (default of 0 implies next available port).
@@ -678,11 +701,15 @@ def main():  #pragma no cover
     public key information.
     """
     parser = optparse.OptionParser()
+    parser.add_option('--allow-public', action='store_true', default=False,
+                      help='allows access by any user, use with care!')
     parser.add_option('--allow-shell', action='store_true', default=False,
-                      help='allows access to execute_command(), use with care!')
+                      help='allows potential shell access, use with care!')
     parser.add_option('--hosts', action='store', type='str',
-                      default='hosts.allow',
-                      help='server port (0 implies next available port)')
+                      default='hosts.allow', help='Filename for allowed hosts')
+    parser.add_option('--users', action='store', type='str',
+                      default='~/.ssh/authorized_keys',
+                      help='Filename for allowed users')
     parser.add_option('--port', action='store', type='int', default=0,
                       help='server port (0 implies next available port)')
     parser.add_option('--prefix', action='store', default='server',
@@ -692,6 +719,8 @@ def main():  #pragma no cover
     if arguments:
         parser.print_help()
         sys.exit(1)
+
+    _LOGGER.setLevel(logging.DEBUG)
 
     server_key = options.prefix+'.key'
     server_cfg = options.prefix+'.cfg'
@@ -706,6 +735,31 @@ def main():  #pragma no cover
         os.remove(server_key)
     except IOError:
         pass
+
+    if options.allow_shell:
+        msg = 'Shell access is ALLOWED'
+        _LOGGER.warning(msg)
+        print msg
+
+    # Get allowed_users.
+    if options.allow_public:
+        allowed_users = None
+        msg = 'Public access is ALLOWED'
+        _LOGGER.warning(msg)
+        print msg
+    else:
+        if os.path.exists(options.users):
+            allowed_users = read_authorized_keys(options.users, _LOGGER)
+            if not allowed_users:
+                msg = 'No authorized keys?'
+                _LOGGER.error(msg)
+                print msg
+                sys.exit(1)
+        else:
+            msg = 'Allowed users file %r does not exist.' % options.users
+            _LOGGER.error(msg)
+            print msg
+            sys.exit(1)
 
     if options.port >= 0:
         # Get allowed_hosts.
@@ -733,17 +787,15 @@ def main():  #pragma no cover
         allowed_hosts = None
 
     # Get address and create manager.
-    _LOGGER.setLevel(logging.DEBUG)
     if options.port >= 0:
         address = (platform.node(), options.port)
     else:
         address = None
     _LOGGER.info('Starting FactoryManager %s %r', address, keytype(authkey))
-    if options.allow_shell:
-        _LOGGER.warning('Shell access is ALLOWED')
     current_process().authkey = authkey
     manager = _FactoryManager(address, authkey, name='Factory',
                               allowed_hosts=allowed_hosts,
+                              allowed_users=allowed_users,
                               allow_shell=options.allow_shell)
 
     # Get server, retry if specified address is in use.

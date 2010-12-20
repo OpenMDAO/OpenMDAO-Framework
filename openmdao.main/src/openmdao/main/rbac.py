@@ -143,15 +143,22 @@ class Credentials(object):
         return Credentials(data, signature)
 
     @staticmethod
-    def verify(encoded):
+    def verify(encoded, allowed_users):
         """
         Verify that `encoded` is a valid encoded credentials object and that
         its public key matches the public key we've already seen, if any.
 
+        encoded: tuple
+            Encoded credentials.
+
+        allowed_users: dict
+            Dictionary of users and corresponding public keys allowed access.
+            If None, any user may access. If empty, no user may access.
+
         Returns :class:`Credentials` object from `encoded`.
         """
         try:
-            return _VERIFY_CACHE[encoded]
+            credentials = _VERIFY_CACHE[encoded]
         except KeyError:
             credentials = Credentials.decode(encoded)
             user = credentials.user
@@ -160,7 +167,19 @@ class Credentials(object):
                     raise CredentialsError('Public key mismatch for %r' % user)
             else:
                 _VERIFY_CACHE[encoded] = credentials
-            return credentials
+
+        if allowed_users is not None:
+            try:
+                pubkey = allowed_users[credentials.user]
+            except KeyError:
+                raise CredentialsError('User %r not in allowed_users' \
+                                       % credentials.user)
+            else:
+                if (credentials.public_key.e != pubkey.e) or \
+                   (credentials.public_key.n != pubkey.n):
+                    raise CredentialsError('Allowed user mismatch for %r' \
+                                           % credentials.user)
+        return credentials
 
 
 def set_credentials(credentials):

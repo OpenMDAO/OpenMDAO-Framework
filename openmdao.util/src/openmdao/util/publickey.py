@@ -3,6 +3,7 @@ import cPickle
 import getpass
 import logging
 import os.path
+import socket
 import sys
 import threading
 
@@ -204,7 +205,7 @@ def decode_public_key(text):
     return cPickle.loads(base64.b64decode(text))
 
 
-def authorized_keys(filename=None, logger=None):
+def read_authorized_keys(filename=None, logger=None):
     """
     Return dictionary of public keys, indexed by user, read from `filename`.
     The default is '~/.ssh/authorized_keys'.  The file must be in ssh form,
@@ -218,7 +219,7 @@ def authorized_keys(filename=None, logger=None):
 
     keys = {}
     if not os.path.exists(filename):
-        logger.debug('%r does not exist', filename)
+        logger.error('%r does not exist', filename)
         return keys
 
     with open(filename, 'r') as inp:
@@ -232,16 +233,29 @@ def authorized_keys(filename=None, logger=None):
 
             fields = line.split()
             if len(fields) != 3:
-                logger.debug('bad line (require exactly 3 fields):')
-                logger.debug(line)
+                logger.error('bad line (require exactly 3 fields):')
+                logger.error(line)
                 continue
 
-            key_type, key_data, user = fields
+            key_type, key_data, user_host = fields
             if key_type != 'ssh-rsa':
-                logger.debug('unsupported key type: %r', key_type)
+                logger.error('unsupported key type: %r', key_type)
                 continue
 
-            logger.debug('user: %r', user)
+            try:
+                user, host = user_host.split('@')
+            except ValueError:
+                logger.error('bad line (require user@host):')
+                logger.error(line)
+                continue
+
+            logger.debug('user %r, host %r', user, host)
+            try:
+                ip_addr = socket.gethostbyname(host)
+            except socket.gaierror:
+                logger.error('unknown host %r', host)
+                logger.error(line)
+                continue
 
             data = base64.b64decode(key_data)
             start = 0
@@ -249,7 +263,8 @@ def authorized_keys(filename=None, logger=None):
             start += 4
             name = data[start:start+name_len]
             if name != 'ssh-rsa':
-                logger.debug('    name error: %r vs. ssh-rsa', name)
+                logger.error('name error: %r vs. ssh-rsa', name)
+                logger.error(line)
                 continue
 
             start += name_len
@@ -262,15 +277,16 @@ def authorized_keys(filename=None, logger=None):
             n = _longint(data, start, n_len)
             start += n_len
             if start != len(data):
-                logger.debug('    length error: %d vs. %d', start, len(data))
+                logger.error('length error: %d vs. %d', start, len(data))
+                logger.error(line)
                 continue
 
             try:
                 pubkey = RSA.construct((n, e))
             except Exception as exc:
-                logger.debug('    construct error: %r', exc)
+                logger.error('key construct error: %r', exc)
             else:
-                keys[user] = pubkey
+                keys[user_host] = pubkey
 
     return keys
 
@@ -280,4 +296,35 @@ def _longint(buf, start, length):
         value = (value << 8) + ord(buf[start])
         start += 1
     return value
+
+
+def write_authorized_keys(allowed_users, filename, logger=None):
+    """
+    Write `allowed_users` to `filename` in ssh authorized_keys format.
+    """
+    with open(filename, 'w') as out:
+        for user in sorted(allowed_users.keys()):
+            pubkey = allowed_users[user]
+            buf = 'ssh-rsa'
+            key_data  = _longstr(len(buf), 4)
+            key_data += buf
+            buf = _longstr(pubkey.e)
+            key_data += _longstr(len(buf), 4)
+            key_data += buf
+            buf = _longstr(pubkey.n)
+            key_data += _longstr(len(buf), 4)
+            key_data += buf
+            data = base64.b64encode(key_data)
+            out.write('ssh-rsa %s %s\n\n' % (data, user))
+    _make_private(filename)
+
+def _longstr(num, length=0):
+    buf = chr(num & 0xff)
+    num >>= 8
+    while num:
+        buf = chr(num & 0xff) + buf
+        num >>= 8
+    while len(buf) < length:
+        buf = chr(0) + buf
+    return buf
 
