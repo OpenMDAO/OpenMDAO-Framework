@@ -64,7 +64,6 @@ class Array(TraitArray):
             
             # Make sure default matches the shape.
             if len(shape) != len(default_value.shape):
-            if default_value.shape != shape:
                 raise TraitError("Shape of the default value does not match "
                                  "the shape attribute.")
             for i, sh in enumerate(shape):
