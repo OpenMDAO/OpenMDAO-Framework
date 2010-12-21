@@ -86,23 +86,23 @@ occurs when the transmission is in first gear.
 
 **Transmission - Design Variables:**
 
-==================  ===========================================  ======
-Variable            Description                                  Units
-==================  ===========================================  ======
-ratio1              Gear ratio in first gear
-------------------  -------------------------------------------  ------
-ratio2              Gear ratio in second gear
-------------------  -------------------------------------------  ------
-ratio3              Gear ratio in third gear
-------------------  -------------------------------------------  ------
-ratio4              Gear ratio in fourth gear
-------------------  -------------------------------------------  ------
-ratio5              Gear ratio in fifth gear
-------------------  -------------------------------------------  ------
-final_drive_ratio   Gear ratio for vehicle's differential
-------------------  -------------------------------------------  ------
-tire_circumference  Circumference of the tire                    inch
-==================  ===========================================  ======
+======================  ===========================================  ======
+Variable                Description                                  Units
+======================  ===========================================  ======
+``ratio1``              Gear ratio in first gear
+----------------------  -------------------------------------------  ------
+``ratio2``              Gear ratio in second gear
+----------------------  -------------------------------------------  ------
+``ratio3``              Gear ratio in third gear
+----------------------  -------------------------------------------  ------
+``ratio4``              Gear ratio in fourth gear
+----------------------  -------------------------------------------  ------
+``ratio5``              Gear ratio in fifth gear
+----------------------  -------------------------------------------  ------
+``final_drive_ratio``   Gear ratio for vehicle's differential
+----------------------  -------------------------------------------  ------
+``tire_circumference``  Circumference of the tire                    inch
+======================  ===========================================  ======
 
 |
 
@@ -111,9 +111,9 @@ tire_circumference  Circumference of the tire                    inch
 =================     ===========================================  ======
 Variable              Description                                  Units
 =================     ===========================================  ======
-current_gear          Current gear position
+``current_gear``      Current gear position
 -----------------     -------------------------------------------  ------
-velocity              Current vehicle velocity                     m/s
+``velocity``          Current vehicle velocity                     m/s
 =================     ===========================================  ======
 
 |
@@ -123,10 +123,10 @@ velocity              Current vehicle velocity                     m/s
 =================  ===========================================  ======
 Variable           Description                                  Units
 =================  ===========================================  ======
-torque_ratio       Ratio of transmission output power to power 
+``torque_ratio``   Ratio of transmission output power to power 
                    at the wheel
 -----------------  -------------------------------------------  ------
-RPM    		   Engine rotational speed			rpm
+``RPM``            Engine rotational speed			rpm
 =================  ===========================================  ======
 
   
@@ -179,29 +179,29 @@ weight and provide it as an output.
 
 **Engine - Design Variables:**
 
-=================  ===========================================  ======
-**Variable**           **Description**            **Units**
-=================  ===========================================  ======
-stroke             Length of compression zone in cylinder       mm
------------------  -------------------------------------------  ------
-bore               Bore (cylinder diameter)                     mm
------------------  -------------------------------------------  ------
-conrod             Connecting rod length                        mm
------------------  -------------------------------------------  ------
-comp_ratio         Volumetric ratio of compression            
------------------  -------------------------------------------  ------
-spark_angle        Spark angle with respect to top dead center  deg
------------------  -------------------------------------------  ------
-n_cyl              Number of Cylinders    
------------------  -------------------------------------------  ------
-IVO                Intake valve open before top dead center     deg
------------------  -------------------------------------------  ------
-IVC                Intake valve close after bottom dead center  deg
------------------  -------------------------------------------  ------
-L_v                Maximum valve lift                           mm
------------------  -------------------------------------------  ------
-D_v                Intake valve diameter                        mm
-=================  ===========================================  ======
+=================  ===========================================  ========
+**Variable**       **Description**            			**Units**
+=================  ===========================================  ========
+``stroke``         Length of compression zone in cylinder       mm
+-----------------  -------------------------------------------  --------
+``bore``           Bore (cylinder diameter)                     mm
+-----------------  -------------------------------------------  --------
+``conrod``         Connecting rod length                        mm
+-----------------  -------------------------------------------  --------
+``comp_ratio``     Volumetric ratio of compression            
+-----------------  -------------------------------------------  --------
+``spark_angle``    Spark angle with respect to top dead center  deg
+-----------------  -------------------------------------------  --------
+``n_cyl``          Number of Cylinders    
+-----------------  -------------------------------------------  --------
+``IVO``            Intake valve open before top dead center     deg
+-----------------  -------------------------------------------  --------
+``IVC``            Intake valve close after bottom dead center  deg
+-----------------  -------------------------------------------  --------
+``L_v``            Maximum valve lift                           mm
+-----------------  -------------------------------------------  --------
+``D_v``            Intake valve diameter                        mm
+=================  ===========================================  ========
 
 |
 
@@ -222,13 +222,13 @@ throttle           Throttle position
 =================  ===========================================  ======
 Variable           Description                                  Units
 =================  ===========================================  ======
-power              Power produced by engine                     kW
+``power``          Power produced by engine                     kW
 -----------------  -------------------------------------------  ------
-torque             Torque produced by engine                    N*m
+``torque``         Torque produced by engine                    N*m
 -----------------  -------------------------------------------  ------
-fuel_burn          Fuel burn rate                               l/sec
+``fuel_burn``      Fuel burn rate                               l/sec
 -----------------  -------------------------------------------  ------
-engine_weight      Engine weight estimate                       kg
+``engine_weight``  Engine weight estimate                       kg
 =================  ===========================================  ======
 
 
@@ -255,33 +255,33 @@ tires and the vehicle drag which is proportional to the square of velocity.
 **Chassis - Design Variables:**
 
 =================  ===========================================  ======
-**Variable**           **Description**                          **Units**
+**Variable**       **Description**                              **Units**
 =================  ===========================================  ======
-mass_vehicle       Vehicle mass                                 kg
+``mass_vehicle``   Vehicle mass                                 kg
 -----------------  -------------------------------------------  ------
-Cf                 Rolling friction coefficient            
+``Cf``             Rolling friction coefficient            
 -----------------  -------------------------------------------  ------
-Cd                 Drag coefficient            
+``Cd``             Drag coefficient            
 -----------------  -------------------------------------------  ------
-area               Front profile area                           m*m
+``area``           Front profile area                           m*m
 =================  ===========================================  ======
 
 |
 
 **Chassis - Simulation Inputs:**
 
-==================  ===========================================  ======
-**Variable**        **Description**                              **Units**
-==================  ===========================================  ======
-mass_engine         Engine mass estimate                         kg
-------------------  -------------------------------------------  ------
-velocity            Current vehicle velocity                     m/s
-------------------  -------------------------------------------  ------
-torque_ratio        Ratio of transmission output power to power 
-                    at the wheel
-------------------  -------------------------------------------  ------
-tire_circumference  Circumference of the tire                    m
-==================  ===========================================  ======
+======================  ===========================================  ======
+**Variable**            **Description**                              **Units**
+======================  ===========================================  ======
+``mass_engine``         Engine mass estimate                         kg
+----------------------  -------------------------------------------  ------
+``velocity``            Current vehicle velocity                     m/s
+----------------------  -------------------------------------------  ------
+``torque_ratio``        Ratio of transmission output power to power 
+                        at the wheel
+----------------------  -------------------------------------------  ------
+``tire_circumference``  Circumference of the tire                    m
+======================  ===========================================  ======
 
 |
 
@@ -437,7 +437,7 @@ from its inputs. We must create the variables that define these inputs and outpu
         torque_ratio = Float(0., iotype='out',
                              desc='Ratio of output torque to engine torque')    
 
-The *Int* and *Floa*t variable types were introduced in previous tutorials, but some new parameters are
+The *Int* and *Float* variable types were introduced in previous tutorials, but some new parameters are
 used here, including the *Enum* type.
 
 .. index:: PEP 8
@@ -458,7 +458,7 @@ default value are covered in previous tutorials. The parameter *units* is
 introduced here and is used in a few of the variables in Transmission. OpenMDAO contains a Units
 module that allows for unit checking and conversion between outputs and
 inputs of components. Our units definitions are based on the those given in
-Scientific Python and can be found the :ref:`Summary-of-Units`. If an output and an
+Scientific Python and can be found the :ref:`Appendix:-Summary-of-Units`. If an output and an
 input of the same unit class (e.g., length) are connected in the framework, the value is automatically
 converted as it is passed from the output to the input. If an output and an input
 of a different unit class are connected (e.g., length and time), an exception is
@@ -701,7 +701,7 @@ other components and included in other assemblies once its variables
 are defined. We would like to promote all of the design and simulation
 variables from the Engine, Transmission, and Chassis components to the input
 and output of the Vehicle assembly. OpenMDAO includes a shortcut for doing
-this quickly by creating passthroughs:
+this quickly by creating *passthroughs*:
 
 .. testcode:: Code5
 
@@ -902,7 +902,7 @@ Sockets and Interfaces
 Now that we have a functional and quick Vehicle assembly, we need to complete
 the problem by providing a way to simulate the acceleration and the EPA fuel
 economy estimates. The acceleration test requires an integration in time to
-match a specified velocity profile. In other words, the vehicle assembly need
+match a specified velocity profile. In other words, the vehicle assembly needs 
 to be executed at each time step to produce the instantaneous acceleration.
 The EPA fuel economy tests are a bit more tricky, though they also require an integration in
 time. For these tests, the vehicle assembly must be executed while varying the throttle and
@@ -913,7 +913,7 @@ called *DrivingSim.*  This component is found in ``driving_sim.py.``
 The component DrivingSim contains an ``execute`` function that performs the time
 integration on a Vehicle component. It is not important to understand the
 execution details. The basic premise is that this simulation component needs
-to contain another OpenMDAO component. This can be done through use of a socket.
+to contain another OpenMDAO component. This can be done by using a *Socket.*
 
 In OpenMDAO, Sockets are placeholders where different objects can be
 substituted to modify the function of a Component. They are used by
@@ -924,7 +924,7 @@ wing might provide a Socket to allow the user to insert a custom flap drag
 calculation. In the example problem section, a Design Of Experiment (DOE)
 Driver uses a Socket to allow different types of DOE to be used.
 
-A socket can be declared in the DrivingSim class using an *Instance* trait:
+A Socket can be declared in the DrivingSim class using an *Instance* trait:
 
 .. testcode:: Socket_to_me
 
@@ -977,15 +977,15 @@ passing data in the framework.
 **DrivingSim - Outputs:**
 
 =================  ===========================================  ========
-Variable	 	Description			        Units
+Variable	   Description			                Units
 =================  ===========================================  ========
-accel_time	   Time for vehicle to accelerate to 60 mph 	s
+``accel_time``	   Time for vehicle to accelerate to 60 mph 	s
 		   from a stop.
 -----------------  -------------------------------------------  --------
-EPA_city    	   Fuel economy estimate based on EPA city	mi/galUS
+``EPA_city``       Fuel economy estimate based on EPA city	mi/galUS
 		   driving profile
 -----------------  -------------------------------------------  --------
-EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
+``EPA_highway``    Fuel economy estimate based on EPA highway	mi/galUS
 		   driving profile
 =================  ===========================================  ========
 
@@ -1112,7 +1112,7 @@ variables one at a time using multiple calls to ``add_parameter``, but we can
 also submit them with a single call to ``add_parameters`` by placing the information
 for each design variable in a list of tuples. The information we need for each
 variable is the expression that points to it (e.g., ``driving_sim.spark_angle``), and
-the minimum and maximum value of the search range for that variable (e.g., -.50, 10).
+the minimum and maximum value of the search range for that variable (e.g., ``-.50, 10``).
 Once again, if the min and max aren't specified, the low and high attributes
 from the OpenMDAO variable will be used if they have been specified.
 
@@ -1221,7 +1221,7 @@ You can build up more complicated expressions from any number of OpenMDAO variab
 	        # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
         	self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
 
-Here, we used a weighted sum of the EPA city and highway fuel economy estimates as the objective in a maximization problem.
+Here we used a weighted sum of the EPA city and highway fuel economy estimates as the objective in a maximization problem.
 Try solving the same optimization problem using this objective.
 
 ::

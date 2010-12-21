@@ -257,7 +257,7 @@ the top level optimization loop.
                 self.driver.workflow.add(['bcastr', 'fixed_point_iterator'])
                 
 So far nothing is really new in terms of syntax. Note that the top level driver is
-always named ``'driver'``. However, all other drivers can be given any valid name. For this
+always named *'driver'*. However, all other drivers can be given any valid name. For this
 model, we've chosen to use the ``FixedPointIterator``.
 
 Next, we need to create the workflow for the solver. We create instances of ``SellarDiscipline1``
@@ -440,7 +440,7 @@ output that resembles this:
 We can also replace the fixed point iterator with a better solver. Fixed point
 iteration works for some problems, including this one, but may not converge to
 a solution for other problems. OpenMDAO also contains a Broyden solver called
-``BroydenSolver``. This solver is based on a quasi-Newton-Raphson algorithm found in 
+*BroydenSolver*. This solver is based on a quasi-Newton-Raphson algorithm found in 
 ``scipy.nonlinear``. It uses a Broyden update to approximate the Jacobian. If we
 replace ``FixedPointIterator`` with ``BroydenSolver``, the optimizer's workflow
 looks like this:
@@ -517,7 +517,7 @@ the two disciplines are executed sequentially.
    
    Iteration Hierarchy for IDF
    
-Next, we will create the SellarIDF assembly. First, all of our components
+Next, we will create the ``SellarIDF`` assembly. First, all of our components
 are instantiated and the workflow is defined.
    
 .. testcode:: IDF_parts

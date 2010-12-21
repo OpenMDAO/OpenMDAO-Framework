@@ -56,7 +56,7 @@ precision. Consider a variable with 15 digits of precision.
     >>> print "%.16f" % val
     3.1415926535897931
     
-If the variable's value in the input file is created using the `print`
+If the variable's value in the input file is created using the ``print``
 statement, only 11 digits of precision are in the generated output. The same
 is true if you convert the value to a string and use string output formatting.
 Printing the variable as a floating point number with no format string gives
@@ -89,7 +89,7 @@ telling the code to output the full precision.
 Running the External Code
 -------------------------
 
-The ExternalCode component takes care of the mundane tasks associated with 
+The ``ExternalCode`` component takes care of the mundane tasks associated with 
 executing the external application. These include:
 
 - Making the system call using the Subprocess module
@@ -129,7 +129,7 @@ do this for a simple component.
             # (Parse output file here)
 
 This component still needs one more piece of information -- the command
-string that runs the external code. The ExternalCode object has an attribute
+string that runs the external code. The ``ExternalCode`` object has an attribute
 named `command` which takes the command string. So, if you want to execute a
 code that you normally run by typing
 
@@ -144,7 +144,7 @@ at the command prompt, then you need to set the command attribute as follows:
     MyComp = WrappedComp()
     MyComp.command = '/usr/bin/externalcode -v -r1'
     
-Note that you could also declare this in the ``__init__`` function of WrappedComp if it
+Note that you could also declare this in the ``__init__`` function of ``WrappedComp`` if it
 is something that you don't expect the user will need to change. The same is true
 of the other attributes described below.
 
@@ -152,7 +152,7 @@ This example is ready to execute, although it is missing the code that writes
 out the input file and parses the output file. Subsequent sections explain how
 to write these.
 
-The ExternalCode object also allows you to specify `stdout, stdin,` and `stderr`.
+The ``ExternalCode`` object also allows you to specify `stdout, stdin,` and `stderr`.
 For example, if your application handled input and output on the command line
 using `stdout` and `stdin` as such:
 
@@ -160,7 +160,7 @@ using `stdout` and `stdin` as such:
 
         /usr/bin/externalcode -v -r1 < myinput.txt > myoutput.txt
         
-you can tell ExternalCode to append these to your command line by setting the
+you can tell ``ExternalCode`` to append these to your command line by setting the
 following attributes:
 
 .. testcode:: External_Code
@@ -263,11 +263,11 @@ input file that contains some integer, floating point, and string inputs:
     A B C
     
 This is a valid input file for your application, and it can also be used as a
-template file. The templating object is called `InputFileGenerator,` and it
+template file. The templating object is called ``InputFileGenerator``, and it
 includes methods that can replace specific fields as measured by their row
 and field numbers. 
 
-To use the InputFileGenerator object, first instantiate it and give it the name of
+To use the ``InputFileGenerator`` object, first instantiate it and give it the name of
 the template file and the name of the output file that you want to produce. (Note
 that this code must be placed in the ``execute`` function of your component
 *before* the external code is run. See :ref:`Running-the-External-Code`.) The
@@ -463,7 +463,7 @@ one of the community-developed engines, such as mako_ or django_.
 .. todo:: Include some examples with one of the templating engines.
 
 
-..index:: Fortran namelists
+.. index:: Fortran namelists
 
 Generating the Input File - Fortran Namelists
 ---------------------------------------------
@@ -548,21 +548,21 @@ Note that this component is derived from ExternalCode and uses a few of its
 features, so it is important to read :ref:`Running-the-External-Code` before
 proceeding.
 
-In the ``execute`` method, a *Namelist* object is instantiated. This object
+In the ``execute`` method, a ``Namelist`` object is instantiated. This object
 allows you to sequentially build up a namelist input file. The only argument
-is `self`, which is passed because the Namelist object needs to access your
+is `self`, which is passed because the ``Namelist`` object needs to access your
 component's OpenMDAO variables in order to automatically determine the data
 type. The ``set_filename`` method is used to set the name of the input file that
 will be written. Here, you just pass it the variable ``self.stdin``, which is part
 of the ExternalCode API.
 
-The first card you create for the Namelist is the title card, which is
+The first card you create for the ``Namelist`` is the title card, which is
 optionally assigned with the ``set_title`` method. After this, the first
 namelist group is declared with the ``add_group`` method. Subsequent variables
 are added to this namelist grouping. If ``add_group`` is called again, the
 current group is closed, and any further variables are added to the new one.
 
-The ``add_var`` method is used to add a variable to the Namelist. The only
+The ``add_var`` method is used to add a variable to the ``Namelist``. The only
 needed argument is the variable's name in the component. The variable's type
 is used to determine what kind of namelist variable to output. If you need to
 add something to the namelist that isn't contained in one of the component's
@@ -585,7 +585,7 @@ move on to running your code.
 *Parsing a Namelist File*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Namelist object also includes some functions for parsing a namelist file and
+The ``Namelist`` object also includes some functions for parsing a namelist file and
 loading the variable values into a component's list of variables. Doing this 
 can be useful for loading in models that were developed when your code was executed
 standalone.
@@ -618,7 +618,7 @@ text-file output:
 
 As part of the file wrap, you need to reach into this file and grab the information
 that is needed by downstream components in the model. OpenMDAO includes an
-object called `FileParser`, which contains functions for parsing a file, grabbing
+object called ``FileParser``, which contains functions for parsing a file, grabbing
 the fields you specify, and applying them to the appropriate data type. For this to
 work, the file must have some general format that would allow you to locate the
 piece of data you need relative to some constant feature in the file. In other
@@ -633,7 +633,7 @@ characters that is some number of lines and some number of fields away from an
     parser = FileParser()
     parser.set_file('myoutput.txt')
     
-To use the FileParser object, first instantiate it and give it the name of the
+To use the ``FileParser`` object, first instantiate it and give it the name of the
 output file. (Note that this code must be placed in your component's
 ``execute`` function *after* the external code has been run. See
 :ref:`Running-the-External-Code`.)
@@ -677,7 +677,7 @@ second field in the first line down from the anchor. The parser is smart enough 
 recognize the number as floating point and to create a Python float variable.
 The final statement assigns this value to the component variable `xreal`.
 
-The third value of ``STRESS`` is `NaN`. If you want to grab that element, you can type
+The third value of ``STRESS`` is ``NaN``. If you want to grab that element, you can type
 this:
 
 ::
