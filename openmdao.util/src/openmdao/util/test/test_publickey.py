@@ -11,7 +11,7 @@ import unittest
 import nose
 
 from openmdao.util.publickey import generate_key_pair, _KEY_CACHE, \
-                                    _is_private, HAVE_PYWIN32, \
+                                    is_private, make_private, HAVE_PYWIN32, \
                                     read_authorized_keys, write_authorized_keys
 
 class TestCase(unittest.TestCase):
@@ -38,12 +38,12 @@ class TestCase(unittest.TestCase):
 
         # Check privacy.
         if sys.platform != 'win32' or HAVE_PYWIN32:
-            self.assertTrue(_is_private(key_file))
+            self.assertTrue(is_private(key_file))
             if sys.platform == 'win32':
                 public_file = os.environ['COMSPEC']
             else:
                 public_file = '/bin/sh'
-            self.assertFalse(_is_private(public_file))
+            self.assertFalse(is_private(public_file))
 
     def test_authorized_keys(self):
         logging.debug('')
@@ -76,6 +76,8 @@ ssh-rsa ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 """ % {'host': hostname}
         with open('key_data', 'w') as out:
             out.write(key_data)
+            if sys.platform != 'win32' or HAVE_PYWIN32:
+                make_private('key_data')
         try:
             keys = read_authorized_keys('key_data', logging.getLogger())
             for name, key in keys.items():
@@ -88,21 +90,29 @@ ssh-rsa ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
             os.remove('key_data')
 
         # Write and read-back.
+        key_file = 'users.allow'
         try:
-            write_authorized_keys(keys, 'users.allow')
-            new_keys = read_authorized_keys('users.allow')
-            self.assertEqual(len(keys), len(new_keys))
-            for user in sorted(keys.keys()):
-                pubkey = keys[user]
-                try:
-                    new_pubkey = new_keys[user]
-                except KeyError:
-                    self.fail('new_keys is missing %r', user)
-                self.assertEqual(new_pubkey.n, pubkey.n)
-                self.assertEqual(new_pubkey.e, pubkey.e)
+            write_authorized_keys(keys, key_file)
+            if sys.platform != 'win32' or HAVE_PYWIN32:
+                self.assertTrue(is_private(key_file))
+                new_keys = read_authorized_keys(key_file)
+                self.assertEqual(len(keys), len(new_keys))
+                for user in sorted(keys.keys()):
+                    pubkey = keys[user]
+                    try:
+                        new_pubkey = new_keys[user]
+                    except KeyError:
+                        self.fail('new_keys is missing %r', user)
+                    self.assertEqual(new_pubkey.n, pubkey.n)
+                    self.assertEqual(new_pubkey.e, pubkey.e)
+            
+            if sys.platform != 'win32':
+                os.chmod(key_file, 0644)
+                new_keys = read_authorized_keys(key_file)
+                self.assertEqual(new_keys, {})
         finally:
-            if os.path.exists('users.allow'):
-                os.remove('users.allow')
+            if os.path.exists(key_file):
+                os.remove(key_file)
 
         # Try default file, which may or may not exist.
         keys = read_authorized_keys(logger=logging.getLogger())

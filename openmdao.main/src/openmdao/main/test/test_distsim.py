@@ -280,9 +280,6 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         """ Start server process. """
-        global _SERVER_ID
-        _SERVER_ID += 1
-
         self.n_errors = len(self.test_result.errors)
         self.n_failures = len(self.test_result.failures)
 
@@ -290,7 +287,11 @@ class TestCase(unittest.TestCase):
         self.keepdirs = os.environ.get('OPENMDAO_KEEPDIRS', '0')
         os.environ['OPENMDAO_KEEPDIRS'] = '1'
 
-        # Start each server process in a unique directory.
+    def start_factory(self, port=None, allowed_users=None):
+        """ Start each factory process in a unique directory. """
+        global _SERVER_ID
+        _SERVER_ID += 1
+
         server_dir = 'Factory_%d' % _SERVER_ID
         if os.path.exists(server_dir):
             shutil.rmtree(server_dir)
@@ -302,9 +303,16 @@ class TestCase(unittest.TestCase):
             logging.debug('')
             logging.debug('tester pid: %s', os.getpid())
             logging.debug('starting server...')
-            # Exercise both AF_INET and AF_UNIX/AF_PIPE.
-            port = -1 if _SERVER_ID & 1 else 0
-            self.server = start_server(port=port)
+
+            if port is None:
+                # Exercise both AF_INET and AF_UNIX/AF_PIPE.
+                port = -1 if _SERVER_ID & 1 else 0
+
+            if allowed_users is None:
+                credentials = get_credentials()
+                allowed_users = {credentials.user: credentials.public_key}
+
+            self.server = start_server(port=port, allowed_users=allowed_users)
             self.address, self.port, self.key = read_server_config('server.cfg')
             logging.debug('server pid: %s', self.server.pid)
             logging.debug('server address: %s', self.address)
@@ -338,6 +346,8 @@ class TestCase(unittest.TestCase):
     def test_1_client(self):
         logging.debug('')
         logging.debug('test_client')
+
+        self.start_factory()
 
         # List available types.
         types = self.factory.get_available_types()
@@ -401,6 +411,8 @@ class TestCase(unittest.TestCase):
     def test_2_model(self):
         logging.debug('')
         logging.debug('test_model')
+
+        self.start_factory()
 
         # Create model and run it.
         box = self.factory.create(_MODULE+'.Box')
@@ -479,17 +491,23 @@ class TestCase(unittest.TestCase):
         # This 'spook' creation is only for testing.
         # Normally the protector would run with regular credentials
         # in effect at the proprietary site.
-        user = 'spooky@spooks-r-us.com'
+        user = 'spooky@'+socket.gethostname()
         key_pair = generate_key_pair(user)
         data = '\n'.join([user, '0', key_pair.publickey().exportKey()])
         hash = hashlib.sha256(data).digest()
         signature = key_pair.sign(hash, get_random_bytes)
         spook = Credentials(data, signature)
 
+        credentials = get_credentials()
+        allowed_users = {credentials.user: credentials.public_key,
+                         spook.user: spook.public_key}
+        self.start_factory(allowed_users=allowed_users)
+
         # Create model and run it.
         saved = get_credentials()
         set_credentials(spook)
-        box = self.factory.create(_MODULE+'.ProtectedBox')
+        box = self.factory.create(_MODULE+'.ProtectedBox',
+                                  allowed_users=allowed_users)
         set_credentials(saved)
 
         model = set_as_top(Model(box))
@@ -535,6 +553,8 @@ class TestCase(unittest.TestCase):
     def test_4_authkey(self):
         logging.debug('')
         logging.debug('test_authkey')
+
+        self.start_factory()
 
         # Start server in non-public-key mode.
         # Connections must have matching authkey,
@@ -589,6 +609,8 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_misc')
 
+        self.start_factory()
+
         # Try using a server after being released, server never used before.
         server = self.factory.create('')
         self.factory.release(server)
@@ -642,6 +664,11 @@ class TestCase(unittest.TestCase):
         code = compile('3 + 4', '<string>', 'eval')
         assert_raises(self, 'self.factory.echo(code)', globals(), locals(),
                       cPickle.PicklingError, "Can't pickle <type 'code'>")
+
+        # Server startup failure.
+        assert_raises(self, 'self.start_factory(port=0, allowed_users={})',
+                      globals(), locals(), RuntimeError,
+                      'Server startup failed')
 
 
 if __name__ == '__main__':

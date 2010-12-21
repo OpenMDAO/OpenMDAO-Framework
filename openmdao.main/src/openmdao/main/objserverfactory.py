@@ -170,9 +170,11 @@ class ObjServerFactory(Factory):
         res_desc: dict or None
             Required resources. Currently not used.
 
-        ctor_args:
-            Other constructor arguments.  If `name` is specified, that
-            is used as the name of the :class:`ObjServer`.
+        ctor_args: dict
+            Other constructor arguments.
+            If `name` or `allowed_users` are specified, they are used when
+            creating the :class:`ObjServer`. If no `allowed_users` are
+            specified, the server is private to the current user.
         """
         self._logger.info('create typname %r, version %r server %s,'
                           ' res_desc %s, args %s', typname, version, server,
@@ -182,7 +184,14 @@ class ObjServerFactory(Factory):
             name = ctor_args.get('name', '')
             if not name:
                 name = 'Server_%d' % (len(self._managers) + 1)
-            manager = _ServerManager(authkey=self._authkey, name=name)
+            allowed_users = ctor_args.get('allowed_users')
+            if not allowed_users:
+                credentials = get_credentials()
+                allowed_users = {credentials.user: credentials.public_key}
+            else:
+                del ctor_args['allowed_users']
+            manager = _ServerManager(authkey=self._authkey,
+                                     allowed_users=allowed_users, name=name)
             root_dir = name
             count = 1
             while os.path.exists(root_dir):
@@ -579,13 +588,16 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
 
     allowed_hosts: list(string)
         Host address patterns to check against. Required if `port` >= 0.
+        Ignored if `allowed_users` is specified.
 
     allowed_users: dict
         Dictionary of users and corresponding public keys allowed access.
-        If None, any user may access. If empty, no user may access.
+        If None, *any* user may access. If empty, no user may access.
+        The host portions of user strings are used for address patterns.
 
     allow_shell: bool
-        If True, :meth:`execute_command` is allowed. Use with caution!
+        If True, :meth:`execute_command` and :meth:`load_model` are allowed.
+        Use with caution!
 
     timeout: int
         Seconds to wait for server to start. Note that public key generation
@@ -595,9 +607,6 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
 
     Returns :class:`ShellProc`.
     """
-    if allowed_hosts is None and port >= 0:
-        allowed_hosts = [socket.gethostbyname(socket.gethostname())]
-
     if timeout is None:
         if sys.platform == 'win32' and not HAVE_PYWIN32:
             timeout = 120
@@ -614,11 +623,6 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
     with open(server_key, 'w') as out:
         out.write('%s\n' % authkey)
 
-    if port >= 0:
-        with open('hosts.allow', 'w') as out:
-            for pattern in allowed_hosts:
-                out.write('%s\n' % pattern)
-
     factory_path = pkg_resources.resource_filename('openmdao.main',
                                                    'objserverfactory.py')
     args = ['python', factory_path, '--port', str(port), '--prefix', prefix]
@@ -628,6 +632,12 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
         args.extend(['--users', 'users.allow'])
     else:
         args.append('--allow-public')
+        if port >= 0:
+            if allowed_hosts is None:
+                allowed_hosts = [socket.gethostbyname(socket.gethostname())]
+            with open('hosts.allow', 'w') as out:
+                for pattern in allowed_hosts:
+                    out.write('%s\n' % pattern)
 
     if allow_shell:
         args.append('--allow-shell')
@@ -658,7 +668,6 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
 
 # Remote process code.
 
-_LOGGER = logging.getLogger()
 _SERVER_CFG = ''
 
 def main():  #pragma no cover
@@ -667,27 +676,30 @@ def main():  #pragma no cover
 
     Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--users=filename][--port=number][--prefix=name]
 
-    allow-public:
+    --allow-public:
         Allows access by anyone from any allowed host.
         Use with care!
 
-    allow-shell:
+    --allow-shell:
         Allows access to :meth:`execute_command` and :meth:`load_model`.
         Use with care!
 
-    hosts: string
+    --hosts: string
         Filename for allowed hosts specification. Default 'hosts.allow'.
+        Ignored if '--users' is specified.
 
-    users: string
+    --users: string
         Filename for allowed users specification.
         Default '~/.ssh/authorized_keys'
+        The host portions of user strings are used for allowed hosts.
+        Ignored if '--allow-public' is specified.
 
-    port: int
+    --port: int
         Server port (default of 0 implies next available port).
         Note that ports below 1024 typically require special privileges.
         If port is negative, then a local pipe is used for communication.
 
-    prefix: string
+    --prefix: string
         Prefix for configuration and stdout/stderr files (default 'server').
 
     If ``prefix.key`` exists, it is read for an authorization key string.
@@ -702,25 +714,26 @@ def main():  #pragma no cover
     """
     parser = optparse.OptionParser()
     parser.add_option('--allow-public', action='store_true', default=False,
-                      help='allows access by any user, use with care!')
+                      help='Allows access by any user, use with care!')
     parser.add_option('--allow-shell', action='store_true', default=False,
-                      help='allows potential shell access, use with care!')
+                      help='Allows potential shell access, use with care!')
     parser.add_option('--hosts', action='store', type='str',
                       default='hosts.allow', help='Filename for allowed hosts')
     parser.add_option('--users', action='store', type='str',
                       default='~/.ssh/authorized_keys',
                       help='Filename for allowed users')
     parser.add_option('--port', action='store', type='int', default=0,
-                      help='server port (0 implies next available port)')
+                      help='Server port (0 implies next available port)')
     parser.add_option('--prefix', action='store', default='server',
-                      help='prefix for config and stdout/stderr files')
+                      help='Prefix for config and stdout/stderr files')
 
     options, arguments = parser.parse_args()
     if arguments:
         parser.print_help()
         sys.exit(1)
 
-    _LOGGER.setLevel(logging.DEBUG)
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
 
     server_key = options.prefix+'.key'
     server_cfg = options.prefix+'.cfg'
@@ -738,60 +751,61 @@ def main():  #pragma no cover
 
     if options.allow_shell:
         msg = 'Shell access is ALLOWED'
-        _LOGGER.warning(msg)
+        logger.warning(msg)
         print msg
+
+    allowed_users = None
+    allowed_hosts = None
 
     # Get allowed_users.
     if options.allow_public:
         allowed_users = None
         msg = 'Public access is ALLOWED'
-        _LOGGER.warning(msg)
+        logger.warning(msg)
         print msg
+
+        if options.port >= 0:
+            # Get allowed_hosts.
+            if os.path.exists(options.hosts):
+                try:
+                    allowed_hosts = read_allowed_hosts(options.hosts)
+                except Exception as exc:
+                    msg = "Can't read allowed hosts file %r: %s" \
+                          % (options.hosts, exc)
+                    logger.error(msg)
+                    print msg
+                    sys.exit(1)
+            else:
+                msg = 'Allowed hosts file %r does not exist.' % options.hosts
+                logger.error(msg)
+                print msg
+                sys.exit(1)
+
+            if not allowed_hosts:
+                msg = 'No allowed hosts!?.'
+                logger.error(msg)
+                print msg
+                sys.exit(1)
     else:
         if os.path.exists(options.users):
-            allowed_users = read_authorized_keys(options.users, _LOGGER)
+            allowed_users = read_authorized_keys(options.users, logger)
             if not allowed_users:
                 msg = 'No authorized keys?'
-                _LOGGER.error(msg)
+                logger.error(msg)
                 print msg
                 sys.exit(1)
         else:
             msg = 'Allowed users file %r does not exist.' % options.users
-            _LOGGER.error(msg)
+            logger.error(msg)
             print msg
             sys.exit(1)
-
-    if options.port >= 0:
-        # Get allowed_hosts.
-        if os.path.exists(options.hosts):
-            try:
-                allowed_hosts = read_allowed_hosts(options.hosts)
-            except Exception as exc:
-                msg = "Can't read allowed hosts file %r: %s" \
-                      % (options.hosts, exc)
-                _LOGGER.error(msg)
-                print msg
-                sys.exit(1)
-        else:
-            msg = 'Allowed hosts file %r does not exist.' % options.hosts
-            _LOGGER.error(msg)
-            print msg
-            sys.exit(1)
-
-        if not allowed_hosts:
-            msg = 'No allowed hosts!?.'
-            _LOGGER.error(msg)
-            print msg
-            sys.exit(1)
-    else:
-        allowed_hosts = None
 
     # Get address and create manager.
     if options.port >= 0:
         address = (platform.node(), options.port)
     else:
         address = None
-    _LOGGER.info('Starting FactoryManager %s %r', address, keytype(authkey))
+    logger.info('Starting FactoryManager %s %r', address, keytype(authkey))
     current_process().authkey = authkey
     manager = _FactoryManager(address, authkey, name='Factory',
                               allowed_hosts=allowed_hosts,
@@ -808,13 +822,13 @@ def main():  #pragma no cover
             if str(exc).find('Address already in use') >= 0:
                 if retries < 10:
                     msg = 'Address %s in use, retrying...' % (address,)
-                    _LOGGER.debug(msg)
+                    logger.debug(msg)
                     print msg
                     time.sleep(5)
                     retries += 1
                 else:
                     msg = 'Address %s in use, too many retries.' % (address,)
-                    _LOGGER.error(msg)
+                    logger.error(msg)
                     print msg
                     sys.exit(1)
             else:
@@ -823,7 +837,7 @@ def main():  #pragma no cover
     # Record configuration.
     write_server_config(server, _SERVER_CFG)
     msg = 'Serving on %s' % (server.address,)
-    _LOGGER.info(msg)
+    logger.info(msg)
     print msg
     sys.stdout.flush()
 
@@ -838,7 +852,7 @@ def main():  #pragma no cover
 
 def _sigterm_handler(signum, frame):  #pragma no cover
     """ Try to go down gracefully. """
-    _LOGGER.info('sigterm_handler invoked')
+    logging.getLogger().info('sigterm_handler invoked')
     print 'sigterm_handler invoked'
     sys.stdout.flush()
     _cleanup()

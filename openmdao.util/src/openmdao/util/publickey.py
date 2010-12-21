@@ -1,3 +1,6 @@
+"""
+Support for generation and storage of public/private key pairs.
+"""
 import base64
 import cPickle
 import getpass
@@ -44,6 +47,13 @@ def generate_key_pair(user_host, logger=None, overwrite_cache=False):
     overwrite_cache: bool
         If True, a new key is generated and forced into the cache of existing
         known keys.  Used for testing.
+
+    .. note::
+
+        To avoid unnecessary key generation, the public/private key pair for
+        the current user is stored in the private file ``~/.openmdao/keys``.
+        On Windows this requires the pywin32 extension.
+
     """
     logger = logger or NullLogger()
 
@@ -64,7 +74,7 @@ def generate_key_pair(user_host, logger=None, overwrite_cache=False):
                 current_user = True
                 key_file = \
                     os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
-                if _is_private(key_file):
+                if is_private(key_file):
                     try:
                         with open(key_file, 'rb') as inp:
                             key_pair = cPickle.load(inp)
@@ -91,12 +101,12 @@ def generate_key_pair(user_host, logger=None, overwrite_cache=False):
                         key_dir = os.path.dirname(key_file)
                         if not os.path.exists(key_dir):
                             os.mkdir(key_dir)
-                        _make_private(key_dir)  # Private while writing keyfile.
+                        make_private(key_dir)  # Private while writing keyfile.
                         with open(key_file, 'wb') as out:
                             cPickle.dump(key_pair, out,
                                          cPickle.HIGHEST_PROTOCOL)
                         try:
-                            _make_private(key_file)
+                            make_private(key_file)
                         # Hard to cause (recoverable) error here.
                         except Exception:  #pragma no cover
                             os.remove(key_file)  # Remove unsecured file.
@@ -105,7 +115,6 @@ def generate_key_pair(user_host, logger=None, overwrite_cache=False):
             _KEY_CACHE[user_host] = key_pair
 
     return key_pair
-
 
 def _generate(user_host, logger):
     """ Return new key. """
@@ -119,8 +128,18 @@ def _generate(user_host, logger):
     return key_pair
 
 
-def _is_private(path):
-    """ Return True if `path` is accessible only by 'owner'. """
+def is_private(path):
+    """
+    Return True if `path` is accessible only by 'owner'.
+
+    path: string
+        Path to file or directory to check.
+
+    .. note::
+
+        On Windows this requires the pywin32 extension.
+
+    """
     if not os.path.exists(path):
         return True  # Nonexistent file is secure ;-)
 
@@ -152,9 +171,22 @@ def _is_private(path):
         return (os.stat(path).st_mode & 0077) == 0
 
 
-def _make_private(path):
-    """ Make `path` accessible only by 'owner'. """
+def make_private(path):
+    """
+    Make `path` accessible only by 'owner'.
+
+    path: string
+        Path to file or directory to be made private.
+
+    .. note::
+
+        On Windows this requires the pywin32 extension.
+
+    """
     if sys.platform == 'win32':  #pragma no cover
+        if not HAVE_PYWIN32:
+            raise ImportError('No pywin32')
+
         # Find the SIDs for user and system.
         user, domain, type = \
             win32security.LookupAccountName('', win32api.GetUserName())
@@ -179,7 +211,8 @@ def _make_private(path):
                                       win32security.DACL_SECURITY_INFORMATION,
                                       sd)
     else:
-        os.chmod(path, 0700)  # Read/Write/Execute
+        mode = 0700 if os.path.isdir(path) else 0600
+        os.chmod(path, mode)  # Read/Write/Execute
 
 
 def encode_public_key(key):
@@ -208,8 +241,14 @@ def decode_public_key(text):
 def read_authorized_keys(filename=None, logger=None):
     """
     Return dictionary of public keys, indexed by user, read from `filename`.
-    The default is '~/.ssh/authorized_keys'.  The file must be in ssh form,
-    and only RSA keys are processed.
+    The file must be in ssh form, and only RSA keys are processed.
+    If the file is not private, then no keys are returned.
+
+    filename: string
+        File to read from. The default is '~/.ssh/authorized_keys'.
+
+    logger: :class:`logging.Logger`
+        Used for log messages.
     """
     if not filename:
         filename = \
@@ -220,6 +259,10 @@ def read_authorized_keys(filename=None, logger=None):
     keys = {}
     if not os.path.exists(filename):
         logger.error('%r does not exist', filename)
+        return keys
+
+    if not is_private(filename):
+        logger.error('%r is not private', filename)
         return keys
 
     with open(filename, 'r') as inp:
@@ -291,6 +334,7 @@ def read_authorized_keys(filename=None, logger=None):
     return keys
 
 def _longint(buf, start, length):
+    """ Return long value from binary string. """
     value = long(0)
     for i in range(length):
         value = (value << 8) + ord(buf[start])
@@ -301,6 +345,16 @@ def _longint(buf, start, length):
 def write_authorized_keys(allowed_users, filename, logger=None):
     """
     Write `allowed_users` to `filename` in ssh authorized_keys format.
+    The file will be made private if supported on this platform.
+
+    allowed_users: dict
+        Dictionary of public keys indexed by user.
+
+    filename: string
+        File to write to.
+
+    logger: :class:`logging.Logger`
+        Used for log messages.
     """
     with open(filename, 'w') as out:
         for user in sorted(allowed_users.keys()):
@@ -316,9 +370,14 @@ def write_authorized_keys(allowed_users, filename, logger=None):
             key_data += buf
             data = base64.b64encode(key_data)
             out.write('ssh-rsa %s %s\n\n' % (data, user))
-    _make_private(filename)
+
+    if sys.platform == 'win32' and not HAVE_PYWIN32: #pragma no cover
+        logger.warning("Can't make %s private", filename)
+    else:
+        make_private(filename)
 
 def _longstr(num, length=0):
+    """ Return binary string representation of `num`. """
     buf = chr(num & 0xff)
     num >>= 8
     while num:

@@ -143,10 +143,12 @@ class OpenMDAO_Server(Server):
 
     allowed_hosts: list(string)
         Host address patterns to check against.
+        Ignored if `allowed_users` is specified.
 
     allowed_users: dict
         Dictionary of users and corresponding public keys allowed access.
         If None, any user may access. If empty, no user may access.
+        The host portions of user strings are used for address patterns.
     """
 
     def __init__(self, registry, address, authkey, serializer, name=None,
@@ -155,16 +157,28 @@ class OpenMDAO_Server(Server):
                                               serializer)
         self.name = name or 'OMS_%d' % os.getpid()
         self.host = socket.gethostname()
-        self._allowed_hosts = allowed_hosts or []
         self._allowed_users = allowed_users
+        if self._allowed_users is not None:
+            self._allowed_hosts = set()
+            for user_host in self._allowed_users.keys():
+                user, host = user_host.split('@')
+                self._allowed_hosts.add(socket.gethostbyname(host))
+        else:
+            self._allowed_hosts = allowed_hosts or []
+
         self._logger = logging.getLogger(name)
         self._logger.info('OpenMDAO_Server process %d started, %r',
                           os.getpid(), keytype(authkey))
-        if allowed_hosts is not None:
-            self._logger.debug('allowed_hosts: %s', sorted(allowed_hosts))
-        if allowed_users is not None:
-            self._logger.debug('allowed_users: %s',
-                               sorted(allowed_users.values()))
+        if self._allowed_users is None:
+            self._logger.warning('    allowed_users: ANY')
+        else:
+            self._logger.info('    allowed_users: %s',
+                              sorted(self._allowed_users.keys()))
+        if self._allowed_hosts:
+            self._logger.info('    allowed_hosts: %s',
+                              sorted(self._allowed_hosts))
+        else:
+            self._logger.warning('    allowed_hosts: ANY')
 
         self._authkey = authkey
         if authkey == 'PublicKey':
@@ -470,7 +484,7 @@ class OpenMDAO_Server(Server):
             self._logger.error("Can't receive key data: %r", exc)
             raise
 
-        if e != self._key_pair.e or n != self._key_pair.n:
+        if e != self._key_pair.e or n != self._key_pair.n:  #pragma no cover
             self._logger.error('Server key mismatch')
             raise RuntimeError('Server key mismatch')
 
