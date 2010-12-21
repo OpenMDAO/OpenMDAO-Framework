@@ -553,8 +553,11 @@ class LocalAllocator(ResourceAllocator):
         criteria: dict
             The dictionary returned by :meth:`time_estimate`.
         """
+        credentials = get_credentials()
+        allowed_users = {credentials.user: credentials.public_key}
         try:
-            return self.create(typname='', name=name)
+            return self.create(typname='', allowed_users=allowed_users,
+                               name=name)
         # Shouldn't happen...
         except Exception as exc:  #pragma no cover
             self._logger.error('create failed: %r', exc)

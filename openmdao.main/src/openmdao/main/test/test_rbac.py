@@ -15,7 +15,7 @@ from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                need_proxy, rbac, rbac_methods, check_role, \
                                AccessController, CredentialsError, RoleError
 
-from openmdao.util.publickey import generate_key_pair
+from openmdao.util.publickey import generate_key_pair, HAVE_PYWIN32
 from openmdao.util.testutil import assert_raises
 
 
@@ -71,7 +71,10 @@ class TestCase(unittest.TestCase):
 
         # Basic form.
         owner = Credentials()
-        self.assertEqual('%s' % owner, owner.user)
+        if sys.platform == 'win32' and not HAVE_PYWIN32:
+            self.assertEqual('%s (transient)' % owner, owner.user)
+        else:
+            self.assertEqual('%s' % owner, owner.user)
 
         # Comparison.
         user = Credentials()

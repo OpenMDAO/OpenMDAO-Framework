@@ -353,11 +353,16 @@ class Host(object):  #pragma no cover
         self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE)
+
+        credentials = get_credentials()
+        allowed_users = {credentials.user: credentials.public_key}
+
         data = dict(
             name='BoostrappingHost', index=index,
             # Avoid lots of SUBDEBUG messages.
             dist_log_level=max(_LOGGER.getEffectiveLevel(), logging.DEBUG),
-            dir=self.tempdir, authkey=str(authkey), allow_shell=allow_shell,
+            dir=self.tempdir, authkey=str(authkey),
+            allowed_users=allowed_users, allow_shell=allow_shell,
             parent_address=address, registry=self.registry,
             keep_dirs=os.environ.get('OPENMDAO_KEEPDIRS', '0')
             )
@@ -459,7 +464,7 @@ def main():  #pragma no cover
     sys.stdout = open('stdout', 'w')
     sys.stderr = open('stderr', 'w')
 
-    util.log_to_stderr(logging.DEBUG)
+#    util.log_to_stderr(logging.DEBUG)
     # Avoid root possibly masking us.
     logging.getLogger().setLevel(logging.DEBUG)
 
@@ -467,6 +472,7 @@ def main():  #pragma no cover
     hostname = platform.node()
     pid = os.getpid()
     ident = '(%s:%d)' % (hostname, pid)
+    print 'keep_dirs', int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
     print '%s main startup' % ident
     sys.stdout.flush()
 
@@ -474,11 +480,18 @@ def main():  #pragma no cover
     data = cPickle.load(sys.stdin)
     sys.stdin.close()
     print '%s data received' % ident
+
     authkey = data['authkey']
     allow_shell = data['allow_shell']
+    allowed_users = data['allowed_users']
     print '%s using %s authentication' % (ident, keytype(authkey))
+    if allowed_users is None:
+        print '%s allowed_users: ANY' % ident
+    else:
+        print '%s allowed_users: %s' % \
+              (ident, sorted(self._allowed_users.keys()))
     if allow_shell:
-        print '%s allowing shell access' % ident
+        print '%s ALLOWING SHELL ACCESS' % ident
     sys.stdout.flush()
     log_level = data['dist_log_level']
     os.environ['OPENMDAO_KEEPDIRS'] = data['keep_dirs']
@@ -507,6 +520,7 @@ def main():  #pragma no cover
         logging.getLogger(name).setLevel(log_level)
         server = OpenMDAO_Server(HostManager._registry, (hostname, 0),
                                  authkey, 'pickle', name=name,
+                                 allowed_users=allowed_users,
                                  allowed_hosts=[data['parent_address'][0]])
     except Exception as exc:
         print '%s caught exception: %s' % (ident, exc)
@@ -542,6 +556,7 @@ def main():  #pragma no cover
     util.Finalize(None, cleanup, args=[data['dir']], exitpriority=0)
 
     # Start host manager.
+    print 'keep_dirs', int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
     print '%s remote host manager starting in %s' % (ident, data['dir'])
     sys.stdout.flush()
     server.serve_forever()

@@ -279,9 +279,11 @@ class TestCase(unittest.TestCase):
         return super(TestCase, self).run(self.test_result)
 
     def setUp(self):
-        """ Start server process. """
+        """ Called before each test. """
         self.n_errors = len(self.test_result.errors)
         self.n_failures = len(self.test_result.failures)
+
+        self.factory = None
 
         # Ensure we control directory cleanup.
         self.keepdirs = os.environ.get('OPENMDAO_KEEPDIRS', '0')
