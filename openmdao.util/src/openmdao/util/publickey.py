@@ -359,6 +359,8 @@ def write_authorized_keys(allowed_users, filename, logger=None):
     logger: :class:`logging.Logger`
         Used for log messages.
     """
+    logger = logger or NullLogger()
+
     with open(filename, 'w') as out:
         for user in sorted(allowed_users.keys()):
             pubkey = allowed_users[user]

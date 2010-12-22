@@ -534,7 +534,8 @@ class OpenMDAO_Server(Server):
             try:
                 check_role(role, function)
             except RoleError as exc:
-                raise RoleError('%s(): %s' % (methodname, exc))
+                raise RoleError('%s(): %s (%s)'
+                                % (methodname, exc, credentials))
 
             # Set credentials for execution of function. Typically
             # these are just the credentials of the caller, but

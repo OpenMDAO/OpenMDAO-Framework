@@ -35,6 +35,7 @@ import fnmatch
 import getpass
 import hashlib
 import inspect
+import logging
 import socket
 import sys
 import threading
@@ -302,6 +303,12 @@ class AccessController(object):
         if isinstance(credentials, Credentials):
             if credentials == self.owner:
                 return 'owner'
+            elif (sys.platform == 'win32') and not HAVE_PYWIN32:
+                # Transient credentials need a more lenient (and insecure!)
+                # check since the keys can't be stored.
+                if credentials.user == self.owner.user:
+                    logging.warning('Allowing %r as owner', credentials.user)
+                    return 'owner'
             return 'user'
         else:
             raise TypeError('credentials is not a Credentials object')

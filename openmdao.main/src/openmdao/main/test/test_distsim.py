@@ -617,14 +617,23 @@ class TestCase(unittest.TestCase):
         factory = self.start_factory()
 
         # Try using a server after being released, server never used before.
+        # This usually results in a "Can't connect" error, but sometimes gets a
+        # "Can't send" error, based on timing/proxying.
         server = factory.create('')
         factory.release(server)
-        assert_raises(self, "server.echo('hello')", globals(), locals(),
-                      RuntimeError, "Can't connect to server at")
+        msg1 = "Can't connect to server at"
+        msg2 = "Can't send to server at"
+        try:
+            reply = server.echo('hello')
+        except RuntimeError as exc:
+            if str(exc)[:len(msg1)] != msg1 and str(exc)[:len(msg1)] != msg1:
+                self.fail('Expected connect/send error, got %r' % exc)
+        else:
+            self.fail('Expected RuntimeError')
 
         # Try using a server after being released, server has been used before.
         # This usually results in a "Can't send" error, but sometimes gets a
-        # "Can't connect" error, based on timing.
+        # "Can't connect" error, based on timing/proxying.
         server = factory.create('')
         reply = server.echo('hello')
         factory.release(server)

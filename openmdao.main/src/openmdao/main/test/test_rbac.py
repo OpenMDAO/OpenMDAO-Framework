@@ -72,7 +72,7 @@ class TestCase(unittest.TestCase):
         # Basic form.
         owner = Credentials()
         if sys.platform == 'win32' and not HAVE_PYWIN32:
-            self.assertEqual('%s (transient)' % owner, owner.user)
+            self.assertEqual('%s' % owner, owner.user+' (transient)')
         else:
             self.assertEqual('%s' % owner, owner.user)
 
