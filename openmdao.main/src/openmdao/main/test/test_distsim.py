@@ -283,7 +283,9 @@ class TestCase(unittest.TestCase):
         self.n_errors = len(self.test_result.errors)
         self.n_failures = len(self.test_result.failures)
 
-        self.factory = None
+        self.factories = []
+        self.servers = []
+        self.server_dirs = []
 
         # Ensure we control directory cleanup.
         self.keepdirs = os.environ.get('OPENMDAO_KEEPDIRS', '0')
@@ -299,8 +301,7 @@ class TestCase(unittest.TestCase):
             shutil.rmtree(server_dir)
         os.mkdir(server_dir)
         os.chdir(server_dir)
-        self.server_dirs = [server_dir]
-        self.server = None
+        self.server_dirs.append(server_dir)
         try:
             logging.debug('')
             logging.debug('tester pid: %s', os.getpid())
@@ -314,27 +315,29 @@ class TestCase(unittest.TestCase):
                 credentials = get_credentials()
                 allowed_users = {credentials.user: credentials.public_key}
 
-            self.server = start_server(port=port, allowed_users=allowed_users)
+            server = start_server(port=port, allowed_users=allowed_users)
+            self.servers.append(server)
             self.address, self.port, self.key = read_server_config('server.cfg')
-            logging.debug('server pid: %s', self.server.pid)
+            logging.debug('server pid: %s', server.pid)
             logging.debug('server address: %s', self.address)
             logging.debug('server port: %s', self.port)
             logging.debug('server key: %s', self.key)
         finally:
             os.chdir('..')
 
-        self.factory = connect(self.address, self.port, pubkey=self.key)
-        logging.debug('factory: %r', self.factory)
+        factory = connect(self.address, self.port, pubkey=self.key)
+        self.factories.append(factory)
+        logging.debug('factory: %r', factory)
+        return factory
 
     def tearDown(self):
         """ Shut down server process. """
         try:
-            if self.factory is not None:
-                self.factory.cleanup()
-            if self.server is not None:
-                logging.debug('terminating server pid %s', self.server.pid)
-                self.server.terminate(timeout=10)
-                self.server = None
+            for factory in self.factories:
+                factory.cleanup()
+            for server in self.servers:
+                logging.debug('terminating server pid %s', server.pid)
+                server.terminate(timeout=10)
 
             # Cleanup only if there weren't any new errors or failures.
             if len(self.test_result.errors) == self.n_errors and \
@@ -349,16 +352,16 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_client')
 
-        self.start_factory()
+        factory = self.start_factory()
 
         # List available types.
-        types = self.factory.get_available_types()
+        types = factory.get_available_types()
         logging.debug('Available types:')
         for typname, version in types:
             logging.debug('   %s %s', typname, version)
 
         # First a HollowSphere, accessed via get()/set().
-        obj = self.factory.create(_MODULE+'.HollowSphere')
+        obj = factory.create(_MODULE+'.HollowSphere')
         sphere_pid = obj.get('pid')
         self.assertNotEqual(sphere_pid, os.getpid())
 
@@ -383,7 +386,7 @@ class TestCase(unittest.TestCase):
                       TraitError, msg)
 
         # Now a Box, accessed via attribute methods.
-        obj = self.factory.create(_MODULE+'.Box')
+        obj = factory.create(_MODULE+'.Box')
         box_pid = obj.get('pid')
         self.assertNotEqual(box_pid, os.getpid())
         self.assertNotEqual(box_pid, sphere_pid)
@@ -414,10 +417,10 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_model')
 
-        self.start_factory()
+        factory = self.start_factory()
 
         # Create model and run it.
-        box = self.factory.create(_MODULE+'.Box')
+        box = factory.create(_MODULE+'.Box')
         model = set_as_top(Model(box))
         model.run()
 
@@ -503,13 +506,13 @@ class TestCase(unittest.TestCase):
         credentials = get_credentials()
         allowed_users = {credentials.user: credentials.public_key,
                          spook.user: spook.public_key}
-        self.start_factory(allowed_users=allowed_users)
+        factory = self.start_factory(allowed_users=allowed_users)
 
         # Create model and run it.
         saved = get_credentials()
         set_credentials(spook)
-        box = self.factory.create(_MODULE+'.ProtectedBox',
-                                  allowed_users=allowed_users)
+        box = factory.create(_MODULE+'.ProtectedBox',
+                             allowed_users=allowed_users)
         set_credentials(saved)
 
         model = set_as_top(Model(box))
@@ -556,7 +559,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_authkey')
 
-        self.start_factory()
+        factory = self.start_factory()
 
         # Start server in non-public-key mode.
         # Connections must have matching authkey,
@@ -611,20 +614,20 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_misc')
 
-        self.start_factory()
+        factory = self.start_factory()
 
         # Try using a server after being released, server never used before.
-        server = self.factory.create('')
-        self.factory.release(server)
+        server = factory.create('')
+        factory.release(server)
         assert_raises(self, "server.echo('hello')", globals(), locals(),
                       RuntimeError, "Can't connect to server at")
 
         # Try using a server after being released, server has been used before.
         # This usually results in a "Can't send" error, but sometimes gets a
         # "Can't connect" error, based on timing.
-        server = self.factory.create('')
+        server = factory.create('')
         reply = server.echo('hello')
-        self.factory.release(server)
+        factory.release(server)
         msg1 = "Can't send to server at"
         msg2 = "Can't connect to server at"
         try:
@@ -639,13 +642,13 @@ class TestCase(unittest.TestCase):
         # result in a ValueError trying to identify the server to release or
         # a RemoteError where the request can't be unpacked. The timing seems
         # to be sensitive to AF_INET/AF_UNIX connection type.
-        server = self.factory.create('')
-        self.factory.release(server)
+        server = factory.create('')
+        factory.release(server)
         msg1 = "can't identify server "
         msg2 = "RuntimeError: Can't decrypt/unpack request." \
                " This could be the result of referring to a dead server."
         try:
-            self.factory.release(server)
+            factory.release(server)
         except ValueError as exc:
             self.assertEqual(str(exc)[:len(msg1)], msg1)
         except RemoteError as exc:
@@ -654,7 +657,7 @@ class TestCase(unittest.TestCase):
             self.fail('Expected ValueError or RemoteError')
 
         # Check false return of has_interface().
-        self.assertFalse(has_interface(self.factory, HasObjectives))
+        self.assertFalse(has_interface(factory, HasObjectives))
 
         # Try to connect to wrong port (assuming junk_port isn't being used!)
         address = socket.gethostname()
@@ -664,7 +667,7 @@ class TestCase(unittest.TestCase):
 
         # Unpickleable argument.
         code = compile('3 + 4', '<string>', 'eval')
-        assert_raises(self, 'self.factory.echo(code)', globals(), locals(),
+        assert_raises(self, 'factory.echo(code)', globals(), locals(),
                       cPickle.PicklingError, "Can't pickle <type 'code'>")
 
         # Server startup failure.

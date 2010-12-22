@@ -472,7 +472,6 @@ def main():  #pragma no cover
     hostname = platform.node()
     pid = os.getpid()
     ident = '(%s:%d)' % (hostname, pid)
-    print 'keep_dirs', int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
     print '%s main startup' % ident
     sys.stdout.flush()
 
@@ -488,8 +487,7 @@ def main():  #pragma no cover
     if allowed_users is None:
         print '%s allowed_users: ANY' % ident
     else:
-        print '%s allowed_users: %s' % \
-              (ident, sorted(self._allowed_users.keys()))
+        print '%s allowed_users: %s' % (ident, sorted(allowed_users.keys()))
     if allow_shell:
         print '%s ALLOWING SHELL ACCESS' % ident
     sys.stdout.flush()
@@ -556,7 +554,6 @@ def main():  #pragma no cover
     util.Finalize(None, cleanup, args=[data['dir']], exitpriority=0)
 
     # Start host manager.
-    print 'keep_dirs', int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
     print '%s remote host manager starting in %s' % (ident, data['dir'])
     sys.stdout.flush()
     server.serve_forever()
