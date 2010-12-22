@@ -11,9 +11,12 @@ import sys
 import unittest
 import nose
 
+from multiprocessing.managers import RemoteError
+
 from openmdao.main.api import Assembly, FileMetadata, SimulationRoot, set_as_top
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunInterrupted
+from openmdao.main.objserverfactory import ObjServerFactory
 
 from openmdao.lib.components.external_code import ExternalCode
 
@@ -274,6 +277,42 @@ class TestCase(unittest.TestCase):
         for comp in (model.a, model.b):
             self.assertEqual(comp.return_code, 0)
             self.assertEqual(comp.timed_out, False)
+
+    def test_rsh(self):
+        logging.debug('')
+        logging.debug('test_rsh')
+
+        testdir = 'test_rsh'
+        if os.path.exists(testdir):
+            shutil.rmtree(testdir)
+        os.mkdir(testdir)
+        os.chdir(testdir)
+
+        factory = None
+        try:
+            # Try to set command line on remote ExternalCode instance.
+            factory = ObjServerFactory()
+            exec_comp = factory.create('openmdao.lib.components.external_code.ExternalCode')
+            cmd = exec_comp.command
+            try:
+                exec_comp.command = 'this-should-fail'
+            except RemoteError as exc:
+                msg = "RoleError: No __setattr__ access to 'command'"
+                logging.debug('msg: %s', msg)
+                logging.debug('exc: %s', exc)
+                self.assertTrue(msg in str(exc))
+            else:
+                self.fail('Expected RemoteError')
+
+        finally:
+            if factory is not None:
+                factory.cleanup()
+            os.chdir('..')
+            if sys.platform == 'win32':
+                time.sleep(2)  # Wait for process shutdown.
+            keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
+            if not keep_dirs:
+                shutil.rmtree(testdir)
 
 
 if __name__ == '__main__':

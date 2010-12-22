@@ -12,6 +12,7 @@ from openmdao.lib.datatypes.api import Bool, Dict, Str, Float, Int
 
 from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped
+from openmdao.main.rbac import AccessController, RoleError
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
@@ -24,7 +25,7 @@ class ExternalCode(Component):
     STDOUT = subprocess.STDOUT
 
     # pylint: disable-msg=E1101
-    command = Str('', iotype='in',
+    command = Str('', 
                   desc='The command to be executed.')
     env_vars = Dict({}, iotype='in',
                     desc='Environment variables required by the command.')
@@ -51,6 +52,10 @@ class ExternalCode(Component):
 
         self._process = None
         self._server = None
+
+    def get_access_controller(self):
+        """ Return :class:`AccessController` for this object. """
+        return _AccessController()
 
     def execute(self):
         """
@@ -295,4 +300,13 @@ class ExternalCode(Component):
                 mode = os.stat(dst_path).st_mode
                 mode |= stat.S_IWUSR
                 os.chmod(dst_path, mode)
+
+
+class _AccessController(AccessController):
+    """ Don't allow setting of 'command' by remote client. """
+
+    def check_access(self, role, methodname, obj, attr):
+        if attr in ('command', 'get_access_controller') and \
+           methodname == '__setattr__':
+            raise RoleError('No %s access to %r' % (methodname, attr))
 

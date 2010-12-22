@@ -626,7 +626,7 @@ class TestCase(unittest.TestCase):
         try:
             reply = server.echo('hello')
         except RuntimeError as exc:
-            if str(exc)[:len(msg1)] != msg1 and str(exc)[:len(msg1)] != msg1:
+            if str(exc)[:len(msg1)] != msg1 and str(exc)[:len(msg2)] != msg2:
                 self.fail('Expected connect/send error, got %r' % exc)
         else:
             self.fail('Expected RuntimeError')
@@ -642,7 +642,7 @@ class TestCase(unittest.TestCase):
         try:
             reply = server.echo('hello')
         except RuntimeError as exc:
-            if str(exc)[:len(msg1)] != msg1 and str(exc)[:len(msg1)] != msg1:
+            if str(exc)[:len(msg1)] != msg1 and str(exc)[:len(msg2)] != msg2:
                 self.fail('Expected send/connect error, got %r' % exc)
         else:
             self.fail('Expected RuntimeError')

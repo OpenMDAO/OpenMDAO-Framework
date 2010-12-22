@@ -479,14 +479,22 @@ class OpenMDAO_Server(Server):
         """ Receive client public key, send session key. """
         # Hard to cause exceptions to happen where we'll see them.
         try:
-            n, e, chunks = conn.recv()
+            client_data = conn.recv()
         except Exception as exc:  #pragma no cover
-            self._logger.error("Can't receive key data: %r", exc)
+            self._logger.error("Can't receive client data: %r", exc)
             raise
 
+        client_version = client_data[0]
+        if client_version != 1:  #pragma no cover
+            msg = 'Expected client protocol version 1, got %r' % client_version
+            self._logger.error(msg)
+            raise RuntimeError(msg)
+
+        n, e, chunks = client_data[1:]
         if e != self._key_pair.e or n != self._key_pair.n:  #pragma no cover
-            self._logger.error('Server key mismatch')
-            raise RuntimeError('Server key mismatch')
+            msg = 'Server key mismatch'
+            self._logger.error(msg)
+            raise RuntimeError(msg)
 
         try:
             text = ''
@@ -497,10 +505,11 @@ class OpenMDAO_Server(Server):
             self._logger.error("Can't recreate client key: %r", exc)
             raise
 
+        server_version = 1
         try:
             session_key = hashlib.sha1(str(id(conn))).hexdigest()
             data = client_key.encrypt(session_key, '')
-            conn.send(data)
+            conn.send((server_version, data))
         except Exception as exc:  #pragma no cover
             self._logger.error("Can't send session key: %r", exc)
             raise
@@ -534,8 +543,7 @@ class OpenMDAO_Server(Server):
             try:
                 check_role(role, function)
             except RoleError as exc:
-                raise RoleError('%s(): %s (%s)'
-                                % (methodname, exc, credentials))
+                raise RoleError('%s(): %s' % (methodname, exc))
 
             # Set credentials for execution of function. Typically
             # these are just the credentials of the caller, but
@@ -1163,10 +1171,18 @@ class OpenMDAO_Proxy(BaseProxy):
         while text:
             chunks.append(server_key.encrypt(text[:chunk_size], ''))
             text = text[chunk_size:]
-        conn.send((server_key.n, server_key.e, chunks))
+        client_version = 1
+        conn.send((client_version, server_key.n, server_key.e, chunks))
 
-        data = conn.recv()
-        self._tls.session_key = key_pair.decrypt(data)
+        server_data = conn.recv()
+        server_version = server_data[0]
+        # Just being defensive, this should never happen.
+        if server_version != 1:  #pragma no cover
+            msg = 'Expecting server protocol version 1, got %r' % server_version
+            loggiong.error(msg)
+            raise RuntimeError(msg)
+        
+        self._tls.session_key = key_pair.decrypt(server_data[1])
 
     def _incref(self):
         """
