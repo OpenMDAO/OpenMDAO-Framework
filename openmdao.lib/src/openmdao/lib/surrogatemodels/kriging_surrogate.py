@@ -3,7 +3,7 @@
 from math import log, e, sqrt
 
 # pylint: disable-msg=E0611,F0401
-from numpy import array, zeros, dot, ones, arange, eye, abs, vstack, exp
+from numpy import array, zeros, dot, ones, arange, eye, abs, vstack, exp, diag
 from numpy.linalg import det, linalg, lstsq
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import fmin
@@ -27,6 +27,7 @@ class KrigingSurrogate(HasTraits):
         self.m = None #number of independent
         self.n = None #number of training points
         self.thetas = None
+        self.nugget = 0 #nugget smoothing parameter from [Sasena, 2002]
         
         self.R = None
         self.R_fact = None
@@ -36,7 +37,7 @@ class KrigingSurrogate(HasTraits):
 
         self.X = X
         self.Y = Y
-
+        
         if X is not None and Y is not None: 
             self.train(X,Y)
             
@@ -128,12 +129,11 @@ class KrigingSurrogate(HasTraits):
         thetas = 10.**self.thetas
         for i in range(self.n):
             for j in arange(i+1,self.n):
-                R[i,j] = e**(-sum(thetas*(X[i]-X[j])**2.)) #weighted distance formula
+                R[i,j] = (1-self.nugget)*e**(-sum(thetas*(X[i]-X[j])**2.)) #weighted distance formula
         R = R + R.T + eye(self.n)
         self.R = R
         one = ones(self.n)
         try:
-            
             self.R_fact = cho_factor(R)
             rhs = vstack([Y, one]).T
             R_fact = (self.R_fact[0].T,not self.R_fact[1])
@@ -141,12 +141,15 @@ class KrigingSurrogate(HasTraits):
             
             self.mu = dot(one,cho[0])/dot(one,cho[1])
             self.sig2 = dot(Y-dot(one,self.mu),cho_solve(self.R_fact,(Y-dot(one,self.mu))))/self.n
-            self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)))-sum(self.thetas)-sum(abs(self.thetas))
+            #self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)+1.e-16))-sum(thetas)
+            self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)+1.e-16))
         except (linalg.LinAlgError,ValueError):
             #------LSTSQ---------
             self.R_fact = None #reset this to none, so we know not to use cholesky
+            #self.R = self.R+diag([10e-6]*self.n) #improve conditioning[Booker et al., 1999]
             rhs = vstack([Y, one]).T
             lsq = lstsq(self.R.T,rhs)[0].T
             self.mu = dot(one,lsq[0])/dot(one,lsq[1])
             self.sig2 = dot(Y-dot(one,self.mu),lstsq(self.R,Y-dot(one,self.mu))[0])/self.n
-            self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)+1.e-16))-sum(self.thetas)
+            self.log_likelihood = -self.n/2.*log(self.sig2)-1./2.*log(abs(det(self.R)+1.e-16))
+            #print self.log_likelihood

@@ -45,7 +45,7 @@ class DOE_Maker(Component):
     
     def __init__(self,doc=None):
         super(DOE_Maker,self).__init__(doc)
-        self.force_execute = True
+        #self.force_execute = True
     
     def execute(self):
         n = self.cases.pop()
@@ -107,7 +107,7 @@ class Analysis(Assembly):
         self.driver.add_event('A.reset_training_data')
         
         self.add('res',Res())
-        #self.res.force_execute = True
+        self.res.force_execute = True
         
         #Iteration Hierarchy
         self.driver.workflow.add(['DOE_maker','trainA','res'])

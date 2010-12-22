@@ -37,6 +37,7 @@ class MetaModel(Component):
 
     # when fired, the next execution will train the metamodel
     train_next = Event()
+    #when fired, the next execution will reset all training data
     reset_training_data = Event()
     
     def __init__(self, *args, **kwargs):

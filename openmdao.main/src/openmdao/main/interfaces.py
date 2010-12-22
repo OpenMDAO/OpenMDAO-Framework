@@ -634,7 +634,7 @@ class IHasObjective(Interface):
         """
     
 
-class IHasObjectives(object): 
+class IHasObjectives(Interface): 
     """An Interface for objects having a multiple objectives."""
 
     def add_objectives(self, obj_iter):
