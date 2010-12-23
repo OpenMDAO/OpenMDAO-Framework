@@ -54,7 +54,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
     def test_success(self):
         self.top.add("driver", FixedPointIterator())
         self.top.add("simple", Simple2())
-        self.top.driver.workflow.add(self.top.simple)
+        self.top.driver.workflow.add('simple')
         
         self.top.driver.x_out = 'simple.outvar'
         self.top.driver.x_in = 'simple.invar'
@@ -67,7 +67,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
     def test_maxiteration(self):
         self.top.add("driver", FixedPointIterator())
         self.top.add("simple", Simple1())
-        self.top.driver.workflow.add(self.top.simple)
+        self.top.driver.workflow.add('simple')
         self.top.driver.x_out = 'simple.outvar'
         self.top.driver.x_in = 'simple.invar'
         self.top.driver.max_iteration = 3
@@ -82,7 +82,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
     def test_tolerance(self):
         self.top.add("driver", FixedPointIterator())
         self.top.add("simple", Simple3())
-        self.top.driver.workflow.add(self.top.simple)
+        self.top.driver.workflow.add('simple')
         self.top.driver.x_out = 'simple.outvar'
         self.top.driver.x_in = 'simple.invar'
         self.top.driver.max_iteration = 2

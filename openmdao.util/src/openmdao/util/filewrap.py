@@ -12,6 +12,18 @@ from pyparsing import CaselessLiteral, Combine, OneOrMore, Optional, \
 # pylint: disable-msg=E0611,F0401
 from numpy import append, array, zeros
 
+def _getformat(val):
+    # Returns the output format for a floating point number.
+    # The general format is used with 16 places of accuracy, except for when
+    # the floating point value is an integer, in which case a decimal point
+    # followed by a single zero is used.
+    
+    if int(val) == val:
+        return "%.1f"
+    else:
+        return "%.16g"
+
+
 class _SubHelper(object):
     """Replaces file text at the correct word location in a line. This
     class contains the Helper Function that is passed to re.sub, etc."""
@@ -50,7 +62,7 @@ class _SubHelper(object):
         
         if self.current_location == self.replace_location:
             if isinstance(self.newtext, float):
-                return '%.16g' % self.newtext
+                return _getformat(self.newtext) % self.newtext
             else:
                 return str(self.newtext)
         else:
@@ -68,7 +80,8 @@ class _SubHelper(object):
            self.current_location <= self.end_location and \
            self.counter < end:
             if isinstance(self.newtext[self.counter], float):
-                return '%.16g' % self.newtext[self.counter]
+                val = self.newtext[self.counter]
+                newval = _getformat(val) % val
             else:
                 newval = str(self.newtext[self.counter])
             self.counter += 1
@@ -87,7 +100,7 @@ class ToFloat(TokenConverter):
     """Converter for PyParsing that is used to turn a token into a float."""
     def postParse( self, instring, loc, tokenlist ):
         """Converter to make token into a float."""
-        return float(tokenlist[0])
+        return float(tokenlist[0].replace('D', 'E'))
 
     
 def _parse_line():
@@ -98,7 +111,7 @@ def _parse_line():
     digits = Word(nums)
     dot = "."
     sign = oneOf("+ -")
-    ee = CaselessLiteral('E')
+    ee = CaselessLiteral('E') | CaselessLiteral('D')
 
     num_int = ToInteger(Combine( Optional(sign) + digits ))
     
@@ -242,7 +255,7 @@ class InputFileGenerator(object):
             array of values to insert.
         
         row_start: integer
-            starting row for inserting the array. This is relative
+	    starting row for inserting the array. This is relative
             to the anchor, and can be negative.
         
         field_start: integer
@@ -253,10 +266,10 @@ class InputFileGenerator(object):
             the final field the array uses in row_end. 
             We need this to figure out if the template is too small or large
         
-        row_end: integer (Optional)
+        row_end: integer (optional)
             Use if the array wraps to cover additional lines.
         
-        sep: integer (Optional)
+        sep: integer (optional)
             Separator to use if we go beyond the template."""
         
         # Simplified input for single-line arrays
@@ -283,7 +296,6 @@ class InputFileGenerator(object):
         # This is resolved by adding more fields at the end
         if sub.counter < len(value):
             for val in value[sub.counter:]:
-                
                 newline = newline.rstrip() + sep + str(val)
         
             self.data[j] = newline
@@ -322,8 +334,8 @@ class InputFileGenerator(object):
             the final field the array uses in row_end. 
             We need this to figure out if the template is too small or large
         
-        sep: str (Optional) (Currently Unsupported)
-            Seperator to append between values if we go beyond the template"""
+        sep: str (optional) (currently unsupported)
+            Separator to append between values if we go beyond the template"""
 
         sub = _SubHelper()
         i = 0
@@ -410,7 +422,7 @@ class FileParser(object):
         
         occurrence: integer
             find nth instance of text; default is 1 (first). Use -1 to
-            find last occurence. Reverse searches always start at the end
+            find last occurrence. Reverse searches always start at the end
             of the file no matter the state of any previous anchor."""
         
         if not isinstance(occurrence, int):
@@ -521,7 +533,7 @@ class FileParser(object):
             field). Use -1 to find last occurance. Position 0 is the key
             field, so it should not be used as a value for occurrence.
         
-        rowoffset: integer (Optional)
+        rowoffset: integer (optional)
             Optional row offset from the occurrence of key. This can
             also be negative.
         
@@ -564,13 +576,13 @@ class FileParser(object):
         """Grabs an array of variables relative to the current anchor.
         
         rowstart: integer
-        Row number to start, relative to the current anchor
+            Row number to start, relative to the current anchor
         
         fieldstart: integer
-        field number to start
+            field number to start
         
         rowend: integer (optional)
-        row number to end. If not set, then only one row is grabbed.
+            row number to end. If not set, then only one row is grabbed.
         
         Setting the delimiter to 'columns' elicits some special behavior
         from this method. Normally, the extraction process wraps around

@@ -835,7 +835,7 @@ Consider the top level assembly that was created for the
             self.add('paraboloid', Paraboloid())
     
             # Add to driver's workflow
-            self.driver.workflow.add(self.paraboloid)
+            self.driver.workflow.add('paraboloid')
         
 
 We can see here that components that comprise the top level of this model are
@@ -1051,7 +1051,7 @@ the CONMINdriver optimizer.
             self.add('driver', CONMINdriver())
         
             # add DrivingSim to workflow
-            driver.workflow.add(self.driving_sim)
+            driver.workflow.add('driving_sim')
 
 We add design variables to the driver ``self.driver`` using the ``add_parameter``
 function. 

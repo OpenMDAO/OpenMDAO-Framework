@@ -97,7 +97,7 @@ def find_up(name, path=None):
     name: str
         Base name of the file or directory being searched for
         
-    path: str, optional
+    path: str (optional)
         Starting directory.  If not supplied, current directory is used.
     """
     if not path:

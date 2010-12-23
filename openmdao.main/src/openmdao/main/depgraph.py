@@ -114,7 +114,7 @@ class DependencyGraph(object):
         varsets: list of sets of str
             Sets of names of outputs from each starting node.
             
-        force: bool, optional
+        force: bool (optional)
             If True, force invalidation to continue even if a component in
             the dependency chain was already invalid.
         """

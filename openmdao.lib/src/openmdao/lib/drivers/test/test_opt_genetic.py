@@ -37,7 +37,7 @@ class Asmb(Assembly):
     def __init__(self,*args,**kwargs):
         super(Asmb,self).__init__(*args,**kwargs)
         self.add('sphere',SphereFunction())
-        self.driver.workflow.add(self.sphere)
+        self.driver.workflow.add('sphere')
         self.create_passthrough('sphere.x')
         self.create_passthrough('sphere.y')
         self.create_passthrough('sphere.z')
@@ -78,7 +78,7 @@ class TestCase(unittest.TestCase):
                
     def test_optimizeSphere_set_high_low(self):
         self.top.add('comp', SphereFunction())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.add_objective("comp.total")
 
         self.top.driver.add_parameter('comp.x',high=5.13,low=-5.12)
@@ -104,7 +104,7 @@ class TestCase(unittest.TestCase):
     
     def test_optimizeSphere(self):
         self.top.add('comp', SphereFunction())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.add_objective("comp.total")
 
         self.top.driver.add_parameter('comp.x')
@@ -129,7 +129,7 @@ class TestCase(unittest.TestCase):
 
     def test_optimizeSpherearray_nolowhigh(self):
         self.top.add('comp', SphereFunctionArray())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.add_objective("comp.total")
 
         try:        
@@ -143,7 +143,7 @@ class TestCase(unittest.TestCase):
             
     def test_optimizeSphereAssemblyPassthrough(self): 
         self.top.add('comp', Asmb())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.add_objective("comp.total")
 
         self.top.driver.add_parameter('comp.x')
@@ -168,7 +168,7 @@ class TestCase(unittest.TestCase):
 
     def test_optimizeSpherearray(self):
         self.top.add('comp', SphereFunctionArray())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.add_objective("comp.total")
 
         self.top.driver.add_parameter('comp.x[0]', low=-5.12,high=5.13)
@@ -196,7 +196,7 @@ class TestCase(unittest.TestCase):
 
     def test_list_remove_clear_params(self):
         self.top.add('comp', SphereFunction())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.add_parameter('comp.x')
         self.top.driver.add_parameter('comp.y')
 
@@ -250,7 +250,7 @@ class TestCase(unittest.TestCase):
 
                 opt = self.add('optimizer',Genetic())
                 self.add('comp',SomeComp())
-                opt.workflow.add(self.comp)
+                opt.workflow.add('comp')
 
                 self.optimizer.add_parameter('comp.x')
                 self.optimizer.add_parameter('comp.y')
@@ -273,7 +273,7 @@ class TestCase(unittest.TestCase):
 
                 self.add('driver',Genetic())
                 self.add('comp',SomeComp())
-                self.driver.workflow.add(self.comp)
+                self.driver.workflow.add('comp')
                 
                 self.driver.add_parameter('comp.z')
         

@@ -40,7 +40,7 @@ def run_openmdao_suite():
                     args.append(opt)
 
             # Better coverage if we clobber cached data.
-            base = os.path.expanduser('~/.openmdao')
+            base = os.path.expanduser(os.path.join('~', '.openmdao'))
             for name in ('eggsaver.dat', 'keys'):
                 path = os.path.join(base, name)
                 if os.path.exists(path):

@@ -5,7 +5,7 @@ Utilities for reading and writing Fortran namelists.
 # pylint: disable-msg=E0611,F0401
 import ordereddict
 
-from numpy import ndarray, array, append
+from numpy import ndarray, array, append, vstack
 from enthought.traits.trait_base import not_none
 
 from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
@@ -13,6 +13,17 @@ from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
                       oneOf, nums, TokenConverter, Group
 
 from openmdao.util.filewrap import ToFloat, ToInteger
+
+def _getformat(val):
+    # Returns the output format for a floating point number.
+    # The general format is used with 16 places of accuracy, except for when
+    # the floating point value is an integer, in which case a decimal point
+    # followed by a single zero is used.
+    
+    if int(val) == val:
+        return "%.1f"
+    else:
+        return "%.16g"
 
 
 class Card(object):
@@ -160,7 +171,8 @@ class Namelist(object):
                     line = "  %s = %s\n" % (card.name, str(card.value))
                     
                 elif isinstance(card.value, float):
-                    line = "  %s = %.16g\n" % (card.name, card.value)
+                    fstring = "  %s = " + _getformat(card.value) + "\n"
+                    line =  fstring % (card.name, card.value)
                     
                 elif isinstance(card.value, str):
                     line = "  %s = '%s'\n" % (card.name, card.value)
@@ -175,7 +187,8 @@ class Namelist(object):
                         line = "  %s = " % (card.name)
                         sep = ""
                         for val in card.value:
-                            line += "%s%.16g" % (sep, val)
+                            fstring = "%s" + _getformat(val)
+                            line += fstring % (sep, val)
                             sep = self.delimiter
                         line += "\n"
                             
@@ -185,8 +198,9 @@ class Namelist(object):
                         for row in range(0, card.value.shape[0]):
                             line += card.name + "(1," + str(row+1) + ") ="
                             for col in range(0, card.value.shape[1]):
-                                line += " %.16g%s" % (card.value[row, col], 
-                                                      self.delimiter)
+                                val = card.value[row, col]
+                                fstring = " " + _getformat(val) + "%s"
+                                line += fstring % (val, self.delimiter)
                             line += "\n"
                         
                     else:
@@ -238,7 +252,7 @@ class Namelist(object):
         digits = Word(nums)
         dot = "."
         sign = oneOf("+ -")
-        ee = CaselessLiteral('E')
+        ee = CaselessLiteral('E') | CaselessLiteral('D')
     
         num_int = ToInteger(Combine( Optional(sign) + digits ))
         
@@ -269,6 +283,11 @@ class Namelist(object):
                            data_token("value"))
         multi_card_token = card_token + ZeroOrMore(Suppress(',') + card_token)
         array_continuation_token = numstr_token.setResultsName("value")
+        array2D_token = fieldval("name") + Suppress("(") + \
+                        Suppress(num_int) + Suppress(',') + \
+                        num_int("index") + Suppress(')') + \
+                        Suppress('=') + numval + \
+                        ZeroOrMore(Suppress(',') + numval)
         
         # Comment Token
         comment_token = Literal("!")
@@ -277,6 +296,7 @@ class Namelist(object):
         
         current_group = None
         for line in data:
+            line_base = line
             line = line.strip()
             
             # blank line: do nothing
@@ -302,6 +322,21 @@ class Namelist(object):
                         else:
                             value = card[1]
                         
+                        self.cards[-1].append(Card(name, value))
+                    
+                # Catch 2D arrays like -> X(1,1) = 3,4,5
+                elif array2D_token.searchString(line):
+                    card = array2D_token.parseString(line)
+                    
+                    name = card[0]
+                    index = card[1]
+                    value = array(card[2:])
+                    
+                    if index > 1:
+                        old_value = self.cards[-1][-1].value
+                        new_value = vstack((old_value, value))
+                        self.cards[-1][-1].value = new_value
+                    else:
                         self.cards[-1].append(Card(name, value))
                     
                 # Arrays can be continued on subsequent lines
@@ -348,45 +383,47 @@ class Namelist(object):
                 # If there is an ungrouped card at the start, take it as the
                 # title for the analysis
                 elif len(self.cards) == 0 and self.title == '':
-                    self.title = line.rstrip()
+                    self.title = line
                     
                 # All other ungrouped cards are saved as free-form (card-less)
                 # groups.
+                # Note that we can't lstrip because column spacing might be
+                # important.
                 else:
-                    self.add_group(line.rstrip())
+                    self.add_group(line_base.rstrip())
                     
 
     def load_model(self, rules=None, ignore=None, single_group=-1):
         """Loads the current deck into an OpenMDAO component.
         
-        rules: dict of lists of strings (Optional)
-        An optional dictionary of rules can be passed if the component has a
-        hierarchy of containers for its input variables. If no rules dictionary
-        is passed, load_model will attempt to find each namelist variable in the
-        top level of the model hierarchy.
+        rules: dict of lists of strings (optional)
+             An optional dictionary of rules can be passed if the component has a
+             hierarchy of containers for its input variables. If no rules dictionary
+             is passed, load_model will attempt to find each namelist variable in the
+             top level of the model hierarchy.
         
-        ignore: list of strings (Optional)
-        List of variable names that can safely be ignored.
+        ignore: list of strings (optional)
+             List of variable names that can safely be ignored.
         
-        single_group: integer (Optional)
-        Group id number to use for processing one single namelist group. Useful
-        if extra processing is needed, or if multiple groups have the same name.
+        single_group: integer (optional)
+             Group id number to use for processing one single namelist group. Useful
+             if extra processing is needed, or if multiple groups have the same name.
         
-        Returns a tuple containing the following values:
-        (empty_groups, unlisted_groups, unlinked_vars). These need to be
-        examined after calling load_model to make sure you loaded every
-        variable into your model.
+             Returns a tuple containing the following values:
+             (empty_groups, unlisted_groups, unlinked_vars). These need to be
+             examined after calling load_model to make sure you loaded every
+             variable into your model.
         
         empty_groups: ordereddict( integer : string )
-        Names and ID number of groups that don't have cards. This includes 
-        strings found at the top level that aren't comments; these need to
-        be processed by your wrapper to determine how the information fits
-        into your component's variable hierarchy.
+             Names and ID number of groups that don't have cards. This includes 
+             strings found at the top level that aren't comments; these need to
+             be processed by your wrapper to determine how the information fits
+             into your component's variable hierarchy.
         
         unlisted_groups: ordereddict( integer : string )
-        This dictionary includes the names and ID number of groups that have
-        variables that couldn't be loaded because the group wasn't mentioned
-        in the rules dictionary.
+             This dictionary includes the names and ID number of groups that have
+             variables that couldn't be loaded because the group wasn't mentioned
+             in the rules dictionary.
         
         unlinked_vars: list containing all variable names that weren't found
         in the component.
@@ -410,8 +447,24 @@ class Namelist(object):
         empty_groups = ordereddict.OrderedDict()
         unlisted_groups = ordereddict.OrderedDict()
         unlinked_vars = []
+        used_groups = []
         for i, group_name in use_group:
             
+            # Report all groups with no cards
+            if len(self.cards[i]) == 0:        
+                empty_groups[i] = group_name
+                continue
+            
+            # If a group_name appears twice, we really don't know where to
+            # stick the variables, and there are potential data overwrite
+            # issues. Those cases have to be handled individually.
+            if group_name in used_groups:
+                unlisted_groups[i] = group_name
+                continue
+            else:
+                used_groups.append(group_name)
+                
+            # Process the cards in this group
             for card in self.cards[i]:
                 
                 name = card.name
@@ -474,10 +527,6 @@ class Namelist(object):
                     self.comp.set(varpath, value)
                     
                     #print varpath, value
-                
-            # Report all groups with no cards
-            if len(self.cards[i]) == 0:        
-                empty_groups[i] = group_name
                 
         return empty_groups, unlisted_groups, unlinked_vars
 

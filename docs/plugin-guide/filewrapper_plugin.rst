@@ -100,13 +100,23 @@ executing the external application. These include:
 - Running the code on a remote server if required (forthcoming)
 
 So, we recommend that you always derive your file-wrapped component from
-the `ExternalCode` base class. The following example shows how you would
-do this for a simple component.
+the ``ExternalCode`` base class. The following example shows how to do for a simple component.
+
+Let's consider a simple application called *externalcode*, which takes one
+input and returns one output. The input is specified with an input file called
+``myinput.txt``, and the output is printed in a file called ``myoutput.txt``. The
+name of the input file that *externalcode* expects is hard-coded and cannot be
+changed. We want to create an OpenMDAO component that generates the input
+file, runs the code, and reads the data from the output file every time the
+component runs.
+
+To do this, we create a component that looks like this:
 
 .. testcode:: External_Code
 
     from openmdao.lib.datatypes.api import Float
     from openmdao.lib.components.api import ExternalCode
+    from openmdao.main.api import FileMetadata
     
     # The following will be used for file wrapping, see the next sections
     from openmdao.util.filewrap import InputFileGenerator, FileParser    
@@ -116,22 +126,60 @@ do this for a simple component.
         
         # Variables go here
         var_input = Float(3.612, iotype='in', desc='A floating point input')
-        var_output = Float(3.612, iotype='out', desc='output')
-        
+        var_output = Float(6.312, iotype='out', desc='output')
+
+        def __init__(self, directory=''):
+            """Constructor for the PdcylComp component"""
+    
+            super(WrappedComp, self).__init__(directory)
+    
+            # External Code public variables
+            self.input_file = 'myinput.txt'
+            self.output_file = 'myoutput.txt'
+            self.stderr = 'myerror.log'
+            
+            self.external_files = [
+                FileMetadata(path=self.input_file, input=True),
+                FileMetadata(path=self.output_file),
+                FileMetadata(path=self.stderr),
+            ]
+            
         def execute(self):
             """ Executes our file-wrapped component. """
             
             # (Prepare input file here)
 
             #Execute the component
-            super(Wrapped_Comp, self).execute()
+            super(WrappedComp, self).execute()
             
             # (Parse output file here)
 
-This component still needs one more piece of information -- the command
-string that runs the external code. The ExternalCode object has an attribute
-named `command` which takes the command string. So, if you want to execute a
-code that you normally run by typing
+Instead of deriving our OpenMDAO component from ``component``, we derive
+it from ``ExternalCode`` to take advantage of the features listed above. Just
+like in other components, we define variables for inputs and outputs.
+
+In the ``__init__`` function, we can define the names of the input and output
+files that the external code needs to run. Here we create two new private
+variables ``self.input_file`` and ``self.output_file`` to store these filenames.
+The name of these variables is not important. We also define a file for
+redirection of stderr. The variable name `stderr` is inherited from the
+``ExternalCode`` component. Finally, the ``__init__`` function also contains a
+block of code where these three files are added to the component's
+FileMetadata. This assures that when the model containing this component is
+saved to an egg, these files are always packed up and included in that egg.
+
+As with other components, the actual component execution occurs in the
+``execute`` method. Notice that the ``ExternalCode`` component takes care of
+running the external code, so all we have to do is call the ``execute``
+method of our base class via the *Super* call. We would still need to generate
+the input file and parse the output file. This example includes a placeholder
+comment for each of these tasks. More detail about what goes there can be
+found in the sections that follow.
+
+In order to run, this component still needs one more piece of information --
+the command string that runs the external code. The ``ExternalCode`` object has an
+attribute named `command` which takes the command string. So, if you want to
+execute a code that you normally run by typing
 
 ::
 
@@ -144,7 +192,7 @@ at the command prompt, then you need to set the command attribute as follows:
     MyComp = WrappedComp()
     MyComp.command = '/usr/bin/externalcode -v -r1'
     
-Note that you could also declare this in the ``__init__`` function of WrappedComp if it
+Note that you could also declare this in the ``__init__`` method of ``WrappedComp`` if it
 is something that you don't expect the user will need to change. The same is true
 of the other attributes described below.
 
@@ -152,29 +200,30 @@ This example is ready to execute, although it is missing the code that writes
 out the input file and parses the output file. Subsequent sections explain how
 to write these.
 
-The ExternalCode object also allows you to specify `stdout, stdin,` and `stderr`.
+The ``ExternalCode`` object also allows you to specify `stdout, stdin,` and `stderr`.
 For example, if your application handled input and output on the command line
-using `stdout` and `stdin` as such:
+using a redirection of `stdout` or `stdin` as such:
 
 ::
 
         /usr/bin/externalcode -v -r1 < myinput.txt > myoutput.txt
         
-you can tell ExternalCode to append these to your command line by setting the
-following attributes:
+you can let ``ExternalCode`` handle the redirection for you. When the following
+attributes are set, the redirection is automatically appended to your command
+line.
 
 .. testcode:: External_Code
 
     MyComp.command = '/usr/bin/externalcode -v -r1'
     MyComp.stdin = 'myinput.txt'
     MyComp.stdout = 'myoutput.txt'
-    MyComp.stderr = 'myerror.log'
     
 Note that you don't just paste everything into the command string, particularly if you
-want to assure cross-platform compatibility. In the example, we captured the
-`stderr` output into a file called ``myerror.log``.
+want to assure cross-platform compatibility.
 
-If you would like to redirect `stderr` to `stdout,` you can use the following:
+In the example, we captured the `stderr` output into a file called
+``myerror.log``. If you would like to redirect `stderr` to `stdout,` you can
+use the following:
 
 .. testcode:: External_Code
 
@@ -185,14 +234,14 @@ is given in the subprocess module as a convenience.
 
 Sometimes execution of a code requires you to set environment variables,
 possibly for defining paths that are needed to search for dynamic libraries, etc.
-The ExternalCode allows you to define variables for the execution environment
+The ``ExternalCode`` allows you to define variables for the execution environment
 using the dictionary ``env_vars``.
 
 .. testcode:: External_Code
 
     MyComp.env_vars = { 'LIBRARY_PATH' : '/usr/local/lib' }
     
-The ExternalCode component also allows you to manage the polling rate and the
+The ``ExternalCode`` component also allows you to manage the polling rate and the
 timeout values. `Timeout` is a measure of the maximum time to wait for the code to
 complete its execution. If a component takes longer than the given timeout value,
 then the process will end with a timeout error. Note that the default
@@ -267,9 +316,9 @@ template file. The templating object is called `InputFileGenerator,` and it
 includes methods that can replace specific fields as measured by their row
 and field numbers. 
 
-To use the InputFileGenerator object, first instantiate it and give it the name of
+To use the ``InputFileGenerator`` object, first instantiate it and give it the name of
 the template file and the name of the output file that you want to produce. (Note
-that this code must be placed in the ``execute`` function of your component
+that this code must be placed in the ``execute`` method of your component
 *before* the external code is run. See :ref:`Running-the-External-Code`.) The
 code will generally look like this:
 
@@ -448,7 +497,7 @@ array in a template to add more terms.
     A B C
 
 The named argument `sep` defines which separator to include between the
-additional terms of the array. Future revisions of InputFileGenerator will
+additional terms of the array. Future revisions of ``InputFileGenerator`` will
 hopefully be able to detect this automatically.
 
 The input file templating capability that comes with OpenMDAO is basic but quite
@@ -463,7 +512,7 @@ one of the community-developed engines, such as mako_ or django_.
 .. todo:: Include some examples with one of the templating engines.
 
 
-..index:: Fortran namelists
+.. index:: Fortran namelists
 
 Generating the Input File - Fortran Namelists
 ---------------------------------------------
@@ -475,7 +524,7 @@ Fortran implementation, but the format generally looks like this:
 
 ::
 
-   NAME
+   NAMEIn 
    ! Comment string
    &GROUP1 
     XREAL =  1.0e33,
@@ -488,8 +537,8 @@ Fortran implementation, but the format generally looks like this:
     ACHAR = 'aaa' 'bbb' 'ccc' ' ddd', 
     ABOOL = T T F F/
 
-The namelist utility includes functions to generate a valid namelist file from a
-component's set of input variables. Other functions can parse a
+The namelist utility includes methods to generate a valid namelist file from a
+component's set of input variables. Other methods can parse a
 namelist file and load the variable data back into an OpenMDAO component's
 variables (which can be useful for populating a component with new values).
 
@@ -544,25 +593,25 @@ namelist called `MAIN` would look like this:
             # Generate the input file for FLOPS
             sb.generate()
 
-Note that this component is derived from ExternalCode and uses a few of its
+Note that this component is derived from ``ExternalCode`` and uses a few of its
 features, so it is important to read :ref:`Running-the-External-Code` before
 proceeding.
 
-In the ``execute`` method, a *Namelist* object is instantiated. This object
+In the ``execute`` method, a ``Namelist`` object is instantiated. This object
 allows you to sequentially build up a namelist input file. The only argument
-is `self`, which is passed because the Namelist object needs to access your
+is `self`, which is passed because the ``Namelist`` object needs to access your
 component's OpenMDAO variables in order to automatically determine the data
 type. The ``set_filename`` method is used to set the name of the input file that
 will be written. Here, you just pass it the variable ``self.stdin``, which is part
 of the ExternalCode API.
 
-The first card you create for the Namelist is the title card, which is
+The first card you create for the ``Namelist`` is the title card, which is
 optionally assigned with the ``set_title`` method. After this, the first
 namelist group is declared with the ``add_group`` method. Subsequent variables
 are added to this namelist grouping. If ``add_group`` is called again, the
 current group is closed, and any further variables are added to the new one.
 
-The ``add_var`` method is used to add a variable to the Namelist. The only
+The ``add_var`` method is used to add a variable to the ``Namelist``. The only
 needed argument is the variable's name in the component. The variable's type
 is used to determine what kind of namelist variable to output. If you need to
 add something to the namelist that isn't contained in one of the component's
@@ -579,13 +628,13 @@ Finally, once every variable, group, and comment have been assigned, use the
 ``generate`` method to create the input file. If a variable was entered
 incorrectly, or if you have given it a variable type that it doesn't know how
 to handle (e.g., an Instance or a custom variable), an exception will be
-raised. Otherwise, the input file is created, and your ``execute`` function can
+raised. Otherwise, the input file is created, and your ``execute`` method can
 move on to running your code.
 
 *Parsing a Namelist File*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Namelist object also includes some functions for parsing a namelist file and
+The ``Namelist`` object also includes some functions for parsing a namelist file and
 loading the variable values into a component's list of variables. Doing this 
 can be useful for loading in models that were developed when your code was executed
 standalone.
@@ -633,7 +682,7 @@ characters that is some number of lines and some number of fields away from an
     parser = FileParser()
     parser.set_file('myoutput.txt')
     
-To use the FileParser object, first instantiate it and give it the name of the
+To use the ``FileParser`` object, first instantiate it and give it the name of the
 output file. (Note that this code must be placed in your component's
 ``execute`` function *after* the external code has been run. See
 :ref:`Running-the-External-Code`.)
@@ -693,7 +742,7 @@ this:
     
 Python also has built-in values for `nan` and `inf` that are valid for float variables. The parser
 recognizes them when it encounters them in a file. This allows you to catch numerical overflows,
-underflows, etc., and take action. Numpy includes the functions ``isnan`` and ``isinf`` to test for
+underflows, etc., and take action. NumPy includes the functions ``isnan`` and ``isinf`` to test for
 `nan` and `inf` respectively.
 
 ::
@@ -749,7 +798,29 @@ back to the first one.
 .. testoutput:: Parse_Output
 
     1.3334e+07
+
+There is a shortcut for extracting data that is stored as ``Key Value`` or 
+``"Key Value Value....``.
+
+.. testcode:: Parse_Output
+
+    parser.mark_anchor("LOAD CASE 1")
+    var = parser.transfer_keyvar("DISPLACEMENT", 1)
     
+    print "%g" % var
+
+.. testoutput:: Parse_Output
+
+    2.1
+    
+The method ``transfer_keyvar`` finds the first occurrence of the *key* string
+after the anchor (in this case, the word ``DISPLACEMENT``), and grabs the
+specified field value. This can be useful in cases where variables are found
+on lines that are uniquely named, particularly where you don't always know how
+many lines the key will occur past the anchor location. There are two optional
+arguments to ``transfer_keyvar``. The first lets you specify the nth occurrence
+of the key, and the second lets you specify a number of lines to offset from
+the line where the key is found (negative numbers are allowed).
 
 *Array Extraction*
 ~~~~~~~~~~~~~~~~~~
@@ -780,8 +851,8 @@ them as an array. You can do this with the ``transfer_array`` method.
 
     [ 2.1      4.6      3.1      2.22234]
 
-The ``transfer_array`` method takes four arguments: starting row, starting field,
-ending row, and ending field. The parser extracts all values from the starting
+The ``transfer_array`` method takes four arguments: *starting row, starting field,
+ending row,* and *ending field.* The parser extracts all values from the starting
 row and field and continues until it hits the ending field in the ending row.
 These values are all placed in a 1D array. When extracting multiple lines, if
 a line break is hit, the parser continues reading from the next line until the
@@ -864,3 +935,8 @@ With the correct delimiter set, you extract the second integer as expected.
     
 *Special Case Delimiter - Columns*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+One special-case value of the delimiter, ``'columns'`` is useful when the
+data fields have defined column location, as is the case in certain formatted
+output from Fortran or C. When the delimiter is set to ``'columns'``, the
+behavior of some of the methods is slightly different.

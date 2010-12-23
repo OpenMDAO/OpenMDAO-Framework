@@ -30,16 +30,16 @@ class SellarCO(Assembly):
         self.add('bcastr', Broadcaster())
         self.add('localopt1', CONMINdriver())
         self.add('localopt2', CONMINdriver())
-        self.driver.workflow.add([self.bcastr, self.localopt1, 
-                                  self.localopt2])
+        self.driver.workflow.add(['bcastr', 'localopt1', 
+                                  'localopt2'])
         
         # Local Optimization 1
         self.add('dis1', SellarDiscipline1())
-        self.localopt1.workflow.add(self.dis1)
+        self.localopt1.workflow.add('dis1')
         
         # Local Optimization 2
         self.add('dis2', SellarDiscipline2())
-        self.localopt2.workflow.add(self.dis2)
+        self.localopt2.workflow.add('dis2')
         
         #Parameters - Global Optimization
         self.driver.add_objective('(bcastr.x1)**2 + bcastr.z2 + bcastr.y1' + \

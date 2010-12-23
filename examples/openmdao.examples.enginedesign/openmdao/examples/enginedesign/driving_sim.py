@@ -68,7 +68,7 @@ class DrivingSim(Assembly):
         """Callback whenever a new Vehicle is added to the DrivingSim
         """
         
-        self.driver.workflow.add(newvehicle)
+        self.driver.workflow.add(newvehicle.name)
         
         # set up interface to the framework  
         # pylint: disable-msg=E1101

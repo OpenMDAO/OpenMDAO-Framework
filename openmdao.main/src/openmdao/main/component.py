@@ -420,11 +420,11 @@ class Component (Container):
     def list_inputs(self, valid=None, connected=None):
         """Return a list of names of input values. 
         
-        valid: bool, optional
+        valid: bool (optional)
             If valid is not None, the list will contain names 
             of inputs with matching validity.
             
-        connected: bool, optional
+        connected: bool (optional)
             If connected is not None, the list will contain names
             of inputs with matching *external* connectivity status.
         """
@@ -456,11 +456,11 @@ class Component (Container):
     def list_outputs(self, valid=None, connected=None):
         """Return a list of names of output values. 
         
-        valid: bool, optional
+        valid: bool (optional)
             If valid is not None, the list will contain names 
             of outputs with matching validity.
             
-        connected: bool, optional
+        connected: bool (optional)
             If connected is not None, the list will contain names
             of outputs with matching *external* connectivity status.
         """

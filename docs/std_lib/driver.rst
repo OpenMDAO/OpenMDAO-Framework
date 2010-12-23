@@ -81,7 +81,7 @@ equations defined in MIMOSystem.
             self.add('driver', BroydenSolver())
             self.add('problem', MIMOSystem())
         
-            self.driver.workflow.add(self.problem)
+            self.driver.workflow.add('problem')
         
             self.driver.add_parameter('problem.x', low=-1.0e99, high=1.0e99)
             self.driver.add_parameter('problem.y', low=-1.0e99, high=1.0e99)
@@ -263,7 +263,7 @@ follows:
             self.add('driver', CONMINdriver())
         
             # add DrivingSim to workflow
-            driver.workflow.add(self.driving_sim)
+            driver.workflow.add('driving_sim')
         
             # CONMIN Design Variables 
             self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
@@ -542,7 +542,7 @@ follows:
             self.add('driver', NEWSUMTdriver())
         
             # add DrivingSim to workflow
-            driver.workflow.add(self.driving_sim)
+            driver.workflow.add('driving_sim')
         
             # CONMIN Design Variables 
             self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
@@ -759,7 +759,7 @@ operate.
                 
                 self.add('branin', BraninComponent())
                 self.add('driver', DOEdriver())
-                self.driver.workflow.add(self.branin)
+                self.driver.workflow.add('branin')
 
                 self.driver.add_parameter('branin.x')
                 self.driver.add_parameter('branin.y')
@@ -831,7 +831,7 @@ like this.
             self.add('driver', FixedPointIterator())
             self.add('problem', Babylonian())
         
-            self.driver.workflow.add(self.problem)
+            self.driver.workflow.add('problem')
             
             # Set our independent and dependent
             self.driver.x_in = 'problem.x'    
@@ -920,7 +920,7 @@ You add design variables to Genetic using the ``add_parameter`` method.
             self.add('comp', SomeComp())
         
             # Driver process definition
-            self.driver.workflow.add(self.comp)
+            self.driver.workflow.add('comp')
 
             self.driver.add_parameter('comp.x')
             self.driver.add_parameter('comp.y')

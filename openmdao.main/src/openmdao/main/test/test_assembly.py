@@ -94,16 +94,15 @@ class AssemblyTestCase(unittest.TestCase):
         for name in ['comp2', 'comp3']:
             top.add(name, DummyComp())
             
-        # driver process definition
-        top.driver.workflow.add([top.comp1,top.nested,top.comp2,top.comp3])
-        nested.driver.workflow.add([nested.comp1])
+        top.driver.workflow.add(['comp1','nested','comp2','comp3'])
+        nested.driver.workflow.add('comp1')
                 
     def test_lazy_eval(self):
         top = set_as_top(Assembly())
         comp1 = top.add('comp1', Multiplier())
         comp2 = top.add('comp2', Multiplier())
         
-        top.driver.workflow.add([comp1, comp2])
+        top.driver.workflow.add(['comp1', 'comp2'])
         
         top.comp1.mult = 2.0
         top.comp2.mult = 4.0
@@ -362,8 +361,8 @@ class AssemblyTestCase(unittest.TestCase):
         comp1 = asm.nested.add('comp1', Simple())
         comp2 = asm.nested.add('comp2', Simple())
         
-        asm.driver.workflow.add(asm.nested)
-        asm.nested.driver.workflow.add([comp1, comp2])
+        asm.driver.workflow.add('nested')
+        asm.nested.driver.workflow.add(['comp1','comp2'])
         
         asm.nested.create_passthrough('comp1.a') 
         asm.nested.connect('a', 'comp2.b') 
@@ -436,7 +435,7 @@ class AssemblyTestCase(unittest.TestCase):
             def __init__(self):
                 super(MyAsm, self).__init__()
                 self.add('propulsion', MyComp())
-                self.driver.workflow.add(self.propulsion)
+                self.driver.workflow.add('propulsion')
                 self.connect('ModulesInstallPath','propulsion.ModulesInstallPath')
         
         asm = set_as_top(MyAsm())

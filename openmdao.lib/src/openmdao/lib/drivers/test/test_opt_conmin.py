@@ -68,7 +68,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         self.top.add('driver', CONMINdriver())
         self.top.add('comp', OptRosenSuzukiComponent())
-        self.top.driver.workflow.add(self.top.comp)
+        self.top.driver.workflow.add('comp')
         self.top.driver.iprint = 0
         self.top.driver.itmax = 30
         
