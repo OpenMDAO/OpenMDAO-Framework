@@ -12,7 +12,7 @@ from openmdao.lib.datatypes.api import Bool, Dict, Str, Float, Int
 
 from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped
-from openmdao.main.rbac import AccessController, RoleError
+from openmdao.main.rbac import AccessController, RoleError, rbac
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
@@ -53,9 +53,17 @@ class ExternalCode(Component):
         self._process = None
         self._server = None
 
-    def get_access_controller(self):
+    # This gets used by remote server.
+    def get_access_controller(self):  #pragma no cover
         """ Return :class:`AccessController` for this object. """
         return _AccessController()
+
+    @rbac(('owner', 'user'))
+    def set(self, path, value, index=None, src=None, force=False):
+        """ Don't allow setting of 'command' by remote client. """
+        if path in ('command', 'get_access_controller'):
+            self.raise_exception('%r may not be set()' % path, RuntimeError)
+        return super(ExternalCode, self).set(path, value, index, src, force)
 
     def execute(self):
         """
@@ -301,8 +309,8 @@ class ExternalCode(Component):
                 mode |= stat.S_IWUSR
                 os.chmod(dst_path, mode)
 
-
-class _AccessController(AccessController):
+# This gets used by remote server.
+class _AccessController(AccessController):  #pragma no cover
     """ Don't allow setting of 'command' by remote client. """
 
     def check_access(self, role, methodname, obj, attr):

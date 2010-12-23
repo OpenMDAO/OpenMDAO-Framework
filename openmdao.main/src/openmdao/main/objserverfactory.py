@@ -608,7 +608,7 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
     Returns :class:`ShellProc`.
     """
     if timeout is None:
-        if sys.platform == 'win32' and not HAVE_PYWIN32:
+        if sys.platform == 'win32' and not HAVE_PYWIN32:  #pragma no cover
             timeout = 120
         else:
             timeout = 30

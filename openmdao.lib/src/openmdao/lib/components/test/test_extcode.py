@@ -8,6 +8,7 @@ import pkg_resources
 import platform
 import shutil
 import sys
+import time
 import unittest
 import nose
 
@@ -282,7 +283,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_rsh')
 
-        testdir = 'test_rsh'
+        testdir = 'external_rsh'
         if os.path.exists(testdir):
             shutil.rmtree(testdir)
         os.mkdir(testdir)
@@ -294,6 +295,7 @@ class TestCase(unittest.TestCase):
             factory = ObjServerFactory()
             exec_comp = factory.create('openmdao.lib.components.external_code.ExternalCode')
             cmd = exec_comp.command
+
             try:
                 exec_comp.command = 'this-should-fail'
             except RemoteError as exc:
@@ -304,6 +306,9 @@ class TestCase(unittest.TestCase):
             else:
                 self.fail('Expected RemoteError')
 
+            code = "exec_comp.set('command', 'this-should-fail')"
+            assert_raises(self, code, globals(), locals(), RuntimeError,
+                          ": 'command' may not be set()")
         finally:
             if factory is not None:
                 factory.cleanup()
