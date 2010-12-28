@@ -61,6 +61,15 @@ class TestCase(unittest.TestCase):
         for directory in ('a', 'b'):
             if os.path.exists(directory):
                 shutil.rmtree(directory)
+        if os.path.exists("error.out"):
+            try:
+                os.remove("error.out")
+                
+            # Windows processes greedily clutch files. I see no
+            # way to delete this file in test_timeout
+            except WindowsError:
+                pass
+                
         SimulationRoot.chroot(ORIG_DIR)
         
     def test_normal(self):

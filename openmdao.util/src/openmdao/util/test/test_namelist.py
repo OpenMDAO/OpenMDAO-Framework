@@ -29,11 +29,14 @@ class VarComponent(Component):
     boolvar = Bool(False, iotype='in')
     intvar = Int(333, iotype='in')
     floatvar = Float(-16.54, iotype='in')
+    expvar1 = Float(1.2, iotype='in')
+    expvar2 = Float(1.2, iotype='in')
     textvar = Str("This", iotype='in')
     arrayvar = Array(iotype='in')
     arrayvarsplit = Array(iotype='in')
     arrayvarsplit2 = Array(iotype='in')
     arrayvarzerod = Array(zeros(shape=(0,0)), iotype='in')
+    arrayvartwod = Array(zeros(shape=(1,3)), iotype='in')
     arraysmall = Array(iotype='in')
     listenumvar = List(Enum(1,(1,2,3)), iotype='in')
     
@@ -128,6 +131,8 @@ class TestCase(unittest.TestCase):
                     "                   2\n" + \
                     "                   3\n" + \
                     "  arraysmall = 1.75\n" + \
+                    "  expvar1 = 1.5e-12\n" + \
+                    "  expvar2 = -1.5D12\n" + \
                     "/\n"
 
         outfile = open(self.filename, 'w')
@@ -146,6 +151,8 @@ class TestCase(unittest.TestCase):
         self.assertEqual(my_comp.intvar, 777)
         self.assertEqual(my_comp.boolvar, True)
         self.assertEqual(my_comp.floatvar, -3.14)
+        self.assertEqual(my_comp.expvar1, 1.5e-12)
+        self.assertEqual(my_comp.expvar2, -1.5e12)
         self.assertEqual(my_comp.textvar, 'That')
         self.assertEqual(my_comp.listenumvar, [3,3,2,2])
         self.assertEqual(my_comp.arrayvar[0], 3.5)
@@ -180,6 +187,12 @@ class TestCase(unittest.TestCase):
                     "&NODICT\n" + \
                     "  noval = 0\n" + \
                     "/\n" + \
+                    "&DUPE\n" + \
+                    "  some = 0\n" + \
+                    "/\n" + \
+                    "&DUPE\n" + \
+                    "  some = 0\n" + \
+                    "/\n" + \
                     "FREEFORM\n"
 
         outfile = open(self.filename, 'w')
@@ -195,8 +208,10 @@ class TestCase(unittest.TestCase):
         rules_dict = { "OPTION" : ["varcontainer"] }
         n1, n2, n3 = sb.load_model(rules_dict)
         
-        self.assertEqual(n1[2], 'FREEFORM')
+        self.assertEqual(n1[4], 'FREEFORM')
         self.assertEqual(n2[1], 'NODICT')
+        self.assertEqual(n2[2], 'DUPE')
+        self.assertEqual(n2[3], 'DUPE')
         self.assertEqual(n3, ['extravar'])
         self.assertEqual(my_comp.varcontainer.intvar, 777)
         self.assertEqual(my_comp.varcontainer.boolvar, False)
@@ -233,6 +248,30 @@ class TestCase(unittest.TestCase):
         self.assertEqual(my_comp.floatvar, 3.5e-23)
         
         
+    def test_2Darray_read(self):
+        
+        namelist1 = "Testing\n" + \
+                    "$GROUP\n" + \
+                    "  arrayvartwod(1,1) = 12, 24, 36\n" + \
+                    "  arrayvartwod(1,2) = 33, 66, 99\n" + \
+                    "$END\n"
+        
+        outfile = open(self.filename, 'w')
+        outfile.write(namelist1)
+        outfile.close()
+        
+        my_comp = VarComponent()
+        sb = Namelist(my_comp)
+        sb.set_filename(self.filename)
+
+        sb.parse_file()
+        
+        sb.load_model()
+
+        # Unchanged
+        self.assertEqual(my_comp.arrayvartwod[0][0], 12)
+        self.assertEqual(my_comp.arrayvartwod[1][2], 99)
+
     def test_container_write(self):
         
         my_comp = VarComponent()
@@ -276,7 +315,7 @@ class TestCase(unittest.TestCase):
         
         compare = "\n" + \
                   "&Test\n" + \
-                  "  arrayvar = 0, 0, 3.700000047683716\n" + \
+                  "  arrayvar = 0.0, 0.0, 3.700000047683716\n" + \
                   "/\n"
 
         self.assertEqual(contents, compare)
@@ -301,9 +340,9 @@ class TestCase(unittest.TestCase):
         
         compare = "\n" + \
                   "&Test\n" + \
-                  "  arrayvar(1,1) = 0,  3.700000047683716, \n" + \
-                  "arrayvar(1,2) = 0,  0, \n" + \
-                  "arrayvar(1,3) = 7.880000114440918,  0, \n" + \
+                  "  arrayvar(1,1) = 0.0,  3.700000047683716, \n" + \
+                  "arrayvar(1,2) = 0.0,  0.0, \n" + \
+                  "arrayvar(1,3) = 7.880000114440918,  0.0, \n" + \
                   "/\n"
 
         self.assertEqual(contents, compare)
