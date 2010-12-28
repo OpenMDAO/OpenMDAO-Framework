@@ -755,6 +755,7 @@ class Container(HasTraits):
         self.raise_exception("Couldn't find metadata for trait %s" % traitpath,
                              AttributeError)
 
+    @rbac(('owner', 'user'))
     def get_metadata(self, traitpath, metaname=None):
         """Retrieve the metadata associated with the trait found using
         traitpath.  If metaname is None, return the entire metadata dictionary
