@@ -21,7 +21,6 @@ class Mux(Component):
     def _n_changed(self,old,new):
         
         for name in self._inputs: 
-            print "test"
             if self.parent:
                 self.parent.disconnect('.'.join([self.name,name]))
             self.remove_trait(name)
@@ -31,7 +30,6 @@ class Mux(Component):
             name = "input_%d"%(i+1)
             self.add_trait(name, Any(iotype="in"))
             self._inputs.append(name)
-        print self._inputs    
     def execute(self): 
         self.output = [getattr(self,inp) for inp in self._inputs]
         

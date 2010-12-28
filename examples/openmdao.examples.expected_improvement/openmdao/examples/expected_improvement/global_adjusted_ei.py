@@ -26,9 +26,9 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
-from openmdao.lib.doegenerators.optlh import OptLatinHypercube
-from openmdao.lib.doegenerators.full_factorial import FullFactorial
+from openmdao.lib.surrogatemodels.api import KrigingSurrogate
+from openmdao.lib.doegenerators.api import OptLatinHypercube
+from openmdao.lib.doegenerators.api import FullFactorial
 
 from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array
 
@@ -39,13 +39,11 @@ from openmdao.lib.caserecorders.api import DBCaseRecorder,DumpCaseRecorder
 from openmdao.lib.caseiterators.api import DBCaseIterator
 
 from openmdao.examples.expected_improvement.alg_component1 import Alg_Component1
-from openmdao.examples.expected_improvement.alg_component3 import Alg_Component3
+from openmdao.examples.expected_improvement.alg_component2 import Alg_Component2
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
 
-from matplotlib import pyplot as plt, cm
-from matplotlib.pylab import get_cmap
 from numpy import meshgrid,array, pi,arange,cos,sin,linspace,remainder
 
 @add_delegate(HasStopConditions)
@@ -200,7 +198,7 @@ class Analysis(Assembly):
         #CONCEPT C2
         self.add("c2",MetaModel())
         self.c2.surrogate = KrigingSurrogate()
-        self.c2.model = Alg_Component3()
+        self.c2.model = Alg_Component2()
         self.c2.recorder = DBCaseRecorder(':memory:')
         self.c2.force_execute = True
         
@@ -260,7 +258,7 @@ class Analysis(Assembly):
         
         self.add("iter",Iterator())
         self.iter.max_iterations = 12
-        #self.iter.add_stop_condition('MOEI.EI <= .000001')
+
         
         self.add("muxer",Mux(2))
         
@@ -292,14 +290,37 @@ if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
     from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
+	
+    seed = None
+    backend = None
+    figname = None
+    for arg in sys.argv[1:]:
+        if arg.startswith('--seed='):
+            import random
+            seed = int(arg.split('=')[1])
+            random.seed(seed)
+        if arg.startswith('--backend='):
+            backend = arg.split('=')[1]
+        if arg.startswith('--figname='):
+            figname = arg.split('=')[1]
+    import matplotlib
+    if backend is not None:
+        matplotlib.use(backend)
+    elif sys.platform == 'win32':
+        matplotlib.use('WxAgg')
+		
+	from matplotlib import pyplot as plt, cm 
+	from matplotlib.pylab import get_cmap
+	from numpy import cos,sin,linspace,seterr,remainder
     
+    seterr(all='ignore')    
+		
     analysis = Analysis()
     
     set_as_top(analysis)
 
     def A1(x):
         return (6.*x-2)**2*sin(12.*x-4.)
-
     def A2(x):
         return 0.5*A1(x)+10.*(x-0.5)-5.
 
@@ -307,18 +328,18 @@ if __name__ == "__main__": #pragma: no cover
         return y
     def B2(y):
         return 12./(y+4.)-20.
-        
-    m = 100
-    X = linspace(0,1.0,m)
-    Y = linspace(-3.5,10.0,m)
     
-    Z1,Z2 = A1(X),A2(X)
+        
+    m = 400
+    Y = linspace(-3.5,10.0,m)
+    X = linspace(0,1.0,m)
+    
     ZZ1,ZZ2 = B1(Y),B2(Y)
+    Z1,Z2 = A1(X),A2(X)
     
     par = plt.figure(figsize=(4,14))
     des = plt.figure(figsize=(4,14))
-    #par = plt.figure()
-    #des = plt.figure()    
+   
     analysis.run()    
 
     plt.show()

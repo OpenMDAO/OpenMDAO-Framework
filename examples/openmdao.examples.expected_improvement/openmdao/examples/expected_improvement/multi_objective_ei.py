@@ -16,7 +16,7 @@ from openmdao.lib.components.api import MetaModel, MultiObjExpectedImprovement,\
      ParetoFilter, Mux
 from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver 
 from openmdao.lib.caseiterators.api import DBCaseIterator
-from openmdao.lib.caserecorders import DBCaseRecorder, DumpCaseRecorder
+from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder
 
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
 
@@ -39,6 +39,7 @@ class Iterator(Driver):
         if (self._iterations > 1) and self.should_stop():
             return False
         if self._iterations <= self.iterations: 
+            print 'Iteration: ',self._iterations
             return True
     
         return False
@@ -78,10 +79,12 @@ class Analysis(Assembly):
         self.spiral_meta_model.force_execute = True
         
         self.add("MOEI",MultiObjExpectedImprovement())
-        self.MOEI.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
+        #self.MOEI.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
+        self.MOEI.criteria = ['f1_xy','f2_xy']
         
         self.add("filter",ParetoFilter())
-        self.filter.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
+        #self.filter.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
+        self.filter.criteria = ['f1_xy','f2_xy']
         self.filter.case_sets = [self.spiral_meta_model.recorder.get_iterator()]
         self.filter.force_execute = True
         
@@ -112,7 +115,7 @@ class Analysis(Assembly):
         self.retrain.force_execute = True
         
         self.add("iter",Iterator())
-        self.iter.iterations = 15
+        self.iter.iterations = 5
         self.iter.add_stop_condition('MOEI.EI <= .0001')
         
         self.add("EI_mux",Mux(2))
@@ -163,9 +166,9 @@ if __name__ == "__main__": #pragma: no cover
     from matplotlib import pyplot as plt, cm 
     from matplotlib.pylab import get_cmap
     from mpl_toolkits.mplot3d import Axes3D
-    from numpy import meshgrid,array, pi,arange,cos
+    from numpy import meshgrid,array, pi,arange,sin,cos,seterr
     
-    
+    seterr(all='ignore')
     #create the analysis
     analysis = Analysis()
     set_as_top(analysis)

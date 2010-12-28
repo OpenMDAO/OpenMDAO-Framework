@@ -102,13 +102,18 @@ class MultiObjExpectedImprovement(Component):
         criteria_count = len(self.criteria)
         
         flat_crit= self.criteria.ravel()
-        
+       #for case in self.best_cases:
+       #     print [out[0] for out in case.outputs]
         #y_star is a 2D list of pareto points
         y_star = []
-        c = []
+        #c = []
         
         for case in self.best_cases:
-            c = [o[2] for o in case.outputs if o[0] in flat_crit]
+            c = []
+            for crit in self.criteria:
+                c.extend([o[2] for o in case.outputs if crit in o[0]])
+                #c = [o[2] for o in case.outputs if o[0] in flat_crit]
+                
             if len(c) == criteria_count :
                 y_star.append(c)
         if not y_star: #empty y_star set means no cases met the criteria!
