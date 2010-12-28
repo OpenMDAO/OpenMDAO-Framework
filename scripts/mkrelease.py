@@ -274,7 +274,8 @@ def main():
         # build the docs
         devtools_dir = os.path.join(topdir,'openmdao.devtools',
                                     'src','openmdao','devtools')
-        check_call([sys.executable, os.path.join(devtools_dir,'build_docs.py')])
+        check_call([sys.executable, os.path.join(devtools_dir,'build_docs.py'),
+                    '--version=%s' % options.version])
         shutil.move(os.path.join(topdir,'docs','_build'), 
                     os.path.join(destdir,'_build'))
         if not options.test:

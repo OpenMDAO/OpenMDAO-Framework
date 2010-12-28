@@ -159,10 +159,13 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
    
       python go-openmdao.py --reqs=mysitereqs --reqs=http://mywebserver/morefiles.req
       
-   The format of requirements files is simple.  Each line can be a comment, a blank
-   line, a line starting with -f, followed by the URL of a find-links server, or a line
-   containing a requirement specifier, which has the same form as those seen in setup.py
-   files or buildout.cfg files.  Here's an example:
+   The following lines are allowed in a requirements file:
+   
+        - A blank line
+        - A python style comment
+        - A line starting with -f, followed by the URL of a find-links server
+        - A line containing a requirement specifier, which has the same form as those seen 
+          in setup.py files or buildout.cfg files.  Here's an example:
    
    ::
    
