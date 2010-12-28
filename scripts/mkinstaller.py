@@ -160,7 +160,7 @@ def after_install(options, home_dir):
         # add packages from any specified requirements files
         if options.reqs:
             if sys.platform == 'win32':
-                reqscript = 'add_reqs.exe'
+                reqscript = 'add_reqs-script.py'
             else:
                 reqscript = 'add_reqs'
             subprocess.check_call([join(bin_dir, 'python'),
