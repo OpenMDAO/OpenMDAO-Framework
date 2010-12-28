@@ -1218,8 +1218,12 @@ def after_install(options, home_dir):
 
         # add packages from any specified requirements files
         if options.reqs:
+            if sys.platform == 'win32':
+                reqscript = 'add_reqs.exe'
+            else:
+                reqscript = 'add_reqs'
             subprocess.check_call([join(bin_dir, 'python'),
-                                   join(bin_dir, 'add_reqs'), '-f', url] + options.reqs,
+                                   join(bin_dir, reqscript), '-f', url] + options.reqs,
                                   env=os.environ)
 
     except Exception as err:
