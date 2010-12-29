@@ -186,10 +186,21 @@ def _write_src_docs(branchdir, docdir):
             logger.info('creating autodoc file for %s' % src)
             _mod_sphinx_info(os.path.basename(src), f)
 
-def build_docs(version=None):
+def build_docs(argv=None):
     """A script (openmdao_build_docs) points to this.  It generates the Sphinx
     documentation for openmdao.
     """
+    if argv is None:
+        argv = sys.argv[1:]
+    if '-v' in argv:
+        idx = argv.index('-v')
+        version = argv[idx+1]
+        shtitle = 'OpenMDAO Documentation v%s' % version
+    else:
+        #version = openmdao.util.releaseinfo.__version__
+        version = 'rev %s' % get_revision()
+        shtitle = 'OpenMDAO Documentation (%s)' % version
+    
     branchdir, docdir, bindir =_get_dirnames()
 
     startdir = os.getcwd()
@@ -208,14 +219,7 @@ def build_docs(version=None):
             shutil.rmtree(os.path.join('_build', 'doctrees'))
         os.makedirs(os.path.join('_build', 'html'))
         os.makedirs(os.path.join('_build', 'doctrees'))
-        
-        if version:
-            shtitle = 'OpenMDAO Documentation v%s' % version
-        else:
-            #version = openmdao.util.releaseinfo.__version__
-            version = 'rev %s' % get_revision()
-            shtitle = 'OpenMDAO Documentation (%s)' % version
-            
+                    
         sphinx.main(argv=['-P', '-b', 'html',
                           '-Dhtml_short_title=%s' % shtitle,
                           '-Dversion=%s' % version,
@@ -349,11 +353,6 @@ def _compare_traits_path(x, y):
     
 
 if __name__ == "__main__": #pragma: no cover
-    parser = OptionParser()
-    parser.add_option("-v", "--version", action="store", type="string", dest="version",
-                      help="version string applied to docs")
-    (options, args) = parser.parse_args(sys.argv[1:])
-    
-    build_docs(options.version)
+    build_docs()
 
 
