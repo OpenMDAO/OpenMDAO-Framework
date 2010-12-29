@@ -186,17 +186,10 @@ def _write_src_docs(branchdir, docdir):
             logger.info('creating autodoc file for %s' % src)
             _mod_sphinx_info(os.path.basename(src), f)
 
-def build_docs(argv=None):
+def build_docs(version=None):
     """A script (openmdao_build_docs) points to this.  It generates the Sphinx
     documentation for openmdao.
     """
-    parser = OptionParser()
-    parser.add_option("-v", "--version", action="store", type="string", dest="version",
-                      help="version string applied to docs")
-    if argv is None:
-        argv = sys.argv[1:]
-    (options, args) = parser.parse_args(argv)
-    
     branchdir, docdir, bindir =_get_dirnames()
 
     startdir = os.getcwd()
@@ -216,8 +209,7 @@ def build_docs(argv=None):
         os.makedirs(os.path.join('_build', 'html'))
         os.makedirs(os.path.join('_build', 'doctrees'))
         
-        if options.version:
-            version = options.version
+        if version:
             shtitle = 'OpenMDAO Documentation v%s' % version
         else:
             #version = openmdao.util.releaseinfo.__version__
@@ -357,6 +349,11 @@ def _compare_traits_path(x, y):
     
 
 if __name__ == "__main__": #pragma: no cover
-    build_docs()
+    parser = OptionParser()
+    parser.add_option("-v", "--version", action="store", type="string", dest="version",
+                      help="version string applied to docs")
+    (options, args) = parser.parse_args(sys.argv[1:])
+    
+    build_docs(options.version)
 
 

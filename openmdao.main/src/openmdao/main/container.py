@@ -30,7 +30,6 @@ from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
 
 from openmdao.main.filevar import FileRef
-from openmdao.lib.datatypes.api import Float
 
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
