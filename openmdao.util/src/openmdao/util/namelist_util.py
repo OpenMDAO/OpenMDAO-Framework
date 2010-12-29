@@ -5,8 +5,10 @@ Utilities for reading and writing Fortran namelists.
 # pylint: disable-msg=E0611,F0401
 import ordereddict
 
-from numpy import ndarray, array, append, vstack
+from numpy import ndarray, array, append, vstack, zeros, \
+                  int32, int64, float32, float64
 from enthought.traits.trait_base import not_none
+from enthought.traits.trait_handlers import TraitListObject 
 
 from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
                       Optional, QuotedString, Suppress, Word, alphanums, \
@@ -14,18 +16,63 @@ from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
 
 from openmdao.util.filewrap import ToFloat, ToInteger
 
-def _getformat(val):
-    # Returns the output format for a floating point number.
-    # The general format is used with 16 places of accuracy, except for when
-    # the floating point value is an integer, in which case a decimal point
-    # followed by a single zero is used.
+def _floatfmt(val):
+    """ Returns the output format for a floating point number.
+    The general format is used with 16 places of accuracy, except for when
+    the floating point value is an integer, in which case a decimal point
+    followed by a single zero is used."""
     
     if int(val) == val:
         return "%.1f"
     else:
         return "%.16g"
 
+def _intfmt(val):
+    """ Returns the output format for an integer """
+    
+    return "%d"
 
+def _strfmt(val):
+    """ Returns the output format for a string """
+    
+    return "'%s'"
+    
+def _boolfmt(val):
+    """ Returns the output format for a boolean """
+    
+    if val == True:
+        return 'T%.0s'
+    else:
+        return 'F%.0s'
+    
+    
+def _process_card_info(card):
+    """ Function to extract info from a card as returned from PyParsing a
+    namelist file. """
+    
+    name = card.name
+
+    # Sometimes we have a 1D array declared by element
+    if card.index:
+        index = card.index[0]-1
+        val = array(card[2:])
+        value = zeros(index+len(val))
+        value[index:] = val
+        
+    # Alternate array specification
+    elif card.dimension:
+        dim = card.dimension
+        value = zeros(dim)
+        value.fill(card.value)
+        
+    # Comma-delimited arrays
+    elif len(card) > 2:
+        value = array(card[1:])
+    else:
+        value = card.value
+        
+    return name, value
+        
 class Card(object):
     """ Data object that stores the value of a single card for a namelist."""
     
@@ -35,15 +82,14 @@ class Card(object):
         self.value = value
         self.is_comment = is_comment
 
-        
 class ToBool(TokenConverter):
     """Converter for PyParsing that is used to turn a token into a Boolean."""
     def postParse( self, instring, loc, tokenlist ):
         """Converter to make token into a bool."""
         
-        if tokenlist[0] in ['T', 'True', 'TRUE', 'true']:
+        if tokenlist[0] in ['T', 'True', 'TRUE', 'true', '.TRUE.']:
             return True
-        elif tokenlist[0] in ['F', 'False', 'FALSE', 'false']:
+        elif tokenlist[0] in ['F', 'False', 'FALSE', 'false', '.FALSE.']:
             return False
         else:
             raise RuntimeError('Unexpected error while trying to identify a'
@@ -127,7 +173,7 @@ class Namelist(object):
         
         target_container = self.comp.get(varpath)
             
-        for name,val in target_container.items(iotype=not_none):
+        for name, val in target_container.items(iotype=not_none):
             self.add_var("%s.%s" % (varpath, name))
         
     def add_comment(self, comment):
@@ -161,23 +207,54 @@ class Namelist(object):
                     line = "  %s\n" % (card.value)
                     
                 elif isinstance(card.value, bool):
-                    if card.value == True:
-                        val = 'T'
-                    else:
-                        val = 'F'
-                    line = "  %s = %s\n" % (card.name, val)
+                    fstring = "  %s = " + _boolfmt(card.value) + "\n"
+                    line = fstring % (card.name, card.value)
                     
                 elif isinstance(card.value, int):
-                    line = "  %s = %s\n" % (card.name, str(card.value))
+                    fstring = "  %s = " + _intfmt(card.value) + "\n"
+                    line = fstring % (card.name, card.value)
                     
                 elif isinstance(card.value, float):
-                    fstring = "  %s = " + _getformat(card.value) + "\n"
+                    fstring = "  %s = " + _floatfmt(card.value) + "\n"
                     line =  fstring % (card.name, card.value)
                     
                 elif isinstance(card.value, str):
-                    line = "  %s = '%s'\n" % (card.name, card.value)
+                    fstring = "  %s = " + _strfmt(card.value) + "\n"
+                    line =  fstring % (card.name, card.value)
                     
+                # Lists are mainly supported for the Enum Array
+                elif isinstance(card.value, list):
+                    line = "  %s = " % (card.name)
+                    sep = ""
+                    for val in card.value:
+                        
+                        # We can have integer, real, or string lists
+                        if isinstance(val, bool):
+                            fmt = _boolfmt
+                        elif isinstance(val, (int, int32, int64)):
+                            fmt = _intfmt
+                        elif isinstance(val, (float, float32, float64)):
+                            fmt = _floatfmt
+                        else:
+                            fmt = _strfmt
+                    
+                        fstring = sep + fmt(val)
+                        line += fstring % val
+                        sep = self.delimiter
+                        
+                    line += "\n"
+
                 elif isinstance(card.value, (ndarray)):
+                    
+                    # We can have integer, real, or string arrays
+                    if card.value.dtype == bool:
+                        fmt = _boolfmt
+                    elif card.value.dtype in (int, int32, int64):
+                        fmt = _intfmt
+                    elif card.value.dtype in (float, float32, float64):
+                        fmt = _floatfmt
+                    else:
+                        fmt = _strfmt
                     
                     # We don't need to output 0D arrays
                     if len(card.value) == 0:
@@ -187,7 +264,7 @@ class Namelist(object):
                         line = "  %s = " % (card.name)
                         sep = ""
                         for val in card.value:
-                            fstring = "%s" + _getformat(val)
+                            fstring = "%s" + fmt(val)
                             line += fstring % (sep, val)
                             sep = self.delimiter
                         line += "\n"
@@ -199,7 +276,7 @@ class Namelist(object):
                             line += card.name + "(1," + str(row+1) + ") ="
                             for col in range(0, card.value.shape[1]):
                                 val = card.value[row, col]
-                                fstring = " " + _getformat(val) + "%s"
+                                fstring = " " + fmt(val) + "%s"
                                 line += fstring % (val, self.delimiter)
                             line += "\n"
                         
@@ -208,15 +285,6 @@ class Namelist(object):
                                            " of %s dimensions" \
                                            % len(card.value.shape))
                     
-                # Lists are mainly supported for the Enum Array
-                elif isinstance(card.value, list):
-                    line = "  %s = " % (card.name)
-                    sep = ""
-                    for val in card.value:
-                        line += sep + str(val)
-                        sep = self.delimiter
-                    line += "\n"
-
                 else:
                     raise RuntimeError("Error generating input file. Don't" + \
                                        "know how to handle data in variable" + \
@@ -243,11 +311,6 @@ class Namelist(object):
         data = infile.readlines()
         infile.close()
         
-        # Tokens for parsing the group head and tail
-        group_name_token = (Literal("$") | Literal("&")) + \
-                           Word(alphanums).setResultsName("name")
-        group_end_token = Literal("/") | Literal("$END") | Literal("$end")
-        
         # Lots of numerical tokens for recognizing various kinds of numbers
         digits = Word(nums)
         dot = "."
@@ -270,24 +333,34 @@ class Namelist(object):
         
         numval = num_float | mixed_exp | num_int | nan
         strval =  QuotedString(quoteChar='"') | QuotedString(quoteChar="'")
-        boolval = ToBool(oneOf("T TRUE True true F FALSE False false"))
+        b_list = "T TRUE True true F FALSE False false .TRUE. .FALSE."
+        boolval = ToBool(oneOf(b_list))
         fieldval = Word(alphanums)
         
         # Tokens for parsing a line of data
         numstr_token = numval + ZeroOrMore(Suppress(',') + numval) \
                    | strval
         data_token = numstr_token | boolval
+        index_token = Suppress('(') + num_int + Suppress(')')
         
         card_token = Group(fieldval("name") + \
+                           Optional(index_token("index")) + \
                            Suppress('=') + \
-                           data_token("value"))
-        multi_card_token = card_token + ZeroOrMore(Suppress(',') + card_token)
+                           data_token("value") +
+                           Optional(Suppress('*') + num_int("dimension")))
+        multi_card_token = (card_token + ZeroOrMore(Suppress(',') + card_token))
         array_continuation_token = numstr_token.setResultsName("value")
         array2D_token = fieldval("name") + Suppress("(") + \
                         Suppress(num_int) + Suppress(',') + \
                         num_int("index") + Suppress(')') + \
                         Suppress('=') + numval + \
                         ZeroOrMore(Suppress(',') + numval)
+        
+        # Tokens for parsing the group head and tail
+        group_name_token = (Literal("$") | Literal("&")) + \
+                           Word(alphanums).setResultsName("name") + \
+                           Optional(multi_card_token)    
+        group_end_token = Literal("/") | Literal("$END") | Literal("$end")
         
         # Comment Token
         comment_token = Literal("!")
@@ -312,18 +385,11 @@ class Namelist(object):
                 # Process orindary cards
                 elif multi_card_token.searchString(line):
                     cards = multi_card_token.parseString(line)
-                    
+
                     for card in cards:
-                        name = card[0]
-                    
-                        # Comma-delimited arrays
-                        if len(card) > 2:
-                            value = array(card[1:])
-                        else:
-                            value = card[1]
-                        
+                        name, value = _process_card_info(card)
                         self.cards[-1].append(Card(name, value))
-                    
+                        
                 # Catch 2D arrays like -> X(1,1) = 3,4,5
                 elif array2D_token.searchString(line):
                     card = array2D_token.parseString(line)
@@ -378,7 +444,15 @@ class Namelist(object):
                     group_name = group_name_token.parseString(line)
                     current_group = group_name.name
                     self.add_group(current_group)
-                    #print current_group
+                    
+                    # Sometimes, variable definitions are included on the
+                    # same line as the namelist header
+                    if len(group_name) > 2:
+                        cards = group_name[2:]
+                        
+                        for card in cards:
+                            name, value = _process_card_info(card)
+                            self.cards[-1].append(Card(name, value))
 
                 # If there is an ungrouped card at the start, take it as the
                 # title for the analysis
@@ -515,14 +589,17 @@ class Namelist(object):
                     
                     # 1D arrays must become ndarrays
                     target = self.comp.get(varpath)
+
                     if isinstance(target, ndarray) and \
                        isinstance(value, (float, int)):
                         value = array([value])
                         
                     # Enum ndarrays must become lists
-                    elif isinstance(target, list) and \
-                       isinstance(value, ndarray):
-                        value = list(value)
+                    elif isinstance(target, TraitListObject):
+                        if isinstance(value, ndarray):
+                            value = list(value)
+                        else:
+                            value = [value]
                         
                     self.comp.set(varpath, value)
                     

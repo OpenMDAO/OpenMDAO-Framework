@@ -184,6 +184,7 @@ execute a code that you normally run by typing
 ::
 
         /usr/bin/externalcode -v -r1
+        /usr/bin/externalcode -v -r1
 
 at the command prompt, then you need to set the command attribute as follows:
 
@@ -326,7 +327,7 @@ code will generally look like this:
 
     from openmdao.util.filewrap import InputFileGenerator
 
-    parser = FileParser()
+    parser = InputFileGenerator()
     parser.set_template_file('mytemplate.txt')
     parser.set_generated_file('myinput.txt')
     
