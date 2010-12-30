@@ -501,7 +501,7 @@ class TestCase(unittest.TestCase):
         data = '\n'.join([user, '0', key_pair.publickey().exportKey()])
         hash = hashlib.sha256(data).digest()
         signature = key_pair.sign(hash, get_random_bytes)
-        spook = Credentials(data, signature)
+        spook = Credentials((data, signature, user))
 
         credentials = get_credentials()
         allowed_users = {credentials.user: credentials.public_key,

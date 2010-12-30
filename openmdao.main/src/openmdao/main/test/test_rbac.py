@@ -94,22 +94,26 @@ class TestCase(unittest.TestCase):
         encoded = owner.encode()
         Credentials.verify(encoded, allowed_users=None)  # 'First sighting'.
         Credentials.verify(encoded, allowed_users=None)  # Cached verification.
-        data, signature = encoded
+        data, signature, real_user = encoded
 
-        assert_raises(self, 'Credentials.verify((data[:1], signature), None)',
+        encoded = (data[:1], signature, real_user)
+        assert_raises(self, 'Credentials.verify(encoded, None)',
                       globals(), locals(), CredentialsError, 'Invalid data')
 
-        assert_raises(self, 'Credentials.verify((data[:-1], signature), None)',
+        encoded = (data[:-1], signature, real_user)
+        assert_raises(self, 'Credentials.verify(encoded, None)',
                       globals(), locals(), CredentialsError, 'Invalid signature')
 
-        assert_raises(self, 'Credentials.verify((data, signature[:-1]), None)',
+        encoded = (data, signature[:-1], real_user)
+        assert_raises(self, 'Credentials.verify(encoded, None)',
                       globals(), locals(), CredentialsError, 'Invalid signature')
 
         newline = data.find('\n')  # .user
         newline = data.find('\n', newline+1)  # .transient
         # Expecting '-'
         mangled = data[:newline+1] + '*' + data[newline+2:]
-        assert_raises(self, 'Credentials.verify((mangled, signature), None)',
+        encoded = (mangled, signature, real_user)
+        assert_raises(self, 'Credentials.verify(encoded, None)',
                       globals(), locals(), CredentialsError, 'Invalid key')
 
         # Detect mismatched key.

@@ -12,7 +12,7 @@ from openmdao.lib.datatypes.api import Bool, Dict, Str, Float, Int
 
 from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped
-from openmdao.main.rbac import AccessController, RoleError, rbac
+from openmdao.main.rbac import AccessController, RoleError, rbac, remote_access
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
@@ -61,8 +61,9 @@ class ExternalCode(Component):
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
         """ Don't allow setting of 'command' by remote client. """
-        if path in ('command', 'get_access_controller'):
-            self.raise_exception('%r may not be set()' % path, RuntimeError)
+        if path in ('command', 'get_access_controller') and remote_access():
+            self.raise_exception('%r may not be set() remotely' % path,
+                                 RuntimeError)
         return super(ExternalCode, self).set(path, value, index, src, force)
 
     def execute(self):

@@ -75,15 +75,24 @@ class Credentials(object):
 
     If the receiver does keep a list of known client keys, then the information
     here will support strict authorization.
+
+    The `real_user` attribute is simply used to track the original user, it is
+    not part of the signed credentials. It is carried along for auditing
+    purposes when proxy credentials are used to allow a publicly accessible
+    proprietary method to invoke other restricted methods on behalf of an
+    ordinary user.
+
+    encoded: tuple
+        If specified, data used to recreate a remote :class:`Credentials`
+        object.
     """
 
     user_host = '%s@%s' % (getpass.getuser(), socket.gethostname())
 
-    def __init__(self, data=None, signature=None):
-        # We don't use cPickle here because we'd rather not have to trust
-        # the sender until after we've checked their credentials.
-
-        if data is None and signature is None:
+    def __init__(self, encoded=None):
+        # We don't use cPickle to create or parse .data because we'd rather not
+        # have to trust a source until after we've checked their credentials.
+        if encoded is None:
             # Create our credentials.
             self.user = Credentials.user_host
             self.transient = (sys.platform == 'win32') and not HAVE_PYWIN32
@@ -93,8 +102,10 @@ class Credentials(object):
                                    self.public_key.exportKey()])
             hash = hashlib.sha256(self.data).digest()
             self.signature = key_pair.sign(hash, get_random_bytes)
+            self.real_user = self.user
         else:
             # Recreate remote user credentials.
+            data, signature, real_user = encoded
             lines = data.split('\n')
             if len(lines) < 3:
                 raise CredentialsError('Invalid data')
@@ -112,6 +123,7 @@ class Credentials(object):
             except Exception:
                 raise CredentialsError('Invalid signature')
             self.signature = signature
+            self.real_user = real_user
 
     def __eq__(self, other):
         if isinstance(other, Credentials):
@@ -121,27 +133,18 @@ class Credentials(object):
             return False
 
     def __str__(self):
+        if self.real_user != self.user:
+            real_user = ' (%s)' % self.real_user
+        else:
+            real_user = ''
         # 'transient' is just an aid to let some Windows users know their
         # credentials will change on-the-fly.
         transient = ' (transient)' if self.transient else ''
-        return '%s%s' % (self.user, transient)
+        return '%s%s%s' % (self.user, real_user, transient)
 
     def encode(self):
-        """ Return object to be sent: ``(data, signature)``. """
-        return (self.data, self.signature)
-
-    @staticmethod
-    def decode(encoded):
-        """
-        Return :class:`Credentials` object from `encoded`.
-        The :attr:`public_key` should be checked against the expected value
-        if it is available.
-
-        encoded: tuple.
-            Data received, returned by (remote) :meth:`encode`.
-        """
-        data, signature = encoded
-        return Credentials(data, signature)
+        """ Return object to be sent: ``(data, signature, real_user)``. """
+        return (self.data, self.signature, self.real_user)
 
     @staticmethod
     def verify(encoded, allowed_users):
@@ -158,16 +161,18 @@ class Credentials(object):
 
         Returns :class:`Credentials` object from `encoded`.
         """
+        data, signature, real_user = encoded
+        key = (data, signature)
         try:
-            credentials = _VERIFY_CACHE[encoded]
+            credentials = _VERIFY_CACHE[key]
         except KeyError:
-            credentials = Credentials.decode(encoded)
+            credentials = Credentials(encoded)
             user = credentials.user
             for cred in _VERIFY_CACHE.values():
                 if cred.user == user:
                     raise CredentialsError('Public key mismatch for %r' % user)
             else:
-                _VERIFY_CACHE[encoded] = credentials
+                _VERIFY_CACHE[key] = credentials
 
         if allowed_users is not None:
             try:
@@ -180,6 +185,8 @@ class Credentials(object):
                    (credentials.public_key.n != pubkey.n):
                     raise CredentialsError('Allowed user mismatch for %r' \
                                            % credentials.user)
+
+        credentials.real_user = real_user
         return credentials
 
 
@@ -195,6 +202,17 @@ def get_credentials():
     except AttributeError:
         credentials = Credentials()
         return set_credentials(credentials)
+
+def remote_access():
+    """ Return True if the current thread is providing remote access. """
+    try:
+        creds = threading.current_thread().credentials
+    except AttributeError:
+        return False
+    else:
+        # Not remote if acting on the local user's behalf.
+        return creds.user != Credentials.user_host or \
+               creds.real_user != Credentials.user_host
 
 
 # For some reason use of a class as a decorator doesn't count as coverage.
@@ -332,9 +350,13 @@ class AccessController(object):
         
         if proxy_role:
             try:
+                proxy_creds = self.credentials_map[proxy_role]
                 return self.credentials_map[proxy_role]
             except KeyError:
                 raise RoleError('No credentials for proxy role %s' % proxy_role)
+            else:
+                proxy_creds.real_user = credentials.real_user
+                return proxy_creds
         else:
             return credentials
 
