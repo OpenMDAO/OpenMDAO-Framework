@@ -783,8 +783,7 @@ class OpenMDAO_Manager(BaseManager):
     _Server = OpenMDAO_Server
 
     def __init__(self, address=None, authkey=None, serializer='pickle',
-                 pubkey=None, name=None, allowed_hosts=None, allowed_users=None,
-                 **kwargs):
+                 pubkey=None, name=None, allowed_hosts=None, allowed_users=None):
 # FIXME: this shouldn't be required, but using a pipe causes problems with
 #        test_distsim).
         if address is None and sys.platform == 'win32' and not HAVE_PYWIN32:  #pragma no cover

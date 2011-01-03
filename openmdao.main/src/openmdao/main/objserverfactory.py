@@ -28,7 +28,7 @@ from openmdao.main.mp_util import keytype, read_allowed_hosts, \
 from openmdao.main.rbac import get_credentials, set_credentials, rbac, RoleError
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
-from openmdao.util.publickey import read_authorized_keys, \
+from openmdao.util.publickey import make_private, read_authorized_keys, \
                                     write_authorized_keys, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT
 
@@ -44,20 +44,29 @@ class ObjServerFactory(Factory):
         Name of factory, used in log messages, etc.
 
     authkey: string
-        Authorization key passed-on to :class:`ObjServer` servers.
+        Passed to created :class:`ObjServer` servers.
 
     allow_shell: bool
-        If True, :meth:`execute_command` and :meth:`load_model` are allowed
-        in created servers. Use with caution!
+        Passed to created :class:`ObjServer` servers.
+
+    allowed_types: list(string)
+        Passed to created :class:`ObjServer` servers.
 
     The environment variable ``OPENMDAO_KEEPDIRS`` can be used to avoid
     having server directory trees removed when servers are shut-down.
     """
 
-    def __init__(self, name='ObjServerFactory', authkey=None, allow_shell=False):
+    # These are used to propagate selections from main().
+    # There isn't a good way to propagate them through a manager.
+    _allow_shell = False
+    _allowed_types = None
+
+    def __init__(self, name='ObjServerFactory', authkey=None, allow_shell=False,
+                 allowed_types=None):
         super(ObjServerFactory, self).__init__()
         self._authkey = authkey
-        self._allow_shell = allow_shell
+        self._allow_shell = allow_shell or ObjServerFactory._allow_shell
+        self._allowed_types = allowed_types or ObjServerFactory._allowed_types
         self._managers = {}
         self._logger = logging.getLogger(name)
         self._logger.info('PID: %d, %r, allow_shell %s', os.getpid(),
@@ -224,7 +233,8 @@ class ObjServerFactory(Factory):
             self._logger.info('    in dir %s', root_dir)
             self._logger.info('    listening on %s', manager.address)
             server = manager.openmdao_main_objserverfactory_ObjServer(name=name,
-                                                  allow_shell=self._allow_shell)
+                                                  allow_shell=self._allow_shell,
+                                              allowed_types=self._allowed_types)
             self._managers[server] = (manager, root_dir, owner)
 
         if typname:
@@ -300,10 +310,18 @@ class ObjServer(object):
     allow_shell: bool
         If True, :meth:`execute_command` and :meth:`load_model` are allowed.
         Use with caution!
+
+    allowed_types: list(string)
+        Names of types which may be created. If None, then allow types listed
+        by :meth:`get_available_types`. If empty, no types are allowed.
     """
 
-    def __init__(self, name='', allow_shell=False):
+    def __init__(self, name='', allow_shell=False, allowed_types=None):
         self._allow_shell = allow_shell
+        if allowed_types is None:
+            allowed_types = [typname for typname, version
+                                      in get_available_types()]
+        self._allowed_types = allowed_types
 
         self.host = platform.node()
         self.pid = os.getpid()
@@ -349,9 +367,12 @@ class ObjServer(object):
         self._logger.info('create typname %r, version %r server %s,'
                           ' res_desc %s, args %s', typname, version, server,
                           res_desc, ctor_args)
-        obj = create(typname, version, server, res_desc, **ctor_args)
-        self._logger.info('    returning %s', obj)
-        return obj
+        if typname in self._allowed_types:
+            obj = create(typname, version, server, res_desc, **ctor_args)
+            self._logger.info('    returning %s', obj)
+            return obj
+        else:
+            raise TypeError('%r is not an allowed type' % typname)
 
     @rbac('owner')
     def execute_command(self, command, stdin, stdout, stderr, env_vars,
@@ -570,7 +591,7 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
 
 def start_server(authkey='PublicKey', port=0, prefix='server',
                  allowed_hosts=None, allowed_users=None, allow_shell=False,
-                 timeout=None):
+                 allowed_types=None, timeout=None):
     """
     Start an :class:`ObjServerFactory` service in a separate process
     in the current directory.
@@ -598,6 +619,10 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
     allow_shell: bool
         If True, :meth:`execute_command` and :meth:`load_model` are allowed.
         Use with caution!
+
+    allowed_types: list(string)
+        Names of types which may be created. If None, then allow types listed
+        by :meth:`get_available_types`. If empty, no types are allowed.
 
     timeout: int
         Seconds to wait for server to start. Note that public key generation
@@ -638,9 +663,19 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
             with open('hosts.allow', 'w') as out:
                 for pattern in allowed_hosts:
                     out.write('%s\n' % pattern)
+            if sys.platform != 'win32' or HAVE_PYWIN32:
+                make_private('hosts.allow')
 
     if allow_shell:
         args.append('--allow-shell')
+
+    if allowed_types is not None:
+        with open('types.allow', 'w') as out:
+            for typname in allowed_types:
+                out.write('%s\n' % typname)
+        if sys.platform != 'win32' or HAVE_PYWIN32:
+            make_private('types.allow')
+        args.extend(['--types', 'types.allow'])
 
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
 
@@ -674,7 +709,7 @@ def main():  #pragma no cover
     """
     OpenMDAO factory service process.
 
-    Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--users=filename][--port=number][--prefix=name]
+    Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--types=filename][--users=filename][--port=number][--prefix=name]
 
     --allow-public:
         Allows access by anyone from any allowed host.
@@ -687,6 +722,9 @@ def main():  #pragma no cover
     --hosts: string
         Filename for allowed hosts specification. Default 'hosts.allow'.
         Ignored if '--users' is specified.
+
+    --types: string
+        Filename for allowed types specification.
 
     --users: string
         Filename for allowed users specification.
@@ -719,6 +757,8 @@ def main():  #pragma no cover
                       help='Allows potential shell access, use with care!')
     parser.add_option('--hosts', action='store', type='str',
                       default='hosts.allow', help='Filename for allowed hosts')
+    parser.add_option('--types', action='store', type='str',
+                      help='Filename for allowed types')
     parser.add_option('--users', action='store', type='str',
                       default='~/.ssh/authorized_keys',
                       help='Filename for allowed users')
@@ -800,6 +840,22 @@ def main():  #pragma no cover
             print msg
             sys.exit(1)
 
+    # Get allowed_types.
+    allowed_types = None
+    if options.types:
+        if os.path.exists(options.types):
+            allowed_types = []
+            with open(options.types, 'r') as inp:
+                line = inp.readline()
+                while line:
+                    allowed_types.append(line.strip())
+                    line = inp.readline()
+        else:
+            msg = 'Allowed types file %r does not exist.' % options.types
+            logger.error(msg)
+            print msg
+            sys.exit(1)
+
     # Get address and create manager.
     if options.port >= 0:
         address = (platform.node(), options.port)
@@ -809,8 +865,12 @@ def main():  #pragma no cover
     current_process().authkey = authkey
     manager = _FactoryManager(address, authkey, name='Factory',
                               allowed_hosts=allowed_hosts,
-                              allowed_users=allowed_users,
-                              allow_shell=options.allow_shell)
+                              allowed_users=allowed_users)
+
+    # Set defaults for created ObjServerFactories.
+    # There isn't a good method to propagate these through the manager.
+    ObjServerFactory._allow_shell = options.allow_shell
+    ObjServerFactory._allowed_types = allowed_types
 
     # Get server, retry if specified address is in use.
     server = None

@@ -302,8 +302,9 @@ class TestCase(unittest.TestCase):
         factory = None
         try:
             # Try to set command line on remote ExternalCode instance.
-            factory = ObjServerFactory()
-            exec_comp = factory.create('openmdao.lib.components.external_code.ExternalCode')
+            typname = 'openmdao.lib.components.external_code.ExternalCode'
+            factory = ObjServerFactory(allowed_types=[typname])
+            exec_comp = factory.create(typname)
             cmd = exec_comp.command
 
             try:

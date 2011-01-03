@@ -315,7 +315,12 @@ class TestCase(unittest.TestCase):
                 credentials = get_credentials()
                 allowed_users = {credentials.user: credentials.public_key}
 
-            server = start_server(port=port, allowed_users=allowed_users)
+            allowed_types = ['openmdao.main.test.test_distsim.HollowSphere',
+                             'openmdao.main.test.test_distsim.Box',
+                             'openmdao.main.test.test_distsim.ProtectedBox']
+
+            server = start_server(port=port, allowed_users=allowed_users,
+                                  allowed_types=allowed_types)
             self.servers.append(server)
             self.address, self.port, self.key = read_server_config('server.cfg')
             logging.debug('server pid: %s', server.pid)
@@ -574,7 +579,9 @@ class TestCase(unittest.TestCase):
         self.server_dirs.append(server_dir)
         try:
             logging.debug('starting server (authkey %s)...', authkey)
-            server = start_server(authkey=authkey, timeout=30)
+            allowed_types = ['openmdao.main.test.test_distsim.Box']
+            server = start_server(authkey=authkey, allowed_types=allowed_types,
+                                  timeout=30)
             address, port, key = read_server_config('server.cfg')
             logging.debug('server address: %s', address)
             logging.debug('server port: %s', port)

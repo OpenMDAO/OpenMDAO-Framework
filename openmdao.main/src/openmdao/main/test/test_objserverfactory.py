@@ -166,6 +166,17 @@ class TestCase(unittest.TestCase):
             finally:
                 inp.close()
 
+            # Try to create a process.
+            args = 'dir' if sys.platform == 'win32' else 'ls'
+            try:
+                proc = server.create('subprocess.Popen', args=args, shell=True)
+                proc.wait()
+            except TypeError as exc:
+                msg = "'subprocess.Popen' is not an allowed type"
+                self.assertEqual(str(exc), msg)
+            else:
+                self.fail('Expected TypeError')
+
         finally:
             os.chdir('..')
             shutil.rmtree(testdir)
