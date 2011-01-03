@@ -7,6 +7,7 @@ import sys
 import unittest
 
 from numpy import float32 as numpy_float32
+from numpy import int32 as numpy_int32
 from numpy import array, zeros
 
 from openmdao.lib.datatypes.api import Float, Bool, Int, Str, Array, File, List, Enum
@@ -38,7 +39,14 @@ class VarComponent(Component):
     arrayvarzerod = Array(zeros(shape=(0,0)), iotype='in')
     arrayvartwod = Array(zeros(shape=(1,3)), iotype='in')
     arraysmall = Array(iotype='in')
+    arrayshorthand = Array(iotype='in')
+    single = Array(iotype='in')
+    singleint = Array(iotype='in', dtype=numpy_int32)
+    singlebool = Array(iotype='in', dtype=bool)
     listenumvar = List(Enum(1,(1,2,3)), iotype='in')
+    listenumvar2 = List(Enum(1.5,(1.5,2.4,3.3)), iotype='in')
+    listenumvar3 = List(Enum('a',('a','b','c')), iotype='in')
+    listenumvar4 = List(Enum(True,(True, False)), iotype='in')
     
     def __init__(self, directory=''):
         
@@ -76,6 +84,9 @@ class TestCase(unittest.TestCase):
 
         my_comp = VarComponent()
         my_comp.listenumvar = [1,2,1,3]
+        my_comp.listenumvar2 = [1.5,1.5]
+        my_comp.listenumvar3 = ['b']
+        my_comp.listenumvar4 = [False, False, False]
         sb = Namelist(my_comp)
         
         sb.set_filename(self.filename)
@@ -89,6 +100,9 @@ class TestCase(unittest.TestCase):
         sb.add_var("floatvar")
         sb.add_var("textvar")
         sb.add_var("listenumvar")
+        sb.add_var("listenumvar2")
+        sb.add_var("listenumvar3")
+        sb.add_var("listenumvar4")
         
         sb.add_newvar("newcard", "new value")
         
@@ -106,6 +120,9 @@ class TestCase(unittest.TestCase):
                   "  floatvar = -16.54\n" + \
                   "  textvar = 'This'\n" + \
                   "  listenumvar = 1, 2, 1, 3\n" + \
+                  "  listenumvar2 = 1.5, 1.5\n" + \
+                  "  listenumvar3 = 'b'\n" + \
+                  "  listenumvar4 = F, F, F\n" + \
                   "  newcard = 'new value'\n" + \
                   "/\n"
 
@@ -118,11 +135,13 @@ class TestCase(unittest.TestCase):
                     "  \n" + \
                     "&OPTION\n" + \
                     "  This is a comment\n" + \
-                    "  INTVAR = 777, floatvar = -3.14\n" + \
+                    "  INTVAR = 777, single(1) = 15.0, floatvar = -3.14\n" + \
+                    "  singleint(1) = 3,4,5\n" + \
                     "  boolvar = T\n" + \
                     "  textvar = 'That'\n" + \
                     "  ! This is a comment too\n" + \
                     "  listenumvar = 3,3,2,2\n" + \
+                    "  listenumvar2 = 1.5\n" + \
                     "  arrayvar = 3.5, 7.76, 1.23\n" + \
                     "  arrayvarsplit = 3.5, 7.76\n" + \
                     "                  5.45, 22.0\n" + \
@@ -131,6 +150,7 @@ class TestCase(unittest.TestCase):
                     "                   2\n" + \
                     "                   3\n" + \
                     "  arraysmall = 1.75\n" + \
+                    "  arrayshorthand = 3.456*8\n" + \
                     "  expvar1 = 1.5e-12\n" + \
                     "  expvar2 = -1.5D12\n" + \
                     "/\n"
@@ -155,6 +175,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(my_comp.expvar2, -1.5e12)
         self.assertEqual(my_comp.textvar, 'That')
         self.assertEqual(my_comp.listenumvar, [3,3,2,2])
+        self.assertEqual(my_comp.listenumvar2, [1.5])
         self.assertEqual(my_comp.arrayvar[0], 3.5)
         self.assertEqual(my_comp.arrayvar[1], 7.76)
         self.assertEqual(my_comp.arrayvar[2], 1.23)
@@ -168,6 +189,11 @@ class TestCase(unittest.TestCase):
         self.assertEqual(my_comp.arrayvarsplit2[2], 3)
         self.assertEqual(my_comp.arraysmall[0], 1.75)
         self.assertEqual(len(my_comp.arraysmall), 1)
+        self.assertEqual(my_comp.arrayshorthand[4], 3.456)
+        self.assertEqual(len(my_comp.arrayshorthand), 8)
+        self.assertEqual(my_comp.single[0], 15.0)
+        self.assertEqual(my_comp.singleint[2], 5)
+        self.assertEqual(type(my_comp.singleint[2]), numpy_int32)
         
     def test_read2(self):
         # Put variables in container, using rules_dict
@@ -177,7 +203,7 @@ class TestCase(unittest.TestCase):
                     "&OPTION\n" + \
                     "  This is a comment\n" + \
                     "  intvar = 777\n" + \
-                    "  boolvar = F\n" + \
+                    "  boolvar = .FALSE.\n" + \
                     "  floatvar = -3.14\n" + \
                     "  extravar = 555\n" + \
                     "  TEXTVAR = 'That'\n" + \
@@ -247,6 +273,29 @@ class TestCase(unittest.TestCase):
         # Changed
         self.assertEqual(my_comp.floatvar, 3.5e-23)
         
+    def test_read4(self):
+        # Variables on same line as header
+
+        namelist1 = "Testing\n" + \
+                    "  \n" + \
+                    "&OPTION boolvar = T, arrayvar = 3.5, 7.76, 1.23\n" + \
+                    "/\n"
+
+        outfile = open(self.filename, 'w')
+        outfile.write(namelist1)
+        outfile.close()
+        
+        my_comp = VarComponent()
+        sb = Namelist(my_comp)
+        sb.set_filename(self.filename)
+
+        sb.parse_file()
+        
+        sb.load_model()
+        
+        self.assertEqual(my_comp.boolvar, True)
+        self.assertEqual(my_comp.arrayvar[0], 3.5)
+        
         
     def test_2Darray_read(self):
         
@@ -301,12 +350,18 @@ class TestCase(unittest.TestCase):
         
         my_comp.arrayvar = zeros(3, dtype=numpy_float32)
         my_comp.arrayvar[2] = 3.7
+        my_comp.single = array(['a', 'b', 'c'])
+        my_comp.singleint = array([1, 2, 3])
+        my_comp.singlebool = array([False, True, False])
         
         sb.set_filename(self.filename)
         sb.add_group('Test')
         sb.add_var("arrayvar")
         # This should be ignored because it is zero-D
         sb.add_var("arrayvarzerod")
+        sb.add_var("single")
+        sb.add_var("singleint")
+        sb.add_var("singlebool")
         
         sb.generate()
         
@@ -316,6 +371,9 @@ class TestCase(unittest.TestCase):
         compare = "\n" + \
                   "&Test\n" + \
                   "  arrayvar = 0.0, 0.0, 3.700000047683716\n" + \
+                  "  single = 'a', 'b', 'c'\n" + \
+                  "  singleint = 1, 2, 3\n" + \
+                  "  singlebool = F, T, F\n" + \
                   "/\n"
 
         self.assertEqual(contents, compare)
