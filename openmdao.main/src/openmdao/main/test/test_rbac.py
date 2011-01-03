@@ -94,17 +94,17 @@ class TestCase(unittest.TestCase):
         encoded = owner.encode()
         Credentials.verify(encoded, allowed_users=None)  # 'First sighting'.
         Credentials.verify(encoded, allowed_users=None)  # Cached verification.
-        data, signature, real_user = encoded
+        data, signature, client_creds = encoded
 
-        encoded = (data[:1], signature, real_user)
+        encoded = (data[:1], signature, client_creds)
         assert_raises(self, 'Credentials.verify(encoded, None)',
                       globals(), locals(), CredentialsError, 'Invalid data')
 
-        encoded = (data[:-1], signature, real_user)
+        encoded = (data[:-1], signature, client_creds)
         assert_raises(self, 'Credentials.verify(encoded, None)',
                       globals(), locals(), CredentialsError, 'Invalid signature')
 
-        encoded = (data, signature[:-1], real_user)
+        encoded = (data, signature[:-1], client_creds)
         assert_raises(self, 'Credentials.verify(encoded, None)',
                       globals(), locals(), CredentialsError, 'Invalid signature')
 
@@ -112,7 +112,7 @@ class TestCase(unittest.TestCase):
         newline = data.find('\n', newline+1)  # .transient
         # Expecting '-'
         mangled = data[:newline+1] + '*' + data[newline+2:]
-        encoded = (mangled, signature, real_user)
+        encoded = (mangled, signature, client_creds)
         assert_raises(self, 'Credentials.verify(encoded, None)',
                       globals(), locals(), CredentialsError, 'Invalid key')
 

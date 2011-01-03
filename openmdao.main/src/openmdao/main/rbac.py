@@ -76,11 +76,11 @@ class Credentials(object):
     If the receiver does keep a list of known client keys, then the information
     here will support strict authorization.
 
-    The `real_user` attribute is simply used to track the original user, it is
-    not part of the signed credentials. It is carried along for auditing
-    purposes when proxy credentials are used to allow a publicly accessible
-    proprietary method to invoke other restricted methods on behalf of an
-    ordinary user.
+    The `client_creds` attribute is simply used to trace back to the original
+    user, it is not part of the credentials signature. It is carried along for
+    auditing purposes when proxy credentials are used to allow a publicly
+    accessible proprietary method to invoke other restricted methods on behalf
+    of an ordinary user.
 
     encoded: tuple
         If specified, data used to recreate a remote :class:`Credentials`
@@ -102,10 +102,10 @@ class Credentials(object):
                                    self.public_key.exportKey()])
             hash = hashlib.sha256(self.data).digest()
             self.signature = key_pair.sign(hash, get_random_bytes)
-            self.real_user = self.user
+            self.client_creds = None
         else:
             # Recreate remote user credentials.
-            data, signature, real_user = encoded
+            data, signature, client_creds = encoded
             lines = data.split('\n')
             if len(lines) < 3:
                 raise CredentialsError('Invalid data')
@@ -123,7 +123,7 @@ class Credentials(object):
             except Exception:
                 raise CredentialsError('Invalid signature')
             self.signature = signature
-            self.real_user = real_user
+            self.client_creds = client_creds
 
     def __eq__(self, other):
         if isinstance(other, Credentials):
@@ -133,18 +133,18 @@ class Credentials(object):
             return False
 
     def __str__(self):
-        if self.real_user != self.user:
-            real_user = ' (%s)' % self.real_user
+        if self.client_creds is not None:
+            client = ' (%s)' % self.client_creds
         else:
-            real_user = ''
+            client = ''
         # 'transient' is just an aid to let some Windows users know their
         # credentials will change on-the-fly.
         transient = ' (transient)' if self.transient else ''
-        return '%s%s%s' % (self.user, real_user, transient)
+        return '%s%s%s' % (self.user, client, transient)
 
     def encode(self):
-        """ Return object to be sent: ``(data, signature, real_user)``. """
-        return (self.data, self.signature, self.real_user)
+        """ Return object to be sent: ``(data, signature, client_creds)``. """
+        return (self.data, self.signature, self.client_creds)
 
     @staticmethod
     def verify(encoded, allowed_users):
@@ -161,7 +161,7 @@ class Credentials(object):
 
         Returns :class:`Credentials` object from `encoded`.
         """
-        data, signature, real_user = encoded
+        data, signature, client_creds = encoded
         key = (data, signature)
         try:
             credentials = _VERIFY_CACHE[key]
@@ -186,7 +186,7 @@ class Credentials(object):
                     raise CredentialsError('Allowed user mismatch for %r' \
                                            % credentials.user)
 
-        credentials.real_user = real_user
+        credentials.client_creds = client_creds
         return credentials
 
 
@@ -212,7 +212,7 @@ def remote_access():
     else:
         # Not remote if acting on the local user's behalf.
         return creds.user != Credentials.user_host or \
-               creds.real_user != Credentials.user_host
+               creds.client_creds is not None
 
 
 # For some reason use of a class as a decorator doesn't count as coverage.
@@ -355,7 +355,7 @@ class AccessController(object):
             except KeyError:
                 raise RoleError('No credentials for proxy role %s' % proxy_role)
             else:
-                proxy_creds.real_user = credentials.real_user
+                proxy_creds.client_creds = credentials.client_creds
                 return proxy_creds
         else:
             return credentials

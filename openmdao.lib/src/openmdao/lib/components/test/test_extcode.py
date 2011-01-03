@@ -18,7 +18,7 @@ from openmdao.main.api import Assembly, FileMetadata, SimulationRoot, set_as_top
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunInterrupted
 from openmdao.main.objserverfactory import ObjServerFactory
-from openmdao.main.rbac import get_credentials
+from openmdao.main.rbac import Credentials, get_credentials
 
 from openmdao.lib.components.external_code import ExternalCode
 
@@ -320,14 +320,14 @@ class TestCase(unittest.TestCase):
 
             # Try to set via remote-looking access.
             creds = get_credentials()
-            creds.real_user = 'floyd@gonzo'
+            creds.client_creds = Credentials()
             logging.debug('    using %s', creds)
             try:
                 code = "exec_comp.set('command', 'this-should-fail')"
                 assert_raises(self, code, globals(), locals(), RuntimeError,
                               ": 'command' may not be set() remotely")
             finally:
-                creds.real_user = creds.user
+                creds.client_creds = None
 
         finally:
             if factory is not None:
