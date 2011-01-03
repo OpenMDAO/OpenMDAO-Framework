@@ -17,7 +17,7 @@ MetaModel
     sockets, one for a particular surrogate model generator and a second for the 
     model that is being approximated. The first socket, named `surrogate`, must 
     always be filled before anything else is done. This socket gets filled with 
-    a surrogate model generator which adheres to the `ISurrogate` interface. 
+    a surrogate model generator which adheres to the ISurrogate interface. 
     OpenMDAO provides some surrogate modelers in ``openmdao.lib.surrogatemodels``. 
     
     .. testcode:: MetaModel_sockets
@@ -125,7 +125,7 @@ MetaModel
     surrogate models fit to them, and consequently, they won't be available to the simulation from
     MetaModel. 
 
-    Now you have setup your MetaModel with a specific surrogate model, and you have 
+    Now you have set up your MetaModel with a specific surrogate model, and you have 
     put a model into the `model` socket. The input and output 
     inclusions/exclusions have been specified. The next step is to actually start
     training and executing the MetaModel in simulations. 
@@ -173,7 +173,7 @@ MetaModel
     IHasEvents Driver sub-interface. The ``train_next`` event is added to a
     Driver, which will then automatically set ``train_next`` prior to each
     iteration of the model. A simple code snippet is presented below, while a
-    more detailed example can be found in the single_objective_ei example under the
+    more detailed example can be found in the ``single_objective_ei`` example under the
     ``openmdao.examples.expected_improvement`` package.
     
     .. testcode:: MetaModel_Assembly
@@ -226,7 +226,7 @@ with a valid license before this wrapper will work.
 If you are creating a component that is supposed to call Nastran to calculate your component's outputs,
 you must do four things: 
 
-#) Point your component to the Nastran executable, by setting the *nastran_command* input
+#) Point your component to the Nastran executable, by setting the ``nastran_command`` input
 #) Make your component a subclass of NastranComponent 
 #) Specify how Nastran will deal with your inputs 
 #) Specify how Nastran will deal with your outputs 
@@ -259,7 +259,7 @@ source documentation, :ref:`here<openmdao.lib.components.nastran.nastran.py>`.
 
 To control what Nastran solves, you have to change certain variables in the Nastran input file.
 NastranComponent can only insert the correct variables in the right places if you tell it where to insert
-the variables. There are two ways of specifying the input variables: via Nastran Replacer or NastranMaker.
+the variables. You can specify the input variables in two ways: via Nastran Replacer or NastranMaker.
 
 
 .. index:: NastranReplacer
@@ -294,7 +294,7 @@ the bulk data format. Replacing bulk data with NastranReplacer is highly discour
 NastranMaker
 ++++++++++++++
 
-Using NastranMaker does not rely on placeholder variables; instead, you must provide the `keyword, the id,` and
+Using NastranMaker does not rely on placeholder variables; instead, you must provide the `keyword`, the `id`, and
 the `fieldnum` to change a card. NastranMaker will find the right card to modify and will convert the entire
 card to long form. This way, you get 16 characters to express numbers. It also allows you to keep the Nastran
 input unmodified, instead of littering it with placeholder variables. Below is an example:
