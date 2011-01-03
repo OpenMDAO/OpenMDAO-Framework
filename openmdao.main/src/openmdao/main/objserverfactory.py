@@ -313,7 +313,8 @@ class ObjServer(object):
 
     allowed_types: list(string)
         Names of types which may be created. If None, then allow types listed
-        by :meth:`get_available_types`. If empty, no types are allowed.
+        by :meth:`factorymanager.get_available_types`. If empty, no types are
+        allowed.
     """
 
     def __init__(self, name='', allow_shell=False, allowed_types=None):
