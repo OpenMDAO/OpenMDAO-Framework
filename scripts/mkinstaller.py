@@ -195,7 +195,7 @@ def after_install(options, home_dir):
                     
         if len(final) > 0:
             activate_template = '\\n'.join([
-            'export PATH',
+            'export VIRTUAL_ENV',
             '',
             'if [ -z "$%%(libpath)s" ] ; then',
             '   %%(libpath)s=""',
@@ -208,7 +208,7 @@ def after_install(options, home_dir):
             content = f.read()
             f.close()
             f = open(os.path.join(absbin, 'activate'), 'w')
-            f.write(content.replace('export PATH', activate_template %% subdict))
+            f.write(content.replace('export VIRTUAL_ENV', activate_template %% subdict, 1))
             f.close()
 
 %(wing)s
