@@ -563,29 +563,25 @@ class OpenMDAO_Server(Server):
         typeid = None
 
         if inspect.ismethod(res) and \
-           (methodname == '__getattribute__' or \
-            methodname == '__getattr__'):
+           (methodname == '__getattribute__' or methodname == '__getattr__'):
             # More informative for common case of missing RBAC.
-            raise AttributeError(
-                'method %r of %r object is not in exposed=%r' %
-                (args[0], type(obj), exposed))
+            raise AttributeError('method %r of %r object is not in exposed=%r'
+                                 % (args[0], type(obj), exposed))
 
         # Proxy pass-through only happens remotely.
-        if isinstance(res, BaseProxy):  #pragma no cover
+        if isinstance(res, OpenMDAO_Proxy):  #pragma no cover
             if self._address_type == 'AF_INET':
                 # Create proxy for proxy.
                 # (res may be unreachable by our client)
                 typeid = res._token.typeid
                 proxyid = make_typeid(res)
-                self._logger.debug('Creating proxy for proxy %s',
-                                   proxyid)
+                self._logger.debug('Creating proxy for proxy %s', proxyid)
                 if proxyid not in self.registry:
-                    self.registry[proxyid] = \
-                        (None, None, None, _auto_proxy)
+                    self.registry[proxyid] = (None, None, None, _auto_proxy)
             else:
                 # Propagate the proxy info.
                 res._close.cancel()  # Don't decref when reaped.
-                msg = ('#PROXY', (res._exposed_, res._token))
+                msg = ('#PROXY', (res._exposed_, res._token, res._pubkey))
 
         elif access_controller is not None:
             if methodname in SPECIALS:
@@ -594,8 +590,7 @@ class OpenMDAO_Server(Server):
                     typeid = make_typeid(res)
                     proxyid = typeid
                     if typeid not in self.registry:
-                        self.registry[typeid] = \
-                            (None, None, None, None)
+                        self.registry[typeid] = (None, None, None, None)
             elif need_proxy(function, res):
                 # Create proxy if in declared proxy types.
                 typeid = make_typeid(res)
@@ -615,7 +610,11 @@ class OpenMDAO_Server(Server):
                 token = Token(typeid, self.address, rident)
                 self._logger.debug('Returning proxy for %s at %s',
                                    typeid, self.address)
-                msg = ('#PROXY', (rexposed, token))
+                if self._key_pair is None:
+                    pubkey = None
+                else:
+                    pubkey = self._key_pair.publickey()
+                msg = ('#PROXY', (rexposed, token, pubkey))
             else:
                 msg = ('#RETURN', res)
 
@@ -784,13 +783,6 @@ class OpenMDAO_Manager(BaseManager):
 
     def __init__(self, address=None, authkey=None, serializer='pickle',
                  pubkey=None, name=None, allowed_hosts=None, allowed_users=None):
-# FIXME: this shouldn't be required, but using a pipe causes problems with
-#        test_distsim).
-        if address is None and sys.platform == 'win32' and not HAVE_PYWIN32:  #pragma no cover
-            ip_addr = socket.gethostbyname(socket.gethostname())
-            address = (ip_addr, 0)
-            allowed_hosts = [ip_addr]
-
         super(OpenMDAO_Manager, self).__init__(address, authkey, serializer)
         self._pubkey = pubkey
         self._name = name
@@ -1133,10 +1125,10 @@ class OpenMDAO_Proxy(BaseProxy):
         if kind == '#RETURN':
             return result
         elif kind == '#PROXY':
-            exposed, token = result
+            exposed, token, pubkey = result
             # Proxy passthru only happens remotely.
             if self._manager is None:  #pragma no cover
-                self._manager = OpenMDAO_Manager()
+                self._manager = OpenMDAO_Manager(pubkey=pubkey)
             try:
                 proxytype = self._manager._registry[token.typeid][-1]
             except KeyError:
@@ -1144,7 +1136,7 @@ class OpenMDAO_Proxy(BaseProxy):
                 proxytype = self._manager._registry[token.typeid][-1]
             proxy = proxytype(
                 token, self._serializer, manager=self._manager,
-                authkey=self._authkey, exposed=exposed
+                authkey=self._authkey, exposed=exposed, pubkey=pubkey
                 )
             conn = self._Client(token.address, authkey=self._authkey)
             dispatch(conn, None, 'decref', (token.id,))
@@ -1178,7 +1170,7 @@ class OpenMDAO_Proxy(BaseProxy):
         # Just being defensive, this should never happen.
         if server_version != 1:  #pragma no cover
             msg = 'Expecting server protocol version 1, got %r' % server_version
-            loggiong.error(msg)
+            logging.error(msg)
             raise RuntimeError(msg)
         
         self._tls.session_key = key_pair.decrypt(server_data[1])
