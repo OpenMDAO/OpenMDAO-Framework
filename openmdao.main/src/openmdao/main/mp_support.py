@@ -570,9 +570,12 @@ class OpenMDAO_Server(Server):
 
         # Proxy pass-through only happens remotely.
         if isinstance(res, OpenMDAO_Proxy):  #pragma no cover
-            if self._address_type == 'AF_INET':
+            res_address = res._token.address
+            res_type = connection.address_type(res_address)
+            if (res_type != self._address_type) or \
+               (res_type == 'AF_INET' and res_address[0] != self.address[0]):
                 # Create proxy for proxy.
-                # (res may be unreachable by our client)
+                # (res is probably unreachable by our client)
                 typeid = res._token.typeid
                 proxyid = make_typeid(res)
                 self._logger.debug('Creating proxy for proxy %s', proxyid)
