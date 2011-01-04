@@ -3,6 +3,8 @@ Generates either a go-openmdao.py script for installation
 of an openmdao release or a go-openmdao-dev.py script for creating a 
 virtualenv with 'develop' versions of all of the openmdao packages. Both
 scripts bootstrap a virtualenv environment.
+
+Use the --dev option to generate a go-openmdao-dev.py script.
 """
 
 import sys, os
@@ -15,26 +17,29 @@ from pkg_resources import working_set, Requirement
 #      EDIT THE FOLLOWING TWO LISTS TO CONTROL THE PACKAGES THAT WILL BE
 #      REQUIRED FOR THE OPENMDAO RELEASE AND DEVELOPMENT ENVIRONMENTS
 #
-# list of packages that must be pre-installed before openmdao can be installed
+# List of packages that must be pre-installed before openmdao can be installed
+# The presence of these will be checked at the beginning and the install will abort
+# if they're not found
 openmdao_prereqs = ['numpy', 'scipy']
 
-# list of tuples of openmdao packages and their parent directory relative to 
-# the top of the repository.  The directory only has meaning for a dev install and
+# list of tuples of the form: (openmdao package, parent directory relative to 
+# the top of the repository, package type).  The directory only has meaning for a dev install and
 # is ignored in the user install. '' should be used instead of '.' to indicate 
-# that the parent dir is the top of the repository.
-openmdao_packages = [('openmdao.util', ''), 
-                     ('openmdao.units', ''), 
-                     ('openmdao.main', ''), 
-                     ('openmdao.lib', ''), 
-                     ('openmdao.test', ''),
-                     ('openmdao.examples.simple', 'examples'),
-                     ('openmdao.examples.bar3simulation', 'examples'),
-                     ('openmdao.examples.enginedesign', 'examples'),
-                     ('openmdao.examples.mdao', 'examples'),
-                     ('openmdao.examples.expected_improvement', 'examples'),
+# that the parent dir is the top of the repository. The package type should be 'sdist' or 'bdist_egg'
+# for binary packages
+openmdao_packages = [('openmdao.util', '', 'sdist'), 
+                     ('openmdao.units', '', 'sdist'), 
+                     ('openmdao.main', '', 'sdist'), 
+                     ('openmdao.lib', '', 'sdist'), 
+                     ('openmdao.test', '', 'sdist'),
+                     ('openmdao.examples.simple', 'examples', 'sdist'),
+                     ('openmdao.examples.bar3simulation', 'examples', 'bdist_egg'),
+                     ('openmdao.examples.enginedesign', 'examples', 'bdist_egg'),
+                     ('openmdao.examples.mdao', 'examples', 'sdist'),
+                     ('openmdao.examples.expected_improvement', 'examples', 'sdist'),
                     ]
 
-def get_adjust_options(options):
+def get_adjust_options(options, version):
     """Return a string containing the definition of the adjust_options function
     that will be included in the generated virtualenv bootstrapping script.
     """
@@ -50,8 +55,8 @@ def get_adjust_options(options):
         code = """
     # name of virtualenv defaults to openmdao-<version>
     if len(args) == 0:
-        args.append('openmdao-%%s' %% '%(version)s')
-"""
+        args.append('openmdao-%%s' %% '%s')
+""" % version
     
     return """
 def adjust_options(options, args):
@@ -67,7 +72,7 @@ def main(options):
     
     url = 'http://openmdao.org/dists'
     if options.dev:
-        openmdao_packages.append(('openmdao.devtools', ''))
+        openmdao_packages.append(('openmdao.devtools', '', 'sdist'))
         sout = StringIO.StringIO()
         pprint.pprint(openmdao_packages, sout)
         pkgstr = sout.getvalue()
@@ -78,7 +83,7 @@ def main(options):
         absbin = os.path.abspath(bin_dir)
         openmdao_packages = %s
         try:
-            for pkg, pdir in openmdao_packages:
+            for pkg, pdir, _ in openmdao_packages:
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
                            'develop', '-N'] + cmds
@@ -100,10 +105,7 @@ def main(options):
         wing = ''
 
     if options.test:
-        if sys.platform == 'win32':
-            url = 'file://%s/dists' % os.environ['HOMEDRIVE']+os.environ['HOMEPATH']
-        else:
-            url = 'file://%s/dists' % os.environ['HOME']
+        url = 'http://torpedo.grc.nasa.gov:31004'
 
     script_str = """
 
@@ -245,7 +247,7 @@ def after_install(options, home_dir):
         'url': url ,
         'make_dev_eggs': make_dev_eggs,
         'wing': wing,
-        'adjust_options': get_adjust_options(options),
+        'adjust_options': get_adjust_options(options, version),
         'openmdao_prereqs': openmdao_prereqs,
     }
     
@@ -267,7 +269,7 @@ if __name__ == '__main__':
     parser.add_option("--dest", action="store", type="string", dest='dest', 
                       help="specify destination directory", default='.')
     parser.add_option("-t", "--test", action="store_true", dest="test",
-                      help="if present, generated installer will point to /OpenMDAO/test_server/dists")
+                      help="if present, generated installer will point to /OpenMDAO/release_test/dists")
     
     (options, args) = parser.parse_args()
     

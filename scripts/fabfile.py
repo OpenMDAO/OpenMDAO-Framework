@@ -10,7 +10,6 @@
 from fabric.api import run, env, local, put, cd, prompt, hide, hosts, get
 import sys
 import os
-#from os.path import join,dirname,normpath
 import tempfile
 import shutil
 import fnmatch
@@ -28,32 +27,31 @@ class _VersionError(RuntimeError):
     pass
 
         
-        
-def _check_version(version):
+def _check_version(version, home):
     with hide('running', 'stdout'):
-        result = run('ls ~/downloads')
+        result = run('ls %s/downloads' % home)
     lst = [x.strip() for x in result.split('\n')]
     if version in lst:
         raise _VersionError('Version %s already exists. Please specify a different version' % version)
     return version
 
 
-def _release(version=None, test=False):
+def _release(version, is_local, home):
     """Creates source distributions, docs, binary eggs, and install script for 
-    the current openmdao namespace packages, uploads them to openmdao.org/dists, 
+    the current openmdao namespace packages, uploads them to <home>/dists, 
     and updates the index.html file there.
     """
     if version is not None:
         try:
-            version = _check_version(version)
+            version = _check_version(version, home)
         except _VersionError, err:
             print str(err),'\n'
             version = None
         
     if version is None:
-        version = prompt('Enter version id:', validate=_check_version)
+        version = prompt('Enter version id:', validate=lambda ver: _check_version(ver,home))
 
-    dist_dir = os.path.normpath(os.path.join(os.path.dirname(__file__),'..'))
+    dist_dir = os.path.dirname(os.path.dirname(__file__))
     scripts_dir = os.path.join(dist_dir, 'scripts')
     doc_dir = os.path.join(dist_dir, 'docs')
     util_dir = os.path.join(dist_dir,'openmdao.util','src','openmdao','util')
@@ -61,7 +59,7 @@ def _release(version=None, test=False):
     startdir = os.getcwd()
     try:
         # build the release distrib (docs are built as part of this)
-        if test:
+        if is_local:
             teststr = '--test'
         else:
             teststr = ''
@@ -77,29 +75,29 @@ def _release(version=None, test=False):
         finally:
             os.chdir(startdir)
         
-        run('mkdir ~/downloads/%s' % version)
-        run('chmod 755 ~/downloads/%s' % version)
+        run('mkdir %s/downloads/%s' % (home, version))
+        run('chmod 755 %s/downloads/%s' % (home, version))
         
         # push new distribs up to the server
         for f in os.listdir(tmpdir):
             if f.startswith('openmdao_src'): 
                 # upload the repo source tar
-                put(os.path.join(tmpdir,f), '~/downloads/%s/%s' % (version, f), 
+                put(os.path.join(tmpdir,f), '%s/downloads/%s/%s' % (home, version, f), 
                     mode=0644)
             elif f.endswith('.tar.gz') and f != 'docs.tar.gz':
-                put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
+                put(os.path.join(tmpdir,f), '%s/dists/%s' % (home, f), mode=0644)
             elif f.endswith('.egg'):
-                put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
+                put(os.path.join(tmpdir,f), '%s/dists/%s' % (home, f), mode=0644)
         
         # for now, put the go-openmdao script up without the version
         # id in the name
         put(os.path.join(tmpdir, 'go-openmdao-%s.py' % version), 
-            '~/downloads/%s/go-openmdao.py' % version,
+            '%s/downloads/%s/go-openmdao.py' % (home, version),
             mode=0755)
 
         # put the docs on the server and untar them
-        put(os.path.join(tmpdir,'docs.tar.gz'), '~/downloads/%s/docs.tar.gz' % version) 
-        with cd('~/downloads/%s' % version):
+        put(os.path.join(tmpdir,'docs.tar.gz'), '%s/downloads/%s/docs.tar.gz' % (home, version)) 
+        with cd('%s/downloads/%s' % (home, version)):
             run('tar xzf docs.tar.gz')
             run('mv html docs')
             run('rm -f docs.tar.gz')
@@ -109,41 +107,47 @@ def _release(version=None, test=False):
         # directory, so we won't have a separate copy of mkdlversionindex.py
         # in every download/<version> directory.
         put(os.path.join(scripts_dir,'mkdlversionindex.py'), 
-            '~/downloads/%s/mkdlversionindex.py' % version)
+            '%s/downloads/%s/mkdlversionindex.py' % (home, version))
         
         # update the index.html for the version download directory on the server
-        with cd('~/downloads/%s' % version):
+        with cd('%s/downloads/%s' % (home, version)):
             run('python2.6 mkdlversionindex.py')
 
         # update the index.html for the dists directory on the server
-        with cd('~/dists'):
+        with cd('%s/dists' % home):
             run('python2.6 mkegglistindex.py')
 
         # update the index.html for the downloads directory on the server
-        with cd('~/downloads'):
+        with cd('%s/downloads' % home):
             run('python2.6 mkdownloadindex.py')
 
         # if everything went well update the 'latest' link to point to the 
         # most recent version directory
-        if not test:
+        if not is_local:
             prompt("Hit return to update the 'latest' link on the server (after testing the release)")
-        run('rm -f ~/downloads/latest')
-        run('ln -s ~/downloads/%s ~/downloads/latest' % version)
+        run('rm -f %s/downloads/latest' % home)
+        run('ln -s %s/downloads/%s %s/downloads/latest' % (home, version, home))
             
     finally:
         shutil.rmtree(tmpdir)
 
             
 @hosts('openmdao@web103.webfaction.com')
-def release(version=None, test=False):
+def release(version=None):
     if sys.platform != 'win32':
         raise RuntimeError("OpenMDAO releases should be built on Windows so Windows binary distributions can be built")
-    _release(version)
+    _release(version, is_local=False, home='~')
     
 
-@hosts('localhost')
+@hosts('torpedo.grc.nasa.gov')
 def localrelease(version=None):
-    _release(version, test=True)
+    # first, make sure we're in sync with the webfaction server
+    print 'syncing downloads dir...'
+    local('rsync -arvzt openmdao@web103.webfaction.com:downloads /OpenMDAO/release_test')
+    print 'syncing dists dir...'
+    local('rsync -arvzt openmdao@web103.webfaction.com:dists /OpenMDAO/release_test')
+    print 'creating release...'
+    _release(version, is_local=True, home='/OpenMDAO/release_test')
   
 #-------------------------------------------------------------------------------------    
 #Local developer script to build and run tests on a branch on each development platform
@@ -256,13 +260,14 @@ def testbranch(runlocal="False", ignoreBzrStatus="False"):
 #Part of script needed to test releases
 #This will only be run from storm, since the release script is always run from storm
 #Run this from the scripts directory
-def _getrelease():
+def _getrelease(releaseurl):
     """Grabs the latest openmdao release from the website, go-openmdao.py, so it can be tested on our dev platforms
     """
     startdir=os.getcwd()
     print('starting dir is %s' % startdir)
-    releaseurl='http://openmdao.org/downloads/latest/go-openmdao.py'
-    try:  resp = urllib2.urlopen(releaseurl)
+    
+    try:  
+        resp = urllib2.urlopen(releaseurl)
     except IOError, e:
         if hasattr(e, 'reason'):
             print 'We failed to reach the server'
@@ -278,12 +283,12 @@ def _getrelease():
         #print resp.code
         #print resp.headers["content-type"]
 
-def _testrelease():
+def _testrelease(releaseurl):
     """"Copies the go-openmdao.py file to each production platform and builds and tests on each one
     """
     startdir=os.getcwd()
     #get go-openmdao.py from web and put in startdir on the local host
-    _getrelease()
+    _getrelease(releaseurl)
     #@runs_once(_getrelease())
 
     winplatforms=["storm.grc.nasa.gov"]  #Is remote host storm?
@@ -323,12 +328,23 @@ def _testrelease():
                 print('Tests completed on %s' % env.host)  
 
 #Do not need to run this separately since testrelease calls it - just here for debugging purposes
-def getrelease():
-    _getrelease()
+def getrelease(releaseurl='http://openmdao.org/downloads/latest/go-openmdao.py'):
+    _getrelease(releaseurl)
 
 @hosts('torpedo.grc.nasa.gov', 'viper.grc.nasa.gov', 'storm.grc.nasa.gov')
-def testrelease():
+def testrelease(releaseurl='http://openmdao.org/downloads/latest/go-openmdao.py'):
     if sys.platform != 'win32':
         raise RuntimeError("OpenMDAO releases should be tested from Windows since that's where releases are created by config mgr.")
-    _testrelease()
+    _testrelease(releaseurl)
+
+# release testing on the local mirror (torpedo)
+@hosts('torpedo.grc.nasa.gov', 'viper.grc.nasa.gov', 'storm.grc.nasa.gov')
+def testlocalrelease(releaseurl='http://torpedo.grc.nasa.gov:31004/downloads/latest/go-openmdao.py'):
+    if sys.platform != 'win32':
+        raise RuntimeError("OpenMDAO releases should be tested from Windows since that's where releases are created by config mgr.")
+    _testrelease(releaseurl)
     
+#Do not need to run this separately since testlocalrelease calls it - just here for debugging purposes
+def getlocalrelease(releaseurl='http://torpedo.grc.nasa.gov:31004/downloads/latest/go-openmdao.py'):
+    _getrelease(releaseurl)
+
