@@ -1171,6 +1171,11 @@ class OpenMDAO_Proxy(BaseProxy):
         if server_version != 1:  #pragma no cover
             msg = 'Expecting server protocol version 1, got %r' % server_version
             logging.error(msg)
+            if server_version == '#TRACEBACK':
+                try:
+                    logging.error(''.join(server_data[1]))
+                except Exception:
+                    pass
             raise RuntimeError(msg)
         
         self._tls.session_key = key_pair.decrypt(server_data[1])

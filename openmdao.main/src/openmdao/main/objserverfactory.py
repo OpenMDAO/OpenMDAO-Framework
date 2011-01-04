@@ -52,19 +52,26 @@ class ObjServerFactory(Factory):
     allowed_types: list(string)
         Passed to created :class:`ObjServer` servers.
 
+    address: tuple or string
+        A :mod:`multiprocessing` address specifying an Internet address or
+        a pipe (default).  Created :class:`ObjServer` servers will use the
+        same form of address.
+
     The environment variable ``OPENMDAO_KEEPDIRS`` can be used to avoid
     having server directory trees removed when servers are shut-down.
     """
 
     # These are used to propagate selections from main().
     # There isn't a good way to propagate them through a manager.
+    _address = None
     _allow_shell = False
     _allowed_types = None
 
     def __init__(self, name='ObjServerFactory', authkey=None, allow_shell=False,
-                 allowed_types=None):
+                 allowed_types=None, address=None):
         super(ObjServerFactory, self).__init__()
         self._authkey = authkey
+        self._address = address or ObjServerFactory._address
         self._allow_shell = allow_shell or ObjServerFactory._allow_shell
         self._allowed_types = allowed_types or ObjServerFactory._allowed_types
         self._managers = {}
@@ -193,14 +200,23 @@ class ObjServerFactory(Factory):
             name = ctor_args.get('name', '')
             if not name:
                 name = 'Server_%d' % (len(self._managers) + 1)
+
             allowed_users = ctor_args.get('allowed_users')
             if not allowed_users:
                 credentials = get_credentials()
                 allowed_users = {credentials.user: credentials.public_key}
             else:
                 del ctor_args['allowed_users']
-            manager = _ServerManager(authkey=self._authkey,
-                                     allowed_users=allowed_users, name=name)
+
+            if self._address is None or isinstance(self._address, basestring):
+                # Local access only via pipe.
+                address = None
+            else:
+                # Network access via same IP as factory, system-selected port.
+                address = (self._address[0], 0)
+
+            manager = _ServerManager(address, self._authkey, name=name,
+                                     allowed_users=allowed_users)
             root_dir = name
             count = 1
             while os.path.exists(root_dir):
@@ -666,6 +682,8 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
                     out.write('%s\n' % pattern)
             if sys.platform != 'win32' or HAVE_PYWIN32:
                 make_private('hosts.allow')
+            else:
+                logging.warning("Can't make hosts.allow private")
 
     if allow_shell:
         args.append('--allow-shell')
@@ -676,6 +694,8 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
                 out.write('%s\n' % typname)
         if sys.platform != 'win32' or HAVE_PYWIN32:
             make_private('types.allow')
+        else:
+            logging.warning("Can't make types.allow private")
         args.extend(['--types', 'types.allow'])
 
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
@@ -870,6 +890,7 @@ def main():  #pragma no cover
 
     # Set defaults for created ObjServerFactories.
     # There isn't a good method to propagate these through the manager.
+    ObjServerFactory._address = address
     ObjServerFactory._allow_shell = options.allow_shell
     ObjServerFactory._allowed_types = allowed_types
 
