@@ -1124,8 +1124,10 @@ class OpenMDAO_Proxy(BaseProxy):
 
         if kind == '#RETURN':
             return result
+
         elif kind == '#PROXY':
             exposed, token, pubkey = result
+
             # Proxy passthru only happens remotely.
             if self._manager is None:  #pragma no cover
                 self._manager = OpenMDAO_Manager(pubkey=pubkey)
@@ -1134,13 +1136,21 @@ class OpenMDAO_Proxy(BaseProxy):
             except KeyError:
                 self._manager.register(token.typeid, None, _auto_proxy)
                 proxytype = self._manager._registry[token.typeid][-1]
-            proxy = proxytype(
-                token, self._serializer, manager=self._manager,
-                authkey=self._authkey, exposed=exposed, pubkey=pubkey
-                )
+
+            if token.address != self._manager.address:
+                manager = OpenMDAO_Manager(token.address, self._authkey,
+                                           pubkey=pubkey)
+            else:
+                manager = self._manager
+
+            proxy = proxytype(token, self._serializer, manager=self._manager,
+                              authkey=self._authkey, exposed=exposed,
+                              pubkey=pubkey)
+
             conn = self._Client(token.address, authkey=self._authkey)
             dispatch(conn, None, 'decref', (token.id,))
             return proxy
+
         raise convert_to_error(kind, result)
 
     def _init_session(self, conn):
