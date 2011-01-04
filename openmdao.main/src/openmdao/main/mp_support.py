@@ -1130,7 +1130,8 @@ class OpenMDAO_Proxy(BaseProxy):
 
             # Proxy passthru only happens remotely.
             if self._manager is None:  #pragma no cover
-                self._manager = OpenMDAO_Manager(pubkey=pubkey)
+                self._manager = OpenMDAO_Manager(token.address, self._authkey,
+                                                 pubkey=pubkey)
             try:
                 proxytype = self._manager._registry[token.typeid][-1]
             except KeyError:
@@ -1138,12 +1139,13 @@ class OpenMDAO_Proxy(BaseProxy):
                 proxytype = self._manager._registry[token.typeid][-1]
 
             if token.address != self._manager.address:
+                # Proxy to different server than request was sent to.
                 manager = OpenMDAO_Manager(token.address, self._authkey,
                                            pubkey=pubkey)
             else:
                 manager = self._manager
 
-            proxy = proxytype(token, self._serializer, manager=self._manager,
+            proxy = proxytype(token, self._serializer, manager=manager,
                               authkey=self._authkey, exposed=exposed,
                               pubkey=pubkey)
 
