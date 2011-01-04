@@ -147,9 +147,9 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
       python go-openmdao.py
 
 
-   This script will check the version of Python you are running. You must be running a version
-   greater than or equal to 2.6 but less than 3.0. After the script completes successfully, you
-   will have installed OpenMDAO. There are just a couple more steps to follow before you can start
+   This script will check the version of Python you are running. You must be running a version greater
+   than or equal to 2.6 but less than 3.0. After the script completes successfully, you will have
+   installed OpenMDAO. However, you still have a couple more steps to complete before you can start
    using it. 
 
 **Activate your virtual environment**
@@ -185,7 +185,7 @@ If you are on **Windows,** type:
 **Run tests to verify valid install**
 
 OpenMDAO has a large test suite which allows you to check and make sure all of the functionality of OpenMDAO will work 
-on your system. You can run these tests yourself to double check your installation. It takes only a couple of 
+on your system. You can run these tests yourself to double check your installation. It takes only a few 
 minutes to run them all. 
 
 To run all tests, type the following:

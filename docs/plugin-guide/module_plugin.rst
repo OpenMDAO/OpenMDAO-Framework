@@ -32,17 +32,17 @@ need to function properly as an OpenMDAO component.
              self.c = self.a + self.b
 
 
-The code defines the class *SimpleAdder*, which inherits from the
+The code defines the class ``SimpleAdder``, which inherits from the
 Component class defined in ``openmdao.main.api``, so we have to import it from
 there. The function in our component that performs a computation is called
 ``execute()``, and there we define *c* as the sum of *a* and *b*.
 The *self* object that is passed as an argument to ``execute()`` represents an
-instance of our SimpleAdder class.
+instance of our ``SimpleAdder`` class.
 
-SimpleAdder has three variables of type Float with the names *a*, *b*, and
-*c*. All three variables have a default value of 0.0. Attributes a and b
-are inputs, so we specify that they have an iotype of *'in'*. Attribute
-c is an output, so it has an iotype of *'out'*.
+``SimpleAdder`` has three variables of type Float with the names *a*, *b*, and
+*c*. All three variables have a default value of 0.0. Attributes *a* and *b*
+are inputs, so we specify that they have an iotype of ``'in'``. Attribute
+*c* is an output, so it has an iotype of ``'out'``.
 
 The Float variable is defined in the package ``openmdao.lib.datatypes.api``, so 
 we have to import it from there before we can use it. This  package defines a 
@@ -52,7 +52,7 @@ implemented using Enthought's Traits and to learn more about traits, see the
 `Traits User Manual 
 <http://code.enthought.com/projects/traits/docs/html/traits_user_manual/index.html>`_.
 
-At this point, our SimpleAdder plugin is usable within OpenMDAO. We could simply
+At this point, our ``SimpleAdder`` plugin is usable within OpenMDAO. We could simply
 import the module containing it and use it in a model; but we want more than
 that. By packaging our plugin as a Python distribution, we can make it easy to share with
 others in the OpenMDAO community. We can give our distribution a version identifier and
@@ -68,7 +68,7 @@ Creating a distribution out of a Python module is straightforward, but it does
 require the creation of a simple directory structure because distributions are
 intended to contain Python packages and not just individual modules.
 
-For example, if our SimpleAdder class is in a file called ``simple_adder.py``, 
+For example, if our ``SimpleAdder`` class is in a file called ``simple_adder.py``, 
 we need a directory structure that looks like this to make it distributable
 as a package in a distribution:
 
@@ -259,8 +259,8 @@ file called ``coord.py`` and placing the following code in it:
 
 
 OpenMDAO uses the Traits package from Enthought to implement variables. The
-base class for custom traits is *TraitType*, so that's the base class for our
-coordinates variable. If a component or a component class contains a TraitType
+base class for custom traits is ``TraitType``, so that's the base class for our
+coordinates variable. If a component or a component class contains a ``TraitType``
 object and that object has a metadata attribute called *iotype*, then that object
 is exposed to the framework as a variable whose value can be passed between
 components.  One thing that can be a little confusing to people first using Traits
@@ -272,8 +272,8 @@ named *wheel* that contained one of our Coordinates traits named
 not a Coordinates object.
 
 We override the base class constructor so we can supply a default value of
-(0.,0.,0.) if the caller doesn't supply one. After that, the only function we
-need to supply is the validate function, which will be called with the
+(``0.,0.,0.``) if the caller doesn't supply one. After that, the only function we
+need to supply is the ``validate`` function, which will be called with the
 following arguments:
 
 **object**
@@ -286,7 +286,7 @@ following arguments:
     The value that our current value is being replaced with
 
 
-Our validate function should test that the value we've been called with is
+Our ``validate`` function should test that the value we've been called with is
 valid. In this particular case, we just need to verify that the value is a
 3-tuple and it has float or int entries. If the value is acceptable, then we
 just return it. We don't need to do it in this case, but in other custom
@@ -316,6 +316,6 @@ a different entry point group name.
         }
     )
 
-We can create this file by hand or generate it using mod2dist, as shown in
+We can create this file by hand or generate it using ``mod2dist``, as shown in
 an earlier section.
 
