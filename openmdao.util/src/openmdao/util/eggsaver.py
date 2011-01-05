@@ -31,6 +31,7 @@ except ImportError:  #pragma no cover
     from yaml import Dumper
     _libyaml = False
 
+import copy
 import copy_reg
 import datetime
 import fnmatch
@@ -190,6 +191,16 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
             required_distributions = set()
             local_modules = set()
             orphan_modules = set()
+            # Collect Python modules.
+            for dirpath, dirnames, filenames in os.walk(py_dir):
+                dirs = copy.copy(dirnames)
+                for path in dirs:
+                    if not os.path.exists(os.path.join(dirpath, path,
+                                                       '__init__.py')):
+                        dirnames.remove(path)
+                for path in filenames:
+                    if path.endswith('.py'):
+                        local_modules.add(os.path.join(dirpath, path))
 
         # Ensure module corresponding to __main__ is local if it was used.
         # (Test script embedded in egg is an example of how this might occur)

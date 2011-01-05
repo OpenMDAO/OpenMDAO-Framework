@@ -9,7 +9,7 @@ from openmdao.lib.datatypes.api import Bool, Instance
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
-from openmdao.main.rbac import Credentials, get_credentials, set_credentials
+from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
 from openmdao.lib.datatypes.int import Int
@@ -67,7 +67,8 @@ class CaseIterDriverBase(Driver):
         self._server_states = {}
         self._server_cases = {}
         self._exceptions = {}
-
+        self._load_failures = {}
+ 
         self._todo = []   # Cases grabbed during server startup.
         self._rerun = []  # Cases that failed and should be retried.
         self._generation = 0  # Used to keep worker names unique.
@@ -186,8 +187,6 @@ class CaseIterDriverBase(Driver):
         """ Start evaluating cases concurrently. """
         # Need credentials in case we're using a PublicKey server.
         credentials = get_credentials()
-        if credentials is None:
-            credentials = Credentials()
 
         # Determine maximum number of servers available.
         resources = {
@@ -227,6 +226,7 @@ class CaseIterDriverBase(Driver):
             self._in_use[name] = True
             self._server_cases[name] = None
             self._server_states[name] = _EMPTY
+            self._load_failures[name] = 0
             server_thread = threading.Thread(target=self._service_loop,
                                              args=(name, resources,
                                                    credentials, self._reply_q))
@@ -337,6 +337,7 @@ class CaseIterDriverBase(Driver):
         self._server_states = {}
         self._server_cases = {}
         self._exceptions = {}
+        self._load_failures = {}
 
         self._todo = []
         self._rerun = []
@@ -374,8 +375,14 @@ class CaseIterDriverBase(Driver):
             if exc is None:
                 in_use = self._start_next_case(server, stepping)
             else:
-                self._logger.debug('    exception while loading: %s', exc)
-                in_use = self._start_processing(server, stepping)
+                self._logger.debug('    exception while loading: %r', exc)
+                self._load_failures[server] += 1
+                if self._load_failures[server] < 3:
+                    in_use = self._start_processing(server, stepping)
+                else:
+                    self._logger.debug('    too many load failures')
+                    self._server_states[server] = _EMPTY
+                    in_use = False
 
         elif state == _EXECUTING:
             case = self._server_cases[server]
@@ -392,7 +399,7 @@ class CaseIterDriverBase(Driver):
                         self._logger.debug('    %s', msg)
                         case.msg = '%s: %s' % (self.get_pathname(), msg)
             else:
-                self._logger.debug('    exception while executing: %s', exc)
+                self._logger.debug('    exception while executing: %r', exc)
                 case.msg = str(exc)
 
             # Record the data.
@@ -544,7 +551,7 @@ class CaseIterDriverBase(Driver):
                 try:
                     result = request[0](request[1])
                 except Exception as req_exc:
-                    self._logger.error('%r: %s caused %s', name,
+                    self._logger.error('%r: %s caused %r', name,
                                        request[0], req_exc)
                     result = None
                 else:
@@ -554,7 +561,7 @@ class CaseIterDriverBase(Driver):
             # This can easily happen if we take a long time to allocate and
             # we get 'cleaned-up' before we get started.
             if self._server_lock is not None:
-                self._logger.error('%r: %s', name, exc)
+                self._logger.error('%r: %r', name, exc)
         finally:
             self._logger.debug('%r releasing server', name)
             RAM.release(server)
@@ -576,7 +583,7 @@ class CaseIterDriverBase(Driver):
                          self._servers[server], self._egg_file, 'b')
             # Difficult to force model file transfer error.
             except Exception as exc:  #pragma nocover
-                self._logger.error('server %r filexfer of %r failed: %s',
+                self._logger.error('server %r filexfer of %r failed: %r',
                                    server, self._egg_file, exc)
                 self._top_levels[server] = None
                 self._exceptions[server] = exc
@@ -587,7 +594,7 @@ class CaseIterDriverBase(Driver):
             tlo = self._servers[server].load_model(self._egg_file)
         # Difficult to force load error.
         except Exception as exc:  #pragma nocover
-            self._logger.error('server.load_model of %r failed: %s',
+            self._logger.error('server.load_model of %r failed: %r',
                                self._egg_file, exc)
             self._top_levels[server] = None
             self._exceptions[server] = exc
@@ -616,7 +623,7 @@ class CaseIterDriverBase(Driver):
                 self.workflow.run()
             except Exception as exc:
                 self._exceptions[server] = exc
-                self._logger.critical('Caught exception: %s' % exc)
+                self._logger.critical('Caught exception: %r' % exc)
         else:
             self._queues[server].put((self._remote_model_execute, server))
 
@@ -626,7 +633,7 @@ class CaseIterDriverBase(Driver):
             self._top_levels[server].run()
         except Exception as exc:
             self._exceptions[server] = exc
-            self._logger.error('Caught exception from server %r, PID %d on %s: %s',
+            self._logger.error('Caught exception from server %r, PID %d on %s: %r',
                                self._server_info[server]['name'],
                                self._server_info[server]['pid'],
                                self._server_info[server]['host'], exc)

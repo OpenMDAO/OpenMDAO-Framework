@@ -16,25 +16,42 @@ check for an object-specific controller by trying to invoke
 :meth:`get_access_controller` on the object before using the default.
 
 The current role is determined from a :class:`Credentials` object which is
-attached to the current thread. Credentials are currently just a user
-identifier string. Mapping from credentials to roles can become fairly involved
-in a real system, typically with site-specific configuration. The default role
-mapping here just returns the roles 'owner' or 'user' based on whether the
-credentials match those in effect when the controller object was created.
+attached to the current thread.  Mapping from credentials to roles can become
+fairly involved in a real system, typically with site-specific configuration.
+The default role mapping here just returns the roles 'owner' or 'user' based on
+whether the credentials match those in effect when the controller object was
+created.
 
 .. warning::
 
-    Credentials are currently just a user identifier string and are trivially
-    forgeable. This access control scheme should *not* be relied upon until
-    credentials have been updated to a more secure form.
+    Credentials as currently defined are quite weak unless the receiver has
+    a list of known client keys.  This access control scheme should *not* be
+    relied upon unless the receiving server verifies that the Credentials
+    public key matches what is expected.
 
 """
 
 import fnmatch
 import getpass
+import hashlib
 import inspect
+import logging
 import socket
+import sys
 import threading
+
+from Crypto.PublicKey import RSA
+from Crypto.Random import get_random_bytes
+
+from openmdao.util.publickey import get_key_pair, HAVE_PYWIN32
+
+# Verified credentials keyed by encoding tuple.
+_VERIFY_CACHE = {}
+
+
+class CredentialsError(Exception):
+    """ Raised when decoding/verifying received credentials. """
+    pass
 
 
 class RoleError(Exception):
@@ -47,30 +64,155 @@ class RoleError(Exception):
 
 class Credentials(object):
     """
-    Currently contains just a single `user` attribute of the form ``user@host``.
+    Credentials are used to certify that a message is from a particular user
+    on a particular host.  The scheme here is quite weak unless the receiver
+    has a list of known client keys.
+
+    Essentially all we can prove here is that *someone* *somewhere* created
+    a correctly formed credential. Without known client keys at the receiving
+    end the best we can do is detect when more than one client claims the
+    same identity.
+
+    If the receiver does keep a list of known client keys, then the information
+    here will support strict authorization.
+
+    The `client_creds` attribute is simply used to trace back to the original
+    user, it is not part of the credentials signature. It is carried along for
+    auditing purposes when proxy credentials are used to allow a publicly
+    accessible proprietary method to invoke other restricted methods on behalf
+    of an ordinary user.
+
+    encoded: tuple
+        If specified, data used to recreate a remote :class:`Credentials`
+        object.
     """
 
-    def __init__(self):
-        self.user = '%s@%s' % (getpass.getuser(), socket.gethostname())
+    user_host = '%s@%s' % (getpass.getuser(), socket.gethostname())
+
+    def __init__(self, encoded=None):
+        # We don't use cPickle to create or parse .data because we'd rather not
+        # have to trust a source until after we've checked their credentials.
+        if encoded is None:
+            # Create our credentials.
+            self.user = Credentials.user_host
+            self.transient = (sys.platform == 'win32') and not HAVE_PYWIN32
+            key_pair = get_key_pair(self.user)
+            self.public_key = key_pair.publickey()
+            self.data = '\n'.join([self.user, str(int(self.transient)),
+                                   self.public_key.exportKey()])
+            hash = hashlib.sha256(self.data).digest()
+            self.signature = key_pair.sign(hash, get_random_bytes)
+            self.client_creds = None
+        else:
+            # Recreate remote user credentials.
+            data, signature, client_creds = encoded
+            lines = data.split('\n')
+            if len(lines) < 3:
+                raise CredentialsError('Invalid data')
+            self.user = lines[0]
+            self.transient = bool(int(lines[1]))
+            try:
+                self.public_key = RSA.importKey('\n'.join(lines[2:]))
+            except Exception:
+                raise CredentialsError('Invalid key')
+            self.data = data
+            hash = hashlib.sha256(data).digest()
+            try:
+                if not self.public_key.verify(hash, signature):
+                    raise CredentialsError('Invalid signature')
+            except Exception:
+                raise CredentialsError('Invalid signature')
+            self.signature = signature
+            self.client_creds = client_creds
 
     def __eq__(self, other):
-        return self.user == other.user
+        if isinstance(other, Credentials):
+            return self.user == other.user and \
+                   self.signature == other.signature
+        else:
+            return False
 
     def __str__(self):
-        return self.user
+        if self.client_creds is not None:
+            client = ' (%s)' % self.client_creds
+        else:
+            client = ''
+        # 'transient' is just an aid to let some Windows users know their
+        # credentials will change on-the-fly.
+        transient = ' (transient)' if self.transient else ''
+        return '%s%s%s' % (self.user, client, transient)
+
+    def encode(self):
+        """ Return object to be sent: ``(data, signature, client_creds)``. """
+        return (self.data, self.signature, self.client_creds)
+
+    @staticmethod
+    def verify(encoded, allowed_users):
+        """
+        Verify that `encoded` is a valid encoded credentials object and that
+        its public key matches the public key we've already seen, if any.
+
+        encoded: tuple
+            Encoded credentials.
+
+        allowed_users: dict
+            Dictionary of users and corresponding public keys allowed access.
+            If None, any user may access. If empty, no user may access.
+
+        Returns :class:`Credentials` object from `encoded`.
+        """
+        data, signature, client_creds = encoded
+        key = (data, signature)
+        try:
+            credentials = _VERIFY_CACHE[key]
+        except KeyError:
+            credentials = Credentials(encoded)
+            user = credentials.user
+            for cred in _VERIFY_CACHE.values():
+                if cred.user == user:
+                    raise CredentialsError('Public key mismatch for %r' % user)
+            else:
+                _VERIFY_CACHE[key] = credentials
+
+        if allowed_users is not None:
+            try:
+                pubkey = allowed_users[credentials.user]
+            except KeyError:
+                raise CredentialsError('User %r not in allowed_users' \
+                                       % credentials.user)
+            else:
+                if (credentials.public_key.e != pubkey.e) or \
+                   (credentials.public_key.n != pubkey.n):
+                    raise CredentialsError('Allowed user mismatch for %r' \
+                                           % credentials.user)
+
+        credentials.client_creds = client_creds
+        return credentials
 
 
 def set_credentials(credentials):
     """ Set the current thread's credentials. """
     threading.current_thread().credentials = credentials
-
+    return credentials
 
 def get_credentials():
     """ Get the current thread's credentials. """
     try:
         return threading.current_thread().credentials
     except AttributeError:
-        return None
+        credentials = Credentials()
+        return set_credentials(credentials)
+
+def remote_access():
+    """ Return True if the current thread is providing remote access. """
+    try:
+        creds = threading.current_thread().credentials
+    except AttributeError:
+        return False
+    else:
+        # Not remote if acting on the local user's behalf.
+        return creds.user != Credentials.user_host or \
+               creds.client_creds is not None
 
 
 # For some reason use of a class as a decorator doesn't count as coverage.
@@ -156,8 +298,6 @@ class AccessController(object):
 
     def __init__(self):
         self.owner = get_credentials()
-        if self.owner is None:
-            raise RoleError('No current credentials')
         self.credentials_map = {}
         self.set_proxy_credentials('owner', self.owner)
         self.attr_proxy_map = {}
@@ -181,6 +321,12 @@ class AccessController(object):
         if isinstance(credentials, Credentials):
             if credentials == self.owner:
                 return 'owner'
+            elif (sys.platform == 'win32') and not HAVE_PYWIN32:  #pragma no cover
+                # Transient credentials need a more lenient (and insecure!)
+                # check since the keys can't be stored.
+                if credentials.user == self.owner.user:
+                    logging.warning('Allowing %r as owner', credentials.user)
+                    return 'owner'
             return 'user'
         else:
             raise TypeError('credentials is not a Credentials object')
@@ -204,9 +350,12 @@ class AccessController(object):
         
         if proxy_role:
             try:
-                return self.credentials_map[proxy_role]
+                proxy_creds = self.credentials_map[proxy_role]
             except KeyError:
                 raise RoleError('No credentials for proxy role %s' % proxy_role)
+            else:
+                proxy_creds.client_creds = credentials.client_creds
+                return proxy_creds
         else:
             return credentials
 

@@ -4,6 +4,7 @@ Test distributed simulation.
 
 import cPickle
 import glob
+import hashlib
 import logging
 from math import pi
 from multiprocessing import AuthenticationError, current_process
@@ -16,6 +17,8 @@ import traceback
 import unittest
 import nose
 
+from Crypto.Random import get_random_bytes
+
 from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly, Case, Component, Container, Driver, \
@@ -24,9 +27,8 @@ from openmdao.main.container import get_closest_proxy
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.interfaces import IComponent
-from openmdao.main.mp_support import has_interface, is_instance, \
-                                     read_server_config, keytype, \
-                                     _generate_key_pair, _KEY_CACHE
+from openmdao.main.mp_support import has_interface, is_instance
+from openmdao.main.mp_util import read_server_config
 from openmdao.main.objserverfactory import connect, start_server, RemoteFile
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
@@ -37,6 +39,7 @@ from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
 from openmdao.test.execcomp import ExecComp
 
 from openmdao.util.decorators import add_delegate
+from openmdao.util.publickey import get_key_pair
 from openmdao.util.testutil import assert_raises, assert_rel_error
 
 
@@ -83,7 +86,7 @@ class Box(ExecComp):
 
     @rbac('owner')
     def cause_parent_error2(self):
-        return self.parent.get_proxy()
+        return self.parent.get_trait('no-such-trait')
 
     @rbac('owner')
     def cause_parent_error3(self):
@@ -201,12 +204,6 @@ class Model(Assembly):
 class Protector(AccessController):
     """ Special :class:`AccessController` to protect secrets. """
 
-    def __init__(self):
-        set_credentials(Credentials())  # Ensure something is current.
-        super(Protector, self).__init__()
-        self.owner = Credentials()
-        self.owner.user = 'xyzzy@spooks-r-us.com'
-
     def check_access(self, role, methodname, obj, attr):
         if not role:
             raise RoleError('No access by null role')
@@ -225,8 +222,6 @@ class Protector(AccessController):
             return True
         return False
 
-PROTECTOR = Protector()
-
 
 class ProtectedBox(Box):
     """ Box which can be used but the innards are hidden. """
@@ -235,36 +230,38 @@ class ProtectedBox(Box):
 
     def __init__(self):
         super(ProtectedBox, self).__init__()
+        # Protector will use current credentials as 'owner'.
+        self.protector = Protector()
 
     @rbac('owner')
     def proprietary_method(self):
         pass
 
     def get_access_controller(self):
-        return PROTECTOR
+        return self.protector
 
     @rbac(('owner', 'user'))
     def get(self, path, index=None):
-        if PROTECTOR.user_attribute(self, path):
+        if self.protector.user_attribute(self, path):
             return super(ProtectedBox, self).get(path, index)
         raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
 
     @rbac(('owner', 'user'))
     def get_dyn_trait(self, name, iotype=None):
-        if PROTECTOR.user_attribute(self, name):
+        if self.protector.user_attribute(self, name):
             return super(ProtectedBox, self).get_dyn_trait(name, iotype)
         raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
 
     @rbac(('owner', 'user'))
     def get_wrapped_attr(self, name):
-        if PROTECTOR.user_attribute(self, name):
+        if self.protector.user_attribute(self, name):
             return super(ProtectedBox, self).get_wrapped_attr(name)
         raise RoleError("No get_wrapped_attr access to '%s' by role '%s'"
                         % (attr, role))
 
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, srcname=None, force=False):
-        if PROTECTOR.user_attribute(self, path):
+        if self.protector.user_attribute(self, path):
             return super(ProtectedBox, self).set(path, value, index, srcname, force)
         raise RoleError("No set access to '%s' by role '%s'"
                         % (attr, role))
@@ -282,57 +279,75 @@ class TestCase(unittest.TestCase):
         return super(TestCase, self).run(self.test_result)
 
     def setUp(self):
-        """ Start server process. """
-        global _SERVER_ID
-        _SERVER_ID += 1
-
+        """ Called before each test. """
         self.n_errors = len(self.test_result.errors)
         self.n_failures = len(self.test_result.failures)
+
+        self.factories = []
+        self.servers = []
+        self.server_dirs = []
 
         # Ensure we control directory cleanup.
         self.keepdirs = os.environ.get('OPENMDAO_KEEPDIRS', '0')
         os.environ['OPENMDAO_KEEPDIRS'] = '1'
 
-        # Start each server process in a unique directory.
+    def start_factory(self, port=None, allowed_users=None):
+        """ Start each factory process in a unique directory. """
+        global _SERVER_ID
+        _SERVER_ID += 1
+
         server_dir = 'Factory_%d' % _SERVER_ID
         if os.path.exists(server_dir):
             shutil.rmtree(server_dir)
         os.mkdir(server_dir)
         os.chdir(server_dir)
-        self.server_dirs = [server_dir]
-        self.server = None
+        self.server_dirs.append(server_dir)
         try:
             logging.debug('')
             logging.debug('tester pid: %s', os.getpid())
             logging.debug('starting server...')
-            # Exercise both AF_INET and AF_UNIX/AF_PIPE.
-            port = -1 if _SERVER_ID & 1 else 0
-            self.server = start_server(port=port)
+
+            if port is None:
+                # Exercise both AF_INET and AF_UNIX/AF_PIPE.
+                port = -1 if _SERVER_ID & 1 else 0
+
+            if allowed_users is None:
+                credentials = get_credentials()
+                allowed_users = {credentials.user: credentials.public_key}
+
+            allowed_types = ['openmdao.main.test.test_distsim.HollowSphere',
+                             'openmdao.main.test.test_distsim.Box',
+                             'openmdao.main.test.test_distsim.ProtectedBox']
+
+            server = start_server(port=port, allowed_users=allowed_users,
+                                  allowed_types=allowed_types)
+            self.servers.append(server)
             self.address, self.port, self.key = read_server_config('server.cfg')
-            logging.debug('server pid: %s', self.server.pid)
+            logging.debug('server pid: %s', server.pid)
             logging.debug('server address: %s', self.address)
             logging.debug('server port: %s', self.port)
             logging.debug('server key: %s', self.key)
         finally:
             os.chdir('..')
 
-        set_credentials(Credentials())
-        self.factory = connect(self.address, self.port, pubkey=self.key)
-        logging.debug('factory: %r', self.factory)
+        factory = connect(self.address, self.port, pubkey=self.key)
+        self.factories.append(factory)
+        logging.debug('factory: %r', factory)
+        return factory
 
     def tearDown(self):
         """ Shut down server process. """
         try:
-            if self.factory is not None:
-                self.factory.cleanup()
-            if self.server is not None:
-                logging.debug('terminating server pid %s', self.server.pid)
-                self.server.terminate(timeout=10)
-                self.server = None
+            for factory in self.factories:
+                factory.cleanup()
+            for server in self.servers:
+                logging.debug('terminating server pid %s', server.pid)
+                server.terminate(timeout=10)
 
             # Cleanup only if there weren't any new errors or failures.
             if len(self.test_result.errors) == self.n_errors and \
-               len(self.test_result.failures) == self.n_failures:
+               len(self.test_result.failures) == self.n_failures and \
+               not int(self.keepdirs):
                 for server_dir in self.server_dirs:
                     shutil.rmtree(server_dir)
         finally:
@@ -342,14 +357,16 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_client')
 
+        factory = self.start_factory()
+
         # List available types.
-        types = self.factory.get_available_types()
+        types = factory.get_available_types()
         logging.debug('Available types:')
         for typname, version in types:
             logging.debug('   %s %s', typname, version)
 
         # First a HollowSphere, accessed via get()/set().
-        obj = self.factory.create(_MODULE+'.HollowSphere')
+        obj = factory.create(_MODULE+'.HollowSphere')
         sphere_pid = obj.get('pid')
         self.assertNotEqual(sphere_pid, os.getpid())
 
@@ -374,7 +391,7 @@ class TestCase(unittest.TestCase):
                       TraitError, msg)
 
         # Now a Box, accessed via attribute methods.
-        obj = self.factory.create(_MODULE+'.Box')
+        obj = factory.create(_MODULE+'.Box')
         box_pid = obj.get('pid')
         self.assertNotEqual(box_pid, os.getpid())
         self.assertNotEqual(box_pid, sphere_pid)
@@ -405,8 +422,10 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_model')
 
+        factory = self.start_factory()
+
         # Create model and run it.
-        box = self.factory.create(_MODULE+'.Box')
+        box = factory.create(_MODULE+'.Box')
         model = set_as_top(Model(box))
         model.run()
 
@@ -458,7 +477,7 @@ class TestCase(unittest.TestCase):
         try:
             box.cause_parent_error2()
         except RemoteError as exc:
-            msg = "AttributeError: method 'get_proxy' of"
+            msg = "AttributeError: method 'get_trait' of"
             logging.debug('msg: %s', msg)
             logging.debug('exc: %s', exc)
             self.assertTrue(msg in str(exc))
@@ -479,8 +498,28 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_access')
 
+        # This 'spook' creation is only for testing.
+        # Normally the protector would run with regular credentials
+        # in effect at the proprietary site.
+        user = 'spooky@'+socket.gethostname()
+        key_pair = get_key_pair(user)
+        data = '\n'.join([user, '0', key_pair.publickey().exportKey()])
+        hash = hashlib.sha256(data).digest()
+        signature = key_pair.sign(hash, get_random_bytes)
+        spook = Credentials((data, signature, None))
+
+        credentials = get_credentials()
+        allowed_users = {credentials.user: credentials.public_key,
+                         spook.user: spook.public_key}
+        factory = self.start_factory(allowed_users=allowed_users)
+
         # Create model and run it.
-        box = self.factory.create(_MODULE+'.ProtectedBox')
+        saved = get_credentials()
+        set_credentials(spook)
+        box = factory.create(_MODULE+'.ProtectedBox',
+                             allowed_users=allowed_users)
+        set_credentials(saved)
+
         model = set_as_top(Model(box))
         model.run()
 
@@ -512,19 +551,20 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('Expected RemoteError')
 
-        spook = Credentials()
-        spook.user = 'xyzzy@spooks-r-us.com'
         saved = get_credentials()
         set_credentials(spook)
-        i = model.box.secret
-        model.box.proprietary_method()
-
-        # Reset credentials to allow factory shutdown.
-        set_credentials(saved)
+        try:
+            i = model.box.secret
+            model.box.proprietary_method()
+        finally:
+            # Reset credentials to allow factory shutdown.
+            set_credentials(saved)
 
     def test_4_authkey(self):
         logging.debug('')
         logging.debug('test_authkey')
+
+        factory = self.start_factory()
 
         # Start server in non-public-key mode.
         # Connections must have matching authkey,
@@ -539,7 +579,9 @@ class TestCase(unittest.TestCase):
         self.server_dirs.append(server_dir)
         try:
             logging.debug('starting server (authkey %s)...', authkey)
-            server = start_server(authkey=authkey, timeout=30)
+            allowed_types = ['openmdao.main.test.test_distsim.Box']
+            server = start_server(authkey=authkey, allowed_types=allowed_types,
+                                  timeout=30)
             address, port, key = read_server_config('server.cfg')
             logging.debug('server address: %s', address)
             logging.debug('server port: %s', port)
@@ -549,7 +591,6 @@ class TestCase(unittest.TestCase):
 
         factory = None
         try:
-            set_credentials(Credentials())
             assert_raises(self, 'connect(address, port, pubkey=key)',
                           globals(), locals(), AuthenticationError,
                           'digest sent was rejected')
@@ -580,17 +621,50 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_misc')
 
+        factory = self.start_factory()
+
+        # Try using a server after being released, server never used before.
+        # This usually results in a "Can't connect" error, but sometimes gets a
+        # "Can't send" error, based on timing/proxying.
+        server = factory.create('')
+        factory.release(server)
+        msg1 = "Can't connect to server at"
+        msg2 = "Can't send to server at"
+        try:
+            reply = server.echo('hello')
+        except RuntimeError as exc:
+            if str(exc)[:len(msg1)] != msg1 and str(exc)[:len(msg2)] != msg2:
+                self.fail('Expected connect/send error, got %r' % exc)
+        else:
+            self.fail('Expected RuntimeError')
+
+        # Try using a server after being released, server has been used before.
+        # This usually results in a "Can't send" error, but sometimes gets a
+        # "Can't connect" error, based on timing/proxying.
+        server = factory.create('')
+        reply = server.echo('hello')
+        factory.release(server)
+        msg1 = "Can't send to server at"
+        msg2 = "Can't connect to server at"
+        try:
+            reply = server.echo('hello')
+        except RuntimeError as exc:
+            if str(exc)[:len(msg1)] != msg1 and str(exc)[:len(msg2)] != msg2:
+                self.fail('Expected send/connect error, got %r' % exc)
+        else:
+            self.fail('Expected RuntimeError')
+
         # Try releasing a server twice. Depending on timing, this could
         # result in a ValueError trying to identify the server to release or
         # a RemoteError where the request can't be unpacked. The timing seems
         # to be sensitive to AF_INET/AF_UNIX connection type.
-        server = self.factory.create('')
-        self.factory.release(server)
+        server = factory.create('')
+        factory.release(server)
         msg1 = "can't identify server "
         msg2 = "RuntimeError: Can't decrypt/unpack request." \
                " This could be the result of referring to a dead server."
         try:
-            self.factory.release(server)
+            factory.release(server)
         except ValueError as exc:
             self.assertEqual(str(exc)[:len(msg1)], msg1)
         except RemoteError as exc:
@@ -599,15 +673,7 @@ class TestCase(unittest.TestCase):
             self.fail('Expected ValueError or RemoteError')
 
         # Check false return of has_interface().
-        self.assertFalse(has_interface(self.factory, HasObjectives))
-
-        # Check that credentials are required.
-        credentials = get_credentials()
-        set_credentials(None)
-        msg = 'No credentials for PublicKey authentication of get_available_types'
-        assert_raises(self, 'self.factory.get_available_types()',
-                      globals(), locals(), RuntimeError, msg)
-        set_credentials(credentials)
+        self.assertFalse(has_interface(factory, HasObjectives))
 
         # Try to connect to wrong port (assuming junk_port isn't being used!)
         address = socket.gethostname()
@@ -615,24 +681,15 @@ class TestCase(unittest.TestCase):
         assert_raises(self, 'connect(address, junk_port, pubkey=self.key)',
                       globals(), locals(), RuntimeError, "can't connect to ")
 
-        # Try to read config from non-existent file.
-        assert_raises(self, "read_server_config('no-such-file')",
-                      globals(), locals(), IOError,
-                      "No such file 'no-such-file'")
-
         # Unpickleable argument.
         code = compile('3 + 4', '<string>', 'eval')
-        assert_raises(self, 'self.factory.echo(code)', globals(), locals(),
+        assert_raises(self, 'factory.echo(code)', globals(), locals(),
                       cPickle.PicklingError, "Can't pickle <type 'code'>")
 
-        # Force a key generation.
-        key_file = os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
-        if os.path.exists(key_file):
-            os.remove(key_file)
-        credentials = Credentials()
-        if credentials.user in _KEY_CACHE:
-            del _KEY_CACHE[credentials.user]
-        _generate_key_pair(credentials)
+        # Server startup failure.
+        assert_raises(self, 'self.start_factory(port=0, allowed_users={})',
+                      globals(), locals(), RuntimeError,
+                      'Server startup failed')
 
 
 if __name__ == '__main__':

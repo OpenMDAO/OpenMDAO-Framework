@@ -8,12 +8,17 @@ import pkg_resources
 import platform
 import shutil
 import sys
+import time
 import unittest
 import nose
+
+from multiprocessing.managers import RemoteError
 
 from openmdao.main.api import Assembly, FileMetadata, SimulationRoot, set_as_top
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunInterrupted
+from openmdao.main.objserverfactory import ObjServerFactory
+from openmdao.main.rbac import Credentials, get_credentials
 
 from openmdao.lib.components.external_code import ExternalCode
 
@@ -108,7 +113,7 @@ class TestCase(unittest.TestCase):
     def test_remote(self):
         logging.debug('')
         logging.debug('test_remote')
-        init_cluster()
+        init_cluster(allow_shell=True)
 
         dummy = 'dummy_output'
         if os.path.exists(dummy):
@@ -283,6 +288,57 @@ class TestCase(unittest.TestCase):
         for comp in (model.a, model.b):
             self.assertEqual(comp.return_code, 0)
             self.assertEqual(comp.timed_out, False)
+
+    def test_rsh(self):
+        logging.debug('')
+        logging.debug('test_rsh')
+
+        testdir = 'external_rsh'
+        if os.path.exists(testdir):
+            shutil.rmtree(testdir)
+        os.mkdir(testdir)
+        os.chdir(testdir)
+
+        factory = None
+        try:
+            # Try to set command line on remote ExternalCode instance.
+            typname = 'openmdao.lib.components.external_code.ExternalCode'
+            factory = ObjServerFactory(allowed_types=[typname])
+            exec_comp = factory.create(typname)
+            cmd = exec_comp.command
+
+            try:
+                exec_comp.command = 'this-should-fail'
+            except RemoteError as exc:
+                msg = "RoleError: No __setattr__ access to 'command'"
+                logging.debug('msg: %s', msg)
+                logging.debug('exc: %s', exc)
+                self.assertTrue(msg in str(exc))
+            else:
+                self.fail('Expected RemoteError')
+
+            exec_comp.set('command', 'this-should-pass')
+
+            # Try to set via remote-looking access.
+            creds = get_credentials()
+            creds.client_creds = Credentials()
+            logging.debug('    using %s', creds)
+            try:
+                code = "exec_comp.set('command', 'this-should-fail')"
+                assert_raises(self, code, globals(), locals(), RuntimeError,
+                              ": 'command' may not be set() remotely")
+            finally:
+                creds.client_creds = None
+
+        finally:
+            if factory is not None:
+                factory.cleanup()
+            os.chdir('..')
+            if sys.platform == 'win32':
+                time.sleep(2)  # Wait for process shutdown.
+            keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
+            if not keep_dirs:
+                shutil.rmtree(testdir)
 
 
 if __name__ == '__main__':
