@@ -47,6 +47,7 @@ def _testrelease(site_url, version, host):
     and tests on each one
     """
     #get go-openmdao.py from the web and put in current dir on the local host
+    print 'getting go-openmdao.py file...'
     _getrelease(site_url, version)
 
     with settings(host_string=host):
@@ -59,16 +60,20 @@ def _testrelease(site_url, version, host):
             removeit="""rmdir /s /q"""
             if os.path.isdir('releasetest'):
                 shutil.rmtree('releasetest')
-            local('mkdir releasetest')
-            shutil.copy('go-openmdao.py', os.path.join('releasetest', 'go-openmdao.py'))  
-            with cd('releasetest'):
-                local('%s go-openmdao.py testrelease' % pyversion)
+            subprocess.check_call(['mkdir', 'releasetest'])
+            shutil.copy('go-openmdao.py', os.path.join('releasetest', 'go-openmdao.py'))
+            startdir = os.getcwd()
+            os.chdir('releasetest')
+            try:
+                subprocess.check_call([pyversion, 'go-openmdao.py', 'testrelease'])
                 # change to testrelease\Scripts (on windows), activate the environment, 
                 # and run tests
-                with cd(os.path.join('testrelease', devbindir)):
-                    print("Please wait while the environment is activated and the tests are run")
-                    local('activate && echo environment activated, please wait while tests run && openmdao_test -x')
-                    print('Tests completed on %s' % host)
+                os.chdir(os.path.join('testrelease', devbindir))
+                print("Please wait while the environment is activated and the tests are run")
+                subprocess.check_call('activate && echo environment activated, please wait while tests run && openmdao_test -x')
+                print('Tests completed on %s' % host)
+            finally:
+                os.chdir(startdir)
         else:
             devbindir='bin'
             pyversion="python2.6"
