@@ -76,8 +76,8 @@ ssh-rsa ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 """ % {'host': hostname}
         with open('key_data', 'w') as out:
             out.write(key_data)
-            if sys.platform != 'win32' or HAVE_PYWIN32:
-                make_private('key_data')
+        if sys.platform != 'win32' or HAVE_PYWIN32:
+            make_private('key_data')
         try:
             keys = read_authorized_keys('key_data', logging.getLogger())
             for name, key in keys.items():
@@ -120,6 +120,17 @@ ssh-rsa ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
         # Try nonexistent file.
         keys = read_authorized_keys('no-such-file', logging.getLogger())
         self.assertEqual(keys.keys(), [])
+
+        # Try insecure file.
+        if sys.platform != 'win32':
+            with open('key_data', 'w') as out:
+                out.write(key_data)
+            os.chmod('key_data', 0666)
+            try: 
+                keys = read_authorized_keys('key_data', logging.getLogger())
+                self.assertEqual(keys.keys(), [])
+            finally:
+                os.remove('key_data')
 
 
 if __name__ == '__main__':

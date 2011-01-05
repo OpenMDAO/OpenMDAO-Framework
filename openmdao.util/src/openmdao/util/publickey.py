@@ -262,10 +262,10 @@ def read_authorized_keys(filename=None, logger=None):
         return keys
 
     if not is_private(filename):
-        if sys.platform != 'win32' or HAVE_PYWIN32: #pragma no cover
+        if sys.platform != 'win32' or HAVE_PYWIN32:
             logger.error('%r is not private', filename)
             return keys
-        else:
+        else:  #pragma no cover
             logger.warning('%r is not private', filename)
 
     with open(filename, 'r') as inp:

@@ -351,7 +351,6 @@ class AccessController(object):
         if proxy_role:
             try:
                 proxy_creds = self.credentials_map[proxy_role]
-                return self.credentials_map[proxy_role]
             except KeyError:
                 raise RoleError('No credentials for proxy role %s' % proxy_role)
             else:

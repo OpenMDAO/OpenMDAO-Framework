@@ -13,6 +13,7 @@ import nose
 
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                need_proxy, rbac, rbac_methods, check_role, \
+                               remote_access, \
                                AccessController, CredentialsError, RoleError
 
 from openmdao.util.publickey import generate_key_pair, HAVE_PYWIN32
@@ -123,6 +124,9 @@ class TestCase(unittest.TestCase):
         assert_raises(self, 'Credentials.verify(encoded, None)',
                       globals(), locals(), CredentialsError,
                       'Public key mismatch')
+
+        # Check if remote access.
+        self.assertFalse(remote_access())
 
     def test_decorator(self):
         logging.debug('')

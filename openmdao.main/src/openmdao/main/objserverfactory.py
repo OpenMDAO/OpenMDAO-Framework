@@ -682,7 +682,7 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
                     out.write('%s\n' % pattern)
             if sys.platform != 'win32' or HAVE_PYWIN32:
                 make_private('hosts.allow')
-            else:
+            else:  #pragma no cover
                 logging.warning("Can't make hosts.allow private")
 
     if allow_shell:
@@ -694,7 +694,7 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
                 out.write('%s\n' % typname)
         if sys.platform != 'win32' or HAVE_PYWIN32:
             make_private('types.allow')
-        else:
+        else:  #pragma no cover
             logging.warning("Can't make types.allow private")
         args.extend(['--types', 'types.allow'])
 
