@@ -66,7 +66,7 @@ from openmdao.main.rbac import AccessController, RoleError, check_role, \
                                Credentials, get_credentials, set_credentials
 
 from openmdao.util.publickey import decode_public_key, encode_public_key, \
-                                    generate_key_pair, HAVE_PYWIN32
+                                    get_key_pair, HAVE_PYWIN32
 
 # Classes which require proxying (used by default AccessController)
 # Used to break import loop between this and openmdao.main.container.
@@ -186,8 +186,7 @@ class OpenMDAO_Server(Server):
             # credentials for getting our key pair. This avoids generation
             # overhead and also issues with propagating our public key
             # back through a proxy.
-            self._key_pair = generate_key_pair(Credentials.user_host,
-                                               self._logger)
+            self._key_pair = get_key_pair(Credentials.user_host, self._logger)
         else:
             self._key_pair = None
         self._id_to_controller = {}
@@ -1160,7 +1159,7 @@ class OpenMDAO_Proxy(BaseProxy):
 
     def _init_session(self, conn):
         """ Send client public key, receive session key. """
-        key_pair = generate_key_pair(Credentials.user_host)
+        key_pair = get_key_pair(Credentials.user_host)
         public_key = key_pair.publickey()
         text = encode_public_key(public_key)
 

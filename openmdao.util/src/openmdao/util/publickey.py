@@ -32,10 +32,10 @@ _KEY_CACHE = {}
 _KEY_CACHE_LOCK = threading.Lock()
 
 
-def generate_key_pair(user_host, logger=None, overwrite_cache=False):
+def get_key_pair(user_host, logger=None, overwrite_cache=False):
     """
     Returns RSA key containing both public and private keys for the user
-    identified in `credentials`.  This can be an expensive operation, so
+    identified in `user_host`.  This can be an expensive operation, so
     we avoid generating a new key pair whenever possible.
 
     user_host: string
@@ -245,7 +245,7 @@ def read_authorized_keys(filename=None, logger=None):
     If the file is not private, then no keys are returned.
 
     filename: string
-        File to read from. The default is '~/.ssh/authorized_keys'.
+        File to read from. The default is ``~/.ssh/authorized_keys``.
 
     logger: :class:`logging.Logger`
         Used for log messages.

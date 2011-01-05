@@ -16,7 +16,7 @@ from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                remote_access, \
                                AccessController, CredentialsError, RoleError
 
-from openmdao.util.publickey import generate_key_pair, HAVE_PYWIN32
+from openmdao.util.publickey import get_key_pair, HAVE_PYWIN32
 from openmdao.util.testutil import assert_raises
 
 
@@ -118,7 +118,7 @@ class TestCase(unittest.TestCase):
                       globals(), locals(), CredentialsError, 'Invalid key')
 
         # Detect mismatched key.
-        generate_key_pair(owner.user, overwrite_cache=True)
+        get_key_pair(owner.user, overwrite_cache=True)
         spook = Credentials()
         encoded = spook.encode()
         assert_raises(self, 'Credentials.verify(encoded, None)',

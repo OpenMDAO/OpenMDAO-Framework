@@ -39,7 +39,7 @@ from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
 from openmdao.test.execcomp import ExecComp
 
 from openmdao.util.decorators import add_delegate
-from openmdao.util.publickey import generate_key_pair
+from openmdao.util.publickey import get_key_pair
 from openmdao.util.testutil import assert_raises, assert_rel_error
 
 
@@ -502,7 +502,7 @@ class TestCase(unittest.TestCase):
         # Normally the protector would run with regular credentials
         # in effect at the proprietary site.
         user = 'spooky@'+socket.gethostname()
-        key_pair = generate_key_pair(user)
+        key_pair = get_key_pair(user)
         data = '\n'.join([user, '0', key_pair.publickey().exportKey()])
         hash = hashlib.sha256(data).digest()
         signature = key_pair.sign(hash, get_random_bytes)

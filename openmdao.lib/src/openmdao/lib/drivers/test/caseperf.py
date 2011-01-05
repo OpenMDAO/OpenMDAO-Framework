@@ -108,7 +108,7 @@ class CID(Assembly):
         self.add('sleeper', Sleeper())
         self.add('driver', CaseIteratorDriver())
         self.driver.extra_reqs = extra_reqs
-        self.driver.workflow.add(self.sleeper)
+        self.driver.workflow.add('sleeper')
         self.driver.log_level = logging.DEBUG
 
 

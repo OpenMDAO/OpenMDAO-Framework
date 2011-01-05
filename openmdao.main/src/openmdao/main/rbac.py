@@ -16,11 +16,11 @@ check for an object-specific controller by trying to invoke
 :meth:`get_access_controller` on the object before using the default.
 
 The current role is determined from a :class:`Credentials` object which is
-attached to the current thread. Credentials are currently just a user
-identifier string. Mapping from credentials to roles can become fairly involved
-in a real system, typically with site-specific configuration. The default role
-mapping here just returns the roles 'owner' or 'user' based on whether the
-credentials match those in effect when the controller object was created.
+attached to the current thread.  Mapping from credentials to roles can become
+fairly involved in a real system, typically with site-specific configuration.
+The default role mapping here just returns the roles 'owner' or 'user' based on
+whether the credentials match those in effect when the controller object was
+created.
 
 .. warning::
 
@@ -43,7 +43,7 @@ import threading
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
-from openmdao.util.publickey import generate_key_pair, HAVE_PYWIN32
+from openmdao.util.publickey import get_key_pair, HAVE_PYWIN32
 
 # Verified credentials keyed by encoding tuple.
 _VERIFY_CACHE = {}
@@ -96,7 +96,7 @@ class Credentials(object):
             # Create our credentials.
             self.user = Credentials.user_host
             self.transient = (sys.platform == 'win32') and not HAVE_PYWIN32
-            key_pair = generate_key_pair(self.user)
+            key_pair = get_key_pair(self.user)
             self.public_key = key_pair.publickey()
             self.data = '\n'.join([self.user, str(int(self.transient)),
                                    self.public_key.exportKey()])

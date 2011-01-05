@@ -377,9 +377,9 @@ class ObjServer(object):
     def create(self, typname, version=None, server=None,
                res_desc=None, **ctor_args):
         """
-        Returns an object of type *typname,* using the specified
-        package version, server location, and resource description.
-        All arguments are passed to :meth:`factorymanager.create`.
+        If *typname* is an allowed type, returns an object of type *typname,*
+        using the specified package version, server location, and resource
+        description. All arguments are passed to :meth:`factorymanager.create`.
         """
         self._logger.info('create typname %r, version %r server %s,'
                           ' res_desc %s, args %s', typname, version, server,
@@ -395,7 +395,8 @@ class ObjServer(object):
     def execute_command(self, command, stdin, stdout, stderr, env_vars,
                         poll_delay, timeout):
         """
-        Run `command` in a subprocess.
+        Run `command` in a subprocess if this server's `allow_shell`
+        attribute is True.
 
         command: string
             Command line to be executed.
@@ -436,7 +437,8 @@ class ObjServer(object):
     @rbac('owner', proxy_types=[Container])
     def load_model(self, egg_filename):
         """
-        Load model from egg and return top-level object.
+        Load model from egg and return top-level object if this server's
+        `allow_shell` attribute is True.
 
         egg_filename: string
             Filename of egg to be loaded.
@@ -455,7 +457,7 @@ class ObjServer(object):
     @rbac('owner')
     def pack_zipfile(self, patterns, filename):
         """
-        Create ZipFile of files matching `patterns`.
+        Create ZipFile of files matching `patterns` if `filename` is legal.
 
         patterns: list
             List of :mod:`glob`-style patterns.
@@ -470,7 +472,7 @@ class ObjServer(object):
     @rbac('owner')
     def unpack_zipfile(self, filename):
         """
-        Unpack ZipFile `filename`.
+        Unpack ZipFile `filename` if `filename` is legal.
 
         filename: string
             Name of ZipFile to unpack.
@@ -733,25 +735,31 @@ def main():  #pragma no cover
     Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--types=filename][--users=filename][--port=number][--prefix=name]
 
     --allow-public:
-        Allows access by anyone from any allowed host.
-        Use with care!
+        Allows access by anyone from any allowed host. Use with care!
 
     --allow-shell:
         Allows access to :meth:`execute_command` and :meth:`load_model`.
         Use with care!
 
     --hosts: string
-        Filename for allowed hosts specification. Default 'hosts.allow'.
+        Filename for allowed hosts specification. Default ``hosts.allow``.
         Ignored if '--users' is specified.
+        The file should contain IPv4 host addresses, IPv4 domain addresses,
+        or hostnames, one per line. Blank lines are ignored, and '#' marks the
+        start of a comment which continues to the end of the line.
 
     --types: string
         Filename for allowed types specification.
+        If not specified then allow types listed by
+        :meth:`factorymanager.get_available_types`.
+        The file should contain one type name per line.
 
     --users: string
         Filename for allowed users specification.
-        Default '~/.ssh/authorized_keys'
-        The host portions of user strings are used for allowed hosts.
         Ignored if '--allow-public' is specified.
+        Default is ``~/.ssh/authorized_keys``, other files should be of the
+        same format.
+        The host portions of user strings are used for allowed hosts.
 
     --port: int
         Server port (default of 0 implies next available port).
@@ -759,14 +767,13 @@ def main():  #pragma no cover
         If port is negative, then a local pipe is used for communication.
 
     --prefix: string
-        Prefix for configuration and stdout/stderr files (default 'server').
+        Prefix for configuration and stdout/stderr files (default ``server``).
 
     If ``prefix.key`` exists, it is read for an authorization key string.
     Otherwise public key authorization and encryption is used.
 
     Allowed hosts *must* be specified if `port` is >= 0. Only allowed hosts
-    may connect to the server.  :func:`mp_util.read_allowed_hosts` is used to
-    read the allowed hosts file.
+    may connect to the server.
 
     Once initialized ``prefix.cfg`` is written with address, port, and
     public key information.
@@ -869,7 +876,9 @@ def main():  #pragma no cover
             with open(options.types, 'r') as inp:
                 line = inp.readline()
                 while line:
-                    allowed_types.append(line.strip())
+                    line = line.strip()
+                    if line:
+                        allowed_types.append(line)
                     line = inp.readline()
         else:
             msg = 'Allowed types file %r does not exist.' % options.types
