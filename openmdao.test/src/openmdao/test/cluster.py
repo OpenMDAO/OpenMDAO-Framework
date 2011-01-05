@@ -17,7 +17,7 @@ from openmdao.main.resource import ResourceAllocationManager, \
 SSH_USERS = []
 
 
-def init_cluster(encrypted=True, clean_dir=True):
+def init_cluster(encrypted=True, clean_dir=True, allow_shell=False):
     """
     If not already done, initializes the ResourceAllocationManager and
     adds a cluster using encrypted or unencrypted communication.
@@ -56,7 +56,7 @@ def init_cluster(encrypted=True, clean_dir=True):
         machines.append({'hostname':node, 'python':python})
 
     if machines:
-        cluster = ClusterAllocator(name, machines, authkey)
+        cluster = ClusterAllocator(name, machines, authkey, allow_shell)
         ResourceAllocationManager.insert_allocator(0, cluster)
         return name
     elif not encrypted:
@@ -65,7 +65,7 @@ def init_cluster(encrypted=True, clean_dir=True):
         for allocator in allocators:
             if allocator.name == name:
                 return name  # Don't add multiple copies.
-        local = LocalAllocator(name, authkey=authkey)
+        local = LocalAllocator(name, authkey=authkey, allow_shell=allow_shell)
         ResourceAllocationManager.insert_allocator(0, local)
         return name
     return None

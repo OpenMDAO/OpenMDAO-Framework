@@ -7,6 +7,7 @@ import copy
 import traceback
 import re
 import pprint
+import socket
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -28,6 +29,8 @@ from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
+
+from multiprocessing import connection
 
 from openmdao.main.filevar import FileRef
 from openmdao.lib.datatypes.api import Float
@@ -560,7 +563,7 @@ class Container(HasTraits):
 
         if is_instance(obj, Container):
             if isinstance(obj, OpenMDAO_Proxy):
-                obj.parent = self.get_proxy(obj._authkey)
+                obj.parent = self._get_proxy(obj)
             else:
                 obj.parent = self
             # if an old child with that name exists, remove it
@@ -579,18 +582,34 @@ class Container(HasTraits):
                     TypeError)
         return obj
 
-    def get_proxy(self, authkey):
-        """ Return :class:`OpenMDAO_Proxy` for self usable via `authkey`. """
+    def _get_proxy(self, proxy):
+        """
+        Return :class:`OpenMDAO_Proxy` for self usable by `proxy`.
+        We create a manager for each access type.
+        In addition, to avoid having to (remotely) manipulate a server's
+        `allowed_hosts`, we use a separate manager for each client accessing
+        via AF_INET from a unique host.
+        """
+        addr_type = connection.address_type(proxy._token.address)
+        addr = proxy._token.address[0] if addr_type == 'AF_INET' else None
+        key = (addr_type, addr, proxy._authkey)
         try:
-            manager = self._managers[authkey]
+            manager = self._managers[key]
         except KeyError:
-            # Only happens on remote side.
-            if self.name:  #pragma nocover
-                server_name='%s-cb' % self.name
+            if addr_type == 'AF_INET':
+                ip_addr = socket.gethostbyname(socket.gethostname())
+                address = (ip_addr, 0)
+                allowed_hosts = [addr]
             else:
-                server_name='parent-cb'
-            manager = ObjectManager(self, authkey=authkey, name=server_name)
-            self._managers[authkey] = manager
+                address = None
+                allowed_hosts = None
+
+            name = self.name or 'parent'
+            access = addr if addr_type == 'AF_INET' else addr_type
+            name = '%s-cb-%s' % (name, access)
+            manager = ObjectManager(self, address, authkey=proxy._authkey,
+                                    name=name, allowed_hosts=allowed_hosts)
+            self._managers[key] = manager
         return manager.proxy
         
     def remove(self, name):
