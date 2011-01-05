@@ -1160,7 +1160,7 @@ def _single_install(cmds, req, bin_dir):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'Pygments==1.3.1', 'ordereddict==1.1', 'Traits==3.3.0', 'pycrypto==2.3', 'PyYAML==3.09', 'Jinja2==2.4', 'Sphinx==1.0.4', 'virtualenv==1.4.6', 'Fabric==0.9.3', 'newsumt==1.0.0', 'networkx==1.0.1', 'decorator==3.2.0', 'conmin==1.0.1', 'pyparsing==1.5.2', 'nose==0.11.3']
+    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'Pygments==1.3.1', 'ordereddict==1.1', 'Traits==3.3.0', 'pycrypto==2.3', 'PyYAML==3.09', 'Jinja2==2.4', 'Sphinx==1.0.4', 'virtualenv==1.4.6', 'Fabric==0.9.3', 'paramiko==1.7.6', 'newsumt==1.0.0', 'networkx==1.0.1', 'decorator==3.2.0', 'conmin==1.0.1', 'pyparsing==1.5.2', 'nose==0.11.3']
     url = 'http://openmdao.org/dists'
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
@@ -1194,20 +1194,20 @@ def after_install(options, home_dir):
         topdir = os.path.abspath(os.path.dirname(__file__))
         startdir = os.getcwd()
         absbin = os.path.abspath(bin_dir)
-        openmdao_packages = [('openmdao.util', ''),
- ('openmdao.units', ''),
- ('openmdao.main', ''),
- ('openmdao.lib', ''),
- ('openmdao.test', ''),
- ('openmdao.examples.simple', 'examples'),
- ('openmdao.examples.bar3simulation', 'examples'),
- ('openmdao.examples.enginedesign', 'examples'),
- ('openmdao.examples.mdao', 'examples'),
- ('openmdao.examples.expected_improvement', 'examples'),
- ('openmdao.devtools', '')]
+        openmdao_packages = [('openmdao.util', '', 'sdist'),
+ ('openmdao.units', '', 'sdist'),
+ ('openmdao.main', '', 'sdist'),
+ ('openmdao.lib', '', 'sdist'),
+ ('openmdao.test', '', 'sdist'),
+ ('openmdao.examples.simple', 'examples', 'sdist'),
+ ('openmdao.examples.bar3simulation', 'examples', 'bdist_egg'),
+ ('openmdao.examples.enginedesign', 'examples', 'bdist_egg'),
+ ('openmdao.examples.mdao', 'examples', 'sdist'),
+ ('openmdao.examples.expected_improvement', 'examples', 'sdist'),
+ ('openmdao.devtools', '', 'sdist')]
 
         try:
-            for pkg, pdir in openmdao_packages:
+            for pkg, pdir, _ in openmdao_packages:
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
                            'develop', '-N'] + cmds
@@ -1270,11 +1270,12 @@ def after_install(options, home_dir):
             f.write(content.replace('export VIRTUAL_ENV', activate_template % subdict, 1))
             f.close()
 
+    abshome = os.path.abspath(home_dir)
+    
 
     # copy the wing project file into the virtualenv
     proj_template = join(topdir,'config','wing_proj_template.wpr')
     
-    abshome = os.path.abspath(home_dir)
     shutil.copy(proj_template, 
                 join(abshome,'etc','wingproj.wpr'))
                 
