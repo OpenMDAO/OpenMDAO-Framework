@@ -38,7 +38,7 @@ setup(name='openmdao.devtools',
       install_requires=[
           'setuptools',
           'Sphinx',
-          'Fabric>=0.9',
+          'Fabric>=0.9.3',
           'virtualenv',
           'openmdao.lib',
       ],
@@ -47,6 +47,7 @@ setup(name='openmdao.devtools',
                 "openmdao_build_docs=openmdao.devtools.build_docs:build_docs",
                 "wingproj=openmdao.devtools.wingproj:run_wing",
                 "openmdao_testdocs=openmdao.devtools.build_docs:test_docs",
+                "test_release=openmdao.devtools.test_release:main",
               ],
       }
     )

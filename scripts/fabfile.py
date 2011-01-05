@@ -129,9 +129,9 @@ def release(version=None):
 def localrelease(version=None):
     # first, make sure we're in sync with the webfaction server
     print 'syncing downloads dir...'
-    local('rsync -arvzt openmdao@web103.webfaction.com:downloads /OpenMDAO/release_test')
+    local('rsync -arvzt --delete openmdao@web103.webfaction.com:downloads /OpenMDAO/release_test')
     print 'syncing dists dir...'
-    local('rsync -arvzt openmdao@web103.webfaction.com:dists /OpenMDAO/release_test')
+    local('rsync -arvzt --delete openmdao@web103.webfaction.com:dists /OpenMDAO/release_test')
     print 'creating release...'
     _release(version, is_local=True, home='/OpenMDAO/release_test', url=TEST_URL)
   
@@ -328,6 +328,7 @@ def testrelease(releaseurl='%s/downloads/latest/go-openmdao.py' % REAL_URL):
 def testlocalrelease(releaseurl='%s/downloads/latest/go-openmdao.py' % TEST_URL):
     if sys.platform != 'win32':
         raise RuntimeError("OpenMDAO releases should be tested from Windows since that's where releases are created by config mgr.")
+
     _testrelease(releaseurl)
     
 #Do not need to run this separately since testlocalrelease calls it - just here for debugging purposes

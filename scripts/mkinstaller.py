@@ -70,7 +70,6 @@ def adjust_options(options, args):
 
 def main(options):
     
-    url = 'http://openmdao.org/dists'
     if options.dev:
         openmdao_packages.append(('openmdao.devtools', '', 'sdist'))
         sout = StringIO.StringIO()
@@ -95,7 +94,6 @@ def main(options):
     # copy the wing project file into the virtualenv
     proj_template = join(topdir,'config','wing_proj_template.wpr')
     
-    abshome = os.path.abspath(home_dir)
     shutil.copy(proj_template, 
                 join(abshome,'etc','wingproj.wpr'))
                 
@@ -105,7 +103,9 @@ def main(options):
         wing = ''
 
     if options.test:
-        url = 'http://torpedo.grc.nasa.gov:31004'
+        url = 'http://torpedo.grc.nasa.gov:31004/dists'
+    else:
+        url = 'http://openmdao.org/dists'
 
     script_str = """
 
@@ -213,6 +213,8 @@ def after_install(options, home_dir):
             f.write(content.replace('export VIRTUAL_ENV', activate_template %% subdict, 1))
             f.close()
 
+    abshome = os.path.abspath(home_dir)
+    
 %(wing)s
 
     print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s.' %% abshome

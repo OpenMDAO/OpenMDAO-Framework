@@ -1,2 +1,2 @@
-recursive-include src/openmdao/util/test/src *.py
+recursive-include src/openmdao/main/test/src *.py
 
