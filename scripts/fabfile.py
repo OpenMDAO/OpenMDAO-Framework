@@ -1,12 +1,4 @@
 
-# This is a fabric file that constructs an openmdao release and
-# deploys it to the openmdao.org site.
-#
-# Usage: fab release    (this will prompt you for a version id)
-#     OR
-#        fab release:version_id
-#
-
 from fabric.api import run, env, local, put, cd, prompt, hide, hosts, get
 import sys
 import os
@@ -21,6 +13,8 @@ import paramiko.util
 
 paramiko.util.log_to_file('paramiko.log')
 
+REAL_URL = 'http://openmdao.org'
+TEST_URL = 'http://torpedo.grc.nasa.gov:31004'
 
 
 class _VersionError(RuntimeError):
@@ -36,7 +30,7 @@ def _check_version(version, home):
     return version
 
 
-def _release(version, is_local, home):
+def _release(version, is_local, home, url=REAL_URL):
     """Creates source distributions, docs, binary eggs, and install script for 
     the current openmdao namespace packages, uploads them to <home>/dists, 
     and updates the index.html file there.
@@ -102,32 +96,24 @@ def _release(version, is_local, home):
             run('mv html docs')
             run('rm -f docs.tar.gz')
 
-        # FIXME: change to a single version of mkdlversionindex.py that sits
-        # in the downloads dir and takes an arg indicating the destination
-        # directory, so we won't have a separate copy of mkdlversionindex.py
-        # in every download/<version> directory.
         put(os.path.join(scripts_dir,'mkdlversionindex.py'), 
             '%s/downloads/%s/mkdlversionindex.py' % (home, version))
         
         # update the index.html for the version download directory on the server
         with cd('%s/downloads/%s' % (home, version)):
-            run('python2.6 mkdlversionindex.py')
+            run('python2.6 mkdlversionindex.py %s' % url)
 
         # update the index.html for the dists directory on the server
         with cd('%s/dists' % home):
-            run('python2.6 mkegglistindex.py')
+            run('python2.6 mkegglistindex.py %s' % url)
 
-        # update the index.html for the downloads directory on the server
-        with cd('%s/downloads' % home):
-            run('python2.6 mkdownloadindex.py')
-
-        # if everything went well update the 'latest' link to point to the 
-        # most recent version directory
-        if not is_local:
-            prompt("Hit return to update the 'latest' link on the server (after testing the release)")
         run('rm -f %s/downloads/latest' % home)
         run('ln -s %s/downloads/%s %s/downloads/latest' % (home, version, home))
             
+        # update the index.html for the downloads directory on the server
+        with cd('%s/downloads' % home):
+            run('python2.6 mkdownloadindex.py %s' % url)
+
     finally:
         shutil.rmtree(tmpdir)
 
@@ -147,7 +133,7 @@ def localrelease(version=None):
     print 'syncing dists dir...'
     local('rsync -arvzt openmdao@web103.webfaction.com:dists /OpenMDAO/release_test')
     print 'creating release...'
-    _release(version, is_local=True, home='/OpenMDAO/release_test')
+    _release(version, is_local=True, home='/OpenMDAO/release_test', url=TEST_URL)
   
 #-------------------------------------------------------------------------------------    
 #Local developer script to build and run tests on a branch on each development platform
@@ -328,23 +314,23 @@ def _testrelease(releaseurl):
                 print('Tests completed on %s' % env.host)  
 
 #Do not need to run this separately since testrelease calls it - just here for debugging purposes
-def getrelease(releaseurl='http://openmdao.org/downloads/latest/go-openmdao.py'):
+def getrelease(releaseurl='%s/downloads/latest/go-openmdao.py' % REAL_URL):
     _getrelease(releaseurl)
 
 @hosts('torpedo.grc.nasa.gov', 'viper.grc.nasa.gov', 'storm.grc.nasa.gov')
-def testrelease(releaseurl='http://openmdao.org/downloads/latest/go-openmdao.py'):
+def testrelease(releaseurl='%s/downloads/latest/go-openmdao.py' % REAL_URL):
     if sys.platform != 'win32':
         raise RuntimeError("OpenMDAO releases should be tested from Windows since that's where releases are created by config mgr.")
     _testrelease(releaseurl)
 
 # release testing on the local mirror (torpedo)
 @hosts('torpedo.grc.nasa.gov', 'viper.grc.nasa.gov', 'storm.grc.nasa.gov')
-def testlocalrelease(releaseurl='http://torpedo.grc.nasa.gov:31004/downloads/latest/go-openmdao.py'):
+def testlocalrelease(releaseurl='%s/downloads/latest/go-openmdao.py' % TEST_URL):
     if sys.platform != 'win32':
         raise RuntimeError("OpenMDAO releases should be tested from Windows since that's where releases are created by config mgr.")
     _testrelease(releaseurl)
     
 #Do not need to run this separately since testlocalrelease calls it - just here for debugging purposes
-def getlocalrelease(releaseurl='http://torpedo.grc.nasa.gov:31004/downloads/latest/go-openmdao.py'):
+def getlocalrelease(releaseurl='%s/downloads/latest/go-openmdao.py' % TEST_URL):
     _getrelease(releaseurl)
 
