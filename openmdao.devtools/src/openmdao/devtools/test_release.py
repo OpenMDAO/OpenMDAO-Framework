@@ -57,7 +57,7 @@ def _testrelease(site_url, version, host):
             # (because it can't ssh to itself)
             devbindir='Scripts'
             pyversion="python"
-            removeit="""rmdir /s /q"""
+            removeit="rmdir /s /q"
             if os.path.isdir('releasetest'):
                 shutil.rmtree('releasetest')
             os.mkdir(['releasetest'])
