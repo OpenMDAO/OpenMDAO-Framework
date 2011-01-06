@@ -13,8 +13,10 @@ import nose
 
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                need_proxy, rbac, rbac_methods, check_role, \
-                               AccessController, RoleError
+                               remote_access, \
+                               AccessController, CredentialsError, RoleError
 
+from openmdao.util.publickey import get_key_pair, HAVE_PYWIN32
 from openmdao.util.testutil import assert_raises
 
 
@@ -70,22 +72,61 @@ class TestCase(unittest.TestCase):
 
         # Basic form.
         owner = Credentials()
-        self.assertEqual('%s' % owner, owner.user)
+        if sys.platform == 'win32' and not HAVE_PYWIN32:
+            self.assertEqual('%s' % owner, owner.user+' (transient)')
+        else:
+            self.assertEqual('%s' % owner, owner.user)
 
         # Comparison.
         user = Credentials()
         self.assertEqual(user, owner)
         user.user = 'anyone@hostname'
         self.assertNotEqual(user, owner)
+        self.assertNotEqual(user, 'xyzzy')
 
         # Thread storage.
         try:
             del threading.current_thread().credentials  # Ensure empty.
         except AttributeError:
             pass
-        self.assertEqual(get_credentials(), None)
-        set_credentials(owner)
         self.assertEqual(get_credentials(), owner)
+
+        # Sign/verify.
+        encoded = owner.encode()
+        Credentials.verify(encoded, allowed_users=None)  # 'First sighting'.
+        Credentials.verify(encoded, allowed_users=None)  # Cached verification.
+        data, signature, client_creds = encoded
+
+        encoded = (data[:1], signature, client_creds)
+        assert_raises(self, 'Credentials.verify(encoded, None)',
+                      globals(), locals(), CredentialsError, 'Invalid data')
+
+        encoded = (data[:-1], signature, client_creds)
+        assert_raises(self, 'Credentials.verify(encoded, None)',
+                      globals(), locals(), CredentialsError, 'Invalid signature')
+
+        encoded = (data, signature[:-1], client_creds)
+        assert_raises(self, 'Credentials.verify(encoded, None)',
+                      globals(), locals(), CredentialsError, 'Invalid signature')
+
+        newline = data.find('\n')  # .user
+        newline = data.find('\n', newline+1)  # .transient
+        # Expecting '-'
+        mangled = data[:newline+1] + '*' + data[newline+2:]
+        encoded = (mangled, signature, client_creds)
+        assert_raises(self, 'Credentials.verify(encoded, None)',
+                      globals(), locals(), CredentialsError, 'Invalid key')
+
+        # Detect mismatched key.
+        get_key_pair(owner.user, overwrite_cache=True)
+        spook = Credentials()
+        encoded = spook.encode()
+        assert_raises(self, 'Credentials.verify(encoded, None)',
+                      globals(), locals(), CredentialsError,
+                      'Public key mismatch')
+
+        # Check if remote access.
+        self.assertFalse(remote_access())
 
     def test_decorator(self):
         logging.debug('')
@@ -124,12 +165,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_access_controller')
 
         # Credential-to-role mapping.
-        set_credentials(None)
-        assert_raises(self, 'AccessController()', globals(), locals(),
-                      RoleError, 'No current credentials')
-
-        owner = Credentials()
-        set_credentials(owner)
+        owner = get_credentials()
         controller = AccessController()
         self.assertEqual(controller.get_role(None), '')
         self.assertEqual(controller.get_role(owner), 'owner')

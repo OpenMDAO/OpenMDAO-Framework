@@ -22,13 +22,14 @@ from openmdao.main.component import SimulationRoot
 from openmdao.main.container import Container
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
-from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, \
-                                     register, write_server_config, keytype, \
-                                     _HAVE_PYWIN32
-from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
-                               rbac
+from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, register
+from openmdao.main.mp_util import keytype, read_allowed_hosts, \
+                                  write_server_config
+from openmdao.main.rbac import get_credentials, set_credentials, rbac, RoleError
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
+from openmdao.util.publickey import make_private, read_authorized_keys, \
+                                    write_authorized_keys, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT
 
 _PROXIES = {}
@@ -43,18 +44,40 @@ class ObjServerFactory(Factory):
         Name of factory, used in log messages, etc.
 
     authkey: string
-        Authorization key passed-on to :class:`ObjServer` servers.
+        Passed to created :class:`ObjServer` servers.
+
+    allow_shell: bool
+        Passed to created :class:`ObjServer` servers.
+
+    allowed_types: list(string)
+        Passed to created :class:`ObjServer` servers.
+
+    address: tuple or string
+        A :mod:`multiprocessing` address specifying an Internet address or
+        a pipe (default).  Created :class:`ObjServer` servers will use the
+        same form of address.
 
     The environment variable ``OPENMDAO_KEEPDIRS`` can be used to avoid
     having server directory trees removed when servers are shut-down.
     """
 
-    def __init__(self, name='ObjServerFactory', authkey=None):
+    # These are used to propagate selections from main().
+    # There isn't a good way to propagate them through a manager.
+    _address = None
+    _allow_shell = False
+    _allowed_types = None
+
+    def __init__(self, name='ObjServerFactory', authkey=None, allow_shell=False,
+                 allowed_types=None, address=None):
         super(ObjServerFactory, self).__init__()
         self._authkey = authkey
+        self._address = address or ObjServerFactory._address
+        self._allow_shell = allow_shell or ObjServerFactory._allow_shell
+        self._allowed_types = allowed_types or ObjServerFactory._allowed_types
         self._managers = {}
         self._logger = logging.getLogger(name)
-        self._logger.info('PID: %d, %r', os.getpid(), keytype(self._authkey))
+        self._logger.info('PID: %d, %r, allow_shell %s', os.getpid(),
+                          keytype(self._authkey), allow_shell)
 
     @rbac('*')
     def echo(self, *args):
@@ -64,9 +87,6 @@ class ObjServerFactory(Factory):
         """
         return args
 
-# FIXME: ('owner', 'user') can create,
-#        whoever created should be the one to release, not just anybody.
-#        => record credentials at creation.
     @rbac(('owner', 'user'))
     def release(self, server):
         """
@@ -75,9 +95,14 @@ class ObjServerFactory(Factory):
         server: :class:`ObjServer`
             Server to be shut down.
         """
-        self._logger.debug('release %r', server)
         try:
-            manager, root_dir = self._managers[server]
+            address = server._token.address
+        except AttributeError:
+            address = 'not-a-proxy'
+        self._logger.debug('release %r', server)
+        self._logger.debug('        at %r', address)
+        try:
+            manager, root_dir, owner = self._managers[server]
         except KeyError:
             # Not identical to any of our proxies.
             # Could still be a reference to the same remote object.
@@ -85,19 +110,24 @@ class ObjServerFactory(Factory):
                 server_host = server.host
                 server_pid = server.pid
             except Exception as exc:
-                self._logger.error("release: can't identify server %r" % server)
-                raise ValueError("can't identify server %r" % server)
+                self._logger.error("release: can't identify server at %r",
+                                   address)
+                raise ValueError("can't identify server at %r" % (address,))
 
             for key in self._managers.keys():
                 if key.host == server_host and key.pid == server_pid:
-                    manager, root_dir = self._managers[key]
+                    manager, root_dir, owner = self._managers[key]
                     server = key
                     break
             else:
                 self._logger.error('release: server %r not found', server)
                 for key in self._managers.keys():
                     self._logger.debug('    %r', key)
+                    self._logger.debug('    at %r', key._token.address)
                 raise ValueError('server %r not found' % server)
+
+        if get_credentials().user != owner.user:
+            raise RoleError('only the owner can release')
 
         manager.shutdown()
         server._close.cancel()
@@ -110,9 +140,15 @@ class ObjServerFactory(Factory):
     def cleanup(self):
         """ Shut-down all remaining :class:`ObjServers`. """
         self._logger.debug('cleanup')
+        cleanup_creds = get_credentials()
         servers = self._managers.keys()
         for server in servers:
-            self.release(server)
+            # Cleanup overrides release() 'owner' protection.
+            set_credentials(self._managers[server][2])
+            try:
+                self.release(server)
+            finally:
+                set_credentials(cleanup_creds)
         self._managers = {}
 
     @rbac('*')
@@ -150,9 +186,11 @@ class ObjServerFactory(Factory):
         res_desc: dict or None
             Required resources. Currently not used.
 
-        ctor_args:
-            Other constructor arguments.  If `name` is specified, that
-            is used as the name of the :class:`ObjServer`.
+        ctor_args: dict
+            Other constructor arguments.
+            If `name` or `allowed_users` are specified, they are used when
+            creating the :class:`ObjServer`. If no `allowed_users` are
+            specified, the server is private to the current user.
         """
         self._logger.info('create typname %r, version %r server %s,'
                           ' res_desc %s, args %s', typname, version, server,
@@ -162,7 +200,23 @@ class ObjServerFactory(Factory):
             name = ctor_args.get('name', '')
             if not name:
                 name = 'Server_%d' % (len(self._managers) + 1)
-            manager = _ServerManager(authkey=self._authkey, name=name)
+
+            allowed_users = ctor_args.get('allowed_users')
+            if not allowed_users:
+                credentials = get_credentials()
+                allowed_users = {credentials.user: credentials.public_key}
+            else:
+                del ctor_args['allowed_users']
+
+            if self._address is None or isinstance(self._address, basestring):
+                # Local access only via pipe.
+                address = None
+            else:
+                # Network access via same IP as factory, system-selected port.
+                address = (self._address[0], 0)
+
+            manager = _ServerManager(address, self._authkey, name=name,
+                                     allowed_users=allowed_users)
             root_dir = name
             count = 1
             while os.path.exists(root_dir):
@@ -181,24 +235,30 @@ class ObjServerFactory(Factory):
                                                     'objserverfactory.py')
             else:
                 orig_main = None
-            self._logger.debug('starting server %r in dir %s', name, root_dir)
+
+            owner = get_credentials()
+            self._logger.debug('%s starting server %r in dir %s',
+                               owner, name, root_dir)
             try:
                 manager.start(cwd=root_dir)
             finally:
                 if orig_main is not None:  #pragma no cover
                     sys.modules['__main__'].__file__ = orig_main
 
-            self._logger.info('new server %r in dir %s listening on %s',
-                              name, root_dir, manager.address)
-            server = manager.openmdao_main_objserverfactory_ObjServer(name=name)
-            self._managers[server] = (manager, root_dir)
+            self._logger.info('new server %r for %s', name, owner)
+            self._logger.info('    in dir %s', root_dir)
+            self._logger.info('    listening on %s', manager.address)
+            server = manager.openmdao_main_objserverfactory_ObjServer(name=name,
+                                                  allow_shell=self._allow_shell,
+                                              allowed_types=self._allowed_types)
+            self._managers[server] = (manager, root_dir, owner)
 
         if typname:
             obj = server.create(typname, version, None, res_desc, **ctor_args)
         else:
             obj = server
 
-        self._logger.debug('create returning %s', obj)
+        self._logger.debug('create returning %s at %r', obj, obj._token.address)
         return obj
 
 
@@ -262,20 +322,37 @@ class ObjServer(object):
 
     name: string
         Name of server, used in log messages, etc.
+
+    allow_shell: bool
+        If True, :meth:`execute_command` and :meth:`load_model` are allowed.
+        Use with caution!
+
+    allowed_types: list(string)
+        Names of types which may be created. If None, then allow types listed
+        by :meth:`factorymanager.get_available_types`. If empty, no types are
+        allowed.
     """
 
-    def __init__(self, name=''):
+    def __init__(self, name='', allow_shell=False, allowed_types=None):
+        self._allow_shell = allow_shell
+        if allowed_types is None:
+            allowed_types = [typname for typname, version
+                                      in get_available_types()]
+        self._allowed_types = allowed_types
+
         self.host = platform.node()
         self.pid = os.getpid()
         self.name = name or ('sim-%d' % self.pid)
 
-        self.root_dir = os.getcwd()
+        self._root_dir = os.getcwd()
         self._logger = logging.getLogger(self.name)
-        self._logger.info('PID: %d', os.getpid())
-        print 'ObjServer %r PID: %d' % (self.name, os.getpid())
+        self._logger.info('PID: %d, allow_shell %s',
+                          os.getpid(), self._allow_shell)
+        print 'ObjServer %r PID: %d, allow_shell %s' \
+              % (self.name, os.getpid(), self._allow_shell)
         sys.stdout.flush()
 
-        SimulationRoot.chroot(self.root_dir)
+        SimulationRoot.chroot(self._root_dir)
         self.tlo = None
 
     # We only reset logging on the remote side.
@@ -300,22 +377,26 @@ class ObjServer(object):
     def create(self, typname, version=None, server=None,
                res_desc=None, **ctor_args):
         """
-        Returns an object of type *typname,* using the specified
-        package version, server location, and resource description.
-        All arguments are passed to :meth:`factorymanager.create`.
+        If *typname* is an allowed type, returns an object of type *typname,*
+        using the specified package version, server location, and resource
+        description. All arguments are passed to :meth:`factorymanager.create`.
         """
         self._logger.info('create typname %r, version %r server %s,'
                           ' res_desc %s, args %s', typname, version, server,
                           res_desc, ctor_args)
-        obj = create(typname, version, server, res_desc, **ctor_args)
-        self._logger.info('    returning %s', obj)
-        return obj
+        if typname in self._allowed_types:
+            obj = create(typname, version, server, res_desc, **ctor_args)
+            self._logger.info('    returning %s', obj)
+            return obj
+        else:
+            raise TypeError('%r is not an allowed type' % typname)
 
     @rbac('owner')
     def execute_command(self, command, stdin, stdout, stderr, env_vars,
                         poll_delay, timeout):
         """
-        Run `command` in a subprocess.
+        Run `command` in a subprocess if this server's `allow_shell`
+        attribute is True.
 
         command: string
             Command line to be executed.
@@ -334,6 +415,11 @@ class ObjServer(object):
             implies no timeout.
         """
         self._logger.debug('execute_command %r', command)
+        if not self._allow_shell:
+            self._logger.error('attempt to execute %r by %r', command,
+                               get_credentials().user)
+            raise RuntimeError('shell access is not allowed by this server')
+
         for arg in (stdin, stdout, stderr):
             if isinstance(arg, basestring):
                 self._check_path(arg, 'execute_command')
@@ -351,12 +437,17 @@ class ObjServer(object):
     @rbac('owner', proxy_types=[Container])
     def load_model(self, egg_filename):
         """
-        Load model from egg and return top-level object.
+        Load model from egg and return top-level object if this server's
+        `allow_shell` attribute is True.
 
         egg_filename: string
             Filename of egg to be loaded.
         """
         self._logger.debug('load_model %r', egg_filename)
+        if not self._allow_shell:
+            self._logger.error('attempt to load %r by %r', egg_filename,
+                               get_credentials().user)
+            raise RuntimeError('shell access is not allowed by this server')
         self._check_path(egg_filename, 'load_model')
         if self.tlo:
             self.tlo.pre_delete()
@@ -366,7 +457,7 @@ class ObjServer(object):
     @rbac('owner')
     def pack_zipfile(self, patterns, filename):
         """
-        Create ZipFile of files matching `patterns`.
+        Create ZipFile of files matching `patterns` if `filename` is legal.
 
         patterns: list
             List of :mod:`glob`-style patterns.
@@ -381,7 +472,7 @@ class ObjServer(object):
     @rbac('owner')
     def unpack_zipfile(self, filename):
         """
-        Unpack ZipFile `filename`.
+        Unpack ZipFile `filename` if `filename` is legal.
 
         filename: string
             Name of ZipFile to unpack.
@@ -470,9 +561,9 @@ class ObjServer(object):
     def _check_path(self, path, operation):
         """ Check if path is allowed to be used. """
         abspath = os.path.abspath(path)
-        if not abspath.startswith(self.root_dir):
+        if not abspath.startswith(self._root_dir):
             raise RuntimeError("Can't %s %r, not within root %s"
-                               % (operation, path, self.root_dir))
+                               % (operation, path, self._root_dir))
 
 
 class _ServerManager(OpenMDAO_Manager):
@@ -517,7 +608,9 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
         return proxy
 
 
-def start_server(authkey='PublicKey', port=0, prefix='server', timeout=None):
+def start_server(authkey='PublicKey', port=0, prefix='server',
+                 allowed_hosts=None, allowed_users=None, allow_shell=False,
+                 allowed_types=None, timeout=None):
     """
     Start an :class:`ObjServerFactory` service in a separate process
     in the current directory.
@@ -533,6 +626,23 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=None):
     prefix: string
         Prefix for server config file and stdout/stderr file.
 
+    allowed_hosts: list(string)
+        Host address patterns to check against. Required if `port` >= 0.
+        Ignored if `allowed_users` is specified.
+
+    allowed_users: dict
+        Dictionary of users and corresponding public keys allowed access.
+        If None, *any* user may access. If empty, no user may access.
+        The host portions of user strings are used for address patterns.
+
+    allow_shell: bool
+        If True, :meth:`execute_command` and :meth:`load_model` are allowed.
+        Use with caution!
+
+    allowed_types: list(string)
+        Names of types which may be created. If None, then allow types listed
+        by :meth:`get_available_types`. If empty, no types are allowed.
+
     timeout: int
         Seconds to wait for server to start. Note that public key generation
         can take a while. The default value of None will use an internally
@@ -542,7 +652,7 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=None):
     Returns :class:`ShellProc`.
     """
     if timeout is None:
-        if sys.platform == 'win32' and not _HAVE_PYWIN32:
+        if sys.platform == 'win32' and not HAVE_PYWIN32:  #pragma no cover
             timeout = 120
         else:
             timeout = 30
@@ -560,6 +670,36 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=None):
     factory_path = pkg_resources.resource_filename('openmdao.main',
                                                    'objserverfactory.py')
     args = ['python', factory_path, '--port', str(port), '--prefix', prefix]
+
+    if allowed_users is not None:
+        write_authorized_keys(allowed_users, 'users.allow', logging.getLogger())
+        args.extend(['--users', 'users.allow'])
+    else:
+        args.append('--allow-public')
+        if port >= 0:
+            if allowed_hosts is None:
+                allowed_hosts = [socket.gethostbyname(socket.gethostname())]
+            with open('hosts.allow', 'w') as out:
+                for pattern in allowed_hosts:
+                    out.write('%s\n' % pattern)
+            if sys.platform != 'win32' or HAVE_PYWIN32:
+                make_private('hosts.allow')
+            else:  #pragma no cover
+                logging.warning("Can't make hosts.allow private")
+
+    if allow_shell:
+        args.append('--allow-shell')
+
+    if allowed_types is not None:
+        with open('types.allow', 'w') as out:
+            for typname in allowed_types:
+                out.write('%s\n' % typname)
+        if sys.platform != 'win32' or HAVE_PYWIN32:
+            make_private('types.allow')
+        else:  #pragma no cover
+            logging.warning("Can't make types.allow private")
+        args.extend(['--types', 'types.allow'])
+
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
 
     try:
@@ -586,38 +726,82 @@ def start_server(authkey='PublicKey', port=0, prefix='server', timeout=None):
 
 # Remote process code.
 
-_LOGGER = logging.getLogger()
 _SERVER_CFG = ''
 
 def main():  #pragma no cover
     """
     OpenMDAO factory service process.
 
-    Usage: python objserverfactory.py [--port=number][--prefix=name]
+    Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--types=filename][--users=filename][--port=number][--prefix=name]
 
-    port: int
+    --allow-public:
+        Allows access by anyone from any allowed host. Use with care!
+
+    --allow-shell:
+        Allows access to :meth:`execute_command` and :meth:`load_model`.
+        Use with care!
+
+    --hosts: string
+        Filename for allowed hosts specification. Default ``hosts.allow``.
+        Ignored if '--users' is specified.
+        The file should contain IPv4 host addresses, IPv4 domain addresses,
+        or hostnames, one per line. Blank lines are ignored, and '#' marks the
+        start of a comment which continues to the end of the line.
+
+    --types: string
+        Filename for allowed types specification.
+        If not specified then allow types listed by
+        :meth:`factorymanager.get_available_types`.
+        The file should contain one type name per line.
+
+    --users: string
+        Filename for allowed users specification.
+        Ignored if '--allow-public' is specified.
+        Default is ``~/.ssh/authorized_keys``, other files should be of the
+        same format.
+        The host portions of user strings are used for allowed hosts.
+
+    --port: int
         Server port (default of 0 implies next available port).
         Note that ports below 1024 typically require special privileges.
         If port is negative, then a local pipe is used for communication.
 
-    prefix: string
-        Prefix for configuration and stdout/stderr files (default 'server').
+    --prefix: string
+        Prefix for configuration and stdout/stderr files (default ``server``).
 
     If ``prefix.key`` exists, it is read for an authorization key string.
     Otherwise public key authorization and encryption is used.
+
+    Allowed hosts *must* be specified if `port` is >= 0. Only allowed hosts
+    may connect to the server.
+
     Once initialized ``prefix.cfg`` is written with address, port, and
     public key information.
     """
     parser = optparse.OptionParser()
+    parser.add_option('--allow-public', action='store_true', default=False,
+                      help='Allows access by any user, use with care!')
+    parser.add_option('--allow-shell', action='store_true', default=False,
+                      help='Allows potential shell access, use with care!')
+    parser.add_option('--hosts', action='store', type='str',
+                      default='hosts.allow', help='Filename for allowed hosts')
+    parser.add_option('--types', action='store', type='str',
+                      help='Filename for allowed types')
+    parser.add_option('--users', action='store', type='str',
+                      default='~/.ssh/authorized_keys',
+                      help='Filename for allowed users')
     parser.add_option('--port', action='store', type='int', default=0,
-                      help='server port (0 implies next available port)')
+                      help='Server port (0 implies next available port)')
     parser.add_option('--prefix', action='store', default='server',
-                      help='prefix for config and stdout/stderr files')
+                      help='Prefix for config and stdout/stderr files')
 
     options, arguments = parser.parse_args()
     if arguments:
         parser.print_help()
         sys.exit(1)
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
 
     server_key = options.prefix+'.key'
     server_cfg = options.prefix+'.cfg'
@@ -633,16 +817,91 @@ def main():  #pragma no cover
     except IOError:
         pass
 
+    if options.allow_shell:
+        msg = 'Shell access is ALLOWED'
+        logger.warning(msg)
+        print msg
+
+    allowed_users = None
+    allowed_hosts = None
+
+    # Get allowed_users.
+    if options.allow_public:
+        allowed_users = None
+        msg = 'Public access is ALLOWED'
+        logger.warning(msg)
+        print msg
+
+        if options.port >= 0:
+            # Get allowed_hosts.
+            if os.path.exists(options.hosts):
+                try:
+                    allowed_hosts = read_allowed_hosts(options.hosts)
+                except Exception as exc:
+                    msg = "Can't read allowed hosts file %r: %s" \
+                          % (options.hosts, exc)
+                    logger.error(msg)
+                    print msg
+                    sys.exit(1)
+            else:
+                msg = 'Allowed hosts file %r does not exist.' % options.hosts
+                logger.error(msg)
+                print msg
+                sys.exit(1)
+
+            if not allowed_hosts:
+                msg = 'No allowed hosts!?.'
+                logger.error(msg)
+                print msg
+                sys.exit(1)
+    else:
+        if os.path.exists(options.users):
+            allowed_users = read_authorized_keys(options.users, logger)
+            if not allowed_users:
+                msg = 'No authorized keys?'
+                logger.error(msg)
+                print msg
+                sys.exit(1)
+        else:
+            msg = 'Allowed users file %r does not exist.' % options.users
+            logger.error(msg)
+            print msg
+            sys.exit(1)
+
+    # Get allowed_types.
+    allowed_types = None
+    if options.types:
+        if os.path.exists(options.types):
+            allowed_types = []
+            with open(options.types, 'r') as inp:
+                line = inp.readline()
+                while line:
+                    line = line.strip()
+                    if line:
+                        allowed_types.append(line)
+                    line = inp.readline()
+        else:
+            msg = 'Allowed types file %r does not exist.' % options.types
+            logger.error(msg)
+            print msg
+            sys.exit(1)
+
     # Get address and create manager.
-    _LOGGER.setLevel(logging.DEBUG)
     if options.port >= 0:
         address = (platform.node(), options.port)
     else:
         address = None
-    set_credentials(Credentials())
-    _LOGGER.info('Starting FactoryManager %s %r', address, keytype(authkey))
+    logger.info('Starting FactoryManager %s %r', address, keytype(authkey))
     current_process().authkey = authkey
-    manager = _FactoryManager(address, authkey, name='Factory')
+    manager = _FactoryManager(address, authkey, name='Factory',
+                              allowed_hosts=allowed_hosts,
+                              allowed_users=allowed_users)
+
+    # Set defaults for created ObjServerFactories.
+    # There isn't a good method to propagate these through the manager.
+    ObjServerFactory._address = address
+    ObjServerFactory._allow_shell = options.allow_shell
+    ObjServerFactory._allowed_types = allowed_types
 
     # Get server, retry if specified address is in use.
     server = None
@@ -654,13 +913,13 @@ def main():  #pragma no cover
             if str(exc).find('Address already in use') >= 0:
                 if retries < 10:
                     msg = 'Address %s in use, retrying...' % (address,)
-                    _LOGGER.debug(msg)
+                    logger.debug(msg)
                     print msg
                     time.sleep(5)
                     retries += 1
                 else:
                     msg = 'Address %s in use, too many retries.' % (address,)
-                    _LOGGER.error(msg)
+                    logger.error(msg)
                     print msg
                     sys.exit(1)
             else:
@@ -669,7 +928,7 @@ def main():  #pragma no cover
     # Record configuration.
     write_server_config(server, _SERVER_CFG)
     msg = 'Serving on %s' % (server.address,)
-    _LOGGER.info(msg)
+    logger.info(msg)
     print msg
     sys.stdout.flush()
 
@@ -684,7 +943,7 @@ def main():  #pragma no cover
 
 def _sigterm_handler(signum, frame):  #pragma no cover
     """ Try to go down gracefully. """
-    _LOGGER.info('sigterm_handler invoked')
+    logging.getLogger().info('sigterm_handler invoked')
     print 'sigterm_handler invoked'
     sys.stdout.flush()
     _cleanup()
@@ -693,7 +952,8 @@ def _sigterm_handler(signum, frame):  #pragma no cover
 
 def _cleanup():  #pragma no cover
     """ Cleanup in preparation to shut down. """
-    if os.path.exists(_SERVER_CFG):
+    keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
+    if not keep_dirs and os.path.exists(_SERVER_CFG):
         os.remove(_SERVER_CFG)
 
 

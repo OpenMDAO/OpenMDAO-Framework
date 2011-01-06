@@ -14,7 +14,6 @@ import nose
 
 from openmdao.main.objserverfactory import ObjServerFactory, ObjServer, \
                                            start_server
-from openmdao.main.rbac import Credentials, set_credentials
 from openmdao.util.testutil import assert_raises
 
 
@@ -34,7 +33,6 @@ class TestCase(unittest.TestCase):
         factory = None
         try:
             # Create a factory.
-            set_credentials(Credentials())
             factory = ObjServerFactory()
 
             # Echo some arguments.
@@ -55,11 +53,12 @@ class TestCase(unittest.TestCase):
             assert_raises(self, "start_server(port='xyzzy')",
                           globals(), locals(), RuntimeError,
                           'Server startup failed')
+
             # Try to release a server that doesn't exist (release takes an
             # OpenMDAO_Proxy as argument, string here is easier).
             assert_raises(self, "factory.release('xyzzy')",
                           globals(), locals(), ValueError,
-                          "can't identify server 'xyzzy'")
+                          "can't identify server at 'not-a-proxy'")
         finally:
             if factory is not None:
                 factory.cleanup()
@@ -94,37 +93,16 @@ class TestCase(unittest.TestCase):
             self.assertEqual(args[0], 'Hello')
             self.assertEqual(args[1], 'world!')
 
-            # Execute a command.
+            # Try to execute a command.
             cmd = 'dir' if sys.platform == 'win32' else 'ls'
-            return_code, error_msg = \
-                server.execute_command(cmd, None, 'cmd.out', None, None, 0, 10)
-            self.assertEqual(return_code, 0)
+            code = "server.execute_command(cmd, None, 'cmd.out', None, None, 0, 10)"
+            assert_raises(self, code, globals(), locals(), RuntimeError,
+                          'shell access is not allowed by this server')
 
-            # Non-zero return code.
-            return_code, error_msg = \
-                server.execute_command('no-such-command',
-                                       None, 'stdout1', 'stderr1', None, 0, 10)
-            self.assertNotEqual(return_code, 0)
-
-            # Exception creating process.
-# FIXME: despite the files being closed, Windows thinks they're in use :-(
-            if sys.platform != 'win32':
-                try:
-                    server.execute_command(['no-such-command'],
-                                           None, 'stdout2', 'stderr2', None, 0, 10)
-                except OSError as exc:
-                    msg = '[Errno 2] No such file or directory'
-                    self.assertEqual(str(exc), msg)
-                else:
-                    self.fail('Expected OSError')
-
-            # Load a model.
-            obj = server.load_model(egg_info[0])
-            obj.run()
-
-            assert_raises(self, "server.load_model('no-such-egg')",
-                          globals(), locals(), ValueError,
-                          "'no-such-egg' not found.")
+            # Try to load a model.
+            assert_raises(self, 'server.load_model(egg_info[0])',
+                          globals(), locals(), RuntimeError,
+                          'shell access is not allowed by this server')
 
             # Bogus file accesses.
             assert_raises(self, "server.open('../xyzzy', 'r')", globals(), locals(),
@@ -188,6 +166,69 @@ class TestCase(unittest.TestCase):
             finally:
                 inp.close()
 
+            # Try to create a process.
+            args = 'dir' if sys.platform == 'win32' else 'ls'
+            try:
+                proc = server.create('subprocess.Popen', args=args, shell=True)
+                proc.wait()
+            except TypeError as exc:
+                msg = "'subprocess.Popen' is not an allowed type"
+                self.assertEqual(str(exc), msg)
+            else:
+                self.fail('Expected TypeError')
+
+        finally:
+            os.chdir('..')
+            shutil.rmtree(testdir)
+
+    def test_shell(self):
+        logging.debug('')
+        logging.debug('test_shell')
+        
+        testdir = 'test_shell'
+        if os.path.exists(testdir):
+            shutil.rmtree(testdir)
+        os.mkdir(testdir)
+        os.chdir(testdir)
+
+        try:
+            # Create a server.
+            server = ObjServer(allow_shell=True)
+
+            # Execute a command.
+            cmd = 'dir' if sys.platform == 'win32' else 'ls'
+            return_code, error_msg = \
+                server.execute_command(cmd, None, 'cmd.out', None, None, 0, 10)
+            self.assertEqual(return_code, 0)
+
+            # Non-zero return code.
+            return_code, error_msg = \
+                server.execute_command('no-such-command',
+                                       None, 'stdout1', 'stderr1', None, 0, 10)
+            self.assertNotEqual(return_code, 0)
+
+            # Exception creating process.
+# FIXME: despite the files being closed, Windows thinks they're in use :-(
+            if sys.platform != 'win32':
+                try:
+                    server.execute_command(['no-such-command'],
+                                           None, 'stdout2', 'stderr2', None, 0, 10)
+                except OSError as exc:
+                    msg = '[Errno 2] No such file or directory'
+                    self.assertEqual(str(exc), msg)
+                else:
+                    self.fail('Expected OSError')
+
+            # Load a model.
+            exec_comp = server.create('openmdao.test.ExecComp')
+            exec_comp.run()
+            egg_info = exec_comp.save_to_egg('exec_comp', '0')
+            obj = server.load_model(egg_info[0])
+            obj.run()
+
+            assert_raises(self, "server.load_model('no-such-egg')",
+                          globals(), locals(), ValueError,
+                          "'no-such-egg' not found.")
         finally:
             os.chdir('..')
             shutil.rmtree(testdir)

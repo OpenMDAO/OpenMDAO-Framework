@@ -35,24 +35,16 @@ method.
 # else might bleed in) as our private multiprocessing package.
 # No obvious 'best' alternative.
 
-import base64
-import ConfigParser
-import cPickle
 import errno
-import getpass
 import hashlib
 import inspect
 import logging
-import os.path
+import os
 import socket
 import sys
 import threading
 import time
 import traceback
-
-from Crypto.Cipher import AES
-from Crypto.PublicKey import RSA
-from Crypto.Random import get_random_bytes
 
 from multiprocessing import Process, current_process, connection, util
 from multiprocessing.forking import Popen
@@ -62,37 +54,26 @@ from multiprocessing.managers import BaseManager, BaseProxy, RebuildProxy, \
 
 if sys.platform == 'win32':  #pragma no cover
     from _multiprocessing import win32
-    try:
-        import win32api
-        import win32security
-        import ntsecuritycon
-    except ImportError:
-        _HAVE_PYWIN32 = False
-    else:
-        _HAVE_PYWIN32 = True
-else:
-    _HAVE_PYWIN32 = False
 
 from enthought.traits.trait_handlers import TraitDictObject
 
 from openmdao.main.interfaces import obj_has_interface
+from openmdao.main.mp_util import decrypt, encrypt, is_legal_connection, \
+                                  keytype, make_typeid, public_methods, \
+                                  SPECIALS
 from openmdao.main.rbac import AccessController, RoleError, check_role, \
                                rbac_methods, need_proxy, \
-                               get_credentials, set_credentials
+                               Credentials, get_credentials, set_credentials
+
+from openmdao.util.publickey import decode_public_key, encode_public_key, \
+                                    get_key_pair, HAVE_PYWIN32
 
 # Classes which require proxying (used by default AccessController)
 # Used to break import loop between this and openmdao.main.container.
 CLASSES_TO_PROXY = []
 
-# Cache of proxies created by make_proxy_type().
+# Cache of proxies created by _make_proxy_type().
 _PROXY_CACHE = {}
-
-# Cache of client key pairs indexed by user (from credentials).
-_KEY_CACHE = {}
-_KEY_CACHE_LOCK = threading.Lock()
-
-# Names of attribute access methods requiring special handling.
-_SPECIALS = ('__getattribute__', '__getattr__', '__setattr__', '__delattr__')
 
 
 def is_instance(obj, typ):
@@ -138,278 +119,6 @@ def has_interface(obj, *ifaces):
         return obj_has_interface(obj, *ifaces)
 
 
-def keytype(authkey):
-    """
-    Just returns a string showing the type of `authkey`.
-
-    authkey: string
-        Key to report type of.
-    """
-    if authkey is None:
-        return '%s (inherited)' % keytype(current_process().authkey)
-    else:
-        return authkey if authkey == 'PublicKey' else 'AuthKey'
-
-
-def _generate_key_pair(credentials, logger=None):
-    """
-    Returns RSA key containing both public and private keys for the user
-    identified in `credentials`.  This can be an expensive operation, so
-    we avoid generating a new key pair whenever possible.
-    """
-    with _KEY_CACHE_LOCK:
-        # Look in previously generated keys.
-        try:
-            key_pair = _KEY_CACHE[credentials.user]
-        except KeyError:
-            # If key for current user (typical), check filesystem.
-# TODO: file lock to protect from separate processes.
-            user, host = credentials.user.split('@')
-            if user == getpass.getuser():
-                current_user = True
-                key_file = \
-                    os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
-                try:
-                    with open(key_file, 'rb') as inp:
-                        key_pair = cPickle.load(inp)
-                except Exception:
-                    generate = True
-                else:
-                    generate = False
-            # Difficult to run test as non-current user.
-            else:  #pragma no cover
-                current_user = False
-                generate = True
-
-            if generate:
-                logger = logger or logging.getLogger()
-                logger.debug('generating public key...')
-                key_pair = RSA.generate(2048, get_random_bytes)
-                logger.debug('    done')
-
-                if current_user:
-                    # Save in protected file.
-                    if sys.platform == 'win32' and not _HAVE_PYWIN32: #pragma no cover
-                        logger.warning('No pywin32, not saving keyfile')
-                    else:
-                        key_dir = os.path.dirname(key_file)
-                        if not os.path.exists(key_dir):
-                            os.mkdir(key_dir)
-                        _make_private(key_dir)  # Private while writing keyfile.
-                        with open(key_file, 'wb') as out:
-                            cPickle.dump(key_pair, out,
-                                         cPickle.HIGHEST_PROTOCOL)
-                        try:
-                            _make_private(key_file)
-                        # Hard to cause (recoverable) error here.
-                        except Exception:  #pragma no cover
-                            os.remove(key_file)  # Remove unsecured file.
-                            raise
-
-            _KEY_CACHE[credentials.user] = key_pair
-
-    return key_pair
-
-def _make_private(path):
-    """ Make `path` accessible only by 'owner'. """
-    if sys.platform == 'win32':  #pragma no cover
-        # Find the SIDs for user and system.
-        user, domain, type = \
-            win32security.LookupAccountName('', win32api.GetUserName())
-        system, domain, type = \
-            win32security.LookupAccountName('', 'System')
-
-        # Find the DACL part of the Security Descriptor for the file
-        sd = win32security.GetFileSecurity(path,
-                                        win32security.DACL_SECURITY_INFORMATION)
-
-        # Create a blank DACL and add the ACEs we want.
-        dacl = win32security.ACL()
-        dacl.AddAccessAllowedAce(win32security.ACL_REVISION,
-                                 ntsecuritycon.FILE_ALL_ACCESS, user)
-        dacl.AddAccessAllowedAce(win32security.ACL_REVISION, 
-                                 ntsecuritycon.FILE_ALL_ACCESS, system)
-
-        # Put our new DACL into the Security Descriptor and update the file
-        # with the updated SD.
-        sd.SetSecurityDescriptorDacl(1, dacl, 0)
-        win32security.SetFileSecurity(path,
-                                      win32security.DACL_SECURITY_INFORMATION,
-                                      sd)
-    else:
-        os.chmod(path, 0700)  # Read/Write/Execute
-
-
-def _encode_public_key(key):
-    """ Return base64 text representation of public key `key`. """
-    # Just being defensive, this should never happen.
-    if key.has_private():  #pragma no cover
-        key = key.publickey()
-    return base64.b64encode(cPickle.dumps(key, cPickle.HIGHEST_PROTOCOL))
-
-def decode_public_key(text):
-    """
-    Return public key from text representation.
-
-    text: string
-        base64 encoded key data.
-    """
-    return cPickle.loads(base64.b64decode(text))
-
-
-# This happens on the remote server side and we'll check when connecting.
-def write_server_config(server, filename):  #pragma no cover
-    """
-    Write server connection information.
-
-    server: OpenMDAO_Server
-        Server to be recorded.
-
-    filename: string
-        Path to file to be written.
-
-    Connection information including IP address, port, and public key is
-    written using :class:`ConfigParser`.
-    """
-    parser = ConfigParser.ConfigParser()
-    section = 'ServerInfo'
-    parser.add_section(section)
-    if connection.address_type(server.address) == 'AF_INET':
-        parser.set(section, 'address', str(server.address[0]))
-        parser.set(section, 'port', str(server.address[1]))
-    else:
-        parser.set(section, 'address', server.address)
-        parser.set(section, 'port', '-1')
-    parser.set(section, 'key', server.public_key_text)
-    with open(filename, 'w') as cfg:
-        parser.write(cfg)
-
-def read_server_config(filename):
-    """
-    Read a server's connection information.
-
-    filename: string
-        Path to file to be read.
-
-    Returns ``(address, port, key)``.
-    """
-    if not os.path.exists(filename):
-        raise IOError('No such file %r' % filename)
-    parser = ConfigParser.ConfigParser()
-    parser.read(filename)
-    section = 'ServerInfo'
-    address = parser.get(section, 'address')
-    port = parser.getint(section, 'port')
-    key = parser.get(section, 'key')
-    if key:
-        key = decode_public_key(key)
-    return (address, port, key)
-
-
-def _encrypt(obj, session_key):
-    """
-    If `session_key` is specified, returns ``(length, data)`` of encrypted,
-    pickled, `obj`. Otherwise `obj` is returned.
-    """
-    if session_key:
-        # Just being defensive, this should never happen.
-        if len(session_key) < 16:  #pragma no cover
-            session_key += '!'*16
-        session_key = session_key[:16]
-        encryptor = AES.new(session_key, AES.MODE_CBC, '?'*AES.block_size)
-        text = cPickle.dumps(obj, cPickle.HIGHEST_PROTOCOL)
-        length = len(text)
-        pad = length % AES.block_size
-        if pad:
-            pad = AES.block_size - pad
-            text += '-'*pad
-        data = encryptor.encrypt(text)
-        return (length, data)
-    else:
-        return obj
-
-def _decrypt(msg, session_key):
-    """
-    If `session_key` is specified, returns object from encrypted pickled data
-    contained in `msg`. Otherwise `msg` is returned.
-    """
-    if session_key:
-        # Just being defensive, this should never happen.
-        if len(msg) != 2:  #pragma no cover
-            raise RuntimeError('_decrypt: msg not encrypted?')
-        # Just being defensive, this should never happen.
-        if len(session_key) < 16:  #pragma no cover
-            session_key += '!'*16
-        session_key = session_key[:16]
-        decryptor = AES.new(session_key, AES.MODE_CBC, '?'*AES.block_size)
-        length, data = msg
-        text = decryptor.decrypt(data)
-        return cPickle.loads(text[:length])
-    else:
-        return msg
-
-
-def _public_methods(obj):
-    """
-    Returns a list of names of the methods of `obj` to be exposed.
-    Supports attribute access in addition to RBAC decorated methods.
-
-    obj: object
-        Object to be scanned.
-    """
-    # Proxy pass-through only happens remotely.
-    if isinstance(obj, BaseProxy):  #pragma no cover
-        methods = []
-        for name in dir(obj):
-            if name[0] != '_':
-                attr = getattr(obj, name)
-                if inspect.ismethod(attr) or inspect.isfunction(attr):
-                    methods.append(name)
-    else:
-        methods = rbac_methods(obj)
-
-    # Add special methods for attribute access.
-    methods.extend([name for name in _SPECIALS if hasattr(obj, name)])
-
-    # Add special __is_instance__ and __has_interface__ methods.
-    methods.append('__is_instance__')
-    methods.append('__has_interface__')
-    return methods
-
-
-def _make_typeid(obj):
-    """
-    Returns a type ID string from `obj`'s module and class names
-    by replacing '.' with '_'.
-    """
-    typeid = '%s.%s' % (obj.__class__.__module__, obj.__class__.__name__)
-    return typeid.replace('.', '_')
-
-def register(cls, manager, module=None):
-    """
-    Register class `cls` proxy info with `manager`. The class will be
-    registered under it's full path, with '.' replaced by '_'.
-    Not typically called by user code.
-
-    cls: class
-        Class to be registered.
-
-    manager: :class:`OpenMDAO_Manager`
-        Manager to register with.
-
-    module: string
-        Module name for registration. Necessary if `cls` might be defined
-        by module '__main__'.
-    """
-    if module is None:
-        module = cls.__module__
-    typeid = '%s.%s' % (module, cls.__name__)
-    typeid = typeid.replace('.', '_')
-    exposed = _public_methods(cls)
-    proxytype = _make_proxy_type(typeid, exposed)
-    manager.register(typeid, callable=cls, exposed=exposed, proxytype=proxytype)
-
-
 class OpenMDAO_Server(Server):
     """
     A :class:`Server` that supports dynamic proxy generation and credential
@@ -431,19 +140,53 @@ class OpenMDAO_Server(Server):
 
     name: string
         Name for server, used in log files, etc.
+
+    allowed_hosts: list(string)
+        Host address patterns to check against.
+        Ignored if `allowed_users` is specified.
+
+    allowed_users: dict
+        Dictionary of users and corresponding public keys allowed access.
+        If None, any user may access. If empty, no user may access.
+        The host portions of user strings are used for address patterns.
     """
 
-    def __init__(self, registry, address, authkey, serializer, name=None):
+    def __init__(self, registry, address, authkey, serializer, name=None,
+                 allowed_hosts=None, allowed_users=None):
         super(OpenMDAO_Server, self).__init__(registry, address, authkey,
                                               serializer)
         self.name = name or 'OMS_%d' % os.getpid()
         self.host = socket.gethostname()
+        self._allowed_users = allowed_users
+        if self._allowed_users is not None:
+            self._allowed_hosts = set()
+            for user_host in self._allowed_users.keys():
+                user, host = user_host.split('@')
+                self._allowed_hosts.add(socket.gethostbyname(host))
+        else:
+            self._allowed_hosts = allowed_hosts or []
+
         self._logger = logging.getLogger(name)
         self._logger.info('OpenMDAO_Server process %d started, %r',
                           os.getpid(), keytype(authkey))
+        if self._allowed_users is None:
+            self._logger.warning('    allowed_users: ANY')
+        else:
+            self._logger.info('    allowed_users: %s',
+                              sorted(self._allowed_users.keys()))
+        if self._allowed_hosts:
+            self._logger.info('    allowed_hosts: %s',
+                              sorted(self._allowed_hosts))
+        else:
+            self._logger.warning('    allowed_hosts: ANY')
+
         self._authkey = authkey
         if authkey == 'PublicKey':
-            self._key_pair = _generate_key_pair(get_credentials(), self._logger)
+            # While we may be 'owned' by some remote user, use default
+            # credentials for getting our key pair. This avoids generation
+            # overhead and also issues with propagating our public key
+            # back through a proxy.
+            self._key_pair = get_key_pair(Credentials.user_host, self._logger)
         else:
             self._key_pair = None
         self._id_to_controller = {}
@@ -466,9 +209,50 @@ class OpenMDAO_Server(Server):
     def public_key_text(self):  #pragma no cover
         """ Text representation of public key. """
         if self._authkey == 'PublicKey':
-            return _encode_public_key(self.public_key)
+            return encode_public_key(self.public_key)
         else:
             return ''
+
+    def serve_forever(self):
+        """
+        Run the server forever.
+        This version supports host connection filtering.
+        Connection filtering allows for PublicKey servers which aren't
+        accessible by just any host.
+        """
+        current_process()._manager_server = self
+        try:
+            try:
+                while 1:
+                    try:
+                        conn = self.listener.accept()
+                    # Hard to cause this to happen.
+                    except (OSError, IOError):  #pragma no cover
+                        continue
+
+                    address = self.listener.last_accepted
+                    if address:
+                        if not is_legal_connection(address, self._allowed_hosts,
+                                                   self._logger):
+                            conn.close()
+                            continue
+
+                    t = threading.Thread(target=self.handle_request,
+                                         args=(conn,))
+                    t.daemon = True
+                    try:
+                        t.start()
+                    # Don't want to cause this to happen.
+                    except Exception as exc:  #pragma no cover
+                        self._logger.error("Can't start server thread: %r", exc)
+                        conn.close()
+                        continue
+            # Don't want to cause this to happen.
+            except (KeyboardInterrupt, SystemExit):  #pragma no cover
+                pass
+        finally:
+            self.stop = 999
+            self.listener.close()
 
     def handle_request(self, conn):
         """
@@ -477,20 +261,20 @@ class OpenMDAO_Server(Server):
         conn: socket or pipe
             Connection to process.
 
-        This version avoids getting upset if it can't deliver a challenge.
-        This is to deal with immediately closed connections caused by
-        :meth:`manager_is_alive` which are used to avoid getting hung trying
-        to connect to a manager which is no longer there.
+        This version filters host connections and avoids getting upset if it
+        can't deliver a challenge. This is to deal with immediately closed
+        connections caused by :meth:`manager_is_alive` which are used to avoid
+        getting hung trying to connect to a manager which is no longer there.
         """
         funcname = result = request = None
 
         try:
             connection.deliver_challenge(conn, self.authkey)
-        except (EOFError, IOError):
+        except (EOFError, IOError) as exc:
             conn.close()
             return
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
-        except Exception:  #pragma no cover
+        except Exception as exc:  #pragma no cover
             msg = ('#TRACEBACK', traceback.format_exc())
             try:
                 conn.send(msg)
@@ -519,6 +303,7 @@ class OpenMDAO_Server(Server):
                 msg = ('#TRACEBACK', traceback.format_exc())
             else:
                 msg = ('#RETURN', result)
+
         try:
             conn.send(msg)
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
@@ -551,16 +336,9 @@ class OpenMDAO_Server(Server):
         id_to_controller = self._id_to_controller
 
         if self._authkey == 'PublicKey':
-            # Receive client public key, send session key.
-            chunks = recv()
-            text = ''
-            for chunk in chunks:
-                text += self._key_pair.decrypt(chunk)
-            client_key = decode_public_key(text)
-            session_key = hashlib.sha1(str(id(conn))).hexdigest()
-            data = client_key.encrypt(session_key, '')
-            send(data)
+            client_key, session_key = self._init_session(conn)
         else:
+            client_key = ''
             session_key = ''
 
         while not self.stop:
@@ -570,7 +348,7 @@ class OpenMDAO_Server(Server):
                 obj = exposed = gettypeid = None
                 data = recv()
                 try:
-                    request = _decrypt(data, session_key)
+                    request = decrypt(data, session_key)
                 except Exception as exc:
                     trace = traceback.format_exc()
                     msg = "Can't decrypt/unpack request. This could be the" \
@@ -583,15 +361,25 @@ class OpenMDAO_Server(Server):
 #                self._logger.debug('request %s %s %s',
 #                                   ident, methodname, credentials)
 #                self._logger.debug('id_to_obj:\n%s', self.debug_info(conn))
+
+                # Decode and verify valid credentials.
+                try:
+                    credentials = Credentials.verify(credentials,
+                                                     self._allowed_users)
+                except Exception as exc:
+                    self._logger.error('%r' % exc)
+                    raise
+
                 try:
                     obj, exposed, gettypeid = id_to_obj[ident]
                 # Hard to cause this to happen.
                 except KeyError:  #pragma no cover
                     msg = 'No object for ident %s' % ident
                     self._logger.error(msg)
-                    raise KeyError('%s %s: %s' % (self.host, self.name, msg))
+                    raise KeyError('%s %r: %s' % (self.host, self.name, msg))
 
                 if methodname not in exposed:
+                    # Try to raise with a useful error message.
                     if methodname == '__getattr__':
                         try:
                             val = getattr(obj, args[0])
@@ -609,54 +397,24 @@ class OpenMDAO_Server(Server):
                                   'method %r of %r object is not in exposed=%r'
                                   % (methodname, type(obj), exposed))
 
-                # Assume we'll just propagate credentials.
+                # Set correct credentials for function lookup.
                 set_credentials(credentials)
-
                 function = getattr(obj, methodname)
 
                 # Proxy pass-through only happens remotely.
                 if isinstance(obj, BaseProxy):  #pragma no cover
-                    access_controller = None
                     role = None
+                    access_controller = None
                 else:
-                    # Get access controller for obj.
-                    access_controller = id_to_controller.get(ident)
-                    if access_controller is None:
-                        try:
-                            get_access_controller = \
-                                getattr(obj, 'get_access_controller')
-                        except AttributeError:
-                            access_controller = self._access_controller
-                        # Only happens on remote protected object.
-                        else:  #pragma no cover
-                            access_controller = get_access_controller()
-                        id_to_controller[ident] = access_controller
-
-                    # Get role based on credentials.
-                    role = access_controller.get_role(credentials)
-
-                    if methodname in _SPECIALS:
-                        # Check for valid access based on role.
-                        access_controller.check_access(role, methodname, obj,
-                                                       args[0])
-                    else:
-                        # Check for valid role.
-                        try:
-                            check_role(role, function)
-                        except RoleError as exc:
-                            raise RoleError('%s(): %s' % (methodname, exc))
-
-                        # Set credentials for execution of function. Typically
-                        # these are just the credentials of the caller, but
-                        # sometimes a function needs to execute with different
-                        # credentials.
-                        set_credentials(
-                            access_controller.get_proxy_credentials(function,
-                                                                   credentials))
+                    # Check for allowed access.
+                    role, credentials, access_controller = \
+                        self._check_access(ident, methodname, function, args,
+                                           credentials)
                 if methodname != 'echo':
                     # 'echo' is used for performance tests, keepalives, etc.
-                    self._logger.debug('Invoke %s %s %s', methodname, role,
-                                       get_credentials())
+                    self._logger.debug('Invoke %s %s %s',
+                                       methodname, role, credentials)
+                # Invoke function.
                 try:
                     try:
                         res = function(*args, **kwds)
@@ -668,67 +426,12 @@ class OpenMDAO_Server(Server):
                         else:
                             raise
                 except Exception as exc:
-                    self._logger.error('%s %s %s: %r', methodname, role,
-                                       get_credentials(), exc)
+                    self._logger.error('%s %s %s: %r',
+                                       methodname, role, credentials, exc)
                     msg = ('#ERROR', exc)
                 else:
-                    msg = None
-                    typeid = None
-
-                    if inspect.ismethod(res) and \
-                       (methodname == '__getattribute__' or \
-                        methodname == '__getattr__'):
-                        # More informative for common case of missing RBAC.
-                        raise AttributeError(
-                            'method %r of %r object is not in exposed=%r' %
-                            (args[0], type(obj), exposed))
-
-                    # Proxy pass-through only happens remotely.
-                    if isinstance(res, BaseProxy):  #pragma no cover
-                        if self._address_type == 'AF_INET':
-                            # Create proxy for proxy.
-                            # (res may be unreachable by our client)
-                            typeid = res._token.typeid
-                            proxyid = _make_typeid(res)
-                            self._logger.debug('Creating proxy for proxy %s',
-                                               proxyid)
-                            if proxyid not in self.registry:
-                                self.registry[proxyid] = \
-                                    (None, None, None, _auto_proxy)
-                        else:
-                            # Propagate the proxy info.
-                            res._close.cancel()  # Don't decref when reaped.
-                            msg = ('#PROXY', (res._exposed_, res._token))
-                    elif access_controller is not None:
-                        if methodname in _SPECIALS:
-                            if access_controller.need_proxy(obj, args[0], res):
-                                # Create proxy if in declared proxy types.
-                                typeid = _make_typeid(res)
-                                proxyid = typeid
-                                if typeid not in self.registry:
-                                    self.registry[typeid] = \
-                                        (None, None, None, None)
-                        elif need_proxy(function, res):
-                            # Create proxy if in declared proxy types.
-                            typeid = _make_typeid(res)
-                            proxyid = typeid
-                            if typeid not in self.registry:
-                                self.registry[typeid] = (None, None, None, None)
-                    # Proxy pass-through only happens remotely.
-                    else:  #pragma no cover
-                        # Create proxy if registered.
-                        typeid = gettypeid and gettypeid.get(methodname, None)
-                        proxyid = typeid
-
-                    if msg is None:
-                        if typeid:
-                            rident, rexposed = self.create(conn, proxyid, res)
-                            token = Token(typeid, self.address, rident)
-                            self._logger.debug('Returning proxy for %s at %s',
-                                               typeid, self.address)
-                            msg = ('#PROXY', (rexposed, token))
-                        else:
-                            msg = ('#RETURN', res)
+                    msg = self._form_reply(res, ident, methodname, function,
+                                           args, access_controller, conn)
 
             except AttributeError:
                 # Just being defensive, this should never happen.
@@ -738,9 +441,8 @@ class OpenMDAO_Server(Server):
                     orig_traceback = traceback.format_exc()
                     try:
                         fallback_func = self.fallback_mapping[methodname]
-                        result = fallback_func(
-                            self, conn, ident, obj, *args, **kwds
-                            )
+                        result = fallback_func(self, conn, ident, obj,
+                                               *args, **kwds)
                         msg = ('#RETURN', result)
                     except Exception:
                         msg = ('#TRACEBACK', orig_traceback)
@@ -760,9 +462,9 @@ class OpenMDAO_Server(Server):
 
             try:
                 try:
-                    send(_encrypt(msg, session_key))
+                    send(encrypt(msg, session_key))
                 except Exception:
-                    send(_encrypt(('#UNSERIALIZABLE', repr(msg)), session_key))
+                    send(encrypt(('#UNSERIALIZABLE', repr(msg)), session_key))
             # Just being defensive, this should never happen.
             except Exception as exc: #pragma no cover
                 self._logger.error('exception in thread serving %r',
@@ -771,6 +473,154 @@ class OpenMDAO_Server(Server):
                 self._logger.error(' ... exception was %r', exc)
                 conn.close()
                 sys.exit(1)
+
+    def _init_session(self, conn):
+        """ Receive client public key, send session key. """
+        # Hard to cause exceptions to happen where we'll see them.
+        try:
+            client_data = conn.recv()
+        except Exception as exc:  #pragma no cover
+            self._logger.error("Can't receive client data: %r", exc)
+            raise
+
+        client_version = client_data[0]
+        if client_version != 1:  #pragma no cover
+            msg = 'Expected client protocol version 1, got %r' % client_version
+            self._logger.error(msg)
+            raise RuntimeError(msg)
+
+        n, e, chunks = client_data[1:]
+        if e != self._key_pair.e or n != self._key_pair.n:  #pragma no cover
+            msg = 'Server key mismatch'
+            self._logger.error(msg)
+            raise RuntimeError(msg)
+
+        try:
+            text = ''
+            for chunk in chunks:
+                text += self._key_pair.decrypt(chunk)
+            client_key = decode_public_key(text)
+        except Exception as exc:  #pragma no cover
+            self._logger.error("Can't recreate client key: %r", exc)
+            raise
+
+        server_version = 1
+        try:
+            session_key = hashlib.sha1(str(id(conn))).hexdigest()
+            data = client_key.encrypt(session_key, '')
+            conn.send((server_version, data))
+        except Exception as exc:  #pragma no cover
+            self._logger.error("Can't send session key: %r", exc)
+            raise
+
+        return (client_key, session_key)
+
+    def _check_access(self, ident, methodname, function, args, credentials):
+        """ Check for valid access, return (role, credentials, controller). """
+        obj, exposed, gettypeid = self.id_to_obj[ident]
+
+        # Get access controller for obj.
+        access_controller = self._id_to_controller.get(ident)
+        if access_controller is None:
+            try:
+                get_access_controller = getattr(obj, 'get_access_controller')
+            except AttributeError:
+                access_controller = self._access_controller
+            # Only happens on remote protected object.
+            else:  #pragma no cover
+                access_controller = get_access_controller()
+            self._id_to_controller[ident] = access_controller
+
+        # Get role based on credentials.
+        role = access_controller.get_role(credentials)
+
+        if methodname in SPECIALS:
+            # Check for valid access based on role.
+            access_controller.check_access(role, methodname, obj, args[0])
+        else:
+            # Check for valid role.
+            try:
+                check_role(role, function)
+            except RoleError as exc:
+                raise RoleError('%s(): %s' % (methodname, exc))
+
+            # Set credentials for execution of function. Typically
+            # these are just the credentials of the caller, but
+            # sometimes a function needs to execute with different
+            # credentials.
+            credentials = \
+                access_controller.get_proxy_credentials(function, credentials)
+            set_credentials(credentials)
+
+        return (role, credentials, access_controller)
+
+    def _form_reply(self, res, ident, methodname, function, args,
+                    access_controller, conn):
+        """ Return reply message for `res`. """
+        obj, exposed, gettypeid = self.id_to_obj[ident]
+        msg = None
+        typeid = None
+
+        if inspect.ismethod(res) and \
+           (methodname == '__getattribute__' or methodname == '__getattr__'):
+            # More informative for common case of missing RBAC.
+            raise AttributeError('method %r of %r object is not in exposed=%r'
+                                 % (args[0], type(obj), exposed))
+
+        # Proxy pass-through only happens remotely.
+        if isinstance(res, OpenMDAO_Proxy):  #pragma no cover
+            res_address = res._token.address
+            res_type = connection.address_type(res_address)
+            if (res_type != self._address_type) or \
+               (res_type == 'AF_INET' and res_address[0] != self.address[0]):
+                # Create proxy for proxy.
+                # (res is probably unreachable by our client)
+                typeid = res._token.typeid
+                proxyid = make_typeid(res)
+                self._logger.debug('Creating proxy for proxy %s', proxyid)
+                if proxyid not in self.registry:
+                    self.registry[proxyid] = (None, None, None, _auto_proxy)
+            else:
+                # Propagate the proxy info.
+                res._close.cancel()  # Don't decref when reaped.
+                msg = ('#PROXY', (res._exposed_, res._token, res._pubkey))
+
+        elif access_controller is not None:
+            if methodname in SPECIALS:
+                if access_controller.need_proxy(obj, args[0], res):
+                    # Create proxy if in declared proxy types.
+                    typeid = make_typeid(res)
+                    proxyid = typeid
+                    if typeid not in self.registry:
+                        self.registry[typeid] = (None, None, None, None)
+            elif need_proxy(function, res):
+                # Create proxy if in declared proxy types.
+                typeid = make_typeid(res)
+                proxyid = typeid
+                if typeid not in self.registry:
+                    self.registry[typeid] = (None, None, None, None)
+
+        # Proxy pass-through only happens remotely.
+        else:  #pragma no cover
+            # Create proxy if registered.
+            typeid = gettypeid and gettypeid.get(methodname, None)
+            proxyid = typeid
+
+        if msg is None:
+            if typeid:
+                rident, rexposed = self.create(conn, proxyid, res)
+                token = Token(typeid, self.address, rident)
+                self._logger.debug('Returning proxy for %s at %s',
+                                   typeid, self.address)
+                if self._key_pair is None:
+                    pubkey = None
+                else:
+                    pubkey = self._key_pair.publickey()
+                msg = ('#PROXY', (rexposed, token, pubkey))
+            else:
+                msg = ('#RETURN', res)
+
+        return msg
 
     def _fallback_isinstance(self, conn, ident, obj, typename):
         """ Check if `obj` is an instance of `typename`. """
@@ -850,7 +700,7 @@ class OpenMDAO_Server(Server):
         typeid: string
             Identifier string for type of object to be created.
 
-        This version uses :func:`_public_methods`.
+        This version uses :func:`public_methods`.
         """
         self.mutex.acquire()
         try:
@@ -871,7 +721,7 @@ class OpenMDAO_Server(Server):
                 obj = callable(*args, **kwds)
 
             if exposed is None:
-                exposed = _public_methods(obj)
+                exposed = public_methods(obj)
             if method_to_typeid is not None:
                 assert type(method_to_typeid) is dict
                 exposed = list(exposed) + list(method_to_typeid)
@@ -892,6 +742,12 @@ class OpenMDAO_Server(Server):
             return ident, tuple(exposed)
         finally:
             self.mutex.release()
+
+    # Will only be seen on remote.
+    def shutdown(self, conn):  #pragma no cover
+        """ Shutdown this process. """
+        self._logger.debug('received shutdown request')
+        super(OpenMDAO_Server, self).shutdown(conn)
 
 
 class OpenMDAO_Manager(BaseManager):
@@ -916,29 +772,33 @@ class OpenMDAO_Manager(BaseManager):
 
     name: string
         Name for server, used in log files, etc.
+
+    allowed_hosts: list(string)
+        Host address patterns to check against.
+
+    allowed_users: dict
+        Dictionary of users and corresponding public keys allowed access.
+        If None, any user may access. If empty, no user may access.
     """
 
     _Server = OpenMDAO_Server
 
     def __init__(self, address=None, authkey=None, serializer='pickle',
-                 pubkey=None, name=None):
-# FIXME: this shouldn't be required, but using a pipe causes problems with
-#        test_distsim).
-        if address is None and sys.platform == 'win32' and not _HAVE_PYWIN32:
-            ip_addr = socket.gethostbyname(socket.gethostname())
-            address = (ip_addr, 0)
-
+                 pubkey=None, name=None, allowed_hosts=None, allowed_users=None):
         super(OpenMDAO_Manager, self).__init__(address, authkey, serializer)
         self._pubkey = pubkey
         self._name = name
+        self._allowed_hosts = allowed_hosts
+        self._allowed_users = allowed_users
 
     def get_server(self):
         """
         Return a server object with :meth:`serve_forever` and address attribute.
         """
         assert self._state.value == State.INITIAL
-        return OpenMDAO_Server(self._registry, self._address,
-                               self._authkey, self._serializer, self._name)
+        return OpenMDAO_Server(self._registry, self._address, self._authkey,
+                               self._serializer, self._name,
+                               self._allowed_hosts, self._allowed_users)
 
     def start(self, cwd=None):
         """
@@ -967,24 +827,11 @@ class OpenMDAO_Manager(BaseManager):
 
         # Spawn process which runs a server.
         credentials = get_credentials()
-        if self._authkey == 'PublicKey':
-            if credentials is None:
-                raise RuntimeError('PublicKey authentication requires user'
-                                   ' credentials')
-            if sys.platform == 'win32' and not _HAVE_PYWIN32:
-                timeout = 120
-            else:
-                # Ensure we have a key pair. Key generation can take a long time
-                # and we don't want to use an excessive startup timeout value.
-                _generate_key_pair(credentials)
-                timeout = 5
-        else:
-            timeout = 5
-
         self._process = Process(
             target=type(self)._run_server,
             args=(registry, self._address, self._authkey,
-                  self._serializer, self._name, writer, credentials, cwd),
+                  self._serializer, self._name, self._allowed_hosts,
+                  self._allowed_users, writer, credentials, cwd),
             )
         ident = ':'.join(str(i) for i in self._process._identity)
         self._process.name = type(self).__name__  + '-' + ident
@@ -992,6 +839,14 @@ class OpenMDAO_Manager(BaseManager):
         pid = self._process.pid
 
         # Get address of server.
+        if self._authkey == 'PublicKey':
+            if sys.platform == 'win32' and not HAVE_PYWIN32:  #pragma no cover
+                timeout = 120
+            else:
+                timeout = 5
+        else:
+            timeout = 5
+
         writer.close()
         start = time.time()
         for retry in range(timeout):
@@ -1028,8 +883,9 @@ class OpenMDAO_Manager(BaseManager):
 
     # This happens on the remote server side and we'll check when using it.
     @classmethod
-    def _run_server(cls, registry, address, authkey, serializer, name, writer,
-                    credentials, cwd=None): #pragma no cover
+    def _run_server(cls, registry, address, authkey, serializer, name,
+                    allowed_hosts, allowed_users, writer, credentials,
+                    cwd=None): #pragma no cover
         """
         Create a server, report its address and public key, and run it.
         """
@@ -1063,7 +919,8 @@ class OpenMDAO_Manager(BaseManager):
                     filename='openmdao_log.txt', filemode='w')
 
             # Create server.
-            server = cls._Server(registry, address, authkey, serializer, name)
+            server = cls._Server(registry, address, authkey, serializer, name,
+                                 allowed_hosts, allowed_users)
         except Exception as exc:
             writer.send(exc)
             return
@@ -1093,7 +950,8 @@ class OpenMDAO_Manager(BaseManager):
                     dispatch(conn, None, 'shutdown')
                 finally:
                     conn.close()
-            except Exception:
+            # Just being defensive here.
+            except Exception:  #pragma no cover
                 pass
 
             process.join(timeout=2)
@@ -1135,18 +993,27 @@ class ObjectManager(object):
 
     name: string
         Name for server, used in log files, etc.
+
+    allowed_hosts: list(string)
+        Host address patterns to check against.
+
+    allowed_users: dict
+        Dictionary of users and corresponding public keys allowed access.
+        If None, any user may access. If empty, no user may access.
     """
 
     def __init__(self, obj, address=None, serializer='pickle', authkey=None,
-                 name=None):
-        self._typeid = _make_typeid(obj)
+                 name=None, allowed_hosts=None, allowed_users=None):
+        self._typeid = make_typeid(obj)
         self._ident = '%x' % id(obj)
         logging.debug('ObjectManager address %s, %r, name %r, ident %r',
                       address, keytype(authkey), name, self._ident)
         self._manager = OpenMDAO_Manager(address=address, serializer=serializer,
-                                         authkey=authkey, name=name)
+                                         authkey=authkey, name=name,
+                                         allowed_hosts=allowed_hosts,
+                                         allowed_users=allowed_users)
         self._server = self._manager.get_server()
-        self._exposed = _public_methods(obj)
+        self._exposed = public_methods(obj)
 
         with self._server.mutex:
             self._server.id_to_obj[self._ident] = (obj, self._exposed, None)
@@ -1166,7 +1033,7 @@ class ObjectManager(object):
             authkey = self._server._authkey
             pubkey = self._server.public_key if authkey == 'PublicKey' else None
             self._proxy = _auto_proxy(token, self._manager._serializer,
-                                      exposed=self._exposed, authkey=authkey,
+                                      authkey=authkey, exposed=self._exposed,
                                       pubkey=pubkey)
             self._server.incref(None, self._ident)
         return self._proxy
@@ -1200,9 +1067,6 @@ class OpenMDAO_Proxy(BaseProxy):
 
         super(OpenMDAO_Proxy, self).__init__(*args, **kwds)
 
-        if self._authkey == 'PublicKey' and get_credentials() is None:
-            raise RuntimeError('PublicKey proxy requires credentials')
-            
         if self._manager is None:
             self._pubkey = pubkey
         else:
@@ -1217,43 +1081,21 @@ class OpenMDAO_Proxy(BaseProxy):
         args = args or ()
         kwds = kwds or {}
 
-        credentials = get_credentials()
-        if self._authkey == 'PublicKey':
-            if credentials is None or not credentials.user:
-                msg = 'No credentials for PublicKey authentication of %s' \
-                      % methodname
-                logging.error(msg)
-                raise RuntimeError(msg)
         try:
             conn = self._tls.connection
         except AttributeError:
             curr_thread = threading.current_thread()
             util.debug('thread %r does not own a connection', curr_thread.name)
-            self._connect()
+            try:
+                self._connect()
+            except Exception as exc:
+                msg = "Can't connect to server at %r: %r" \
+                      % (self._token.address, exc)
+                logging.error(msg)
+                raise RuntimeError(msg)
             conn = self._tls.connection
-
             if self._authkey == 'PublicKey':
-                # Send client public key, receive session key.
-                key_pair = _generate_key_pair(credentials)
-                public_key = key_pair.publickey()
-                text = _encode_public_key(public_key)
-
-                server_key = self._pubkey
-                # Just being defensive, this should never happen.
-                if not server_key:  #pragma no cover
-                    msg = 'No server PublicKey for %s(%s, %s)' \
-                          % (methodname, args, kwds)
-                    logging.error(msg)
-                    raise RuntimeError(msg)
-                chunk_size = server_key.size() / 8
-                chunks = []
-                while text:
-                    chunks.append(server_key.encrypt(text[:chunk_size], ''))
-                    text = text[chunk_size:]
-                conn.send(chunks)
-
-                data = conn.recv()
-                self._tls.session_key = key_pair.decrypt(data)
+                self._init_session(conn)
             else:
                 self._tls.session_key = ''
 
@@ -1272,34 +1114,89 @@ class OpenMDAO_Proxy(BaseProxy):
             else:
                 new_args.append(arg)
 
-        conn.send(_encrypt((self._id, methodname, new_args, kwds,
-                            credentials), session_key))
+        try:
+            conn.send(encrypt((self._id, methodname, new_args, kwds,
+                               get_credentials().encode()), session_key))
+        except IOError as exc:
+            msg = "Can't send to server at %r: %r" % (self._token.address, exc)
+            logging.error(msg)
+            raise RuntimeError(msg)
 
-        kind, result = _decrypt(conn.recv(), session_key)
+        kind, result = decrypt(conn.recv(), session_key)
 
         if kind == '#RETURN':
             return result
+
         elif kind == '#PROXY':
-            exposed, token = result
+            exposed, token, pubkey = result
+
             # Proxy passthru only happens remotely.
             if self._manager is None:  #pragma no cover
-                self._manager = OpenMDAO_Manager()
+                self._manager = OpenMDAO_Manager(token.address, self._authkey,
+                                                 pubkey=pubkey)
             try:
                 proxytype = self._manager._registry[token.typeid][-1]
             except KeyError:
                 self._manager.register(token.typeid, None, _auto_proxy)
                 proxytype = self._manager._registry[token.typeid][-1]
-            proxy = proxytype(
-                token, self._serializer, manager=self._manager,
-                authkey=self._authkey, exposed=exposed
-                )
+
+            if token.address != self._manager.address:
+                # Proxy to different server than request was sent to.
+                manager = OpenMDAO_Manager(token.address, self._authkey,
+                                           pubkey=pubkey)
+            else:
+                manager = self._manager
+
+            proxy = proxytype(token, self._serializer, manager=manager,
+                              authkey=self._authkey, exposed=exposed,
+                              pubkey=pubkey)
+
             conn = self._Client(token.address, authkey=self._authkey)
             dispatch(conn, None, 'decref', (token.id,))
             return proxy
+
         raise convert_to_error(kind, result)
+
+    def _init_session(self, conn):
+        """ Send client public key, receive session key. """
+        key_pair = get_key_pair(Credentials.user_host)
+        public_key = key_pair.publickey()
+        text = encode_public_key(public_key)
+
+        server_key = self._pubkey
+        # Just being defensive, this should never happen.
+        if not server_key:  #pragma no cover
+            msg = 'No server PublicKey for %s(%s, %s)' \
+                  % (methodname, args, kwds)
+            logging.error(msg)
+            raise RuntimeError(msg)
+
+        chunk_size = server_key.size() / 8
+        chunks = []
+        while text:
+            chunks.append(server_key.encrypt(text[:chunk_size], ''))
+            text = text[chunk_size:]
+        client_version = 1
+        conn.send((client_version, server_key.n, server_key.e, chunks))
+
+        server_data = conn.recv()
+        server_version = server_data[0]
+        # Just being defensive, this should never happen.
+        if server_version != 1:  #pragma no cover
+            msg = 'Expecting server protocol version 1, got %r' % server_version
+            logging.error(msg)
+            if server_version == '#TRACEBACK':
+                try:
+                    logging.error(''.join(server_data[1]))
+                except Exception:
+                    pass
+            raise RuntimeError(msg)
+        
+        self._tls.session_key = key_pair.decrypt(server_data[1])
 
     def _incref(self):
         """
+        Tell server to increment its reference count.
         This version avoids a hang in _Client if the server no longer exists.
         """
         # Hard to cause this to happen.
@@ -1327,6 +1224,7 @@ class OpenMDAO_Proxy(BaseProxy):
     @staticmethod
     def _decref(token, authkey, state, tls, idset, _Client):
         """
+        Tell server to decrement its reference count.
         This version avoids a hang in _Client if the server no longer exists.
         """
         idset.discard(token.id)
@@ -1402,13 +1300,34 @@ class OpenMDAO_Proxy(BaseProxy):
             # Can't pickle an AuthenticationString.
             kwds['authkey'] = 'PublicKey'
 
-        if getattr(self, '_isauto', False):
-            kwds['exposed'] = self._exposed_
-            return (RebuildProxy,
-                    (_auto_proxy, self._token, self._serializer, kwds))
-        else:
-            return (RebuildProxy,
-                    (type(self), self._token, self._serializer, kwds))
+        kwds['exposed'] = self._exposed_
+        return (RebuildProxy,
+                (_auto_proxy, self._token, self._serializer, kwds))
+
+
+def register(cls, manager, module=None):
+    """
+    Register class `cls` proxy info with `manager`. The class will be
+    registered under it's full path, with '.' replaced by '_'.
+    Not typically called by user code.
+
+    cls: class
+        Class to be registered.
+
+    manager: :class:`OpenMDAO_Manager`
+        Manager to register with.
+
+    module: string
+        Module name for registration. Necessary if `cls` might be defined
+        by module '__main__'.
+    """
+    if module is None:
+        module = cls.__module__
+    typeid = '%s.%s' % (module, cls.__name__)
+    typeid = typeid.replace('.', '_')
+    exposed = public_methods(cls)
+    proxytype = _make_proxy_type(typeid, exposed)
+    manager.register(typeid, callable=cls, exposed=exposed, proxytype=proxytype)
 
 
 def _make_proxy_type(name, exposed):
@@ -1495,20 +1414,6 @@ def _auto_proxy(token, serializer, manager=None, authkey=None,
     Return an auto-proxy for `token`.
     This version uses :func:`_make_proxy_type`.
     """
-    _Client = listener_client[serializer][1]
-
-    if authkey is None and manager is not None:
-        authkey = manager._authkey
-    if authkey is None:
-        authkey = current_process().authkey
-
-    if exposed is None:
-        conn = _Client(token.address, authkey=authkey)
-        try:
-            exposed = dispatch(conn, None, 'get_methods', (token,))
-        finally:
-            conn.close()
-
     ProxyType = _make_proxy_type('OpenMDAO_AutoProxy[%s]' % token.typeid,
                                  exposed)
     proxy = ProxyType(token, serializer, manager=manager, authkey=authkey,

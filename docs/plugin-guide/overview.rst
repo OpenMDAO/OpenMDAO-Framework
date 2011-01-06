@@ -16,7 +16,7 @@ haven't, learn how to do that :ref:`here <Installing-OpenMDAO>`.
 
 .. note:: If you intend to develop a plugin on Windows that requires compilation, you
           will need to have the necessary compiler(s) installed on your system. See the
-          *Developer Guide* installation instructions for :ref:`Windows <Windows>` for help on installing
+          *Developer Guide* installation instructions for :ref:`Windows <Windows>` for help installing
           Visual C++ 2008 and mingw32.
 
 

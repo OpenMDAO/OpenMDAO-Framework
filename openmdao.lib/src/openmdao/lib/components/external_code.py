@@ -12,6 +12,7 @@ from openmdao.lib.datatypes.api import Bool, Dict, Str, Float, Int
 
 from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped
+from openmdao.main.rbac import AccessController, RoleError, rbac, remote_access
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
@@ -24,7 +25,7 @@ class ExternalCode(Component):
     STDOUT = subprocess.STDOUT
 
     # pylint: disable-msg=E1101
-    command = Str('', iotype='in',
+    command = Str('', 
                   desc='The command to be executed.')
     env_vars = Dict({}, iotype='in',
                     desc='Environment variables required by the command.')
@@ -51,6 +52,19 @@ class ExternalCode(Component):
 
         self._process = None
         self._server = None
+
+    # This gets used by remote server.
+    def get_access_controller(self):  #pragma no cover
+        """ Return :class:`AccessController` for this object. """
+        return _AccessController()
+
+    @rbac(('owner', 'user'))
+    def set(self, path, value, index=None, src=None, force=False):
+        """ Don't allow setting of 'command' by remote client. """
+        if path in ('command', 'get_access_controller') and remote_access():
+            self.raise_exception('%r may not be set() remotely' % path,
+                                 RuntimeError)
+        return super(ExternalCode, self).set(path, value, index, src, force)
 
     def execute(self):
         """
@@ -248,7 +262,7 @@ class ExternalCode(Component):
             if not os.path.exists(inputs_dir):
                 self.raise_exception("inputs_dir '%s' does not exist" \
                                      % inputs_dir, RuntimeError)
-            self.copy_files(inputs_dir, patterns)
+            self._copy(inputs_dir, patterns)
 
     def copy_results(self, results_dir, patterns):
         """
@@ -269,9 +283,9 @@ class ExternalCode(Component):
             if not os.path.exists(results_dir):
                 self.raise_exception("results_dir '%s' does not exist" \
                                      % results_dir, RuntimeError)
-            self.copy_files(results_dir, patterns)
+            self._copy(results_dir, patterns)
 
-    def copy_files(self, directory, patterns):
+    def _copy(self, directory, patterns):
         """
         Copy files from `directory` that match `patterns`
         to the current directory and ensure they are writable.
@@ -295,4 +309,13 @@ class ExternalCode(Component):
                 mode = os.stat(dst_path).st_mode
                 mode |= stat.S_IWUSR
                 os.chmod(dst_path, mode)
+
+# This gets used by remote server.
+class _AccessController(AccessController):  #pragma no cover
+    """ Don't allow setting of 'command' by remote client. """
+
+    def check_access(self, role, methodname, obj, attr):
+        if attr in ('command', 'get_access_controller') and \
+           methodname == '__setattr__':
+            raise RoleError('No %s access to %r' % (methodname, attr))
 
