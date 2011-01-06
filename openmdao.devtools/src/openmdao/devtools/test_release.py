@@ -70,7 +70,11 @@ def _testrelease(site_url, version, host):
                 # and run tests
                 os.chdir(os.path.join('testrelease', devbindir))
                 print("Please wait while the environment is activated and the tests are run")
-                subprocess.check_call('activate && echo environment activated, please wait while tests run && openmdao_test -x')
+                env = os.environ.copy()
+                if 'VIRTUAL_ENV' in env: del env['VIRTUAL_ENV']
+                if '_OLD_VIRTUAL_PATH' in env: del env['_OLD_VIRTUAL_PATH']
+                if '_OLD_VIRTUAL_PROMPT' in env: del env['_OLD_VIRTUAL_PROMPT']
+                subprocess.check_call('activate && echo environment activated, please wait while tests run && openmdao_test -x', env=env)
                 print('Tests completed on %s' % host)
             finally:
                 os.chdir(startdir)
