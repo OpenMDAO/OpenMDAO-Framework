@@ -60,7 +60,7 @@ def _testrelease(site_url, version, host):
             removeit="rmdir /s /q"
             if os.path.isdir('releasetest'):
                 shutil.rmtree('releasetest')
-            os.mkdir(['releasetest'])
+            os.mkdir('releasetest')
             shutil.copy('go-openmdao.py', os.path.join('releasetest', 'go-openmdao.py'))
             startdir = os.getcwd()
             os.chdir('releasetest')
