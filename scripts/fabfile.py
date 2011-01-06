@@ -129,9 +129,9 @@ def release(version=None):
 def localrelease(version=None):
     # first, make sure we're in sync with the webfaction server
     print 'syncing downloads dir...'
-    local('rsync -arvzt --delete openmdao@web103.webfaction.com:downloads /OpenMDAO/release_test')
+    run('rsync -arvzt --delete openmdao@web103.webfaction.com:downloads /OpenMDAO/release_test')
     print 'syncing dists dir...'
-    local('rsync -arvzt --delete openmdao@web103.webfaction.com:dists /OpenMDAO/release_test')
+    run('rsync -arvzt --delete openmdao@web103.webfaction.com:dists /OpenMDAO/release_test')
     print 'creating release...'
     _release(version, is_local=True, home='/OpenMDAO/release_test', url=TEST_URL)
   
