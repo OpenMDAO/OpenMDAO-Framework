@@ -53,6 +53,8 @@ def _testrelease(site_url, version, host):
     with settings(host_string=host):
         winplatforms=["storm.grc.nasa.gov"]  #Is remote host storm?
         if host in winplatforms:
+            if sys.platform != 'win32':
+                raise RuntimeError('Windows release testing must be done locally. Aborting.')
             # If running windows tests, do it locally on storm 
             # (because it can't ssh to itself)
             devbindir='Scripts'
