@@ -210,9 +210,9 @@ def main():
         
     The sphinx docs will also be built.
           
-    In order to run this, you must be in a bzr repository that has not changed since
-    the last commit, and in the process of running, a number of releaseinfo.py files
-    and the sphinx conf.py file will be updated with new version information and will 
+    In order to run this, you must be in a bzr repository that has not changed
+    since the last commit, and in the process of running, a number of
+    releaseinfo.py files will be updated with new version information and will
     be commited with the comment 'updated revision info and conf.py files'.
         
     """

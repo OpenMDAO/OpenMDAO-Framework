@@ -116,7 +116,7 @@ def main(argv=None):
     if options.hosts:
         hosts = options.hosts
     else:
-        hosts = ['torpedo.grc.nasa.gov', 'storm.grc.nasa.gov', 'viper.grc.nasa.gov']
+        hosts = ['storm.grc.nasa.gov', 'torpedo.grc.nasa.gov', 'viper.grc.nasa.gov']
         
     # ensure that all network connections are closed
     # TODO: once we move to Fabric 0.9.4, just use disconnect_all() function
