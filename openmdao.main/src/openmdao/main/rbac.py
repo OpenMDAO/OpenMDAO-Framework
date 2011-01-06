@@ -229,7 +229,6 @@ class rbac(object):  #pragma no cover
 
     proxy_types: list[class]
         Types of return values that must be proxied.
-
     """
 
     def __init__(self, roles, proxy_role='', proxy_types=None):
@@ -240,6 +239,31 @@ class rbac(object):  #pragma no cover
     def __call__(self, func):
         func._rbac = (self.roles, self.proxy_role, self.proxy_types, {})
         return func
+
+
+def rbac_decorate(method, roles, proxy_role='', proxy_types=None):
+    """
+    Post-definition decorator for specifying RBAC roles for a method.
+    Not typically used, but needed if `proxy_types` must include the
+    class currently being defined, since the normal decorator won't see
+    the class yet.
+
+    method: instancemethod
+        Method to be decorated.
+
+    roles: string or sequence[string]
+        Role name patterns which are allowed access.
+
+    proxy_role: string
+        Role to use during execution of method.
+        A null string implies that the current role is used.
+
+    proxy_types: list[class]
+        Types of return values that must be proxied.
+    """
+    roles = (roles,) if isinstance(roles, basestring) else tuple(roles)
+    proxy_types = () if proxy_types is None else tuple(proxy_types)
+    method.__func__._rbac = (roles, proxy_role, proxy_types, {})
 
 
 def rbac_methods(obj):

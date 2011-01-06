@@ -252,7 +252,10 @@ class OpenMDAO_Server(Server):
                 pass
         finally:
             self.stop = 999
-            self.listener.close()
+            try:
+                self.listener.close()
+            except Exception as exc:
+                self._logger.error('Exception closing listener: %r', exc)
 
     def handle_request(self, conn):
         """
@@ -275,7 +278,7 @@ class OpenMDAO_Server(Server):
             return
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
         except Exception as exc:  #pragma no cover
-            msg = ('#TRACEBACK', traceback.format_exc())
+            msg = ('#TRACEBACK', 'Exception delivering challenge: %r' % exc)
             try:
                 conn.send(msg)
             except Exception as exc:
@@ -293,14 +296,18 @@ class OpenMDAO_Server(Server):
             assert funcname in self.public, '%r unrecognized' % funcname
             func = getattr(self, funcname)
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
-        except Exception:  #pragma no cover
-            msg = ('#TRACEBACK', traceback.format_exc())
+        except Exception as exc:  #pragma no cover
+            msg = ('#TRACEBACK', 'Exception answering challenge: %r' % exc)
         else:
             try:
                 result = func(conn, *args, **kwds)
             # Hard to cause this to happen. It rarely happens, and then at shutdown.
-            except Exception:  #pragma no cover
-                msg = ('#TRACEBACK', traceback.format_exc())
+            except Exception as exc:  #pragma no cover
+                try:  # Sometimes at shutdown 'traceback' is None!?
+                    msg = ('#TRACEBACK', traceback.format_exc())
+                except Exception:
+                    msg = ('#TRACEBACK',
+                           'Exception from %r: %r' % (funcname, exc))
             else:
                 msg = ('#RETURN', result)
 
@@ -309,7 +316,7 @@ class OpenMDAO_Server(Server):
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
         except Exception as exc:  #pragma no cover
             try:
-                conn.send(('#TRACEBACK', traceback.format_exc()))
+                conn.send(('#TRACEBACK', 'Exception sending reply: %r' % exc))
             except Exception:
                 pass
             util.info('Failure to send message: %r', msg)
@@ -1394,6 +1401,13 @@ def %s(self, *args, **kwds):
         return object.%s(self, *args, **kwds)
     return self._callmethod(%r, args, kwds)
 """ % (meth, meth, meth) in dic
+
+        elif meth == '__exit__':
+            # Can't pickle traceback argument.
+            exec """
+def __exit__(self, exc_type, exc_value, traceback):
+    return self._callmethod('__exit__', (exc_type, exc_value, None))
+""" in dic
 
         else:
             # Normal method always calls remote.
