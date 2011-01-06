@@ -1,10 +1,10 @@
 """Expected Improvement calculation for one or more objectives""" 
-
+from time import time
 from numpy import exp, abs, pi, array,isnan
 from scipy.special import erf
 
 from openmdao.lib.datatypes.api import Instance, Str, ListStr, Enum, \
-     Float, Array
+     Float, Array,Event
 
 from openmdao.main.component import Component
 
@@ -28,6 +28,39 @@ class MultiObjExpectedImprovement(Component):
     
     EI = Float(0.0, iotype="out", desc="The expected improvement of the next_case")
 
+    reset_y_star = Event()
+    
+    def __init__(self, *args, **kwargs):
+        super(MultiObjExpectedImprovement, self).__init__(*args, **kwargs)
+        self.y_star = None
+        
+    def _reset_y_star_fired(self):
+        self.y_star = None
+    
+    def get_y_star(self):
+        criteria_count = len(self.criteria)
+        
+        flat_crit= self.criteria.ravel()
+
+        #y_star is a 2D list of pareto points
+        y_star = []
+
+        for case in self.best_cases:
+            c = []
+            for crit in self.criteria:
+                c.extend([o[2] for o in case.outputs if crit in o[0]])
+                #c = [o[2] for o in case.outputs if o[0] in flat_crit]
+                
+            if len(c) == criteria_count :
+                y_star.append(c)
+        if not y_star: #empty y_star set means no cases met the criteria!
+            self.raise_exception('no cases in the provided case_set had output '
+                 'matching the provided criteria, %s'%self.criteria, ValueError)
+        
+        #sort list on first objective
+        y_star = array(y_star)[array([i[0] for i in y_star]).argsort()]
+        return y_star
+        
     def _multiPI(self,mu,sigma):
         """Calculates the multi-objective probability of improvement
         for a new point with two responses. Takes as input a 
@@ -98,36 +131,15 @@ class MultiObjExpectedImprovement(Component):
         """ Calculates the expected improvement of
         the model at a given point.
         """
-        
-        criteria_count = len(self.criteria)
-        
-        flat_crit= self.criteria.ravel()
-       #for case in self.best_cases:
-       #     print [out[0] for out in case.outputs]
-        #y_star is a 2D list of pareto points
-        y_star = []
-        #c = []
-        
-        for case in self.best_cases:
-            c = []
-            for crit in self.criteria:
-                c.extend([o[2] for o in case.outputs if crit in o[0]])
-                #c = [o[2] for o in case.outputs if o[0] in flat_crit]
-                
-            if len(c) == criteria_count :
-                y_star.append(c)
-        if not y_star: #empty y_star set means no cases met the criteria!
-            self.raise_exception('no cases in the provided case_set had output '
-                 'matching the provided criteria, %s'%self.criteria, ValueError)
+        #print 'exec'
         mu = [objective.mu for objective in self.predicted_values]
         sig = [objective.sigma for objective in self.predicted_values]
-
-        #self.y_star = y_star
         
-        #sort list on first objective
-        self.y_star = array(y_star)[array([i[0] for i in y_star]).argsort()]
-        
+        if self.y_star == None:
+            self.y_star = self.get_y_star()
+            
         self.EI = self._multiEI(mu,sig)
+
         #print "ei: ", self.EI
         
         

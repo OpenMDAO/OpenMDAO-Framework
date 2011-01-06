@@ -239,17 +239,18 @@ class Analysis(Assembly):
         self.DOE_trainer2.case_outputs = ['c2.f1','c2.f2']
         self.DOE_trainer2.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer2.db'))
         
-        self.add("GAEI_opt",Genetic())
-        self.GAEI_opt.opt_type = "maximize"
-        self.GAEI_opt.population_size = 100
-        self.GAEI_opt.generations = 20
-        self.GAEI_opt.selection_method = "tournament"
-        self.GAEI_opt.elitism = True
-        self.GAEI_opt.add_parameter("c1.x")
-        
-        self.GAEI_opt.add_objective("MOEI.EI*probInt.PInt")
-        #self.GAEI_opt.add_objective("probInt.PInt")
-        self.GAEI_opt.force_execute = True
+        self.add("opt",Genetic())
+        self.opt.opt_type = "maximize"
+        self.opt.population_size = 100
+        self.opt.generations = 20
+        self.opt.selection_method = "tournament"
+        self.opt.elitism = True
+        self.opt.add_parameter("c1.x")
+        self.opt.add_objective("MOEI.EI*probInt.PInt")
+        self.opt.add_event('MOEI.reset_y_star')
+        self.opt.add_event('probInt.reset_y_stars')
+        #self.opt.add_objective("probInt.PInt")
+        self.opt.force_execute = True
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("c1.train_next")
@@ -258,7 +259,6 @@ class Analysis(Assembly):
         
         self.add("iter",Iterator())
         self.iter.max_iterations = 12
-
         
         self.add("muxer",Mux(2))
         
@@ -269,9 +269,9 @@ class Analysis(Assembly):
         self.DOE_trainer2.workflow.add('c2')
         
         self.iter.workflow = SequentialWorkflow()
-        self.iter.workflow.add(['gfilter', 'filter_c1', 'GAEI_opt', 'retrain'])
+        self.iter.workflow.add(['gfilter', 'filter_c1', 'opt', 'retrain'])
         
-        self.GAEI_opt.workflow.add(['c1', 'muxer', 'MOEI', 'probInt'])
+        self.opt.workflow.add(['c1', 'muxer', 'MOEI', 'probInt'])
         self.retrain.workflow.add('c1')
         
         #Data Connections

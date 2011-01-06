@@ -8,3 +8,4 @@ from openmdao.lib.components.pareto_filter import ParetoFilter
 from openmdao.lib.components.expected_improvement import ExpectedImprovement
 from openmdao.lib.components.expected_improvement_multiobj import MultiObjExpectedImprovement
 from openmdao.lib.components.mux import Mux, DeMux
+from openmdao.lib.components.pareto_min_dist import Pareto_Min_Dist

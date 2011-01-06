@@ -15,11 +15,12 @@ from openmdao.lib.datatypes.api import Python, Enum, Float, Int, Bool, Instance
 from openmdao.main.api import Driver 
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
+from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
-
+import time
 array_test = re.compile("(\[[0-9]+\])+$")
 
-@add_delegate(HasParameters, HasObjective)
+@add_delegate(HasParameters, HasObjective,HasEvents)
 class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO framework, based on the Pyevolve
     Genetic algorithm module. 
@@ -118,11 +119,14 @@ class Genetic(Driver):
             else: 
                 self.raise_exception("%s is not a float, int, or enumerated \
                 datatype. Only these 3 types are allowed"%target,ValueError)
-                
+        
         self.count = count
         return alleles
                 
     def execute(self):
+        
+        self.set_events()
+
         """Perform the optimization"""
         
         alleles = self._make_alleles()
@@ -157,7 +161,7 @@ class Genetic(Driver):
         
         #GO
         ga.evolve(freq_stats=0)
-        
+
         self.best_individual = ga.bestIndividual()
         
         #run it once to get the model into the optimal state

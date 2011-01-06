@@ -107,6 +107,7 @@ class Analysis(Assembly):
         self.MOEI_opt.add_parameter("spiral_meta_model.x")
         self.MOEI_opt.add_parameter("spiral_meta_model.y")
         self.MOEI_opt.add_objective("MOEI.EI")
+        self.MOEI_opt.add_event('MOEI.reset_y_star')
         self.MOEI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
@@ -167,14 +168,15 @@ if __name__ == "__main__": #pragma: no cover
     from matplotlib.pylab import get_cmap
     from mpl_toolkits.mplot3d import Axes3D
     from numpy import meshgrid,array, pi,arange,sin,cos,seterr
-    
+    import time
     seterr(all='ignore')
     #create the analysis
     analysis = Analysis()
     set_as_top(analysis)
     #run the analysis
+    a = time.time()
     analysis.run()
-    
+    print time.time()-a
     
     #plot the samples points, along with the data from the function
     def f1(x,y):
@@ -272,6 +274,6 @@ if __name__ == "__main__": #pragma: no cover
     plt.scatter(f1_train,f2_train,s=30,c='#572E07',zorder=10)
     plt.scatter(f1_iter,f2_iter,s=30,c=colors,zorder=11,cmap=color_map)
     
-    plt.show()
+    #plt.show()
     analysis.cleanup()
     
