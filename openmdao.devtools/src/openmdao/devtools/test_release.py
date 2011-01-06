@@ -74,7 +74,7 @@ def _testrelease(site_url, version, host):
                 if 'VIRTUAL_ENV' in env: del env['VIRTUAL_ENV']
                 if '_OLD_VIRTUAL_PATH' in env: del env['_OLD_VIRTUAL_PATH']
                 if '_OLD_VIRTUAL_PROMPT' in env: del env['_OLD_VIRTUAL_PROMPT']
-                subprocess.check_call('activate && echo environment activated, please wait while tests run && openmdao_test -x', env=env)
+                subprocess.check_call('activate.bat && echo environment activated, please wait while tests run && openmdao_test -x', env=env)
                 print('Tests completed on %s' % host)
             finally:
                 os.chdir(startdir)
