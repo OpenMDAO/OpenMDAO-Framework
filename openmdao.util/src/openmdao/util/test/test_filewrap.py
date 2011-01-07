@@ -44,6 +44,7 @@ class TestCase(unittest.TestCase):
         
         gen.mark_anchor('Anchor')
         gen.transfer_var('CC', 2, 0)
+        gen.transfer_var(3.0, 1, 3)
         gen.mark_anchor('Anchor', 2)
         gen.transfer_var('NaN', 1, 4)
         gen.reset_anchor()
@@ -62,7 +63,7 @@ class TestCase(unittest.TestCase):
         
         answer = "\n" + \
                    "Anchor\n" + \
-                   " A 1, 2 34, Test 1.3e-37\n" + \
+                   " A 1, 3.0 34, Test 1.3e-37\n" + \
                    " B 55 Stuff\n" + \
                    "Anchor\n" + \
                    " C 77 False NaN 8.7\n"
@@ -109,7 +110,7 @@ class TestCase(unittest.TestCase):
         gen.set_generated_file(self.filename)
         
         gen.mark_anchor('Anchor')
-        gen.transfer_array(array([1, 2, 3, 4, 5]), 1, 3, 5, sep=' ')
+        gen.transfer_array(array([1, 2, 3, 4.75, 5.0]), 1, 3, 5, sep=' ')
         
         gen.generate()
         
@@ -118,7 +119,7 @@ class TestCase(unittest.TestCase):
         infile.close()
         
         answer = "Anchor\n" + \
-                   "0 0 1 2 3 4 5\n"
+                   "0 0 1.0 2.0 3.0 4.75 5.0\n"
     
         self.assertEqual(answer, result)
 

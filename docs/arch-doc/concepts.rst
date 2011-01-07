@@ -251,7 +251,7 @@ Each virtual environment can run a different Python version and can also
 have its own set of modules installed.
 
 Users often want to update a model as its constituent components evolve. To
-facilitate this process, we will add a replace() function to the
+facilitate this process, we will add a ``replace()`` function to the
 Assembly interface so that a new Component can be configured using an
 existing older Component. This will allow the user to drag a new version of a
 Component onto an older version in a model, replacing the older version with
@@ -271,17 +271,16 @@ the same process at the same time.
 User Interfaces
 ===============
 
-There are a number of ways in which a user can interact with the framework.
-There will be a command line interface allowing the user to load a model
-configuration and execute a set of input cases. There will also be a graphical
-interface, although it is not clear at this time whether it will be a
-traditional GUI running on the desktop implemented in wxPython or PyQt, or a web
-based interface. Initial plans were to implement both kinds of graphical
-interface, but given the size of the development team and the amount of time
-allowed for development, this is simply not possible. In addition to the command
-line and graphical interface, there will also be a programmatic interface that
-allows a user to write a python script that can interact with objects in the
-framework.
+A user can interact with the framework in a number of ways. There will be a
+command line interface allowing the user to load a model configuration and
+execute a set of input cases. There will also be a graphical interface, although
+it is not clear at this time whether it will be a traditional GUI running on the
+desktop implemented in wxPython or PyQt, or a web-based interface. Initial plans
+were to implement both kinds of graphical interface, but given the size of the
+development team and the amount of time allowed for development, this is simply
+not possible. In addition to the command line and graphical interface, there
+will also be a programmatic interface that allows a user to write a Python
+script that can interact with objects in the framework.
 
 Neither approach to graphical interface development is ideal. Early prototyping
 using the wxPython approach has revealed some platform differences between the
@@ -289,13 +288,13 @@ Windows and linux versions that were not anticipated. Also, packaging and
 distribution is difficult due to dependence on underlying libraries like, for
 example, *GTK* on linux.  The current version of the Qt library has a license
 that is not compatible with OpenMDAO, although the next version will have an
-LGPL license, which is compatible. It is assumed that PyQt, the python wrapper
+LGPL license, which is compatible. It is assumed that PyQt, the Python wrapper
 for Qt will have a similar license to Qt, but this is not certain. 
 
-If a web-based interface is used, there are questions about the richness of the
-interface relative to a traditional GUI. There are a number of javascript
-libraries like jquery_ and dojo_ for example that are still relatively immature,
-but they offer the promise of a browser based application with interactivity
+If a web-based interface is used, questions arise about the richness of the
+interface relative to a traditional GUI. A number of javascript
+libraries, like jquery_ and dojo_, for example, are still relatively immature,
+but they offer the promise of a browser-based application with interactivity
 that approaches that of a desktop application. Projects like dojo are being
 actively developed, so they may reach the necessary level of maturity in the
 near future.  
@@ -311,13 +310,12 @@ Views
 =====
 
 
-There are a number of visual representations of the system that the user will
-be able to interact with through the GUI. These visual representations are
-called *views.* All views are based on the same underlying data model, so
-changes in one view will typically result in changes to other views. For
-example, if a tool is added to the dataflow view, it will also appear in the
-tree view. The rest of this section describes the different views that will be
-available to a user of the GUI.
+Users will be able to interact with a number of visual representations of
+the system through the GUI. These visual representations are called *views.* All
+views are based on the same underlying data model, so changes in one view will
+typically result in changes to other views. For example, if a tool is added to the
+dataflow view, it will also appear in the tree view. The rest of this section
+describes the different views that will be available to a user of the GUI.
 
 .. index:: N squared form
 .. index:: free form
@@ -393,7 +391,7 @@ ______________________________________
 
 The problem formulation_ view (shown in the next figure) allows a number of desired
 outputs to be specified and connected to a particular component. Based on that
-connection, additional variables which are the inputs to the connected component
+connection, additional variables that are the inputs to the connected component
 must then have their values filled either by outputs from other components or by
 constants.  When no more unfilled  variables exist, the process model is complete. 
 When an attempt is made to connect an output to an input, the connection will be
@@ -494,10 +492,10 @@ by an unapproved user and inadvertent misuse of the system by a legal user.
 Users will be identified by some mechanism (such as username, password), and
 simulations should not be accessed by any user not listed in the simulation's
 approved users. The system will not be addressing issues regarding intentional
-*spoofing* of legal user IDs or various other forms of attack on a user's
+spoofing of legal user IDs or various other forms of attack on a user's
 identity.
 
-There are expected to be situations where simulation methods and/or variables
+We expect situations where simulation methods and/or variables
 should not be accessed or modified. For example, a component has some internal
 configuration which should not be changed. The system will incorporate
 mechanisms to protect the component from unintentional changes by a legal user
@@ -526,7 +524,7 @@ the simulation server. The server has an access control list which contains
 the user IDs for all legal users. Initially, the access control list contains
 only the user who started the simulation. That user may then add other users
 or open the simulation to all (via the *guest* ID). Note that the access
-control list is just another python object, so any legal user can change it.
+control list is just another Python object, so any legal user can change it.
 
 To support fully open simulations without having to explicitly list all users,
 the system defines a special *guest* account. Any user may identify him or
@@ -599,7 +597,7 @@ access.
 Error Handling
 ==============
 
-Execution of an MDAO model is often a complex process, and when that process
+Execution of an MDAO model is often a complex process. When that process
 fails, it can be difficult to determine the source of the problem and to correct
 it unless information related to the error is readily available, relevant, and
 sufficiently detailed. The component and the framework are both responsible

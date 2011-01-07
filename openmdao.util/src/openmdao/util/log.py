@@ -105,7 +105,7 @@ def disable_console():
     logger.removeHandler(CONSOLE)
 
 
-if os.environ.get('OPENMDAO_ENABLE_CONSOLE'):
+if int(os.environ.get('OPENMDAO_ENABLE_CONSOLE', '0')):
     enable_console()
 
 
@@ -201,7 +201,7 @@ class NullLogger(object):
         """ Log a critical message. """
         pass
 
-    def log(self, msg, *args, **kwargs):
+    def log(self, level, msg, *args, **kwargs):
         """ Log a message at a specified level. """
         pass
 

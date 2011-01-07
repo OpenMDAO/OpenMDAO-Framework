@@ -16,8 +16,7 @@ import traceback
 from openmdao.main import mp_distributing
 from openmdao.main.mp_support import register
 from openmdao.main.objserverfactory import ObjServerFactory
-from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
-                               rbac
+from openmdao.main.rbac import get_credentials, set_credentials, rbac
 
 from openmdao.util.eggloader import check_requirements
 from openmdao.util.wrkpool import WorkerPool
@@ -28,23 +27,21 @@ class ResourceAllocationManager(object):
     The allocation manager maintains a list of :class:`ResourceAllocator`
     which are used to select the "best fit" for a particular resource request.
     The manager is initialized with a :class:`LocalAllocator` for the local
-    host, using `authkey` of 'PublicKey'. Additional allocators can be added
-    and the manager will look for the best fit across all the allocators.
+    host, using `authkey` of 'PublicKey', and allowing 'shell' access.
+    Additional allocators can be added and the manager will look for the best
+    fit across all the allocators.
     """
 
     _lock = threading.Lock()
     _RAM = None  # Singleton.
 
     def __init__(self):
-        credentials = get_credentials()
-        if credentials is None:
-            set_credentials(Credentials())
-
         self._logger = logging.getLogger('RAM')
         self._allocations = 0
         self._allocators = []
         self._allocators.append(LocalAllocator('LocalHost',
-                                               authkey='PublicKey'))
+                                               authkey='PublicKey',
+                                               allow_shell=True))
         self._deployed_servers = {}
 
     @staticmethod
@@ -262,7 +259,7 @@ class ResourceAllocationManager(object):
             allocator.release(server)
         # Just being defensive.
         except Exception as exc:  #pragma no cover
-            self._logger.error("Can't release %r: %s", server_info['name'], exc)
+            self._logger.error("Can't release %r: %r", server_info['name'], exc)
         server._close.cancel()
 
 
@@ -276,15 +273,19 @@ class ResourceAllocator(ObjServerFactory):
 
     authkey: string
         Authorization key for this allocator and any deployed servers.
+
+    allow_shell: bool
+        If True, :meth:`execute_command` and :meth:`load_model` are allowed
+        in created servers. Use with caution!
     """
 
-    def __init__(self, name, authkey=None):
+    def __init__(self, name, authkey=None, allow_shell=False):
         if authkey is None:
             authkey = multiprocessing.current_process().authkey
             if authkey is None:
                 authkey = 'PublicKey'
                 multiprocessing.current_process().authkey = authkey
-        super(ResourceAllocator, self).__init__(name, authkey)
+        super(ResourceAllocator, self).__init__(name, authkey, allow_shell)
         self.name = name
 
     # To be implemented by real allocator.
@@ -393,11 +394,15 @@ class LocalAllocator(ResourceAllocator):
 
     authkey: string
         Authorization key for this allocator and any deployed servers.
+
+    allow_shell: bool
+        If True, :meth:`execute_command` and :meth:`load_model` are allowed
+        in created servers. Use with caution!
     """
 
     def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0,
-                 authkey=None):
-        super(LocalAllocator, self).__init__(name, authkey)
+                 authkey=None, allow_shell=False):
+        super(LocalAllocator, self).__init__(name, authkey, allow_shell)
         self._name = name  # To allow looking like a proxy.
         self.pid = os.getpid()  # We may be a process on a remote host.
         if total_cpus > 0:
@@ -548,11 +553,14 @@ class LocalAllocator(ResourceAllocator):
         criteria: dict
             The dictionary returned by :meth:`time_estimate`.
         """
+        credentials = get_credentials()
+        allowed_users = {credentials.user: credentials.public_key}
         try:
-            return self.create(typname='', name=name)
+            return self.create(typname='', allowed_users=allowed_users,
+                               name=name)
         # Shouldn't happen...
         except Exception as exc:  #pragma no cover
-            self._logger.error('create failed: %s', exc)
+            self._logger.error('create failed: %r', exc)
             return None
 
 register(LocalAllocator, mp_distributing.Cluster)
@@ -577,11 +585,15 @@ class ClusterAllocator(object):  #pragma no cover
     authkey: string
         Authorization key to be passed-on to remote servers.
 
+    allow_shell: bool
+        If True, :meth:`execute_command` and :meth:`load_model` are allowed
+        in created servers. Use with caution!
+
     We assume that machines in the cluster are similar enough that ranking
     by load average is reasonable.
     """
 
-    def __init__(self, name, machines, authkey=None):
+    def __init__(self, name, machines, authkey=None, allow_shell=False):
         if authkey is None:
             authkey = multiprocessing.current_process().authkey
             if authkey is None:
@@ -604,9 +616,10 @@ class ClusterAllocator(object):  #pragma no cover
             host.register(LocalAllocator)
             hosts.append(host)
 
-        self.cluster = mp_distributing.Cluster(hosts, authkey=authkey)
+        self.cluster = mp_distributing.Cluster(hosts, authkey=authkey,
+                                               allow_shell=allow_shell)
         self.cluster.start()
-        self._logger.debug('server listening on %s', self.cluster.address)
+        self._logger.debug('server listening on %r', (self.cluster.address,))
 
         for host in self.cluster:
             manager = host.manager
@@ -622,7 +635,9 @@ class ClusterAllocator(object):  #pragma no cover
                 host_ip = name[dash+1:colon]
 
             if host_ip not in self._allocators:
-                allocator = manager.openmdao_main_resource_LocalAllocator(name)
+                allocator = \
+                    manager.openmdao_main_resource_LocalAllocator(name=name,
+                                                        allow_shell=allow_shell)
                 allocator._name = allocator.name
                 self._allocators[host_ip] = allocator
                 self._logger.debug('%s allocator %r pid %s', host.hostname,
@@ -892,7 +907,7 @@ class ClusterAllocator(object):  #pragma no cover
         try:
             server = allocator.deploy(name, resource_desc, criteria)
         except Exception as exc:
-            self._logger.error('%r deploy() failed for %s: %s',
+            self._logger.error('%r deploy() failed for %s: %r',
                                allocator._name, name, exc)
             return None
 
@@ -921,7 +936,7 @@ class ClusterAllocator(object):  #pragma no cover
         try:
             allocator.release(server)
         except Exception as exc:
-            self._logger.error("Can't release %r: %s", server, exc)
+            self._logger.error("Can't release %r: %r", server, exc)
         server._close.cancel()
 
     def shutdown(self):

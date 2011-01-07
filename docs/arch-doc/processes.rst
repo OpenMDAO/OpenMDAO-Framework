@@ -17,11 +17,11 @@ Component Creation
 
 The :term:`FactoryManager` object manages the creation process for all
 :term:`Component` and :term:`Container` types in the framework. The creation process
-begins with a request to create a specific type, along with an optional dictionary of
-attributes describing desired resources, being passed to the FactoryManager.
+begins with a request to create a specific type as well as an optional dictionary of
+attributes describing desired resources that are passed to the FactoryManager.
 The resource description dictionary can include attributes that specify version,
 server location, memory and disk requirements, etc. The FactoryManager then
-passes the create call on to a list of Factory objects until one of them
+passes the ``create`` call on to a list of Factory objects until one of them
 successfully creates the object and returns a reference to it. That reference is
 returned to the original caller.
 
@@ -34,7 +34,7 @@ ______________________________
 
 
 Local components can simply be imported and instantiated if the package containing
-them is on the python search path.  The ``create`` function can be used to 
+them is on the Python search path.  The ``create`` function can be used to 
 instantiate them if there are openmdao plugin entry points registered for them.
 
 When a new object is requested and the module containing the requested type is
@@ -43,7 +43,7 @@ is passed to the PkgResourcesFactory, which attempts to locate and load an
 entry point that matches the desired type.
 
 If the PkgResourcesFactory cannot locate the desired instance factory and
-there is no version specified, then the create call is passed to the
+there is no version specified, then the ``create`` call is passed to the
 ImportFactory, which first uses the normal Python import mechanism to import
 the module and then executes the constructor for the requested type.
 
@@ -104,9 +104,8 @@ _______________________
 Components communicate by linking output Variables of one component to input
 Variables of another. (See the figure `Linking Variables`_.) At the time of connection,
 the ``validate()`` function of the input :term:`Variable` object will be called to ensure
-that the types of the Variables being connected are compatible. It will also
-be possible at this time to create an adaptor, if available, between
-incompatible Variables.  
+that the types of Variables being connected are compatible. At this time it will also
+be possible to create an adaptor -- if available -- between incompatible Variables.  
 
 .. _`Linking Variables`:
 
@@ -137,7 +136,7 @@ By default, cPickle and libyaml use Python's built-in import mechanism to
 create the memory resident versions of their saved objects. This does not work
 well in this case for a number of reasons. First of all, there may be multiple
 versions of a given component available on a particular host, but the wrong
-version may be present in Python's sys.path, so a simple import would give the
+version may be present in Python's ``sys.path``, so a simple import would give the
 user the wrong version. Secondly, the desired component module may not be
 available at all on the current host, and it may have to be loaded into a remote
 host and communicated with using a proxy. Finally, an attempt could be made to
@@ -198,10 +197,10 @@ remote serialized state so that it can be located later during a load operation.
 Execution
 =========
 
-Each Component in the system has a ``run()`` function which handles updating of
-necessary inputs, executing the Component, and updating outputs. An
+Each Component in the system has a ``run()`` function which updates 
+necessary inputs, executes the Component, and updates outputs. An
 :term:`Assembly` is a Component that contains other Components along with at
-least one special Component called a Driver. When an Assembly runs, it runs
+least one special Component called a *Driver*. When an Assembly runs, it runs
 its top level Driver, which is always named *driver*. A :term:`Driver` is a
 Component that performs some kind of iteration over a Workflow, iterating
 until some condition is met. A Driver that is an optimizer, for example, would

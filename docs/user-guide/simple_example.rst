@@ -119,12 +119,11 @@ than one component in a single file. The file ``paraboloid.py`` contains the
 code shown above. Later in this tutorial we will discuss how to execute a
 model containing this component.
 
-In Python, a class or function must be imported before it can be used. Most of
-what you need in OpenMDAO can be imported from: ``openmdao.main.api`` and
-`the openmdao.lib api modules: ``openmdao.lib.caseiterators.api``,
-``openmdao.lib.caserecorders.api``,``openmdao.lib.components.api``, 
-``openmdao.lib.datatypes.api``,``openmdao.lib.doegenerators.api``,
-``openmdao.lib.drivers.api``,``openmdao.lib.surrogatemodels.api``.
+In Python, a class or function must be imported before it can be used. Most of what you need in OpenMDAO
+can be imported from: ``openmdao.main.api`` and the ``openmdao.lib`` api modules: 
+``openmdao.lib.caseiterators.api``, ``openmdao.lib.caserecorders.api``,
+``openmdao.lib.components.api``,  ``openmdao.lib.datatypes.api``, ``openmdao.lib.doegenerators.api``,
+``openmdao.lib.drivers.api``, and ``openmdao.lib.surrogatemodels.api``.
 
 The first two lines in the ``paraboloid.py`` module import the definitions
 of the Component class and the Float class. You will use these in the definition
@@ -185,7 +184,7 @@ by adding these lines:
 
 .. index:: Traits
 
-In python, all objects have *attributes*, but making all of those attributes
+In Python, all objects have *attributes*, but making all of those attributes
 visible to the framework would be overwhelming, so OpenMDAO requires you to
 declare what we call *Variables* to indicate the specific inputs and outputs
 that you want your component to make available to other components. Variables
@@ -194,7 +193,7 @@ are usually declared in the class definition of a component.
 In this example, all of your inputs and outputs are floating point numbers, so
 you will use a type of variable called *Float*. The Float constructor contains
 a default value and some arguments. The default value has been set to zero for
-the x and y.
+the `x` and `y`.
 
 The argument *iotype* declares this variable as an input or an output. This
 argument is required. If it is omitted (or misspelled), then the variable
@@ -265,7 +264,7 @@ set a new value for each of the inputs, run the component, and look at the outpu
     >>> my_comp.f_xy
     -17.0
 
-If you have done everything correctly, you should also get -17.0 as the solution.    
+If you have done everything correctly, you should also get ``-17.0`` as the solution.    
 
 The Paraboloid component is now built and ready for inclusion in a larger model.
 
@@ -386,9 +385,9 @@ As with other class members,
 these are now accessible in the ``OptimizationUnconstrained`` assembly via ``self.paraboloid``
 and ``self.driver``.
 
-Next, the CONMINdriver needs to be told what to run. Every driver has a *Workflow*
+Next, the CONMINdriver needs to be told what to run. Every driver has a :term:`Workflow`
 that contains a list of the components that the driver tells to run. We can add the
-*Paraboloid* component to the driver's workflow by using its *add* function.
+*Paraboloid* component to the driver's workflow by using its ``add`` function.
 
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -422,11 +421,11 @@ individually using the ``add_parameter`` method:
             self.driver.add_parameter('paraboloid.x', -50, 50)
             self.driver.add_parameter('paraboloid.y', -50, 50)
 
-Here, both x and y from the *Paraboloid* component are chosen as the design
+Here, both `x` and `y` from the *Paraboloid* component are chosen as the design
 variables. The ``add_parameter`` method also allows you to add a range of
 validity for these variables, so that the unconstrained optimization can be
-performed on a bounded region. For this problem, you are constraining x and y
-to lie on [-50, 50].
+performed on a bounded region. For this problem, you are constraining `x` and `y`
+to lie on ``[-50, 50]``.
         
 The problem is now essentially ready to execute. CONMIN contains quite a few
 additional control parameters, though the default values for many of them are
@@ -465,7 +464,7 @@ either at the command line or in the Python shell. Using the conditional
     ``if __name__ == "__main__":``
     
 you can include some Python code at the bottom of ``optimization_unconstrained.py``. It will execute
-only when you call it at the command line or the shell, and not when another module imports it. So,
+only when you call it at the command line or the shell, and not when another module imports it. So
 the final lines in this file are:
 
 .. testsetup:: simple_model_Unconstrained_run

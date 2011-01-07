@@ -232,7 +232,7 @@ the variables *x* and *y*.
             self.y = 3.0*self.x
 
 Next, the ``add_trait`` function is used to add the input *x* and the output *y* after
-an instance of *Simple* has been created:
+an instance of ``Simple`` has been created:
 
 .. doctest:: creating_public_variables_2
 
@@ -313,44 +313,44 @@ Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
     
 **Summary of Variable Types**
 
-+------------------+----------------------------------------------------------+
-| Name             | Callable Signature                                       |
-+==================+==========================================================+
-| Array            | Array( [default_value = None, shape = None, value = None,|
-|                  | dtype = None, units = None, iotype = None, desc = None,  |
-|                  | units = None] )                                          |
-+------------------+----------------------------------------------------------+
-| Bool             | Bool( [value = None, desc = None, iotype = None] )       | 
-+------------------+----------------------------------------------------------+
-| Complex          | Complex( [value = None, desc = None,                     |
-|                  | iotype = None] )                                         |
-+------------------+----------------------------------------------------------+
-| Enum             | Enum( [default_value, values = (),                       | 
-|                  | desc = None, iotype = None, aliases = ()] )              |
-+------------------+----------------------------------------------------------+
-| File             | File( [default_value = None, iotype = None,              |
-|                  | desc = None, low = None, high = None, path = None,       |
-|                  | content_type = None, binary = False,                     |
-|                  | local_path = None] )                                     |
-+------------------+----------------------------------------------------------+
-| Float            | Float( [default_value = None, iotype = None,             |
-|                  | desc = None, low = None, high = None,                    |
-|                  | exclude_low = False, exclude_high = False,               |
-|                  | units = None] )                                          |
-+------------------+----------------------------------------------------------+
-| Instance         | Instance( [klass = None, desc = None, iotype = None,     |
-|                  | factory = None, args = None, kw = None,                  |
-|                  | allow_none = True, adapt = None, module = None,          |
-|                  | required = False] )                                      |
-+------------------+----------------------------------------------------------+
-| Int              | Int( [default_value = None, iotype = None,               |
-|                  | desc = None, low = None, high = None,                    |
-|                  | exclude_low = False, exclude_high = False] )             |
-+------------------+----------------------------------------------------------+
-| Range            | Deprecated. Use OpenMDAO's Int or Float.                 |
-+------------------+----------------------------------------------------------+
-| Str              | Str( [value = None, desc = None, iotype = None] )        |
-+------------------+----------------------------------------------------------+
++----------+--------------------------------------------------------------+
+| Nam      | Callable Signature                                           |
++==========+==============================================================+
+| Arr      | ``Array( [default_value = None, shape = None, value = None,  |
+|          | dtype = None, units = None, iotype = None, desc = None,      |
+|          | units = None] )``                                            |
++----------+--------------------------------------------------------------+
+| Bool     | ``Bool( [value = None, desc = None, iotype = None] )``       | 
++----------+--------------------------------------------------------------+
+| Complex  | ``Complex( [value = None, desc = None,                       |
+|          | iotype = None] )``                                           |
++----------+--------------------------------------------------------------+
+| Enum     | ``Enum( [default_value, values = (),                         | 
+|          | desc = None, iotype = None, aliases = ()] )``                |
++----------+--------------------------------------------------------------+
+| File     | ``File( [default_value = None, iotype = None,                |
+|          | desc = None, low = None, high = None, path = None,           |
+|          | content_type = None, binary = False,                         |
+|          | local_path = None] )``                                       |
++----------+--------------------------------------------------------------+
+| Float    | ``Float( [default_value = None, iotype = None,               |
+|          | desc = None, low = None, high = None,                        |
+|          | exclude_low = False, exclude_high = False,                   |
+|          | units = None] )``                                            |
++----------+--------------------------------------------------------------+
+| Instance | ``Instance( [klass = None, desc = None, iotype = None,       |
+|          | factory = None, args = None, kw = None,                      |
+|          | allow_none = True, adapt = None, module = None,              |
+|          | required = False] )``                                        |
++----------+--------------------------------------------------------------+
+| Int      | ``Int( [default_value = None, iotype = None,                 |
+|          | desc = None, low = None, high = None,                        |
+|          | exclude_low = False, exclude_high = False] )``               |
++----------+--------------------------------------------------------------+
+| Range    | Deprecated. Use OpenMDAO's Int or Float.                     |
++----------+--------------------------------------------------------------+
+| Str      | ``Str( [value = None, desc = None, iotype = None] )``        |
++----------+--------------------------------------------------------------+
 
 A more detailed list of Enthought's `Traits`__ is given in their documentation.
 Traits are also available for use as variables in the framework, though
@@ -371,13 +371,13 @@ attribute are ``'in'`` and ``'out'``.
 
 **Summary of iotypes**
 
-============  =====================
-**iotype**    **Description**
-============  =====================
-iotype='in'   Component input
-------------  ---------------------
-iotype='out'  Component output
-============  =====================
+================  =====================
+**iotype**        **Description**
+================  =====================
+``iotype='in'``   Component input
+----------------  ---------------------
+``iotype='out'``  Component output
+================  =====================
 
 The *desc* attribute is a concise description of the variable -- one or
 two sentences should be fine. While nothing in the framework requires this
@@ -624,15 +624,16 @@ mark a file as binary.
 Instance Traits
 +++++++++++++++
 
-An *Instance* is a trait that requires any value assigned to it to be either an instance of a specific class
-or an implementation of a specific Interface. The class or Interface to be matched is the first argument to
-the constructor. Failure to match the specified class or Interface will result in an exception being raised.
-Instance traits are typically used to implement Sockets, which are placeholders for plugins within a
-component, but they may also be used to implement Variables by setting their *iotype* metadata attribute to
-``'in'`` or ``'out'``.  In this case, it is important to  also set the *copy* metadata attribute so the
-framework knows how to copy the data to connected components.  Allowable values for *copy* are ``'deep'`` (the
-default), ``'shallow'``, and None.  A copy value of None indicates that the data will be passed by reference
-and no copy will be made.
+An *Instance* is a trait that requires any value assigned to it to be either an instance of a
+specific class or an implementation of a specific Interface. The class or Interface to be matched is
+the first argument to the constructor. Failure to match the specified class or Interface will result
+in an exception being raised. Instance traits are typically used to implement Sockets, which are
+placeholders for plugins within a component, but they may also be used to implement Variables by
+setting their *iotype* metadata attribute to ``'in'`` or ``'out'``.  In this case, it is important
+to  also set the *copy* metadata attribute so the framework knows how to copy the data to connected
+components.  Allowable values for *copy* are ``'deep'`` (the default), ``'shallow'``, and ``None``. 
+A copy value of ``None`` indicates that the data will be passed by reference and no copy will be
+made.
 
 
 .. testcode:: instance_example
@@ -650,12 +651,12 @@ and no copy will be made.
                             iotype='in')
  
 In this example, we have one Socket and one input that are Instances. The
-input called *caseiter* requires data objects that implement the ICaseIterator
+input called *caseiter* requires data objects that implement the ``ICaseIterator``
 interface. The Socket called *recorder* is required to implement the
-ICaseRecorder Interface.
+``ICaseRecorder`` interface.
 
 The attribute *required* is used to indicate whether the object that plugs into
-a Socket is required. If *required* is True, then an exception will be raised
+a Socket is required. If ``required`` is True, then an exception will be raised
 if the object is not present.
 
 
@@ -1013,7 +1014,7 @@ their respective workflow until certain conditions are met. OpenMDAO includes
 several drivers that are distributable (i.e., either open source or
 public domain.) This section describes the driver interface that is common
 to most drivers. A more complete discussion on how to use each of the
-drivers can be found in the section on :ref:`Drivers` in Appendix B: Standard Library Reference.
+drivers can be found in the section on :ref:`Drivers` in *Appendix B: Standard Library Reference.*
 
 .. _Driver-API: 
 

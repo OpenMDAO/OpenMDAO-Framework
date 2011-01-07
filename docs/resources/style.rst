@@ -168,8 +168,7 @@ The following sections can be included in a docstring, but in many cases, are op
 	  Optimization," AIAA JOURNAL, Vol. 44, 2006, pp. 879-891.
 
    If possible, avoid referencing sources of a temporary nature, such as web pages. Follow the
-   `citation format of the IEEE <http://www.ieee.org/pubs/transactions/auinfo03.pdf>`_, which states
-   that references are numbered, starting from one, in the order in which they are cited.
+   format above and number all references, starting from one, in the order you cite them.
 
 
 7. **Examples (optional)**

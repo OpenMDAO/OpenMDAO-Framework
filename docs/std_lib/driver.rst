@@ -114,25 +114,26 @@ The resulting solution should yield:
 
 .. index:: algorithm, Enum, SciPy
 
-There are five parameters that control the solution process in the BroydenSolver.
+Five parameters control the solution process in the BroydenSolver.
 
-**algorithm** -- SciPy's nonlinear package contained several algorithms for solving
-a set of nonlinear equations. Three of these methods were considered by their
-developers to be of good quality, so those three were implemented as part of 
-the BroydenSolver. The variable *algorithm* is an Enum where the following values
-represent the algorithms that follow.
+**algorithm** 
+  SciPy's nonlinear package contained several algorithms for solving
+  a set of nonlinear equations. Three of these methods were considered by their
+  developers to be of good quality, so those three were implemented as part of 
+  the BroydenSolver. The variable ``algorithm`` is an Enum where the following values
+  represent the algorithms that follow.
 
-- **broyden2**: Broyden's second method -- the same as broyden1 but
+- ``broyden2``: Broyden's second method -- the same as ``broyden1`` but
   updates the inverse Jacobian directly
-- **broyden3**: Broyden's third method -- the same as broyden2, but instead of
+- ``broyden3``: Broyden's third method -- the same as ``broyden2``, but instead of
   directly computing the inverse Jacobian, it remembers how to construct it using
   vectors. When computing ``inv(J)*F``, it uses those vectors to compute this
   product, thus avoiding the expensive NxN matrix multiplication. 
-- **excitingmixing**: The excitingmixing algorithm. ``J=-1/alpha``
+- ``excitingmixing``: The excitingmixing algorithm. ``J=-1/alpha``
 
-The default value for *algorithm* is ``"broyden2"``.
+  The default value for ``algorithm`` is ``"broyden2"``.
 
-.. testsetup:: Broyden3
+  .. testsetup:: Broyden3
 
     from openmdao.lib.drivers.api import BroydenSolver
     from openmdao.main.api import Assembly
@@ -140,39 +141,43 @@ The default value for *algorithm* is ``"broyden2"``.
     self = Assembly()
     self.add('driver', BroydenSolver())
 
-.. testcode:: Broyden3
+  .. testcode:: Broyden3
 
     self.driver.algorithm = "broyden2"
     
-**itmax** -- This parameter specifies the maximum number of iterations before
-BroydenSolver terminates. The default value is 10.
+**itmax** 
+  This parameter specifies the maximum number of iterations before
+  BroydenSolver terminates. The default value is 10.
     
-.. testcode:: Broyden3
+  .. testcode:: Broyden3
 
     self.driver.itmax = 10
     
-**alpha** -- This parameter specifies the mixing coefficient for the algorithm. The
-mixing coefficient is a linear scale factor applied to the update of the parameters, so
-increasing it can lead to quicker convergence but can also lead to instability. The 
-default value is 0.4. If you use the *excitingmixing* algorithm, you should try a lower
-value, such as 0.1.
+**alpha** 
+  This parameter specifies the mixing coefficient for the algorithm. The
+  mixing coefficient is a linear scale factor applied to the update of the parameters, so
+  increasing it can lead to quicker convergence but can also lead to instability. The 
+  default value is 0.4. If you use the ``excitingmixing`` algorithm, you should try a lower
+  value, such as 0.1.
     
-.. testcode:: Broyden3
+  .. testcode:: Broyden3
 
     self.driver.alpha = 0.1
     
-**tol** -- Convergence tolerance for the solution. Iteration ends when the constraint
-equation is satisfied within this tolerance. The default value is 0.00001.
+**tol** 
+  Convergence tolerance for the solution. Iteration ends when the constraint
+  equation is satisfied within this tolerance. The default value is 0.00001.
     
-.. testcode:: Broyden3
+  .. testcode:: Broyden3
 
     self.driver.tol = 0.00001
     
-**alphamax** -- This parameter is only used for the *excitingmixing* algorithm
-where the mixing coefficient is adaptively adjusted. It specifies the maximum
-allowable mixing coefficient for adaptation. The default value is 1.0.
+**alphamax** 
+  This parameter is only used for the ``excitingmixing`` algorithm
+  where the mixing coefficient is adaptively adjusted. It specifies the maximum
+  allowable mixing coefficient for adaptation. The default value is 1.0.
 
-.. testcode:: Broyden3
+  .. testcode:: Broyden3
 
     self.driver.alphamax = 1.0
     
@@ -238,8 +243,8 @@ The OpenMDAO CONMIN driver can be imported from ``openmdao.lib.drivers.api``.
 
     from openmdao.lib.drivers.api import CONMINdriver
 
-Typically, CONMIN will be used as a driver in the top level assembly, though it
-can be also used in a subassembly as part of a nested driver scheme. Using the
+Typically, CONMIN will be used as a driver in the top level assembly, though it also
+can be used in a subassembly as part of a nested driver scheme. Using the
 OpenMDAO script interface, a simple optimization problem can be set up as
 follows:
 
@@ -272,8 +277,8 @@ follows:
             # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
             self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
 
-This first section of code defines an assembly called *EngineOptimization.*
-This assembly contains a DrivingSim component and a CONMIN driver, both of
+This first section of code defines an assembly called EngineOptimization.
+This assembly contains a DrivingSim component and a CONMINdriver, both of
 which are created and added inside the ``__init__`` function with ``add``. The
 DrivingSim component is also added to the driver's workflow. The objective
 function, design variables, constraints, and any CONMIN parameters are also
@@ -289,7 +294,7 @@ The CONMIN driver allows control over both the number of iterations
 before termination as well as the convergence tolerance (both absolute and
 relative).
 
-The maximum number of iterations is specified by setting the *itmax* parameter.
+The maximum number of iterations is specified by setting the ``itmax`` parameter.
 The default value is 10.
 
 .. testsetup:: CONMIN_show
@@ -301,12 +306,12 @@ The default value is 10.
 
         self.driver.itmax = 30
 
-The convergence tolerance is controlled with *dabfun* and *delfun*. *Dabfun* is the
+The convergence tolerance is controlled with ``dabfun`` and ``delfun``. ``Dabfun`` is the
 absolute change in the objective function to indicate convergence (i.e., if the
-objective function changes by less than dabfun, then the problem is converged).
-Similarly, *delfun* is the relative change of the objective function with respect
-to the value at the previous step. Note that delfun has a hard-wired minimum of 
-``1e-10`` in the Fortran code, and dabfun has a minimum of 0.0001.
+objective function changes by less than ``dabfun``, then the problem is converged).
+Similarly, ``delfun`` is the relative change of the objective function with respect
+to the value at the previous step. Note that ``delfun`` has a hard-wired minimum of 
+``1e-10`` in the Fortran code, and ``dabfun`` has a minimum of 0.0001.
 
 .. testcode:: CONMIN_show
 
@@ -322,20 +327,20 @@ tests are performed in the following sequence:
 4. Reduce constraint thickness for slow convergence
 
 The number of successive iterations that the convergence tolerance should be checked before
-terminating the loop can also be specified with the *itrm* parameter, whose
+terminating the loop can also be specified with the ``itrm`` parameter, whose
 default value is 3.
 
 .. testcode:: CONMIN_show
 
         self.driver.itrm = 3
 
-CONMIN can calculate the gradient of both the objective functions and of the
-constraints using a finite difference approximation. This is the current
-default behavior of the OpenMDAO driver. The CONMIN code can also accept
-user-calculated gradients, but these are not yet supported in OpenMDAO. Two
-parameters control the step size used for numerically estimating the local
-gradient: *fdch* and *fdchm.* The *fdchm* parameter is the minimum absolute step size that the finite
-difference will use, and *fdch* is the step size relative to the design variable.
+CONMIN can calculate the gradient of both the objective functions and of the constraints
+using a finite difference approximation. This is the current default behavior of the
+OpenMDAO driver. The CONMIN code can also accept user-calculated gradients, but these
+are not yet supported in OpenMDAO. Two parameters control the step size used for
+numerically estimating the local gradient: ``fdch`` and ``fdchm``. The ``fdchm`` parameter is
+the minimum absolute step size that the finite difference will use, and ``fdch`` is the
+step size relative to the design variable.
 
 .. testcode:: CONMIN_show
 
@@ -343,7 +348,7 @@ difference will use, and *fdch* is the step size relative to the design variable
         self.driver.fdchm = .0001
 
 .. note::
-   The default values of *fdch* and *fdchm* are set to 0.01. This may be too
+   The default values of ``fdch`` and ``fdchm`` are set to 0.01. This may be too
    large for some problems and will manifest itself by converging to a value that
    is not the minimum. It is important to evaluate the scale of the objective
    function around the optimum so that these can be chosen well.
@@ -351,21 +356,21 @@ difference will use, and *fdch* is the step size relative to the design variable
 For certain problems, it is desirable to scale the inputs.
 Several scaling options are available, as summarized here:
 
-============  ========================================================
-Value         Result
-============  ========================================================
-nscal < 0     User-defined scaling with the vector in scal
-------------  --------------------------------------------------------
-nscal = 0     No scaling of the design variables
-------------  --------------------------------------------------------
-nscal > 0     Scale the design variables every NSCAL iterations.
-              Please see the CONMIN user's manual for additional notes
-              about using this option
-============  ========================================================
+==============  ========================================================
+Value           Result
+==============  ========================================================
+``nscal < 0``   User-defined scaling with the vector in ``scal``
+--------------  --------------------------------------------------------
+``nscal = 0``   No scaling of the design variables
+--------------  --------------------------------------------------------
+``nscal > 0``   Scale the design variables every ``NSCAL`` iteration. Please
+                see the `CONMIN User's Manual <file:../../../plugin-guide/CONMIN_user_manual.html>`_ 
+                for additional notes about using this option.
+==============  ========================================================
 
-The default setting is nscal=0 for no scaling of the design variables. The 
-*nscal* parameter can be set to a negative number to turn on user-defined
-scaling. When this is enabled, the array of values in the vector *scal* is
+The default setting is ``nscal=0`` for no scaling of the design variables. The 
+``nscal`` parameter can be set to a negative number to turn on user-defined
+scaling. When this is enabled, the array of values in the vector ``scal`` is
 used to scale the design variables.
 
 .. testcode:: CONMIN_show
@@ -386,12 +391,12 @@ variables as follows:
     self.driver.cons_is_linear = [1, 0]
 
 Here, the first constraint is linear, and the second constraint is nonlinear. If 
-*cons_is_linear* is not specified, then all the constraints are assumed to be
-nonlinear. Note that the original CONMIN parameter for this is *ISC.* If
+``cons_is_linear`` is not specified, then all the constraints are assumed to be
+nonlinear. Note that the original CONMIN parameter for this is ``ISC``. If
 your constraint includes some framework output in the equation, then it is 
 probably not a linear function of the design variables.
 
-Finally, the *iprint* parameter can be used to display diagnostic
+Finally, the ``iprint`` parameter can be used to display diagnostic
 messages inside of CONMIN. These messages are currently sent to the standard
 output.
 
@@ -399,31 +404,32 @@ output.
 
         self.driver.iprint = 0
 
-Higher positive values of *iprint* turn on the display of more levels of output, as summarized below.
+Higher positive values of ``iprint`` turn on the display of more levels of output, as summarized
+below.
 
-============  ========================================================
-Value         Result
-============  ========================================================
-iprint = 0    All output is suppressed
-------------  --------------------------------------------------------
-iprint = 1    Print initial and final function information
-------------  --------------------------------------------------------
-iprint = 2    Debug level 1: All of the above plus control parameters
-------------  --------------------------------------------------------
-iprint = 3    Debug level 2: All of the above plus all constraint
-              values, number of active/violated constraints, direction
-              vectors, move parameters, and miscellaneous information
-------------  --------------------------------------------------------
-iprint = 4    Complete debug: All of the above plus objective function
-              gradients, active and violated constraint gradients, and
-              miscellaneous information
-------------  --------------------------------------------------------
-iprint = 5    All of above plus each proposed design vector, objective
-              and constraints during the one-dimensional search
-------------  --------------------------------------------------------
-iprint = 101  All of above plus a dump of the arguments passed to
-              subroutine CONMIN
-============  ========================================================
+================  ========================================================
+Value             Result
+================  ========================================================
+``iprint = 0``    All output is suppressed
+----------------  --------------------------------------------------------
+``iprint = 1``    Print initial and final function information
+----------------  --------------------------------------------------------
+``iprint = 2``    Debug level 1: All of the above plus control parameters
+----------------  --------------------------------------------------------
+``iprint = 3``    Debug level 2: All of the above plus all constraint
+                  values, number of active/violated constraints, direction
+                  vectors, move parameters, and miscellaneous information
+----------------  --------------------------------------------------------
+``iprint = 4``    Complete debug: All of the above plus objective function
+                  gradients, active and violated constraint gradients, and
+                  miscellaneous information
+----------------  --------------------------------------------------------
+``iprint = 5``    All of above plus each proposed design vector, objective
+                  and constraints during the one-dimensional search
+----------------  --------------------------------------------------------
+``iprint = 101``  All of above plus a dump of the arguments passed to
+                  subroutine CONMIN
+================  ========================================================
 
 
 *Advanced Options*
@@ -432,42 +438,47 @@ The following options exercise some of the more advanced capabilities of CONMIN.
 The details given here briefly summarize the effects of these parameters; more
 information is available in the `CONMIN User's Manual <file:../../../plugin-guide/CONMIN_user_manual.html>`_.
 
-**icndir** -- Conjugate direction restart parameter. For an unconstrained problem
-(no side constraints either), Fletcher-Reeves conjugate direction method will
-be restarted with the steepest descent direction every ICNDIR iterations.  If 
-ICNDIR = 1, only the steepest descent will be used. Default value is the number of
-design variables + 1.
+**icndir**
+  Conjugate direction restart parameter. For an unconstrained problem
+  (no side constraints either), Fletcher-Reeves conjugate direction method will
+  be restarted with the steepest descent direction every ``ICNDIR`` iterations.  If 
+  ``ICNDIR = 1``, only the steepest descent will be used. Default value is the number of
+  design variables + 1.
 
-**Constraint Thickness** -- CONMIN gives four parameters for controlling the 
-thickness of constraints -- *ct, ctmin, ctl,* and *ctlmin.* Using these parameters
-essentially puts a tolerance around a constraint surface. Note that *ct* is used
-for general constraints, and *ctl* is used only for linear constraints. A wide
-initial value of the constraint thickness is desirable for highly nonlinear 
-problems so that when a constraint becomes active, it tends to remain active,
-thus reducing the zigzagging problem. The values of *ct* and *ctl* adapt as the
-problem converges, so the minima can be set with *ctl* and *ctlmin.*
+**Constraint Thickness** 
+  CONMIN gives four parameters for controlling the 
+  thickness of constraints -- ``ct, ctmin, ctl,`` and ``ctlmin``. Using these parameters
+  essentially puts a tolerance around a constraint surface. Note that ``ct`` is used
+  for general constraints, and ``ctl`` is used only for linear constraints. A wide
+  initial value of the constraint thickness is desirable for highly nonlinear 
+  problems so that when a constraint becomes active, it tends to remain active,
+  thus reducing the zigzagging problem. The values of ``ct`` and ``ctl`` adapt as the
+  problem converges, so the minima can be set with ``ctl`` and ``ctlmin``.
 
-**theta** -- Mean value of the push-off factor in the method of feasible
-directions. A larger value of theta is desirable if the constraints are known
-to be highly nonlinear, and a smaller value may be used if all constraints are
-known to be nearly linear. The actual value of the push-off factor used in the
-program is a quadratic function of each constraint (G(J)), varying from ``0.0
-for G(J) = ct to 4.0*theta for G(J) = ABS(ct)``. A value of theta = 0.0 is used
-in the program for constraints which are identified by the user to be strictly
-linear. Theta is called a *push-off* factor because it pushes the design away
-from the active constraints into the feasible region. The default value is
-usually adequate. This is used only for constrained problems.
+**theta** 
+  Mean value of the push-off factor in the method of feasible
+  directions. A larger value of theta is desirable if the constraints are known
+  to be highly nonlinear, and a smaller value may be used if all constraints are
+  known to be nearly linear. The actual value of the push-off factor used in the
+  program is a quadratic function of each constraint (G(J)), varying from ``0.0
+  for G(J) = ct to 4.0*theta for G(J) = ABS(ct)``. A value of ``theta = 0.0`` is used
+  in the program for constraints which are identified by the user to be strictly
+  linear. Theta is called a *push-off* factor because it pushes the design away
+  from the active constraints into the feasible region. The default value is
+  usually adequate. This is used only for constrained problems.
 
-**phi** -- Participation coefficient, used if a design is infeasible (i.e.,
-one or more violated constraints). *Phi* is a measure of how hard the design
-will be "pushed" towards the feasible region and is, in effect, a penalty
-parameter. If in a given problem, a feasible solution cannot be obtained with
-the default value, phi should be increased, and the problem run again. If a
-feasible solution cannot be obtained with phi = 100, it is probable that no
-feasible solution exists. The default value of 5.0 is usually adequate. Phi is
-used only for constrained problems.
+**phi** 
+  Participation coefficient, used if a design is infeasible (i.e.,
+  one or more violated constraints). ``Phi`` is a measure of how hard the design
+  will be "pushed" towards the feasible region and is, in effect, a penalty
+  parameter. If in a given problem, a feasible solution cannot be obtained with
+  the default value, ``phi`` should be increased, and the problem run again. If a
+  feasible solution cannot be obtained with ``phi = 100``, it is probable that no
+  feasible solution exists. The default value of 5.0 is usually adequate. ``Phi`` is
+  used only for constrained problems.
 
-**linobj** -- Set this to 1 if the objective function is known to be linear.
+**linobj**
+  Set this to 1 if the objective function is known to be linear.
 
 (See the source documentation for more information on 
 :ref:`CONMINdriver<openmdao.lib.drivers.conmindriver.py>`.)
@@ -551,8 +562,8 @@ follows:
             # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
             self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
 
-This first section of code defines an assembly called *EngineOptimization.*
-This assembly contains a DrivingSim component and a NEWSUMT driver, both of
+This first section of code defines an assembly called EngineOptimization.
+This assembly contains a DrivingSim component and a NEWSUMTdriver, both of
 which are created and added inside the ``__init__`` function with ``add``. The
 DrivingSim component is also added to the driver's workflow. The objective
 function, design variables, constraints, and any NEWSUMT parameters are also
@@ -564,8 +575,8 @@ discussed in :ref:`Driver-API`.
 ++++++++++++++++++
 
 This section contains the basic parameters for NEWSUMT. One of the most important parameters in
-NEWSUMT is *ifd*. It is a flag for finite difference gradient control. The following table gives the
-possible values for ifd.
+NEWSUMT is ``ifd``. It is a flag for finite difference gradient control. The following table gives the
+possible values for ``ifd``.
 
 =========    ================================================
 IFD Value    Descriptive Information 
@@ -575,7 +586,7 @@ IFD Value    Descriptive Information
 > 0          Use default finite difference stepsize of 0.1
 ---------    ------------------------------------------------
 < 0          Use user defined finite difference stepsize.
-             The array fdcv specifies these stepsizes.
+             The array ``fdcv`` specifies these stepsizes.
 ---------    ------------------------------------------------
 1            Gradient of objective function computed by finite differences
 ---------    ------------------------------------------------
@@ -591,7 +602,7 @@ IFD Value    Descriptive Information
 NEWSUMT can calculate the gradient of both the objective functions and of the constraints
 using a finite difference approximation. This is the current default behavior of the OpenMDAO
 driver. The NEWSUMT code can also accept user-calculated gradients, but these are not yet
-supported in OpenMDAO.  In NEWSUMT, the array *fdcv* defines the step size of the finite 
+supported in OpenMDAO. In NEWSUMT, the array ``fdcv`` defines the step size of the finite 
 difference steps for each design variable.
 
 .. testcode:: NEWSUMT_show
@@ -599,14 +610,14 @@ difference steps for each design variable.
         self.driver.fdcv = [0.1,0.1]
 
 .. note::
-   The default values of *fdcv* are set to 0.01. This may be too
+   The default values of ``fdcv`` are set to 0.01. This may be too
    large for some problems and will manifest itself by converging to a value that
    is not the minimum. It is important to evaluate the scale of the objective
    function around the optimum so that these can be chosen well.
 
 
 When using NEWSUMT, you should specify which constraints are linear. Use the
-integer array *ilin* to designate whether a constraint is linear. A value of 0 indicates
+integer array ``ilin`` to designate whether a constraint is linear. A value of 0 indicates
 that that constraint is non-linear, while a value of 1 indicates that that the constraint is
 linear. 
 
@@ -619,14 +630,14 @@ linear.
 
 Similarly, NEWSUMT has a flag parameter to indicate 
 whether the objective function is linear or nonlinear. Setting
-*lobj* to 1 indicates a linear objective function. Setting it
+``lobj`` to 1 indicates a linear objective function. Setting it
 to 0 indicates a nonlinear objective function.
 
 .. testcode:: NEWSUMT_show
 
         self.driver.lobj = 0
 
-The *jprint* parameter can be used to display diagnostic
+The ``jprint`` parameter can be used to display diagnostic
 messages. These messages are currently sent to the standard
 output.
 
@@ -634,22 +645,22 @@ output.
 
         self.driver.jprint = 0
 
-Higher positive values of *jprint* turn on the display of more levels of output, as summarized below.
+Higher positive values of ``jprint`` turn on the display of more levels of output, as summarized below.
 
-============  ========================================================
-Value         Result
-============  ========================================================
-jprint = -1   All output is suppressed, including warnings
-------------  --------------------------------------------------------
-jprint = 0    Print initial and final designs only
-------------  --------------------------------------------------------
-jprint = 1    Print brief results of analysis for initial and final designs 
-              together with minimal intermediate information
-------------  --------------------------------------------------------
-jprint = 2    Detailed printing
-------------  --------------------------------------------------------
-jprint = 3    Debugging printing
-============  ========================================================
+===============  ========================================================
+Value            Result
+===============  ========================================================
+``jprint = -1``  All output is suppressed, including warnings
+---------------  --------------------------------------------------------
+``jprint = 0``   Print initial and final designs only
+---------------  --------------------------------------------------------
+``jprint = 1``   Print brief results of analysis for initial and final designs 
+                 together with minimal intermediate information
+---------------  --------------------------------------------------------
+``jprint = 2``   Detailed printing
+---------------  --------------------------------------------------------
+``jprint = 3``   Debugging printing
+===============  ========================================================
 
 
 *Controlling the Optimization*
@@ -657,7 +668,7 @@ jprint = 3    Debugging printing
 
 NEWSUMT provides a variety of parameters to control the convergence criteria for an optimization.
 
-The maximum number of iterations is specified by setting the *itmax* parameter.
+The maximum number of iterations is specified by setting the ``itmax`` parameter.
 The default value is 10.
 
 .. testsetup:: NEWSUMT_show
@@ -672,26 +683,26 @@ The default value is 10.
 The convergence tolerance is controlled with six parameters. The following
 table summarizes these parameters.
 
-=========  ===================================================  =======
-Parameter  Description                                          Default
-=========  ===================================================  =======
-epsgsn     Convergence criteria of the golden section           0.001
-           algorithm used for the one-dimensional minimization
----------  ---------------------------------------------------  -------
-epsodm     Convergence criteria of the unconstrained            0.001
-           minimization
----------  ---------------------------------------------------  -------
-epsrsf     Convergence criteria for the overall process         0.001
----------  ---------------------------------------------------  -------
-maxgsn     Maximum allowable number of golden section           20
-           iterations used for 1D minimization
----------  ---------------------------------------------------  -------
-maxodm     Maximum allowable number of one-dimensional          6
-           minimizations
----------  ---------------------------------------------------  -------
-maxrsf     Maximum allowable number of unconstrained            15
-           minimizations
-=========  ===================================================  =======
+==========  ===================================================  =======
+Parameter   Description                                          Default
+==========  ===================================================  =======
+``epsgsn``  Convergence criteria of the golden section           0.001
+            algorithm used for the one-dimensional minimization
+----------  ---------------------------------------------------  -------
+``epsodm``  Convergence criteria of the unconstrained            0.001
+            minimization
+----------  ---------------------------------------------------  -------
+``epsrsf``  Convergence criteria for the overall process         0.001
+----------  ---------------------------------------------------  -------
+``maxgsn``  Maximum allowable number of golden section           20
+            iterations used for 1D minimization
+----------  ---------------------------------------------------  -------
+``maxodm``  Maximum allowable number of one-dimensional          6
+            minimizations
+----------  ---------------------------------------------------  -------
+``maxrsf``  Maximum allowable number of unconstrained            15
+            minimizations
+==========  ===================================================  =======
 
 .. testcode:: NEWSUMT_show
 
@@ -706,23 +717,23 @@ There are additional options for advanced users.  More information on these para
 found in the `NEWSUMT Users Guide <file:../../../plugin-guide/newsumt-manual.pdf>`_.
 
 
-=========  ===========================================  =======
+=========  ===========================================  ===========
 Parameter  Description                                  Default
-=========  ===========================================  =======
-mflag      Flag for penalty multiplier.                 15
+=========  ===========================================  ===========
+``mflag``  Flag for penalty multiplier.                 15
            If 0, initial value computed by NEWSUMT.
            If 1, initial value set by `ra`
----------  -------------------------------------------  -------
-ra         Penalty multiplier. Required if mflag=1      1.0
----------  -------------------------------------------  -------
-racut      Penalty multiplier decrease ratio.           0.1
-           Required if mflag=1
----------  -------------------------------------------  -------
-ramin      Lower bound of penalty multiplier.           1.0e-13
-           Required if mflag=1
----------  -------------------------------------------  -------
-g0         Initial value of the transition parameter    0.1
-=========  ===========================================  =======
+---------  -------------------------------------------  -----------
+``ra``     Penalty multiplier. Required if ``mflag=1``  1.0
+---------  -------------------------------------------  -----------
+``racut``  Penalty multiplier decrease ratio.           0.1
+           Required if ``mflag=1``
+---------  -------------------------------------------  -----------
+``ramin``  Lower bound of penalty multiplier.           ``1.0e-13``
+           Required if ``mflag=1``
+---------  -------------------------------------------  -----------
+``g0``     Initial value of the transition parameter    0.1
+=========  ===========================================  ===========
 
 (See the source documentation for more information on the :ref:`NEWSUMTDriver<openmdao.lib.drivers.newsumtdriver.py>`.)
 
@@ -850,12 +861,12 @@ The *x* input and the *F(x)* output are specified as string expressions and assi
 Two additional parameters control the FixedPointIterator. The
 parameter ``tolerance`` sets the convergence tolerance for the comparison
 between value of ``x_out`` at the current iteration and the previous iteration.
-The default value for tolerance is 0.00001. The parameter ``max_iteration``
+The default value for ``tolerance`` is 0.00001. The parameter ``max_iteration``
 specifies the number of iterations to run. The default value for
 ``max_iterations`` is 25.
 
 A more useful example in which the FixedPointIterator is used to converge two
-coupled components is shown in :ref:`Tutorial-MDAO-Architectures` .
+coupled components is shown in :ref:`Tutorial:-MDAO-Architectures`.
 
 (See the source documentation for more information on :ref:`FixedPointIterator<openmdao.lib.drivers.iterate.py>`.)
 
@@ -969,7 +980,7 @@ In the second example above, a more complex objective function was created where
 a weighted combination of ``comp.x, comp.y,`` and ``comp.z``. 
 
 To set the optimizer to either minimize or maximize your objective, you set the
-``opt_type`` variable of Genetic to "minimize" or "maximize."
+``opt_type`` variable of Genetic to ``"minimize"`` or ``"maximize``.
 
 .. testcode:: Genetic
 
@@ -1033,8 +1044,8 @@ Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection
 ``selection_method`` variable allows you to select the algorithm; allowed values are: ``"roulette_wheel," 
 "tournament," "rank,"`` and ``"uniform"``.
 
-(See the source documentation for more information on :ref:`Genetic<openmdao.lib.drivers.genetic.py>`.)
-
 .. testcode:: Genetic
     
     top.driver.selection_method="rank"
+
+(See the source documentation for more information on :ref:`Genetic<openmdao.lib.drivers.genetic.py>`.)

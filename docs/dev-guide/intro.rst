@@ -126,14 +126,14 @@ Getting the Source Code
 
 Before you can do any development work on OpenMDAO, you'll need a copy of the source code.
 The source repository for the OpenMDAO  project is available on :term:`Launchpad`. You can
-get a copy of the repository by typing:
+create a copy of the repository by typing:
 
 ::
 
    bzr branch lp:openmdao <branch_name>
    
    
-where ``<branch_name>`` is the name you are giving to the top level directory of your branch
+where ``<branch_name>`` is the name you are assigning the top level directory of your branch
 repository. It's a good idea to name branches based on ticket numbers in our bug  tracker
 (:term:`Trac`) using the form ``T<ticket_number>-<desc>``, where ``ticket_number`` is the
 Trac ticket number and ``<desc>`` is a short description of the branch, for example,
@@ -159,9 +159,9 @@ ________________________________
 
 After you've created your branch, run ``python go-openmdao-dev.py`` from the top directory of your
 branch to set up your development environment. (The ``devenv`` directory that is created is not part
-of the source repository.) The script will check the version of Python you are running. Currently 
-you must be running version 2.6. (To find out which Python version
-you are running, you can type ``python --version``.)
+of the source repository.) The script will check the version of Python you are running. **You must
+be running version 2.6.** (To find out which Python version you are
+running, you can type ``python --version``.)
 
 .. note:: If you're using Visual Studio on Windows, you need to run the installer from a 
    command window that has the Visual Studio environment variables set. The

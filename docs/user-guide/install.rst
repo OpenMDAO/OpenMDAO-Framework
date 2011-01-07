@@ -215,7 +215,7 @@ If you are on **Windows,** type:
 **Run tests to verify valid install**
 
 OpenMDAO has a large test suite which allows you to check and make sure all of the functionality of OpenMDAO will work 
-on your system. You can run these tests yourself to double check your installation. It takes only a couple of 
+on your system. You can run these tests yourself to double check your installation. It takes only a few 
 minutes to run them all. 
 
 To run all tests, type the following:

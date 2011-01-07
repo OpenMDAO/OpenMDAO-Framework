@@ -57,7 +57,7 @@ into the default Python environment on your system.
     
 F2PY automates the process of generating a library that contains Fortran functions
 callable from Python as well as an interface into exposed common blocks and Fortran
-90/95 module data. Additionally, F2PY handles the conversion of inputs and output
+90/95 module data. Additionally, F2PY handles the conversion of inputs and outputs
 between their representative Python and Fortran types,  particularly with arrays,
 which are converted into NumPy's numerical arrays on the Python side. The most
 attractive feature of F2PY is its simplicity -- it can be learned quickly and used
@@ -77,9 +77,9 @@ If you have downloaded the latest release version from the website, you should f
 
   openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.bar3simulation-X.X.X-######.egg/openmdao/examples/bar3simulation
 	
-X.X.X is the current OpenMDAO version, and ###### is a string that contains the Python version and the
+``X.X.X`` is the current OpenMDAO version, and ``######`` is a string that contains the Python version and the
 Operating System description. This path will vary depending on your system and version, but there will be
-only one *bar3simulation* in your distribution.
+only one ``bar3simulation`` in your distribution.
 
 If you are a developer and have a branch from the source repository, you will find the files you need here:
 
@@ -251,7 +251,7 @@ opening OpenMDAO's local Python environment:
 
 The docstring can be useful for figuring out the arguments and returns for the
 generated function. Most of the values passed here are floats, which
-are analogous to Double Precision variables in Fortran. The load is stored in
+are analogous to double precision variables in Fortran. The load is stored in
 *pvec,* which is an array that contains the x and y components of the force. To
 pass this into the Fortran subroutine, it needs to be in the form of a NumPy
 array (in this case, an array of floating point numbers):
@@ -355,10 +355,10 @@ effectively passed as arguments. The corresponding interface file would look lik
                         double RPM, double Throttle, double thetastep, double Fuel_Density,
                         double *OUTPUT, double *OUTPUT, double *OUTPUT, double *OUTPUT);
 
-Notice that the variables *Power, Torque, FuelBurn,* and *EngineWeight* are 
-declared as outputs. Inputs don't have to be explicitly declared, although the keyword *INPUT*
+Notice that the variables ``Power, Torque, FuelBurn,`` and ``EngineWeight`` are 
+declared as outputs. Inputs don't have to be explicitly declared, although the keyword ``INPUT``
 should be used whenever a pointer is actually a single input value. If a variable
-functions as both an input and an output, use the keyword *BOTH* in the interface file.
+functions as both an input and an output, use the keyword ``BOTH`` in the interface file.
 
 Generating the importable shared object from this interface is a 4-step process.
 
