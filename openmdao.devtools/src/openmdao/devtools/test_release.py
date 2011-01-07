@@ -54,7 +54,7 @@ def _testrelease(site_url, version, host):
         winplatforms=["storm.grc.nasa.gov"]  #Is remote host storm?
         if host in winplatforms:
             if sys.platform != 'win32':
-                raise RuntimeError('Windows release testing must be done locally. Aborting.')
+                raise RuntimeError('Windows release testing only works when done locally. Aborting.')
             # If running windows tests, do it locally on storm 
             # (because it can't ssh to itself)
             devbindir='Scripts'
@@ -124,6 +124,7 @@ def main(argv=None):
     else:
         hosts = ['storm.grc.nasa.gov', 'torpedo.grc.nasa.gov', 'viper.grc.nasa.gov']
         
+    print 'testing on hosts: %s' % hosts
     # ensure that all network connections are closed
     # TODO: once we move to Fabric 0.9.4, just use disconnect_all() function
     try:
