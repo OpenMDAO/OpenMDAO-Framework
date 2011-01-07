@@ -7,7 +7,7 @@ from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
 from openmdao.main.api import Component, Case
-from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder
+from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, ICaseIterator
 from openmdao.main.uncertain_distributions import UncertainDistribution, \
                                                   NormalDistribution
 from openmdao.main.mp_support import has_interface
@@ -27,6 +27,12 @@ class MetaModel(Component):
     excludes = ListStr(iotype='in',
                            desc='A list of names of variables to be excluded '
                                 'from the public interface.')
+    
+    warm_start_data = Instance(ICaseIterator,iotype="in",
+                              desc="CaseIterator containing cases to use as "
+                              "initial training data. When this is set, all "
+                              "previous training data is cleared, and replaced "
+                              "with data from this CaseIterator")
     
     surrogate = Instance(ISurrogate, allow_none=True,
                          desc='An ISurrogate instance that is used as a '
@@ -63,6 +69,51 @@ class MetaModel(Component):
     def _reset_training_data_fired(self):
         self._training_input_history = []
         self.update_model(self.model, self.model)
+        
+    def _warm_start_data_changed(self,oldval,newval): 
+        self.reset_training_date = True
+        
+        #build list of inputs         
+        inputs = []
+        for case in newval:
+            inputs = []
+            for inp_name in self._surrogate_input_names:
+                inp_val = None
+                #TODO: Fix case object, so it has a get_input method to clean up this loop
+                var_name = "%s.%s"%(self.name,inp_name)
+                for inp in case.inputs: 
+                    if inp[0] == var_name:
+                        inp_val = inp[2]
+                        break
+                if inp_val is not None: 
+                    inputs.append(inp_val)
+                else: 
+                    self.raise_exception('The variable "%s" was not '
+                                         'found as an input in one of the cases provided '
+                                         'for warm_start_data.'%var_name, ValueError)
+            print "inputs", inputs
+            self._training_input_history.append(inputs)                  
+            
+            for output_name in self.list_outputs_from_model():
+                #grab value from case data
+                output_val = None
+                var_name = "%s.%s"%(self.name,output_name)
+                for output in case.outputs: 
+                    if output[0]==var_name: 
+                        output_val = output[2]
+                        break
+                if output_val is not None: 
+                    # save to training output history
+                    print output_name,":",output_val
+                    self._surrogate_info[output_name][1].append(output_val) 
+                else: 
+                    self.raise_exception('The output "%s" was not found'
+                                         'in one of the cases provided for '
+                                         'warm_start_data'%var_name, ValueError) 
+        
+        self._new_train_data = True
+        
+        
         
     def execute(self):
         """If the training flag is set, train the metamodel. Otherwise, 

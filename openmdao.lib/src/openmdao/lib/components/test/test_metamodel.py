@@ -5,9 +5,10 @@ import unittest
 from enthought.traits.api import HasTraits
 
 from openmdao.lib.datatypes.api import Float, TraitError, implements
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, Case
 from openmdao.main.interfaces import ICaseRecorder
 
+from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
 
@@ -120,6 +121,50 @@ class MetaModelTestCase(unittest.TestCase):
         asm.metamodel.model = Simple2()
         self.assertEqual(asm.list_connections(), [])
         
+    def test_warm_start(self): 
+        metamodel = MetaModel()
+        metamodel.name = 'meta'
+        metamodel.surrogate = KrigingSurrogate()
+        metamodel.model = Simple()
+        metamodel.recorder = DumbRecorder()
+        simple = Simple()
+        
+        cases = []        
+        
+        metamodel.a = 1.
+        metamodel.b = 2.
+        metamodel.train_next = True
+        metamodel.run()
+        inputs = [('meta2.a',None,metamodel.a),('meta2.b',None,metamodel.b)]
+        outputs = [('meta2.c',None,metamodel.c.mu),('meta2.d',None,metamodel.d.mu)]
+        cases.append(Case(inputs=inputs,outputs=outputs))
+        
+        metamodel.a = 3.
+        metamodel.b = 5.
+        metamodel.train_next = True
+        metamodel.run()
+        inputs = [('meta2.a',None,metamodel.a),('meta2.b',None,metamodel.b)]
+        outputs = [('meta2.c',None,metamodel.c.mu),('meta2.d',None,metamodel.d.mu)]
+        cases.append(Case(inputs=inputs,outputs=outputs))
+        
+        case_iter = ListCaseIterator(cases)
+        
+        metamodel2 = MetaModel()
+        metamodel2.name = 'meta2'
+        metamodel2.surrogate = KrigingSurrogate()
+        metamodel2.model = Simple()
+        metamodel2.recorder = DumbRecorder()
+        metamodel2.warm_start_data = case_iter
+        
+        metamodel2.a = simple.a = 1
+        metamodel2.b = simple.b = 2
+        metamodel2.run()
+        simple.run()
+        
+        self.assertEqual(metamodel2.c.getvalue(), 3.)
+        self.assertEqual(metamodel2.d.getvalue(), -1.)
+        self.assertEqual(metamodel2.c.getvalue(), simple.c)
+        self.assertEqual(metamodel2.d.getvalue(), simple.d)        
         
     def test_default_execute(self):
         metamodel = MetaModel()
