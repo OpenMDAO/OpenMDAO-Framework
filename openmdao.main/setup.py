@@ -35,6 +35,9 @@ setup(name='openmdao.main',
       packages=find_packages('src'),
       package_dir={'': 'src'},
       include_package_data=True,
+      package_data={
+          'openmdao.main.test': ['src/doubler.py']
+      },
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[

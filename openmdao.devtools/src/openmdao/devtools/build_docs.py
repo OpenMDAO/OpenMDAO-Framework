@@ -9,6 +9,7 @@ import StringIO
 import re
 from subprocess import Popen, PIPE, STDOUT
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
+from optparse import OptionParser
 
 import sphinx
 
@@ -28,6 +29,17 @@ packages = [
 
 
 logger = logging.getLogger()
+
+def get_revision():
+    try:
+        p = Popen('bzr log --short -r-1', 
+                  stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+        out = p.communicate()[0]
+        ret = p.returncode
+    except:
+        return '<unknown_rev>'
+    else:
+        return out.split()[0]
 
 # set all of our global configuration parameters
 def _get_dirnames():
@@ -174,10 +186,21 @@ def _write_src_docs(branchdir, docdir):
             logger.info('creating autodoc file for %s' % src)
             _mod_sphinx_info(os.path.basename(src), f)
 
-def build_docs():
+def build_docs(argv=None):
     """A script (openmdao_build_docs) points to this.  It generates the Sphinx
     documentation for openmdao.
     """
+    if argv is None:
+        argv = sys.argv[1:]
+    if '-v' in argv:
+        idx = argv.index('-v')
+        version = argv[idx+1]
+        shtitle = 'OpenMDAO Documentation v%s' % version
+    else:
+        #version = openmdao.util.releaseinfo.__version__
+        version = 'rev %s' % get_revision()
+        shtitle = 'OpenMDAO Documentation (%s)' % version
+    
     branchdir, docdir, bindir =_get_dirnames()
 
     startdir = os.getcwd()
@@ -196,29 +219,12 @@ def build_docs():
             shutil.rmtree(os.path.join('_build', 'doctrees'))
         os.makedirs(os.path.join('_build', 'html'))
         os.makedirs(os.path.join('_build', 'doctrees'))
-        
-        # update conf.py with new version and release info
-        conf = os.path.join(docdir, 'conf.py')
-        f = open(conf, 'rb')
-        contents = f.read()
-        f.close()
-        
-        ver_rgx = re.compile("version = '[^']*'")
-        rel_rgx = re.compile("release = '[^']*'")
-        shtitle_rgx = re.compile("html_short_title = '[^']*'")
-
-        version = openmdao.util.releaseinfo.__version__
-        contents = ver_rgx.sub("version = '%s'" % version, contents)
-        contents = rel_rgx.sub("release = '%s'" % version, contents)
-        contents = shtitle_rgx.sub(
-             "html_short_title = 'OpenMDAO Documentation v%s'" % version, contents)
-        
-        f = open(conf, 'wb')
-        f.write(contents)
-        f.close()
-        
-        sphinx.main(argv=['-P', '-b', 'html', '-d', 
-                          os.path.join(docdir, '_build', 'doctrees'), 
+                    
+        sphinx.main(argv=['-P', '-b', 'html',
+                          '-Dhtml_short_title=%s' % shtitle,
+                          '-Dversion=%s' % version,
+                          '-Drelease=%s' % version,
+                          '-d', os.path.join(docdir, '_build', 'doctrees'), 
                           docdir, os.path.join(docdir, '_build', 'html')])
     finally:
         os.chdir(startdir)

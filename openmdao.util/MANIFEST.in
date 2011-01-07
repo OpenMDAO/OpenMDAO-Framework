@@ -1,2 +1,0 @@
-recursive-include src/openmdao/util/test/src *.py
-

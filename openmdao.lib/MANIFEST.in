@@ -1,4 +1,3 @@
 recursive-include src *.inp
-include src/openmdao/lib/traits/domain/test *.mesh *.new
-recursive-include src/openmdao/lib/components/nastran/test *.txt *.bdf
-include src/openmdao/lib/components/nastran/test *.out
+recursive-include src/openmdao/lib/datatypes/domain/test *.mesh *.new
+recursive-include src/openmdao/lib/components/nastran/test *.txt *.bdf *.out

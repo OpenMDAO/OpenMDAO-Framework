@@ -63,6 +63,14 @@ class TestCase(unittest.TestCase):
         """ Called after each test. """
         pass
 
+    def test_bad_workflow_reference(self):
+        self.model.driver.workflow.add('foobar')
+        try:
+            self.model.run()
+        except AttributeError as err:
+            self.assertEqual(str(err), 
+                "driver: Component in workflow failed to resolve: 'Model' object has no attribute 'foobar'")
+
     def test_simple(self):
         self.assertEqual(self.model.comp_a.total_executions, 0)
         self.assertEqual(self.model.comp_b.total_executions, 0)

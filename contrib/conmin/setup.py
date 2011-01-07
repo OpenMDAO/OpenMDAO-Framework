@@ -8,7 +8,16 @@ from numpy.distutils.misc_util import Configuration
 include_dirs = []
 library_dirs = []
 if sys.platform == 'win32':
-    import openmdao.util.distutils_fix
+    # Update the ``library_dir_option`` function in MSVCCompiler 
+    # to add quotes around /LIBPATH entries.
+    import types
+    def _lib_dir_option(self, dir):
+        return '/LIBPATH:"%s"' % dir
+    
+    from distutils.msvc9compiler import MSVCCompiler
+    setattr(MSVCCompiler, 'library_dir_option',
+            types.MethodType(_lib_dir_option, None, MSVCCompiler))
+    
     sdkdir = os.environ.get('WindowsSdkDir')
     if sdkdir:
         include_dirs.append(os.path.join(sdkdir,'Include'))

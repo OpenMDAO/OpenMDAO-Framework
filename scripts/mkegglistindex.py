@@ -9,9 +9,6 @@ import hashlib
 import fnmatch
 
 
-FIND_LINKS_URL = 'http://openmdao.org/dists'
-
-
 def find_files(pats, startdir):
     """Return a list of files (using a generator) that match
     the given list of glob patterns. Walks an entire directory structure.
@@ -40,15 +37,15 @@ def file_md5(fpath):
         f.close()
 
 
-def make_egglist_index(startdir = '.'):
-    startdir = os.path.abspath(startdir)
+def make_egglist_index(url):
+    startdir = os.path.abspath(os.path.dirname(__file__))
     out = open('index.html', 'w')
     out.write('<html>\n<body>\n')
     text = []
     for f in find_files(["*.egg", "*.tar.gz", "*.zip"], startdir):
         checksum = file_md5(f)
         basef = os.path.basename(f)
-        lpath = os.path.join(FIND_LINKS_URL, basef)
+        lpath = os.path.join(url, 'dists', basef)
         text.append('<li><a href="%s#md5=%s">%s</a>\n' % (lpath, checksum, basef))
     text.sort()
     out.writelines(text)
@@ -60,4 +57,4 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         make_egglist_index(sys.argv[1])
     else:
-        make_egglist_index()
+        make_egglist_index('http://openmdao.org')

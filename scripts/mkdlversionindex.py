@@ -18,8 +18,8 @@ def file_md5(fpath):
             m.update(s)
         return m.hexdigest()
 
-def make_index(startdir = '.'):
-    startdir = os.path.abspath(startdir)
+def make_index(url):
+    startdir = os.path.abspath(os.path.dirname(__file__))
     out = open('index.html', 'w')
     version = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
     out.write('<html>\n\n')
@@ -39,7 +39,7 @@ def make_index(startdir = '.'):
     out.write('    OpenMDAO Version %s Downloads\n' % version)
     out.write('  </h1>\n')
     out.write('  <ul>\n')
-    out.write('    <li><a href="http://openmdao.org/downloads">..</a>\n')
+    out.write('    <li><a href="%s/downloads">..</a>\n' % url)
 
     files = []
     dirs = []
@@ -52,11 +52,11 @@ def make_index(startdir = '.'):
             dirs.append(f)
 
     for d in dirs:
-        lpath = os.path.join('http://openmdao.org/downloads/%s'%version, d)
+        lpath = os.path.join(url, 'downloads', version, d)
         out.write('    <li><a href="%s">%s</a>\n' % (lpath, d))
 
     for f in files:
-        lpath = os.path.join('http://openmdao.org/downloads/%s'%version, f)
+        lpath = os.path.join(url, 'downloads', version, f)
         checksum = file_md5(f)
         out.write('    <li><a href="%s#md5=%s">%s</a>\n'%(lpath, checksum, f))
     out.write('  </ul>\n')
@@ -66,6 +66,6 @@ def make_index(startdir = '.'):
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        make_index(sys.argv[1])
+        make_index(url=sys.argv[1])
     else:
-        make_index()
+        make_index(url='http://openmdao.org')

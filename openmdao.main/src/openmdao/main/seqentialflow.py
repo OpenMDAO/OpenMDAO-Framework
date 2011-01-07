@@ -18,7 +18,7 @@ class SequentialWorkflow(Workflow):
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
-        return self.contents().__iter__()
+        return self.get_components().__iter__()
     
     def __len__(self):
         return len(self._names)
@@ -26,11 +26,10 @@ class SequentialWorkflow(Workflow):
     def __contains__(self, comp):
         return comp in self._names
     
-    def contents(self):
-        """Returns a list of all component objects in the workflow."""
-        scope = self.scope
-        return [getattr(scope, name) for name in self._names]
-
+    def get_names(self):
+        """Return a list of component names in this workflow."""
+        return self._names[:]
+    
     def add(self, compnames):
         """ Add new component(s) to the end of the workflow by name. """
         if isinstance(compnames, list) or isinstance(compnames, tuple):
