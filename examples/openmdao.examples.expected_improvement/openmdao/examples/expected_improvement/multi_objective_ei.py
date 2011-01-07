@@ -3,6 +3,8 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
+from numpy import sin, cos
+
 from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
 
 from openmdao.main.api import Assembly, Component, Driver, \
@@ -14,35 +16,18 @@ from openmdao.main.hasstopcond import HasStopConditions
 
 from openmdao.lib.components.api import MetaModel, MultiObjExpectedImprovement,\
      ParetoFilter, Mux
-from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver 
+from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
 from openmdao.lib.caseiterators.api import DBCaseIterator
 from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder
 
-from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
+from openmdao.lib.surrogatemodels.api import KrigingSurrogate
 
-from openmdao.lib.doegenerators.optlh import OptLatinHypercube
-from openmdao.lib.doegenerators.full_factorial import FullFactorial
+from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
 
 from openmdao.examples.expected_improvement.spiral_component import SpiralComponent
 
 from openmdao.util.decorators import add_delegate
 
-@add_delegate(HasStopConditions)
-class Iterator(Driver):
-    iterations = Int(10,iotype="in")
-    
-    def start_iteration(self):
-        self._iterations = 0
-    
-    def continue_iteration(self):
-        self._iterations += 1
-        if (self._iterations > 1) and self.should_stop():
-            return False
-        if self._iterations <= self.iterations: 
-            print 'Iteration: ',self._iterations
-            return True
-    
-        return False
     
 class MyDriver(Driver):
     """Custom driver to retrain the MetaModel each iteration. Also records each 
@@ -79,12 +64,10 @@ class Analysis(Assembly):
         self.spiral_meta_model.force_execute = True
         
         self.add("MOEI",MultiObjExpectedImprovement())
-        #self.MOEI.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
-        self.MOEI.criteria = ['f1_xy','f2_xy']
+        self.MOEI.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
         
         self.add("filter",ParetoFilter())
-        #self.filter.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
-        self.filter.criteria = ['f1_xy','f2_xy']
+        self.filter.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
         self.filter.case_sets = [self.spiral_meta_model.recorder.get_iterator()]
         self.filter.force_execute = True
         
@@ -107,7 +90,6 @@ class Analysis(Assembly):
         self.MOEI_opt.add_parameter("spiral_meta_model.x")
         self.MOEI_opt.add_parameter("spiral_meta_model.y")
         self.MOEI_opt.add_objective("MOEI.EI")
-        self.MOEI_opt.add_event('MOEI.reset_y_star')
         self.MOEI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
@@ -115,8 +97,8 @@ class Analysis(Assembly):
         self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
         self.retrain.force_execute = True
         
-        self.add("iter",Iterator())
-        self.iter.iterations = 5
+        self.add("iter",IterateUntil())
+        self.iter.iterations = 15
         self.iter.add_stop_condition('MOEI.EI <= .0001')
         
         self.add("EI_mux",Mux(2))
@@ -167,16 +149,15 @@ if __name__ == "__main__": #pragma: no cover
     from matplotlib import pyplot as plt, cm 
     from matplotlib.pylab import get_cmap
     from mpl_toolkits.mplot3d import Axes3D
-    from numpy import meshgrid,array, pi,arange,sin,cos,seterr
-    import time
-    seterr(all='ignore')
+    from numpy import meshgrid,array, pi,arange,cos
+    
+    
     #create the analysis
     analysis = Analysis()
     set_as_top(analysis)
     #run the analysis
-    a = time.time()
     analysis.run()
-    print time.time()-a
+    
     
     #plot the samples points, along with the data from the function
     def f1(x,y):
@@ -274,6 +255,6 @@ if __name__ == "__main__": #pragma: no cover
     plt.scatter(f1_train,f2_train,s=30,c='#572E07',zorder=10)
     plt.scatter(f1_iter,f2_iter,s=30,c=colors,zorder=11,cmap=color_map)
     
-    #plt.show()
+    plt.show()
     analysis.cleanup()
     

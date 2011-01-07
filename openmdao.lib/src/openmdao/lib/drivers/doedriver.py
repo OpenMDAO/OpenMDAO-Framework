@@ -13,6 +13,7 @@ from openmdao.lib.drivers.caseiterdriver import CaseIterDriverBase
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
 
+
 @add_delegate(HasParameters)
 class DOEdriver(CaseIterDriverBase):
     """ Driver for Design of Experiments """

@@ -9,6 +9,8 @@ from numpy import zeros
 
 from openmdao.lib.datatypes.api import Float, Int, Str
 from openmdao.main.api import Driver
+from openmdao.util.decorators import add_delegate
+from openmdao.main.hasstopcond import HasStopConditions
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exceptions import RunStopped
 
@@ -86,4 +88,24 @@ class FixedPointIterator(Driver):
         self.history = history[:self.current_iteration+1]
             
 
+@add_delegate(HasStopConditions)
+class IterateUntil(Driver):
+
+    max_iterations = Int(10,iotype="in", desc="maximun number of iterations")
+    iteration = Int(0,iotype="out",desc="current iteration counter")
+    
+    def start_iteration(self):
+        self.iterations = 0
+    
+    def continue_iteration(self):        
+        if (self.iteration > 1) and self.should_stop():
+            return False
+        if self.iteration < self.max_iterations: 
+            self.iteration += 1
+            #print "iteration: ",self.iteration
+            return True
+        
+        return False
+    
+    
 # End iterate.py
