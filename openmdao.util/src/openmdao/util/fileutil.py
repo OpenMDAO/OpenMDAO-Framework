@@ -54,8 +54,8 @@ def find_in_path(fname, pathvar=None, sep=os.pathsep, exts=('',)):
 
 
 def makepath(path):
-    """ Creates missing directories for the given path and returns a normalized absolute 
-    version of the path.
+    """ Creates missing directories for the given path and returns a 
+    normalized absolute version of the path.
 
     - If the given path already exists in the filesystem,
       the filesystem is not modified.
