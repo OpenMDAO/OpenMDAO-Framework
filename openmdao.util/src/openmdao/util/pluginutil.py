@@ -11,17 +11,55 @@ from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
 from token import NAME, OP
 from tokenize import generate_tokens
+import compiler
+
+import networkx as nx
 
 from openmdao.util.fileutil import find_files
+from openmdao.main.api import Component as mycomp
 
-class Foo(object):
-    pass
+def _to_str(arg):
+    if isinstance(arg, compiler.ast.Getattr):
+        return '.'.join([_to_str(arg.expr), arg.attrname])
+    elif isinstance(arg, compiler.ast.Name):
+        return arg.name
+    else:
+        return arg
+                
 
-class Bar(Foo):
-    pass
+class MyVisitor(compiler.visitor.ASTVisitor):
+    def __init__(self, *args, **kwargs):
+        compiler.visitor.ASTVisitor.__init__(self, *args, **kwargs)
+        self.classes = []
+        self.impnames = {}  # map of local names to package names
+        
+    def visitClass(self, node):
+        name = self.impnames.get(node.name, node.name)
+        bases = [self.impnames.get(b,_to_str(b)) for b in node.bases]
+        self.classes.append((name, bases))
+        
+    def visitImport(self, node):
+        for name, alias in node.names:
+            if alias is None:
+                self.impnames[name] = name
+            else:
+                self.impnames[alias] = name
+
+    def visitFrom(self, node):
+        for name,alias in node.names:
+            if alias is None:
+                self.impnames[name] = '.'.join([node.modname, name])
+            else:
+                self.impnames[alias] = '.'.join([node.modname, name])
+                
+            
+    def dump(self):
+        print 'classes = %s' % self.classes
+        print 'impnames = %s' % self.impnames.values()
+
 
 def _parse_class(iterator):
-    """after encountering 'class' during a parse, this function
+    """after encountering 'class' during a parse, this fwkdjunction
     parses the rest of the inheritance specification up to the ':'
     """
     tok, s, _, _, _ = iterator.next()
@@ -71,16 +109,24 @@ def get_package_name(fpath):
             pnames.append(pname)
     return '.'.join(pnames[::-1])
    
-def get_inheritance_tree(class_list):
-    idict = { 'object': [] }
+def add_inheritance(graph, class_list):
     for entry in class_list:
-        idict[entry[0]] = entry[1:]
-
-                
+        for klass in entry[1:]:
+            graph.add_edge(entry[0], klass)
+            
 if __name__ == '__main__':
+    
     #get_class_decls(__file__)
     #print 'pname = ',get_package_name(__file__)
-    for pyfile in find_files("*.py", sys.argv[1]):
-        classes = get_class_decls(pyfile)
-        if len(classes) > 0:
-            print 'classes = ',classes
+    #graph = nx.DiGraph()
+    #for pyfile in find_files("*.py", sys.argv[1]):
+        #myvisitor = MyVisitor()
+        #ast = compiler.parseFile(pyfile)
+        #compiler.visitor.walk(ast, myvisitor)
+        #add_inheritance(graph, get_class_decls(pyfile))
+
+    myvisitor = MyVisitor()
+    ast = compiler.parseFile(__file__)
+    compiler.visitor.walk(ast, myvisitor)
+    myvisitor.dump()
+
