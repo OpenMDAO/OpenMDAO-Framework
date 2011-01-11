@@ -10,6 +10,7 @@ import re
 from subprocess import Popen, PIPE, STDOUT
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
 from optparse import OptionParser
+import tarfile
 
 from fabric.api import run, env, local, put, cd, get, settings
 from fabric.state import connections
@@ -263,7 +264,7 @@ def push_docs():
         build_docs()
 
     try:
-        os.path.chdir(os.path.join(docdir, '_build'))
+        os.chdir(os.path.join(docdir, '_build'))
         try:
             if os.path.exists('docs.tar.gz'):
                 os.remove('docs.tar.gz')
@@ -276,10 +277,12 @@ def push_docs():
         with settings(host_string='openmdao@web103.webfaction.com'):
             # tar up the docs so we can upload them to the server
             # put the docs on the server and untar them
-            put(os.path.join(docdir,'_build','docs.tar.gz'), 'docs.tar.gz') 
-            run('tar xzf docs.tar.gz')
-            run('mv html dev_docs')
-            run('rm -f docs.tar.gz')
+            put(os.path.join(docdir,'_build','docs.tar.gz'), 'downloads/docs.tar.gz')
+            with cd('downloads'):
+                run('tar xzf docs.tar.gz')
+                run('rm -rf dev_docs')
+                run('mv html dev_docs')
+                run('rm -f docs.tar.gz')
     finally:
         for key in connections.keys():
             connections[key].close()
