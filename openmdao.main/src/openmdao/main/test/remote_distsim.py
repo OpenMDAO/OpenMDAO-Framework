@@ -20,13 +20,16 @@ def main():
     """
     Usage:
 
-    python remote_distsim.py [--server][--client] [config_filename]
+    python remote_distsim.py [--server][--client][--tunnel] [config_filename]
 
     --server:
         Run server.
 
     --client:
         Run client.
+
+    --tunnel:
+        Connect via ssh tunnel.
 
     config_filename:
         Path to server config file, default ``server.cfg``.
@@ -37,6 +40,8 @@ def main():
                       help='Run server')
     parser.add_option('--client', action='store_true', default=False,
                       help='Run client')
+    parser.add_option('--tunnel', action='store_true', default=False,
+                      help='Connect via ssh tunnel')
 
     options, arguments = parser.parse_args()
     if arguments:
@@ -59,17 +64,19 @@ def main():
         os.mkdir(server_dir)
         os.chdir(server_dir)
         try:
-            server, config_filename = start_factory()
+            server, config_filename = start_factory(options.tunnel)
         finally:
             os.chdir('..')
         config_filename = os.path.join(server_dir, config_filename)
         if not options.client:
             print '        configuration file:', config_filename
-        atexit.register(cleanup, server, config_filename, server_dir)
+        atexit.register(cleanup, server_dir)
 
     if options.client:
         # Run client.
         client(config_filename, not options.server)
+        if options.server:
+            stop_factory(server, config_filename)
     else:
         # Wait until killed.
         try:
@@ -78,21 +85,26 @@ def main():
             pass
 
 
-def cleanup(server, config_filename, server_dir):
-    """ Shutdown server and clean up. """
-#    stop_factory(server, config_filename)
-    shutil.rmtree(server_dir)
+def cleanup(server_dir):
+    """ Clean up server tree. """
+    keepdirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
+    if not keepdirs and os.path.exists(server_dir):
+        shutil.rmtree(server_dir)
 
 
-def start_factory():
+def start_factory(tunnel):
     """ Start factory server.  Returns (server, config_filename). """
+    address = 'localhost' if tunnel else None
+
     credentials = get_credentials()
     allowed_users = {credentials.user: credentials.public_key}
 
     allowed_types = ['openmdao.main.test.test_distsim.Box']
 
-    server = start_server(allowed_users=allowed_users,
-                          allowed_types=allowed_types)
+    server = start_server(address=address,
+                          allowed_users=allowed_users,
+                          allowed_types=allowed_types,
+                          allow_tunneling=tunnel)
 
     address, port, pubkey = read_server_config('server.cfg')
     print 'Factory pid:', server.pid

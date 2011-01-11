@@ -149,22 +149,30 @@ class OpenMDAO_Server(Server):
         Dictionary of users and corresponding public keys allowed access.
         If None, any user may access. If empty, no user may access.
         The host portions of user strings are used for address patterns.
+
+    allow_tunneling: bool
+        If True, allow connections from 127.0.0.1 (localhost), even if not
+        listed otherwise.
     """
 
     def __init__(self, registry, address, authkey, serializer, name=None,
-                 allowed_hosts=None, allowed_users=None):
+                 allowed_hosts=None, allowed_users=None, allow_tunneling=False):
         super(OpenMDAO_Server, self).__init__(registry, address, authkey,
                                               serializer)
         self.name = name or 'OMS_%d' % os.getpid()
         self.host = socket.gethostname()
         self._allowed_users = allowed_users
         if self._allowed_users is not None:
-            self._allowed_hosts = set()
+            hosts = set()
             for user_host in self._allowed_users.keys():
                 user, host = user_host.split('@')
-                self._allowed_hosts.add(socket.gethostbyname(host))
+                hosts.add(socket.gethostbyname(host))
+            self._allowed_hosts = list(hosts)
         else:
             self._allowed_hosts = allowed_hosts or []
+
+        if allow_tunneling:
+            self._allowed_hosts.append('127.0.0.1')
 
         self._logger = logging.getLogger(name)
         self._logger.info('OpenMDAO_Server process %d started, %r',
@@ -786,17 +794,23 @@ class OpenMDAO_Manager(BaseManager):
     allowed_users: dict
         Dictionary of users and corresponding public keys allowed access.
         If None, any user may access. If empty, no user may access.
+
+    allow_tunneling: bool
+        If True, allow connections from 127.0.0.1 (localhost), even if not
+        listed otherwise.
     """
 
     _Server = OpenMDAO_Server
 
     def __init__(self, address=None, authkey=None, serializer='pickle',
-                 pubkey=None, name=None, allowed_hosts=None, allowed_users=None):
+                 pubkey=None, name=None, allowed_hosts=None, allowed_users=None,
+                 allow_tunneling=False):
         super(OpenMDAO_Manager, self).__init__(address, authkey, serializer)
         self._pubkey = pubkey
         self._name = name
         self._allowed_hosts = allowed_hosts
         self._allowed_users = allowed_users
+        self._allow_tunneling = allow_tunneling
 
     def get_server(self):
         """
@@ -805,7 +819,8 @@ class OpenMDAO_Manager(BaseManager):
         assert self._state.value == State.INITIAL
         return OpenMDAO_Server(self._registry, self._address, self._authkey,
                                self._serializer, self._name,
-                               self._allowed_hosts, self._allowed_users)
+                               self._allowed_hosts, self._allowed_users,
+                               self._allow_tunneling)
 
     def start(self, cwd=None):
         """
@@ -838,7 +853,8 @@ class OpenMDAO_Manager(BaseManager):
             target=type(self)._run_server,
             args=(registry, self._address, self._authkey,
                   self._serializer, self._name, self._allowed_hosts,
-                  self._allowed_users, writer, credentials, cwd),
+                  self._allowed_users, self._allow_tunneling,
+                  writer, credentials, cwd),
             )
         ident = ':'.join(str(i) for i in self._process._identity)
         self._process.name = type(self).__name__  + '-' + ident
@@ -891,8 +907,8 @@ class OpenMDAO_Manager(BaseManager):
     # This happens on the remote server side and we'll check when using it.
     @classmethod
     def _run_server(cls, registry, address, authkey, serializer, name,
-                    allowed_hosts, allowed_users, writer, credentials,
-                    cwd=None): #pragma no cover
+                    allowed_hosts, allowed_users, allow_tunneling,
+                    writer, credentials, cwd=None): #pragma no cover
         """
         Create a server, report its address and public key, and run it.
         """
@@ -927,7 +943,7 @@ class OpenMDAO_Manager(BaseManager):
 
             # Create server.
             server = cls._Server(registry, address, authkey, serializer, name,
-                                 allowed_hosts, allowed_users)
+                                 allowed_hosts, allowed_users, allow_tunneling)
         except Exception as exc:
             writer.send(exc)
             return

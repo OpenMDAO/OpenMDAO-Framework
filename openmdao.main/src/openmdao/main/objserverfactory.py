@@ -66,6 +66,7 @@ class ObjServerFactory(Factory):
     # There isn't a good way to propagate them through a manager.
     _address = None
     _allow_shell = False
+    _allow_tunneling = False
     _allowed_types = None
 
     def __init__(self, name='ObjServerFactory', authkey=None, allow_shell=False,
@@ -217,7 +218,8 @@ class ObjServerFactory(Factory):
                 address = (self._address[0], 0)
 
             manager = _ServerManager(address, self._authkey, name=name,
-                                     allowed_users=allowed_users)
+                                     allowed_users=allowed_users,
+                                     allow_tunneling=self._allow_tunneling)
             root_dir = name
             count = 1
             while os.path.exists(root_dir):
@@ -624,15 +626,19 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
         return proxy
 
 
-def start_server(authkey='PublicKey', port=0, prefix='server',
-                 allowed_hosts=None, allowed_users=None, allow_shell=False,
-                 allowed_types=None, timeout=None):
+def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
+                 allowed_hosts=None, allowed_users=None, allow_tunneling=False,
+                 allow_shell=False, allowed_types=None, timeout=None):
     """
     Start an :class:`ObjServerFactory` service in a separate process
     in the current directory.
 
     authkey: string
         Authorization key, must be matched by clients.
+
+    address: string
+        IPv4 address, hostname, or pipe name.
+        Default is the host's default IPv4 address.
 
     port: int
         Server port (default of 0 implies next available port).
@@ -650,6 +656,10 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
         Dictionary of users and corresponding public keys allowed access.
         If None, *any* user may access. If empty, no user may access.
         The host portions of user strings are used for address patterns.
+
+    allow_tunneling: bool
+        If True, allow connections from 127.0.0.1 (localhost), even if not
+        listed otherwise.
 
     allow_shell: bool
         If True, :meth:`execute_command` and :meth:`load_model` are allowed.
@@ -687,6 +697,9 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
                                                    'objserverfactory.py')
     args = ['python', factory_path, '--port', str(port), '--prefix', prefix]
 
+    if address is not None:
+        args.extend(['--address', address])
+
     if allowed_users is not None:
         write_authorized_keys(allowed_users, 'users.allow', logging.getLogger())
         args.extend(['--users', 'users.allow'])
@@ -702,6 +715,9 @@ def start_server(authkey='PublicKey', port=0, prefix='server',
                 make_private('hosts.allow')
             else:  #pragma no cover
                 logging.warning("Can't make hosts.allow private")
+
+    if allow_tunneling:
+        args.append('--allow-tunneling')
 
     if allow_shell:
         args.append('--allow-shell')
@@ -748,7 +764,7 @@ def main():  #pragma no cover
     """
     OpenMDAO factory service process.
 
-    Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--types=filename][--users=filename][--port=number][--prefix=name]
+    Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--types=filename][--users=filename][--address=address][--port=number][--prefix=name]
 
     --allow-public:
         Allows access by anyone from any allowed host. Use with care!
@@ -756,6 +772,10 @@ def main():  #pragma no cover
     --allow-shell:
         Allows access to :meth:`execute_command` and :meth:`load_model`.
         Use with care!
+
+    --allow-tunneling:
+        Allows connections from 127.0.0.1 (localhost), even if not listed
+        otherwise.
 
     --hosts: string
         Filename for allowed hosts specification. Default ``hosts.allow``.
@@ -777,6 +797,10 @@ def main():  #pragma no cover
         same format.
         The host portions of user strings are used for allowed hosts.
 
+    --address: string
+        IPv4 address, hostname, or pipe name.
+        Default is the host's default IPv4 address.
+
     --port: int
         Server port (default of 0 implies next available port).
         Note that ports below 1024 typically require special privileges.
@@ -795,10 +819,14 @@ def main():  #pragma no cover
     public key information.
     """
     parser = optparse.OptionParser()
+    parser.add_option('--address', action='store', type='str',
+                      help='Network address to serve.')
     parser.add_option('--allow-public', action='store_true', default=False,
                       help='Allows access by any user, use with care!')
     parser.add_option('--allow-shell', action='store_true', default=False,
                       help='Allows potential shell access, use with care!')
+    parser.add_option('--allow-tunneling', action='store_true', default=False,
+                      help='Allows connections from 127.0.0.1 (localhost)')
     parser.add_option('--hosts', action='store', type='str',
                       default='hosts.allow', help='Filename for allowed hosts')
     parser.add_option('--types', action='store', type='str',
@@ -904,19 +932,28 @@ def main():  #pragma no cover
 
     # Get address and create manager.
     if options.port >= 0:
-        address = (platform.node(), options.port)
+        if options.address:  # Specify IPv4/hostname.
+            address = (options.address, options.port)
+        else:
+            address = (platform.node(), options.port)
     else:
-        address = None
+        if options.address:  # Specify pipename.
+            address = options.address
+        else:
+            address = None
+
     logger.info('Starting FactoryManager %s %r', address, keytype(authkey))
     current_process().authkey = authkey
     manager = _FactoryManager(address, authkey, name='Factory',
                               allowed_hosts=allowed_hosts,
-                              allowed_users=allowed_users)
+                              allowed_users=allowed_users,
+                              allow_tunneling=options.allow_tunneling)
 
     # Set defaults for created ObjServerFactories.
     # There isn't a good method to propagate these through the manager.
     ObjServerFactory._address = address
     ObjServerFactory._allow_shell = options.allow_shell
+    ObjServerFactory._allow_tunneling = options.allow_tunneling
     ObjServerFactory._allowed_types = allowed_types
 
     # Get server, retry if specified address is in use.

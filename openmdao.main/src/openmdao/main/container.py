@@ -590,6 +590,7 @@ class Container(HasTraits):
         `allowed_hosts`, we use a separate manager for each client accessing
         via AF_INET from a unique host.
         """
+# FIXME: this needs allowed_users control!
         addr_type = connection.address_type(proxy._token.address)
         addr = proxy._token.address[0] if addr_type == 'AF_INET' else None
         key = (addr_type, addr, proxy._authkey)
@@ -599,7 +600,10 @@ class Container(HasTraits):
             if addr_type == 'AF_INET':
                 ip_addr = socket.gethostbyname(socket.gethostname())
                 address = (ip_addr, 0)
-                allowed_hosts = [addr]
+                if addr == '127.0.0.1':
+                    allowed_hosts = [addr, ip_addr]  # Allow 'real' local host.
+                else:
+                    allowed_hosts = [addr, '127.0.0.1']  # Allow tunneling.
             else:
                 address = None
                 allowed_hosts = None
