@@ -82,13 +82,13 @@ class Workflow(object):
         Stop all Components in this Workflow.
         We assume it's OK to to call stop() on something that isn't running.
         """
-        for comp in self.contents():
+        for comp in self.get_components():
             comp.stop()
         self._stop = True
 
     def add(self, comp):
         """ Add a new component to the workflow by name."""
-        raise NotImplemented("This Workflow has no 'add' function")
+        raise NotImplementedError("This Workflow has no 'add' function")
     
     def config_changed(self):
         """Notifies the Workflow that workflow configuration (dependencies, etc)
@@ -98,19 +98,24 @@ class Workflow(object):
         
     def remove(self, comp):
         """Remove a component from this Workflow by name."""
-        raise NotImplemented("This Workflow has no 'remove' function")
+        raise NotImplementedError("This Workflow has no 'remove' function")
 
-    def contents(self):
-        """Returns a list containing all Components in the workflow.
-        No ordering is assumed.
+    def get_names(self):
+        """Return a list of component names in this workflow."""
+        raise NotImplementedError("This Workflow has no 'get_names' function")
+
+    def get_components(self):
+        """Returns a list of all component objects in the workflow. No ordering
+        is assumed.
         """
-        raise NotImplemented("This Workflow has no 'contents' function")
+        scope = self.scope
+        return [getattr(scope, name) for name in self.get_names()]
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow in
         some order.
         """
-        raise NotImplemented("This Workflow has no '__iter__' function")
+        raise NotImplementedError("This Workflow has no '__iter__' function")
     
     def __len__(self):
-        raise NotImplemented("This Workflow has no '__len__' function")
+        raise NotImplementedError("This Workflow has no '__len__' function")

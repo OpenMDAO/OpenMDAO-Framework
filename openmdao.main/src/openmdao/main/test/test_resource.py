@@ -45,6 +45,15 @@ class TestCase(unittest.TestCase):
             self.machines.append({'hostname':self.node,
                                   'python':self.python})
 
+        # Ensure we aren't held up by local host load problems.
+        for allocator in ResourceAllocationManager.list_allocators():
+            if allocator.name == 'LocalHost':
+                self.local = allocator
+                self.local.max_load = 10
+                break
+        else:
+            raise RuntimeError('No LocalHost allocator!?')
+
     def tearDown(self):
 # shutdown() currently causes problems (except at exit).
 #        if self.cluster is not None:
@@ -94,25 +103,19 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_max_servers')
 
-        local = ResourceAllocationManager.get_allocator(0)
-        n_servers = local.max_servers({'python_version':sys.version[:3]})
+        n_servers = self.local.max_servers({'python_version':sys.version[:3]})
         try:
             n_cpus = multiprocessing.cpu_count()
         except AttributeError:
             n_cpus = 1
-        self.assertEqual(n_servers, local.max_load * n_cpus)
+        self.assertEqual(n_servers, self.local.max_load * n_cpus)
 
-        n_servers = local.max_servers({'python_version':'bad-version'})
+        n_servers = self.local.max_servers({'python_version':'bad-version'})
         self.assertEqual(n_servers, 0)
 
     def test_hostnames(self):
         logging.debug('')
         logging.debug('test_hostnames')
-
-        # Ensure we aren't held up by local host load problems.
-        local = ResourceAllocationManager.get_allocator(0)
-        local.max_load = 10
-        self.assertEqual(local.name, 'LocalHost')
 
         hostnames = ResourceAllocationManager.get_hostnames({'n_cpus':1})
         self.assertEqual(hostnames[0], platform.node())
@@ -123,10 +126,6 @@ class TestCase(unittest.TestCase):
     def test_resources(self):
         logging.debug('')
         logging.debug('test_resources')
-
-        # Ensure we aren't held up by local host load problems.
-        local = ResourceAllocationManager.get_allocator(0)
-        local.max_load = 10
 
         result = ResourceAllocationManager.allocate({'localhost':False})
         self.assertEqual(result, (None, None))

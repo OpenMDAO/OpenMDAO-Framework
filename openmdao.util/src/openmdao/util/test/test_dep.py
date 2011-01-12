@@ -26,6 +26,9 @@ class DepTestCase(unittest.TestCase):
                         psta.graph['openmdao.main.container.Container'])
         self.assertTrue('openmdao.main.assembly.Assembly' in 
                         psta.graph['openmdao.main.component.Component'])
+        
+        lst = psta.find_inheritors('openmdao.main.component.Component')
+        print lst
         # find all inheritors from openmdao.main.api.Component
         #for edge in graph.in_edges('openmdao.main.component.Component'):
             #print edge

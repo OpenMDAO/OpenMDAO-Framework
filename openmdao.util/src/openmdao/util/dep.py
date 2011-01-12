@@ -138,3 +138,7 @@ class PythonSourceTreeAnalyser(object):
         # flip orientation of inheritance graph so we can find all classes
         # that inherit from a particular base more easily
         self.graph = self.graph.reverse(copy=False)
+        
+    def find_inheritors(self, base):
+        paths = nx.shortest_path(self.graph, source=base, target=None)
+        return paths.keys()

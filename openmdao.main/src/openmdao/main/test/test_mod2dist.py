@@ -8,7 +8,7 @@ import pkg_resources
 import copy
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
-import openmdao.util.mod2dist
+import openmdao.main.mod2dist
 from openmdao.util.testutil import find_python
 
 orig_path = copy.copy(pkg_resources.working_set.entries)
@@ -22,7 +22,7 @@ class mod2distTestCase(unittest.TestCase):
         pkg_resources.working_set = pkg_resources.WorkingSet()
         self.pudir = tempfile.mkdtemp()
         self.version = '1.999'
-        self.mod2dist = openmdao.util.mod2dist.__file__.replace('.pyc','.py')
+        self.mod2dist = openmdao.main.mod2dist.__file__.replace('.pyc','.py')
         self.mod2dist = self.mod2dist.replace('.pyo','.py')
         self.python = find_python()
         self.srcfile = os.path.join(os.path.dirname(__file__),'src','doubler.py')

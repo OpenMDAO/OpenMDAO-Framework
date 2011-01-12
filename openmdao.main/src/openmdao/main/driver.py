@@ -47,17 +47,27 @@ class Driver(Component):
             return False
 
         # force execution if any component in the workflow is invalid
-        for comp in self.workflow.contents():
+        for comp in self.workflow.get_components():
             if not comp.is_valid():
                 return False
         return True
+
+    def check_config (self):
+        """Verify that our workflow is able to resolve all of its components."""
+        # workflow will raise an exception if it can't resolve a Component
+        super(Driver, self).check_config()
+        try:
+            comps = self.workflow.get_components()
+        except AttributeError as err:
+            self.raise_exception("Component in workflow failed to resolve: %s" % str(err),
+                                 AttributeError)
 
     def iteration_set(self):
         """Return a set of all Components in our workflow(s), and 
         recursively in any workflow in any Driver in our workflow(s).
         """
         allcomps = set()
-        for child in self.workflow.contents():
+        for child in self.workflow.get_components():
             allcomps.add(child)
             if is_instance(child, Driver):
                 allcomps.update(child.iteration_set())

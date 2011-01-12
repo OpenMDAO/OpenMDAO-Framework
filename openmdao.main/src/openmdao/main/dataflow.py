@@ -1,6 +1,6 @@
 
 import networkx as nx
-from networkx.algorithms.traversal import strongly_connected_components
+from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.seqentialflow import SequentialWorkflow
 from openmdao.main.interfaces import IDriver
@@ -61,7 +61,7 @@ class Dataflow(SequentialWorkflow):
         scope = self.scope
         graph = scope._depgraph.copy_graph()
         
-        contents = self.contents()
+        contents = self.get_components()
         
         # add any dependencies due to ExprEvaluators
         for comp in contents:
