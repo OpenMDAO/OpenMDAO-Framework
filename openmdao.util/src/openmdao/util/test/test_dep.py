@@ -27,12 +27,16 @@ class DepTestCase(unittest.TestCase):
         self.assertTrue('openmdao.main.assembly.Assembly' in 
                         psta.graph['openmdao.main.component.Component'])
         
-        lst = psta.find_inheritors('openmdao.main.component.Component')
-        print lst
-        # find all inheritors from openmdao.main.api.Component
-        #for edge in graph.in_edges('openmdao.main.component.Component'):
-            #print edge
-
+        comps = psta.find_inheritors('openmdao.main.component.Component')
+        comps = [x.rsplit('.',1)[1] for x in comps]
+        comps.remove('Driver')
+        
+        from openmdao.main.api import get_available_types
+        types = set([x[0] for x in get_available_types(['openmdao.component'])])
+        types = [x.rsplit('.',1)[1] for x in types]
+        
+        self.assertEqual(set(comps), set(types))
+        
     
 if __name__ == '__main__':
     unittest.main()

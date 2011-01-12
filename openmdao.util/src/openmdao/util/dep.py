@@ -1,5 +1,5 @@
 """
-Routines analysing dependencies (class and module) in python source
+Routines analyzing dependencies (class and module) in python source
 """
 
 import os
@@ -141,4 +141,5 @@ class PythonSourceTreeAnalyser(object):
         
     def find_inheritors(self, base):
         paths = nx.shortest_path(self.graph, source=base, target=None)
+        del paths[base] # don't want the base itself in the list
         return paths.keys()
