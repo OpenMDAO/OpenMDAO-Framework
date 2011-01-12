@@ -74,11 +74,33 @@ def makepath(path):
 
 def find_files(pat, startdir):
     """Return a list of files (using a generator) that match
-    the given glob pattern. Walks an entire directory structure.
+    the given glob pattern. startdir can be a single directory
+    or a list of directories.  Walks all subdirectories below 
+    each specified starting directory.
     """
-    for path, dirlist, filelist in os.walk(startdir):
-        for name in fnmatch.filter(filelist, pat):
-            yield join(path, name)
+    if isinstance(startdir, basestring):
+        startdirs = [startdir]
+    else:
+        startdirs = startdir
+
+    for startdir in startdirs:
+        for path, dirlist, filelist in os.walk(startdir):
+            for name in fnmatch.filter(filelist, pat):
+                yield join(path, name)
+            
+def exclude_files(excludes, pat, startdir):
+    """Return a list of files (using a generator) that match
+    the given glob pattern, minus any that match any of the
+    given exclude patterns. startdir can be a single dir
+    or a list of dirs.  Walks all subdirs below each specified
+    dir.
+    """
+    for name in find_files(pat, startdir):
+        for exclude in excludes:
+            if fnmatch.fnmatch(name, exclude):
+                break
+        else:
+            yield name
 
 def find_files_and_dirs(pat, startdir):
     """Return a list of files and directories (using a generator) that match
@@ -113,6 +135,19 @@ def find_up(name, path=None):
             if path == pth:
                 return None
     return None
+
+                
+def get_module_path(fpath):
+    """Given a module filename, return its full python name including
+    enclosing packages. (based on existence of __init__.py files)
+    """
+    pnames = [os.path.basename(fpath)[:-3]]
+    path = os.path.dirname(os.path.abspath(fpath))
+    while os.path.isfile(os.path.join(path, '__init__.py')):
+            path, pname = os.path.split(path)
+            pnames.append(pname)
+    return '.'.join(pnames[::-1])
+   
 
 def rm(path):
     """Delete a file or directory."""
