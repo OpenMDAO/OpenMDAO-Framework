@@ -21,7 +21,8 @@ def find_in_dir_list(fname, dirlist, exts=('',)):
         List of directory paths, relative or absolute.
         
     exts: tuple of str
-        Tuple of extensions (including the '.') to apply to fname for, e.g., .exe.
+        Tuple of extensions (including the '.') to apply to fname for loop, 
+        e.g., ('.exe','.bat').
     """
     for path in dirlist:
         for ext in exts:
@@ -45,7 +46,8 @@ def find_in_path(fname, pathvar=None, sep=os.pathsep, exts=('',)):
         Delimiter used to separate paths within pathvar.
         
     exts: tuple of str
-        Tuple of extensions (including the '.') to apply to fname for, e.g., .exe.
+        Tuple of extensions (including the '.') to apply to fname for loop, 
+        e.g., ('.exe','.bat').
     """
     if pathvar is None:
         pathvar = os.environ['PATH']
@@ -148,6 +150,14 @@ def get_module_path(fpath):
             pnames.append(pname)
     return '.'.join(pnames[::-1])
    
+def get_ancestor_dir(path, num_levels=1):
+    """Return the name of the directory that is 'num_levels' levels
+    above the specified path.  If num_levels is larger than the number
+    of members in the path, then the root directory name will be returned.
+    """
+    for i in range(num_levels):
+        path = os.path.dirname(path)
+    return path
 
 def rm(path):
     """Delete a file or directory."""
