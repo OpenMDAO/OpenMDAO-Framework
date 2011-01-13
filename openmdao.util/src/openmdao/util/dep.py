@@ -103,7 +103,9 @@ class PythonSourceTreeAnalyser(object):
         else:
             self.excludes = excludes
             
-    def analyze(self):
+        self._analyze()
+            
+    def _analyze(self):
         """Gather import and class inheritance information from
         the source trees under the specified set of starting 
         directories.

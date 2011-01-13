@@ -52,9 +52,10 @@ setup(name='openmdao.main',
           'openmdao.util',
           'pycrypto',
       ],
-      entry_points = {
-          "console_scripts": [
-                "openmdao_docs=openmdao.util.view_docs:view_docs",
-              ],
-          },
+      entry_points = """
+      [console_scripts]
+      openmdao_docs=openmdao.util.view_docs:view_docs
+      [openmdao.component]
+      openmdao.main.Assembly = openmdao.main.assembly:Assembly
+      """,
     )
