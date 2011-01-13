@@ -586,7 +586,9 @@ class OpenMDAO_Server(Server):
             res_address = res._token.address
             res_type = connection.address_type(res_address)
             if (res_type != self._address_type) or \
-               (res_type == 'AF_INET' and res_address[0] != self.address[0]):
+               (res_type == 'AF_INET' and \
+                (self.address[0] == '127.0.0.1' or \
+                  res_address[0] != self.address[0])):
                 # Create proxy for proxy.
                 # (res is probably unreachable by our client)
                 typeid = res._token.typeid
@@ -1220,7 +1222,7 @@ class OpenMDAO_Proxy(BaseProxy):
         # Hard to cause this to happen.
         if not OpenMDAO_Proxy.manager_is_alive(self._token.address):  #pragma no cover
             raise RuntimeError('Cannot connect to manager at %r' 
-                               % (self._token.address))
+                               % (self._token.address,))
 
         conn = self._Client(self._token.address, authkey=self._authkey)
         dispatch(conn, None, 'incref', (self._id,))

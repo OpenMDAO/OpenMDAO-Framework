@@ -1,6 +1,22 @@
 """
 Run a distributed simulation between a remote host and this one.
 Similar to code in test_distsim.py, but doesn't assume localhost.
+
+To test between gxterm3 (server) and torpedo (client):
+
+1. gxterm3> python remote_distsim --server --tunnel
+
+2. torpedo> scp gx:Factory/server.cfg .
+
+3. torpedo> ssh -L port:localhost:port gxterm3
+   [where 'port' is the port the server is listening to]
+
+4. torpedo> python remote_distsim --client
+
+Currently this gets to the point of adding the remote component.  When setting
+the component's parent we run into problems probably related to no connectivity
+to the parent server (running on torpedo) from the component (running on gx).
+[No ssh tunnel set up, and parent server could be at any port]
 """
 
 import atexit
