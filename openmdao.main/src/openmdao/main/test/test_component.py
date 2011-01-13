@@ -162,7 +162,7 @@ class TestCase(unittest.TestCase):
         except NotImplementedError as err:
             self.assertEqual(str(err), ".execute")
         else:
-            self.fail('expected NotImplemented')
+            self.fail('expected NotImplementedError')
     
     def test_run(self):
         comp = Component()
@@ -171,7 +171,7 @@ class TestCase(unittest.TestCase):
         except NotImplementedError as err:
             self.assertEqual(str(err), ".execute")
         else:
-            self.fail('expected NotImplemented')
+            self.fail('expected NotImplementedError')
 
     def test_get_entry_group(self):
         self.assertEqual(_get_entry_group(Component()), 'openmdao.component')

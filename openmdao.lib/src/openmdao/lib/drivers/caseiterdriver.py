@@ -181,7 +181,7 @@ class CaseIterDriverBase(Driver):
         
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
-        raise NotImplemented('get_case_iterator')
+        raise NotImplementedError('get_case_iterator')
 
     def _start(self):
         """ Start evaluating cases concurrently. """

@@ -33,7 +33,6 @@ from enthought.traits.trait_base import not_none, not_event
 from multiprocessing import connection
 
 from openmdao.main.filevar import FileRef
-from openmdao.lib.datatypes.api import Float
 
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
@@ -778,6 +777,7 @@ class Container(HasTraits):
         self.raise_exception("Couldn't find metadata for trait %s" % traitpath,
                              AttributeError)
 
+    @rbac(('owner', 'user'))
     def get_metadata(self, traitpath, metaname=None):
         """Retrieve the metadata associated with the trait found using
         traitpath.  If metaname is None, return the entire metadata dictionary

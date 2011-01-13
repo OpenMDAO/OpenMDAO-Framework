@@ -21,7 +21,7 @@ import pkg_resources
 # easy install barfs without distutils import
 import distutils.command.build
 import setuptools.command.easy_install
-from openmdao.lib.datatypes.api import TraitType
+from enthought.traits.api import TraitType
 
 from openmdao.main.api import Component, Driver # , ResourceAllocator, CaseIterator
 
@@ -73,7 +73,7 @@ def mod2dist(argv=None, groups= { 'openmdao.component': Component,
     parser.add_option("-d","--dest", action="store", type="string", dest="dest",
                       help="specify the destination directory for the distribution")
 
-    parser.add_option("","--desc", action="store", type="string", dest="desc",
+    parser.add_option("--desc", action="store", type="string", dest="desc",
                       help="specify a description for the distribution")
 
     parser.add_option("-a","--author", action="store", type="string", dest="author",
@@ -91,7 +91,7 @@ def mod2dist(argv=None, groups= { 'openmdao.component': Component,
     parser.add_option("-u","--url", action="store", type="string", dest="url",
                       help="specify URL of the web page for the distribution")
     
-    parser.add_option("","--verbose", action="store_true", dest="verbose", default=False,
+    parser.add_option("--verbose", action="store_true", dest="verbose", default=False,
                       help="generate verbose output while building")
     
     parser.add_option("-k","--keep", action="store_true", dest="keep", default=False,

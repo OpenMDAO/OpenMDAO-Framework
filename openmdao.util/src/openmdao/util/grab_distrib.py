@@ -85,7 +85,7 @@ if __name__ == '__main__':
                       help="destination directory", default='.')
     parser.add_option("-q", "--quiet", action="store_true", dest="quiet",
                       help="no output")
-    parser.add_option("", "--nopypi", action="store_true", dest="nopypi",
+    parser.add_option("--nopypi", action="store_true", dest="nopypi",
                       help="do not search PyPI")
     (options, args) = parser.parse_args(sys.argv[1:])
     

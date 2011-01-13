@@ -63,9 +63,13 @@ class Array(TraitArray):
             metadata['shape'] = shape
             
             # Make sure default matches the shape.
-            if default_value.shape != shape:
+            if len(shape) != len(default_value.shape):
                 raise TraitError("Shape of the default value does not match "
                                  "the shape attribute.")
+            for i, sh in enumerate(shape):
+                if sh is not None and sh != default_value.shape[i]:
+                    raise TraitError("Shape of the default value does not match "
+                                     "the shape attribute.")
             
         super(Array, self).__init__(dtype=dtype, value=default_value,
                                     **metadata)

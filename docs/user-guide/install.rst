@@ -147,27 +147,57 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
       python go-openmdao.py
 
 
-   This script will check the version of Python you are running. You must be running a version greater
-   than or equal to 2.6 but less than 3.0. After the script completes successfully, you will have
-   installed OpenMDAO. However, you still have a couple more steps to complete before you can start
-   using it. 
+   This script will check the version of Python you are running. Currently you
+   must be running version 2.6. After the script completes successfully, you
+   will have installed OpenMDAO. There are just a couple more steps to follow
+   before you can start using it.
+   
+   You can also specify names or URLs of files defining additional
+   required packages by passing *--reqs* arguments to go-openmdao.py, e.g.,
+   
+   ::
+   
+      python go-openmdao.py --reqs=mysitereqs --reqs=http://mywebserver/morefiles.req
+      
+   The following lines are allowed in a requirements file:
+   
+        - A blank line
+        - A python style comment
+        - A line starting with -f, followed by the URL of a find-links server
+        - A line containing a requirement specifier, which has the same form as those seen 
+          in setup.py files or buildout.cfg files.  Here's an example:
+   
+   ::
+   
+      #  a comment
+      
+      -f http://myserver.org:8432   # another comment
+      mypackage<1.5
+      anotherpackage==2.1
+      
+      -f http://anotherserver.com
+      pyawesome>0.3,<1.4
+      
 
 **Activate your virtual environment**
 
-Each time before you want to use openmdao, you need to activate its virtual environment. 
-Activation adds your virtual environment's ``bin`` directory to the front of your system path in the current 
-shell so that when you type ``python``, you'll get a Python interpreter that's customized for your virtual 
+Each time before you want to use openmdao, you need to activate its virtual
+environment. Activation adds your virtual environment's ``bin`` directory to
+the front of your system path in the current shell so that when you type
+``python``, you'll get a Python interpreter that's customized for your virtual
 environment, giving you access to everything in OpenMDAO.
 
 Navigate into the folder that was just created by your install script.
 
-If you are on **Linux or Mac OS X,** you must be running Bash. If you are in Bash, omit this step; otherwise, type: 
+If you are on **Linux or Mac OS X,** you must be running bash in order to
+activate the virtual environment. If you are not running bash, start it up
+by typing:
 
  :: 
 
     bash
 
- Next, type the following, making sure to include the "." in the command:
+ Next, if you're on Linux or OS X, type the following, making sure to include the "." in the command:
 
  ::
 

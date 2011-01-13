@@ -204,15 +204,15 @@ def check_eggdir(name):
 
 if __name__ == '__main__':
     parser = OptionParser()
-    parser.add_option("","--log", action="store", type="string", dest="log",
+    parser.add_option("--log", action="store", type="string", dest="log",
                       help="a file to log results to")
-    parser.add_option("","--eggdir", action="store", type="string", dest="eggdir",
+    parser.add_option("--eggdir", action="store", type="string", dest="eggdir",
                       help="the directory where distributions are kept. The"+
                         " format of the directory must be a top level directory "+
                         "containing one directory for each package, with each package "+
                         "directory containing all distributions for that package",
                         default=".")
-    parser.add_option("", "--port", action="store", type="int", dest="port", default=31001,
+    parser.add_option("--port", action="store", type="int", dest="port", default=31001,
                       help="the port that the egg server will listen to")
     (options, args) = parser.parse_args()
     
