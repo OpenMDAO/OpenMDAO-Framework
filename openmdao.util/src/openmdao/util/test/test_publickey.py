@@ -28,13 +28,16 @@ class TestCase(unittest.TestCase):
         user = '%s@%s' % (getpass.getuser(), socket.gethostname())
         if user in _KEY_CACHE:
             del _KEY_CACHE[user]
-        key_pair = get_key_pair(user, logging.getLogger())
+        key_pair = get_key_pair(user, logging.getLogger(), ignore_ssh=True)
 
         # Again, this time with insecure key file.
         if sys.platform != 'win32':
             os.chmod(key_file, 0644)
             del _KEY_CACHE[user]
-            key_pair = get_key_pair(user, logging.getLogger())
+            key_pair = get_key_pair(user, logging.getLogger(), ignore_ssh=True)
+
+        # Revert to normal (try ssh) scheme for any other tests.
+        del _KEY_CACHE[user]
 
         # Check privacy.
         if sys.platform != 'win32' or HAVE_PYWIN32:
