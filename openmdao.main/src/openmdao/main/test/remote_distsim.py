@@ -15,6 +15,8 @@ from openmdao.main.objserverfactory import connect, start_server
 from openmdao.main.rbac import get_credentials
 from openmdao.main.test.test_distsim import Model
 
+from openmdao.util.publickey import read_authorized_keys
+
 
 def main():
     """
@@ -97,7 +99,11 @@ def start_factory(tunnel):
     address = 'localhost' if tunnel else None
 
     credentials = get_credentials()
-    allowed_users = {credentials.user: credentials.public_key}
+#    allowed_users = {credentials.user: credentials.public_key}
+    allowed_users = read_authorized_keys()
+    if not allowed_users:
+        print 'No authorized keys?'
+        sys.exit(1)
 
     allowed_types = ['openmdao.main.test.test_distsim.Box']
 

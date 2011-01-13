@@ -1,6 +1,11 @@
 """
-Support for generation and storage of public/private key pairs.
+Support for generation, use, and storage of public/private key pairs.
+The :func:`pk_encrypt`, :func:`pk_decrypt`, :func:`pk_sign`, and
+:func:`pk_verify` functions provide a thin interface over
+:class:`Crypto.PublicKey.RSA` methods for easier use and to work around some
+issues found with some keys read from ssh ``id_rsa`` files.
 """
+
 import base64
 import cPickle
 import getpass
@@ -12,6 +17,7 @@ import threading
 
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
+from Crypto.Util.number import bytes_to_long
 
 if sys.platform == 'win32':  #pragma no cover
     try:
@@ -32,11 +38,13 @@ _KEY_CACHE = {}
 _KEY_CACHE_LOCK = threading.Lock()
 
 
-def get_key_pair(user_host, logger=None, overwrite_cache=False):
+def get_key_pair(user_host, logger=None,
+                 overwrite_cache=False, ignore_ssh=False):
     """
     Returns RSA key containing both public and private keys for the user
     identified in `user_host`.  This can be an expensive operation, so
     we avoid generating a new key pair whenever possible.
+    If ``~/.ssh/id_rsa`` exists and is private, that key is returned.
 
     user_host: string
         Format ``user@host``.
@@ -48,11 +56,15 @@ def get_key_pair(user_host, logger=None, overwrite_cache=False):
         If True, a new key is generated and forced into the cache of existing
         known keys.  Used for testing.
 
+    ignore_ssh: bool
+        If True, ignore any existing ssh id_rsa key file.  Used for testing.
+
     .. note::
 
         To avoid unnecessary key generation, the public/private key pair for
         the current user is stored in the private file ``~/.openmdao/keys``.
-        On Windows this requires the pywin32 extension.
+        On Windows this requires the pywin32 extension.  Also, the public
+        key is stored in ssh form in ``~/.openmdao/id_rsa.pub``.
 
     """
     logger = logger or NullLogger()
@@ -72,20 +84,40 @@ def get_key_pair(user_host, logger=None, overwrite_cache=False):
             user, host = user_host.split('@')
             if user == getpass.getuser():
                 current_user = True
-                key_file = \
-                    os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
-                if is_private(key_file):
-                    try:
-                        with open(key_file, 'rb') as inp:
-                            key_pair = cPickle.load(inp)
-                    except Exception:
-                        generate = True
+                key_pair = None
+
+                # Try to re-use SSH key. Exceptions should *never* be exercised!
+                if not ignore_ssh:
+                    id_rsa = \
+                        os.path.expanduser(os.path.join('~', '.ssh', 'id_rsa'))
+                    if is_private(id_rsa):
+                        try:
+                            with open(id_rsa, 'r') as inp:
+                                key_pair = RSA.importKey(inp.read())
+                        except Exception as exc:  #pragma no cover
+                            logger.warning('ssh id_rsa import: %r', exc)
+                        else:
+                            generate = False
+                    else:  #pragma no cover
+                        logger.warning('Ignoring insecure ssh id_rsa.')
+
+                if key_pair is None:
+                    # Look for OpenMDAO key.
+                    key_file = \
+                        os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
+                    if is_private(key_file):
+                        try:
+                            with open(key_file, 'rb') as inp:
+                                key_pair = cPickle.load(inp)
+                        except Exception:
+                            generate = True
+                        else:
+                            generate = False
                     else:
-                        generate = False
-                else:
-                    logger.warning('Insecure keyfile! Regenerating keys.')
-                    os.remove(key_file)
-                    generate = True
+                        logger.warning('Insecure keyfile! Regenerating keys.')
+                        os.remove(key_file)
+                        generate = True
+
             # Difficult to run test as non-current user.
             else:  #pragma no cover
                 current_user = False
@@ -94,7 +126,7 @@ def get_key_pair(user_host, logger=None, overwrite_cache=False):
             if generate:
                 key_pair = _generate(user_host, logger)
                 if current_user:
-                    # Save in protected file.
+                    # Save key pair in protected file.
                     if sys.platform == 'win32' and not HAVE_PYWIN32: #pragma no cover
                         logger.debug('No pywin32, not saving keyfile')
                     else:
@@ -112,6 +144,11 @@ def get_key_pair(user_host, logger=None, overwrite_cache=False):
                             os.remove(key_file)  # Remove unsecured file.
                             raise
 
+                    # Save public key in ssh form.
+                    users = {user_host: key_pair.publickey()}
+                    filename = os.path.join(key_dir, 'id_rsa.pub')
+                    write_authorized_keys(users, filename, logger)
+
             _KEY_CACHE[user_host] = key_pair
 
     return key_pair
@@ -126,6 +163,75 @@ def _generate(user_host, logger):
     key_pair = RSA.generate(strength, get_random_bytes)
     logger.debug('    done')
     return key_pair
+
+
+def pk_encrypt(data, public_key):
+    """
+    Return list of chunks of `data` encrypted by `public_key`.
+
+    data: string
+        The message to be encrypted.
+
+    public_key: :class:`Crypto.PublicKey.RSA`
+        Public portion of key pair.
+    """
+    # Normally we would use 8 rather than 16 here, but for some reason at least
+    # some keys read from ssh id_rsa files don't work correctly with 8.
+    chunk_size = public_key.size() / 16
+    chunks = []
+    while data:
+        chunks.append(public_key.encrypt(data[:chunk_size], ''))
+        data = data[chunk_size:]
+    return chunks
+
+def pk_decrypt(encrypted, private_key):
+    """
+    Return `encrypted` decrypted by `private_key` as a string.
+
+    encrypted: list
+        Chunks of encrypted data returned by :func:`pk_encrypt`.
+
+    private_key: :class:`Crypto.PublicKey.RSA`
+        Private portion of key pair.
+    """
+    data = ''
+    for chunk in encrypted:
+        data += private_key.decrypt(chunk)
+    return data
+
+
+def pk_sign(hashed, private_key):
+    """
+    Return signature for `hashed` using `private_key`.
+
+    hashed: string
+        A hash value of the data to be signed.
+
+    private_key: :class:`Crypto.PublicKey.RSA`
+        Private portion of key pair.
+    """
+    # Normally we would just do:
+    #    return private_key.sign(hashed, '')
+    # But that fails for at least some keys from ssh id_rsa files.
+    # Instead, use the 'slowmath' method:
+    c = bytes_to_long(hashed)
+    m = pow(c, private_key.d, private_key.n)
+    return (m,)
+
+def pk_verify(hashed, signature, public_key):
+    """
+    Verify `hashed` based on `signature` and `public_key`.
+
+    hashed: string
+        A hash for the data that is signed.
+
+    signature: tuple
+        Value returned by :func:`pk_sign`.
+
+    public_key: :class:`Crypto.PublicKey.RSA`
+        Public portion of key pair.
+    """
+    return public_key.verify(hashed, signature)
 
 
 def is_private(path):
@@ -241,7 +347,7 @@ def decode_public_key(text):
 def read_authorized_keys(filename=None, logger=None):
     """
     Return dictionary of public keys, indexed by user, read from `filename`.
-    The file must be in ssh form, and only RSA keys are processed.
+    The file must be in ssh format, and only RSA keys are processed.
     If the file is not private, then no keys are returned.
 
     filename: string
@@ -347,7 +453,7 @@ def _longint(buf, start, length):
 
 def write_authorized_keys(allowed_users, filename, logger=None):
     """
-    Write `allowed_users` to `filename` in ssh authorized_keys format.
+    Write `allowed_users` to `filename` in ssh format.
     The file will be made private if supported on this platform.
 
     allowed_users: dict

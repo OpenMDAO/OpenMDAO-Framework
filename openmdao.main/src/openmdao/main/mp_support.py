@@ -66,7 +66,8 @@ from openmdao.main.rbac import AccessController, RoleError, check_role, \
                                Credentials, get_credentials, set_credentials
 
 from openmdao.util.publickey import decode_public_key, encode_public_key, \
-                                    get_key_pair, HAVE_PYWIN32
+                                    get_key_pair, HAVE_PYWIN32, \
+                                    pk_encrypt, pk_decrypt
 
 # Classes which require proxying (used by default AccessController)
 # Used to break import loop between this and openmdao.main.container.
@@ -504,16 +505,14 @@ class OpenMDAO_Server(Server):
             self._logger.error(msg)
             raise RuntimeError(msg)
 
-        n, e, chunks = client_data[1:]
+        n, e, encrypted = client_data[1:]
         if e != self._key_pair.e or n != self._key_pair.n:  #pragma no cover
             msg = 'Server key mismatch'
             self._logger.error(msg)
             raise RuntimeError(msg)
 
         try:
-            text = ''
-            for chunk in chunks:
-                text += self._key_pair.decrypt(chunk)
+            text = pk_decrypt(encrypted, self._key_pair)
             client_key = decode_public_key(text)
         except Exception as exc:  #pragma no cover
             self._logger.error("Can't recreate client key: %r", exc)
@@ -1194,13 +1193,9 @@ class OpenMDAO_Proxy(BaseProxy):
             logging.error(msg)
             raise RuntimeError(msg)
 
-        chunk_size = server_key.size() / 8
-        chunks = []
-        while text:
-            chunks.append(server_key.encrypt(text[:chunk_size], ''))
-            text = text[chunk_size:]
+        encrypted = pk_encrypt(text, server_key)
         client_version = 1
-        conn.send((client_version, server_key.n, server_key.e, chunks))
+        conn.send((client_version, server_key.n, server_key.e, encrypted))
 
         server_data = conn.recv()
         server_version = server_data[0]
