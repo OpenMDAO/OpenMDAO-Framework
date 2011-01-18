@@ -126,13 +126,14 @@ def get_key_pair(user_host, logger=None,
             if generate:
                 key_pair = _generate(user_host, logger)
                 if current_user:
+                    key_dir = os.path.dirname(key_file)
+                    if not os.path.exists(key_dir):
+                        os.mkdir(key_dir)
+
                     # Save key pair in protected file.
                     if sys.platform == 'win32' and not HAVE_PYWIN32: #pragma no cover
                         logger.debug('No pywin32, not saving keyfile')
                     else:
-                        key_dir = os.path.dirname(key_file)
-                        if not os.path.exists(key_dir):
-                            os.mkdir(key_dir)
                         make_private(key_dir)  # Private while writing keyfile.
                         with open(key_file, 'wb') as out:
                             cPickle.dump(key_pair, out,
