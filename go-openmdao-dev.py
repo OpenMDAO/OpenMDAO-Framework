@@ -1127,48 +1127,42 @@ def create_bootstrap_script(extra_text, python_version=''):
 
 
 
-# list of openmdao packages to be installed as 'develop' eggs.
-openmdao_packages = ['openmdao.util', 
-                     'openmdao.units', 
-                     'openmdao.main', 
-                     'openmdao.lib', 
-                     'openmdao.test',
-                     'openmdao.devtools',
-                     'examples/openmdao.examples.simple',
-                     'examples/openmdao.examples.bar3simulation',
-                     'examples/openmdao.examples.enginedesign',
-                     'examples/openmdao.examples.mdao',
-                     'examples/openmdao.examples.expected_improvement'
-                    ]
-    
+openmdao_prereqs = ['numpy', 'scipy']
+
+def extend_parser(parser):
+    parser.add_option("--reqs", action="append", type="string", dest='reqs', 
+                      help="specify file with additional requirements", default=[])
+
+
 def adjust_options(options, args):
-    if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
-        print 'ERROR: python version must be >= 2.6 and <= 3.0. yours is %s' % sys.version.split(' ')[0]
+    major_version = sys.version_info[:2]
+    if major_version != (2,6):
+        print 'ERROR: python major version must be 2.6. yours is %s' % str(major_version)
         sys.exit(-1)
+
     for arg in args:
         if not arg.startswith('-'):
-            print 'no args allowed that start without a dash (-)'
+            print 'ERROR: no args allowed that start without a dash (-)'
             sys.exit(-1)
     args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <top>/devenv
 
+
+
+
 def _single_install(cmds, req, bin_dir):
+    global logger
     cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
-        # pip seems more robust than easy_install, but won't install from binary distribs :(
+        # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     logger.debug("running command: %s" % ' '.join(cmdline))
     subprocess.check_call(cmdline)
 
 def after_install(options, home_dir):
-    global logger
-    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'Pygments==1.3.1', 'ordereddict==1.1', 'Traits==3.3.0', 'pycrypto==2.3', 'PyYAML==3.09', 'Jinja2==2.4', 'Sphinx==1.0.4', 'virtualenv==1.4.6', 'Fabric==0.9.0', 'newsumt==1.0.0', 'networkx==1.0.1', 'decorator==3.2.0', 'conmin==1.0.1', 'pyparsing==1.5.2', 'nose==0.11.3']
-    cmds = []
+    global logger, openmdao_prereqs
+    
+    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'Pygments==1.3.1', 'ordereddict==1.1', 'Traits==3.3.0', 'pycrypto==2.3', 'PyYAML==3.09', 'Jinja2==2.4', 'Sphinx==1.0.4', 'virtualenv==1.4.6', 'Fabric==0.9.3', 'paramiko==1.7.6', 'newsumt==1.0.0', 'networkx==1.0.1', 'decorator==3.2.0', 'conmin==1.0.1', 'pyparsing==1.5.2', 'nose==0.11.3']
     url = 'http://openmdao.org/dists'
-    found = [c for c in cmds if url in c]
-    if not found:
-        cmds.extend(['-f',url])
     etc = join(home_dir, 'etc')
-    ## TODO: this should all come from distutils
-    ## like distutils.sysconfig.get_python_inc()
     if sys.platform == 'win32':
         lib_dir = join(home_dir, 'Lib')
         bin_dir = join(home_dir, 'Scripts')
@@ -1178,24 +1172,62 @@ def after_install(options, home_dir):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
+        
+    failed_imports = []
+    for pkg in openmdao_prereqs:
+        try:
+            __import__(pkg)
+        except ImportError:
+            failed_imports.append(pkg)
+    if failed_imports:
+        logger.error("ERROR: the following prerequisites could not be imported: %s." % failed_imports)
+        logger.error("These must be installed in the system level python before installing OpenMDAO.")
+        sys.exit(-1)
+    
+    cmds = ['-f', url]
     try:
         for req in reqs:
             _single_install(cmds, req, bin_dir)
+        
 
         # now install dev eggs for all of the openmdao packages
         topdir = os.path.abspath(os.path.dirname(__file__))
         startdir = os.getcwd()
         absbin = os.path.abspath(bin_dir)
+        openmdao_packages = [('openmdao.util', '', 'sdist'),
+ ('openmdao.units', '', 'sdist'),
+ ('openmdao.main', '', 'sdist'),
+ ('openmdao.lib', '', 'sdist'),
+ ('openmdao.test', '', 'sdist'),
+ ('openmdao.examples.simple', 'examples', 'sdist'),
+ ('openmdao.examples.bar3simulation', 'examples', 'bdist_egg'),
+ ('openmdao.examples.enginedesign', 'examples', 'bdist_egg'),
+ ('openmdao.examples.mdao', 'examples', 'sdist'),
+ ('openmdao.examples.expected_improvement', 'examples', 'sdist'),
+ ('openmdao.devtools', '', 'sdist')]
+
         try:
-            for pkg in openmdao_packages:
-                os.chdir(join(topdir, pkg))
+            for pkg, pdir, _ in openmdao_packages:
+                os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
                            'develop', '-N'] + cmds
                 subprocess.check_call(cmdline)
         finally:
             os.chdir(startdir)
+        
+
+        # add packages from any specified requirements files
+        if options.reqs:
+            if sys.platform == 'win32':
+                reqscript = 'add_reqs-script.py'
+            else:
+                reqscript = 'add_reqs'
+            subprocess.check_call([join(bin_dir, 'python'),
+                                   join(bin_dir, reqscript), '-f', url] + options.reqs,
+                                  env=os.environ)
+
     except Exception as err:
-        print "ERROR: build failed"
+        logger.error("ERROR: build failed: %s" % str(err))
         sys.exit(-1)
         
     if sys.platform != 'win32':
@@ -1205,8 +1237,8 @@ def after_install(options, home_dir):
                 for name in fnmatch.filter(filelist, pat):
                     yield os.path.join(path, name)
 
-       # in order to find all of our shared libraries,
-       # put their directories in LD_LIBRARY_PATH
+       # in order to find all of our shared libraries, modify the activate
+       # script to put their directories in LD_LIBRARY_PATH
         pkgdir = os.path.join(lib_dir, 'site-packages')
         sofiles = [os.path.abspath(x) for x in _find_files('*.so',pkgdir)]
                       
@@ -1219,10 +1251,10 @@ def after_install(options, home_dir):
         subdict = { 'libpath': 'LD_LIBRARY_PATH',
                     'add_on': os.pathsep.join(final)
                     }
-
+                    
         if len(final) > 0:
             activate_template = '\n'.join([
-            'export PATH',
+            'export VIRTUAL_ENV',
             '',
             'if [ -z "$%(libpath)s" ] ; then',
             '   %(libpath)s=""',
@@ -1235,16 +1267,20 @@ def after_install(options, home_dir):
             content = f.read()
             f.close()
             f = open(os.path.join(absbin, 'activate'), 'w')
-            f.write(content.replace('export PATH', activate_template % subdict))
+            f.write(content.replace('export VIRTUAL_ENV', activate_template % subdict, 1))
             f.close()
+
+    abshome = os.path.abspath(home_dir)
+    
 
     # copy the wing project file into the virtualenv
     proj_template = join(topdir,'config','wing_proj_template.wpr')
     
-    abshome = os.path.abspath(home_dir)
     shutil.copy(proj_template, 
                 join(abshome,'etc','wingproj.wpr'))
                 
+        
+
     print '\n\nThe OpenMDAO virtual environment has been installed in %s.' % abshome
     print 'From %s, type:\n' % abshome
     if sys.platform == 'win32':

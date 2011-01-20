@@ -40,5 +40,6 @@ setup(name='openmdao.util',
       [console_scripts]
       mod2dist=openmdao.util.mod2dist:mod2dist
       xyplot=openmdao.util.casedb:cmdlineXYplot
+      add_reqs=openmdao.util.addreqs:add_reqs
       """
     )
