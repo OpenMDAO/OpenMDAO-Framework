@@ -91,7 +91,7 @@ class MetaModel(Component):
                     self.raise_exception('The variable "%s" was not '
                                          'found as an input in one of the cases provided '
                                          'for warm_start_data.'%var_name, ValueError)
-            print "inputs", inputs
+            #print "inputs", inputs
             self._training_input_history.append(inputs)                  
             
             for output_name in self.list_outputs_from_model():
@@ -104,7 +104,7 @@ class MetaModel(Component):
                         break
                 if output_val is not None: 
                     # save to training output history
-                    print output_name,":",output_val
+                    #print output_name,":",output_val
                     self._surrogate_info[output_name][1].append(output_val) 
                 else: 
                     self.raise_exception('The output "%s" was not found '
