@@ -14,7 +14,6 @@ class KrigingSurrogateTests(unittest.TestCase):
     
     def setUp(self):
         random.seed(10)
-        numpy_random.seed(10)
     
     def test_1d_kriging1(self):
         

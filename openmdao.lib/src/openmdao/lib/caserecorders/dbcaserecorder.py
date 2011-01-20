@@ -73,6 +73,7 @@ class DBCaseRecorder(object):
         # insert the inputs and outputs into the vars table.  Pickle them if they're not one of the
         # built-in types int, float, or str.
         vlist = []
+        
         for name,idx,value in case.inputs:
             if isinstance(value, (float,int,str)):
                 vlist.append((None, name, case_id, 'i', value, idx))
@@ -87,7 +88,6 @@ class DBCaseRecorder(object):
             cur.execute("insert into casevars(var_id,name,case_id,sense,value,idx) values(?,?,?,?,?,?)", 
                             v)
         self._connection.commit()
-
     def get_iterator(self):
         """Return a DBCaseIterator that points to our current DB."""
         return DBCaseIterator(dbfile=self._dbfile, connection=self._connection)

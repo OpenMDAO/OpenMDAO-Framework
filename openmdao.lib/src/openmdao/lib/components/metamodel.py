@@ -75,7 +75,7 @@ class MetaModel(Component):
         
         #build list of inputs         
         inputs = []
-        for case in newval:
+        for case in newval.get_iter():
             inputs = []
             for inp_name in self._surrogate_input_names:
                 inp_val = None
@@ -107,7 +107,7 @@ class MetaModel(Component):
                     print output_name,":",output_val
                     self._surrogate_info[output_name][1].append(output_val) 
                 else: 
-                    self.raise_exception('The output "%s" was not found'
+                    self.raise_exception('The output "%s" was not found '
                                          'in one of the cases provided for '
                                          'warm_start_data'%var_name, ValueError) 
         
@@ -123,11 +123,18 @@ class MetaModel(Component):
             if self.model:
                 try:
                     inputs = self.update_model_inputs()
-                    self._training_input_history.append(inputs)
+                    
                     #print '%s training with inputs: %s' % (self.get_pathname(), inputs)
                     self.model.run(force=True)
+
+                except Exception as err:
+                    #self.raise_exception("training failed: %s" % str(err), type(err))
+                    pass
+                else: #if no exceptions are generated, save the data
+                    self._training_input_history.append(inputs)
                     self.update_outputs_from_model()
                     case_outputs = []
+                    
                     for name, tup in self._surrogate_info.items():
                         surrogate, output_history = tup
                         case_outputs.append(('.'.join([self.name,name]), None, output_history[-1]))
@@ -135,8 +142,7 @@ class MetaModel(Component):
                     # this Case is scoped to our parent Assembly
                     case_inputs = [('.'.join([self.name,name]),None,val) for name,val in zip(self._surrogate_input_names, inputs)]
                     self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
-                except Exception as err:
-                    self.raise_exception("training failed: %s" % str(err), type(err))
+                    
             else:
                 self.raise_exception("MetaModel object must have a model!",
                                      RuntimeError)

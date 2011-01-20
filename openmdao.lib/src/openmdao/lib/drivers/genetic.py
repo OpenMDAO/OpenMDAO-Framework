@@ -6,7 +6,7 @@ import re
 
 from numpy import float32, float64, int32, int64, array
 
-from pyevolve import G1DList, GAllele, GenomeBase
+from pyevolve import G1DList, GAllele, GenomeBase, Scaling
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
 # pylint: disable-msg=E0611,F0401
@@ -146,6 +146,8 @@ class Genetic(Driver):
         #configuring the options
         ga = GSimpleGA.GSimpleGA(genome, interactiveMode = False, 
                                  seed=self.seed)
+        pop = ga.getPopulation()
+        pop = pop.scaleMethod.set(Scaling.SigmaTruncScaling)
         ga.setMinimax(Consts.minimaxType[self.opt_type])
         ga.setGenerations(self.generations)
         ga.setMutationRate(self.mutation_rate)

@@ -14,12 +14,11 @@ class Mux(Component):
     
     def __init__(self,n=2,*args,**kwargs): 
         super(Mux,self).__init__(*args,**kwargs)
-        self.n = n
         self._inputs = []
+        self.n = n
         self._n_changed(n,n) #just to initialize it
         
     def _n_changed(self,old,new):
-        
         for name in self._inputs: 
             if self.parent:
                 self.parent.disconnect('.'.join([self.name,name]))
