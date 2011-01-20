@@ -47,7 +47,6 @@ Component, Driver, and TraitType plugins for OpenMDAO
           'Pyevolve==0.6',
           'ordereddict',
           'scipy',
-          'ecspy'
           ],
       entry_points="""
       [openmdao.driver]
