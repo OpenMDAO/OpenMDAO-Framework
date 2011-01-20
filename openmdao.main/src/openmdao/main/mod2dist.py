@@ -185,8 +185,8 @@ def mod2dist(argv=None, groups= { 'openmdao.component': Component,
             if omod.__file__.startswith(dist.location):
                 found = True
                 break
-            if found:
-                break
+        if found:
+            break
             
     # now put sys.path and sys.modules back to the way they were
     sys.path = old_sys_path
