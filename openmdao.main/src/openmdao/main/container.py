@@ -1,5 +1,5 @@
 """
-The Container class
+The Container class.
 """
 
 import datetime
@@ -299,10 +299,10 @@ class Container(HasTraits):
         that it is referring to a variable outside of this object's scope.
         
         srcpath: str
-            Pathname of source variable
+            Pathname of source variable.
             
         destpath: str
-            Pathname of destination variable
+            Pathname of destination variable.
         """
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
@@ -1087,7 +1087,7 @@ class Container(HasTraits):
             If True, call :meth:`post_load`.
 
         name: string
-            Name for root object
+            Name for root object.
 
         Returns the root object.
         """
@@ -1112,7 +1112,7 @@ class Container(HasTraits):
     @rbac(('owner', 'user'))
     def get_dyn_trait(self, pathname, iotype=None, trait=None):
         """Returns a trait if a trait with the given pathname exists, possibly
-        creating it 'on-the-fly' and adding its Container. If an attribute exists
+        creating it "on-the-fly" and adding its Container. If an attribute exists
         with the given pathname but no trait is found or can be created, or if
         pathname references a trait in a parent scope, None will be returned.
         If no attribute exists with the given pathname within this scope, an
@@ -1125,7 +1125,7 @@ class Container(HasTraits):
             Expected iotype of the trait.
             
         trait: TraitType (optional)
-            Trait to be used for validation
+            Trait to be used for validation.
         """
         if pathname.startswith('parent.'):
             return None

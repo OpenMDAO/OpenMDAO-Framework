@@ -4,7 +4,7 @@ from openmdao.main.api import Component
         
 class DynWrapper(Component):
     """A Component wrapper for objects that contain their own internal hierarchy
-    and Component-like interface (set/get/run) but do not provide normal python 
+    and Component-like interface (set/get/run) but do not provide normal Python 
     attribute access.
     """
     
@@ -13,7 +13,7 @@ class DynWrapper(Component):
 
     def get_dyn_trait(self, pathname, io):
         """Returns a trait if a trait with the given pathname exists, possibly
-        creating the trait 'on-the-fly'. If an attribute exists with the given
+        creating the trait "on-the-fly." If an attribute exists with the given
         pathname but no trait is found or can be created, or if pathname
         references a trait in a parent scope, None will be returned. If no
         attribute exists with the given pathname within this scope, an

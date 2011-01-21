@@ -186,11 +186,11 @@ class CONMINdriver(Driver):
     nfdg = Float(0, iotype='in', desc='User-defined gradient flag (not yet '
                       'supported).')
     ct = Float(-0.1, iotype='in', desc='Constraint thickness parameter.')
-    ctmin = Float(0.004, iotype='in', desc='Minimum absoluate value of ct '
+    ctmin = Float(0.004, iotype='in', desc='Minimum absolute value of ct '
                       'used in optimization.')
     ctl = Float(-0.01, iotype='in', desc='Constraint thickness parameter for '
                       'linear and side constraints.')
-    ctlmin = Float(0.001, iotype='in', desc='Minimum absoluate value of ctl '
+    ctlmin = Float(0.001, iotype='in', desc='Minimum absolute value of ctl '
                       'used in optimization.')
     theta = Float(1.0, iotype='in', desc='Mean value of the push-off factor '
                       'in the method of feasible directions.')
@@ -206,7 +206,7 @@ class CONMINdriver(Driver):
                       'indicate convergence (relative or absolute).')
         
     # Extra variables for printing
-    printvars = List(Str, iotype='in', desc='List of extra variables to'
+    printvars = List(Str, iotype='in', desc='List of extra variables to '
                                'output in the recorder.')
     
     def __init__(self, doc=None):
@@ -290,7 +290,7 @@ class CONMINdriver(Driver):
         return self.cnmn1.igoto != 0 or self.iter_count == 0
     
     def pre_iteration(self):
-        """Checks or RunStopped and evaluates objective"""
+        """Checks or RunStopped and evaluates objective."""
         
         super(CONMINdriver, self).pre_iteration()
         if self._stop:
@@ -300,7 +300,7 @@ class CONMINdriver(Driver):
         self.cnmn1.obj = self.eval_objective()
         
     def run_iteration(self):
-        """ The CONMIN driver iteration"""
+        """ The CONMIN driver iteration."""
         
         #self._logger.debug('iter_count = %d' % self.iter_count)
         #self._logger.debug('objective = %f' % self.cnmn1.obj)
@@ -376,7 +376,7 @@ class CONMINdriver(Driver):
                     from CONMIN', RuntimeError)
 
     def post_iteration(self):
-        """ Checks CONMIN's return status and writes out cases"""
+        """ Checks CONMIN's return status and writes out cases."""
         
         super(CONMINdriver, self).post_iteration()
         
@@ -407,8 +407,8 @@ class CONMINdriver(Driver):
                                           'case%s' % self.iter_count))
         
     def _config_conmin(self):
-        """Set up arrays for the FORTRAN conmin routine, and perform some
-        validation and make sure that array sizes are consistent.
+        """Set up arrays for the FORTRAN conmin routine and perform some
+        validation, and make sure that array sizes are consistent.
         """
         
         self.cnmn1.clear()
