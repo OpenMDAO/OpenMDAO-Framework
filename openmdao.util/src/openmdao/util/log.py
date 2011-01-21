@@ -120,6 +120,17 @@ class Logger(object):
             self.level = self._logger.getEffectiveLevel()
         else:
             self.level = level
+            
+    def __eq__(self, other):
+        try:
+            if self._name == other._name and self._logger == other._logger and self._level == other._level:
+                return True
+        except AttributeError:
+            pass
+        return False
+    
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __getstate__(self):
         """ Return dict representing this Logger's state. """

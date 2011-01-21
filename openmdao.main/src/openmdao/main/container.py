@@ -36,6 +36,7 @@ from openmdao.main.filevar import FileRef
 
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
+from openmdao.main.configinfo import ConfigInfo
 
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
@@ -816,10 +817,6 @@ class Container(HasTraits):
             if obj is Missing or not is_instance(obj, Container):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
-            #elif index is None:
-                #return getattr(obj, restofpath)
-            #else:
-                #return obj._array_get(restofpath, index)
         else:
             if index is None:
                 obj = getattr(self, path, Missing)
@@ -1151,6 +1148,15 @@ class Container(HasTraits):
         self.raise_exception("Cannot locate variable named '%s'" %
                              pathname, AttributeError)
 
+    @rbac(('owner', 'user'))
+    def get_nondefault_config(self):
+        """Return a ConfigInfo object for this instance.  The
+        ConfigInfo object should also contain ConfigInfo objects
+        for children of this object.
+        """
+        info = ConfigInfo()
+        return info
+    
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         full_msg = '%s: %s' % (self.get_pathname(), msg)

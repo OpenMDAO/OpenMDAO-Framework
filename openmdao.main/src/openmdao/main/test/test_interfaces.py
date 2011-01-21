@@ -75,7 +75,7 @@ class InterfaceTestCase(unittest.TestCase):
 
         mht2 = MyHasTraits2()
         # HasTraits2 has an attribute that matches the one in IMarkerPlusAttribute,
-        # but it's the wrong type. This shows the no type checking is done.
+        # but it's the wrong type. This shows that no type checking is done.
         self.assertEqual(validate_implements(mht2, IMarkerPlusAttribute), True)
         
         mht3 = MyHasTraits3()
