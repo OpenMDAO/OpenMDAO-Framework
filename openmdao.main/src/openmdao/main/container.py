@@ -1155,6 +1155,9 @@ class Container(HasTraits):
         for children of this object.
         """
         info = ConfigInfo()
+        children = info.children
+        for name in self.list_containers():
+            children.append((name, getattr(self, name).get_nondefault_config()))
         return info
     
     def raise_exception(self, msg, exception_class=Exception):

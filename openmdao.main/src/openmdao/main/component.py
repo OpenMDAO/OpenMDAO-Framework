@@ -402,6 +402,19 @@ class Component (Container):
         return True
         
     @rbac(('owner', 'user'))
+    def get_nondefault_config(self):
+        """Return a ConfigInfo object for this instance.  The
+        ConfigInfo object should also contain ConfigInfo objects
+        for children of this object.
+        """
+        info = super(Component, self).get_nondefault_config()
+        for inp in self.list_inputs():
+            val = getattr(self, inp)
+            if self.trait(inp).default != val:
+                info.attribs.append((inp, val))
+        return info
+    
+    @rbac(('owner', 'user'))
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.

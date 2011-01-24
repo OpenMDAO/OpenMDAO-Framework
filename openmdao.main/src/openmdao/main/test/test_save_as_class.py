@@ -7,7 +7,8 @@ from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.lib.datatypes.api import Float, Str, Instance, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
-import StringIO
+
+from openmdao.util.debug import obj_diff
 
 class Multiplier(Component):
     rval_in = Float(iotype='in')
@@ -47,7 +48,7 @@ class SaveAsClassTestCase(unittest.TestCase):
     def setUp(self):
         pass
     
-    def test_save_as_class(self):
+    def test_obj_diff(self):
         top = set_as_top(Assembly())
         comp1 = top.add('comp1', Multiplier())
         comp2 = top.add('comp2', Multiplier())
@@ -59,10 +60,8 @@ class SaveAsClassTestCase(unittest.TestCase):
         top.connect('comp1.rval_out', 'comp2.rval_in')
         top.comp1.rval_in = 5.0
         
-        stream = StringIO.StringIO()
-        save_as_class(top, stream)
-
-        self.assertEqual(stream.getvalue(), '')
+        diff = obj_diff(top.comp1, top.comp2)
+        self.assertEqual(diff, {})
 
         
 if __name__ == "__main__":

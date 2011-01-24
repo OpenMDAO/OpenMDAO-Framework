@@ -53,13 +53,62 @@ def dumpit(obj, stream=sys.stdout, recurse=True, ignore_address=True):
 
     _dumpit(obj, stream, recurse, 0, set(), ignore_address)
 
+    
+class _objdiff(object):
+    def __init__(self, o1names, o2names, diffdict):
+        self.o1names = o1names
+        self.o2names = o2names
+        self.diffdict = diffdict
+
+def dict_diff(d1, d2):
+    """Recursive dict comparison.  Returns a dict of differences having two possible
+    forms.  For differences between object instances, the difference value will be
+    a tuple of the form: (d1only, d2only, common) where d1only and d2only are dicts
+    containing values from d1 or d2 respectively that don't exist in the other. For
+    differences between built-in types, the difference value will be a tuple of the 
+    form (idx, v1, v2) where idx is the tuple index of a value that only exists in
+    either d1 or d2. If idx is None that indicates that both values exist but are
+    different. v1 will be the value from d1 if it exists and v2 will be the value
+    from d2 if it exists.
+    """
+    obj1_set = set(d1.keys())
+    obj2_set = set(d2.keys())
+    
+    common = obj1_set.intersection(obj2_set)
+    obj1_only = obj1_set.difference(common)
+    obj2_only = obj2_set.difference(common)
+    
+    del obj1_set
+    del obj2_set
+
+    diffs = {}
+    for name in common:
+        v1 = d1[name]
+        v2 = d2[name]
+        if not hasattr(v1, '__dict__') or not hasattr(v2, '__dict__'):
+            if isinstance(v1, dict) and isinstance(v2, dict):
+                diff = dict_diff(v1, v2)
+            else:
+                diff = obj_diff(v1, v2)
+            if diff:
+                diffs[name] = diff
+        elif v1 != v2:
+            diffs[name] = (None, v1, v2)
+        
+    for name in obj1_only:
+        diffs[name] = (1, d1[name], None)
+        
+    for name in obj2_only:
+        diffs[name] = (2, None, d2[name])
+        
+    return diffs
+
 
 def obj_diff(obj1, obj2, recurse=True):
     """Find the difference between two objects of the same type and return it
-    as a dict of dicts. Methods are not investigated beyond detecting whether
+    as a dict of difference tuples. Methods are not investigated beyond detecting whether
     they are present or absent, so two objects with methods of the same name
-    having different bodies will not be detected.  Trying to diff two objects
-    of different types will raise a TypeError.
+    having different bodies will not be detected.  
     """
     def _filter(name, val):
         """Return True if value should be filtered"""
@@ -69,55 +118,52 @@ def obj_diff(obj1, obj2, recurse=True):
             return True
         return False
         
-    if type(obj1) != type(obj2):
-        raise TypeError('obj_diff: the two objects are not of the same type')
-    
-    ret = {}
     # first, see if objs have their own way of comparing
-    try:
-        if obj1 == obj2:
-            return ret
-    except:
-        pass
+    if obj1 == obj2:
+        return {}
     
-    obj1_attrs = dict([(k,v) for k,v in getmembers(obj1)])
-    obj2_attrs = dict([(k,v) for k,v in getmembers(obj2)])
+    if hasattr(obj1, '__dict__') and hasattr(obj2, '__dict__'):
+        return dict_diff(obj1.__dict__, obj2.__dict__)
+    else:
+        return (None, obj1, obj2)
+    #obj1_attrs = dict([(k,v) for k,v in getmembers(obj1)])
+    #obj2_attrs = dict([(k,v) for k,v in getmembers(obj2)])
     
-    obj1_set = set(obj1_attrs.keys())
-    obj2_set = set(obj2_attrs.keys())
+    #obj1_set = set(obj1_attrs.keys())
+    #obj2_set = set(obj2_attrs.keys())
     
-    common = obj1_set.intersection(obj2_set)
-    obj1_only = obj1_set.difference(common)
-    obj2_only = obj2_set.difference(common)
+    #common = obj1_set.intersection(obj2_set)
+    #obj1_only = obj1_set.difference(common)
+    #obj2_only = obj2_set.difference(common)
     
-    del obj1_set
-    del obj2_set
+    #del obj1_set
+    #del obj2_set
     
-    if obj1_only:
-        ret['obj1'] = dict([(k,v) for k,v in obj1_attrs.items() if k in obj1_only and not _filter(k,v)])
-    if obj2_only:
-        ret['obj2'] = dict([(k,v) for k,v in obj2_attrs.items() if k in obj2_only and not _filter(k,v)])
+    #if obj1_only:
+        #ret['obj1'] = dict([(k,v) for k,v in obj1_attrs.items() if k in obj1_only and not _filter(k,v)])
+    #if obj2_only:
+        #ret['obj2'] = dict([(k,v) for k,v in obj2_attrs.items() if k in obj2_only and not _filter(k,v)])
     
-    retcom = {}
+    #retcom = {}
     
-    common.remove('__dict__')
+    #common.remove('__dict__')
     
-    for name in common:
-        o1 = obj1_attrs[name]
-        o2 = obj2_attrs[name]
-        if type(o1) == type(o2) and _filter(name, o1):
-            continue
-        elif type(o1) != type(o2):
-            retcom[name] = (o1, o2)
-        elif type(o1) is InstanceType and o1 != o2:
-            diffdict = obj_diff(o1, o2)
-            if diffdict:
-                retcom[name] = diffdict
-        elif o1 != o2:
-            retcom[name] = (o1, o2)
+    #for name in common:
+        #o1 = obj1_attrs[name]
+        #o2 = obj2_attrs[name]
+        #if type(o1) == type(o2) and _filter(name, o1):
+            #continue
+        #elif type(o1) != type(o2):
+            #retcom[name] = (o1, o2)
+        #elif type(o1) is InstanceType and o1 != o2:
+            #diffdict = obj_diff(o1, o2)
+            #if diffdict:
+                #retcom[name] = diffdict
+        #elif o1 != o2:
+            #retcom[name] = (o1, o2)
     
-    if retcom:
-        ret['common'] = retcom
+    #if retcom:
+        #ret['common'] = retcom
     
-    return ret
+    #return ret
 

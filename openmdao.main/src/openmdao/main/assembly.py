@@ -246,6 +246,16 @@ class Assembly (Component):
         """
         return self._depgraph.list_connections(show_passthrough)
 
+    @rbac(('owner', 'user'))
+    def get_nondefault_config(self):
+        """Return a ConfigInfo object for this instance.  The
+        ConfigInfo object should also contain ConfigInfo objects
+        for children of this object.
+        """
+        info = super(Assembly, self).get_nondefault_config()
+        info.connections = self._depgraph.list_connections()
+        return info
+    
     def _cvt_input_srcs(self, sources):
         link = self._depgraph.get_link('@xin', '@bin')
         if link is None:

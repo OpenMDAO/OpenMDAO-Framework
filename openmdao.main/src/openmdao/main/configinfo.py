@@ -15,6 +15,7 @@ class ConfigInfo(object):
         self.classes = set() # classes that must be imported at the top level
         self.files = set()
         self.children = []  # list of ConfigInfo objects for children
+        self.connections = []
         
     def add_class(self, instance):
         klass = instance.__class__
