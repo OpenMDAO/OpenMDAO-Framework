@@ -43,7 +43,8 @@ import threading
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
-from openmdao.util.publickey import get_key_pair, HAVE_PYWIN32
+from openmdao.util.publickey import get_key_pair, HAVE_PYWIN32, \
+                                    pk_sign, pk_verify
 
 # Verified credentials keyed by encoding tuple.
 _VERIFY_CACHE = {}
@@ -101,7 +102,7 @@ class Credentials(object):
             self.data = '\n'.join([self.user, str(int(self.transient)),
                                    self.public_key.exportKey()])
             hash = hashlib.sha256(self.data).digest()
-            self.signature = key_pair.sign(hash, get_random_bytes)
+            self.signature = pk_sign(hash, key_pair)
             self.client_creds = None
         else:
             # Recreate remote user credentials.
@@ -117,15 +118,19 @@ class Credentials(object):
                 raise CredentialsError('Invalid key')
             self.data = data
             hash = hashlib.sha256(data).digest()
+            valid = False
             try:
-                if not self.public_key.verify(hash, signature):
-                    raise CredentialsError('Invalid signature')
-            except Exception:
+                valid = pk_verify(hash, signature, self.public_key)
+            except Exception as exc:
+                raise CredentialsError('Invalid signature: %r' % exc)
+            if not valid:
                 raise CredentialsError('Invalid signature')
             self.signature = signature
             self.client_creds = client_creds
 
     def __eq__(self, other):
+        # Just checking signature is normally sufficient.
+        # The user check makes writing tests easier.
         if isinstance(other, Credentials):
             return self.user == other.user and \
                    self.signature == other.signature
@@ -229,7 +234,6 @@ class rbac(object):  #pragma no cover
 
     proxy_types: list[class]
         Types of return values that must be proxied.
-
     """
 
     def __init__(self, roles, proxy_role='', proxy_types=None):
@@ -240,6 +244,31 @@ class rbac(object):  #pragma no cover
     def __call__(self, func):
         func._rbac = (self.roles, self.proxy_role, self.proxy_types, {})
         return func
+
+
+def rbac_decorate(method, roles, proxy_role='', proxy_types=None):
+    """
+    Post-definition decorator for specifying RBAC roles for a method.
+    Not typically used, but needed if `proxy_types` must include the
+    class currently being defined, since the normal decorator won't see
+    the class yet.
+
+    method: instancemethod
+        Method to be decorated.
+
+    roles: string or sequence[string]
+        Role name patterns which are allowed access.
+
+    proxy_role: string
+        Role to use during execution of method.
+        A null string implies that the current role is used.
+
+    proxy_types: list[class]
+        Types of return values that must be proxied.
+    """
+    roles = (roles,) if isinstance(roles, basestring) else tuple(roles)
+    proxy_types = () if proxy_types is None else tuple(proxy_types)
+    method.__func__._rbac = (roles, proxy_role, proxy_types, {})
 
 
 def rbac_methods(obj):

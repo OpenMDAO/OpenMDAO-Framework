@@ -65,8 +65,10 @@ class Box(ExecComp):
         sub.add_trait('subvar', Int())
 
     def execute(self):
-        print 'Box.execute(), %f %f %f on %d' \
-              % (self.width, self.height, self.depth, self.pid)
+        print 'Box.execute(), %f %f %f on %s:%d' \
+              % (self.width, self.height, self.depth,
+                 socket.gethostname(), self.pid)
+        sys.stdout.flush()
         super(Box, self).execute()
 
     def no_rbac(self):
