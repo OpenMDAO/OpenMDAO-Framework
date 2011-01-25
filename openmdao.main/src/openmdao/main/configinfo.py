@@ -1,28 +1,22 @@
 
 from inspect import getsourcefile
 
+def get_classname(instance):
+    return instance.__class__.__name__
+    
 class ConfigInfo(object):
-    # in order to make our new class declaration, what info do we need:
-    #    1) names/packages of any classes we need to create inside of our __init__
-    #          (this is necessary when an object is a class instance and it is not created
-    #           as part of the __init__ of the enclosing object)
-    #    2) names of attributes we must assign values to.  In some cases these
-    #        values will be class instances that we must initialize
-    #    3) connections
-    #    4) addition of parameters/objectives (driver specific)
-    def __init__(self):
-        self.attribs = []  # list of name, value tuples
-        self.classes = set() # classes that must be imported at the top level
-        self.files = set()
-        self.children = []  # list of ConfigInfo objects for children
-        self.connections = []
+    def __init__(self, instance, name, *initargs, **initkwargs):
+        self.name = name  # name of the object that this config describes
+        self.classname = get_classname(instance)
+        self.initargs = initargs
+        self.initkwargs = initkwargs
+        # the following is a list of instructions that can have 2 possible forms:
+        #   1) a string (python syntax with possible %(pathname)s formatting in it)
+        #   2) a ConfigInfo object for a child who is to be initialized
+        self.cmds = []
+    
+    def save_as_class(self, stream):
+        lines = []
         
-    def add_class(self, instance):
-        klass = instance.__class__
-        try:
-            fname = getsourcefile(klass)
-        except TypeError:
-            return  # it's a builtin class
-        self.files.add(fname)
-        self.classes.add(klass)
-
+        stream.write('\n'.join(lines))
+        

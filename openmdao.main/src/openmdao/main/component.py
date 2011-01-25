@@ -25,6 +25,7 @@ from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
+from openmdao.main.configinfo import ConfigInfo
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -402,16 +403,19 @@ class Component (Container):
         return True
         
     @rbac(('owner', 'user'))
-    def get_nondefault_config(self):
+    def get_configinfo(self, parent_name='self', inst_name=None):
         """Return a ConfigInfo object for this instance.  The
         ConfigInfo object should also contain ConfigInfo objects
         for children of this object.
         """
-        info = super(Component, self).get_nondefault_config()
+        path = '.'.join([parent_name, self.name])
+        info = ConfigInfo(self, self.name)
         for inp in self.list_inputs():
             val = getattr(self, inp)
-            if self.trait(inp).default != val:
-                info.attribs.append((inp, val))
+            if self.trait(inp).default == val:
+                continue
+            elif hasattr(val, 'get_configinfo'):
+                info.cmds.append(val.get_configinfo(path,inp))
         return info
     
     @rbac(('owner', 'user'))
