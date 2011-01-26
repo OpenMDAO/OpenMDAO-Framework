@@ -63,12 +63,10 @@ class DependencyGraph(object):
         return compname in self._graph
     
     def __eq__(self, other):
-        if hasattr(other, '_graph'):
-            if self._graph.nodes() != other._graph.nodes():
-                return False
-            if self._graph.edges() != other._graph.edges():
-                return False
-            return True
+        if isinstance(other, DependencyGraph):
+            if self._graph.nodes() == other._graph.nodes():
+                if self._graph.edges() == other._graph.edges():
+                    return True
         return False
     
     def __ne__(self, other):

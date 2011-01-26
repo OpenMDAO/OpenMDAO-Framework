@@ -1,12 +1,14 @@
 # pylint: disable-msg=C0111,C0103
 
 import unittest
+import sys
 
 from enthought.traits.api import TraitError
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.lib.datatypes.api import Float, Str, Instance, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
+
 
 class Multiplier(Component):
     rval_in = Float(iotype='in')
@@ -109,6 +111,8 @@ class AssemblyTestCase(unittest.TestCase):
         top.connect('comp1.rval_out', 'comp2.rval_in')
         top.comp1.rval_in = 5.0
         top.run()
+        ci = top.get_configinfo()
+        ci.save_as_class(sys.stdout, 'Foo')
         self.assertEqual(top.get('comp1.rval_out'), 10.)
         self.assertEqual(top.get('comp2.rval_in'), 10.)
         self.assertEqual(top.get('comp2.rval_out'), 40.)

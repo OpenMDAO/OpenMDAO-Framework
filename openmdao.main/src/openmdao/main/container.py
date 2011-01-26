@@ -1149,7 +1149,7 @@ class Container(HasTraits):
                              pathname, AttributeError)
 
     @rbac(('owner', 'user'))
-    def get_nondefault_config(self):
+    def get_configinfo(self, pathname):
         """Return a ConfigInfo object for this instance.  The
         ConfigInfo object should also contain ConfigInfo objects
         for children of this object.
@@ -1157,7 +1157,7 @@ class Container(HasTraits):
         info = ConfigInfo()
         children = info.children
         for name in self.list_containers():
-            children.append((name, getattr(self, name).get_nondefault_config()))
+            children.append((name, getattr(self, name).get_configinfo('.'.join([pathname,name]))))
         return info
     
     def raise_exception(self, msg, exception_class=Exception):
