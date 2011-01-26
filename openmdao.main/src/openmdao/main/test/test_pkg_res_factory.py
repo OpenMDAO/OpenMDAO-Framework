@@ -143,10 +143,24 @@ class PkgResFactoryTestCase(unittest.TestCase):
         
     def test_get_available_types(self):
         types = set([x[0] for x in get_available_types()])
-        self.assertTrue(types.issuperset(set(['openmdao.lib.CONMINdriver',
-                                              'openmdao.lib.pyevolvedriver',
+        self.assertTrue(types.issuperset(set(['openmdao.lib.ExternalCode',
+                                              'openmdao.lib.DeMux',
+                                              'openmdao.lib.DOEdriver',
+                                              'openmdao.lib.Genetic',
+                                              'openmdao.lib.CaseIteratorDriver',
+                                              'openmdao.lib.MetaModel',
+                                              'openmdao.lib.MultiObjExpectedImprovement',
+                                              'openmdao.lib.CONMINdriver',
+                                              'openmdao.lib.SimpleCaseIterDriver',
+                                              'openmdao.lib.ParetoFilter',
                                               'openmdao.lib.NEWSUMTdriver',
-                                              'openmdao.test.ExecComp'])))
+                                              'openmdao.lib.ProbIntersect',
+                                              'openmdao.lib.NastranComponent',
+                                              'openmdao.lib.Mux',
+                                              'openmdao.lib.ExpectedImprovement',
+                                              'openmdao.test.ExecComp',
+                                              'openmdao.main.Assembly',
+                                              'openmdao.lib.FixedPointIterator',])))
         
 if __name__ == "__main__":
     unittest.main()

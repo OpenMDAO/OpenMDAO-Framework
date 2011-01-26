@@ -4,8 +4,8 @@ import sys
 import StringIO
 
 import networkx as nx
-from networkx.algorithms.traversal import topological_sort_recursive, \
-                                          strongly_connected_components
+from networkx.algorithms.dag import topological_sort_recursive,is_directed_acyclic_graph
+from networkx.algorithms.components import strongly_connected_components
 
 
 class AlreadyConnectedError(RuntimeError):
@@ -287,7 +287,7 @@ class DependencyGraph(object):
                 link=_Link(srccompname, destcompname)
                 graph.add_edge(srccompname, destcompname, link=link)
             
-            if topological_sort_recursive(graph):
+            if is_directed_acyclic_graph(graph):
                 link.connect(srcvarname, destvarname)
             else:   # cycle found
                 # do a little extra work here to give more info to the user in the error message
