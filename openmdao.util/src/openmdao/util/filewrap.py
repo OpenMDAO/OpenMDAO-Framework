@@ -102,6 +102,18 @@ class ToFloat(TokenConverter):
         """Converter to make token into a float."""
         return float(tokenlist[0].replace('D', 'E'))
 
+class ToNan(TokenConverter):
+    """Converter for PyParsing that is used to turn a token into Python nan."""
+    def postParse( self, instring, loc, tokenlist ):
+        """Converter to make token into Python nan."""
+        return float('nan')
+    
+class ToInf(TokenConverter):
+    """Converter for PyParsing that is used to turn a token into Python inf."""
+    def postParse( self, instring, loc, tokenlist ):
+        """Converter to make token into Python inf."""
+        return float('inf')
+    
     
 def _parse_line():
     """Parse a single data line that may contain string or numerical data.
@@ -124,12 +136,14 @@ def _parse_line():
     # special case for a float written like "3e5"
     mixed_exp = ToFloat(Combine( digits + ee + Optional(sign) + digits ))
     
-    nan = ToFloat(oneOf("NaN Inf -Inf"))
+    nan = ToInf(oneOf("Inf -Inf")) | \
+          ToNan(oneOf("NaN nan NaN%  NaNQ NaNS qNaN sNaN " + \
+                        "1.#SNAN 1.#QNAN -1.#IND"))
     
     # sep = Literal(" ") | Literal("\n")
     
-    data = ( OneOrMore( (num_float | mixed_exp | num_int | 
-                         nan | Word(printables)) ) )
+    data = ( OneOrMore( (nan | num_float | mixed_exp | num_int |
+                         Word(printables)) ) )
     
     return data
 
@@ -255,7 +269,7 @@ class InputFileGenerator(object):
             array of values to insert.
         
         row_start: integer
-	    starting row for inserting the array. This is relative
+            starting row for inserting the array. This is relative
             to the anchor, and can be negative.
         
         field_start: integer
