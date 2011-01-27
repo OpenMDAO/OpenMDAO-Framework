@@ -66,7 +66,8 @@ from openmdao.main.rbac import AccessController, RoleError, check_role, \
                                Credentials, get_credentials, set_credentials
 
 from openmdao.util.publickey import decode_public_key, encode_public_key, \
-                                    get_key_pair, HAVE_PYWIN32
+                                    get_key_pair, HAVE_PYWIN32, \
+                                    pk_encrypt, pk_decrypt
 
 # Classes which require proxying (used by default AccessController)
 # Used to break import loop between this and openmdao.main.container.
@@ -159,10 +160,11 @@ class OpenMDAO_Server(Server):
         self.host = socket.gethostname()
         self._allowed_users = allowed_users
         if self._allowed_users is not None:
-            self._allowed_hosts = set()
+            hosts = set()
             for user_host in self._allowed_users.keys():
                 user, host = user_host.split('@')
-                self._allowed_hosts.add(socket.gethostbyname(host))
+                hosts.add(socket.gethostbyname(host))
+            self._allowed_hosts = list(hosts)
         else:
             self._allowed_hosts = allowed_hosts or []
 
@@ -252,7 +254,10 @@ class OpenMDAO_Server(Server):
                 pass
         finally:
             self.stop = 999
-            self.listener.close()
+            try:
+                self.listener.close()
+            except Exception as exc:
+                self._logger.error('Exception closing listener: %r', exc)
 
     def handle_request(self, conn):
         """
@@ -275,7 +280,7 @@ class OpenMDAO_Server(Server):
             return
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
         except Exception as exc:  #pragma no cover
-            msg = ('#TRACEBACK', traceback.format_exc())
+            msg = ('#TRACEBACK', 'Exception delivering challenge: %r' % exc)
             try:
                 conn.send(msg)
             except Exception as exc:
@@ -293,14 +298,18 @@ class OpenMDAO_Server(Server):
             assert funcname in self.public, '%r unrecognized' % funcname
             func = getattr(self, funcname)
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
-        except Exception:  #pragma no cover
-            msg = ('#TRACEBACK', traceback.format_exc())
+        except Exception as exc:  #pragma no cover
+            msg = ('#TRACEBACK', 'Exception answering challenge: %r' % exc)
         else:
             try:
                 result = func(conn, *args, **kwds)
             # Hard to cause this to happen. It rarely happens, and then at shutdown.
-            except Exception:  #pragma no cover
-                msg = ('#TRACEBACK', traceback.format_exc())
+            except Exception as exc:  #pragma no cover
+                try:  # Sometimes at shutdown 'traceback' is None!?
+                    msg = ('#TRACEBACK', traceback.format_exc())
+                except Exception:
+                    msg = ('#TRACEBACK',
+                           'Exception from %r: %r' % (funcname, exc))
             else:
                 msg = ('#RETURN', result)
 
@@ -309,7 +318,7 @@ class OpenMDAO_Server(Server):
         # Hard to cause this to happen. It rarely happens, and then at shutdown.
         except Exception as exc:  #pragma no cover
             try:
-                conn.send(('#TRACEBACK', traceback.format_exc()))
+                conn.send(('#TRACEBACK', 'Exception sending reply: %r' % exc))
             except Exception:
                 pass
             util.info('Failure to send message: %r', msg)
@@ -489,16 +498,14 @@ class OpenMDAO_Server(Server):
             self._logger.error(msg)
             raise RuntimeError(msg)
 
-        n, e, chunks = client_data[1:]
+        n, e, encrypted = client_data[1:]
         if e != self._key_pair.e or n != self._key_pair.n:  #pragma no cover
             msg = 'Server key mismatch'
             self._logger.error(msg)
             raise RuntimeError(msg)
 
         try:
-            text = ''
-            for chunk in chunks:
-                text += self._key_pair.decrypt(chunk)
+            text = pk_decrypt(encrypted, self._key_pair)
             client_key = decode_public_key(text)
         except Exception as exc:  #pragma no cover
             self._logger.error("Can't recreate client key: %r", exc)
@@ -884,8 +891,8 @@ class OpenMDAO_Manager(BaseManager):
     # This happens on the remote server side and we'll check when using it.
     @classmethod
     def _run_server(cls, registry, address, authkey, serializer, name,
-                    allowed_hosts, allowed_users, writer, credentials,
-                    cwd=None): #pragma no cover
+                    allowed_hosts, allowed_users,
+                    writer, credentials, cwd=None): #pragma no cover
         """
         Create a server, report its address and public key, and run it.
         """
@@ -1171,13 +1178,9 @@ class OpenMDAO_Proxy(BaseProxy):
             logging.error(msg)
             raise RuntimeError(msg)
 
-        chunk_size = server_key.size() / 8
-        chunks = []
-        while text:
-            chunks.append(server_key.encrypt(text[:chunk_size], ''))
-            text = text[chunk_size:]
+        encrypted = pk_encrypt(text, server_key)
         client_version = 1
-        conn.send((client_version, server_key.n, server_key.e, chunks))
+        conn.send((client_version, server_key.n, server_key.e, encrypted))
 
         server_data = conn.recv()
         server_version = server_data[0]
@@ -1202,7 +1205,7 @@ class OpenMDAO_Proxy(BaseProxy):
         # Hard to cause this to happen.
         if not OpenMDAO_Proxy.manager_is_alive(self._token.address):  #pragma no cover
             raise RuntimeError('Cannot connect to manager at %r' 
-                               % (self._token.address))
+                               % (self._token.address,))
 
         conn = self._Client(self._token.address, authkey=self._authkey)
         dispatch(conn, None, 'incref', (self._id,))
@@ -1394,6 +1397,13 @@ def %s(self, *args, **kwds):
         return object.%s(self, *args, **kwds)
     return self._callmethod(%r, args, kwds)
 """ % (meth, meth, meth) in dic
+
+        elif meth == '__exit__':
+            # Can't pickle traceback argument.
+            exec """
+def __exit__(self, exc_type, exc_value, traceback):
+    return self._callmethod('__exit__', (exc_type, exc_value, None))
+""" in dic
 
         else:
             # Normal method always calls remote.
