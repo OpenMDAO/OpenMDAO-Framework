@@ -23,7 +23,9 @@ import distutils.command.build
 import setuptools.command.easy_install
 from enthought.traits.api import TraitType
 
-from openmdao.main.api import Component, Driver # , ResourceAllocator, CaseIterator
+from openmdao.main.component import Component
+from openmdao.main.driver import Driver 
+# , ResourceAllocator, CaseIterator
 
 logging.basicConfig(level=logging.INFO)
 
@@ -50,11 +52,11 @@ def _run_command(cmd):
 
 
 def mod2dist(argv=None, groups= { 'openmdao.component': Component,
-                            'openmdao.driver': Driver,
-                            #'openmdao.case_iterator': CaseIterator,
-                            #'openmdao.resource_allocator': ResourceAllocator,
-                            'openmdao.variable': TraitType
-                            }):
+                                  'openmdao.driver': Driver,
+                                  #'openmdao.case_iterator': CaseIterator,
+                                  #'openmdao.resource_allocator': ResourceAllocator,
+                                  'openmdao.variable': TraitType
+                                  }):
     """Utility to simplify the packaging of a single module containing OpenMDAO
     plugin classes into a source distribution.
     

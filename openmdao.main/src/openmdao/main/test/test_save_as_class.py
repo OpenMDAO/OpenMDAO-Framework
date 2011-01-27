@@ -1,5 +1,6 @@
 # pylint: disable-msg=C0111,C0103
 
+import sys
 import unittest
 
 from enthought.traits.api import TraitError
@@ -8,7 +9,9 @@ from openmdao.lib.datatypes.api import Float, Str, Instance, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
 
-from openmdao.util.debug import obj_diff
+#from openmdao.util.debug import obj_diff
+
+from openmdao.main.configinfo import model_to_package
 
 class Multiplier(Component):
     rval_in = Float(iotype='in')
@@ -48,7 +51,7 @@ class SaveAsClassTestCase(unittest.TestCase):
     def setUp(self):
         pass
     
-    def test_obj_diff(self):
+    def test_save_as_class(self):
         top = set_as_top(Assembly())
         comp1 = top.add('comp1', Multiplier())
         comp2 = top.add('comp2', Multiplier())
@@ -60,9 +63,10 @@ class SaveAsClassTestCase(unittest.TestCase):
         top.connect('comp1.rval_out', 'comp2.rval_in')
         top.comp1.rval_in = 5.0
         
-        diff = obj_diff(top.comp1, top.comp2)
-        self.assertEqual(diff, {})
-
+        model_to_package(top, 'Foo', '1.0')
+        #ci = top.get_configinfo()
+        #ci.save_as_class(sys.stdout, 'Foo')
+        print 'done'
         
 if __name__ == "__main__":
     unittest.main()

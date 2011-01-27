@@ -111,8 +111,6 @@ class AssemblyTestCase(unittest.TestCase):
         top.connect('comp1.rval_out', 'comp2.rval_in')
         top.comp1.rval_in = 5.0
         top.run()
-        ci = top.get_configinfo()
-        ci.save_as_class(sys.stdout, 'Foo')
         self.assertEqual(top.get('comp1.rval_out'), 10.)
         self.assertEqual(top.get('comp2.rval_in'), 10.)
         self.assertEqual(top.get('comp2.rval_out'), 40.)
