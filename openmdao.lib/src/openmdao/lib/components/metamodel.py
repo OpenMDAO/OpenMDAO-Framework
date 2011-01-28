@@ -2,12 +2,14 @@
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array
-from openmdao.lib.datatypes.api import Instance, ListStr, Event
+from openmdao.lib.datatypes.api import Instance, ListStr, Event, Either, \
+     List, Str, Dict
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
 from openmdao.main.api import Component, Case
-from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, ICaseIterator
+from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
+     ICaseIterator
 from openmdao.main.uncertain_distributions import UncertainDistribution, \
                                                   NormalDistribution
 from openmdao.main.mp_support import has_interface
@@ -34,9 +36,13 @@ class MetaModel(Component):
                               "previous training data is cleared, and replaced "
                               "with data from this CaseIterator")
     
-    surrogate = Instance(ISurrogate, allow_none=True,
-                         desc='An ISurrogate instance that is used as a '
+    surrogate = Either(Instance(ISurrogate),
+                       Dict(key_train=Str,
+                            value_trait=ISurrogate),
+                       allow_none=True,
+                       desc='An ISurrogate instance that is used as a '
                               'template for each output surrogate.')
+                       
     
     recorder = Instance(ICaseRecorder,
                         desc = 'Records training cases')
@@ -213,14 +219,26 @@ class MetaModel(Component):
                 
             # now outputs
             traitdict = newmodel._alltraits(iotype='out')
+            
+            if not isinstance(self.surrogate,dict): 
+                surrogates = dict()
+                for name in traitdict.keys(): 
+                    surrogates[name] = self.surrogate
+            else:
+                surrogates = self.surrogate
             for name,trait in traitdict.items():
                 if self._eligible(name):
+                    try: 
+                        surrogate = surrogates[name]
+                    except KeyError: 
+                        self.raise_exception('Dict provided for "surrogates" does not include a value for "%s". All outputs must be specified'%name,ValueError)
+                if self._eligible(name):
+                    trait_type = surrogate.get_uncertain_value(1.0).__class__()
                     self.add_trait(name, 
-                                   Instance(UncertainDistribution, iotype='out', desc=trait.desc))
-                    self._surrogate_info[name] = (self.surrogate.__class__(), []) # (surrogate,output_history)
+                                   Instance(trait_type, iotype='out', desc=trait.desc))
+                    self._surrogate_info[name] = (surrogate.__class__(), []) # (surrogate,output_history)
                     new_model_traitnames.add(name)
-                    setattr(self, name, NormalDistribution(getattr(newmodel, name)))
-                    
+                    setattr(self, name, surrogate.get_uncertain_value(getattr(newmodel,name)))
             newmodel.parent = self
             newmodel.name = 'model'
         
