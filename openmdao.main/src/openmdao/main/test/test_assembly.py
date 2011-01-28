@@ -328,11 +328,11 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.connect('comp1.rout','comp2.r')
         try:
             self.asm.connect('comp2.rout','comp1.r')
-        except RuntimeError, err:
+        except Exception, err:
             self.assertEqual("circular dependency (['comp2', 'comp1']) would be created by"+
                              " connecting comp2.rout to comp1.r", str(err))
         else:
-            self.fail('RuntimeError expected')
+            self.fail('Exception expected')
             
     def test_disconnect(self):
         # first, run connected

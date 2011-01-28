@@ -26,6 +26,8 @@ _container_groups = [ 'openmdao.container',
                       'openmdao.driver',
                     ]
 
+_plugin_groups = _container_groups + ['openmdao.variable']
+
 
 def create(typname, version=None, server=None, res_desc=None, **ctor_args):
     """Create and return an object specified by the given type,
@@ -67,7 +69,7 @@ def get_available_types(groups=None):
 
 
 # register factory that loads plugins via pkg_resources
-_pkg_res_factory = PkgResourcesFactory(groups=_container_groups)   
+_pkg_res_factory = PkgResourcesFactory(groups=_plugin_groups)   
 register_class_factory(_pkg_res_factory)
 
 # register factory for simple imports
