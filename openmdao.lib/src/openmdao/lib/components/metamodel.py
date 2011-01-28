@@ -227,10 +227,11 @@ class MetaModel(Component):
             else:
                 surrogates = self.surrogate
             for name,trait in traitdict.items():
-                try: 
-                    surrogate = surrogates[name]
-                except KeyError: 
-                    self.raise_exception('Dict provided for "surrogates" does not include a value for "%s". All outputs must be specified'%name,ValueError)
+                if self._eligible(name):
+                    try: 
+                        surrogate = surrogates[name]
+                    except KeyError: 
+                        self.raise_exception('Dict provided for "surrogates" does not include a value for "%s". All outputs must be specified'%name,ValueError)
                 if self._eligible(name):
                     trait_type = surrogate.get_uncertain_value(1.0).__class__()
                     self.add_trait(name, 
