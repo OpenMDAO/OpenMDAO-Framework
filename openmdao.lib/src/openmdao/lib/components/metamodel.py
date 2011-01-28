@@ -76,6 +76,7 @@ class MetaModel(Component):
         #build list of inputs         
         inputs = []
         for case in newval.get_iter():
+            self.recorder.record(case)
             inputs = []
             for inp_name in self._surrogate_input_names:
                 inp_val = None
@@ -111,9 +112,7 @@ class MetaModel(Component):
                                          'in one of the cases provided for '
                                          'warm_start_data'%var_name, ValueError) 
         
-        self._new_train_data = True
-        
-        
+        self._new_train_data = True        
         
     def execute(self):
         """If the training flag is set, train the metamodel. Otherwise, 
