@@ -2,7 +2,8 @@
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array
-from openmdao.lib.datatypes.api import Instance, ListStr, Event
+from openmdao.lib.datatypes.api import Instance, ListStr, Event, Either, \
+     ListInstance
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
@@ -34,9 +35,10 @@ class MetaModel(Component):
                               "previous training data is cleared, and replaced "
                               "with data from this CaseIterator")
     
-    surrogate = Instance(ISurrogate, allow_none=True,
+    surrogate = Either(Instance(ISurrogate),ListInstance(ISurrogate),allow_none=True,
                          desc='An ISurrogate instance that is used as a '
                               'template for each output surrogate.')
+                       
     
     recorder = Instance(ICaseRecorder,
                         desc = 'Records training cases')
@@ -213,11 +215,16 @@ class MetaModel(Component):
                 
             # now outputs
             traitdict = newmodel._alltraits(iotype='out')
-            for name,trait in traitdict.items():
+            
+            if not isinstance(self.surrogate,list): 
+                surrogates = [self.surrogate for x in traitdict]
+            else: 
+                surrogates = self.surrogate
+            for (name,trait),surrogate in zip(traitdict.items(),surrogates):
                 if self._eligible(name):
                     self.add_trait(name, 
                                    Instance(UncertainDistribution, iotype='out', desc=trait.desc))
-                    self._surrogate_info[name] = (self.surrogate.__class__(), []) # (surrogate,output_history)
+                    self._surrogate_info[name] = (surrogate.__class__(), []) # (surrogate,output_history)
                     new_model_traitnames.add(name)
                     setattr(self, name, NormalDistribution(getattr(newmodel, name)))
                     
