@@ -45,16 +45,17 @@ setup(name='openmdao.main',
           'pyparsing==1.5.2',
           'numpy',
           'PyYAML==3.09',
-          'networkx==1.0.1',
+          'networkx==1.3',
           'Traits==3.3.0',
           'decorator',
           'openmdao.units',
           'openmdao.util',
           'pycrypto',
       ],
-      entry_points = {
-          "console_scripts": [
-                "openmdao_docs=openmdao.util.view_docs:view_docs",
-              ],
-          },
+      entry_points = """
+      [console_scripts]
+      openmdao_docs=openmdao.util.view_docs:view_docs
+      [openmdao.component]
+      openmdao.main.Assembly = openmdao.main.assembly:Assembly
+      """,
     )

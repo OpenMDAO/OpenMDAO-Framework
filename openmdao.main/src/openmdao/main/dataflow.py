@@ -1,6 +1,6 @@
 
 import networkx as nx
-from networkx.algorithms.traversal import strongly_connected_components
+from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.seqentialflow import SequentialWorkflow
 from openmdao.main.interfaces import IDriver
