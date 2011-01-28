@@ -2,6 +2,7 @@
 
 import sys
 import unittest
+import tempfile
 
 from enthought.traits.api import TraitError
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
@@ -63,7 +64,8 @@ class SaveAsClassTestCase(unittest.TestCase):
         top.connect('comp1.rval_out', 'comp2.rval_in')
         top.comp1.rval_in = 5.0
         
-        model_to_package(top, 'Foo', '1.0')
+        tdir = tempfile.mkdtemp()
+        model_to_package(top, 'Foo', '1.0', destdir=tdir)
         #ci = top.get_configinfo()
         #ci.save_as_class(sys.stdout, 'Foo')
         print 'done'

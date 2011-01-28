@@ -1,6 +1,10 @@
 
-from inspect import getsourcefile, getsource, getargspec, getmodule, getmro, getmembers
+import os
+
+from inspect import getsourcefile, getsource, getmodule
 from subprocess import check_call
+
+from openmdao.util.dep import PythonSourceTreeAnalyser
 
 class ConfigInfo(object):
     def __init__(self, instance, name, *initargs, **initkwargs):
@@ -42,14 +46,7 @@ class ConfigInfo(object):
         imports = set()
         classes = set()
         
-        if self.modname == '__main__':
-            #classes.add(self.klass)
-            #base = getmro(self.klass)[1]
-            #mod = getmodule(base)
-            #if mod.__name__ != '__builtin__':
-                #imports.add((mod.__name__, base.__name__))
-            pass
-        else:
+        if self.modname != '__main__':
             imports.add((self.modname, self.classname))
             pkgs.add(self.package)
             
@@ -83,13 +80,73 @@ class ConfigInfo(object):
         stream.write('        super(%s, self).__init__(*args, **kwargs)\n        ' % self.classname)
         
         stream.write('\n        '.join(lines[1:]))
+        stream.write("\n")
 
 
-def model_to_package(model, classname, version):
-    fname = "%s.py" % classname.lower()
-    with open(fname, 'w') as f:
-        cfg = model.get_configinfo()
-        cfg.save_as_class(f, classname)
-    argv = ['mod2dist', '-v', version, '-k', '-n', fname]
-    #mod2dist(argv)
-    check_call(argv)
+
+def model_to_package(model, classname, version, destdir='.'):
+    startdir = os.getcwd()
+    try:
+        os.chdir(destdir)
+        fname = "%s.py" % classname.lower()
+        with open(fname, 'w') as f:
+            cfg = model.get_configinfo()
+            cfg.save_as_class(f, classname)
+        argv = ['mod2dist', '-v', version, '-k', '-n', '-d', destdir, fname]
+        check_call(argv)
+    finally:
+        os.chdir(startdir)
+
+
+def make_pkg_dir(dirpath, pkgname, **kwargs):
+    """Creates a directory structure for a python package with the given name.
+    """
+    setuptemplate = '''
+from setuptools import setup
+
+setup(
+    name='%(name)s',
+    version='%(version)s',
+    description=%'(desc)s',
+    author='%(author)s',
+    author_email='%(author_email)s',
+    license='%(license)s',
+    url='%(url)s',
+    packages=['%(name)s'],
+    zip_safe=%(zipped)s,
+    install_requires=%(depends)s,
+    entry_points=%(entrypts)s
+)   
+   '''
+    setupdict = { 'name': pkgname, 
+                  'version': kwargs['version'],
+                  'desc': kwargs.get('desc', ''),
+                  'author': kwargs.get('author', ''),
+                  'author_email': kwargs.get('author_email', ''),
+                  'license': kwargs.get('license', ''),
+                  'url': kwargs.get('url', ''),
+                  'entrypts': kwargs.get('entrypts', {}),
+                  'zipped': False,
+                  'depends': ['openmdao.main']+kwargs.get('depends',[]),
+                  }
+    
+    startdir = os.getcwd()
+    try:
+        os.chdir(dirpath)
+        if os.path.isdir(pkgname):
+            sta = PythonSourceTreeAnalyser(startdir=os.getcwd(), excludes=['setup.py'])
+            ???
+        os.makedirs(os.path.join(pkgname, pkgname))
+        with open(os.path.join(pkgname, pkgname, '__init__.py'), 'w') as f:
+            f.write('from %s import %s\n' % (pkgname, pkgname))
+        with open(os.path.join(pkgname, 'setup.py'), 'w') as f:
+            f.write("""
+            
+# GENERATED FILE - DO NOT EDIT
+
+            """)
+            f.write(setuptemplate % setupdict)
+            f.write('\n')
+        
+    finally:
+        os.chdir(startdir)

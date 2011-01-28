@@ -16,7 +16,6 @@ import compiler
 import networkx as nx
 
 from openmdao.util.fileutil import exclude_files, get_module_path
-from openmdao.main.api import Component as mycomp
 
 class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
     """Collects info about imports and class inheritance from a 
@@ -29,7 +28,7 @@ class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
         self.classes = {}
         self.impnames = {}  # map of local names to package names
         
-    def translate(self, finfo):
+    def _translate(self, finfo):
         """Take module pathnames of classes that may be indirect names and
         convert them to their true absolute module pathname.  For example,
         'from openmdao.main.api import Component' implies the module
@@ -91,6 +90,8 @@ class PythonSourceTreeAnalyser(object):
         # pointing to the classes that inherit from them
         self.graph = nx.DiGraph()
         
+        self.fileinfo = {}
+        
         if isinstance(startdir, basestring):
             self.startdirs = [startdir]
         elif startdir is None:
@@ -110,7 +111,7 @@ class PythonSourceTreeAnalyser(object):
         the source trees under the specified set of starting 
         directories.
         """
-        fileinfo = {}
+        fileinfo = self.fileinfo
         
         # gather python files from the specified starting directories
         # and parse them, extracting class and import information
@@ -129,8 +130,8 @@ class PythonSourceTreeAnalyser(object):
         #       openmdao.main.api.Component will not be translated to
         #       openmdao.main.component.Component like it should.
         for visitor in fileinfo.values():
-            visitor.translate(fileinfo)
-    
+            visitor._translate(fileinfo)
+
         # build the inheritance graph
         for visitor in fileinfo.values():
             for klass, bases in visitor.classes.items():
