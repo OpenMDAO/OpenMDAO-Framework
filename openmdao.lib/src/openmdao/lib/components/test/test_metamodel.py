@@ -8,9 +8,13 @@ from openmdao.lib.datatypes.api import Float, TraitError, implements
 from openmdao.main.api import Assembly, Component, set_as_top, Case
 from openmdao.main.interfaces import ICaseRecorder
 
+from openmdao.main.uncertain_distributions import NormalDistribution
+
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
+from openmdao.lib.surrogatemodels.logistic_regression import LogisticRegression
+
 
 from openmdao.util.testutil import assert_rel_error
 
@@ -190,6 +194,42 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertEqual(metamodel.d.getvalue(), -1.)
         self.assertEqual(metamodel.c.getvalue(), simple.c)
         self.assertEqual(metamodel.d.getvalue(), simple.d)
+    
+    def test_multi_surrogate_models_bad_surrogate_dict(self): 
+        metamodel = MetaModel()
+        metamodel.name = 'meta'
+        metamodel.surrogate = {'d':KrigingSurrogate()}
+        try: 
+            metamodel.model = Simple()
+        except ValueError,err: 
+            self.assertEqual('meta: Dict provided for "surrogates" does not include a value for "c". All outputs must be specified',str(err))
+        else: 
+            self.fail('ValueError expected')
+        
+    def test_multi_surrogate_models(self): 
+        metamodel = MetaModel()
+        metamodel.name = 'meta'
+        metamodel.surrogate = {'d':KrigingSurrogate(),
+                               'c':LogisticRegression()}
+        metamodel.model = Simple()
+        metamodel.recorder = DumbRecorder()
+        simple = Simple()
+        
+        metamodel.a = simple.a = 1.
+        metamodel.b = simple.b = 2.
+        metamodel.train_next = True
+        simple.run()
+        metamodel.run()
+        
+        metamodel.a = simple.a = 3.
+        metamodel.b = simple.b = 4.
+        metamodel.train_next = True
+        simple.run()
+        metamodel.run()
+        
+        self.assertTrue(isinstance(metamodel.d,NormalDistribution))
+        self.assertTrue(isinstance(metamodel.c,float))
+        
         
     def test_includes(self):
         metamodel = MyMetaModel()
