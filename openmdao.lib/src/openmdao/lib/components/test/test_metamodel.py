@@ -205,6 +205,17 @@ class MetaModelTestCase(unittest.TestCase):
             self.assertEqual('meta: Dict provided for "surrogates" does not include a value for "c". All outputs must be specified',str(err))
         else: 
             self.fail('ValueError expected')
+            
+        metamodel = MetaModel()
+        metamodel.name = 'meta'
+        metamodel.surrogate = {'d':KrigingSurrogate()}
+        metamodel.includes = ['a','b','d']
+        try: 
+            metamodel.model = Simple()
+        except ValueError,err: 
+            if 'meta: Dict provided for "surrogates" does not include a value for "c". All outputs must be specified'==str(err):
+                self.fail('should not get a value error for variable c. It is not included in the metamodel')
+        
         
     def test_multi_surrogate_models(self): 
         metamodel = MetaModel()
