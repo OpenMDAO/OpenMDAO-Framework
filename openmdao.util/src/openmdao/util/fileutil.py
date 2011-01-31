@@ -143,12 +143,33 @@ def get_module_path(fpath):
     """Given a module filename, return its full python name including
     enclosing packages. (based on existence of __init__.py files)
     """
-    pnames = [os.path.basename(fpath)[:-3]]
+    pnames = [os.path.basename(os.path.splitext(fpath)[0])]
     path = os.path.dirname(os.path.abspath(fpath))
     while os.path.isfile(os.path.join(path, '__init__.py')):
             path, pname = os.path.split(path)
             pnames.append(pname)
     return '.'.join(pnames[::-1])
+
+def find_module(name, path=None):
+    """Return the pathname of the file corresponding to the given module
+    name, or None if it can't be found.  If path is set, search in path
+    for the file, otherwise search in sys.path
+    """
+    if path is None:
+        path = sys.path
+    nameparts = name.split('.')
+    
+    endings = []
+    endings.append(os.path.join(*nameparts))
+    endings.append(os.path.join(endings[0], '__init__.py'))
+    endings[0] += '.py'
+    
+    for entry in path:
+        for ending in endings:
+            f = os.path.join(entry, ending)
+            if os.path.isfile(f):
+                return f
+    return None
    
 def get_ancestor_dir(path, num_levels=1):
     """Return the name of the directory that is 'num_levels' levels

@@ -15,7 +15,7 @@ import compiler
 
 import networkx as nx
 
-from openmdao.util.fileutil import exclude_files, get_module_path
+from openmdao.util.fileutil import exclude_files, get_module_path, find_module
 
 class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
     """Collects info about imports and class inheritance from a 
@@ -27,6 +27,7 @@ class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
         self.modpath = get_module_path(fname)
         self.classes = {}
         self.impnames = {}  # map of local names to package names
+        self.imported_files = set()
         
     def _translate(self, finfo):
         """Take module pathnames of classes that may be indirect names and
@@ -48,6 +49,9 @@ class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
         
     def visitImport(self, node):
         for name, alias in node.names:
+            pathname = find_module(name)
+            if pathname:
+                self.imported_files.add(pathname)
             if alias is None:
                 self.impnames[name] = name
             else:
@@ -55,23 +59,32 @@ class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
 
     def visitFrom(self, node):
         for name, alias in node.names:
+            modpath = '.'.join([node.modname, name])
+            pathname = find_module(modpath)
+            if pathname is None:
+                pathname = find_module(node.modname)
+            if pathname:
+                self.imported_files.add(pathname)
+                
             if alias is None:
-                self.impnames[name] = '.'.join([node.modname, name])
+                self.impnames[name] = modpath
             else:
-                self.impnames[alias] = '.'.join([node.modname, name])
+                self.impnames[alias] = modpath
                 
     def _to_str(self, arg):
         """Take arg of the form Getattr(Getattr(Name('foo'),'bar'),'blah')
         and convert it to a module path name.
         """
         if isinstance(arg, compiler.ast.Getattr):
-            return '.'.join([_to_str(arg.expr), arg.attrname])
+            return '.'.join([self._to_str(arg.expr), arg.attrname])
         elif isinstance(arg, compiler.ast.Name):
             return arg.name
         else:
             return arg
                 
     def _real_name(self, name, finfo):
+        if not isinstance(name, basestring):
+            return name
         while True:
             parts = name.rsplit('.', 1)
             if len(parts) > 1:
@@ -115,10 +128,16 @@ class PythonSourceTreeAnalyser(object):
         
         # gather python files from the specified starting directories
         # and parse them, extracting class and import information
-        for pyfile in exclude_files(self.excludes, "*.py", self.startdirs):
-            myvisitor = PythonSourceFileAnalyser(pyfile)
-            compiler.visitor.walk(compiler.parseFile(pyfile), myvisitor)
-            fileinfo[get_module_path(pyfile)] = myvisitor
+        lst = list(exclude_files(self.excludes, "*.py", self.startdirs))
+        visited = set()
+        while lst:
+            pyfile = lst.pop()
+            if pyfile not in visited:
+                visited.add(pyfile)
+                myvisitor = PythonSourceFileAnalyser(pyfile)
+                compiler.visitor.walk(compiler.parseFile(pyfile), myvisitor)
+                fileinfo[get_module_path(pyfile)] = myvisitor
+                lst.extend(myvisitor.imported_files)
             
         # now translate any indirect imports into absolute module pathnames
         # NOTE: only indirect imports within the set of specified source
@@ -143,6 +162,8 @@ class PythonSourceTreeAnalyser(object):
         self.graph = self.graph.reverse(copy=False)
         
     def find_inheritors(self, base):
+        if base not in self.graph:
+            return []
         paths = nx.shortest_path(self.graph, source=base, target=None)
         del paths[base] # don't want the base itself in the list
         return paths.keys()
