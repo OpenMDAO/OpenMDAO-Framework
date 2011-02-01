@@ -181,7 +181,7 @@ class MetaModel(Component):
     
     def _model_changed(self, oldmodel, newmodel):
         self.update_model(oldmodel, newmodel)
-            
+        
     def update_model(self, oldmodel, newmodel):
         """called whenever the model variable is set."""
         # TODO: check for pre-connected traits on the new model
@@ -231,8 +231,6 @@ class MetaModel(Component):
                     try: 
                         surrogate = surrogates[name]
                     except KeyError: 
-                        print name, self._eligible(name)
-                        exit()
                         self.raise_exception('Dict provided for "surrogates" does not include a value for "%s". All outputs must be specified'%name,ValueError)
                     trait_type = surrogate.get_uncertain_value(1.0).__class__()
                     self.add_trait(name, 
