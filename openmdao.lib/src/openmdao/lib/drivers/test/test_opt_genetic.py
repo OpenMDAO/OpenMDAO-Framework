@@ -58,8 +58,8 @@ class TestCase(unittest.TestCase):
     """ test case for the genetic driver"""         
 
     def setUp(self):
-        #random.seed(10)
-        #numpy_random.seed(10)
+        random.seed(10)
+        numpy_random.seed(10)
         
         # pyevolve does some caching that causes failures during our
         # complete unit tests due to stale values in the cache attributes
