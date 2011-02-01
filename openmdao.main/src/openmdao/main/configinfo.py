@@ -4,8 +4,6 @@ import os
 from inspect import getsourcefile, getsource, getmodule
 from subprocess import check_call
 
-from openmdao.util.dep import PythonSourceTreeAnalyser
-
 class ConfigInfo(object):
     def __init__(self, instance, name, *initargs, **initkwargs):
         self.name = name  # name of the object that this config describes
@@ -82,76 +80,3 @@ class ConfigInfo(object):
         stream.write('\n        '.join(lines[1:]))
         stream.write("\n")
 
-
-
-def model_to_package(model, classname, version, destdir='.'):
-    startdir = os.getcwd()
-    try:
-        os.chdir(destdir)
-        pkgname = classname.lower()
-        os.makedirs(os.path.join(pkgname, pkgname))
-        fname = os.path.join(pkgname, pkgname, "%s.py" % pkgname)
-        with open(fname, 'w') as f:
-            cfg = model.get_configinfo()
-            cfg.save_as_class(f, classname)
-        make_pkg('.', pkgname, version=version)
-    finally:
-        os.chdir(startdir)
-
-
-def make_pkg(dirpath, pkgname, **kwargs):
-    """Creates a python package with the given name."""
-    setuptemplate = '''
-from setuptools import setup
-
-setup(
-    name='%(name)s',
-    version='%(version)s',
-    description='%(desc)s',
-    author='%(author)s',
-    author_email='%(author_email)s',
-    license='%(license)s',
-    url='%(url)s',
-    packages=['%(name)s'],
-    zip_safe=%(zipped)s,
-    install_requires=%(depends)s,
-    entry_points=%(entrypts)s
-)   
-   '''
-
-    setupdict = { 'name': pkgname,
-                  'version': kwargs['version'],
-                  'desc': kwargs.get('desc', ''),
-                  'author': kwargs.get('author', ''),
-                  'author_email': kwargs.get('author_email', ''),
-                  'license': kwargs.get('license', ''),
-                  'url': kwargs.get('url', ''),
-                  'entrypts': kwargs.get('entrypts', {}),
-                  'zipped': False,
-                  'depends': ['openmdao.main']+kwargs.get('depends',[]),
-                  }
-    
-    # find plugins and create entry points
-    sta = PythonSourceTreeAnalyser(startdir=os.getcwd(), excludes=['setup.py'])
-    drivers = sta.find_inheritors('openmdao.main.driver.Driver')
-    drivers.append('openmdao.main.driver.Driver')
-    comps = sta.find_inheritors('openmdao.main.component.Component')
-    comps = list(set(comps)-set(drivers))
-    for drv in drivers:
-        parts = drv.split('.')
-        setupdict['entrypts']['openmdao.drivers'] = "%s=%s:%s" % (drv,'.'.join(parts[:-1]),parts[-1])
-    for comp in comps:
-        parts = comp.split('.')
-        setupdict['entrypts']['openmdao.components'] = "%s=%s:%s" % (comp,'.'.join(parts[:-1]),parts[-1])
-        
-    with open(os.path.join(pkgname, pkgname, '__init__.py'), 'w') as f:
-        f.write('from %s import %s\n' % (pkgname, pkgname))
-    with open(os.path.join(pkgname, 'setup.py'), 'w') as f:
-        f.write("""
-
-# GENERATED FILE - DO NOT EDIT
-
-                """)
-        f.write(setuptemplate % setupdict)
-        f.write('\n')
-    print 'done'

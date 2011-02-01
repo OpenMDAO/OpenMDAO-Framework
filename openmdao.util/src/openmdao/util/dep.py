@@ -89,7 +89,7 @@ class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
             parts = name.rsplit('.', 1)
             if len(parts) > 1:
                 if parts[0] in finfo:
-                    trans = finfo[parts[0]].impnames.get(parts[1], parts[1])
+                    trans = finfo[parts[0]][0].impnames.get(parts[1], parts[1])
                     if trans == name:
                         return trans
                     else:
@@ -104,6 +104,7 @@ class PythonSourceTreeAnalyser(object):
         self.graph = nx.DiGraph()
         
         self.fileinfo = {}
+        self.startset = set()
         
         if isinstance(startdir, basestring):
             self.startdirs = [startdir]
@@ -129,6 +130,7 @@ class PythonSourceTreeAnalyser(object):
         # gather python files from the specified starting directories
         # and parse them, extracting class and import information
         lst = list(exclude_files(self.excludes, "*.py", self.startdirs))
+        self.startset = set(lst)
         visited = set()
         while lst:
             pyfile = lst.pop()
@@ -136,8 +138,11 @@ class PythonSourceTreeAnalyser(object):
                 visited.add(pyfile)
                 myvisitor = PythonSourceFileAnalyser(pyfile)
                 compiler.visitor.walk(compiler.parseFile(pyfile), myvisitor)
-                fileinfo[get_module_path(pyfile)] = myvisitor
-                lst.extend(myvisitor.imported_files)
+                fileinfo[get_module_path(pyfile)] = (myvisitor, pyfile)
+                for name,val in myvisitor.classes.items():
+                    if len(val) > 1 or (len(val)==1 and val[0] != 'object'):
+                        lst.extend(myvisitor.imported_files)
+                        break
             
         # now translate any indirect imports into absolute module pathnames
         # NOTE: only indirect imports within the set of specified source
@@ -148,12 +153,14 @@ class PythonSourceTreeAnalyser(object):
         #       won't be included in the translation.  This means that
         #       openmdao.main.api.Component will not be translated to
         #       openmdao.main.component.Component like it should.
-        for visitor in fileinfo.values():
+        for visitor, _ in fileinfo.values():
             visitor._translate(fileinfo)
 
         # build the inheritance graph
-        for visitor in fileinfo.values():
+        for visitor,fname in fileinfo.values():
             for klass, bases in visitor.classes.items():
+                if klass not in self.graph:
+                    self.graph.add_node(klass, fname=fname)
                 for base in bases:
                     self.graph.add_edge(klass, base)
     
@@ -162,8 +169,16 @@ class PythonSourceTreeAnalyser(object):
         self.graph = self.graph.reverse(copy=False)
         
     def find_inheritors(self, base):
+        """Returns a list of classes that inherit from the given base class. Only
+        classes defined in source files located in the set of directories specified
+        for this PythonSourceTreeAnalyser will be returned.
+        """
         if base not in self.graph:
             return []
         paths = nx.shortest_path(self.graph, source=base, target=None)
         del paths[base] # don't want the base itself in the list
-        return paths.keys()
+        ret = []
+        for path in paths.keys():
+            if self.graph.node[path]['fname'] in self.startset:
+                ret.append(path)
+        return ret
