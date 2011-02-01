@@ -2,6 +2,23 @@
     conmindriver.py - Driver for the CONMIN optimizer.
     
     See Appendix B for additional information on the :ref:`CONMINDriver`.
+    
+    The CONMIN driver can be a good example of how to wrap another Driver for
+    OpenMDAO. However, there are some things to keep in mind.
+    
+    1. This implementation of the CONMIN Fortran driver is interruptable, in
+    that control is returned every time an objective or contstraint evaluation
+    is needed. Most external optimizers just expect a functions to be passed
+    for these, so they require a slightly different driver implementation than
+    this.
+    
+    2. The CONMIN driver is a direct wrap, and all inputs are passed using
+    Numpy arrays. This means there are a lot of locally stored variables
+    that you might not need for a pure Python optimizer.
+    
+    Ultimately, if you are wrapping a new optimizer for OpenMDAO, you should
+    endeavour to understand the purpose for each statement, so that your
+    implementation doesn't do any unneccessary or redundant calculation.
 """
 
 # pylint: disable-msg=C0103
@@ -25,14 +42,14 @@ from openmdao.util.decorators import add_delegate
 
 
 class _cnmn1(object):
-    """Just a primitive data structure for storing cnmnl common block data"""
+    """Just a primitive data structure for storing cnmnl common block data.
+    
+    We save the common blocks to prevent collision in the case where there are
+    multiple instances of CONMIN running in our model."""
     
     def __init__(self):
         self.clear()
 
-    # Note: These values aren't the defaults. This object instantiates with
-    # "cleared" values. The true default values (as denoted in the corresponding
-    # traits) are assigned later.
     def clear(self):
         """ Clear values. """
         
@@ -66,7 +83,10 @@ class _cnmn1(object):
         # pylint: enable-msg=W0201
  
 class _consav(object):
-    """Just a primitive data structure for storing consav common block data."""
+    """Just a primitive data structure for storing consav common block data.
+    
+    We save the common blocks to prevent collision in the case where there are
+    multiple instances of CONMIN running in our model."""
     
     def __init__(self):
         self.clear()
@@ -163,17 +183,18 @@ class CONMINdriver(Driver):
         5: Solve 1D search problem for unconstrained function
             
     """
+    
     # pylint: disable-msg=E1101
+    # Control parameters for CONMIN.
+    # CONMIN has quite a few parameters to give the user control over aspects
+    # of the solution. 
+    
     scal = Array(zeros(0.,'d'), iotype='in', 
         desc='Array of scaling factors for the parameters.')
 
     cons_is_linear = Array(zeros(0,'d'), dtype=numpy_int, iotype='in', 
         desc='Array designating whether each constraint is linear.')
                  
-    # Control parameters for CONMIN.
-    # CONMIN has quite a few parameters to give the user control over aspects
-    # of the solution. 
-    
     iprint = Enum(0, [0, 1, 2, 3, 4, 5, 101], iotype='in', desc='Print '
                     'information during CONMIN solution. Higher values are '
                     'more verbose.')
@@ -222,21 +243,23 @@ class CONMINdriver(Driver):
         
         self.iter_count = 0
 
-        # define the CONMINdriver's private variables
-        # note, these are all resized in config_conmin
+        # Since CONMIN is an external Fortran code, it requires data to be
+        # passed via several Numpy arrays. We definie all these arrays here
+        # and initialize to zero length. They are later resized in 
+        # config_conmin.
         
         # basic stuff
         self.design_vals = zeros(0,'d')
         self._scal = zeros(0,'d')
         self.cons_active_or_violated = zeros(0, 'i') 
         self._cons_is_linear = zeros(0, 'i')
+        self.gradients = zeros(0, 'd')
         
         # gradient of objective w.r.t x[i]
         self.df = zeros(0, 'd')
 
         # move direction in the optimization space
         self.s = zeros(0, 'd')
-        self.gradients = zeros(0, 'd')
 
         # temp storage
         self._b = zeros(0, 'd')
@@ -246,7 +269,8 @@ class CONMINdriver(Driver):
         # temp storage for constraints
         self.g1 = zeros(0,'d')
         self.g2 = zeros(0,'d')
-    
+
+        
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
         
@@ -274,34 +298,20 @@ class CONMINdriver(Driver):
                                          ' of: %s' % str(val.expreval),
                                          ValueError)
 
-        # perform an initial run for self-consistency
-        super(CONMINdriver, self).run_iteration()
-
-        # update constraint value array
-        for i, v in enumerate(self.get_ineq_constraints().values()):
-            val = v.evaluate()
-            if '>' in val[2]:
-                self.constraint_vals[i] = val[1]-val[0]
-            else:
-                self.constraint_vals[i] = val[0]-val[1]
-        #self._logger.debug('%s: new iteration' % self.get_pathname())
-        #self._logger.debug('objective = %s' % self.list_objective())
-        #self._logger.debug('design vars = %s' % self.design_vars)
         
     def continue_iteration(self):
         """Returns True if iteration should continue."""
         
         return self.cnmn1.igoto != 0 or self.iter_count == 0
+
     
     def pre_iteration(self):
-        """Checks or RunStopped and evaluates objective"""
+        """Checks for RunStopped and evaluates objective"""
         
         super(CONMINdriver, self).pre_iteration()
         if self._stop:
             self.raise_exception('Stop requested', RunStopped)
             
-        # calculate objective
-        self.cnmn1.obj = self.eval_objective()
         
     def run_iteration(self):
         """ The CONMIN driver iteration"""
@@ -350,6 +360,9 @@ class CONMINdriver(Driver):
             # update the model
             super(CONMINdriver, self).run_iteration()
         
+            # calculate objective
+            self.cnmn1.obj = self.eval_objective()
+
             # update constraint value array
             for i, v in enumerate(self.get_ineq_constraints().values()):
                 val = v.evaluate()
@@ -379,6 +392,7 @@ class CONMINdriver(Driver):
             self.raise_exception('Unexpected value for flag INFO returned \
                     from CONMIN', RuntimeError)
 
+            
     def post_iteration(self):
         """ Checks CONMIN's return status and writes out cases"""
         
@@ -410,6 +424,7 @@ class CONMINdriver(Driver):
                 self.recorder.record(Case(case_input, case_output, 
                                           'case%s' % self.iter_count))
         
+
     def _config_conmin(self):
         """Set up arrays for the FORTRAN conmin routine, and perform some
         validation and make sure that array sizes are consistent.
@@ -493,15 +508,13 @@ class CONMINdriver(Driver):
         # array of active or violated constraints (ic in CONMIN)
         self.cons_active_or_violated = zeros(n3, 'i')
         self.gradients = zeros((int(n1), int(n3)), 'd')
-        # temp storage
+        
+        # these are all temp storage
         self._b = zeros((int(n3), int(n3)), 'd')
-        # temp storage
         self._c = zeros(n4, 'd')
-        # temp storage
         self._ms1 = zeros(n5, 'i')
 
         # Load all of the user-changeable parameters into the common block
-        
         self.cnmn1.iprint = self.iprint
         self.cnmn1.itmax = self.itmax
         self.cnmn1.fdch = self.fdch
