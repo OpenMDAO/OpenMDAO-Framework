@@ -34,7 +34,7 @@ import conmin.conmin as conmin
 
 from openmdao.main.api import Case, Driver
 from openmdao.main.exceptions import RunStopped
-from openmdao.lib.datatypes.api import Array, Enum, Float, Int, Str, List
+from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
@@ -208,7 +208,7 @@ class CONMINdriver(Driver):
                       'parameter.')
     nscal = Float(0, iotype='in', desc='Scaling control parameter -- '
                       'controls scaling of decision variables.')
-    nfdg = Float(0, iotype='in', desc='User-defined gradient flag (not yet '
+    nfdg = Int(0, iotype='in', desc='User-defined gradient flag (not yet '
                       'supported).')
     ct = Float(-0.1, iotype='in', desc='Constraint thickness parameter.')
     ctmin = Float(0.004, iotype='in', desc='Minimum absolute value of ct '
@@ -226,7 +226,8 @@ class CONMINdriver(Driver):
                    desc='Relative convergence tolerance.')
     dabfun = Float(0.001, iotype='in', low=1.0e-10, 
                    desc='Absolute convergence tolerance.')
-    linobj = Int(0, iotype='in', desc='Linear objective function flag.')
+    linobj = Bool(False, iotype='in', desc='Linear objective function flag. '
+                    'Set to True if objective is linear')
     itrm = Int(3, iotype='in', desc='Number of consecutive iterations to '
                       'indicate convergence (relative or absolute).')
         
@@ -306,7 +307,7 @@ class CONMINdriver(Driver):
 
     
     def pre_iteration(self):
-        """Checks for RunStopped and evaluates objective"""
+        """Checks for RunStopped"""
         
         super(CONMINdriver, self).pre_iteration()
         if self._stop:
@@ -530,7 +531,10 @@ class CONMINdriver(Driver):
         self.consav.phi = self.phi
         self.cnmn1.dabfun = self.dabfun
         self.cnmn1.delfun = self.delfun
-        self.cnmn1.linobj = self.linobj
+        if self.linobj:
+            self.cnmn1.linobj = 1
+        else:
+            self.cnmn1.linobj = 0
         self.cnmn1.itrm = self.itrm
         
         
@@ -550,6 +554,7 @@ class CONMINdriver(Driver):
         """" Saves the common block data to the class to prevent trampling by
         other instances of CONMIN.
         """
+        
         common = self.cnmn1
         for name, value in common.__dict__.items():
             setattr(common, name, type(value)(getattr(conmin.cnmn1, name)))
