@@ -31,6 +31,8 @@ class LogisticRegression(HasTraits):
 
         self.alpha = alpha
         
+        self.degenerate = False
+        
         if X is not None and Y is not None: 
             self.train(X,Y)
             
@@ -61,6 +63,13 @@ class LogisticRegression(HasTraits):
         #normalize all Y data to be between -1 and 1
         low = min(Y)
         high = max(Y)
+        
+        #there was no data to predict on, so just degenerate to predicting True all the time
+        self.degenerate = False
+        if high == low: 
+            self.degenerate = high
+            return 
+        
         self.m = 2.0/(high-low)
         self.b = (2.0*low/(low-high))-1
         
@@ -93,6 +102,8 @@ class LogisticRegression(HasTraits):
         """Calculates a predicted value of the response based on the current
         trained model for the supplied list of inputs.
         """ 
+        if self.degenerate: return self.degenerate
+        
         return self.z*sigmoid(np.dot(self.betas,np.array(new_x)))+self.w
 
     
