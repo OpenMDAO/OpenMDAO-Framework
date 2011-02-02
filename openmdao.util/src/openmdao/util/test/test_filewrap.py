@@ -4,7 +4,7 @@ Testing the file wrapping utilities.
 
 import unittest, os
 
-from numpy import array, isnan
+from numpy import array, isnan, isinf
 
 from openmdao.lib.datatypes.api import Float, Bool, Int, Str, Array, File, List, Enum
 from openmdao.main.api import Container, Component
@@ -161,7 +161,8 @@ class TestCase(unittest.TestCase):
                    " B 4 Stuff\n" + \
                    "Anchor\n" + \
                    " C 77 False NaN 333.444\n" + \
-                   " 1,2,3,4,5"
+                   " 1,2,3,4,5\n" + \
+                   " Inf 1.#QNAN -1.#IND\n"
         
         outfile = open(self.filename, 'w')
         outfile.write(data)
@@ -180,6 +181,12 @@ class TestCase(unittest.TestCase):
         self.assertEqual(type(val), int)
         gen.mark_anchor('Anchor',2)
         val = gen.transfer_var(1, 4)
+        self.assertEqual(isnan(val), True)
+        val = gen.transfer_var(3, 1)
+        self.assertEqual(isinf(val), True)
+        val = gen.transfer_var(3, 2)
+        self.assertEqual(isnan(val), True)
+        val = gen.transfer_var(3, 3)
         self.assertEqual(isnan(val), True)
         val = gen.transfer_line(-1)
         self.assertEqual(val, ' B 4 Stuff')
