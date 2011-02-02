@@ -3,6 +3,7 @@
 import sys
 import unittest
 import tempfile
+import shutil
 
 from enthought.traits.api import TraitError
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
@@ -13,6 +14,7 @@ from openmdao.main.hasobjective import HasObjective
 #from openmdao.util.debug import obj_diff
 
 from openmdao.main.configinfo import model_to_package
+from openmdao.util.project import new_package
 
 fcontents = """
 class Multiplier(Component):
@@ -63,18 +65,21 @@ class Simple(Component):
 class SaveAsClassTestCase(unittest.TestCase):
 
     def setUp(self):
-        pass
+        self.tdir = tempfile.mkdtemp()
+        
+    def tearDown(self):
+        shutil.rmtree(self.tdir)
     
     def test_save_as_class(self):
-        tdir = tempfile.mkdtemp()
-        f = open(os.path.join(tdir, 'mymodel.py'), 'w')
+        
+        f = open(os.path.join(self.tdir, 'mymodel.py'), 'w')
         f.write(fcontents)
         f.close()
         
         model_to_package(top, 'Foo', '1.0', destdir=tdir)
         #ci = top.get_configinfo()
         #ci.save_as_class(sys.stdout, 'Foo')
-        print 'done'
+
         
 if __name__ == "__main__":
     unittest.main()

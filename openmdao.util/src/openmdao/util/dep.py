@@ -6,11 +6,6 @@ import os
 from os import makedirs
 import sys
 import shutil
-import fnmatch
-from os.path import islink, isdir, join
-from os.path import normpath, dirname, exists, isfile, abspath
-from token import NAME, OP
-from tokenize import generate_tokens
 import compiler
 
 import networkx as nx
