@@ -29,7 +29,7 @@ MetaModel
         
         from openmdao.main.api import Assembly
         from openmdao.lib.components.api import MetaModel
-        from openmdao.lib.surrogatemodels.api import KrigingSurrogate,LogisticRegrssion
+        from openmdao.lib.surrogatemodels.api import KrigingSurrogate,LogisticRegression
         
         class Simulation(Assembly):
             def __init__(self): 
@@ -42,6 +42,7 @@ MetaModel
                 #alternately, overiding the default for a specific variable
                 self.meta_model.surrogate = {'default':LogisticRegression(),
                                              'f_xy':KrigingSurrogate()}
+                                             
     Once the surrogate dictionary has been specified, the model socket, called 
     `model`, can be filled with a component. As soon as a component is put in the
     socket, MetaModel will automatically mirror the inputs and outputs of that 
@@ -60,7 +61,7 @@ MetaModel
                 super(Simulation,self).__init__(self)
                 
                 self.add('meta_model',MetaModel())
-                self.meta_model.surrogate = {'default',KrigingSurrogate()}
+                self.meta_model.surrogate = {'default':KrigingSurrogate()}
         
                 #component has two inputs: x,y
                 self.meta_model.model = BraninComponent()
