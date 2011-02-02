@@ -36,12 +36,15 @@ class MetaModel(Component):
                               "previous training data is cleared, and replaced "
                               "with data from this CaseIterator")
     
-    surrogate = Either(Instance(ISurrogate),
-                       Dict(key_train=Str,
-                            value_trait=ISurrogate),
-                       allow_none=True,
-                       desc='An ISurrogate instance that is used as a '
-                              'template for each output surrogate.')
+    surrogate = Dict(key_train=Str,
+                     value_trait=ISurrogate,
+                     allow_none=True,
+                     desc='An dictionary provides a mapping between variables and '
+                          'surrogate models for each output. The "default" '
+                          'key must be given. It is the default surrogate model for all '
+                          'outputs. Any specific surrogate models can be '
+                          'specifed by a key with the desired variable name.'
+                    )
                        
     
     recorder = Instance(ICaseRecorder,
@@ -220,18 +223,17 @@ class MetaModel(Component):
             # now outputs
             traitdict = newmodel._alltraits(iotype='out')
             
-            if not isinstance(self.surrogate,dict): 
-                surrogates = dict()
-                for name in traitdict.keys(): 
-                    surrogates[name] = self.surrogate
-            else:
-                surrogates = self.surrogate
             for name,trait in traitdict.items():
                 if self._eligible(name):
                     try: 
-                        surrogate = surrogates[name]
+                        surrogate = self.surrogate[name]
                     except KeyError: 
-                        self.raise_exception('Dict provided for "surrogates" does not include a value for "%s". All outputs must be specified'%name,ValueError)
+                        try: 
+                            surrogate = self.surrogate['default']
+                        except KeyError: 
+                            self.raise_exception("No default surrogate model was" 
+                            " specified. Either specify a default, or specify a "
+                            "surrogate model for all outputs",ValueError)
                     trait_type = surrogate.get_uncertain_value(1.0).__class__()
                     self.add_trait(name, 
                                    Instance(trait_type, iotype='out', desc=trait.desc))

@@ -71,7 +71,7 @@ class MetaModelTestCase(unittest.TestCase):
         metamodel = MetaModel()
         mmins = set(metamodel.list_inputs())
         mmouts = set(metamodel.list_outputs())
-        metamodel.surrogate = KrigingSurrogate()
+        metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.model = Simple()
         inputs = set(metamodel.list_inputs())
         outputs = set(metamodel.list_outputs())
@@ -90,7 +90,7 @@ class MetaModelTestCase(unittest.TestCase):
         asm.add('metamodel', MetaModel())
         asm.add('comp1', Simple())
         asm.add('comp2', Simple())
-        asm.metamodel.surrogate = KrigingSurrogate()
+        asm.metamodel.surrogate = {'default':KrigingSurrogate()}
         asm.metamodel.model = Simple()
         asm.metamodel.recorder = DumbRecorder()
         asm.driver.workflow.add(['metamodel','comp1','comp2'])
@@ -128,7 +128,7 @@ class MetaModelTestCase(unittest.TestCase):
     def test_warm_start(self): 
         metamodel = MetaModel()
         metamodel.name = 'meta'
-        metamodel.surrogate = KrigingSurrogate()
+        metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.model = Simple()
         metamodel.recorder = DumbRecorder()
         simple = Simple()
@@ -155,7 +155,7 @@ class MetaModelTestCase(unittest.TestCase):
         
         metamodel2 = MetaModel()
         metamodel2.name = 'meta2'
-        metamodel2.surrogate = KrigingSurrogate()
+        metamodel2.surrogate = {'default':KrigingSurrogate()}
         metamodel2.model = Simple()
         metamodel2.recorder = DumbRecorder()
         metamodel2.warm_start_data = case_iter
@@ -173,7 +173,7 @@ class MetaModelTestCase(unittest.TestCase):
     def test_default_execute(self):
         metamodel = MetaModel()
         metamodel.name = 'meta'
-        metamodel.surrogate = KrigingSurrogate()
+        metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.model = Simple()
         metamodel.recorder = DumbRecorder()
         simple = Simple()
@@ -202,7 +202,9 @@ class MetaModelTestCase(unittest.TestCase):
         try: 
             metamodel.model = Simple()
         except ValueError,err: 
-            self.assertEqual('meta: Dict provided for "surrogates" does not include a value for "c". All outputs must be specified',str(err))
+            self.assertEqual('meta: No default surrogate model was specified. '
+            'Either specify a default, or specify a surrogate model for all '
+            'outputs',str(err))
         else: 
             self.fail('ValueError expected')
             
@@ -244,7 +246,7 @@ class MetaModelTestCase(unittest.TestCase):
         
     def test_includes(self):
         metamodel = MyMetaModel()
-        metamodel.surrogate = KrigingSurrogate()
+        metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.includes = ['a','d']
         metamodel.model = Simple()
         self.assertEqual(metamodel.list_inputs_to_model(), ['a'])
@@ -257,7 +259,7 @@ class MetaModelTestCase(unittest.TestCase):
 
     def test_excludes(self):
         metamodel = MyMetaModel()
-        metamodel.surrogate = KrigingSurrogate()
+        metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.excludes = ['a','d']
         metamodel.model = Simple()
         self.assertEqual(metamodel.list_inputs_to_model(), ['b'])
@@ -270,7 +272,7 @@ class MetaModelTestCase(unittest.TestCase):
         
     def test_include_exclude(self):
         metamodel = MyMetaModel()
-        metamodel.surrogate = KrigingSurrogate()
+        metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.includes = ['a','d']
         try:
             metamodel.excludes = ['b','c']
@@ -295,7 +297,7 @@ class MetaModelTestCase(unittest.TestCase):
     def test_reset_training_data_event(self):
         metamodel = MetaModel()
         metamodel.name = 'meta'
-        metamodel.surrogate = KrigingSurrogate()
+        metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.model = Simple()
         metamodel.recorder = DumbRecorder()
         simple = Simple()

@@ -58,7 +58,7 @@ class Analysis(Assembly):
         
         #Components
         self.add("spiral_meta_model",MetaModel())
-        self.spiral_meta_model.surrogate = KrigingSurrogate()
+        self.spiral_meta_model.surrogate = {'default':KrigingSurrogate()}
         self.spiral_meta_model.model = SpiralComponent()
         self.spiral_meta_model.recorder = DBCaseRecorder(':memory:')
         self.spiral_meta_model.force_execute = True
