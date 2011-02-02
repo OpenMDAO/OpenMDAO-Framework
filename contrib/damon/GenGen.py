@@ -84,7 +84,7 @@ class Analysis(Assembly):
         
         #Components
         self.add("A",MetaModel())
-        self.A .surrogate = KrigingSurrogate()
+        self.A .surrogate = {'default':KrigingSurrogate()}
         self.A.model = ConceptA()
         self.A.recorder = DBCaseRecorder(':memory:')
 
