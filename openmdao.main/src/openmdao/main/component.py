@@ -89,7 +89,96 @@ class DirectoryContext(object):
 _iodict = { 'out': 'output', 'in': 'input' }
 
 
+class Derivatives(object):
+    """Class for storing derivatives between the inputs and outputs of a
+    component at specified orders.
+    """
+    
+    def __init__(self):
+        
+        # Dict of dicts contains derivative for all input-output pairs that
+        # are requested
+        self.derivatives = {}
+        
+        # Baseline variables are saved in a dict.
+        self.inputs = {}
+        self.outputs = {}
+        
+        # Keep track of these in a list, so we know which vars to save.
+        self.input_names = []
+        self.output_names = []
+        
+    def set_derivative(self, input_name, output_name, value, order=1):
+        """
+        Stores a single derivative value.
+        
+        input_name: string
+            name of component's input variable
+            
+        output_name: string
+            name of component's output variable
+            
+        value: float, ndarray
+            value of derivative (or N-D array of derivatives for array
+            variables)
+            
+        order: int
+            order of the derivative
+        """
+        
+        if order not in self.derivatives.keys():
+            self.derivatives[order] = {}
+            
+        if output_name not in self.derivatives[order].keys():
+            self.derivatives[order][output_name] = {}
+        
+        self.derivatives[order][output_name][input_name] = value
+            
+        if input_name not in self.input_names:
+            self.input_names.append(input_name)
+            
+        if output_name not in self.output_names:
+            self.output_names.append(output_name)
+            
+    def save_baseline(self, comp):
+        """Saves the baseline of all inputs and outputs for which derivatives
+        have been specified.
+        """
+        
+        for name in self.input_names:
+            self.inputs[name] = comp.get(name)
 
+        for name in self.output_names:
+            self.outputs[name] = comp.get(name)
+
+    def calculate_output(self, comp, output_name, order):
+        """Returns the Fake Finite Difference output for the given output
+        name using the stored baseline and derivatives along with the
+        new inputs in comp.
+        """
+        
+        y = self.outputs[output_name]
+            
+        # First order derivatives
+        if order == 1:
+            
+            for input_name, dx in self.derivatives[1][output_name].iteritems():
+                y += dx*(comp.get(input_name) - self.inputs[input_name])
+        
+        # Second order derivatives
+        elif order == 2:
+            
+            for input_name, dx in self.derivatives[2][output_name].iteritems():
+                y += 0.5*dx*(comp.get(input_name) - self.inputs[input_name])**2
+        
+        else:
+            msg = 'Fake Finite Difference does not currently support an ' + \
+                  'order of %n.' % order
+            raise NotImplementedError(msg)
+        
+        return y
+            
+    
 class Component (Container):
     """This is the base class for all objects containing Traits that are \
     accessible to the OpenMDAO framework and are "runnable."
@@ -151,6 +240,10 @@ class Component (Container):
         
         self._dir_stack = []
         self._dir_context = None
+        
+        # Maybe we should have the user create this in the component's __init__
+        self.derivatives = Derivatives()
+
 
     @property
     def dir_context(self):
@@ -291,6 +384,39 @@ class Component (Container):
         """
         raise NotImplementedError('%s.execute' % self.get_pathname())
     
+    def _execute_ffd(self, ffd_order):
+        """During Fake Finite Difference, instead of executing, a component
+        can use the available derivatives to calculate the output efficiently.
+        Before FFD can execute, calc_derivatives must be called to save the
+        baseline state and the derivatives at that baseline point.
+        
+        This method approximates the output using a Talylor series expansion
+        about the saved baseline point.
+        
+        ffd_order: int
+            Order of the derivatives to be used (typically 1 or 2).
+        """
+        
+        for name in self.derivatives.output_names:
+            setattr(self, name,
+                     self.derivatives.calculate_output(self, name, ffd_order))
+    
+    def calc_derivatives(self):
+        """Prepare for Fake Finite Difference runs by calculating all needed
+        derivatives, and saving the current state as the baseline. The user
+        must supply calculate_derivatives() in the component.
+        
+        This function should not be overriden.
+        """
+        
+        if self.calculate_derivatives:
+            
+            # Calculate derivatives in user-defined function
+            self.calculate_derivatives()
+            
+            # Save baseline state
+            self.derivatives.save_baseline(self)
+    
     def _post_execute (self):
         """Update output variables and anything else needed after execution. 
         Overrides of this function must call this version.
@@ -307,9 +433,18 @@ class Component (Container):
         self._call_execute = False
         
     @rbac('*', 'owner')
-    def run (self, force=False):
+    def run (self, force=False, ffd_order=0):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
+
+        force: bool
+            If True, force component to execute even if inputs have not
+            changed. (Default is False)
+            
+        ffd_order: int
+            Order of the derivatives to be used during Fake
+            Finite Difference (typically 1 or 2). During regular execution,
+            ffd_order should be 0. (Default is 0)
         """
         if self.directory:
             self.push_dir()
@@ -322,7 +457,15 @@ class Component (Container):
             self._pre_execute(force)
             if self._call_execute or force:
                 #print 'execute: %s' % self.get_pathname()
-                self.execute()
+                
+                if ffd_order and hasattr(self, 'calculate_derivatives'):
+                    # During Fake Finite Difference, the available derivatives
+                    # are used to approximate the outputs.
+                    self._execute_ffd(ffd_order)
+                else:
+                    # Component executes as normal
+                    self.execute()
+                    
                 self._post_execute()
             #else:
                 #print 'skipping: %s' % self.get_pathname()

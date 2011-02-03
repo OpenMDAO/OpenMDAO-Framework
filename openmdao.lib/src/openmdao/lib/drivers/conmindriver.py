@@ -7,7 +7,7 @@
     OpenMDAO. However, there are some things to keep in mind.
     
     1. This implementation of the CONMIN Fortran driver is interruptable, in
-    that control is returned every time an objective or contstraint evaluation
+    that control is returned every time an objective or constraint evaluation
     is needed. Most external optimizers just expect a functions to be passed
     for these, so they require a slightly different driver implementation than
     this.
