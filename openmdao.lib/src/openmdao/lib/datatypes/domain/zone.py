@@ -93,7 +93,7 @@ class Zone(object):
 
     def make_cartesian(self, axis='z'):
         """
-        Convert to cartesian coordinate system.
+        Convert to Cartesian coordinate system.
 
         axis: string
             Specifies which is the cylinder axis ('z' or 'x').

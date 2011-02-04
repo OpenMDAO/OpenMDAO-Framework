@@ -13,15 +13,15 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 
 class ProbIntersect(Component):
     """Computes the probability that any given point from the primary concept 
-    will interesect the pareto frontiers of some other concepts.
+    will intersect the pareto frontiers of some other concepts.
     """ 
     primary_pareto = Instance(ICaseIterator, iotype="in",
                     desc="CaseIterator which contains only Pareto optimal cases "
-                         "belonging to the same model as predicted_values")
+                         "belonging to the same model as predicted_values.")
     
     global_pareto = Instance(ICaseIterator, iotype="in",
                     desc="CaseIterator which contains all the points from the "
-                         "global pareto frontier")
+                         "global pareto frontier.")
                     
     criteria = ListStr(iotype="in",dtype="str",
                        desc="Names of responses to maximize expected improvement around. "
@@ -34,7 +34,7 @@ class ProbIntersect(Component):
     
     PInt = Float(0.0, iotype="out", 
                  desc="The probability that a candidate point is close to Pareto "
-                      "intersection")
+                      "intersection.")
 
     def _calcDist(self,p1,y_star_other):
         """Computes the minimum distance from a point in 
@@ -88,7 +88,7 @@ class ProbIntersect(Component):
     def _calcProbInt(self,y_star,y_star_other):
         """Computes the probability that a new point is
         close to a Pareto intersection. Makes sequential
-        calls to _calcProbInt_single for each point in primary_pareto
+        calls to _calcProbInt_single for each point in primary_pareto.
         """
         mu = [objective.mu for objective in self.predicted_values]
         sig = [objective.sigma for objective in self.predicted_values]

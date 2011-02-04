@@ -58,10 +58,10 @@ class IContainer(Interface):
         that it is referring to a variable outside of this object's scope.
         
         srcpath: str
-            Pathname of source variable
+            Pathname of source variable.
             
         destpath: str
-            Pathname of destination variable
+            Pathname of destination variable.
         """
         
     def contains(self, path):
@@ -84,7 +84,7 @@ class IContainer(Interface):
         
     def get_dyn_trait(self, pathname, iotype=None, trait=None):
         """Returns a trait if a trait with the given pathname exists, possibly
-        creating the trait 'on-the-fly'. If an attribute exists with the given
+        creating the trait "on-the-fly." If an attribute exists with the given
         pathname but no trait is found or can be created, or if pathname
         references a trait in a parent scope, None will be returned. If no
         attribute exists with the given pathname within this scope, an
@@ -97,7 +97,7 @@ class IContainer(Interface):
             Expected iotype of the trait.
             
         trait: TraitType (optional)
-            Trait to be used for validation
+            Trait to be used for validation.
         """
 
     def get(self, path, index=None):
@@ -147,7 +147,7 @@ class IContainer(Interface):
         """
 
     def invoke(self, path, *args, **kwargs):
-        """Call the callable specified by **path**, which may be a simple
+        """Call the callable specified by *path*, which may be a simple
         name or a dotted path, passing the given arguments to it, and 
         return the result.
         """
@@ -241,10 +241,10 @@ class IComponent(IContainer):
         that it is referring to a variable outside of this object's scope.
         
         srcpath: str
-            Pathname of source variable
+            Pathname of source variable.
             
         destpath: str
-            Pathname of destination variable
+            Pathname of destination variable.
         """
         
     def disconnect(self, srcpath, destpath):
@@ -277,7 +277,7 @@ class IComponent(IContainer):
         """
 
     def get_file_vars(self):
-        """Return list of (filevarname,filevarvalue,file trait) owned by this
+        """Return list of (filevarname, filevarvalue, file trait) owned by this
         component."""
 
     def step (self):
@@ -320,7 +320,7 @@ class IDriver(Interface):
     
     def iteration_set(self):
         """Return a set of names (not pathnames) containing all Components
-        in all of the workflows managed by this Driver
+        in all of the workflows managed by this Driver.
         """
 
 class IFactory (Interface):
@@ -363,7 +363,7 @@ class IResourceAllocator (Interface):
         of concurrent evaluations."""
 
     def time_estimate (resource_desc):
-        """Return ``(estimate, criteria)`` indicating how well this resource
+        """Return `(estimate, criteria)` indicating how well this resource
         allocator can satisfy the `resource_desc` request.  The estimate will
         be:
 
@@ -381,7 +381,7 @@ class IResourceAllocator (Interface):
         Returns a proxy to the deployed server."""
 
     def list_allocated_components ():
-        """Return a list of tuples ``(hostname, pid, component_name)`` for each
+        """Return a list of tuples `(hostname, pid, component_name)` for each
         Component currently allocated by this allocator."""
 
     
@@ -410,14 +410,14 @@ class IDOEgenerator(Interface):
 class IUncertainVariable(Interface):
     """A variable which supports uncertainty"""
     def getvalue():
-        """returns either value from expected() or from sample() depending on 
-        the golbal or local uncertainty setting"""
+        """Returns either value from expected() or from sample() depending on 
+        the global or local uncertainty setting."""
     
     def expected():
-        """Calculates the expected value of the uncertainty distribution"""
+        """Calculates the expected value of the uncertainty distribution."""
     
     def sample():
-        """Generates a random number from an uncertain distribution"""
+        """Generates a random number from an uncertain distribution."""
 
 class ICaseRecorder(Interface):
     """A recorder of Cases."""
@@ -432,15 +432,15 @@ class ISurrogate(Interface):
     
     def get_uncertain_value(self,value): 
         """Converts a deterministic value into an uncertain quantity which 
-        matches the uncertain variable type the surrogate predicts"""
+        matches the uncertain variable type the surrogate predicts."""
     
     def predict(self, X):
-        """Predicts a value of from the surrogate model, for the given independent values in X.
+        """Predicts a value of from the surrogate model for the given independent values in X.
             
         X: list
-            the input values for which the predicted output is requested.
+            The input values for which the predicted output is requested.
             
-        Returns the predicted output value
+        Returns the predicted output value.
         """
 
     def train(self, X, Y): 
@@ -540,17 +540,17 @@ class IHasEqConstraints(Interface):
         """Adds an equality constraint.
         
         lhs: str
-            Left hand side of the equality
+            Left-hand side of the equality.
             
         rhs: str
-            Right hand side of the equality
+            Right-hand side of the equality.
         """
         
     def remove_constraint(self, expr_string):
         """Removes the given constraint.
         
         expr_string: str
-            A string matching the constraint the constraint to be
+            A string matching the constraint to be
             removed.  Whitespace is ignored when matching.
         """
         
@@ -563,8 +563,8 @@ class IHasEqConstraints(Interface):
 
     def eval_eq_constraints(self): 
         """Evaluates the constraint expressions and returns a list of tuples of the 
-        form (lhs, rhs, operator, is_violated), where lhs is the right hand side
-        of the equality, lhs is the left hand side of the equality, operator is 
+        form (lhs, rhs, operator, is_violated), where rhs is the right-hand side
+        of the equality, lhs is the left-hand side of the equality, operator is 
         the string '=', and is_violated is a boolean which is True if the constraint
         is currently violated.  The operator entry in the tuple is always the same
         for an equality constraint, but is included for consistency with the 
@@ -581,8 +581,8 @@ class IHasIneqConstraints(Interface):
         """
 
     def add_ineq_constraint(self, lhs, rel, rhs):
-        """Adds an inequality constraint as three strings; a left hand side,
-        a right hand side, and a relation.  The relation must be one of the 
+        """Adds an inequality constraint as three strings; a left-hand side,
+        a right-hand side, and a relation.  The relation must be one of the 
         following: '<', '>', '<=', or '>='.
         """
 

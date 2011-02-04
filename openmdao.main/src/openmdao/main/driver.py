@@ -153,7 +153,7 @@ class Driver(Component):
         self.set_events()
         
     def run_iteration(self):
-        """Runs workflow"""
+        """Runs workflow."""
         wf = self.workflow
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())

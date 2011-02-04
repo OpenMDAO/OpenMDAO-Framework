@@ -1,4 +1,4 @@
-""" Class definition for Component """
+""" Class definition for Component. """
 
 #public symbols
 __all__ = ['Component', 'SimulationRoot']
@@ -102,14 +102,14 @@ class Component (Container):
                     iotype='in')
     external_files = List(FileMetadata,
                           desc='FileMetadata objects for external files used'
-                               ' by this component')
+                               ' by this component.')
     force_execute = Bool(False, iotype='in',
                          desc="If True, always execute even if all IO traits are valid.")
 
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
     
-    exec_count = Int(0, desc='Number of times this Component has been executed')
+    exec_count = Int(0, desc='Number of times this Component has been executed.')
     
     create_instance_dir = Bool(False)
     
@@ -508,10 +508,10 @@ class Component (Container):
         that it is referring to a variable outside of this object's scope.
         
         srcpath: str
-            Pathname of source variable
+            Pathname of source variable.
             
         destpath: str
-            Pathname of destination variable
+            Pathname of destination variable.
         """
         valids_update = None
         
@@ -874,7 +874,7 @@ class Component (Container):
             child entry point object.
 
         name: string
-            Name for the root object
+            Name for the root object.
 
         observer: callable
             Will be called via an :class:`EggObserver`.

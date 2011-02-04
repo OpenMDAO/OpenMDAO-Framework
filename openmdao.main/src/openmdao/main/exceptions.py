@@ -1,5 +1,5 @@
 """
-Exception classes for OpenMDAO
+Exception classes for OpenMDAO.
 """
 
 #public symbols
