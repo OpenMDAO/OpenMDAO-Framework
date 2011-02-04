@@ -16,7 +16,6 @@ from openmdao.main.hasobjective import HasObjective
 from openmdao.main.configinfo import model_to_package
 from openmdao.util.project import new_package
 
-fcontents = """
 class Multiplier(Component):
     rval_in = Float(iotype='in')
     rval_out = Float(iotype='out')
@@ -31,36 +30,8 @@ class Multiplier(Component):
     def execute(self):
         self.rval_out = self.rval_in * self.mult
         
-class Simple(Component):
-    
-    a = Float(iotype='in')
-    b = Float(iotype='in')
-    c = Float(iotype='out')
-    d = Float(iotype='out')
-    
-    def __init__(self):
-        super(Simple, self).__init__()
-        self.a = 4.
-        self.b = 5.
-        self.c = 7.
-        self.d = 1.5
-
-    def execute(self):
-        self.c = self.a + self.b
-        self.d = self.a - self.b
         
-        top = set_as_top(Assembly())
-        comp1 = top.add('comp1', Multiplier())
-        comp2 = top.add('comp2', Multiplier())
         
-        top.driver.workflow.add(['comp1', 'comp2'])
-        
-        top.comp1.mult = 2.0
-        top.comp2.mult = 4.0
-        top.connect('comp1.rval_out', 'comp2.rval_in')
-        top.comp1.rval_in = 5.0
-        
-"""
 
 class SaveAsClassTestCase(unittest.TestCase):
 
@@ -72,9 +43,16 @@ class SaveAsClassTestCase(unittest.TestCase):
     
     def test_save_as_class(self):
         
-        f = open(os.path.join(self.tdir, 'mymodel.py'), 'w')
-        f.write(fcontents)
-        f.close()
+        top = set_as_top(Assembly())
+        comp1 = top.add('comp1', Multiplier())
+        comp2 = top.add('comp2', Multiplier())
+        
+        top.driver.workflow.add(['comp1', 'comp2'])
+        
+        top.comp1.mult = 2.0
+        top.comp2.mult = 4.0
+        top.connect('comp1.rval_out', 'comp2.rval_in')
+        top.comp1.rval_in = 5.0
         
         model_to_package(top, 'Foo', '1.0', destdir=tdir)
         #ci = top.get_configinfo()
