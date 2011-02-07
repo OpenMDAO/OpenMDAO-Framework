@@ -152,12 +152,21 @@ class Driver(Component):
         """Called prior to each iteration.  This is where iteration events are set."""
         self.set_events()
         
-    def run_iteration(self):
+    def run_iteration(self, ffd_order=0):
         """Runs workflow"""
         wf = self.workflow
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
-        wf.run()
+        wf.run(ffd_order)
+        
+    def calc_derivatives(self, orders=[1]):
+        """ Calculate derivatives and save baseline states for all components
+        in this workflow."""
+        wf = self.workflow
+        if len(wf) == 0:
+            self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
+        wf.calc_derivatives(orders)
+        
 
     def post_iteration(self):
         """Called after each iteration."""

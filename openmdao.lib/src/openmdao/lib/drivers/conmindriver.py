@@ -208,8 +208,9 @@ class CONMINdriver(Driver):
                       'parameter.')
     nscal = Float(0, iotype='in', desc='Scaling control parameter -- '
                       'controls scaling of decision variables.')
-    nfdg = Int(0, iotype='in', desc='User-defined gradient flag (not yet '
-                      'supported).')
+    nfdg = Enum(0, [0, 1], iotype='in', desc='User-defined gradient flag. '
+                      '(0 = let CONMIN calculate gradients. '
+                      '1 = let OpenMDAO calculate gradients.)')
     ct = Float(-0.1, iotype='in', desc='Constraint thickness parameter.')
     ctmin = Float(0.004, iotype='in', desc='Minimum absolute value of ct '
                       'used in optimization.')
@@ -270,6 +271,9 @@ class CONMINdriver(Driver):
         # temp storage for constraints
         self.g1 = zeros(0,'d')
         self.g2 = zeros(0,'d')
+        
+        # Flag used to figure out if we are starting a new finite difference
+        self.baseline_point = True
 
         
     def start_iteration(self):
@@ -348,18 +352,32 @@ class CONMINdriver(Driver):
         
         self._save_common_blocks()
         
-        #print "After %s" % self.get_pathname()
-        #print self.design_vals
-        
-        # update the parameters in the model
-        dvals = [float(val) for val in self.design_vals[:-2]]
-        self.set_parameters(dvals)
-        
         # calculate objective and constraints
         if self.cnmn1.info == 1:
             
-            # update the model
-            super(CONMINdriver, self).run_iteration()
+            # Note. CONMIN is driving the finite difference estimation of the
+            # gradient. However, we still take advantage of a component's
+            # user-defined gradients via Fake Finite Difference.
+            if self.cnmn1.igoto == 3:
+                # Save baseline states and calculate derivatives
+                if self.baseline_point:
+                    super(CONMINdriver, self).calc_derivatives(orders=[1])
+                self.baseline_point = False
+                
+                # update the parameters in the model
+                dvals = [float(val) for val in self.design_vals[:-2]]
+                self.set_parameters(dvals)
+        
+                # Run model under Fake Finite Difference
+                super(CONMINdriver, self).run_iteration(ffd_order=1)
+            else:
+                # update the parameters in the model
+                dvals = [float(val) for val in self.design_vals[:-2]]
+                self.set_parameters(dvals)
+        
+                # Run the model for this step
+                super(CONMINdriver, self).run_iteration()
+                self.baseline_point = True
         
             # calculate objective
             self.cnmn1.obj = self.eval_objective()

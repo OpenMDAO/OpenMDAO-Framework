@@ -18,6 +18,7 @@ from enthought.traits.trait_base import not_event, not_none
 from enthought.traits.api import Bool, List, Str, Int, Instance, Property, implements, TraitError, Missing
 
 from openmdao.main.container import Container
+from openmdao.main.derivatives import Derivatives
 from openmdao.main.interfaces import IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -89,96 +90,7 @@ class DirectoryContext(object):
 _iodict = { 'out': 'output', 'in': 'input' }
 
 
-class Derivatives(object):
-    """Class for storing derivatives between the inputs and outputs of a
-    component at specified orders.
-    """
-    
-    def __init__(self):
-        
-        # Dict of dicts contains derivative for all input-output pairs that
-        # are requested
-        self.derivatives = {}
-        
-        # Baseline variables are saved in a dict.
-        self.inputs = {}
-        self.outputs = {}
-        
-        # Keep track of these in a list, so we know which vars to save.
-        self.input_names = []
-        self.output_names = []
-        
-    def set_derivative(self, input_name, output_name, value, order=1):
-        """
-        Stores a single derivative value.
-        
-        input_name: string
-            name of component's input variable
-            
-        output_name: string
-            name of component's output variable
-            
-        value: float, ndarray
-            value of derivative (or N-D array of derivatives for array
-            variables)
-            
-        order: int
-            order of the derivative
-        """
-        
-        if order not in self.derivatives.keys():
-            self.derivatives[order] = {}
-            
-        if output_name not in self.derivatives[order].keys():
-            self.derivatives[order][output_name] = {}
-        
-        self.derivatives[order][output_name][input_name] = value
-            
-        if input_name not in self.input_names:
-            self.input_names.append(input_name)
-            
-        if output_name not in self.output_names:
-            self.output_names.append(output_name)
-            
-    def save_baseline(self, comp):
-        """Saves the baseline of all inputs and outputs for which derivatives
-        have been specified.
-        """
-        
-        for name in self.input_names:
-            self.inputs[name] = comp.get(name)
 
-        for name in self.output_names:
-            self.outputs[name] = comp.get(name)
-
-    def calculate_output(self, comp, output_name, order):
-        """Returns the Fake Finite Difference output for the given output
-        name using the stored baseline and derivatives along with the
-        new inputs in comp.
-        """
-        
-        y = self.outputs[output_name]
-            
-        # First order derivatives
-        if order == 1:
-            
-            for input_name, dx in self.derivatives[1][output_name].iteritems():
-                y += dx*(comp.get(input_name) - self.inputs[input_name])
-        
-        # Second order derivatives
-        elif order == 2:
-            
-            for input_name, dx in self.derivatives[2][output_name].iteritems():
-                y += 0.5*dx*(comp.get(input_name) - self.inputs[input_name])**2
-        
-        else:
-            msg = 'Fake Finite Difference does not currently support an ' + \
-                  'order of %n.' % order
-            raise NotImplementedError(msg)
-        
-        return y
-            
-    
 class Component (Container):
     """This is the base class for all objects containing Traits that are \
     accessible to the OpenMDAO framework and are "runnable."
@@ -401,18 +313,23 @@ class Component (Container):
             setattr(self, name,
                      self.derivatives.calculate_output(self, name, ffd_order))
     
-    def calc_derivatives(self):
+    def calc_derivatives(self, orders=[1]):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline. The user
         must supply calculate_derivatives() in the component.
         
         This function should not be overriden.
+        
+        orders: list of ints
+            List of which derivative orders we want to calculate. Presently
+            only first and second order derivatives are supported, so valid
+            values are [1], [2], and [1,2]
         """
         
-        if self.calculate_derivatives:
+        if hasattr(self, 'calculate_derivatives'):
             
             # Calculate derivatives in user-defined function
-            self.calculate_derivatives()
+            self.calculate_derivatives(orders)
             
             # Save baseline state
             self.derivatives.save_baseline(self)
