@@ -4,7 +4,33 @@ Routines for handling 'projects' in python.
 
 import os
 import sys
+import inspect
 
+from pkg_resources import get_distribution, DistributionNotFound
+
+from openmdao.util.fileutil import get_module_path
+
+def find_distribution(obj):
+    """Return the name of the distribution containing the module that
+    contains the given object, or None if it's not part of a distribution.
+    """
+    try:
+        fname = inspect.getfile(obj)
+    except TypeError:
+        return None
+    
+    modpath = get_module_path(fname)
+    parts = modpath.split('.')
+    l = len(parts)
+    for i in range(l):
+        try:
+            dist = get_distribution('.'.join(parts[:l-i]))
+        except DistributionNotFound:
+            continue
+        return dist
+    return None
+    
+    
 def model_to_class(model, classname, stream):
     """Takes a model and creates a new class inherited from the model's
     class that is initialized with the current model's non-default
