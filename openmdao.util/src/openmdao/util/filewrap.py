@@ -609,10 +609,10 @@ class FileParser(object):
         
         j1 = self.current_row + rowstart
         
-        if rowend:
-            j2 = self.current_row + rowend + 1
+        if rowend is None:
+            j2 = j1 + 1
         else:
-            j2 = j1
+            j2 = self.current_row + rowend + 1
             
         if not fieldend:
             raise ValueError("fieldend is missing, currently required")
