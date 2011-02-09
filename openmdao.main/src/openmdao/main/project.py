@@ -12,12 +12,51 @@ from pkg_resources import get_distribution, DistributionNotFound
 
 from openmdao.util.fileutil import get_module_path
 
+
+def _parse_archive_name(name):
+    return os.path.basename(name).split('.')[0]
+
+def project_from_archive(parent_dir, archive_name):
+    """Expand the given project archive file in the specified parent
+    directory and return a Project object that points to newly
+    expanded project.
+    """
+    projname = _parse_archive_name(archive_name)
+    projpath = os.path.join(parent_dir, projname)
+    os.mkdir(projpath)
+    with tarfile.open(archive_name) as tf:
+        tf.extractall(projpath)
+    return Project(projpath)
+
+    
 class Project(object):
     def __init__(self, projpath):
+        """Initializes a Project containing the project found in the 
+        specified directory.
+        """
+        if os.path.isdir(projpath):
+            # locate the state file containing the state of the project
+            statefile = os.path.join(projpath, '_project_state')
+            if os.path.isfile(statefile):
+                with open(statefile, 'r') as f:
+                    self.__dict__ = pickle.load(f)
+        else:
+            os.makedirs(projpath)
+            self.files = set()
+            self.top = None
+
         self.path = projpath
-        self.files = set()
-        self.top = None
+        self.activate()
         
+    def clear(self):
+        """Removes all project files in the project directory."""
+        for name in self.files:
+            if os.path.exists(name):
+                os.remove(name)
+        fname = os.path.join(self.path, '_project_state')
+        if os.path.exists(fname):
+            os.remove(fname)
+
     @property
     def name(self):
         return os.path.basename(self.path)
@@ -50,39 +89,6 @@ class Project(object):
         """Saves the state of the project to its project directory."""
         fname = os.path.join(self.path, '_project_state')
         pickle.dump(self.__dict__, fname)
-    
-    @staticmethod
-    def load(dirname, archive_name=None):
-        """Returns a Project object containing the project found in the 
-        specified directory or archive file.  If archive_name is not None
-        then dirname is assumed to be the parent directory where the archive
-        will be expanded.  If archive_name is None then dirname is assumed
-        to be the name of the directory containing the project to be loaded.
-        """
-        # if we're dealing with an archive file, extract it inside of dirname
-        if archive_name is not None:
-            with tarfile.open(archive_name) as tf:
-                tf.extractall(dirname)
-                projname = os.path.basename(archive_name).split('.')[0]
-                if not os.path.isdir(os.path.join(dirname, projname)):
-                    raise IOError("No %s directory was found after expansion of archive %s" % (projname,archive_name))
-            projpath = os.path.join(dirname, projname)
-        else:
-            projname = os.path.basename(dirname)
-            projpath = dirname
-            
-        # locate the state file containing the state of the project
-        statefile = os.path.join(projpath, '_project_state')
-        if not os.path.isfile(statefile):
-            raise IOError("Can't find state file for project in %s" % projpath)
-        
-        proj = Project(projpath)
-        proj.activate()
-        with open(statefile, 'r') as f:
-            proj.__dict__ = pickle.load(f)
-        proj.path = projpath  # could be different than the one we loaded
-                
-        return proj
     
 def find_distrib_for_obj(obj):
     """Return the name of the distribution containing the module that
