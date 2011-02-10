@@ -313,23 +313,24 @@ class Component (Container):
             setattr(self, name,
                      self.derivatives.calculate_output(self, name, ffd_order))
     
-    def calc_derivatives(self, orders=[1]):
+    def calc_derivatives(self, first=False, second=False):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline. The user
         must supply calculate_derivatives() in the component.
         
         This function should not be overriden.
         
-        orders: list of ints
-            List of which derivative orders we want to calculate. Presently
-            only first and second order derivatives are supported, so valid
-            values are [1], [2], and [1,2]
+        first: Bool
+            Set to True to calculate first derivatives.
+        
+        second: Bool
+            Set to True to calculate second derivatives.
         """
         
         if hasattr(self, 'calculate_derivatives'):
             
             # Calculate derivatives in user-defined function
-            self.calculate_derivatives(orders)
+            self.calculate_derivatives(first, second)
             
             # Save baseline state
             self.derivatives.save_baseline(self)

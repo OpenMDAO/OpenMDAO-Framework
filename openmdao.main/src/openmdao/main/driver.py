@@ -159,13 +159,13 @@ class Driver(Component):
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         wf.run(ffd_order)
         
-    def calc_derivatives(self, orders=[1]):
+    def calc_derivatives(self, first=False, second=False):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
         wf = self.workflow
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
-        wf.calc_derivatives(orders)
+        wf.calc_derivatives(first, second)
         
 
     def post_iteration(self):

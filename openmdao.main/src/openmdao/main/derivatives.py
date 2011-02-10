@@ -25,6 +25,23 @@ class Derivatives(object):
         self.output_names = []
 
 
+    def declare_first_derivative(self, output_name, input_name):
+        """ Declares that a component can calculate a first derivative
+        between the given input and output.
+        """
+        
+        if output_name not in self.first_derivatives.keys():
+            self.first_derivatives[output_name] = {}
+            
+        self.first_derivatives[output_name][input_name] = 0.0
+        
+        if input_name not in self.input_names:
+            self.input_names.append(input_name)
+            
+        if output_name not in self.output_names:
+            self.output_names.append(output_name)
+
+            
     def set_first_derivative(self, output_name, input_name, value):
         """
         Stores a single first derivative value.
@@ -35,23 +52,43 @@ class Derivatives(object):
         input_name: string
             name of component's input variable
             
-        value: float, ndarray
-            value of derivative (or N-D array of derivatives for array
-            variables)
+        value: float
+            value of derivative 
         """
         
-        if output_name not in self.first_derivatives.keys():
-            self.first_derivatives[output_name] = {}
-        
-        self.first_derivatives[output_name][input_name] = value
+        if output_name not in self.first_derivatives.keys() or \
+           input_name not in self.first_derivatives[output_name].keys():
+            msg = "Derivative of %s " % output_name + \
+                  "with repect to %s " % input_name + \
+                  "must be declared before being set."
+            raise KeyError(msg)
             
-        if input_name not in self.input_names:
+        self.first_derivatives[output_name][input_name] = value
+
+
+    def declare_second_derivative(self, output_name, input_name1, input_name2):
+        """ Declares that a component can calculate a second derivative
+        between the given input and output.
+        """
+        
+        if output_name not in self.second_derivatives.keys():
+            self.second_derivatives[output_name] = {}
+            
+        if input_name1 not in self.second_derivatives[output_name].keys():
+            self.second_derivatives[output_name][input_name1] = {}
+        
+        self.second_derivatives[output_name][input_name1][input_name2] = 0.0
+        
+        if input_name1 not in self.input_names:
+            self.input_names.append(input_name)
+            
+        if input_name2 not in self.input_names:
             self.input_names.append(input_name)
             
         if output_name not in self.output_names:
             self.output_names.append(output_name)
 
-
+            
     def set_second_derivative(self, output_name, input_name1, input_name2, value):
         """
         Stores a single second derivative value.
@@ -68,17 +105,18 @@ class Derivatives(object):
         input_name: string
             name of component's second input variable for derivative
             
-        value: float, ndarray
-            value of derivative (or N-D array of derivatives for array
-            variables)
+        value: float
+            value of derivative
         """
         
-        if output_name not in self.second_derivatives.keys():
-            self.second_derivatives[output_name] = {}
-        
-        if input_name1 not in self.second_derivatives[output_name].keys():
-            self.second_derivatives[output_name][input_name1] = {}
-        
+        if output_name not in self.second_derivatives.keys() or \
+           input_name1 not in self.second_derivatives[output_name].keys() or \
+           input_name1 not in self.second_derivatives[output_name][input_name1].keys():
+            msg = "Derivative of %s " % output_name + \
+                  "with repect to %s " % input_name + \
+                  "must be declared before being set."
+            raise KeyError(msg)
+            
         self.second_derivatives[output_name][input_name1][input_name2] = value
         
         # For cross terms, populate the symmetric derivative
@@ -88,15 +126,6 @@ class Derivatives(object):
                 self.second_derivatives[output_name][input_name2] = {}
         
             self.second_derivatives[output_name][input_name2][input_name1] = value
-            
-        if input_name1 not in self.input_names:
-            self.input_names.append(input_name)
-            
-        if input_name2 not in self.input_names:
-            self.input_names.append(input_name)
-            
-        if output_name not in self.output_names:
-            self.output_names.append(output_name)
 
 
     def save_baseline(self, comp):
