@@ -3,11 +3,9 @@ import tempfile
 import os
 import shutil
 
-from openmdao.main.project import new_project
 from openmdao.util.fileutil import find_files
 
-from openmdao.main.api import Component, Assembly
-from openmdao.main.project import Project
+from openmdao.main.project import Project, project_from_archive
 
 class ProjectTestCase(unittest.TestCase):
     def setUp(self):
@@ -16,11 +14,33 @@ class ProjectTestCase(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tdir)
         
-    def test_load_project(self):
-        projdir = os.path.join(os.path.dirname(__file__),'project','proj1')
-        proj = Project.load(projdir)
-        print proj.files
+    def _create_project(self):
+        projdir = os.path.join(os.path.dirname(os.path.abspath(__file__)),'project')
+        proj = Project(os.path.join(projdir, 'proj1'))
+        top = proj.top
         
+        from multiplier import Multiplier
+        
+        comp1 = top.add('comp1', Multiplier())
+        comp2 = top.add('comp2', Multiplier())
+        
+        top.driver.workflow.add(['comp1', 'comp2'])
+        
+        top.comp1.mult = 2.0
+        top.comp2.mult = 4.0
+        top.connect('comp1.rval_out', 'comp2.rval_in')
+        top.comp1.rval_in = 5.0
+        
+        return proj
+        
+    def test_proj1(self):
+        proj = self._create_project()
+        proj.save()
+        proj.export(self.tdir)
+        proj.deactivate()
+        
+        newproj = project_from_archive(os.path.join(self.tdir,'proj1.proj'), self.tdir)
+        print 'done'
 
     
 

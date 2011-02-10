@@ -14,43 +14,65 @@ from openmdao.main.api import Assembly, set_as_top
 from openmdao.util.fileutil import get_module_path
 
 
-def _parse_archive_name(name):
-    return os.path.basename(name).split('.')[0]
+def _parse_archive_name(pathname):
+    """Return the name of the project given the pathname of a project
+    archive file.
+    """
+    return os.path.basename(pathname).split('.')[0]
 
 def project_from_archive(archive_name, dest_dir):
     """Expand the given project archive file in the specified destination
     directory and return a Project object that points to newly
     expanded project.
+    
+    archive_name: str
+        Path to the project archive to be expanded
+        
+    dest_dir: str
+        Directory where the project directory for the expanded archive will
+        reside.
     """
     projname = _parse_archive_name(archive_name)
     projpath = os.path.join(dest_dir, projname)
     os.mkdir(projpath)
-    with tarfile.open(archive_name) as tf:
+    tf = tarfile.open(archive_name)
+    try:
         tf.extractall(projpath)
+    finally:
+        tf.close()
     return Project(projpath)
 
     
 class Project(object):
-    def __init__(self, projpath):
+    def __init__(self, projpath, model=None):
         """Initializes a Project containing the project found in the 
-        specified directory.
+        specified directory or creates a new project if one doesn't exist.
+        
+        projpath: str
+            Path to the project's directory
+            
+        model: Assembly (optional)
+            If not None, use this Assembly as the model to associate with 
+            this Project.
         """
+        self.path = projpath
+        self.activate()
         if os.path.isdir(projpath):
             # locate the state file containing the state of the project
             statefile = os.path.join(projpath, '_project_state')
             if os.path.isfile(statefile):
                 with open(statefile, 'r') as f:
                     self.__dict__ = pickle.load(f)
+            else:
+                self.top = set_as_top(Assembly())
         else:
             os.makedirs(projpath)
-            self.files = set()
+            #self.files = set()
             self.top = set_as_top(Assembly())
 
-        self.path = projpath
-        self.activate()
         
     def clear(self):
-        """Removes all project files in the project directory."""
+        """Removes all project files and subdirectories in the project directory."""
         for f in os.listdir(self.path):
             if os.path.isdir(f):
                 shutil.rmtree(f)
@@ -61,17 +83,17 @@ class Project(object):
     def name(self):
         return os.path.basename(self.path)
     
-    def add_file(self, name):
-        if os.path.exists(name):
-            self.files.add(name)
-        else:
-            raise IOError("File %s does not exist" % name)
+    #def add_file(self, name):
+        #if os.path.exists(name):
+            #self.files.add(name)
+        #else:
+            #raise IOError("File %s does not exist" % name)
         
-    def remove_file(self, name):
-        if name in self.files:
-            self.files.remove(name)
-        else:
-            raise KeyError("File %s is not a member of this project" % name)
+    #def remove_file(self, name):
+        #if name in self.files:
+            #self.files.remove(name)
+        #else:
+            #raise KeyError("File %s is not a member of this project" % name)
     
     def activate(self):
         """Puts this project's directory on sys.path."""
@@ -88,10 +110,15 @@ class Project(object):
     def save(self):
         """Saves the state of the project to its project directory."""
         fname = os.path.join(self.path, '_project_state')
-        pickle.dump(self.__dict__, fname)
+        with open(fname, 'w') as f:
+            pickle.dump(self.__dict__, f)
         
     def export(self, destdir='.'):
-        """Creates an archive of the current project for export."""
+        """Creates an archive of the current project for export.
+        
+        destdir: str
+            The directory where the project archive will be placed.
+        """
         ddir = os.path.abspath(destdir)
         if ddir.startswith(self.path):  # the project contains the dest directory... bad
             raise RuntimeError("Destination directory for export (%s) is within project directory (%s)" %
@@ -100,8 +127,11 @@ class Project(object):
         startdir = os.getcwd()
         os.chdir(os.path.dirname(self.path))
         try:
-            with tarfile.open(os.path.join(ddir,self.name+'.proj'), mode='w:gz') as tf:
+            try:
+                tf = tarfile.open(os.path.join(ddir,self.name+'.proj'), mode='w:gz')
                 tf.add(os.path.basename(self.path))
+            finally:
+                tf.close()
         finally:
             os.chdir(startdir)
             
