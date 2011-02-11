@@ -216,7 +216,7 @@ class Component (Container):
             except OSError, exc:
                 self.raise_exception("Can't create execution directory '%s': %s"
                                      % (path, exc.strerror), OSError)
-            
+
             # Populate with external files from config directory.
             config_dir = self.directory
             self.directory = new_dir

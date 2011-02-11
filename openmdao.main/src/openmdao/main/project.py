@@ -20,6 +20,7 @@ def _parse_archive_name(pathname):
     """
     return os.path.basename(pathname).split('.')[0]
 
+
 def project_from_archive(archive_name, dest_dir):
     """Expand the given project archive file in the specified destination
     directory and return a Project object that points to newly
@@ -53,7 +54,8 @@ class Project(object):
             
         model: Assembly (optional)
             If not None, use this Assembly as the model to associate with 
-            this Project.
+            this Project. If None, an empty Assembly will be created and
+            associated with this Project.
         """
         self.path = projpath
         self.activate()
@@ -64,11 +66,17 @@ class Project(object):
                 with open(statefile, 'r') as f:
                     self.__dict__ = pickle.load(f)
             else:
-                self.top = set_as_top(Assembly())
+                self.top = Assembly()
         else:
             os.makedirs(projpath)
-            #self.files = set()
-            self.top = set_as_top(Assembly())
+            self.top = Assembly()
+            
+        modeldir = os.path.join(self.path, 'model')
+        if not os.path.isdir(modeldir):
+            os.mkdir(modeldir)
+            
+        self.top.directory = modeldir
+        set_as_top(self.top)
 
         
     def clear(self):
@@ -82,18 +90,6 @@ class Project(object):
     @property
     def name(self):
         return os.path.basename(self.path)
-    
-    #def add_file(self, name):
-        #if os.path.exists(name):
-            #self.files.add(name)
-        #else:
-            #raise IOError("File %s does not exist" % name)
-        
-    #def remove_file(self, name):
-        #if name in self.files:
-            #self.files.remove(name)
-        #else:
-            #raise KeyError("File %s is not a member of this project" % name)
     
     def activate(self):
         """Puts this project's directory on sys.path."""
