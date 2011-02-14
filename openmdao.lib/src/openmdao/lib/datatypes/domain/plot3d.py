@@ -127,7 +127,7 @@ def read_plot3d_f(grid_file, f_file, varnames=None, multiblock=True, dim=3,
                   single_precision=True, unformatted=True, logger=None):
     """
     Returns a :class:`DomainObj` initialized from Plot3D `grid_file` and
-    `f_file`.  Variables are assigned to names of the form ``f_N``.
+    `f_file`.  Variables are assigned to names of the form `f_N`.
 
     grid_file: string
         Grid filename.

@@ -12,7 +12,7 @@ class Parameter(object):
         self.expreval = expr
 
 class HasParameters(object): 
-    """This class provides an implementation of the IHasParameters interface"""
+    """This class provides an implementation of the IHasParameters interface."""
 
     _do_not_promote = ['get_expr_depends']
     
@@ -134,7 +134,7 @@ class HasParameters(object):
         variables in the model.
         
         values: iterator
-            iterator of input values with an order defined to match the order of parameters returned 
+            Iterator of input values with an order defined to match the order of parameters returned 
             by the list_parameter method. 'values' must support the len() function.
         """
         if len(values) != len(self._parameters):

@@ -44,7 +44,7 @@ class LatinHypercube(object):
         return self.doe.shape
     
     def mmphi(self):
-        """Returns the Morris-Mitchell sampling criterion for this latin hypercube."""
+        """Returns the Morris-Mitchell sampling criterion for this Latin hypercube."""
 
         if self.phi is None:
             n,m = self.doe.shape
@@ -110,7 +110,7 @@ _norm_map = {"1-norm":1,"2-norm":2}
 
 
 class OptLatinHypercube(HasTraits): 
-    """IDOEgenerator which provides a latin hypercube DOE sample set.
+    """IDOEgenerator which provides a Latin hypercube DOE sample set.
     The Morris-Mitchell sampling criterion of the DOE is optimzied
     using an evolutionary algorithm.
     """    
@@ -125,7 +125,7 @@ class OptLatinHypercube(HasTraits):
     generations = Int(2,
         desc="Number of generations the optimization will evolve over.")
     norm_method = Enum(["1-norm","2-norm"],
-                    desc="Vector norm calculation method. '1-norm' is faster, but less accurate")
+                    desc="Vector norm calculation method. '1-norm' is faster, but less accurate.")
     
     def __init__(self, num_samples=None, population=None,generations=None):
         super(OptLatinHypercube,self).__init__()

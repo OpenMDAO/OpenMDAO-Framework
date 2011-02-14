@@ -1,6 +1,6 @@
 
 class HasEvents(object): 
-    """This class provides an implementation of the IHasEvents interface"""
+    """This class provides an implementation of the IHasEvents interface."""
 
     def __init__(self, parent):
         self._events = []
@@ -10,7 +10,7 @@ class HasEvents(object):
         """Adds an event variable to be set by the driver. 
         
         name: string
-            name of the event variable the driver should set during execution
+            Name of the event variable the driver should set during execution.
         """
         if name in self._events: 
             self._parent.raise_exception("Trying to add event '%s' to driver, "

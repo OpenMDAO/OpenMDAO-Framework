@@ -23,7 +23,7 @@ class DOEdriver(CaseIterDriverBase):
     
     # pylint: disable-msg=E1101
     DOEgenerator = Instance(IDOEgenerator, iotype='in', required=True,
-                            desc='Iterator supplying normalized DOE values')
+                            desc='Iterator supplying normalized DOE values.')
     
     case_outputs = ListStr([], iotype='in', 
                            desc='A list of outputs to be saved with each case.')

@@ -300,7 +300,7 @@ actively developed, so they may reach the necessary level of maturity in the
 near future.  
 
 
-.. _dojo: http://www.dojotoolkit.org
+.. _dojo: http://dojotoolkit.org
 
 .. _jquery: http://jquery.com
 
