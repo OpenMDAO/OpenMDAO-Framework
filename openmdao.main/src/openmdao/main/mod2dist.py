@@ -36,13 +36,12 @@ def _find_dist(path, pkgname, version):
     env = pkg_resources.Environment(path)
     for dist in env[pkgname]:
         if dist.version == version:
-            return dist.location        
+            return dist.location
     return None
 
 def _run_command(cmd):
     """Run a command using Popen and return its output (stdout and stderr)
-    and its return code as a tuple. If the command is a python file, prepend
-    python to the command string. cmd should be a sequence of strings.
+    and its return code as a tuple. cmd should be a sequence of strings.
     """
     p = Popen(args=cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=False)
     output = p.communicate()[0]
@@ -174,7 +173,7 @@ def mod2dist(argv=None, groups= { 'openmdao.component': Component,
                 for gname, klass in groups.items():
                     if issubclass(val, klass):
                         plugins[gname].append(name)
-        if valmod is not None and valmod is not mod and valmod.__name__ is not None:
+        if valmod is not None and valmod is not mod and valmod.__name__ not in [None,'__builtin__']:
             othermods.add(valmod)
 
     # for each module imported by our module, find the distrib that contains it 
@@ -212,10 +211,16 @@ def mod2dist(argv=None, groups= { 'openmdao.component': Component,
  
         setup_template = '''
 from setuptools import setup
+from sphinx.setup_command import BuildDoc
+cmdclass = {'build_sphinx': BuildDoc}
+
+name = '%(name)s'
+version = %(version)s
+release = version
 
 setup(
-    name='%(name)s',
-    version='%(version)s',
+    name=name,
+    version=version,
     description=%(desc)s,
     author=%(author)s,
     author_email=%(author_email)s,
@@ -224,6 +229,13 @@ setup(
     packages=['%(name)s'],
     zip_safe=%(zipped)s,
     install_requires=%(depends)s,
+    cmdclass=cmdclass,
+    # these are optional and override conf.py settings
+    command_options={
+        'build_sphinx': {
+            'project': ('setup.py', name),
+            'version': ('setup.py', version),
+            'release': ('setup.py', release)}},
     entry_points=%(entrypts)s
 )   
    '''
@@ -246,10 +258,21 @@ setup(
         f.write('from %s import %s' % (modname, ','.join(classnames)))
         f.close()
         
+        # build the docs
+        cmdargs = [sys.executable, 
+                   'setup.py', 'build_sphinx']
+        out, ret = _run_command(cmd=cmdargs)
+        if ret:
+            logging.error('non-zero return code (%s) from command: %s' % 
+                          (ret,' '.join(cmdargs)))
+            print out
+        elif options.verbose:
+            print out
+
         # build the distrib
         if not options.nodist:
-            cmdargs = [sys.executable, 
-                                    'setup.py', 'sdist', '-d', destdir]
+                
+            cmdargs = [sys.executable, 'setup.py', 'sdist', '-d', destdir]
             out, ret = _run_command(cmd=cmdargs)
             if ret:
                 logging.error('non-zero return code (%s) from command: %s' % 
