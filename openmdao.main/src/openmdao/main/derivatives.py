@@ -56,14 +56,19 @@ class Derivatives(object):
             value of derivative 
         """
         
-        if output_name not in self.first_derivatives.keys() or \
-           input_name not in self.first_derivatives[output_name].keys():
+        if input_name not in self.first_derivatives[output_name]:
             msg = "Derivative of %s " % output_name + \
                   "with repect to %s " % input_name + \
                   "must be declared before being set."
             raise KeyError(msg)
             
-        self.first_derivatives[output_name][input_name] = value
+        try:
+            self.first_derivatives[output_name][input_name] = value
+        except KeyError:
+            msg = "Derivative of %s " % output_name + \
+                  "with repect to %s " % input_name + \
+                  "must be declared before being set."
+            raise KeyError(msg)
 
 
     def declare_second_derivative(self, output_name, input_name1, input_name2):
@@ -71,10 +76,10 @@ class Derivatives(object):
         between the given input and output.
         """
         
-        if output_name not in self.second_derivatives.keys():
+        if output_name not in self.second_derivatives:
             self.second_derivatives[output_name] = {}
             
-        if input_name1 not in self.second_derivatives[output_name].keys():
+        if input_name1 not in self.second_derivatives[output_name]:
             self.second_derivatives[output_name][input_name1] = {}
         
         self.second_derivatives[output_name][input_name1][input_name2] = 0.0
@@ -109,20 +114,26 @@ class Derivatives(object):
             value of derivative
         """
         
-        if output_name not in self.second_derivatives.keys() or \
-           input_name1 not in self.second_derivatives[output_name].keys() or \
-           input_name1 not in self.second_derivatives[output_name][input_name1].keys():
+        if input_name2 not in self.second_derivatives[output_name][input_name1]:
             msg = "Derivative of %s " % output_name + \
-                  "with repect to %s " % input_name + \
+                  "with repect to %s " % input_name1 + \
+                  "and %s " % input_name2 + \
                   "must be declared before being set."
             raise KeyError(msg)
             
-        self.second_derivatives[output_name][input_name1][input_name2] = value
+        try:
+            self.second_derivatives[output_name][input_name1][input_name2] = value
+        except KeyError:
+            msg = "Derivative of %s " % output_name + \
+                  "with repect to %s " % input_name1 + \
+                  "and %s " % input_name2 + \
+                  "must be declared before being set."
+            raise KeyError(msg)
         
         # For cross terms, populate the symmetric derivative
         if input_name1 != input_name2:
             
-            if input_name2 not in self.second_derivatives[output_name].keys():
+            if input_name2 not in self.second_derivatives[output_name]:
                 self.second_derivatives[output_name][input_name2] = {}
         
             self.second_derivatives[output_name][input_name2][input_name1] = value
@@ -169,3 +180,73 @@ class Derivatives(object):
             raise NotImplementedError(msg)
         
         return y
+
+    
+    def validate(self, comp, driver_inputs, driver_outputs):
+        """Check the component's inputs and output and warn about any input-
+        output combinations that are missing a derivative."""
+        
+        input_list = driver_inputs
+        output_list = driver_outputs
+        
+        # only check float-valued outputs that are connected in the framework,
+        # and have not been excluded from checking using 'no_deriv_check'
+        for outvar in comp.list_outputs(connected=True):
+            if isinstance(comp.get(outvar), float) and \
+               'no_deriv_check' not in comp.get_metadata(outvar):
+                output_list.append(outvar)
+            
+        # only check float-valued inputs that are connected in the framework,
+        # and have not been excluded from checking using 'no_deriv_check'
+        for invar in comp.list_inputs(connected=True):
+            if isinstance(comp.get(invar), float) and \
+               'no_deriv_check' not in comp.get_metadata(invar):
+                input_list.append(invar)
+                
+        if self.first_derivatives:
+            for outvar in output_list:
+                
+                if outvar not in self.first_derivatives:
+                    no_outvar = True
+                else:
+                    no_outvar = False
+                    
+                for invar in invar_list:
+                    if no_outvar or \
+                       invar not in self.first_derivatives[outvar]:
+                        
+                        msg = 'Warning: no first derivative defined for ' \
+                               'output %s and ' % outvar + \
+                               'input %s.' % invar
+                        comp._logger.warning(msg)
+                        
+                        # TODO - This should be removed when logging is
+                        # finalized.
+                        print msg
+                        
+        if self.second_derivatives:
+            for outvar in output_list:
+                
+                if outvar not in self.second_derivatives:
+                    no_outvar = True
+                else:
+                    no_outvar = False
+                    
+                invar_list2 = []
+                for invar in invar_list:
+                    invar_list2.append(invar)
+                    for invar2 in invar_list2:
+                        if no_outvar or \
+                           invar not in self.second_derivatives[outvar][invar2]:
+                            
+                            msg = 'Warning: no second derivative defined ' \
+                                   'for output %s and ' % outvar + \
+                                   'input1 %s and' % invar + \
+                                   'input2 %s.' % invar2
+                            comp._logger.warning(msg)
+                            
+                            # TODO - This should be removed when logging is
+                            # finalized.
+                            print msg
+            
+        
