@@ -14,8 +14,8 @@ import sys
 import weakref
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.trait_base import not_event, not_none
-from enthought.traits.api import Bool, List, Str, Int, Instance, Property, implements, TraitError, Missing
+from enthought.traits.trait_base import not_event
+from enthought.traits.api import Bool, List, Str, Int, Instance, Property, implements, TraitError
 
 from openmdao.main.container import Container
 from openmdao.main.derivatives import Derivatives
@@ -309,7 +309,7 @@ class Component (Container):
             Order of the derivatives to be used (typically 1 or 2).
         """
         
-        for name in self.derivatives.output_names:
+        for name in self.derivatives.out_names:
             setattr(self, name,
                      self.derivatives.calculate_output(self, name, ffd_order))
     

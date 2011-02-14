@@ -4,6 +4,29 @@ perform calculations during a Fake Finite Difference.
 """
 
 
+def _check_var(comp, var_name, iotype):
+    """ Checks a variable to make sure it's the proper type and iotype"""
+    
+    if iotype == 'input':
+        conns = comp.list_inputs()
+    else:
+        conns = comp.list_outputs()
+        
+    if var_name not in conns:
+        msg = 'Variable %s ' % var_name + \
+              'should be an %s. ' % iotype +\
+              'Derivatives need to be declared for outputs with respect' + \
+              ' to inputs.'
+        raise RuntimeError(msg)
+    
+    value = comp.get(var_name)
+    if not isinstance(value, float):
+        msg = 'At present, derivatives can only be declared for float-' + \
+              'valued variables. Variable %s ' % var_name + \
+              'is of type %s.' % type(var_name)
+        raise RuntimeError(msg)
+
+    
 class Derivatives(object):
     """Class for storing derivatives between the inputs and outputs of a
     component at specified orders.
@@ -21,122 +44,145 @@ class Derivatives(object):
         self.outputs = {}
         
         # Keep track of these in a list, so we know which vars to save.
-        self.input_names = []
-        self.output_names = []
+        self.in_names = []
+        self.out_names = []
 
 
-    def declare_first_derivative(self, output_name, input_name):
+    def declare_first_derivative(self, comp, out_name, in_name):
         """ Declares that a component can calculate a first derivative
         between the given input and output.
+        
+        comp: Component
+            Component that contains the variables out_name and in_name.
+            
+        out_name: str
+            name of component's output variable.
+            
+        in_name: str
+            name of component's first input variable for derivative.
         """
         
-        if output_name not in self.first_derivatives.keys():
-            self.first_derivatives[output_name] = {}
-            
-        self.first_derivatives[output_name][input_name] = 0.0
+        _check_var(comp, in_name, "input")
+        _check_var(comp, out_name, "output")
         
-        if input_name not in self.input_names:
-            self.input_names.append(input_name)
+        if out_name not in self.first_derivatives.keys():
+            self.first_derivatives[out_name] = {}
             
-        if output_name not in self.output_names:
-            self.output_names.append(output_name)
+        self.first_derivatives[out_name][in_name] = 0.0
+        
+        if in_name not in self.in_names:
+            self.in_names.append(in_name)
+            
+        if out_name not in self.out_names:
+            self.out_names.append(out_name)
 
             
-    def set_first_derivative(self, output_name, input_name, value):
+    def set_first_derivative(self, out_name, in_name, value):
         """
         Stores a single first derivative value.
         
-        output_name: string
-            name of component's output variable
+        out_name: str
+            name of component's output variable.
             
-        input_name: string
-            name of component's input variable
+        in_name: str
+            name of component's input variable.
             
         value: float
-            value of derivative 
+            value of derivative.
         """
         
-        if input_name not in self.first_derivatives[output_name]:
-            msg = "Derivative of %s " % output_name + \
-                  "with repect to %s " % input_name + \
-                  "must be declared before being set."
-            raise KeyError(msg)
-            
         try:
-            self.first_derivatives[output_name][input_name] = value
+            if in_name not in self.first_derivatives[out_name]:
+                raise KeyError()
+            self.first_derivatives[out_name][in_name] = value
         except KeyError:
-            msg = "Derivative of %s " % output_name + \
-                  "with repect to %s " % input_name + \
+            msg = "Derivative of %s " % out_name + \
+                  "with repect to %s " % in_name + \
                   "must be declared before being set."
             raise KeyError(msg)
+        
 
-
-    def declare_second_derivative(self, output_name, input_name1, input_name2):
+    def declare_second_derivative(self, comp, out_name, in_name1, in_name2):
         """ Declares that a component can calculate a second derivative
         between the given input and output.
+        
+        comp: Component
+            Component that contains the variables out_name and in_name(1,2)
+            
+        out_name: str
+            name of component's output variable.
+            
+        in_name1: str
+            name of component's first input variable for derivative.
+            
+        in_name2: str
+            name of component's second input variable for derivative.
         """
         
-        if output_name not in self.second_derivatives:
-            self.second_derivatives[output_name] = {}
-            
-        if input_name1 not in self.second_derivatives[output_name]:
-            self.second_derivatives[output_name][input_name1] = {}
+        _check_var(comp, in_name1, "input")
+        _check_var(comp, in_name2, "input")
+        _check_var(comp, out_name, "output")
         
-        self.second_derivatives[output_name][input_name1][input_name2] = 0.0
+        if out_name not in self.second_derivatives:
+            self.second_derivatives[out_name] = {}
+            
+        if in_name1 not in self.second_derivatives[out_name]:
+            self.second_derivatives[out_name][in_name1] = {}
         
-        if input_name1 not in self.input_names:
-            self.input_names.append(input_name)
+        self.second_derivatives[out_name][in_name1][in_name2] = 0.0
+        
+        # For cross terms, we also have a symmetric derivative
+        if in_name1 != in_name2:
             
-        if input_name2 not in self.input_names:
-            self.input_names.append(input_name)
+            if in_name2 not in self.second_derivatives[out_name]:
+                self.second_derivatives[out_name][in_name2] = {}
+                
+            self.second_derivatives[out_name][in_name2][in_name1] = 0.0
+        
+        if in_name1 not in self.in_names:
+            self.in_names.append(in_name1)
             
-        if output_name not in self.output_names:
-            self.output_names.append(output_name)
+        if in_name2 not in self.in_names:
+            self.in_names.append(in_name2)
+            
+        if out_name not in self.out_names:
+            self.out_names.append(out_name)
 
             
-    def set_second_derivative(self, output_name, input_name1, input_name2, value):
+    def set_second_derivative(self, out_name, in_name1, in_name2, value):
         """
         Stores a single second derivative value.
         
-        Note cross terms (i.e., df_dxdy) are assumed symmetric, so you onnly
+        Note cross terms (i.e., df_dxdy) are assumed symmetric, so you only
         have to specify them once.
         
-        output_name: string
-            name of component's output variable
+        out_name: str
+            name of component's output variable.
             
-        input_name: string
-            name of component's first input variable for derivative
+        in_name1: str
+            name of component's first input variable for derivative.
             
-        input_name: string
-            name of component's second input variable for derivative
+        in_name2: str
+            name of component's second input variable for derivative.
             
         value: float
-            value of derivative
+            value of derivative.
         """
         
-        if input_name2 not in self.second_derivatives[output_name][input_name1]:
-            msg = "Derivative of %s " % output_name + \
-                  "with repect to %s " % input_name1 + \
-                  "and %s " % input_name2 + \
-                  "must be declared before being set."
-            raise KeyError(msg)
-            
         try:
-            self.second_derivatives[output_name][input_name1][input_name2] = value
+            if in_name2 not in self.second_derivatives[out_name][in_name1]:
+                raise KeyError()
+            self.second_derivatives[out_name][in_name1][in_name2] = value
         except KeyError:
-            msg = "Derivative of %s " % output_name + \
-                  "with repect to %s " % input_name1 + \
-                  "and %s " % input_name2 + \
+            msg = "Derivative of %s " % out_name + \
+                  "with repect to %s " % in_name1 + \
+                  "and %s " % in_name2 + \
                   "must be declared before being set."
             raise KeyError(msg)
         
         # For cross terms, populate the symmetric derivative
-        if input_name1 != input_name2:
-            
-            if input_name2 not in self.second_derivatives[output_name]:
-                self.second_derivatives[output_name][input_name2] = {}
-        
-            self.second_derivatives[output_name][input_name2][input_name1] = value
+        if in_name1 != in_name2:
+            self.second_derivatives[out_name][in_name2][in_name1] = value
 
 
     def save_baseline(self, comp):
@@ -144,39 +190,39 @@ class Derivatives(object):
         have been specified.
         """
         
-        for name in self.input_names:
+        for name in self.in_names:
             self.inputs[name] = comp.get(name)
 
-        for name in self.output_names:
+        for name in self.out_names:
             self.outputs[name] = comp.get(name)
 
 
-    def calculate_output(self, comp, output_name, order):
+    def calculate_output(self, comp, out_name, order):
         """Returns the Fake Finite Difference output for the given output
         name using the stored baseline and derivatives along with the
         new inputs in comp.
         """
         
-        y = self.outputs[output_name]
+        y = self.outputs[out_name]
             
         # First order derivatives
         if order == 1:
             
-            for input_name, dx in self.first_derivatives[output_name].iteritems():
-                y += dx*(comp.get(input_name) - self.inputs[input_name])
+            for in_name, dx in self.first_derivatives[out_name].iteritems():
+                y += dx*(comp.get(in_name) - self.inputs[in_name])
         
         # Second order derivatives
         elif order == 2:
             
-            for input_name1, item in self.second_derivatives[output_name].iteritems():
-                for input_name2, dx in item.iteritems():
+            for in_name1, item in self.second_derivatives[out_name].iteritems():
+                for in_name2, dx in item.iteritems():
                     y += 0.5*dx* \
-                      (comp.get(input_name1) - self.inputs[input_name1])* \
-                      (comp.get(input_name2) - self.inputs[input_name2])
+                      (comp.get(in_name1) - self.inputs[in_name1])* \
+                      (comp.get(in_name2) - self.inputs[in_name2])
         
         else:
             msg = 'Fake Finite Difference does not currently support an ' + \
-                  'order of %n.' % order
+                  'order of %s.' % order
             raise NotImplementedError(msg)
         
         return y
@@ -211,7 +257,7 @@ class Derivatives(object):
                 else:
                     no_outvar = False
                     
-                for invar in invar_list:
+                for invar in input_list:
                     if no_outvar or \
                        invar not in self.first_derivatives[outvar]:
                         
@@ -232,10 +278,10 @@ class Derivatives(object):
                 else:
                     no_outvar = False
                     
-                invar_list2 = []
-                for invar in invar_list:
-                    invar_list2.append(invar)
-                    for invar2 in invar_list2:
+                input_list2 = []
+                for invar in input_list:
+                    input_list2.append(invar)
+                    for invar2 in input_list2:
                         if no_outvar or \
                            invar not in self.second_derivatives[outvar][invar2]:
                             
