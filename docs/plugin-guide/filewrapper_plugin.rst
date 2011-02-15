@@ -420,7 +420,7 @@ Note also that we used the method ``reset_anchor`` to return the anchor to the
 beginning of the file before marking our new anchor. Subsequent calls to
 ``mark_anchor`` start at the previous anchor and find the next instance of the
 anchor text. It is a good practice to reset your anchor unless you are looking for
-and instance of "B" that follows an instance of "A".
+an instance of "B" that follows an instance of "A".
 
 You can also count backwards from the bottom of the file by passing a negative
 number. Here, the second instance of ``"INPUT"`` from the bottom brings you
@@ -803,7 +803,7 @@ Note also that we used the method ``reset_anchor`` to return the anchor to the
 beginning of the file before marking our new anchor. Subsequent calls to
 ``mark_anchor`` start at the previous anchor and find the next instance of the
 anchor text. It is a good practice to reset your anchor unless you are looking for
-and instance of "B" that follows an instance of "A".
+an instance of "B" that follows an instance of "A".
 
 You can also count backwards from the bottom of the file by passing a negative
 number. Here, the second instance of ``"LOAD CASE"`` from the bottom brings us
