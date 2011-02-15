@@ -138,12 +138,12 @@ def find_up(name, path=None):
                 return None
     return None
 
-                
+
 def get_module_path(fpath):
     """Given a module filename, return its full python name including
     enclosing packages. (based on existence of __init__.py files)
     """
-    pnames = [os.path.basename(fpath)[:-3]]
+    pnames = [os.path.splitext(os.path.basename(fpath))[0]]
     path = os.path.dirname(os.path.abspath(fpath))
     while os.path.isfile(os.path.join(path, '__init__.py')):
             path, pname = os.path.split(path)

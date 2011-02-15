@@ -101,15 +101,25 @@ def add_delegate(*delegates):
     return _add_delegate
 
 
-def on_condition(cond, dec, *args, **kwargs):
-    """This is actually a decorator of decorators.  It will cause the wrapped decorator
-    to be applied only if the supplied value is True.
-    """
-    def _wrap_on_condition(fnc):
-        if cond:
-            return dec(*args, **kwargs)(fnc)
-        else:
-            return fnc
-    return _wrap_on_condition
+def entry_point(group, name=None):
+    """Registers an entry point for the decorated class or function."""
+    # may use the extensions lib to do the registration at some point, but it
+    # seems to have some bugs.  For now, just do nothing and detect entry points
+    # using PythonSourceFileAnalyser to parse the source for @entry_point calls.
+    def _reg_entry_pt(c_or_f):
+        return c_or_f
+    return _reg_entry_pt
+
+
+#def on_condition(cond, dec, *args, **kwargs):
+    #"""This is actually a decorator of decorators.  It will cause the wrapped decorator
+    #to be applied only if the supplied value is True.
+    #"""
+    #def _wrap_on_condition(fnc):
+        #if cond:
+            #return dec(*args, **kwargs)(fnc)
+        #else:
+            #return fnc
+    #return _wrap_on_condition
 
 

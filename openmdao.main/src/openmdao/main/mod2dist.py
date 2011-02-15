@@ -126,70 +126,71 @@ def mod2dist(argv=None, groups= { 'openmdao.component': Component,
     
     sys.path = [modpath]+sys.path
     
-    if options.install_dir:
-        if not os.path.isdir(options.install_dir):
-            raise Mod2DistError("install directory %s does not exist\n" % options.install_dir)
-        ename = _find_dist([options.install_dir], modname, options.version)
+    try:
+        if options.install_dir:
+            if not os.path.isdir(options.install_dir):
+                raise Mod2DistError("install directory %s does not exist\n" % options.install_dir)
+            ename = _find_dist([options.install_dir], modname, options.version)
+            # be a little extra paranoid about accidental overwriting of a
+            # distribution without updating its version
+            if ename:
+                raise Mod2DistError("distrib %s already exists in directory %s" %\
+                      (ename, os.path.abspath(options.install_dir)))
+            if os.path.isabs(options.install_dir):
+                idir_abs = options.install_dir
+            else:
+                idir_abs = os.path.join(os.getcwd(), options.install_dir)
+        else:
+            idir_abs = None
+    
+        destdir = options.dest or os.getcwd()
+        destdir = os.path.abspath(destdir)
+        if options.keep:
+            pkgdir = destdir
+        else:
+            pkgdir = tempfile.mkdtemp()
+    
+        ename = _find_dist([destdir], modname, options.version)
         # be a little extra paranoid about accidental overwriting of a
         # distribution without updating its version
         if ename:
             raise Mod2DistError("distrib %s already exists in directory %s" %\
-                  (ename, os.path.abspath(options.install_dir)))
-        if os.path.isabs(options.install_dir):
-            idir_abs = options.install_dir
-        else:
-            idir_abs = os.path.join(os.getcwd(), options.install_dir)
-    else:
-        idir_abs = None
-
-    destdir = options.dest or os.getcwd()
-    destdir = os.path.abspath(destdir)
-    if options.keep:
-        pkgdir = destdir
-    else:
-        pkgdir = tempfile.mkdtemp()
-
-    ename = _find_dist([destdir], modname, options.version)
-    # be a little extra paranoid about accidental overwriting of a
-    # distribution without updating its version
-    if ename:
-        raise Mod2DistError("distrib %s already exists in directory %s" %\
-              (ename, os.path.abspath(destdir)))
-        
-    mod = __import__(modname)
-
-    plugins = groups.copy()
-    for name in plugins.keys():
-        plugins[name] = []
-
-    othermods = set()
-
-    # find any classes in the module so we can see if they're 
-    # OpenMDAO plugin types
-    for name, val in inspect.getmembers(mod):
-        valmod = inspect.getmodule(val)
-        if inspect.isclass(val):
-            if valmod is mod:
-                for gname, klass in groups.items():
-                    if issubclass(val, klass):
-                        plugins[gname].append(name)
-        if valmod is not None and valmod is not mod and valmod.__name__ not in [None,'__builtin__']:
-            othermods.add(valmod)
-
-    # for each module imported by our module, find the distrib that contains it 
-    depends = set()
-    for omod in othermods:
-        found = False
-        for dist in pkg_resources.working_set:
-            if omod.__file__.startswith(dist.location):
-                found = True
-                break
-            if found:
-                break
+                  (ename, os.path.abspath(destdir)))
             
-    # now put sys.path and sys.modules back to the way they were
-    sys.path = old_sys_path
-    sys.modules = old_sys_modules
+        mod = __import__(modname)
+    
+        plugins = groups.copy()
+        for name in plugins.keys():
+            plugins[name] = []
+    
+        othermods = set()
+    
+        # find any classes in the module so we can see if they're 
+        # OpenMDAO plugin types
+        for name, val in inspect.getmembers(mod):
+            valmod = inspect.getmodule(val)
+            if inspect.isclass(val):
+                if valmod is mod:
+                    for gname, klass in groups.items():
+                        if issubclass(val, klass):
+                            plugins[gname].append(name)
+            if valmod is not None and valmod is not mod and valmod.__name__ not in [None,'__builtin__']:
+                othermods.add(valmod)
+    
+        # for each module imported by our module, find the distrib that contains it 
+        depends = set()
+        for omod in othermods:
+            found = False
+            for dist in pkg_resources.working_set:
+                if omod.__file__.startswith(dist.location):
+                    found = True
+                    break
+                if found:
+                    break
+    finally:
+        # put sys.path and sys.modules back to the way they were
+        sys.path = old_sys_path
+        sys.modules = old_sys_modules
                     
     orig_dir = os.getcwd()
     
