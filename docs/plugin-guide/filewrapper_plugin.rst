@@ -392,6 +392,7 @@ fragment ``"INPUT"``.
 
 .. testcode:: Parse_Input
 
+    parser.reset_anchor()    
     parser.mark_anchor("INPUT", 2)
     
     my_var = 3.1415926535897932
@@ -414,13 +415,20 @@ fragment ``"INPUT"``.
 Note that you are able to pass a floating point value to ``transfer_var`` and still
 keep 15 digits of precision. See :ref:`A-Note-on-Precision` for a discussion of
 why this is important.
-    
+
+Note also that we used the method ``reset_anchor`` to return the anchor to the
+beginning of the file before marking our new anchor. Subsequent calls to
+``mark_anchor`` start at the previous anchor and find the next instance of the
+anchor text. It is a good practice to reset your anchor unless you are looking for
+and instance of "B" that follows an instance of "A".
+
 You can also count backwards from the bottom of the file by passing a negative
 number. Here, the second instance of ``"INPUT"`` from the bottom brings you
 back to the first one.
 
 .. testcode:: Parse_Input
 
+    parser.reset_anchor()    
     parser.mark_anchor("INPUT", -2)
     parser.transfer_var("99999", 1, 1)
     
@@ -447,6 +455,7 @@ replacing the set of three integers as follows:
     
     array_val = array([123, 456, 789])
 
+    parser.reset_anchor()    
     parser.mark_anchor("INPUT")
     parser.transfer_array(array_val, 1, 1, 3)
     
@@ -481,6 +490,7 @@ array in a template to add more terms.
     
     array_val = array([11, 22, 33, 44, 55, 66])
 
+    parser.reset_anchor()    
     parser.mark_anchor("INPUT")
     parser.transfer_array(array_val, 1, 1, 3, sep=' ')
     
@@ -733,6 +743,7 @@ this:
 
 ::
 
+    parser.reset_anchor()    
     parser.mark_anchor("LOAD CASE")
     var = parser.transfer_var(1, 4)
     
@@ -762,6 +773,7 @@ word ``DISPLACEMENT``.
     
 .. testcode:: Parse_Output
 
+    parser.reset_anchor()    
     parser.mark_anchor("LOAD CASE")
     var = parser.transfer_var(2, 1)
     
@@ -777,6 +789,7 @@ start at the second instance of the text fragment ``"LOAD CASE"``.
 
 .. testcode:: Parse_Output
 
+    parser.reset_anchor()    
     parser.mark_anchor("LOAD CASE", 2)
     var = parser.transfer_var(1, 2)
     
@@ -786,12 +799,19 @@ start at the second instance of the text fragment ``"LOAD CASE"``.
 
     11
     
+Note also that we used the method ``reset_anchor`` to return the anchor to the
+beginning of the file before marking our new anchor. Subsequent calls to
+``mark_anchor`` start at the previous anchor and find the next instance of the
+anchor text. It is a good practice to reset your anchor unless you are looking for
+and instance of "B" that follows an instance of "A".
+
 You can also count backwards from the bottom of the file by passing a negative
 number. Here, the second instance of ``"LOAD CASE"`` from the bottom brings us
 back to the first one.
 
 .. testcode:: Parse_Output
 
+    parser.reset_anchor()    
     parser.mark_anchor("LOAD CASE", -2)
     var = parser.transfer_var(1, 2)
     
@@ -806,6 +826,7 @@ There is a shortcut for extracting data that is stored as ``Key Value`` or
 
 .. testcode:: Parse_Output
 
+    parser.reset_anchor()    
     parser.mark_anchor("LOAD CASE 1")
     var = parser.transfer_keyvar("DISPLACEMENT", 1)
     
@@ -844,6 +865,7 @@ them as an array. You can do this with the ``transfer_array`` method.
 
 .. testcode:: Parse_Output
 
+    parser.reset_anchor()    
     parser.mark_anchor("LOAD CASE")
     var = parser.transfer_array(2, 2, 2, 5)
     
@@ -862,6 +884,7 @@ last line is hit. The following extraction illustrates this:
 
 .. testcode:: Parse_Output
 
+    parser.reset_anchor()    
     parser.mark_anchor("LOAD CASE")
     var = parser.transfer_array(1, 3, 2, 4)
     
@@ -903,6 +926,7 @@ separated file (i.e, csv). Here's an example of such an output file:
     parser.data = []
     parser.data.append("CASE 1")
     parser.data.append("3,7,2,4,5,6")
+    parser.reset_anchor()    
     
 Try grabbing the first element without changing the delimiters:
 
@@ -923,6 +947,7 @@ delimiters. Now specify commas as your delimiter.
 
 .. testcode:: Parse_Output
 
+    parser.reset_anchor()    
     parser.mark_anchor("CASE")
     parser.set_delimiters(", ")
     var = parser.transfer_var(1, 2)

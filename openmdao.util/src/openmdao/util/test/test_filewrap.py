@@ -45,6 +45,7 @@ class TestCase(unittest.TestCase):
         gen.mark_anchor('Anchor')
         gen.transfer_var('CC', 2, 0)
         gen.transfer_var(3.0, 1, 3)
+        gen.reset_anchor()
         gen.mark_anchor('Anchor', 2)
         gen.transfer_var('NaN', 1, 4)
         gen.reset_anchor()
@@ -96,6 +97,44 @@ class TestCase(unittest.TestCase):
             self.fail('RuntimeError expected')  
             
             
+    def test_templated_input_same_anchors(self):
+        
+        template = "CQUAD4 1 3.456\n" + \
+                   "CQUAD4 2 4.123\n" + \
+                   "CQUAD4 3 7.222\n" + \
+                   "CQUAD4 4\n"
+
+        outfile = open(self.templatename, 'w')
+        outfile.write(template)
+        outfile.close()
+        
+        gen = InputFileGenerator()
+        gen.set_template_file(self.templatename)
+        gen.set_generated_file(self.filename)
+        gen.set_delimiters(', ')
+
+        gen.mark_anchor('CQUAD4')
+        gen.transfer_var('x', 0, 2)
+        gen.mark_anchor('CQUAD4')
+        gen.transfer_var('y', 0, 3)
+        gen.mark_anchor('CQUAD4', 2)
+        gen.transfer_var('z', 0, 2)
+
+        gen.generate()
+        
+        infile = open(self.filename, 'r')
+        result = infile.read()
+        infile.close()
+        
+        answer =   "CQUAD4 x 3.456\n" + \
+                   "CQUAD4 2 y\n" + \
+                   "CQUAD4 3 7.222\n" + \
+                   "CQUAD4 z\n"
+
+        self.assertEqual(answer, result)
+        print result
+
+
     def test_templated_input_arrays(self):
         
         template = "Anchor\n" + \
@@ -224,6 +263,46 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('RuntimeError expected')  
 
+    def test_output_parse_same_anchors(self):
+        
+        data = "CQUAD4 1 3.456\n" + \
+               "CQUAD4 2 4.123\n" + \
+               "CQUAD4 3 7.222\n" + \
+               "CQUAD4 4\n"
+        
+        outfile = open(self.filename, 'w')
+        outfile.write(data)
+        outfile.close()
+        
+        gen = FileParser()
+        gen.set_file(self.filename)
+        gen.set_delimiters(' ')
+        
+        gen.mark_anchor('CQUAD4')
+        val = gen.transfer_var(0, 3)
+        self.assertEqual(val, 3.456)
+        
+        gen.mark_anchor('CQUAD4')
+        val = gen.transfer_var(0, 3)
+        self.assertEqual(val, 4.123)
+
+        gen.mark_anchor('CQUAD4', 2)
+        val = gen.transfer_var(0, 2)
+        self.assertEqual(val, 4)
+
+        gen.reset_anchor()
+        
+        gen.mark_anchor('CQUAD4', -1)
+        val = gen.transfer_var(0, 2)
+        self.assertEqual(val, 4)
+
+        gen.mark_anchor('CQUAD4', -1)
+        val = gen.transfer_var(0, 3)
+        self.assertEqual(val, 7.222)
+
+        gen.mark_anchor('CQUAD4', -2)
+        val = gen.transfer_var(0, 3)
+        self.assertEqual(val, 4.123)
         
     def test_output_parse_keyvar(self):
         
