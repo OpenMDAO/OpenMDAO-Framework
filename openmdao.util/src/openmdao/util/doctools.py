@@ -100,7 +100,7 @@ def get_traits_info(app, what, name, obj, options, lines):
                 lines.extend(["*%s* **%s**" %(type(val.trait_type).__name__, t)])
             lines.extend(["  %s" %val.desc])
             lines.append('')
-	    lines.extend(["  * default:  '%s'" %(val.trait_type).default_value]) 
+            lines.extend(["  * default:  '%s'" %(val.trait_type).default_value]) 
             if (val.iotype is not None):
                 lines.extend(["  * iotype:  '%s'" %val.iotype])
             if (val.units is not None):

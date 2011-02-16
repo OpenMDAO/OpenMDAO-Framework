@@ -11,13 +11,7 @@ Contents:
    :maxdepth: 2
     
    plugin
-
-
-.. automodule:: conmindriver
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
+   srcdocs
 
    
 * :ref:`search`

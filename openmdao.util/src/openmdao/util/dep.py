@@ -11,7 +11,9 @@ from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
 from token import NAME, OP
 from tokenize import generate_tokens
-import compiler
+#import compiler
+import ast
+import parser
 
 import networkx as nx
 
@@ -63,12 +65,12 @@ class ClassInfo(object):
         self.bases = [_real_name(b, finfo) for b in self.bases]
         
 
-class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
+class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
     python file.
     """
     def __init__(self, fname):
-        compiler.visitor.ASTVisitor.__init__(self)
+        ast.NodeVisitor.__init__(self)
         self.fname = os.path.abspath(fname)
         self.modpath = get_module_path(fname)
         self.classes = {}
@@ -86,7 +88,7 @@ class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
         for classinfo in self.classes.values():
             classinfo.resolve_true_basenames(finfo)
                 
-    def visitClass(self, node):
+    def visit_ClassDef(self, node):
         """This executes every time a class definition is parsed."""
         fullname = '.'.join([self.modpath, node.name])
         self.localnames[node.name] = fullname
@@ -102,7 +104,7 @@ class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
                         args.append(fullname)
                     self.classes[fullname].entry_points.append((args[0],args[1],args[1]))
         
-    def visitImport(self, node):
+    def visit_Import(self, node):
         """This executes every time an 'import foo' style import statement 
         is parsed.
         """
@@ -112,7 +114,7 @@ class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
             else:
                 self.localnames[alias] = name
 
-    def visitFrom(self, node):
+    def visit_From(self, node):
         """This executes every time a 'from foo import bar' style import
         statement is parsed.
         """
@@ -154,7 +156,12 @@ class PythonSourceTreeAnalyser(object):
         # and parse them, extracting class and import information
         for pyfile in exclude_files(self.excludes, "*.py", self.startdirs):
             myvisitor = PythonSourceFileAnalyser(pyfile)
-            compiler.visitor.walk(compiler.parseFile(pyfile), myvisitor)
+            f = open(pyfile, 'r')
+            try:
+                for node in ast.walk(ast.parse(f.read().strip(), pyfile)):
+                    myvisitor.visit(node)
+            finally:
+                f.close()
             fileinfo[get_module_path(pyfile)] = myvisitor
             
         # now translate any indirect imports into absolute module pathnames
