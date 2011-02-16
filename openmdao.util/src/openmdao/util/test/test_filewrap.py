@@ -303,6 +303,8 @@ class TestCase(unittest.TestCase):
         val = gen.transfer_array(1, 10, 2, 18)
         self.assertEqual(val[0], 40)
         self.assertEqual(val[5], 61)
+        val = gen.transfer_array(3, 5, 3, 10)
+        self.assertEqual(val[0], 'a b c')
 
         try:
             gen.transfer_array(1, 7, 1)

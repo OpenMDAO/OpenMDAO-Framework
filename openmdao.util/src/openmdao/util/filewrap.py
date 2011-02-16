@@ -625,17 +625,21 @@ class FileParser(object):
             if self.delimiter == "columns":
                 line = line[(fieldstart-1):fieldend]
                 
+                # Stripping whitespace may be controversial.
+                line = line.strip()
+                
                 # Let pyparsing figure out if this is a number, and return it
                 # as a float or int as appropriate
                 parsed = _parse_line().parseString(line)
                 
-                # data might have been split if it contains whitespace. If so,
-                # just return the whole string
-                #if len(parsed) > 1:
-                #    data = append(data, array(line))
-                #else:
-                #    data = append(data, array(parsed))
-                data = append(data, array(parsed[:]))
+                newdata = array(parsed[:])
+                # data might have been split if it contains whitespace. If the
+                # data is string, we probably didn't want this.
+                if '|S' in str(newdata.dtype):
+                    newdata = array(line)
+                    
+                data = append(data, newdata)
+                
             else:
                 parsed = _parse_line().parseString(line)
                 if i == j2-j1-1:
