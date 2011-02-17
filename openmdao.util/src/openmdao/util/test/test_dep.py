@@ -2,7 +2,7 @@
 Test Dependency Functions
 """
 
-import os
+import os, sys
 import unittest
 
 from openmdao.util.dep import PythonSourceFileAnalyser, PythonSourceTreeAnalyser
@@ -51,4 +51,25 @@ class DepTestCase(unittest.TestCase):
     
 if __name__ == '__main__':
     unittest.main()
+    #import ast
+    #import parser
+    #from openmdao.util.fileutil import find_files
+    
+    #passcount = 0
+    #fails = {}
+    #for pyfile in find_files('*.py', sys.argv[1]):
+        #f = open(pyfile, 'Ur')
+        #content = f.read()+'\n'
+        #f.close()
+        #try:
+            #ast.parse(content, pyfile)
+            #passcount += 1
+            ##print 'GOOD: %s' % os.path.basename(pyfile)
+        #except Exception as err:
+            #print 'FAIL: %s' % pyfile
+            #print '**** %s' % str(err)
+            #fails[pyfile] = str(err)
+            
+    #print '%s passed' % passcount
+    #print '%s failed' % len(fails)
 

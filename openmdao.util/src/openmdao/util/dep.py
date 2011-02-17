@@ -20,20 +20,32 @@ import networkx as nx
 from openmdao.util.fileutil import exclude_files, get_module_path
 from openmdao.main.api import Component as mycomp
 
+class StrVisitor(ast.NodeVisitor):
+    def __init__(self):
+        ast.NodeVisitor.__init__(self)
+        self.parts = []
+
+    def visit_Name(self, node):
+        self.parts.append(node.id)
+        
+    def visit_Str(self, node):
+        self.parts.append(node.s)
+        
+    def get_value(self):
+        return '.'.join(self.parts)
+
 def _to_str(arg):
-    """Take arg of the form Getattr(Getattr(Name('foo'),'bar'),'blah')
-    and convert it to 'foo.bar.blah'.
-    """
-    if isinstance(arg, compiler.ast.Getattr):
-        return '.'.join([_to_str(arg.expr), arg.attrname])
-    elif isinstance(arg, compiler.ast.Name):
-        return arg.name
-    elif isinstance(arg, compiler.ast.Const):
-        return arg.value
-    else:
-        return arg
-            
+    """Take groups of Name nodes or a Str node and convert to a string."""
+    myvisitor = StrVisitor()
+    for node in ast.walk(arg):
+        myvisitor.visit(node)
+    return myvisitor.get_value()
+
+
 def _real_name(name, finfo):
+    """Given the name of an object, return the full name (including package)
+    from where it is actually defined.
+    """
     while True:
         parts = name.rsplit('.', 1)
         if len(parts) > 1:
@@ -48,8 +60,17 @@ def _real_name(name, finfo):
 
 class ClassInfo(object):
     def __init__(self, name, bases, decorators):
+        self.name = name
         self.bases = bases
         self.decorators = decorators
+        self.entry_points = []
+        
+        for dec in decorators:
+            if dec.func.id == 'entry_point':
+                args = [_to_str(a) for a in dec.args]
+                if len(args) == 1:
+                    args.append(name)
+                self.entry_points.append((args[0],args[1],name))
         
     def resolve_true_basenames(self, finfo):
         """Take module pathnames of base classes that may be an indirect names and
@@ -92,37 +113,30 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         """This executes every time a class definition is parsed."""
         fullname = '.'.join([self.modpath, node.name])
         self.localnames[node.name] = fullname
-        self.classes[fullname] = ClassInfo(fullname, node.bases, node.decorators)
-        
         bases = [_to_str(b) for b in node.bases]
-        self.classes[fullname] = ClassInfo(bases=[self.localnames.get(b, b) for b in bases])
-        if node.decorators:
-            for dec in node.decorators.nodes:
-                if dec.node.name == 'entry_point':
-                    args = [_to_str(a) for a in dec.args]
-                    if len(args) == 1:
-                        args.append(fullname)
-                    self.classes[fullname].entry_points.append((args[0],args[1],args[1]))
+        self.classes[fullname] = ClassInfo(fullname, 
+                                           [self.localnames.get(b,b) for b in bases], 
+                                           node.decorator_list)
         
     def visit_Import(self, node):
         """This executes every time an 'import foo' style import statement 
         is parsed.
         """
-        for name, alias in node.names:
-            if alias is None:
-                self.localnames[name] = name
+        for al in node.names:
+            if al.asname is None:
+                self.localnames[al.name] = al.name
             else:
-                self.localnames[alias] = name
+                self.localnames[al.asname] = al.name
 
-    def visit_From(self, node):
+    def visit_ImportFrom(self, node):
         """This executes every time a 'from foo import bar' style import
         statement is parsed.
         """
-        for name, alias in node.names:
-            if alias is None:
-                self.localnames[name] = '.'.join([node.modname, name])
+        for al in node.names:
+            if al.asname is None:
+                self.localnames[al.name] = '.'.join([node.module, al.name])
             else:
-                self.localnames[alias] = '.'.join([node.modname, name])
+                self.localnames[al.asname] = '.'.join([node.module, al.name])
                 
 
 class PythonSourceTreeAnalyser(object):
@@ -156,9 +170,9 @@ class PythonSourceTreeAnalyser(object):
         # and parse them, extracting class and import information
         for pyfile in exclude_files(self.excludes, "*.py", self.startdirs):
             myvisitor = PythonSourceFileAnalyser(pyfile)
-            f = open(pyfile, 'r')
+            f = open(pyfile, 'Ur')
             try:
-                for node in ast.walk(ast.parse(f.read().strip(), pyfile)):
+                for node in ast.walk(ast.parse(f.read()+'\n', pyfile)):
                     myvisitor.visit(node)
             finally:
                 f.close()

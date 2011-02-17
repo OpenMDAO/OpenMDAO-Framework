@@ -190,3 +190,36 @@ def find_bzr(path=None):
             if path == pth:
                 return None
     return None
+
+
+def build_directory(dct):
+    """Create a directory structure based on the contents of a 
+    nested dict.  The directory is created in the current working
+    directory.  If a directory being created already exists, an 
+    OSError will be raised.  The structure of the dict is as follows:
+    if the value at a key is a dict, then that key is used to create
+    a directory. Otherwise, the key is used to create a file and the
+    value stored at that key is written to the file.  All keys must
+    be relative names.
+    """
+    startdir = os.getcwd()
+    try:
+        for key, val in dct.items():
+            os.chdir(startdir)
+            if os.path.isabs(key):
+                raise RuntimeError("build_directory: key (%s) is not a relative name" % key)
+            if isinstance(val, dict): # it's a dict, so this is a directory
+                if os.path.exists(key):
+                    raise OSError("build_directory: %s cannot be created because it already exists" % key)
+                os.makedirs(key)
+                os.chdir(key)
+                build_directory(val)
+            else:  # assume a string value. Use that value to create a file
+                dname = os.path.dirname(key)
+                if dname and not os.path.isdir(dname):
+                    os.makedirs(dname)
+                with open(key, 'w') as f:
+                    f.write(val)
+    finally:
+        os.chdir(startdir)
+            

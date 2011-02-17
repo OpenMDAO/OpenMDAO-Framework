@@ -1,3 +1,9 @@
+
+import os
+import sys
+
+conf_py_template = """
+
 # -*- coding: utf-8 -*-
 #
 # OpenMDAO documentation build configuration file, created by
@@ -19,7 +25,7 @@ import sys, os
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 
               'sphinx.ext.doctest', 'sphinx.ext.todo', 
                'openmdao.util.doctools', 'sphinx.ext.viewcode'
-	      ]
+      ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -34,7 +40,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'CONMINdriver'
+project = u'%(name)s'
 copyright = u'none'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -55,7 +61,7 @@ copyright = u'none'
 # non-false value, then it is used:
 #today = ''
 # Else, today_fmt is used as the format for a strftime call.
-today_fmt = '%B %d, %Y'
+today_fmt = '%%B %%d, %%Y'
 
 # List of directories, relative to source directory, that shouldn't be searched
 # for source files.
@@ -96,7 +102,7 @@ html_style = 'default.css'
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
-html_last_updated_fmt = '%b %d, %Y'
+html_last_updated_fmt = '%%b %%d, %%Y'
 
 # If false, no index is generated.
 #html_use_index = True
@@ -137,3 +143,62 @@ todo_include_todos = True
 intersphinx_mapping = {'http://docs.python.org/dev': None}
 
 autodoc_member_order = 'groupwise'
+
+"""
+
+index_rst_template = """
+
+ 
+%(titlemarker)s
+%(name)s Documentation
+%(titlemarker)s
+
+Current version: |version|
+
+Contents:
+
+.. toctree::
+   :maxdepth: 2
+    
+   %(plugin_rst_file)s
+   srcdocs
+
+   
+* :ref:`search`
+   
+  
+"""
+
+srcdocs_rst_template = """
+
+====================
+Source Documentation
+====================
+
+.. automodule:: %(modname)s
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+"""
+
+def plugin_quickstart(plugin_name, dest):
+    """A script (openmdao_plugin_quickstart) points to this.  It generates a
+    directory structure for an openmdao plugin package along with Sphinx docs.
+    """
+    structure = {
+        'src': {
+            plugin_name: {
+                '%s.py': plugin_py_template % options,
+                },
+            },
+        'docs': {
+            'conf.py': conf_py_template % options,
+            'index.rst': index_rst_template % options,
+            'srcdocs.rst': srcdocs_rst_template % options,
+            '%s.rst' % plugin_name: plugin_template % options,
+            },
+        'setup.cfg': setup_cfg_template % options,
+        'setup.py': setup_py_template % options,
+        }
+

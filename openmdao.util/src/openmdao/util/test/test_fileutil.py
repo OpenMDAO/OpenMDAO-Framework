@@ -10,15 +10,18 @@ import sys
 import unittest
 import tempfile
 
-from openmdao.util.fileutil import find_in_path
+from openmdao.util.fileutil import find_in_path, build_directory
 
-structure = [
-    'top/foo/',
-    'top/foo/bar.exe',
-    'top/blah/',
-    'top/blah/somefile',
-    'top/somedir/dir2/'
-    ]
+structure = {
+    'top': {
+        'foo/bar.exe': 'some stuff...',
+        'blah': {
+            'somefile': '# a comment',
+            },
+        'somedir/dir2': {
+                    }
+        }
+    }
 
 class FileUtilTestCase(unittest.TestCase):
 
@@ -26,13 +29,7 @@ class FileUtilTestCase(unittest.TestCase):
         self.startdir = os.getcwd()
         self.tempdir = tempfile.mkdtemp()
         os.chdir(self.tempdir)
-        for name in structure:
-            if name.endswith('/'):
-                os.makedirs(name)
-            else:
-                f = open(name, 'w')
-                f.write('testing...')
-                f.close()
+        build_directory(structure)
 
     def tearDown(self):
         os.chdir(self.startdir)
@@ -56,7 +53,8 @@ class FileUtilTestCase(unittest.TestCase):
         # make sure we don't find directories
         fname = find_in_path('blah', path)
         self.assertEqual(fname, None)
-                         
+        
+
 if __name__ == '__main__':
     unittest.main()
 
