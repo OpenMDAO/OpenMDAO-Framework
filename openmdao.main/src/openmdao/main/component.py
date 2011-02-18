@@ -155,6 +155,7 @@ class Component (Container):
         
         # Maybe we should have the user create this in the component's __init__
         self.derivatives = Derivatives()
+        self.ffd_order = 0
 
 
     @property
@@ -335,6 +336,12 @@ class Component (Container):
             # Save baseline state
             self.derivatives.save_baseline(self)
     
+    def check_derivatives(self, order, driver_inputs, driver_outputs):
+        """Calls the validate method of the derivatives object, in order to
+        warn the user about all missing derivatives."""
+        
+        self.derivatives.validate(self, order, driver_inputs, driver_outputs)
+    
     def _post_execute (self):
         """Update output variables and anything else needed after execution. 
         Overrides of this function must call this version.
@@ -371,12 +378,13 @@ class Component (Container):
             force = True
 
         self._stop = False
+        self.ffd_order = ffd_order
         try:
             self._pre_execute(force)
             if self._call_execute or force:
                 #print 'execute: %s' % self.get_pathname()
                 
-                if ffd_order and hasattr(self, 'calculate_derivatives'):
+                if self.ffd_order and hasattr(self, 'calculate_derivatives'):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
                     self._execute_ffd(ffd_order)

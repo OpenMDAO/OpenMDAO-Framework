@@ -228,7 +228,7 @@ class Derivatives(object):
         return y
 
     
-    def validate(self, comp, driver_inputs, driver_outputs):
+    def validate(self, comp, order, driver_inputs, driver_outputs):
         """Check the component's inputs and output and warn about any input-
         output combinations that are missing a derivative."""
         
@@ -249,7 +249,7 @@ class Derivatives(object):
                'no_deriv_check' not in comp.get_metadata(invar):
                 input_list.append(invar)
                 
-        if self.first_derivatives:
+        if order==1 and self.first_derivatives:
             for outvar in output_list:
                 
                 if outvar not in self.first_derivatives:
@@ -270,7 +270,7 @@ class Derivatives(object):
                         # finalized.
                         print msg
                         
-        if self.second_derivatives:
+        elif order==2 and self.second_derivatives:
             for outvar in output_list:
                 
                 if outvar not in self.second_derivatives:
