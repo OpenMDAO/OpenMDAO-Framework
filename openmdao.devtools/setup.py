@@ -49,6 +49,7 @@ setup(name='openmdao.devtools',
                 "openmdao_testdocs=openmdao.devtools.build_docs:test_docs",
                 "test_release=openmdao.devtools.test_release:main",
                 "push_docs=openmdao.devtools.build_docs:push_docs",
+                "plugin_quickstart=openmdao.devtools.plugins:plugin_quickstart",
               ],
       }
     )

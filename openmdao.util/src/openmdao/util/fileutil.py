@@ -6,7 +6,8 @@ import os
 from os import makedirs
 import sys
 import shutil
-import fnmatch
+from fnmatch import fnmatch
+from fnmatch import filter as fnfilter
 from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
 
@@ -54,63 +55,64 @@ def find_in_path(fname, pathvar=None, sep=os.pathsep, exts=('',)):
         
     return find_in_dir_list(fname, pathvar.split(sep), exts)
 
-
-def makepath(path):
-    """ Creates missing directories for the given path and returns a 
-    normalized absolute version of the path.
-
-    - If the given path already exists in the filesystem,
-      the filesystem is not modified.
-
-    - Otherwise makepath creates directories along the given path
-      using the dirname() of the path. You may append
-      a '/' to the path if you want it to be a directory path.
-
-    from holger@trillke.net 2002/03/18
-    """
-
-    dpath = normpath(dirname(path))
-    if not exists(dpath): makedirs(dpath)
-    return normpath(abspath(path))
-
-
-def find_files(pat, startdir):
-    """Return a list of files (using a generator) that match
-    the given glob pattern. startdir can be a single directory
+def _file_gen(dname):
+    for path, dirlist, filelist in os.walk(dname):
+        for name in filelist:
+            yield join(path, name)
+            
+def _file_dir_gen(dname):
+    for path, dirlist, filelist in os.walk(dname):
+        for name in filelist:
+            yield join(path, name)
+        for name in dirlist:
+            yield join(path, name)
+    
+def find_files(start, match=None, exclude=None, nodirs=True):
+    """Return filenames (using a generator) that match
+    the given glob pattern(s), if any, subject to any excluding
+    glob pattern(s), if any. startdir can be a single directory
     or a list of directories.  Walks all subdirectories below 
     each specified starting directory.
     """
-    if isinstance(startdir, basestring):
-        startdirs = [startdir]
+    startdirs = [start] if isinstance(start, basestring) else start
+    
+    if nodirs:
+        gen = _file_gen
     else:
-        startdirs = startdir
+        gen = _file_dir_gen
 
-    for startdir in startdirs:
-        for path, dirlist, filelist in os.walk(startdir):
-            for name in fnmatch.filter(filelist, pat):
-                yield join(path, name)
-            
-def exclude_files(excludes, pat, startdir):
-    """Return a list of files (using a generator) that match
-    the given glob pattern, minus any that match any of the
-    given exclude patterns. startdir can be a single dir
-    or a list of dirs.  Walks all subdirs below each specified
-    dir.
-    """
-    for name in find_files(pat, startdir):
-        for exclude in excludes:
-            if fnmatch.fnmatch(name, exclude):
-                break
-        else:
-            yield name
+    if match is None and exclude is None:
+        for d in startdirs:
+            for path in gen(d):
+                yield path
+    elif exclude is None:
+        matches = [match] if isinstance(match, basestring) else match
+        for d in startdirs:
+            for path in gen(d):
+                for match in matches:
+                    if fnmatch(path, match):
+                        yield path
+                        break
+    else:
+        if match is None:
+            match = '*'
+        excludes = [exclude] if isinstance(exclude, basestring) else exclude
+        matches = [match] if isinstance(match, basestring) else match
+        for d in startdirs:
+            for path in gen(d):
+                skip = False
+                for match in matches:
+                    if skip:
+                        break
+                    if fnmatch(path, match):
+                        for exclude in excludes:
+                            if fnmatch(path, exclude):
+                                skip = True
+                                break
+                        else:
+                            yield path
+                            break
 
-def find_files_and_dirs(pat, startdir):
-    """Return a list of files and directories (using a generator) that match
-    the given glob pattern. Walks an entire directory structure.
-    """
-    for path, dirlist, filelist in os.walk(startdir):
-        for name in fnmatch.filter(filelist+dirlist, pat):
-            yield join(path, name)
 
 def find_up(name, path=None):
     """Search upward from the starting path (or the current directory)

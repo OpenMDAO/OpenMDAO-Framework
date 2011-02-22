@@ -9,7 +9,7 @@ import hashlib
 import fnmatch
 
 
-def find_files(pats, startdir):
+def find_files(startdir, pats):
     """Return a list of files (using a generator) that match
     the given list of glob patterns. Walks an entire directory structure.
     """
@@ -42,7 +42,7 @@ def make_egglist_index(url):
     out = open('index.html', 'w')
     out.write('<html>\n<body>\n')
     text = []
-    for f in find_files(["*.egg", "*.tar.gz", "*.zip"], startdir):
+    for f in find_files(startdir, ["*.egg", "*.tar.gz", "*.zip"]):
         checksum = file_md5(f)
         basef = os.path.basename(f)
         lpath = os.path.join(url, 'dists', basef)

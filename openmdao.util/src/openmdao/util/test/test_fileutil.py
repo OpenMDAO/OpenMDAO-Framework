@@ -10,7 +10,7 @@ import sys
 import unittest
 import tempfile
 
-from openmdao.util.fileutil import find_in_path, build_directory
+from openmdao.util.fileutil import find_in_path, build_directory, find_files
 
 structure = {
     'top': {
@@ -54,7 +54,26 @@ class FileUtilTestCase(unittest.TestCase):
         fname = find_in_path('blah', path)
         self.assertEqual(fname, None)
         
-
+    def test_find_files(self):
+        flist = find_files(self.tempdir)
+        self.assertEqual(set([os.path.basename(f) for f in flist]), 
+                         set(['bar.exe', 'somefile']))
+        flist = find_files(self.tempdir, '*.exe')
+        self.assertEqual(set([os.path.basename(f) for f in flist]), 
+                         set(['bar.exe']))
+        flist = find_files(self.tempdir, ['*.exe','*some*'])
+        self.assertEqual(set([os.path.basename(f) for f in flist]), 
+                         set(['bar.exe', 'somefile']))
+        flist = find_files(self.tempdir, exclude='*.exe')
+        self.assertEqual(set([os.path.basename(f) for f in flist]), 
+                         set(['somefile']))
+        flist = find_files(self.tempdir, exclude=['*.exe', '*some*'])
+        self.assertEqual(set([os.path.basename(f) for f in flist]), 
+                         set([]))
+        flist = find_files(self.tempdir, match='*.exe', exclude=['*.exe', '*some*'])
+        self.assertEqual(set([os.path.basename(f) for f in flist]), 
+                         set([]))
+        
 if __name__ == '__main__':
     unittest.main()
 

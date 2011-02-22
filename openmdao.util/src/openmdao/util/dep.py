@@ -17,7 +17,7 @@ import parser
 
 import networkx as nx
 
-from openmdao.util.fileutil import exclude_files, get_module_path
+from openmdao.util.fileutil import find_files, get_module_path
 from openmdao.main.api import Component as mycomp
 
 class StrVisitor(ast.NodeVisitor):
@@ -168,8 +168,12 @@ class PythonSourceTreeAnalyser(object):
         
         # gather python files from the specified starting directories
         # and parse them, extracting class and import information
-        for pyfile in exclude_files(self.excludes, "*.py", self.startdirs):
+        for pyfile in find_files(self.startdirs, "*.py", self.excludes):
             myvisitor = PythonSourceFileAnalyser(pyfile)
+            # in order to get this to work with the 'ast' lib, I have
+            # to read using universal newlines and append a newline
+            # to the string I read for some files.  The 'compiler' lib
+            # didn't have this problem. :(
             f = open(pyfile, 'Ur')
             try:
                 for node in ast.walk(ast.parse(f.read()+'\n', pyfile)):

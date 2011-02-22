@@ -4,6 +4,7 @@ Test Dependency Functions
 
 import os, sys
 import unittest
+from nose import SkipTest
 
 from openmdao.util.dep import PythonSourceFileAnalyser, PythonSourceTreeAnalyser
 
@@ -14,8 +15,9 @@ class DepTestCase(unittest.TestCase):
             import openmdao.main
             import openmdao.lib
         except ImportError:
-            return  # don't perform this test if openmdao.main 
-                    # and openmdao.lib aren't present
+            # don't perform this test if openmdao.main 
+            # and openmdao.lib aren't present
+            raise SkipTest("this test requires openmdao.main and openmdao.lib")
         excludes = [os.path.join('*','test','*')]
         startdirs = [os.path.dirname(openmdao.main.__file__), 
                      os.path.dirname(openmdao.lib.__file__)]
@@ -57,7 +59,7 @@ if __name__ == '__main__':
     
     #passcount = 0
     #fails = {}
-    #for pyfile in find_files('*.py', sys.argv[1]):
+    #for pyfile in find_files(sys.argv[1, '*.py'):
         #f = open(pyfile, 'Ur')
         #content = f.read()+'\n'
         #f.close()
