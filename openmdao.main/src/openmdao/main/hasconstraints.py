@@ -118,9 +118,9 @@ class HasEqConstraints(_HasConstraintsBase):
         to the driver.
         
         
-	*Parameters:*
-	
-	expr_string: str
+        *Parameters:*
+        
+        expr_string: str
             Expression string containing the constraint.
         
         scaler: float (optional)

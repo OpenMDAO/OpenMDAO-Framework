@@ -568,8 +568,8 @@ class Container(HasTraits):
             # if an old child with that name exists, remove it
             if self.contains(name) and getattr(self, name):
                 self.remove(name)
-            setattr(self, name, obj)
             obj.name = name
+            setattr(self, name, obj)
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.

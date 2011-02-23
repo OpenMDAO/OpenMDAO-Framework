@@ -622,9 +622,6 @@ class IHasObjective(Interface):
     def list_objective(self):
         """Returns the expression string for the objective."""
     
-    def get_objective(self):
-        """Returns the objective object."""
-    
     def eval_objective(self):
         """Returns the value of the evaluated objective."""
 
@@ -660,9 +657,6 @@ class IHasObjectives(object):
     def clear_objectives(self):
         """Removes all objectives."""
         
-    def get_objectives(self):
-        """Returns an ordered dict of objective objects."""
-
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
  

@@ -38,6 +38,7 @@ from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
+from openmdao.main.uses_derivatives import UsesGradients
 from openmdao.util.decorators import add_delegate
 
 
@@ -170,7 +171,7 @@ class _consav(object):
         self.ispace = [0, 0]
         # pylint: enable-msg=W0201
 
-@add_delegate(HasParameters, HasIneqConstraints, HasObjective)
+@add_delegate(HasParameters, HasIneqConstraints, HasObjective, UsesGradients)
 class CONMINdriver(Driver):
     """ Driver wrapper of Fortran version of CONMIN. 
         
@@ -351,7 +352,7 @@ class CONMINdriver(Driver):
             raise
         
         self._save_common_blocks()
-        print self.gradients
+        #print self.gradients
         
         # calculate objective and constraints
         if self.cnmn1.info == 1:

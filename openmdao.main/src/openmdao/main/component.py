@@ -340,7 +340,19 @@ class Component (Container):
         """Calls the validate method of the derivatives object, in order to
         warn the user about all missing derivatives."""
         
-        self.derivatives.validate(self, order, driver_inputs, driver_outputs)
+        local_inputs = []
+        for item in driver_inputs:
+            paths = item.split('.')
+            if paths[0] == self.name:
+                local_inputs.append(','.join(paths[1:]))
+        
+        local_outputs = []
+        for item in driver_outputs:
+            paths = item.split('.')
+            if paths[0] == self.name:
+                local_outputs.append(','.join(paths[1:]))
+        
+        self.derivatives.validate(self, order, local_inputs, local_outputs)
     
     def _post_execute (self):
         """Update output variables and anything else needed after execution. 

@@ -89,6 +89,14 @@ class Workflow(object):
                 raise RunStopped('Stop requested')
         self._iterator = None
         
+    def check_derivatives(self, order, driver_inputs, driver_outputs):
+        """ Run check_derivatives on all components in workflow."""
+        
+        self._iterator = self.__iter__()
+        for node in self._iterator:
+            node.check_derivatives(order, driver_inputs, driver_outputs)
+        self._iterator = None
+        
     def stop(self):
         """
         Stop all Components in this Workflow.

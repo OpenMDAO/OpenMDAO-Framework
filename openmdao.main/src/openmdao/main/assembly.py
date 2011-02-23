@@ -428,6 +428,13 @@ class Assembly (Component):
         driver's workflow."""
         
         self.driver.calc_derivatives(first, second)
+        
+    def check_derivatives(self, order, driver_inputs, driver_outputs):
+        """An assembly just tells its driver to run check_derivatives on each
+        element in its workflow."""
+        
+        self.driver.check_derivatives(order, driver_inputs, driver_outputs)
+    
 
 
 def dump_iteration_tree(obj):

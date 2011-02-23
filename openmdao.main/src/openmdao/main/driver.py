@@ -61,6 +61,11 @@ class Driver(Component):
         except AttributeError as err:
             self.raise_exception("Component in workflow failed to resolve: %s" % str(err),
                                  AttributeError)
+            
+        if hasattr(self, 'check_gradients'):
+            self.check_gradients()
+        if hasattr(self, 'check_hessians'):
+            self.check_hessians()
 
     def iteration_set(self):
         """Return a set of all Components in our workflow(s), and 
@@ -163,11 +168,13 @@ class Driver(Component):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
         wf = self.workflow
-        if len(wf) == 0:
-            self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         wf.calc_derivatives(first, second)
         
-
+    def check_derivatives(self, order, driver_inputs, driver_outputs):
+        """ Check derivatives for all components in this workflow."""
+        wf = self.workflow
+        wf.check_derivatives(order, driver_inputs, driver_outputs)
+        
     def post_iteration(self):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration

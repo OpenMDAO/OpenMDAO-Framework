@@ -311,7 +311,7 @@ class DerivativesTestCase(unittest.TestCase):
         
         self.assertEqual(d_fd_x, 5.0)
         self.assertEqual(d_fd_y, 21.0)
-        self.assertEqual(simple.comp1.ran_real, False)
+        #self.assertEqual(simple.comp1.ran_real, False)
 
 if __name__ == '__main__':
-    unitself.comp.main()
+    unittest.main()
