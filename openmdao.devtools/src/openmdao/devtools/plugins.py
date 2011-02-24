@@ -374,6 +374,9 @@ def plugin_quickstart(argv=None):
         'zip_safe': False,
         'include_package_data': True,
         'install_requires': [],
+        'url': 'UNKNOWN',
+        'author': 'UNKNOWN',
+        'author_email': 'UNKNOWN',
     }
     
     setup_options.update(kwargs)
@@ -415,6 +418,7 @@ def plugin_quickstart(argv=None):
             'setup.cfg': templates['setup.cfg'] % template_options,
             'setup.py': templates['setup.py'] % template_options,
             'MANIFEST.in': templates['MANIFEST.in'] % template_options,
+            'README.txt': 'README.txt file for %s' % plugin_name,
         }
     }
     
