@@ -214,7 +214,12 @@ building = set([
 for arg in sys.argv[1:]:
     if arg in building:
         if 'build_sphinx' not in sys.argv:
-            sys.argv = [sys.argv[0], 'build_sphinx']+sys.argv[1:]
+            try:
+                from sphinx.setup_command import BuildDoc
+            except ImportError:
+                pass
+            else:
+                sys.argv = [sys.argv[0], 'build_sphinx']+sys.argv[1:]
         break
 
 # only import BuildDoc if we're building so we can avoid a sphinx
