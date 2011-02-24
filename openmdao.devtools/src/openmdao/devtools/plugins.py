@@ -242,6 +242,7 @@ templates['setup.cfg'] = """
 
 [build_sphinx]
 version = %(version)s
+all-files = true
 build_dir = src/%(name)s/sphinx_build
 
 """
