@@ -212,8 +212,6 @@ def mod2dist(argv=None, groups= { 'openmdao.component': Component,
  
         setup_template = '''
 from setuptools import setup
-from sphinx.setup_command import BuildDoc
-cmdclass = {'build_sphinx': BuildDoc}
 
 name = '%(name)s'
 version = %(version)s
@@ -230,13 +228,6 @@ setup(
     packages=['%(name)s'],
     zip_safe=%(zipped)s,
     install_requires=%(depends)s,
-    cmdclass=cmdclass,
-    # these are optional and override conf.py settings
-    command_options={
-        'build_sphinx': {
-            'project': ('setup.py', name),
-            'version': ('setup.py', version),
-            'release': ('setup.py', release)}},
     entry_points=%(entrypts)s
 )   
    '''
@@ -259,17 +250,6 @@ setup(
         f.write('from %s import %s' % (modname, ','.join(classnames)))
         f.close()
         
-        # build the docs
-        cmdargs = [sys.executable, 
-                   'setup.py', 'build_sphinx']
-        out, ret = _run_command(cmd=cmdargs)
-        if ret:
-            logging.error('non-zero return code (%s) from command: %s' % 
-                          (ret,' '.join(cmdargs)))
-            print out
-        elif options.verbose:
-            print out
-
         # build the distrib
         if not options.nodist:
                 

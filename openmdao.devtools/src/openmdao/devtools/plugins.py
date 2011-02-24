@@ -165,9 +165,6 @@ Contents:
    %(doc)s
    srcdocs
 
-   
-* :ref:`search`
-   
   
 """
 
@@ -200,28 +197,37 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),'src',na
 
 kwargs = %(setup_options)s
 
-from distutils.core import setup
+from setuptools import setup
 
-if 'sphinx_build' in sys.argv or 'sdist' in sys.argv:
-    from distutils.command.sdist import sdist
+building = set([
+ 'build',
+ 'bdist',
+ 'sdist',
+ 'bdist_egg',
+ 'bdist_rpm',
+ 'bdist_wininst',
+ 'build_ext',
+ 'build_py',
+])
+
+# ensure that docs are built during any build command
+for arg in sys.argv[1:]:
+    if arg in building:
+        if 'build_sphinx' not in sys.argv:
+            sys.argv = [sys.argv[0], 'build_sphinx']+sys.argv[1:]
+        break
+
+# only import BuildDoc if we're building so we can avoid a sphinx
+# dependency when we don't really need it
+if 'build_sphinx' in sys.argv:
     from sphinx.setup_command import BuildDoc
-
-    # this overrides the default sdist behavior of distutils to ensure that
-    # the sphinx html docs will always be built and included in our source
-    # distribution
-    class mysdist(sdist):
-        def run(self):
-            mydir = os.path.dirname(os.path.abspath(__file__))
-            docbuilddir = os.path.join(mydir, 'src', '%(name)s', 'sphinx_build')
-            if not os.path.isdir(docbuilddir):
-                os.mkdir(docbuilddir)
-            self.run_command('build_sphinx')
-            sdist.run(self)
-    
     kwargs['cmdclass'] = { 
-       'build_sphinx': BuildDoc,
-       'sdist': mysdist,
+         'build_sphinx': BuildDoc,
     }
+    mydir = os.path.dirname(os.path.abspath(__file__))
+    docbuilddir = os.path.join(mydir, 'src', '%(name)s', 'sphinx_build')
+    if not os.path.isdir(docbuilddir):
+        os.mkdir(docbuilddir)
 
 setup(**kwargs)
 
@@ -421,14 +427,3 @@ def plugin_quickstart(argv=None):
         os.chdir(startdir)
         
 
-def package_plugin(argv=None):
-    """A command line script (package_plugin) points to this.  It creates a source
-    distribution for the plugin including sphinx source documentation.
-    """
-    
-    args, options = argv_to_args(argv)
-
-    if not args:
-        raise RuntimeError("plugin_quickstart: no plugin name was specified")
-    elif len(args) > 2:
-        raise RuntimeError("plugin_quickstart: don't understand args %s" % args[2:])

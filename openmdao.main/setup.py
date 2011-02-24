@@ -56,6 +56,7 @@ setup(name='openmdao.main',
       [console_scripts]
       openmdao_docs=openmdao.util.view_docs:view_docs
       mod2dist=openmdao.main.mod2dist:mod2dist
+      plugin_docs=openmdao.main.plugin:_plugin_docs
       [openmdao.component]
       openmdao.main.Assembly = openmdao.main.assembly:Assembly
       """,
