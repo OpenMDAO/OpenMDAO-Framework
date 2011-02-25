@@ -12,7 +12,7 @@ from numpy.testing import assert_equal
 
 from enthought.traits.api import Bool, Str, TraitError
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, plugin
 from openmdao.lib.datatypes.file import File
 from openmdao.lib.datatypes.array import Array
 
@@ -20,6 +20,7 @@ from openmdao.lib.datatypes.array import Array
 # "Instance of <class> has no <attr> member"
 
 
+@plugin('openmdao.component')
 class Source(Component):
     """ Produces files. """
 
@@ -42,6 +43,7 @@ class Source(Component):
             out.close()
 
 
+@plugin('openmdao.component')
 class Passthrough(Component):
     """ Copies input files (implicitly via local_path) to output. """
     text_in = File(iotype='in', local_path='tout',
@@ -57,6 +59,7 @@ class Passthrough(Component):
         self.binary_out.extra_stuff = self.binary_in.extra_stuff
 
 
+@plugin('openmdao.component')
 class Middle(Assembly):
     """ Intermediary which passes-on files. """
 
@@ -73,6 +76,7 @@ class Middle(Assembly):
         self.create_passthrough('passthrough.binary_out')
 
 
+@plugin('openmdao.component')
 class Sink(Component):
     """ Consumes files. """
 
@@ -95,6 +99,7 @@ class Sink(Component):
         inp.close()
 
 
+@plugin('openmdao.component')
 class Model(Assembly):
     """ Transfer files from producer to consumer. """
 

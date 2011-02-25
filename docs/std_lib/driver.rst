@@ -29,8 +29,9 @@ prefer. See :ref:`Tutorial:-MDAO-Architectures` to learn how to broadcast variab
 .. testcode:: Broyden
 
     from openmdao.lib.datatypes.api import Float
-    from openmdao.main.api import Component
+    from openmdao.main.api import Component, plugin
     
+    @plugin('openmdao.component')
     class MIMOSystem(Component):
         """ Two equations, two unknowns """
         
@@ -805,8 +806,9 @@ produce the square root of a number.
 .. testcode:: FPI
 
     from openmdao.lib.datatypes.api import Float
-    from openmdao.main.api import Component
+    from openmdao.main.api import Component, plugin
     
+    @plugin('openmdao.component')
     class Babylonian(Component):
         """ The Babylonians had a neat way of calculating square
         roots using Fixed Point Iteration"""
@@ -904,10 +906,11 @@ You add design variables to Genetic using the ``add_parameter`` method.
 
 .. testcode:: Genetic
 
-    from openmdao.main.api import Assembly,Component, set_as_top
+    from openmdao.main.api import Assembly,Component, set_as_top, plugin
     from openmdao.lib.drivers.api import Genetic
     from openmdao.lib.datatypes.api import Float,Int,Enum
     
+    @plugin('openmdao.component')
     class SomeComp(Component):
         """Arbitrary component with a few variables, but which does not really do 
            any calculations

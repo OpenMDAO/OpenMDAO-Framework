@@ -5,10 +5,11 @@ Test the FixedPointIterator component
 import unittest
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, plugin
 from openmdao.lib.datatypes.api import Float
 from openmdao.lib.drivers.iterate import FixedPointIterator
 
+@plugin('openmdao.component')
 class Simple1(Component):
     """ Testing convergence failure"""
     
@@ -20,6 +21,7 @@ class Simple1(Component):
         
         self.outvar = self.invar + 1
 
+@plugin('openmdao.component')
 class Simple2(Component):
     """ Testing convergence success"""
     
@@ -31,6 +33,7 @@ class Simple2(Component):
         
         self.outvar = self.invar
         
+@plugin('openmdao.component')
 class Simple3(Component):
     """ Testing convergence tolerance"""
     

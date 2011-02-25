@@ -210,7 +210,7 @@ building = set([
  'build_py',
 ])
 
-# ensure that docs are built during any build command
+# ensure that docs are built during any build command (assuming sphinx is available)
 for arg in sys.argv[1:]:
     if arg in building:
         if 'build_sphinx' not in sys.argv:
@@ -242,6 +242,7 @@ templates['setup.cfg'] = """
 
 [build_sphinx]
 version = %(version)s
+release = %(release)s
 all-files = true
 build_dir = src/%(name)s/sphinx_build
 
@@ -257,9 +258,10 @@ code_templates = {}
 
 code_templates['openmdao.component'] = """
 
-from openmdao.main.api import Component
+from openmdao.main.api import Component, plugin
 from openmdao.lib.datatypes.api import Float
 
+@plugin('openmdao.component')
 class %(name)s(Component):
     # declare inputs and outputs here
     #x = Float(0.0, iotype='in')

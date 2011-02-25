@@ -12,10 +12,11 @@ from nose import SkipTest
 
 from enthought.traits.api import TraitError
 
-from openmdao.main.api import Component, Container
+from openmdao.main.api import Component, Container, plugin
 from openmdao.lib.datatypes.api import Float
 from openmdao.main.container import _get_entry_group
 
+@plugin('openmdao.component')
 class MyComponent(Component):
     x = Float(1., iotype='in')
     xout = Float(2., iotype='out')

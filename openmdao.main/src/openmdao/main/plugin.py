@@ -3,6 +3,26 @@ import sys
 import os
 import webbrowser
 
+_allowed_plugin_types = set([ 'openmdao.component',
+                              'openmdao.driver',
+                              'openmdao.variable',
+                              'openmdao.caseiterator',
+                              'openmdao.caserecorder',
+                              'openmdao.resource_allocator'
+                              ])
+
+
+def plugin(*plugin_types):
+    """A class decorator that registers a class as an OpenMDAO plugin."""
+    def _reg_plugin(c):
+        for typ in plugin_types:
+            if typ not in _allowed_plugin_types:
+                raise NameError("'%s' is not a valid OpenMDAO plugin group name" % typ)
+            # at some point, actually register the class as a plugin here...
+        return c
+    return _reg_plugin
+
+
 def _plugin_docs(argv=None):
     """A command line script (plugin_docs) points to this. It brings up
     the sphinx documentation for the named plugin in a browser.

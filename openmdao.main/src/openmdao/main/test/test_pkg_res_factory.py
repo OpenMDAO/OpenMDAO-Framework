@@ -11,8 +11,9 @@ from pkg_resources import DistributionNotFound, VersionConflict
 from pkg_resources import Requirement, Environment, working_set
 
 from openmdao.main.pkg_res_factory import import_version, PkgResourcesFactory
-from openmdao.main.api import Component, get_available_types
+from openmdao.main.api import Component, get_available_types, plugin
 
+@plugin('openmdao.component')
 class CoordComp(Component):
     pass
 

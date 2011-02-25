@@ -11,7 +11,7 @@ from openmdao.examples.mdao.broadcaster import Broadcaster
 from openmdao.examples.mdao.sellar_MDF import SellarMDF
 from openmdao.examples.mdao.sellar_IDF import SellarIDF
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, plugin
 from openmdao.main.exceptions import RunStopped
 from openmdao.lib.drivers.api import CONMINdriver, FixedPointIterator 
 from openmdao.lib.datatypes.api import Float
@@ -20,6 +20,7 @@ from openmdao.util.testutil import assert_rel_error
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
 
+@plugin('openmdao.component')
 class SellarDiscipline2a(Component):
     """Component containing Discipline 2a"""
     
@@ -41,6 +42,7 @@ class SellarDiscipline2a(Component):
         self.temp1 = y1**(.5)
 
         
+@plugin('openmdao.component')
 class SellarDiscipline2b(Component):
     """Component containing Discipline 2b"""
     
@@ -60,6 +62,7 @@ class SellarDiscipline2b(Component):
         self.temp2 = self.temp1 + z1
 
         
+@plugin('openmdao.component')
 class SellarDiscipline2c(Component):
     """Component containing Discipline 2c"""
     
@@ -78,6 +81,7 @@ class SellarDiscipline2c(Component):
         self.y2 = self.temp2 + z2
 
 
+@plugin('openmdao.component')
 class SellarCO(Assembly):
     """Solution of the sellar analytical problem using CO.
     

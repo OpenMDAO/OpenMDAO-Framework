@@ -4,12 +4,13 @@ Wrappers for test models.
 
 import mool.Optimization.Models_test
 
-from openmdao.main.api import Component
+from openmdao.main.api import Component, plugin
 from openmdao.lib.datatypes.api import Float
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
 
+@plugin('openmdao.component')
 class Model_A2d(Component):
     """ Wrapper for M4 Model_A2d. """
 
@@ -34,6 +35,7 @@ class Model_A2d(Component):
                    self.x, self.y, self.z1, self.z2)
 
 
+@plugin('openmdao.component')
 class Model_B2d(Component):
     """ Wrapper for M4 Model_B2d. """
 

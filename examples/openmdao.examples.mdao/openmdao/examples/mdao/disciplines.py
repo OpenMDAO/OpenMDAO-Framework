@@ -8,9 +8,10 @@ From Sellar's analytic problem.
     January 1996.
 """
 
-from openmdao.main.api import Component
+from openmdao.main.api import Component, plugin
 from openmdao.lib.datatypes.api import Float
 
+@plugin('openmdao.component')
 class SellarDiscipline1(Component):
     """Component containing Discipline 1"""
     
@@ -35,6 +36,7 @@ class SellarDiscipline1(Component):
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
 
 
+@plugin('openmdao.component')
 class SellarDiscipline2(Component):
     """Component containing Discipline 2"""
     

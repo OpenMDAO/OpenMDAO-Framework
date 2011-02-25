@@ -1,8 +1,9 @@
 from math import cos, pi
 
-from openmdao.main.api import Component
+from openmdao.main.api import Component, plugin
 from openmdao.lib.datatypes.api import Float
 
+@plugin('openmdao.component')
 class BraninComponent(Component): 
     x = Float(0.,iotype="in",low=-5.,high=10.)
     y = Float(0.,iotype="in",low=0.,high=15.)

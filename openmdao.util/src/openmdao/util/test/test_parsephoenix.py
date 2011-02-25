@@ -16,7 +16,7 @@ class TestCase(unittest.TestCase):
     
     def tearDown(self):
         if os.path.exists(self.infile):
-           os.remove(self.infile)
+            os.remove(self.infile)
         if os.path.exists(self.outfile):
             os.remove(self.outfile)
         pass
@@ -62,7 +62,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(result[4], '\n')
         self.assertEqual(result[5], 'from numpy import float32 as numpy_float32\n')
         self.assertEqual(result[6], '\n')
-        self.assertEqual(result[7], 'from openmdao.main.api import Component, Container\n')
+        self.assertEqual(result[7], 'from openmdao.main.api import Component, Container, plugin\n')
         self.assertEqual(result[8], 'from openmdao.lib.datatypes.api import Int, Float, Str, Array, Enum, Bool, File\n')
         self.assertEqual(result[9], '\n')
         self.assertEqual(result[10], '\n')
@@ -87,24 +87,25 @@ class TestCase(unittest.TestCase):
         self.assertEqual(result[29], "        self.add('deep',  TestComp_input_deep())\n")
         self.assertEqual(result[30], '\n')
         self.assertEqual(result[31], '\n')
-        self.assertEqual(result[32], 'class TestComp(Component):\n')
-        self.assertEqual(result[33], '    """Wrapper for TestComp"""\n')
-        self.assertEqual(result[34], '\n')
-        self.assertEqual(result[35], '    # OpenMDAO Variables\n')
-        self.assertEqual(result[36], "    int1 = Int(0, iotype='in', doc='Description1')\n")
-        self.assertEqual(result[37], "    float = Float(3.14159, iotype='out', doc='Description2')\n")
-        self.assertEqual(result[38], "    ERROR = Str('ZZZ', iotype='in', doc='Description4')\n")
-        self.assertEqual(result[39], "    ERROR2 = Str('', iotype='out', doc='Description4')\n")
-        self.assertEqual(result[40], "    units = Float(0.0, iotype='in', units='ft', doc='Description5')\n")
-        self.assertEqual(result[41], "    array1 = Array(iotype='in', dtype=numpy_float32, doc='Description5')\n")
-        self.assertEqual(result[42], "    iopt = Enum((1,2,3,4), iotype='in', doc='Execution Type', aliases=('Analysis', 'Parametric Variation', 'Optimization', 'Contour or Thumbprint plot'))\n") 
-        self.assertEqual(result[43], "    unitignore = Float(0.0, iotype='in', doc='Description5')\n")
-        self.assertEqual(result[44], "    unitreplace = Float(0.0, iotype='in', units='mi/h', doc='Description5')\n")
-        self.assertEqual(result[45], "    bool = Bool(False, iotype='in')\n")
-        self.assertEqual(result[46], "    stringbadquote = Str('xx', iotype='in', doc='Description4')\n")
-        self.assertEqual(result[47], "    zfile = File(iotype='out', path='Insert_Filename_Here')\n")
-        self.assertEqual(result[48], "    unitfullreplace = Float(0.0, iotype='out', units='degR', doc='Description5')\n")
-        self.assertEqual(result[49], "    floatbadquote = Float(0.0, iotype='out', doc='Aa, Bb, Cc')\n")
+        self.assertEqual(result[32], "@plugin('openmdao.component')\n")
+        self.assertEqual(result[33], 'class TestComp(Component):\n')
+        self.assertEqual(result[34], '    """Wrapper for TestComp"""\n')
+        self.assertEqual(result[35], '\n')
+        self.assertEqual(result[36], '    # OpenMDAO Variables\n')
+        self.assertEqual(result[37], "    int1 = Int(0, iotype='in', doc='Description1')\n")
+        self.assertEqual(result[38], "    float = Float(3.14159, iotype='out', doc='Description2')\n")
+        self.assertEqual(result[39], "    ERROR = Str('ZZZ', iotype='in', doc='Description4')\n")
+        self.assertEqual(result[40], "    ERROR2 = Str('', iotype='out', doc='Description4')\n")
+        self.assertEqual(result[41], "    units = Float(0.0, iotype='in', units='ft', doc='Description5')\n")
+        self.assertEqual(result[42], "    array1 = Array(iotype='in', dtype=numpy_float32, doc='Description5')\n")
+        self.assertEqual(result[43], "    iopt = Enum((1,2,3,4), iotype='in', doc='Execution Type', aliases=('Analysis', 'Parametric Variation', 'Optimization', 'Contour or Thumbprint plot'))\n") 
+        self.assertEqual(result[44], "    unitignore = Float(0.0, iotype='in', doc='Description5')\n")
+        self.assertEqual(result[45], "    unitreplace = Float(0.0, iotype='in', units='mi/h', doc='Description5')\n")
+        self.assertEqual(result[46], "    bool = Bool(False, iotype='in')\n")
+        self.assertEqual(result[47], "    stringbadquote = Str('xx', iotype='in', doc='Description4')\n")
+        self.assertEqual(result[48], "    zfile = File(iotype='out', path='Insert_Filename_Here')\n")
+        self.assertEqual(result[49], "    unitfullreplace = Float(0.0, iotype='out', units='degR', doc='Description5')\n")
+        self.assertEqual(result[50], "    floatbadquote = Float(0.0, iotype='out', doc='Aa, Bb, Cc')\n")
         
         
     def test_small_phx(self):
@@ -122,7 +123,7 @@ class TestCase(unittest.TestCase):
         result = infile.readlines()
         infile.close()
         
-        self.assertEqual(result[6], 'from openmdao.main.api import Component\n')
+        self.assertEqual(result[6], 'from openmdao.main.api import Component, plugin\n')
         
     def test_bad_datatype(self):
         

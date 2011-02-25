@@ -8,9 +8,10 @@
 from math import pi, sin, cos, exp
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Component
+from openmdao.main.api import Component, plugin
 from openmdao.lib.datatypes.api import Float, Int
 
+@plugin('openmdao.component')
 class Engine(Component):
     """ Model of a piston engine - Python Implementation."""
 

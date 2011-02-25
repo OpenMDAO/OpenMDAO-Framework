@@ -6,12 +6,13 @@ from openmdao.lib.datatypes.api import Instance, ListStr, Event
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
-from openmdao.main.api import Component, Case
+from openmdao.main.api import Component, Case, plugin
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder
 from openmdao.main.uncertain_distributions import UncertainDistribution, \
                                                   NormalDistribution
 from openmdao.main.mp_support import has_interface
 
+@plugin('openmdao.component')
 class MetaModel(Component):
     """ A component that provides general Meta Modeling capability.
     

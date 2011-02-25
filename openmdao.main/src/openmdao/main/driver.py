@@ -10,6 +10,7 @@ from enthought.traits.api import implements, List, Instance
 from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, \
                                      IHasEvents, obj_has_interface
 from openmdao.main.exceptions import RunStopped
+from openmdao.main.plugin import plugin
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
@@ -19,6 +20,7 @@ from openmdao.main.mp_support import is_instance
 from openmdao.main.rbac import rbac
 
 @add_delegate(HasEvents)
+@plugin('openmdao.driver')
 class Driver(Component):
     """ A Driver iterates over a workflow of Components until some condition
     is met. """

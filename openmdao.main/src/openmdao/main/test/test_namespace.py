@@ -1,7 +1,7 @@
 
 import unittest
 
-from openmdao.main.api import Container, Component, Assembly, set_as_top
+from openmdao.main.api import Container, Component, Assembly, set_as_top, plugin
 from openmdao.lib.datatypes.api import Float, Instance
 
 class DumbContainer2(Container):
@@ -22,6 +22,7 @@ class DumbContainer(Container):
         self.add_trait('v3', Float(3., iotype=iotype))
     
     
+@plugin('openmdao.component')
 class SimpleComp(Component):
     cont_in = Instance(DumbContainer, iotype='in')
     cont_out = Instance(DumbContainer, iotype='out')

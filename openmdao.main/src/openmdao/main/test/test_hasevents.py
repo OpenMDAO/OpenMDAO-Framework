@@ -2,12 +2,13 @@
 
 import unittest
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top
+from openmdao.main.api import Assembly, Component, Driver, set_as_top, plugin
 from openmdao.lib.datatypes.api import Int, Event
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasevents import HasEvents
 
 @add_delegate(HasEvents)
+@plugin('openmdao.driver')
 class MyDriver(Driver):
     def start_iteration(self):
         self.iter_count = 0
@@ -18,6 +19,7 @@ class MyDriver(Driver):
     def continue_iteration(self):
         return self.iter_count < 3
 
+@plugin('openmdao.component')
 class MyEvComp(Component):
     doit = Event()
     doit2 = Event()

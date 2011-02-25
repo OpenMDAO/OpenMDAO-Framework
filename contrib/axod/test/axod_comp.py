@@ -14,13 +14,14 @@ from numpy import float32, zeros
 
 import axod as axod
 
-from openmdao.main.api import Component
+from openmdao.main.api import Component, plugin
 from openmdao.lib.datatypes.api import Float, Array, Str
 
 __all__ = ('AxodComp',)
 
 _ZEROS48 = zeros((48,),float32)
 
+@plugin('openmdao.component')
 class AxodComp(Component):
     """ OpenMDAO component wrapper for AXOD. """
 

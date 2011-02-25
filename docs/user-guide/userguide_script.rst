@@ -138,9 +138,10 @@ A simple component that implements an equation with two inputs is shown below:
 
 .. testcode:: simple_component_Equation
 
-    from openmdao.main.api import Component
+    from openmdao.main.api import Component, plugin
     from openmdao.lib.datatypes.api import Float
     
+    @plugin('openmdao.component')
     class Equation(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
@@ -201,9 +202,10 @@ output would look like this:
 
 .. testcode:: creating_public_variables_1
 
-    from openmdao.main.api import Component
+    from openmdao.main.api import Component, plugin
     from openmdao.lib.datatypes.api import Float
     
+    @plugin('openmdao.component')
     class Simple(Component):
         """ A simple multiplication """
     
@@ -223,8 +225,9 @@ the variables *x* and *y*.
   
 .. testcode:: creating_public_variables_2
 
-    from openmdao.main.api import Component
+    from openmdao.main.api import Component, plugin
     from openmdao.lib.datatypes.api import Float
+    @plugin('openmdao.component')
     class Simple(Component):
         """ A simple multiplication """
         def execute(self):
@@ -438,9 +441,10 @@ and calculates their dot product as an output.
 
     from numpy import array, sum, float   
     
-    from openmdao.main.api import Component
+    from openmdao.main.api import Component, plugin
     from openmdao.lib.datatypes.api import Array, Float
     
+    @plugin('openmdao.component')
     class Dot(Component):
         """ A component that outputs a dot product of two arrays"""
     
@@ -488,8 +492,9 @@ colors:
 .. testcode:: enum_example2
 
     from openmdao.lib.datatypes.api import Enum
-    from openmdao.main.api import Component
+    from openmdao.main.api import Component, plugin
     
+    @plugin('openmdao.component')
     class TrafficLight(Component):
         color2 = Enum('Red', ('Red', 'Yellow', 'Green'), iotype='in')
 
@@ -516,8 +521,9 @@ strings to go along with the numbers the code expects.
 .. testcode:: enum_example
 
     from openmdao.lib.datatypes.api import Enum
-    from openmdao.main.api import Component
+    from openmdao.main.api import Component, plugin
     
+    @plugin('openmdao.component')
     class TrafficLight(Component):
         color = Enum(0, (0, 1, 2), iotype='in', aliases=("Red", "Yellow", "Green"))
 
@@ -566,8 +572,9 @@ defined by creating a *List* of Enums.
 .. testcode:: enum_list_example
 
     from openmdao.lib.datatypes.api import Enum, List
-    from openmdao.main.api import Component
+    from openmdao.main.api import Component, plugin
     
+    @plugin('openmdao.component')
     class Dice(Component):
         roll = List( Enum(1, (1, 2, 3, 4, 5, 6)), iotype='in')
         
@@ -638,10 +645,11 @@ made.
 
 .. testcode:: instance_example
 
-    from openmdao.main.api import Component
+    from openmdao.main.api import Component, plugin
     from openmdao.lib.datatypes.api import Instance
     from openmdao.main.interfaces import ICaseRecorder, ICaseIterator
     
+    @plugin('openmdao.component')
     class Fred(Component):
         """ A component that takes a class as an input """
     
@@ -692,9 +700,10 @@ component would look like this:
 
 .. testcode:: units_declare
 
-    from openmdao.main.api import Component
+    from openmdao.main.api import Component, plugin
     from openmdao.lib.datatypes.api import Float
     
+    @plugin('openmdao.component')
     class Pressure(Component):
         """Simple component to calculate pressure given force and area"""
     
@@ -760,7 +769,7 @@ three variables that define two flight conditions:
 
 .. testcode:: variable_containers
 
-    from openmdao.main.api import Component, Container
+    from openmdao.main.api import Component, Container, plugin
     from openmdao.lib.datatypes.api import Float
 
     class FlightCondition(Container):
@@ -770,6 +779,7 @@ three variables that define two flight conditions:
         angle_of_attack = Float(0.0, iotype='in', units='deg')
         sideslip_angle = Float(0.0, iotype='in', units='deg')
 
+    @plugin('openmdao.component')
     class AircraftSim(Component):
         """This component contains variables in a container"""
     

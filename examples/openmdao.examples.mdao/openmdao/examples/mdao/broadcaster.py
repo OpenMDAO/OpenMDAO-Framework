@@ -6,9 +6,10 @@ in expressions like Constraints or Objectives.)
 """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Component
+from openmdao.main.api import Component, plugin
 from openmdao.lib.datatypes.api import Float
 
+@plugin('openmdao.component')
 class Broadcaster(Component):
     """Component that holds some design variables.
     This is only needed because we can't hook an optimizer up to multiple

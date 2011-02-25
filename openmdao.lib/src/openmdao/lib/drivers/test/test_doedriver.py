@@ -12,7 +12,7 @@ import unittest
 
 from openmdao.lib.datatypes.api import TraitError, Event
 
-from openmdao.main.api import Assembly, Component, Case, set_as_top
+from openmdao.main.api import Assembly, Component, Case, set_as_top, plugin
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.datatypes.api import Float, Bool, Array
@@ -39,6 +39,7 @@ def rosen_suzuki(x0,x1,x2,x3):
            2.*x2**2 - 21.*x2 + x3**2 + 7.*x3 + 50
 
 
+@plugin('openmdao.component')
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 
@@ -66,6 +67,7 @@ class DrivenComponent(Component):
             self.parent.driver.stop()  # Only valid if sequential!
 
 
+@plugin('openmdao.component')
 class MyModel(Assembly):
     """ Use DOEdriver with DrivenComponent. """
 

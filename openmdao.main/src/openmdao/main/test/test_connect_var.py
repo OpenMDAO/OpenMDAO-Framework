@@ -5,11 +5,12 @@
 
 
 import unittest
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, plugin
 from openmdao.lib.datatypes.api import Float, Int, Str, Bool, Enum
 from enthought.traits.api import TraitError
 
 
+@plugin('openmdao.component')
 class Oneout(Component):
     """ A simple output component    """
     
@@ -34,6 +35,7 @@ class Oneout(Component):
         # print '%s.execute()' % self.get_pathname()
 
 
+@plugin('openmdao.component')
 class Oneinp(Component):
     """ A simple input component    """
     

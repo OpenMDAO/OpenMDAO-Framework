@@ -44,10 +44,11 @@ can be directly set:
 
 .. testsetup:: parameter_interface
 
-    from openmdao.main.api import Component, Assembly
+    from openmdao.main.api import Component, Assembly, plugin
     from openmdao.lib.datatypes.api import Float, Bool
     from openmdao.lib.drivers.api import CONMINdriver
     
+    @plugin('openmdao.component')
     class GeoMan(Component):
 
         radius = Float(7.0, low=1., high=20.0, iotype='in', 

@@ -21,8 +21,9 @@ need to function properly as an OpenMDAO component.
 
     from openmdao.lib.datatypes.api import Float
     
-    from openmdao.main.api import Component
+    from openmdao.main.api import Component, plugin
 
+    @plugin('openmdao.component')
     class SimpleAdder(Component):
         a = Float(0.0, iotype='in')
         b = Float(0.0, iotype='in')

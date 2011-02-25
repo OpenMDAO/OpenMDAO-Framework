@@ -6,9 +6,10 @@
 # Transmission is a 5-speed manual.
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Component, convert_units
+from openmdao.main.api import Component, convert_units, plugin
 from openmdao.lib.datatypes.api import Float, Int, Enum
 
+@plugin('openmdao.component')
 class Transmission(Component):
     """ A simple transmission model."""
 

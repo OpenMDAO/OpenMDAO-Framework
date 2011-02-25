@@ -20,12 +20,13 @@ import numpy
 import logging
 
 from openmdao.main.expreval import translate_expr, ExprEvaluator
-from openmdao.main.api import Assembly, Container, Component, set_as_top
+from openmdao.main.api import Assembly, Container, Component, set_as_top, plugin
 from openmdao.lib.datatypes.api import Float, Array
 
 class A(Container):
     b = Array(iotype='in')
     
+@plugin('openmdao.component')
 class Comp(Component):
     x = Float(iotype='in')
     y = Float(iotype='in')

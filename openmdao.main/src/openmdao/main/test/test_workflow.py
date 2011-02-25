@@ -4,7 +4,7 @@ Test run/step/stop aspects of a simple workflow.
 
 import unittest
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, plugin
 from openmdao.main.exceptions import RunStopped
 from openmdao.lib.datatypes.api import Int, Bool
 
@@ -13,6 +13,7 @@ from openmdao.lib.datatypes.api import Int, Bool
 
 dummyval = 1
 
+@plugin('openmdao.component')
 class TestComponent(Component):
     """
     Component which tracks it's total executions
@@ -29,6 +30,7 @@ class TestComponent(Component):
             self.parent.driver.stop()
 
 
+@plugin('openmdao.component')
 class Model(Assembly):
     """ Just a simple three-component workflow. """
 

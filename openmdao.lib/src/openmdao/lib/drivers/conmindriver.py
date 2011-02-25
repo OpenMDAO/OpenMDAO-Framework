@@ -38,7 +38,8 @@ from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
-from openmdao.util.decorators import add_delegate, entry_point
+from openmdao.util.decorators import add_delegate
+from openmdao.main.plugin import plugin
 
 
 class _cnmn1(object):
@@ -170,7 +171,7 @@ class _consav(object):
         self.ispace = [0, 0]
         # pylint: enable-msg=W0201
 
-@entry_point('openmdao.driver')
+@plugin('openmdao.driver')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class CONMINdriver(Driver):
     """ Driver wrapper of Fortran version of CONMIN. 

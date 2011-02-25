@@ -6,9 +6,10 @@ import unittest
 
 import numpy
 
-from openmdao.main.api import Component, Assembly
+from openmdao.main.api import Component, Assembly, plugin
 from openmdao.lib.datatypes.api import Float, Array, List
 
+@plugin('openmdao.component')
 class MyDefComp(Component):
     f_in = Float(3.14, iotype='in')
     f_out = Float(iotype='out')
@@ -18,6 +19,7 @@ class MyDefComp(Component):
     def execute(self):
         self.f_out = self.f_in + 1.
         
+@plugin('openmdao.component')
 class MyNoDefComp(Component):
     f_in = Float(iotype='in')
     f_out = Float(iotype='out')

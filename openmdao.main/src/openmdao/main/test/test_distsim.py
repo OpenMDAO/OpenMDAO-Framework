@@ -22,7 +22,7 @@ from Crypto.Random import get_random_bytes
 from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly, Case, Component, Container, Driver, \
-                              set_as_top
+                              set_as_top, plugin
 from openmdao.main.container import get_closest_proxy
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasparameters import HasParameters
@@ -50,6 +50,7 @@ _MODULE = 'openmdao.main.test.test_distsim'
 _SERVER_ID = 0
 
 
+@plugin('openmdao.component')
 class Box(ExecComp):
     """ Simple component for testing. """
 
@@ -95,6 +96,7 @@ class Box(ExecComp):
         return self.parent.xyzzy()
 
 
+@plugin('openmdao.component')
 class HollowSphere(Component):
     """ Simple component for testing. """
 

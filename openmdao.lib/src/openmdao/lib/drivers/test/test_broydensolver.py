@@ -7,13 +7,14 @@ import unittest
 import numpy
 
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, plugin
 from openmdao.lib.drivers.api import BroydenSolver
 from openmdao.lib.datatypes.float import Float
 from openmdao.util.testutil import assert_rel_error
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
+@plugin('openmdao.component')
 class SellarDiscipline1(Component):
     """Component containing Discipline 1"""
     
@@ -38,6 +39,7 @@ class SellarDiscipline1(Component):
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
 
 
+@plugin('openmdao.component')
 class SellarDiscipline2(Component):
     """Component containing Discipline 2"""
     
@@ -64,6 +66,7 @@ class SellarDiscipline2(Component):
         self.y2 = y1**(.5) + z1 + z2
 
 
+@plugin('openmdao.component')
 class SellarBroyden(Assembly):
     """Solution of the sellar analytical problem using MDF.
     
@@ -100,6 +103,7 @@ class SellarBroyden(Assembly):
         self.driver.alpha = .4
         self.driver.tol = .000000001
 
+@plugin('openmdao.component')
 class MIMOEquation(Component):
     """Equation with 2 inputs and 2 outputs"""
     
@@ -133,6 +137,7 @@ class MIMOEquation(Component):
         self.f4 = ff[3]
         self.f5 = ff[4]
         
+@plugin('openmdao.component')
 class DumbComp(Component):
     """A component whose output is independent of the input."""
     
@@ -146,6 +151,7 @@ class DumbComp(Component):
         
         pass
     
+@plugin('openmdao.component')
 class DumbAssembly(Assembly):
     """Assembly with DumbComp.
     """
@@ -169,6 +175,7 @@ class DumbAssembly(Assembly):
         self.driver.add_constraint('dis1.f1 = 0.0')
 
         
+@plugin('openmdao.component')
 class MIMOBroyden(Assembly):
     """Solution of the MIMO problem using MDF.
     """

@@ -11,12 +11,13 @@ import numpy
 from openmdao.lib.datatypes.api import TraitError, Float, Array
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.api import Component, Assembly, set_as_top
+from openmdao.main.api import Component, Assembly, set_as_top, plugin
 from openmdao.main.eggchecker import check_save_load
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.util.testutil import assert_rel_error
 
 
+@plugin('openmdao.component')
 class OptGolinskiComponent(Component):
     """ From the University of Buffalo MDO Test Suite Problem 2.4
     EXAMPLE   - Golinski's Speed Reducer Test Problem                            

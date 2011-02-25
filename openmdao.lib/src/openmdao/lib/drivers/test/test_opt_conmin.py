@@ -8,11 +8,12 @@ import numpy
 from openmdao.lib.datatypes.api import TraitError
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, plugin
 from openmdao.lib.datatypes.api import Float, Array, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.util.testutil import assert_rel_error
 
+@plugin('openmdao.component')
 class OptRosenSuzukiComponent(Component):
     """ From the CONMIN User's Manual:
     EXAMPLE 1 - CONSTRAINED ROSEN-SUZUKI FUNCTION. NO GRADIENT INFORMATION.

@@ -3,11 +3,13 @@
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Instance, List, ListStr
 
+from openmdao.main.plugin import plugin
 from openmdao.main.component import Component
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
 
+@plugin('openmdao.component')
 class ParetoFilter(Component):
     """Takes a set of cases and filters out the subset of cases which are
     pareto optimal. Assumes that smaller values for model responses are
