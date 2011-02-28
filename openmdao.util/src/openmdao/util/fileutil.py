@@ -3,6 +3,7 @@ Misc. file utility routines
 """
 
 import os
+import stat
 from os import makedirs
 import sys
 import shutil
@@ -194,15 +195,16 @@ def find_bzr(path=None):
     return None
 
 
-def build_directory(dct):
-    """Create a directory structure based on the contents of a 
-    nested dict.  The directory is created in the current working
-    directory.  If a directory being created already exists, an 
-    OSError will be raised.  The structure of the dict is as follows:
-    if the value at a key is a dict, then that key is used to create
-    a directory. Otherwise, the key is used to create a file and the
-    value stored at that key is written to the file.  All keys must
-    be relative names.
+def build_directory(dct, force=False):
+    """Create a directory structure based on the contents of a nested dict.
+    The directory is created in the current working directory. If a file
+    being created already exists, an OSError will be raised unless force is
+    True. 
+    
+    The structure of the dict is as follows: if the value at a key is a
+    dict, then that key is used to create a directory. Otherwise, the key is
+    used to create a file and the value stored at that key is written to the
+    file. All keys must be relative names or a RuntimeError will be raised.
     """
     startdir = os.getcwd()
     try:
@@ -211,12 +213,14 @@ def build_directory(dct):
             if os.path.isabs(key):
                 raise RuntimeError("build_directory: key (%s) is not a relative name" % key)
             if isinstance(val, dict): # it's a dict, so this is a directory
-                if os.path.exists(key):
-                    raise OSError("build_directory: %s cannot be created because it already exists" % key)
-                os.makedirs(key)
+                if not os.path.exists(key):
+                    os.makedirs(key)
                 os.chdir(key)
-                build_directory(val)
+                build_directory(val, force)
             else:  # assume a string value. Use that value to create a file
+                if os.path.exists(key):
+                    if not force:
+                        raise OSError("File '%s' already exists" % key)
                 dname = os.path.dirname(key)
                 if dname and not os.path.isdir(dname):
                     os.makedirs(dname)
@@ -224,4 +228,3 @@ def build_directory(dct):
                     f.write(val)
     finally:
         os.chdir(startdir)
-            

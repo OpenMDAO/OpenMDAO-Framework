@@ -333,6 +333,9 @@ def argv_to_args(argv=None):
     
     return (args, kwargs)
 
+_qs_usage = """
+  usage: plugin_quickstart <plugin_name> <version> [destination_dir] [<name>=<option>]*
+"""
 
 def plugin_quickstart(argv=None):
     """A command line script (plugin_quickstart) points to this.  It generates a
@@ -351,12 +354,8 @@ def plugin_quickstart(argv=None):
     
     args, kwargs = argv_to_args(argv)
 
-    if len(args) < 1:
-        raise RuntimeError("plugin_quickstart: no plugin name was specified")
-    elif len(args) < 2:
-        raise RuntimeError("plugin_quickstart: no version specified")
-    elif len(args) > 3:
-        raise RuntimeError("plugin_quickstart: don't understand args %s" % args[2:])
+    if len(args) < 2 or len(args) > 3:
+        raise RuntimeError(_qs_usage)
 
     plugin_name = args[0]
     version = args[1]
