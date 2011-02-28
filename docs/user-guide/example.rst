@@ -406,10 +406,10 @@ from its inputs. We must create the variables that define these inputs and outpu
 
 .. testcode:: Code2
 
-    from openmdao.main.api import Component, convert_units, plugin
+    from openmdao.main.api import Component, convert_units
     from openmdao.lib.datatypes.api import Float, Int, Enum
 
-    @plugin('openmdao.component')
+    
     class Transmission(Component):
         """ A simple transmission model."""
     

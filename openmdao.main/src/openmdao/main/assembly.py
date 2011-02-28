@@ -10,7 +10,6 @@ import cStringIO
 from enthought.traits.api import Instance, TraitError, Missing
 from enthought.traits.api import TraitType
 
-from openmdao.main.plugin import plugin
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
@@ -33,7 +32,7 @@ class PassthroughTrait(TraitType):
             return self.validation_trait.validate(obj, name, value)
         return value
 
-@plugin('openmdao.component')
+
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
     and outputs between its children.  When executed, it runs the top level

@@ -7,12 +7,12 @@
 from numpy import zeros
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Component, plugin
+from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
 
 from openmdao.examples.bar3simulation.bar3 import runbar3truss, forces
 
-@plugin('openmdao.component')
+
 class Bar3Truss(Component):
     """ Model of a three bar truss - Fortran Implementation."""
 

@@ -23,8 +23,6 @@ from openmdao.main.exceptions import ConstraintError
 
 from openmdao.main.filevar import FileMetadata, FileRef
 
-from openmdao.main.plugin import plugin
-
 from openmdao.main.case import Case
 
 from openmdao.util.eggsaver import SAVE_YAML, SAVE_LIBYAML, \

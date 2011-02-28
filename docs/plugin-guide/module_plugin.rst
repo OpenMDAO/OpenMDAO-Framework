@@ -21,9 +21,9 @@ need to function properly as an OpenMDAO component.
 
     from openmdao.lib.datatypes.api import Float
     
-    from openmdao.main.api import Component, plugin
+    from openmdao.main.api import Component
 
-    @plugin('openmdao.component')
+    
     class SimpleAdder(Component):
         a = Float(0.0, iotype='in')
         b = Float(0.0, iotype='in')
@@ -106,7 +106,7 @@ In this case, the ``setup.py`` file looks like this:
         packages=find_packages(),
         install_requires=['openmdao.lib', 'Traits>=3.1.0'],
         entry_points={
-        'openmdao.component': ['SimpleAdder = simple_adder:SimpleAdder']
+        'openmdao.component': ['simple_adder.SimpleAdder = simple_adder:SimpleAdder']
         }
     )
 
@@ -183,10 +183,10 @@ within the OpenMDAO framework:
     
         """
         [openmdao.component]
-        SimpleAdder = simple_adder:SimpleAdder
+        simple_adder.SimpleAdder = simple_adder:SimpleAdder
         
         [openmdao.driver]
-        MyDriver = mydriver:MyDriver
+        mydriver.MyDriver = mydriver:MyDriver
         """
    
     or
@@ -194,8 +194,8 @@ within the OpenMDAO framework:
     :: 
        
           
-        { 'openmdao.component': ['SimpleAdder = simple_adder:SimpleAdder'],
-          'openmdao.driver': ['MyDriver = mydriver:MyDriver']
+        { 'openmdao.component': ['simple_adder.SimpleAdder = simple_adder:SimpleAdder'],
+          'openmdao.driver': ['mydriver.MyDriver = mydriver:MyDriver']
         }
 
         

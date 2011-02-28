@@ -7,7 +7,7 @@ import nose
 from enthought.traits.api import TraitError
 from nose import SkipTest
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow, plugin
+from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
 from openmdao.lib.datatypes.api import Int
 from openmdao.main.hasobjective import HasObjective
 from openmdao.util.decorators import add_delegate
@@ -15,14 +15,13 @@ from openmdao.util.decorators import add_delegate
 exec_order = []
 
 @add_delegate(HasObjective)
-@plugin('openmdao.driver')
 class DumbDriver(Driver):
     def execute(self):
         global exec_order
         exec_order.append(self.name)
         super(DumbDriver, self).execute()
 
-@plugin('openmdao.component')
+
 class Simple(Component):
     a = Int(iotype='in')
     b = Int(iotype='in')

@@ -2,10 +2,10 @@
 
 import unittest
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top, plugin
+from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.lib.datatypes.api import Int
 
-@plugin('openmdao.component')
+
 class Simple(Component):
     
     a = Int(iotype='in')

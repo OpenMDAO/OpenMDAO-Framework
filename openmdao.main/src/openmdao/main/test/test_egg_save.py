@@ -16,7 +16,7 @@ import nose
 from enthought.traits.api import Callable
 
 from openmdao.main.api import Assembly, Component, Container, SAVE_PICKLE, \
-                              SAVE_CPICKLE, set_as_top, plugin
+                              SAVE_CPICKLE, set_as_top
 from openmdao.main.filevar import FileMetadata
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
@@ -148,7 +148,7 @@ class DataObj(object):
         self.data = data
 
 
-@plugin('openmdao.component')
+
 class Sink(Component):
     """ Consumes files. """
 
@@ -173,7 +173,7 @@ class Sink(Component):
             self.binary_data = cPickle.load(inp)
 
 
-@plugin('openmdao.component')
+
 class Oddball(Assembly):
     """
     Just a component that needs a separate directory to be created.
@@ -233,7 +233,7 @@ class Oddball(Assembly):
         return None
 
 
-@plugin('openmdao.component')
+
 class OddballComponent(Component):
     """ Just a subcomponent for Oddball to test nested entry points. """
 
@@ -259,7 +259,7 @@ def observer(state, string, file_fraction, byte_fraction):
     return True
 
 
-@plugin('openmdao.component')
+
 class Model(Assembly):
     """ Transfer files from producer to consumer. """
 

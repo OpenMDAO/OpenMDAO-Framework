@@ -258,10 +258,10 @@ code_templates = {}
 
 code_templates['openmdao.component'] = """
 
-from openmdao.main.api import Component, plugin
+from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
 
-@plugin('openmdao.component')
+
 class %(name)s(Component):
     # declare inputs and outputs here
     #x = Float(0.0, iotype='in')
@@ -351,11 +351,11 @@ def plugin_quickstart(argv=None):
     
     args, kwargs = argv_to_args(argv)
 
-    if not args:
+    if len(args) < 1:
         raise RuntimeError("plugin_quickstart: no plugin name was specified")
     elif len(args) < 2:
         raise RuntimeError("plugin_quickstart: no version specified")
-    elif len(args) > 2:
+    elif len(args) > 3:
         raise RuntimeError("plugin_quickstart: don't understand args %s" % args[2:])
 
     plugin_name = args[0]

@@ -45,10 +45,10 @@ Disciplines 1 and 2 were implemented in OpenMDAO as components.
 
 .. testcode:: Disciplines
 
-    from openmdao.main.api import Component, plugin
+    from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
     
-    @plugin('openmdao.component')
+    
     class SellarDiscipline1(Component):
         """Component containing Discipline 1"""
         
@@ -73,7 +73,7 @@ Disciplines 1 and 2 were implemented in OpenMDAO as components.
             self.y1 = z1**2 + z2 + x1 - 0.2*y2
     
     
-    @plugin('openmdao.component')
+    
     class SellarDiscipline2(Component):
         """Component containing Discipline 2"""
         
@@ -147,10 +147,10 @@ to the outputs.
 
 .. testcode:: Broadcaster
 
-    from openmdao.main.api import Component, plugin
+    from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
     
-    @plugin('openmdao.component')
+    
     class Broadcaster(Component):
         """Component that holds some design variables.
         This is only needed because we can't hook an optimizer up to multiple

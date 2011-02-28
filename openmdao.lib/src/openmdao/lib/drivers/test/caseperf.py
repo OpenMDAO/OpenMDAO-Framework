@@ -24,7 +24,7 @@ logging.getLogger('mp_distributing').setLevel(logging.DEBUG)
 
 from enthought.traits.api import HasTraits
 
-from openmdao.main.api import Assembly, Case, Component, set_as_top, plugin
+from openmdao.main.api import Assembly, Case, Component, set_as_top
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
@@ -89,7 +89,7 @@ class Recorder(HasTraits):
         return None
  
 
-@plugin('openmdao.component')
+
 class Sleeper(Component):
     """ Just sleeps for the requested duration. """
 
@@ -100,7 +100,7 @@ class Sleeper(Component):
         time.sleep(self.delay)
 
 
-@plugin('openmdao.component')
+
 class CID(Assembly):
     """ Executes via CaseIteratorDriver. """
 

@@ -16,13 +16,13 @@ class PluginsTestCase(unittest.TestCase):
         shutil.rmtree(self.tdir)
 
     def test_quickstart(self):
-        argv = ['foobar', self.tdir, 'version=1.1']
+        argv = ['foobar', '1.1', self.tdir]
         plugin_quickstart(argv)
         fandd = find_files(self.tdir, nodirs=False)
         self.assertEqual(set([os.path.basename(f) for f in fandd]), 
                          set(['foobar', 'src', 'docs', 'setup.cfg', 'setup.py',
-                              'MANIFEST.in', 'conf.py', 'foobar.rst', 'index.rst',
-                              'srcdocs.rst', 'foobar.py']))
+                              'MANIFEST.in', '__init__.py', 'conf.py', 'foobar.rst', 'index.rst',
+                              'srcdocs.rst', 'foobar.py', 'README.txt']))
 
 if __name__ == '__main__':
     unittest.main()

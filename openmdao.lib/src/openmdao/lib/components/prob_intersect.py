@@ -6,13 +6,12 @@ from scipy.integrate import dblquad
 from openmdao.lib.datatypes.api import Instance, Str, ListStr, Enum, \
      Float, Array
 
-from openmdao.main.plugin import plugin
 from openmdao.main.component import Component
 
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-@plugin('openmdao.component')
+
 class ProbIntersect(Component):
     """Computes the probability that any given point from the primary concept 
     will intersect the pareto frontiers of some other concepts.

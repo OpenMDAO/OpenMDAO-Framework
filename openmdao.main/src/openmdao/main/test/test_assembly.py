@@ -3,12 +3,12 @@
 import unittest
 
 from enthought.traits.api import TraitError
-from openmdao.main.api import Assembly, Component, Driver, set_as_top, plugin
+from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.lib.datatypes.api import Float, Str, Instance, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
 
-@plugin('openmdao.component')
+
 class Multiplier(Component):
     rval_in = Float(iotype='in')
     rval_out = Float(iotype='out')
@@ -23,7 +23,7 @@ class Multiplier(Component):
     def execute(self):
         self.rval_out = self.rval_in * self.mult
         
-@plugin('openmdao.component')
+
 class Simple(Component):
     
     a = Float(iotype='in')
@@ -42,7 +42,7 @@ class Simple(Component):
         self.c = self.a + self.b
         self.d = self.a - self.b
 
-@plugin('openmdao.component')
+
 class DummyComp(Component):
     
     r = Float(iotype='in')

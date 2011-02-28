@@ -26,7 +26,7 @@ from numpy import float32, zeros
 import axod as axod
 #from  readclas  import readfile
 
-from openmdao.main.api import Component, set_as_top, Container, plugin
+from openmdao.main.api import Component, set_as_top, Container
 from openmdao.lib.datatypes.api import Float, Array, Str, Int
 from datain import Datain
 
@@ -102,7 +102,7 @@ class Case (Container):
         
 
 
-@plugin('openmdao.component')
+
 class AxodCompn(Component):
     """ OpenMDAO component wrapper for AXOD. """
 

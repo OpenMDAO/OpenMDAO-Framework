@@ -43,12 +43,12 @@ import numpy
 #     really can import
 # pylint: disable-msg=F0401,E0611
 
-from openmdao.main.api import Assembly, Component, set_as_top, plugin
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.drivers.api import NEWSUMTdriver
 from openmdao.util.testutil import assert_rel_error
 
-@plugin('openmdao.component')
+
 class OptRosenSuzukiComponent(Component):
     """ From the NEWSUMT User's Manual:
     EXAMPLE 2 - CONSTRAINED ROSEN-SUZUKI FUNCTION. NO GRADIENT INFORMATION.
@@ -98,7 +98,7 @@ class OptRosenSuzukiComponent(Component):
                        self.x[3]**2 + 7.*self.x[3] + 50)
 
 
-@plugin('openmdao.component')
+
 class Example1FromManualComponent(Component):
     """ From the NEWSUMT User's Manual:
 
@@ -141,7 +141,7 @@ class Example1FromManualComponent(Component):
         self.result = (10.0 * self.x[0] + self.x[1] )
 
 
-@plugin('openmdao.component')
+
 class ParaboloidComponent(Component):
     """     
          MINIMIZE OBJ = ( X(1) - 2.0 ) ** 2 +  ( X(2) - 3.0 ) **2
@@ -164,7 +164,7 @@ class ParaboloidComponent(Component):
         self.result = (self.x[0] - 2.0) ** 2 + (self.x[1] - 3.0) ** 2
 
 
-@plugin('openmdao.component')
+
 class ConstrainedBettsComponent(Component):
     """     
          MINIMIZE OBJ = 0.01 * x(1) **2 + x(2) ** 2 - 100.0

@@ -5,12 +5,12 @@ from scipy.special import erf
 
 from openmdao.lib.datatypes.api import Instance, Str, Float
 
-from openmdao.main.api import Component, plugin
+from openmdao.main.api import Component
 
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-@plugin('openmdao.component')
+
 class ExpectedImprovement(Component):
     best_case = Instance(ICaseIterator, iotype="in",
                     desc="CaseIterator which contains a single case, "

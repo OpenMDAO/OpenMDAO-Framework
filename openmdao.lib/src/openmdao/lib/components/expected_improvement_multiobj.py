@@ -6,13 +6,12 @@ from scipy.special import erf
 from openmdao.lib.datatypes.api import Instance, Str, ListStr, Enum, \
      Float, Array
 
-from openmdao.main.plugin import plugin
 from openmdao.main.component import Component
 
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-@plugin('openmdao.component')
+
 class MultiObjExpectedImprovement(Component):
     best_cases = Instance(ICaseIterator, iotype="in",
                     desc="CaseIterator which contains only Pareto optimal cases \

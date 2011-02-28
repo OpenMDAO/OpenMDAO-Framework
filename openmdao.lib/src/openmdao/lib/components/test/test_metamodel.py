@@ -5,7 +5,7 @@ import unittest
 from enthought.traits.api import HasTraits
 
 from openmdao.lib.datatypes.api import Float, TraitError, implements
-from openmdao.main.api import Assembly, Component, set_as_top, plugin
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.interfaces import ICaseRecorder
 
 from openmdao.lib.components.metamodel import MetaModel
@@ -18,7 +18,7 @@ class DumbRecorder(HasTraits):
     def record(self,case): 
         pass
 
-@plugin('openmdao.component')
+
 class Simple(Component):
     
     a = Float(iotype='in')
@@ -37,7 +37,7 @@ class Simple(Component):
         self.c = self.a + self.b
         self.d = self.a - self.b
         
-@plugin('openmdao.component')
+
 class Simple2(Component):
     
     w = Float(iotype='in')
@@ -56,11 +56,11 @@ class Simple2(Component):
         self.y = self.w * 1.1
         self.z = self.x * 0.9
         
-@plugin('openmdao.component')
+
 class AModel(Component):
     pass
 
-@plugin('openmdao.component')
+
 class MyMetaModel(MetaModel):
     my_x = Float(1., iotype='in')
 

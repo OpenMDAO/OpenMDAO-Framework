@@ -1,10 +1,10 @@
 from openmdao.lib.datatypes.api import Int, List, Any
 
-from openmdao.main.api import Component, plugin
+from openmdao.main.api import Component
 from openmdao.main.interfaces import IComponent
 
 
-@plugin('openmdao.component')
+
 class Mux(Component): 
     """ Takes in *n* inputs and exports a length *n* List 
     with the data. It is a logical multiplexer.
@@ -37,7 +37,7 @@ class Mux(Component):
         self.output = [getattr(self,inp) for inp in self._inputs]
         
 
-@plugin('openmdao.component')
+
 class DeMux(Component): 
     """ Takes one List input and splits it into *n* indvidual outputs. This is a 
     logical demultiplexer. """

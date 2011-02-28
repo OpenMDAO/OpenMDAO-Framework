@@ -7,7 +7,7 @@ from math import sqrt
 
 from openmdao.main.api import Assembly, Component, Driver, \
                               Dataflow, SequentialWorkflow, set_as_top, \
-                              dump_iteration_tree, plugin
+                              dump_iteration_tree
 from openmdao.lib.datatypes.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.main.hasobjective import HasObjective
@@ -19,7 +19,7 @@ from openmdao.main.component import _show_validity
 
 exec_order = []
 
-@plugin('openmdao.component')
+
 class Adder(Component):
     """Outputs the sum of its two inputs."""
     
@@ -36,7 +36,6 @@ class Adder(Component):
         self.runcount += 1
 
 @add_delegate(HasObjective, HasParameters)
-@plugin('openmdao.driver')
 class Summer(Driver):
     """Sums the objective over some number of iterations, feeding
     its current sum back into the specified parameter."""
@@ -69,7 +68,7 @@ class Summer(Driver):
         super(Summer, self).execute()
         self.runcount += 1
 
-@plugin('openmdao.component')
+
 class ExprComp(Component):
     """Evaluates an expression based on the input x and assigns it to f_x"""
     
@@ -89,7 +88,7 @@ class ExprComp(Component):
         self.f_x = eval(self.expr)
         self.runcount += 1
     
-@plugin('openmdao.component')
+
 class ExprComp2(Component):
     """Evaluates an expression based on the inputs x & y and assigns it to f_xy"""
     

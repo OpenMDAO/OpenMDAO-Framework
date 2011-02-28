@@ -264,9 +264,9 @@ def parse_phoenixwrapper(infile, outfile, compname):
         text += "from numpy import %s as numpy_%s\n" % (imp, imp)
         
     if len(groups) > 0:
-        text += "\nfrom openmdao.main.api import Component, Container, plugin\n"
+        text += "\nfrom openmdao.main.api import Component, Container\n"
     else:
-        text += "\nfrom openmdao.main.api import Component, plugin\n"
+        text += "\nfrom openmdao.main.api import Component\n"
         
     sep = ""
     text += "from openmdao.lib.datatypes.api import "
@@ -323,7 +323,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
         if group != "":
         
             container_name = compname + "_" + group.replace(".","_")
-            text = "\n\n"
+            text = "\n"
             text += "class " + container_name + "(Container):\n"
             
             text += tab + '"""Container for %s"""\n\n' % str(group)
@@ -348,7 +348,6 @@ def parse_phoenixwrapper(infile, outfile, compname):
         
     # Top level class of the Wrapper.
     text = "\n\n"
-    text += "@plugin('openmdao.component')\n"
     text += "class " + compname + "(Component):\n"
     
     text += tab + '"""Wrapper for %s"""\n\n' % compname

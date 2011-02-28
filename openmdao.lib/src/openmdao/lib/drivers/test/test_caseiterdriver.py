@@ -15,7 +15,7 @@ import numpy.random as numpy_random
 
 from openmdao.lib.datatypes.api import TraitError
 
-from openmdao.main.api import Assembly, Component, Case, set_as_top, plugin
+from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
@@ -41,7 +41,7 @@ def rosen_suzuki(x):
            2.*x[2]**2 - 21.*x[2] + x[3]**2 + 7.*x[3] + 50
 
 
-@plugin('openmdao.component')
+
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 

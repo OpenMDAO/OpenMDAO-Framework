@@ -12,7 +12,7 @@ from numpy import array, zeros
 
 from openmdao.lib.datatypes.api import Float, Bool, Int, Str, Array, File, List, Enum
 
-from openmdao.main.api import Container, Component, plugin
+from openmdao.main.api import Container, Component
 from openmdao.util.namelist_util import Namelist, ToBool
 
 class VarContainer(Container):
@@ -24,7 +24,7 @@ class VarContainer(Container):
     textvar = Str("Hey", iotype='in')
     listenumvar = List(Enum(1,(1,2,3)), iotype='in')
 
-@plugin('openmdao.component')
+
 class VarComponent(Component):
     """Contains some vars"""
 

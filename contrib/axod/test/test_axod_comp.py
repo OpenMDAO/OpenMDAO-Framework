@@ -8,7 +8,7 @@ if '.' not in sys.path:
     sys.path.append('.')
 
 from openmdao.util.testutil import assert_rel_error
-from openmdao.main.api import Assembly, set_as_top,  Component, plugin
+from openmdao.main.api import Assembly, set_as_top,  Component
 from openmdao.lib.datatypes.api import Str, Bool, Int, Array, Enum, Float, File
 
 from axod_compn import AxodCompn
@@ -17,7 +17,7 @@ from axod_compn import AxodCompn
 import shutil
 
 
-@plugin('openmdao.component')
+
 class temp_data(Component):
 
     """ for assigning new values   for axod input """
@@ -38,7 +38,7 @@ class temp_data(Component):
         self.ptout = 14.711
         self._logger.debug('done')
 
-@plugin('openmdao.component')
+
 class next_data(Component):
 
     """ for assigning new values  from axod output """
