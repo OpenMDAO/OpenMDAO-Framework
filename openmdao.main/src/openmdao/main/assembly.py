@@ -431,7 +431,20 @@ class Assembly (Component):
         
     def check_derivatives(self, order, driver_inputs, driver_outputs):
         """An assembly just tells its driver to run check_derivatives on each
-        element in its workflow."""
+        element in its workflow. Note that an assembly signifies a change of
+        scope, so the driver input and output lists are pared down."""
+        
+        # Put the driver connection lists into our local scope by removing
+        # the assembly name from the dotted path.
+        for j, item in enumerate(driver_inputs):
+            names = item.split('.')
+            if names[0] == self.name:
+                driver_inputs[j] = '.'.join(names[1:])
+        
+        for j, item in enumerate(driver_outputs):
+            names = item.split('.')
+            if names[0] == self.name:
+                driver_outputs[j] = '.'.join(names[1:])
         
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
     
