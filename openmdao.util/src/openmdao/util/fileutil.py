@@ -7,10 +7,31 @@ import stat
 from os import makedirs
 import sys
 import shutil
+import warnings
 from fnmatch import fnmatch
 from fnmatch import filter as fnfilter
 from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
+
+class DirContext(object):
+    """Supports using the 'with' statement in place of try-finally for
+    entering a directory, executing a block, then returning to the 
+    original directory.
+    """
+    def __init__(self, destdir):
+        self.destdir = destdir
+
+    def __enter__(self):
+        self.startdir = os.getcwd()
+        # convert destdir to absolute at enter time instead of init time
+        # so relative paths will be relative to the current context
+        self.destdir = os.path.abspath(self.destdir)
+        os.chdir(self.destdir)
+        return self.destdir
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        os.chdir(self.startdir)
+
 
 def find_in_dir_list(fname, dirlist, exts=('',)):
     """Search the given list of directories for the specified file.
@@ -57,11 +78,15 @@ def find_in_path(fname, pathvar=None, sep=os.pathsep, exts=('',)):
     return find_in_dir_list(fname, pathvar.split(sep), exts)
 
 def _file_gen(dname):
+    """A generator returning all files under the given directory."""
     for path, dirlist, filelist in os.walk(dname):
         for name in filelist:
             yield join(path, name)
             
 def _file_dir_gen(dname):
+    """A generator returning all files and directories under 
+    the given directory.
+    """
     for path, dirlist, filelist in os.walk(dname):
         for name in filelist:
             yield join(path, name)
@@ -112,7 +137,7 @@ def find_files(start, match=None, exclude=None, nodirs=True):
                                 break
                         else:
                             yield path
-                            break
+                            skip = True
 
 
 def find_up(name, path=None):
@@ -198,8 +223,9 @@ def find_bzr(path=None):
 def build_directory(dct, force=False):
     """Create a directory structure based on the contents of a nested dict.
     The directory is created in the current working directory. If a file
-    being created already exists, an OSError will be raised unless force is
-    True. 
+    being created already exists, a warning will be issued and the file will
+    not be changed if force is False.  If force is True, the file will be
+    overwritten.
     
     The structure of the dict is as follows: if the value at a key is a
     dict, then that key is used to create a directory. Otherwise, the key is
@@ -218,13 +244,14 @@ def build_directory(dct, force=False):
                 os.chdir(key)
                 build_directory(val, force)
             else:  # assume a string value. Use that value to create a file
-                if os.path.exists(key):
-                    if not force:
-                        raise OSError("File '%s' already exists" % key)
-                dname = os.path.dirname(key)
-                if dname and not os.path.isdir(dname):
-                    os.makedirs(dname)
-                with open(key, 'w') as f:
-                    f.write(val)
+                if os.path.exists(key) and force is False:
+                    warnings.warn("File '%s' already exists and will not be overwritten." 
+                                  % key, Warning)
+                else:
+                    dname = os.path.dirname(key)
+                    if dname and not os.path.isdir(dname):
+                        os.makedirs(dname)
+                    with open(key, 'w') as f:
+                        f.write(val)
     finally:
         os.chdir(startdir)
