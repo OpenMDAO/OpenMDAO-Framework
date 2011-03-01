@@ -3,7 +3,7 @@
 """
 
 from os import fdopen, remove, path
-from tempfile import mkdtemp
+from tempfile import mkdtemp, gettempdir
 from shutil import rmtree
 import re
 import copy
@@ -44,6 +44,10 @@ class NastranComponent(ExternalCode):
 
     delete_tmp_files = Bool(True, iotype="in", desc="Should I delete \
                             the temporary files?")
+
+    output_tempdir_dir = Str(gettempdir(), iotype="in", desc="Directory in which \
+                                            to put the output temp dir.")
+
 
     keep_first_iteration = Bool(True, iotype="in", desc="If I am \
     deleting temporary files, should I keep the first one?")
@@ -148,7 +152,8 @@ class NastranComponent(ExternalCode):
                                     "most probably mistyped")
 
         # let's do our work in a tmp dir
-        tmpdir = mkdtemp()
+        # let's do our work in a tmp dir
+        tmpdir = mkdtemp(dir = self.output_tempdir_dir)
         tmppath = path.join(tmpdir, "input.bdf")
         tmpfh = open(tmppath, "w")
 
