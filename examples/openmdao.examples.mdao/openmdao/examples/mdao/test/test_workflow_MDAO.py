@@ -139,8 +139,8 @@ class SellarCO(Assembly):
         self.driver.fdchm = .003
         self.driver.delfun = .0001
         self.driver.dabfun = .00001
-        self.driver.ct = -.001
-        self.driver.ctlmin = 0.001
+        self.driver.ct = -.0008
+        self.driver.ctlmin = 0.0008
 
         #Parameters - Local Optimization 1
         self.localopt1.add_objective('(bcastr.z1-dis1.z1)**2 + ' + \
