@@ -4,8 +4,10 @@ import sys
 import pprint
 import StringIO
 from ConfigParser import SafeConfigParser
+from optparse import OptionParser
 
 from openmdao.util.fileutil import build_directory
+from sphinx.setup_command import BuildDoc
 
 templates = {}
 
@@ -160,21 +162,22 @@ templates['index.rst'] = """
 %(name)s Documentation
 %(title_marker)s
 
-Current version: |version|
-
 Contents:
 
 .. toctree::
    :maxdepth: 2
     
    pkgdocs
-   %(doc)s
+   usage
    srcdocs
 
   
 """
 
+
 templates['srcdocs.rst'] = """
+
+.. _source-documentation-label:
 
 ====================
 Source Documentation
@@ -187,30 +190,17 @@ Source Documentation
 
 """
 
-templates['pkgdocs.rst'] = """
+templates['usage.rst'] = """
 
-===================
-Package Information
-===================
+===========
+Usage Guide
+===========
 
-Summary: %(summary)s
-
-
-License: %(license)s
-
-
-Author: %(author)s
-
-
-Email: %(author_email)s
-
-
-Web Page: %(url)s
-
-
-Platform: %(platform)s
+No usage information has been provided for this plugin. Consult the 
+:ref:`_source-documentation-label` for more info.
 
 """
+
 
 templates['setup.py'] = """
 
@@ -225,6 +215,8 @@ import os
 import warnings
 
 name = '%(name)s'
+version = '%(version)s'
+release = '%(release)s'
 
 # add our package to python path so autodoc will find our source code
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),'src',name))
@@ -263,6 +255,13 @@ if 'build_sphinx' in sys.argv:
     kwargs['cmdclass'] = { 
          'build_sphinx': BuildDoc,
     }
+    kwargs['command_options'] = {
+            'build_sphinx': {
+                'version': ('setup.py', version),
+                'release': ('setup.py', release),
+                'build_dir': ('setup.py', 'src/%(name)s/sphinx_build'),
+             }
+        }
     mydir = os.path.dirname(os.path.abspath(__file__))
     docbuilddir = os.path.join(mydir, 'src', '%(name)s', 'sphinx_build')
     if not os.path.isdir(docbuilddir):
@@ -275,6 +274,35 @@ setup(**kwargs)
 templates['MANIFEST.in'] = """
 
 graft src/%(name)s/sphinx_build/html
+
+"""
+
+templates['setup.cfg'] = """
+
+[metadata]
+name = %(name)s
+version = %(version)s
+summary = 
+description-file = usage.rst
+keywords = openmdao
+home-page = UNKNOWN
+download-url = UNKNOWN
+author = UNKNOWN
+author-email = UNKNOWN
+maintainer = UNKNOWN
+maintainer-email = UNKNOWN
+license = UNKNOWN
+classifier = Intended Audience :: Science/Research
+    Topic :: Scientific/Engineering
+
+requires-dist = openmdao.main
+provides-dist = 
+obsoletes-dist = 
+requires-python = 
+    >=2.6
+    <2.7
+requires-externals = 
+project-url = UNKNOWN
 
 """
 
@@ -321,6 +349,31 @@ class %(name)s(Driver):
 
 """
 
+def get_pkgdocs(metadata):
+    lines = ['\n',
+             '================\n',
+             'Package Metadata\n',
+             '================\n',
+             '\n']
+
+    tuplist = list(metadata.items())
+    tuplist.sort()
+    for key,value in tuplist:
+        if key == 'name':
+            continue
+        if value.strip():
+            if '\n' in value:
+                lines.append(":%s: " % key)
+                for v in [vv.strip() for vv in value.split('\n')]:
+                    if v:
+                        lines.append("    %s\n\n" % v)
+                lines.append('\n')
+            elif value != 'UNKNOWN':
+                lines.append(":%s: %s\n\n" % (key, value))
+        
+    return ''.join(lines)
+
+
 def argv_to_args(argv=None):
     """Convert command line arguments into arguments passable to a python
     callable.
@@ -357,100 +410,40 @@ def argv_to_args(argv=None):
     
     return (args, kwargs)
 
-_qs_usage = """
-  usage: plugin_quickstart <plugin_name> <version> [destination_dir] [name=option]*
-"""
-
-def _get_config(options):
-    """If a setup.cfg file exists in the current directory, return a
-    SafeConfigParser for it. Otherwise, return a SafeConfigParser for
-    a default configuration.
-    """
-    cfgname = 'setup.cfg'
-    if os.path.exists(cfgname):
-        cfg = SafeConfigParser()
-        cfg.readfp(open(cfgname, 'r'), cfgname)
-    else:
-        default_config = """
-[build_sphinx]
-version = %(version)s
-release = %(release)s
-all-files = true
-build_dir = src/%(name)s/sphinx_build
-
-[metadata]
-name = %(name)s
-version = %(version)s
-summary = %(summary)s
-keywords = %(keywords)s
-home-page
-download-url
-author
-author-email
-maintainer
-maintainer-email
-license
-classifiers
-requires-dist
-provides-dist
-obsoletes-dist
-requires-python
-requires-externals
-project-url
-
-""" % options
-    
-        cfg = SafeConfigParser()
-        cfg.add_section('build_sphinx')
-        
-    
-
-    return cfg
-
 
 def plugin_quickstart(argv=None):
     """A command line script (plugin_quickstart) points to this.  It generates a
     directory structure for an openmdao plugin package along with Sphinx docs.
     
-    usage: plugin_quickstart <plugin_name> <version> [destination_dir] [name=option]*
+    usage: plugin_quickstart <plugin_name> <version> [--dest=<dest_dir>] [--group=<plugin_group>]
     
-    For each name=option argument, name can be any valid keyword passable to the 
-    setup function, or one of the keywords listed below:
-    
-    src:  the path to a python source file containing the plugin class definition(s)
-    doc: the path to a .rst file containing docs for the plugin
-    group: a plugin group id, e.g., openmdao.component, openmdao.driver, etc.
-
     """
     
-    args, kwargs = argv_to_args(argv)
+    if argv is None:
+        argv = sys.argv[1:]
+    
+    parser = OptionParser()
+    parser.usage = "plugin_quickstart <plugin_name> <version> [options]"
+    parser.add_option("-d", "--dest", action="store", type="string", dest='dest', default='.',
+                      help="destination directory (parent of the new plugin directory)")
+    parser.add_option("-g", "--group", action="store", type="string", dest='group', 
+                      default = 'openmdao.component',
+                      help="specify plugin group (openmdao.component, openmdao.driver, openmdao.variable)")
+    
+    (options, args) = parser.parse_args(argv)
 
     if len(args) < 2 or len(args) > 3:
-        raise RuntimeError(_qs_usage)
+        parser.print_help()
+        sys.exit(-1)
 
-    plugin_name = args[0]
+    name = args[0]
     version = args[1]
-    dest = '.' if len(args) < 3 else args[2]
     
-    pyfile = kwargs.pop('src', None)
-    group = kwargs.pop('group', 'openmdao.component')
-    docfile = kwargs.pop('doc', '')
-    cpyright = kwargs.pop('copyright', '')
-    release = kwargs.pop('release', version)
-
-    if docfile:
-        f = open(docfile, 'r')
-        doccontents = f.read()
-        f.close()
-    else:
-        doccontents = ''
-        docfile = "%s.rst" % plugin_name
-
     setup_options = {
-        'name': plugin_name,
+        'name': name,
         'version': version,
-        'packages': [plugin_name],
-        'package_data': { plugin_name: [
+        'packages': [name],
+        'package_data': { name: [
             'sphinx_build/html/*.*',
             'sphinx_build/html/_modules/*',
             'sphinx_build/html/_sources/*',
@@ -459,66 +452,62 @@ def plugin_quickstart(argv=None):
         'package_dir': {'': 'src'},
         'zip_safe': False,
         'include_package_data': True,
-        'install_requires': [],
-        'url': 'UNKNOWN',
-        'author': 'UNKNOWN',
-        'author_email': 'UNKNOWN',
-        'license': 'UNKNOWN',
-        'platform': 'UNKNOWN',
+        'install_requires': ['openmdao.main'],
     }
-    
-    setup_options.update(kwargs)
     
     sio = StringIO.StringIO()
     pprint.pprint(setup_options, sio)
     
     template_options = {
-        'doc': os.path.splitext(os.path.basename(docfile))[0],
-        'copyright': cpyright,
-        'release': release,
+        'release': version,
+        'copyright': '',
         'summary': '',
-        'title_marker': '='*(len(plugin_name)+len(' Documentation')),
+        'title_marker': '='*(len(name)+len(' Documentation')),
         'setup_options': sio.getvalue()
     }
     
-    template_options.update(setup_options)
-    
-    if pyfile:
-        f = open(pyfile, 'r')
-        pycontents = f.read()
-        f.close()
-        template_options['srcmod'] = os.path.splitext(os.path.basename(pyfile))[0]
-    else:
-        plugin_py_template = code_templates[group or 'openmdao.component']
-        pycontents = plugin_py_template % template_options
-        pyfile = '%s.py' % plugin_name
-        template_options['srcmod'] = plugin_name
-        
-    dirstruct = {
-        plugin_name: {
-            'setup.py': templates['setup.py'] % template_options,
-            'setup.cfg': templates['setup.cfg'] % template_options,
-            'MANIFEST.in': templates['MANIFEST.in'] % template_options,
-            'README.txt': 'README.txt file for %s' % plugin_name,
-            'src': {
-                plugin_name: {
-                    '__init__.py': '',
-                    os.path.basename(pyfile): pycontents,
-                    },
-                },
-            'docs': {
-                'conf.py': templates['conf.py'] % template_options,
-                'index.rst': templates['index.rst'] % template_options,
-                'srcdocs.rst': templates['srcdocs.rst'] % template_options,
-                'pkgdocs.rst': templates['pkgdocs.rst'] % template_options,
-                '%s.rst' % plugin_name: doccontents,
-                },
-        },
-    }
     
     startdir = os.getcwd()
     try:
-        os.chdir(dest)
+        os.chdir(options.dest)
+        cfg = SafeConfigParser()
+        if os.path.exists('setup.cfg'):
+            stream = open('setup.cfg', 'r')
+        else:
+            stream = StringIO.StringIO(templates['setup.cfg'] % { 'name':name, 'version':version})
+        cfg.readfp(stream, 'setup.cfg')
+        metadata = dict([item for item in cfg.items('metadata')])
+        template_options.update(metadata)
+        cfgcontents = StringIO.StringIO()
+        cfg.write(cfgcontents)
+        
+        plugin_py_template = code_templates[options.group]
+        pycontents = plugin_py_template % template_options
+        pyfile = '%s.py' % name
+        template_options['srcmod'] = name
+    
+        dirstruct = {
+            name: {
+                'setup.py': templates['setup.py'] % template_options,
+                'setup.cfg': cfgcontents.getvalue(),
+                'MANIFEST.in': templates['MANIFEST.in'] % template_options,
+                'README.txt': 'README.txt file for %s' % name,
+                'src': {
+                    name: {
+                        '__init__.py': '',
+                        pyfile: pycontents,
+                        },
+                    },
+                'docs': {
+                    'conf.py': templates['conf.py'] % template_options,
+                    'index.rst': templates['index.rst'] % template_options,
+                    'srcdocs.rst': templates['srcdocs.rst'] % template_options,
+                    'pkgdocs.rst': get_pkgdocs(metadata),
+                    'usage.rst': templates['usage.rst'] % template_options,
+                    },
+            },
+        }
+
         build_directory(dirstruct)
     
     finally:
@@ -567,5 +556,3 @@ def package_plugin(argv=None):
         pass
     finally:
         os.chdir(startdir)
-        
-        

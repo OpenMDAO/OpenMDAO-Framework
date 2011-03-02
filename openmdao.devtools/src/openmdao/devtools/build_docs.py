@@ -9,7 +9,6 @@ import StringIO
 import re
 from subprocess import Popen, PIPE, STDOUT
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
-from optparse import OptionParser
 import tarfile
 
 from fabric.api import run, env, local, put, cd, get, settings

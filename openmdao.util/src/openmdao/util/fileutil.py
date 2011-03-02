@@ -201,23 +201,6 @@ def copy(src, dest):
         shutil.copy(src, dest)
     elif isdir(src):
         shutil.copytree(src, dest) 
-    
-
-def find_bzr(path=None):
-    """ Return bzr root directory path or None. """
-    if not path:
-        path = os.getcwd()
-    if not exists(path):
-        return None
-    while path:
-        if exists(join(path, '.bzr')):
-            return path
-        else:
-            pth = path
-            path = dirname(path)
-            if path == pth:
-                return None
-    return None
 
 
 def build_directory(dct, force=False):
