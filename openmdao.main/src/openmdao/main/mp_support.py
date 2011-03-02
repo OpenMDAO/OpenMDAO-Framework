@@ -952,7 +952,7 @@ class OpenMDAO_Manager(BaseManager):
         if process.is_alive():
             logging.debug('sending shutdown message to manager')
             try:
-                conn = _Client(address, authkey=authkey)
+                conn = _get_connection(_Client, address, authkey)
                 try:
                     dispatch(conn, None, 'shutdown')
                 finally:
@@ -1158,7 +1158,7 @@ class OpenMDAO_Proxy(BaseProxy):
                               authkey=self._authkey, exposed=exposed,
                               pubkey=pubkey)
 
-            conn = self._Client(token.address, authkey=self._authkey)
+            conn = _get_connection(self._Client, token.address, self._authkey)
             dispatch(conn, None, 'decref', (token.id,))
             return proxy
 
@@ -1207,7 +1207,7 @@ class OpenMDAO_Proxy(BaseProxy):
             raise RuntimeError('Cannot connect to manager at %r' 
                                % (self._token.address,))
 
-        conn = self._Client(self._token.address, authkey=self._authkey)
+        conn = _get_connection(self._Client, self._token.address, self._authkey)
         dispatch(conn, None, 'incref', (self._id,))
         # Enable this with care. While testing CaseIteratorDriver it can cause a
         # deadlock in logging (called via BaseProxy._after_fork()).
@@ -1239,7 +1239,7 @@ class OpenMDAO_Proxy(BaseProxy):
                 # tell manager this process no longer cares about referent
                 try:
                     util.debug('DECREF %r', token.id)
-                    conn = _Client(token.address, authkey=authkey)
+                    conn = _get_connection(_Client, token.address, authkey)
                     dispatch(conn, None, 'decref', (token.id,))
                 # Hard to cause this to happen.
                 except Exception as exc:  #pragma no cover
@@ -1430,4 +1430,23 @@ def _auto_proxy(token, serializer, manager=None, authkey=None,
                       incref=incref, pubkey=pubkey)
     proxy._isauto = True
     return proxy
+
+
+def _get_connection(_client, address, authkey):
+    """
+    Get client connection to `address` using `authkey`.
+    Avoids dying on 'Interrupted system call'. (Should be in lower layer)
+    """
+    for retry in range(3):
+        try:
+            conn = _client(address, authkey=authkey)
+        except IOError as exc:
+            if exc.errno != 4 or retry >= 2:
+                raise
+        except Exception:
+            raise
+        else:
+            return conn
+
+    raise RuntimeError('Too many connection attempts')
 
