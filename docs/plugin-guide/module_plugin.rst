@@ -1,19 +1,86 @@
 .. index:: SimpleAdder
 
-.. index:: pair: plugin; building from a Python Module
+.. index:: pair: plugin; building a pure Python plugin
 
 
-Building a Component Plugin from a Python Module
-================================================
+Building a Pure Python Component Plugin
+=======================================
 
 For this example we'll build a plugin for the component shown in the figure
 :ref:`Conceptual-View-of-a-Simple-Component` (from the *User Guide*).  This component
 simply computes the value of its single output by adding its two inputs.
 
-Our first step is to create our class. We want to inherit from
-``openmdao.main.api.Component`` because that provides us with the interface we
-need to function properly as an OpenMDAO component.
+Our first step is to run the ``plugin_quickstart`` script as follows:
 
+::
+
+    plugin_quickstart SimpleAdder -v 0.9 -d myplugins
+    
+where the first argument is the name of our plugin class. The argument
+following the ``-v`` is the version id of the plugin and the argument after
+the ``-d`` is the destination directory where the plugin directory will be
+created. If no directory is supplied, it defaults to the current directory. If
+no version id is supplied, it defaults to ``0.1``. There are two other
+optional arguments: 
+
+- **-g**: can specify a plugin group name. The default
+    plugin group is ``openmdao.component``, which is what we're creating here, so
+    we don't need to supply the argument. Other options for ``-g`` are:
+    ``openmdao.driver`` and ``openmdao.variable``.
+
+- **--dist**: can be used to specify the name of the distribution if you want
+    it to be different from the lower case version of the plugin class.
+
+After running ``plugin_quickstart``, the ``myplugins`` directory will contain
+a directory named ``simpleadder``, which is the lower case version of the
+plugin class name we passed to the script. The ``simpleadder`` directory
+structure will look something like this::
+
+    simpleadder
+    |-- docs
+    |   |-- conf.py
+    |   |-- index.rst
+    |   |-- pkgdocs.rst
+    |   |-- srcdocs.rst
+    |   `-- usage.rst
+    |-- MANIFEST.in
+    |-- README.txt
+    |-- setup.cfg
+    |-- setup.py
+    `-- src
+        `-- simpleadder
+            |-- __init__.py
+            `-- simpleadder.py
+
+
+Customizing our Plugin
+----------------------
+
+The ``plugin_quickstart`` automatically generates skeleton files for
+our plugin class, distribution metadata, and documentation, but
+we'll want to tailor these specifically to our plugin.
+
+
+Editing our Plugin Class
+++++++++++++++++++++++++
+
+The most important file to edit is of course the python file that defines our
+plugin class.  The plugin class definition is found in:
+
+::
+
+    src/<dist_name>/<dist_name>.py
+    
+
+or in our case:
+
+::
+
+    src/simpleadder/simpleadder.py
+
+    
+When we're done modifying the skeleton plugin class in the ``simpleadder.py`` file, 
+it should look like this:
 
 .. _plugin_overview_Code1: 
 
@@ -23,13 +90,16 @@ need to function properly as an OpenMDAO component.
     
     from openmdao.main.api import Component
 
-    
     class SimpleAdder(Component):
+        """A simple component whose output *c* is the sum of
+        its inputs *a* and *b*.
+        """
         a = Float(0.0, iotype='in')
         b = Float(0.0, iotype='in')
         c = Float(0.0, iotype='out')
     
         def execute(self):
+             """Calculate c as the sum of a and b."""
              self.c = self.a + self.b
 
 
@@ -53,184 +123,225 @@ implemented using Enthought's Traits and to learn more about traits, see the
 `Traits User Manual 
 <http://code.enthought.com/projects/traits/docs/html/traits_user_manual/index.html>`_.
 
-At this point, our ``SimpleAdder`` plugin is usable within OpenMDAO. We could simply
-import the module containing it and use it in a model; but we want more than
-that. By packaging our plugin as a Python distribution, we can make it easy to share with
-others in the OpenMDAO community. We can give our distribution a version identifier and
-other :term:`metadata` that will allow the framework to discover our plugin and show users
-that it's available. 
+Developing a plugin is often an iterative process, so it's convenient to have
+a way to install the plugin and hack on it, test it, etc., without having to 
+reinstall it each time we change it.  Luckily this is easy to do by just
+installing our plugin as a *develop* egg. We do this as follows:
+
+::
+
+    python setup.py develop
+
+
+After that, our plugin can be imported and used in the OpenMDAO environment
+just like any other installed plugin.  For example, we could import our
+plugin class like this:
+
+
+::
+
+    from <distrib_name> import <plugin_class>
+    
+    
+or, in this specific case:
+
+::
+
+    from simpleadder import SimpleAdder
+    
+
+
+Adding Documentation
+++++++++++++++++++++
+
+Now that our plugin class is fully defined, we should write up some documentation
+about how to use it.  The packaging script that we'll run later, ``package_plugin``, 
+will automatically generate source documentation for our plugin, but we can add to
+that by editing the ``docs/usage.rst`` file, perhaps providing some detailed usage
+instructions and maybe a few examples.  The format of the ``usage.rst`` file is 
+:term:`reStructuredText` and we use Sphinx to generate our documentation, so any
+reST or Sphinx directives may be used there.
+
+The other documentation file that you may want to edit is the ``README.txt`` file.
+A small amount of information is put there automatically but you may want to add
+more.
+
+
+Setting Metadata
+++++++++++++++++
+
+The final step in preparing to package our plugin is to define metadata for
+our distribution.  You specify that metadata by editing the ``setup.cfg`` file.
+The skeleton version of ``setup.cfg`` generated by ``plugin_quickstart`` in our
+case looks like this:
+
+::
+
+    [metadata]
+    name = simpleadder
+    version = 0.9
+    summary = 
+    description-file = README.txt
+    keywords = openmdao
+    home-page = 
+    download-url = 
+    author = 
+    author-email = 
+    maintainer = 
+    maintainer-email = 
+    license = 
+    classifier = Intended Audience :: Science/Research
+        Topic :: Scientific/Engineering
+    
+    requires-dist = openmdao.main
+    provides-dist = 
+    obsoletes-dist = 
+    requires-python = 
+        >=2.6
+        <2.7
+    requires-externals = 
+    project-url = 
+
+
+You should set whatever of these values you feel are applicable to your plugin.
+The **name** and **version** values are the only ones that are mandatory, but
+you should fill in as many as possible to better inform potential users about
+your plugin. 
+
+.. note::
+    Distributions tend to evolve over time, so providing a version id for a
+    package is extremely important. It is assumed that once a distribution is
+    created from a particular version of a package, that distribution will
+    **never** change. People may build things that depend on a particular
+    version of your distribution, so changing that version could break their
+    code. If, however, you update your distribution's version id, then users
+    have the option of either using the updated distribution and modifying
+    their own code to make it work or sticking with an older version that
+    already works with their code. 
+
+
+More descriptions of the various metadata values can be found 
+`here`__.
+
+.. __: http://readthedocs.org/docs/distutils2/en/latest/setupcfg.html#metadata
+
+
+Additional Customization
+++++++++++++++++++++++++
+
+In some cases, you may want to add multiple plugin classes to your distribution,
+either in the *<dist_name>.py* file or in separate Python source files that you
+add to the ``src`` directory, possible as part of a nested package directory
+structure.  The ``package_plugin`` script knows how to handle this sort of a
+situation and will generate the appropriate source documentation and metadata
+for whatever plugins you define under the ``src`` tree.
+
+If you plan to use ``package_plugin`` to create your distribution, you should not
+modify any of the files listed below because they will be overwritten by the script.
+
+    - **setup.cfg**
+    - **docs/pkgdocs.rst**
+    - **docs/srcdocs.rst**
+
+
+If for some reason you must modify any of the files above, you must build your
+distribution using the standard Python packaging procedure, for example:
+
+::
+
+    python setup.py sdist
+    
+
+That will create a source distribution of your plugin, but keep in mind that
+in this case you will have to specify entry point metadata in the ``setup.py``
+file manually for each of your plugins. In order to specify entry points
+manually, you must add an ``entry_points`` keyword argument to the ``setup``
+call inside of the ``setup.py`` file.
+
+Entry points are divided into groups, and each
+type of OpenMDAO plugin has a particular group. For example, Component
+plugins are found in the ``openmdao.component`` group. Each entry
+point is specified by its name, followed by an equals (**=**) sign, followed by
+dotted module path (dotted path you would use to import the module in
+Python), followed by a colon (**:**) and the name of the plugin class. The value
+of ``entry_points`` should be a string in INI file format or a dictionary. 
+
+
+For example:
+
+::
+
+    """
+    [openmdao.component]
+    simpleadder.SimpleAdder = simpleadder:SimpleAdder
+    
+    [openmdao.driver]
+    mydriver.MyDriver = mydriver:MyDriver
+    """
+
+or
+ 
+:: 
+   
+      
+    { 'openmdao.component': ['simpleadder.SimpleAdder = simpleadder:SimpleAdder'],
+      'openmdao.driver': ['mydriver.MyDriver = mydriver:MyDriver']
+    }
+
+
 
 .. index:: creation
 
 Distribution Creation
 ---------------------
 
-Creating a distribution out of a Python module is straightforward, but it does
-require the creation of a simple directory structure because distributions are
-intended to contain Python packages and not just individual modules.
-
-For example, if our ``SimpleAdder`` class is in a file called ``simple_adder.py``, 
-we need a directory structure that looks like this to make it distributable
-as a package in a distribution:
+Eventually our hacking will be finished and our plugin will be ready to
+package up as a distribution. Packaging our plugin as a 
+distribution makes it easier to share it with others in the OpenMDAO
+community. To create our distribution, we issue the command:
 
 ::
 
-   simple_adder
-      |
-      |-- simple_adder
-      |     |
-      |     |-- simple_adder.py
-      |     `-- __init__.py
-      |
-      `-- setup.py
-      
-
-The ``__init__.py`` file is empty and is there only because that is how
-Python determines that the directory ``simple_adder`` is a Python package. The
-only other file in the directory structure besides ``simple_adder.py`` is the
-``setup.py`` file, which describes how to build a distribution containing our module.
-In this case, the ``setup.py`` file looks like this:
+    package_plugin <dist_dir>
 
 
-..  _module_plugin_Code2:
-
+where ``dist_dir`` is the name of the directory containing our distribution.
+The script will automatically detect plugins within the distribution ``src``
+directory and generate any necessary entry points for them in the ``setup.py``
+file.  It will also generate the sphinx documentation and place the sphinx
+generated files and all other necessary files in a source distribution that
+will be named as follows:
 
 ::
 
-
-    from setuptools import setup, find_packages
+    <dist_name>-<version>.tar.gz
     
-    setup(
-        name='simple_adder',
-        version='1.0',
-        packages=find_packages(),
-        install_requires=['openmdao.lib', 'Traits>=3.1.0'],
-        entry_points={
-        'openmdao.component': ['simple_adder.SimpleAdder = simple_adder:SimpleAdder']
-        }
-    )
-
     
-The ``setup()`` command has many arguments in addition to those shown above,
-e.g., ``author, author_email, maintainer, maintainer_email, url, license,
-description, long_description, keywords, platforms, fullname, contact,
-contact_email, classifiers``, and ``download_url``. If you supply any of these,
-their values will be stored as metadata in the distribution. To keep things
-simple, we won't describe all of the arguments in detail. If you're
-interested, you can go to this 
-`reference page <http://docs.python.org/distutils/apiref.html#module-distutils.core>`_ for a
-description of the arguments to ``setup()`` or go
-`here <http://peak.telecommunity.com/DevCenter/setuptools#new-and-changed-setup-keywords>`_ for
-the keyword arguments added or changed by ``setuptools``.
+In our particular case, the file would be named ``simpleadder-0.9.tar.gz``.
 
-The following options are required for our distribution to function properly
-within the OpenMDAO framework:
-
-**name** 
-    The package must have a name, and generally it should be the name of
-    the module, minus the ``.py`` extension, e.g., ``'simple_adder'``, or the name
-    of the class within the module, assuming that the module contains only one
-    class.
-
-**version** 
-    Packages tend to evolve over time, so providing a version id for a package is extremely
-    important. You **must** update the version id of your package prior to creating a
-    distribution out of it. It is assumed that once a distribution is created from a
-    particular version of a package, that distribution will **never** change. People may
-    build things that depend on a particular version of your distribution, so changing that
-    version could break their code. If, however, you update your distribution's version id,
-    then users have the option of either using the updated distribution and modifying their
-    own code to make it work or sticking with an older version that already works with their
-    code. The value of *version* is specified as a string, e.g., ``'1.0.4'``.
-
-**packages**
-    If you have only one module, there will be only one package, but the
-    distribution format allows for the existence of multiple packages. You can
-    specify *packages* as an explicit list of strings, but the easiest thing
-    to do is to use the ``find_packages()`` function from setuptools as shown in
-    the example above.
-
-**install_requires**   
-    This option specifies the distributions that your
-    distribution depends on. Note that you need to include only *direct*
-    dependencies in this list, i.e., if your package depends on ``package_A``,
-    which in turn depends on ``package_B``, you need to include only
-    ``package_A``. Make sure not to leave out any direct dependencies here
-    because doing so will result in failure to install needed dependent
-    distributions whenever your distribution is installed. The value of
-    ``install_requires`` should be a list of strings. These strings can specify
-    not only the name of a distribution but also a version or a range of
-    versions. For example, ``'numpy>=1.3.0',`` ``'numpy<=1.5'`` and
-    ``'numpy=='1.4.1'`` are all valid entries. However, it's usually best not to
-    specify an exact version because it will make it harder to install your
-    distribution in an environment with other distributions that depend on a
-    different version of a distribution that your package depends on.
-
-**entry_points**
-    Entry points can be used by OpenMDAO to determine which plugins are
-    available within a distribution. Entry points are divided into groups, and each
-    type of OpenMDAO plugin has a particular group. For example, Component
-    plugins are found in the ``openmdao.component`` group. Each entry
-    point is specified by its name, followed by an equals (**=**) sign, followed by
-    dotted module path (dotted path you would use to import the module in
-    Python), followed by a colon (**:**) and the name of the plugin class. The value
-    of ``entry_points`` should be a string in INI file format or a dictionary. 
-    
-        
-    For example:
-    
-    ::
-    
-        """
-        [openmdao.component]
-        simple_adder.SimpleAdder = simple_adder:SimpleAdder
-        
-        [openmdao.driver]
-        mydriver.MyDriver = mydriver:MyDriver
-        """
-   
-    or
-     
-    :: 
-       
-          
-        { 'openmdao.component': ['simple_adder.SimpleAdder = simple_adder:SimpleAdder'],
-          'openmdao.driver': ['mydriver.MyDriver = mydriver:MyDriver']
-        }
-
-        
-With the ``simple_adder`` directory structure shown above and the ``setup.py``
-file shown, we can now build our distribution. From the ``simple_adder``
-directory, typing ``python setup.py sdist -d .`` will create the distribution
-in our current directory. The version of the distribution and the Python
-version will be included in the filename. For example, since the version we
-specified in our ``setup.py`` file was ``'1.0'``, our distribution will be named 
-``simple_adder-1.0.tar.gz``. 
-
-
-.. index:: mod2dist
-
-Distribution Creation for the Lazy
-----------------------------------
-
-A tool called *mod2dist* exists for those of us who don't want to create a package
-directory structure and a ``setup.py`` file manually. It has a number of options that you
-can see if you run ``mod2dist -h``.  The only required options are the desired version
-of the distribution and the module to use to generate the distribution.  For example, 
-the command
+Once we've created our source distribution, it can be installed into an active
+OpenMDAO environment by running:
 
 ::
 
-   mod2dist -v 1.0 simple_adder.py
-   
-   
-will generate the same distribution that we built manually earlier in this example.
+    easy_install simpleadder-0.9.tar.gz
+    
+    
+We could also put the source distribution on a file server so that anyone with
+access to the server would be able to download and install it automatically.
+For example, if we were to put the file on the *openmdao.org* server, anyone
+could install it by typing:
+
+::
+
+    easy_install -f http://openmdao.org/dists simpleadder
+
 
 
 .. _Building-a-Variable-Plugin:
 
-Building a Variable Plugin from a Python Module
-===============================================
+Building a Variable Plugin
+==========================
 
 Sometimes it's necessary to create a new type of variable that can be passed 
 between OpenMDAO components.  This section describes how to do this using a 
@@ -238,8 +349,23 @@ pure Python OpenMDAO plugin.
 
 Let's assume we want to have a variable that represents a set of Cartesian 
 coordinates, with the value of the variable being a 3-tuple of floating point
-values representing the *x, y,* and *z* position.  We'll start by creating a 
-file called ``coord.py`` and placing the following code in it:
+values representing the *x, y,* and *z* position.
+
+As before when we created a component plugin, we'll use ``plugin_quickstart`` to
+generate the directory structure for our distribution, but this time we use
+the **-g** option to specify the plugin group as ``openmdao.variable``.  
+Also, this time around we'll specify the name *coord* for our distribution 
+using the **--dist** option.
+
+::
+
+
+    plugin_quickstart Coordinates -d myplugins -g openmdao.variable --dist=coord 
+
+
+Since we said our distribution name is going to be *coord*, that means that
+``plugin_quickstart`` created a skeleton of our plugin class definition in 
+the ``src/coord/coord.py`` file.  After editing that file, it looks like this:
 
 ::
 
@@ -253,10 +379,10 @@ file called ``coord.py`` and placing the following code in it:
     
         def validate(self, object, name, value):
             if isinstance(value, tuple) and len(value) == 3 and \
-               all([isinstance(val,float) or isinstance(val,int) for val in value]):
+               all([isinstance(val,(float,int)) for val in value]):
                 return value
             else:
-                self._logger.error(object, name, value)
+                self.error(object, name, value)
 
 
 OpenMDAO uses the Traits package from Enthought to implement variables. The
@@ -292,31 +418,17 @@ valid. In this particular case, we just need to verify that the value is a
 3-tuple and it has float or int entries. If the value is acceptable, then we
 just return it. We don't need to do it in this case, but in other custom
 traits, we could convert the value before returning it. If the value
-is not acceptable, then we call the error function, which will raise an
-exception.
+is not acceptable, then we call the error function, which will raise a
+TraitError exception.
 
-That's all of the source code required to make our coordinates variable 
-functional.  The next step is to turn our module into a package and define
-an entry point for our new class.  This is very similar to what we did in the
-section earlier where we made a component plugin, except this time we use
-a different entry point group name.
+That's all of the source code required to make our Coordinates variable 
+functional.  As in the earlier section where we made a component plugin,
+we need to specify the metadata for our distribution by editing the 
+``setup.cfg`` file and add any extra documentation that we want to the
+``docs/usage.rst`` file and the ``README.txt`` file.  When that's done,
+as before, we run ``package_plugin`` and the end result should be a
+source distribution named ``coord-0.1.tar.gz``.  The version id of our 
+plugin defaulted to **0.1** because we didn't specify it when we ran
+``plugin_quickstart``.
 
-
-::
-
-
-    from setuptools import setup, find_packages
-    
-    setup(
-        name='coord',
-        version='1.0',
-        packages=find_packages(),
-        install_requires=['Traits>=3.1.0'],
-        entry_points={
-          'openmdao.variable': ['Coordinates = coord:Coordinates']
-        }
-    )
-
-We can create this file by hand or generate it using ``mod2dist``, as shown in
-an earlier section.
 

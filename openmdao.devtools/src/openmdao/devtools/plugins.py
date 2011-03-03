@@ -281,21 +281,32 @@ graft src/%(name)s/sphinx_build/html
 
 """
 
+templates['README.txt'] = """
+
+README.txt file for %(name)s.
+
+To view the Sphinx documentation for this distribution, type:
+
+plugin_docs %(name)s
+
+
+"""
+
 templates['setup.cfg'] = """
 
 [metadata]
 name = %(name)s
 version = %(version)s
 summary = 
-description-file = usage.rst
+description-file = README.txt
 keywords = openmdao
-home-page = UNKNOWN
-download-url = UNKNOWN
-author = UNKNOWN
-author-email = UNKNOWN
-maintainer = UNKNOWN
-maintainer-email = UNKNOWN
-license = UNKNOWN
+home-page = 
+download-url = 
+author = 
+author-email = 
+maintainer = 
+maintainer-email = 
+license = 
 classifier = Intended Audience :: Science/Research
     Topic :: Scientific/Engineering
 
@@ -306,7 +317,7 @@ requires-python =
     >=2.6
     <2.7
 requires-externals = 
-project-url = UNKNOWN
+project-url = 
 
 """
 
@@ -318,7 +329,7 @@ from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
 
 
-class %(name)s(Component):
+class %(classname)s(Component):
     # declare inputs and outputs here
     #x = Float(0.0, iotype='in')
     #y = Float(0.0, iotype='out')
@@ -334,24 +345,42 @@ code_templates['openmdao.driver'] = """
 from openmdao.main.api import Driver
 from openmdao.util.decorators import add_delegate
 
-class %(name)s(Driver):
+class %(classname)s(Driver):
 
     def start_iteration(self):
-        super(%(name)s, self).start_iteration()
+        super(%(classname)s, self).start_iteration()
 
     def continue_iteration(self):
-        return super(%(name)s, self).continue_iteration()
+        return super(%(classname)s, self).continue_iteration()
     
     def pre_iteration(self):
-        super(%(name)s, self).pre_iteration()
+        super(%(classname)s, self).pre_iteration()
         
     def run_iteration(self):
-        super(%(name)s, self).run_iteration()
+        super(%(classname)s, self).run_iteration()
 
     def post_iteration(self):
-        super(%(name)s, self).post_iteration()
+        super(%(classname)s, self).post_iteration()
 
 """
+
+code_templates['openmdao.variable'] = """
+from openmdao.lib.datatypes.api import TraitType
+
+class %(classname)s(TraitType):
+
+    #def __init__(self, default_value = ???, **metadata):
+    #    super(%(classname)s, self).__init__(default_value=default_value,
+    #                                        **metadata)
+
+    def validate(self, object, name, value):
+        pass
+        # insert validation code here
+        
+        # in the event of an error, call
+        # self.error(object, name, value)
+"""
+
 
 def get_pkgdocs(metadata):
     lines = ['\n',
@@ -367,13 +396,13 @@ def get_pkgdocs(metadata):
             continue
         if value.strip():
             if '\n' in value:
-                lines.append(":%s: " % key)
+                lines.append("- **%s**: " % key)
                 for v in [vv.strip() for vv in value.split('\n')]:
                     if v:
                         lines.append("    %s\n\n" % v)
                 lines.append('\n')
             elif value != 'UNKNOWN':
-                lines.append(":%s: %s\n\n" % (key, value))
+                lines.append("- **%s**: %s\n\n" % (key, value))
         
     return ''.join(lines)
 
@@ -427,21 +456,29 @@ def plugin_quickstart(argv=None):
         argv = sys.argv[1:]
     
     parser = OptionParser()
-    parser.usage = "plugin_quickstart <plugin_name> <version> [options]"
+    parser.usage = "plugin_quickstart <plugin_class_name> [options]"
+    parser.add_option("-v", "--version", action="store", type="string", dest='version', default='0.1',
+                      help="version id of the plugin (optional)")
+    parser.add_option("", "--dist", action="store", type="string", dest='dist',
+                      help="distribution name (optional)")
     parser.add_option("-d", "--dest", action="store", type="string", dest='dest', default='.',
-                      help="destination directory (parent of the new plugin directory)")
+                      help="directory where new plugin directory will be created (optional)")
     parser.add_option("-g", "--group", action="store", type="string", dest='group', 
                       default = 'openmdao.component',
-                      help="specify plugin group (openmdao.component, openmdao.driver, openmdao.variable)")
+                      help="specify plugin group (openmdao.component, openmdao.driver, openmdao.variable) (optional)")
     
     (options, args) = parser.parse_args(argv)
 
-    if len(args) < 2 or len(args) > 3:
+    if len(args) < 1 or len(args) > 2:
         parser.print_help()
         sys.exit(-1)
 
-    name = args[0]
-    version = args[1]
+    classname = args[0]
+    if options.dist:
+        name = options.dist
+    else:
+        name = classname.lower()
+    version = options.version
     
     setup_options = {
         'name': name,
@@ -464,13 +501,15 @@ def plugin_quickstart(argv=None):
     
     template_options = {
         'release': version,
+        'classname': classname,
         'copyright': '',
         'summary': '',
         'title_marker': '='*(len(name)+len(' Documentation')),
         'setup_options': sio.getvalue()
     }
     
-    
+    options.dest = os.path.expandvars(os.path.expanduser(options.dest))
+
     startdir = os.getcwd()
     try:
         os.chdir(options.dest)
@@ -495,10 +534,10 @@ def plugin_quickstart(argv=None):
                 'setup.py': templates['setup.py'] % template_options,
                 'setup.cfg': cfgcontents.getvalue(),
                 'MANIFEST.in': templates['MANIFEST.in'] % template_options,
-                'README.txt': 'README.txt file for %s' % name,
+                'README.txt': templates['README.txt'] % template_options,
                 'src': {
                     name: {
-                        '__init__.py': '',
+                        '__init__.py': 'from %s import %s\n' % (name,classname),
                         pyfile: pycontents,
                         },
                     },
