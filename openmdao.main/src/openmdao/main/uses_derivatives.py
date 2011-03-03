@@ -8,12 +8,21 @@
     to it's objective(s) and constraints.
 """
 
+# pylint: disable-msg=E0611,F0401
+from openmdao.lib.datatypes.api import Instance
+from openmdao.main.interfaces import IDifferentiator
+
 
 class UsesDerivatives_Base(object): 
     """This class provides an implementation of the derivatives delegates."""
 
     def __init__(self, parent):
         self._parent = parent
+        
+        parent.add_trait("differentiator", \
+                         Instance(IDifferentiator, iotype='in', \
+                                  desc = "Socket for a differentiator"))
+                                                         
 
     def _list_driver_connections(self):
         """Return a list of inputs and a list of outputs that are referenced by

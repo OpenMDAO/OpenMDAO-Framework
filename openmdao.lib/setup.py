@@ -54,8 +54,9 @@ Component, Driver, and TraitType plugins for OpenMDAO
       openmdao.lib.CaseIteratorDriver = openmdao.lib.drivers.caseiterdriver:CaseIteratorDriver
       openmdao.lib.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
       openmdao.lib.DOEdriver = openmdao.lib.drivers.doedriver:DOEdriver
-      openmdao.lib.Genetic = openmdao.lib.drivers.genetic:Genetic
+      openmdao.lib.FiniteDifference = openmdao.lib.differentiators.finite_difference:FiniteDifference
       openmdao.lib.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
+      openmdao.lib.Genetic = openmdao.lib.drivers.genetic:Genetic
       openmdao.lib.NEWSUMTdriver = openmdao.lib.drivers.newsumtdriver:NEWSUMTdriver
       openmdao.lib.SimpleCaseIterDriver = openmdao.lib.drivers.simplecid:SimpleCaseIterDriver
       [openmdao.component]

@@ -406,7 +406,17 @@ class IDOEgenerator(Interface):
     def __iter__():
         """Return an iterator object."""
 
+class IDifferentiator(Interface):
+    """A plugin to driver that can determine derivatives between a driver's
+    parameters and its objectives and constraints."""
+    
+    def calc_gradient():
+        """Returns the gradient vectors for this Driver's workflow"""
 
+    def calc_hessian():
+        """Returns the Hessian matrix for this Driver's workflow"""
+        
+        
 class IUncertainVariable(Interface):
     """A variable which supports uncertainty"""
     def getvalue():

@@ -220,8 +220,6 @@ class NEWSUMTdriver(Driver):
     mflag = Int(15, iotype='in', desc='Flag for penalty multiplier. \
                      If 0, initial value computed by NEWSUMT. \
                      If 1, initial value set by ra.')
-    ndv = Int(0, iotype='in', desc='Number of design variables.' )
-    ntce = Int(0, iotype='in', desc='Number of constraints considered.' )
     
     def __init__(self, doc=None):
         super(NEWSUMTdriver, self).__init__( doc)
