@@ -269,7 +269,8 @@ class TestCase(unittest.TestCase):
         
         data = "Anchor\n" + \
                "10 20 30 40 50 60 70 80\n" + \
-               "11 21 31 41 51 61 71 81\n"
+               "11 21 31 41 51 61 71 81\n" + \
+               "Key a b c d e\n"
         
         outfile = open(self.filename, 'w')
         outfile.write(data)
@@ -286,8 +287,15 @@ class TestCase(unittest.TestCase):
         val = gen.transfer_array(1, 5, 2, 6)
         self.assertEqual(val[0], 50)
         self.assertEqual(val[9], 61)
+        gen.mark_anchor('Key')
+        val = gen.transfer_array(0, 2, 0, 6)
+        self.assertEqual(val[4], 'e')
+        val = gen.transfer_array(0, 2, fieldend=6)
+        self.assertEqual(val[4], 'e')
         
         # Now, let's try column delimiters
+        gen.reset_anchor()
+        gen.mark_anchor('Anchor')
         gen.set_delimiters('columns')
         val = gen.transfer_array(1, 7, 1, 15)
         self.assertEqual(val[0], 30)

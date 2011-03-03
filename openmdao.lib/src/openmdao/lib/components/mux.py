@@ -5,7 +5,7 @@ from openmdao.main.interfaces import IComponent
 
 
 class Mux(Component): 
-    """ Takes in n inputs, and exports a length n List 
+    """ Takes in *n* inputs and exports a length *n* List 
     with the data. It is a logical multiplexer.
     """
     
@@ -34,7 +34,7 @@ class Mux(Component):
         
 
 class DeMux(Component): 
-    """ Takes one List input, and splits it into n indvidual outputs. This is a 
+    """ Takes one List input and splits it into *n* indvidual outputs. This is a 
     logical demultiplexer. """
 
     n = Int(2,low=2,iotype="in",desc="number of items in the array to be \

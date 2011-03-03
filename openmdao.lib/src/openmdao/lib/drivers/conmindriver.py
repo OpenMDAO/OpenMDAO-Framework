@@ -232,7 +232,7 @@ class CONMINdriver(Driver):
                       'indicate convergence (relative or absolute).')
         
     # Extra variables for printing
-    printvars = List(Str, iotype='in', desc='List of extra variables to'
+    printvars = List(Str, iotype='in', desc='List of extra variables to '
                                'output in the recorder.')
     
     def __init__(self, doc=None):
@@ -315,7 +315,7 @@ class CONMINdriver(Driver):
             
         
     def run_iteration(self):
-        """ The CONMIN driver iteration"""
+        """ The CONMIN driver iteration."""
         
         #self._logger.debug('iter_count = %d' % self.iter_count)
         #self._logger.debug('objective = %f' % self.cnmn1.obj)
@@ -395,7 +395,7 @@ class CONMINdriver(Driver):
 
             
     def post_iteration(self):
-        """ Checks CONMIN's return status and writes out cases"""
+        """ Checks CONMIN's return status and writes out cases."""
         
         super(CONMINdriver, self).post_iteration()
         
@@ -427,8 +427,8 @@ class CONMINdriver(Driver):
         
 
     def _config_conmin(self):
-        """Set up arrays for the FORTRAN conmin routine, and perform some
-        validation and make sure that array sizes are consistent.
+        """Set up arrays for the FORTRAN conmin routine and perform some
+        validation, and make sure that array sizes are consistent.
         """
         
         self.cnmn1.clear()

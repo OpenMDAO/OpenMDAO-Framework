@@ -36,7 +36,7 @@ class CaseIterDriverBase(Driver):
     """
 
     recorder = Instance(ICaseRecorder, allow_none=True, 
-                        desc='Something to save Cases to.')
+                        desc='Something to save cases to.')
     
     sequential = Bool(True, iotype='in',
                       desc='If True, evaluate cases sequentially.')

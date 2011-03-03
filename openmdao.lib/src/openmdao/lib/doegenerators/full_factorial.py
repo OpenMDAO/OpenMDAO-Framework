@@ -18,10 +18,10 @@ class FullFactorial(HasTraits):
     implements(IDOEgenerator)
     
     # pylint: disable-msg=E1101
-    num_parameters = Int(0, iotype="in", desc="number of independent "
-                                              "parameters in the DOE")
-    num_levels = Int(0, iotype="in", desc="number of levels of values for "
-                                          "each parameter")
+    num_parameters = Int(0, iotype="in", desc="Number of independent "
+                                              "parameters in the DOE.")
+    num_levels = Int(0, iotype="in", desc="Number of levels of values for "
+                                          "each parameter.")
     
     def __init__(self, num_levels=None, *args, **kwargs):
         
@@ -31,7 +31,7 @@ class FullFactorial(HasTraits):
             self.num_levels = num_levels
     
     def __iter__(self):
-        """Return an iterator over our sets of input values"""
+        """Return an iterator over our sets of input values."""
         
         return product(*[linspace(0., 1., self.num_levels) \
                          for i in range(self.num_parameters)])

@@ -1,5 +1,5 @@
 """Expected Improvement calculation for one or more objectives""" 
-from time import time
+
 from numpy import exp, abs, pi, array,isnan
 from scipy.special import erf
 
@@ -64,7 +64,7 @@ class MultiObjExpectedImprovement(Component):
     def _multiPI(self,mu,sigma):
         """Calculates the multi-objective probability of improvement
         for a new point with two responses. Takes as input a 
-        pareto frontier, mean and sigma of new point"""
+        pareto frontier, mean and sigma of new point."""
         
         y_star = self.y_star
         
@@ -84,7 +84,7 @@ class MultiObjExpectedImprovement(Component):
     def _multiEI(self,mu,sigma):
         """Calculates the multi-criteria expected improvement
         for a new point with two responses. Takes as input a 
-        pareto frontier, mean and sigma of new point"""
+        pareto frontier, mean and sigma of new point."""
         
         y_star = self.y_star
         self.PI = self._multiPI(mu,sigma)

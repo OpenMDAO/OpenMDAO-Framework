@@ -1,4 +1,4 @@
-""" Pareto Filter -- finds non-dominated cases """
+""" Pareto Filter -- finds non-dominated cases. """
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Instance, List, ListStr
@@ -29,7 +29,7 @@ class ParetoFilter(Component):
                              "Find the pareto optimal subset.")
     
     pareto_set = Instance(ICaseIterator, iotype="out", 
-                          desc="resulting collection of pareto optimal cases",copy="shallow")
+                          desc="Resulting collection of pareto optimal cases.",copy="shallow")
     dominated_set = Instance(ICaseIterator, iotype="out",
                              desc="Resulting collection of dominated cases.",copy="shallow")
     

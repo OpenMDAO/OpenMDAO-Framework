@@ -10,8 +10,8 @@ class SimpleCaseIterDriver(Driver):
     """
     A Driver that sequentially runs a set of cases provided by an :class:`ICaseIterator`
     and records the results in a :class:`CaseRecorder`. This is
-    intended for test cases or very simple models only. For a more full-
-    featured Driver with similar functionality, see
+    intended for test cases or very simple models only. For a more full-featured Driver 
+    with similar functionality, see
     :class:`CaseIteratorDriver`.
 
     - The `iterator` socket provides the cases to be evaluated.

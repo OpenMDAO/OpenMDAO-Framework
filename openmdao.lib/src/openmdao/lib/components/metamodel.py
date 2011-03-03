@@ -2,7 +2,7 @@
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array
-from openmdao.lib.datatypes.api import Instance, ListStr, Event, Either, \
+from openmdao.lib.datatypes.api import Instance, ListStr, Event, \
      List, Str, Dict
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait

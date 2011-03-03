@@ -1,4 +1,4 @@
-""" Class definition for Assembly """
+""" Class definition for Assembly. """
 
 
 #public symbols
@@ -27,7 +27,7 @@ class PassthroughTrait(TraitType):
     """
 
     def validate(self, obj, name, value):
-        """Validation for the PassThroughTrait"""
+        """Validation for the PassThroughTrait."""
         if self.validation_trait:
             return self.validation_trait.validate(obj, name, value)
         return value
@@ -40,7 +40,7 @@ class Assembly (Component):
     
     driver = Instance(Driver, allow_none=True,
                       desc="The top level Driver that manages execution of "
-                           "this Assembly")
+                           "this Assembly.")
     
     def __init__(self, doc=None, directory=''):
         super(Assembly, self).__init__(doc=doc, directory=directory)
@@ -141,10 +141,10 @@ class Assembly (Component):
         that it is referring to a Variable outside of this object's scope.
         
         srcpath: str
-            Pathname of source variable
+            Pathname of source variable.
             
         destpath: str
-            Pathname of destination variable
+            Pathname of destination variable.
         """
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)

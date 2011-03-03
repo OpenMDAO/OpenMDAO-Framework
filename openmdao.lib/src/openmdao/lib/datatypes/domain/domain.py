@@ -134,7 +134,7 @@ class DomainObj(object):
 
         logger: Logger or None
             Used to log debug messages that will indicate what if anything
-            is not equivalent
+            is not equivalent.
 
         tolerance: float
             The maximum relative difference in array values to be considered
@@ -163,7 +163,7 @@ class DomainObj(object):
 
     def make_cartesian(self, axis='z'):
         """
-        Convert to cartesian coordinate system.
+        Convert to Cartesian coordinate system.
 
         axis: string
             Specifies which is the cylinder axis ('z' or 'x').

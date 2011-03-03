@@ -461,6 +461,10 @@ class test__PhysicalQuantity(unittest.TestCase):
         else: 
             self.fail("TypeError expected")
 
+        x=units.PhysicalQuantity('1.0psi')
+        x.convert_to_unit('psf')
+        self.assertEqual(x,units.PhysicalQuantity('144.0psf'))
+        
     def test_in_units_of(self):
         """in_units_of should return a new PhysicalQuantity with the requested unit, leaving the old unit as it was"""
 

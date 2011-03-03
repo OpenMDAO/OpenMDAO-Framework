@@ -1,4 +1,4 @@
-""" Surrogate model based on Kriging """
+""" Surrogate model based on Kriging. """
 
 from math import log, e, sqrt
 
