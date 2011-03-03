@@ -177,7 +177,8 @@ Contents:
 
 templates['srcdocs.rst'] = """
 
-.. _source-documentation-label:
+.. _%(name)s_src_label:
+
 
 ====================
 Source Documentation
@@ -190,14 +191,15 @@ Source Documentation
 
 """
 
+
 templates['usage.rst'] = """
 
 ===========
 Usage Guide
 ===========
 
-No usage information has been provided for this plugin. Consult the 
-:ref:`_source-documentation-label` for more info.
+No usage information has been provided for this plugin. Consult the
+:ref:`%(name)s_src_label` section for more detail.
 
 """
 
@@ -218,8 +220,8 @@ name = '%(name)s'
 version = '%(version)s'
 release = '%(release)s'
 
-# add our package to python path so autodoc will find our source code
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),'src',name))
+# prepend our package to python path so autodoc will find our source code
+sys.path[0:0] = [os.path.join(os.path.dirname(os.path.abspath(__file__)),'src',name)]
 
 kwargs = %(setup_options)s
 
@@ -260,6 +262,8 @@ if 'build_sphinx' in sys.argv:
                 'version': ('setup.py', version),
                 'release': ('setup.py', release),
                 'build_dir': ('setup.py', 'src/%(name)s/sphinx_build'),
+                'all_files': ('setup.py', 'true'),
+                'fresh_env': ('setup.py', 'true'),
              }
         }
     mydir = os.path.dirname(os.path.abspath(__file__))
