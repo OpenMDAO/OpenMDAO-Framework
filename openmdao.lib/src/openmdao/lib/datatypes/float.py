@@ -9,15 +9,16 @@ __all__ = ["Float"]
 from sys import float_info
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import TraitType, Range, TraitError
+from enthought.traits.api import Range, TraitError
 from enthought.traits.api import Float as TraitFloat
 from openmdao.units import PhysicalQuantity
 
+from openmdao.main.variable import Variable
 from openmdao.main.tvalwrapper import TraitValWrapper
 
 from openmdao.main.uncertain_distributions import UncertainDistribution
 
-class Float(TraitType):
+class Float(Variable):
     """A Variable wrapper for floating point number valid within a
     specified range of values.
     """

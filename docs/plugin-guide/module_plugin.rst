@@ -239,7 +239,7 @@ for whatever plugins you define under the ``src`` tree.
 If you plan to use ``package_plugin`` to create your distribution, you should not
 modify any of the files listed below because they will be overwritten by the script.
 
-    - **setup.cfg**
+    - **setup.py**
     - **docs/pkgdocs.rst**
     - **docs/srcdocs.rst**
 
@@ -250,7 +250,7 @@ distribution using the standard Python packaging procedure, for example:
 ::
 
     python setup.py sdist
-    
+
 
 That will create a source distribution of your plugin, but keep in mind that
 in this case you will have to specify entry point metadata in the ``setup.py``
@@ -369,9 +369,9 @@ the ``src/coord/coord.py`` file.  After editing that file, it looks like this:
 
 ::
 
-    from openmdao.lib.datatypes.api import TraitType
+    from openmdao.main.variable import Variable
     
-    class Coordinates(TraitType):
+    class Coordinates(Variable):
     
         def __init__(self, default_value = (0.,0.,0.), **metadata):
             super(Coordinates, self).__init__(default_value=default_value,
@@ -385,18 +385,21 @@ the ``src/coord/coord.py`` file.  After editing that file, it looks like this:
                 self.error(object, name, value)
 
 
-OpenMDAO uses the Traits package from Enthought to implement variables. The
-base class for custom traits is ``TraitType``, so that's the base class for our
-coordinates variable. If a component or a component class contains a ``TraitType``
-object and that object has a metadata attribute called *iotype*, then that object
-is exposed to the framework as a variable whose value can be passed between
-components.  One thing that can be a little confusing to people first using Traits
-is that the Trait object itself is just a validator and possibly a converter.  The
-object that actually gets passed around between components is the *value* that the
-trait corresponds to and not the trait itself. For example, if we had a component
-named *wheel* that contained one of our Coordinates traits named
-``center_location``, then the value of ``wheel.center_location`` would be a 3-tuple,
-not a Coordinates object.
+OpenMDAO provides a base class for framework visible inputs and outputs called
+``Variable``, so that's the base class for our coordinates variable. If a
+class inherits from ``Variable``, then that class is recognized by the
+framework as a plugin. If a Component object contains a ``Variable`` instance
+that has a metadata attribute named *iotype* then that instance object is
+exposed to the framework as a variable whose value can be passed between
+components. Valid values for *iotype* are 'in' and 'out'. 
+
+One thing that can be a little confusing to people first using Variables is that
+the Variable object itself is just a validator and possibly a converter. The
+object that actually gets passed around between components is the *value* that
+the variable corresponds to and not the variable itself. For example, if we had a
+component named *wheel* that contained one of our Coordinates variables named
+``center_location``, then the value of ``wheel.center_location`` would be a
+3-tuple, not a Coordinates object.
 
 We override the base class constructor so we can supply a default value of
 (``0.,0.,0.``) if the caller doesn't supply one. After that, the only function we

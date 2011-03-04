@@ -1,6 +1,9 @@
 """
-This package is not intended to be used as anything other than a 'develop'
-egg.  It's just a place to collect all of the scripts we use to build
+This package is not included in an OpenMDAO release.  It's always present in 
+a 'dev' install, but to be used with a release it must be explicitly installed
+after the release virtualenv has been activated.
+
+It's just a place to collect all of the tools we use to build
 openmdao docs, releases, etc., and a place to specify all of their 
 dependencies without forcing non-dev openmdao users to satisfy dependencies
 that they don't need.
@@ -11,15 +14,14 @@ that they don't need.
 import os,sys
 from setuptools import setup, find_packages
 
-#here = os.path.dirname(os.path.realpath(__file__))
-#sys.path.insert(0, os.path.normpath(os.path.join(here,
-#                                                 'src',
-#                                                 'openmdao',
-#                                                 'devtools')))
+here = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.normpath(os.path.join(here,
+                                                 'src',
+                                                 'openmdao',
+                                                 'devtools')))
 
-#import releaseinfo
-#version = releaseinfo.__version__
-version = '0.1'
+import releaseinfo
+version = releaseinfo.__version__
 
 setup(name='openmdao.devtools',
       version=version,
@@ -40,7 +42,7 @@ setup(name='openmdao.devtools',
           'Sphinx',
           'Fabric>=0.9.3',
           'virtualenv',
-          'openmdao.lib',
+          'openmdao.util',
       ],
       entry_points = {
           "console_scripts": [
@@ -49,7 +51,6 @@ setup(name='openmdao.devtools',
                 "openmdao_testdocs=openmdao.devtools.build_docs:test_docs",
                 "test_release=openmdao.devtools.test_release:main",
                 "push_docs=openmdao.devtools.build_docs:push_docs",
-                "plugin_quickstart=openmdao.devtools.plugins:plugin_quickstart",
               ],
       }
     )

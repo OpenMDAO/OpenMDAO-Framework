@@ -5,7 +5,7 @@ import os
 import shutil
 import tempfile
 
-from openmdao.devtools.plugins import plugin_quickstart
+from openmdao.main.plugin import plugin_quickstart
 from openmdao.util.fileutil import find_files
 
 class PluginsTestCase(unittest.TestCase):
@@ -16,7 +16,7 @@ class PluginsTestCase(unittest.TestCase):
         shutil.rmtree(self.tdir)
 
     def test_quickstart(self):
-        argv = ['foobar', '1.1', self.tdir]
+        argv = ['foobar', '-v', '1.1', '-d', self.tdir]
         plugin_quickstart(argv)
         fandd = find_files(self.tdir, nodirs=False)
         self.assertEqual(set([os.path.basename(f) for f in fandd]), 
@@ -26,3 +26,4 @@ class PluginsTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+    

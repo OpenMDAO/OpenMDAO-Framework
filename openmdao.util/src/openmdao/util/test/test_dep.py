@@ -29,10 +29,10 @@ class DepTestCase(unittest.TestCase):
                         psta.graph['openmdao.main.component.Component'])
         
         self.assertTrue('openmdao.lib.datatypes.float.Float' in
-                        psta.graph['enthought.traits.api.TraitType'])
+                        psta.graph['openmdao.main.variable.Variable'])
         
         comps = psta.find_inheritors('openmdao.main.component.Component')
-        comps.extend(psta.find_inheritors('enthought.traits.api.TraitType'))
+        comps.extend(psta.find_inheritors('openmdao.main.variable.Variable'))
         comps.extend(psta.find_inheritors('enthought.traits.api.Array'))
         comps = [x.rsplit('.',1)[1] for x in comps]
         comps.remove('Driver')

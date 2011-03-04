@@ -16,7 +16,7 @@ setup(name='openmdao.lib',
       version=version,
       description="OpenMDAO Standard Library",
       long_description="""\
-Component, Driver, and TraitType plugins for OpenMDAO
+Component, Driver, and Variable plugins for OpenMDAO
 """,
       classifiers=[
         'Development Status :: 2 - Pre-Alpha',

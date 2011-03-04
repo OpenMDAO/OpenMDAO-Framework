@@ -182,7 +182,7 @@ class Oddball(Assembly):
 
     # FIXME: I tried the built-in trait types of Callable, Method, and Function
     # for these two sockets and couldn't get them to work.  We may have to
-    # create new TraitTypes for these...
+    # create new Variables for these...
     #function_socket = Instance(Callable, none_allowed=True,
     #                           desc='Just something to call.', required=False)
     #method_socket = Instance(Callable, none_allowed=True,

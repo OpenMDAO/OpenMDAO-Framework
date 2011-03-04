@@ -11,7 +11,6 @@ from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
 from token import NAME, OP
 from tokenize import generate_tokens
-#import compiler
 import ast
 import parser
 
@@ -90,7 +89,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
     python file.
     """
-    def __init__(self, fname):
+    def __init__(self, fname, stop_classes=None):
         ast.NodeVisitor.__init__(self)
         self.fname = os.path.abspath(fname)
         self.modpath = get_module_path(fname)
@@ -152,6 +151,8 @@ class PythonSourceTreeAnalyser(object):
         else:
             self.startdirs = startdir
             
+        self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
+            
         if excludes is None:
             self.excludes = []
         else:
@@ -205,6 +206,9 @@ class PythonSourceTreeAnalyser(object):
         self.graph = self.graph.reverse(copy=False)
         
     def find_inheritors(self, base):
-        paths = nx.shortest_path(self.graph, source=base, target=None)
+        try:
+            paths = nx.shortest_path(self.graph, source=base, target=None)
+        except KeyError:
+            return []
         del paths[base] # don't want the base itself in the list
         return paths.keys()

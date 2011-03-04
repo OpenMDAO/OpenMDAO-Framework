@@ -512,30 +512,26 @@ Glossary
         attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
 
 
-      **TraitType** 
-        The base class used when creating a new Variable type.
-      
-      
       **trunk**
         A Bazaar term that refers to the main development branch (in this case,
         the openmdao trunk) from which working branches are pulled.
 
 
       **tuple**
-      	A tuple is an immutable list. It is defined in the same way as a list, except that the whole set of
-	elements is enclosed in parentheses instead of square brackets. The elements of a tuple have a defined
-	order, and tuples indices are zero-based, just like a list, so the first element of a non-empty tuple
-	is always t[0].  Negative indices count from the end of the tuple. Slicing works too, but when you
-	slice a tuple, you get a new tuple.  
+        A tuple is an immutable list. It is defined in the same way as a list, except that the whole set of  
+        elements is enclosed in parentheses instead of square brackets. The elements of a tuple have a defined
+        order, and tuples indices are zero-based, just like a list, so the first element of a non-empty tuple
+        is always t[0].  Negative indices count from the end of the tuple. Slicing works too, but when you
+        slice a tuple, you get a new tuple.  
 
 
       **units**
         A package used by OpenMDAO that provides unit conversion capability for variables.
 
        
-      **Variable**
-        see :term:`Variables`
-
+      **Variable** 
+        The base class used when creating a new Variable type.
+      
         
       **Variables** 
         A component's inputs and outputs that are visible to other components
