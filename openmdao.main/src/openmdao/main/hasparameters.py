@@ -6,10 +6,11 @@ from openmdao.main.expreval import ExprEvaluator
 
 class Parameter(object): 
     
-    def __init__(self, low=None, high=None, expr=None):
+    def __init__(self, low=None, high=None, expr=None, fd_step=None):
         self.low = low
         self.high = high
         self.expreval = expr
+        self.fd_step = fd_step
 
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface."""
@@ -27,7 +28,7 @@ class HasParameters(object):
         for name, low, high in param_iter:
             self._parent.add_parameter(name, low=low, high=high)
 
-    def add_parameter(self, name, low=None, high=None):
+    def add_parameter(self, name, low=None, high=None, fd_step=None):
         """Adds a parameter to the driver. 
         
         name: string
@@ -38,6 +39,10 @@ class HasParameters(object):
             
         high: float (optional)
             Maximum allowed value of the parameter.
+            
+        fd_step: float (optional)
+            Step-size to use for finite difference calculation. If no value is
+            given, the differentitator will use its own default
         
         If neither "low" nor "high" is specified, the min and max will
         default to the values in the metadata of the variable being
@@ -107,6 +112,7 @@ class HasParameters(object):
             self._parent.raise_exception("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
                                          (name, parameter.low, parameter.high), ValueError)
 
+        self.fd_step = fd_step
         self._parameters[name] = parameter
             
     def remove_parameter(self, name):

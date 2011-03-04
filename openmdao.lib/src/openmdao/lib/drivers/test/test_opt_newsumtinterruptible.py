@@ -217,13 +217,8 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
-        self.top.driver.ifd = 4 
-        self.top.driver.iside = numpy.array( [3,3], dtype=int )
         self.top.driver.jprint = -1
         self.top.driver.lobj = 0
-        self.top.driver.mflag = 0
-        self.top.driver.ndv = 2
-        self.top.driver.ntce = 0
         
     def tearDown(self):
         '''tear down'''
@@ -239,28 +234,6 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
             ('comp.x[1]', -100.0, 100.0),
             ] )
         
-        map(self.top.driver.add_constraint,[ ])    
-        self.top.run()
-        self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.eval_objective(), places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
-                               self.top.comp.x[0], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
-                               self.top.comp.x[1], places=2)
-    
-    def test_missing_iside(self):
-
-        # iside set so should default to no
-        #     side bounds. Should get same result
-        
-        self.top.driver.add_objective('comp.result')
-
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', -100.0, 100.0),
-            ('comp.x[1]', -100.0, 100.0),
-            ] )
-        
-        self.top.driver.iside = numpy.array( [], dtype=int )
         map(self.top.driver.add_constraint,[ ])    
         self.top.run()
         self.assertAlmostEqual(self.top.comp.opt_objective, 
@@ -300,13 +273,8 @@ class NEWSUMTdriverParaboloidWithLinearConstraintTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
-        self.top.driver.ifd = 4 
-        self.top.driver.iside = numpy.array( [3,3], dtype=int )
         self.top.driver.jprint = -1
         self.top.driver.lobj = 0
-        self.top.driver.mflag = 0
-        self.top.driver.ndv = 2
-        self.top.driver.ntce = 1
         self.top.driver.ilin = numpy.array( [1], dtype=int )
         
     def tearDown(self):
@@ -343,14 +311,8 @@ class NEWSUMTdriverParaboloidWithNonLinearConstraintTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 300
-        self.top.driver.ifd = 4 
-        self.top.driver.iside = numpy.array( [3,3], dtype=int )
         self.top.driver.jprint = -1
         self.top.driver.lobj = 0
-        self.top.driver.mflag = 0
-        self.top.driver.ndv = 2
-        self.top.driver.ntce = 1
-        self.top.driver.ilin = numpy.array( [0], dtype=int )
         
     def tearDown(self):
         '''tear down'''
@@ -385,20 +347,12 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
         self.top.add('comp', ConstrainedBettsComponent())
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
-        self.top.driver.itmax = 3000
+        self.top.driver.itmax = 100
         # use finite differences for gradients for objective
         #      and constraint functions
         # use the default values for the step size = 0.01
-        self.top.driver.ifd = 4 
-        self.top.driver.fdcv = [0.0,0.0]
-        self.top.driver.iside = numpy.array( [3,3], dtype=int )
         self.top.driver.jprint = -1
-        self.top.driver.lobj = 0
-        self.top.driver.mflag = 0
-        self.top.driver.ndv = 2
-        self.top.driver.ntce = 1
         self.top.driver.epsrsf = 0.0000005
-        self.top.driver.ilin = numpy.array( [1], dtype=int )
         
     def tearDown(self):
         '''tear down'''
@@ -414,6 +368,7 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
             ] )
         
         map(self.top.driver.add_constraint,[ '-10.0 + 10.0 * comp.x[0] - comp.x[1] > 0.0' ] )
+        self.top.driver.ilin = [1]
 
         self.top.run()
         
@@ -436,14 +391,8 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
-        self.top.driver.ifd = 4
-        self.top.driver.iside = numpy.array( [3,3,3,3], dtype=int )
         self.top.driver.jprint = -1
         self.top.driver.lobj = 0
-        self.top.driver.mflag = 0
-        self.top.driver.ndv = 4
-        self.top.driver.ntce = 3
-        self.top.driver.ilin = numpy.array( [0,0,0], dtype=int )
         
     def tearDown(self):
         '''tear down'''
@@ -489,17 +438,14 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 100
-        self.top.driver.ifd = 4
-        self.top.driver.iside = numpy.array( [1,1], dtype=int )
         self.top.driver.jprint = -1
         self.top.driver.lobj = 1
-        self.top.driver.mflag = 0
-        self.top.driver.ndv = 2
-        self.top.driver.ntce = 3
-        self.top.driver.ilin = numpy.array( [1,1,0], dtype=int )
-        self.top.driver.epsrsf = 0.00001
-        self.top.driver.epsodm = 0.00001
-        self.top.driver.epsgsn = 0.00001
+        self.top.driver.epsrsf = 0.0005
+        self.top.driver.epsodm = 0.001
+        self.top.driver.epsgsn = 0.001
+        self.top.driver.default_fd_stepsize = 0.001
+        self.top.driver.stepmx = 1e10
+        self.top.driver.maxrsf = 30
         
     def tearDown(self):
         '''tear down'''
@@ -521,15 +467,15 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             ])    
         self.top.run()
 
-        self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.eval_objective(), places=2)
+        assert_rel_error(self, self.top.comp.opt_objective, 
+                               self.top.driver.eval_objective(), .05)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
                                self.top.comp.x[0], places=2)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
                                self.top.comp.x[1], places=2)
 
-    def test_missing_ilin(self):
-        # Test when user forgets to specify ilin
+    def test_bad_ilin(self):
+        # Test when user specify an ilin of improper dimension
         
         self.top.driver.add_objective('comp.result')
         
@@ -544,57 +490,17 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             '- comp.x[0]**2 + 2.0 * ( comp.x[0] + comp.x[1]) - 1.0 > 0.0'
             ])    
 
-        self.top.driver.ilin = numpy.array( [], dtype=int )
+        self.top.driver.ilin = numpy.array( [0, 0], dtype=int )
 
         try:
             self.top.run()
         except RuntimeError, err:
-            self.assertEqual(str(err), "driver: ilin not specified" )
+            msg = "driver: Dimension of NEWSUMT setting 'ilin' should be equal to " + \
+                  "the number of constraints."            
+            self.assertEqual(str(err), msg )
         else:
             self.fail('RuntimeError expected')
         
-    def test_analytic_gradient_of_constraints(self):
-        # see what happens if you ask NEWSUMT to use
-        # analytics gradients of nonlinear constraints.
-
-        #The wrapped version does not support this yet. 
-        
-        self.top.driver.add_objective('comp.result')
-        
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', 0.0, 100.0),
-            ('comp.x[1]', 0.0, 100.0),
-            ] )
-
-        map(self.top.driver.add_constraint,[
-            '2.0 * comp.x[0] - comp.x[1] - 1.0 > 0.0',
-            'comp.x[0] - 2.0 * comp.x[1] + 1.0 > 0.0',
-            '- comp.x[0]**2 + 2.0 * ( comp.x[0] + comp.x[1]) - 1.0 > 0.0'
-            ])    
-
-        self.top.driver.ifd = 0
-
-        try:
-            self.top.run()
-        except RuntimeError, err:
-            self.assertEqual(str(err), 
-                "driver: NEWSUMT does not yet support " + \
-                             "analytic constraint gradients")
-        else:
-            self.fail('RuntimeError expected')
-
-    def test_bad_objective(self):
-        # test if objective given is invalid
-        
-        try:
-            self.top.driver.add_objective( 'comp.missing' )
-        except ValueError, err:
-            self.assertEqual(str(err), 
-              "driver: Can't add objective because " + \
-              "I can't evaluate 'comp.missing'." )
-        else:
-            self.fail('ValueError Exception expected')
-
     def test_no_design_vars(self):
         # test to see if code responds correctly to no
         #   design vars
@@ -608,27 +514,6 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         else:
             self.fail('RuntimeError expected')
     
-    def test_no_objective(self):
-        # test to see how the code responds to no
-        #   objective function
-        
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', 0.0, 100.0),
-            ('comp.x[1]', 0.0, 100.0),
-            ] )
-        map(self.top.driver.add_constraint,[
-            '2.0 * comp.x[0] - comp.x[1] - 1.0 > 0.0',
-            'comp.x[0] - 2.0 * comp.x[1] + 1.0 > 0.0',
-            '- comp.x[0]**2 + 2.0 * ( comp.x[0] + comp.x[1]) - 1.0 > 0.0'
-            ])    
-        try:
-            self.top.run()
-        except Exception, err:
-            self.assertEqual(str(err), "driver: no objective specified")
-            pass
-        else:
-            self.fail('Exception expected')
-
     def test_get_objective(self):
         # test getting the objective function
         self.top.driver.add_objective( 'comp.result' )
@@ -660,19 +545,6 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         else:
             self.fail('AttributeError expected')
     
-    def test_bad_constraint(self):
-        # test to see how code handles bad constraints
-        try:
-            map(self.top.driver.add_constraint,[
-                'bogus.flimflam > 0.0',
-                ])    
-        except ValueError, err:
-            self.assertEqual(str(err), 
-           "Constraint 'bogus.flimflam > 0.0' has an invalid left-hand-side.")
-
-        else:
-            self.fail('ValueError expected')
-            
     def test_bounds_swapped(self):
         # test for when lower and upper bounds are swapped
         self.top.driver.add_objective( 'comp.result' )
@@ -730,13 +602,12 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             'comp.x[0] - 2.0 * comp.x[1] + 1.0 > 0.0',
             '- comp.x[0]**2 + 2.0 * ( comp.x[0] + comp.x[1]) - 1.0 > 0.0'
             ] )
-        self.top.driver.ifd = -4 
-        self.top.driver.fdcv = [0.01,0.01]
+        self.top.driver.default_fd_stepsize = 0.01
         
         self.top.run()
         baseerror = abs(self.top.comp.opt_objective - self.top.driver.eval_objective())
         
-        self.top.driver.fdcv = [0.1,0.1]
+        self.top.driver.default_fd_stepsize = 10.0
         self.top.comp.x = numpy.array([2.0, 1.0], dtype=float)
         self.top.run()
         newerror = abs(self.top.comp.opt_objective - self.top.driver.eval_objective())

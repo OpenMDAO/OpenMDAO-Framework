@@ -720,7 +720,7 @@ found in the `NEWSUMT Users Guide <file:../../../plugin-guide/newsumt-manual.pdf
 =========  ===========================================  ===========
 Parameter  Description                                  Default
 =========  ===========================================  ===========
-``mflag``  Flag for penalty multiplier.                 15
+``mflag``  Flag for penalty multiplier.                 0
            If 0, initial value computed by NEWSUMT.
            If 1, initial value set by `ra`
 ---------  -------------------------------------------  -----------

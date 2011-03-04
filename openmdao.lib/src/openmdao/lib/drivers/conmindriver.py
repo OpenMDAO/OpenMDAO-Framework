@@ -353,7 +353,7 @@ class CONMINdriver(Driver):
         
         self._save_common_blocks()
         
-        print self.d_const
+        #print self.d_const
         
         # calculate objective and constraints
         if self.cnmn1.info == 1:

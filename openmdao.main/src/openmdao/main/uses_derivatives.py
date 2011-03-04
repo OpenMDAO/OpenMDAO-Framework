@@ -60,8 +60,7 @@ class UsesDerivatives_Base(object):
                         driver_outputs.append(varpath)
                 
         # Constraints can also introduce additional connections.
-        for delegate in ['_hasineqconstraints', '_haseqconstraints', 
-                         '_hasconstraints']:
+        for delegate in ['_hasineqconstraints', '_haseqconstraints']:
             
             if hasattr(self._parent, delegate):
                 constraints = getattr(self._parent, delegate)
@@ -79,6 +78,36 @@ class UsesDerivatives_Base(object):
                            varpath not in driver_outputs:
                             driver_outputs.append(varpath)
                             
+        if hasattr(self._parent, '_hasconstraints'):
+            constraints = getattr(self._parent, '_hasconstraints')
+            for item in constraints._ineq._constraints.values():
+                
+                for varpath in item.lhs.get_referenced_varpaths():
+                    metadata = self._parent.parent.get_metadata(varpath)
+                    if metadata['iotype'] == 'out' and \
+                       varpath not in driver_outputs:
+                        driver_outputs.append(varpath)
+
+                for varpath in item.rhs.get_referenced_varpaths():
+                    metadata = self._parent.parent.get_metadata(varpath)
+                    if metadata['iotype'] == 'out' and \
+                       varpath not in driver_outputs:
+                        driver_outputs.append(varpath)
+                        
+            for item in constraints._eq._constraints.values():
+                
+                for varpath in item.lhs.get_referenced_varpaths():
+                    metadata = self._parent.parent.get_metadata(varpath)
+                    if metadata['iotype'] == 'out' and \
+                       varpath not in driver_outputs:
+                        driver_outputs.append(varpath)
+
+                for varpath in item.rhs.get_referenced_varpaths():
+                    metadata = self._parent.parent.get_metadata(varpath)
+                    if metadata['iotype'] == 'out' and \
+                       varpath not in driver_outputs:
+                        driver_outputs.append(varpath)
+                        
         return driver_inputs, driver_outputs
     
         
