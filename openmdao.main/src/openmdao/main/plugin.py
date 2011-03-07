@@ -7,6 +7,7 @@ import pprint
 import StringIO
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
+from subprocess import call
 
 from openmdao.util.fileutil import build_directory
 from openmdao.util.dep import PythonSourceTreeAnalyser
@@ -631,16 +632,7 @@ def _find_all_plugins(searchdir):
     dct['openmdao.variable'] = set(variables)
 
     return dct
-    
-def _dict_to_ini(dct):
-    s = StringIO.StringIO()
-    for key,val in dct.items():
-        if len(val) > 0:
-            s.write("[%s]\n" % key)
-            for v in val:
-                s.write("%s" % v)
-            s.write('\n')
-    return s.getvalue()
+
 
 def package_plugin(argv=None):
     """A command line script (package_plugin) points to this.  It creates a 
@@ -683,7 +675,7 @@ def package_plugin(argv=None):
         
         pkgdocs = get_pkgdocs(metadata)
         
-        metadata['entry_points'] = entrypoints #_dict_to_ini(entrypoints)
+        metadata['entry_points'] = entrypoints
 
         if 'release' not in metadata:
             metadata['release'] = metadata['version']
@@ -700,9 +692,20 @@ def package_plugin(argv=None):
             }
         
         build_directory(dirstruct, force=True)
+        
+        cmdargs = [sys.executable, 'setup.py', 'sdist', '-d', startdir]
+        cmd = ' '.join(cmdargs)
+        retcode = call(cmdargs)
+        if retcode:
+            sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
     finally:
         os.chdir(startdir)
 
+    disttar = "%s-%s.tar.gz" % (metadata['name'],metadata['version'])
+    if os.path.exists(disttar):
+        print "Created distribution %s" % disttar
+    else:
+        sys.stderr.write("\nERROR: failed to make distribution %s" % disttar)
 
 
 def _plugin_docs(argv=None):
