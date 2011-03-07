@@ -878,7 +878,14 @@ class Container(HasTraits):
                             setattr(self, path, value)
                         finally:
                             self._input_check = chk
-                        self._input_updated(path)
+                        # Note: This was done to make foo.bar = 3 behave the
+                        # same as foo.set('bar', 3).
+                        # Without this, the output of the comp was
+                        # always invalidated when you call set_parameters.
+                        # This meant that component was always executed
+                        # even when the inputs were unchanged.
+                        if self._call_execute:
+                            self._input_updated(path)
                     else:  # array index specified
                         self._array_set(path, value, index)
                 elif index:  # array index specified for output

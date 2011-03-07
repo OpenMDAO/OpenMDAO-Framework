@@ -104,24 +104,13 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, nrandm, \
        this function.
     """
 
-    #print "info = %d" % info
+    print "info = %d" % info
     
-    # First, check and see if any parameters changed.
-    updated = False
-    for i, val in enumerate(driver.get_parameters().values()):
-        value = val.expreval.evaluate()
-        if x[i] != value:
-            updated = True
-            break
-
-    driver.set_parameters(x)
-
     if info in [1, 2]:
         # evaluate objective function or constraint function
         
-        if updated:
-            driver.set_parameters(x)
-            super(NEWSUMTdriver, driver).run_iteration()
+        driver.set_parameters(x)
+        super(NEWSUMTdriver, driver).run_iteration()
 
         # evaluate objectives
         if info == 1:
