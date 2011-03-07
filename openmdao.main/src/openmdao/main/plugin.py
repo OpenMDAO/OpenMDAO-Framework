@@ -218,64 +218,9 @@ templates['setup.py'] = """
 # the distribution.
 #
 
-import sys
-import os
-import warnings
-
-name = '%(name)s'
-version = '%(version)s'
-release = '%(release)s'
-
-# prepend our package to python path so autodoc will find our source code
-sys.path[0:0] = [os.path.join(os.path.dirname(os.path.abspath(__file__)),'src',name)]
-
 kwargs = %(setup_options)s
 
 from setuptools import setup
-
-building = set([
- 'build',
- 'bdist',
- 'sdist',
- 'bdist_egg',
- 'bdist_rpm',
- 'bdist_wininst',
- 'build_ext',
- 'build_py',
-])
-
-# ensure that docs are built during any build command (assuming sphinx is available)
-if 'build_sphinx' not in sys.argv:
-    for arg in sys.argv[1:]:
-        if arg in building:
-            try:
-                from sphinx.setup_command import BuildDoc
-            except ImportError:
-                warnings.warn("Sphinx not found so no docs will be built", Warning)
-            else:
-                sys.argv = [sys.argv[0], 'build_sphinx']+sys.argv[1:]
-        break
-
-# only import BuildDoc if we're building so we can avoid a sphinx
-# dependency when we don't really need it
-if 'build_sphinx' in sys.argv:
-    from sphinx.setup_command import BuildDoc
-    kwargs['cmdclass'] = { 
-         'build_sphinx': BuildDoc,
-    }
-    kwargs['command_options'] = {
-            'build_sphinx': {
-                'version': ('setup.py', version),
-                'release': ('setup.py', release),
-                'build_dir': ('setup.py', 'src/%(name)s/sphinx_build'),
-                'all_files': ('setup.py', 'true'),
-                'fresh_env': ('setup.py', 'true'),
-             }
-        }
-    mydir = os.path.dirname(os.path.abspath(__file__))
-    docbuilddir = os.path.join(mydir, 'src', '%(name)s', 'sphinx_build')
-    if not os.path.isdir(docbuilddir):
-        os.mkdir(docbuilddir)
 
 setup(**kwargs)
 
