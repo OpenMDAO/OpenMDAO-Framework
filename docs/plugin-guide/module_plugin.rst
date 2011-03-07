@@ -16,21 +16,32 @@ Our first step is to run the ``plugin_quickstart`` script as follows:
 
     plugin_quickstart SimpleAdder -v 0.9 -d myplugins
     
-where the first argument is the name of our plugin class. The argument
-following the ``-v`` is the version id of the plugin and the argument after
-the ``-d`` is the destination directory where the plugin directory will be
-created. If no directory is supplied, it defaults to the current directory. If
-no version id is supplied, it defaults to ``0.1``. There are two other
-optional arguments: 
+.. program:: plugin_quickstart
 
-- **-g**: can specify a plugin group name. The default
-    plugin group is ``openmdao.component``, which is what we're creating here, so
-    we don't need to supply the argument. Other options for ``-g`` are:
-    ``openmdao.driver`` and ``openmdao.variable``.
+Where the first argument is the name of your plugin class.  By default, the name of the distribution
+will be the lower case version of your plugin class name.  To change that, use the ``--dist`` option.
+All arguments starting with a dash (-) are optional and are described below:
 
-- **--dist**: can be used to specify the name of the distribution if you want
-    it to be different from the lower case version of the plugin class.
+.. option:: -v
 
+   Version id of the plugin.
+   
+.. option:: -d
+
+   Destination directory where the plugin subdirectory will be created.
+
+.. option:: -g
+
+   Plugin group. The default
+   plugin group is ``openmdao.component``. Other possible values are:
+   ``openmdao.driver`` and ``openmdao.variable``.
+
+.. option:: --dist
+
+   Name of the distribution. Use this if you want
+   it to be different from the lower case version of the plugin class.
+
+   
 After running ``plugin_quickstart``, the ``myplugins`` directory will contain
 a directory named ``simpleadder``, which is the lower case version of the
 plugin class name we passed to the script. The ``simpleadder`` directory
@@ -94,9 +105,9 @@ it should look like this:
         """A simple component whose output *c* is the sum of
         its inputs *a* and *b*.
         """
-        a = Float(0.0, iotype='in')
-        b = Float(0.0, iotype='in')
-        c = Float(0.0, iotype='out')
+        a = Float(0.0, iotype='in', desc='an input to be combined with *b* to make *c*')
+        b = Float(0.0, iotype='in', desc='an input to be combined with *a* to make *c*')
+        c = Float(0.0, iotype='out', desc='the sum of *a* and *b*')
     
         def execute(self):
              """Calculate c as the sum of a and b."""
@@ -161,6 +172,10 @@ that by editing the ``docs/usage.rst`` file, perhaps providing some detailed usa
 instructions and maybe a few examples.  The format of the ``usage.rst`` file is 
 :term:`reStructuredText` and we use Sphinx to generate our documentation, so any
 reST or Sphinx directives may be used there.
+
+.. note:: Make sure to give your plugin class a doc string, because otherwise
+   the automatic source documentation for your input and output variables won't
+   be generated.
 
 The other documentation file that you may want to edit is the ``README.txt`` file.
 A small amount of information is put there automatically but you may want to add

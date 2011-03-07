@@ -447,7 +447,7 @@ def plugin_quickstart(argv=None):
     """A command line script (plugin_quickstart) points to this.  It generates a
     directory structure for an openmdao plugin package along with Sphinx docs.
     
-    usage: plugin_quickstart <plugin_name> <version> [--dest=<dest_dir>] [--group=<plugin_group>]
+    usage: plugin_quickstart <plugin_class_name> [-v <version>] [-d <dest_dir>] [-g <plugin_group>] [--dist=<dist_name>]
     
     """
     
