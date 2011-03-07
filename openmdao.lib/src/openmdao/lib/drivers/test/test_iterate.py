@@ -142,7 +142,7 @@ class TestIterateUntill(unittest.TestCase):
         
         self.top.add('simple',Simple4())
         self.top.simple.invar = 1
-        self.top.driver.add_stop_condition("simple.outvar <= 2")
+        self.top.driver.add_stop_condition("simple.outvar >= 2")
         
         self.top.run()
         

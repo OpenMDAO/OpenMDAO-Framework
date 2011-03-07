@@ -97,8 +97,8 @@ class IterateUntil(Driver):
     def start_iteration(self):
         self.iterations = 0
     
-    def continue_iteration(self):        
-        if (self.iteration > 1) and self.should_stop():
+    def continue_iteration(self): 
+        if self.should_stop():
             return False
         if self.iteration < self.max_iterations: 
             self.iteration += 1
