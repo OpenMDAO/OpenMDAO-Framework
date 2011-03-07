@@ -1,5 +1,7 @@
 """
 A utility to extract Traits information from the code and get it into the Sphinx documentation.
+
+NOTE: No traits docs will be generated unless the class containing the traits has a doc string!
 """
 
 from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, Event

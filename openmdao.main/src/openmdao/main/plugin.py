@@ -13,6 +13,7 @@ from openmdao.util.fileutil import build_directory
 from openmdao.util.dep import PythonSourceTreeAnalyser
 
 from sphinx.setup_command import BuildDoc
+import sphinx
 
 templates = {}
 
@@ -35,8 +36,8 @@ import sys, os
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 
-              'sphinx.ext.doctest', 'sphinx.ext.todo', 
-              'sphinx.ext.viewcode','openmdao.util.doctools'
+              'sphinx.ext.doctest', 'sphinx.ext.todo','openmdao.util.doctools', 
+              'sphinx.ext.viewcode'
       ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -172,9 +173,9 @@ Contents:
 .. toctree::
    :maxdepth: 2
     
-   pkgdocs
    usage
    srcdocs
+   pkgdocs
 
   
 """
@@ -335,13 +336,17 @@ from openmdao.lib.datatypes.api import Float
 
 
 class %(classname)s(Component):
+    \"\"\"  ... Make sure to put some kind of docstring here. Otherwise
+                the descriptions for your variables won't show up in the
+                source ducumentation.
+    \"\"\"
     # declare inputs and outputs here
-    #x = Float(0.0, iotype='in')
-    #y = Float(0.0, iotype='out')
+    x = Float(0.0, iotype='in', desc='description for x')
+    y = Float(0.0, iotype='out', desc='description for y')
 
     def execute(self):
         # do your calculations here
-        pass
+        print 'hello'
         
 """
 
@@ -351,6 +356,10 @@ from openmdao.main.api import Driver
 from openmdao.util.decorators import add_delegate
 
 class %(classname)s(Driver):
+    \"\"\"  ... Make sure to put some kind of docstring here. Otherwise
+                the descriptions for your variables won't show up in the
+                source ducumentation.
+    \"\"\"
 
     def start_iteration(self):
         super(%(classname)s, self).start_iteration()
@@ -691,8 +700,26 @@ def package_plugin(argv=None):
                 },
             }
         
+        disttar = "%s-%s.tar.gz" % (metadata['name'],metadata['version'])
+        disttarpath = os.path.join(startdir, disttar)
+        if os.path.exists(disttarpath):
+            sys.stderr.write("ERROR: distribution %s already exists.\n" % disttarpath)
+            sys.exit(-1)
+        
         build_directory(dirstruct, force=True)
         
+        docdir = os.path.join(destdir, 'docs')
+        srcdir = os.path.join(destdir, 'src', metadata['name'])
+        if srcdir not in sys.path:
+            sys.path[0:0] = [srcdir]
+            
+        sphinx.main(argv=['-P','-b', 'html',
+                          '-Dversion=%s' % metadata['version'],
+                          '-Drelease=%s' % metadata['version'],
+                          '-d', os.path.join(srcdir, 'sphinx_build', 'doctrees'), 
+                          docdir, 
+                          os.path.join(srcdir, 'sphinx_build', 'html')])
+
         cmdargs = [sys.executable, 'setup.py', 'sdist', '-d', startdir]
         cmd = ' '.join(cmdargs)
         retcode = call(cmdargs)
@@ -701,7 +728,6 @@ def package_plugin(argv=None):
     finally:
         os.chdir(startdir)
 
-    disttar = "%s-%s.tar.gz" % (metadata['name'],metadata['version'])
     if os.path.exists(disttar):
         print "Created distribution %s" % disttar
     else:
@@ -754,3 +780,6 @@ def plugin_docs(plugin_name, browser=None):
     wb = webbrowser.get(browser)
     wb.open(idx)
 
+if __name__ == '__main__':
+    package_plugin(['/OpenMDAO/dev/banaylor/T441_plugin_docs/devenv/foo'])
+    
