@@ -104,8 +104,6 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, nrandm, \
        this function.
     """
 
-    print "info = %d" % info
-    
     if info in [1, 2]:
         # evaluate objective function or constraint function
         

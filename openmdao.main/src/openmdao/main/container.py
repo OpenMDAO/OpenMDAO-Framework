@@ -884,6 +884,9 @@ class Container(HasTraits):
                         # always invalidated when you call set_parameters.
                         # This meant that component was always executed
                         # even when the inputs were unchanged.
+                        # _call_execute is set in the on-trait-changed
+                        # callback, so it's a good test for whether the
+                        # value changed.
                         if self._call_execute:
                             self._input_updated(path)
                     else:  # array index specified

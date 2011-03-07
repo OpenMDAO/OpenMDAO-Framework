@@ -3,7 +3,7 @@ variety of difference types are available for both first and second order."""
 
 
 # pylint: disable-msg=E0611,F0401
-from numpy import zeros
+from numpy import zeros, copy
 
 from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import implements, Enum, Float
