@@ -69,7 +69,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_join_timeout')
 
         worker_q = WorkerPool.get()
-        worker_q.put((time.sleep, (100,), {}, self.reply_q))
+        worker_q.put((time.sleep, (3,), {}, self.reply_q))
         WorkerPool.cleanup()
 
     def test_never_released(self):
