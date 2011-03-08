@@ -112,7 +112,7 @@ class HasParameters(object):
             self._parent.raise_exception("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
                                          (name, parameter.low, parameter.high), ValueError)
 
-        self.fd_step = fd_step
+        parameter.fd_step = fd_step
         self._parameters[name] = parameter
             
     def remove_parameter(self, name):

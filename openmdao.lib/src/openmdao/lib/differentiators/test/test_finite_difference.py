@@ -20,12 +20,15 @@ class Comp(Component):
     # set up interface to the framework  
     # pylint: disable-msg=E1101
     x = Float(0.0, iotype='in')
+    u = Float(0.0, iotype='in')
     y = Float(0.0, iotype='out')
+    v = Float(0.0, iotype='out')
 
     def execute(self):
         """ Executes it """
         
-        self.y = (self.x)**2
+        self.y = (self.x)**2 + 3.0*self.u**3 + 4*self.u*self.x
+        self.v = (self.x)**3 * (self.u)**2
 
         
 @add_delegate(HasParameters, HasObjective, UsesGradients, \
@@ -57,7 +60,8 @@ class Assy(Assembly):
         self.driver.add_objective('comp.y')
         
         # CONMIN Design Variables 
-        self.driver.add_parameter('comp.x', low=-50., high=50., fd_step=.0001)
+        self.driver.add_parameter('comp.x', low=-50., high=50., fd_step=.01)
+        self.driver.add_parameter('comp.u', low=-50., high=50., fd_step=.01)
         
 
 class FiniteDifferenceTestCase(unittest.TestCase):
@@ -70,29 +74,51 @@ class FiniteDifferenceTestCase(unittest.TestCase):
         
         self.model.driver.form = 'Central'
         self.model.comp.x = 1.0
+        self.model.comp.u = 1.0
         self.model.run()
         self.model.driver.differentiator.calc_gradient()
         assert_rel_error(self, self.model.driver.differentiator.gradient_obj[0],
-                               2.0, .001)
+                               6.0, .001)
+        assert_rel_error(self, self.model.driver.differentiator.gradient_obj[1],
+                               13.0, .001)
         
         for key, item in self.model.driver.get_parameters().iteritems():
             self.model.driver._hasparameters._parameters[key].ffd_step = None
             
         self.model.driver.differentiator.form = 'Forward'
         self.model.comp.x = 1.0
+        self.model.comp.u = 1.0
         self.model.run()
         self.model.driver.differentiator.default_stepsize = 0.1
         self.model.driver.differentiator.calc_gradient()
         assert_rel_error(self, self.model.driver.differentiator.gradient_obj[0],
-                               2.1, .01)
+                               6.01, .01)
 
         self.model.driver.differentiator.form = 'Backward'
         self.model.comp.x = 1.0
+        self.model.comp.u = 1.0
         self.model.run()
         self.model.driver.differentiator.default_stepsize = 0.1
         self.model.driver.differentiator.calc_gradient()
         assert_rel_error(self, self.model.driver.differentiator.gradient_obj[0],
-                               1.9, .01)
+                               5.99, .01)
+
+    def test_Hessian(self):
+        
+        self.model.comp.x = 1.0
+        self.model.comp.u = 1.0
+        self.model.run()
+        self.model.driver.differentiator.default_stepsize = .001
+        self.model.driver.differentiator.calc_hessian()
+        assert_rel_error(self, self.model.driver.differentiator.hessian_obj[0, 0],
+                               2.0, .001)
+        assert_rel_error(self, self.model.driver.differentiator.hessian_obj[1, 1],
+                               18.0, .001)
+        assert_rel_error(self, self.model.driver.differentiator.hessian_obj[0, 1],
+                               4.0, .001)
+        assert_rel_error(self, self.model.driver.differentiator.hessian_obj[1, 0],
+                               4.0, .001)
+        
 
 if __name__ == '__main__':
     unittest.main()

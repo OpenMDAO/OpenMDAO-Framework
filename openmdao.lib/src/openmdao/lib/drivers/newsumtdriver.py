@@ -33,7 +33,7 @@ from enthought.traits.api import Array
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
-from openmdao.main.hasconstraints import HasConstraints
+from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.uses_derivatives import UsesGradients, UsesHessians
 from openmdao.util.decorators import add_delegate
@@ -103,7 +103,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, nrandm, \
        Note, there is some evidence of loss of precision on the output of
        this function.
     """
-
+    
     if info in [1, 2]:
         # evaluate objective function or constraint function
         
@@ -126,17 +126,53 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, nrandm, \
     elif info == 3 :
         # evaluate the first and second order derivatives
         #     of the objective function
-        pass # for now
-    elif info == 4:
-        # evaluate gradient of nonlinear constraints
-        driver.raise_exception('NEWSUMT does not yet support analytic constraint gradients',
-                               RuntimeError)
-    elif info == 5:
-        # evaluate gradient of linear constraints
-        # Bizarre note, NEWSUMT calls into here with info==5, even when the
-        # derivatives are set to internal finite-difference.
-        pass # for now
-    
+
+        # NEWSUMT bug: sometimes we end up here when ifd=-4
+        if not driver.differentiator:
+            return obj, dobj, ddobj, g, dg
+        
+        super(NEWSUMTdriver, driver).calc_derivatives(first=True)
+        driver.ffd_order = 1
+        driver.differentiator.calc_gradient()
+        
+        super(NEWSUMTdriver, driver).calc_derivatives(second=True)
+        driver.ffd_order = 2
+        driver.differentiator.calc_hessian(reuse_first=True)
+        
+        driver.ffd_order = 0
+
+        dobj = driver.differentiator.gradient_obj
+        
+        i_current = 0
+        for ii in range(0, driver.differentiator.n_param):
+            for jj in range(0, ii+1):
+                ddobj[i_current] = driver.differentiator.hessian_obj[ii, jj]
+                i_current += 1
+
+    elif info in [4,5]:
+        # evaluate gradient of nonlinear or linear constraints.
+        
+        # Linear gradients are only called once, at startup
+        if info == 5:
+            # NEWSUMT bug - During initial run, NEWSUMT will ask for analytic
+            # derivatives of the linear constraints even when ifd=-4. The only
+            # thing we can do is return zero.
+            if not driver.differentiator:
+                return obj, dobj, ddobj, g, dg
+
+            super(NEWSUMTdriver, driver).calc_derivatives(first=True)
+            driver.ffd_order = 1
+            driver.differentiator.calc_gradient()
+            driver.differentiator.calc_hessian(reuse_first=True)
+            driver.ffd_order = 0
+        
+        nparam = driver.differentiator.n_param
+        ncon = driver.differentiator.n_ineqconst
+        
+        for ii in range(0, nparam):
+            dg[(ii*ncon):(ncon+ii*ncon)] = \
+              -driver.differentiator.gradient_ineq_const[ii, :]
+            
     return obj, dobj, ddobj, g, dg
 # pylint: enable-msg=W0613
 
@@ -204,7 +240,7 @@ class _countr(object):
 
         
 # pylint: disable-msg=R0913,R0902
-@add_delegate(HasParameters, HasConstraints, HasObjective, UsesGradients, \
+@add_delegate(HasParameters, HasIneqConstraints, HasObjective, UsesGradients, \
               UsesHessians)
 class NEWSUMTdriver(Driver):
     """ Driver wrapper of Fortran version of NEWSUMT. 
