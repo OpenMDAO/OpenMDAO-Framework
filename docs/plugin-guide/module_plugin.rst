@@ -18,9 +18,10 @@ Our first step is to run the ``plugin_quickstart`` script as follows:
     
 .. program:: plugin_quickstart
 
-Where the first argument is the name of your plugin class.  By default, the name of the distribution
-will be the lower case version of your plugin class name.  To change that, use the ``--dist`` option.
-All arguments starting with a dash (-) are optional and are described below:
+Where the first argument is the name of your plugin class. By default, the
+name of the distribution will be the lower case version of your plugin class
+name. To change that, use the ``--dist`` option. All arguments starting with a
+dash (-) are optional and are described below:
 
 .. option:: -v
 
@@ -216,6 +217,10 @@ case looks like this:
         <2.7
     requires-externals = 
     project-url = 
+    
+    [openmdao]
+    copyright =
+    
 
 
 You should set whatever of these values you feel are applicable to your plugin.
@@ -241,6 +246,12 @@ More descriptions of the various metadata values can be found
 .. __: http://readthedocs.org/docs/distutils2/en/latest/setupcfg.html#metadata
 
 
+The values in the *metadata* section are specified by **PEP 345** and they
+apply to any python distribution.  We've added an *openmdao* section to the
+file to provide a place to put metadata that isn't mentioned in PEP 345, for
+example the copyright notice for the documentation.
+
+
 Additional Customization
 ++++++++++++++++++++++++
 
@@ -255,6 +266,7 @@ If you plan to use ``package_plugin`` to create your distribution, you should no
 modify any of the files listed below because they will be overwritten by the script.
 
     - **setup.py**
+    - **docs/conf.py**
     - **docs/pkgdocs.rst**
     - **docs/srcdocs.rst**
 

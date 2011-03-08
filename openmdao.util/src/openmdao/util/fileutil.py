@@ -203,12 +203,12 @@ def copy(src, dest):
         shutil.copytree(src, dest) 
 
 
-def build_directory(dct, force=False):
+def build_directory(dct, force=False, topdir='.'):
     """Create a directory structure based on the contents of a nested dict.
-    The directory is created in the current working directory. If a file
-    being created already exists, a warning will be issued and the file will
-    not be changed if force is False.  If force is True, the file will be
-    overwritten.
+    The directory is created in the specified top directory, or in the current
+    working directory if one isn't specified. If a file being created already
+    exists, a warning will be issued and the file will not be changed if force
+    is False. If force is True, the file will be overwritten.
     
     The structure of the dict is as follows: if the value at a key is a
     dict, then that key is used to create a directory. Otherwise, the key is
@@ -216,9 +216,10 @@ def build_directory(dct, force=False):
     file. All keys must be relative names or a RuntimeError will be raised.
     """
     startdir = os.getcwd()
+    topdir = os.path.abspath(topdir)
     try:
         for key, val in dct.items():
-            os.chdir(startdir)
+            os.chdir(topdir)
             if os.path.isabs(key):
                 raise RuntimeError("build_directory: key (%s) is not a relative name" % key)
             if isinstance(val, dict): # it's a dict, so this is a directory
