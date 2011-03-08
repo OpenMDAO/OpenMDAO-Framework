@@ -57,8 +57,9 @@ setup(name='openmdao.main',
       openmdao_docs=openmdao.util.view_docs:view_docs
       mod2dist=openmdao.main.mod2dist:mod2dist
       plugin_docs=openmdao.main.plugin:_plugin_docs
+      plugin_install=openmdao.main.plugin:plugin_install
+      plugin_package=openmdao.main.plugin:plugin_package
       plugin_quickstart=openmdao.main.plugin:plugin_quickstart
-      package_plugin=openmdao.main.plugin:package_plugin
       
       [openmdao.component]
       openmdao.main.Assembly = openmdao.main.assembly:Assembly
