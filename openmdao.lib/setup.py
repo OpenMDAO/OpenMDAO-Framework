@@ -56,6 +56,7 @@ Component, Driver, and TraitType plugins for OpenMDAO
       openmdao.lib.DOEdriver = openmdao.lib.drivers.doedriver:DOEdriver
       openmdao.lib.Genetic = openmdao.lib.drivers.genetic:Genetic
       openmdao.lib.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
+      openmdao.lib.drivers.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil
       openmdao.lib.NEWSUMTdriver = openmdao.lib.drivers.newsumtdriver:NEWSUMTdriver
       openmdao.lib.SimpleCaseIterDriver = openmdao.lib.drivers.simplecid:SimpleCaseIterDriver
       [openmdao.component]
