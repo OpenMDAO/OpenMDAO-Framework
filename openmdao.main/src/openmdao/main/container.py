@@ -887,7 +887,7 @@ class Container(HasTraits):
                         # _call_execute is set in the on-trait-changed
                         # callback, so it's a good test for whether the
                         # value changed.
-                        if self._call_execute:
+                        if hasattr(self, "_call_execute") and self._call_execute:
                             self._input_updated(path)
                     else:  # array index specified
                         self._array_set(path, value, index)
