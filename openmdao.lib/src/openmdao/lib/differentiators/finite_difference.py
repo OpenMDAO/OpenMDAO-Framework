@@ -181,7 +181,13 @@ class FiniteDifference(HasTraits):
         self.base_ineqconst = base_ineqconst
         
     def calc_hessian(self, reuse_first=False):
-        """Returns the Hessian matrix for this Driver's workflow"""
+        """Returns the Hessian matrix for this Driver's workflow.
+        
+        reuse_first: bool
+            Switch to reuse some data from the gradient calculation so that
+            we don't have to re-run some points we already ran (namely the
+            baseline, +eps, and -eps cases.) Obviously you do this when the
+            driver needs gradient and hessian information at the same point."""
         
         self.setup()
         
