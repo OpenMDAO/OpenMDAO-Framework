@@ -172,6 +172,9 @@ to the script, e.g.:
     plugin_install myplugin-0.5.tar.gz
     
 
+This command installs the distribution into the ``site-packages`` directory
+of your OpenMDAO virtual environment.
+
 Finally, if you want to install a plugin distribution from a remote server, it
 would look like:
 

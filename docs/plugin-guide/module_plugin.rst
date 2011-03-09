@@ -5,25 +5,34 @@
 
 .. _build-pure-python-plugin-label:
 
-Building a Pure Python Component Plugin
-=======================================
+Building a Component Plugin
+===========================
 
 For this example we'll build a plugin for the component shown in the figure
 :ref:`Conceptual-View-of-a-Simple-Component` (from the *User Guide*).  This component
 simply computes the value of its single output by adding its two inputs.
 
-Our first step is to run the ``plugin_quickstart`` script as follows:
+These instructions apply to any plugin component distribution that is pure
+python, i.e. not containing any python extensions.  They will also work with file
+wrapped components as long as the application being file wrapped is not included
+as part of the distribution.
+
+The first thing we want to do is to create the directory structure necessary
+to build a distribution.  We use the ``plugin_quickstart`` command to build
+this directory, for example, we can create the necessary directory structure
+for our SimpleAdder component as follows:
 
 ::
 
     plugin_quickstart SimpleAdder -v 0.9 -d myplugins
     
-.. program:: plugin_quickstart
-
-Where the first argument is the name of your plugin class. By default, the
-name of the distribution will be the lower case version of your plugin class
+    
+Where the first argument is the name of our plugin class. By default, the
+name of the distribution will be the lower case version of our plugin class
 name. To change that, use the ``--dist`` option. All arguments starting with a
 dash (-) are optional and are described below:
+
+.. program:: plugin_quickstart
 
 .. option:: -v
 
@@ -72,13 +81,14 @@ Customizing our Plugin
 
 The ``plugin_quickstart`` automatically generates skeleton files for
 our plugin class, distribution metadata, and documentation, but
-we'll want to tailor these specifically to our plugin.
+we'll want to tailor these specifically to our plugin. The following sections
+describe how to do this.
 
 
 Editing our Plugin Class
 ++++++++++++++++++++++++
 
-The most important file to edit is of course the python file that defines our
+The most important file to edit is the python file that defines our
 plugin class.  The plugin class definition is found in:
 
 ::
@@ -131,21 +141,17 @@ are inputs, so we specify that they have an iotype of ``'in'``. Attribute
 
 The Float variable is defined in the package ``openmdao.lib.datatypes.api``, so 
 we have to import it from there before we can use it. This  package defines a 
-wide variety of traits, including basic types like *Int*, *Str*, and *Bool*; 
-containers like *List* and *Dict*; and others. Variables are actually 
-implemented using Enthought's Traits and to learn more about traits, see the  
-`Traits User Manual 
-<http://code.enthought.com/projects/traits/docs/html/traits_user_manual/index.html>`_.
+wide variety of variables, including basic types like *Int*, *Str*, and *Bool*; 
+containers like *List* and *Dict*; and others. 
 
 Developing a plugin is often an iterative process, so it's convenient to have
-a way to install the plugin and hack on it, test it, etc., without having to 
-reinstall it each time we change it.  Luckily this is easy to do by just
-installing our plugin as a *develop* egg. To do this, we just run the ``plugin_install``
-command from the top directory of our plugin distribution.
-
+a way to install the plugin and hack on it, test it, etc., without having to
+reinstall it each time we change it. Luckily this is easy to do by just
+installing our plugin as a *develop* egg. To do this, we just run the
+``plugin_install`` command from the top directory of our plugin distribution.
 After that, our plugin can be imported and used in the OpenMDAO environment
-just like any other installed plugin.  For example, we could import our
-plugin class like this:
+just like any other installed plugin. For example, we could import our plugin
+class like this:
 
 
 ::
@@ -317,8 +323,8 @@ or
 
 .. index:: creation
 
-Distribution Creation
----------------------
+Creating Our Plugin Distribution
+--------------------------------
 
 Eventually our hacking will be finished and our plugin will be ready to
 package up as a distribution. Packaging our plugin as a 
