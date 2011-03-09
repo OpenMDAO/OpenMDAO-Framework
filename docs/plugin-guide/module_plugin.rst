@@ -3,6 +3,8 @@
 .. index:: pair: plugin; building a pure Python plugin
 
 
+.. _build-pure-python-plugin-label:
+
 Building a Pure Python Component Plugin
 =======================================
 
@@ -138,12 +140,8 @@ implemented using Enthought's Traits and to learn more about traits, see the
 Developing a plugin is often an iterative process, so it's convenient to have
 a way to install the plugin and hack on it, test it, etc., without having to 
 reinstall it each time we change it.  Luckily this is easy to do by just
-installing our plugin as a *develop* egg. We do this as follows:
-
-::
-
-    python setup.py develop
-
+installing our plugin as a *develop* egg. To do this, we just run the ``plugin_install``
+command from the top directory of our plugin distribution.
 
 After that, our plugin can be imported and used in the OpenMDAO environment
 just like any other installed plugin.  For example, we could import our
@@ -167,7 +165,7 @@ Adding Documentation
 ++++++++++++++++++++
 
 Now that our plugin class is fully defined, we should write up some documentation
-about how to use it.  The packaging script that we'll run later, ``package_plugin``, 
+about how to use it.  The packaging script that we'll run later, ``plugin_package``, 
 will automatically generate source documentation for our plugin, but we can add to
 that by editing the ``docs/usage.rst`` file, perhaps providing some detailed usage
 instructions and maybe a few examples.  The format of the ``usage.rst`` file is 
@@ -258,11 +256,11 @@ Additional Customization
 In some cases, you may want to add multiple plugin classes to your distribution,
 either in the *<dist_name>.py* file or in separate Python source files that you
 add to the ``src`` directory, possible as part of a nested package directory
-structure.  The ``package_plugin`` script knows how to handle this sort of a
+structure.  The ``plugin_package`` script knows how to handle this sort of a
 situation and will generate the appropriate source documentation and metadata
 for whatever plugins you define under the ``src`` tree.
 
-If you plan to use ``package_plugin`` to create your distribution, you should not
+If you plan to use ``plugin_package`` to create your distribution, you should not
 modify any of the files listed below because they will be overwritten by the script.
 
     - **setup.py**
@@ -329,7 +327,7 @@ community. To create our distribution, we issue the command:
 
 ::
 
-    package_plugin <dist_dir>
+    plugin_package <dist_dir>
 
 
 where ``dist_dir`` is the name of the directory containing our distribution.
@@ -351,7 +349,7 @@ OpenMDAO environment by running:
 
 ::
 
-    easy_install simpleadder-0.9.tar.gz
+    plugin_install simpleadder-0.9.tar.gz
     
     
 We could also put the source distribution on a file server so that anyone with
@@ -361,7 +359,7 @@ could install it by typing:
 
 ::
 
-    easy_install -f http://openmdao.org/dists simpleadder
+    plugin_install -f http://openmdao.org/dists simpleadder
 
 
 
@@ -456,7 +454,7 @@ functional.  As in the earlier section where we made a component plugin,
 we need to specify the metadata for our distribution by editing the 
 ``setup.cfg`` file and add any extra documentation that we want to the
 ``docs/usage.rst`` file and the ``README.txt`` file.  When that's done,
-as before, we run ``package_plugin`` and the end result should be a
+as before, we run ``plugin_package`` and the end result should be a
 source distribution named ``coord-0.1.tar.gz``.  The version id of our 
 plugin defaulted to **0.1** because we didn't specify it when we ran
 ``plugin_quickstart``.
