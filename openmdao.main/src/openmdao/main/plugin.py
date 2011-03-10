@@ -194,24 +194,6 @@ Contents:
 
 """
 
-# template for the file that will contain the autodoc information for
-# the plugin package
-_templates['srcdocs.rst'] = """
-
-.. _%(name)s_src_label:
-
-
-====================
-Source Documentation
-====================
-
-.. automodule:: %(srcmod)s
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-"""
-
 # template for the file where the user may add specific usage documentation
 # for the plugin
 _templates['usage.rst'] = """
@@ -327,16 +309,22 @@ class %(classname)s(Component):
 
 _class_templates['openmdao.driver'] = '''
 
-from openmdao.main.api import Driver
+from openmdao.main.api import Driver, HasParameters
 from openmdao.util.decorators import add_delegate
+from openmdao.lib.datatypes.api import Float
 
 # Make sure that your class has some kind of docstring. Otherwise
 # the descriptions for your variables won't show up in the
 # source ducumentation.
+#@add_delegate(HasParameters)  # uncomment this to add parameter handling
 class %(classname)s(Driver):
     """
     """
 
+    # declare inputs and outputs here, for example:
+    #x = Float(0.0, iotype='in', desc='description for x')
+    #y = Float(0.0, iotype='out', desc='description for y')
+    
     def start_iteration(self):
         super(%(classname)s, self).start_iteration()
 
@@ -370,6 +358,41 @@ class %(classname)s(Variable):
         # in the event of an error, call
         # self.error(object, name, value)
 '''
+
+def _get_srcdocs(destdir, name):
+    startdir = os.getcwd()
+    srcdir = os.path.join(destdir,'src', name)
+    if os.path.exists(srcdir):
+        os.chdir(srcdir)
+        try:
+            srcmods = _get_src_modules('.')
+        finally:
+            os.chdir(startdir)
+    else:
+        srcmods = [name]
+
+    contents = [
+        """
+.. _%s_src_label:
+
+
+====================
+Source Documentation
+====================
+        
+        """ % name
+        ]
+    
+    for mod in srcmods:
+        contents.append("""
+.. automodule:: %s
+   :members:
+   :undoc-members:
+   :show-inheritance:
+    
+        """ % mod)
+
+    return ''.join(contents)
 
 
 def _get_pkgdocs(cfg):
@@ -425,6 +448,8 @@ def _get_setup_options(metadata):
         'classifier': 'classifiers',
         'requires-dist': 'install_requires',
         'entry_points': 'entry_points',
+        #'py_modules': 'py_modules',
+        'packages': 'packages',
         }
     
     setup_options = {
@@ -453,6 +478,23 @@ def _pretty(obj):
     return sio.getvalue()
 
 
+def _get_py_files(distdir):
+    def _pred(fname):
+        parts = fname.split(os.sep)
+        if parts[-1] in ['setup.py','__init__.py'] or 'test' in parts:
+            return False
+        return fname.endswith('.py')
+    return list(find_files(distdir, _pred))
+        
+
+def _get_src_modules(topdir):
+    topdir = os.path.abspath(os.path.expandvars(os.path.expanduser(topdir)))
+    pyfiles = _get_py_files(topdir)
+    noexts = [os.path.splitext(f)[0] for f in pyfiles]
+    rel = [f[len(topdir)+1:] for f in noexts]
+    return ['.'.join(f.split(os.sep)) for f in rel]
+    
+
 def _get_template_options(distdir, cfg, **kwargs):
     if cfg.has_section('metadata'):
         metadata = dict([item for item in cfg.items('metadata')])
@@ -462,6 +504,11 @@ def _get_template_options(distdir, cfg, **kwargs):
         openmdao_metadata = dict([item for item in cfg.items('openmdao')])
     else:
         openmdao.metadata = {}
+
+    if 'packages' in kwargs:
+        metadata['packages'] = kwargs['packages']
+    else:
+        metadata['packages'] = [metadata['name']]
 
     setup_options = _get_setup_options(metadata)
     
@@ -587,7 +634,7 @@ def plugin_quickstart(argv=None):
                 'docs': {
                     'conf.py': _templates['conf.py'] % template_options,
                     'index.rst': _templates['index.rst'] % template_options,
-                    'srcdocs.rst': _templates['srcdocs.rst'] % template_options,
+                    'srcdocs.rst': _get_srcdocs(options.dest, name),
                     'pkgdocs.rst': _get_pkgdocs(cfg),
                     'usage.rst': _templates['usage.rst'] % template_options,
                     },
@@ -692,14 +739,11 @@ def plugin_makedist(argv=None):
             
         _set_entry_points('src', cfg)
 
-        template_options = _get_template_options(destdir, cfg)
+        template_options = _get_template_options(destdir, cfg,
+                                                 packages=find_packages('src'))
 
         dirstruct = {
             'setup.py': _templates['setup.py'] % template_options,
-            #'docs': {
-                #'conf.py': _templates['conf.py'] % template_options,
-                #'pkgdocs.rst': _get_pkgdocs(cfg),
-                #},
             }
         
         name = cfg.get('metadata', 'name')
@@ -712,7 +756,7 @@ def plugin_makedist(argv=None):
             sys.exit(-1)
         
         build_directory(dirstruct, force=True)
-        _plugin_build_docs(destdir, cfg)
+        plugin_build_docs([destdir])
 
         cmdargs = [sys.executable, 'setup.py', 'sdist', '-d', startdir]
         cmd = ' '.join(cmdargs)
@@ -876,6 +920,7 @@ def plugin_build_docs(argv=None):
         'docs': {
             'conf.py': _templates['conf.py'] % template_options,
             'pkgdocs.rst': _get_pkgdocs(cfg),
+            'srcdocs.rst': _get_srcdocs(destdir, template_options['name']),
             },
         }
     

@@ -94,11 +94,23 @@ def _file_dir_gen(dname):
             yield join(path, name)
     
 def find_files(start, match=None, exclude=None, nodirs=True):
-    """Return filenames (using a generator) that match
-    the given glob pattern(s), if any, subject to any excluding
-    glob pattern(s), if any. startdir can be a single directory
-    or a list of directories.  Walks all subdirectories below 
-    each specified starting directory.
+    """Return filenames (using a generator).
+    
+    start: str or list of str
+        Starting directory or list of directories.
+        
+    match: str, predicate funct or list of same
+        Either a string containing a glob pattern to match
+        or a predicate function that returns True on a match,
+        or a list either.
+        
+    exclude: str or list of str
+        A string or list of strings containing glob pattern(s)
+        
+    nodirs: bool
+        If False, return names of files and directories.
+        
+    Walks all subdirectories below each specified starting directory.
     """
     startdirs = [start] if isinstance(start, basestring) else start
     
@@ -112,13 +124,21 @@ def find_files(start, match=None, exclude=None, nodirs=True):
             for path in gen(d):
                 yield path
     elif exclude is None:
-        matches = [match] if isinstance(match, basestring) else match
+        if isinstance(match, (list, tuple)):
+            matches = match
+        else:
+            matches = [match]
         for d in startdirs:
             for path in gen(d):
                 for match in matches:
-                    if fnmatch(path, match):
-                        yield path
-                        break
+                    if isinstance(match, basestring):
+                        if fnmatch(path, match):
+                            yield path
+                            break
+                    else:  # assume it's a predicate function
+                        if match(path):
+                            yield path
+                            break
     else:
         if match is None:
             match = '*'
@@ -130,14 +150,18 @@ def find_files(start, match=None, exclude=None, nodirs=True):
                 for match in matches:
                     if skip:
                         break
-                    if fnmatch(path, match):
-                        for exclude in excludes:
-                            if fnmatch(path, exclude):
-                                skip = True
-                                break
-                        else:
-                            yield path
+                    if isinstance(match, basestring):
+                        if not fnmatch(path, match):
+                            continue
+                    elif not match(path):
+                        continue
+                    for exclude in excludes:
+                        if fnmatch(path, exclude):
                             skip = True
+                            break
+                    else:
+                        yield path
+                        skip = True
 
 
 def find_up(name, path=None):
