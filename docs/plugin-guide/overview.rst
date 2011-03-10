@@ -36,11 +36,12 @@ are available in the environment? To allow that to happen, a plugin developer
 must provide metadata that specifies the name, plugin interface, and location
 within its package for each plugin that is intended to be discoverable by the
 framework. This metadata is in the form of an *entry point*. An entry point is
-a mapping of a name to some Python object, in our case a class, that
+just a mapping of a name to some Python object, in our case a class, that
 exists within a distribution. Each entry point must be a member of an entry
 point group. An application can look at the entry point groups that are
 defined to determine if any applicable plugins exist within a given
-distribution.
+distribution.  In the case of OpenMDAO, we look for entry point group names
+that correspond to the types of plugin interfaces that we support.
 
 
 Types of Plugin Interfaces
@@ -66,6 +67,10 @@ group:
 `openmdao.resource_allocator`    To add custom handling of allocation of computing resources
 ==============================  =================================================================================================
 
+.. note:: The entry point group names look like they could be the names of python
+     modules or packages, but they're not.  They're just strings that a plugin 
+     developer uses to indicate to the framework that his plugin supports a particular
+     plugin interface.
 
 The framework also provides a base class corresponding to most plugin
 interfaces in order to make it easier for developers to create new plugins by
@@ -73,7 +78,7 @@ simply inheriting from the base class and modifying a small number of methods
 and/or attributes.
 
 The table below shows each base class and the entry point group that it
-corresponds to:
+belongs to:
 
 =========================================  ================================
 **Base Class**                             **Entry Point Group**
@@ -88,28 +93,45 @@ openmdao.main.resource.ResourceAllocator    ``openmdao.resource_allocator``
 =========================================  ================================
 
 
-Note that every ``openmdao.driver`` plugin is also assumed to be an 
-``openmdao.component`` since Driver inherits from Component. 
+Note that every plugin in ``openmdao.driver`` is also assumed to be a member 
+of ``openmdao.component`` since Driver inherits from Component. 
 
 
 *Plugin Development Tools*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There is a small set of scripts available to simplify the process of
-developing plugin distributions. The scripts, ``plugin_quickstart``,
-``plugin_package``, and ``plugin_install`` are described in more detail
-in :ref:`build-pure-python-plugin-label`.
+developing plugin distributions. The table below shows each script with a
+brief description of its purpose. All of the scripts are described in more
+detail in :ref:`build-pure-python-plugin-label`.
 
-The good news is that if you use the ``plugin_package`` tool provided with
-OpenMDAO to package your plugin, the necessary entry points will be created
-for you automatically. The bad news is that there are some cases where
-``plugin_package`` cannot be used and so the entry points must be defined
-manually. The rest of this section describes how to add entry points and other
-metadata to a distribution manually.
+
+======================  ===========================================================================
+**Script Name**         **Purpose**
+======================  ===========================================================================
+plugin_build_docs        To build the html docs for the plugin
+----------------------  ---------------------------------------------------------------------------
+plugin_docs              To view the html docs for the plugin
+----------------------  ---------------------------------------------------------------------------
+plugin_install           To install the plugin into the active environment
+----------------------  ---------------------------------------------------------------------------
+plugin_makedist          To create a source distribution containing the plugin
+----------------------  ---------------------------------------------------------------------------
+plugin_quickstart        To create the directory structure needed to build the plugin distribution
+======================  ===========================================================================
+
 
 
 *Defining Entry Points*
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+The good news is that if you use the ``plugin_makedist`` tool to package your
+plugin, the ``setup.py`` file with all necessary entry points will be created
+for you automatically. The bad news is that there are some cases where
+``plugin_makedist`` cannot be used and so the entry points must be defined
+manually. The rest of this section describes how to add entry points and other
+metadata to a distribution manually.
+
 
 Entry points are defined within the ``setup.py`` file that is
 used to build the distribution.  The following code snippet
@@ -130,7 +152,7 @@ called ``simple_adder``:
         name='simple_adder',
         version='1.0',
         packages=find_packages(),
-        install_requires=['openmdao.lib', 'Traits>=3.1.0'],
+        install_requires=['openmdao.lib'],
         entry_points={
         'openmdao.component': ['simple_adder.SimpleAdder = simple_adder:SimpleAdder']
         }
@@ -146,33 +168,44 @@ in the table above.
 
 .. note:: You should always use the full module dotted name as the name of your entry
    point for consistency with other OpenMDAO plugins.
+   
+   
+Once you have your ``setup.py`` file and your plugin class is complete, you're ready
+to build a distribution.  If you're not able to use ``plugin_makedist`` for some 
+reason, you can build your distribution by executing your ``setup.py`` file in the following
+way:
+
+::
+
+    python setup.py sdist -d .
+    
+    
+This will create a source distribution and place it in the current directory. If your
+distribution is named *simple_adder*, for example, the source distribution will be named 
+*simple_adder-1.0.tar.gz*, or possibly *simple_adder-1.0.zip* on Windows.  The version 
+of the packaged distribution is *1.0* as was specified in the ``setup.py`` file.
 
 
 *Installing an OpenMDAO Plugin*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Once you've created a distribution for your plugin either by using ``plugin_package`` 
-or by doing it manually, you can install your plugin into an OpenMDAO virtual 
-environment by running ``plugin_install``.  If you run 
+If you run ``plugin_install`` from the top directory of your plugin
+distribution, it will install your plugin as a *develop* egg, meaning that it
+places a link to your distribution on the python path so that you can make
+changes to your plugin and test it in the environment without having to keep
+reinstalling it.
 
-::
-
-    plugin_install
-    
-from the top directory of your plugin distribution, it will install your
-plugin as a *develop* egg, meaning that it places a link to your distribution
-on the python path so that you can make changes to your plugin and test it in
-the environment without having to keep reinstalling it.
-
-To install a plugin distribution from a tar file, pass the name of the tar file
-to the script, e.g.:
+If you have a distrbution tar or zip file, created either by using ``plugin_makedist`` 
+or by running ``setup.py`` directly, you can install your plugin into an OpenMDAO virtual 
+environment by running ``plugin_install`` and passing it the name of the file, for 
+example:
 
 ::
 
     plugin_install myplugin-0.5.tar.gz
     
 
-This command installs the distribution into the ``site-packages`` directory
+which will install the distribution into the ``site-packages`` directory
 of your OpenMDAO virtual environment.
 
 Finally, if you want to install a plugin distribution from a remote server, it
@@ -184,8 +217,8 @@ would look like:
     
 
 where *find_links_url* is the url for a find_links server and *distrib_reqirement* is
-a requirement string in the same form as you would pass to ``easy_install`` or ``pip``,
-for example, *myplugin*, *myplugin==0.5*, and *myplugin>=0.3* are all valid requirement
+a requirement string in the same form as you would pass to ``easy_install`` or ``pip``.
+For example, *myplugin*, *myplugin==0.5*, and *myplugin>=0.3* are all valid requirement
 strings.  If there is no version specifier in the *distrib_requirement* then the latest
 version compatible with the current platform will be installed.
 
@@ -205,4 +238,24 @@ environment as follows:
 ::
 
     plugin_install -f http://openmdao.org/dists MyDist
+
+
+If you want to distribute your plugin to the whole world but don't happen to
+have your own public server, you can put your plugin up on the 
+`Python Package Index`__ (PyPI), which is also known as the *Cheeseshop*. 
+PyPI is the default package index for ``plugin_install``, so the command
+
+.. __: http://pypi.python.org/pypi
+
+
+::
+
+    plugin_install MyDist
+    
+    
+will attempt to download the MyDist distribution from PyPI. See this `link`__
+for more information about how to register your plugin with PyPI.
+
+.. __: http://docs.python.org/distutils/packageindex.html
+
 

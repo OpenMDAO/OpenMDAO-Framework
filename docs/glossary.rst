@@ -347,7 +347,7 @@ Glossary
 
       
       **plugin**
-        A computer program that interacts with a host aplication to
+        An object that interacts with a host aplication to
         provide specific functionality without changing the host application.
 
 

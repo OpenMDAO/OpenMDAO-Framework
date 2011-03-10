@@ -14,49 +14,56 @@ simply computes the value of its single output by adding its two inputs.
 
 These instructions apply to any plugin component distribution that is pure
 python, i.e. not containing any python extensions.  They will also work with file
-wrapped components as long as the application being file wrapped is not included
-as part of the distribution.
+wrapped components as long as the distribution includes only the wrapper component
+and not the application being file wrapped.
 
-The first thing we want to do is to create the directory structure necessary
-to build a distribution.  We use the ``plugin_quickstart`` command to build
-this directory, for example, we can create the necessary directory structure
-for our SimpleAdder component as follows:
-
-::
-
-    plugin_quickstart SimpleAdder -v 0.9 -d myplugins
-    
-    
-Where the first argument is the name of our plugin class. By default, the
-name of the distribution will be the lower case version of our plugin class
-name. To change that, use the ``--dist`` option. All arguments starting with a
-dash (-) are optional and are described below:
+The script we use to create the initial directory structure for our plugin
+distribution is called ``plugin_quickstart``.
 
 .. program:: plugin_quickstart
 
+::
+
+    plugin_quickstart dist_name [-v version [-c class_name [-g plugin_group [-d dest_directory]]]]
+
+.. option:: dist_name
+
+   The name of the distribution we want to create.
+
 .. option:: -v
 
-   Version id of the plugin.
+   Version id of the distribution. Defaults to **0.1**.  It's really important to update
+   the version id each time you change your distribution in order to avoid breaking
+   code that depends on older versions of it.
    
-.. option:: -d
+.. option:: -c
 
-   Destination directory where the plugin subdirectory will be created.
+   Name of the plugin class.  By default the plugin class has the same name as
+   the distribution.
 
 .. option:: -g
 
-   Plugin group. The default
-   plugin group is ``openmdao.component``. Other possible values are:
-   ``openmdao.driver`` and ``openmdao.variable``.
+   Plugin group. Defaults to **openmdao.component**. Other possible values are:
+   **openmdao.driver** and **openmdao.variable**.
 
-.. option:: --dist
+.. option:: -d
 
-   Name of the distribution. Use this if you want
-   it to be different from the lower case version of the plugin class.
+   Directory where the plugin subdirectory will be created. Defaults
+   to the current directory.
 
    
-After running ``plugin_quickstart``, the ``myplugins`` directory will contain
-a directory named ``simpleadder``, which is the lower case version of the
-plugin class name we passed to the script. The ``simpleadder`` directory
+The first thing we'll do is to use ``plugin_quickstart`` to build a
+directory structure in our current directory for a distribution named
+*simpleadder* containing a component plugin class named *SimpleAdder* and
+having a version id of *0.9*.
+
+::
+
+    plugin_quickstart simpleadder -c SimpleAdder -v 0.9
+    
+
+After running ``plugin_quickstart``, the current directory will contain
+a directory named ``simpleadder``. The ``simpleadder`` directory
 structure will look something like this::
 
     simpleadder
@@ -81,8 +88,39 @@ Customizing our Plugin
 
 The ``plugin_quickstart`` automatically generates skeleton files for
 our plugin class, distribution metadata, and documentation, but
-we'll want to tailor these specifically to our plugin. The following sections
-describe how to do this.
+we'll want to tailor these specifically to our plugin by editing the
+following files found in our distribution directory:
+
+**src/<dist_name>/<dist_name>.py**
+    A python source file containing our plugin class.
+    
+**setup.cfg**
+    A config file that specifies metadata related to the plugin. This
+    is where we would specify license information, contact emails, etc.
+    
+**MANIFEST.in**
+    If we have additional files to include in our distribution beyond
+    the standard set of python source files and setup files, we can 
+    specify them here.  For more info about MANIFEST.in, look `here`__
+    
+**docs/usage.rst**
+    A reStructuredText file containing any docs that we want to add to those
+    that are generated automatically.
+    
+**README.txt**
+    A simple text file with miscellaneous instructions about the plugin.  
+    
+**src/<dist_name>/test/test_<dist_name>.py**
+    A python source file containing a unit test for our plugin class. It
+    actually doesn't run any tests by default, but there is a skeletal
+    version of a unittest.TestCase defined here to make it as easy as 
+    possible add some unit tests for our plugin.
+    
+
+.. __: http://docs.python.org/distutils/sourcedist.html#the-manifest-in-template
+
+
+The following sections describe how to edit these files in more detail.
 
 
 Editing our Plugin Class
@@ -171,7 +209,7 @@ Adding Documentation
 ++++++++++++++++++++
 
 Now that our plugin class is fully defined, we should write up some documentation
-about how to use it.  The packaging script that we'll run later, ``plugin_package``, 
+about how to use it.  The packaging script that we'll run later, ``plugin_makedist``, 
 will automatically generate source documentation for our plugin, but we can add to
 that by editing the ``docs/usage.rst`` file, perhaps providing some detailed usage
 instructions and maybe a few examples.  The format of the ``usage.rst`` file is 
@@ -262,11 +300,11 @@ Additional Customization
 In some cases, you may want to add multiple plugin classes to your distribution,
 either in the *<dist_name>.py* file or in separate Python source files that you
 add to the ``src`` directory, possible as part of a nested package directory
-structure.  The ``plugin_package`` script knows how to handle this sort of a
+structure.  The ``plugin_makedist`` script knows how to handle this sort of a
 situation and will generate the appropriate source documentation and metadata
 for whatever plugins you define under the ``src`` tree.
 
-If you plan to use ``plugin_package`` to create your distribution, you should not
+If you plan to use ``plugin_makedist`` to create your distribution, you should not
 modify any of the files listed below because they will be overwritten by the script.
 
     - **setup.py**
@@ -333,7 +371,7 @@ community. To create our distribution, we issue the command:
 
 ::
 
-    plugin_package <dist_dir>
+    plugin_makedist <dist_dir>
 
 
 where ``dist_dir`` is the name of the directory containing our distribution.
@@ -385,13 +423,13 @@ values representing the *x, y,* and *z* position.
 As before when we created a component plugin, we'll use ``plugin_quickstart`` to
 generate the directory structure for our distribution, but this time we use
 the **-g** option to specify the plugin group as ``openmdao.variable``.  
-Also, this time around we'll specify the name *coord* for our distribution 
-using the **--dist** option.
+Also, this time around we'll specify a class name of *Coordinates* using
+the **-c** option.
 
 ::
 
 
-    plugin_quickstart Coordinates -d myplugins -g openmdao.variable --dist=coord 
+    plugin_quickstart coord -c Coordinates -g openmdao.variable
 
 
 Since we said our distribution name is going to be *coord*, that means that
@@ -418,11 +456,10 @@ the ``src/coord/coord.py`` file.  After editing that file, it looks like this:
 
 OpenMDAO provides a base class for framework visible inputs and outputs called
 ``Variable``, so that's the base class for our coordinates variable. If a
-class inherits from ``Variable``, then that class is recognized by the
-framework as a plugin. If a Component object contains a ``Variable`` instance
-that has a metadata attribute named *iotype* then that instance object is
-exposed to the framework as a variable whose value can be passed between
-components. Valid values for *iotype* are 'in' and 'out'. 
+Component object contains a ``Variable`` instance that has a metadata
+attribute named *iotype* then that instance object is exposed to the framework
+as a variable whose value can be passed between components. Valid values for
+*iotype* are 'in' and 'out'.
 
 One thing that can be a little confusing to people first using Variables is that
 the Variable object itself is just a validator and possibly a converter. The
@@ -460,7 +497,7 @@ functional.  As in the earlier section where we made a component plugin,
 we need to specify the metadata for our distribution by editing the 
 ``setup.cfg`` file and add any extra documentation that we want to the
 ``docs/usage.rst`` file and the ``README.txt`` file.  When that's done,
-as before, we run ``plugin_package`` and the end result should be a
+as before, we run ``plugin_makedist`` and the end result should be a
 source distribution named ``coord-0.1.tar.gz``.  The version id of our 
 plugin defaulted to **0.1** because we didn't specify it when we ran
 ``plugin_quickstart``.
