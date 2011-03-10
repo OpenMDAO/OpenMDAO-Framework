@@ -17,6 +17,10 @@ python, i.e. not containing any python extensions.  They will also work with fil
 wrapped components as long as the distribution includes only the wrapper component
 and not the application being file wrapped.
 
+
+Getting Started Quickly
+-----------------------
+
 The script we use to create the initial directory structure for our plugin
 distribution is called ``plugin_quickstart``.
 
@@ -32,9 +36,7 @@ distribution is called ``plugin_quickstart``.
 
 .. option:: -v
 
-   Version id of the distribution. Defaults to **0.1**.  It's really important to update
-   the version id each time you change your distribution in order to avoid breaking
-   code that depends on older versions of it.
+   Version id of the distribution. Defaults to **0.1**.  
    
 .. option:: -c
 
@@ -81,6 +83,8 @@ structure will look something like this::
         `-- simpleadder
             |-- __init__.py
             `-- simpleadder.py
+            `-- test
+                `-- test_simpleadder.py
 
 
 Customizing our Plugin
@@ -114,7 +118,7 @@ following files found in our distribution directory:
     A python source file containing a unit test for our plugin class. It
     actually doesn't run any tests by default, but there is a skeletal
     version of a unittest.TestCase defined here to make it as easy as 
-    possible add some unit tests for our plugin.
+    possible to add some unit tests for our plugin.
     
 
 .. __: http://docs.python.org/distutils/sourcedist.html#the-manifest-in-template
@@ -156,8 +160,8 @@ it should look like this:
         """A simple component whose output *c* is the sum of
         its inputs *a* and *b*.
         """
-        a = Float(0.0, iotype='in', desc='an input to be combined with *b* to make *c*')
-        b = Float(0.0, iotype='in', desc='an input to be combined with *a* to make *c*')
+        a = Float(0.0, iotype='in', desc='an input added to *b* to make *c*')
+        b = Float(0.0, iotype='in', desc='an input added to *a* to make *c*')
         c = Float(0.0, iotype='out', desc='the sum of *a* and *b*')
     
         def execute(self):
@@ -271,10 +275,10 @@ you should fill in as many as possible to better inform potential users about
 your plugin. 
 
 .. note::
-    Distributions tend to evolve over time, so providing a version id for a
+    Distributions tend to evolve over time, so providing a **version** id for a
     package is extremely important. It is assumed that once a distribution is
     created from a particular version of a package, that distribution will
-    **never** change. People may build things that depend on a particular
+    never change. People may build things that depend on a particular
     version of your distribution, so changing that version could break their
     code. If, however, you update your distribution's version id, then users
     have the option of either using the updated distribution and modifying
@@ -358,16 +362,61 @@ or
     }
 
 
+Building Just the Plugin Docs
+-----------------------------
 
+Sometimes when we're iterating on the plugin documentation it's 
+convenient to regenerate just the docs instead of creating a new
+distribution every time.  We can do this using the ``plugin_build_docs``
+command.
+
+.. program:: plugin_build_docs
+
+::
+
+    plugin_build_docs [dist_directory]
+
+    
+.. option:: dist_directory
+
+   Top level directory of the distribution.  Defaults to the current
+   directory.
+   
+
+We can view the docs for a plugin using the ``plugin_docs`` command.  Note 
+that this only works for installed plugin distributions.
+
+.. program:: plugin_docs
+
+::
+
+   plugin_docs plugin_dist_name
+   
+   
+.. option:: plugin_dist_name
+
+   The name of the plugin distribution
+   
+
+If we install our plugin as a *develop* egg by running ``plugin_install`` from
+the top level directory of our plugin distribution, we can then edit and view
+our docs efficiently by repeating the following sequence:
+
+::
+
+    ... hack, hack, hack
+    plugin_build_docs
+    plugin_docs <plugin_dist_name>
+    
+    
 .. index:: creation
 
 Creating Our Plugin Distribution
 --------------------------------
 
-Eventually our hacking will be finished and our plugin will be ready to
-package up as a distribution. Packaging our plugin as a 
-distribution makes it easier to share it with others in the OpenMDAO
-community. To create our distribution, we issue the command:
+Eventually our plugin will be ready to package as a distribution. Doing this
+makes it easier to share our plugin with others in the OpenMDAO community. To
+create our distribution, we issue the command:
 
 ::
 
