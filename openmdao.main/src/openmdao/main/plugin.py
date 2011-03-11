@@ -363,7 +363,7 @@ class %(classname)s(Variable):
 
 def _get_srcdocs(destdir, name):
     startdir = os.getcwd()
-    srcdir = os.path.join(destdir,'src', name)
+    srcdir = os.path.join(destdir,'src')
     if os.path.exists(srcdir):
         os.chdir(srcdir)
         try:
@@ -371,7 +371,7 @@ def _get_srcdocs(destdir, name):
         finally:
             os.chdir(startdir)
     else:
-        srcmods = [name]
+        srcmods = ["%s.%s" % (name,name)]
 
     contents = [
         """
@@ -615,7 +615,7 @@ def plugin_quickstart(argv=None):
     if options.classname:
         classname = options.classname
     else:
-        classname = name
+        classname = "%s%s" % ((name.upper())[0], name[1:])
     version = options.version
     
     options.dest = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dest)))
@@ -899,7 +899,7 @@ def _plugin_build_docs(destdir, cfg):
     path_added = False
     try:
         docdir = os.path.join(destdir, 'docs')
-        srcdir = os.path.join(destdir, 'src', name)
+        srcdir = os.path.join(destdir, 'src')
         
         # have to add srcdir to sys.path or autodoc won't find source code
         if srcdir not in sys.path:
@@ -909,9 +909,9 @@ def _plugin_build_docs(destdir, cfg):
         sphinx.main(argv=['','-E','-a','-b', 'html',
                           '-Dversion=%s' % version,
                           '-Drelease=%s' % version,
-                          '-d', os.path.join(srcdir, 'sphinx_build', 'doctrees'), 
+                          '-d', os.path.join(srcdir, name, 'sphinx_build', 'doctrees'), 
                           docdir, 
-                          os.path.join(srcdir, 'sphinx_build', 'html')])
+                          os.path.join(srcdir, name, 'sphinx_build', 'html')])
     finally:
         if path_added:
             sys.path.remove(srcdir)

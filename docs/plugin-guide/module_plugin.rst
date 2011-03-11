@@ -41,7 +41,7 @@ distribution is called ``plugin_quickstart``.
 .. option:: -c
 
    Name of the plugin class.  By default the plugin class has the same name as
-   the distribution.
+   the distribution except the first letter is capitalized.
 
 .. option:: -g
 
@@ -198,14 +198,14 @@ class like this:
 
 ::
 
-    from <distrib_name> import <plugin_class>
+    from <package_name>.<module_name> import <plugin_class>
     
     
 or, in this specific case:
 
 ::
 
-    from simpleadder import SimpleAdder
+    from simpleadder.simpleadder import SimpleAdder
     
 
 
@@ -346,10 +346,10 @@ For example:
 
     """
     [openmdao.component]
-    simpleadder.SimpleAdder = simpleadder:SimpleAdder
+    simpleadder.simpleadder.SimpleAdder = simpleadder.simpleadder:SimpleAdder
     
     [openmdao.driver]
-    mydriver.MyDriver = mydriver:MyDriver
+    mydriver.mydriver.MyDriver = mydriver.mydriver:MyDriver
     """
 
 or
@@ -357,8 +357,8 @@ or
 :: 
    
       
-    { 'openmdao.component': ['simpleadder.SimpleAdder = simpleadder:SimpleAdder'],
-      'openmdao.driver': ['mydriver.MyDriver = mydriver:MyDriver']
+    { 'openmdao.component': ['simpleadder.simpleadder.SimpleAdder = simpleadder.simpleadder:SimpleAdder'],
+      'openmdao.driver': ['mydriver.mydriver.MyDriver = mydriver.mydriver:MyDriver']
     }
 
 
@@ -424,11 +424,11 @@ create our distribution, we issue the command:
 
 
 where ``dist_dir`` is the name of the directory containing our distribution.
-The script will automatically detect plugins within the distribution ``src``
-directory and generate any necessary entry points for them in the ``setup.py``
-file.  It will also generate the sphinx documentation and place the sphinx
-generated files and all other necessary files in a source distribution that
-will be named as follows:
+It defaults to the current directory. The script will automatically detect
+plugins within the distribution ``src`` directory and generate any necessary
+entry points for them in the ``setup.py`` file. It will also generate the
+sphinx documentation and place the sphinx generated files and all other
+necessary files in a source distribution that will be named as follows:
 
 ::
 
