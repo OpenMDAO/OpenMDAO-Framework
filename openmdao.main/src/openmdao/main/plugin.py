@@ -8,6 +8,7 @@ import StringIO
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser
 from subprocess import call
+from fnmatch import fnmatch
 
 from ordereddict import OrderedDict
 
@@ -229,6 +230,7 @@ setup(**kwargs)
 _templates['MANIFEST.in'] = """
 
 graft src/%(name)s/sphinx_build/html
+recursive-include src/%(name)s/test *.py
 
 """
 
@@ -429,12 +431,8 @@ def _get_pkgdocs(cfg):
         
     return ''.join(lines)
 
-def _cfg_to_py(obj):
-    """Convert a config file string to a python object."""
-    parts = [p.strip() for p in obj.split('\n') if p.strip()]
-    
-    
-def _get_setup_options(metadata):
+
+def _get_setup_options(distdir, metadata):
     # a set of names of variables that are supposed to be lists
     lists = set([
         'keywords',
@@ -464,14 +462,26 @@ def _get_setup_options(metadata):
         'packages': 'packages',
         }
     
+    # populate the package data with sphinx docs
+    # we have to list all of the files because setuptools doesn't
+    # handle nested directories very well
+    pkgdir = os.path.join(distdir, 'src', metadata['name'])
+    plen = len(pkgdir)+1
+    sphinxdir = os.path.join(pkgdir, 'sphinx_build', 'html')
+    testdir = os.path.join(pkgdir, 'test')
+    pkglist = list(find_files(sphinxdir))
+    pkglist.extend(list(find_files(testdir, exclude="*.py[co]")))
+    pkglist = [p[plen:] for p in pkglist]
     setup_options = {
         #'packages': [metadata['name']],
-        'package_data': { metadata['name']: [
-            'sphinx_build/html/*.*',
-            'sphinx_build/html/_modules/*',
-            'sphinx_build/html/_sources/*',
-            'sphinx_build/html/_static/*',
-            ] },
+        'package_data': { 
+            metadata['name']: pkglist #[
+            #'sphinx_build/html/*.*',
+            #'sphinx_build/html/_modules/*',
+            #'sphinx_build/html/_sources/*',
+            #'sphinx_build/html/_static/*',
+            #] 
+        },
         'package_dir': {'': 'src'},
         'zip_safe': False,
         'include_package_data': True,
@@ -527,7 +537,7 @@ def _get_template_options(distdir, cfg, **kwargs):
     else:
         metadata['packages'] = [metadata['name']]
 
-    setup_options = _get_setup_options(metadata)
+    setup_options = _get_setup_options(distdir, metadata)
     
     template_options = {
         'copyright': '',
@@ -628,9 +638,6 @@ def plugin_quickstart(argv=None):
         template_options = _get_template_options(os.path.join(options.dest,name),
                                                  cfg, classname=classname)
         
-        plugin_py_template = _class_templates[options.group]
-        pycontents = plugin_py_template % template_options
-        pyfile = '%s.py' % name
         template_options['srcmod'] = name
     
         dirstruct = {
@@ -641,10 +648,14 @@ def plugin_quickstart(argv=None):
                 'README.txt': _templates['README.txt'] % template_options,
                 'src': {
                     name: {
-                        '__init__.py': 'from %s import %s\n' % (name,classname),
-                        pyfile: pycontents,
+                        '__init__.py': '', #'from %s import %s\n' % (name,classname),
+                        '%s.py' % name: _class_templates[options.group] % template_options,
                         'test': {
                                 'test_%s.py' % name: _get_test_file(name)
+                            },
+                        'sub': {
+                            '__init__.py': '',
+                            'sub.py': _class_templates[options.group] % { 'classname': 'Foo' }
                             }
                         },
                     },
@@ -710,7 +721,7 @@ def _find_all_plugins(searchdir):
 
     return dct
 
-def _set_entry_points(startdir, cfg):
+def _get_entry_points(startdir):
     plugins = _find_all_plugins(startdir)
     entrypoints = StringIO.StringIO()
     for key,val in plugins.items():
@@ -723,7 +734,7 @@ def _set_entry_points(startdir, cfg):
             for ept in epts:
                 entrypoints.write("%s\n" % ept)
     
-    cfg.set('metadata', 'entry_points', entrypoints.getvalue())
+    return entrypoints.getvalue()
 
 def plugin_makedist(argv=None):
     """A command line script (plugin_makedist) points to this.  It creates a 
@@ -751,11 +762,13 @@ def plugin_makedist(argv=None):
     os.chdir(destdir)
     
     try:
+        plugin_build_docs([destdir])
+        
         cfg = SafeConfigParser(dict_type=OrderedDict)
         cfg.readfp(open('setup.cfg', 'r'), 'setup.cfg')
             
-        _set_entry_points('src', cfg)
-
+        cfg.set('metadata', 'entry_points', _get_entry_points('src'))
+        
         template_options = _get_template_options(destdir, cfg,
                                                  packages=find_packages('src'))
 
@@ -773,7 +786,6 @@ def plugin_makedist(argv=None):
             sys.exit(-1)
         
         build_directory(dirstruct, force=True)
-        plugin_build_docs([destdir])
 
         cmdargs = [sys.executable, 'setup.py', 'sdist', '-d', startdir]
         cmd = ' '.join(cmdargs)
@@ -930,7 +942,9 @@ def plugin_build_docs(argv=None):
     cfg = SafeConfigParser(dict_type=OrderedDict)
     cfg.readfp(open(cfgfile, 'r'), cfgfile)
     
-    _set_entry_points(os.path.join(destdir,'src'), cfg)
+    cfg.set('metadata', 'entry_points', 
+            _get_entry_points(os.path.join(destdir,'src')))
+    
     template_options = _get_template_options(destdir, cfg)
 
     dirstruct = {

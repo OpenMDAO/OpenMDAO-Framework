@@ -92,7 +92,7 @@ def _file_dir_gen(dname):
             yield join(path, name)
         for name in dirlist:
             yield join(path, name)
-    
+
 def find_files(start, match=None, exclude=None, nodirs=True):
     """Return filenames (using a generator).
     
@@ -130,7 +130,10 @@ def find_files(start, match=None, exclude=None, nodirs=True):
         fmatch = matcher
 
     iters = [itertools.ifilter(fmatch, gen(d)) for d in startdirs]
-    return itertools.chain(*iters)
+    if len(iters) > 1:
+        return itertools.chain(*iters)
+    else:
+        return iters[0]
 
 
 def find_up(name, path=None):
