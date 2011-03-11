@@ -653,10 +653,6 @@ def plugin_quickstart(argv=None):
                         'test': {
                                 'test_%s.py' % name: _get_test_file(name)
                             },
-                        'sub': {
-                            '__init__.py': '',
-                            'sub.py': _class_templates[options.group] % { 'classname': 'Foo' }
-                            }
                         },
                     },
                 'docs': {
@@ -884,9 +880,6 @@ def plugin_install(argv=None):
     if retcode:
         sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
         sys.exit(-1)
-
-    # TODO: in the future, generate some event here to notify the gui to update its
-    # list of available plugins
 
     
 def _plugin_build_docs(destdir, cfg):
