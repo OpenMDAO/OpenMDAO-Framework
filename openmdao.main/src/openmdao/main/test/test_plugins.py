@@ -27,17 +27,19 @@ class PluginsTestCase(unittest.TestCase):
                               'README.txt',
                               'test','test_foobar.py']))
     
-    def test_makedist(self):
-        argv = ['foobar', '-v', '1.1', '-d', self.tdir]
-        plugin_quickstart(argv)
+    # FIXME: all of the output from this currently shows up in the openmdao_test
+    # output even when the test is successful, so leave it out for now...
+    #def test_makedist(self):
+        #argv = ['foobar', '-v', '1.1', '-d', self.tdir]
+        #plugin_quickstart(argv)
         
-        startdir = os.getcwd()
-        try:
-            os.chdir(self.tdir)
-            plugin_makedist(['foobar'])
-            self.assertTrue(os.path.exists('foobar-1.1.tar.gz'))
-        finally:
-            os.chdir(startdir)
+        #startdir = os.getcwd()
+        #try:
+            #os.chdir(self.tdir)
+            #plugin_makedist(['foobar'])
+            #self.assertTrue(os.path.exists('foobar-1.1.tar.gz'))
+        #finally:
+            #os.chdir(startdir)
 
 if __name__ == '__main__':
     unittest.main()
