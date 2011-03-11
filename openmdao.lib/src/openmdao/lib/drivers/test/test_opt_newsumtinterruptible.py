@@ -45,6 +45,7 @@ import numpy
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.datatypes.api import Float, Array
+from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import NEWSUMTdriver
 from openmdao.util.testutil import assert_rel_error
 
@@ -381,6 +382,31 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
                                self.top.comp.x[1], places=2)
         
+    def test_opt1_with_OpenMDAO_FD(self):
+
+        self.top.driver.add_objective( 'comp.result' )
+
+        self.top.driver.add_parameters( [
+            ('comp.x[0]', 2.0, 50.0),
+            ('comp.x[1]', -50.0, 50.0),
+            ] )
+        
+        map(self.top.driver.add_constraint,[ '-10.0 + 10.0 * comp.x[0] - comp.x[1] > 0.0' ] )
+        self.top.driver.ilin = [1]
+
+        self.top.driver.differentiator = FiniteDifference(self.top.driver)
+        
+        self.top.run()
+        
+        assert_rel_error(self,
+                         self.top.comp.opt_objective, 
+                         self.top.driver.eval_objective(),
+                         0.001)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
+                               self.top.comp.x[0], places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
+                               self.top.comp.x[1], places=2)
+        
 class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
     """test NEWSUMT optimizer component using the Rosen Suzuki problem"""
 
@@ -616,6 +642,141 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         if baseerror > newerror:
             self.fail("Coarsening CONMIN gradient step size did not make the objective worse.")
 
+            
+class OptRosenSuzukiComponent_Deriv(Component):
+    """ From the NEWSUMT User's Manual:
+    EXAMPLE 2 - CONSTRAINED ROSEN-SUZUKI FUNCTION. NO GRADIENT INFORMATION.
+    
+         MINIMIZE OBJ = X(1)**2 - 5*X(1) + X(2)**2 - 5*X(2) +
+                        2*X(3)**2 - 21*X(3) + X(4)**2 + 7*X(4) + 50
+    
+         Subject to:
+    
+              G(1) = X(1)**2 + X(1) + X(2)**2 - X(2) +
+                     X(3)**2 + X(3) + X(4)**2 - X(4) - 8   .LE.0
+    
+              G(2) = X(1)**2 - X(1) + 2*X(2)**2 + X(3)**2 +
+                     2*X(4)**2 - X(4) - 10                  .LE.0
+    
+              G(3) = 2*X(1)**2 + 2*X(1) + X(2)**2 - X(2) +
+                     X(3)**2 - X(4) - 5                     .LE.0
+                     
+    This problem is solved beginning with an initial X-vector of
+         X = (1.0, 1.0, 1.0, 1.0)
+    The optimum design is known to be
+         OBJ = 6.000
+    and the corresponding X-vector is
+         X = (0.0, 1.0, 2.0, -1.0)
+    """
+    
+    x1 = Float(1.0, iotype='in')
+    x2 = Float(1.0, iotype='in')
+    x3 = Float(1.0, iotype='in')
+    x4 = Float(1.0, iotype='in')
+    result = Float(0.0, iotype='out')
+    
+    # pylint: disable-msg=C0103
+    def __init__(self, doc=None):
+        """Initialize"""
+        
+        super(OptRosenSuzukiComponent_Deriv, self).__init__(doc)
+        # Initial guess
+        self.opt_objective = 6.
+        self.opt_design_vars = [0., 1., 2., -1.]
+
+        self.derivatives.declare_first_derivative(self, 'result', 'x1')
+        self.derivatives.declare_first_derivative(self, 'result', 'x2')
+        self.derivatives.declare_first_derivative(self, 'result', 'x3')
+        self.derivatives.declare_first_derivative(self, 'result', 'x4')
+        self.derivatives.declare_second_derivative(self, 'result', 'x1', 'x1')
+        self.derivatives.declare_second_derivative(self, 'result', 'x1', 'x2')
+        self.derivatives.declare_second_derivative(self, 'result', 'x1', 'x3')
+        self.derivatives.declare_second_derivative(self, 'result', 'x1', 'x4')
+        self.derivatives.declare_second_derivative(self, 'result', 'x2', 'x2')
+        self.derivatives.declare_second_derivative(self, 'result', 'x2', 'x3')
+        self.derivatives.declare_second_derivative(self, 'result', 'x2', 'x4')
+        self.derivatives.declare_second_derivative(self, 'result', 'x3', 'x3')
+        self.derivatives.declare_second_derivative(self, 'result', 'x3', 'x4')
+        self.derivatives.declare_second_derivative(self, 'result', 'x4', 'x4')
+
+    def execute(self):
+        """calculate the new objective value"""
+        self.result = (self.x1**2 - 5.*self.x1 + 
+                       self.x2**2 - 5.*self.x2 +
+                       2.*self.x3**2 - 21.*self.x3 + 
+                       self.x4**2 + 7.*self.x4 + 50)
+
+    def calculate_derivatives(self, first, second):
+        """Analytical derivatives"""
+        
+        if first:
+        
+            df_dx1 = 2.0*self.x1 - 5.0
+            df_dx2 = 2.0*self.x2 - 5.0
+            df_dx3 = 4.0*self.x3 - 21.0
+            df_dx4 = 2.0*self.x4 + 7.0
+        
+            self.derivatives.set_first_derivative('result', 'x1', df_dx1)
+            self.derivatives.set_first_derivative('result', 'x2', df_dx2)
+            self.derivatives.set_first_derivative('result', 'x3', df_dx3)
+            self.derivatives.set_first_derivative('result', 'x4', df_dx4)
+        
+        if second:
+        
+            df_dx1dx1 = 2.0
+            df_dx2dx2 = 2.0
+            df_dx3dx3 = 4.0
+            df_dx4dx4 = 2.0
+            
+            self.derivatives.set_second_derivative('result', 'x1', 'x1', df_dx1dx1)
+            self.derivatives.set_second_derivative('result', 'x2', 'x2', df_dx2dx2)
+            self.derivatives.set_second_derivative('result', 'x3', 'x3', df_dx3dx3)
+            self.derivatives.set_second_derivative('result', 'x4', 'x4', df_dx4dx4)
+
+class NEWSUMTdriverRosenSuzukiTestCaseDeriv(unittest.TestCase):
+    """test NEWSUMT optimizer component using the Rosen Suzuki problem"""
+
+    def setUp(self):
+        '''setup test'''
+        self.top = set_as_top(Assembly())
+        self.top.add('comp', OptRosenSuzukiComponent_Deriv())
+        self.top.add('driver', NEWSUMTdriver())
+        self.top.driver.workflow.add('comp')
+        self.top.driver.itmax = 30
+        self.top.driver.jprint = -1
+        self.top.driver.lobj = 0
+        
+    def tearDown(self):
+        '''tear down'''
+        self.top = None
+        
+    def test_opt1(self):
+
+        self.top.driver.add_objective('comp.result')
+
+        self.top.driver.add_parameter('comp.x1', -10.0, 99.0, fd_step=0.01)
+        self.top.driver.add_parameter('comp.x2', -10.0, 99.0)
+        self.top.driver.add_parameter('comp.x3', -10.0, 99.0)
+        self.top.driver.add_parameter('comp.x4', -10.0, 99.0)
+
+        map(self.top.driver.add_constraint,[
+            'comp.x1**2+comp.x1+comp.x2**2-comp.x2+comp.x3**2+comp.x3+comp.x4**2-comp.x4 < 8',
+            'comp.x1**2-comp.x1+2*comp.x2**2+comp.x3**2+2*comp.x4**2-comp.x4 < 10',
+            '2*comp.x1**2+2*comp.x1+comp.x2**2-comp.x2+comp.x3**2-comp.x4 < 5'])
+        
+        self.top.driver.differentiator = FiniteDifference(self.top.driver)
+        self.top.run()
+
+        self.assertAlmostEqual(self.top.comp.opt_objective, 
+                               self.top.driver.eval_objective(), places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
+                               self.top.comp.x1, places=1)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
+                               self.top.comp.x2, places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
+                               self.top.comp.x3, places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
+                               self.top.comp.x4, places=1)
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
@@ -625,6 +786,7 @@ if __name__ == "__main__":
     suite.addTest(unittest.makeSuite(NEWSUMTdriverParaboloidWithLinearConstraintTestCase))
     suite.addTest(unittest.makeSuite(NEWSUMTdriverParaboloidWithNonLinearConstraintTestCase))
     suite.addTest(unittest.makeSuite(NEWSUMTdriverExample1FromManualTestCase))
+    suite.addTest(unittest.makeSuite(NEWSUMTdriverRosenSuzukiTestCaseDeriv))
 
     results = unittest.TextTestRunner(verbosity=2).run(suite)
 

@@ -353,8 +353,6 @@ class CONMINdriver(Driver):
         
         self._save_common_blocks()
         
-        #print self.d_const
-        
         # calculate objective and constraints
         if self.cnmn1.info == 1:
             
@@ -398,6 +396,8 @@ class CONMINdriver(Driver):
             #self._logger.debug('constraints = %s'%self.constraint_vals)
                 
         # calculate gradient of constraints and gradient of objective
+        # We also have to determine which constrints are active/violated, and
+        # only return gradients of active/violated constraints.
         elif self.cnmn1.info == 2 and self.cnmn1.nfdg == 1:
             
             super(CONMINdriver, self).calc_derivatives(first=True)
@@ -405,20 +405,24 @@ class CONMINdriver(Driver):
             self.differentiator.calc_gradient()
             self.ffd_order = 0
                 
-            ncon = self.differentiator.n_ineqconst
-            for i in range(ncon):
-                scale = norm(self.differentiator.gradient_ineq_const[:, i])
-                self.d_const[:-2, i] = \
-                    self.differentiator.gradient_ineq_const[:, i]/scale
-                self.d_const[-2, i] = 1.0
-                self.d_const[-1, i] = scale
-                
             self.d_obj[:-2] = self.differentiator.gradient_obj
+            
+            for i in range(len(self.cons_active_or_violated)):
+                self.cons_active_or_violated[i] = 0
                 
+            ncon = self.differentiator.n_ineqconst
+            self.cnmn1.nac = 0
+            for i in range(ncon):
+                if self.constraint_vals[i] >= self.cnmn1.ct:
+                    self.cons_active_or_violated[self.cnmn1.nac] = i+1
+                    self.d_const[:-2, self.cnmn1.nac] = \
+                        self.differentiator.gradient_ineq_const[:, i]
+                    self.cnmn1.nac += 1
+                    
         else:
             self.raise_exception('Unexpected value for flag INFO returned \
                     from CONMIN', RuntimeError)
-
+        
             
     def post_iteration(self):
         """ Checks CONMIN's return status and writes out cases."""

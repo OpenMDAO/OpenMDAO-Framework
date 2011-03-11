@@ -163,7 +163,6 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, nrandm, \
             super(NEWSUMTdriver, driver).calc_derivatives(first=True)
             driver.ffd_order = 1
             driver.differentiator.calc_gradient()
-            driver.differentiator.calc_hessian(reuse_first=True)
             driver.ffd_order = 0
         
         nparam = driver.differentiator.n_param
@@ -246,9 +245,6 @@ class NEWSUMTdriver(Driver):
     """ Driver wrapper of Fortran version of NEWSUMT. 
         
     
-.. todo:: Make NEWSUMT's handling of user calculated gradients 
-          accessible through NEWSUMTdriver.
-            
 .. todo:: Check to see if this itmax variable is needed.
             NEWSUMT might handle it for us.
             

@@ -10,6 +10,7 @@ from openmdao.lib.datatypes.api import TraitError
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.datatypes.api import Float, Array, Str
+from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.util.testutil import assert_rel_error
 
@@ -86,6 +87,34 @@ class CONMINdriverTestCase(unittest.TestCase):
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])        
         self.top.run()
+        # pylint: disable-msg=E1101
+        self.assertAlmostEqual(self.top.comp.opt_objective, 
+                               self.top.driver.eval_objective(), places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
+                               self.top.comp.x[0], places=1)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
+                               self.top.comp.x[1], places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
+                               self.top.comp.x[2], places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
+                               self.top.comp.x[3], places=1)
+
+    def test_opt1_with_OpenMDAO_gradient(self):
+        self.top.driver.add_objective('comp.result')
+        self.top.driver.add_parameter('comp.x[0]', fd_step = .01)
+        self.top.driver.add_parameter('comp.x[1]', fd_step = .01)
+        self.top.driver.add_parameter('comp.x[2]', fd_step = .01)
+        self.top.driver.add_parameter('comp.x[3]', fd_step = .01)
+        
+        # pylint: disable-msg=C0301
+        map(self.top.driver.add_constraint,[
+            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
+            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])  
+        
+        self.top.driver.differentiator = FiniteDifference(self.top.driver)
+        self.top.run()
+        
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
                                self.top.driver.eval_objective(), places=2)
