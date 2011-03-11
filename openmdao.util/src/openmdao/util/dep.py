@@ -139,7 +139,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                 
 
 class PythonSourceTreeAnalyser(object):
-    def __init__(self, startdir=None, excludes=None):
+    def __init__(self, startdir=None, exclude=None):
         # inheritance graph. It's a directed graph with base classes
         # pointing to the classes that inherit from them
         self.graph = nx.DiGraph()
@@ -153,10 +153,7 @@ class PythonSourceTreeAnalyser(object):
             
         self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
             
-        if excludes is None:
-            self.excludes = []
-        else:
-            self.excludes = excludes
+        self.exclude = exclude
             
         self._analyze()
             
@@ -169,7 +166,7 @@ class PythonSourceTreeAnalyser(object):
         
         # gather python files from the specified starting directories
         # and parse them, extracting class and import information
-        for pyfile in find_files(self.startdirs, "*.py", self.excludes):
+        for pyfile in find_files(self.startdirs, "*.py", self.exclude):
             myvisitor = PythonSourceFileAnalyser(pyfile)
             # in order to get this to work with the 'ast' lib, I have
             # to read using universal newlines and append a newline

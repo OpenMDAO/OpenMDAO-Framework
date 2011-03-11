@@ -8,8 +8,8 @@ from os import makedirs
 import sys
 import shutil
 import warnings
+import itertools
 from fnmatch import fnmatch
-from fnmatch import filter as fnfilter
 from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
 
@@ -99,13 +99,13 @@ def find_files(start, match=None, exclude=None, nodirs=True):
     start: str or list of str
         Starting directory or list of directories.
         
-    match: str, predicate funct or list of same
+    match: str or predicate funct
         Either a string containing a glob pattern to match
-        or a predicate function that returns True on a match,
-        or a list either.
+        or a predicate function that returns True on a match.
         
-    exclude: str or list of str
-        A string or list of strings containing glob pattern(s)
+    exclude: str or predicate funct
+        Either a string containing a glob pattern to exclude
+        or a predicate function that returns True to exclude.
         
     nodirs: bool
         If False, return names of files and directories.
@@ -114,54 +114,23 @@ def find_files(start, match=None, exclude=None, nodirs=True):
     """
     startdirs = [start] if isinstance(start, basestring) else start
     
-    if nodirs:
-        gen = _file_gen
+    gen = _file_gen if nodirs else _file_dir_gen
+    if match is None:
+        matcher = bool
+    elif isinstance(match, basestring):
+        matcher = lambda name: fnmatch(name,match)
     else:
-        gen = _file_dir_gen
+        matcher = match
 
-    if match is None and exclude is None:
-        for d in startdirs:
-            for path in gen(d):
-                yield path
-    elif exclude is None:
-        if isinstance(match, (list, tuple)):
-            matches = match
-        else:
-            matches = [match]
-        for d in startdirs:
-            for path in gen(d):
-                for match in matches:
-                    if isinstance(match, basestring):
-                        if fnmatch(path, match):
-                            yield path
-                            break
-                    else:  # assume it's a predicate function
-                        if match(path):
-                            yield path
-                            break
+    if isinstance(exclude, basestring):
+        fmatch = lambda name: matcher(name) and not fnmatch(name, exclude)
+    elif exclude is not None:
+        fmatch = lambda name: matcher(name) and not exclude(name)
     else:
-        if match is None:
-            match = '*'
-        excludes = [exclude] if isinstance(exclude, basestring) else exclude
-        matches = [match] if isinstance(match, basestring) else match
-        for d in startdirs:
-            for path in gen(d):
-                skip = False
-                for match in matches:
-                    if skip:
-                        break
-                    if isinstance(match, basestring):
-                        if not fnmatch(path, match):
-                            continue
-                    elif not match(path):
-                        continue
-                    for exclude in excludes:
-                        if fnmatch(path, exclude):
-                            skip = True
-                            break
-                    else:
-                        yield path
-                        skip = True
+        fmatch = matcher
+
+    iters = [itertools.ifilter(fmatch, gen(d)) for d in startdirs]
+    return itertools.chain(*iters)
 
 
 def find_up(name, path=None):

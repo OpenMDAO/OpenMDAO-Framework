@@ -429,8 +429,20 @@ def _get_pkgdocs(cfg):
         
     return ''.join(lines)
 
-
+def _cfg_to_py(obj):
+    """Convert a config file string to a python object."""
+    parts = [p.strip() for p in obj.split('\n') if p.strip()]
+    
+    
 def _get_setup_options(metadata):
+    # a set of names of variables that are supposed to be lists
+    lists = set([
+        'keywords',
+        'install_requires',
+        'packages',
+        'classifiers',
+        ])
+    
     # mapping of new metadata names to old ones
     mapping = {
         'name': 'name',
@@ -467,6 +479,11 @@ def _get_setup_options(metadata):
     
     for key,val in metadata.items():
         if key in mapping:
+            if isinstance(val, basestring):
+                if mapping[key] in lists:
+                    val = [p.strip() for p in val.split('\n') if p.strip()]
+                else:
+                    val = val.strip()
             setup_options[mapping[key]] = val
 
     return setup_options

@@ -9,6 +9,7 @@ import os.path
 import sys
 import unittest
 import tempfile
+from fnmatch import fnmatch
 
 from openmdao.util.fileutil import find_in_path, build_directory, find_files
 
@@ -61,16 +62,17 @@ class FileUtilTestCase(unittest.TestCase):
         flist = find_files(self.tempdir, '*.exe')
         self.assertEqual(set([os.path.basename(f) for f in flist]), 
                          set(['bar.exe']))
-        flist = find_files(self.tempdir, ['*.exe','*some*'])
+        matcher = lambda name: fnmatch(name, '*.exe') or fnmatch(name, '*some*')
+        flist = find_files(self.tempdir, matcher)
         self.assertEqual(set([os.path.basename(f) for f in flist]), 
                          set(['bar.exe', 'somefile']))
         flist = find_files(self.tempdir, exclude='*.exe')
         self.assertEqual(set([os.path.basename(f) for f in flist]), 
                          set(['somefile']))
-        flist = find_files(self.tempdir, exclude=['*.exe', '*some*'])
+        flist = find_files(self.tempdir, exclude=matcher)
         self.assertEqual(set([os.path.basename(f) for f in flist]), 
                          set([]))
-        flist = find_files(self.tempdir, match='*.exe', exclude=['*.exe', '*some*'])
+        flist = find_files(self.tempdir, match='*.exe', exclude=matcher)
         self.assertEqual(set([os.path.basename(f) for f in flist]), 
                          set([]))
         
