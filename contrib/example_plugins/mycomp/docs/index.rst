@@ -1,20 +1,15 @@
- 
-====================
-CONMIN Documentation
-====================
 
-Current version: |version|
+
+====================
+mycomp Documentation
+====================
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
     
-   plugin
+   usage
    srcdocs
-
-   
-* :ref:`search`
-   
-  
+   pkgdocs
 

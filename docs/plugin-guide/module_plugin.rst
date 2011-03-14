@@ -303,7 +303,7 @@ Additional Customization
 
 In some cases, you may want to add multiple plugin classes to your distribution,
 either in the *<dist_name>.py* file or in separate Python source files that you
-add to the ``src`` directory, possible as part of a nested package directory
+add to the ``src`` directory, possibly as part of a nested package directory
 structure.  The ``plugin_makedist`` script knows how to handle this sort of a
 situation and will generate the appropriate source documentation and metadata
 for whatever plugins you define under the ``src`` tree.
@@ -432,10 +432,21 @@ necessary files in a source distribution that will be named as follows:
 
 ::
 
+    <dist_name>-<version>.zip
+    
+    
+on Windows, or
+
+::
+
     <dist_name>-<version>.tar.gz
     
     
-In our particular case, the file would be named ``simpleadder-0.9.tar.gz``.
+on other platforms.
+    
+    
+In our particular case since we're doing this on linux, the file would be 
+named ``simpleadder-0.9.tar.gz``.
 
 Once we've created our source distribution, it can be installed into an active
 OpenMDAO environment by running:
@@ -550,5 +561,28 @@ as before, we run ``plugin_makedist`` and the end result should be a
 source distribution named ``coord-0.1.tar.gz``.  The version id of our 
 plugin defaulted to **0.1** because we didn't specify it when we ran
 ``plugin_quickstart``.
+
+
+Building a Driver Plugin
+========================
+
+Drivers are Components that have some extra API functions to let them
+deal with iterating over workflows, handling design variables, etc.
+Driver plugins are built and distributed in the same way as component
+plugins, so we can use the ``plugin_quickstart`` script to create a
+starting directory structure for our plugin:
+
+::
+
+
+    plugin_quickstart mydriver -c MyDriver -g openmdao.driver
+
+
+By settng the **-g** option to *openmdao.driver*, we tell ``plugin_quickstart``
+to generate a source file containing a Driver class.  The rest of the plugin
+development process is the same as described in the :ref:`build-pure-python-plugin-label`
+section.
+
+
 
 

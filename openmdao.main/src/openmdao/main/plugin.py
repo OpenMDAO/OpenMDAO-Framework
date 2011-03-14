@@ -558,12 +558,14 @@ def _get_template_options(distdir, cfg, **kwargs):
         
     return template_options
 
-def _get_test_file(name):
-    return """
+
+
+test_template = """
+
 import unittest
 
 
-class %(name)sTestCase(unittest.TestCase):
+class %(classname)sTestCase(unittest.TestCase):
 
     def setUp(self):
         pass
@@ -573,13 +575,13 @@ class %(name)sTestCase(unittest.TestCase):
         
     # add some tests here...
     
-    #def test_%(name)s(self):
+    #def test_%(classname)s(self):
         #pass
         
 if __name__ == "__main__":
     unittest.main()
     
-    """ % { 'name': name }
+"""
 
 
 def plugin_quickstart(argv=None):
@@ -651,7 +653,7 @@ def plugin_quickstart(argv=None):
                         '__init__.py': '', #'from %s import %s\n' % (name,classname),
                         '%s.py' % name: _class_templates[options.group] % template_options,
                         'test': {
-                                'test_%s.py' % name: _get_test_file(name)
+                                'test_%s.py' % name: test_template % template_options
                             },
                         },
                     },
@@ -775,7 +777,10 @@ def plugin_makedist(argv=None):
         name = cfg.get('metadata', 'name')
         version = cfg.get('metadata', 'version')
         
-        disttar = "%s-%s.tar.gz" % (name, version)
+        if sys.platform == 'win32':
+            disttar = "%s-%s.zip" % (name, version)
+        else:
+            disttar = "%s-%s.tar.gz" % (name, version)
         disttarpath = os.path.join(startdir, disttar)
         if os.path.exists(disttarpath):
             sys.stderr.write("ERROR: distribution %s already exists.\n" % disttarpath)
