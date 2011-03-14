@@ -220,7 +220,7 @@ class TestCase(unittest.TestCase):
                     self.fail('Expected OSError')
 
             # Load a model.
-            exec_comp = server.create('openmdao.test.ExecComp')
+            exec_comp = server.create('openmdao.test.execcomp.ExecComp')
             exec_comp.run()
             egg_info = exec_comp.save_to_egg('exec_comp', '0')
             obj = server.load_model(egg_info[0])
