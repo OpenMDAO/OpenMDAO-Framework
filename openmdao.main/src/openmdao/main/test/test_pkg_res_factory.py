@@ -78,7 +78,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
         dist = working_set.find(Requirement.parse('openmdao.test'))
         fact = PkgResourcesFactory(['openmdao.component'], None)
         
-        comp = fact.create('openmdao.test.ExecComp', 
+        comp = fact.create('openmdao.test.execcomp.ExecComp', 
                            exprs=['x = a+1','y=b-2','z=x*2'])
         comp.a = 4
         comp.b = 2
@@ -144,26 +144,29 @@ class PkgResFactoryTestCase(unittest.TestCase):
         
     def test_get_available_types(self):
         types = set([x[0] for x in get_available_types()])
-        self.assertTrue(types.issuperset(set(['openmdao.lib.ExternalCode',
-                                              'openmdao.lib.DeMux',
-                                              'openmdao.lib.DOEdriver',
-                                              'openmdao.lib.Genetic',
-                                              'openmdao.lib.CaseIteratorDriver',
-                                              'openmdao.lib.MetaModel',
-                                              'openmdao.lib.MultiObjExpectedImprovement',
-                                              'openmdao.lib.CONMINdriver',
-                                              'openmdao.lib.SimpleCaseIterDriver',
-                                              'openmdao.lib.ParetoFilter',
-                                              'openmdao.lib.NEWSUMTdriver',
-                                              'openmdao.lib.ProbIntersect',
-                                              'openmdao.lib.NastranComponent',
-                                              'openmdao.lib.Mux',
-                                              'openmdao.lib.ExpectedImprovement',
-                                              'openmdao.test.ExecComp',
-                                              'openmdao.main.Assembly',
-                                              'openmdao.lib.FixedPointIterator',])))
+        expected = set(['openmdao.lib.components.external_code.ExternalCode',
+                        'openmdao.lib.components.mux.DeMux',
+                        'openmdao.lib.drivers.doedriver.DOEdriver',
+                        'openmdao.lib.drivers.genetic.Genetic',
+                        'openmdao.lib.drivers.caseiterdriver.CaseIteratorDriver',
+                        'openmdao.lib.components.metamodel.MetaModel',
+                        'openmdao.lib.components.expected_improvement_multiobj.MultiObjExpectedImprovement',
+                        'openmdao.lib.drivers.conmindriver.CONMINdriver',
+                        'openmdao.lib.drivers.simplecid.SimpleCaseIterDriver',
+                        'openmdao.lib.components.pareto_filter.ParetoFilter',
+                        'openmdao.lib.drivers.newsumtdriver.NEWSUMTdriver',
+                        'openmdao.lib.components.prob_intersect.ProbIntersect',
+                        'openmdao.lib.components.nastran.nastran.NastranComponent',
+                        'openmdao.lib.components.mux.Mux',
+                        'openmdao.lib.components.expected_improvement.ExpectedImprovement',
+                        'openmdao.test.execcomp.ExecComp',
+                        'openmdao.main.assembly.Assembly',
+                        'openmdao.lib.drivers.iterate.FixedPointIterator',])
+        missing = expected - types
+        if missing:
+            self.fail("the following expected types were missing: %s" % missing)
         
 if __name__ == "__main__":
     unittest.main()
 
-    
+
