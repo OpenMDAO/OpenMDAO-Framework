@@ -872,7 +872,7 @@ def plugin_install(argv=None):
         sys.exit(-1)
         
     if develop:
-        cmdargs = [sys.executable, 'setup.py', 'develop']
+        cmdargs = [sys.executable, 'setup.py', 'develop', '-N']
     else:
         cmdargs = ['easy_install']
         if options.findlinks:
