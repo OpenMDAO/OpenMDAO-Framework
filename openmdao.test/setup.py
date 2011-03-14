@@ -48,7 +48,7 @@ setup(name='openmdao.test',
       ],
       entry_points={
       'openmdao.component': [
-          'openmdao.test.ExecComp = openmdao.test.execcomp:ExecComp'
+          'openmdao.test.execcomp.ExecComp = openmdao.test.execcomp:ExecComp'
       ],
       "console_scripts": [
           'openmdao_test = openmdao.test.testing:run_openmdao_suite'

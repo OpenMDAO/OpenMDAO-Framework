@@ -45,10 +45,15 @@ class DepTestCase(unittest.TestCase):
         types = set([x[0] for x in get_available_types(groups)])
         types = [x.rsplit('.',1)[1] for x in types]
         
-        noentrypts = set(comps)-set(types)
+        cset = set(comps)
+        tset = set(types)
+        noentrypts = cset-tset
         if noentrypts:
             self.fail("the following Components are not registered using entry points: %s" % noentrypts)
         
+        #noclasses = tset-cset
+        #if noclasses:
+        #    self.fail("the following entry points have no classes associated with them: %s" % noclasses)
     
 if __name__ == '__main__':
     unittest.main()

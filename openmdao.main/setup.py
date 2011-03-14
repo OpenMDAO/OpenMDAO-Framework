@@ -62,6 +62,6 @@ setup(name='openmdao.main',
       plugin_quickstart=openmdao.main.plugin:plugin_quickstart
       
       [openmdao.component]
-      openmdao.main.Assembly = openmdao.main.assembly:Assembly
+      openmdao.main.assembly.Assembly = openmdao.main.assembly:Assembly
       """,
     )
