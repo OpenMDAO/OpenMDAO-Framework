@@ -43,10 +43,10 @@ class TestCase(unittest.TestCase):
             # List types.
             types = factory.get_available_types()
             names = [name for name, version in types]
-            self.assertTrue('openmdao.test.ExecComp' in names)
+            self.assertTrue('openmdao.test.execcomp.ExecComp' in names)
 
             # Create a component.
-            exec_comp = factory.create('openmdao.test.ExecComp')
+            exec_comp = factory.create('openmdao.test.execcomp.ExecComp')
             exec_comp.run()
 
             # Force failed factory server startup via invalid port.
@@ -84,7 +84,7 @@ class TestCase(unittest.TestCase):
             server = ObjServer()
 
             # Create a component.
-            exec_comp = server.create('openmdao.test.ExecComp')
+            exec_comp = server.create('openmdao.test.execcomp.ExecComp')
             exec_comp.run()
             egg_info = exec_comp.save_to_egg('exec_comp', '0')
 
@@ -112,7 +112,7 @@ class TestCase(unittest.TestCase):
 
             # Create a file using context.
             with server.open('xyzzy', 'w') as out:
-                 out.write('Hello world!\n')
+                out.write('Hello world!\n')
 
             # Create another file using file proxy.
             out = server.open('fred', 'w')
