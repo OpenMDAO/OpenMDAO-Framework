@@ -284,7 +284,7 @@ class NEWSUMTdriver(Driver):
     
     jprint = Int(0, iotype='in', desc='Print information during NEWSUMT \
                     solution. Higher values are more verbose. If 0,\
-                    print initial and final designs only.', high=999, low=-1)
+                    print initial and final designs only.', high=3, low=-1)
     lobj = Int(0, iotype='in', desc='Set to 1 if linear objective function.')
     maxgsn = Int(20, iotype='in', desc='Maximum allowable number of golden \
                     section iterations used for 1D minimization.')
