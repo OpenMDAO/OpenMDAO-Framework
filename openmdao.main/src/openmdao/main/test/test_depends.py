@@ -5,7 +5,6 @@ import logging
 import nose
 
 from enthought.traits.api import TraitError
-from nose import SkipTest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
 from openmdao.lib.datatypes.api import Int
@@ -331,8 +330,21 @@ class DependsTestCase(unittest.TestCase):
             self.assertEqual(str(err), 
                 "sub.comp2: 'b' is connected to source 'parent.b2' and cannot be set by source 'None'")
         else:
-            self.fail('TraitError expected')            
+            self.fail('TraitError expected')
             
+    def test_force_with_input_updates(self):
+        top = set_as_top(Assembly())
+        top.add('c2', Simple())
+        top.add('c1', Simple())
+        top.c2.force_execute = True
+        top.connect('c1.c', 'c2.a')
+        top.driver.workflow.add(['c1','c2'])
+        top.run()
+        self.assertEqual(top.c2.a, 3)
+        top.c1.a = 2
+        top.run()
+        self.assertEqual(top.c2.a, 4)
+
         
 if __name__ == "__main__":
     

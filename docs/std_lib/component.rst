@@ -14,26 +14,36 @@ MetaModel
 ~~~~~~~~~~~
 
     MetaModel is a class which supports generalized meta modeling capabilities. There are two 
-    sockets, one for a particular surrogate model generator and a second for the 
+    sockets, one for surrogate model generators and a second for the 
     model that is being approximated. The first socket, named `surrogate`, must 
     always be filled before anything else is done. This socket gets filled with 
-    a surrogate model generator which adheres to the ISurrogate interface. 
+    a dictionary that specifies which surrogate model generator should be used for 
+    which outputs. The keys of the dictionary are the variable names, and the values
+    are the particular surrogate model generators which adhere to the ISurrogate
+    interface. A special key, 'default', can be used to indicate a surrogate model
+    generator to be used if no specific one is given for a particular variable. 
+    Any specific variables specified will override the default. 
     OpenMDAO provides some surrogate modelers in ``openmdao.lib.surrogatemodels``. 
     
     .. testcode:: MetaModel_sockets
         
         from openmdao.main.api import Assembly
         from openmdao.lib.components.api import MetaModel
-        from openmdao.lib.surrogatemodels.api import KrigingSurrogate
+        from openmdao.lib.surrogatemodels.api import KrigingSurrogate,LogisticRegression
         
         class Simulation(Assembly):
             def __init__(self): 
                 super(Simulation,self).__init__(self)
                 
                 self.add('meta_model',MetaModel())
-                self.meta_model.surrogate = KrigingSurrogate()
-        
-    Once a particular surrogate model has been specified, the model socket, called 
+                #using KriginSurrogate for all outputs                
+                self.meta_model.surrogate = {'default':KrigingSurrogate()}
+                
+                #alternately, overiding the default for a specific variable
+                self.meta_model.surrogate = {'default':LogisticRegression(),
+                                             'f_xy':KrigingSurrogate()}
+                                             
+    Once the surrogate dictionary has been specified, the model socket, called 
     `model`, can be filled with a component. As soon as a component is put in the
     socket, MetaModel will automatically mirror the inputs and outputs of that 
     component. In other words, MetaModel will have the same inputs and 
@@ -51,7 +61,7 @@ MetaModel
                 super(Simulation,self).__init__(self)
                 
                 self.add('meta_model',MetaModel())
-                self.meta_model.surrogate = KrigingSurrogate()
+                self.meta_model.surrogate = {'default':KrigingSurrogate()}
         
                 #component has two inputs: x,y
                 self.meta_model.model = BraninComponent()
@@ -85,7 +95,7 @@ MetaModel
                 super(Simulation,self).__init__(self)
                 
                 self.add('meta_model',MetaModel())
-                self.meta_model.surrogate = KrigingSurrogate()
+                self.meta_model.surrogate = {'default':KrigingSurrogate()}
                 
                 #component has two inputs: x,y
                 self.meta_model.model = BraninComponent()
@@ -109,7 +119,7 @@ MetaModel
                 super(Simulation,self).__init__(self)
                 
                 self.add('meta_model',MetaModel())
-                self.meta_model.surrogate = KrigingSurrogate()
+                self.meta_model.surrogate = {'default': KrigingSurrogate()}
                 
                 #component has two inputs: x,y
                 self.meta_model.model = BraninComponent()
@@ -156,7 +166,7 @@ MetaModel
                 super(Simulation,self).__init__()
                 
                 self.add('meta_model',MetaModel())
-                self.meta_model.surrogate = KrigingSurrogate()
+                self.meta_model.surrogate = {'default':KrigingSurrogate()}
                 
                 #component has two inputs: x,y
                 self.meta_model.model = BraninComponent()

@@ -3,6 +3,8 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
+from numpy import sin, cos
+
 from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
 
 from openmdao.main.api import Assembly, Component, Driver, \
@@ -14,34 +16,18 @@ from openmdao.main.hasstopcond import HasStopConditions
 
 from openmdao.lib.components.api import MetaModel, MultiObjExpectedImprovement,\
      ParetoFilter, Mux
-from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver 
+from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
 from openmdao.lib.caseiterators.api import DBCaseIterator
-from openmdao.lib.caserecorders import DBCaseRecorder, DumpCaseRecorder
+from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder
 
-from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
+from openmdao.lib.surrogatemodels.api import KrigingSurrogate
 
-from openmdao.lib.doegenerators.optlh import OptLatinHypercube
-from openmdao.lib.doegenerators.full_factorial import FullFactorial
+from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
 
 from openmdao.examples.expected_improvement.spiral_component import SpiralComponent
 
 from openmdao.util.decorators import add_delegate
 
-@add_delegate(HasStopConditions)
-class Iterator(Driver):
-    iterations = Int(10,iotype="in")
-    
-    def start_iteration(self):
-        self._iterations = 0
-    
-    def continue_iteration(self):
-        self._iterations += 1
-        if (self._iterations > 1) and self.should_stop():
-            return False
-        if self._iterations <= self.iterations: 
-            return True
-    
-        return False
     
 class MyDriver(Driver):
     """Custom driver to retrain the MetaModel each iteration. Also records each 
@@ -72,7 +58,7 @@ class Analysis(Assembly):
         
         #Components
         self.add("spiral_meta_model",MetaModel())
-        self.spiral_meta_model.surrogate = KrigingSurrogate()
+        self.spiral_meta_model.surrogate = {'default':KrigingSurrogate()}
         self.spiral_meta_model.model = SpiralComponent()
         self.spiral_meta_model.recorder = DBCaseRecorder(':memory:')
         self.spiral_meta_model.force_execute = True
@@ -111,7 +97,7 @@ class Analysis(Assembly):
         self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
         self.retrain.force_execute = True
         
-        self.add("iter",Iterator())
+        self.add("iter",IterateUntil())
         self.iter.iterations = 15
         self.iter.add_stop_condition('MOEI.EI <= .0001')
         

@@ -163,6 +163,7 @@ class InputFileGenerator(object):
         
         self.data = []
         self.current_row = 0
+        self.anchored = False
     
     def set_template_file(self, filename):
         """Set the name of the template file to be used The template
@@ -197,14 +198,17 @@ class InputFileGenerator(object):
         
     def mark_anchor(self, anchor, occurrence=1):
         """Marks the location of a landmark, which lets you describe data by
-        relative position.
+        relative position. Note that a forward search begins at the old anchor 
+        location. If you want to restart the search for the anchor at the file
+        beginning, then call reset_anchor() before mark_anchor. 
         
         anchor: str
-            Text string to search for
+            The text you want to search for.
         
         occurrence: integer
-            Find nth instance of text; default is 1 (first). Use -1 to
-            find the last occurrence."""
+            find nth instance of text; default is 1 (first). Use -1 to
+            find last occurrence. Reverse searches always start at the end
+            of the file no matter the state of any previous anchor."""
         
         if not isinstance(occurrence, int):
             raise ValueError("The value for occurrence must be an integer")
@@ -212,26 +216,44 @@ class InputFileGenerator(object):
         instance = 0
         if occurrence > 0:
             count = 0
-            for line in self.data:
+            for line in self.data[self.current_row:]:
+                
+                # If we are marking a new anchor from an existing anchor, and
+                # the anchor is mid-line, then we still search the line, but
+                # only after the anchor.
+                if count == 0 and self.anchored:
+                    line = line.split(anchor)[-1]
+
                 if line.find(anchor) > -1:
+                    
                     instance += 1
                     if instance == occurrence:
-                        self.current_row = count
+                        self.current_row += count
+                        self.anchored = True
                         return
             
                 count += 1
+                
         elif occurrence < 0:
             count = len(self.data)-1
             for line in reversed(self.data):
+                
+                # If we are marking a new anchor from an existing anchor, and
+                # the anchor is mid-line, then we still search the line, but
+                # only before the anchor.
+                if count == len(self.data)-1 and self.anchored:
+                    line = line.split(anchor)[0]
+
                 if line.find(anchor) > -1:
                     instance += -1
                     if instance == occurrence:
                         self.current_row = count
+                        self.anchored = True
                         return
             
                 count -= 1
         else:
-            raise ValueError("0 is not valid for an anchor occurrence.") 
+            raise ValueError("0 is not valid for an anchor occurrence.")
             
         raise RuntimeError("Could not find pattern %s in template file %s" % \
                            (anchor, self.template_filename))
@@ -240,6 +262,7 @@ class InputFileGenerator(object):
         """Resets anchor to the beginning of the file."""
         
         self.current_row = 0
+        self.anchored = False
         
     def transfer_var(self, value, row, field):
         """Changes a single variable in the template relative to the 
@@ -397,6 +420,7 @@ class FileParser(object):
         self.delimiter = " \t"
         
         self.current_row = 0
+        self.anchored = False
         
     def set_file(self, filename):
         """Set the name of the file that will be generated.
@@ -446,10 +470,19 @@ class FileParser(object):
         if occurrence > 0:
             count = 0
             for line in self.data[self.current_row:]:
+                
+                # If we are marking a new anchor from an existing anchor, and
+                # the anchor is mid-line, then we still search the line, but
+                # only after the anchor.
+                if count == 0 and self.anchored:
+                    line = line.split(anchor)[-1]
+
                 if line.find(anchor) > -1:
+                    
                     instance += 1
                     if instance == occurrence:
                         self.current_row += count
+                        self.anchored = True
                         return
             
                 count += 1
@@ -457,10 +490,18 @@ class FileParser(object):
         elif occurrence < 0:
             count = len(self.data)-1
             for line in reversed(self.data):
+                
+                # If we are marking a new anchor from an existing anchor, and
+                # the anchor is mid-line, then we still search the line, but
+                # only before the anchor.
+                if count == len(self.data)-1 and self.anchored:
+                    line = line.split(anchor)[0]
+
                 if line.find(anchor) > -1:
                     instance += -1
                     if instance == occurrence:
                         self.current_row = count
+                        self.anchored = True
                         return
             
                 count -= 1
@@ -474,6 +515,7 @@ class FileParser(object):
         """Resets anchor to the beginning of the file."""
         
         self.current_row = 0
+        self.anchored = False
         
     def transfer_line(self, row):
         """Returns a whole line, relative to current anchor.
@@ -625,17 +667,21 @@ class FileParser(object):
             if self.delimiter == "columns":
                 line = line[(fieldstart-1):fieldend]
                 
+                # Stripping whitespace may be controversial.
+                line = line.strip()
+                
                 # Let pyparsing figure out if this is a number, and return it
                 # as a float or int as appropriate
                 parsed = _parse_line().parseString(line)
                 
-                # data might have been split if it contains whitespace. If so,
-                # just return the whole string
-                #if len(parsed) > 1:
-                #    data = append(data, array(line))
-                #else:
-                #    data = append(data, array(parsed))
-                data = append(data, array(parsed[:]))
+                newdata = array(parsed[:])
+                # data might have been split if it contains whitespace. If the
+                # data is string, we probably didn't want this.
+                if '|S' in str(newdata.dtype):
+                    newdata = array(line)
+                    
+                data = append(data, newdata)
+                
             else:
                 parsed = _parse_line().parseString(line)
                 if i == j2-j1-1:

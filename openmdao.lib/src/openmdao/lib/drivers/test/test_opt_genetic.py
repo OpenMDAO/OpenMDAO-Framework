@@ -61,8 +61,8 @@ class TestCase(unittest.TestCase):
     """ test case for the genetic driver"""         
 
     def setUp(self):
-        #random.seed(10)
-        #numpy_random.seed(10)
+        random.seed(10)
+        numpy_random.seed(10)
         
         # pyevolve does some caching that causes failures during our
         # complete unit tests due to stale values in the cache attributes
@@ -98,9 +98,9 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               .1920, places = 4)
+                               .020, places = 2)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, -0.4381, places = 4)
+        self.assertAlmostEqual(x, 0.135, places = 2)
         self.assertEqual(y, 0)
         self.assertEqual(z, 0)
 
@@ -124,9 +124,9 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               .1920,places = 4)
+                               .02,places = 1)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, -0.4381, places = 4)
+        self.assertAlmostEqual(x, 0.135, places = 2)
         self.assertEqual(y, 0)
         self.assertEqual(z, 0)
 
@@ -163,9 +163,9 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               .1920,places = 4)
+                               .02,places = 1)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, -0.4381, places = 4)
+        self.assertAlmostEqual(x, .135, places = 2)
         self.assertEqual(y, 0)
         self.assertEqual(z, 0)
 
@@ -190,11 +190,11 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               12.0912,places = 4)
+                               4.28,places = 2)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, -1.7603, places = 4)
-        self.assertAlmostEqual(y, -2.5575, places = 4)
-        self.assertAlmostEqual(z, 1.5657, places = 4)  
+        self.assertAlmostEqual(x, 2.0, places = 2)
+        self.assertAlmostEqual(y, .07, places = 2)
+        self.assertAlmostEqual(z, .51, places = 2)  
 
 
     def test_list_remove_clear_params(self):
