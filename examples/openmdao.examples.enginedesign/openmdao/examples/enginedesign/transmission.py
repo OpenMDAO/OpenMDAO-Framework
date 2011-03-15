@@ -9,6 +9,7 @@
 from openmdao.main.api import Component, convert_units
 from openmdao.lib.datatypes.api import Float, Int, Enum
 
+
 class Transmission(Component):
     """ A simple transmission model."""
 

@@ -26,6 +26,7 @@ from openmdao.lib.datatypes.api import Float, Array
 class A(Container):
     b = Array(iotype='in')
     
+
 class Comp(Component):
     x = Float(iotype='in')
     y = Float(iotype='in')

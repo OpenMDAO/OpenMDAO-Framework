@@ -89,6 +89,7 @@ class Recorder(HasTraits):
         return None
  
 
+
 class Sleeper(Component):
     """ Just sleeps for the requested duration. """
 
@@ -97,6 +98,7 @@ class Sleeper(Component):
     def execute(self):
         """ Just delays for the requested amount of time. """
         time.sleep(self.delay)
+
 
 
 class CID(Assembly):

@@ -18,6 +18,7 @@ class MyDriver(Driver):
     def continue_iteration(self):
         return self.iter_count < 3
 
+
 class MyEvComp(Component):
     doit = Event()
     doit2 = Event()

@@ -20,6 +20,7 @@ from openmdao.main.eggchecker import check_save_load
 
 # pylint: disable-msg=E1101
 
+
 class SphereFunction(Component):
     total = Float(0., iotype='out')
     x = Float(0, low=-5.12,high=5.13, iotype="in")
@@ -33,6 +34,7 @@ class SphereFunction(Component):
         """ calculate the sume of the squares for the list of numbers """
         self.total = self.x**2+self.y**2+int(self.z)**2
         
+
 class Asmb(Assembly): 
     def __init__(self,*args,**kwargs):
         super(Asmb,self).__init__(*args,**kwargs)
@@ -42,6 +44,7 @@ class Asmb(Assembly):
         self.create_passthrough('sphere.y')
         self.create_passthrough('sphere.z')
         self.create_passthrough('sphere.total')
+
 
 class SphereFunctionArray(Component):
     total = Float(0., iotype='out')
@@ -230,6 +233,7 @@ class TestCase(unittest.TestCase):
 
     def test_0_low_high(self): 
 
+        
         class SomeComp(Component):
             """Arbitrary component with a few variables, but which does not really do 
             any calculations"""
@@ -240,6 +244,7 @@ class TestCase(unittest.TestCase):
             y = Int(10,low=10,high=100,iotype="in")
             z = Enum([-10,-5,0,7],iotype="in")
 
+        
         class Simulation(Assembly):
             """Top Level Assembly used for simulation"""
 
@@ -258,11 +263,13 @@ class TestCase(unittest.TestCase):
         s = Simulation()
     
     def test_improper_parameter_type(self): 
+        
         class SomeComp(Component):
             """Arbitrary component with a few variables, but which does not really do 
             any calculations"""
             z = Str("test",iotype="in")
 
+        
         class Simulation(Assembly):
             """Top Level Assembly used for simulation"""
 

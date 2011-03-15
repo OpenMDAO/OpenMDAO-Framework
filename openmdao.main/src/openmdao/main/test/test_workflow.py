@@ -13,6 +13,7 @@ from openmdao.lib.datatypes.api import Int, Bool
 
 dummyval = 1
 
+
 class TestComponent(Component):
     """
     Component which tracks it's total executions
@@ -27,6 +28,7 @@ class TestComponent(Component):
         self.total_executions += 1
         if self.set_stop:
             self.parent.driver.stop()
+
 
 
 class Model(Assembly):

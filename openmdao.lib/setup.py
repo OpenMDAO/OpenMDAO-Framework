@@ -16,7 +16,7 @@ setup(name='openmdao.lib',
       version=version,
       description="OpenMDAO Standard Library",
       long_description="""\
-Component, Driver, and TraitType plugins for OpenMDAO
+Component, Driver, and Variable plugins for OpenMDAO
 """,
       classifiers=[
         'Development Status :: 2 - Pre-Alpha',
@@ -50,30 +50,32 @@ Component, Driver, and TraitType plugins for OpenMDAO
           ],
       entry_points="""
       [openmdao.driver]
-      openmdao.lib.BroydenSolver = openmdao.lib.drivers.broydensolver:BroydenSolver
-      openmdao.lib.CaseIteratorDriver = openmdao.lib.drivers.caseiterdriver:CaseIteratorDriver
-      openmdao.lib.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
-      openmdao.lib.DOEdriver = openmdao.lib.drivers.doedriver:DOEdriver
-      openmdao.lib.Genetic = openmdao.lib.drivers.genetic:Genetic
-      openmdao.lib.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
-      openmdao.lib.drivers.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil
-      openmdao.lib.NEWSUMTdriver = openmdao.lib.drivers.newsumtdriver:NEWSUMTdriver
-      openmdao.lib.SimpleCaseIterDriver = openmdao.lib.drivers.simplecid:SimpleCaseIterDriver
+      openmdao.lib.drivers.broydensolver.BroydenSolver = openmdao.lib.drivers.broydensolver:BroydenSolver
+      openmdao.lib.drivers.caseiterdriver.CaseIteratorDriver = openmdao.lib.drivers.caseiterdriver:CaseIteratorDriver
+      openmdao.lib.drivers.conmindriver.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
+      openmdao.lib.drivers.doedriver.DOEdriver = openmdao.lib.drivers.doedriver:DOEdriver
+      openmdao.lib.drivers.genetic.Genetic = openmdao.lib.drivers.genetic:Genetic
+      openmdao.lib.drivers.iterate.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
+      openmdao.lib.drivers.iterate.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil
+      openmdao.lib.drivers.newsumtdriver.NEWSUMTdriver = openmdao.lib.drivers.newsumtdriver:NEWSUMTdriver
+      openmdao.lib.drivers.simplecid.SimpleCaseIterDriver = openmdao.lib.drivers.simplecid:SimpleCaseIterDriver
+
       [openmdao.component]
-      openmdao.lib.ExpectedImprovement = openmdao.lib.components.expected_improvement:ExpectedImprovement
-      openmdao.lib.MultiObjExpectedImprovement = openmdao.lib.components.expected_improvement_multiobj:MultiObjExpectedImprovement
-      openmdao.lib.ExternalCode = openmdao.lib.components.external_code:ExternalCode
-      openmdao.lib.MetaModel = openmdao.lib.components.metamodel:MetaModel
-      openmdao.lib.Mux = openmdao.lib.components.mux:Mux
-      openmdao.lib.DeMux = openmdao.lib.components.mux:DeMux
-      openmdao.lib.ParetoFilter = openmdao.lib.components.pareto_filter:ParetoFilter
-      openmdao.lib.ProbIntersect = openmdao.lib.components.prob_intersect:ProbIntersect
-      openmdao.lib.NastranComponent = openmdao.lib.components.nastran.nastran:NastranComponent
+      openmdao.lib.components.expected_improvement.ExpectedImprovement = openmdao.lib.components.expected_improvement:ExpectedImprovement
+      openmdao.lib.components.expected_improvement_multiobj.MultiObjExpectedImprovement = openmdao.lib.components.expected_improvement_multiobj:MultiObjExpectedImprovement
+      openmdao.lib.components.external_code.ExternalCode = openmdao.lib.components.external_code:ExternalCode
+      openmdao.lib.components.metamodel.MetaModel = openmdao.lib.components.metamodel:MetaModel
+      openmdao.lib.components.mux.Mux = openmdao.lib.components.mux:Mux
+      openmdao.lib.components.mux.DeMux = openmdao.lib.components.mux:DeMux
+      openmdao.lib.components.pareto_filter.ParetoFilter = openmdao.lib.components.pareto_filter:ParetoFilter
+      openmdao.lib.components.prob_intersect.ProbIntersect = openmdao.lib.components.prob_intersect:ProbIntersect
+      openmdao.lib.components.nastran.nastran.NastranComponent = openmdao.lib.components.nastran.nastran:NastranComponent
+
       [openmdao.variable]
-      opendao.lib.Array = openmdao.lib.datatypes.array:Array
-      opendao.lib.Enum = openmdao.lib.datatypes.enum:Enum
-      opendao.lib.File = openmdao.lib.datatypes.file:File
-      opendao.lib.Float = openmdao.lib.datatypes.float:Float
-      opendao.lib.Int = openmdao.lib.datatypes.int:Int
+      opendao.lib.datatypes.array.Array = openmdao.lib.datatypes.array:Array
+      opendao.lib.datatypes.enum.Enum = openmdao.lib.datatypes.enum:Enum
+      opendao.lib.datatypes.file.File = openmdao.lib.datatypes.file:File
+      opendao.lib.datatypes.float.Float = openmdao.lib.datatypes.float:Float
+      opendao.lib.datatypes.int.Int = openmdao.lib.datatypes.int:Int
       """,
       )

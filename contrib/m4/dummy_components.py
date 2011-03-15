@@ -10,6 +10,7 @@ from openmdao.lib.datatypes.api import Float
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
 
+
 class Model_A2d(Component):
     """ Wrapper for M4 Model_A2d. """
 
@@ -32,6 +33,7 @@ class Model_A2d(Component):
         self.z2 = self._m4_comp.RunModel(vec, 1)
         self._logger.debug('function(%f, %f) = %f, %f',
                    self.x, self.y, self.z1, self.z2)
+
 
 
 class Model_B2d(Component):

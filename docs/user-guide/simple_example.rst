@@ -91,6 +91,7 @@ paraboloid as an OpenMDAO component:
     from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
     
+    
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
@@ -136,7 +137,7 @@ Type these two lines into that file:
     from openmdao.lib.datatypes.api import Float
     
 You could import many other objects from ``openmdao.main.api`` and ``openmdao.lib.datatypes.api``, but you
-are importing only the two classes that you need. This is a good idea because it helps to
+are importing only the classes that you need. This is a good idea because it helps to
 prevent any namespace collisions in your module. In other words:
 
 .. testcode:: package
@@ -154,6 +155,7 @@ The next line defines a class called *Paraboloid:*
 
 .. testcode:: simple_component_Paraboloid_pieces
 
+    
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     

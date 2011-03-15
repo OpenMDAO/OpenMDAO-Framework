@@ -11,23 +11,90 @@ from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
 from token import NAME, OP
 from tokenize import generate_tokens
-import compiler
+import ast
+import parser
 
 import networkx as nx
 
-from openmdao.util.fileutil import exclude_files, get_module_path
+from openmdao.util.fileutil import find_files, get_module_path
 from openmdao.main.api import Component as mycomp
 
-class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
+class StrVisitor(ast.NodeVisitor):
+    def __init__(self):
+        ast.NodeVisitor.__init__(self)
+        self.parts = []
+
+    def visit_Name(self, node):
+        self.parts.append(node.id)
+        
+    def visit_Str(self, node):
+        self.parts.append(node.s)
+        
+    def get_value(self):
+        return '.'.join(self.parts)
+
+def _to_str(arg):
+    """Take groups of Name nodes or a Str node and convert to a string."""
+    myvisitor = StrVisitor()
+    for node in ast.walk(arg):
+        myvisitor.visit(node)
+    return myvisitor.get_value()
+
+
+def _real_name(name, finfo):
+    """Given the name of an object, return the full name (including package)
+    from where it is actually defined.
+    """
+    while True:
+        parts = name.rsplit('.', 1)
+        if len(parts) > 1:
+            if parts[0] in finfo:
+                trans = finfo[parts[0]].localnames.get(parts[1], parts[1])
+                if trans == name:
+                    return trans
+                else:
+                    name = trans
+                    continue
+        return name
+
+class ClassInfo(object):
+    def __init__(self, name, bases, decorators):
+        self.name = name
+        self.bases = bases
+        self.decorators = decorators
+        self.entry_points = []
+        
+        for dec in decorators:
+            if dec.func.id == 'entry_point':
+                args = [_to_str(a) for a in dec.args]
+                if len(args) == 1:
+                    args.append(name)
+                self.entry_points.append((args[0],args[1],name))
+        
+    def resolve_true_basenames(self, finfo):
+        """Take module pathnames of base classes that may be an indirect names and
+        convert them to their true absolute module pathname.  For example,
+        'from openmdao.main.api import Component' implies the module
+        path of Component is openmdao.main.api.Component, but inside
+        of openmdao.main.api is the import statement 
+        'from openmdao.main.component import Component', so the true
+        module pathname of Component is openmdao.main.component.Component.
+        
+        finfo: list
+        """
+        self.bases = [_real_name(b, finfo) for b in self.bases]
+        
+
+class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
     python file.
     """
-    def __init__(self, fname):
-        compiler.visitor.ASTVisitor.__init__(self)
-        self.fname = fname
+    def __init__(self, fname, stop_classes=None):
+        ast.NodeVisitor.__init__(self)
+        self.fname = os.path.abspath(fname)
         self.modpath = get_module_path(fname)
         self.classes = {}
-        self.impnames = {}  # map of local names to package names
+        self.localnames = {}  # map of local names to package names
         
     def translate(self, finfo):
         """Take module pathnames of classes that may be indirect names and
@@ -38,55 +105,41 @@ class PythonSourceFileAnalyser(compiler.visitor.ASTVisitor):
         'from openmdao.main.component import Component', so the true
         module pathname of Component is openmdao.main.component.Component.
         """
-        for klass, bases in self.classes.items():
-            self.classes[klass] = [self._real_name(b, finfo) for b in bases]
+        for classinfo in self.classes.values():
+            classinfo.resolve_true_basenames(finfo)
                 
-    def visitClass(self, node):
+    def visit_ClassDef(self, node):
+        """This executes every time a class definition is parsed."""
         fullname = '.'.join([self.modpath, node.name])
-        bases = [self._to_str(b) for b in node.bases]
-        self.classes[fullname] = [self.impnames.get(b, b) for b in bases]
-        self.impnames[node.name] = fullname
+        self.localnames[node.name] = fullname
+        bases = [_to_str(b) for b in node.bases]
+        self.classes[fullname] = ClassInfo(fullname, 
+                                           [self.localnames.get(b,b) for b in bases], 
+                                           node.decorator_list)
         
-    def visitImport(self, node):
-        for name, alias in node.names:
-            if alias is None:
-                self.impnames[name] = name
-            else:
-                self.impnames[alias] = name
-
-    def visitFrom(self, node):
-        for name, alias in node.names:
-            if alias is None:
-                self.impnames[name] = '.'.join([node.modname, name])
-            else:
-                self.impnames[alias] = '.'.join([node.modname, name])
-                
-    def _to_str(self, arg):
-        """Take arg of the form Getattr(Getattr(Name('foo'),'bar'),'blah')
-        and convert it to a module path name.
+    def visit_Import(self, node):
+        """This executes every time an 'import foo' style import statement 
+        is parsed.
         """
-        if isinstance(arg, compiler.ast.Getattr):
-            return '.'.join([_to_str(arg.expr), arg.attrname])
-        elif isinstance(arg, compiler.ast.Name):
-            return arg.name
-        else:
-            return arg
+        for al in node.names:
+            if al.asname is None:
+                self.localnames[al.name] = al.name
+            else:
+                self.localnames[al.asname] = al.name
+
+    def visit_ImportFrom(self, node):
+        """This executes every time a 'from foo import bar' style import
+        statement is parsed.
+        """
+        for al in node.names:
+            if al.asname is None:
+                self.localnames[al.name] = '.'.join([node.module, al.name])
+            else:
+                self.localnames[al.asname] = '.'.join([node.module, al.name])
                 
-    def _real_name(self, name, finfo):
-        while True:
-            parts = name.rsplit('.', 1)
-            if len(parts) > 1:
-                if parts[0] in finfo:
-                    trans = finfo[parts[0]].impnames.get(parts[1], parts[1])
-                    if trans == name:
-                        return trans
-                    else:
-                        name = trans
-                        continue
-            return name
 
 class PythonSourceTreeAnalyser(object):
-    def __init__(self, startdir=None, excludes=None):
+    def __init__(self, startdir=None, exclude=None):
         # inheritance graph. It's a directed graph with base classes
         # pointing to the classes that inherit from them
         self.graph = nx.DiGraph()
@@ -98,10 +151,9 @@ class PythonSourceTreeAnalyser(object):
         else:
             self.startdirs = startdir
             
-        if excludes is None:
-            self.excludes = []
-        else:
-            self.excludes = excludes
+        self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
+            
+        self.exclude = exclude
             
         self._analyze()
             
@@ -114,9 +166,18 @@ class PythonSourceTreeAnalyser(object):
         
         # gather python files from the specified starting directories
         # and parse them, extracting class and import information
-        for pyfile in exclude_files(self.excludes, "*.py", self.startdirs):
+        for pyfile in find_files(self.startdirs, "*.py", self.exclude):
             myvisitor = PythonSourceFileAnalyser(pyfile)
-            compiler.visitor.walk(compiler.parseFile(pyfile), myvisitor)
+            # in order to get this to work with the 'ast' lib, I have
+            # to read using universal newlines and append a newline
+            # to the string I read for some files.  The 'compiler' lib
+            # didn't have this problem. :(
+            f = open(pyfile, 'Ur')
+            try:
+                for node in ast.walk(ast.parse(f.read()+'\n', pyfile)):
+                    myvisitor.visit(node)
+            finally:
+                f.close()
             fileinfo[get_module_path(pyfile)] = myvisitor
             
         # now translate any indirect imports into absolute module pathnames
@@ -133,15 +194,18 @@ class PythonSourceTreeAnalyser(object):
     
         # build the inheritance graph
         for visitor in fileinfo.values():
-            for klass, bases in visitor.classes.items():
-                for base in bases:
-                    self.graph.add_edge(klass, base)
+            for classname, classinfo in visitor.classes.items():
+                for base in classinfo.bases:
+                    self.graph.add_edge(classname, base)
     
         # flip orientation of inheritance graph so we can find all classes
         # that inherit from a particular base more easily
         self.graph = self.graph.reverse(copy=False)
         
     def find_inheritors(self, base):
-        paths = nx.shortest_path(self.graph, source=base, target=None)
+        try:
+            paths = nx.shortest_path(self.graph, source=base, target=None)
+        except KeyError:
+            return []
         del paths[base] # don't want the base itself in the list
         return paths.keys()

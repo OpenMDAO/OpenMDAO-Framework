@@ -34,7 +34,7 @@ import fnmatch
 from threading import Lock
 
 
-def find_files(pats, startdir):
+def find_files(startdir, pats):
     """Return a list of files (using a generator) that match
     the given list of glob patterns. Walks an entire directory structure.
     """
@@ -138,7 +138,7 @@ class DistServer(object):
         self.lock.acquire()
         file_cache = self.file_cache
         try:
-            flist = sorted(find_files(["*.egg","*.tar.gz"], self.topdir), key=str.lower)
+            flist = sorted(find_files(self.topdir, ["*.egg","*.tar.gz"]), key=str.lower)
             for f in flist:
                 checksum = file_md5(f)
                 basef = os.path.basename(f)
@@ -178,7 +178,7 @@ class DistServer(object):
         
             # should only find one file to match pth, so return immediately
             # when found
-            for f in find_files([pth.strip('/')], self.topdir):
+            for f in find_files(self.topdir, [pth.strip('/')]):
                 self.lock.acquire()
                 self.file_cache[fpath] = f
                 self.lock.release()

@@ -2,6 +2,7 @@ from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
 from openmdao.main.expreval import ExprEvaluator
 
+
 class ExecComp(Component):
     """Given a list of assignment statements, this component creates
     input and output I/O traits at construction time.  All variables

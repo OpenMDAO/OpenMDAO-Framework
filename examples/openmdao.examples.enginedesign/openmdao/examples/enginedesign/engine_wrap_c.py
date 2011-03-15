@@ -15,6 +15,7 @@ from openmdao.lib.datatypes.api import Float, Int
 
 from openmdao.examples.enginedesign.engineC import RunEngineCycle
 
+
 class Engine(Component):
     """ Model of a piston engine - C Implementation."""
 

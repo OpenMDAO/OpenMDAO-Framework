@@ -8,6 +8,7 @@ from openmdao.lib.datatypes.api import Float, Str, Instance, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
 
+
 class Multiplier(Component):
     rval_in = Float(iotype='in')
     rval_out = Float(iotype='out')
@@ -22,6 +23,7 @@ class Multiplier(Component):
     def execute(self):
         self.rval_out = self.rval_in * self.mult
         
+
 class Simple(Component):
     
     a = Float(iotype='in')
@@ -39,6 +41,7 @@ class Simple(Component):
     def execute(self):
         self.c = self.a + self.b
         self.d = self.a - self.b
+
 
 class DummyComp(Component):
     

@@ -8,6 +8,7 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
 
+
 class ParetoFilter(Component):
     """Takes a set of cases and filters out the subset of cases which are
     pareto optimal. Assumes that smaller values for model responses are

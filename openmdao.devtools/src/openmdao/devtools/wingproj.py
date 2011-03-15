@@ -95,7 +95,7 @@ def run_wing():
         bzrtop = find_up('.bzr')
         if bzrtop:
             bzrtop = os.path.dirname(bzrtop)
-            sodirs = set([os.path.dirname(x) for x in find_files('*.so',bzrtop)])
+            sodirs = set([os.path.dirname(x) for x in find_files(bzrtop,'*.so')])
             libs.extend(sodirs)
             env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
     

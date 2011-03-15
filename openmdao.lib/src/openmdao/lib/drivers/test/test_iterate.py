@@ -9,6 +9,7 @@ from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.datatypes.api import Float
 from openmdao.lib.drivers.iterate import FixedPointIterator, IterateUntil
 
+
 class Simple1(Component):
     """ Testing convergence failure"""
     
@@ -19,6 +20,7 @@ class Simple1(Component):
         """Will never converge"""
         
         self.outvar = self.invar + 1
+
 
 class Simple2(Component):
     """ Testing convergence success"""
@@ -31,6 +33,7 @@ class Simple2(Component):
         
         self.outvar = self.invar
         
+
 class Simple3(Component):
     """ Testing convergence tolerance"""
     

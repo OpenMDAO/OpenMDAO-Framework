@@ -23,6 +23,7 @@ class DumbRecorder(HasTraits):
     def record(self,case): 
         pass
 
+
 class Simple(Component):
     
     a = Float(iotype='in')
@@ -41,6 +42,7 @@ class Simple(Component):
         self.c = self.a + self.b
         self.d = self.a - self.b
         
+
 class Simple2(Component):
     
     w = Float(iotype='in')
@@ -59,8 +61,10 @@ class Simple2(Component):
         self.y = self.w * 1.1
         self.z = self.x * 0.9
         
+
 class AModel(Component):
     pass
+
 
 class MyMetaModel(MetaModel):
     my_x = Float(1., iotype='in')

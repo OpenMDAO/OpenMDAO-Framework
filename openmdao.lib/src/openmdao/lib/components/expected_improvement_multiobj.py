@@ -11,6 +11,7 @@ from openmdao.main.component import Component
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
+
 class MultiObjExpectedImprovement(Component):
     best_cases = Instance(ICaseIterator, iotype="in",
                     desc="CaseIterator which contains only Pareto optimal cases \

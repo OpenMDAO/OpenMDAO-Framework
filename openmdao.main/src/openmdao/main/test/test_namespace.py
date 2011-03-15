@@ -22,6 +22,7 @@ class DumbContainer(Container):
         self.add_trait('v3', Float(3., iotype=iotype))
     
     
+
 class SimpleComp(Component):
     cont_in = Instance(DumbContainer, iotype='in')
     cont_out = Instance(DumbContainer, iotype='out')

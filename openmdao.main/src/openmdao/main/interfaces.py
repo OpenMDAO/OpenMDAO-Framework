@@ -37,21 +37,6 @@ class IContainer(Interface):
         keep track of dynamically added traits for serialization.
         """
 
-    #def build_trait(self, pathname, iotype=None, trait=None):
-        #"""Asks the object to dynamically create a trait for the 
-        #attribute given by pathname, based on whatever knowledge the
-        #component has of that attribute.
-        
-        #pathname: str
-            #The dotted path to the specified attribute.
-            
-        #iotype: str (optional)
-            #The data direction, either 'in' or 'out'.
-            
-        #trait: TraitType (optional)
-            #A validation trait for the given attribute.
-        #"""
-        
     def connect(self, srcpath, destpath):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates

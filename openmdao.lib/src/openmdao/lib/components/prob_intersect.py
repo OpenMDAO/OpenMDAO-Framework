@@ -11,6 +11,7 @@ from openmdao.main.component import Component
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
+
 class ProbIntersect(Component):
     """Computes the probability that any given point from the primary concept 
     will interesect the pareto frontiers of some other concepts.

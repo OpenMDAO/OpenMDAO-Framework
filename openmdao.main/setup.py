@@ -23,7 +23,6 @@ setup(name='openmdao.main',
         'License :: OSI Approved',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.6',
         'Topic :: Scientific/Engineering',
       ],
       keywords='optimization multidisciplinary multi-disciplinary analysis',
@@ -41,21 +40,28 @@ setup(name='openmdao.main',
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
-          'setuptools',
-          'pyparsing==1.5.2',
-          'numpy',
-          'PyYAML==3.09',
-          'networkx==1.3',
-          'Traits==3.3.0',
           'decorator',
+          'networkx==1.3',
+          'numpy',
           'openmdao.units',
           'openmdao.util',
           'pycrypto',
+          'pyparsing==1.5.2',
+          'PyYAML==3.09',
+          'setuptools',
+          'Sphinx',
+          'Traits==3.3.0',
       ],
       entry_points = """
       [console_scripts]
       openmdao_docs=openmdao.util.view_docs:view_docs
+      plugin_docs=openmdao.main.plugin:plugin_docs
+      plugin_build_docs=openmdao.main.plugin:plugin_build_docs
+      plugin_install=openmdao.main.plugin:plugin_install
+      plugin_makedist=openmdao.main.plugin:plugin_makedist
+      plugin_quickstart=openmdao.main.plugin:plugin_quickstart
+      
       [openmdao.component]
-      openmdao.main.Assembly = openmdao.main.assembly:Assembly
+      openmdao.main.assembly.Assembly = openmdao.main.assembly:Assembly
       """,
     )

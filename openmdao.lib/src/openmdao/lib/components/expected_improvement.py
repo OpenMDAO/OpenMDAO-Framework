@@ -10,6 +10,7 @@ from openmdao.main.api import Component
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
+
 class ExpectedImprovement(Component):
     best_case = Instance(ICaseIterator, iotype="in",
                     desc="CaseIterator which contains a single case, "

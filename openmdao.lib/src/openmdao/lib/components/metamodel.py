@@ -14,6 +14,7 @@ from openmdao.main.uncertain_distributions import UncertainDistribution, \
                                                   NormalDistribution
 from openmdao.main.mp_support import has_interface
 
+
 class MetaModel(Component):
     """ A component that provides general Meta Modeling capability.
     

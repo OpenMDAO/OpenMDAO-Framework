@@ -9,6 +9,7 @@ in expressions like Constraints or Objectives.)
 from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
 
+
 class Broadcaster(Component):
     """Component that holds some design variables.
     This is only needed because we can't hook an optimizer up to multiple

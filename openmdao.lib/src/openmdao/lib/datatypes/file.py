@@ -9,11 +9,12 @@ __all__ = ['File']
 import os.path
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import TraitType, TraitError
+from enthought.traits.api import TraitError
 from openmdao.main.filevar import FileRef, _get_valid_owner
 
+from openmdao.main.variable import Variable
 
-class File(TraitType):
+class File(Variable):
     """
     A trait wrapper for a :class:`FileRef` object. For input files
     :attr:`legal_types` may be set to a list of expected 'content_type' strings.

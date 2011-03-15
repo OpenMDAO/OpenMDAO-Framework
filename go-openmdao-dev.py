@@ -1232,7 +1232,7 @@ def after_install(options, home_dir):
         
     if sys.platform != 'win32':
         import fnmatch
-        def _find_files(pat, startdir):
+        def _find_files(startdir, pat):
             for path, dirlist, filelist in os.walk(startdir):
                 for name in fnmatch.filter(filelist, pat):
                     yield os.path.join(path, name)
@@ -1240,7 +1240,7 @@ def after_install(options, home_dir):
        # in order to find all of our shared libraries, modify the activate
        # script to put their directories in LD_LIBRARY_PATH
         pkgdir = os.path.join(lib_dir, 'site-packages')
-        sofiles = [os.path.abspath(x) for x in _find_files('*.so',pkgdir)]
+        sofiles = [os.path.abspath(x) for x in _find_files(pkgdir, '*.so')]
                       
         final = set()
         for f in sofiles:
