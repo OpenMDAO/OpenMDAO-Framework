@@ -3,17 +3,13 @@
 import sys
 import os
 import shutil
-import urllib2
 import subprocess
 from optparse import OptionParser
 from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, hosts
 from fabric.state import connections
 import paramiko.util
-
 from socket import gethostname
-import tempfile
-import fnmatch
-import tarfile
+#import urllib2
 
 paramiko.util.log_to_file('paramiko.log')
 
@@ -26,27 +22,25 @@ def _testbranch(hostname):
 
     startdir=os.getcwd()
     branchdir=local('bzr root').strip()    
-    print("starting directory is %s" % startdir)
-    print("branch root directory is %s" % branchdir)
+    #print("starting directory is %s" % startdir)
     remotehost = hostname.split(".")[0]
     tarfilename=remotehost+"testbranch.tar.gz"
-    print("tarfilename is %s" % tarfilename)    
+    #print("tarfilename is %s" % tarfilename)    
     #export the current branch to a tarfile
     os.chdir(branchdir)  #change to top dir of branch
-    #local('bzr export testbranch.tar.gz')
     local("bzr export %s --root=testbranch" % tarfilename)
-    paramiko_log="paramiko.log." + remotehost
-    paramiko.util.log_to_file(paramiko_log)  
+    #paramiko_log="paramiko.log." + remotehost
+    #paramiko.util.log_to_file(paramiko_log)    #this doesn't work
       
     winplatforms=["storm.grc.nasa.gov"]  #list of windows platforms to remote into
     if hostname in winplatforms:     #if we are remoting into a windows host
         devbindir='devenv\Scripts'
         unpacktar="7z x" 
         pyversion="python"   #for some reason, on storm the python2.6 alias doesn't work on storm
-        removeit="rmdir /s /q"  #previously in triple quotes
+        removeit="""rmdir /s /q"""  #previously in triple quotes
         env.shell="cmd /C"
         user=env.user
-        # env.user="ndc\\"+env.user   #need to preface username with ndc\\ to get into storm
+        # env.user="ndc\\"+env.user   #no longer need to preface username with ndc\\ to get into storm
     else:
         devbindir='devenv/bin'
         unpacktar="tar xvf"
@@ -56,11 +50,11 @@ def _testbranch(hostname):
 
     #Copy exported branch tarfile to desired test platform in user's root dir
     with settings(host_string=hostname):
-        #filetocopy = os.path.join(branchdir, 'testbranch.tar.gz')
         filetocopy = os.path.join(branchdir, tarfilename)
         if hostname not in winplatforms:     #if we are not remoting into a windows host
             #remove any previous testbranches on remote host
-            run('%s testbranch' % removeit)  
+            res1=run('%s testbranch' % removeit)
+            #run('%s testbranch' % removeit)  
             #copy exported branch tartile to test platform in user's root dir 
             put(filetocopy, tarfilename)
             #unpack the tarfile
@@ -74,25 +68,28 @@ def _testbranch(hostname):
                 with cd(devbindir):
                     print("Please wait while the environment is activated and the tests are run")
                     run('source activate && echo $PATH && echo environment activated, please wait while tests run && openmdao_test -xv')
-                    print('Tests completed on %s' % env.host)
+                    print('Tests completed on %s' % hostname)
          
         else:  #we're remoting into windows (storm)
+            #check connection on windows to prevent hanging due to ndc password change
+            #checkcon=run("dir")
+            #print("check succeeded is %s" % checkcon.succeeded)
+	    #sys.exit()
             #remove any previous testbranches on remote host
-            run("""if exist testbranch/nul rmdir /s /q testbranch""")  #was triple quotes
-            run("""if exist stormtestbranch.tar del stormtestbranch.tar""")     #was triple quotes
-            run("""if exist stormtestbranch.tar.gz del stormtestbranch.tar.gz""")     #was triple quotes
+            run("""if exist testbranch/nul rmdir /s /q testbranch""") 
+            run("""if exist stormtestbranch.tar del stormtestbranch.tar""")     
+            run("""if exist stormtestbranch.tar.gz del stormtestbranch.tar.gz""")    
             #copy exported branch tartile to test platform (storm) in user's root dir  
-            filedestination = user + """@storm.grc.nasa.gov:""" + tarfilename   #was triple quotes
+            filedestination = user + """@storm.grc.nasa.gov:""" + tarfilename   
             local('scp %s %s' % (filetocopy, filedestination)) 
             #unpack the tarfile
             run("7z.exe x %s" % tarfilename)
             tf2 = tarfilename.split(".")
-	    print("tf2 is %s" % tf2)
 	    del tf2[-1]
-	    print("tf2 is now %s" % tf2)
             run("""call 7z.exe x """ + tarfilename.split(".")[0] + """.tar""")
-            run("""call python testbranch\go-openmdao-dev.py""")  #was triple quotes
-            #sys.exit()      
+            run("""call python testbranch\go-openmdao-dev.py""")  
+	    #Hack - Must build and test from a batch file in order for environment to be correct
+	    #Windows and fabric don't always play nicely together
             teststeps="""chdir testbranch\devenv\Scripts    
                 call activate.bat
                 set PYTHON_EGG_CACHE=C:\Users\\%USERNAME%\\testbranch
@@ -104,23 +101,24 @@ def _testbranch(hostname):
             f.close()
             #Then copy the newly generated batch file to windows platform (storm)
             filetocopy = os.path.join(branchdir, 'winteststeps.bat')
-            filedestination = user + """@storm.grc.nasa.gov:winteststeps.bat"""   #was triple quotes
+            filedestination = user + """@storm.grc.nasa.gov:winteststeps.bat"""   #probably should be generic!!!!!
             local('scp %s %s' % (filetocopy, filedestination)) 
             #change to devenv\Scripts, activate the envronment, and run tests
             run('call winteststeps.bat')
             print('Tests completed on %s' % hostname)   
-    
-def main(argv=None):
-    print("running the main part of the script...")
 
+def waitForLine(fname, linePattern, grepArgs=''):
+    run("tail -F '%s' | grep -m 1 %s '%s'" % (fname, grepArgs, linePattern))
+
+def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 	
     #Figure out what branch we're in    
     startdir=os.getcwd()
     branchdir=subprocess.Popen(["bzr root"], stdout=subprocess.PIPE, shell=True).communicate()[0]
-    print("starting directory is %s" % startdir)
-    print("branch root directory is %s" % branchdir)
+    #print("starting directory is %s" % startdir)
+    print("Testing on branch %s" % branchdir)
 
     #fabfilename="fabfile.py"      #no longer need this
     #fabfilepath=os.path.join(startdir, fabfilename)
@@ -144,7 +142,6 @@ def main(argv=None):
 
     #Check for uncommitted changes first
     uncommittedChanges=subprocess.Popen(['bzr status -SV'], stdout=subprocess.PIPE, shell=True).communicate()[0]
-    #print("uncommittedchanges is %s" % uncommittedChanges)   #debug line - remove later
     if uncommittedChanges is not None: 
         #There are uncommitted changes
         if not ignoreBzrStatus: #raise error if uncommitted changes on current branch and not set to ignore
@@ -155,7 +152,7 @@ def main(argv=None):
     if options.runplatforms is not None:    #replace defaults with command line options, if they exist
         runplatforms = options.runplatforms
     else:
-        runplatforms = ["storm.grc.nasa.gov", "viper.grc.nasa.gov", "torpedo.grc.nasa.gov"] #default platforms to run tests on
+        runplatforms = ["torpedo.grc.nasa.gov", "viper.grc.nasa.gov", "storm.grc.nasa.gov"] #default platforms to run tests on
     #numberofplatforms=len(runplatforms)    #probably don't need anymore 
     print("Testing on hosts: %s" % runplatforms)
 
