@@ -19,25 +19,20 @@ def _testbranch(hostname):
     You can run from anywhere in the branch, but recommend running from branchroot/scripts dir.
     """
     print('running tests on %s' % hostname)
-
     startdir=os.getcwd()
     branchdir=local('bzr root').strip()    
-    #print("starting directory is %s" % startdir)
     remotehost = hostname.split(".")[0]
     tarfilename=remotehost+"testbranch.tar.gz"
-    #print("tarfilename is %s" % tarfilename)    
     #export the current branch to a tarfile
     os.chdir(branchdir)  #change to top dir of branch
     local("bzr export %s --root=testbranch" % tarfilename)
-    #paramiko_log="paramiko.log." + remotehost
-    #paramiko.util.log_to_file(paramiko_log)    #this doesn't work
       
     winplatforms=["storm.grc.nasa.gov"]  #list of windows platforms to remote into
     if hostname in winplatforms:     #if we are remoting into a windows host
         devbindir='devenv\Scripts'
         unpacktar="7z x" 
         pyversion="python"   #for some reason, on storm the python2.6 alias doesn't work on storm
-        removeit="""rmdir /s /q"""  #previously in triple quotes
+        removeit="""rmdir /s /q""" 
         env.shell="cmd /C"
         user=env.user
         # env.user="ndc\\"+env.user   #no longer need to preface username with ndc\\ to get into storm
@@ -71,10 +66,6 @@ def _testbranch(hostname):
                     print('Tests completed on %s' % hostname)
          
         else:  #we're remoting into windows (storm)
-            #check connection on windows to prevent hanging due to ndc password change
-            #checkcon=run("dir")
-            #print("check succeeded is %s" % checkcon.succeeded)
-	    #sys.exit()
             #remove any previous testbranches on remote host
             run("""if exist testbranch/nul rmdir /s /q testbranch""") 
             run("""if exist stormtestbranch.tar del stormtestbranch.tar""")     
@@ -117,16 +108,10 @@ def main(argv=None):
     #Figure out what branch we're in    
     startdir=os.getcwd()
     branchdir=subprocess.Popen(["bzr root"], stdout=subprocess.PIPE, shell=True).communicate()[0]
-    #print("starting directory is %s" % startdir)
     print("Testing on branch %s" % branchdir)
 
-    #fabfilename="fabfile.py"      #no longer need this
-    #fabfilepath=os.path.join(startdir, fabfilename)
-    #specifyfabfile="--fabfile=%s" % fabfilepath
-    
     #parse through any command line options
     parser = OptionParser()
-    parser.add_option("-v", "--verbose", action="store_true", dest="verbose", help="show all output") #keep this???
     parser.add_option("-l", "--runlocal", action="store_true", dest="runlocal", default=False,
                   help="force tests to run also on current platform")	
     parser.add_option("-i", "--ignorebzr", action="store_true", dest="ignoreBzrStatus", default=False,
@@ -137,7 +122,6 @@ def main(argv=None):
 
     runlocal = options.runlocal
     ignoreBzrStatus = options.ignoreBzrStatus
-    #currenthost = gethostname().split('.')[0]
     currenthost = gethostname()
 
     #Check for uncommitted changes first
@@ -153,12 +137,9 @@ def main(argv=None):
         runplatforms = options.runplatforms
     else:
         runplatforms = ["torpedo.grc.nasa.gov", "viper.grc.nasa.gov", "storm.grc.nasa.gov"] #default platforms to run tests on
-    #numberofplatforms=len(runplatforms)    #probably don't need anymore 
     print("Testing on hosts: %s" % runplatforms)
 
 
-    #%env_vars = os.environ.copy()   #Do I really need this??
-        
     # ensure that all network connections are closed
     # TODO: once we move to Fabric 0.9.4, just use disconnect_all() function
     try:
@@ -171,50 +152,7 @@ def main(argv=None):
         for key in connections.keys():
             connections[key].close()
             del connections[key]
-	    
-	    
-	    
-	    
-"""            #outfile="out"+remotehost
-            #fileout=open(outfile, "w")
-            print('running tests on %s' % remotehost)
-            #call the _testbranch function with appropriate host arg  
-            cmd = "fab testbranch:host=" + remotehost
-	    #cmd2="fab "+ specifyfabfile + " testbranch:host=" + remotehost
-            print("cmd is %s" % cmd)
-            #print("Please wait while tests are running on %s" % remotehost)
-            #os.system(cmd)    #old style system command
-            cmdargs=["fab, testbranch:host=" + remotehost]
-            print("cmdargs is %s" % cmdargs)
-            #testout=subprocess.Popen([cmdargs], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).communicate()[0]
-            p=subprocess.Popen([cmd], env=env_vars, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            (stdout, stderr) = p.communicate()
-            #subprocess.Popen([cmd], stdout=subprocess.PIPE, shell=True).communicate()[0]
-            #subprocess.Popen([cmd], stdout=fileout, shell=True).communicate()[0]
-            #fileout.close()
-            #if hostname=="storm":
-            #    processes.append(subprocess.Popen([cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False))	    
-            #else:
-            #    processes.append(subprocess.Popen([cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True))
-            #print("process has been appended")
-        # Handle error condition (deal with stdout being None, too)
 
-        class _AttributeString(str): pass	
-        out = _AttributeString(stdout.strip() if stdout else "")
-        err = _AttributeString(stderr.strip() if stderr else "")
-        out.failed = False
-        out.stderr = err
-        out.return_code = p.returncode
-        if p.returncode != 0:
-            out.failed = True
-            msg = "local() encountered an error (return code %s) while executing '%s'" % (p.returncode, command)
-            _handle_failure(message=msg)
-        out.succeeded = not out.failed
-        # If we were capturing, this will be a string; otherwise it will be None.
-        #return out
-	print(out)
-    
-    print("now, we're done, but where is the output?")"""
    
 if __name__ == '__main__': #pragma: no cover
     main()
