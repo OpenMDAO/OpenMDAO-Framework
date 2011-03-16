@@ -751,7 +751,7 @@ class NEWSUMTdriverRosenSuzukiTestCaseDeriv(unittest.TestCase):
         self.top = None
         
     def test_opt1(self):
-
+        # OpenMDAO Finite difference
         self.top.driver.add_objective('comp.result')
 
         self.top.driver.add_parameter('comp.x1', -10.0, 99.0, fd_step=0.01)
@@ -778,6 +778,33 @@ class NEWSUMTdriverRosenSuzukiTestCaseDeriv(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
                                self.top.comp.x4, places=1)
 
+    def test_opt2(self):
+        # NEWSUMT Finite Difference
+
+        self.top.driver.add_objective('comp.result')
+
+        self.top.driver.add_parameter('comp.x1', -10.0, 99.0, fd_step=0.01)
+        self.top.driver.add_parameter('comp.x2', -10.0, 99.0)
+        self.top.driver.add_parameter('comp.x3', -10.0, 99.0)
+        self.top.driver.add_parameter('comp.x4', -10.0, 99.0)
+
+        map(self.top.driver.add_constraint,[
+            'comp.x1**2+comp.x1+comp.x2**2-comp.x2+comp.x3**2+comp.x3+comp.x4**2-comp.x4 < 8',
+            'comp.x1**2-comp.x1+2*comp.x2**2+comp.x3**2+2*comp.x4**2-comp.x4 < 10',
+            '2*comp.x1**2+2*comp.x1+comp.x2**2-comp.x2+comp.x3**2-comp.x4 < 5'])
+        
+        self.top.run()
+
+        self.assertAlmostEqual(self.top.comp.opt_objective, 
+                               self.top.driver.eval_objective(), places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
+                               self.top.comp.x1, places=1)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
+                               self.top.comp.x2, places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
+                               self.top.comp.x3, places=2)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
+                               self.top.comp.x4, places=1)
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(NEWSUMTdriverConstrainedBettsTestCase))

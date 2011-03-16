@@ -578,6 +578,131 @@ When it is executed, it should produce this output:
 Notice that the minimum of the constrained problem is different from the minimum of
 the unconstrained problem.
 
-This concludes an introduction to a simple problem of component creation and execution in
-OpenMDAO. The next tutorial introduces a problem with more complexity and
-presents additional features of the framework.
+Adding Derivatives to Your Components
+-------------------------------------
+
+Optimizers such as CONMIN are gradient optimizers because they move toward the
+optimum value by travelling in the direction of the steepest gradient of the
+objective function. In our simple example problem, the CONMIN driver estimates
+the gradient at various times during the solution procedure by performing a
+local finite-difference step. Calculating the gradient typically involves 1 or
+more executions of the objective function depending on the finite difference
+method that is used. This of course means that your model is executed some
+additional times each iteration.
+
+Sometimes, the solution process can be sped up by having a component supply
+its own derivatives. These derivatives may be analytical (as will be shown in
+this example), or they might be estimated by some other means. An additional 
+benefit is that these derivatives can be more accurate than those estimated
+by finite differencing the component, and are not dependent on the right choice
+of a stepsize parameter.
+
+OpenMDAO supports the specification of derivatives in the component API. When
+a component has a set of specified derivatives, they are used to replace that
+component's output with the first-order Taylor series expansion whenver the
+optimizer initiates a finite difference estimation of the gradient. This is
+called "Fake Finite Difference" and was developed to support an efficient way
+to calculate gradients for mixed models -- models that contain both components
+that can provide derivatives, and those that cannot. More detail can be found
+in the Scripting User Interface [??? link when it is done]
+
+OpenMDAO supports the specification of gradients (first derivatives) and
+hessians (second derivatives) in mixed models via Fake Finite Difference. The
+CONMIN driver only uses gradients, but the NEWSUMT optimizer can use both
+gradients and hessians.
+
+There are two steps involved in specifying derivatives for a component:
+
+ :: 
+ 
+    1. Declare derivatives in the ``__init__`` method
+    2. Calculate the derivatives in the ``calculate_derivatives`` method
+
+You must declare the derivatives that you want to define so that it is
+possible to check the component for missing derivatives. In declaration, you
+aren't defining a value, but just declaring that this derivative is needed and
+provided by the component. In the general case, you need to have derivatives
+for all possible permutations between the inputs and outputs of your
+component. However, during any specific optimization, you only need the
+derivatives for inputs that are connected to upstream components and outputs
+that pass info to downstream components. This set can be further reduced when
+you consider that you only need the inputs and outputs that are active in the
+loop between the optimizers parameters and its objective and constraints.
+Presently, derivatives are only valid for the `Float` variable type.
+
+Derivative declaration is guided by the "sparse matrix" policy: if you don't
+declare a derivative, it is assumed to be zero. You don't have to actively
+set it to zero, and there is no superefluous multiplication by zero in any
+of the calculation. This philosophy leads to a clean interface and efficient
+calculation, but the burden is on the component developer to make sure not
+to miss a declaration of a derivative for an important output pair.
+
+You can add analytical derivatives to the Paraboloid component by adding the
+two functions mentioned above.
+
+The ``__init__`` method is a function that every class calls when it is instantiated.
+We need to add an ``__init__`` method that defines derivatives between the inputs
+(x, y) and the output f_xy. Lets add both first and second derivatives.
+
+.. testcode:: Paraboloid_derivative
+    :hide:
+    
+    from openmdao.examples.simple.paraboloid import Paraboloid
+    self = Paraboloid()
+
+.. testcode:: Paraboloid_derivative
+
+    def __init__(self):
+        """ declare what derivatives that we can provide"""
+        
+        super(Paraboloid_Derivative, self).__init__()
+
+        self.derivatives.declare_first_derivative(self, 'f_xy', 'x')
+        self.derivatives.declare_first_derivative(self, 'f_xy', 'y')
+        self.derivatives.declare_second_derivative(self, 'f_xy', 'x', 'x')
+        self.derivatives.declare_second_derivative(self, 'f_xy', 'x', 'y')
+        self.derivatives.declare_second_derivative(self, 'f_xy', 'y', 'y')
+
+The ``super`` command executes the parent's ``__init__`` function. **This is
+required for the component to behave properly in OpenMDAO, so don't forget to
+include it.**
+
+Also, don't forget the cross-variable terms when declaring second derivatives
+(in this case, the second derivative of f_xy with respect to x *and* y.)
+
+Next, we define the ``calculate_derivatives`` method.
+
+.. testcode:: Paraboloid_derivative
+
+    def calculate_derivatives(self, first, second):
+        """Analytical derivatives"""
+        
+        if first:
+        
+            df_dx = 2.0*self.x - 6.0 + self.y
+            df_dy = 2.0*self.y + 8.0 + self.x
+        
+            self.derivatives.set_first_derivative('f_xy', 'x', df_dx)
+            self.derivatives.set_first_derivative('f_xy', 'y', df_dy)
+        
+        if second:
+        
+            df_dxdx = 2.0
+            df_dxdy = 1.0
+            df_dydy = 2.0
+            
+            self.derivatives.set_second_derivative('f_xy', 'x', 'x', df_dxdx)
+            self.derivatives.set_second_derivative('f_xy', 'x', 'y', df_dxdy)
+            self.derivatives.set_second_derivative('f_xy', 'y', 'y', df_dydy)
+            
+This ``calculate_derivatives`` method calculated both the first and second
+derivatives, but we can take advantage of two Booleans, *first* and *second*,
+so that we only perform the calculation that is requested by the optimizer.
+Note that the hessian matrix is symmetric, so df/dxdy is the same as df/dydx,
+and only one has to be set.
+
+            
+This concludes an introduction to a simple problem of component creation and
+execution in OpenMDAO. The next tutorial introduces a problem with more
+complexity and presents additional features of the framework.
+

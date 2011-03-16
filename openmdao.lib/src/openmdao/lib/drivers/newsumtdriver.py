@@ -92,8 +92,7 @@ import newsumt.newsumtinterruptible as newsumtinterruptible
 
 # Disable complaints about Unused argument
 # pylint: disable-msg=W0613
-def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, nrandm, \
-                        niandm, driver):
+def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
     """
        Calculate the objective functions, constraints,
          and gradients of those. Call back to the driver
@@ -104,11 +103,36 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, nrandm, \
        this function.
     """
     
+    # evaluate objective function or constraint function
     if info in [1, 2]:
-        # evaluate objective function or constraint function
         
-        driver.set_parameters(x)
-        super(NEWSUMTdriver, driver).run_iteration()
+        if imode == 1:
+            
+            # We are in a finite difference step drive by NEWSUMT
+            # However, we still take advantage of a component's
+            # user-defined gradients via Fake Finite Difference.
+            
+            # Note, NEWSUMT estimates 2nd-order derivatives from
+            # the first order differences.
+            
+            # Save baseline states and calculate derivatives
+            if driver.baseline_point:
+                super(NEWSUMTdriver, driver).calc_derivatives(first=True)
+            driver.baseline_point = False
+            
+            # update the parameters in the model
+            driver.set_parameters(x)
+    
+            # Run model under Fake Finite Difference
+            driver.ffd_order = 1
+            super(NEWSUMTdriver, driver).run_iteration()
+            driver.ffd_order = 0
+        else:
+
+            # Optimization step
+            driver.set_parameters(x)
+            super(NEWSUMTdriver, driver).run_iteration()
+            driver.baseline_point = True
 
         # evaluate objectives
         if info == 1:
@@ -327,8 +351,6 @@ class NEWSUMTdriver(Driver):
         self._sn = zeros(0)
         self._x = zeros(0)
         self._iik = zeros(0, dtype=int)
-        self._ran = zeros(0)
-        self._ian = zeros(0, dtype=int)
 
         self._lower_bounds = zeros(0)
         self._upper_bounds = zeros(0)
@@ -342,17 +364,15 @@ class NEWSUMTdriver(Driver):
         self._obj = 0.0
         self._objmin = 0.0
 
-        # Size of some temp arrays needed by the routine that computes
-        #   the objective functions and constraints
-        self.nrandm = 1
-        self.niandm = 1
-
         self.isdone = False
         self.resume = False
         
     def start_iteration(self):
         """Perform the optimization."""
 
+        # Flag used to figure out if we are starting a new finite difference
+        self.baseline_point = True
+        
         # set newsumt array sizes and more...
         self._config_newsumt()
 
@@ -417,7 +437,6 @@ class NEWSUMTdriver(Driver):
                    self._s, self._sn, self.design_vals, self.__design_vals_tmp,
                    self._iik, self.ilin, self._iside,
                    self.n1, self.n2, self.n3, self.n4,
-                   self._ran, self.nrandm, self._ian, self.niandm,
                    self.isdone, self.resume, analys_extra_args = (self,))
 
         except Exception, err:
@@ -537,8 +556,6 @@ class NEWSUMTdriver(Driver):
         self._g3 = zeros( self.n2 )
         self._s = zeros( self.n1 )
         self._sn = zeros( self.n1 )
-        self._ran = zeros( self.nrandm )
-        self._ian = zeros( self.niandm, dtype = int )
         self._iik = zeros( self.n1, dtype=int )
 
 

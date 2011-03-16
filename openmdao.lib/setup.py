@@ -43,7 +43,7 @@ Component, Driver, and TraitType plugins for OpenMDAO
           'setuptools',
           'openmdao.main',
           'conmin==1.0.1',
-          'newsumt==1.0.0',
+          'newsumt==1.1.0',
           'Pyevolve==0.6',
           'ordereddict',
           'scipy',

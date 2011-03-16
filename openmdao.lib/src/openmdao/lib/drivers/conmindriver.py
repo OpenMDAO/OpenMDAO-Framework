@@ -273,12 +273,12 @@ class CONMINdriver(Driver):
         self.g1 = zeros(0,'d')
         self.g2 = zeros(0,'d')
         
-        # Flag used to figure out if we are starting a new finite difference
-        self.baseline_point = True
 
-        
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
+        
+        # Flag used to figure out if we are starting a new finite difference
+        self.baseline_point = True
         
         self._config_conmin()
         self.cnmn1.igoto = 0
