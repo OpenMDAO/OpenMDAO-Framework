@@ -19,7 +19,7 @@ import math
 import numpy
 import logging
 
-from openmdao.main.expreval import ExprEvaluator #,translate_expr
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.api import Assembly, Container, Component, set_as_top
 from openmdao.lib.datatypes.api import Float, Array
 
@@ -50,10 +50,10 @@ class ExprEvalTestCase(unittest.TestCase):
         ('comp.x < b', "scope.parent.get('comp.x')<b"),
         ('math.sin(b)+math.cos(b+math.pi)', 'math.sin(b)+math.cos(b+math.pi)'),
         ('comp.x[0]', "scope.parent.get('comp.x',[0])"),
-        #('comp.x[0] = 10.-(3.2* b[3]+ 1.1*b[2 ])', 
-        #     "scope.parent.set('comp.x',10.-(3.2*b[3]+1.1*b[2]),[0])"),
-        #('c.b[2] = -comp.x',
-        #     "scope.parent.set('c.b',-scope.parent.get('comp.x'),[2])"),
+        ('comp.x[0] = 10*(3.2+ b[3]* 1.1*b[2 ])', 
+             "scope.parent.set('comp.x',10*(3.2+b[3]*1.1*b[2]),[0])"),
+        ('a.b[2] = -comp.x',
+             "scope.parent.set('a.b',-scope.parent.get('comp.x'),[2])"),
         ]
 
         for tst in tests:
@@ -68,7 +68,7 @@ class ExprEvalTestCase(unittest.TestCase):
         ('abs(a.b[1][2])', "abs(scope.get('a.b',[1,2]))"),
         ('a.b[1][x.y]', "scope.get('a.b',[1,scope.parent.get('x.y')])"),  
         #('a.b()', "scope.invoke('a.b')"),
-        #('comp.x=a.b[1]',"scope.set('comp.x',scope.get('a.b',[1]))"),
+        ('comp.x=a.b[1]',"scope.set('comp.x',scope.get('a.b',[1]))"),
         #('a.b(5)', "scope.invoke('a.b',5)"),
         #('a.b(5,9)', "scope.invoke('a.b',5,9)"),
         #('a.b(5,z.y)', "scope.invoke('a.b',5,scope.parent.get('z.y'))"),
@@ -93,74 +93,74 @@ class ExprEvalTestCase(unittest.TestCase):
         ex.set(75.4)
         self.assertEqual(75.4, self.top.comp.x)
 
-    #def test_boolean(self):
-        #comp = self.top.comp
-        #comp.x = 1.
-        #comp.y = 3.
-        #self.assertEqual(True, ExprEvaluator('comp.x < comp.y', self.top).evaluate())
-        #self.assertEqual(True, ExprEvaluator('comp.x <= comp.y', self.top).evaluate())
-        #self.assertEqual(True, ExprEvaluator('comp.x != comp.y', self.top).evaluate())
-        #self.assertEqual(False, ExprEvaluator('comp.x == comp.y', self.top).evaluate())
-        #self.assertEqual(False, ExprEvaluator('comp.x > comp.y', self.top).evaluate())
-        #self.assertEqual(False, ExprEvaluator('comp.x >= comp.y', self.top).evaluate())
+    def test_boolean(self):
+        comp = self.top.comp
+        comp.x = 1.
+        comp.y = 3.
+        self.assertEqual(True, ExprEvaluator('comp.x < comp.y', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('comp.x <= comp.y', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('comp.x != comp.y', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('comp.x == comp.y', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('comp.x > comp.y', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('comp.x >= comp.y', self.top).evaluate())
         
-        #self.assertEqual(True, ExprEvaluator('1< comp.y', self.top).evaluate())
-        #self.assertEqual(True, ExprEvaluator('1<= comp.y', self.top).evaluate())
-        #self.assertEqual(True, ExprEvaluator('1!= comp.y', self.top).evaluate())
-        #self.assertEqual(False, ExprEvaluator('1== comp.y', self.top).evaluate())
-        #self.assertEqual(False, ExprEvaluator('1> comp.y', self.top).evaluate())
-        #self.assertEqual(False, ExprEvaluator('1>= comp.y', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('1< comp.y', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('1<= comp.y', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('1!= comp.y', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('1== comp.y', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('1> comp.y', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('1>= comp.y', self.top).evaluate())
         
-        #self.assertEqual(True, ExprEvaluator('comp.x < 3', self.top).evaluate())
-        #self.assertEqual(True, ExprEvaluator('comp.x <= 3', self.top).evaluate())
-        #self.assertEqual(True, ExprEvaluator('comp.x != 3', self.top).evaluate())
-        #self.assertEqual(False, ExprEvaluator('comp.x == 3', self.top).evaluate())
-        #self.assertEqual(False, ExprEvaluator('comp.x > 3', self.top).evaluate())
-        #self.assertEqual(False, ExprEvaluator('comp.x >= 3', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('comp.x < 3', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('comp.x <= 3', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('comp.x != 3', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('comp.x == 3', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('comp.x > 3', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('comp.x >= 3', self.top).evaluate())
         
-        #comp.x = 3.
-        #self.assertEqual(False, ExprEvaluator('comp.x != comp.y', self.top).evaluate())
-        #self.assertEqual(True, ExprEvaluator('comp.x == comp.y', self.top).evaluate())
+        comp.x = 3.
+        self.assertEqual(False, ExprEvaluator('comp.x != comp.y', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('comp.x == comp.y', self.top).evaluate())
         
-        #self.top.a.b = [1,1,1,1]
-        #self.assertEqual(True, ExprEvaluator('all(a.b)', self.top).evaluate())
-        #self.assertEqual(True, ExprEvaluator('any(a.b)', self.top).evaluate())
-        #self.top.a.b = [1,1,0,1]
-        #self.assertEqual(False, ExprEvaluator('all(a.b)', self.top).evaluate())
-        #self.assertEqual(True, ExprEvaluator('any(a.b)', self.top).evaluate())
+        self.top.a.b = [1,1,1,1]
+        self.assertEqual(True, ExprEvaluator('all(a.b)', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('any(a.b)', self.top).evaluate())
+        self.top.a.b = [1,1,0,1]
+        self.assertEqual(False, ExprEvaluator('all(a.b)', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('any(a.b)', self.top).evaluate())
         
-    #def test_builtins(self):
-        #comp = self.top.comp
-        #comp.x = 1.
-        #comp.y = -3.
-        #self.assertEqual(3., ExprEvaluator('abs(comp.y)', self.top).evaluate())
-        #self.assertAlmostEqual(0., ExprEvaluator('math.sin(math.pi)', self.top).evaluate())
-        #comp.x = 1.35
-        #self.assertEqual(1., ExprEvaluator('math.floor(comp.x)', self.top).evaluate())
-        #self.assertEqual(2., ExprEvaluator('math.ceil(comp.x)', self.top).evaluate())
-        #comp.x = 0.
-        #self.assertEqual(True, ExprEvaluator('math.sin(comp.x)<math.cos(comp.x)', self.top).evaluate())
-        #comp.x = math.pi/2.
-        #self.assertEqual(False, ExprEvaluator('math.sin(comp.x)<math.cos(comp.x)', self.top).evaluate())
+    def test_builtins(self):
+        comp = self.top.comp
+        comp.x = 1.
+        comp.y = -3.
+        self.assertEqual(3., ExprEvaluator('abs(comp.y)', self.top).evaluate())
+        self.assertAlmostEqual(0., ExprEvaluator('math.sin(math.pi)', self.top).evaluate())
+        comp.x = 1.35
+        self.assertEqual(1., ExprEvaluator('math.floor(comp.x)', self.top).evaluate())
+        self.assertEqual(2., ExprEvaluator('math.ceil(comp.x)', self.top).evaluate())
+        comp.x = 0.
+        self.assertEqual(True, ExprEvaluator('math.sin(comp.x)<cos(comp.x)', self.top).evaluate())
+        comp.x = math.pi/2.
+        self.assertEqual(False, ExprEvaluator('math.sin(comp.x)<math.cos(comp.x)', self.top).evaluate())
         
-    #def test_multi_object(self):
-        ## verify that single_name will not allow expressions with multiple objects
-        #try:
-            #ex = ExprEvaluator('comp.x+comp.x', self.top, single_name=True, lazy_check=False)
-        #except RuntimeError, err:
-            #self.assertEqual(str(err),
-                #"Expected end of text (at char 6), (line:1, col:7) - comp.x>!<+comp.x")
-        #else:
-            #raise AssertionError('RuntimeError expected')
+    def test_multi_object(self):
+        # verify that single_name will not allow expressions with multiple objects
+        try:
+            ex = ExprEvaluator('comp.x+comp.x', self.top, single_name=True, lazy_check=False)
+        except RuntimeError, err:
+            self.assertEqual(str(err),
+                "Expression 'comp.x+comp.x' is not a single name and therefore can't be used on the LHS of an assignment")
+        else:
+            raise AssertionError('RuntimeError expected')
     
-    #def test_bogus(self):        
-        ## now try some bogus expressions
-        #try:
-            #ex = ExprEvaluator('abcd.efg', self.top, lazy_check=False)
-        #except RuntimeError, err:
-            #self.assertEqual(str(err), "ExprEvaluator: cannot find variable 'abcd.efg'")
-        #else:
-            #raise AssertionError('RuntimeError expected')
+    def test_bogus(self):        
+        # now try some bogus expressions
+        try:
+            ex = ExprEvaluator('abcd.efg', self.top, lazy_check=False)
+        except RuntimeError, err:
+            self.assertEqual(str(err), "expression 'abcd.efg' can't be resolved")
+        else:
+            raise AssertionError('RuntimeError expected')
 
 if __name__ == "__main__":
     unittest.main()

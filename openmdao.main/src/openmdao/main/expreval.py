@@ -7,32 +7,29 @@ import weakref
 import math
 import ast
 
+_scope = {
+    'math': math,
+    '_local_setter': None,
+    }
+for name in dir(math):
+    if not name.startswith('_'):
+        _scope[name] = getattr(math, name)
 
-class _Globals(object):
-    def __init__(self):
-        self.math = math
-        self._local_setter = None
-        for name in dir(math):
-            if not name.startswith('_'):
-                setattr(self, name, getattr(math, name))
-        
-_globals_scope = _Globals()
 
-def _in_globals(name):
+def _is_local(name):
     """Return True if the given (dotted) name refers to something in our
-    globals object, e.g., math.sin.  Raises an AttributeError if the name
-    refers to something in globals that doesn't exist, e.g., math.foobar.
-    Returns False if the name refers to nothing in globals, e.g., mycomp.x.
+    _scope dict, e.g., math.sin.  Raises a KeyError if the name
+    refers to something in _scope that doesn't exist, e.g., math.foobar.
+    Returns False if the name refers to nothing in _scope, e.g., mycomp.x.
     """
-    obj = _globals_scope
-    for i,part in enumerate(name.split('.')):
+    parts = name.split('.')
+    obj = _scope.get(parts[0], None)
+    if obj is None:
+        return False
+    for part in parts[1:]:
         obj = getattr(obj, part, None)
         if obj is None:
-            if i==0:
-                return False  # object is nowhere in globals
-            else: # part of name refers to a globals object, but full dotted 
-                  # path doesn't point to an existing object
-                raise AttributeError("Can't find '%s' in globals" % name)
+            raise KeyError("Can't find '%s' in _scope" % name)
     return True
 
 def _get_name_node(names):
@@ -56,7 +53,59 @@ def _cannot_find(name):
                   #ast.Is, ast.IsNot, ast.In, ast.NotIn
                   #)
                   
-                  
+_prec = 0
+
+# dict with operator precedence
+_opdct = {}
+
+_opdct[ast.Lambda] = _prec
+_prec += 1
+_opdct[ast.If] = _prec
+_prec += 1
+_opdct[ast.Or] = _prec
+_prec += 1
+_opdct[ast.And] = _prec
+_prec += 1
+_opdct[ast.Not] = _prec
+_prec += 1
+_opdct[ast.In] = _prec
+_opdct[ast.NotIn] = _prec
+_opdct[ast.Is] = _prec
+_opdct[ast.IsNot] = _prec
+_opdct[ast.Lt] = _prec
+_opdct[ast.LtE] = _prec
+_opdct[ast.Gt] = _prec
+_opdct[ast.GtE] = _prec
+_opdct[ast.NotEq] = _prec
+_opdct[ast.Eq] = _prec
+_prec += 1
+_opdct[ast.BitOr] = _prec
+_prec += 1
+_opdct[ast.BitXor] = _prec
+_prec += 1
+_opdct[ast.BitAnd] = _prec
+_prec += 1
+_opdct[ast.LShift] = _prec
+_opdct[ast.RShift] = _prec
+_prec += 1
+_opdct[ast.Add] = _prec
+_opdct[ast.Sub] = _prec
+_prec += 1
+_opdct[ast.Mult] = _prec
+_opdct[ast.Div] = _prec
+_opdct[ast.FloorDiv] = _prec
+_opdct[ast.Mod] = _prec
+_prec += 1
+_opdct[ast.UAdd] = _prec
+_opdct[ast.USub] = _prec
+_opdct[ast.Invert] = _prec
+_prec += 1
+_opdct[ast.Pow] = _prec
+
+
+def _pred_cmp(op1, op2):
+    return _opdct[op1.__class__] - _opdct[op2.__class__]
+
 class ExprPrinter(ast.NodeVisitor):
     def __init__(self):
         super(ExprPrinter, self).__init__()
@@ -87,6 +136,23 @@ class ExprPrinter(ast.NodeVisitor):
         
     def visit_Name(self, node):
         self.write(node.id)
+        
+    def visit_BinOp(self, node):
+        # we have to add parens around any immediate BinOp child
+        # that has a lower precedence operation than we do
+        if isinstance(node.left, ast.BinOp) and _pred_cmp(node.left.op, node.op) < 0:
+            self.write('(')
+            self.visit(node.left)
+            self.write(')')
+        else:
+            self.visit(node.left)
+        self.visit(node.op)
+        if isinstance(node.right, ast.BinOp) and _pred_cmp(node.right.op, node.op) < 0:
+            self.write('(')
+            self.visit(node.right)
+            self.write(')')
+        else:
+            self.visit(node.right)
 
     def visit_IfExp(self, node):
         self.visit(node.body)
@@ -275,17 +341,20 @@ class ExprTransformer(ast.NodeTransformer):
         if long_name is None:
             return node
         
-        if _in_globals(long_name):
+        if _is_local(long_name):
             return node
+        
+        self.expreval.var_names.add(long_name)
     
         args = [ast.Str(s=long_name)]
         scope = self.expreval.scope
-        names = []
+        names = ['scope']
         if scope:
-            if scope.contains(long_name.split('.',1)[0]):
-                names = ['scope']
-            else:
-                names = ['scope', 'parent']
+            if not scope.contains(long_name.split('.',1)[0]):
+                names.append('parent')
+                if not scope.parent or not scope.parent.contains(long_name.split('.',1)[0]):
+                    if not self.expreval.lazy_check:
+                        raise RuntimeError("expression '%s' can't be resolved" % str(self.expreval))
         else:
             raise RuntimeError("expression '%s' can't be evaluated because it has no scope" % str(self.expreval))
 
@@ -360,7 +429,6 @@ class ExprEvaluator(str):
         s.single_name = single_name
         s._text = None  # used to detect change in str
         s.var_names = set()
-        s._has_globals = False
         if lazy_check is False:
             s._parse()
         return s
@@ -420,6 +488,9 @@ class ExprEvaluator(str):
         self._code = compile(self.scoped_text, '<string>', 'eval')
         
         if self.single_name: # set up a compiled assignment statement
+            if not isinstance(new_ast.body[0].value, 
+                              (ast.Attribute, ast.Name, ast.Subscript, ast.Call)):
+                raise RuntimeError("Expression '%s' is not a single name and therefore can't be used on the LHS of an assignment" % self)
             old_lazy_check = self.lazy_check
             try:
                 self.lazy_check = True
@@ -442,15 +513,7 @@ class ExprEvaluator(str):
         try:
             if self._text != self:  # text has changed
                 self._parse()
-            if scope:
-                if self._has_globals:
-                    globdict = _evalglobals.copy()
-                    globdict.update(scope.__dict__)
-                else:
-                    globdict = scope.__dict__
-                return eval(self._code, globdict, locals())
-            else:
-                return eval(self._code, _evalglobals, locals())
+            return eval(self._code, _scope, locals())
         except Exception, err:
             raise type(err)("ExprEvaluator failed evaluating expression "+
                             "'%s'. Caught message is: %s" %(self,str(err)))
