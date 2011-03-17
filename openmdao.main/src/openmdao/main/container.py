@@ -75,6 +75,20 @@ def get_closest_proxy(start_scope, pathname):
     return (obj, '.'.join(names[i:]))
 
 
+def build_container_hierarchy(dct):
+    """Create a hierarchy of Containers based on the contents of a nested dict.
+    There will always be a single top level scoping Container regardless of the
+    contents of dct.
+    """
+    top = Container()
+    for key,val in dct.items():
+        if isinstance(val, dict): # it's a dict, so this is a Container
+            top.add(key, build_container_hierarchy(val))
+        else:
+            setattr(top, key, val)
+    return top
+        
+
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
 # re-raised.

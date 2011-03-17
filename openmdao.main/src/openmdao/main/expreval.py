@@ -3,239 +3,48 @@
 #public symbols
 __all__ = ["ExprEvaluator"]
 
-
 import weakref
 import math
+import ast
 
-#from pyparsing import Word, ZeroOrMore, OneOrMore, Literal, CaselessLiteral
-#from pyparsing import oneOf, alphas, nums, alphanums, Optional, Combine
-#from pyparsing import Forward, StringEnd
-#from pyparsing import ParseException
 
-_evalglobals = {
-    'abs': abs, 
-    'all': all, 
-    'any': any, 
-    'bool': bool, 
-    'complex': complex, 
-    'divmod': divmod, 
-    'filter': filter, 
-    'float': float, 
-    'hex': hex, 
-    'int': int, 
-    'isinstance': isinstance, 
-    'issubclass': issubclass, 
-    'iter': iter, 
-    'len': len, 
-    'list': list, 
-    'long': long, 
-    'math': math,
-    'max': max, 
-    'min': min, 
-    'oct': oct, 
-    'ord': ord, 
-    'pow': pow, 
-    'range': range, 
-    'reduce': reduce, 
-    'reversed': reversed, 
-    'round': round, 
-    'set': set, 
-    'sorted': sorted, 
-    'str': str, 
-    'sum': sum, 
-    'tuple': tuple
-}
+class _Globals(object):
+    def __init__(self):
+        self.math = math
+        self._local_setter = None
+        for name in dir(math):
+            if not name.startswith('_'):
+                setattr(self, name, getattr(math, name))
+        
+_globals_scope = _Globals()
 
-#_fake_eq = '_@EQ@_'  # used to replace '==' to avoid ambiguity with '='
+def _in_globals(name):
+    """Return True if the given (dotted) name refers to something in our
+    globals object, e.g., math.sin.  Raises an AttributeError if the name
+    refers to something in globals that doesn't exist, e.g., math.foobar.
+    Returns False if the name refers to nothing in globals, e.g., mycomp.x.
+    """
+    obj = _globals_scope
+    for i,part in enumerate(name.split('.')):
+        obj = getattr(obj, part, None)
+        if obj is None:
+            if i==0:
+                return False  # object is nowhere in globals
+            else: # part of name refers to a globals object, but full dotted 
+                  # path doesn't point to an existing object
+                raise AttributeError("Can't find '%s' in globals" % name)
+    return True
+
+def _get_name_node(names):
+    node = ast.Name(id=names[0], ctx=ast.Load())
+    for name in names[1:]:
+        node = ast.Attribute(value=node, attr=name, ctx=ast.Load())
+    return node
+
 
 def _cannot_find(name):
     raise RuntimeError("ExprEvaluator: cannot find variable '%s'" % name)
 
-#def _trans_unary(strng, loc, tok):
-    #return tok
-
-    
-#def _trans_lhs(strng, loc, tok, exprobj):
-    #if exprobj._scope:
-        #scope = exprobj._scope()
-        #lazy_check = exprobj.lazy_check
-        #if scope.contains(tok[0]):
-            #scname = 'scope'
-        #else:
-            #scname = 'scope.parent'
-            #if lazy_check is False and not scope.parent.contains(tok[0]):
-                #_cannot_find(tok[0])
-        #exprobj.var_names.add(tok[0])
-    #else:
-        #_cannot_find(tok[0])
-        
-    #full = scname + ".set('" + tok[0] + "',_@RHS@_"
-    #if len(tok) > 1 and tok[1] != '=':
-        #full += ","+tok[1]
-            
-    #return ['=', full + ")"]
-    
-#def _trans_assign(strng, loc, tok, exprobj):
-    #if tok[0] == '=':
-        #return [tok[1].replace('_@RHS@_', tok[2], 1)]
-    #else:
-        #return tok
-    
-#def _trans_arrayindex(strng, loc, tok):
-    #full = "[" + tok[1]
-    #if tok[2] == ',':
-        #for index in range(3, len(tok), 2):
-            #full += ','
-            #full += tok[index]
-    #else:
-        #for index in range(4, len(tok), 3):
-            #full += ','
-            #full += tok[index]
-    #return [full+"]"]
-    
-#def _trans_arglist(strng, loc, tok):
-    #full = "("
-    #if len(tok) > 2: 
-        #full += tok[1]
-    #for index in range(3, len(tok), 2):
-        #full += ','+tok[index]
-    #return [full+")"]
-
-#def _trans_fancyname(strng, loc, tok, exprobj):
-    ## if we find the named object in the current scope, then we don't need to 
-    ## do any translation.  The scope object is assumed to have a contains() 
-    ## function.
-    #if exprobj._scope is None:
-        #_cannot_find(tok[0])
-    
-    #scope = exprobj._scope()
-    #lazy_check = exprobj.lazy_check
-    
-    #if tok[0].startswith('math.'):
-        #exprobj._has_globals = True
-        #return tok
-    #elif scope.contains(tok[0]):
-        #scname = 'scope'
-        #if hasattr(scope, tok[0]):
-            #return tok  # use name unmodified for faster local access
-    #elif tok[0] == '_local_setter': # used in assigment statements
-        #return tok
-    #else:
-        #scname = 'scope.parent'
-        #if lazy_check is False and (scope.parent is None or 
-                                 #not scope.parent.contains(tok[0])):
-            #_cannot_find(tok[0])
-    
-        
-    #if len(tok) == 1 or (len(tok) > 1 and tok[1].startswith('[')):
-        #full = scname + ".get('" + tok[0] + "'"
-        #if len(tok) > 1:
-            #full += ","+tok[1]
-        #exprobj.var_names.add(tok[0])
-        #exprobj._comp_names[tok[0].split('.')[0]] = 0
-    #else:
-        ## special check here for calls to builtins like abs, all, any, etc.
-        ## or calls to math functions (math.sin, math.cos, etc.)
-        #if tok[0] in _evalglobals or tok[0].startswith('math.'):
-            #exprobj._has_globals = True
-            #full = tok[0] + "("
-            #if len(tok[1]) > 2:
-                #full += tok[1][1:-1]
-        #else:
-            #full = scname + ".invoke('" + tok[0] + "'"
-            #if len(tok[1]) > 2:
-                #full += "," + tok[1][1:-1]
-        
-    #return [full + ")"]
-    
-
-#def translate_expr(text, exprobj, single_name=False):
-    #"""A function to translate an expression using dotted names into a new
-    #expression string containing the appropriate calls to resolve those dotted
-    #names in the framework, e.g., 'a.b.c' becomes get('a.b.c') or 'a.b.c(1,2,3)'
-    #becomes invoke('a.b.c',1,2,3).
-    #"""
-    #lazy_check = exprobj.lazy_check
-    
-    #ee = CaselessLiteral('E')
-    #comma    = Literal( "," )    
-    #plus     = Literal( "+" )
-    #minus    = Literal( "-" )
-    #mult     = Literal( "*" )
-    #div      = Literal( "/" )
-    #lpar     = Literal( "(" )
-    #rpar     = Literal( ")" )
-    #dot      = Literal( "." )
-    
-    #equal    = Literal( _fake_eq ) # substitute for '==' to avoid ambiguity in grammar
-    #notequal = Literal( "!=" )
-    #less     = Literal( "<" )
-    #lesseq   = Literal( "<=" )
-    #greater  = Literal( ">" )
-    #greatereq = Literal( ">=" )
-    
-    #assignop = Literal( "=" )
-    #lbracket = Literal( "[" )
-    #rbracket = Literal( "]" )
-    #expop    = Literal( "**" )
-
-    #expr = Forward()
-    #arrayindex = Forward()
-    #arglist = Forward()
-    #fancyname = Forward()
-
-    #digits = Word(nums)
-
-    #number = Combine( ((digits + Optional( dot + Optional(digits) )) |
-                             #(dot + digits) )+
-                           #Optional( ee + Optional(oneOf('+ -')) + digits )
-                          #)
-    #name = Word('_'+alphas, bodyChars='_'+alphanums)
-    #pathname = Combine(name + ZeroOrMore(dot + name))
-    #arrayindex << OneOrMore(lbracket + Combine(expr) + 
-                            #ZeroOrMore(comma+Combine(expr)) + rbracket)
-    #arrayindex.setParseAction(_trans_arrayindex)
-    #arglist << lpar + Optional(Combine(expr) + 
-                               #ZeroOrMore(comma+Combine(expr))) + rpar
-    #arglist.setParseAction(_trans_arglist)
-    #fancyname << pathname + ZeroOrMore(arrayindex | arglist)
-    
-    ## set up the scope name translation here. Parse actions called from
-    ## pyparsing only take 3 args, so we wrap our function in a lambda function
-    ## with an extra argument to specify the ExprEvaluator object.
-    #fancyname.setParseAction(
-        #lambda s,loc,tok: _trans_fancyname(s,loc,tok,exprobj))
-
-    #addop  = plus | minus
-    #multop = mult | div
-    #boolop = equal | notequal | lesseq | less | greatereq | greater 
-
-    #factor = Forward()
-    #atom = Combine(Optional("-") + (( number | fancyname) | (lpar+expr+rpar)), adjacent=False)
-    #factor << atom + ZeroOrMore( ( expop + factor ) )
-    #term = factor + ZeroOrMore( ( multop + factor ) )
-    #addterm = term + ZeroOrMore( ( addop + term ) )
-    #expr << addterm + ZeroOrMore( ( boolop + addterm ) )
-    
-    #lhs_fancyname = pathname + ZeroOrMore(arrayindex)
-    #lhs = lhs_fancyname + assignop
-    #lhs.setParseAction(lambda s,loc,tok: _trans_lhs(s,loc,tok,exprobj))
-    #equation = Optional(lhs) + Combine(expr) + StringEnd()
-    #equation.setParseAction(lambda s,loc,tok: _trans_assign(s,loc,tok, exprobj))
-    
-    #try:
-        #if single_name:
-            #simple_str = fancyname + StringEnd()
-            #return ''.join(simple_str.parseString(text))
-        #else:
-            #return ''.join(equation.parseString(text))
-    #except ParseException, err:
-        #raise RuntimeError(str(err)+' - '+err.markInputline())
-
-
-    
-    
-import ast
 
 #_allowed_nodes = (ast.BoolOp, ast.BinOp, ast.UnaryOp, ast.Attribute, ast.Assign, 
                   #ast.Name, ast.IfExp, ast.Call, ast.Num, 
@@ -435,18 +244,19 @@ class ExprPrinter(ast.NodeVisitor):
 
         
 class ExprTransformer(ast.NodeTransformer):
-    def __init__(self, expreval, mode='get'):
+    """Transforms attribute accesses, e.g., abc.def.g in an expression into 
+    scope.get('abc.def.g') or scope.parent.get('abc.def.g')
+    """
+    def __init__(self, expreval, rhs=None):
         self.expreval = expreval
-        self.mode = mode
+        self.rhs = rhs
+        self._stack = []  # use this to see if we're inside of parens or brackets so
+                          # that we always translate to 'get' even if we're on the lhs
         super(ExprTransformer, self).__init__()
         
-    def _get_name_node(self, names):
-        node = ast.Name(id=names[0], ctx=ast.Load())
-        for name in names[1:]:
-            node = ast.Attribute(value=node, attr=name, ctx=ast.Load())
-        return node
-
-    def visit_Attribute(self, node, subs=None):
+    def _get_long_name(self, node):
+        # if node is an Attribute composed of only other Attributes and a Name
+        # then return the full dotted name. Otherwise, return None
         val = node.value
         parts = [node.attr]
         while True:
@@ -456,28 +266,38 @@ class ExprTransformer(ast.NodeTransformer):
             elif isinstance(val, ast.Name):
                 parts.append(val.id)
                 break
-            else:  # it's more than just a simple dotted name, so don't transform it
-                return node
-
-        long_name = '.'.join(parts[::-1])
+            else:  # it's more than just a simple dotted name
+                return None
+        return '.'.join(parts[::-1])
+    
+    def visit_Attribute(self, node, subs=None):
+        long_name = self._get_long_name(node)
+        if long_name is None:
+            return node
+        
+        if _in_globals(long_name):
+            return node
+    
         args = [ast.Str(s=long_name)]
         scope = self.expreval.scope
         names = []
         if scope:
-            if scope.contains(parts[-1]):
+            if scope.contains(long_name.split('.',1)[0]):
                 names = ['scope']
-            elif long_name.startswith('math.') and hasattr(math, long_name.split('.',1)[-1]):
-                return node
             else:
                 names = ['scope', 'parent']
         else:
             raise RuntimeError("expression '%s' can't be evaluated because it has no scope" % str(self.expreval))
 
-        names.append(self.mode)
-        if self.mode == 'set':
-            args.append(ast.Name(id='_local_setter', ctx=ast.Load()))
+        if self.rhs and len(self._stack) == 0:
+            fname = 'set'
+        else:
+            fname = 'get'
+        names.append(fname)
+        if fname == 'set':
+            args.append(self.rhs)
 
-        called_obj = self._get_name_node(names)
+        called_obj = _get_name_node(names)
         if subs:
             args.append(ast.List(elts=subs))
 
@@ -485,17 +305,29 @@ class ExprTransformer(ast.NodeTransformer):
                                           ctx=node.ctx), node)
 
     def visit_Subscript(self, node, sublist=None):
+        self._stack.append(node)
         if sublist:
             subs = [self.visit(node.slice.value)] + sublist
         else:
             subs = [self.visit(node.slice.value)]
+        self._stack.pop()
             
         if isinstance(node.value, ast.Attribute):
             node = self.visit_Attribute(node.value, subs)
         elif isinstance(node.value, ast.Subscript):
-            return self.visit_Subscript(node.value, subs)
+            node = self.visit_Subscript(node.value, subs)
         return node
     
+    def visit_Module(self, node):
+        # Make sure there is only one statement or expression
+        if len(node.body) > 1 or not isinstance(node.body[0], (ast.Assign, ast.Expr)):
+            raise RuntimeError("Only one assignment statement or expression is allowed")
+        return super(ExprTransformer, self).generic_visit(node)
+        
+    def visit_Assign(self, node):
+        if len(node.targets) > 1:
+            raise RuntimeError("only one expression is allowed on left hand side of assignment")
+        return ExprTransformer(self.expreval, rhs=self.visit(node.value)).visit(node.targets[0])
     
 class ExprEvaluator(str):
     """A class that translates an expression string into a new string containing
@@ -549,7 +381,6 @@ class ExprEvaluator(str):
         else:
             self._scope = None
 
-                
     def __getstate__(self):
         """Return dict representing this container's state."""
         state = self.__dict__.copy()
@@ -575,7 +406,7 @@ class ExprEvaluator(str):
 
     def _parse(self):
         self.var_names = set()
-        root = ast.parse(self, mode='eval')
+        root = ast.parse(self, mode='exec')
         
         # transform attribute accesses to 'get' calls if necessary
         new_ast = ExprTransformer(self).visit(root)
@@ -592,8 +423,10 @@ class ExprEvaluator(str):
             old_lazy_check = self.lazy_check
             try:
                 self.lazy_check = True
+                assign_txt = "%s=_local_setter" % self
+                root = ast.parse(assign_txt, mode='exec')
                 # transform into a 'set' call to set the specified variable
-                new_ast = ExprTransformer(self, mode='set').visit(root)
+                new_ast = ExprTransformer(self).visit(root)
                 ep = ExprPrinter()
                 ep.visit(new_ast)
                 self._assignment_code = compile(ep.get_text(),'<string>','eval')
@@ -684,3 +517,45 @@ class ExprEvaluator(str):
                 if scope.parent.check_resolve(self.var_names):
                     return True
         return False
+
+
+if __name__ == '__main__':
+    import sys
+    from openmdao.main.container import build_container_hierarchy
+
+    txt = ''.join(sys.argv[1:])
+    root = ast.parse(txt, mode='exec')
+    print 'original:\n %s' % txt
+    
+    print '\noriginal AST dump:'
+    print ast.dump(root, annotate_fields=True)
+    
+    print '\nprinted AST:'
+    ep = ExprPrinter()
+    ep.visit(root)
+    print ep.get_text()
+    
+    top = build_container_hierarchy({
+        'a': {
+            'b': {
+                'c': 1,
+                'd': 2,
+                }
+            },
+        'x': {
+            'y': {
+                'z': 3.14,
+                }
+            }
+        })
+    
+    root = ExprTransformer(ExprEvaluator(txt, scope=top)).visit(root)
+    print '\ntransformed AST dump:'
+    print ast.dump(root, annotate_fields=True)
+    
+    print '\nprinted transformed AST:'
+    ep = ExprPrinter()
+    ep.visit(root)
+    print ep.get_text()
+    
+

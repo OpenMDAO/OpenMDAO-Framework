@@ -6,7 +6,6 @@ import shutil
 from openmdao.main.api import Assembly, Component, Driver, \
      SequentialWorkflow, Case
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
