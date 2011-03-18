@@ -101,10 +101,10 @@ class CONMINdriverTestCase(unittest.TestCase):
 
     def test_opt1_with_OpenMDAO_gradient(self):
         self.top.driver.add_objective('comp.result')
-        self.top.driver.add_parameter('comp.x[0]', fd_step = .01)
-        self.top.driver.add_parameter('comp.x[1]', fd_step = .01)
-        self.top.driver.add_parameter('comp.x[2]', fd_step = .01)
-        self.top.driver.add_parameter('comp.x[3]', fd_step = .01)
+        self.top.driver.add_parameter('comp.x[0]', fd_step = .00001)
+        self.top.driver.add_parameter('comp.x[1]', fd_step = .00001)
+        self.top.driver.add_parameter('comp.x[2]', fd_step = .00001)
+        self.top.driver.add_parameter('comp.x[3]', fd_step = .00001)
         
         # pylint: disable-msg=C0301
         map(self.top.driver.add_constraint,[

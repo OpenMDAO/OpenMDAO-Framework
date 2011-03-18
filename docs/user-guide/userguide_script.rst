@@ -1018,8 +1018,8 @@ drivers can be found in the section on :ref:`Drivers` in *Appendix B: Standard L
 
 .. _Driver-API: 
 
-The Driver API
-~~~~~~~~~~~~~~
+*The Driver API*
+~~~~~~~~~~~~~~~~
 
 Drivers in OpenMDAO share a functional interface for setting up certain common
 parts of the problem. There are functions to handle parameters, which are inputs
@@ -1261,6 +1261,9 @@ for the objective value.
 .. todo::
 
     Show how to add new drivers.
+
+Derivatives
+-----------
 
 Running OpenMDAO
 -----------------

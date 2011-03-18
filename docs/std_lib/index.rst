@@ -10,6 +10,7 @@ Appendix B:  Standard Library Reference
    :maxdepth: 2
    
    component.rst
+   differentiator.rst
    doegenerator.rst
    driver.rst
    surrogatemodels.rst

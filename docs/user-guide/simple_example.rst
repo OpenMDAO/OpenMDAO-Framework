@@ -701,7 +701,11 @@ so that we only perform the calculation that is requested by the optimizer.
 Note that the hessian matrix is symmetric, so df/dxdy is the same as df/dydx,
 and only one has to be set.
 
-            
+Note that no changes are required to the OptimizationConstrained or
+OptimizationUnconstrained assembly at this point. If the driver uses
+gradients (or hessians), and can take advantage of the analytical ones
+you provide, then it will do so.
+
 This concludes an introduction to a simple problem of component creation and
 execution in OpenMDAO. The next tutorial introduces a problem with more
 complexity and presents additional features of the framework.

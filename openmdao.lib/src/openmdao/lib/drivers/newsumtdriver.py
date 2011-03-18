@@ -204,7 +204,7 @@ class _contrl(object):
     """Just a primitive data structure for storing contrl common block data.
     
     We save the common blocks to prevent collision in the case where there are
-    multiple instances of CONMIN running in our model."""
+    multiple instances of NEWSUMT running in our model."""
     
     def __init__(self):
         self.clear()
@@ -243,7 +243,7 @@ class _countr(object):
     """Just a primitive data structure for storing countr common block data.
     
     We save the common blocks to prevent collision in the case where there are
-    multiple instances of CONMIN running in our model."""
+    multiple instances of NEWSUMT running in our model."""
     
     def __init__(self):
         self.clear()
@@ -572,8 +572,8 @@ class NEWSUMTdriver(Driver):
             
         
     def _save_common_blocks(self):
-        """" Saves the common block data to the class to prevent trampling by
-        other instances of CONMIN.
+        """ Saves the common block data to the class to prevent trampling by
+        other instances of NEWSUMT.
         """
         
         common = self.contrl

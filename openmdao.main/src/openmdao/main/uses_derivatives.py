@@ -5,7 +5,7 @@
     UsesHessians  - if you need second derivatives
     
     From a driver's perspective, derivatives are needed from its parameters
-    to it's objective(s) and constraints.
+    to its objective(s) and constraints.
 """
 
 # pylint: disable-msg=E0611,F0401
