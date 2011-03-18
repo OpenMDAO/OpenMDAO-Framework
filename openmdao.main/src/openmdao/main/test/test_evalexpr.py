@@ -57,7 +57,7 @@ class ExprEvalTestCase(unittest.TestCase):
         ]
 
         for tst in tests:
-            ex = ExprEvaluator(tst[0], self.top.a, lazy_check=True)
+            ex = ExprEvaluator(tst[0], self.top.a, lazy=True)
             ex._parse()
             self.assertEqual(ex.scoped_text, tst[1])
 
@@ -134,19 +134,19 @@ class ExprEvalTestCase(unittest.TestCase):
         comp.x = 1.
         comp.y = -3.
         self.assertEqual(3., ExprEvaluator('abs(comp.y)', self.top).evaluate())
-        self.assertAlmostEqual(0., ExprEvaluator('math.sin(math.pi)', self.top).evaluate())
+        self.assertAlmostEqual(0., ExprEvaluator('sin(pi)', self.top).evaluate())
         comp.x = 1.35
-        self.assertEqual(1., ExprEvaluator('math.floor(comp.x)', self.top).evaluate())
-        self.assertEqual(2., ExprEvaluator('math.ceil(comp.x)', self.top).evaluate())
+        self.assertEqual(1., ExprEvaluator('floor(comp.x)', self.top).evaluate())
+        self.assertEqual(2., ExprEvaluator('ceil(comp.x)', self.top).evaluate())
         comp.x = 0.
-        self.assertEqual(True, ExprEvaluator('math.sin(comp.x)<cos(comp.x)', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('sin(comp.x)<math.cos(comp.x)', self.top).evaluate())
         comp.x = math.pi/2.
-        self.assertEqual(False, ExprEvaluator('math.sin(comp.x)<math.cos(comp.x)', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('sin(comp.x)<cos(comp.x)', self.top).evaluate())
         
     def test_multi_object(self):
         # verify that single_name will not allow expressions with multiple objects
         try:
-            ex = ExprEvaluator('comp.x+comp.x', self.top, single_name=True, lazy_check=False)
+            ex = ExprEvaluator('comp.x+comp.x', self.top, single_name=True, lazy=False)
         except RuntimeError, err:
             self.assertEqual(str(err),
                 "Expression 'comp.x+comp.x' is not a single name and therefore can't be used on the LHS of an assignment")
@@ -156,7 +156,7 @@ class ExprEvalTestCase(unittest.TestCase):
     def test_bogus(self):        
         # now try some bogus expressions
         try:
-            ex = ExprEvaluator('abcd.efg', self.top, lazy_check=False)
+            ex = ExprEvaluator('abcd.efg', self.top, lazy=False)
         except RuntimeError, err:
             self.assertEqual(str(err), "expression 'abcd.efg' can't be resolved")
         else:

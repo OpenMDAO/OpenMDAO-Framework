@@ -58,7 +58,8 @@ class Constraint(object):
 
 def _parse_constraint(expr_string):
     """ Parses the constraint expression string and returns the lhs string, 
-    the rhs string, and comparator"""
+    the rhs string, and comparator
+    """
     for comparator in ['>=', '<=', '>', '<', '=']:
         parts = expr_string.split(comparator)
         if len(parts) > 1:
@@ -118,9 +119,9 @@ class HasEqConstraints(_HasConstraintsBase):
         to the driver.
         
         
-	*Parameters:*
-	
-	expr_string: str
+        *Parameters:*
+
+        expr_string: str
             Expression string containing the constraint.
         
         scaler: float (optional)

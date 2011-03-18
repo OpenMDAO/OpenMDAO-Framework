@@ -6,57 +6,35 @@ __all__ = ["ExprEvaluator"]
 import weakref
 import math
 import ast
+import __builtin__
 
-_scope = {
+# this dict will act as the local scope when we eval our expressions
+_locals_dict = {
     'math': math,
     '_local_setter': None,
     }
+# add stuff from math lib directly to our locals dict so users won't have to 
+# put 'math.' in front of all of their calls to standard math functions 
 for name in dir(math):
     if not name.startswith('_'):
-        _scope[name] = getattr(math, name)
+        _locals_dict[name] = getattr(math, name)
+
+_Missing = object()
 
 
-def _is_local(name):
-    """Return True if the given (dotted) name refers to something in our
-    _scope dict, e.g., math.sin.  Raises a KeyError if the name
-    refers to something in _scope that doesn't exist, e.g., math.foobar.
-    Returns False if the name refers to nothing in _scope, e.g., mycomp.x.
-    """
-    parts = name.split('.')
-    obj = _scope.get(parts[0], None)
-    if obj is None:
-        return False
-    for part in parts[1:]:
-        obj = getattr(obj, part, None)
-        if obj is None:
-            raise KeyError("Can't find '%s' in _scope" % name)
-    return True
-
-def _get_name_node(names):
+def _get_attr_node(names):
+    """Builds an Attribute node, or a Name node if names has just one entry."""
     node = ast.Name(id=names[0], ctx=ast.Load())
     for name in names[1:]:
         node = ast.Attribute(value=node, attr=name, ctx=ast.Load())
     return node
 
 
-def _cannot_find(name):
-    raise RuntimeError("ExprEvaluator: cannot find variable '%s'" % name)
-
-
-#_allowed_nodes = (ast.BoolOp, ast.BinOp, ast.UnaryOp, ast.Attribute, ast.Assign, 
-                  #ast.Name, ast.IfExp, ast.Call, ast.Num, 
-                  #ast.Str, ast.Subscript, ast.Index, ast.Slice, ast.List, ast.Tuple, 
-                  #ast.USub, ast.UAdd, ast.And, ast.Or,
-                  #ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Mod, ast.Pow, 
-                  #ast.LShift, ast.RShift, ast.BitOr, ast.BitXor, ast.BitAnd, 
-                  #ast.FloorDiv, ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE, 
-                  #ast.Is, ast.IsNot, ast.In, ast.NotIn
-                  #)
-                  
-_prec = 0
-
-# dict with operator precedence
+# dict with operator precedence.  We need this because otherwise we can't
+# tell where to put parens when we print out an expression with mixed operators.  
+# We could just put them around every operation, but that's a little ugly...
 _opdct = {}
+_prec = 0
 
 _opdct[ast.Lambda] = _prec
 _prec += 1
@@ -307,6 +285,21 @@ class ExprPrinter(ast.NodeVisitor):
 
     def visit_NotIn(self, node):
         self.write(' not in ')
+    
+    def _ignore(self, node):
+        super(ExprPrinter, self).generic_visit(node)
+
+    visit_Module = _ignore
+    visit_Expr = _ignore
+    visit_Compare = _ignore
+    visit_UnaryOp = _ignore
+    visit_Subscript = _ignore
+    visit_Load = _ignore
+    
+    def generic_visit(self, node):
+        # We want to fail if we see any nodes we don't know about rather than
+        # generating code that isn't correct.
+        raise RuntimeError("ExprPrinter can't handle a node of type %s" % node.__class__.__name__)
 
         
 class ExprTransformer(ast.NodeTransformer):
@@ -336,24 +329,29 @@ class ExprTransformer(ast.NodeTransformer):
                 return None
         return '.'.join(parts[::-1])
     
-    def visit_Attribute(self, node, subs=None):
-        long_name = self._get_long_name(node)
-        if long_name is None:
+    def _name_to_node(self, node, name, subs=None):
+        """Given a dotted name, return the proper node depending on whether
+        the name is resolvable in 'local' scope or not.
+        """
+        if name is None:
             return node
         
-        if _is_local(long_name):
+        if self.expreval._is_local(name):
             return node
         
-        self.expreval.var_names.add(long_name)
+        self.expreval.var_names.add(name)
     
-        args = [ast.Str(s=long_name)]
         scope = self.expreval.scope
-        names = ['scope']
         if scope:
-            if not scope.contains(long_name.split('.',1)[0]):
-                names.append('parent')
-                if not scope.parent or not scope.parent.contains(long_name.split('.',1)[0]):
-                    if not self.expreval.lazy_check:
+            parts = name.split('.',1)
+            if scope.contains(parts[0]):
+                if len(parts) == 1: # short name, so no 'get' or 'set' needed
+                    return node
+                names = ['scope']
+            else:
+                names = ['scope','parent']
+                if not scope.parent or not scope.parent.contains(name.split('.',1)[0]):
+                    if not self.expreval.lazy:
                         raise RuntimeError("expression '%s' can't be resolved" % str(self.expreval))
         else:
             raise RuntimeError("expression '%s' can't be evaluated because it has no scope" % str(self.expreval))
@@ -363,15 +361,23 @@ class ExprTransformer(ast.NodeTransformer):
         else:
             fname = 'get'
         names.append(fname)
+        args = [ast.Str(s=name)]
         if fname == 'set':
             args.append(self.rhs)
 
-        called_obj = _get_name_node(names)
+        called_obj = _get_attr_node(names)
         if subs:
-            args.append(ast.List(elts=subs))
+            args.append(ast.List(elts=subs, ctx=ast.Load()))
 
         return ast.copy_location(ast.Call(func=called_obj, args=args,
-                                          ctx=node.ctx), node)
+                                          ctx=node.ctx, keywords=[]), node)
+    
+    def visit_Name(self, node, subs=None):
+        return self._name_to_node(node, node.id, subs)
+    
+    def visit_Attribute(self, node, subs=None):
+        long_name = self._get_long_name(node)
+        return self._name_to_node(node, long_name, subs)
 
     def visit_Subscript(self, node, sublist=None):
         self._stack.append(node)
@@ -382,10 +388,16 @@ class ExprTransformer(ast.NodeTransformer):
         self._stack.pop()
             
         if isinstance(node.value, ast.Attribute):
-            node = self.visit_Attribute(node.value, subs)
+            newnode = self.visit_Attribute(node.value, subs)
+        elif isinstance(node.value, ast.Name):
+            newnode = self.visit_Name(node.value, subs)
         elif isinstance(node.value, ast.Subscript):
-            node = self.visit_Subscript(node.value, subs)
-        return node
+            newnode = self.visit_Subscript(node.value, subs)
+        else:
+            return node
+        if newnode is node.value:
+            return node
+        return newnode
     
     def visit_Module(self, node):
         # Make sure there is only one statement or expression
@@ -397,7 +409,8 @@ class ExprTransformer(ast.NodeTransformer):
         if len(node.targets) > 1:
             raise RuntimeError("only one expression is allowed on left hand side of assignment")
         return ExprTransformer(self.expreval, rhs=self.visit(node.value)).visit(node.targets[0])
-    
+
+
 class ExprEvaluator(str):
     """A class that translates an expression string into a new string containing
     any necessary framework access functions, e.g., set, get. The compiled
@@ -412,9 +425,9 @@ class ExprEvaluator(str):
     would translate to 
     "a+b[2]-self.parent.invoke('comp.y',self.parent.get('x'))".
     
-    If *lazy_check* is False, any objects referenced in the expression must exist
+    If *lazy* is False, any objects referenced in the expression must exist
     at creation time (or any time later that text is set to a different value)
-    or a RuntimeError will be raised.  If *lazy_check* is True, error reporting will
+    or a RuntimeError will be raised.  If *lazy* is True, error reporting will
     be delayed until the expression is evaluated.
     
     If *single_name* is True, the expression can only be the name of one object, with
@@ -422,14 +435,15 @@ class ExprEvaluator(str):
     expression is intended to be on the LHS of an assignment statement.
     """
     
-    def __new__(cls, text, scope=None, single_name=False, lazy_check=True):
+    def __new__(cls, text, scope=None, single_name=False, lazy=True):
         s = super(ExprEvaluator, cls).__new__(ExprEvaluator, text)
         s.scope = scope
-        s.lazy_check = lazy_check
+        s.lazy = lazy
         s.single_name = single_name
         s._text = None  # used to detect change in str
         s.var_names = set()
-        if lazy_check is False:
+        s._locals_dict = _locals_dict.copy()
+        if lazy is False:
             s._parse()
         return s
     
@@ -448,14 +462,14 @@ class ExprEvaluator(str):
             self._scope = weakref.ref(value)
         else:
             self._scope = None
-
+        
     def __getstate__(self):
         """Return dict representing this container's state."""
         state = self.__dict__.copy()
-        if state['_scope'] is not None:
-            # remove weakref to scope because it won't pickle
-            state['_scope'] = self._scope()
+        # remove weakref to scope because it won't pickle
+        state['_scope'] = self.scope
         state['_code'] = None  # <type 'code'> won't pickle either.
+        state['_locals_dict'] = None
         if state.get('_assignment_code'):
             state['_assignment_code'] = None # more unpicklable <type 'code'>
         return state
@@ -465,14 +479,30 @@ class ExprEvaluator(str):
         self.__dict__.update(state)
         if self._scope is not None:
             self._scope = weakref.ref(self._scope)
-        if self.scoped_text:
-            self._code = compile(self.scoped_text, '<string>', 'eval')
-        satxt = state.get('scoped_assignment_text')
-        if satxt:
-            self._assignment_code = compile(self.scoped_assignment_text, 
-                                            '<string>', 'exec')
+        self._text = None  # force reparsing of expression
+        self._locals_dict = _locals_dict.copy()
 
+
+    def _is_local(self, name):
+        """Return True if the given (dotted) name refers to something in our
+        _locals_dict dict, e.g., math.sin.  Raises a KeyError if the name
+        refers to something in _locals_dict that doesn't exist, e.g., math.foobar.
+        Returns False if the name refers to nothing in _locals_dict, e.g., mycomp.x.
+        """
+        if hasattr(__builtin__, name):
+            return True
+        parts = name.split('.')
+        obj = self._locals_dict.get(parts[0], _Missing)
+        if obj is _Missing:
+            return False
+        for part in parts[1:]:
+            obj = getattr(obj, part, _Missing)
+            if obj is _Missing:
+                raise KeyError("Can't find '%s' in current scope" % name)
+        return True
+        
     def _parse(self):
+        self._text = str(self)
         self.var_names = set()
         root = ast.parse(self, mode='exec')
         
@@ -485,24 +515,32 @@ class ExprEvaluator(str):
         self.scoped_text = ep.get_text()
         
         # compile the transformed AST
+        # FIXME: we really want to just compile the transformed AST, but for
+        #        now that still has problems...
+        #ast.fix_missing_locations(new_ast)
+        #self._code = compile(new_ast, '<string>', 'exec')
         self._code = compile(self.scoped_text, '<string>', 'eval')
         
         if self.single_name: # set up a compiled assignment statement
             if not isinstance(new_ast.body[0].value, 
                               (ast.Attribute, ast.Name, ast.Subscript, ast.Call)):
                 raise RuntimeError("Expression '%s' is not a single name and therefore can't be used on the LHS of an assignment" % self)
-            old_lazy_check = self.lazy_check
+            old_lazy = self.lazy
             try:
-                self.lazy_check = True
+                self.lazy = True
                 assign_txt = "%s=_local_setter" % self
                 root = ast.parse(assign_txt, mode='exec')
                 # transform into a 'set' call to set the specified variable
                 new_ast = ExprTransformer(self).visit(root)
+                # FIXME: we really want to just compile the transformed AST, but for
+                #        now that still has problems...
+                #ast.fix_missing_locations(new_ast)
+                #self._assignment_code = compile(new_ast,'<string>','exec')
                 ep = ExprPrinter()
                 ep.visit(new_ast)
                 self._assignment_code = compile(ep.get_text(),'<string>','eval')
             finally:
-                self.lazy_check = old_lazy_check
+                self.lazy = old_lazy
                 
 
     def evaluate(self):
@@ -513,7 +551,12 @@ class ExprEvaluator(str):
         try:
             if self._text != self:  # text has changed
                 self._parse()
-            return eval(self._code, _scope, locals())
+            self._locals_dict['scope'] = scope
+            if scope:
+                dct = scope.__dict__
+            else:
+                dct = {}
+            return eval(self._code, dct, self._locals_dict)
         except Exception, err:
             raise type(err)("ExprEvaluator failed evaluating expression "+
                             "'%s'. Caught message is: %s" %(self,str(err)))
@@ -525,14 +568,19 @@ class ExprEvaluator(str):
             raise RuntimeError(
                 'ExprEvaluator cannot evaluate expression without scope.')
         
-        if self.single_name:           
+        if self.single_name:
             # self.assignment_code is a compiled version of an assignment statement
             # of the form  'somevar = _local_setter', so we set _local_setter here
             # and the exec call will pull it out of locals()
             _local_setter = val 
             if self._text != self:  # text has changed
                 self._parse()
-            exec(self._assignment_code, scope.__dict__, locals())
+            self._locals_dict.update(locals())
+            if scope:
+                dct = scope.__dict__
+            else:
+                dct = {}
+            exec(self._assignment_code, dct, self._locals_dict)
         else: # self.single_name is False
             raise ValueError("trying to set input expression '%s'" % str(self))
         
@@ -551,7 +599,12 @@ class ExprEvaluator(str):
         """
         if self._text != self:  # text has changed
             self._parse()
-        return set([x.split('.')[0] for x in self.var_names])
+        names = set()
+        for x in self.var_names:
+            parts = x.split('.')
+            if len(parts) > 1:
+                names.add(parts[0])
+        return names
     
     def refs_valid(self):
         """Return True if all variables referenced by our expression
@@ -559,26 +612,24 @@ class ExprEvaluator(str):
         """
         if self.single_name:
             return True   # since we're setting this expression, we don't care if it's valid
-        if self._scope:
-            scope = self._scope()
-            if scope and scope.parent:
-                if self._text != self:  # text has changed
-                    self._parse()
-                if not all(scope.parent.get_valid(self.var_names)):
-                    return False
+        scope = self.scope
+        if scope and scope.parent:
+            if self._text != self:  # text has changed
+                self._parse()
+            if not all(scope.parent.get_valid(self.var_names)):
+                return False
         return True
     
     def check_resolve(self):
         """Return True if all variables referenced by our expression can
         be resolved.
         """
-        if self._scope:
-            scope = self._scope()
-            if scope and scope.parent:
-                if self._text != self:  # text has changed
-                    self._parse()
-                if scope.parent.check_resolve(self.var_names):
-                    return True
+        scope = self.scope
+        if scope and scope.parent:
+            if self._text != self:  # text has changed
+                self._parse()
+            if scope.parent.check_resolve(self.var_names):
+                return True
         return False
 
 
@@ -600,19 +651,15 @@ if __name__ == '__main__':
     
     top = build_container_hierarchy({
         'a': {
-            'b': {
-                'c': 1,
-                'd': 2,
-                }
+            'b': { 'c': 1, 'd': 2 }
             },
         'x': {
-            'y': {
-                'z': 3.14,
-                }
+            'y': { 'z': 3.14 }
             }
         })
     
-    root = ExprTransformer(ExprEvaluator(txt, scope=top)).visit(root)
+    expreval = ExprEvaluator(txt, scope=top)
+    root = ExprTransformer(expreval).visit(root)
     print '\ntransformed AST dump:'
     print ast.dump(root, annotate_fields=True)
     
@@ -621,4 +668,10 @@ if __name__ == '__main__':
     ep.visit(root)
     print ep.get_text()
     
-
+    print '\nvars referenced: %s' % expreval.get_referenced_varpaths()
+    
+    print '\nattempting to compile the transformed AST...'
+    ast.fix_missing_locations(root)
+    code = compile(root, '<string>', 'exec')
+    
+    

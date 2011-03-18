@@ -131,11 +131,11 @@ class IContainer(Interface):
         unless you are certain that the named trait exists.
         """
 
-    def invoke(self, path, *args, **kwargs):
-        """Call the callable specified by *path*, which may be a simple
-        name or a dotted path, passing the given arguments to it, and 
-        return the result.
-        """
+    #def invoke(self, path, *args, **kwargs):
+        #"""Call the callable specified by *path*, which may be a simple
+        #name or a dotted path, passing the given arguments to it, and 
+        #return the result.
+        #"""
     
     def pre_delete(self):
         """Perform any required operations before being deleted."""
