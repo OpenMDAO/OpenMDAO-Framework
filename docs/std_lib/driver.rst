@@ -216,8 +216,7 @@ efficient solution of constrained problems, unconstrained function
 minimization problems may also be solved. The conjugate direction method
 of Fletcher and Reeves is used for this purpose.
 
-More information on CONMIN can be found in the `CONMIN User's Manual
-<http://openmdao.org/downloads/user_guides/CONMIN_user_manual.html>`_. (In the :ref:`simple
+More information on CONMIN can be found in the `CONMIN User's Manual <http://www.eng.buffalo.edu/Research/MODEL/mdo.test.orig/CONMIN/manual.html>`_. (In the :ref:`simple
 tutorial <Getting-Started-with-OpenMDAO>` in the *User Guide*, CONMIN is used for an
 unconstrained and a constrained optimization.)
 
@@ -365,7 +364,7 @@ Value           Result
 ``nscal = 0``   No scaling of the design variables
 --------------  --------------------------------------------------------
 ``nscal > 0``   Scale the design variables every ``NSCAL`` iteration. Please
-                see the `CONMIN User's Manual <http://openmdao.org/downloads/user_guides/CONMIN_user_manual.html>`_ 
+                see the `CONMIN User's Manual <http://www.eng.buffalo.edu/Research/MODEL/mdo.test.orig/CONMIN/manual.html>`_ 
                 for additional notes about using this option.
 ==============  ========================================================
 
@@ -437,8 +436,7 @@ Value             Result
 ++++++++++++++++++
 The following options exercise some of the more advanced
 capabilities of CONMIN. The details given here briefly summarize the effects of these
-parameters; more information is available in the `CONMIN User's Manual
-<http://openmdao.org/downloads/user_guides/CONMIN_user_manual.html>`_.
+parameters; more information is available in the `CONMIN User's Manual <http://www.eng.buffalo.edu/Research/MODEL/mdo.test.orig/CONMIN/manual.html>`_.
 
 **icndir**
   Conjugate direction restart parameter. For an unconstrained problem
