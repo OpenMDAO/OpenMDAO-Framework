@@ -17,6 +17,7 @@ from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.util.testutil import assert_rel_error
 
 
+
 class OptGolinskiComponent(Component):
     """ From the University of Buffalo MDO Test Suite Problem 2.4
     EXAMPLE   - Golinski's Speed Reducer Test Problem                            

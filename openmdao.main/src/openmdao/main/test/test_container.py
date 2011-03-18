@@ -7,13 +7,14 @@ import StringIO
 import nose
 import copy
 
-from enthought.traits.api import TraitError, HasTraits, TraitType
+from enthought.traits.api import TraitError, HasTraits
 
 import openmdao.util.eggsaver as constants
 from openmdao.main.container import Container, get_default_name, \
                                     deep_hasattr, get_default_name, find_name, \
                                     find_trait_and_value, _get_entry_group, \
                                     create_io_traits
+from openmdao.main.variable import Variable
 from openmdao.lib.datatypes.api import Float, Int, Bool, List, Dict, TraitError
 from openmdao.util.testutil import make_protected_dir
 
@@ -21,7 +22,7 @@ from openmdao.util.testutil import make_protected_dir
 # This is used to detect when we're the main module or not.
 MODULE_NAME = __name__
 
-class DumbTrait(TraitType):
+class DumbTrait(Variable):
     def validate(self, obj, name, value):
         """Validation for the PassThroughTrait"""
         if self.validation_trait:

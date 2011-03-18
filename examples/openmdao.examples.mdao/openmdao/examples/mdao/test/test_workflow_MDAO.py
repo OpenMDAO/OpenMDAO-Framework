@@ -20,6 +20,7 @@ from openmdao.util.testutil import assert_rel_error
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
 
+
 class SellarDiscipline2a(Component):
     """Component containing Discipline 2a"""
     
@@ -41,6 +42,7 @@ class SellarDiscipline2a(Component):
         self.temp1 = y1**(.5)
 
         
+
 class SellarDiscipline2b(Component):
     """Component containing Discipline 2b"""
     
@@ -60,6 +62,7 @@ class SellarDiscipline2b(Component):
         self.temp2 = self.temp1 + z1
 
         
+
 class SellarDiscipline2c(Component):
     """Component containing Discipline 2c"""
     
@@ -76,6 +79,7 @@ class SellarDiscipline2c(Component):
         z2 = self.z2
         
         self.y2 = self.temp2 + z2
+
 
 
 class SellarCO(Assembly):

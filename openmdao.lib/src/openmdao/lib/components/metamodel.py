@@ -2,15 +2,18 @@
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array
-from openmdao.lib.datatypes.api import Instance, ListStr, Event
+from openmdao.lib.datatypes.api import Instance, ListStr, Event, \
+     List, Str, Dict
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
 from openmdao.main.api import Component, Case
-from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder
+from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
+     ICaseIterator
 from openmdao.main.uncertain_distributions import UncertainDistribution, \
                                                   NormalDistribution
 from openmdao.main.mp_support import has_interface
+
 
 class MetaModel(Component):
     """ A component that provides general Meta Modeling capability.
@@ -28,15 +31,30 @@ class MetaModel(Component):
                            desc='A list of names of variables to be excluded '
                                 'from the public interface.')
     
-    surrogate = Instance(ISurrogate, allow_none=True,
-                         desc='An ISurrogate instance that is used as a '
-                              'template for each output surrogate.')
+    warm_start_data = Instance(ICaseIterator,iotype="in",
+                              desc="CaseIterator containing cases to use as "
+                              "initial training data. When this is set, all "
+                              "previous training data is cleared, and replaced "
+                              "with data from this CaseIterator")
+    
+    surrogate = Dict(key_train=Str,
+                     value_trait=ISurrogate,
+                     allow_none=True,
+                     desc='An dictionary provides a mapping between variables and '
+                          'surrogate models for each output. The "default" '
+                          'key must be given. It is the default surrogate model for all '
+                          'outputs. Any specific surrogate models can be '
+                          'specifed by a key with the desired variable name.'
+                    )
+                       
     
     recorder = Instance(ICaseRecorder,
                         desc = 'Records training cases')
 
     # when fired, the next execution will train the metamodel
     train_next = Event()
+    #when fired, the next execution will reset all training data
+    reset_training_data = Event()
     
     def __init__(self, *args, **kwargs):
         super(MetaModel, self).__init__(*args, **kwargs)
@@ -57,7 +75,55 @@ class MetaModel(Component):
     def _train_next_fired(self):
         self._train = True
         self._new_train_data = True
-
+    
+    def _reset_training_data_fired(self):
+        self._training_input_history = []
+        self.update_model(self.model, self.model)
+        
+    def _warm_start_data_changed(self,oldval,newval): 
+        self.reset_training_date = True
+        
+        #build list of inputs         
+        inputs = []
+        for case in newval.get_iter():
+            self.recorder.record(case)
+            inputs = []
+            for inp_name in self._surrogate_input_names:
+                inp_val = None
+                #TODO: Fix case object, so it has a get_input method to clean up this loop
+                var_name = "%s.%s"%(self.name,inp_name)
+                for inp in case.inputs: 
+                    if inp[0] == var_name:
+                        inp_val = inp[2]
+                        break
+                if inp_val is not None: 
+                    inputs.append(inp_val)
+                else: 
+                    self.raise_exception('The variable "%s" was not '
+                                         'found as an input in one of the cases provided '
+                                         'for warm_start_data.'%var_name, ValueError)
+            #print "inputs", inputs
+            self._training_input_history.append(inputs)                  
+            
+            for output_name in self.list_outputs_from_model():
+                #grab value from case data
+                output_val = None
+                var_name = "%s.%s"%(self.name,output_name)
+                for output in case.outputs: 
+                    if output[0]==var_name: 
+                        output_val = output[2]
+                        break
+                if output_val is not None: 
+                    # save to training output history
+                    #print output_name,":",output_val
+                    self._surrogate_info[output_name][1].append(output_val) 
+                else: 
+                    self.raise_exception('The output "%s" was not found '
+                                         'in one of the cases provided for '
+                                         'warm_start_data'%var_name, ValueError) 
+        
+        self._new_train_data = True        
+        
     def execute(self):
         """If the training flag is set, train the metamodel. Otherwise, 
         predict outputs.
@@ -66,11 +132,18 @@ class MetaModel(Component):
             if self.model:
                 try:
                     inputs = self.update_model_inputs()
-                    self._training_input_history.append(inputs)
+                    
                     #print '%s training with inputs: %s' % (self.get_pathname(), inputs)
                     self.model.run(force=True)
+
+                except Exception as err:
+                    #self.raise_exception("training failed: %s" % str(err), type(err))
+                    pass
+                else: #if no exceptions are generated, save the data
+                    self._training_input_history.append(inputs)
                     self.update_outputs_from_model()
                     case_outputs = []
+                    
                     for name, tup in self._surrogate_info.items():
                         surrogate, output_history = tup
                         case_outputs.append(('.'.join([self.name,name]), None, output_history[-1]))
@@ -78,8 +151,7 @@ class MetaModel(Component):
                     # this Case is scoped to our parent Assembly
                     case_inputs = [('.'.join([self.name,name]),None,val) for name,val in zip(self._surrogate_input_names, inputs)]
                     self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
-                except Exception as err:
-                    self.raise_exception("training failed: %s" % str(err), type(err))
+                    
             else:
                 self.raise_exception("MetaModel object must have a model!",
                                      RuntimeError)
@@ -113,7 +185,7 @@ class MetaModel(Component):
     
     def _model_changed(self, oldmodel, newmodel):
         self.update_model(oldmodel, newmodel)
-            
+        
     def update_model(self, oldmodel, newmodel):
         """called whenever the model variable is set."""
         # TODO: check for pre-connected traits on the new model
@@ -151,14 +223,24 @@ class MetaModel(Component):
                 
             # now outputs
             traitdict = newmodel._alltraits(iotype='out')
+            
             for name,trait in traitdict.items():
                 if self._eligible(name):
+                    try: 
+                        surrogate = self.surrogate[name]
+                    except KeyError: 
+                        try: 
+                            surrogate = self.surrogate['default']
+                        except KeyError: 
+                            self.raise_exception("No default surrogate model was" 
+                            " specified. Either specify a default, or specify a "
+                            "surrogate model for all outputs",ValueError)
+                    trait_type = surrogate.get_uncertain_value(1.0).__class__()
                     self.add_trait(name, 
-                                   Instance(UncertainDistribution, iotype='out', desc=trait.desc))
-                    self._surrogate_info[name] = (self.surrogate.__class__(), []) # (surrogate,output_history)
+                                   Instance(trait_type, iotype='out', desc=trait.desc))
+                    self._surrogate_info[name] = (surrogate.__class__(), []) # (surrogate,output_history)
                     new_model_traitnames.add(name)
-                    setattr(self, name, NormalDistribution(getattr(newmodel, name)))
-                    
+                    setattr(self, name, surrogate.get_uncertain_value(getattr(newmodel,name)))
             newmodel.parent = self
             newmodel.name = 'model'
         

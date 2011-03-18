@@ -148,6 +148,7 @@ class DataObj(object):
         self.data = data
 
 
+
 class Sink(Component):
     """ Consumes files. """
 
@@ -172,6 +173,7 @@ class Sink(Component):
             self.binary_data = cPickle.load(inp)
 
 
+
 class Oddball(Assembly):
     """
     Just a component that needs a separate directory to be created.
@@ -180,7 +182,7 @@ class Oddball(Assembly):
 
     # FIXME: I tried the built-in trait types of Callable, Method, and Function
     # for these two sockets and couldn't get them to work.  We may have to
-    # create new TraitTypes for these...
+    # create new Variables for these...
     #function_socket = Instance(Callable, none_allowed=True,
     #                           desc='Just something to call.', required=False)
     #method_socket = Instance(Callable, none_allowed=True,
@@ -231,6 +233,7 @@ class Oddball(Assembly):
         return None
 
 
+
 class OddballComponent(Component):
     """ Just a subcomponent for Oddball to test nested entry points. """
 
@@ -254,6 +257,7 @@ def observer(state, string, file_fraction, byte_fraction):
     if state != 'analyze':  # 'analyze' is sporadic due to re-use of analyses.
         OBSERVATIONS.append((state, string, file_fraction, byte_fraction))
     return True
+
 
 
 class Model(Assembly):

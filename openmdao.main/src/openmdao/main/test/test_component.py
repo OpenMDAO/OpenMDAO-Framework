@@ -16,6 +16,7 @@ from openmdao.main.api import Component, Container
 from openmdao.lib.datatypes.api import Float
 from openmdao.main.container import _get_entry_group
 
+
 class MyComponent(Component):
     x = Float(1., iotype='in')
     xout = Float(2., iotype='out')

@@ -14,6 +14,7 @@ from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.util.testutil import assert_rel_error
 
+
 class OptRosenSuzukiComponent(Component):
     """ From the CONMIN User's Manual:
     EXAMPLE 1 - CONSTRAINED ROSEN-SUZUKI FUNCTION. NO GRADIENT INFORMATION.

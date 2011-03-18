@@ -21,6 +21,7 @@ __all__ = ('AxodComp',)
 
 _ZEROS48 = zeros((48,),float32)
 
+
 class AxodComp(Component):
     """ OpenMDAO component wrapper for AXOD. """
 

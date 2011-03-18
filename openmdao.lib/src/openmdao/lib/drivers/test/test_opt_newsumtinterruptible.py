@@ -49,6 +49,7 @@ from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import NEWSUMTdriver
 from openmdao.util.testutil import assert_rel_error
 
+
 class OptRosenSuzukiComponent(Component):
     """ From the NEWSUMT User's Manual:
     EXAMPLE 2 - CONSTRAINED ROSEN-SUZUKI FUNCTION. NO GRADIENT INFORMATION.
@@ -98,6 +99,7 @@ class OptRosenSuzukiComponent(Component):
                        self.x[3]**2 + 7.*self.x[3] + 50)
 
 
+
 class Example1FromManualComponent(Component):
     """ From the NEWSUMT User's Manual:
 
@@ -140,6 +142,7 @@ class Example1FromManualComponent(Component):
         self.result = (10.0 * self.x[0] + self.x[1] )
 
 
+
 class ParaboloidComponent(Component):
     """     
          MINIMIZE OBJ = ( X(1) - 2.0 ) ** 2 +  ( X(2) - 3.0 ) **2
@@ -160,6 +163,7 @@ class ParaboloidComponent(Component):
     def execute(self):
         """calculate the new objective value"""
         self.result = (self.x[0] - 2.0) ** 2 + (self.x[1] - 3.0) ** 2
+
 
 
 class ConstrainedBettsComponent(Component):

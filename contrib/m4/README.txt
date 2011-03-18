@@ -1,3 +1,12 @@
+
+NOTE: This was written back when we were using zc.buildout to construct
+      the OpenMDAO environment, so it's a bit out of date.  I'm not sure
+      if it works under our current virtualenv based scheme.  -BAN
+
+
+
+
+
 The code here was developed just as a feasability check.
 It's not intended to be the 'right', or even a 'good' way to do things.
 It was written by someone with very little 'mool' knowledge.

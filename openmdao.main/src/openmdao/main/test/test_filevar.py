@@ -17,6 +17,7 @@ from openmdao.lib.datatypes.api import Array, Bool, File, Str, TraitError
 # "Instance of <class> has no <attr> member"
 
 
+
 class Source(Component):
     """ Produces files. """
 
@@ -39,6 +40,7 @@ class Source(Component):
             out.close()
 
 
+
 class Passthrough(Component):
     """ Copies input files (implicitly via local_path) to output. """
     text_in = File(iotype='in', local_path='tout',
@@ -52,6 +54,7 @@ class Passthrough(Component):
         # We have to manually propagate 'extra_stuff' because the output
         # FileRef isn't copied from the input FileRef.
         self.binary_out.extra_stuff = self.binary_in.extra_stuff
+
 
 
 class Middle(Assembly):
@@ -68,6 +71,7 @@ class Middle(Assembly):
 
         self.create_passthrough('passthrough.text_out')
         self.create_passthrough('passthrough.binary_out')
+
 
 
 class Sink(Component):
@@ -90,6 +94,7 @@ class Sink(Component):
         inp = self.binary_file.open()
         self.binary_data = cPickle.load(inp)
         inp.close()
+
 
 
 class Model(Assembly):

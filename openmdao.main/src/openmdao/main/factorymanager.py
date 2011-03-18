@@ -69,7 +69,7 @@ def get_available_types(groups=None):
 
 
 # register factory that loads plugins via pkg_resources
-_pkg_res_factory = PkgResourcesFactory(groups=_plugin_groups)   
+_pkg_res_factory = PkgResourcesFactory(groups=_plugin_groups)
 register_class_factory(_pkg_res_factory)
 
 # register factory for simple imports

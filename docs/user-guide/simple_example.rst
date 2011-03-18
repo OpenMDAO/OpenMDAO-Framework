@@ -91,6 +91,7 @@ paraboloid as an OpenMDAO component:
     from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
     
+    
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
@@ -136,7 +137,7 @@ Type these two lines into that file:
     from openmdao.lib.datatypes.api import Float
     
 You could import many other objects from ``openmdao.main.api`` and ``openmdao.lib.datatypes.api``, but you
-are importing only the two classes that you need. This is a good idea because it helps to
+are importing only the classes that you need. This is a good idea because it helps to
 prevent any namespace collisions in your module. In other words:
 
 .. testcode:: package
@@ -154,6 +155,7 @@ The next line defines a class called *Paraboloid:*
 
 .. testcode:: simple_component_Paraboloid_pieces
 
+    
     class Paraboloid(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
@@ -578,6 +580,8 @@ When it is executed, it should produce this output:
 Notice that the minimum of the constrained problem is different from the minimum of
 the unconstrained problem.
 
+.. _`Adding-Derivatives-to-Your-Components`:
+
 Adding Derivatives to Your Components
 -------------------------------------
 
@@ -604,12 +608,12 @@ optimizer initiates a finite difference estimation of the gradient. This is
 called "Fake Finite Difference" and was developed to support an efficient way
 to calculate gradients for mixed models -- models that contain both components
 that can provide derivatives, and those that cannot. More detail can be found
-in the Scripting User Interface [??? link when it is done]
+in the Scripting User Interface :ref:`_Derivatives`.
 
 OpenMDAO supports the specification of gradients (first derivatives) and
-hessians (second derivatives) in mixed models via Fake Finite Difference. The
+Hessians (second derivatives) in mixed models via Fake Finite Difference. The
 CONMIN driver only uses gradients, but the NEWSUMT optimizer can use both
-gradients and hessians.
+gradients and Hessians.
 
 There are two steps involved in specifying derivatives for a component:
 
@@ -698,12 +702,12 @@ Next, we define the ``calculate_derivatives`` method.
 This ``calculate_derivatives`` method calculated both the first and second
 derivatives, but we can take advantage of two Booleans, *first* and *second*,
 so that we only perform the calculation that is requested by the optimizer.
-Note that the hessian matrix is symmetric, so df/dxdy is the same as df/dydx,
+Note that the Hessian matrix is symmetric, so df/dxdy is the same as df/dydx,
 and only one has to be set.
 
 Note that no changes are required to the OptimizationConstrained or
 OptimizationUnconstrained assembly at this point. If the driver uses
-gradients (or hessians), and can take advantage of the analytical ones
+gradients (or Hessians), and can take advantage of the analytical ones
 you provide, then it will do so.
 
 This concludes an introduction to a simple problem of component creation and

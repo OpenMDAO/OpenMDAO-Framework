@@ -17,6 +17,7 @@ from axod_compn import AxodCompn
 import shutil
 
 
+
 class temp_data(Component):
 
     """ for assigning new values   for axod input """
@@ -36,6 +37,7 @@ class temp_data(Component):
         self.ttout = 518.191
         self.ptout = 14.711
         self._logger.debug('done')
+
 
 class next_data(Component):
 

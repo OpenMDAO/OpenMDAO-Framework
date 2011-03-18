@@ -10,5 +10,6 @@ from openmdao.lib.datatypes.array import Array
 
 # Traits from Enthought
 from enthought.traits.api import Bool, List, Str, Instance, \
-     Complex, CBool, Dict, ListStr, Any, TraitError, TraitType, on_trait_change,\
-     implements, Interface, Python, Event
+     Complex, CBool, Dict, ListStr, Any, TraitError, on_trait_change,\
+     implements, Interface, Python, Event, Dict
+

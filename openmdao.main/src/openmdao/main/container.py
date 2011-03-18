@@ -24,7 +24,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint: disable-msg=E0611,F0401
 
 from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
-                                 push_exception_handler, Python, TraitType, \
+                                 push_exception_handler, Python, \
                                  Interface, Instance
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType, _clone_trait
@@ -32,6 +32,7 @@ from enthought.traits.trait_base import not_none, not_event
 
 from multiprocessing import connection
 
+from openmdao.main.variable import Variable
 from openmdao.main.filevar import FileRef
 
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
@@ -110,7 +111,7 @@ class _ContainerDepends(object):
 class _DumbTmp(object):
     pass
 
-#class Alias(TraitType):
+#class Alias(Variable):
     #"""A trait that allows attributes in child objects to be referenced
     #using an alias in a higher scope.  We don't use a delegate because
     #we can't be sure that the attribute we want is found in a HasTraits
@@ -1185,7 +1186,7 @@ def _get_entry_group(obj):
         # Entry point definitions taken from plugin-guide.
         # Order should be from most-specific to least.
         _get_entry_group.group_map = [
-            (TraitType,          'openmdao.variable'),
+            (Variable,           'openmdao.variable'),
             (Driver,             'openmdao.driver'),
             (ICaseIterator,      'openmdao.case_iterator'),
             (IResourceAllocator, 'openmdao.resource_allocator'),

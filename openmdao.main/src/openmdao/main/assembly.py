@@ -8,10 +8,10 @@ import cStringIO
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Instance, TraitError, Missing
-from enthought.traits.api import TraitType
 
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
+from openmdao.main.variable import Variable
 from openmdao.main.driver import Driver
 from openmdao.main.tvalwrapper import TraitValWrapper
 from openmdao.main.rbac import rbac
@@ -20,7 +20,7 @@ from openmdao.main.mp_support import is_instance
 _iodict = { 'out': 'output', 'in': 'input' }
 
 
-class PassthroughTrait(TraitType):
+class PassthroughTrait(Variable):
     """A trait that can use another trait for validation, but otherwise is
     just a trait that lives on an Assembly boundary and can be connected
     to other traits within the Assembly.
@@ -31,6 +31,7 @@ class PassthroughTrait(TraitType):
         if self.validation_trait:
             return self.validation_trait.validate(obj, name, value)
         return value
+
 
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
