@@ -21,7 +21,7 @@ import logging
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.api import Assembly, Container, Component, set_as_top
-from openmdao.lib.datatypes.api import Float, Array
+from openmdao.lib.datatypes.api import Float, Array, List, Instance
 
 class A(Container):
     b = Array(iotype='in')
@@ -161,6 +161,8 @@ class ExprEvalTestCase(unittest.TestCase):
             self.assertEqual(str(err), "expression 'abcd.efg' can't be resolved")
         else:
             raise AssertionError('RuntimeError expected')
-
+        
 if __name__ == "__main__":
     unittest.main()
+    
+    

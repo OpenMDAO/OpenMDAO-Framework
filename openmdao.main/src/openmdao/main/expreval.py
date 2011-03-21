@@ -33,58 +33,60 @@ def _get_attr_node(names):
 # dict with operator precedence.  We need this because otherwise we can't
 # tell where to put parens when we print out an expression with mixed operators.  
 # We could just put them around every operation, but that's a little ugly...
-_opdct = {}
+_op_preds = {}
 _prec = 0
 
-_opdct[ast.Lambda] = _prec
+_op_preds[ast.Lambda] = _prec
 _prec += 1
-_opdct[ast.If] = _prec
+_op_preds[ast.If] = _prec
 _prec += 1
-_opdct[ast.Or] = _prec
+_op_preds[ast.Or] = _prec
 _prec += 1
-_opdct[ast.And] = _prec
+_op_preds[ast.And] = _prec
 _prec += 1
-_opdct[ast.Not] = _prec
+_op_preds[ast.Not] = _prec
 _prec += 1
-_opdct[ast.In] = _prec
-_opdct[ast.NotIn] = _prec
-_opdct[ast.Is] = _prec
-_opdct[ast.IsNot] = _prec
-_opdct[ast.Lt] = _prec
-_opdct[ast.LtE] = _prec
-_opdct[ast.Gt] = _prec
-_opdct[ast.GtE] = _prec
-_opdct[ast.NotEq] = _prec
-_opdct[ast.Eq] = _prec
+_op_preds[ast.In] = _prec
+_op_preds[ast.NotIn] = _prec
+_op_preds[ast.Is] = _prec
+_op_preds[ast.IsNot] = _prec
+_op_preds[ast.Lt] = _prec
+_op_preds[ast.LtE] = _prec
+_op_preds[ast.Gt] = _prec
+_op_preds[ast.GtE] = _prec
+_op_preds[ast.NotEq] = _prec
+_op_preds[ast.Eq] = _prec
 _prec += 1
-_opdct[ast.BitOr] = _prec
+_op_preds[ast.BitOr] = _prec
 _prec += 1
-_opdct[ast.BitXor] = _prec
+_op_preds[ast.BitXor] = _prec
 _prec += 1
-_opdct[ast.BitAnd] = _prec
+_op_preds[ast.BitAnd] = _prec
 _prec += 1
-_opdct[ast.LShift] = _prec
-_opdct[ast.RShift] = _prec
+_op_preds[ast.LShift] = _prec
+_op_preds[ast.RShift] = _prec
 _prec += 1
-_opdct[ast.Add] = _prec
-_opdct[ast.Sub] = _prec
+_op_preds[ast.Add] = _prec
+_op_preds[ast.Sub] = _prec
 _prec += 1
-_opdct[ast.Mult] = _prec
-_opdct[ast.Div] = _prec
-_opdct[ast.FloorDiv] = _prec
-_opdct[ast.Mod] = _prec
+_op_preds[ast.Mult] = _prec
+_op_preds[ast.Div] = _prec
+_op_preds[ast.FloorDiv] = _prec
+_op_preds[ast.Mod] = _prec
 _prec += 1
-_opdct[ast.UAdd] = _prec
-_opdct[ast.USub] = _prec
-_opdct[ast.Invert] = _prec
+_op_preds[ast.UAdd] = _prec
+_op_preds[ast.USub] = _prec
+_op_preds[ast.Invert] = _prec
 _prec += 1
-_opdct[ast.Pow] = _prec
-
+_op_preds[ast.Pow] = _prec
 
 def _pred_cmp(op1, op2):
-    return _opdct[op1.__class__] - _opdct[op2.__class__]
+    return _op_preds[op1.__class__] - _op_preds[op2.__class__]
 
 class ExprPrinter(ast.NodeVisitor):
+    _opdict = {
+        }
+    
     def __init__(self):
         super(ExprPrinter, self).__init__()
         self.txtlist = []
@@ -95,12 +97,6 @@ class ExprPrinter(ast.NodeVisitor):
     def get_text(self):
         return ''.join(self.txtlist)
 
-    #def generic_visit(self, node):
-        #if not isinstance(node, _allowed_nodes):
-            #raise TypeError("Expression AST contains a node of type %s which is not allowed." %
-                            #node.__class__.__name__)
-        #super(ExprPrinter, self).generic_visit(node)
-        
     def visit_Attribute(self, node):
         self.visit(node.value)
         self.write(".%s" % node.attr)
@@ -334,7 +330,7 @@ class ExprTransformer(ast.NodeTransformer):
         the name is resolvable in 'local' scope or not.
         """
         if name is None:
-            return node
+            return super(ExprTransformer, self).generic_visit(node)
         
         if self.expreval._is_local(name):
             return node
