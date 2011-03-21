@@ -1308,6 +1308,55 @@ it is *the output that yields the exact derivative when finite differenced*.
 A simple tutorial that covers the specification of derivatives can be found in
 :ref:`Adding-Derivatives-to-Your-Components`.
 
+.. _Calculating-Derivatives-with-Finite-Difference:
+
+*Calculating Derivatives with Finite Difference*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+OpenMDAO's finite differencing capability can be accessed via the
+``FiniteDifference` object, which is part of a special class of ``Differentiator``
+objects which can be used by a driver to provide derivatives between the
+parameters and the constraints and objectives of a driver.
+
+.. testcode:: NEWSUMT_fd
+
+    from openmdao.examples.enginedesign.driving_sim import DrivingSim
+    from openmdao.examples.enginedesign.vehicle import Vehicle
+    from openmdao.main.api import Assembly
+    from openmdao.lib.drivers.api import NEWSUMTdriver
+    from openmdao.lib.differentiators.finite_difference import FiniteDifference
+
+    class EngineOptimization(Assembly):
+        """ Top level assembly for optimizing a vehicle. """
+    
+        def __init__(self):
+            """ Creates a new Assembly containing a DrivingSim and an optimizer"""
+        
+            super(EngineOptimization, self).__init__()
+
+            # Create DrivingSim component instances
+            self.add('driving_sim', DrivingSim())
+
+            # Create NEWSUMT Optimizer instance
+            self.add('driver', NEWSUMTdriver())
+        
+            # add DrivingSim to workflow
+            self.driver.workflow.add('driving_sim')
+        
+            # Add Vehicle instance to vehicle socket
+            self.driving_sim.add('vehicle', Vehicle())
+        
+            # CONMIN Design Variables 
+            self.driver.add_parameter('driving_sim.spark_angle', low=-50.0, high=10.0, fd_step = .00001)
+            self.driver.add_parameter('driving_sim.bore', low=65.0, high=100.0, fd_step = .005)
+
+            # Use OpenMDAO to calculate gradients
+            self.driver.differentiator = FiniteDifference(self.driver)
+
+            # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
+            self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
+
+
 Running OpenMDAO
 -----------------
 

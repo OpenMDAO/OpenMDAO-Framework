@@ -232,6 +232,10 @@ class Derivatives(object):
         """Check the component's inputs and output and warn about any input-
         output combinations that are missing a derivative."""
         
+        print "validating", comp.name
+        print comp.list_inputs(connected=True)
+        print comp.list_outputs(connected=True)
+        
         input_list = driver_inputs
         output_list = driver_outputs
         

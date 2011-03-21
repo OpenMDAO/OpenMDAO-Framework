@@ -548,7 +548,7 @@ class Component (Container):
             If connected is not None, the list will contain names
             of outputs with matching *external* connectivity status.
         """
-        if self._output_names is None:
+        if self._connected_outputs is None:
             nset = set([k for k,v in self.items(iotype='out')])
             self._connected_outputs = self._depgraph.get_connected_outputs()
             nset.update(self._connected_outputs)

@@ -608,7 +608,7 @@ optimizer initiates a finite difference estimation of the gradient. This is
 called "Fake Finite Difference" and was developed to support an efficient way
 to calculate gradients for mixed models -- models that contain both components
 that can provide derivatives, and those that cannot. More detail can be found
-in the Scripting User Interface :ref:`_Derivatives`.
+in the Scripting User Interface :ref:`Derivatives`.
 
 OpenMDAO supports the specification of gradients (first derivatives) and
 Hessians (second derivatives) in mixed models via Fake Finite Difference. The
