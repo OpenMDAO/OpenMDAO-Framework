@@ -310,8 +310,10 @@ class ExprTransformer(ast.NodeTransformer):
         super(ExprTransformer, self).__init__()
         
     def _get_long_name(self, node):
-        # if node is an Attribute composed of only other Attributes and a Name
-        # then return the full dotted name. Otherwise, return None
+        # Return a tuple of the form (node, attr_string) where attr_string
+        # is the part of the Attribute composed only of Attributes and Names
+        # combined into a dotted name while node is the rest of the Attribute
+        # or None if the Attribute is expressible entirely as a dotted name.
         val = node.value
         parts = [node.attr]
         while True:
@@ -320,10 +322,11 @@ class ExprTransformer(ast.NodeTransformer):
                 val = val.value
             elif isinstance(val, ast.Name):
                 parts.append(val.id)
+                val = None
                 break
             else:  # it's more than just a simple dotted name
-                return None
-        return '.'.join(parts[::-1])
+                break
+        return (val, '.'.join(parts[::-1]))
     
     def _name_to_node(self, node, name, subs=None):
         """Given a dotted name, return the proper node depending on whether
@@ -372,7 +375,11 @@ class ExprTransformer(ast.NodeTransformer):
         return self._name_to_node(node, node.id, subs)
     
     def visit_Attribute(self, node, subs=None):
-        long_name = self._get_long_name(node)
+        subnode, long_name = self._get_long_name(node)
+        if subnode is not None:
+            if subs is None:
+                subs = []
+            subs = [(subnode, long_name)] + subs
         return self._name_to_node(node, long_name, subs)
 
     def visit_Subscript(self, node, sublist=None):
