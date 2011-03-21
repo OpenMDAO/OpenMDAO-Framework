@@ -1314,9 +1314,12 @@ A simple tutorial that covers the specification of derivatives can be found in
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 OpenMDAO's finite differencing capability can be accessed via the
-``FiniteDifference` object, which is part of a special class of ``Differentiator``
-objects which can be used by a driver to provide derivatives between the
-parameters and the constraints and objectives of a driver.
+``FiniteDifference`` object, which is part of a special class of
+``Differentiator`` objects which can be used by a driver to provide
+derivatives between the parameters and the constraints and objectives of a
+driver. If a driver supports derivative calculation (like the CONMIN and
+NEWSUMT optimizers), then it contains a socket called "differentiator",
+into which a FiniteDifference instance can be placed:
 
 .. testcode:: NEWSUMT_fd
 
@@ -1352,9 +1355,23 @@ parameters and the constraints and objectives of a driver.
 
             # Use OpenMDAO to calculate gradients
             self.driver.differentiator = FiniteDifference(self.driver)
+            self.driver.differentiator.form = 'Central'
+            self.driver.differentiator.default_stepsize = 1.0e-6
 
             # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
             self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
+
+If the driver has its own internal gradient calculation, it is disabled when
+you fill the differentiator socket, and the FiniteDifference component is used
+for the calculation.
+
+The FiniteDifference gradient calculation support forward, central, and
+backward differencing via the attribute ``form``. The default value is
+'Central' for central differencing. You can also define the stepsize that is
+applied for all of the parameter inputs when they are differenced. The default
+value is 1.0e-6. Note also that the parameter interface allows you to specify a
+separate stepsize value for each parameter using the keyword argument *fd_step* in
+the ``add_parameter`` call. The code fragment above shows an example of all of these.
 
 
 Running OpenMDAO

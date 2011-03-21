@@ -232,10 +232,6 @@ class Derivatives(object):
         """Check the component's inputs and output and warn about any input-
         output combinations that are missing a derivative."""
         
-        print "validating", comp.name
-        print comp.list_inputs(connected=True)
-        print comp.list_outputs(connected=True)
-        
         input_list = driver_inputs
         output_list = driver_outputs
         
@@ -267,7 +263,8 @@ class Derivatives(object):
                         
                         msg = 'Warning: no first derivative defined for ' \
                                'output %s and ' % outvar + \
-                               'input %s.' % invar
+                               'input %s ' % invar + \
+                               'in %s.' % comp.name
                         comp._logger.warning(msg)
                         
                         # TODO - This should be removed when logging is
@@ -292,7 +289,8 @@ class Derivatives(object):
                             msg = 'Warning: no second derivative defined ' \
                                    'for output %s and ' % outvar + \
                                    'input1 %s and' % invar + \
-                                   'input2 %s.' % invar2
+                                   'input2 %s ' % invar2 + \
+                                   'in %s.' % comp.name
                             comp._logger.warning(msg)
                             
                             # TODO - This should be removed when logging is

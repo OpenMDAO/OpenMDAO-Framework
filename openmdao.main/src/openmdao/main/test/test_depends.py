@@ -345,6 +345,24 @@ class DependsTestCase(unittest.TestCase):
         top.run()
         self.assertEqual(top.c2.a, 4)
 
+
+class DependsTestCase2(unittest.TestCase):
+
+    def setUp(self):
+        self.top = set_as_top(Assembly())
+        self.top.add('c2', Simple())
+        self.top.add('c1', Simple())
+    
+    def test_connected_outs(self):
+        self.assertEqual(self.top.c1.list_outputs(connected=True), [])
+        self.top.connect('c1.c', 'c2.a')
+        self.assertEqual(self.top.c1.list_outputs(connected=True), ['c'])
+        self.top.connect('c1.d', 'c2.b')
+        self.assertEqual(set(self.top.c1.list_outputs(connected=True)), set(['c', 'd']))
+        self.top.disconnect('c1.d', 'c2.b')
+        self.assertEqual(self.top.c1.list_outputs(connected=True), ['c'])
+        
+
         
 if __name__ == "__main__":
     

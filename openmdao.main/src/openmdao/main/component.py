@@ -605,6 +605,7 @@ class Component (Container):
         elif destpath.startswith('parent.'): # internal source
             if srcpath not in self._valid_dict:
                 valids_update = (srcpath, True)
+            self._connected_outputs = None
                     
         super(Component, self).connect(srcpath, destpath)
         
