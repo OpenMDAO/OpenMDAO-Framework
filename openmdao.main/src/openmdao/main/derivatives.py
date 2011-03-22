@@ -5,7 +5,7 @@ perform calculations during a Fake Finite Difference.
 
 
 def _check_var(comp, var_name, iotype):
-    """ Checks a variable to make sure it's the proper type and iotype"""
+    """ Checks a variable to make sure it's the proper type and iotype."""
     
     if iotype == 'input':
         conns = comp.list_inputs()
@@ -56,10 +56,10 @@ class Derivatives(object):
             Component that contains the variables out_name and in_name.
             
         out_name: str
-            name of component's output variable.
+            Name of component's output variable.
             
         in_name: str
-            name of component's first input variable for derivative.
+            Name of component's first input variable for derivative.
         """
         
         _check_var(comp, in_name, "input")
@@ -82,13 +82,13 @@ class Derivatives(object):
         Stores a single first derivative value.
         
         out_name: str
-            name of component's output variable.
+            Name of component's output variable.
             
         in_name: str
-            name of component's input variable.
+            Name of component's input variable.
             
         value: float
-            value of derivative.
+            Value of derivative.
         """
         
         try:
@@ -110,13 +110,13 @@ class Derivatives(object):
             Component that contains the variables out_name and in_name(1,2)
             
         out_name: str
-            name of component's output variable.
+            Name of component's output variable.
             
         in_name1: str
-            name of component's first input variable for derivative.
+            Name of component's first input variable for derivative.
             
         in_name2: str
-            name of component's second input variable for derivative.
+            Name of component's second input variable for derivative.
         """
         
         _check_var(comp, in_name1, "input")
@@ -153,20 +153,20 @@ class Derivatives(object):
         """
         Stores a single second derivative value.
         
-        Note cross terms (i.e., df_dxdy) are assumed symmetric, so you only
+        Note cross terms (i.e., df_dxdy) are assumed symmetric so you only
         have to specify them once.
         
         out_name: str
-            name of component's output variable.
+            Name of component's output variable.
             
         in_name1: str
-            name of component's first input variable for derivative.
+            Name of component's first input variable for derivative.
             
         in_name2: str
-            name of component's second input variable for derivative.
+            Name of component's second input variable for derivative.
             
         value: float
-            value of derivative.
+            Value of derivative.
         """
         
         try:

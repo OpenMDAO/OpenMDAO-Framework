@@ -1,4 +1,4 @@
-.. index:: user guide script interface
+.. index:: scripting interface
 
 .. _`OpenMDAO-scripting-interface`:
 
@@ -1272,22 +1272,24 @@ for the objective value.
 
     Show how to add new drivers.
 
+.. index:: derivatives, Finite Difference, Hessians, constraints
+
 .. _Derivatives:
 
 Derivatives
 -----------
 
 OpenMDAO provides the capability for a driver to determine the derivative of
-its outputs (typically the Objective and Constraints) with respect to its
-inputs (the Parameters). Both first derivative (gradients) and second
+its outputs (typically the objective and constraints) with respect to its
+inputs (the parameters). Both first derivative (gradients) and second
 derivatives (Hessians) are supported. This capability is particularly useful
 for gradient-descent optimizers and Newton solvers, where the solution moves
-toward the optimum value by travelling in the direction of the steepest
+toward the optimum value by traveling in the direction of the steepest
 gradient of the objective function.
 
 Some drivers, such as CONMINdriver and NEWSUMTdriver, include their own
 methods to calculate derivatives. These are usually based on a finite
-difference approximation of the deriviatives of interest, and thus require one
+difference approximation of the derivatives of interest, and thus require one
 or more additional evaluations of the driver's workflow. OpenMDAO includes its
 own differentiator that uses the Finite Difference method to calculate both
 gradients and Hessians. 
@@ -1295,13 +1297,15 @@ gradients and Hessians.
 Sometimes, the solution process can be sped up by having a component supply
 its own derivatives. These derivatives may be analytical, or they might be
 estimated by some other means. The derivatives provided by a component may be
-more accurate than those estimated by finite differencing the component, and
-are also independent of the choice of stepsize parameter.
+more accurate than those estimated by finite differencing the component and
+are also independent of the choice of step-size parameter.
+
+.. index:: Fake Finite Difference
 
 OpenMDAO can take advantage of the derivatives that a component supplies to
 potentially speed up the computation through the process of Fake Finite
 Difference (FFD). During a finite difference step, a component can be told to
-use its derivatives and the first (or second) taylor series term to produce
+use its derivatives and the first (or second) Taylor series term to produce
 its output. This output is not an accurate output at the requested input, but
 it is *the output that yields the exact derivative when finite differenced*.
 
@@ -1318,7 +1322,7 @@ OpenMDAO's finite differencing capability can be accessed via the
 ``Differentiator`` objects which can be used by a driver to provide
 derivatives between the parameters and the constraints and objectives of a
 driver. If a driver supports derivative calculation (like the CONMIN and
-NEWSUMT optimizers), then it contains a socket called "differentiator",
+NEWSUMT optimizers), then it contains a socket called *differentiator*,
 into which a FiniteDifference instance can be placed:
 
 .. testcode:: NEWSUMT_fd
@@ -1365,12 +1369,12 @@ If the driver has its own internal gradient calculation, it is disabled when
 you fill the differentiator socket, and the FiniteDifference component is used
 for the calculation.
 
-The FiniteDifference gradient calculation support forward, central, and
+The FiniteDifference gradient calculation supports forward, central, and
 backward differencing via the attribute ``form``. The default value is
-'Central' for central differencing. You can also define the stepsize that is
+``'Central'`` for central differencing. You can also define the step size that is
 applied for all of the parameter inputs when they are differenced. The default
-value is 1.0e-6. Note also that the parameter interface allows you to specify a
-separate stepsize value for each parameter using the keyword argument *fd_step* in
+value is ``1.0e-6``. Note also that the parameter interface allows you to specify a
+separate step-size value for each parameter using the keyword argument ``fd_step`` in
 the ``add_parameter`` call. The code fragment above shows an example of all of these.
 
 

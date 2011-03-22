@@ -1,4 +1,4 @@
-""" Differentiates a driver's workflow using the finite difference method. a
+""" Differentiates a driver's workflow using the finite difference method. A
 variety of difference types are available for both first and second order."""
 
 
@@ -33,7 +33,7 @@ def diff_2nd_xy(fpp, fpm, fmp, fmm, eps1, eps2):
 
 class FiniteDifference(HasTraits):
     """ Differentiates a driver's workflow using the finite difference method.
-    a variety of difference types are available for both first and second
+    A variety of difference types are available for both first and second
     order."""
 
     implements(IDifferentiator)
@@ -65,7 +65,7 @@ class FiniteDifference(HasTraits):
         self.hessian_eq_const = zeros(0, 'd')
     
     def setup(self):
-        """Sets some dimensions"""
+        """Sets some dimensions."""
 
         self.n_param = len(self._parent._hasparameters._parameters)
         #self.n_objective = len(self._parent._hasobjective._objective)
@@ -78,7 +78,7 @@ class FiniteDifference(HasTraits):
             self.n_ineqconst = len(self._parent._hasconstraints._ineq._constraints)
         
     def calc_gradient(self):
-        """Returns the gradient vectors for this Driver's workflow"""
+        """Returns the gradient vectors for this Driver's workflow."""
         
         self.setup()
 
@@ -361,7 +361,7 @@ class FiniteDifference(HasTraits):
                     
     
     def _run_point(self, data_param):
-        """Runs the model at a single point and captures the results. Note,
+        """Runs the model at a single point and captures the results. Note that 
         some differences require the baseline point."""
 
         # Temp storage of all responses

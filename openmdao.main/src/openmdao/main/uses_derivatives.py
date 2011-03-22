@@ -2,6 +2,7 @@
     Hessians) of their workflow. The following delegates are available:
     
     UsesGradients - if you need first derivatives
+    
     UsesHessians  - if you need second derivatives
     
     From a driver's perspective, derivatives are needed from its parameters

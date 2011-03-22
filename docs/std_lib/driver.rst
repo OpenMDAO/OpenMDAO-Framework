@@ -585,6 +585,7 @@ function, design variables, constraints, and any NEWSUMT parameters are also
 assigned in the ``__init__`` function. The specific syntax for all of these is
 discussed in :ref:`Driver-API`.
 
+.. index:: gradients, Hessians
 
 *Basic Parameters*
 ++++++++++++++++++
@@ -598,8 +599,8 @@ can replace NEWSUMT's finite difference with OpenMDAO's built-in capability by
 inserting a differentiator into the Differentiator slot in the driver, as shown
 in :ref:`Calculating-Derivatives-with-Finite-Difference`.
 
-If you want to use NEWSUMT for the finite difference calculation, and want the
-same finite difference stepsize in all your variables, you can set the ``default_fd_stepsize``
+If you want to use NEWSUMT for the finite difference calculation and want the
+same finite difference step size in all your variables, you can set the ``default_fd_stepsize``
 parameter.
 
 .. testcode:: NEWSUMT_fd
@@ -613,10 +614,10 @@ parameter.
     self.driver.default_fd_stepsize = .0025
 
 The default step size will be used for all parameters for which you have not
-set the *fd_step* attribute.
+set the ``fd_step`` attribute.
 
-When using NEWSUMT, if some of your constraints are linear, it may be
-advantageous to specify which ones are linear so that NEWSUMT can treat them
+When using NEWSUMT, if you have any linear constraints, it may be
+advantageous to specify them as such so that NEWSUMT can treat them
 differently. Use the integer array ``ilin`` to designate whether a constraint
 is linear. A value of 0 indicates that that constraint is non-linear, while a
 value of 1 indicates that that the constraint is linear. This parameter is
