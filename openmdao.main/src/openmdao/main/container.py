@@ -831,10 +831,6 @@ class Container(HasTraits):
             if obj is Missing or not is_instance(obj, Container):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
-            #elif index is None:
-                #return getattr(obj, restofpath)
-            #else:
-                #return obj._array_get(restofpath, index)
         else:
             if index is None:
                 obj = getattr(self, path, Missing)
@@ -842,7 +838,7 @@ class Container(HasTraits):
                     return self._get_failed(path, index)
                 return obj
             else:
-                return self._array_get(path, index)
+                return self._index_get(path, index)
      
     def _set_failed(self, path, value, index=None, src=None, force=False):
         """If set() cannot locate the specified variable, raise an exception.
@@ -895,41 +891,62 @@ class Container(HasTraits):
                             self._input_check = chk
                         self._input_updated(path)
                     else:  # array index specified
-                        self._array_set(path, value, index)
+                        self._index_set(path, value, index)
                 elif index:  # array index specified for output
-                    self._array_set(path, value, index)
+                    self._index_set(path, value, index)
                 else: # output
                     setattr(self, path, value)
             else:
                 return self._set_failed(path, value, index, src, force)
 
-    def _array_set(self, name, value, index):
-        arr = getattr(self, name)
+    def _index_set(self, name, value, index):
+        obj = getattr(self, name)
         length = len(index)
-        if length == 1:
-            old = arr[index[0]]
-            arr[index[0]] = value
+        for idx in index[:-1]:
+            if isinstance(idx, list):
+                if len(idx) == 1 and isinstance(idx[0], basestring):
+                    obj = getattr(obj, idx[0])
+                else:
+                    raise RuntimeError("bad index format in set(): index=%s" % index)
+            else:
+                obj = obj[idx]
+        last_i = index[length-1]
+        if isinstance(last_i, list):
+            old = getattr(obj, last_i[0])
+            setattr(obj, last_i[0], value)
         else:
-            for idx in index[:-1]:
-                arr = arr[idx]
-            old = arr[index[length-1]]
-            arr[index[length-1]] = value
+            old = obj[last_i]
+            obj[last_i] = value
                 
-        # setting of individual Array values doesn't seem to trigger
+        # setting of individual Array entries or sub attributes doesn't seem to trigger
         # _input_trait_modified, so do it manually
-        # FIXME: if people register other callbacks on Arrays, they won't
+        # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         if old != value:
             self._call_execute = True
             self._input_updated(name)
             
-    def _array_get(self, name, index):
-        arr = getattr(self, name, Missing)
-        if arr is Missing:
+    def _index_get(self, name, index):
+        """Resolve the object given by the index, which is really a list with
+        the following possible entries:
+        
+            - a non-list value: this is interpreted as an index into a container.
+              It can be any hashable object.
+            - a list: if this contains a single string, it's interpreted as an
+              attribute access.
+        """
+        obj = getattr(self, name, Missing)
+        if obj is Missing:
             return self._get_failed(name, index)
         for idx in index:
-            arr = arr[idx]
-        return arr
+            if isinstance(idx, list):
+                if len(idx) == 1 and isinstance(idx[0], basestring):
+                    obj = getattr(obj, idx[0])
+                else:
+                    raise RuntimeError("bad index format in get(): index=%s" % index)
+            else:
+                obj = obj[idx]
+        return obj
     
     def save_to_egg(self, name, version, py_dir=None, src_dir=None,
                     src_files=None, child_objs=None, dst_dir=None,

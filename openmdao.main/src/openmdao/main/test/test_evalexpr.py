@@ -1,65 +1,91 @@
-"""
-Test scenario:
-    Container hierarchy    top
-                          /   \
-                         a   comp
-                        /       \
-                       b         x
-                      /
-                    funct
-                       
-b is an array variable
-funct is a callable
-comp is a Component
-x is an float variable
-"""
 import unittest
 import math
 
 import numpy
-import logging
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.api import Assembly, Container, Component, set_as_top
-from openmdao.lib.datatypes.api import Float, Array, List, Instance
+from openmdao.lib.datatypes.api import Float, Array, List, Instance, Dict
 
 class A(Container):
-    b = Array(iotype='in')
+    f = Float(iotype='in')
+    a1d = Array(numpy.array([1.0, 1.0, 2.0, 3.0]), iotype='in')
+    a2d = Array(numpy.array([[1.0, 1.0], [2.0, 3.0]]), iotype='in')
+    b1d = Array(numpy.array([1.0, 1.0, 2.0, 3.0]), iotype='out')
+    b2d = Array(numpy.array([[1.0, 1.0], [2.0, 3.0]]), iotype='out')
     
 class Comp(Component):
     x = Float(iotype='in')
     y = Float(iotype='in')
+    indct = Dict(iotype='in')
+    outdct = Dict(iotype='out')
+    cont = Instance(A, iotype='in')
+    contlist = List(Instance(A), iotype='in')
     
 class ExprEvalTestCase(unittest.TestCase):
     def setUp(self):
         self.top = set_as_top(Assembly())
         self.top.add('a', A())
-        self.top.a.b = numpy.array([1., 2, 3, 4, 5, 6])
+        self.top.a.a1d = numpy.array([1., 2, 3, 4, 5, 6])
         self.top.add('comp', Comp())
         self.top.comp.x = 3.14
         self.top.comp.y = 42.
 
+    def _do_tests(self, tests, top):
+        for tst in tests:
+            ex = ExprEvaluator(tst[0], top, lazy=True)
+            ex._parse()
+            self.assertEqual(ex.scoped_text, tst[1])
+        
+    def test_simple(self):
+        tests = [
+            ('a.f', "scope.get('a.f')"),
+            ('a.f**2', "scope.get('a.f')**2"),
+            ('a.f/a.a1d[int(a.f)]', "scope.get('a.f')/scope.get('a.a1d',[int(scope.get('a.f'))])"),
+            ('a.f = a.a1d[int(a.f)]', "scope.set('a.f',scope.get('a.a1d',[int(scope.get('a.f'))]))"),
+        ]
+        self._do_tests(tests, self.top)
+        
+    def test_containers(self):
+        tests = [
+            ('comp.cont.f',"scope.get('comp.cont.f')"),
+            ('comp.contlist[2].a1d[3]',"scope.get('comp.contlist',[2,['a1d'],3])"),
+        ]
+        self._do_tests(tests, self.top)
+        
+    def test_dicts(self):
+        tests = [
+            ("comp.indct['foo.bar']","scope.get('comp.indct',['foo.bar'])"),
+            ("comp.indct['foo.bar']=comp.cont.f","scope.set('comp.indct',scope.get('comp.cont.f'),['foo.bar'])"),
+        ]
+        self._do_tests(tests, self.top)
+        
+    def test_arrays(self):
+        tests = [
+            ('a.a1d', "scope.get('a.a1d')"),
+            ('-a.a1d', "-scope.get('a.a1d')"),
+            ('+a.a1d', "+scope.get('a.a1d')"),
+            ('a.a1d[0]', "scope.get('a.a1d',[0])"),
+            ('comp.cont.a1d[-3]', "scope.get('comp.cont.a1d',[-3])"),
+            ('a.a2d[-a.a1d[2]]', "scope.get('a.a2d',[-scope.get('a.a1d',[2])])"),
+            ('a.a2d[-a.a1d[2]]=a.f', 
+             "scope.set('a.a2d',scope.get('a.f'),[-scope.get('a.a1d',[2])])"),
+        ]
+        self._do_tests(tests, self.top)
+        
     def test_set1(self):
         # each test is a tuple of the form (input, expected output)
         tests = [
-        ('b', "b"),
-        ('-b', "-b"),
-        ('b[0]', "b[0]"),
-        ('b[-3]', "b[-3]"),
-        ('abs(b)', 'abs(b)'),
-        ('comp.x < b', "scope.parent.get('comp.x')<b"),
-        ('math.sin(b)+math.cos(b+math.pi)', 'math.sin(b)+math.cos(b+math.pi)'),
-        ('comp.x[0]', "scope.parent.get('comp.x',[0])"),
-        ('comp.x[0] = 10*(3.2+ b[3]* 1.1*b[2 ])', 
-             "scope.parent.set('comp.x',10*(3.2+b[3]*1.1*b[2]),[0])"),
-        ('a.b[2] = -comp.x',
+            ('comp.x < a1d', "scope.parent.get('comp.x')<a1d"),
+            ('math.sin(f)+math.cos(f+math.pi)', 'math.sin(f)+math.cos(f+math.pi)'),
+            ('comp.x[0]', "scope.parent.get('comp.x',[0])"),
+            ('comp.x[0] = 10*(3.2+ a1d[3]* 1.1*a1d[2 ])', 
+             "scope.parent.set('comp.x',10*(3.2+a1d[3]*1.1*a1d[2]),[0])"),
+            ('a.b[2] = -comp.x',
              "scope.parent.set('a.b',-scope.parent.get('comp.x'),[2])"),
         ]
 
-        for tst in tests:
-            ex = ExprEvaluator(tst[0], self.top.a, lazy=True)
-            ex._parse()
-            self.assertEqual(ex.scoped_text, tst[1])
+        self._do_tests(tests, self.top.a)
 
     def test_set2(self):
         tests = [
@@ -67,23 +93,21 @@ class ExprEvalTestCase(unittest.TestCase):
         ('a.b[1][2]', "scope.get('a.b',[1,2])"),
         ('abs(a.b[1][2])', "abs(scope.get('a.b',[1,2]))"),
         ('a.b[1][x.y]', "scope.get('a.b',[1,scope.parent.get('x.y')])"),  
-        #('a.b()', "scope.invoke('a.b')"),
         ('comp.x=a.b[1]',"scope.set('comp.x',scope.get('a.b',[1]))"),
-        #('a.b(5)', "scope.invoke('a.b',5)"),
-        #('a.b(5,9)', "scope.invoke('a.b',5,9)"),
-        #('a.b(5,z.y)', "scope.invoke('a.b',5,scope.parent.get('z.y'))"),
-        #('a.b(5,-z.y)', "scope.invoke('a.b',5,-scope.parent.get('z.y'))"),
-        #('a.b(5, z.y(2,3))', "scope.invoke('a.b',5,scope.parent.invoke('z.y',2,3))"),
-        #('a.b(5, z.y[3])', "scope.invoke('a.b',5,scope.parent.get('z.y',[3]))"),
-        #('0+a.b(5, -z.y[3])**2-z.z[4]',
-         #"0+scope.invoke('a.b',5,-scope.parent.get('z.y',[3]))**2-scope.parent.get('z.z',[4])"),
-         #('a.b(1,23)[1]', "scope.parent.get(scope.parent.invoke('a.b',1,23),[1])"),
+        ('a.b()', "scope.get('a.b',[[[],{},None,None]])"),
+        ('a.b(5)', "scope.get('a.b',[[[5],{},None,None]])"),
+        ('a.b(5,9)', "scope.get('a.b',[[[5,9],{},None,None]])"),
+        ('a.b(5,z.y)', "scope.get('a.b',[[[5,scope.parent.get('z.y')],{},None,None]])"),
+        ('a.b(5, z.y(2,3))', 
+         "scope.get('a.b',[[[5,scope.parent.get('z.y',[[[2,3],{},None,None]])],{},None,None]])"),
+        ('a.b(5, z.y[3])', 
+         "scope.get('a.b',[[[5,scope.parent.get('z.y',[3])],{},None,None]])"),
+         ('a.b(1,23,foo=9,*args,**kwargs)', 
+          "scope.get('a.b',[[[1,23],{'foo':9},args,kwargs]])"),
+         ('a.b(1,23)[1]', "scope.get('a.b',[[[1,23],{},None,None],1])"),
         ]
 
-        for tst in tests:
-            ex = ExprEvaluator(tst[0], self.top)
-            ex._parse()
-            self.assertEqual(ex.scoped_text, tst[1])
+        self._do_tests(tests, self.top)
     
     def test_set_evaluate(self):
         ex = ExprEvaluator('comp.x', self.top, single_name=True)
@@ -92,6 +116,15 @@ class ExprEvalTestCase(unittest.TestCase):
         # test setting the value of a referenced variable
         ex.set(75.4)
         self.assertEqual(75.4, self.top.comp.x)
+        
+        self.top.comp.contlist = [A(), A(), A()]
+        self.top.comp.contlist[1].a1d = [4]*5
+        ex = ExprEvaluator('comp.contlist[1].a1d[3]', self.top, single_name=True)
+        self.assertEqual(ex.evaluate(), 4)
+        
+        ex.set(123)
+        self.assertEqual(ex.evaluate(), 123)
+        
 
     def test_boolean(self):
         comp = self.top.comp

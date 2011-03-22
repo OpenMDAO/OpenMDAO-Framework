@@ -84,8 +84,6 @@ def _pred_cmp(op1, op2):
     return _op_preds[op1.__class__] - _op_preds[op2.__class__]
 
 class ExprPrinter(ast.NodeVisitor):
-    _opdict = {
-        }
     
     def __init__(self):
         super(ExprPrinter, self).__init__()
@@ -182,115 +180,69 @@ class ExprPrinter(ast.NodeVisitor):
         if node.step is not None:
             self.visit(node.step)
         
-    def visit_List(self, node):
+    def visit_List(self, node):  
         self.write('[')
         for i,e in enumerate(node.elts):
-            if i>0:
-                self.write(',')
+            if i>0: self.write(',')
             self.visit(e)
         self.write(']')
         
-    def visit_Tuple(self, node):
-        self.write('(')
+    def visit_Dict(self, node):  
+        self.write('{')
+        for i,tup in enumerate(zip(node.keys,node.values)):
+            if i>0: self.write(',')
+            self.write("'%s':" % tup[0].s)
+            self.visit(tup[1])
+        self.write('}')
+        
+    def visit_Tuple(self, node): 
+        self.write(first)
+        length = len(node.elts)
         for i,e in enumerate(node.elts):
-            if i>0:
-                self.write(',')
             self.visit(e)
-        if len(node.elts) == 1:
-            self.write(',')
-        self.write(')')
+            if i>0 or length==1: self.write(',')
+        self.write(last)
         
-    def visit_USub(self, node):
-        self.write('-')
-        
-    def visit_UAdd(self, node):
-        self.write('+')
-        
-    def visit_And(self, node):
-        self.write(' and ')
-        
-    def visit_Or(self, node):
-        self.write(' or ')
+    def visit_USub(self, node): self.write('-')
+    def visit_UAdd(self, node): self.write('+')
+    def visit_And(self, node):  self.write(' and ')
+    def visit_Or(self, node):   self.write(' or ')
         
     # operators
-    #Add | Sub | Mult | Div | Mod | Pow | LShift | RShift | BitOr | BitXor | BitAnd | FloorDiv
-    def visit_Add(self, node):
-        self.write('+')
-        
-    def visit_Sub(self, node):
-        self.write('-')
-        
-    def visit_Mult(self, node):
-        self.write('*')
-        
-    def visit_Div(self, node):
-        self.write('/')
-        
-    def visit_Mod(self, node):
-        self.write('%')
-        
-    def visit_Pow(self, node):
-        self.write('**')
-        
-    def visit_LShift(self, node):
-        self.write('<<')
-        
-    def visit_Rshift(self, node):
-        self.write('>>')
-        
-    def visit_BitOr(self, node):
-        self.write('|')
-        
-    def visit_BitXor(self, node):
-        self.write('^')
-        
-    def visit_BitAnd(self, node):
-        self.write('&')
-        
-    def visit_FloorDiv(self, node):
-        self.write('//')
+    def visit_Add(self, node):      self.write('+')
+    def visit_Sub(self, node):      self.write('-')
+    def visit_Mult(self, node):     self.write('*')
+    def visit_Div(self, node):      self.write('/')
+    def visit_Mod(self, node):      self.write('%')
+    def visit_Pow(self, node):      self.write('**')
+    def visit_LShift(self, node):   self.write('<<')
+    def visit_Rshift(self, node):   self.write('>>')
+    def visit_BitOr(self, node):    self.write('|')
+    def visit_BitXor(self, node):   self.write('^')
+    def visit_BitAnd(self, node):   self.write('&')
+    def visit_FloorDiv(self, node): self.write('//')
         
     # cmp operators
-    # Eq | NotEq | Lt | LtE | Gt | GtE | Is | IsNot | In | NotIn
-    def visit_Eq(self, node):
-        self.write('==')
-
-    def visit_NotEq(self, node):
-        self.write('!=')
-
-    def visit_Lt(self, node):
-        self.write('<')
-
-    def visit_LtE(self, node):
-        self.write('<=')
-
-    def visit_Gt(self, node):
-        self.write('>')
-
-    def visit_GtE(self, node):
-        self.write('>=')
-
-    def visit_Is(self, node):
-        self.write(' is ')
-
-    def visit_IsNot(self, node):
-        self.write(' is not ')
-
-    def visit_In(self, node):
-        self.write(' in ')
-
-    def visit_NotIn(self, node):
-        self.write(' not in ')
+    def visit_Eq(self, node):    self.write('==')
+    def visit_NotEq(self, node): self.write('!=')
+    def visit_Lt(self, node):    self.write('<')
+    def visit_LtE(self, node):   self.write('<=')
+    def visit_Gt(self, node):    self.write('>')
+    def visit_GtE(self, node):   self.write('>=')
+    def visit_Is(self, node):    self.write(' is ')
+    def visit_IsNot(self, node): self.write(' is not ')
+    def visit_In(self, node):    self.write(' in ')
+    def visit_NotIn(self, node): self.write(' not in ')
     
     def _ignore(self, node):
         super(ExprPrinter, self).generic_visit(node)
 
-    visit_Module = _ignore
-    visit_Expr = _ignore
-    visit_Compare = _ignore
-    visit_UnaryOp = _ignore
+    visit_Module    = _ignore
+    visit_Expr      = _ignore
+    visit_Compare   = _ignore
+    visit_UnaryOp   = _ignore
     visit_Subscript = _ignore
-    visit_Load = _ignore
+    visit_Load      = _ignore
     
     def generic_visit(self, node):
         # We want to fail if we see any nodes we don't know about rather than
@@ -299,8 +251,9 @@ class ExprPrinter(ast.NodeVisitor):
 
         
 class ExprTransformer(ast.NodeTransformer):
-    """Transforms attribute accesses, e.g., abc.def.g in an expression into 
-    scope.get('abc.def.g') or scope.parent.get('abc.def.g')
+    """Transforms attribute accesses, e.g., abc.def.g in an expression AST into 
+    scope.get('abc.def.g') or scope.parent.get('abc.def.g'). Also turns assignments
+    into the appropriate set() calls.
     """
     def __init__(self, expreval, rhs=None):
         self.expreval = expreval
@@ -309,11 +262,22 @@ class ExprTransformer(ast.NodeTransformer):
                           # that we always translate to 'get' even if we're on the lhs
         super(ExprTransformer, self).__init__()
         
+    def visit(self, node, subs=None):
+        """Visit a node."""
+        method = 'visit_' + node.__class__.__name__
+        visitor = getattr(self, method, self.generic_visit)
+        if visitor == self.generic_visit:
+            return visitor(node)
+        else:
+            return visitor(node, subs)
+
     def _get_long_name(self, node):
-        # Return a tuple of the form (node, attr_string) where attr_string
-        # is the part of the Attribute composed only of Attributes and Names
-        # combined into a dotted name while node is the rest of the Attribute
-        # or None if the Attribute is expressible entirely as a dotted name.
+        # If this node is an Attribute or Name node that is composed
+        # only of other Attribute or Name nodes, then return the full
+        # dotted name for this node. Otherwise, i.e., if this node
+        # contains Subscripts or Calls, return None.
+        if isinstance(node, ast.Name):
+            return node.id
         val = node.value
         parts = [node.attr]
         while True:
@@ -322,11 +286,10 @@ class ExprTransformer(ast.NodeTransformer):
                 val = val.value
             elif isinstance(val, ast.Name):
                 parts.append(val.id)
-                val = None
                 break
             else:  # it's more than just a simple dotted name
-                break
-        return (val, '.'.join(parts[::-1]))
+                return None
+        return '.'.join(parts[::-1])
     
     def _name_to_node(self, node, name, subs=None):
         """Given a dotted name, return the proper node depending on whether
@@ -375,40 +338,70 @@ class ExprTransformer(ast.NodeTransformer):
         return self._name_to_node(node, node.id, subs)
     
     def visit_Attribute(self, node, subs=None):
-        subnode, long_name = self._get_long_name(node)
-        if subnode is not None:
+        long_name = self._get_long_name(node)
+        if long_name is None: # this Attribute contains more than just names/attrs
             if subs is None:
                 subs = []
-            subs = [(subnode, long_name)] + subs
+            subs[0:0] = [ast.List(elts=[ast.Str(s=node.attr)], ctx=ast.Load())]
+            return self.visit(node.value, subs)
         return self._name_to_node(node, long_name, subs)
 
-    def visit_Subscript(self, node, sublist=None):
+    def visit_Subscript(self, node, subs=None):
         self._stack.append(node)
-        if sublist:
-            subs = [self.visit(node.slice.value)] + sublist
-        else:
-            subs = [self.visit(node.slice.value)]
+        if subs is None:
+            subs = []
+        subs[0:0] = [self.visit(node.slice.value)]
         self._stack.pop()
-            
-        if isinstance(node.value, ast.Attribute):
-            newnode = self.visit_Attribute(node.value, subs)
-        elif isinstance(node.value, ast.Name):
-            newnode = self.visit_Name(node.value, subs)
-        elif isinstance(node.value, ast.Subscript):
-            newnode = self.visit_Subscript(node.value, subs)
-        else:
-            return node
+        
+        newnode = self.visit(node.value, subs)
         if newnode is node.value:
             return node
         return newnode
-    
-    def visit_Module(self, node):
+        
+    def visit_Call(self, node, subs=None):
+        name = self._get_long_name(node.func)
+        if self.expreval._is_local(name):
+            return self.generic_visit(node)
+        
+        if subs is None:
+            subs = []
+        
+        self._stack.append(node)
+        
+        call_list = [ast.List(elts=[self.visit(arg) for arg in node.args], ctx=ast.Load())]
+            
+        if hasattr(node, 'keywords'):
+            keywords = ast.Dict(keys=[ast.Str(kw.arg) for kw in node.keywords],
+                                values=[self.visit(kw.value) for kw in node.keywords],
+                                ctx=ast.Load())
+        else:
+            keywords = ast.Dict(elts=[], ctx=ast.Load())
+        call_list.append(keywords)
+
+        if hasattr(node, 'starargs') and node.starargs:
+            call_list.append(node.starargs)
+        else:
+            call_list.append(ast.Name(id='None', ctx=ast.Load()))
+            
+        if hasattr(node, 'kwargs') and node.kwargs:
+            call_list.append(node.kwargs)
+        else:
+            call_list.append(ast.Name(id='None', ctx=ast.Load()))
+            
+        self._stack.pop()
+                
+        subs[0:0] = [ast.List(elts=call_list, ctx=ast.Load())]
+        
+        return self.visit(node.func, subs)
+
+
+    def visit_Module(self, node, subs=None):
         # Make sure there is only one statement or expression
         if len(node.body) > 1 or not isinstance(node.body[0], (ast.Assign, ast.Expr)):
             raise RuntimeError("Only one assignment statement or expression is allowed")
         return super(ExprTransformer, self).generic_visit(node)
         
-    def visit_Assign(self, node):
+    def visit_Assign(self, node, subs=None):
         if len(node.targets) > 1:
             raise RuntimeError("only one expression is allowed on left hand side of assignment")
         return ExprTransformer(self.expreval, rhs=self.visit(node.value)).visit(node.targets[0])
