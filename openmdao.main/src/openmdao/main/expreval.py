@@ -368,29 +368,31 @@ class ExprTransformer(ast.NodeTransformer):
         
         self._stack.append(node)
         
-        call_list = [ast.List(elts=[self.visit(arg) for arg in node.args], ctx=ast.Load())]
-            
-        if hasattr(node, 'keywords'):
-            keywords = ast.Dict(keys=[ast.Str(kw.arg) for kw in node.keywords],
-                                values=[self.visit(kw.value) for kw in node.keywords],
-                                ctx=ast.Load())
-        else:
-            keywords = ast.Dict(elts=[], ctx=ast.Load())
-        call_list.append(keywords)
-
-        if hasattr(node, 'starargs') and node.starargs:
-            call_list.append(node.starargs)
-        else:
-            call_list.append(ast.Name(id='None', ctx=ast.Load()))
-            
+        call_list = []
+        
         if hasattr(node, 'kwargs') and node.kwargs:
             call_list.append(node.kwargs)
-        else:
+            
+        if hasattr(node, 'starargs') and node.starargs:
+            call_list.append(node.starargs)
+        elif len(call_list) > 0:
             call_list.append(ast.Name(id='None', ctx=ast.Load()))
             
+        if hasattr(node, 'keywords') and len(node.keywords) > 0:
+            call_list.append(ast.Dict(keys=[ast.Str(kw.arg) for kw in node.keywords],
+                                values=[self.visit(kw.value) for kw in node.keywords],
+                                ctx=ast.Load()))
+        elif len(call_list) > 0:
+            call_list.append(ast.Dict(keys=[], values=[], ctx=ast.Load()))
+
+        call_list.append(ast.List(elts=[self.visit(arg) for arg in node.args], 
+                                  ctx=ast.Load()))
+
         self._stack.pop()
                 
-        subs[0:0] = [ast.List(elts=call_list, ctx=ast.Load())]
+        # call_list is reversed here because we built it backwards in order
+        # to make it easier to leave off unnecessary empty stuff
+        subs[0:0] = [ast.List(elts=call_list[::-1], ctx=ast.Load())]
         
         return self.visit(node.func, subs)
 
