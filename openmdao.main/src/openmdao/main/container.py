@@ -940,8 +940,19 @@ class Container(HasTraits):
             return self._get_failed(name, index)
         for idx in index:
             if isinstance(idx, list):
-                if len(idx) == 1 and isinstance(idx[0], basestring):
+                if len(idx) == 1 and isinstance(idx[0], basestring): # late attribute access
                     obj = getattr(obj, idx[0])
+                elif len(idx)>0 and isinstance(idx[0], list): # function call
+                    args = idx[0][:]
+                    if len(idx) > 1 and len(idx[1])>0:
+                        kwargs = idx[1].copy()
+                        if len(idx) > 3 and idx[3] is not None:
+                            kwargs.update(idx[3])
+                    else:
+                        kwargs = {}
+                    if len(idx) > 2 and len(idx[2])>0:
+                        args.extend(idx[2])
+                    obj = obj.__call__(*args, **kwargs)
                 else:
                     raise RuntimeError("bad index format in get(): index=%s" % index)
             else:
