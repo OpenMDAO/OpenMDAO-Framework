@@ -126,13 +126,14 @@ def main(argv=None):
 
     #Check for uncommitted changes first
     uncommittedChanges=subprocess.Popen(['bzr status -SV'], stdout=subprocess.PIPE, shell=True).communicate()[0]
+    print("uncommitted changes is %s" % uncommittedChanges)
     if uncommittedChanges is not None: 
         #There are uncommitted changes
         if not ignoreBzrStatus: #raise error if uncommitted changes on current branch and not set to ignore
             raise RuntimeError("There are uncommitted changes on this branch.  Please commit changes then restart this script.")
         else:   #if running special debugging version, you'll get a msg only and will be allowed to continue
             print('There are uncommitted changes on this branch.  Continue at your own risk')
-
+    sys.exit()
     if options.runplatforms is not None:    #replace defaults with command line options, if they exist
         runplatforms = options.runplatforms
     else:
