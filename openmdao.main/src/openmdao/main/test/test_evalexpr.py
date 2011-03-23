@@ -49,7 +49,7 @@ class ExprEvalTestCase(unittest.TestCase):
     def _do_tests(self, tests, top):
         # each test is a tuple of the form (input, expected output)
         for tst in tests:
-            ex = ExprEvaluator(tst[0], top, lazy=True)
+            ex = ExprEvaluator(tst[0], top)
             ex._parse()
             self.assertEqual(ex.scoped_text, tst[1])
         
@@ -90,7 +90,7 @@ class ExprEvalTestCase(unittest.TestCase):
             ('a.b.cde[1+3**4*1]', "scope.get('a.b.cde',[1+3**4*1])"),
             ('a.b[1][2]', "scope.get('a.b',[1,2])"),
             ('abs(a.b[1][2])', "abs(scope.get('a.b',[1,2]))"),
-            ('a.b[1][x.y]', "scope.get('a.b',[1,scope.parent.get('x.y')])"),  
+            ('a.b[1][x.y]', "scope.get('a.b',[1,scope.get('x.y')])"),  
             ('comp.x=a.b[1]',"scope.set('comp.x',scope.get('a.b',[1]))"),
             ('comp.cont.a1d[-3]', "scope.get('comp.cont.a1d',[-3])"),
         ]
@@ -114,11 +114,11 @@ class ExprEvalTestCase(unittest.TestCase):
         ('a.b()', "scope.get('a.b',[[[]]])"),
         ('a.b(5)', "scope.get('a.b',[[[5]]])"),
         ('a.b(5,9)', "scope.get('a.b',[[[5,9]]])"),
-        ('a.b(5,z.y)', "scope.get('a.b',[[[5,scope.parent.get('z.y')]]])"),
+        ('a.b(5,z.y)', "scope.get('a.b',[[[5,scope.get('z.y')]]])"),
         ('a.b(5, z.y(2,3))', 
-         "scope.get('a.b',[[[5,scope.parent.get('z.y',[[[2,3]]])]]])"),
+         "scope.get('a.b',[[[5,scope.get('z.y',[[[2,3]]])]]])"),
         ('a.b(5, z.y[3])', 
-         "scope.get('a.b',[[[5,scope.parent.get('z.y',[3])]]])"),
+         "scope.get('a.b',[[[5,scope.get('z.y',[3])]]])"),
          ('a.b(1,23,foo=9,*args,**kwargs)', 
           "scope.get('a.b',[[[1,23],{'foo':9},args,kwargs]])"),
          ('a.b(1,23)[1]', "scope.get('a.b',[[[1,23]],1])"),
@@ -127,7 +127,7 @@ class ExprEvalTestCase(unittest.TestCase):
         self._do_tests(tests, self.top)
     
     def test_set_evaluate(self):
-        ex = ExprEvaluator('comp.x', self.top, allow_set=True)
+        ex = ExprEvaluator('comp.x', self.top)
         self.assertEqual(3.14, ex.evaluate())
 
         # test setting the value of a referenced variable
@@ -136,7 +136,7 @@ class ExprEvalTestCase(unittest.TestCase):
         
         self.top.comp.contlist = [A(), A(), A()]
         self.top.comp.contlist[1].a1d = [4]*5
-        ex = ExprEvaluator('comp.contlist[1].a1d[3]', self.top, allow_set=True)
+        ex = ExprEvaluator('comp.contlist[1].a1d[3]', self.top)
         self.assertEqual(ex.evaluate(), 4)
         
         ex.set(123)
@@ -209,23 +209,26 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(False, ExprEvaluator('sin(comp.x)<cos(comp.x)', self.top).evaluate())
         
     def test_multi_object(self):
-        # verify that allow_set will not allow expressions with multiple objects
+        # verify that expressions with multiple objects raise a reasonable error message
+        # when a set is attempted.
         try:
-            ex = ExprEvaluator('comp.x+comp.x', self.top, allow_set=True, lazy=False)
-        except RuntimeError, err:
+            ex = ExprEvaluator('comp.x+comp.x', self.top)
+            ex.set(1)
+        except ValueError, err:
             self.assertEqual(str(err),
-                "Expression 'comp.x+comp.x' is not a single name and therefore can't be used on the LHS of an assignment")
+                "expression 'comp.x+comp.x' can't be set to a value")
         else:
-            raise AssertionError('RuntimeError expected')
+            raise AssertionError('ValueError expected')
     
     def test_bogus(self):        
         # now try some bogus expressions
         try:
-            ex = ExprEvaluator('abcd.efg', self.top, lazy=False)
-        except RuntimeError, err:
-            self.assertEqual(str(err), "expression 'abcd.efg' can't be resolved")
+            ex = ExprEvaluator('abcd.efg', self.top)
+            ex.evaluate()
+        except AttributeError, err:
+            self.assertEqual(str(err), "can't evaluate expression 'abcd.efg': : object has no attribute 'abcd.efg'")
         else:
-            raise AssertionError('RuntimeError expected')
+            raise AssertionError('AttributeError expected')
         
 if __name__ == "__main__":
     unittest.main()

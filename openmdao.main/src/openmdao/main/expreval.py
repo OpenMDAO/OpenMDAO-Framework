@@ -308,15 +308,13 @@ class ExprTransformer(ast.NodeTransformer):
         scope = self.expreval.scope
         if scope:
             parts = name.split('.',1)
+            names = ['scope']
             if scope.contains(parts[0]):
                 if len(parts) == 1: # short name, so no 'get' or 'set' needed
                     return node
-                names = ['scope']
             else:
-                names = ['scope','parent']
-                if not scope.parent or not scope.parent.contains(name.split('.',1)[0]):
-                    if not self.expreval.lazy:
-                        raise RuntimeError("expression '%s' can't be resolved" % str(self.expreval))
+                if scope.parent is not None:
+                    names.append('parent')
         else:
             raise RuntimeError("expression '%s' can't be evaluated because it has no scope" % str(self.expreval))
 
@@ -404,7 +402,7 @@ class ExprTransformer(ast.NodeTransformer):
         if len(node.body) > 1 or not isinstance(node.body[0], (ast.Assign, ast.Expr)):
             raise RuntimeError("Only one assignment statement or expression is allowed")
         return super(ExprTransformer, self).generic_visit(node)
-        
+    
     def visit_Assign(self, node, subs=None):
         if len(node.targets) > 1:
             raise RuntimeError("only one expression is allowed on left hand side of assignment")
@@ -412,39 +410,29 @@ class ExprTransformer(ast.NodeTransformer):
 
 
 class ExprEvaluator(str):
-    """A class that translates an expression string into a new string containing
-    any necessary framework access functions, e.g., set, get. The compiled
-    bytecode is stored within the object so that it doesn't have to be reparsed
-    during later evaluations.  A scoping object is required at construction time,
-    and that object determines the form of the  translated expression based on scope. 
-    Variables that are local to the scoping object do not need to be translated,
-    whereas variables from other objects must  be accessed using the appropriate
-    *set()* or *get()* call.  Array entry access, 'late' attribute access,
-    and function invocation are also translated in a similar way.  For example, 
-    the expression "a+b[2]-comp.y(x)"
-    for a scoping object that contains variables a and b, but not comp,x or y,
-    would translate to 
+    """A class that translates an expression string into a new string
+    containing any necessary framework access functions, e.g., set, get. The
+    compiled bytecode is stored within the object so that it doesn't have to
+    be reparsed during later evaluations. A scoping object is required at
+    construction time or evaluation time, and that object determines the form
+    of the translated expression based on scope. Variables that are local to
+    the scoping object do not need to be translated, whereas variables from
+    other objects must be accessed using the appropriate *set()* or *get()*
+    call. Array entry access, 'late' attribute access, and function invocation
+    are also translated in a similar way. For example, the expression
+    "a+b[2]-comp.y(x)" for a scoping object that contains variables a and b,
+    but not comp,x or y, would translate to
     "a+b[2]-self.parent.get('comp.y',[[[self.parent.get('x')]]])".
-    
-    If *lazy* is False, any objects referenced in the expression must exist
-    at creation time (or any time later that text is set to a different value)
-    or a RuntimeError will be raised.  If *lazy* is True, error reporting will
-    be delayed until the expression is evaluated.
-    
-    If *allow_set* is True, the expression must evaluate to a single 'settable'
-    object or an exception will be raised.
     """
     
-    def __new__(cls, text, scope=None, allow_set=False, lazy=True):
+    def __new__(cls, text, scope=None):
         s = super(ExprEvaluator, cls).__new__(ExprEvaluator, text)
+        s._scope = None
         s.scope = scope
-        s.lazy = lazy
-        s.allow_set = allow_set
+        s._allow_set = True
         s._text = None  # used to detect change in str
         s.var_names = set()
         s._locals_dict = _locals_dict.copy()
-        if lazy is False:
-            s._parse()
         return s
     
     @property
@@ -458,11 +446,23 @@ class ExprEvaluator(str):
         
     @scope.setter
     def scope(self, value):
-        if value is not None:
-            self._scope = weakref.ref(value)
-        else:
-            self._scope = None
+        if value is not self.scope:
+            self._text = None # force a reparse
+            if value is not None:
+                self._scope = weakref.ref(value)
+            else:
+                self._scope = None
         
+    def is_valid_assignee(self):
+        """Returns True if the syntax of our expression is valid to
+        be on the left hand side of an assignment.  No check is 
+        performed to see if the variable(s) in the expression actually
+        exist.
+        """
+        if self._text != self:
+            self._pre_parse()
+        return self._allow_set
+
     def __getstate__(self):
         """Return dict representing this container's state."""
         state = self.__dict__.copy()
@@ -501,10 +501,23 @@ class ExprEvaluator(str):
                 raise KeyError("Can't find '%s' in current scope" % name)
         return True
         
+    def _pre_parse(self):
+        root = ast.parse(self, mode='exec')
+        if isinstance(root.body[0], ast.Expr):
+            topnode = root.body[0].value
+        else:
+            topnode = root.body[0]
+        if not isinstance(topnode, (ast.Attribute, ast.Name, ast.Subscript)):
+            self._allow_set = False
+        else:
+            self._allow_set = True
+        return root
+        
     def _parse(self):
+        self._allow_set = True
         self._text = str(self)
         self.var_names = set()
-        root = ast.parse(self, mode='exec')
+        root = self._pre_parse()
         
         # transform attribute accesses to 'get' calls if necessary
         new_ast = ExprTransformer(self).visit(root)
@@ -521,33 +534,36 @@ class ExprEvaluator(str):
         #self._code = compile(new_ast, '<string>', 'exec')
         self._code = compile(self.scoped_text, '<string>', 'eval')
         
-        if self.allow_set: # set up a compiled assignment statement
-            if not isinstance(new_ast.body[0].value, 
-                              (ast.Attribute, ast.Name, ast.Subscript, ast.Call)):
-                raise RuntimeError("Expression '%s' is not a single name and therefore can't be used on the LHS of an assignment" % self)
-            old_lazy = self.lazy
-            try:
-                self.lazy = True
-                assign_txt = "%s=_local_setter" % self
-                root = ast.parse(assign_txt, mode='exec')
-                # transform into a 'set' call to set the specified variable
-                new_ast = ExprTransformer(self).visit(root)
-                # FIXME: we really want to just compile the transformed AST, but for
-                #        now that still has problems...
-                #ast.fix_missing_locations(new_ast)
-                #self._assignment_code = compile(new_ast,'<string>','exec')
-                ep = ExprPrinter()
-                ep.visit(new_ast)
-                self._assignment_code = compile(ep.get_text(),'<string>','eval')
-            finally:
-                self.lazy = old_lazy
+        if self._allow_set: # set up a compiled assignment statement
+            assign_txt = "%s=_local_setter" % self
+            root = ast.parse(assign_txt, mode='exec')
+            # transform into a 'set' call to set the specified variable
+            new_ast = ExprTransformer(self).visit(root)
+            # FIXME: we really want to just compile the transformed AST, but for
+            #        now that still has problems...
+            #ast.fix_missing_locations(new_ast)
+            #self._assignment_code = compile(new_ast,'<string>','exec')
+            ep = ExprPrinter()
+            ep.visit(new_ast)
+            self._assignment_code = compile(ep.get_text(),'<string>','eval')
                 
+    def _get_updated_scope(self, scope):
+        oldscope = self.scope
+        if scope is None:
+            scope = oldscope
+        elif scope is not oldscope:
+            self._text = None  # force a re-parse
+            self.scope = scope
+        if scope is None:
+            raise RuntimeError(
+                'ExprEvaluator cannot evaluate expression without scope.')
+        return scope
 
-    def evaluate(self):
+    def evaluate(self, scope=None):
         """Return the value of the scoped string, evaluated 
         using the eval() function.
         """
-        scope = self.scope
+        scope = self._get_updated_scope(scope)
         try:
             if self._text != self:  # text has changed
                 self._parse()
@@ -561,19 +577,16 @@ class ExprEvaluator(str):
             raise type(err)("can't evaluate expression "+
                             "'%s': %s" %(self,str(err)))
 
-    def set(self, val):
+    def set(self, val, scope=None):
         """Set the value of the referenced object to the specified value."""
-        scope = self.scope
-        if scope is None:
-            raise RuntimeError(
-                'ExprEvaluator cannot evaluate expression without scope.')
+        scope = self._get_updated_scope(scope)
         
-        if self.allow_set:
+        if self.is_valid_assignee():
             # self.assignment_code is a compiled version of an assignment statement
             # of the form  'somevar = _local_setter', so we set _local_setter here
             # and the exec call will pull it out of locals()
             _local_setter = val 
-            if self._text != self:  # text has changed
+            if self._text != self:  # text or scope has changed
                 self._parse()
             self._locals_dict.update(locals())
             if scope:
@@ -581,8 +594,8 @@ class ExprEvaluator(str):
             else:
                 dct = {}
             exec(self._assignment_code, dct, self._locals_dict)
-        else: # self.allow_set is False
-            raise ValueError("trying to set input expression '%s'" % str(self))
+        else: # self._allow_set is False
+            raise ValueError("expression '%s' can't be set to a value" % str(self))
         
     def get_referenced_varpaths(self):
         """Return a set of source or dest Variable pathnames relative to
@@ -610,8 +623,6 @@ class ExprEvaluator(str):
         """Return True if all variables referenced by our expression
         are valid.
         """
-        if self.allow_set:
-            return True   # since we're setting this expression, we don't care if it's valid
         scope = self.scope
         if scope and scope.parent:
             if self._text != self:  # text has changed
