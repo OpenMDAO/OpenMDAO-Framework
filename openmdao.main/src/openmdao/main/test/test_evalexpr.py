@@ -7,12 +7,21 @@ from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.api import Assembly, Container, Component, set_as_top
 from openmdao.lib.datatypes.api import Float, Array, List, Instance, Dict
 
-class A(Container):
+class A(Component):
     f = Float(iotype='in')
     a1d = Array(numpy.array([1.0, 1.0, 2.0, 3.0]), iotype='in')
     a2d = Array(numpy.array([[1.0, 1.0], [2.0, 3.0]]), iotype='in')
     b1d = Array(numpy.array([1.0, 1.0, 2.0, 3.0]), iotype='out')
     b2d = Array(numpy.array([[1.0, 1.0], [2.0, 3.0]]), iotype='out')
+    
+    def some_funct(self, a, b, op='add'):
+        if op == 'add':
+            return a+b
+        elif op == 'mult':
+            return a*b
+        elif op == 'sub':
+            return a-b
+        raise RuntimeError("bad input to some_funct")
     
 class Comp(Component):
     x = Float(iotype='in')
@@ -21,6 +30,12 @@ class Comp(Component):
     outdct = Dict(iotype='out')
     cont = Instance(A, iotype='in')
     contlist = List(Instance(A), iotype='in')
+    
+    def get_cont(self, i):
+        return self.contlist[i]
+    
+    def get_attr(self, name):
+        return getattr(self, name)
     
 class ExprEvalTestCase(unittest.TestCase):
     def setUp(self):
@@ -126,6 +141,21 @@ class ExprEvalTestCase(unittest.TestCase):
         
         ex.set(123)
         self.assertEqual(ex.evaluate(), 123)
+        
+        ex = ExprEvaluator("comp.contlist[1].some_funct(3,5,'sub')", self.top)
+        self.assertEqual(ex.evaluate(), -2)
+        
+        ex = ExprEvaluator("comp.get_cont(1).some_funct(3,5,'add')", self.top)
+        self.assertEqual(ex.evaluate(), 8)
+        
+        ex = ExprEvaluator("comp.get_cont(1).a1d[2]", self.top)
+        self.assertEqual(ex.evaluate(), 4)
+        
+        ex = ExprEvaluator("comp.get_cont(1).a1d", self.top)
+        self.assertTrue(all(ex.evaluate() == numpy.array([4,4,4,123,4])))
+        
+        ex = ExprEvaluator("comp.get_attr('get_cont')(1).a1d", self.top)
+        self.assertTrue(all(ex.evaluate() == numpy.array([4,4,4,123,4])))
         
 
     def test_boolean(self):

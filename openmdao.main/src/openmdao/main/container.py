@@ -765,25 +765,6 @@ class Container(HasTraits):
                 return hasattr(obj, restofpath)
         return hasattr(self, path)
     
-    #def invoke(self, path, *args, **kwargs):
-        #"""Call the callable specified by **path**, which may be a simple
-        #name or a dotted path, passing the given arguments to it, and 
-        #return the result.
-        #"""
-        #if path:
-            #childname, _, restofpath = path.partition('.')
-            #if restofpath:
-                #obj = getattr(self, childname, Missing)
-                #if obj is Missing:
-                    #self.raise_exception("object has no attribute '%s'" % childname, 
-                                         #AttributeError)
-                #return obj.invoke(restofpath, *args, **kwargs)
-            
-            #return getattr(self, path)(*args, **kwargs)
-        #else:
-            #self.raise_exception("invoke: no path given",
-                                 #RuntimeError)
-    
     def _get_metadata_failed(self, traitpath, metaname):
         self.raise_exception("Couldn't find metadata for trait %s" % traitpath,
                              AttributeError)
@@ -832,13 +813,15 @@ class Container(HasTraits):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
         else:
+            obj = getattr(self, path, Missing)
+            if obj is Missing:
+                return self._get_failed(path, index)
             if index is None:
-                obj = getattr(self, path, Missing)
-                if obj is Missing:
-                    return self._get_failed(path, index)
                 return obj
             else:
-                return self._index_get(path, index)
+                for idx in index:
+                    obj = self._process_index_entry(obj, idx)
+                return obj
      
     def _set_failed(self, path, value, index=None, src=None, force=False):
         """If set() cannot locate the specified variable, raise an exception.
@@ -899,50 +882,30 @@ class Container(HasTraits):
             else:
                 return self._set_failed(path, value, index, src, force)
 
-    def _index_set(self, name, value, index):
-        obj = getattr(self, name)
-        length = len(index)
-        for idx in index[:-1]:
-            if isinstance(idx, list):
-                if len(idx) == 1 and isinstance(idx[0], basestring):
-                    obj = getattr(obj, idx[0])
-                else:
-                    raise RuntimeError("bad index format in set(): index=%s" % index)
-            else:
-                obj = obj[idx]
-        last_i = index[length-1]
-        if isinstance(last_i, list):
-            old = getattr(obj, last_i[0])
-            setattr(obj, last_i[0], value)
-        else:
-            old = obj[last_i]
-            obj[last_i] = value
-                
-        # setting of individual Array entries or sub attributes doesn't seem to trigger
-        # _input_trait_modified, so do it manually
-        # FIXME: if people register other callbacks on a trait, they won't
-        #        be called if we do it this way
-        if old != value:
-            self._call_execute = True
-            self._input_updated(name)
-            
-    def _index_get(self, name, index):
-        """Resolve the object given by the index, which is really a list with
-        the following possible entries:
-        
+    def _process_index_entry(self, obj, idx):
+        """Return a new object based on a starting object and some operation
+        indicated by idx that can be either an index into a container, an list 
+        of attribute accesses, or a fuction call.  idx can have the following
+        possible formats:
             - a non-list value: this is interpreted as an index into a container.
               It can be any hashable object.
-            - a list: if this contains a single string, it's interpreted as an
-              attribute access.
+            - a list: 
+                If the list has a single string entry, it is interpreted
+                as an attribute access, e.g., ['foo'] means  obj.foo.
+                If the list is empty or contains a sublist as the first entry,
+                it's interpreted as a function call where the list has the form:
+                  [[arg1,...,argn], [kwarg1,...kwargn], starargs_name or None, kwargs_name or None]
+                  All empty/None entries in the list can be left out if no entries after
+                  them are non-empty.
+                  
         """
-        obj = getattr(self, name, Missing)
-        if obj is Missing:
-            return self._get_failed(name, index)
-        for idx in index:
-            if isinstance(idx, list):
-                if len(idx) == 1 and isinstance(idx[0], basestring): # late attribute access
-                    obj = getattr(obj, idx[0])
-                elif len(idx)>0 and isinstance(idx[0], list): # function call
+        if isinstance(idx, list): # must be an attribute access or function call
+            if len(idx)==1 and isinstance(idx[0], basestring): # 'late' attribute access
+                obj = getattr(obj, idx[0])
+            elif isinstance(idx[0], list): # function call
+                if len(idx) == 0:
+                    obj = obj.__call__()
+                else:
                     args = idx[0][:]
                     if len(idx) > 1 and len(idx[1])>0:
                         kwargs = idx[1].copy()
@@ -953,12 +916,34 @@ class Container(HasTraits):
                     if len(idx) > 2 and len(idx[2])>0:
                         args.extend(idx[2])
                     obj = obj.__call__(*args, **kwargs)
-                else:
-                    raise RuntimeError("bad index format in get(): index=%s" % index)
             else:
-                obj = obj[idx]
+                raise RuntimeError("bad index format: index entry=%s" % idx)
+        else:
+            obj = obj[idx]
         return obj
-    
+        
+    def _index_set(self, name, value, index):
+        obj = getattr(self, name)
+        for idx in index[:-1]:
+            obj = self._process_index_entry(obj, idx)
+        idx = index[-1]
+        old = self._process_index_entry(obj, idx)
+        if isinstance(idx, list):
+            if len(idx)==1 and isinstance(idx[0], basestring): # 'late' attribute access
+                setattr(obj, idx[0], value)
+            else:
+                raise RuntimeError("bad index format in set(): index entry=%s" % idx)
+        else:
+            obj[idx] = value
+                
+        # setting of individual Array entries or sub attributes doesn't seem to trigger
+        # _input_trait_modified, so do it manually
+        # FIXME: if people register other callbacks on a trait, they won't
+        #        be called if we do it this way
+        if old != value:
+            self._call_execute = True
+            self._input_updated(name)
+            
     def save_to_egg(self, name, version, py_dir=None, src_dir=None,
                     src_files=None, child_objs=None, dst_dir=None,
                     observer=None, need_requirements=True):

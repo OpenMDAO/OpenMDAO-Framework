@@ -278,6 +278,8 @@ class ExprTransformer(ast.NodeTransformer):
         # contains Subscripts or Calls, return None.
         if isinstance(node, ast.Name):
             return node.id
+        elif not isinstance(node, ast.Attribute):
+            return None
         val = node.value
         parts = [node.attr]
         while True:
@@ -360,7 +362,7 @@ class ExprTransformer(ast.NodeTransformer):
         
     def visit_Call(self, node, subs=None):
         name = self._get_long_name(node.func)
-        if self.expreval._is_local(name):
+        if name is not None and self.expreval._is_local(name):
             return self.generic_visit(node)
         
         if subs is None:
@@ -417,20 +419,20 @@ class ExprEvaluator(str):
     and that object determines the form of the  translated expression based on scope. 
     Variables that are local to the scoping object do not need to be translated,
     whereas variables from other objects must  be accessed using the appropriate
-    *set()* or *get()* call.  Array entry access and function invocation are also
-    translated in a similar way.  For example, the expression "a+b[2]-comp.y(x)"
+    *set()* or *get()* call.  Array entry access, 'late' attribute access,
+    and function invocation are also translated in a similar way.  For example, 
+    the expression "a+b[2]-comp.y(x)"
     for a scoping object that contains variables a and b, but not comp,x or y,
     would translate to 
-    "a+b[2]-self.parent.invoke('comp.y',self.parent.get('x'))".
+    "a+b[2]-self.parent.get('comp.y',[[[self.parent.get('x')]]])".
     
     If *lazy* is False, any objects referenced in the expression must exist
     at creation time (or any time later that text is set to a different value)
     or a RuntimeError will be raised.  If *lazy* is True, error reporting will
     be delayed until the expression is evaluated.
     
-    If *allow_set* is True, the expression can only be the name of one object, with
-    optional array indexing, but general expressions are not allowed because the
-    expression is intended to be on the LHS of an assignment statement.
+    If *allow_set* is True, the expression must evaluate to a single 'settable'
+    object or an exception will be raised.
     """
     
     def __new__(cls, text, scope=None, allow_set=False, lazy=True):
@@ -556,8 +558,8 @@ class ExprEvaluator(str):
                 dct = {}
             return eval(self._code, dct, self._locals_dict)
         except Exception, err:
-            raise type(err)("ExprEvaluator failed evaluating expression "+
-                            "'%s'. Caught message is: %s" %(self,str(err)))
+            raise type(err)("can't evaluate expression "+
+                            "'%s': %s" %(self,str(err)))
 
     def set(self, val):
         """Set the value of the referenced object to the specified value."""
