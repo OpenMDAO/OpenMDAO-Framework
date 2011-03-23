@@ -50,7 +50,7 @@ class HasParameters(object):
                                          AttributeError)
         
         parameter = Parameter()
-        parameter.expreval = ExprEvaluator(name, self._parent, single_name=True)
+        parameter.expreval = ExprEvaluator(name, self._parent, allow_set=True)
         
         try:
             metadata = self._parent.parent.get_metadata(name.split('[')[0])

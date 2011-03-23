@@ -428,16 +428,16 @@ class ExprEvaluator(str):
     or a RuntimeError will be raised.  If *lazy* is True, error reporting will
     be delayed until the expression is evaluated.
     
-    If *single_name* is True, the expression can only be the name of one object, with
+    If *allow_set* is True, the expression can only be the name of one object, with
     optional array indexing, but general expressions are not allowed because the
     expression is intended to be on the LHS of an assignment statement.
     """
     
-    def __new__(cls, text, scope=None, single_name=False, lazy=True):
+    def __new__(cls, text, scope=None, allow_set=False, lazy=True):
         s = super(ExprEvaluator, cls).__new__(ExprEvaluator, text)
         s.scope = scope
         s.lazy = lazy
-        s.single_name = single_name
+        s.allow_set = allow_set
         s._text = None  # used to detect change in str
         s.var_names = set()
         s._locals_dict = _locals_dict.copy()
@@ -519,7 +519,7 @@ class ExprEvaluator(str):
         #self._code = compile(new_ast, '<string>', 'exec')
         self._code = compile(self.scoped_text, '<string>', 'eval')
         
-        if self.single_name: # set up a compiled assignment statement
+        if self.allow_set: # set up a compiled assignment statement
             if not isinstance(new_ast.body[0].value, 
                               (ast.Attribute, ast.Name, ast.Subscript, ast.Call)):
                 raise RuntimeError("Expression '%s' is not a single name and therefore can't be used on the LHS of an assignment" % self)
@@ -566,7 +566,7 @@ class ExprEvaluator(str):
             raise RuntimeError(
                 'ExprEvaluator cannot evaluate expression without scope.')
         
-        if self.single_name:
+        if self.allow_set:
             # self.assignment_code is a compiled version of an assignment statement
             # of the form  'somevar = _local_setter', so we set _local_setter here
             # and the exec call will pull it out of locals()
@@ -579,7 +579,7 @@ class ExprEvaluator(str):
             else:
                 dct = {}
             exec(self._assignment_code, dct, self._locals_dict)
-        else: # self.single_name is False
+        else: # self.allow_set is False
             raise ValueError("trying to set input expression '%s'" % str(self))
         
     def get_referenced_varpaths(self):
@@ -608,7 +608,7 @@ class ExprEvaluator(str):
         """Return True if all variables referenced by our expression
         are valid.
         """
-        if self.single_name:
+        if self.allow_set:
             return True   # since we're setting this expression, we don't care if it's valid
         scope = self.scope
         if scope and scope.parent:

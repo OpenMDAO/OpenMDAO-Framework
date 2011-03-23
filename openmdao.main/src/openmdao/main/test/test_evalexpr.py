@@ -32,6 +32,7 @@ class ExprEvalTestCase(unittest.TestCase):
         self.top.comp.y = 42.
 
     def _do_tests(self, tests, top):
+        # each test is a tuple of the form (input, expected output)
         for tst in tests:
             ex = ExprEvaluator(tst[0], top, lazy=True)
             ex._parse()
@@ -66,15 +67,21 @@ class ExprEvalTestCase(unittest.TestCase):
             ('-a.a1d', "-scope.get('a.a1d')"),
             ('+a.a1d', "+scope.get('a.a1d')"),
             ('a.a1d[0]', "scope.get('a.a1d',[0])"),
-            ('comp.cont.a1d[-3]', "scope.get('comp.cont.a1d',[-3])"),
             ('a.a2d[-a.a1d[2]]', "scope.get('a.a2d',[-scope.get('a.a1d',[2])])"),
             ('a.a2d[-a.a1d[2]]=a.f', 
              "scope.set('a.a2d',scope.get('a.f'),[-scope.get('a.a1d',[2])])"),
+            ('a.f/a.a1d[int(a.f)]', "scope.get('a.f')/scope.get('a.a1d',[int(scope.get('a.f'))])"),
+            ('a.f = a.a1d[int(a.f)]', "scope.set('a.f',scope.get('a.a1d',[int(scope.get('a.f'))]))"),
+            ('a.b.cde[1+3**4*1]', "scope.get('a.b.cde',[1+3**4*1])"),
+            ('a.b[1][2]', "scope.get('a.b',[1,2])"),
+            ('abs(a.b[1][2])', "abs(scope.get('a.b',[1,2]))"),
+            ('a.b[1][x.y]', "scope.get('a.b',[1,scope.parent.get('x.y')])"),  
+            ('comp.x=a.b[1]',"scope.set('comp.x',scope.get('a.b',[1]))"),
+            ('comp.cont.a1d[-3]', "scope.get('comp.cont.a1d',[-3])"),
         ]
         self._do_tests(tests, self.top)
         
-    def test_set1(self):
-        # each test is a tuple of the form (input, expected output)
+    def test_mixed_scope(self):
         tests = [
             ('comp.x < a1d', "scope.parent.get('comp.x')<a1d"),
             ('math.sin(f)+math.cos(f+math.pi)', 'math.sin(f)+math.cos(f+math.pi)'),
@@ -89,11 +96,6 @@ class ExprEvalTestCase(unittest.TestCase):
 
     def test_set2(self):
         tests = [
-        ('a.b.cde[1+3**4*1]', "scope.get('a.b.cde',[1+3**4*1])"),
-        ('a.b[1][2]', "scope.get('a.b',[1,2])"),
-        ('abs(a.b[1][2])', "abs(scope.get('a.b',[1,2]))"),
-        ('a.b[1][x.y]', "scope.get('a.b',[1,scope.parent.get('x.y')])"),  
-        ('comp.x=a.b[1]',"scope.set('comp.x',scope.get('a.b',[1]))"),
         ('a.b()', "scope.get('a.b',[[[]]])"),
         ('a.b(5)', "scope.get('a.b',[[[5]]])"),
         ('a.b(5,9)', "scope.get('a.b',[[[5,9]]])"),
@@ -110,7 +112,7 @@ class ExprEvalTestCase(unittest.TestCase):
         self._do_tests(tests, self.top)
     
     def test_set_evaluate(self):
-        ex = ExprEvaluator('comp.x', self.top, single_name=True)
+        ex = ExprEvaluator('comp.x', self.top, allow_set=True)
         self.assertEqual(3.14, ex.evaluate())
 
         # test setting the value of a referenced variable
@@ -119,7 +121,7 @@ class ExprEvalTestCase(unittest.TestCase):
         
         self.top.comp.contlist = [A(), A(), A()]
         self.top.comp.contlist[1].a1d = [4]*5
-        ex = ExprEvaluator('comp.contlist[1].a1d[3]', self.top, single_name=True)
+        ex = ExprEvaluator('comp.contlist[1].a1d[3]', self.top, allow_set=True)
         self.assertEqual(ex.evaluate(), 4)
         
         ex.set(123)
@@ -177,9 +179,9 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(False, ExprEvaluator('sin(comp.x)<cos(comp.x)', self.top).evaluate())
         
     def test_multi_object(self):
-        # verify that single_name will not allow expressions with multiple objects
+        # verify that allow_set will not allow expressions with multiple objects
         try:
-            ex = ExprEvaluator('comp.x+comp.x', self.top, single_name=True, lazy=False)
+            ex = ExprEvaluator('comp.x+comp.x', self.top, allow_set=True, lazy=False)
         except RuntimeError, err:
             self.assertEqual(str(err),
                 "Expression 'comp.x+comp.x' is not a single name and therefore can't be used on the LHS of an assignment")
