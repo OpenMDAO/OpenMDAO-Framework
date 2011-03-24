@@ -84,7 +84,7 @@ def _pred_cmp(op1, op2):
     return _op_preds[op1.__class__] - _op_preds[op2.__class__]
 
 class ExprPrinter(ast.NodeVisitor):
-    
+    """A NodeVisitor that gets the text of the expression defined by the AST."""
     def __init__(self):
         super(ExprPrinter, self).__init__()
         self.txtlist = []
@@ -411,7 +411,7 @@ class ExprTransformer(ast.NodeTransformer):
         return ExprTransformer(self.expreval, rhs=self.visit(node.value)).visit(node.targets[0])
 
 
-class ExprEvaluator(str):
+class ExprEvaluator(object):
     """A class that translates an expression string into a new string
     containing any necessary framework access functions, e.g., set, get. The
     compiled bytecode is stored within the object so that it doesn't have to
@@ -427,22 +427,29 @@ class ExprEvaluator(str):
     "a+b[2]-self.parent.get('comp.y',[[[self.parent.get('x')]]])".
     """
     
-    def __new__(cls, text, scope=None):
-        s = super(ExprEvaluator, cls).__new__(ExprEvaluator, text)
-        s._scope = None
-        s.scope = scope
-        s._allow_set = True
-        s._text = None  # used to detect change in str
-        s.var_names = set()
-        s._locals_dict = _locals_dict.copy()
-        return s
+    def __init__(self, text, scope=None):
+        self._scope = None
+        self.scope = scope
+        self._allow_set = False
+        self.text = text
+        self.var_names = set()
+        self._locals_dict = _locals_dict.copy()
     
+    @property
+    def text(self):
+        return self._text
+    
+    @text.setter
+    def text(self, value):
+        self._parse_needed = True
+        self._text = value
+
     @property
     def scope(self):
         if self._scope:
             scope = self._scope()
             if scope is None:
-                raise RuntimeError('ExprEvaluator scoping object does not exist.')
+                raise RuntimeError('ExprEvaluator scoping object no longer exists.')
             return scope
         return None
         
@@ -461,7 +468,7 @@ class ExprEvaluator(str):
         performed to see if the variable(s) in the expression actually
         exist.
         """
-        if self._text != self:
+        if self._parse_needed:
             self._pre_parse()
         return self._allow_set
 
@@ -481,9 +488,8 @@ class ExprEvaluator(str):
         self.__dict__.update(state)
         if self._scope is not None:
             self._scope = weakref.ref(self._scope)
-        self._text = None  # force reparsing of expression
+        self._parse_needed = True  # force a reparse
         self._locals_dict = _locals_dict.copy()
-
 
     def _is_local(self, name):
         """Return True if the given (dotted) name refers to something in our
@@ -504,7 +510,7 @@ class ExprEvaluator(str):
         return True
         
     def _pre_parse(self):
-        root = ast.parse(self, mode='exec')
+        root = ast.parse(self.text, mode='exec')
         if isinstance(root.body[0], ast.Expr):
             topnode = root.body[0].value
         else:
@@ -517,7 +523,6 @@ class ExprEvaluator(str):
         
     def _parse(self):
         self._allow_set = True
-        self._text = str(self)
         self.var_names = set()
         root = self._pre_parse()
         
@@ -537,7 +542,7 @@ class ExprEvaluator(str):
         self._code = compile(self.scoped_text, '<string>', 'eval')
         
         if self._allow_set: # set up a compiled assignment statement
-            assign_txt = "%s=_local_setter" % self
+            assign_txt = "%s=_local_setter" % self.text
             root = ast.parse(assign_txt, mode='exec')
             # transform into a 'set' call to set the specified variable
             new_ast = ExprTransformer(self).visit(root)
@@ -548,13 +553,15 @@ class ExprEvaluator(str):
             ep = ExprPrinter()
             ep.visit(new_ast)
             self._assignment_code = compile(ep.get_text(),'<string>','eval')
+            
+        self._parse_needed = False
                 
     def _get_updated_scope(self, scope):
         oldscope = self.scope
         if scope is None:
             scope = oldscope
         elif scope is not oldscope:
-            self._text = None  # force a re-parse
+            self._parse_needed = True
             self.scope = scope
         if scope is None:
             raise RuntimeError(
@@ -567,7 +574,7 @@ class ExprEvaluator(str):
         """
         scope = self._get_updated_scope(scope)
         try:
-            if self._text != self:  # text has changed
+            if self._parse_needed:
                 self._parse()
             self._locals_dict['scope'] = scope
             if scope:
@@ -577,7 +584,7 @@ class ExprEvaluator(str):
             return eval(self._code, dct, self._locals_dict)
         except Exception, err:
             raise type(err)("can't evaluate expression "+
-                            "'%s': %s" %(self,str(err)))
+                            "'%s': %s" %(self.text,str(err)))
 
     def set(self, val, scope=None):
         """Set the value of the referenced object to the specified value."""
@@ -586,9 +593,9 @@ class ExprEvaluator(str):
         if self.is_valid_assignee():
             # self.assignment_code is a compiled version of an assignment statement
             # of the form  'somevar = _local_setter', so we set _local_setter here
-            # and the exec call will pull it out of locals()
+            # and the exec call will pull it out of the locals dict
             _local_setter = val 
-            if self._text != self:  # text or scope has changed
+            if self._parse_needed:
                 self._parse()
             self._locals_dict.update(locals())
             if scope:
@@ -597,14 +604,14 @@ class ExprEvaluator(str):
                 dct = {}
             exec(self._assignment_code, dct, self._locals_dict)
         else: # self._allow_set is False
-            raise ValueError("expression '%s' can't be set to a value" % str(self))
+            raise ValueError("expression '%s' can't be set to a value" % self.text)
         
     def get_referenced_varpaths(self):
         """Return a set of source or dest Variable pathnames relative to
         *self.parent* and based on the names of Variables referenced in our 
         reference string. 
         """
-        if self._text != self:  # text has changed
+        if self._parse_needed:
             self._parse()
         return self.var_names
 
@@ -612,7 +619,7 @@ class ExprEvaluator(str):
         """Return a set of source or dest Component names based on the 
         pathnames of Variables referenced in our reference string. 
         """
-        if self._text != self:  # text has changed
+        if self._parse_needed:
             self._parse()
         names = set()
         for x in self.var_names:
@@ -627,7 +634,7 @@ class ExprEvaluator(str):
         """
         scope = self.scope
         if scope and scope.parent:
-            if self._text != self:  # text has changed
+            if self._parse_needed:
                 self._parse()
             if not all(scope.parent.get_valid(self.var_names)):
                 return False
@@ -639,7 +646,7 @@ class ExprEvaluator(str):
         """
         scope = self.scope
         if scope and scope.parent:
-            if self._text != self:  # text has changed
+            if self._parse_needed:
                 self._parse()
             if scope.parent.check_resolve(self.var_names):
                 return True
