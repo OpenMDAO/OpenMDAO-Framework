@@ -42,6 +42,7 @@ from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, obj_has_interface
+from openmdao.main.expreval import INDEX,ATTR,CALL,SLICE
 
 _copydict = {
     'deep': copy.deepcopy,
@@ -49,6 +50,7 @@ _copydict = {
     }
 
 _iodict = { 'out': 'output', 'in': 'input' }
+
 
 def set_as_top(cont):
     """Specifies that the given Container is the top of a 
@@ -884,43 +886,53 @@ class Container(HasTraits):
 
     def _process_index_entry(self, obj, idx):
         """Return a new object based on a starting object and some operation
-        indicated by idx that can be either an index into a container, an list 
-        of attribute accesses, or a fuction call.  idx can have the following
-        possible formats:
-            - a non-list value: this is interpreted as an index into a container.
-              It can be any hashable object.
-            - a list: 
-                If the list has a single string entry, it is interpreted
-                as an attribute access, e.g., ['foo'] means  obj.foo.
-                If the list is empty or contains a sublist as the first entry,
-                it's interpreted as a function call where the list has the form:
-                  [[arg1,...,argn], [kwarg1,...kwargn], starargs_name or None, kwargs_name or None]
-                  All empty/None entries in the list can be left out if no entries after
-                  them are non-empty.
-                  
+        indicated by idx that can be either an index into a container, an 
+        attribute access, or a fuction call.  idx can be non-tuple hashable
+        object, which will be interpreted as an index to a container, or it can
+        be a tuple of the form (operation_id, stuff)
+            
+            where operation_id is as follows (the named constants are defined in expreval.py):
+              INDEX = 0
+              ATTR = 1
+              CALL = 2
+              SLICE = 3
+              
+        On the off chance that you want to use a tuple as a key into a dict, you'll have to
+        nest your key tuple inside of an INDEX tuple to avoid ambiguity, e.g., (INDEX, my_tuple)
+              
+        The forms of the various tuples are:
+              
+              INDEX:   (0, idx)  where idx is some hashable value
+              ATTR:    (1, name) where name is the attribute name
+              CALL:    (2, args, keywords) where args is a list and keywords is a dict.
+                                           keywords can be left out if empty.  args
+                                           can be left out if empty as long as keywords
+                                           are also empty, for example, (2,) and 
+                                           (2,[],{'foo':1}) are valid
+                                           but (2,{'foo':1}) is not.
+              SLICE:   (3, lower, upper, step) All members must be present and should
+                                               have a value of None if not set.
         """
-        if isinstance(idx, list): # must be an attribute access or function call
-            if len(idx)==1 and isinstance(idx[0], basestring): # 'late' attribute access
-                obj = getattr(obj, idx[0])
-            elif isinstance(idx[0], list): # function call
-                if len(idx) == 0:
-                    obj = obj.__call__()
-                else:
-                    args = idx[0][:]
-                    if len(idx) > 1 and len(idx[1])>0:
-                        kwargs = idx[1].copy()
-                        if len(idx) > 3 and idx[3] is not None:
-                            kwargs.update(idx[3])
-                    else:
-                        kwargs = {}
-                    if len(idx) > 2 and len(idx[2])>0:
-                        args.extend(idx[2])
-                    obj = obj.__call__(*args, **kwargs)
+        if not isinstance(idx, tuple):
+            return obj[idx]
+        if idx[0] == INDEX:
+            return obj[idx[1]]
+        elif idx[0] == ATTR:
+            return getattr(obj, idx[1])
+        elif idx[0] == CALL:
+            if len(idx) == 1:
+                return obj.__call__()
             else:
-                raise RuntimeError("bad index format: index entry=%s" % idx)
-        else:
-            obj = obj[idx]
-        return obj
+                args = idx[1]
+                if len(idx) == 3:
+                    kwargs = idx[2]
+                else:
+                    kwargs = {}
+                return obj.__call__(*args, **kwargs)
+        elif idx[0] == SLICE:
+            return obj.__getitem__(slice(idx[1],idx[2],idx[3]))
+        
+        self.raise_exception("invalid index: %s" % idx, ValueError)
         
     def _index_set(self, name, value, index):
         obj = getattr(self, name)
@@ -928,11 +940,13 @@ class Container(HasTraits):
             obj = self._process_index_entry(obj, idx)
         idx = index[-1]
         old = self._process_index_entry(obj, idx)
-        if isinstance(idx, list):
-            if len(idx)==1 and isinstance(idx[0], basestring): # 'late' attribute access
-                setattr(obj, idx[0], value)
-            else:
-                raise RuntimeError("bad index format in set(): index entry=%s" % idx)
+        if isinstance(idx, tuple):
+            if idx[0] == INDEX:
+                obj[idx[1]] = value
+            elif idx[0] == ATTR:
+                setattr(obj, idx[1], value)
+            elif idx[0] == SLICE:
+                obj.__setitem__(slice(idx[1],idx[2],idx[3]), value)
         else:
             obj[idx] = value
                 

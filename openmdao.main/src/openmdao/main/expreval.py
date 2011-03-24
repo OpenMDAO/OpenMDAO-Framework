@@ -21,6 +21,13 @@ for name in dir(math):
 _Missing = object()
 
 
+# some constants used in the get/set downstream protocol
+INDEX = 0
+ATTR = 1
+CALL = 2
+SLICE = 3
+
+
 def _get_attr_node(names):
     """Builds an Attribute node, or a Name node if names has just one entry."""
     node = ast.Name(id=names[0], ctx=ast.Load())
@@ -172,9 +179,11 @@ class ExprPrinter(ast.NodeVisitor):
         self.write(']')
 
     def visit_Slice(self, node):
-        self.visit(node.lower)
+        if node.lower is not None:
+            self.visit(node.lower)
         self.write(':')
-        self.visit(node.upper)
+        if node.upper is not None:
+            self.visit(node.upper)
         self.write(':')
         if node.step is not None:
             self.visit(node.step)
@@ -195,12 +204,13 @@ class ExprPrinter(ast.NodeVisitor):
         self.write('}')
         
     def visit_Tuple(self, node): 
-        self.write(first)
+        self.write('(')
         length = len(node.elts)
         for i,e in enumerate(node.elts):
+            if i>0: self.write(',')
             self.visit(e)
-            if i>0 or length==1: self.write(',')
-        self.write(last)
+        if length==1: self.write(',')
+        self.write(')')
         
     def visit_USub(self, node): self.write('-')
     def visit_UAdd(self, node): self.write('+')
@@ -242,6 +252,7 @@ class ExprPrinter(ast.NodeVisitor):
     visit_UnaryOp   = _ignore
     visit_Subscript = _ignore
     visit_Load      = _ignore
+    visit_Store     = _ignore
     
     def generic_visit(self, node):
         # We want to fail if we see any nodes we don't know about rather than
@@ -255,7 +266,7 @@ class ExprTransformer(ast.NodeTransformer):
     into the appropriate set() calls.  Also translates function calls and indirect
     attribute accesses into a form that can be passed to a downstream object and
     executed there.  For example, abc.d[xyz](1, pdq-10).value would translate to, e.g.,
-    scope.get('abc.d', [xyz, [[1,pdq-10]], ['value']]).
+    scope.get('abc.d', [(0,xyz), (0,[1,pdq-10]), (1,'value')]).
     """
     def __init__(self, expreval, rhs=None):
         self.expreval = expreval
@@ -345,15 +356,29 @@ class ExprTransformer(ast.NodeTransformer):
         if long_name is None: # this Attribute contains more than just names/attrs
             if subs is None:
                 subs = []
-            subs[0:0] = [ast.List(elts=[ast.Str(s=node.attr)], ctx=ast.Load())]
+            subs[0:0] = [ast.Tuple(elts=[ast.Num(n=ATTR),ast.Str(s=node.attr)], ctx=ast.Load())]
             return self.visit(node.value, subs)
         return self._name_to_node(node, long_name, subs)
 
+    def _get_slice_vals(self, node):
+        lower = ast.Name(id='None',ctx=Load()) if node.lower is None else self.visit(node.lower)
+        upper = ast.Name(id='None',ctx=Load()) if node.upper is None else self.visit(node.upper)
+        step = ast.Name(id='None',ctx=Load()) if node.step is None else self.visit(node.step)
+        return ast.Tuple(elts=[lower, upper, step], ctx=Load())
+        
     def visit_Subscript(self, node, subs=None):
         self._stack.append(node)
         if subs is None:
             subs = []
-        subs[0:0] = [self.visit(node.slice.value)]
+        if isinstance(node.slice, ast.Index):
+            subs[0:0] = [ast.Tuple(elts=[ast.Num(n=INDEX),self.visit(node.slice.value)], 
+                                   ctx=ast.Load())]
+        elif isinstance(node.slice, ast.Slice):
+            subs[0:0] = [ast.Tuple(elts=[ast.Num(n=SLICE),self._get_slice_vals(node.slice)], 
+                                   ctx=ast.Load())]
+        else:
+            raise ValueError("unknown Subscript child node: %s" % node.slice.__class__.__name__)
+
         self._stack.pop()
         
         newnode = self.visit(node.value, subs)
@@ -361,9 +386,10 @@ class ExprTransformer(ast.NodeTransformer):
             return node
         elif isinstance(newnode, ast.Attribute):
             node.value = newnode
+            node.slice = self.generic_visit(node.slice)
             return node
         return newnode
-        
+    
     def visit_Call(self, node, subs=None):
         name = self._get_long_name(node.func)
         if name is not None:
@@ -406,14 +432,16 @@ class ExprTransformer(ast.NodeTransformer):
         elif len(call_list) > 0:
             call_list.append(ast.Dict(keys=[], values=[], ctx=ast.Load()))
 
-        call_list.append(ast.List(elts=[self.visit(arg) for arg in node.args], 
-                                  ctx=ast.Load()))
+        if len(node.args)>0 or len(call_list)>0:
+            call_list.append(ast.List(elts=[self.visit(arg) for arg in node.args], 
+                                      ctx=ast.Load()))
 
         self._stack.pop()
                 
         # call_list is reversed here because we built it backwards in order
         # to make it a little easier to leave off unnecessary empty stuff
-        subs[0:0] = [ast.List(elts=call_list[::-1], ctx=ast.Load())]
+        subs[0:0] = [ast.Tuple(elts=[ast.Num(n=CALL)]+call_list[::-1], 
+                               ctx=ast.Load())]
         
         return self.visit(node.func, subs)
 
@@ -439,10 +467,7 @@ class ExprEvaluator(object):
     object are translated to a simple attribute access on the object, whereas
     variables from other objects must be accessed using the appropriate
     *set()* or *get()* call. Array entry access, 'late' attribute access, and
-    function invocation are also translated in a similar way. For example, the
-    expression "a+b[2]-comp.y(x)" for a scoping object that contains variables
-    a and b but not comp,x or y, would translate to
-    "scope.a+scope.b[2]-scope.parent.get('comp.y',[[[scope.parent.get('x')]]])".
+    function invocation are also translated in a similar way.".
     """
     
     def __init__(self, text, scope=None):

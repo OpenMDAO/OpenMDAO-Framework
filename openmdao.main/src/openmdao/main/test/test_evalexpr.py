@@ -61,22 +61,22 @@ class ExprEvalTestCase(unittest.TestCase):
         tests = [
             ('a.f', "scope.get('a.f')"),
             ('a.f**2', "scope.get('a.f')**2"),
-            ('a.f/a.a1d[int(a.f)]', "scope.get('a.f')/scope.get('a.a1d',[int(scope.get('a.f'))])"),
-            ('a.f = a.a1d[int(a.f)]', "scope.set('a.f',scope.get('a.a1d',[int(scope.get('a.f'))]))"),
+            ('a.f/a.a1d[int(a.f)]', "scope.get('a.f')/scope.get('a.a1d',[(0,int(scope.get('a.f')))])"),
+            ('a.f = a.a1d[int(a.f)]', "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]))"),
         ]
         self._do_tests(tests, self.top)
         
     def test_containers(self):
         tests = [
             ('comp.cont.f',"scope.get('comp.cont.f')"),
-            ('comp.contlist[2].a1d[3]',"scope.get('comp.contlist',[2,['a1d'],3])"),
+            ('comp.contlist[2].a1d[3]',"scope.get('comp.contlist',[(0,2),(1,'a1d'),(0,3)])"),
         ]
         self._do_tests(tests, self.top)
         
     def test_dicts(self):
         tests = [
-            ("comp.indct['foo.bar']","scope.get('comp.indct',['foo.bar'])"),
-            ("comp.indct['foo.bar']=comp.cont.f","scope.set('comp.indct',scope.get('comp.cont.f'),['foo.bar'])"),
+            ("comp.indct['foo.bar']","scope.get('comp.indct',[(0,'foo.bar')])"),
+            ("comp.indct['foo.bar']=comp.cont.f","scope.set('comp.indct',scope.get('comp.cont.f'),[(0,'foo.bar')])"),
         ]
         self._do_tests(tests, self.top)
         
@@ -85,19 +85,20 @@ class ExprEvalTestCase(unittest.TestCase):
             ('a.a1d', "scope.get('a.a1d')"),
             ('-a.a1d', "-scope.get('a.a1d')"),
             ('+a.a1d', "+scope.get('a.a1d')"),
-            ('a.a1d[0]', "scope.get('a.a1d',[0])"),
-            ('a.a2d[-a.a1d[2]]', "scope.get('a.a2d',[-scope.get('a.a1d',[2])])"),
-            ('a.a2d[-a.a1d[2]][foo.bar]', "scope.get('a.a2d',[-scope.get('a.a1d',[2]),scope.get('foo.bar')])"),
+            ('a.a1d[0]', "scope.get('a.a1d',[(0,0)])"),
+            ('a.a2d[-a.a1d[2]]', "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)]))])"),
+            ('a.a2d[-a.a1d[2]][foo.bar]', 
+             "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)])),(0,scope.get('foo.bar'))])"),
             ('a.a2d[-a.a1d[2]]=a.f', 
-             "scope.set('a.a2d',scope.get('a.f'),[-scope.get('a.a1d',[2])])"),
-            ('a.f/a.a1d[int(a.f)]', "scope.get('a.f')/scope.get('a.a1d',[int(scope.get('a.f'))])"),
-            ('a.f = a.a1d[int(a.f)]', "scope.set('a.f',scope.get('a.a1d',[int(scope.get('a.f'))]))"),
-            ('a.b.cde[1+3**4*1]', "scope.get('a.b.cde',[1+3**4*1])"),
-            ('a.b[1][2]', "scope.get('a.b',[1,2])"),
-            ('abs(a.b[1][2])', "abs(scope.get('a.b',[1,2]))"),
-            ('a.b[1][x.y]', "scope.get('a.b',[1,scope.get('x.y')])"),  
-            ('comp.x=a.b[1]',"scope.set('comp.x',scope.get('a.b',[1]))"),
-            ('comp.cont.a1d[-3]', "scope.get('comp.cont.a1d',[-3])"),
+             "scope.set('a.a2d',scope.get('a.f'),[(0,-scope.get('a.a1d',[(0,2)]))])"),
+            ('a.f/a.a1d[int(a.f)]', "scope.get('a.f')/scope.get('a.a1d',[(0,int(scope.get('a.f')))])"),
+            ('a.f = a.a1d[int(a.f)]', "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]))"),
+            ('a.b.cde[1+3**4*1]', "scope.get('a.b.cde',[(0,1+3**4*1)])"),
+            ('a.b[1][2]', "scope.get('a.b',[(0,1),(0,2)])"),
+            ('abs(a.b[1][2])', "abs(scope.get('a.b',[(0,1),(0,2)]))"),
+            ('a.b[1][x.y]', "scope.get('a.b',[(0,1),(0,scope.get('x.y'))])"),  
+            ('comp.x=a.b[1]',"scope.set('comp.x',scope.get('a.b',[(0,1)]))"),
+            ('comp.cont.a1d[-3]', "scope.get('comp.cont.a1d',[(0,-3)])"),
         ]
         self._do_tests(tests, self.top)
         
@@ -105,30 +106,31 @@ class ExprEvalTestCase(unittest.TestCase):
         tests = [
             ('comp.x < a1d', "scope.parent.get('comp.x')<scope.a1d"),
             ('math.sin(f)+math.cos(f+math.pi)', 'math.sin(scope.f)+math.cos(scope.f+math.pi)'),
-            ('comp.x[0]', "scope.parent.get('comp.x',[0])"),
+            ('comp.x[0]', "scope.parent.get('comp.x',[(0,0)])"),
             ('comp.x[0] = 10*(3.2+ a1d[3]* 1.1*a1d[2 ])', 
-             "scope.parent.set('comp.x',10*(3.2+scope.a1d[3]*1.1*scope.a1d[2]),[0])"),
+             "scope.parent.set('comp.x',10*(3.2+scope.a1d[3]*1.1*scope.a1d[2]),[(0,0)])"),
             ('comp.x[0] = some_funct(1,foo.bar)', 
-             "scope.parent.set('comp.x',scope.some_funct(1,scope.parent.get('foo.bar')),[0])"),
+             "scope.parent.set('comp.x',scope.some_funct(1,scope.parent.get('foo.bar')),[(0,0)])"),
             ('a.b[2] = -comp.x',
-             "scope.parent.set('a.b',-scope.parent.get('comp.x'),[2])"),
+             "scope.parent.set('a.b',-scope.parent.get('comp.x'),[(0,2)])"),
+            ('a1d[foo]', "scope.a1d[scope.parent.get('foo')]"),
         ]
 
         self._do_tests(tests, self.top.a)
 
     def test_calls(self):
         tests = [
-        ('a.b()', "scope.get('a.b',[[[]]])"),
-        ('a.b(5)', "scope.get('a.b',[[[5]]])"),
-        ('a.b(5,9)', "scope.get('a.b',[[[5,9]]])"),
-        ('a.b(5,z.y)', "scope.get('a.b',[[[5,scope.get('z.y')]]])"),
+        ('a.b()', "scope.get('a.b',[(2,)])"),
+        ('a.b(5)', "scope.get('a.b',[(2,[5])])"),
+        ('a.b(5,9)', "scope.get('a.b',[(2,[5,9])])"),
+        ('a.b(5,z.y)', "scope.get('a.b',[(2,[5,scope.get('z.y')])])"),
         ('a.b(5, z.y(2,3))', 
-         "scope.get('a.b',[[[5,scope.get('z.y',[[[2,3]]])]]])"),
+         "scope.get('a.b',[(2,[5,scope.get('z.y',[(2,[2,3])])])])"),
         ('a.b(5, z.y[3])', 
-         "scope.get('a.b',[[[5,scope.get('z.y',[3])]]])"),
+         "scope.get('a.b',[(2,[5,scope.get('z.y',[(0,3)])])])"),
          ('a.b(1,23,foo=9,*args,**kwargs)', 
-          "scope.get('a.b',[[[1,23],{'foo':9},args,kwargs]])"),
-         ('a.b(1,23)[1]', "scope.get('a.b',[[[1,23]],1])"),
+          "scope.get('a.b',[(2,[1,23],{'foo':9},args,kwargs)])"),
+         ('a.b(1,23)[1]', "scope.get('a.b',[(2,[1,23]),(0,1)])"),
         ]
 
         self._do_tests(tests, self.top)
