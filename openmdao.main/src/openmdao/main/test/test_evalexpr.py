@@ -107,8 +107,8 @@ class ExprEvalTestCase(unittest.TestCase):
             ('comp.x[0]', "scope.parent.get('comp.x',[0])"),
             ('comp.x[0] = 10*(3.2+ a1d[3]* 1.1*a1d[2 ])', 
              "scope.parent.set('comp.x',10*(3.2+scope.a1d[3]*1.1*scope.a1d[2]),[0])"),
-            ('comp.x[0] = some_funct(1,2)', 
-             "scope.parent.set('comp.x',scope.some_funct(1,2),[0])"),
+            ('comp.x[0] = some_funct(1,foo.bar)', 
+             "scope.parent.set('comp.x',scope.some_funct(1,scope.parent.get('foo.bar')),[0])"),
             ('a.b[2] = -comp.x',
              "scope.parent.set('a.b',-scope.parent.get('comp.x'),[2])"),
         ]

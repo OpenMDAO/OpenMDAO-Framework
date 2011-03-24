@@ -9,15 +9,14 @@ import ast
 import __builtin__
 
 # a copy of this dict will act as the local scope when we eval our expressions
-_locals_dict = {
+_expr_dict = {
     'math': math,
-    '_local_setter': None,
     }
 # add stuff from math lib directly to our locals dict so users won't have to 
 # put 'math.' in front of all of their calls to standard math functions 
 for name in dir(math):
     if not name.startswith('_'):
-        _locals_dict[name] = getattr(math, name)
+        _expr_dict[name] = getattr(math, name)
 
 _Missing = object()
 
@@ -442,7 +441,7 @@ class ExprEvaluator(object):
     *set()* or *get()* call. Array entry access, 'late' attribute access, and
     function invocation are also translated in a similar way. For example, the
     expression "a+b[2]-comp.y(x)" for a scoping object that contains variables
-    a and b, but not comp,x or y, would translate to
+    a and b but not comp,x or y, would translate to
     "scope.a+scope.b[2]-scope.parent.get('comp.y',[[[scope.parent.get('x')]]])".
     """
     
@@ -452,7 +451,6 @@ class ExprEvaluator(object):
         self._allow_set = False
         self.text = text
         self.var_names = set()
-        self._locals_dict = _locals_dict.copy()
     
     @property
     def text(self):
@@ -501,7 +499,6 @@ class ExprEvaluator(object):
         # remove weakref to scope because it won't pickle
         state['_scope'] = self.scope
         state['_code'] = None  # <type 'code'> won't pickle either.
-        state['_locals_dict'] = None
         if state.get('_assignment_code'):
             state['_assignment_code'] = None # more unpicklable <type 'code'>
         return state
@@ -512,18 +509,18 @@ class ExprEvaluator(object):
         if self._scope is not None:
             self._scope = weakref.ref(self._scope)
         self._parse_needed = True  # force a reparse
-        self._locals_dict = _locals_dict.copy()
 
     def _is_local(self, name):
         """Return True if the given (dotted) name refers to something in our
-        _locals_dict dict, e.g., math.sin.  Raises a KeyError if the name
-        refers to something in _locals_dict that doesn't exist, e.g., math.foobar.
-        Returns False if the name refers to nothing in _locals_dict, e.g., mycomp.x.
+        _expr_dict dict, e.g., math.sin.  Raises a KeyError if the name
+        refers to something in _expr_dict that doesn't exist, e.g., math.foobar.
+        Returns False if the name refers to nothing in _expr_dict, e.g., mycomp.x.
         """
-        if hasattr(__builtin__, name):
+        global _expr_dict
+        if hasattr(__builtin__, name) or name=='_local_setter':
             return True
         parts = name.split('.')
-        obj = self._locals_dict.get(parts[0], _Missing)
+        obj = _expr_dict.get(parts[0], _Missing)
         if obj is _Missing:
             return False
         for part in parts[1:]:
@@ -597,22 +594,19 @@ class ExprEvaluator(object):
         """Return the value of the scoped string, evaluated 
         using the eval() function.
         """
+        global _expr_dict
         scope = self._get_updated_scope(scope)
         try:
             if self._parse_needed:
                 self._parse()
-            self._locals_dict['scope'] = scope
-            if scope:
-                dct = scope.__dict__
-            else:
-                dct = {}
-            return eval(self._code, dct, self._locals_dict)
+            return eval(self._code, _expr_dict, locals())
         except Exception, err:
             raise type(err)("can't evaluate expression "+
                             "'%s': %s" %(self.text,str(err)))
 
     def set(self, val, scope=None):
         """Set the value of the referenced object to the specified value."""
+        global _expr_dict
         scope = self._get_updated_scope(scope)
         
         if self.is_valid_assignee():
@@ -622,12 +616,7 @@ class ExprEvaluator(object):
             _local_setter = val 
             if self._parse_needed:
                 self._parse()
-            self._locals_dict.update(locals())
-            if scope:
-                dct = scope.__dict__
-            else:
-                dct = {}
-            exec(self._assignment_code, dct, self._locals_dict)
+            exec(self._assignment_code, _expr_dict, locals())
         else: # self._allow_set is False
             raise ValueError("expression '%s' can't be set to a value" % self.text)
         
