@@ -8,7 +8,7 @@ import math
 import ast
 import __builtin__
 
-# this dict will act as the local scope when we eval our expressions
+# a copy of this dict will act as the local scope when we eval our expressions
 _locals_dict = {
     'math': math,
     '_local_setter': None,
@@ -319,7 +319,7 @@ class ExprTransformer(ast.NodeTransformer):
                 if scope.parent is not None:
                     names.append('parent')
         else:
-            raise RuntimeError("expression '%s' can't be evaluated because it has no scope" % str(self.expreval))
+            raise RuntimeError("expression has no scope")
 
         if self.rhs and len(self._stack) == 0:
             fname = 'set'
@@ -445,6 +445,10 @@ class ExprEvaluator(object):
         self._text = value
 
     @property
+    def transformed_text(self):
+        return self._transform_ast()[1]
+
+    @property
     def scope(self):
         if self._scope:
             scope = self._scope()
@@ -456,7 +460,7 @@ class ExprEvaluator(object):
     @scope.setter
     def scope(self, value):
         if value is not self.scope:
-            self._text = None # force a reparse
+            self._parse_needed = True
             if value is not None:
                 self._scope = weakref.ref(value)
             else:
@@ -521,25 +525,30 @@ class ExprEvaluator(object):
             self._allow_set = True
         return root
         
+    def _transform_ast(self):
+        """Returns a tuple of the form (new_AST, new_text) where new_AST
+        is the transformed AST and new_text is the text of the transformed
+        AST.
+        """
+        # transform attribute accesses to 'get' calls if necessary
+        new_ast = ExprTransformer(self).visit(self._pre_parse())
+        
+        ## now take the new AST and save it to a string
+        ep = ExprPrinter()
+        ep.visit(new_ast)
+        return (new_ast, ep.get_text())
+        
     def _parse(self):
         self._allow_set = True
         self.var_names = set()
-        root = self._pre_parse()
-        
-        # transform attribute accesses to 'get' calls if necessary
-        new_ast = ExprTransformer(self).visit(root)
-        
-        ## now take the new AST and save it to a string (for debugging purposes)
-        ep = ExprPrinter()
-        ep.visit(new_ast)
-        self.scoped_text = ep.get_text()
+        new_ast, scoped_text = self._transform_ast()
         
         # compile the transformed AST
         # FIXME: we really want to just compile the transformed AST, but for
         #        now that still has problems...
         #ast.fix_missing_locations(new_ast)
         #self._code = compile(new_ast, '<string>', 'exec')
-        self._code = compile(self.scoped_text, '<string>', 'eval')
+        self._code = compile(scoped_text, '<string>', 'eval')
         
         if self._allow_set: # set up a compiled assignment statement
             assign_txt = "%s=_local_setter" % self.text
@@ -563,9 +572,6 @@ class ExprEvaluator(object):
         elif scope is not oldscope:
             self._parse_needed = True
             self.scope = scope
-        if scope is None:
-            raise RuntimeError(
-                'ExprEvaluator cannot evaluate expression without scope.')
         return scope
 
     def evaluate(self, scope=None):

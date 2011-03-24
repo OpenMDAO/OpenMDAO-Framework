@@ -51,7 +51,7 @@ class ExprEvalTestCase(unittest.TestCase):
         for tst in tests:
             ex = ExprEvaluator(tst[0], top)
             ex._parse()
-            self.assertEqual(ex.scoped_text, tst[1])
+            self.assertEqual(ex.transformed_text, tst[1])
         
     def test_simple(self):
         tests = [
@@ -157,6 +157,38 @@ class ExprEvalTestCase(unittest.TestCase):
         ex = ExprEvaluator("comp.get_attr('get_cont')(1).a1d", self.top)
         self.assertTrue(all(ex.evaluate() == numpy.array([4,4,4,123,4])))
         
+    def test_reparse_on_scope_change(self):
+        self.top.comp.x = 99.5
+        self.top.comp.y = -3.14
+        
+        ex = ExprEvaluator('comp.x', self.top)
+        self.assertEqual(99.5, ex.evaluate())
+        self.assertEqual(ex.transformed_text, "scope.get('comp.x')")
+        
+        ex.scope = self.top.a
+        ex.set(0.5)
+        self.assertEqual(0.5, self.top.comp.x)
+        self.assertEqual(ex.transformed_text, "scope.parent.get('comp.x')")
+        self.assertEqual(0.5, ex.evaluate(self.top)) # set scope back to self.top
+        self.assertEqual(ex.transformed_text, "scope.get('comp.x')")
+        
+        ex.text = 'comp.y'
+        self.assertEqual(-3.14, ex.evaluate(self.top.a))
+        ex.set(11.1)
+        self.assertEqual(11.1, self.top.comp.y)
+        self.assertEqual(ex.transformed_text, "scope.parent.get('comp.y')")
+        
+    def test_no_scope(self):
+        ex = ExprEvaluator('abs(-3)+int(2.3)+math.floor(5.4)')
+        self.assertEqual(ex.evaluate(), 10.0)
+        
+        ex.text = 'comp.x'
+        try:
+            ex.evaluate()
+        except Exception, err:
+            self.assertEqual(str(err), "can't evaluate expression 'comp.x': expression has no scope")
+        else:
+            self.fail("Exception expected")
 
     def test_boolean(self):
         comp = self.top.comp
