@@ -87,6 +87,7 @@ class ExprEvalTestCase(unittest.TestCase):
             ('+a.a1d', "+scope.get('a.a1d')"),
             ('a.a1d[0]', "scope.get('a.a1d',[0])"),
             ('a.a2d[-a.a1d[2]]', "scope.get('a.a2d',[-scope.get('a.a1d',[2])])"),
+            ('a.a2d[-a.a1d[2]][foo.bar]', "scope.get('a.a2d',[-scope.get('a.a1d',[2]),scope.get('foo.bar')])"),
             ('a.a2d[-a.a1d[2]]=a.f', 
              "scope.set('a.a2d',scope.get('a.f'),[-scope.get('a.a1d',[2])])"),
             ('a.f/a.a1d[int(a.f)]', "scope.get('a.f')/scope.get('a.a1d',[int(scope.get('a.f'))])"),
