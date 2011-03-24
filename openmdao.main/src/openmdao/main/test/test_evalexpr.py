@@ -109,7 +109,7 @@ class ExprEvalTestCase(unittest.TestCase):
 
         self._do_tests(tests, self.top.a)
 
-    def test_set2(self):
+    def test_calls(self):
         tests = [
         ('a.b()', "scope.get('a.b',[[[]]])"),
         ('a.b(5)', "scope.get('a.b',[[[5]]])"),

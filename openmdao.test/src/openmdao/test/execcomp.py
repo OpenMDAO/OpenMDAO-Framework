@@ -18,7 +18,7 @@ class ExecComp(Component):
         allvars = set()
         self.codes = [compile(expr,'<string>','exec') for expr in exprs]
         for expr in exprs:
-            expreval = ExprEvaluator(expr, scope=self, lazy=True)
+            expreval = ExprEvaluator(expr, scope=self)
             exvars = expreval.get_referenced_varpaths()
             lhs,rhs = expr.split('=')
             lhs = lhs.strip()

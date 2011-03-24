@@ -251,9 +251,12 @@ class ExprPrinter(ast.NodeVisitor):
 
         
 class ExprTransformer(ast.NodeTransformer):
-    """Transforms attribute accesses, e.g., abc.def.g in an expression AST into 
-    scope.get('abc.def.g') or scope.parent.get('abc.def.g'). Also turns assignments
-    into the appropriate set() calls.
+    """Transforms dotted name references, e.g., abc.d.g in an expression AST into 
+    scope.get('abc.d.g') or scope.parent.get('abc.d.g'). Also turns assignments
+    into the appropriate set() calls.  Also translates function calls and indirect
+    attribute accesses into a form that can be passed to a downstream object and
+    executed there.  For example, abc.d[xyz](1, pdq-10).value would translate to, e.g.,
+    scope.get('abc.d', [xyz, [[1,pdq-10]], ['value']]).
     """
     def __init__(self, expreval, rhs=None):
         self.expreval = expreval
@@ -395,7 +398,6 @@ class ExprTransformer(ast.NodeTransformer):
         subs[0:0] = [ast.List(elts=call_list[::-1], ctx=ast.Load())]
         
         return self.visit(node.func, subs)
-
 
     def visit_Module(self, node, subs=None):
         # Make sure there is only one statement or expression
