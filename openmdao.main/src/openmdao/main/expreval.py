@@ -313,8 +313,9 @@ class ExprTransformer(ast.NodeTransformer):
             parts = name.split('.',1)
             names = ['scope']
             if scope.contains(parts[0]):
-                if len(parts) == 1: # short name, so no 'get' or 'set' needed
-                    return node
+                if len(parts) == 1: # short name, so just do a simple attr lookup on scope
+                    names.append(name)
+                    return _get_attr_node(names)
             else:
                 if scope.parent is not None:
                     names.append('parent')
@@ -359,12 +360,30 @@ class ExprTransformer(ast.NodeTransformer):
         newnode = self.visit(node.value, subs)
         if newnode is node.value:
             return node
+        elif isinstance(newnode, ast.Attribute):
+            node.value = newnode
+            return node
         return newnode
         
     def visit_Call(self, node, subs=None):
         name = self._get_long_name(node.func)
-        if name is not None and self.expreval._is_local(name):
-            return self.generic_visit(node)
+        if name is not None:
+            if self.expreval._is_local(name):
+                return self.generic_visit(node)
+            elif isinstance(node.func, ast.Name):
+                self._stack.append(node)
+                kwargs = {
+                    'func': _get_attr_node(['scope',node.func.id]),
+                    'args': [self.visit(arg) for arg in node.args],
+                    'keywords': [(kw.arg,self.visit(kw.value)) for kw in node.keywords],
+                    'ctx': node.func.ctx,
+                    }
+                self._stack.pop()
+                if hasattr(node, 'kwargs') and node.kwargs:
+                    kwargs['kwargs'] = node.kwargs
+                if hasattr(node, 'starargs') and node.starargs:
+                    kwargs['starargs'] = node.starargs
+                return ast.copy_location(ast.Call(**kwargs), node)
         
         if subs is None:
             subs = []
@@ -394,7 +413,7 @@ class ExprTransformer(ast.NodeTransformer):
         self._stack.pop()
                 
         # call_list is reversed here because we built it backwards in order
-        # to make it easier to leave off unnecessary empty stuff
+        # to make it a little easier to leave off unnecessary empty stuff
         subs[0:0] = [ast.List(elts=call_list[::-1], ctx=ast.Load())]
         
         return self.visit(node.func, subs)
@@ -417,14 +436,14 @@ class ExprEvaluator(object):
     compiled bytecode is stored within the object so that it doesn't have to
     be reparsed during later evaluations. A scoping object is required at
     construction time or evaluation time, and that object determines the form
-    of the translated expression based on scope. Variables that are local to
-    the scoping object do not need to be translated, whereas variables from
-    other objects must be accessed using the appropriate *set()* or *get()*
-    call. Array entry access, 'late' attribute access, and function invocation
-    are also translated in a similar way. For example, the expression
-    "a+b[2]-comp.y(x)" for a scoping object that contains variables a and b,
-    but not comp,x or y, would translate to
-    "a+b[2]-self.parent.get('comp.y',[[[self.parent.get('x')]]])".
+    of the translated expression. Variables that are local to the scoping
+    object are translated to a simple attribute access on the object, whereas
+    variables from other objects must be accessed using the appropriate
+    *set()* or *get()* call. Array entry access, 'late' attribute access, and
+    function invocation are also translated in a similar way. For example, the
+    expression "a+b[2]-comp.y(x)" for a scoping object that contains variables
+    a and b, but not comp,x or y, would translate to
+    "scope.a+scope.b[2]-scope.parent.get('comp.y',[[[scope.parent.get('x')]]])".
     """
     
     def __init__(self, text, scope=None):
@@ -650,13 +669,15 @@ class ExprEvaluator(object):
         """Return True if all variables referenced by our expression can
         be resolved.
         """
-        scope = self.scope
-        if scope and scope.parent:
-            if self._parse_needed:
-                self._parse()
-            if scope.parent.check_resolve(self.var_names):
-                return True
-        return False
+        if self._parse_needed:
+            self._parse()
+        if len(self.var_names) > 0:
+            scope = self.scope
+            if scope and scope.parent:
+                if scope.parent.check_resolve(self.var_names):
+                    return True
+            return False
+        return True
 
 
 if __name__ == '__main__':

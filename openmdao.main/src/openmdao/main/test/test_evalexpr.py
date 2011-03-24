@@ -23,6 +23,10 @@ class A(Component):
             return a-b
         raise RuntimeError("bad input to some_funct")
     
+    @property
+    def some_prop(self):
+        return 7
+    
 class Comp(Component):
     x = Float(iotype='in')
     y = Float(iotype='in')
@@ -98,11 +102,13 @@ class ExprEvalTestCase(unittest.TestCase):
         
     def test_mixed_scope(self):
         tests = [
-            ('comp.x < a1d', "scope.parent.get('comp.x')<a1d"),
-            ('math.sin(f)+math.cos(f+math.pi)', 'math.sin(f)+math.cos(f+math.pi)'),
+            ('comp.x < a1d', "scope.parent.get('comp.x')<scope.a1d"),
+            ('math.sin(f)+math.cos(f+math.pi)', 'math.sin(scope.f)+math.cos(scope.f+math.pi)'),
             ('comp.x[0]', "scope.parent.get('comp.x',[0])"),
             ('comp.x[0] = 10*(3.2+ a1d[3]* 1.1*a1d[2 ])', 
-             "scope.parent.set('comp.x',10*(3.2+a1d[3]*1.1*a1d[2]),[0])"),
+             "scope.parent.set('comp.x',10*(3.2+scope.a1d[3]*1.1*scope.a1d[2]),[0])"),
+            ('comp.x[0] = some_funct(1,2)', 
+             "scope.parent.set('comp.x',scope.some_funct(1,2),[0])"),
             ('a.b[2] = -comp.x',
              "scope.parent.set('a.b',-scope.parent.get('comp.x'),[2])"),
         ]
@@ -189,6 +195,10 @@ class ExprEvalTestCase(unittest.TestCase):
             self.assertEqual(str(err), "can't evaluate expression 'comp.x': expression has no scope")
         else:
             self.fail("Exception expected")
+            
+    def test_property(self):
+        ex = ExprEvaluator('some_prop', self.top.a)
+        self.assertEqual(ex.evaluate(), 7)
 
     def test_boolean(self):
         comp = self.top.comp
