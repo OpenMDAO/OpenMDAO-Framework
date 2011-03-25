@@ -318,17 +318,17 @@ class ExprTransformer(ast.NodeTransformer):
         if self.expreval._is_local(name):
             return node
         
-        self.expreval.var_names.add(name)
-    
         scope = self.expreval.scope
         if scope:
             parts = name.split('.',1)
             names = ['scope']
             if scope.contains(parts[0]):
+                self.expreval.var_names.add('.'.join([scope.name,name]))
                 if len(parts) == 1: # short name, so just do a simple attr lookup on scope
                     names.append(name)
                     return _get_attr_node(names)
             else:
+                self.expreval.var_names.add(name)
                 if scope.parent is not None:
                     names.append('parent')
         else:
@@ -649,8 +649,8 @@ class ExprEvaluator(object):
         
     def get_referenced_varpaths(self):
         """Return a set of source or dest Variable pathnames relative to
-        *self.parent* and based on the names of Variables referenced in our 
-        reference string. 
+        *scope.parent* and based on the names of Variables referenced in our 
+        expression string. 
         """
         if self._parse_needed:
             self._parse()
@@ -658,7 +658,7 @@ class ExprEvaluator(object):
 
     def get_referenced_compnames(self):
         """Return a set of source or dest Component names based on the 
-        pathnames of Variables referenced in our reference string. 
+        pathnames of Variables referenced in our expression string. 
         """
         if self._parse_needed:
             self._parse()
@@ -689,9 +689,15 @@ class ExprEvaluator(object):
             self._parse()
         if len(self.var_names) > 0:
             scope = self.scope
-            if scope and scope.parent:
-                if scope.parent.check_resolve(self.var_names):
-                    return True
+            if scope:
+                if scope.parent:
+                    sc = scope.parent
+                else:
+                    sc = scope
+                for name in self.var_names:
+                    if not sc.contains(name):
+                        return False
+                return True
             return False
         return True
 

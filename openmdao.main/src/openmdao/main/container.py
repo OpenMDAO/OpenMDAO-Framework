@@ -283,6 +283,10 @@ class Container(HasTraits):
         if self._name is None:
             if self.parent:
                 self._name = find_name(self.parent, self)
+            elif self._call_tree_rooted is False:
+                self._name = ''
+            else:
+                return ''
         return self._name
 
     @name.setter
@@ -452,7 +456,8 @@ class Container(HasTraits):
 
     def add_trait(self, name, trait):
         """Overrides HasTraits definition of *add_trait* in order to
-        keep track of dynamically added traits for serialization.
+        keep track of dynamically added traits for serialization and to add
+        callbacks for input Variables.
         """
         # When a trait with sub-traits is added (like a List or Dict),
         # HasTraits calls add_trait AGAIN for the sub-trait, so we

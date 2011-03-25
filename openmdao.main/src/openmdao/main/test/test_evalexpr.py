@@ -203,8 +203,25 @@ class ExprEvalTestCase(unittest.TestCase):
         ex = ExprEvaluator('some_prop', self.top.a)
         self.assertEqual(ex.evaluate(), 7)
         
-    #def test_resolve(self):
-    #    self.fail("")
+    def test_resolve(self):
+        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a1d[3]* 1.1*a1d[2 ])', self.top.a)
+        self.assertEqual(ex.check_resolve(), True)
+        ex.text = 'comp.contlist[1].a2d[2][1]'
+        self.assertEqual(ex.check_resolve(), True)
+        ex.scope = self.top.comp
+        ex.text = 'contlist[1]'
+        self.assertEqual(ex.check_resolve(), True)
+        ex.text = 'contlist[1]-foo.flambe'
+        self.assertEqual(ex.check_resolve(), False)
+        
+    def test_get_referenced_varpaths(self):
+        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a1d[3]* 1.1*a1d[2 ])', self.top.a)
+        self.assertEqual(ex.get_referenced_varpaths(), set(['comp.x','a.a1d']))
+        ex.text = 'comp.contlist[1].a2d[2][1]'
+        self.assertEqual(ex.get_referenced_varpaths(), set(['comp.contlist']))
+        ex.scope = self.top.comp
+        ex.text = 'contlist[1]'
+        self.assertEqual(ex.get_referenced_varpaths(), set(['comp.contlist']))
         
     def test_slice(self):
         ex = ExprEvaluator('a1d[1::2]', self.top.a)

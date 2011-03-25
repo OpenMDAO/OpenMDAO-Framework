@@ -52,6 +52,10 @@ class HasParameters(object):
         parameter = Parameter()
         parameter.expreval = ExprEvaluator(name, self._parent)
         
+        if not parameter.expreval.is_valid_assignee():
+            self._parent.raise_exception("Can't add parameter '%s' because it refers to multiple objects." % name,
+                                         ValueError)
+        
         try:
             metadata = self._parent.parent.get_metadata(name.split('[')[0])
         except AttributeError:
