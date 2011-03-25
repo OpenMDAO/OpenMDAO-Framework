@@ -179,6 +179,7 @@ class ExprPrinter(ast.NodeVisitor):
         self.write(']')
 
     def visit_Slice(self, node):
+        self.write('[')
         if node.lower is not None:
             self.visit(node.lower)
         self.write(':')
@@ -187,6 +188,7 @@ class ExprPrinter(ast.NodeVisitor):
         self.write(':')
         if node.step is not None:
             self.visit(node.step)
+        self.write(']')
         
     def visit_List(self, node):  
         self.write('[')
@@ -361,10 +363,10 @@ class ExprTransformer(ast.NodeTransformer):
         return self._name_to_node(node, long_name, subs)
 
     def _get_slice_vals(self, node):
-        lower = ast.Name(id='None',ctx=Load()) if node.lower is None else self.visit(node.lower)
-        upper = ast.Name(id='None',ctx=Load()) if node.upper is None else self.visit(node.upper)
-        step = ast.Name(id='None',ctx=Load()) if node.step is None else self.visit(node.step)
-        return ast.Tuple(elts=[lower, upper, step], ctx=Load())
+        lower = ast.Name(id='None',ctx=ast.Load()) if node.lower is None else self.visit(node.lower)
+        upper = ast.Name(id='None',ctx=ast.Load()) if node.upper is None else self.visit(node.upper)
+        step = ast.Name(id='None',ctx=ast.Load()) if node.step is None else self.visit(node.step)
+        return ast.Tuple(elts=[lower, upper, step], ctx=ast.Load())
         
     def visit_Subscript(self, node, subs=None):
         self._stack.append(node)

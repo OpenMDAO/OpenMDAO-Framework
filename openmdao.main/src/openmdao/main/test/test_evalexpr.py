@@ -202,6 +202,21 @@ class ExprEvalTestCase(unittest.TestCase):
     def test_property(self):
         ex = ExprEvaluator('some_prop', self.top.a)
         self.assertEqual(ex.evaluate(), 7)
+        
+    #def test_resolve(self):
+    #    self.fail("")
+        
+    def test_slice(self):
+        ex = ExprEvaluator('a1d[1::2]', self.top.a)
+        self.assertTrue(all(numpy.array([2.,4.,6.]) == ex.evaluate()))
+        ex.text = 'a1d[2:4]'
+        self.assertTrue(all(numpy.array([3.,4.]) == ex.evaluate()))
+        ex.text = 'a1d[2:]'
+        self.assertTrue(all(numpy.array([3.,4.,5.,6.]) == ex.evaluate()))
+        ex.text = 'a1d[::-1]'
+        self.assertTrue(all(numpy.array([6.,5.,4.,3.,2.,1.]) == ex.evaluate()))
+        ex.text = 'a1d[:2]'
+        self.assertTrue(all(numpy.array([1.,2.]) == ex.evaluate()))
 
     def test_boolean(self):
         comp = self.top.comp
@@ -265,7 +280,7 @@ class ExprEvalTestCase(unittest.TestCase):
         else:
             raise AssertionError('ValueError expected')
     
-    def test_bogus(self):        
+    def test_bogus(self):
         # now try some bogus expressions
         try:
             ex = ExprEvaluator('abcd.efg', self.top)
