@@ -6,6 +6,7 @@ __all__ = ["ExprEvaluator"]
 import weakref
 import math
 import ast
+import copy
 import __builtin__
 
 # a copy of this dict will act as the local scope when we eval our expressions
@@ -87,10 +88,13 @@ _prec += 1
 _op_preds[ast.Pow] = _prec
 
 def _pred_cmp(op1, op2):
+    """Used to determine operator precedence."""
     return _op_preds[op1.__class__] - _op_preds[op2.__class__]
 
 class ExprPrinter(ast.NodeVisitor):
-    """A NodeVisitor that gets the text of the expression defined by the AST."""
+    """A NodeVisitor that gets the python text of an expression or assignment
+    statement defined by an AST.
+    """
     def __init__(self):
         super(ExprPrinter, self).__init__()
         self.txtlist = []
@@ -248,13 +252,14 @@ class ExprPrinter(ast.NodeVisitor):
     def _ignore(self, node):
         super(ExprPrinter, self).generic_visit(node)
 
-    visit_Module    = _ignore
-    visit_Expr      = _ignore
-    visit_Compare   = _ignore
-    visit_UnaryOp   = _ignore
-    visit_Subscript = _ignore
-    visit_Load      = _ignore
-    visit_Store     = _ignore
+    visit_Module     = _ignore
+    visit_Expr       = _ignore
+    visit_Expression = _ignore
+    visit_Compare    = _ignore
+    visit_UnaryOp    = _ignore
+    visit_Subscript  = _ignore
+    visit_Load       = _ignore
+    visit_Store      = _ignore
     
     def generic_visit(self, node):
         # We want to fail if we see any nodes we don't know about rather than
@@ -323,7 +328,10 @@ class ExprTransformer(ast.NodeTransformer):
             parts = name.split('.',1)
             names = ['scope']
             if scope.contains(parts[0]):
-                self.expreval.var_names.add('.'.join([scope.name,name]))
+                if scope.name:
+                    self.expreval.var_names.add('.'.join([scope.name,name]))
+                else:
+                    self.expreval.var_names.add(name)
                 if len(parts) == 1: # short name, so just do a simple attr lookup on scope
                     names.append(name)
                     return _get_attr_node(names)
@@ -334,21 +342,20 @@ class ExprTransformer(ast.NodeTransformer):
         else:
             raise RuntimeError("expression has no scope")
 
+        args = [ast.Str(s=name)]
         if self.rhs and len(self._stack) == 0:
             fname = 'set'
+            args.append(self.rhs)
         else:
             fname = 'get'
         names.append(fname)
-        args = [ast.Str(s=name)]
-        if fname == 'set':
-            args.append(self.rhs)
 
         called_obj = _get_attr_node(names)
         if subs:
             args.append(ast.List(elts=subs, ctx=ast.Load()))
 
         return ast.copy_location(ast.Call(func=called_obj, args=args,
-                                          ctx=node.ctx, keywords=[]), node)
+                                             ctx=node.ctx, keywords=[]), node)
     
     def visit_Name(self, node, subs=None):
         return self._name_to_node(node, node.id, subs)
@@ -403,7 +410,7 @@ class ExprTransformer(ast.NodeTransformer):
                     'func': _get_attr_node(['scope',node.func.id]),
                     'args': [self.visit(arg) for arg in node.args],
                     'keywords': [(kw.arg,self.visit(kw.value)) for kw in node.keywords],
-                    'ctx': node.func.ctx,
+                    'ctx': ast.Load(),
                     }
                 self._stack.pop()
                 if hasattr(node, 'kwargs') and node.kwargs:
@@ -451,13 +458,20 @@ class ExprTransformer(ast.NodeTransformer):
         # Make sure there is only one statement or expression
         if len(node.body) > 1 or not isinstance(node.body[0], (ast.Assign, ast.Expr)):
             raise RuntimeError("Only one assignment statement or expression is allowed")
-        return super(ExprTransformer, self).generic_visit(node)
+        top = super(ExprTransformer, self).generic_visit(node)
+        if isinstance(top.body[0], ast.Call):
+            top.body[0] = ast.Expr(value=top.body[0])
+        return top
     
     def visit_Assign(self, node, subs=None):
         if len(node.targets) > 1:
             raise RuntimeError("only one expression is allowed on left hand side of assignment")
-        return ExprTransformer(self.expreval, rhs=self.visit(node.value)).visit(node.targets[0])
-
+        rhs=self.visit(node.value)
+        lhs = ExprTransformer(self.expreval, rhs=rhs).visit(node.targets[0])
+        if isinstance(lhs, (ast.Name,ast.Subscript,ast.Attribute)):
+            lhs.ctx = ast.Store()
+            return ast.Assign(targets=[lhs], value=rhs)
+        return lhs
 
 class ExprEvaluator(object):
     """A class that translates an expression string into a new string
@@ -481,6 +495,7 @@ class ExprEvaluator(object):
     
     @property
     def text(self):
+        """The expression string"""
         return self._text
     
     @text.setter
@@ -490,10 +505,16 @@ class ExprEvaluator(object):
 
     @property
     def transformed_text(self):
-        return self._transform_ast()[1]
+        """The transformed expression string"""
+        new_ast = ExprTransformer(self).visit(self._pre_parse())
+        
+        ep = ExprPrinter()
+        ep.visit(new_ast)
+        return ep.get_text()
 
     @property
     def scope(self):
+        """The scoping object used to evaluate the expression"""
         if self._scope:
             scope = self._scope()
             if scope is None:
@@ -557,54 +578,37 @@ class ExprEvaluator(object):
         return True
         
     def _pre_parse(self):
-        root = ast.parse(self.text, mode='exec')
-        if isinstance(root.body[0], ast.Expr):
-            topnode = root.body[0].value
-        else:
-            topnode = root.body[0]
-        if not isinstance(topnode, (ast.Attribute, ast.Name, ast.Subscript)):
+        try:
+            root = ast.parse(self.text, mode='eval')
+            if not isinstance(root.body, (ast.Attribute, ast.Name, ast.Subscript)):
+                self._allow_set = False
+            else:
+                self._allow_set = True
+        except SyntaxError:
+            # might be an assignment, try mode='exec'
+            root = ast.parse(self.text, mode='exec')
             self._allow_set = False
-        else:
-            self._allow_set = True
         return root
-        
-    def _transform_ast(self):
-        """Returns a tuple of the form (new_AST, new_text) where new_AST
-        is the transformed AST and new_text is the text of the transformed
-        AST.
-        """
-        # transform attribute accesses to 'get' calls if necessary
-        new_ast = ExprTransformer(self).visit(self._pre_parse())
-        
-        ## now take the new AST and save it to a string
-        ep = ExprPrinter()
-        ep.visit(new_ast)
-        return (new_ast, ep.get_text())
         
     def _parse(self):
         self._allow_set = True
         self.var_names = set()
-        new_ast, scoped_text = self._transform_ast()
+        new_ast = ExprTransformer(self).visit(self._pre_parse())
         
         # compile the transformed AST
-        # FIXME: we really want to just compile the transformed AST, but for
-        #        now that still has problems...
-        #ast.fix_missing_locations(new_ast)
-        #self._code = compile(new_ast, '<string>', 'exec')
-        self._code = compile(scoped_text, '<string>', 'eval')
+        ast.fix_missing_locations(new_ast)
+        mode = 'exec' if isinstance(new_ast, ast.Module) else 'eval'
+        self._code = compile(new_ast, '<string>', mode)
         
         if self._allow_set: # set up a compiled assignment statement
             assign_txt = "%s=_local_setter" % self.text
             root = ast.parse(assign_txt, mode='exec')
-            # transform into a 'set' call to set the specified variable
+            ## transform into a 'set' call to set the specified variable
             new_ast = ExprTransformer(self).visit(root)
-            # FIXME: we really want to just compile the transformed AST, but for
-            #        now that still has problems...
-            #ast.fix_missing_locations(new_ast)
-            #self._assignment_code = compile(new_ast,'<string>','exec')
-            ep = ExprPrinter()
-            ep.visit(new_ast)
-            self._assignment_code = compile(ep.get_text(),'<string>','eval')
+            #if isinstance(new_ast.body[0], ast.Call):
+            #    new_ast.body = [ast.Expr(value=new_ast.body[0])]
+            ast.fix_missing_locations(new_ast)
+            self._assignment_code = compile(new_ast,'<string>','exec')
             
         self._parse_needed = False
                 
@@ -662,12 +666,7 @@ class ExprEvaluator(object):
         """
         if self._parse_needed:
             self._parse()
-        names = set()
-        for x in self.var_names:
-            parts = x.split('.')
-            if len(parts) > 1:
-                names.add(parts[0])
-        return names
+        return set([v.split('.',1)[0] for v in self.var_names])
     
     def refs_valid(self):
         """Return True if all variables referenced by our expression
@@ -691,11 +690,9 @@ class ExprEvaluator(object):
             scope = self.scope
             if scope:
                 if scope.parent:
-                    sc = scope.parent
-                else:
-                    sc = scope
+                    scope = scope.parent
                 for name in self.var_names:
-                    if not sc.contains(name):
+                    if not scope.contains(name):
                         return False
                 return True
             return False

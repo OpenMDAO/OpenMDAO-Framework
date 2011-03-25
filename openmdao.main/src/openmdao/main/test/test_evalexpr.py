@@ -176,8 +176,8 @@ class ExprEvalTestCase(unittest.TestCase):
         
         ex.scope = self.top.a
         ex.set(0.5)
-        self.assertEqual(0.5, self.top.comp.x)
         self.assertEqual(ex.transformed_text, "scope.parent.get('comp.x')")
+        self.assertEqual(0.5, self.top.comp.x)
         self.assertEqual(0.5, ex.evaluate(self.top)) # set scope back to self.top
         self.assertEqual(ex.transformed_text, "scope.get('comp.x')")
         
@@ -202,6 +202,12 @@ class ExprEvalTestCase(unittest.TestCase):
     def test_property(self):
         ex = ExprEvaluator('some_prop', self.top.a)
         self.assertEqual(ex.evaluate(), 7)
+        
+    def test_assignee(self):
+        ex = ExprEvaluator('a1d[3]*a1d[2 ]', self.top.a)
+        self.assertEqual(ex.is_valid_assignee(), False)
+        ex.text = 'comp.contlist[1].a2d[2][1]'
+        self.assertEqual(ex.is_valid_assignee(), True)
         
     def test_resolve(self):
         ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a1d[3]* 1.1*a1d[2 ])', self.top.a)
