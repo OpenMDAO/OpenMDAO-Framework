@@ -121,7 +121,7 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
         logger.error(msg)
         raise RuntimeError(msg)
 
-    if info.module_name in sys.modules.keys():
+    if info.module_name in sys.modules:
         logger.debug("    removing existing '%s' in sys.modules",
                      info.module_name)
         del sys.modules[info.module_name]

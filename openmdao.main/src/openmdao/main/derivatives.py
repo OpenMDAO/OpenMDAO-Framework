@@ -65,7 +65,7 @@ class Derivatives(object):
         _check_var(comp, in_name, "input")
         _check_var(comp, out_name, "output")
         
-        if out_name not in self.first_derivatives.keys():
+        if out_name not in self.first_derivatives:
             self.first_derivatives[out_name] = {}
             
         self.first_derivatives[out_name][in_name] = 0.0
