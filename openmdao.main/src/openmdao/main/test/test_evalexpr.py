@@ -366,9 +366,10 @@ class ExprEvalTestCase(unittest.TestCase):
          "scope.get('a.b',[(2,[5,scope.get('z.y',[(2,[2,3])])])])"),
         ('a.b(5, z.y[3])', 
          "scope.get('a.b',[(2,[5,scope.get('z.y',[(0,3)])])])"),
-         ('a.b(1,23,foo=9,*args,**kwargs)', 
-          "scope.get('a.b',[(2,[1,23],{'foo':9},args,kwargs)])"),
+         ('a.b(1,23,foo=9)', 
+          "scope.get('a.b',[(2,[1,23],[('foo',9)])])"),
          ('a.b(1,23)[1]', "scope.get('a.b',[(2,[1,23]),(0,1)])"),
+         ('a.b(1).somefunct(2)[1]', "scope.get('a.b',[(2,[1]),(1,'somefunct'),(2,[2]),(0,1)])"),
         ]
 
         self._do_tests(tests, self.top)

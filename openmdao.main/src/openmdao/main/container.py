@@ -124,100 +124,6 @@ class _ContainerDepends(object):
         """
         return self._srcs.get(destname)
 
-class _DumbTmp(object):
-    pass
-
-#class Alias(Variable):
-    #"""A trait that allows attributes in child objects to be referenced
-    #using an alias in a higher scope.  We don't use a delegate because
-    #we can't be sure that the attribute we want is found in a HasTraits
-    #object.
-    #"""
-    #def __init__ ( self, path, **metadata ):
-        #if len(path.split('.')) < 2:
-            #raise TraitError("Alias path must have at least "
-                             #"two entries in it."
-                             #" The given path was '%s'" % path)
-        #self._path = path
-        #self._restofpath = ''
-        #self._is_container = False
-            
-        ##make weakref to a transient object to force a re-resolve later
-        ##without checking for self._ref being equal to None
-        #self._ref = weakref.ref(_DumbTmp())
-        #super(Alias, self).__init__(NoDefaultSpecified, **metadata)
-
-    #def __getstate__(self):
-        #state = self.__dict__.copy()
-        #state['_ref'] = None
-        #return state
-
-    #def __setstate__(self, state):
-        #self.__dict__.update(state)
-        #self._ref = weakref.ref(_DumbTmp())
-
-    #def _resolve(self, obj):
-        #"""Resolve down to the closest scoping Container in the path and
-        #store a weakref to that object along with the rest of the pathname.
-        #"""
-        #found = False
-        #self._is_container = False
-        #try:
-            #names = self._path.split('.')
-            #for i in range(len(names)-1):
-                #obj = getattr(obj, names[i])
-                #if not isinstance(obj, Container):
-                    #break
-            #else:
-                #self._is_container = True
-                #restofpath = names[-1]
-                #found = True
-        #except AttributeError:
-            #restofpath = '.'.join(names[i:])
-            #if isinstance(obj, Container):
-                #self._is_container = True
-            
-        #try:
-            #if (self._is_container and obj.contains(restofpath)) or \
-                      #(self._is_container is False and hasattr(obj, restofpath)):
-                #self._restofpath = restofpath
-                #found = True
-        #except:
-            #pass
-            
-        #if not found:
-            #raise TraitError("Alias cannot resolve path '%s'" % self._path)
-        
-        #self._ref = weakref.ref(obj)
-        #return obj
-
-    #def get(self, obj, name):
-        #"""Return the value of the referenced attribute."""
-        #ref = self._ref()
-        #if not ref:
-            #ref = self._resolve(obj)
-        #if self._is_container:
-            #return ref.get(self._restofpath) 
-        #else:
-            #return getattr(ref, self._restofpath)
-
-    #def set(self, obj, name, value):
-        #"""Set the value of the referenced attribute."""
-        #if self.iotype == 'out':
-            #raise TraitError("Can't set output variable '%s'" % name)
-        
-        #if self.trait:
-            #value = self.trait.validate(obj, name, value)
-            
-        #ref = self._ref()
-        #if not ref:
-            #ref = self._resolve(obj)
-
-        #if self._is_container:
-            #ref.set(self._restofpath, value)
-        #else:
-            #setattr(ref, self._restofpath, value)
-
 
 class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
@@ -909,12 +815,13 @@ class Container(HasTraits):
               
               INDEX:   (0, idx)  where idx is some hashable value
               ATTR:    (1, name) where name is the attribute name
-              CALL:    (2, args, keywords) where args is a list and keywords is a dict.
-                                           keywords can be left out if empty.  args
-                                           can be left out if empty as long as keywords
-                                           are also empty, for example, (2,) and 
-                                           (2,[],{'foo':1}) are valid
-                                           but (2,{'foo':1}) is not.
+              CALL:    (2, args, kwargs) where args is a list of values and kwargs
+                                         is a list of tuples of the form (keyword,value).
+                                         kwargs can be left out if empty.  args
+                                         can be left out if empty as long as kwargs
+                                         are also empty, for example, (2,) and 
+                                         (2,[],[('foo',1)]) are valid
+                                         but (2,[('foo',1)]) is not.
               SLICE:   (3, lower, upper, step) All members must be present and should
                                                have a value of None if not set.
         """
@@ -930,7 +837,7 @@ class Container(HasTraits):
             else:
                 args = idx[1]
                 if len(idx) == 3:
-                    kwargs = idx[2]
+                    kwargs = dict(idx[2])
                 else:
                     kwargs = {}
                 return obj.__call__(*args, **kwargs)
