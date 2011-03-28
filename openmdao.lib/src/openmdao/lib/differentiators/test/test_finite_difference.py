@@ -85,7 +85,7 @@ class FiniteDifferenceTestCase(unittest.TestCase):
         for key, item in self.model.driver.get_parameters().iteritems():
             self.model.driver._hasparameters._parameters[key].ffd_step = None
             
-        self.model.driver.differentiator.form = 'Forward'
+        self.model.driver.differentiator.form = 'forward'
         self.model.comp.x = 1.0
         self.model.comp.u = 1.0
         self.model.run()
@@ -94,7 +94,7 @@ class FiniteDifferenceTestCase(unittest.TestCase):
         assert_rel_error(self, self.model.driver.differentiator.gradient_obj[0],
                                6.01, .01)
 
-        self.model.driver.differentiator.form = 'Backward'
+        self.model.driver.differentiator.form = 'backward'
         self.model.comp.x = 1.0
         self.model.comp.u = 1.0
         self.model.run()

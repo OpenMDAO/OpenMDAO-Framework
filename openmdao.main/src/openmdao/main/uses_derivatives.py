@@ -29,13 +29,12 @@ class UsesDerivatives_Base(object):
         """Return a list of inputs and a list of outputs that are referenced by
         any existing driver Expreval."""
         
-        driver_inputs = []
-        driver_outputs = []
-        
         # Parameters are all inputs.
-        for name in self._parent.get_parameters().keys():
-            driver_inputs.append(name)
+        driver_inputs = set(self._parent.get_parameters().keys())
+        driver_outputs = set()
 
+        get_metadata = self._parent.parent.get_metadata
+        
         # Objective expressions can contain inputs. These do not need to
         # be checked, because:
         # -- if they are physically connected to another comp, they will be
@@ -47,18 +46,16 @@ class UsesDerivatives_Base(object):
             
             if obj._objective:
                 for varpath in obj._objective.get_referenced_varpaths():
-                    metadata = self._parent.parent.get_metadata(varpath)
-                    if metadata['iotype'] == 'out':
-                        driver_outputs.append(varpath)
+                    if get_metadata(varpath, 'iotype') == 'out':
+                        driver_outputs.add(varpath)
                 
         if hasattr(self._parent, '_hasobjectives'):
             obj = getattr(self._parent, '_hasobjectives')
             
             for item in obj._objectives.values():
                 for varpath in item.get_referenced_varpaths():
-                    metadata = self._parent.parent.get_metadata(varpath)
-                    if metadata['iotype'] == 'out':
-                        driver_outputs.append(varpath)
+                    if get_metadata(varpath, 'iotype') == 'out':
+                        driver_outputs.add(varpath)
                 
         # Constraints can also introduce additional connections.
         for delegate in ['_hasineqconstraints', '_haseqconstraints']:
@@ -68,46 +65,34 @@ class UsesDerivatives_Base(object):
                 for item in constraints._constraints.values():
                     
                     for varpath in item.lhs.get_referenced_varpaths():
-                        metadata = self._parent.parent.get_metadata(varpath)
-                        if metadata['iotype'] == 'out' and \
-                           varpath not in driver_outputs:
-                            driver_outputs.append(varpath)
+                        if get_metadata(varpath, 'iotype') == 'out':
+                            driver_outputs.add(varpath)
 
                     for varpath in item.rhs.get_referenced_varpaths():
-                        metadata = self._parent.parent.get_metadata(varpath)
-                        if metadata['iotype'] == 'out' and \
-                           varpath not in driver_outputs:
-                            driver_outputs.append(varpath)
+                        if get_metadata(varpath, 'iotype') == 'out':
+                            driver_outputs.add(varpath)
                             
         if hasattr(self._parent, '_hasconstraints'):
             constraints = getattr(self._parent, '_hasconstraints')
             for item in constraints._ineq._constraints.values():
                 
                 for varpath in item.lhs.get_referenced_varpaths():
-                    metadata = self._parent.parent.get_metadata(varpath)
-                    if metadata['iotype'] == 'out' and \
-                       varpath not in driver_outputs:
-                        driver_outputs.append(varpath)
+                    if get_metadata(varpath, 'iotype') == 'out':
+                        driver_outputs.add(varpath)
 
                 for varpath in item.rhs.get_referenced_varpaths():
-                    metadata = self._parent.parent.get_metadata(varpath)
-                    if metadata['iotype'] == 'out' and \
-                       varpath not in driver_outputs:
-                        driver_outputs.append(varpath)
+                    if get_metadata(varpath, 'iotype') == 'out':
+                        driver_outputs.add(varpath)
                         
             for item in constraints._eq._constraints.values():
                 
                 for varpath in item.lhs.get_referenced_varpaths():
-                    metadata = self._parent.parent.get_metadata(varpath)
-                    if metadata['iotype'] == 'out' and \
-                       varpath not in driver_outputs:
-                        driver_outputs.append(varpath)
+                    if get_metadata(varpath, 'iotype') == 'out':
+                        driver_outputs.add(varpath)
 
                 for varpath in item.rhs.get_referenced_varpaths():
-                    metadata = self._parent.parent.get_metadata(varpath)
-                    if metadata['iotype'] == 'out' and \
-                       varpath not in driver_outputs:
-                        driver_outputs.append(varpath)
+                    if get_metadata(varpath, 'iotype') == 'out':
+                        driver_outputs.add(varpath)
                         
         return driver_inputs, driver_outputs
     

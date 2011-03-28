@@ -396,3 +396,6 @@ class FiniteDifference(HasTraits):
         return data_obj, data_ineqconst, data_eqconst
                     
                     
+    def raise_exception(self, msg, exception_class=Exception):
+        """Raise an exception."""
+        self._parent.raise_exception(msg, exception_class)
