@@ -13,7 +13,7 @@ For this example we'll build a plugin for the component shown in the figure
 simply computes the value of its single output by adding its two inputs.
 
 These instructions apply to any plugin component distribution that is pure
-python, i.e. not containing any python extensions.  They will also work with file
+Python, i.e., not containing any Python extensions.  They will also work with file
 wrapped components as long as the distribution includes only the wrapper component
 and not the application being file wrapped.
 
@@ -36,7 +36,7 @@ distribution is called ``plugin_quickstart``.
 
 .. option:: -v
 
-   Version id of the distribution. Defaults to **0.1**.  
+   Version id of the distribution. Defaults to ``0.1``.  
    
 .. option:: -c
 
@@ -45,8 +45,8 @@ distribution is called ``plugin_quickstart``.
 
 .. option:: -g
 
-   Plugin group. Defaults to **openmdao.component**. Other possible values are:
-   **openmdao.driver** and **openmdao.variable**.
+   Plugin group. Defaults to ``openmdao.component``. Other possible values are:
+   ``openmdao.driver`` and ``openmdao.variable``.
 
 .. option:: -d
 
@@ -96,7 +96,7 @@ we'll want to tailor these specifically to our plugin by editing the
 following files found in our distribution directory:
 
 **src/<dist_name>/<dist_name>.py**
-    A python source file containing our plugin class.
+    A Python source file containing our plugin class.
     
 **setup.cfg**
     A config file that specifies metadata related to the plugin. This
@@ -104,8 +104,8 @@ following files found in our distribution directory:
     
 **MANIFEST.in**
     If we have additional files to include in our distribution beyond
-    the standard set of python source files and setup files, we can 
-    specify them here.  For more info about MANIFEST.in, look `here`__
+    the standard set of Python source files and setup files, we can 
+    specify them here.  For more info about ``MANIFEST.in``, look `here`__.
     
 **docs/usage.rst**
     A reStructuredText file containing any docs that we want to add to those
@@ -115,9 +115,9 @@ following files found in our distribution directory:
     A simple text file with miscellaneous instructions about the plugin.  
     
 **src/<dist_name>/test/test_<dist_name>.py**
-    A python source file containing a unit test for our plugin class. It
+    A Python source file containing a unit test for our plugin class. It
     actually doesn't run any tests by default, but there is a skeletal
-    version of a unittest.TestCase defined here to make it as easy as 
+    version of a ``unittest.TestCase`` defined here to make it as easy as 
     possible to add some unit tests for our plugin.
     
 
@@ -127,10 +127,10 @@ following files found in our distribution directory:
 The following sections describe how to edit these files in more detail.
 
 
-Editing our Plugin Class
-++++++++++++++++++++++++
+*Editing our Plugin Class*
++++++++++++++++++++++++++++
 
-The most important file to edit is the python file that defines our
+The most important file to edit is the Python file that defines our
 plugin class.  The plugin class definition is found in:
 
 ::
@@ -209,8 +209,8 @@ or, in this specific case:
     
 
 
-Adding Documentation
-++++++++++++++++++++
+*Adding Documentation*
++++++++++++++++++++++++
 
 Now that our plugin class is fully defined, we should write up some documentation
 about how to use it.  The packaging script that we'll run later, ``plugin_makedist``, 
@@ -229,8 +229,8 @@ A small amount of information is put there automatically but you may want to add
 more.
 
 
-Setting Metadata
-++++++++++++++++
+*Setting Metadata*
+++++++++++++++++++
 
 The final step in preparing to package our plugin is to define metadata for
 our distribution.  You specify that metadata by editing the ``setup.cfg`` file.
@@ -292,17 +292,17 @@ More descriptions of the various metadata values can be found
 .. __: http://readthedocs.org/docs/distutils2/en/latest/setupcfg.html#metadata
 
 
-The values in the *metadata* section are specified by **PEP 345** and they
-apply to any python distribution.  We've added an *openmdao* section to the
+The values in the *metadata* section are specified by **PEP 345** and 
+apply to any Python distribution.  We've added an *openmdao* section to the
 file to provide a place to put metadata that isn't mentioned in PEP 345, for
-example the copyright notice for the documentation.
+example, the copyright notice for the documentation.
 
 
-Additional Customization
-++++++++++++++++++++++++
+*Additional Customization*
+++++++++++++++++++++++++++
 
 In some cases, you may want to add multiple plugin classes to your distribution,
-either in the *<dist_name>.py* file or in separate Python source files that you
+either in the ``<dist_name>.py`` file or in separate Python source files that you
 add to the ``src`` directory, possibly as part of a nested package directory
 structure.  The ``plugin_makedist`` script knows how to handle this sort of a
 situation and will generate the appropriate source documentation and metadata
@@ -317,7 +317,7 @@ modify any of the files listed below because they will be overwritten by the scr
     - **docs/srcdocs.rst**
 
 
-If for some reason you must modify any of the files above, you must build your
+If for some reason you must modify any of the files above, then you must build your
 distribution using the standard Python packaging procedure, for example:
 
 ::
@@ -327,16 +327,16 @@ distribution using the standard Python packaging procedure, for example:
 
 That will create a source distribution of your plugin, but keep in mind that
 in this case you will have to specify entry point metadata in the ``setup.py``
-file manually for each of your plugins. In order to specify entry points
+file manually for each of your plugins. To specify entry points
 manually, you must add an ``entry_points`` keyword argument to the ``setup``
 call inside of the ``setup.py`` file.
 
-Entry points are divided into groups, and each
+Entry points are divided into groups, and each 
 type of OpenMDAO plugin has a particular group. For example, Component
 plugins are found in the ``openmdao.component`` group. Each entry
-point is specified by its name, followed by an equals (**=**) sign, followed by
+point is specified by its name followed by an equals (**=**) sign; followed by
 dotted module path (dotted path you would use to import the module in
-Python), followed by a colon (**:**) and the name of the plugin class. The value
+Python); followed by a colon (**:**) and the name of the plugin class. The value
 of ``entry_points`` should be a string in INI file format or a dictionary. 
 
 
@@ -395,7 +395,7 @@ that this only works for installed plugin distributions.
    
 .. option:: plugin_dist_name
 
-   The name of the plugin distribution
+   The name of the plugin distribution.
    
 
 If we install our plugin as a *develop* egg by running ``plugin_install`` from
@@ -427,7 +427,7 @@ where ``dist_dir`` is the name of the directory containing our distribution.
 It defaults to the current directory. The script will automatically detect
 plugins within the distribution ``src`` directory and generate any necessary
 entry points for them in the ``setup.py`` file. It will also generate the
-sphinx documentation and place the sphinx generated files and all other
+Sphinx documentation and place the Sphinx-generated files and all other
 necessary files in a source distribution that will be named as follows:
 
 ::
@@ -445,7 +445,7 @@ on Windows, or
 on other platforms.
     
     
-In our particular case since we're doing this on linux, the file would be 
+In our particular case, since we're doing this on Linux, the file would be 
 named ``simpleadder-0.9.tar.gz``.
 
 Once we've created our source distribution, it can be installed into an active
@@ -458,7 +458,7 @@ OpenMDAO environment by running:
     
 We could also put the source distribution on a file server so that anyone with
 access to the server would be able to download and install it automatically.
-For example, if we were to put the file on the *openmdao.org* server, anyone
+For example, if we were to put the file on the ``openmdao.org`` server, anyone
 could install it by typing:
 
 ::
@@ -519,7 +519,7 @@ OpenMDAO provides a base class for framework visible inputs and outputs called
 Component object contains a ``Variable`` instance that has a metadata
 attribute named *iotype* then that instance object is exposed to the framework
 as a variable whose value can be passed between components. Valid values for
-*iotype* are 'in' and 'out'.
+*iotype* are ``'in'`` and ``'out'``.
 
 One thing that can be a little confusing to people first using Variables is that
 the Variable object itself is just a validator and possibly a converter. The
@@ -549,15 +549,15 @@ valid. In this particular case, we just need to verify that the value is a
 3-tuple and it has float or int entries. If the value is acceptable, then we
 just return it. We don't need to do it in this case, but in other custom
 traits, we could convert the value before returning it. If the value
-is not acceptable, then we call the error function, which will raise a
+is not acceptable, then we call the ``error`` function, which will raise a
 TraitError exception.
 
 That's all of the source code required to make our Coordinates variable 
-functional.  As in the earlier section where we made a component plugin,
+functional.  As in the earlier section, where we made a component plugin,
 we need to specify the metadata for our distribution by editing the 
 ``setup.cfg`` file and add any extra documentation that we want to the
 ``docs/usage.rst`` file and the ``README.txt`` file.  When that's done,
-as before, we run ``plugin_makedist`` and the end result should be a
+as before, we run ``plugin_makedist``; the end result should be a
 source distribution named ``coord-0.1.tar.gz``.  The version id of our 
 plugin defaulted to **0.1** because we didn't specify it when we ran
 ``plugin_quickstart``.
@@ -578,7 +578,7 @@ starting directory structure for our plugin:
     plugin_quickstart mydriver -c MyDriver -g openmdao.driver
 
 
-By settng the **-g** option to *openmdao.driver*, we tell ``plugin_quickstart``
+By settng the **-g** option to ``openmdao.driver``, we tell ``plugin_quickstart``
 to generate a source file containing a Driver class.  The rest of the plugin
 development process is the same as described in the :ref:`build-pure-python-plugin-label`
 section.

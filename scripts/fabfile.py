@@ -8,6 +8,7 @@ import fnmatch
 import tarfile
 import urllib2
 import subprocess
+from subprocess import Popen, STDOUT, PIPE, check_call
 from socket import gethostname
 import paramiko.util
 
@@ -15,7 +16,6 @@ paramiko.util.log_to_file('paramiko.log')
 
 REAL_URL = 'http://openmdao.org'
 TEST_URL = 'http://torpedo.grc.nasa.gov:31004'
-
 
 class _VersionError(RuntimeError):
     pass
@@ -117,7 +117,15 @@ def _release(version, is_local, home, url=REAL_URL):
     finally:
         shutil.rmtree(tmpdir)
 
-            
+def _find_top_dir():
+    path = os.getcwd()
+    while path:
+        if '.bzr' in os.listdir(path):
+            return path
+        path = os.path.dirname(path)
+    raise RuntimeError("Can't find top dir of repository starting at %s" % os.getcwd())
+
+                
 @hosts('openmdao@web103.webfaction.com')
 def release(version=None):
     if sys.platform != 'win32':
@@ -134,22 +142,76 @@ def localrelease(version=None):
     run('rsync -arvzt --delete openmdao@web103.webfaction.com:dists /OpenMDAO/release_test')
     print 'creating release...'
     _release(version, is_local=True, home='/OpenMDAO/release_test', url=TEST_URL)
-  
+
+
+
+#Keith's function to update the dev docs - not on trunk yet?
+def _update_dev_docs():
+    startdir = os.getcwd()
+    try:
+        # tar up the docs so we can upload them to the server
+	topdir = _find_top_dir()
+        devtools_dir = os.path.join(topdir,'openmdao.devtools',
+                                    'src','openmdao','devtools')
+        check_call([sys.executable, os.path.join(devtools_dir,'build_docs.py')])        
+
+        try:
+            archive = tarfile.open(os.path.join(topdir,'docs','docs.tar.gz'), 'w:gz')
+	    os.chdir(os.path.join(topdir, 'docs', '_build'))	
+            archive.add('html')
+            archive.close()
+        finally:
+            os.chdir(startdir)
+
+        # put the docs on the server and untar them
+        put(os.path.join(topdir,'docs', 'docs.tar.gz'), '~/downloads/dev_docs/docs.tar.gz') 
+        with cd('~/downloads/dev_docs'):
+            run('tar xzf docs.tar.gz')
+            run('mv html/* ~/downloads/dev_docs')
+	    run('rm -rf html')
+            run('rm -f docs.tar.gz')
+ 
+    finally:
+        cmd="rm -rf " + os.path.join(topdir,'docs','docs.tar.gz')
+        local(cmd)
+   
+@hosts('openmdao@web103.webfaction.com')
+def update_dev_docs():
+    _update_dev_docs()
+ 
+
+
+
+
+
+
+
+
+
+
+
+#ALL FUNCTIONALITY BELOW THIS POINT HAS BEEN MOVED TO STANDALONE FILES!!!!!  
 #-------------------------------------------------------------------------------------    
 #Local developer script to build and run tests on a branch on each development platform
+#FUNCTIONALITY MOVED TO TESTBRANCH.PY
 def _testbranch():
     """Builds and runs tests on a branch on all our development platforms
     You can run from anywhere in the branch, but recommend running from branchroot/scripts dir.
     """
     startdir=os.getcwd()
     branchdir=local('bzr root').strip()    
-    print("starting directory is %s" % startdir)
-    print("branch root directory is %s" % branchdir)
-    
+    #print("starting directory is %s" % startdir)
+    #print("branch root directory is %s" % branchdir)
+    remotehost = env.host.split('.')[0]
+    tarfilename=remotehost+"testbranch.tar.gz"
+    print("tarfilename is %s" % tarfilename)    
     #export the current branch to a tarfile
     os.chdir(branchdir)  #change to top dir of branch
-    local('bzr export testbranch.tar.gz')
-    
+    #local('bzr export testbranch.tar.gz')
+    local("bzr export %s --root=testbranch" % tarfilename)
+    paramiko_log="paramiko.log." + remotehost
+    paramiko.util.log_to_file(paramiko_log)  
+      
     winplatforms=["storm.grc.nasa.gov"]  #list of windows platforms to remote into
     if env.host in winplatforms:     #if we are remoting into a windows host
         devbindir='devenv\Scripts'
@@ -167,7 +229,8 @@ def _testbranch():
         env.shell="/bin/bash -l -c"
 
     #Copy exported branch tarfile to desired test platform in user's root dir
-    filetocopy = os.path.join(branchdir, 'testbranch.tar.gz')
+    #filetocopy = os.path.join(branchdir, 'testbranch.tar.gz')
+    filetocopy = os.path.join(branchdir, tarfilename)
     if env.host not in winplatforms:     #if we are not remoting into a windows host
         #remove any previous testbranches on remote host
         run('%s testbranch' % removeit)  
@@ -183,7 +246,7 @@ def _testbranch():
             #change to devenv/bin, activate the envronment, and run tests
             with cd(devbindir):
                 print("Please wait while the environment is activated and the tests are run")
-                run('source activate && echo $PATH && echo environment activated, please wait while tests run && openmdao_test -x')
+                run('source activate && echo $PATH && echo environment activated, please wait while tests run && openmdao_test -xv')
                 print('Tests completed on %s' % env.host)
          
     else:  #we're remoting into windows (storm)
@@ -201,7 +264,7 @@ def _testbranch():
             call activate.bat
             set PYTHON_EGG_CACHE=C:\Users\\%USERNAME%\\testbranch
             echo "environment activated, please wait while tests run"
-            openmdao_test.exe -x"""
+            openmdao_test.exe -xv"""
         #need to export teststeps to batch file
         with open('winteststeps.bat', 'w') as f:
             f.write(teststeps)
@@ -214,38 +277,15 @@ def _testbranch():
         run('call winteststeps.bat')
         print('Tests completed on %s' % env.host)
 
+
 @hosts('storm.grc.nasa.gov', 'torpedo.grc.nasa.gov', 'viper.grc.nasa.gov')
-def testbranch(runlocal="False", ignoreBzrStatus="False"):
-    """Builds and runs tests on a branch on all our development platforms, except the platform you are
-    running from (if that platform is one of our developer platforms)
-    You can run from anywhere in the branch, but recommend running from branchroot/scripts dir.
-    If you have uncommitted changes on your branch you will get an error message and the script will exit
-    Usage: fab testbranch
-        fab testbranch -u username, if you are not on viper, storm, or torpedo
-        fab testbranch:host=hostname.grc.nasa.gov,  to run on a single host
-        fab testbranch:True or fab testbranch:runlocal=True,  to force testing on the local OpenMDAO platform
-        When using more than one option, they should be separated by only a comma, no spaces, for example:
-            fab testbranch:runlocal=True,host=storm.grc.nasa.gov
-    """
-    remotehost = env.host.split('.')[0]
-    currenthost = gethostname().split('.')[0]
-    if runlocal.lower() == "false" and (currenthost == remotehost):
-        print("skipping tests on %s" % currenthost)
-    else:
-        print('running tests on %s' % remotehost)
-        #Check for uncommitted changes first
-        uncommittedChanges=local('bzr status -SV')
-        if uncommittedChanges: 
-            if ignoreBzrStatus.lower() == "false": #raise error if uncommitted changes on current branch 
-                raise RuntimeError("There are uncommitted changes on this branch.  Please commit changes then restart this script.")
-            else:   #if running special debugging version, you'll get a msg only and will be allowed to continue
-                print('There are uncommitted changes on this branch.  Continue at your own risk')
-        _testbranch()
+def testbranch():
+     _testbranch()
 
 #------------------------------------------------------------------------------------------------------
 #Part of script needed to test releases
 #This will only be run from storm, since the release script is always run from storm
-#Run this from the scripts directory
+#Run this from the scripts directory - THIS FUNCTIONALITY HAS BEEN MOVED TO test_release.py!
 def _getrelease(releaseurl):
     """Grabs the latest openmdao release from the website, go-openmdao.py, so it can be tested on our dev platforms
     """
@@ -329,7 +369,6 @@ def testlocalrelease(releaseurl='%s/downloads/latest/go-openmdao.py' % TEST_URL)
     if sys.platform != 'win32':
         raise RuntimeError("OpenMDAO releases should be tested from Windows since that's where releases are created by config mgr.")
 
-    _testrelease(releaseurl)
     
 #Do not need to run this separately since testlocalrelease calls it - just here for debugging purposes
 def getlocalrelease(releaseurl='%s/downloads/latest/go-openmdao.py' % TEST_URL):

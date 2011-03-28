@@ -736,7 +736,7 @@ def _get_entry_points(startdir):
 
 def plugin_makedist(argv=None):
     """A command line script (plugin_makedist) points to this.  It creates a 
-    source distribution containing sphinx documentation for the specified
+    source distribution containing Sphinx documentation for the specified
     distribution directory.  If no directory is specified, the current directory
     is assumed.
     
@@ -803,7 +803,7 @@ def plugin_makedist(argv=None):
 
 def plugin_docs(argv=None):
     """A command line script (plugin_docs) points to this. It brings up
-    the sphinx documentation for the named plugin in a browser.
+    the Sphinx documentation for the named plugin in a browser.
     """
     if argv is None:
         argv = sys.argv[1:]
@@ -821,7 +821,7 @@ def plugin_docs(argv=None):
         
         
 def _plugin_docs(plugin_name, browser=None):
-    """This brings up the sphinx docs for the named plugin using the
+    """This brings up the Sphinx docs for the named plugin using the
     specified browser.  The plugin must be importable in the current 
     environment.
     
@@ -917,7 +917,7 @@ def _plugin_build_docs(destdir, cfg):
     
 def plugin_build_docs(argv=None):
     """A command line script (plugin_build_docs) points to this.  It builds the
-    sphinx documentation for the specified distribution directory.  
+    Sphinx documentation for the specified distribution directory.  
     If no directory is specified, the current directory is assumed.
     
     usage: plugin_build_docs [dist_dir_path]

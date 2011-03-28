@@ -53,44 +53,45 @@ entry point group to the purpose within the framework of plugins in that
 group:
 
 
-==============================  =================================================================================================
-**Entry Point Group**           **Purpose**                                                                                              
-==============================  =================================================================================================
-`openmdao.component`             To add custom computations to an OpenMDAO model 
-------------------------------  -------------------------------------------------------------------------------------------------
-`openmdao.variable`              To add custom data object to pass between components
-------------------------------  -------------------------------------------------------------------------------------------------
-`openmdao.driver`                To add custom iterative executive (optimizer, solver, design space explorer) to an OpenMDAO model
-------------------------------  -------------------------------------------------------------------------------------------------
-`openmdao.case_iterator`         To add custom supplier of Cases
-------------------------------  -------------------------------------------------------------------------------------------------
-`openmdao.resource_allocator`    To add custom handling of allocation of computing resources
-==============================  =================================================================================================
+===============================  =================================================================================================
+**Entry Point Group**            **Purpose**                                                                                              
+===============================  =================================================================================================
+``openmdao.component``           To add custom computations to an OpenMDAO model 
+-------------------------------  -------------------------------------------------------------------------------------------------
+``openmdao.variable``            To add custom data object to pass between components
+-------------------------------  -------------------------------------------------------------------------------------------------
+``openmdao.driver``              To add custom iterative executive (optimizer, solver, design space explorer) to an OpenMDAO model
+-------------------------------  -------------------------------------------------------------------------------------------------
+``openmdao.case_iterator``       To add custom supplier of Cases
+-------------------------------  -------------------------------------------------------------------------------------------------
+``openmdao.resource_allocator``  To add custom handling of allocation of computing resources
+===============================  =================================================================================================
 
-.. note:: The entry point group names look like they could be the names of python
+
+.. note:: The entry point group names look like they could be the names of Python
      modules or packages, but they're not.  They're just strings that a plugin 
      developer uses to indicate to the framework that his plugin supports a particular
      plugin interface.
 
 The framework also provides a base class corresponding to most plugin
-interfaces in order to make it easier for developers to create new plugins by
+interfaces to make it easier for developers to create new plugins by
 simply inheriting from the base class and modifying a small number of methods
 and/or attributes.
 
 The table below shows each base class and the entry point group that it
 belongs to:
 
-=========================================  ================================
-**Base Class**                             **Entry Point Group**
-=========================================  ================================
-openmdao.main.api.Component                 ``openmdao.component`` 
------------------------------------------  --------------------------------
-openmdao.main.api.Variable                  ``openmdao.variable``
------------------------------------------  --------------------------------
-openmdao.main.api.Driver                    ``openmdao.driver``
------------------------------------------  --------------------------------
-openmdao.main.resource.ResourceAllocator    ``openmdao.resource_allocator``
-=========================================  ================================
+============================================  ================================
+**Base Class**                                **Entry Point Group**
+============================================  ================================
+``openmdao.main.api.Component``               ``openmdao.component`` 
+--------------------------------------------  --------------------------------
+``openmdao.main.api.Variable``                ``openmdao.variable``
+--------------------------------------------  --------------------------------
+``openmdao.main.api.Driver``                  ``openmdao.driver``
+--------------------------------------------  --------------------------------
+``openmdao.main.resource.ResourceAllocator``  ``openmdao.resource_allocator``
+============================================  ================================
 
 
 Note that every plugin in ``openmdao.driver`` is also assumed to be a member 
@@ -109,15 +110,15 @@ detail in :ref:`build-pure-python-plugin-label`.
 ======================  ===========================================================================
 **Script Name**         **Purpose**
 ======================  ===========================================================================
-plugin_build_docs        To build the html docs for the plugin
+``plugin_build_docs``   To build the html docs for the plugin
 ----------------------  ---------------------------------------------------------------------------
-plugin_docs              To view the html docs for the plugin
+``plugin_docs``         To view the html docs for the plugin
 ----------------------  ---------------------------------------------------------------------------
-plugin_install           To install the plugin into the active environment
+``plugin_install``      To install the plugin into the active environment
 ----------------------  ---------------------------------------------------------------------------
-plugin_makedist          To create a source distribution containing the plugin
+``plugin_makedist``     To create a source distribution containing the plugin
 ----------------------  ---------------------------------------------------------------------------
-plugin_quickstart        To create the directory structure needed to build the plugin distribution
+``plugin_quickstart``   To create the directory structure needed to build the plugin distribution
 ======================  ===========================================================================
 
 
@@ -128,7 +129,7 @@ plugin_quickstart        To create the directory structure needed to build the p
 The good news is that if you use the ``plugin_makedist`` tool to package your
 plugin, the ``setup.py`` file with all necessary entry points will be created
 for you automatically. The bad news is that there are some cases where
-``plugin_makedist`` cannot be used and so the entry points must be defined
+``plugin_makedist`` cannot be used, so the entry points must be defined
 manually. The rest of this section describes how to add entry points and other
 metadata to a distribution manually.
 
@@ -158,7 +159,7 @@ called ``simple_adder``:
         }
     )
 
-The example above shows that an entry point named *simple_adder.SimpleAdder*
+The example above shows that an entry point named ``simple_adder.SimpleAdder``
 that maps to the SimpleAdder class within the ``simple_adder.py`` module is a
 member of the ``openmdao.component`` entry point group. This tells OpenMDAO
 that the SimpleAdder plugin is an OpenMDAO Component.  The list of entry point
@@ -167,7 +168,7 @@ in the table above.
 
 
 .. note:: You should always use the full module dotted name as the name of your entry
-   point for consistency with other OpenMDAO plugins.
+   point to be consistent with other OpenMDAO plugins.
    
    
 Once you have your ``setup.py`` file and your plugin class is complete, you're ready
@@ -181,8 +182,8 @@ way:
     
     
 This will create a source distribution and place it in the current directory. If your
-distribution is named *simple_adder*, for example, the source distribution will be named 
-*simple_adder-1.0.tar.gz*, or possibly *simple_adder-1.0.zip* on Windows.  The version 
+distribution is named ``simple_adder``, for example, the source distribution will be named 
+``simple_adder-1.0.tar.gz``, or possibly ``simple_adder-1.0.zip`` on Windows.  The version 
 of the packaged distribution is *1.0* as was specified in the ``setup.py`` file.
 
 
@@ -191,7 +192,7 @@ of the packaged distribution is *1.0* as was specified in the ``setup.py`` file.
 
 If you run ``plugin_install`` from the top directory of your plugin
 distribution, it will install your plugin as a *develop* egg, meaning that it
-places a link to your distribution on the python path so that you can make
+places a link to your distribution on the Python path so that you can make
 changes to your plugin and test it in the environment without having to keep
 reinstalling it.
 
@@ -216,22 +217,22 @@ would look like:
     plugin_install [-f <find_links_url>] <distrib_requirement>
     
 
-where *find_links_url* is the url for a find_links server and *distrib_reqirement* is
+where ``find_links_url`` is the url for a ``find_links`` server and ``distrib_reqirement`` is
 a requirement string in the same form as you would pass to ``easy_install`` or ``pip``.
-For example, *myplugin*, *myplugin==0.5*, and *myplugin>=0.3* are all valid requirement
-strings.  If there is no version specifier in the *distrib_requirement* then the latest
+For example, ``myplugin``, ``myplugin==0.5``, and ``myplugin>=0.3`` are all valid requirement
+strings.  If there is no version specifier in the ``distrib_requirement``, then the latest
 version compatible with the current platform will be installed.
 
 
 *Making Your Plugin Available to Others*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    
-There are a number of ways to do this, from simply emailing your distribution
-to them or giving it to them on a thumb drive, CD, etc., or placing your
-distribution on a file server that they have access to. As mentioned above,
-``plugin_install`` allows you to download and install python distributions
+You can make your plugin available to others in a number of ways, from simply emailing your distribution
+to others or giving it to them on a thumb drive, CD, etc., or placing your
+distribution on a file server that they can access. As mentioned above,
+``plugin_install`` allows you to download and install Python distributions
 from remote web servers. For example, if there were a distribution called
-'MyDist' on the openmdao.org server and you wanted to grab the newest version
+*MyDist* on the ``openmdao.org`` server and you wanted to grab the newest version
 of it, you could ``plugin_install`` it into your activated OpenMDAO virtual
 environment as follows:
 

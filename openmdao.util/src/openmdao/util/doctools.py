@@ -1,6 +1,5 @@
 """
 A utility to extract Traits information from the code and get it into the Sphinx documentation.
-
 NOTE: No traits docs will be generated unless the class containing the traits has a doc string!
 """
 
@@ -100,9 +99,10 @@ def get_traits_info(app, what, name, obj, options, lines):
                 lines.extend(["*%s* (%s) **%s**" %(type(val.trait_type).__name__, val.trait_type.klass.__name__, t)])
             else:
                 lines.extend(["*%s* **%s**" %(type(val.trait_type).__name__, t)])
-            lines.extend(["  %s" %val.desc])
-            lines.append('')
-            lines.extend(["  * default:  '%s'" %(val.trait_type).default_value]) 
+            if (val.desc is not None):
+                lines.extend(["  %s" %val.desc])
+                lines.append('')
+	    lines.extend(["  * default:  '%s'" %(val.trait_type).default_value]) 
             if (val.iotype is not None):
                 lines.extend(["  * iotype:  '%s'" %val.iotype])
             if (val.units is not None):
