@@ -224,7 +224,7 @@ class Assembly (Component):
         
     def execute (self):
         """Runs driver and updates our boundary variables."""
-        self.driver.run()
+        self.driver.run(ffd_order=self.ffd_order)
         
         # now update boundary outputs
         valids = self._valid_dict
@@ -422,6 +422,33 @@ class Assembly (Component):
     
     def exec_counts(self, compnames):
         return [getattr(self,c).exec_count for c in compnames]
+    
+    def calc_derivatives(self, first=False, second=False):
+        """ Overides the component's version of this function. An assembly
+        must initiate the call of calc_derivatives on all components in its
+        driver's workflow."""
+        
+        self.driver.calc_derivatives(first, second)
+        
+    def check_derivatives(self, order, driver_inputs, driver_outputs):
+        """An assembly just tells its driver to run check_derivatives on each
+        element in its workflow. Note that an assembly signifies a change of
+        scope, so the driver input and output lists are pared down."""
+        
+        # Put the driver connection lists into our local scope by removing
+        # the assembly name from the dotted path.
+        for j, item in enumerate(driver_inputs):
+            names = item.split('.')
+            if names[0] == self.name:
+                driver_inputs[j] = '.'.join(names[1:])
+        
+        for j, item in enumerate(driver_outputs):
+            names = item.split('.')
+            if names[0] == self.name:
+                driver_outputs[j] = '.'.join(names[1:])
+        
+        self.driver.check_derivatives(order, driver_inputs, driver_outputs)
+    
 
 
 def dump_iteration_tree(obj):

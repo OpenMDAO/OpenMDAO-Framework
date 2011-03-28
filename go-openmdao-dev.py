@@ -1160,7 +1160,7 @@ def _single_install(cmds, req, bin_dir):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'Pygments==1.3.1', 'ordereddict==1.1', 'Traits==3.3.0', 'pycrypto==2.3', 'PyYAML==3.09', 'Jinja2==2.4', 'decorator==3.2.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'paramiko==1.7.6', 'virtualenv==1.4.6', 'newsumt==1.0.0', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'nose==0.11.3']
+    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'Pygments==1.3.1', 'ordereddict==1.1', 'Traits==3.3.0', 'pycrypto==2.3', 'PyYAML==3.09', 'Jinja2==2.4', 'decorator==3.2.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'paramiko==1.7.6', 'virtualenv==1.4.6', 'newsumt==1.1.0', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'nose==0.11.3']
     url = 'http://openmdao.org/dists'
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':

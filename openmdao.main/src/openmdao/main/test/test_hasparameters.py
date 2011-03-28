@@ -73,7 +73,19 @@ class HasParametersTestCase(unittest.TestCase):
         else: 
             self.fail('RuntimeError expected')
         
-
+    def test_metadata(self):
+        
+            self.top.driver.add_parameter('comp.x', low=0., high=100, fd_step=.001)
+            self.top.driver.add_parameter('comp.y', low=0., high=100)
+            
+            param = self.top.driver.get_parameters().values()
+            
+            self.assertEqual(param[0].low, 0.0)
+            self.assertEqual(param[0].high, 100.0)
+            self.assertEqual(param[0].fd_step, 0.001)
+            self.assertEqual(param[1].fd_step, None)
+            
+            
 if __name__ == "__main__":
     unittest.main()
 

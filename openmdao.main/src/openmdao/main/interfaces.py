@@ -391,7 +391,17 @@ class IDOEgenerator(Interface):
     def __iter__():
         """Return an iterator object."""
 
+class IDifferentiator(Interface):
+    """A plugin to driver that can determine derivatives between a driver's
+    parameters and its objectives and constraints."""
+    
+    def calc_gradient():
+        """Returns the gradient vectors for this Driver's workflow"""
 
+    def calc_hessian():
+        """Returns the Hessian matrix for this Driver's workflow"""
+        
+        
 class IUncertainVariable(Interface):
     """A variable which supports uncertainty"""
     def getvalue():
@@ -607,9 +617,6 @@ class IHasObjective(Interface):
     def list_objective(self):
         """Returns the expression string for the objective."""
     
-    def get_objective(self):
-        """Returns the objective object."""
-    
     def eval_objective(self):
         """Returns the value of the evaluated objective."""
 
@@ -645,9 +652,6 @@ class IHasObjectives(Interface):
     def clear_objectives(self):
         """Removes all objectives."""
         
-    def get_objectives(self):
-        """Returns an ordered dict of objective objects."""
-
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
  

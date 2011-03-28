@@ -14,10 +14,11 @@ import sys
 import weakref
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.trait_base import not_event, not_none
-from enthought.traits.api import Bool, List, Str, Int, Instance, Property, implements, TraitError, Missing
+from enthought.traits.trait_base import not_event
+from enthought.traits.api import Bool, List, Str, Int, Instance, Property, implements, TraitError
 
 from openmdao.main.container import Container
+from openmdao.main.derivatives import Derivatives
 from openmdao.main.interfaces import IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -151,6 +152,11 @@ class Component (Container):
         
         self._dir_stack = []
         self._dir_context = None
+        
+        # Maybe we should have the user create this in the component's __init__
+        self.derivatives = Derivatives()
+        self.ffd_order = 0
+
 
     @property
     def dir_context(self):
@@ -294,6 +300,63 @@ class Component (Container):
         """
         raise NotImplementedError('%s.execute' % self.get_pathname())
     
+    def _execute_ffd(self, ffd_order):
+        """During Fake Finite Difference, instead of executing, a component
+        can use the available derivatives to calculate the output efficiently.
+        Before FFD can execute, calc_derivatives must be called to save the
+        baseline state and the derivatives at that baseline point.
+        
+        This method approximates the output using a Taylor series expansion
+        about the saved baseline point.
+        
+        ffd_order: int
+            Order of the derivatives to be used (typically 1 or 2).
+        """
+        
+        for name in self.derivatives.out_names:
+            setattr(self, name,
+                     self.derivatives.calculate_output(self, name, ffd_order))
+    
+    def calc_derivatives(self, first=False, second=False):
+        """Prepare for Fake Finite Difference runs by calculating all needed
+        derivatives, and saving the current state as the baseline. The user
+        must supply calculate_derivatives() in the component.
+        
+        This function should not be overriden.
+        
+        first: Bool
+            Set to True to calculate first derivatives.
+        
+        second: Bool
+            Set to True to calculate second derivatives.
+        """
+        
+        if hasattr(self, 'calculate_derivatives'):
+            
+            # Calculate derivatives in user-defined function
+            self.calculate_derivatives(first, second)
+            
+            # Save baseline state
+            self.derivatives.save_baseline(self)
+    
+    def check_derivatives(self, order, driver_inputs, driver_outputs):
+        """Calls the validate method of the derivatives object, in order to
+        warn the user about all missing derivatives."""
+        
+        local_inputs = []
+        for item in driver_inputs:
+            paths = item.split('.')
+            if paths[0] == self.name:
+                local_inputs.append(','.join(paths[1:]))
+        
+        local_outputs = []
+        for item in driver_outputs:
+            paths = item.split('.')
+            if paths[0] == self.name:
+                local_outputs.append('.'.join(paths[1:]))
+        
+        self.derivatives.validate(self, order, local_inputs, local_outputs)
+    
     def _post_execute (self):
         """Update output variables and anything else needed after execution. 
         Overrides of this function must call this version.
@@ -310,9 +373,18 @@ class Component (Container):
         self._call_execute = False
         
     @rbac('*', 'owner')
-    def run (self, force=False):
+    def run (self, force=False, ffd_order=0):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
+
+        force: bool
+            If True, force component to execute even if inputs have not
+            changed. (Default is False)
+            
+        ffd_order: int
+            Order of the derivatives to be used during Fake
+            Finite Difference (typically 1 or 2). During regular execution,
+            ffd_order should be 0. (Default is 0)
         """
         if self.directory:
             self.push_dir()
@@ -321,11 +393,20 @@ class Component (Container):
             force = True
 
         self._stop = False
+        self.ffd_order = ffd_order
         try:
             self._pre_execute(force)
             if self._call_execute or force:
                 #print 'execute: %s' % self.get_pathname()
-                self.execute()
+                
+                if ffd_order and hasattr(self, 'calculate_derivatives'):
+                    # During Fake Finite Difference, the available derivatives
+                    # are used to approximate the outputs.
+                    self._execute_ffd(ffd_order)
+                else:
+                    # Component executes as normal
+                    self.execute()
+                    
                 self._post_execute()
             #else:
                 #print 'skipping: %s' % self.get_pathname()
@@ -467,7 +548,7 @@ class Component (Container):
             If connected is not None, the list will contain names
             of outputs with matching *external* connectivity status.
         """
-        if self._output_names is None:
+        if self._connected_outputs is None:
             nset = set([k for k,v in self.items(iotype='out')])
             self._connected_outputs = self._depgraph.get_connected_outputs()
             nset.update(self._connected_outputs)
@@ -524,6 +605,7 @@ class Component (Container):
         elif destpath.startswith('parent.'): # internal source
             if srcpath not in self._valid_dict:
                 valids_update = (srcpath, True)
+            self._connected_outputs = None  # reset cached value of connected outputs
                     
         super(Component, self).connect(srcpath, destpath)
         
@@ -1165,51 +1247,6 @@ class Component (Container):
     def _set_log_level(self, level):
         """Set logging message level."""
         self._logger.level = level
-
-# TODO: uncomment require_gradients and require_hessians after they're better thought out
-    
-    #def require_gradients (self, varname, gradients):
-        #"""Requests that the component be able to provide (after execution) a
-        #list of gradients w.r.t. a list of variables. The format
-        #of the gradients list is [dvar_1, dvar_2, ..., dvar_n]. The component
-        #should return a list with entries of either a name, a tuple of the
-        #form (name,index) or None.  None indicates that the component cannot
-        #compute the specified derivative. name indicates the name of a
-        #scalar variable in the component that contains the gradient value, and
-        #(name,index) indicates the name of an array variable and the index of
-        #the entry containing the gradient value. If the component cannot
-        #compute any gradients of the requested varname, it can just return
-        #None.
-        #"""
-        #return None
-
-    #def require_hessians (self, varname, deriv_vars):
-        #""" Requests that the component be able to provide (after execution)
-        #the hessian w.r.t. a list of variables. The format of
-        #deriv_vars is [dvar_1, dvar_2, ..., dvar_n]. The component should
-        #return one of the following:
-
-            #1) a name, which would indicate that the component contains
-               #a 2D array variable or matrix containing the hessian
-
-            #2) an array of the form 
-
-               #[[dx1dx1, dx1dx2, ... dx1dxn],
-               #[           ...             ],
-               #[dxndx1, dxndx2, ... dxndxn]]
-
-               #with entries of either name, (name,index), or None. name
-               #indicates that a scalar variable in the component contains the
-               #desired hessian matrix entry. (name,index) indicates that
-               #an array variable contains the value at the specified index.
-               #If index is a list with two entries, that indicates that
-               #the variable containing the entry is a 2d array or matrix.
-
-            #3) None, which means the the component cannot compute any values
-               #of the hessian.
-
-             #"""
-        #return None
 
 
 def _show_validity(comp, recurse=True, exclude=set(), valid=None): #pragma no cover
