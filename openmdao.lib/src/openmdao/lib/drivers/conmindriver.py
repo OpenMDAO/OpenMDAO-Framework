@@ -1,7 +1,7 @@
 """
     conmindriver.py - Driver for the CONMIN optimizer.
     
-    See Appendix B for additional information on the :ref:`CONMINDriver`.
+    See the Standard Library Reference for additional information on the :ref:`CONMINDriver`.
     
     The CONMIN driver can be a good example of how to wrap another Driver for
     OpenMDAO. However, there are some things to keep in mind.

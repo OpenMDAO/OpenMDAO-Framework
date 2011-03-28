@@ -240,6 +240,7 @@ where they occur. See the following example:
 
 .. figure:: ../images/quick-ref/merge_conflict.png
    :align: center
+   :alt: a screen capture from a Linux machine showing a list of changes and conflicts on a branch
    
    Example of Conflicts When Merging
 
