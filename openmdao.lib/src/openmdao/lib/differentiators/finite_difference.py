@@ -39,7 +39,7 @@ class FiniteDifference(HasTraits):
     implements(IDifferentiator)
     
     # pylint: disable-msg=E1101
-    form = Enum("Central", ["Central", "Forward", "Backward"], iotype='in', \
+    form = Enum("central", ["central", "forward", "backward"], iotype='in', \
                 desc="Finite difference form (central, forward, backward)")
     
     default_stepsize = Float(1.0e-6, iotype='in', desc='Default finite ' + \
@@ -105,12 +105,12 @@ class FiniteDifference(HasTraits):
                 self._run_point(base_param)
         
         # Set up problem based on Finite Difference type
-        if self.form == 'Central':
+        if self.form == 'central':
             deltas = [1, -1]
             func = diff_1st_central
 
         else:
-            if self.form == 'Forward':
+            if self.form == 'forward':
                 deltas = [1, 0]
                 func = diff_1st_fwrdbwrd
             else:
@@ -262,7 +262,7 @@ class FiniteDifference(HasTraits):
         # Run all "cases".
         # TODO - Integrate OpenMDAO's concurrent processing capability once it
         # is formalized. This operation is inherently paralellizable.
-        if reuse_first and self.form=='Central':
+        if reuse_first and self.form=='central':
             for icase, case in self.hessian_ondiag_case.iteritems():
                 for ipcase, pcase in case.iteritems():
                     

@@ -55,7 +55,7 @@ optimizers by plugging it into the differentiator socket.
                 
             # Differentiator
             self.driver.differentiator = FiniteDifference(self.driver)
-            self.driver.differentiator.form = 'Central'
+            self.driver.differentiator.form = 'central'
             self.driver.differentiator.default_stepsize = .0001
                 
             # Objective 

@@ -72,7 +72,7 @@ class FiniteDifferenceTestCase(unittest.TestCase):
         
     def test_first_order(self):
         
-        self.model.driver.form = 'Central'
+        self.model.driver.form = 'central'
         self.model.comp.x = 1.0
         self.model.comp.u = 1.0
         self.model.run()

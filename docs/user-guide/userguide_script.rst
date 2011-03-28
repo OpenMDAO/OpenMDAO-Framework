@@ -1359,7 +1359,7 @@ into which a FiniteDifference instance can be placed:
 
             # Use OpenMDAO to calculate gradients
             self.driver.differentiator = FiniteDifference(self.driver)
-            self.driver.differentiator.form = 'Central'
+            self.driver.differentiator.form = 'central'
             self.driver.differentiator.default_stepsize = 1.0e-6
 
             # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
@@ -1371,7 +1371,7 @@ for the calculation.
 
 The FiniteDifference gradient calculation supports forward, central, and
 backward differencing via the attribute ``form``. The default value is
-``'Central'`` for central differencing. You can also define the step size that is
+``'central'`` for central differencing. You can also define the step size that is
 applied for all of the parameter inputs when they are differenced. The default
 value is ``1.0e-6``. Note also that the parameter interface allows you to specify a
 separate step-size value for each parameter using the keyword argument ``fd_step`` in

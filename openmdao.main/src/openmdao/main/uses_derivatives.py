@@ -119,9 +119,7 @@ class UsesGradients(UsesDerivatives_Base):
         """Run check_derivatives on our workflow."""
         
         driver_inputs, driver_outputs = self._list_driver_connections()
-        
-        wf = self._parent.workflow
-        wf.check_derivatives(1, driver_inputs, driver_outputs)     
+        self._parent.workflow.check_derivatives(1, driver_inputs, driver_outputs)     
         
         
 class UsesHessians(UsesDerivatives_Base): 
@@ -131,8 +129,6 @@ class UsesHessians(UsesDerivatives_Base):
         """Run check_derivatives on our workflow."""
         
         driver_inputs, driver_outputs = self._list_driver_connections()
-        
-        wf = self._parent.workflow
-        wf.check_derivatives(2, driver_inputs, driver_outputs)  
+        self._parent.workflow.check_derivatives(2, driver_inputs, driver_outputs)  
         
         
