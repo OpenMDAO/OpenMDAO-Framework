@@ -81,7 +81,7 @@ class Genetic(Driver):
             count += 1    
             expreval = param.expreval
             val = expreval.evaluate() #now grab the value 
-            ref = str(expreval)
+            ref = expreval.text
         
             
             #split up the ref string to be able to get the trait.

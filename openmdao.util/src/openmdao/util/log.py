@@ -166,6 +166,10 @@ class Logger(object):
         """ Log an error message. """
         self._logger.error(msg, *args, **kwargs)
 
+    def exception(self, msg, *args, **kwargs):
+        """ Log an exception. """
+        self._logger.exception(msg, *args, **kwargs)
+
     def critical(self, msg, *args, **kwargs):
         """ Log a critical message. """
         self._logger.critical(msg, *args, **kwargs)
@@ -195,6 +199,10 @@ class NullLogger(object):
 
     def error(self, msg, *args, **kwargs):
         """ Log an error message. """
+        pass
+
+    def exception(self, msg, *args, **kwargs):
+        """ Log an exception. """
         pass
 
     def critical(self, msg, *args, **kwargs):

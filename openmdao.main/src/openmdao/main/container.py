@@ -42,6 +42,7 @@ from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, obj_has_interface
+from openmdao.main.expreval import INDEX,ATTR,CALL,SLICE
 
 _copydict = {
     'deep': copy.deepcopy,
@@ -49,6 +50,7 @@ _copydict = {
     }
 
 _iodict = { 'out': 'output', 'in': 'input' }
+
 
 def set_as_top(cont):
     """Specifies that the given Container is the top of a 
@@ -74,6 +76,20 @@ def get_closest_proxy(start_scope, pathname):
         i += 1
     return (obj, '.'.join(names[i:]))
 
+
+def build_container_hierarchy(dct):
+    """Create a hierarchy of Containers based on the contents of a nested dict.
+    There will always be a single top level scoping Container regardless of the
+    contents of dct.
+    """
+    top = Container()
+    for key,val in dct.items():
+        if isinstance(val, dict): # it's a dict, so this is a Container
+            top.add(key, build_container_hierarchy(val))
+        else:
+            setattr(top, key, val)
+    return top
+        
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
@@ -107,100 +123,6 @@ class _ContainerDepends(object):
         or None if not connected.
         """
         return self._srcs.get(destname)
-
-class _DumbTmp(object):
-    pass
-
-#class Alias(Variable):
-    #"""A trait that allows attributes in child objects to be referenced
-    #using an alias in a higher scope.  We don't use a delegate because
-    #we can't be sure that the attribute we want is found in a HasTraits
-    #object.
-    #"""
-    #def __init__ ( self, path, **metadata ):
-        #if len(path.split('.')) < 2:
-            #raise TraitError("Alias path must have at least "
-                             #"two entries in it."
-                             #" The given path was '%s'" % path)
-        #self._path = path
-        #self._restofpath = ''
-        #self._is_container = False
-            
-        ##make weakref to a transient object to force a re-resolve later
-        ##without checking for self._ref being equal to None
-        #self._ref = weakref.ref(_DumbTmp())
-        #super(Alias, self).__init__(NoDefaultSpecified, **metadata)
-
-    #def __getstate__(self):
-        #state = self.__dict__.copy()
-        #state['_ref'] = None
-        #return state
-
-    #def __setstate__(self, state):
-        #self.__dict__.update(state)
-        #self._ref = weakref.ref(_DumbTmp())
-
-    #def _resolve(self, obj):
-        #"""Resolve down to the closest scoping Container in the path and
-        #store a weakref to that object along with the rest of the pathname.
-        #"""
-        #found = False
-        #self._is_container = False
-        #try:
-            #names = self._path.split('.')
-            #for i in range(len(names)-1):
-                #obj = getattr(obj, names[i])
-                #if not isinstance(obj, Container):
-                    #break
-            #else:
-                #self._is_container = True
-                #restofpath = names[-1]
-                #found = True
-        #except AttributeError:
-            #restofpath = '.'.join(names[i:])
-            #if isinstance(obj, Container):
-                #self._is_container = True
-            
-        #try:
-            #if (self._is_container and obj.contains(restofpath)) or \
-                      #(self._is_container is False and hasattr(obj, restofpath)):
-                #self._restofpath = restofpath
-                #found = True
-        #except:
-            #pass
-            
-        #if not found:
-            #raise TraitError("Alias cannot resolve path '%s'" % self._path)
-        
-        #self._ref = weakref.ref(obj)
-        #return obj
-
-    #def get(self, obj, name):
-        #"""Return the value of the referenced attribute."""
-        #ref = self._ref()
-        #if not ref:
-            #ref = self._resolve(obj)
-        #if self._is_container:
-            #return ref.get(self._restofpath) 
-        #else:
-            #return getattr(ref, self._restofpath)
-
-    #def set(self, obj, name, value):
-        #"""Set the value of the referenced attribute."""
-        #if self.iotype == 'out':
-            #raise TraitError("Can't set output variable '%s'" % name)
-        
-        #if self.trait:
-            #value = self.trait.validate(obj, name, value)
-            
-        #ref = self._ref()
-        #if not ref:
-            #ref = self._resolve(obj)
-
-        #if self._is_container:
-            #ref.set(self._restofpath, value)
-        #else:
-            #setattr(ref, self._restofpath, value)
 
 
 class Container(HasTraits):
@@ -267,6 +189,10 @@ class Container(HasTraits):
         if self._name is None:
             if self.parent:
                 self._name = find_name(self.parent, self)
+            elif self._call_tree_rooted is False:
+                self._name = ''
+            else:
+                return ''
         return self._name
 
     @name.setter
@@ -436,7 +362,8 @@ class Container(HasTraits):
 
     def add_trait(self, name, trait):
         """Overrides HasTraits definition of *add_trait* in order to
-        keep track of dynamically added traits for serialization.
+        keep track of dynamically added traits for serialization and to add
+        callbacks for input Variables.
         """
         # When a trait with sub-traits is added (like a List or Dict),
         # HasTraits calls add_trait AGAIN for the sub-trait, so we
@@ -751,25 +678,6 @@ class Container(HasTraits):
                 return hasattr(obj, restofpath)
         return hasattr(self, path)
     
-    #def invoke(self, path, *args, **kwargs):
-        #"""Call the callable specified by **path**, which may be a simple
-        #name or a dotted path, passing the given arguments to it, and 
-        #return the result.
-        #"""
-        #if path:
-            #childname, _, restofpath = path.partition('.')
-            #if restofpath:
-                #obj = getattr(self, childname, Missing)
-                #if obj is Missing:
-                    #self.raise_exception("object has no attribute '%s'" % childname, 
-                                         #AttributeError)
-                #return obj.invoke(restofpath, *args, **kwargs)
-            
-            #return getattr(self, path)(*args, **kwargs)
-        #else:
-            #self.raise_exception("invoke: no path given",
-                                 #RuntimeError)
-    
     def _get_metadata_failed(self, traitpath, metaname):
         self.raise_exception("Couldn't find metadata for trait %s" % traitpath,
                              AttributeError)
@@ -817,18 +725,16 @@ class Container(HasTraits):
             if obj is Missing or not is_instance(obj, Container):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
-            #elif index is None:
-                #return getattr(obj, restofpath)
-            #else:
-                #return obj._array_get(restofpath, index)
         else:
+            obj = getattr(self, path, Missing)
+            if obj is Missing:
+                return self._get_failed(path, index)
             if index is None:
-                obj = getattr(self, path, Missing)
-                if obj is Missing:
-                    return self._get_failed(path, index)
                 return obj
             else:
-                return self._array_get(path, index)
+                for idx in index:
+                    obj = self._process_index_entry(obj, idx)
+                return obj
      
     def _set_failed(self, path, value, index=None, src=None, force=False):
         """If set() cannot locate the specified variable, raise an exception.
@@ -881,42 +787,89 @@ class Container(HasTraits):
                             self._input_check = chk
                         self._input_updated(path)
                     else:  # array index specified
-                        self._array_set(path, value, index)
+                        self._index_set(path, value, index)
                 elif index:  # array index specified for output
-                    self._array_set(path, value, index)
+                    self._index_set(path, value, index)
                 else: # output
                     setattr(self, path, value)
             else:
                 return self._set_failed(path, value, index, src, force)
 
-    def _array_set(self, name, value, index):
-        arr = getattr(self, name)
-        length = len(index)
-        if length == 1:
-            old = arr[index[0]]
-            arr[index[0]] = value
+    def _process_index_entry(self, obj, idx):
+        """Return a new object based on a starting object and some operation
+        indicated by idx that can be either an index into a container, an 
+        attribute access, or a fuction call.  idx can be non-tuple hashable
+        object, which will be interpreted as an index to a container, or it can
+        be a tuple of the form (operation_id, stuff)
+            
+            where operation_id is as follows (the named constants are defined in expreval.py):
+              INDEX = 0
+              ATTR = 1
+              CALL = 2
+              SLICE = 3
+              
+        On the off chance that you want to use a tuple as a key into a dict, you'll have to
+        nest your key tuple inside of an INDEX tuple to avoid ambiguity, e.g., (INDEX, my_tuple)
+              
+        The forms of the various tuples are:
+              
+              INDEX:   (0, idx)  where idx is some hashable value
+              ATTR:    (1, name) where name is the attribute name
+              CALL:    (2, args, kwargs) where args is a list of values and kwargs
+                                         is a list of tuples of the form (keyword,value).
+                                         kwargs can be left out if empty.  args
+                                         can be left out if empty as long as kwargs
+                                         are also empty, for example, (2,) and 
+                                         (2,[],[('foo',1)]) are valid
+                                         but (2,[('foo',1)]) is not.
+              SLICE:   (3, lower, upper, step) All members must be present and should
+                                               have a value of None if not set.
+        """
+        if not isinstance(idx, tuple):
+            return obj[idx]
+        if idx[0] == INDEX:
+            return obj[idx[1]]
+        elif idx[0] == ATTR:
+            return getattr(obj, idx[1])
+        elif idx[0] == CALL:
+            if len(idx) == 1:
+                return obj.__call__()
+            else:
+                args = idx[1]
+                if len(idx) == 3:
+                    kwargs = dict(idx[2])
+                else:
+                    kwargs = {}
+                return obj.__call__(*args, **kwargs)
+        elif idx[0] == SLICE:
+            return obj.__getitem__(slice(idx[1],idx[2],idx[3]))
+        
+        self.raise_exception("invalid index: %s" % idx, ValueError)
+        
+    def _index_set(self, name, value, index):
+        obj = getattr(self, name)
+        for idx in index[:-1]:
+            obj = self._process_index_entry(obj, idx)
+        idx = index[-1]
+        old = self._process_index_entry(obj, idx)
+        if isinstance(idx, tuple):
+            if idx[0] == INDEX:
+                obj[idx[1]] = value
+            elif idx[0] == ATTR:
+                setattr(obj, idx[1], value)
+            elif idx[0] == SLICE:
+                obj.__setitem__(slice(idx[1],idx[2],idx[3]), value)
         else:
-            for idx in index[:-1]:
-                arr = arr[idx]
-            old = arr[index[length-1]]
-            arr[index[length-1]] = value
+            obj[idx] = value
                 
-        # setting of individual Array values doesn't seem to trigger
+        # setting of individual Array entries or sub attributes doesn't seem to trigger
         # _input_trait_modified, so do it manually
-        # FIXME: if people register other callbacks on Arrays, they won't
+        # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         if old != value:
             self._call_execute = True
             self._input_updated(name)
             
-    def _array_get(self, name, index):
-        arr = getattr(self, name, Missing)
-        if arr is Missing:
-            return self._get_failed(name, index)
-        for idx in index:
-            arr = arr[idx]
-        return arr
-    
     def save_to_egg(self, name, version, py_dir=None, src_dir=None,
                     src_files=None, child_objs=None, dst_dir=None,
                     observer=None, need_requirements=True):

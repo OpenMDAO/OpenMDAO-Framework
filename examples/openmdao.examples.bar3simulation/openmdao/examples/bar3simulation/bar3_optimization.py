@@ -68,13 +68,6 @@ class Bar3Optimization(Assembly):
 
        # CONMIN Constraints
 
-        bar1_stress_allowable = self.bar1_stress_allowable
-        bar2_stress_allowable = self.bar2_stress_allowable
-        bar3_stress_allowable = self.bar3_stress_allowable
-        displacement_x_dir_allowable = self.displacement_x_dir_allowable
-        displacement_y_dir_allowable = self.displacement_y_dir_allowable
-        frequency_allowable = self.frequency_allowable
-
         constraints = [
             '(bar3_truss.bar1_stress/bar1_stress_allowable) <= 1.0',
             '(bar3_truss.bar2_stress/bar2_stress_allowable) <= 1.0',
