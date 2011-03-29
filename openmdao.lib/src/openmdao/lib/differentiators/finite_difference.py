@@ -8,6 +8,7 @@ from numpy import zeros, ones
 from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import implements, Enum, Float
 from openmdao.main.interfaces import IDifferentiator
+from openmdao.main.container import find_name
 
 
 def diff_1st_central(fp, fm, eps):
@@ -398,4 +399,5 @@ class FiniteDifference(HasTraits):
                     
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
-        self._parent.raise_exception(msg, exception_class)
+        name = find_name(self._parent, self)
+        self._parent.raise_exception("%s: %s" % (name,msg), exception_class)

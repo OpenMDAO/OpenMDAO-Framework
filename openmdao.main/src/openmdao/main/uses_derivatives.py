@@ -31,7 +31,7 @@ class UsesDerivatives_Base(object):
         
         # for collecting a unique set of referenced varnames from objectives
         # and constraints
-        var_set = set()
+        varset = set()
 
         # Objective expressions can contain inputs. These do not need to
         # be checked, because:
@@ -72,7 +72,7 @@ class UsesDerivatives_Base(object):
         # Parameters are all inputs.
         driver_inputs = self._parent.get_parameters().keys()
         
-        driver_outputs = [vname for vname in var_set 
+        driver_outputs = [vname for vname in varset 
                           if get_metadata(vname, 'iotype')=='out']
                         
         return driver_inputs, list(driver_outputs)
