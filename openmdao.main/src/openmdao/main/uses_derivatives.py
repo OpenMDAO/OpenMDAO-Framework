@@ -29,12 +29,10 @@ class UsesDerivatives_Base(object):
         """Return a list of inputs and a list of outputs that are referenced by
         any existing driver Expreval."""
         
-        # Parameters are all inputs.
-        driver_inputs = set(self._parent.get_parameters().keys())
-        driver_outputs = set()
+        # for collecting a unique set of referenced varnames from objectives
+        # and constraints
+        var_set = set()
 
-        get_metadata = self._parent.parent.get_metadata
-        
         # Objective expressions can contain inputs. These do not need to
         # be checked, because:
         # -- if they are physically connected to another comp, they will be
@@ -43,58 +41,41 @@ class UsesDerivatives_Base(object):
         # -- if they are not connected, their derivative is always 0
         if hasattr(self._parent, '_hasobjective'):
             obj = getattr(self._parent, '_hasobjective')
-            
             if obj._objective:
-                for varpath in obj._objective.get_referenced_varpaths():
-                    if get_metadata(varpath, 'iotype') == 'out':
-                        driver_outputs.add(varpath)
+                varset.update(obj._objective.get_referenced_varpaths())
                 
         if hasattr(self._parent, '_hasobjectives'):
             obj = getattr(self._parent, '_hasobjectives')
-            
             for item in obj._objectives.values():
-                for varpath in item.get_referenced_varpaths():
-                    if get_metadata(varpath, 'iotype') == 'out':
-                        driver_outputs.add(varpath)
+                varset.update(item.get_referenced_varpaths())
                 
         # Constraints can also introduce additional connections.
         for delegate in ['_hasineqconstraints', '_haseqconstraints']:
-            
             if hasattr(self._parent, delegate):
                 constraints = getattr(self._parent, delegate)
                 for item in constraints._constraints.values():
-                    
-                    for varpath in item.lhs.get_referenced_varpaths():
-                        if get_metadata(varpath, 'iotype') == 'out':
-                            driver_outputs.add(varpath)
-
-                    for varpath in item.rhs.get_referenced_varpaths():
-                        if get_metadata(varpath, 'iotype') == 'out':
-                            driver_outputs.add(varpath)
+                    varset.update(item.lhs.get_referenced_varpaths())
+                    varset.update(item.rhs.get_referenced_varpaths())
                             
         if hasattr(self._parent, '_hasconstraints'):
             constraints = getattr(self._parent, '_hasconstraints')
             for item in constraints._ineq._constraints.values():
-                
-                for varpath in item.lhs.get_referenced_varpaths():
-                    if get_metadata(varpath, 'iotype') == 'out':
-                        driver_outputs.add(varpath)
-
-                for varpath in item.rhs.get_referenced_varpaths():
-                    if get_metadata(varpath, 'iotype') == 'out':
-                        driver_outputs.add(varpath)
+                varset.update(item.lhs.get_referenced_varpaths())
+                varset.update(item.rhs.get_referenced_varpaths())
                         
             for item in constraints._eq._constraints.values():
-                
-                for varpath in item.lhs.get_referenced_varpaths():
-                    if get_metadata(varpath, 'iotype') == 'out':
-                        driver_outputs.add(varpath)
+                varset.update(item.lhs.get_referenced_varpaths())
+                varset.update(item.rhs.get_referenced_varpaths())
 
-                for varpath in item.rhs.get_referenced_varpaths():
-                    if get_metadata(varpath, 'iotype') == 'out':
-                        driver_outputs.add(varpath)
+        get_metadata = self._parent.parent.get_metadata
+        
+        # Parameters are all inputs.
+        driver_inputs = self._parent.get_parameters().keys()
+        
+        driver_outputs = [vname for vname in var_set 
+                          if get_metadata(vname, 'iotype')=='out']
                         
-        return driver_inputs, driver_outputs
+        return driver_inputs, list(driver_outputs)
     
         
 class UsesGradients(UsesDerivatives_Base): 

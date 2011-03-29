@@ -345,15 +345,15 @@ class Component (Container):
         
         local_inputs = []
         for item in driver_inputs:
-            paths = item.split('.')
+            paths = item.split('.',1)
             if paths[0] == self.name:
-                local_inputs.append(','.join(paths[1:]))
+                local_inputs.append(paths[1])
         
         local_outputs = []
         for item in driver_outputs:
-            paths = item.split('.')
+            paths = item.split('.',1)
             if paths[0] == self.name:
-                local_outputs.append('.'.join(paths[1:]))
+                local_outputs.append(paths[1])
         
         self.derivatives.validate(self, order, local_inputs, local_outputs)
     
