@@ -54,13 +54,13 @@ class FiniteDifference(HasTraits):
         self.n_ineqconst = 0
         self.n_param = 0
         
-        self.gradient_case = {}
+        self.gradient_case = []
         self.gradient_obj = zeros(0, 'd')
         self.gradient_ineq_const = zeros(0, 'd')
         self.gradient_eq_const = zeros(0, 'd')
         
-        self.hessian_ondiag_case = {}
-        self.hessian_offdiag_case = {}
+        self.hessian_ondiag_case = []
+        self.hessian_offdiag_case = []
         self.hessian_obj = zeros(0, 'd')
         self.hessian_ineq_const = zeros(0, 'd')
         self.hessian_eq_const = zeros(0, 'd')
@@ -91,16 +91,16 @@ class FiniteDifference(HasTraits):
         # Pull initial state and stepsizes from driver's parameters
         base_param = zeros(self.n_param, 'd')
         stepsize = ones(self.n_param, 'd')*self.default_stepsize
-        for i_param, item in enumerate(self._parent.get_parameters().iteritems()):
-            base_param[i_param] = item[1].expreval.evaluate()
+        for i_param, item in enumerate(self._parent.get_parameters().values()):
+            base_param[i_param] = item.expreval.evaluate()
             
-            fd_step = item[1].fd_step
+            fd_step = item.fd_step
             if fd_step:
                 stepsize[i_param] = fd_step
 
         # For Forward or Backward diff, we want to save the baseline
         # objective and constraints. These area also needed for the
-        # on-diagonal Hessian terms, so we will save them in the calss
+        # on-diagonal Hessian terms, so we will save them in the class
         # later.
         base_obj, base_ineqconst, base_eqconst = \
                 self._run_point(base_param)
@@ -109,62 +109,54 @@ class FiniteDifference(HasTraits):
         if self.form == 'central':
             deltas = [1, -1]
             func = diff_1st_central
-
+        elif self.form == 'forward':
+            deltas = [1, 0]
+            func = diff_1st_fwrdbwrd
         else:
-            if self.form == 'forward':
-                deltas = [1, 0]
-                func = diff_1st_fwrdbwrd
-            else:
-                deltas = [0, -1]
-                func = diff_1st_fwrdbwrd
+            deltas = [0, -1]
+            func = diff_1st_fwrdbwrd
+
+        self.gradient_case = []
 
         # Assemble input data
         for i_param in range(0, self.n_param):
             
-            pcase = {}
+            pcase = []
             for j_step, delta in enumerate(deltas):
                 
                 case = base_param.copy()
                 case[i_param] += delta*stepsize[i_param]
-                pcase[j_step] = {}
-                pcase[j_step]['param'] = case
+                pcase.append({ 'param': case })
                 
-            self.gradient_case[i_param] = pcase
+            self.gradient_case.append(pcase)
             
         # Run all "cases".
         # TODO - Integrate OpenMDAO's concurrent processing capability once it
         # is formalized. This operation is inherently paralellizable.
-        for icase, case in self.gradient_case.iteritems():
-            for ipcase, pcase in case.iteritems():
-                
+        for case in self.gradient_case:
+            for ipcase, pcase in enumerate(case):
                 if deltas[ipcase]:
                     data_obj, data_ineqconst, data_eqconst = \
                             self._run_point(pcase['param'])
                     
-                    self.gradient_case[icase][ipcase]['obj'] = \
-                        data_obj
-                    self.gradient_case[icase][ipcase]['ineqconst'] = \
-                        data_ineqconst
-                    self.gradient_case[icase][ipcase]['eqconst'] = \
-                        data_eqconst
+                    pcase['obj'] = data_obj
+                    pcase['ineqconst'] = data_ineqconst
+                    pcase['eqconst'] = data_eqconst
                 else:
-                    self.gradient_case[icase][ipcase]['obj'] = \
-                        base_obj
-                    self.gradient_case[icase][ipcase]['ineqconst'] = \
-                        base_ineqconst
-                    self.gradient_case[icase][ipcase]['eqconst'] = \
-                        base_eqconst
+                    pcase['obj'] = base_obj
+                    pcase['ineqconst'] = base_ineqconst
+                    pcase['eqconst'] = base_eqconst
                 
         
         # Calculate gradients
-        for icase, case in self.gradient_case.iteritems():
+        for icase, case in enumerate(self.gradient_case):
             
             eps = stepsize[icase]
             
             # Calculate gradients
             self.gradient_obj[icase] = \
                  func(case[0]['obj'], case[1]['obj'], eps)
-                 
+
             for j in range(0, self.n_ineqconst):
                 self.gradient_ineq_const[icase, j] = \
                     func(case[0]['ineqconst'][j],
@@ -188,7 +180,8 @@ class FiniteDifference(HasTraits):
             Switch to reuse some data from the gradient calculation so that
             we don't have to re-run some points we already ran (namely the
             baseline, +eps, and -eps cases.) Obviously you do this when the
-            driver needs gradient and hessian information at the same point."""
+            driver needs gradient and hessian information at the same point.
+        """
         
         self.setup()
         
@@ -199,10 +192,13 @@ class FiniteDifference(HasTraits):
         self.hessian_eq_const = zeros([self.n_param, self.n_param, 
                                        self.n_eqconst], 'd')
         
+        self.hessian_ondiag_case = []
+        self.hessian_offdiag_case = []
+
         # Pull stepsizes from driver's parameters
         stepsize = ones(self.n_param, 'd')*self.default_stepsize
-        for i_param, item in enumerate(self._parent.get_parameters().iteritems()):
-            fd_step = item[1].fd_step
+        for i_param, item in enumerate(self._parent.get_parameters().values()):
+            fd_step = item.fd_step
             if fd_step:
                 stepsize[i_param] = fd_step
 
@@ -218,8 +214,8 @@ class FiniteDifference(HasTraits):
             
             # Pull initial state from driver's parameters
             base_param = zeros(self.n_param, 'd')
-            for i_param, item in enumerate(self._parent.get_parameters().iteritems()):
-                base_param[i_param] = item[1].expreval.evaluate()
+            for i_param, item in enumerate(self._parent.get_parameters().values()):
+                base_param[i_param] = item.expreval.evaluate()
                     
             base_obj, base_ineqconst, base_eqconst = \
                     self._run_point(base_param)
@@ -229,15 +225,14 @@ class FiniteDifference(HasTraits):
         deltas = [1, -1]
         for i_param in range(0, self.n_param):
             
-            pcase = {}
+            pcase = []
             for j_step, step in enumerate(deltas):
                 
                 case = base_param.copy()
                 case[i_param] += step*stepsize[i_param]
-                pcase[j_step] = {}
-                pcase[j_step]['param'] = case
+                pcase.append({ 'param': case })
                 
-            self.hessian_ondiag_case[i_param] = pcase
+            self.hessian_ondiag_case.append(pcase)
             
         # Assemble input data
         # Cases : offdiag [fpp, fpm, fmp, fmm]
@@ -246,63 +241,58 @@ class FiniteDifference(HasTraits):
                   [-1, 1],
                   [-1, -1]]
         for i_param in range(0, self.n_param):
-            self.hessian_offdiag_case[i_param] = {}
+            
+            offdiag = []
             for j_param in range(0, i_param):
             
-                pcase = {}
-                for j_step, delta in enumerate(deltas):
+                pcase = []
+                for delta in deltas:
                     
                     case = base_param.copy()
                     case[i_param] += delta[0]*stepsize[i_param]
                     case[j_param] += delta[1]*stepsize[j_param]
-                    pcase[j_step] = {}
-                    pcase[j_step]['param'] = case
+                    pcase.append({ 'param': case })
+                offdiag.append(pcase)
                     
-                self.hessian_offdiag_case[i_param][j_param] = pcase
+            self.hessian_offdiag_case.append(offdiag)
             
         # Run all "cases".
         # TODO - Integrate OpenMDAO's concurrent processing capability once it
         # is formalized. This operation is inherently paralellizable.
         if reuse_first and self.form=='central':
-            for icase, case in self.hessian_ondiag_case.iteritems():
-                for ipcase, pcase in case.iteritems():
-                    
-                    self.hessian_ondiag_case[icase][ipcase]['obj'] = \
-                        self.gradient_case[icase][ipcase]['obj'] 
-                    self.hessian_ondiag_case[icase][ipcase]['ineqconst'] = \
-                        self.gradient_case[icase][ipcase]['ineqconst'] 
-                    self.hessian_ondiag_case[icase][ipcase]['eqconst'] = \
-                        self.gradient_case[icase][ipcase]['eqconst'] 
-        else:
-            for icase, case in self.hessian_ondiag_case.iteritems():
-                for ipcase, pcase in case.iteritems():
-                    
-                    data_obj, data_ineqconst, data_eqconst = \
-                            self._run_point(pcase['param'])
-                    
-                    self.hessian_ondiag_case[icase][ipcase]['obj'] = \
-                        data_obj
-                    self.hessian_ondiag_case[icase][ipcase]['ineqconst'] = \
-                        data_ineqconst
-                    self.hessian_ondiag_case[icase][ipcase]['eqconst'] = \
-                        data_eqconst
+            for icase, case in enumerate(self.hessian_ondiag_case):
                 
-        for icase, cases in self.hessian_offdiag_case.iteritems():
-            for jcase, case in cases.iteritems():
-                for ipcase, pcase in case.iteritems():
+                gradient_case = self.gradient_case[icase]
+                for ipcase, pcase in enumerate(case):
+                    
+                    gradient_ipcase = gradient_case[ipcase]
+                    pcase['obj'] = gradient_ipcase['obj'] 
+                    pcase['ineqconst'] = gradient_ipcase['ineqconst'] 
+                    pcase['eqconst'] = gradient_ipcase['eqconst'] 
+        else:
+            for case in self.hessian_ondiag_case:
+                for pcase in case:
                     
                     data_obj, data_ineqconst, data_eqconst = \
                             self._run_point(pcase['param'])
                     
-                    self.hessian_offdiag_case[icase][jcase][ipcase]['obj'] = \
-                        data_obj
-                    self.hessian_offdiag_case[icase][jcase][ipcase]['ineqconst'] = \
-                        data_ineqconst
-                    self.hessian_offdiag_case[icase][jcase][ipcase]['eqconst'] = \
-                        data_eqconst
+                    pcase['obj'] = data_obj
+                    pcase['ineqconst'] = data_ineqconst
+                    pcase['eqconst'] = data_eqconst
+                
+        for cases in self.hessian_offdiag_case:
+            for case in cases:
+                for pcase in case:
+                    
+                    data_obj, data_ineqconst, data_eqconst = \
+                            self._run_point(pcase['param'])
+                    
+                    pcase['obj'] = data_obj
+                    pcase['ineqconst'] = data_ineqconst
+                    pcase['eqconst'] = data_eqconst
                 
         # Calculate Hessians
-        for icase, case in self.hessian_ondiag_case.iteritems():
+        for icase, case in enumerate(self.hessian_ondiag_case):
             
             eps = stepsize[icase]
             
@@ -322,10 +312,11 @@ class FiniteDifference(HasTraits):
                                 base_eqconst[j],
                                 case[1]['eqconst'][j], eps)
                 
-        for icase, cases in self.hessian_offdiag_case.iteritems():
-            for jcase, case in cases.iteritems():
+        for icase, cases in enumerate(self.hessian_offdiag_case):
             
-                eps1 = stepsize[icase]
+            eps1 = stepsize[icase]
+            for jcase, case in enumerate(cases):
+            
                 eps2 = stepsize[jcase]
                 
                 # Calculate Hessians
