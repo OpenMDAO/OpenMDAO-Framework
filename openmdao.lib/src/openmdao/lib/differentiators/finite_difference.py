@@ -99,7 +99,7 @@ class FiniteDifference(HasTraits):
                 stepsize[i_param] = fd_step
 
         # For Forward or Backward diff, we want to save the baseline
-        # objective and constraints. These area also needed for the
+        # objective and constraints. These are also needed for the
         # on-diagonal Hessian terms, so we will save them in the class
         # later.
         base_obj, base_ineqconst, base_eqconst = \
