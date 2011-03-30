@@ -344,23 +344,6 @@ class Assembly (Component):
                 ret.extend(sup.get_valid(name))
         return ret
 
-    def check_resolve(self, names):
-        """Returns True if all of the pathnames are resolvable starting from this
-        Assembly.
-        """
-        simple, compmap = _partition_names_by_comp(names)
-        for name in simple:
-            if not hasattr(self, name):
-                return False
-        for cname,vnames in compmap.items():
-            comp = getattr(self, cname, None)
-            if comp is None:
-                return False
-            for vname in vnames:
-                if not comp.contains(vname):
-                    return False
-        return True
-
     def _input_updated(self, name):
         if self._valid_dict[name]:  # if var is not already invalid
             outs = self.invalidate_deps(varnames=set([name]))

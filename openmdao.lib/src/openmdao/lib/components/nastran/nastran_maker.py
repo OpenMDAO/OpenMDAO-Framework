@@ -29,15 +29,15 @@ class NastranMaker(object):
 
         name: str
         
-	
+
         cid: int or str
-	  Specifies the id of the card.
+        Specifies the id of the card.
         
-	
+
         fieldnum: int
           What field should we modify?
         
-	
+
         value: thing that can be passed to str
           What value should we put in?
             

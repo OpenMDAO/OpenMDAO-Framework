@@ -43,7 +43,7 @@ class FixedPointIterator(Driver):
         self._x_out_expr = ExprEvaluator(newval, scope=self)
     
     def _x_in_changed(self, oldval, newval):
-        self._x_in_expr = ExprEvaluator(newval, scope=self, single_name=True)
+        self._x_in_expr = ExprEvaluator(newval, scope=self)
     
     def execute(self):
         """Perform the iteration."""

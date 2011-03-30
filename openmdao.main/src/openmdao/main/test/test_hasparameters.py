@@ -44,6 +44,13 @@ class HasParametersTestCase(unittest.TestCase):
     def test_list_add_remove_clear_params(self):
         self.top.driver.add_parameter('comp.x', low=0., high=1.e99)
         self.top.driver.add_parameter('comp.y', low=0., high=1.e99)
+        
+        try:
+            self.top.driver.add_parameter('comp.x+comp.y', low=0, high=1.e99)
+        except Exception, err:
+            self.assertEqual(str(err), "driver: Can't add parameter 'comp.x+comp.y' because it refers to multiple objects.")
+        else:
+            self.fail("Exception expected")
 
         params = self.top.driver.list_parameters()
         self.assertEqual(params,['comp.x','comp.y'])

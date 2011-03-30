@@ -42,11 +42,11 @@ class DOEdriver(CaseIterDriverBase):
                 
                 #convert DOE values to variable values
                 value = parameter.low+(parameter.high-parameter.low)*val
-                if '[' in parameter.expreval:
+                if '[' in parameter.expreval.text:
                     raise ValueError('Array entry design vars '
                                      'not supported yet.')
                 else:
-                    inputs.append((str(parameter.expreval), None, value))
+                    inputs.append((parameter.expreval.text, None, value))
             
             # now add any event variables
             for varname in self.get_events():
