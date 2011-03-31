@@ -24,8 +24,8 @@ setup(
 '''
 
 
-def make_pseudopkg(argv=None):
-    """A command line script (make_pseudopkg) points to this.  It generates a
+def mkpseudo(argv=None):
+    """A command line script (mkpseudo) points to this.  It generates a
     source distribution package that's empty aside from
     having a number of dependencies on other packages.
     
@@ -33,6 +33,9 @@ def make_pseudopkg(argv=None):
     
     Required dependencies are specified using the same notation used by
     setuptools/easy_install/distribute/pip
+    
+    NOTE: If your required dependencies use the '<' or '>' characters you must put the
+    entire requirement in quotes to avoid misinterpretation by the shell.
 
     """
     
@@ -40,7 +43,7 @@ def make_pseudopkg(argv=None):
         argv = sys.argv[1:]
     
     parser = OptionParser()
-    parser.usage = "make_pseudopkg [options] [requirements]"
+    parser.usage = "mkpseudo [options] [requirements]"
     parser.add_option("-n", "--name", action="store", type="string", dest='name',
                       help="name of the package (required)")
     parser.add_option("-v", "--version", action="store", type="string", dest='version',
@@ -110,5 +113,5 @@ def make_pseudopkg(argv=None):
 
 
 if __name__ == '__main__':
-    make_pseudopkg(sys.argv[1:])
+    mkpseudo(sys.argv[1:])
     

@@ -53,7 +53,6 @@ setup(name='openmdao.devtools',
                 "push_docs=openmdao.devtools.build_docs:push_docs",
                 "test_branch=openmdao.devtools.test_branch:main",
                 "make_release=openmdao.devtools.make_release:main",
-                "make_pseudopkg=openmdao.devtools.make_pseudopkg:main",
               ],
       }
     )
