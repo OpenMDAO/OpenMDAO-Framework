@@ -1,5 +1,8 @@
 import sys
 import os
+import tempfile
+import shutil
+import subprocess
 from optparse import OptionParser
 
 from openmdao.util.fileutil import build_directory
@@ -21,26 +24,29 @@ setup(
 '''
 
 
-def main(argv=None):
+def make_pseudopkg(argv=None):
     """A command line script (make_pseudopkg) points to this.  It generates a
-    directory structure for an openmdao plugin package that's empty aside from
+    source distribution package that's empty aside from
     having a number of dependencies on other packages.
     
-    usage: make_pseudopkg <pseudo_pkg_name> [-v <version>] [-d <dest_dir>]
+    usage: make_pseudopkg -n <pkg_name> -v <version> [-d <dest_dir>] [-l <links_url>] req1 ... req_n
     
+    Required dependencies are specified using the same notation used by
+    setuptools/easy_install/distribute/pip
+
     """
     
     if argv is None:
         argv = sys.argv[1:]
     
     parser = OptionParser()
-    parser.usage = "make_pseudopkg <pseudo_pkg_name> [options] [requirements]"
+    parser.usage = "make_pseudopkg [options] [requirements]"
     parser.add_option("-n", "--name", action="store", type="string", dest='name',
                       help="name of the package (required)")
     parser.add_option("-v", "--version", action="store", type="string", dest='version',
                       help="version id of the package (required)")
     parser.add_option("-d", "--dest", action="store", type="string", dest='dest', default='.',
-                      help="directory where package will be created (optional)")
+                      help="directory where distribution will be created (optional)")
     parser.add_option("-l", "--link", action="append", type="string", dest='deplinks', default=[],
                       help="URLs to search for dependencies (optional)")
     
@@ -59,6 +65,10 @@ def main(argv=None):
 
     options.dest = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dest)))
 
+    if len(args) == 0:
+        print "No dependencies have been specified, so no pseudo package will be created"
+        sys.exit(-1)
+
     setup_options = {
         'requires': args,
         'name': name,
@@ -67,29 +77,38 @@ def main(argv=None):
         }
     
     startdir = os.getcwd()
+    tdir = tempfile.mkdtemp()
+    
     try:
-        os.chdir(options.dest)
+        os.chdir(tdir)
         
-        if os.path.exists(name):
-            raise OSError("Can't create directory '%s' because it already exists." %
-                          os.path.join(options.dest, name))
-
         dirstruct = {
-            name: {
-                'setup.py': _setup_py_template % setup_options,
-                'src': {
-                    name: {
-                        '__init__.py': '', #'from %s import %s\n' % (name,classname),
-                        },
+            'setup.py': _setup_py_template % setup_options,
+            'src': {
+                name: {
+                    '__init__.py': '',
                     },
-            },
+                },
         }
 
         build_directory(dirstruct)
-    
+        
+        dest = os.path.expanduser(os.path.expandvars(options.dest))
+        tarname = os.path.join(dest, "%s-%s.tar.gz" % (name,version))
+        zipname = os.path.join(dest, "%s-%s.zip" % (name,version))
+        for fname in [tarname, zipname]:
+            if os.path.exists(fname):
+                print "%s already exists" % fname
+                sys.exit(-1)
+        
+        cmd = [sys.executable, 'setup.py', 'sdist', '-d', options.dest]
+        subprocess.check_call(cmd)
+        
     finally:
         os.chdir(startdir)
+        shutil.rmtree(tdir)
 
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    make_pseudopkg(sys.argv[1:])
+    
