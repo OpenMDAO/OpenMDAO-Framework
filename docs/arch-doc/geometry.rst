@@ -7,6 +7,7 @@ Geometry Interfaces in OpenMDAO (Working Document)
 
 .. figure:: ../images/arch-doc/top_level.png
    :align: center
+   :alt: Refer to caption
 
    An OpenMDAO process model that integrates :term:`CFD` & :term:`FEM` based on a common
    geometry model into an optimization problem
@@ -311,6 +312,7 @@ Use Cases
 
 .. figure:: ../images/arch-doc/top_level2.png
    :align: center
+   :alt: Refer to caption
 
    An OpenMDAO process model that shows how multiple geometry manipulators are
    used to provide derived geometries based on the original geometry

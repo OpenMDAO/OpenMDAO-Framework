@@ -18,7 +18,8 @@ to be :term:`plugins` to the framework.
 
 .. figure:: ../generated_images/TopContext.png
    :align: center
-
+   :alt: Top level context diagram is a large circle containing plugins that surround the framework box; inside the framework are tools and interfaces.
+   
    Top Level Context Diagram
 
 
@@ -45,6 +46,7 @@ web service embedded within the main simulation server.
 
 .. figure:: ../generated_images/Layers.png
    :align: center
+   :alt: Refer to adjacent text
 
    Framework Layers
 

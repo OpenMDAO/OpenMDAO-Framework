@@ -338,6 +338,7 @@ as shown below.
 
 .. figure:: ../generated_images/NSquaredView.png
    :align: center
+   :alt: Refer to the caption
 
    N-Squared Dataflow View of an Assembly
 
@@ -349,6 +350,7 @@ as shown below.
 
 .. figure:: ../generated_images/DataFlowView.png
    :align: center
+   :alt:  Refer to the caption
 
    Freeform Dataflow View of an Assembly
 
@@ -379,6 +381,7 @@ branching.
 
 .. figure:: ../generated_images/ControlFlow.png
    :align: center
+   :alt: Diagram shows 3 drivers and 4 components as part of an Assembly's Workflow
 
    Notional Workflow View of an Assembly
 
@@ -411,6 +414,7 @@ components repeatedly until some condition is satisfied.
 
 .. figure:: ../images/arch-doc/DataDrivenPic.png
    :align: center
+   :alt: Refer to adjacent text
 
    Problem Formulation View
 
@@ -426,6 +430,7 @@ problem formulation view.
 
 .. figure:: ../generated_images/NSquaredViewDD.png
    :align: center
+   :alt: Refer to caption
 
    N-squared View of Problem Formulation
 
@@ -451,6 +456,7 @@ runtime simply by dragging and dropping objects onto the Component.
 
 .. figure:: ../generated_images/PluginView.png
    :align: center
+   :alt: Diagram shows different socket types for a Component
 
    Plugin View of a Component
 
