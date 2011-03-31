@@ -14,9 +14,9 @@ class ProjectTestCase(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tdir)
         
-    def _create_project(self):
+    def _create_project(self, name):
         projdir = os.path.join(os.path.dirname(os.path.abspath(__file__)),'project')
-        proj = Project(os.path.join(projdir, 'proj1'))
+        proj = Project(os.path.join(projdir, name))
         top = proj.top
         
         from multiplier import Multiplier
@@ -34,14 +34,12 @@ class ProjectTestCase(unittest.TestCase):
         return proj
         
     def test_proj1(self):
-        proj = self._create_project()
+        proj = self._create_project('proj1')
         proj.save()
         proj.export(self.tdir)
         proj.deactivate()
         
         newproj = project_from_archive(os.path.join(self.tdir,'proj1.proj'), self.tdir)
-        print 'done'
-
     
 
 if __name__ == "__main__":
