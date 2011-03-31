@@ -159,7 +159,7 @@ class FlowSolution(object):
 
     def make_cartesian(self, grid, axis='z'):
         """
-        Convert to cartesian coordinate system.
+        Convert to Cartesian coordinate system.
 
         grid: GridCoordinates
             Must be in cylindrical form.

@@ -6,10 +6,10 @@ import numpy
 class Vector(object):
     """
     Vector data for a :class:`FlowSolution`.
-    In cartesian coordinates, array indexing order is x,y,z;
+    In Cartesian coordinates, array indexing order is x,y,z;
     so an 'i-face' is a y,z surface.
     In cylindrical coordinates, array indexing order is z,r,t;
-    so an 'i-face' is a r,t surface.
+    so an 'i-face' is an r,t surface.
     """
 
     def __init__(self):
@@ -108,7 +108,7 @@ class Vector(object):
 
     def make_cartesian(self, grid, axis='z'):
         """
-        Convert to cartesian coordinate system.
+        Convert to Cartesian coordinate system.
 
         grid: GridCoordinates
             Must be in cylindrical form.

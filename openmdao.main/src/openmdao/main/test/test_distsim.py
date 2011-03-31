@@ -50,6 +50,7 @@ _MODULE = 'openmdao.main.test.test_distsim'
 _SERVER_ID = 0
 
 
+
 class Box(ExecComp):
     """ Simple component for testing. """
 
@@ -93,6 +94,7 @@ class Box(ExecComp):
     @rbac('owner')
     def cause_parent_error3(self):
         return self.parent.xyzzy()
+
 
 
 class HollowSphere(Component):

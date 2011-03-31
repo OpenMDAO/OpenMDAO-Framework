@@ -73,6 +73,7 @@ class DBCaseRecorder(object):
         # insert the inputs and outputs into the vars table.  Pickle them if they're not one of the
         # built-in types int, float, or str.
         vlist = []
+        
         for name,idx,value in case.inputs:
             if isinstance(value, (float,int,str)):
                 vlist.append((None, name, case_id, 'i', value, idx))
@@ -87,7 +88,6 @@ class DBCaseRecorder(object):
             cur.execute("insert into casevars(var_id,name,case_id,sense,value,idx) values(?,?,?,?,?,?)", 
                             v)
         self._connection.commit()
-
     def get_iterator(self):
         """Return a DBCaseIterator that points to our current DB."""
         return DBCaseIterator(dbfile=self._dbfile, connection=self._connection)
@@ -132,7 +132,7 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
         The name of the sqlite DB file.
         
     varnames: list[str]
-        iterator of names of variables to be retrieved.
+        Iterator of names of variables to be retrieved.
         
     case_sql: str (optional)
         SQL syntax that will be placed in the WHERE clause for Case retrieval.
@@ -141,7 +141,7 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
         SQL syntax that will be placed in the WHERE clause for variable retrieval.
     
     include_errors: bool (optional) [False]
-        if True, include data from cases that reported an error
+        If True, include data from cases that reported an error.
         
     """
     varnames = set(varnames)

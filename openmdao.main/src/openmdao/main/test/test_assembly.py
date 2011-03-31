@@ -24,6 +24,7 @@ class Multiplier(Component):
     def execute(self):
         self.rval_out = self.rval_in * self.mult
         
+
 class Simple(Component):
     
     a = Float(iotype='in')
@@ -41,6 +42,7 @@ class Simple(Component):
     def execute(self):
         self.c = self.a + self.b
         self.d = self.a - self.b
+
 
 class DummyComp(Component):
     

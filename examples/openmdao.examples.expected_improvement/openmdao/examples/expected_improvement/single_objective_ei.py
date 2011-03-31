@@ -8,43 +8,19 @@ from openmdao.main.api import Assembly, Component, Driver, \
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.expreval import ExprEvaluator
 
-from openmdao.lib.components.metamodel import MetaModel
-from openmdao.lib.components.expected_improvement import ExpectedImprovement
-from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
-from openmdao.lib.components.pareto_filter import ParetoFilter
-from openmdao.lib.drivers.doedriver import DOEdriver
-from openmdao.lib.drivers.genetic import Genetic
+from openmdao.lib.components.api import MetaModel, ExpectedImprovement, ParetoFilter
+from openmdao.lib.surrogatemodels.api import KrigingSurrogate
+from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
 
-from openmdao.lib.doegenerators.optlh import OptLatinHypercube
-from openmdao.lib.doegenerators.full_factorial import FullFactorial
-from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
-from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
-from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
-from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
+from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
+from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder
+
+from openmdao.lib.caseiterators.api import DBCaseIterator
 from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
-
 from openmdao.examples.expected_improvement.branin_component import BraninComponent
-
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
         
-@add_delegate(HasStopConditions)
-class Iterator(Driver):
-    iterations = Int(10,iotype="in")
-    
-    def start_iteration(self):
-        self._iterations = 0
-    
-    def continue_iteration(self):
-        self._iterations += 1
-        if (self._iterations > 1) and self.should_stop():
-            return False
-        if self._iterations <= self.iterations: 
-            return True
-        
-        return False
-
-   
     
 class MyDriver(Driver): 
     def __init__(self,doc=None):
@@ -74,10 +50,11 @@ class Analysis(Assembly):
         
         #Components
         self.add("branin_meta_model",MetaModel())
-        self.branin_meta_model.surrogate = KrigingSurrogate()
+        self.branin_meta_model.surrogate = {'default':KrigingSurrogate()}
         self.branin_meta_model.model = BraninComponent()
         self.branin_meta_model.recorder = DBCaseRecorder(':memory:')
         self.branin_meta_model.force_execute = True        
+        
         
         self.add("EI",ExpectedImprovement())
         self.EI.criteria = "branin_meta_model.f_xy"
@@ -89,7 +66,7 @@ class Analysis(Assembly):
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
         self.DOE_trainer.sequential = True
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=10)
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=15)
         #self.DOE_trainer.DOEgenerator = FullFactorial(num_levels=5)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
@@ -113,8 +90,8 @@ class Analysis(Assembly):
         self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
         self.retrain.force_execute = True
         
-        self.add("iter",Iterator())
-        self.iter.iterations = 30
+        self.add("iter",IterateUntil())
+        self.iter.max_iterations = 30
         self.iter.add_stop_condition('EI.EI <= .0001')
         
         #Iteration Heirarchy
@@ -169,7 +146,7 @@ if __name__ == "__main__": #pragma: no cover
     
     analysis.run()
     
-    print "for damon: " , analysis.iter._iterations
+    print "for damon: " , analysis.iter.iteration
     
     points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
     for x,y,z in points: 

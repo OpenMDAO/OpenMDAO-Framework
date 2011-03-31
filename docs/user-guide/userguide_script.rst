@@ -141,6 +141,7 @@ A simple component that implements an equation with two inputs is shown below:
     from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
     
+    
     class Equation(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
@@ -204,6 +205,7 @@ output would look like this:
     from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
     
+    
     class Simple(Component):
         """ A simple multiplication """
     
@@ -225,6 +227,7 @@ the variables *x* and *y*.
 
     from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
+    
     class Simple(Component):
         """ A simple multiplication """
         def execute(self):
@@ -441,6 +444,7 @@ and calculates their dot product as an output.
     from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Array, Float
     
+    
     class Dot(Component):
         """ A component that outputs a dot product of two arrays"""
     
@@ -490,6 +494,7 @@ colors:
     from openmdao.lib.datatypes.api import Enum
     from openmdao.main.api import Component
     
+    
     class TrafficLight(Component):
         color2 = Enum('Red', ('Red', 'Yellow', 'Green'), iotype='in')
 
@@ -517,6 +522,7 @@ strings to go along with the numbers the code expects.
 
     from openmdao.lib.datatypes.api import Enum
     from openmdao.main.api import Component
+    
     
     class TrafficLight(Component):
         color = Enum(0, (0, 1, 2), iotype='in', aliases=("Red", "Yellow", "Green"))
@@ -567,6 +573,7 @@ defined by creating a *List* of Enums.
 
     from openmdao.lib.datatypes.api import Enum, List
     from openmdao.main.api import Component
+    
     
     class Dice(Component):
         roll = List( Enum(1, (1, 2, 3, 4, 5, 6)), iotype='in')
@@ -642,6 +649,7 @@ made.
     from openmdao.lib.datatypes.api import Instance
     from openmdao.main.interfaces import ICaseRecorder, ICaseIterator
     
+    
     class Fred(Component):
         """ A component that takes a class as an input """
     
@@ -694,6 +702,7 @@ component would look like this:
 
     from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
+    
     
     class Pressure(Component):
         """Simple component to calculate pressure given force and area"""
@@ -770,6 +779,7 @@ three variables that define two flight conditions:
         angle_of_attack = Float(0.0, iotype='in', units='deg')
         sideslip_angle = Float(0.0, iotype='in', units='deg')
 
+    
     class AircraftSim(Component):
         """This component contains variables in a container"""
     

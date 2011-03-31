@@ -14,6 +14,7 @@ from openmdao.util.testutil import assert_rel_error
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
+
 class SellarDiscipline1(Component):
     """Component containing Discipline 1"""
     
@@ -36,6 +37,7 @@ class SellarDiscipline1(Component):
         y2 = self.y2
         
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
+
 
 
 class SellarDiscipline2(Component):
@@ -62,6 +64,7 @@ class SellarDiscipline2(Component):
         y1 = abs(self.y1)
         
         self.y2 = y1**(.5) + z1 + z2
+
 
 
 class SellarBroyden(Assembly):
@@ -100,6 +103,7 @@ class SellarBroyden(Assembly):
         self.driver.alpha = .4
         self.driver.tol = .000000001
 
+
 class MIMOEquation(Component):
     """Equation with 2 inputs and 2 outputs"""
     
@@ -133,6 +137,7 @@ class MIMOEquation(Component):
         self.f4 = ff[3]
         self.f5 = ff[4]
         
+
 class DumbComp(Component):
     """A component whose output is independent of the input."""
     
@@ -146,6 +151,7 @@ class DumbComp(Component):
         
         pass
     
+
 class DumbAssembly(Assembly):
     """Assembly with DumbComp.
     """
@@ -169,6 +175,7 @@ class DumbAssembly(Assembly):
         self.driver.add_constraint('dis1.f1 = 0.0')
 
         
+
 class MIMOBroyden(Assembly):
     """Solution of the MIMO problem using MDF.
     """

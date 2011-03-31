@@ -20,6 +20,7 @@ from openmdao.main.eggchecker import check_save_load
 
 # pylint: disable-msg=E1101
 
+
 class SphereFunction(Component):
     total = Float(0., iotype='out')
     x = Float(0, low=-5.12,high=5.13, iotype="in")
@@ -33,6 +34,7 @@ class SphereFunction(Component):
         """ calculate the sume of the squares for the list of numbers """
         self.total = self.x**2+self.y**2+int(self.z)**2
         
+
 class Asmb(Assembly): 
     def __init__(self,*args,**kwargs):
         super(Asmb,self).__init__(*args,**kwargs)
@@ -42,6 +44,7 @@ class Asmb(Assembly):
         self.create_passthrough('sphere.y')
         self.create_passthrough('sphere.z')
         self.create_passthrough('sphere.total')
+
 
 class SphereFunctionArray(Component):
     total = Float(0., iotype='out')
@@ -58,8 +61,8 @@ class TestCase(unittest.TestCase):
     """ test case for the genetic driver"""         
 
     def setUp(self):
-        #random.seed(10)
-        #numpy_random.seed(10)
+        random.seed(10)
+        numpy_random.seed(10)
         
         # pyevolve does some caching that causes failures during our
         # complete unit tests due to stale values in the cache attributes
@@ -95,9 +98,9 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               .1920, places = 4)
+                               .020, places = 2)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, -0.4381, places = 4)
+        self.assertAlmostEqual(x, 0.135, places = 2)
         self.assertEqual(y, 0)
         self.assertEqual(z, 0)
 
@@ -121,9 +124,9 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               .1920,places = 4)
+                               .02,places = 1)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, -0.4381, places = 4)
+        self.assertAlmostEqual(x, 0.135, places = 2)
         self.assertEqual(y, 0)
         self.assertEqual(z, 0)
 
@@ -160,9 +163,9 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               .1920,places = 4)
+                               .02,places = 1)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, -0.4381, places = 4)
+        self.assertAlmostEqual(x, .135, places = 2)
         self.assertEqual(y, 0)
         self.assertEqual(z, 0)
 
@@ -187,11 +190,11 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               12.0912,places = 4)
+                               4.28,places = 2)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, -1.7603, places = 4)
-        self.assertAlmostEqual(y, -2.5575, places = 4)
-        self.assertAlmostEqual(z, 1.5657, places = 4)  
+        self.assertAlmostEqual(x, 2.0, places = 2)
+        self.assertAlmostEqual(y, .07, places = 2)
+        self.assertAlmostEqual(z, .51, places = 2)  
 
 
     def test_list_remove_clear_params(self):
@@ -230,6 +233,7 @@ class TestCase(unittest.TestCase):
 
     def test_0_low_high(self): 
 
+        
         class SomeComp(Component):
             """Arbitrary component with a few variables, but which does not really do 
             any calculations"""
@@ -240,6 +244,7 @@ class TestCase(unittest.TestCase):
             y = Int(10,low=10,high=100,iotype="in")
             z = Enum([-10,-5,0,7],iotype="in")
 
+        
         class Simulation(Assembly):
             """Top Level Assembly used for simulation"""
 
@@ -258,11 +263,13 @@ class TestCase(unittest.TestCase):
         s = Simulation()
     
     def test_improper_parameter_type(self): 
+        
         class SomeComp(Component):
             """Arbitrary component with a few variables, but which does not really do 
             any calculations"""
             z = Str("test",iotype="in")
 
+        
         class Simulation(Assembly):
             """Top Level Assembly used for simulation"""
 

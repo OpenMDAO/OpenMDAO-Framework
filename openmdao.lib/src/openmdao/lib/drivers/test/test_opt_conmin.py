@@ -13,6 +13,7 @@ from openmdao.lib.datatypes.api import Float, Array, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.util.testutil import assert_rel_error
 
+
 class OptRosenSuzukiComponent(Component):
     """ From the CONMIN User's Manual:
     EXAMPLE 1 - CONSTRAINED ROSEN-SUZUKI FUNCTION. NO GRADIENT INFORMATION.
@@ -134,7 +135,7 @@ class CONMINdriverTestCase(unittest.TestCase):
     
     def test_no_objective(self):
         map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]'])
+                                            'comp.x[2]', 'comp.x[3]'])
         try:
             self.top.run()
         except Exception, err:

@@ -1160,7 +1160,7 @@ def _single_install(cmds, req, bin_dir):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'Pygments==1.3.1', 'ordereddict==1.1', 'Traits==3.3.0', 'pycrypto==2.3', 'PyYAML==3.09', 'Jinja2==2.4', 'Sphinx==1.0.4', 'virtualenv==1.4.6', 'Fabric==0.9.3', 'paramiko==1.7.6', 'newsumt==1.0.0', 'networkx==1.3', 'decorator==3.2.0', 'conmin==1.0.1', 'pyparsing==1.5.2', 'nose==0.11.3']
+    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'Pygments==1.3.1', 'ordereddict==1.1', 'Traits==3.3.0', 'pycrypto==2.3', 'PyYAML==3.09', 'Jinja2==2.4', 'decorator==3.2.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'paramiko==1.7.6', 'virtualenv==1.4.6', 'newsumt==1.0.0', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'nose==0.11.3']
     url = 'http://openmdao.org/dists'
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
@@ -1232,7 +1232,7 @@ def after_install(options, home_dir):
         
     if sys.platform != 'win32':
         import fnmatch
-        def _find_files(pat, startdir):
+        def _find_files(startdir, pat):
             for path, dirlist, filelist in os.walk(startdir):
                 for name in fnmatch.filter(filelist, pat):
                     yield os.path.join(path, name)
@@ -1240,7 +1240,7 @@ def after_install(options, home_dir):
        # in order to find all of our shared libraries, modify the activate
        # script to put their directories in LD_LIBRARY_PATH
         pkgdir = os.path.join(lib_dir, 'site-packages')
-        sofiles = [os.path.abspath(x) for x in _find_files('*.so',pkgdir)]
+        sofiles = [os.path.abspath(x) for x in _find_files(pkgdir,'*.so')]
                       
         final = set()
         for f in sofiles:

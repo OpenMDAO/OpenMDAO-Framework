@@ -36,7 +36,7 @@ the framework are listed below:
 
 .. index:: pair: Component; plugin base class 
 .. index:: pair: Driver; plugin base class
-.. index:: pair: TraitType; plugin base class
+.. index:: pair: Variable; plugin base class
 
 
 :ref:`Component<openmdao.main.component.py>` - base class of an engineering tool or some 
@@ -46,7 +46,7 @@ sort of calculation. It inherits from :ref:`Container<openmdao.main.container.py
 parameter studies, and other objects that iterate over a set of components. 
 It inherits from :ref:`Component<openmdao.main.component.py>`.
 
-TraitType_ - base class used to validate and possibly convert data objects that are
+Variable - base class used to validate and possibly convert data objects that are
 passed between linked components. 
 
 
@@ -300,7 +300,7 @@ actively developed, so they may reach the necessary level of maturity in the
 near future.  
 
 
-.. _dojo: http://www.dojotoolkit.org
+.. _dojo: http://dojotoolkit.org
 
 .. _jquery: http://jquery.com
 

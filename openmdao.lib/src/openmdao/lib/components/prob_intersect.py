@@ -1,15 +1,16 @@
-
+from time import time
 from numpy import exp, abs, pi, array,isnan,sum,sqrt,argsort
 from scipy.special import erf
 from scipy.integrate import dblquad
 
 from openmdao.lib.datatypes.api import Instance, Str, ListStr, Enum, \
-     Float, Array
+     Float, Array, Event, List
 
 from openmdao.main.component import Component
 
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
+
 
 class ProbIntersect(Component):
     """Computes the probability that any given point from the primary concept 
@@ -19,9 +20,8 @@ class ProbIntersect(Component):
                     desc="CaseIterator which contains only Pareto optimal cases "
                          "belonging to the same model as predicted_values")
     
-    global_pareto = Instance(ICaseIterator, iotype="in",
-                    desc="CaseIterator which contains all the points from the "
-                         "global pareto frontier")
+    global_pareto = List([], iotype="in",
+                    desc="List of CaseIterators containing competing local Pareto points")
                     
     criteria = ListStr(iotype="in",dtype="str",
                        desc="Names of responses to maximize expected improvement around. "
@@ -35,7 +35,56 @@ class ProbIntersect(Component):
     PInt = Float(0.0, iotype="out", 
                  desc="The probability that a candidate point is close to Pareto "
                       "intersection")
+    
+    reset_y_stars = Event()
+    
+    def __init__(self,*args,**kwargs):
+        super(ProbIntersect, self).__init__(*args, **kwargs)
+        self.y_star = None
+        self.y_star_other = None
+        
+    def _reset_y_stars_fired(self):
+        self.y_star = None
+        self.y_star_other = None
+    
+    def get_y_stars(self):
+        #y_star is a 2D list of pareto points belonging
+        #to the same model as predicted_values
+        y_star = []
+        y_star_other = []
 
+        c = []
+        
+        #find the pareto points which are in the global_pareto but not in the primary_pareto
+        #other_pareto = [case for case in self.global_pareto if case not in self.primary_pareto]
+        
+        for case in self.primary_pareto:
+
+            for objective in case.outputs:
+                for crit in self.criteria:
+                    if crit in objective[0]:
+                        #TODO: criteria needs at least two things matching
+                        #objective names in CaseIterator outputs, error otherwise
+                        c.append(objective[2])
+            if c != [] :
+                y_star.append(c)
+            c = []
+
+        for single_case_list in self.global_pareto:
+            for case in single_case_list:
+                for objective in case.outputs:
+                    for crit in self.criteria:
+                        if crit in objective[0]:
+                            #TODO: criteria needs at least two things matching
+                            #objective names in CaseIterator outputs, error otherwise
+                            c.append(objective[2])
+                if c != [] :
+                    y_star_other.append(c)
+                c = []
+       
+        return y_star, y_star_other
+        
+        
     def _calcDist(self,p1,y_star_other):
         """Computes the minimum distance from a point in 
         primary_pareto to other_pareto. Uses this information
@@ -63,8 +112,8 @@ class ProbIntersect(Component):
         ys = array(y_star_other)
         xd,yd = self._calcDist(pp,ys)
         #print xd,yd
-        ai = 1./xd
-        bi = 1./yd
+        ai = 1./(10*xd)
+        bi = 1./(100*yd)
         f1_low = pp[0]-ai
         f1_hi  = pp[0]+ai
         f2_low = pp[1]-bi
@@ -80,9 +129,9 @@ class ProbIntersect(Component):
         
         def joint_pdf(f2,f1):
             return 1/(2*pi*sig1*sig2)*exp(-0.5*(((f1-mu1)**2/sig1**2)+((f2-sig2)**2/sig2**2)))
-        
+        b = time()
         integral = dblquad(joint_pdf, f1_low , f1_hi, lambda f1: f2_low, lambda f1: f2_hi)
-
+        #print 'int: ',time()-b,f1_hi-f1_low,f2_hi-f2_low
         return integral[0]
         
     def _calcProbInt(self,y_star,y_star_other):
@@ -101,39 +150,12 @@ class ProbIntersect(Component):
         """ Calculates the probability that a new point
         is close to the intersection of Pareto frontiers.
         """
+        if (self.y_star == None) or (self.y_star_other == None):
+            self.y_star,self.y_star_other = self.get_y_stars()
         
-        #y_star is a 2D list of pareto points belonging
-        #to the same model as predicted_values
-        y_star = []
-        y_star_other = []
-
-        c = []
+        #print len(self.y_star),len(self.y_star_other)
         
-        #find the pareto points which are in the global_pareto but not in the primary_pareto
-        other_pareto = [case for case in self.global_pareto if case not in self.primary_pareto]
-        
-        for case in self.primary_pareto:
-
-            for objective in case.outputs:
-                for crit in self.criteria:
-                    if crit in objective[0]:
-                        #TODO: criteria needs at least two things matching
-                        #objective names in CaseIterator outputs, error otherwise
-                        c.append(objective[2])
-            if c != [] :
-                y_star.append(c)
-            c = []
-
-
-        for case in other_pareto:
-            for objective in case.outputs:
-                for crit in self.criteria:
-                    if crit in objective[0]:
-                        #TODO: criteria needs at least two things matching
-                        #objective names in CaseIterator outputs, error otherwise
-                        c.append(objective[2])
-            if c != [] :
-                y_star_other.append(c)
-            c = []        
-        
-        self.PInt = self._calcProbInt(y_star,y_star_other)
+        a = time()
+        self.PInt = self._calcProbInt(self.y_star,self.y_star_other)
+        #self.PInt = self.PInt/0.0024
+        #print 'Total PI: ', time()-a

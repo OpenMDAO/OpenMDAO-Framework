@@ -16,8 +16,12 @@ class TreeProxy(object):
         def call(pathname, *args, **kwargs)
         def __contains__(pathname)
     
-    where pathname is a dot separated name, and index is a tuple of element
-    indices, e.g., (2,1) or ('mykey',).
+    where pathname is a dot separated name, and index is a list of element
+    indices or attribute names, e.g., [2,1], ['mykey'] or [2,1,['attrname']].
+    Attribute names are buried inside of a nested list to avoid confusion
+    with strings used to index into a container.  Also, nested tuples are not
+    used to avoid confusion for the same reason, i.e. they are hashable and
+    therefore could be used to index into a container.
     """
     def __init__(self, root, path):
         object.__setattr__(self, '_root', weakref.ref(root))
@@ -56,6 +60,9 @@ class TreeProxy(object):
     def __getitem__(self, key):
         return self._root().get(self._path, index=(key,))
     
+    def __setitem__(self, key, value):
+        return self._root().set(self._path, value, index=(key,))
+    
     def __call__(self, *args, **kwargs):
         return self._root().call(self._path[:-1], *args, **kwargs)
 
@@ -68,7 +75,5 @@ def all_tree_names(pathnames):
     allnames = set()
     for key in pathnames:
         parts = key.split('.')
-        for i in range(len(parts)):
-            path = '.'.join(parts[:i+1])
-            allnames.add(path)
+        allnames.update(['.'.join(parts[:i+1]) for i in range(len(parts))])
     return allnames

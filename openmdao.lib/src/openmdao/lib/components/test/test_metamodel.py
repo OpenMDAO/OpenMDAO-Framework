@@ -5,11 +5,16 @@ import unittest
 from enthought.traits.api import HasTraits
 
 from openmdao.lib.datatypes.api import Float, TraitError, implements
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, Case
 from openmdao.main.interfaces import ICaseRecorder
 
+from openmdao.main.uncertain_distributions import NormalDistribution
+
+from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
+from openmdao.lib.surrogatemodels.logistic_regression import LogisticRegression
+
 
 from openmdao.util.testutil import assert_rel_error
 
@@ -17,6 +22,7 @@ class DumbRecorder(HasTraits):
     implements(ICaseRecorder)
     def record(self,case): 
         pass
+
 
 class Simple(Component):
     
@@ -36,6 +42,7 @@ class Simple(Component):
         self.c = self.a + self.b
         self.d = self.a - self.b
         
+
 class Simple2(Component):
     
     w = Float(iotype='in')
@@ -54,8 +61,10 @@ class Simple2(Component):
         self.y = self.w * 1.1
         self.z = self.x * 0.9
         
+
 class AModel(Component):
     pass
+
 
 class MyMetaModel(MetaModel):
     my_x = Float(1., iotype='in')
@@ -66,7 +75,7 @@ class MetaModelTestCase(unittest.TestCase):
         metamodel = MetaModel()
         mmins = set(metamodel.list_inputs())
         mmouts = set(metamodel.list_outputs())
-        metamodel.surrogate = KrigingSurrogate()
+        metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.model = Simple()
         inputs = set(metamodel.list_inputs())
         outputs = set(metamodel.list_outputs())
@@ -85,7 +94,7 @@ class MetaModelTestCase(unittest.TestCase):
         asm.add('metamodel', MetaModel())
         asm.add('comp1', Simple())
         asm.add('comp2', Simple())
-        asm.metamodel.surrogate = KrigingSurrogate()
+        asm.metamodel.surrogate = {'default':KrigingSurrogate()}
         asm.metamodel.model = Simple()
         asm.metamodel.recorder = DumbRecorder()
         asm.driver.workflow.add(['metamodel','comp1','comp2'])
@@ -120,11 +129,55 @@ class MetaModelTestCase(unittest.TestCase):
         asm.metamodel.model = Simple2()
         self.assertEqual(asm.list_connections(), [])
         
+    def test_warm_start(self): 
+        metamodel = MetaModel()
+        metamodel.name = 'meta'
+        metamodel.surrogate = {'default':KrigingSurrogate()}
+        metamodel.model = Simple()
+        metamodel.recorder = DumbRecorder()
+        simple = Simple()
+        
+        cases = []        
+        
+        metamodel.a = 1.
+        metamodel.b = 2.
+        metamodel.train_next = True
+        metamodel.run()
+        inputs = [('meta2.a',None,metamodel.a),('meta2.b',None,metamodel.b)]
+        outputs = [('meta2.c',None,metamodel.c.mu),('meta2.d',None,metamodel.d.mu)]
+        cases.append(Case(inputs=inputs,outputs=outputs))
+        
+        metamodel.a = 3.
+        metamodel.b = 5.
+        metamodel.train_next = True
+        metamodel.run()
+        inputs = [('meta2.a',None,metamodel.a),('meta2.b',None,metamodel.b)]
+        outputs = [('meta2.c',None,metamodel.c.mu),('meta2.d',None,metamodel.d.mu)]
+        cases.append(Case(inputs=inputs,outputs=outputs))
+        
+        case_iter = ListCaseIterator(cases)
+        
+        metamodel2 = MetaModel()
+        metamodel2.name = 'meta2'
+        metamodel2.surrogate = {'default':KrigingSurrogate()}
+        metamodel2.model = Simple()
+        metamodel2.recorder = DumbRecorder()
+        metamodel2.warm_start_data = case_iter
+        
+        metamodel2.a = simple.a = 1
+        metamodel2.b = simple.b = 2
+        metamodel2.run()
+        simple.run()
+        
+        self.assertEqual(metamodel2.c.getvalue(), 3.)
+        self.assertEqual(metamodel2.d.getvalue(), -1.)
+        self.assertEqual(metamodel2.c.getvalue(), simple.c)
+        self.assertEqual(metamodel2.d.getvalue(), simple.d)        
         
     def test_default_execute(self):
         metamodel = MetaModel()
         metamodel.name = 'meta'
-        metamodel.surrogate = KrigingSurrogate()
+        metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.model = Simple()
         metamodel.recorder = DumbRecorder()
         simple = Simple()
@@ -145,10 +198,59 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertEqual(metamodel.d.getvalue(), -1.)
         self.assertEqual(metamodel.c.getvalue(), simple.c)
         self.assertEqual(metamodel.d.getvalue(), simple.d)
+    
+    def test_multi_surrogate_models_bad_surrogate_dict(self): 
+        metamodel = MetaModel()
+        metamodel.name = 'meta'
+        metamodel.surrogate = {'d':KrigingSurrogate()}
+        try: 
+            metamodel.model = Simple()
+        except ValueError,err: 
+            self.assertEqual('meta: No default surrogate model was specified. '
+            'Either specify a default, or specify a surrogate model for all '
+            'outputs',str(err))
+        else: 
+            self.fail('ValueError expected')
+            
+        metamodel = MetaModel()
+        metamodel.name = 'meta'
+        metamodel.surrogate = {'d':KrigingSurrogate()}
+        metamodel.includes = ['a','b','d']
+        try: 
+            metamodel.model = Simple()
+        except ValueError,err: 
+            if 'meta: Dict provided for "surrogates" does not include a value for "c". All outputs must be specified'==str(err):
+                self.fail('should not get a value error for variable c. It is not included in the metamodel')
+        
+        
+    def test_multi_surrogate_models(self): 
+        metamodel = MetaModel()
+        metamodel.name = 'meta'
+        metamodel.surrogate = {'d':KrigingSurrogate(),
+                               'c':LogisticRegression()}
+        metamodel.model = Simple()
+        metamodel.recorder = DumbRecorder()
+        simple = Simple()
+        
+        metamodel.a = simple.a = 1.
+        metamodel.b = simple.b = 2.
+        metamodel.train_next = True
+        simple.run()
+        metamodel.run()
+        
+        metamodel.a = simple.a = 3.
+        metamodel.b = simple.b = 4.
+        metamodel.train_next = True
+        simple.run()
+        metamodel.run()
+        
+        self.assertTrue(isinstance(metamodel.d,NormalDistribution))
+        self.assertTrue(isinstance(metamodel.c,float))
+        
         
     def test_includes(self):
         metamodel = MyMetaModel()
-        metamodel.surrogate = KrigingSurrogate()
+        metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.includes = ['a','d']
         metamodel.model = Simple()
         self.assertEqual(metamodel.list_inputs_to_model(), ['a'])
@@ -161,7 +263,7 @@ class MetaModelTestCase(unittest.TestCase):
 
     def test_excludes(self):
         metamodel = MyMetaModel()
-        metamodel.surrogate = KrigingSurrogate()
+        metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.excludes = ['a','d']
         metamodel.model = Simple()
         self.assertEqual(metamodel.list_inputs_to_model(), ['b'])
@@ -174,7 +276,7 @@ class MetaModelTestCase(unittest.TestCase):
         
     def test_include_exclude(self):
         metamodel = MyMetaModel()
-        metamodel.surrogate = KrigingSurrogate()
+        metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.includes = ['a','d']
         try:
             metamodel.excludes = ['b','c']
@@ -195,6 +297,26 @@ class MetaModelTestCase(unittest.TestCase):
         else:
             self.fail('Expected Exception')
         self.assertEqual(metamodel.includes, [])
+        
+    def test_reset_training_data_event(self):
+        metamodel = MetaModel()
+        metamodel.name = 'meta'
+        metamodel.surrogate = {'default':KrigingSurrogate()}
+        metamodel.model = Simple()
+        metamodel.recorder = DumbRecorder()
+        simple = Simple()
+        
+        metamodel.a = 1.
+        metamodel.b = 2.
+        metamodel.train_next = True
+        metamodel.run()
+        
+        metamodel.a = 2.
+        metamodel.b = 3.
+        metamodel.train_next = True
+        metamodel.run()
+        
+        
         
 if __name__ == "__main__":
     unittest.main()

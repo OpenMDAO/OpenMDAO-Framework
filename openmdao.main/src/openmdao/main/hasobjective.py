@@ -34,7 +34,7 @@ class HasObjective(object):
             
     def list_objective(self):
         """Returns the expression string for the objective."""
-        return str(self._objective)
+        return self._objective.text
     
     def get_objective(self):
         """Returns the objective object."""

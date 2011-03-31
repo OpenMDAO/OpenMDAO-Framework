@@ -165,7 +165,7 @@ class DepGraphTestCase(unittest.TestCase):
         link = self.dep.get_link('@bin', 'B')
         self.assertEqual(link, None)
         
-        # not test a similar situation on the output side
+        # now test a similar situation on the output side
         self.dep.disconnect('bound_c')
         link = self.dep.get_link('@bout', '@xout')
         self.assertTrue('bound_c' not in link._srcs)

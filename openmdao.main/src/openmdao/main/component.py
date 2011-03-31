@@ -1,4 +1,4 @@
-""" Class definition for Component """
+""" Class definition for Component. """
 
 #public symbols
 __all__ = ['Component', 'SimulationRoot']
@@ -103,14 +103,14 @@ class Component (Container):
                     iotype='in')
     external_files = List(FileMetadata,
                           desc='FileMetadata objects for external files used'
-                               ' by this component')
+                               ' by this component.')
     force_execute = Bool(False, iotype='in',
                          desc="If True, always execute even if all IO traits are valid.")
 
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
     
-    exec_count = Int(0, desc='Number of times this Component has been executed')
+    exec_count = Int(0, desc='Number of times this Component has been executed.')
     
     create_instance_dir = Bool(False)
     
@@ -251,14 +251,10 @@ class Component (Container):
         if self._call_tree_rooted:
             self.tree_rooted()
             
-        if self._call_check_config:
-            self.check_config()
-            self._call_check_config = False
-        
         if force:
             outs = self.invalidate_deps()
             if (outs is None) or outs:
-                if self.parent: self.parent.child_invalidated(self.name)
+                if self.parent: self.parent.child_invalidated(self.name, outs)
         else:
             if not self.is_valid():
                 self._call_execute = True
@@ -266,25 +262,32 @@ class Component (Container):
                 self._call_execute = True
                 # we're valid, but we're running anyway because of our input CaseIterators,
                 # so we need to notify downstream comps so they grab our new outputs
-                self.invalidate_deps()
-    
-            if self.parent is None: # if parent is None, we're not part of an Assembly
-                                    # so Variable validity doesn't apply. Just execute.
+                outs = self.invalidate_deps()
+                if (outs is None) or outs:
+                    if self.parent: self.parent.child_invalidated(self.name, outs)
+        
+        if self.parent is None: # if parent is None, we're not part of an Assembly
+                                # so Variable validity doesn't apply. Just execute.
+            self._call_execute = True
+            valids = self._valid_dict
+            for name in self.list_inputs():
+                valids[name] = True
+        else:
+            valids = self._valid_dict
+            invalid_ins = [inp for inp in self.list_inputs(connected=True) 
+                                    if valids.get(inp) is False]
+            if invalid_ins:
                 self._call_execute = True
-                valids = self._valid_dict
-                for name in self.list_inputs():
+                self.parent.update_inputs(self.name, invalid_ins)
+                for name in invalid_ins:
                     valids[name] = True
-            else:
-                valids = self._valid_dict
-                invalid_ins = [inp for inp in self.list_inputs(connected=True) 
-                                        if valids.get(inp) is False]
-                if invalid_ins:
-                    self._call_execute = True
-                    self.parent.update_inputs(self.name, invalid_ins)
-                    for name in invalid_ins:
-                        valids[name] = True
-                elif self._call_execute == False and len(self.list_outputs(valid=False)):
-                    self._call_execute = True
+            elif self._call_execute == False and len(self.list_outputs(valid=False)):
+                self._call_execute = True
+                
+        if self._call_check_config:
+            self.check_config()
+            self._call_check_config = False
+
 
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
@@ -545,10 +548,10 @@ class Component (Container):
         that it is referring to a variable outside of this object's scope.
         
         srcpath: str
-            Pathname of source variable
+            Pathname of source variable.
             
         destpath: str
-            Pathname of destination variable
+            Pathname of destination variable.
         """
         valids_update = None
         
@@ -911,7 +914,7 @@ class Component (Container):
             child entry point object.
 
         name: string
-            Name for the root object
+            Name for the root object.
 
         observer: callable
             Will be called via an :class:`EggObserver`.
@@ -1157,7 +1160,8 @@ class Component (Container):
         NOTE: Components supporting partial output validation must override
         this function.
         
-        Returns None, indicating that all outputs are invalidated.
+        Returns None, indicating that all outputs are newly invalidated, or [],
+        indicating that no outputs are newly invalidated.
         """
         outs = self.list_outputs()
         valids = self._valid_dict

@@ -31,6 +31,7 @@ prefer. See :ref:`Tutorial:-MDAO-Architectures` to learn how to broadcast variab
     from openmdao.lib.datatypes.api import Float
     from openmdao.main.api import Component
     
+    
     class MIMOSystem(Component):
         """ Two equations, two unknowns """
         
@@ -215,8 +216,7 @@ efficient solution of constrained problems, unconstrained function
 minimization problems may also be solved. The conjugate direction method
 of Fletcher and Reeves is used for this purpose.
 
-More information on CONMIN can be found in the `CONMIN User's Manual
-<file:../../../plugin-guide/CONMIN_user_manual.html>`_. (In the :ref:`simple
+More information on CONMIN can be found in the `CONMIN User's Manual <http://www.eng.buffalo.edu/Research/MODEL/mdo.test.orig/CONMIN/manual.html>`_. (In the :ref:`simple
 tutorial <Getting-Started-with-OpenMDAO>` in the *User Guide*, CONMIN is used for an
 unconstrained and a constrained optimization.)
 
@@ -364,7 +364,7 @@ Value           Result
 ``nscal = 0``   No scaling of the design variables
 --------------  --------------------------------------------------------
 ``nscal > 0``   Scale the design variables every ``NSCAL`` iteration. Please
-                see the `CONMIN User's Manual <file:../../../plugin-guide/CONMIN_user_manual.html>`_ 
+                see the `CONMIN User's Manual <http://www.eng.buffalo.edu/Research/MODEL/mdo.test.orig/CONMIN/manual.html>`_ 
                 for additional notes about using this option.
 ==============  ========================================================
 
@@ -434,9 +434,9 @@ Value             Result
 
 *Advanced Options*
 ++++++++++++++++++
-The following options exercise some of the more advanced capabilities of CONMIN.
-The details given here briefly summarize the effects of these parameters; more
-information is available in the `CONMIN User's Manual <file:../../../plugin-guide/CONMIN_user_manual.html>`_.
+The following options exercise some of the more advanced
+capabilities of CONMIN. The details given here briefly summarize the effects of these
+parameters; more information is available in the `CONMIN User's Manual <http://www.eng.buffalo.edu/Research/MODEL/mdo.test.orig/CONMIN/manual.html>`_.
 
 **icndir**
   Conjugate direction restart parameter. For an unconstrained problem
@@ -505,7 +505,8 @@ calculated by finite difference.
 
 NEWSUMT treats inequality constraints in a way that is especially well suited to engineering design applications.
 
-More information on NEWSUMT can be found in the `NEWSUMT Users Guide <file:../../../plugin-guide/newsumt-manual.pdf>`_.
+More information on NEWSUMT can be found in the `NEWSUMT Users Guide
+<http://openmdao.org/downloads/user_guides/newsumt-manual.pdf>`_.
 
 
 *Basic Interface*
@@ -714,7 +715,8 @@ Parameter   Description                                          Default
 ++++++++++++++++++ 
 
 There are additional options for advanced users.  More information on these parameters can be
-found in the `NEWSUMT Users Guide <file:../../../plugin-guide/newsumt-manual.pdf>`_.
+found in the `NEWSUMT Users Guide <http://openmdao.org/downloads/user_guides/newsumt-manual.pdf>`_. (This doc is
+slow to load.)
 
 
 =========  ===========================================  ===========
@@ -806,6 +808,7 @@ produce the square root of a number.
 
     from openmdao.lib.datatypes.api import Float
     from openmdao.main.api import Component
+    
     
     class Babylonian(Component):
         """ The Babylonians had a neat way of calculating square
@@ -907,6 +910,7 @@ You add design variables to Genetic using the ``add_parameter`` method.
     from openmdao.main.api import Assembly,Component, set_as_top
     from openmdao.lib.drivers.api import Genetic
     from openmdao.lib.datatypes.api import Float,Int,Enum
+    
     
     class SomeComp(Component):
         """Arbitrary component with a few variables, but which does not really do 

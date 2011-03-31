@@ -1,4 +1,4 @@
-"""A simple Pyevolve-based driver for OpenMDAO
+"""A simple Pyevolve-based driver for OpenMDAO.
 
    See Appendix B for additional information on the :ref:`Genetic` driver."""
 
@@ -6,7 +6,7 @@ import re
 
 from numpy import float32, float64, int32, int64, array
 
-from pyevolve import G1DList, GAllele, GenomeBase
+from pyevolve import G1DList, GAllele, GenomeBase, Scaling
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
 # pylint: disable-msg=E0611,F0401
@@ -15,11 +15,12 @@ from openmdao.lib.datatypes.api import Python, Enum, Float, Int, Bool, Instance
 from openmdao.main.api import Driver 
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
+from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
-
+import time
 array_test = re.compile("(\[[0-9]+\])+$")
 
-@add_delegate(HasParameters, HasObjective)
+@add_delegate(HasParameters, HasObjective,HasEvents)
 class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO framework, based on the Pyevolve
     Genetic algorithm module. 
@@ -80,7 +81,7 @@ class Genetic(Driver):
             count += 1    
             expreval = param.expreval
             val = expreval.evaluate() #now grab the value 
-            ref = str(expreval)
+            ref = expreval.text
         
             
             #split up the ref string to be able to get the trait.
@@ -118,13 +119,14 @@ class Genetic(Driver):
             else: 
                 self.raise_exception("%s is not a float, int, or enumerated \
                 datatype. Only these 3 types are allowed"%target,ValueError)
-                
+        
         self.count = count
         return alleles
                 
     def execute(self):
         """Perform the optimization"""
-        
+        self.set_events()
+
         alleles = self._make_alleles()
         
         genome = G1DList.G1DList(len(alleles))
@@ -142,6 +144,8 @@ class Genetic(Driver):
         #configuring the options
         ga = GSimpleGA.GSimpleGA(genome, interactiveMode = False, 
                                  seed=self.seed)
+        pop = ga.getPopulation()
+        pop = pop.scaleMethod.set(Scaling.SigmaTruncScaling)
         ga.setMinimax(Consts.minimaxType[self.opt_type])
         ga.setGenerations(self.generations)
         ga.setMutationRate(self.mutation_rate)
@@ -157,7 +161,7 @@ class Genetic(Driver):
         
         #GO
         ga.evolve(freq_stats=0)
-        
+
         self.best_individual = ga.bestIndividual()
         
         #run it once to get the model into the optimal state

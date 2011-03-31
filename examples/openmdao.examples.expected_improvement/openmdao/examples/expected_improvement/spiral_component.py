@@ -4,6 +4,7 @@ from numpy import sin,cos
 from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
 
+
 class SpiralComponent(Component): 
     x = Float(iotype="in",low=0.75,high=5.*pi)
     y = Float(iotype="in",low=0.75,high=5.*pi)

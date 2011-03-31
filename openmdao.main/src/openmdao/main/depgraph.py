@@ -198,14 +198,14 @@ class DependencyGraph(object):
             return None
 
     def in_links(self, cname):
-        """Return a list of the form [(compname,link), (compname2,link2)...]
+        """Return a list of the form [(compname, link), (compname2, link2)...]
         containing each incoming link to the given component and the name
         of the connected component.
         """
         return [(u,data['link']) for u,v,data in self._graph.in_edges(cname, data=True)]
     
     def out_links(self, cname):
-        """Return a list of the form [(compname,link), (compname2,link2)...]
+        """Return a list of the form [(compname, link), (compname2, link2)...]
         containing each outgoing link from the given component and the name
         of the connected component.
         """
@@ -321,7 +321,7 @@ class DependencyGraph(object):
         return conns
     
     def _var_connections(self, path):
-        """Returns a list of tuples of the form (srcpath,destpath) for all
+        """Returns a list of tuples of the form (srcpath, destpath) for all
         connections to and from the specified variable.
         """
         conns = []
@@ -344,7 +344,7 @@ class DependencyGraph(object):
         return conns
     
     def connections_to(self, path):
-        """Returns a list of tuples of the form (srcpath,destpath) for
+        """Returns a list of tuples of the form (srcpath, destpath) for
         all connections between the variable or component specified
         by *path*.
         """

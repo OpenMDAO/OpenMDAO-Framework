@@ -8,9 +8,11 @@ __all__ = ["Int"]
 from sys import maxint
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Range, TraitError, TraitType
+from enthought.traits.api import Range, TraitError
 
-class Int(TraitType):
+from openmdao.main.variable import Variable
+
+class Int(Variable):
     """A variable wrapper for an integer valid within a
        specified range of values.
        """

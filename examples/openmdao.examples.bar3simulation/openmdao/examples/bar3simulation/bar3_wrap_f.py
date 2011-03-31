@@ -12,6 +12,7 @@ from openmdao.lib.datatypes.api import Float
 
 from openmdao.examples.bar3simulation.bar3 import runbar3truss, forces
 
+
 class Bar3Truss(Component):
     """ Model of a three bar truss - Fortran Implementation."""
 

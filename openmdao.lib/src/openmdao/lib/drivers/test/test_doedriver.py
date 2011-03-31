@@ -39,6 +39,7 @@ def rosen_suzuki(x0,x1,x2,x3):
            2.*x2**2 - 21.*x2 + x3**2 + 7.*x3 + 50
 
 
+
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 
@@ -64,6 +65,7 @@ class DrivenComponent(Component):
             self.raise_exception('Forced error', RuntimeError)
         if self.stop_exec:
             self.parent.driver.stop()  # Only valid if sequential!
+
 
 
 class MyModel(Assembly):

@@ -9,16 +9,20 @@ import os.path
 import sys
 import unittest
 import tempfile
+from fnmatch import fnmatch
 
-from openmdao.util.fileutil import find_in_path
+from openmdao.util.fileutil import find_in_path, build_directory, find_files
 
-structure = [
-    'top/foo/',
-    'top/foo/bar.exe',
-    'top/blah/',
-    'top/blah/somefile',
-    'top/somedir/dir2/'
-    ]
+structure = {
+    'top': {
+        'foo/bar.exe': 'some stuff...',
+        'blah': {
+            'somefile': '# a comment',
+            },
+        'somedir/dir2': {
+                    }
+        }
+    }
 
 class FileUtilTestCase(unittest.TestCase):
 
@@ -26,13 +30,7 @@ class FileUtilTestCase(unittest.TestCase):
         self.startdir = os.getcwd()
         self.tempdir = tempfile.mkdtemp()
         os.chdir(self.tempdir)
-        for name in structure:
-            if name.endswith('/'):
-                os.makedirs(name)
-            else:
-                f = open(name, 'w')
-                f.write('testing...')
-                f.close()
+        build_directory(structure)
 
     def tearDown(self):
         os.chdir(self.startdir)
@@ -56,7 +54,28 @@ class FileUtilTestCase(unittest.TestCase):
         # make sure we don't find directories
         fname = find_in_path('blah', path)
         self.assertEqual(fname, None)
-                         
+        
+    def test_find_files(self):
+        flist = find_files(self.tempdir)
+        self.assertEqual(set([os.path.basename(f) for f in flist]), 
+                         set(['bar.exe', 'somefile']))
+        flist = find_files(self.tempdir, '*.exe')
+        self.assertEqual(set([os.path.basename(f) for f in flist]), 
+                         set(['bar.exe']))
+        matcher = lambda name: fnmatch(name, '*.exe') or fnmatch(name, '*some*')
+        flist = find_files(self.tempdir, matcher)
+        self.assertEqual(set([os.path.basename(f) for f in flist]), 
+                         set(['bar.exe', 'somefile']))
+        flist = find_files(self.tempdir, exclude='*.exe')
+        self.assertEqual(set([os.path.basename(f) for f in flist]), 
+                         set(['somefile']))
+        flist = find_files(self.tempdir, exclude=matcher)
+        self.assertEqual(set([os.path.basename(f) for f in flist]), 
+                         set([]))
+        flist = find_files(self.tempdir, match='*.exe', exclude=matcher)
+        self.assertEqual(set([os.path.basename(f) for f in flist]), 
+                         set([]))
+        
 if __name__ == '__main__':
     unittest.main()
 

@@ -323,7 +323,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
         if group != "":
         
             container_name = compname + "_" + group.replace(".","_")
-            text = "\n\n"
+            text = "\n"
             text += "class " + container_name + "(Container):\n"
             
             text += tab + '"""Container for %s"""\n\n' % str(group)

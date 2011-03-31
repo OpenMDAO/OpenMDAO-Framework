@@ -8,7 +8,7 @@ from optparse import OptionParser
 
 from fabric.api import run, env, local, put, cd, get, settings
 from fabric.state import connections
-
+#testing
 import paramiko.util
 
 paramiko.util.log_to_file('paramiko.log')

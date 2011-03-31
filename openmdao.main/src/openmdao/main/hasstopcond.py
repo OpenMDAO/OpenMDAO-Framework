@@ -38,7 +38,7 @@ class HasStopConditions(object):
         self._stop_conditions = ordereddict.OrderedDict()
         
     def get_stop_conditions(self):
-        """Returns an ordered dict of stop condition strings."""
+        """Returns a list of stop condition strings."""
         return self._stop_conditions.keys()
 
     def eval_stop_conditions(self): 
@@ -47,4 +47,6 @@ class HasStopConditions(object):
     
     def should_stop(self):
         """Return True if any of the stopping conditions evaluate to True."""
-        return any(self.eval_stop_conditions())
+        for cond in self._stop_conditions.values():
+            if cond.evaluate():
+                return True

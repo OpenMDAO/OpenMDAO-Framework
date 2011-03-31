@@ -33,7 +33,7 @@ class BroydenSolver(Driver):
 
     These solvers find x for which F(x)=0. Both x and F are multidimensional.
 
-    All solvers have the parameter iter (the number of iterations to compute);
+    All solvers have the parameter *iter* (the number of iterations to compute);
     some of them have other parameters of the solver. See the particular solver
     for details.
 
@@ -44,10 +44,10 @@ class BroydenSolver(Driver):
     - broyden3: Broyden's second method -- the same as broyden2 but
       instead of directly computing the inverse Jacobian,
       it remembers how to construct it using vectors. 
-      When computing inv(J)*F, it uses those vectors to
+      When computing ``inv(J)*F``, it uses those vectors to
       compute this product, thus avoiding the expensive NxN
       matrix multiplication.
-    - excitingmixing: The excitingmixing algorithm. J=-1/alpha
+    - excitingmixing: The excitingmixing algorithm. ``J=-1/alpha``
 
     The broyden2 is the best. For large systems, use broyden3; excitingmixing is
     also very effective. The remaining nonlinear solvers from SciPy are, in
@@ -69,7 +69,7 @@ class BroydenSolver(Driver):
                                             'used with excitingmixing.)')
 
     tol = Float(0.00001, iotype='in', 
-                  desc='Convergence tolerance. If the norm of the independent'
+                  desc='Convergence tolerance. If the norm of the independent '
                   'vector is lower than this, then terminate successfully.')
 
     def __init__(self):

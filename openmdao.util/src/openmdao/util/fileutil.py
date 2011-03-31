@@ -3,12 +3,35 @@ Misc. file utility routines
 """
 
 import os
+import stat
 from os import makedirs
 import sys
 import shutil
-import fnmatch
+import warnings
+import itertools
+from fnmatch import fnmatch
 from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
+
+class DirContext(object):
+    """Supports using the 'with' statement in place of try-finally for
+    entering a directory, executing a block, then returning to the 
+    original directory.
+    """
+    def __init__(self, destdir):
+        self.destdir = destdir
+
+    def __enter__(self):
+        self.startdir = os.getcwd()
+        # convert destdir to absolute at enter time instead of init time
+        # so relative paths will be relative to the current context
+        self.destdir = os.path.abspath(self.destdir)
+        os.chdir(self.destdir)
+        return self.destdir
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        os.chdir(self.startdir)
+
 
 def find_in_dir_list(fname, dirlist, exts=('',)):
     """Search the given list of directories for the specified file.
@@ -54,63 +77,64 @@ def find_in_path(fname, pathvar=None, sep=os.pathsep, exts=('',)):
         
     return find_in_dir_list(fname, pathvar.split(sep), exts)
 
-
-def makepath(path):
-    """ Creates missing directories for the given path and returns a 
-    normalized absolute version of the path.
-
-    - If the given path already exists in the filesystem,
-      the filesystem is not modified.
-
-    - Otherwise makepath creates directories along the given path
-      using the dirname() of the path. You may append
-      a '/' to the path if you want it to be a directory path.
-
-    from holger@trillke.net 2002/03/18
-    """
-
-    dpath = normpath(dirname(path))
-    if not exists(dpath): makedirs(dpath)
-    return normpath(abspath(path))
-
-
-def find_files(pat, startdir):
-    """Return a list of files (using a generator) that match
-    the given glob pattern. startdir can be a single directory
-    or a list of directories.  Walks all subdirectories below 
-    each specified starting directory.
-    """
-    if isinstance(startdir, basestring):
-        startdirs = [startdir]
-    else:
-        startdirs = startdir
-
-    for startdir in startdirs:
-        for path, dirlist, filelist in os.walk(startdir):
-            for name in fnmatch.filter(filelist, pat):
-                yield join(path, name)
-            
-def exclude_files(excludes, pat, startdir):
-    """Return a list of files (using a generator) that match
-    the given glob pattern, minus any that match any of the
-    given exclude patterns. startdir can be a single dir
-    or a list of dirs.  Walks all subdirs below each specified
-    dir.
-    """
-    for name in find_files(pat, startdir):
-        for exclude in excludes:
-            if fnmatch.fnmatch(name, exclude):
-                break
-        else:
-            yield name
-
-def find_files_and_dirs(pat, startdir):
-    """Return a list of files and directories (using a generator) that match
-    the given glob pattern. Walks an entire directory structure.
-    """
-    for path, dirlist, filelist in os.walk(startdir):
-        for name in fnmatch.filter(filelist+dirlist, pat):
+def _file_gen(dname):
+    """A generator returning all files under the given directory."""
+    for path, dirlist, filelist in os.walk(dname):
+        for name in filelist:
             yield join(path, name)
+            
+def _file_dir_gen(dname):
+    """A generator returning all files and directories under 
+    the given directory.
+    """
+    for path, dirlist, filelist in os.walk(dname):
+        for name in filelist:
+            yield join(path, name)
+        for name in dirlist:
+            yield join(path, name)
+
+def find_files(start, match=None, exclude=None, nodirs=True):
+    """Return filenames (using a generator).
+    
+    start: str or list of str
+        Starting directory or list of directories.
+        
+    match: str or predicate funct
+        Either a string containing a glob pattern to match
+        or a predicate function that returns True on a match.
+        
+    exclude: str or predicate funct
+        Either a string containing a glob pattern to exclude
+        or a predicate function that returns True to exclude.
+        
+    nodirs: bool
+        If False, return names of files and directories.
+        
+    Walks all subdirectories below each specified starting directory.
+    """
+    startdirs = [start] if isinstance(start, basestring) else start
+    
+    gen = _file_gen if nodirs else _file_dir_gen
+    if match is None:
+        matcher = bool
+    elif isinstance(match, basestring):
+        matcher = lambda name: fnmatch(name,match)
+    else:
+        matcher = match
+
+    if isinstance(exclude, basestring):
+        fmatch = lambda name: matcher(name) and not fnmatch(name, exclude)
+    elif exclude is not None:
+        fmatch = lambda name: matcher(name) and not exclude(name)
+    else:
+        fmatch = matcher
+
+    iters = [itertools.ifilter(fmatch, gen(d)) for d in startdirs]
+    if len(iters) > 1:
+        return itertools.chain(*iters)
+    else:
+        return iters[0]
+
 
 def find_up(name, path=None):
     """Search upward from the starting path (or the current directory)
@@ -138,12 +162,12 @@ def find_up(name, path=None):
                 return None
     return None
 
-                
+
 def get_module_path(fpath):
     """Given a module filename, return its full python name including
     enclosing packages. (based on existence of __init__.py files)
     """
-    pnames = [os.path.basename(os.path.splitext(fpath)[0])]
+    pnames = [os.path.splitext(os.path.basename(fpath))[0]]
     path = os.path.dirname(os.path.abspath(fpath))
     while os.path.isfile(os.path.join(path, '__init__.py')):
             path, pname = os.path.split(path)
@@ -159,8 +183,7 @@ def find_module(name, path=None):
         path = sys.path
     nameparts = name.split('.')
     
-    endings = []
-    endings.append(os.path.join(*nameparts))
+    endings = [os.path.join(*nameparts)]
     endings.append(os.path.join(endings[0], '__init__.py'))
     endings[0] += '.py'
     
@@ -194,20 +217,41 @@ def copy(src, dest):
         shutil.copy(src, dest)
     elif isdir(src):
         shutil.copytree(src, dest) 
-    
 
-def find_bzr(path=None):
-    """ Return bzr root directory path or None. """
-    if not path:
-        path = os.getcwd()
-    if not exists(path):
-        return None
-    while path:
-        if exists(join(path, '.bzr')):
-            return path
-        else:
-            pth = path
-            path = dirname(path)
-            if path == pth:
-                return None
-    return None
+
+def build_directory(dct, force=False, topdir='.'):
+    """Create a directory structure based on the contents of a nested dict.
+    The directory is created in the specified top directory, or in the current
+    working directory if one isn't specified. If a file being created already
+    exists, a warning will be issued and the file will not be changed if force
+    is False. If force is True, the file will be overwritten.
+    
+    The structure of the dict is as follows: if the value at a key is a
+    dict, then that key is used to create a directory. Otherwise, the key is
+    used to create a file and the value stored at that key is written to the
+    file. All keys must be relative names or a RuntimeError will be raised.
+    """
+    startdir = os.getcwd()
+    topdir = os.path.abspath(topdir)
+    try:
+        for key, val in dct.items():
+            os.chdir(topdir)
+            if os.path.isabs(key):
+                raise RuntimeError("build_directory: key (%s) is not a relative name" % key)
+            if isinstance(val, dict): # it's a dict, so this is a directory
+                if not os.path.exists(key):
+                    os.makedirs(key)
+                os.chdir(key)
+                build_directory(val, force)
+            else:  # assume a string value. Use that value to create a file
+                if os.path.exists(key) and force is False:
+                    warnings.warn("File '%s' already exists and will not be overwritten." 
+                                  % key, Warning)
+                else:
+                    dname = os.path.dirname(key)
+                    if dname and not os.path.isdir(dname):
+                        os.makedirs(dname)
+                    with open(key, 'w') as f:
+                        f.write(val)
+    finally:
+        os.chdir(startdir)

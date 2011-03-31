@@ -489,8 +489,8 @@ class NastranParser(object):
             A dictionary of constraints. str: str
             
         column_names: [ column_name ] or "*"
-            Specify a list of column names, or the asterisk
-            character, for all of them.
+            Specify a list of column names or the asterisk
+            character for all of them.
             
         row_width: int
             Optional. Sometimes there are two values per

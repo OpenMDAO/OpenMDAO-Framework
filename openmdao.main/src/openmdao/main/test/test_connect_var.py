@@ -10,6 +10,7 @@ from openmdao.lib.datatypes.api import Float, Int, Str, Bool, Enum
 from enthought.traits.api import TraitError
 
 
+
 class Oneout(Component):
     """ A simple output component    """
     
@@ -32,6 +33,7 @@ class Oneout(Component):
            execute
         """
         # print '%s.execute()' % self.get_pathname()
+
 
 
 class Oneinp(Component):

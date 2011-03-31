@@ -25,7 +25,7 @@ def register_surface_probe(name, function, integrate):
 
     function: callable
         The function to call.  The passed arguments are
-        ``(domain, surface, weights, reference_state)``.
+        `(domain, surface, weights, reference_state)`.
 
     integrate: bool
         If True, then function values are integrated, not averaged.
@@ -42,13 +42,13 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
         The domain to be processed.
 
     surfaces: list
-        List of ``(zone_name,imin,imax,jmin,jmax,kmin,kmax)``
+        List of `(zone_name, imin, imax, jmin, jmax, kmin, kmax)`
         mesh surface specifications to be used for the calculation.
         Indices start at 0. Negative indices are relative to the end of the
         array.
 
     variables: list
-        List of ``(metric_name, units)`` tuples. Legal metric names are
+        List of `(metric_name, units)` tuples. Legal metric names are
         'area', 'mass_flow', 'corrected_mass_flow', 'pressure',
         'pressure_stagnation', 'temperature', and 'temperature_stagnation'.
 

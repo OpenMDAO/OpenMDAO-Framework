@@ -41,7 +41,7 @@ Command Name         Description
 -------------------  ---------------------------------------------------------------------------------
 ``commit``           Commits changes into a new revision. You must add a commit message via ``-m`` 
                      (command line) or a text editor. When you commit, it records your userid, the 
-		     current time and timezone, and the contents of your branch.
+                     current time and timezone, and the contents of your branch.
 -------------------  ---------------------------------------------------------------------------------
 ``conflicts``        Lists files with conflicts.
 -------------------  ---------------------------------------------------------------------------------
@@ -120,7 +120,7 @@ Alternatively, you may simply use the UNIX command to delete a file:
 
 ::  
     
-  rm <file_name>             
+  rm <file_name>
   
     
 However, to remove a directory, it may be safer to use the UNIX remove command. This
@@ -225,7 +225,7 @@ cancel the merge by using the ``revert`` command. Type:
 
 ::
 
-  bzr revert         
+  bzr revert
   
 This removes uncommitted changes and causes your branch to revert to the previous revision. You
 can also use this command if you do not want to commit changes you've made. In this case, it is
@@ -233,13 +233,13 @@ a good idea to see which files will be removed, so type:
 
 ::
 
-  bzr status    
+  bzr status
   
 This shows you which files have been modified, deleted, or added. Then, type:
 
 ::
 
-  bzr revert    
+  bzr revert
   
 to revert to the previous revision.
   

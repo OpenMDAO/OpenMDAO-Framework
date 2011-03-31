@@ -214,7 +214,7 @@ class NEWSUMTdriver(Driver):
     maxgsn = Int(20, iotype='in', desc='Maximum allowable number of golden \
                     section iterations used for 1D minimization.')
     maxodm = Int(6, iotype='in', desc='Maximum allowable number of one \
-                     dimensional minimizations.')
+                    dimensional minimizations.')
     maxrsf = Int(15, iotype='in', desc='Maximum allowable number of \
                      unconstrained minimizations.')
     mflag = Int(15, iotype='in', desc='Flag for penalty multiplier. \

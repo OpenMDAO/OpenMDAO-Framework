@@ -46,7 +46,8 @@ Classes for Validation and Conversion of Component Attributes
 =============================================================
 
 Validation and conversion of Component attributes is done using the Traits_
-package. You can define your own custom traits by inheriting from TraitType
+package. You can define your own custom traits by inheriting from Variable
+(which is our wrapper class for TraitType)
 and overriding the ``validate()`` function. :term:`Traits` also has built-in
 support for creation of graphical editors for each trait. The documentation
 claims that traits uses something called *pyface* to provide a sort of

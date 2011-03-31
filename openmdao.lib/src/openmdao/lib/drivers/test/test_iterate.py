@@ -7,7 +7,8 @@ import unittest
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.datatypes.api import Float
-from openmdao.lib.drivers.iterate import FixedPointIterator
+from openmdao.lib.drivers.iterate import FixedPointIterator, IterateUntil
+
 
 class Simple1(Component):
     """ Testing convergence failure"""
@@ -20,6 +21,7 @@ class Simple1(Component):
         
         self.outvar = self.invar + 1
 
+
 class Simple2(Component):
     """ Testing convergence success"""
     
@@ -31,6 +33,7 @@ class Simple2(Component):
         
         self.outvar = self.invar
         
+
 class Simple3(Component):
     """ Testing convergence tolerance"""
     
@@ -41,6 +44,17 @@ class Simple3(Component):
         """Will converge if tolerance is loose enough"""
         
         self.outvar = self.invar + .01
+        
+class Simple4(Component): 
+    """Testing for iteration counting and stop conditions"""
+    invar = Float(1,iotype="in")
+    outvar = Float(0,iotype="out")
+    
+    def __init__(self): 
+        super(Simple4,self).__init__()
+        self.force_execute = True
+    def execute(self):
+        self.outvar = self.outvar + self.invar
 
 class FixedPointIteratorTestCase(unittest.TestCase):
     """test FixedPointIterator component"""
@@ -98,7 +112,46 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.tolerance = 0.1
         self.top.run()
 
-
+class TestIterateUntill(unittest.TestCase): 
+    """Test case for the IterateUntil Driver""" 
+    
+    def setUp(self):
+        self.top = set_as_top(Assembly())
+        
+    def tearDown(self):
+        self.top = None
+        
+    def test_max_iterations(self): 
+        self.top.add("driver",IterateUntil())
+        self.top.driver.max_iterations = 3;
+        
+        self.top.driver.workflow.add('simple')
+        
+        self.top.add('simple',Simple4())
+        self.top.simple.invar = 1
+        
+        
+        self.top.run()
+        
+        self.assertEqual(self.top.driver.iteration,3)
+        self.assertEqual(self.top.simple.outvar, 3)
+       
+    def test_stop_conditions(self): 
+        self.top.add("driver",IterateUntil())
+        self.top.driver.max_iterations = 10;
+        
+        
+        self.top.driver.workflow.add('simple')
+        
+        self.top.add('simple',Simple4())
+        self.top.simple.invar = 1
+        self.top.driver.add_stop_condition("simple.outvar >= 2")
+        
+        self.top.run()
+        
+        self.assertEqual(self.top.driver.iteration,2)
+        self.assertEqual(self.top.simple.outvar, 2)
+     
 if __name__ == "__main__":
     unittest.main()
   

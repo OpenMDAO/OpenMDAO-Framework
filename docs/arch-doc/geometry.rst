@@ -48,6 +48,7 @@ can be directly set:
     from openmdao.lib.datatypes.api import Float, Bool
     from openmdao.lib.drivers.api import CONMINdriver
     
+    
     class GeoMan(Component):
 
         radius = Float(7.0, low=1., high=20.0, iotype='in', 

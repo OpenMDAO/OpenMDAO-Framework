@@ -8,7 +8,7 @@ from enthought.traits.api import HasTraits
 from enthought.traits.trait_types import validate_implements
 
 from openmdao.lib.datatypes.api import Int, Str, Instance, Interface, \
-     implements, TraitType
+     implements
 
 class IMyMarkerInterface(Interface):
     """Just an empty marker interface"""

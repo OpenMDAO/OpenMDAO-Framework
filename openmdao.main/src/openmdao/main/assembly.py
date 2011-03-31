@@ -1,4 +1,4 @@
-""" Class definition for Assembly """
+""" Class definition for Assembly. """
 
 
 #public symbols
@@ -8,10 +8,10 @@ import cStringIO
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Instance, TraitError, Missing
-from enthought.traits.api import TraitType
 
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
+from openmdao.main.variable import Variable
 from openmdao.main.driver import Driver
 from openmdao.main.tvalwrapper import TraitValWrapper
 from openmdao.main.rbac import rbac
@@ -20,17 +20,18 @@ from openmdao.main.mp_support import is_instance
 _iodict = { 'out': 'output', 'in': 'input' }
 
 
-class PassthroughTrait(TraitType):
+class PassthroughTrait(Variable):
     """A trait that can use another trait for validation, but otherwise is
     just a trait that lives on an Assembly boundary and can be connected
     to other traits within the Assembly.
     """
 
     def validate(self, obj, name, value):
-        """Validation for the PassThroughTrait"""
+        """Validation for the PassThroughTrait."""
         if self.validation_trait:
             return self.validation_trait.validate(obj, name, value)
         return value
+
 
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
@@ -40,7 +41,7 @@ class Assembly (Component):
     
     driver = Instance(Driver, allow_none=True,
                       desc="The top level Driver that manages execution of "
-                           "this Assembly")
+                           "this Assembly.")
     
     def __init__(self, doc=None, directory=''):
         super(Assembly, self).__init__(doc=doc, directory=directory)
@@ -141,10 +142,10 @@ class Assembly (Component):
         that it is referring to a Variable outside of this object's scope.
         
         srcpath: str
-            Pathname of source variable
+            Pathname of source variable.
             
         destpath: str
-            Pathname of destination variable
+            Pathname of destination variable.
         """
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
@@ -353,23 +354,6 @@ class Assembly (Component):
             else:
                 ret.extend(sup.get_valid(name))
         return ret
-
-    def check_resolve(self, names):
-        """Returns True if all of the pathnames are resolvable starting from this
-        Assembly.
-        """
-        simple, compmap = _partition_names_by_comp(names)
-        for name in simple:
-            if not hasattr(self, name):
-                return False
-        for cname,vnames in compmap.items():
-            comp = getattr(self, cname, None)
-            if comp is None:
-                return False
-            for vname in vnames:
-                if not comp.contains(vname):
-                    return False
-        return True
 
     def _input_updated(self, name):
         if self._valid_dict[name]:  # if var is not already invalid

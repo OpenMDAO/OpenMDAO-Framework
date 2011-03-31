@@ -24,6 +24,7 @@ class VarContainer(Container):
     textvar = Str("Hey", iotype='in')
     listenumvar = List(Enum(1,(1,2,3)), iotype='in')
 
+
 class VarComponent(Component):
     """Contains some vars"""
 

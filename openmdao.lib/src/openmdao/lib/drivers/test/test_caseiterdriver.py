@@ -41,6 +41,7 @@ def rosen_suzuki(x):
            2.*x[2]**2 - 21.*x[2] + x[3]**2 + 7.*x[3] + 50
 
 
+
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 

@@ -11,6 +11,7 @@ From Sellar's analytic problem.
 from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
 
+
 class SellarDiscipline1(Component):
     """Component containing Discipline 1"""
     
@@ -33,6 +34,7 @@ class SellarDiscipline1(Component):
         y2 = self.y2
         
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
+
 
 
 class SellarDiscipline2(Component):
