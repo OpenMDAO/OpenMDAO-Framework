@@ -14,11 +14,23 @@ from setuptools import setup, find_packages
 setup(
    name = '%(name)s',
    version = '%(version)s',
-   packages = find_packages(),
+   packages = find_packages('src'),
    package_dir = {'': 'src'},
+   namespace_packages=%(nspkgs)s,
    zip_safe = False,
    install_requires = %(requires)s,
    dependency_links = %(deplinks)s,
+   #long_description="",
+   #classifiers=[
+   #     'Intended Audience :: Science/Research',
+   #     'Topic :: Scientific/Engineering',
+   #],
+   #keywords='optimization multidisciplinary multi-disciplinary analysis',
+   #author='',
+   #author_email='',
+   #url='http://???',
+   #license='NASA Open Source Agreement 1.3',
+   #test_suite='nose.collector',
 )
 
 '''
@@ -84,11 +96,16 @@ def mkpseudo(argv=None):
         print "No dependencies have been specified, so the distribution will not be built"
         options.dist = False
 
+    nspkgs = []
+    for i,nm in enumerate(names[:-1]):
+        nspkgs.append('.'.join(names[:i+1]))
+
     setup_options = {
         'requires': options.reqs,
         'name': name,
         'version': version,
         'deplinks': options.deplinks,
+        'nspkgs': nspkgs,
         }
     
     startdir = os.getcwd()
