@@ -46,7 +46,7 @@ C        =====>>  Contents of  NEWSUMT.SRC(DIRCTN$)  <<=====
      *          , FDCV  , FEST  , G     , GB    , G1    , G2
      *  , G3    , OBJ   , OBJMIN, S     , SN    , TFMIN , X     , X0
      *  , IIK   , ILIN  , IRUN  , ISIDE , JRUN  , N1    , N2
-     *  , N3    , N4    , RAN, NRANDM, IAN, NIANDM)
+     *  , N3    , N4)
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
 C * * PROGRAM NO.  LC0002P
 C * * PROGRAMMER   L. CHENG,  H.MIURA
@@ -75,7 +75,6 @@ cvvjdg - linux:  One line added below...
      *  , G1(N2)  , G2(N2)  , G3(N2)  , S(N1)   , SN(N1)   , X(N1)
      *  , X0(N1)
      *  , IIK(N1) , ILIN(N2), ISIDE(N1)
-     *    , RAN(NRANDM), IAN(NIANDM)
       COMMON/CONTRL/C     , EPSGSN, EPSODM, EPSRSF, G0    , P
      *    , RA    , RACUT , RAMIN , STEPMX
      *    , IFD   , JPRINT, JSIGNG, LOBJ  , MAXGSN, MAXODM, MAXRSF
@@ -140,16 +139,14 @@ C
       IF(IFDO.NE.0 .OR. LOBJ.EQ.1) GO TO 196
       IOBGRD=IOBGRD+1
       TTS=CTIME(1)
-      CALL ANALYS (3,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+      CALL ANALYS (3,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4,0)
       TTE=CTIME(1)
       TOBGRD=TOBGRD+TTS-TTE
   196 CONTINUE
       IF(NONLC.EQ.0 .OR. IFDG.NE.0) GO TO 198
       INLCGR=INLCGR+1
       TTS=CTIME(1)
-      CALL ANALYS (4,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+      CALL ANALYS (4,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4,0)
       TTE=CTIME(1)
       TNLCGR=TNLCGR+TTS-TTE
   198 CONTINUE
@@ -160,8 +157,7 @@ C
       IF(IFDG.EQ.0) GO TO 200
       ICONST=ICONST+1
       TTS=CTIME(1)
-      CALL ANALYS (2,X ,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+      CALL ANALYS (2,X ,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4,1)
       TTE=CTIME(1)
       TCONST=TCONST+TTS-TTE
   200 IF(IFDO.EQ.0) GO TO 202
@@ -169,8 +165,7 @@ C
   201 DDOBJ(I)=0.0
       IOBJCT=IOBJCT+1
       TTS=CTIME(1)
-      CALL ANALYS (1,X ,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+      CALL ANALYS (1,X ,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4,1)
       TTE=CTIME(1)
       TOBJCT=TOBJCT+TTS-TTE
   202 CONTINUE
@@ -180,7 +175,7 @@ C
       ICONST=ICONST+1
       TTS=CTIME(1)
       CALL ANALYS (2,X ,OBJ,DOBJ,DDOBJ,G1,GB,DG,N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM) ! eval constraints
+     *,1) ! eval constraints
       TTE=CTIME(1)
       TCONST=TCONST+TTS-TTE
       IF(NTCE.LE.0) GO TO 212
@@ -192,10 +187,9 @@ C
       IOBJCT=IOBJCT+2
       TTS=CTIME(1)
       CALL ANALYS (1,X,OBJ1,DOBJ,DDOBJ,G1,GB,DG,N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM) ! eval obj func
+     *,1) ! eval obj func
       X(I)=X0(I)-FDCV(I)
-      CALL ANALYS (1,X,OBJ2,DOBJ,DDOBJ,G1,GB,DG,N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+      CALL ANALYS (1,X,OBJ2,DOBJ,DDOBJ,G1,GB,DG,N1,N2,N3,N4,1)
 
       TTE=CTIME(1)
       TOBJCT=TOBJCT+TTS-TTE
@@ -432,8 +426,7 @@ C        =====>>  Contents of  NEWSUMT.SRC(FUNCTN$)  <<=====
      *   , AL    , BL    , BU    , DDOBJ , DG    , DOBJ  , FTN
      *   , G     , GB    , G1    , G2    , G3    , OBJ   , OBJB
      *   , SN    , X     , X0
-     *   , ILIN  , ISIDE , N1    , N2    , N3    , N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+     *   , ILIN  , ISIDE , N1    , N2    , N3    , N4)
 C
 C * * PROGRAM NO.
 C * * PROGRAMMER   L. CHENG AND H.MIURA
@@ -475,7 +468,6 @@ cvvjdg - linux:  One line added below...
      *  , DOBJ(N1), G(N2)   , GB(N2)  , G1(N2)  , G2(N2)  , G3(N2)
      *  , SN(N1)  , X(N1)   , X0(N1)
      *  , ILIN(N2),ISIDE(N1)
-     *    , RAN(NRANDM), IAN(NIANDM)
       COMMON/CONTRL/C     , EPSGSN, EPSODM, EPSRSF, G0    , P
      *    , RA    , RACUT , RAMIN , STEPMX
      *    , IFD   , JPRINT, JSIGNG, LOBJ  , MAXGSN, MAXODM, MAXRSF
@@ -500,8 +492,7 @@ C
       IF(LOBJ.EQ.1) GO TO 44
       IOBJCT=IOBJCT+1
       TTS=CTIME(1)
-      CALL ANALYS(1, X, OBJ, DOBJ, DDOBJ, G, GB, DG, N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+      CALL ANALYS(1, X, OBJ, DOBJ, DDOBJ, G, GB, DG, N1,N2,N3,N4,0)
 
 
 
@@ -544,8 +535,7 @@ crmc   76 CONTINUE
       GO TO 100
    80 ICONST=ICONST+1
       TTS=CTIME(1)
-      CALL ANALYS(2, X, OBJ, DOBJ, DDOBJ, G, GB, DG, N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+      CALL ANALYS(2, X, OBJ, DOBJ, DDOBJ, G, GB, DG, N1,N2,N3,N4,0)
       TTE=CTIME(1)
       TCONST=TCONST+TTS-TTE
       DO 82 I=1, NTCE
@@ -640,8 +630,7 @@ C        =====>>  Contents of  NEWSUMT.SRC(NEWSUM$)  <<=====
      *    ,FDCV  , FMIN  , G     , GB    , G1    , G2    , G3
      *    ,OBJ   , OBJMIN, S     , SN    , X     , X0
      *    ,IIK   , ILIN  , ISIDE , N1    , N2    , N3    , N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM, 
-     *    isdone, resume )
+     *    ,isdone, resume )
 C     ******************************************************************
 C     **                                                              **
 C     **                        NEWSUMT                               **
@@ -693,6 +682,10 @@ CCCCC  Added to make it interruptible
       Logical isdone, resume
 CCCCC
 
+CCCCC Removed temp storage arrays because they are not needed
+CCCCC in OpenMDAO. Added parameter IMODE to tell ANALYS if we
+CCCCC are running a finite difference calculation.
+
 
 cvvjdg - linux:  One line added below...
       External CTIME
@@ -703,7 +696,7 @@ cvvjdg - linux:  One line added below...
      *  , G1(N2)  , G2(N2)  , G3(N2)  , S(N1)   , SN(N1)   , X(N1)
      *  , X0(N1)
      *  , IIK(N1) , ILIN(N2), ISIDE(N1)
-     *  , II(7)   , RAN(NRANDM), IAN(NIANDM)
+     *  , II(7)
       COMMON/CONTRL/C     , EPSGSN, EPSODM, EPSRSF, G0    , P
      *    , RA    , RACUT , RAMIN , STEPMX
      *    , IFD   , JPRINT, JSIGNG, LOBJ  , MAXGSN, MAXODM, MAXRSF
@@ -757,10 +750,7 @@ Cf2py intent(in) N1
 Cf2py intent(in) N2
 Cf2py intent(in) N3
 Cf2py intent(in) N4
-Cf2py intent(out) RAN
-Cf2py intent(in) NRANDM
-Cf2py intent(out) IAN
-Cf2py intent(in) NIANDM
+Cf2py intent(in) IMODE
       EQUIVALENCE (IOBJCT, II(1))
 C       C      : TRANSITION POINT COEFFICIENT
 C       EPSGSN : GOLDEN SECTION CONVERGENCE CRITERION
@@ -829,8 +819,7 @@ C
       IOBJCT=IOBJCT+1
       TTS=CTIME(1)
 
-      CALL ANALYS (1,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+      CALL ANALYS (1,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4,0)
 
       TTE=CTIME(1)
       TOBJCT=TOBJCT+TTS-TTE
@@ -838,8 +827,7 @@ C
       IF(NTCE.EQ.0) GO TO 70
       ICONST=ICONST+1
       TTS=CTIME(1)
-      CALL ANALYS (2,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+      CALL ANALYS (2,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4,0)
       TTE=CTIME(1)
       TCONST=TCONST+TTS-TTE
 70    CONTINUE
@@ -859,8 +847,7 @@ C
       IF(NTCE.EQ.NONLC) GO TO 82
       ICONGR=ICONGR+1
       TTS=CTIME(1)
-      CALL ANALYS (5,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+      CALL ANALYS (5,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4,0)
       TTE=CTIME(1)
       TCONGR=TCONGR+TTS-TTE
 82    CONTINUE
@@ -870,8 +857,7 @@ C
       IF(LOBJ.NE.1) GO TO 86
       IOBGRD=IOBGRD+1
       TTS=CTIME(1)
-      CALL ANALYS (3,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+      CALL ANALYS (3,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4,0)
       TTE=CTIME(1)
       TOBGRD=TOBGRD+TTS-TTE
 86    CONTINUE
@@ -939,7 +925,7 @@ C
      *          , FDCV  , FEST  , G     , GB    , G1    , G2
      *  , G3    , OBJ   , OBJMIN, S     , SN    , TFMIN , X     , X0
      *  , IIK   , ILIN  , IRUN  , ISIDE , JRUN  , N1    , N2
-     *  , N3    , N4    , RAN, NRANDM, IAN, NIANDM)
+     *  , N3    , N4)
 
 
       TTE2=CTIME(1)
@@ -954,8 +940,7 @@ C
      *  , AMIN  , BL    , BU    , DDOBJ , DF0   , DG    , DOBJ
      *  , TFMIN , G     , G1    , G2    , G3    , GB    , OBJ   , OBJB
      *  , OBJMIN,         SN    , X     , X0
-     *  , ILIN  , ISIDE , N1    , N2    , N3    , N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+     *  , ILIN  , ISIDE , N1    , N2    , N3    , N4)
 
 
       TTE3=CTIME(1)
@@ -1028,8 +1013,7 @@ C     skipping over added by Herb Schilling 10/8/2010
       WRITE(6,1070)
       CALL PRINTD(X0,X,SN,OBJ,G,DG,DOBJ,DDOBJ,TFMIN,BU,BL,ISIDE
      *     ,1,0,0,1,1,0,0,0,1,1, N1,N2,N3,N4)
-C     CALL ANALYS (7,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4
-C    *    ,RAN   , NRANDM, IAN   , NIANDM)
+C     CALL ANALYS (7,X0,OBJ,DOBJ,DDOBJ,G,GB,DG,N1,N2,N3,N4,0)
 154   CONTINUE
       RA1=RA
       OB1=OBJMIN
@@ -1198,8 +1182,7 @@ C        =====>>  Contents of  NEWSUMT.SRC(ODM$)  <<=====
      *  , AMIN  , BL    , BU    , DDOBJ , DF0   , DG    , DOBJ
      *  , TFMIN , G     , G1    , G2    , G3    , GB    , OBJ   , OBJB
      *  , OBJMIN, SN    , X     , X0
-     *  , ILIN  , ISIDE , N1    , N2    , N3    , N4
-     *  , RAN   , NRANDM, IAN   , NIANDM)
+     *  , ILIN  , ISIDE , N1    , N2    , N3    , N4)
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
 C * * PROGRAM NO.  LC0003P
 C * * PROGRAMMER   L. CHENG,  H. MIURA
@@ -1222,7 +1205,6 @@ C       ALPHA : MOVE DISTANCE
      *  , G(N2)   , G1(N2)  , G2(N2)  , G3(N2)  , GB(N2)
      *  , SN(N1)  , X(N1)   , X0(N1)
      *  , ILIN(N2),ISIDE(N1)
-     *    , RAN(NRANDM), IAN(NIANDM)
       COMMON/CONTRL/C     , EPSGSN, EPSODM, EPSRSF, G0    , P
      *    , RA    , RACUT , RAMIN , STEPMX
      *    , IFD   , JPRINT, JSIGNG, LOBJ  , MAXGSN, MAXODM, MAXRSF
@@ -1249,8 +1231,7 @@ C
      *   , ALL   , BL    , BU    , DDOBJ , DG    , DOBJ  , FLL
      *   , G     , GB    , G1    , G2    , G3    , OBJ   , OBJB
      *   , SN    , X             , X0
-     *   , ILIN  , ISIDE , N1    , N2    , N3    , N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+     *   , ILIN  , ISIDE , N1    , N2    , N3    , N4)
       F0=FLL
 crmc  115 TFMIN=F0
       TFMIN=F0
@@ -1404,8 +1385,7 @@ C
      *   , R1    , BL    , BU    , DDOBJ , DG    , DOBJ  , FRR
      *   , G     , GB    , G1    , G2    , G3    , OBJ   , OBJB
      *   , SN    , X             , X0
-     *   , ILIN  , ISIDE , N1    , N2    , N3    , N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+     *   , ILIN  , ISIDE , N1    , N2    , N3    , N4)
       F1=FRR
 crmc  315 OBJ1=OBJ
       OBJ1=OBJ
@@ -1520,8 +1500,7 @@ C
      *   , ALPHA , BL    , BU    , DDOBJ , DG    , DOBJ  , FTN
      *   , G     , GB    , G1    , G2    , G3    , OBJ   , OBJB
      *   , SN    , X             , X0
-     *   , ILIN  , ISIDE , N1    , N2    , N3    , N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+     *   , ILIN  , ISIDE , N1    , N2    , N3    , N4)
       IF(JPRINT.LE.5) GO TO 554
       WRITE(6, 1050) ALPHA
       CALL PRINTD(X0,X,SN,OBJ,G,DG,DOBJ,DDOBJ,FTN,BU,BL,ISIDE
@@ -1591,8 +1570,7 @@ C
      *   , ALPMIN, BL    , BU    , DDOBJ , DG    , DOBJ  , FTN
      *   , G     , GB    , G1    , G2    , G3    , OBJ   , OBJB
      *   , SN    , X             , X0
-     *   , ILIN  , ISIDE , N1    , N2    , N3    , N4
-     *    ,RAN   , NRANDM, IAN   , NIANDM)
+     *   , ILIN  , ISIDE , N1    , N2    , N3    , N4)
       IF(JPRINT.LE.2) GO TO 690
       WRITE(6, 1040) ALPMIN
       CALL PRINTD(X0,X,SN,OBJ,G,DG,DOBJ,DDOBJ,FTN,BU,BL,ISIDE

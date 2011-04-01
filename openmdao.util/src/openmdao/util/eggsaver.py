@@ -443,7 +443,7 @@ def _fix_object(obj, container, index, cls, observer,
         raise RuntimeError(msg)
 
     mod = cls.__module__
-    if mod == '__main__' and (classname not in fixup_classes.keys()):
+    if mod == '__main__' and (classname not in fixup_classes):
         mod, module = _find_in_main(classname)
         if mod:
             new = getattr(module, classname)

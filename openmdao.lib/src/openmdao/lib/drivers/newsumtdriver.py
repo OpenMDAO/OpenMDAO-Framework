@@ -7,12 +7,6 @@
 # disable complaints about Module 'numpy' has no 'array' member
 # pylint: disable-msg=E1101 
 
-# Disable complaints Comma not followed by a space
-# pylint: disable-msg=C0324
-
-# disable complaints about .__init__: Use super on an old style class
-# pylint: disable-msg=E1002
-
 # Disable complaints Invalid name "setUp" (should match [a-z_][a-z0-9_]{2,30}$)
 # pylint: disable-msg=C0103
 
@@ -26,18 +20,11 @@
 # Disable complaints about Too many local variables (%s/%s) Used
 # pylint: disable-msg=R0914 
 
-# Disable complaints about Unused argument %r
-#       Used when a function or method argument is not used.
-# pylint: disable-msg=W0613
-
 #public symbols
 __all__ = ['NEWSUMTdriver']
 
 
-import os
-import sys
-
-from numpy import zeros
+from numpy import zeros, ones
 from numpy import float as numpy_float
 from numpy import int as numpy_int
 
@@ -46,11 +33,12 @@ from enthought.traits.api import Array
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
-from openmdao.main.hasconstraints import HasConstraints
+from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
+from openmdao.main.uses_derivatives import UsesGradients, UsesHessians
 from openmdao.util.decorators import add_delegate
-from openmdao.lib.datatypes.float import Float
-from openmdao.lib.datatypes.int import Int
+from openmdao.lib.datatypes.api import Float, Int, Enum
+from openmdao.util.testutil import assert_rel_error
 
 import newsumt.newsumtinterruptible as newsumtinterruptible
 
@@ -102,75 +90,200 @@ import newsumt.newsumtinterruptible as newsumtinterruptible
 #     os.close(null_fds[1])
 
 
-def user_function(info,x,obj,dobj,ddobj,g,dg,n2,n3,n4,nrandm,niandm,driver):
+# Disable complaints about Unused argument
+# pylint: disable-msg=W0613
+def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
     """
        Calculate the objective functions, constraints,
          and gradients of those. Call back to the driver
          to get the values that were plugged 
          in.
 
+       Note, there is some evidence of loss of precision on the output of
+       this function.
     """
+    
+    # evaluate objective function or constraint function
+    if info in [1, 2]:
+        
+        if imode == 1:
+            
+            # We are in a finite difference step drive by NEWSUMT
+            # However, we still take advantage of a component's
+            # user-defined gradients via Fake Finite Difference.
+            
+            # Note, NEWSUMT estimates 2nd-order derivatives from
+            # the first order differences.
+            
+            # Save baseline states and calculate derivatives
+            if driver.baseline_point:
+                super(NEWSUMTdriver, driver).calc_derivatives(first=True)
+            driver.baseline_point = False
+            
+            # update the parameters in the model
+            driver.set_parameters(x)
+    
+            # Run model under Fake Finite Difference
+            driver.ffd_order = 1
+            super(NEWSUMTdriver, driver).run_iteration()
+            driver.ffd_order = 0
+        else:
 
-    driver.set_parameters(x)
+            # Optimization step
+            driver.set_parameters(x)
+            super(NEWSUMTdriver, driver).run_iteration()
+            driver.baseline_point = True
 
-    super(NEWSUMTdriver, driver).run_iteration()
-
-    if info == 1:
-        # evaluate objective function
-        obj = driver.eval_objective()
-    elif info == 2 :
+        # evaluate objectives
+        if info == 1:
+            obj = driver.eval_objective()
+        
         # evaluate constraint functions
-        for i, v in enumerate(driver.get_ineq_constraints().values()):
-            val = v.evaluate()
-            if '>' in val[2]:
-                g[i] = -(val[1]-val[0])
-            else:
-                g[i] = -(val[0]-val[1])
+        if info == 2:
+            for i, v in enumerate(driver.get_ineq_constraints().values()):
+                val = v.evaluate()
+                if '>' in val[2]:
+                    g[i] = val[0]-val[1]
+                else:
+                    g[i] = val[1]-val[0]
 
     elif info == 3 :
         # evaluate the first and second order derivatives
         #     of the objective function
-        pass # for now
-    elif info == 4:
-        # evaluate gradient of nonlinear constraints
-        driver.raise_exception('NEWSUMT does not yet support analytic constraint gradients',
-                               RuntimeError)
-    elif info == 5:
-        # evaluate gradient of linear constraints
-        pass # for now
+
+        # NEWSUMT bug: sometimes we end up here when ifd=-4
+        if not driver.differentiator:
+            return obj, dobj, ddobj, g, dg
+        
+        super(NEWSUMTdriver, driver).calc_derivatives(first=True)
+        driver.ffd_order = 1
+        driver.differentiator.calc_gradient()
+        
+        super(NEWSUMTdriver, driver).calc_derivatives(second=True)
+        driver.ffd_order = 2
+        driver.differentiator.calc_hessian(reuse_first=True)
+        
+        driver.ffd_order = 0
+
+        dobj = driver.differentiator.gradient_obj
+        
+        i_current = 0
+        for ii in range(0, driver.differentiator.n_param):
+            for jj in range(0, ii+1):
+                ddobj[i_current] = driver.differentiator.hessian_obj[ii, jj]
+                i_current += 1
+
+    elif info in [4,5]:
+        # evaluate gradient of nonlinear or linear constraints.
+        
+        # Linear gradients are only called once, at startup
+        if info == 5:
+            # NEWSUMT bug - During initial run, NEWSUMT will ask for analytic
+            # derivatives of the linear constraints even when ifd=-4. The only
+            # thing we can do is return zero.
+            if not driver.differentiator:
+                return obj, dobj, ddobj, g, dg
+
+            super(NEWSUMTdriver, driver).calc_derivatives(first=True)
+            driver.ffd_order = 1
+            driver.differentiator.calc_gradient()
+            driver.ffd_order = 0
+        
+        nparam = driver.differentiator.n_param
+        ncon = driver.differentiator.n_ineqconst
+        
+        for ii in range(0, nparam):
+            dg[(ii*ncon):(ncon+ii*ncon)] = \
+              -driver.differentiator.gradient_ineq_const[ii, :]
+            
+    return obj, dobj, ddobj, g, dg
+# pylint: enable-msg=W0613
+
+
+class _contrl(object):
+    """Just a primitive data structure for storing contrl common block data.
     
-    return obj,dobj,ddobj,g,dg
+    We save the common blocks to prevent collision in the case where there are
+    multiple instances of NEWSUMT running in our model."""
+    
+    def __init__(self):
+        self.clear()
+
+    def clear(self):
+        """ Clear values. """
+        
+        # pylint: disable-msg=W0201
+        self.c = 0.0
+        self.epsgsn = 0.0
+        self.epsodm = 0.0
+        self.epsrsf = 0.0
+        self.fdch = 0.0
+        self.g0 = 0.0
+        self.ifd = 0
+        self.iflapp = 0
+        self.jprint = 0
+        self.jsigng = 0
+        self.lobj = 0
+        self.maxgsn = 0
+        self.maxodm = 0 
+        self.maxrsf = 0 
+        self.mflag = 0 
+        self.ndv = 0
+        self.ntce = 0
+        self.p = 0.0
+        self.ra = 0.0
+        self.racut = 0.0
+        self.ramin = 0.0
+        self.stepmx = 0.0
+        self.tftn = 0.0
+        # pylint: enable-msg=W0201
 
 
+class _countr(object):
+    """Just a primitive data structure for storing countr common block data.
+    
+    We save the common blocks to prevent collision in the case where there are
+    multiple instances of NEWSUMT running in our model."""
+    
+    def __init__(self):
+        self.clear()
+
+    def clear(self):
+        """ Clear values. """
+        
+        # pylint: disable-msg=W0201
+        self.iobjct = 0
+        self.iobapr = 0
+        self.iobgrd = 0
+        self.iconst = 0
+        self.icongr = 0
+        self.inlcgr = 0
+        self.icgapr = 0
+        # pylint: enable-msg=W0201
+
+        
 # pylint: disable-msg=R0913,R0902
-@add_delegate(HasParameters, HasConstraints, HasObjective)
+@add_delegate(HasParameters, HasIneqConstraints, HasObjective, UsesGradients, \
+              UsesHessians)
 class NEWSUMTdriver(Driver):
     """ Driver wrapper of Fortran version of NEWSUMT. 
         
     
-.. todo:: Make NEWSUMT's handling of user calculated gradients 
-          accessible through NEWSUMTdriver.
-            
 .. todo:: Check to see if this itmax variable is needed.
             NEWSUMT might handle it for us.
             
     """
 
-    fdcv = Array(dtype=numpy_float, value=zeros(0,'d'), iotype='in', 
-        desc='Step size of the finite difference steps for each design \
-              variable.')
+    itmax = Int(10, iotype='in', desc='Maximum number of iterations before \
+                    termination.')
+    
+    default_fd_stepsize = Float(0.01, iotype='in', desc='Default finite ' \
+                                'difference stepsize. Parameters with ' \
+                                'specified values override this.')
 
     ilin = Array(dtype=numpy_int, value=zeros(0,'i4'), iotype='in', 
         desc='Array designating whether each constraint is linear.')
                  
-    iside = Array(dtype=numpy_int, value=zeros(0,'i4'), iotype='in', 
-        desc='Array indicating what kind of side constraint (aka lower \
-        and upper bounds ): 0=no bounds, 1=lower bounds only, 2= upper \
-        bounds only, 3= lower and upper bounds.')
-
-    itmax = Int(10, iotype='in', desc='Maximum number of iterations before \
-                    termination.')
-
     # Control parameters for NEWSUMT.
     # NEWSUMT has quite a few parameters to give the user control over aspects
     # of the solution. 
@@ -193,49 +306,38 @@ class NEWSUMTdriver(Driver):
                       initial step size of the one-dimensional \
                       minimization.')
     
-    ifd = Int(4, iotype='in', desc='Flag for finite difference gradient control.\
-                      If 0, all gradients computed by user analysis program. \
-                      If > 0, use default finite difference stepsize of 0.1. \
-                      If < 0, use user defined finite difference stepsize.\
-                         FDCV must be specified.\
-                      If 1, gradient of objective function computed by \
-                         differences. \
-                      If 2, gradient of all constraints computed by \
-                         differences. \
-                      If 3, gradient of nonlinear constraints computed\
-                         by finite differences. \
-                      If 4, combination of 1 and 2. \
-                      If 5, combination of 1 and 3. \
-                      ')
     jprint = Int(0, iotype='in', desc='Print information during NEWSUMT \
                     solution. Higher values are more verbose. If 0,\
-                    print initial and final designs only.')
-    lobj = Int(0, iotype='in', desc='If 1, linear objective function.')
+                    print initial and final designs only.', high=3, low=-1)
+    lobj = Int(0, iotype='in', desc='Set to 1 if linear objective function.')
     maxgsn = Int(20, iotype='in', desc='Maximum allowable number of golden \
                     section iterations used for 1D minimization.')
     maxodm = Int(6, iotype='in', desc='Maximum allowable number of one \
                     dimensional minimizations.')
     maxrsf = Int(15, iotype='in', desc='Maximum allowable number of \
                      unconstrained minimizations.')
-    mflag = Int(15, iotype='in', desc='Flag for penalty multiplier. \
+    mflag = Int(0, iotype='in', desc='Flag for penalty multiplier. \
                      If 0, initial value computed by NEWSUMT. \
                      If 1, initial value set by ra.')
-    ndv = Int(0, iotype='in', desc='Number of design variables.' )
-    ntce = Int(0, iotype='in', desc='Number of constraints considered.' )
     
     def __init__(self, doc=None):
         super(NEWSUMTdriver, self).__init__( doc)
         
         self.iter_count = 0
 
+        # Save data from common blocks into the driver
+        self.contrl = _contrl()
+        self.countr = _countr()
+        
         # define the NEWSUMTdriver's private variables
         # note, these are all resized in config_newsumt
         
         # basic stuff
-        self.design_vals = zeros(0,'d')
-        
+        self.design_vals = zeros(0, 'd')
+        self.constraint_vals = []
+
         # temp storage
-        self.__design_vals_tmp = zeros(0,'d')
+        self.__design_vals_tmp = zeros(0, 'd')
         self._ddobj = zeros(0)
         self._dg = zeros(0)
         self._dh = zeros(0)
@@ -248,25 +350,19 @@ class NEWSUMTdriver(Driver):
         self._s = zeros(0)
         self._sn = zeros(0)
         self._x = zeros(0)
-        self._iik = zeros(0,dtype=int)
-        self._ran = zeros(0)
-        self._ian = zeros(0,dtype=int)
+        self._iik = zeros(0, dtype=int)
 
         self._lower_bounds = zeros(0)
         self._upper_bounds = zeros(0)
+        self._iside = zeros(0)
+        self.fdcv = zeros(0)
 
         # Just defined here. Set elsewhere
         self.n1 = self.n2 = self.n3 = self.n4 = 0
-        self.constraint_vals = []
         
         # Ready inputs for NEWSUMT
         self._obj = 0.0
         self._objmin = 0.0
-
-        # Size of some temp arrays needed by the routine that computes
-        #   the objective functions and constraints
-        self.nrandm = 1
-        self.niandm = 1
 
         self.isdone = False
         self.resume = False
@@ -274,22 +370,22 @@ class NEWSUMTdriver(Driver):
     def start_iteration(self):
         """Perform the optimization."""
 
+        # Flag used to figure out if we are starting a new finite difference
+        self.baseline_point = True
+        
         # set newsumt array sizes and more...
         self._config_newsumt()
 
         self.iter_count = 0
         
-        # Right now, we only support numerical gradient calculation
-        if self.ifd not in [4, -4]:
-            msg = 'NEWSUMT does not yet support analytic constraint gradients'
-            self.raise_exception(msg, RuntimeError)
-        
         # get the values of the parameters
         # check if any min/max constraints are violated by initial values
         for i, val in enumerate(self.get_parameters().values()):
-            self.design_vals[i] = val.expreval.evaluate()
+            
+            value = val.expreval.evaluate()
+            self.design_vals[i] = value
             # next line is specific to NEWSUMT
-            self.__design_vals_tmp[i] =  val.expreval.evaluate() 
+            self.__design_vals_tmp[i] = value
             
 #             if dval > val.high:
 #                 if (dval - val.high) < self.ctlmin:
@@ -306,20 +402,6 @@ class NEWSUMTdriver(Driver):
 #                                          ' of: %s' % str(val.expreval),
 #                                          ValueError)
 
-        # perform an initial run for self-consistency
-        super(NEWSUMTdriver, self).run_iteration()
-
-        # update constraint value array
-        for i, v in enumerate(self.get_ineq_constraints().values()):
-            val = v.evaluate()
-            if '>' in val[2]:
-                self.constraint_vals[i] = -( val[1]-val[0] )
-            else:
-                self.constraint_vals[i] = -( val[0]-val[1] )
-
-
-        # update objective
-        self._obj = self.eval_objective()
 
         # Call the interruptible version of SUMT in a loop that we manage
         self.isdone = False
@@ -341,43 +423,43 @@ class NEWSUMTdriver(Driver):
     def run_iteration(self):
         """ The NEWSUMT driver iteration."""
 
+        self._load_common_blocks()
+        
         try:
-            #redirect_fortran_stdout_to_null()
-            
-            ( fmin,self._obj,self._objmin,self.design_vals, 
-              self.__design_vals_tmp,self.isdone,self.resume) = \
+            ( fmin, self._obj, self._objmin, self.design_vals, 
+              self.__design_vals_tmp, self.isdone, self.resume) = \
               newsumtinterruptible.newsuminterruptible(user_function,
                    self._lower_bounds, self._upper_bounds,
-                   self._ddobj,self._dg,self._dh,self._dobj,
-                   self.fdcv,self._g,
-                   self._gb,self._g1,self._g2,self._g3,
-                   self._obj,self._objmin,
-                   self._s,self._sn,self.design_vals,self.__design_vals_tmp,
-                   self._iik,self.ilin,self.iside,
-                   self.n1,self.n2,self.n3,self.n4,
-                   self._ran,self.nrandm,self._ian,self.niandm,
-                   self.isdone,self.resume,analys_extra_args = (self,))
-            
-            #restore_fortran_stdout()
+                   self._ddobj, self._dg, self._dh, self._dobj,
+                   self.fdcv, self._g,
+                   self._gb, self._g1, self._g2, self._g3,
+                   self._obj, self._objmin,
+                   self._s, self._sn, self.design_vals, self.__design_vals_tmp,
+                   self._iik, self.ilin, self._iside,
+                   self.n1, self.n2, self.n3, self.n4,
+                   self.isdone, self.resume, analys_extra_args = (self,))
 
         except Exception, err:
             self._logger.error(str(err))
             raise
             
+        self._save_common_blocks()
+        
         self.iter_count += 1
                         
-        # update the parameters in the model
-        dvals = [float(val) for val in self.design_vals]
-        self.set_parameters(dvals)
+        # Update the parameters and run one final time with what it gave us.
+        # This update is needed because I obeserved that the last callback to
+        # user_function is the final leg of a finite difference, so the model
+        # is not in sync with the final design variables.
+        if not self.continue_iteration():
+            dvals = [float(val) for val in self.design_vals]
+            self.set_parameters(dvals)
+        
+            super(NEWSUMTdriver, self).run_iteration()
         
     def _config_newsumt(self):
         """Set up arrays for the Fortran newsumt routine, and perform some
         validation and make sure that array sizes are consistent.
-
-        .. todo:: Save and restore common block data so that
-                    this code can be used in workflows where
-                    there are multiple instances of newsumt running.
-            
         """
 
         params = self.get_parameters().values()
@@ -385,16 +467,29 @@ class NEWSUMTdriver(Driver):
         if ndv < 1:
             self.raise_exception('no parameters specified', RuntimeError)
             
-        # create lower_bounds array
+        # Create some information arrays using our Parameter data
+        
         self._lower_bounds = zeros(ndv)
+        self._upper_bounds = zeros(ndv)
+        self._iside = zeros(ndv)
+        self.fdcv = ones(ndv)*self.default_fd_stepsize
+        
         for i, param in enumerate(params):
             self._lower_bounds[i] = param.low
-            
-        # create upper bounds array
-        self._upper_bounds = zeros(ndv)
-        for i, param in enumerate(params):
             self._upper_bounds[i] = param.high
+            
+            # The way Parameters presently work, we always specify an
+            # upper and lower bound
+            self._iside[i] = 3
+            
+            if param.fd_step:
+                self.fdcv[i] = param.fd_step
 
+        if self.differentiator:
+            ifd = 0
+        else:
+            ifd = -4
+                
         self.n1 = ndv
         ncon = len( self.get_ineq_constraints() )
         if ncon > 0:
@@ -410,44 +505,43 @@ class NEWSUMTdriver(Driver):
         self.design_vals = zeros(ndv)
         self.constraint_vals = zeros(ncon)
 
-        # Even though in some cases, these arrays are not used
-        #    we need to set it to the proper array size
-        #    because the wrapped newsumt expects an array
-        #    sized properly as if it is really used
-
-        if not len( self.fdcv ):
-            self.fdcv = zeros(ndv)
-
-        if len( self.ilin ) == 0 :
+        # Linear constraint setting
+        if len(self.ilin) == 0 :
             if ncon > 0: 
-                self.raise_exception('ilin not specified', RuntimeError)
-                #self.ilin = zeros(ncon,dtype=int)
+                self.ilin = zeros(ncon, dtype=int)
             else:
-                self.ilin = zeros(1,dtype=int)
+                self.ilin = zeros(1, dtype=int)
+        elif len(self.ilin) != ncon:
+            msg = "Dimension of NEWSUMT setting 'ilin' should be equal to " + \
+                  "the number of constraints."
+            self.raise_exception(msg, RuntimeError)
 
-        if len(self.iside) == 0 :
-            self.iside = zeros(ndv,dtype=int)
-
-        # Set values in the common block
-        newsumtinterruptible.contrl.epsgsn = self.epsgsn
-        newsumtinterruptible.contrl.epsgsn = self.epsgsn
-        newsumtinterruptible.contrl.epsodm = self.epsodm
-        newsumtinterruptible.contrl.epsrsf = self.epsrsf
-        newsumtinterruptible.contrl.g0 = self.g0
-        newsumtinterruptible.contrl.ra = self.ra
-        newsumtinterruptible.contrl.racut = self.racut
-        newsumtinterruptible.contrl.ramin = self.ramin
-        newsumtinterruptible.contrl.stepmx = self.stepmx
-        newsumtinterruptible.contrl.ifd = self.ifd
-        newsumtinterruptible.contrl.jprint = self.jprint
-        newsumtinterruptible.contrl.lobj = self.lobj
-        newsumtinterruptible.contrl.maxgsn = self.maxgsn
-        newsumtinterruptible.contrl.maxodm = self.maxodm
-        newsumtinterruptible.contrl.maxrsf = self.maxrsf
-        newsumtinterruptible.contrl.mflag = self.mflag
-
-        newsumtinterruptible.contrl.ndv = ndv
-        newsumtinterruptible.contrl.ntce = ncon
+        # Set initial values in the common blocks
+        self.countr.clear()
+        self.contrl.clear()
+        self.contrl.c = 0.2
+        self.contrl.epsgsn = self.epsgsn
+        self.contrl.epsodm = self.epsodm
+        self.contrl.epsrsf = self.epsrsf
+        self.contrl.fdch = 0.05
+        self.contrl.g0 = self.g0
+        self.contrl.ifd = ifd
+        self.contrl.iflapp = 0
+        self.contrl.jprint = self.jprint
+        self.contrl.jsigng = 1
+        self.contrl.lobj = self.lobj
+        self.contrl.maxgsn = self.maxgsn
+        self.contrl.maxodm = self.maxodm
+        self.contrl.maxrsf = self.maxrsf
+        self.contrl.mflag = self.mflag
+        self.contrl.ndv = ndv
+        self.contrl.ntce = ncon
+        self.contrl.p = 0.5
+        self.contrl.ra = self.ra
+        self.contrl.racut = self.racut
+        self.contrl.ramin = self.ramin
+        self.contrl.stepmx = self.stepmx
+        self.contrl.tftn = 0.0
 
         # work arrays
         self.__design_vals_tmp = zeros(self.n1,'d')
@@ -462,9 +556,34 @@ class NEWSUMTdriver(Driver):
         self._g3 = zeros( self.n2 )
         self._s = zeros( self.n1 )
         self._sn = zeros( self.n1 )
-        self._ran = zeros( self.nrandm )
-        self._ian = zeros( self.niandm, dtype = int )
         self._iik = zeros( self.n1, dtype=int )
 
 
+    def _load_common_blocks(self):
+        """ Reloads the common blocks using the intermediate info saved in the
+        class.
+        """
         
+        for name, value in self.contrl.__dict__.items():
+            setattr( newsumtinterruptible.contrl, name, value )
+            
+        for name, value in self.countr.__dict__.items():
+            setattr( newsumtinterruptible.countr, name, value )
+            
+        
+    def _save_common_blocks(self):
+        """ Saves the common block data to the class to prevent trampling by
+        other instances of NEWSUMT.
+        """
+        
+        common = self.contrl
+        for name, value in common.__dict__.items():
+            setattr(common, name, \
+                    type(value)(getattr(newsumtinterruptible.contrl, name)))
+        
+        common = self.countr
+        for name, value in common.__dict__.items():
+            setattr(common, name, \
+                    type(value)(getattr(newsumtinterruptible.countr, name)))
+        
+

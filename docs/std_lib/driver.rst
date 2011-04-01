@@ -207,14 +207,15 @@ CaseIteratorDriver
 CONMINDriver
 ~~~~~~~~~~~~~~
 
-:term:`CONMIN` is a Fortran program written as a subroutine to solve
-linear or nonlinear constrained optimization problems. The basic optimization
-algorithm is the Method of Feasible Directions. If analytic gradients of the
-objective or constraint functions are not available, this information is
-calculated by finite difference. While the program is intended primarily for
-efficient solution of constrained problems, unconstrained function
-minimization problems may also be solved. The conjugate direction method
-of Fletcher and Reeves is used for this purpose.
+:term:`CONMIN` is a Fortran program written as a subroutine to solve linear or
+nonlinear constrained optimization problems. The basic optimization algorithm
+is the Method of Feasible Directions. If analytic gradients of the objective
+or constraint functions are not available (i.e., if a Differentiator is not
+plugged into the differentiator socket), then the gradients are calculated
+by CONMIN's internal finite difference code. While the program is intended
+primarily for efficient solution of constrained problems, unconstrained
+function minimization problems may also be solved. The conjugate direction
+method of Fletcher and Reeves is used for this purpose.
 
 More information on CONMIN can be found in the `CONMIN User's Manual
 <http://www.eng.buffalo.edu/Research/MODEL/mdo.test.orig/CONMIN/manual.html>`_. (In the :ref:`simple
@@ -269,7 +270,10 @@ follows:
             self.add('driver', CONMINdriver())
         
             # add DrivingSim to workflow
-            driver.workflow.add('driving_sim')
+            self.driver.workflow.add('driving_sim')
+        
+            # Add Vehicle instance to vehicle socket
+            self.driving_sim.add('vehicle', Vehicle())
         
             # CONMIN Design Variables 
             self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
@@ -335,12 +339,12 @@ default value is 3.
 
         self.driver.itrm = 3
 
-CONMIN can calculate the gradient of both the objective functions and of the constraints
-using a finite difference approximation. This is the current default behavior of the
-OpenMDAO driver. The CONMIN code can also accept user-calculated gradients, but these
-are not yet supported in OpenMDAO. Two parameters control the step size used for
-numerically estimating the local gradient: ``fdch`` and ``fdchm``. The ``fdchm`` parameter is
-the minimum absolute step size that the finite difference will use, and ``fdch`` is the
+CONMIN can calculate the gradient of both the objective functions and of the
+constraints using a finite difference approximation. This is the default
+behavior if no Differentiator is plugged into the differentiator socket. Two
+parameters control the step size used for numerically estimating the local
+gradient: ``fdch`` and ``fdchm``. The ``fdchm`` parameter is the minimum
+absolute step size that the finite difference will use, and ``fdch`` is the
 step size relative to the design variable.
 
 .. testcode:: CONMIN_show
@@ -353,6 +357,10 @@ step size relative to the design variable.
    large for some problems and will manifest itself by converging to a value that
    is not the minimum. It is important to evaluate the scale of the objective
    function around the optimum so that these can be chosen well.
+
+You can also replace CONMIN's finite difference with OpenMDAO's built-in
+capability by inserting a differentiator into the Differentiator slot in the
+driver, as shown in :ref:`Calculating-Derivatives-with-Finite-Difference`.
 
 For certain problems, it is desirable to scale the inputs.
 Several scaling options are available, as summarized here:
@@ -501,9 +509,8 @@ with a basic gradient-based optimization algorithm.
 The minimization algorithm used in NEWSUMT is a sequence of unconstrained minimizations technique (SUMT)
 where the modified Newton's method is used for unconstrained function minimizations.
 
-If analytic gradients of the
-objective or constraint functions are not available, this information is
-calculated by finite difference. 
+If analytic gradients of the objective or constraint functions are not
+available, this information is calculated by finite difference.
 
 NEWSUMT treats inequality constraints in a way that is especially well suited to engineering design applications.
 
@@ -538,6 +545,8 @@ follows:
 
 .. testcode:: NEWSUMT_load
 
+    from openmdao.examples.enginedesign.driving_sim import DrivingSim
+    from openmdao.examples.enginedesign.vehicle import Vehicle
     from openmdao.main.api import Assembly
     from openmdao.lib.drivers.api import NEWSUMTdriver
 
@@ -556,7 +565,10 @@ follows:
             self.add('driver', NEWSUMTdriver())
         
             # add DrivingSim to workflow
-            driver.workflow.add('driving_sim')
+            self.driver.workflow.add('driving_sim')
+        
+            # Add Vehicle instance to vehicle socket
+            self.driving_sim.add('vehicle', Vehicle())
         
             # CONMIN Design Variables 
             self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
@@ -573,56 +585,43 @@ function, design variables, constraints, and any NEWSUMT parameters are also
 assigned in the ``__init__`` function. The specific syntax for all of these is
 discussed in :ref:`Driver-API`.
 
+.. index:: gradients, Hessians
 
 *Basic Parameters*
 ++++++++++++++++++
 
-This section contains the basic parameters for NEWSUMT. One of the most important parameters in
-NEWSUMT is ``ifd``. It is a flag for finite difference gradient control. The following table gives the
-possible values for ``ifd``.
+This section contains the basic parameters for NEWSUMT. 
 
-=========    ================================================
-IFD Value    Descriptive Information 
-=========    ================================================
-0            All gradients computed by user analysis program
----------    ------------------------------------------------
-> 0          Use default finite difference stepsize of 0.1
----------    ------------------------------------------------
-< 0          Use user defined finite difference stepsize.
-             The array ``fdcv`` specifies these stepsizes.
----------    ------------------------------------------------
-1            Gradient of objective function computed by finite differences
----------    ------------------------------------------------
-2            Gradient of all constraints computed by finite differences
----------    ------------------------------------------------
-3            Gradient of nonlinear constraints computed by finite differences
----------    ------------------------------------------------
-4            Combination of 1 and 2
----------    ------------------------------------------------
-5            Combination of 1 and 3
-=========    ================================================
+The default behavior for NEWSUMT is to calculate its own gradients and Hessians
+of the objective and constraints using a first-order forward finite difference.
+The second derivatives are approximated from the first order differences. You
+can replace NEWSUMT's finite difference with OpenMDAO's built-in capability by
+inserting a differentiator into the Differentiator slot in the driver, as shown
+in :ref:`Calculating-Derivatives-with-Finite-Difference`.
 
-NEWSUMT can calculate the gradient of both the objective functions and of the constraints
-using a finite difference approximation. This is the current default behavior of the OpenMDAO
-driver. The NEWSUMT code can also accept user-calculated gradients, but these are not yet
-supported in OpenMDAO. In NEWSUMT, the array ``fdcv`` defines the step size of the finite 
-difference steps for each design variable.
+If you want to use NEWSUMT for the finite difference calculation and want the
+same finite difference step size in all your variables, you can set the ``default_fd_stepsize``
+parameter.
 
-.. testcode:: NEWSUMT_show
+.. testcode:: NEWSUMT_fd
+    :hide:
+    
+    from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+    self = EngineOptimization()
+    
+.. testcode:: NEWSUMT_fd
 
-        self.driver.fdcv = [0.1,0.1]
+    self.driver.default_fd_stepsize = .0025
 
-.. note::
-   The default values of ``fdcv`` are set to 0.01. This may be too
-   large for some problems and will manifest itself by converging to a value that
-   is not the minimum. It is important to evaluate the scale of the objective
-   function around the optimum so that these can be chosen well.
+The default step size will be used for all parameters for which you have not
+set the ``fd_step`` attribute.
 
-
-When using NEWSUMT, you should specify which constraints are linear. Use the
-integer array ``ilin`` to designate whether a constraint is linear. A value of 0 indicates
-that that constraint is non-linear, while a value of 1 indicates that that the constraint is
-linear. 
+When using NEWSUMT, if you have any linear constraints, it may be
+advantageous to specify them as such so that NEWSUMT can treat them
+differently. Use the integer array ``ilin`` to designate whether a constraint
+is linear. A value of 0 indicates that that constraint is non-linear, while a
+value of 1 indicates that that the constraint is linear. This parameter is
+optional, and when it is omitted, all constraints are assumed to be nonlinear.
 
 .. testcode:: NEWSUMT_show
 
@@ -631,10 +630,10 @@ linear.
     self.driver.ilin_linear = [1, 0]
 
 
-Similarly, NEWSUMT has a flag parameter to indicate 
-whether the objective function is linear or nonlinear. Setting
-``lobj`` to 1 indicates a linear objective function. Setting it
-to 0 indicates a nonlinear objective function.
+Similarly, NEWSUMT has a flag parameter to indicate whether the objective
+function is linear or nonlinear. Setting ``lobj`` to 1 indicates a linear
+objective function. Setting it to 0, which is the default value, indicates a
+nonlinear objective function.
 
 .. testcode:: NEWSUMT_show
 
@@ -724,7 +723,7 @@ slow to load.)
 =========  ===========================================  ===========
 Parameter  Description                                  Default
 =========  ===========================================  ===========
-``mflag``  Flag for penalty multiplier.                 15
+``mflag``  Flag for penalty multiplier.                 0
            If 0, initial value computed by NEWSUMT.
            If 1, initial value set by `ra`
 ---------  -------------------------------------------  -----------

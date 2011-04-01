@@ -29,10 +29,6 @@ class HasObjectiveTestCase(unittest.TestCase):
         self.asm.driver.add_objective('comp1.c-comp1.d')
         self.assertEqual(self.asm.driver.list_objective(), 'comp1.c-comp1.d')
         
-    def test_get_objective(self):
-        self.asm.driver.add_objective('comp1.a-comp1.b')
-        self.assertTrue(isinstance(self.asm.driver.get_objective(), ExprEvaluator))
-        
     def test_add_objective(self):
         try:
             self.asm.driver.add_objective('blah.foo')
@@ -66,14 +62,6 @@ class HasObjectivesTestCase(unittest.TestCase):
         self.asm.driver.add_objective('comp1.a-comp1.b')
         self.asm.driver.add_objective('comp1.c-comp1.d')
         self.assertEqual(self.asm.driver.list_objectives(), ['comp1.a-comp1.b', 'comp1.c-comp1.d'])
-        
-    def test_get_objectives(self):
-        self.asm.driver.add_objective('comp1.a-comp1.b')
-        self.asm.driver.add_objective('comp1.c-comp1.d')
-        self.assertEqual([e.text for e in self.asm.driver.get_objectives().values()], 
-                         ['comp1.a-comp1.b', 'comp1.c-comp1.d'])
-        for obj in self.asm.driver.get_objectives().values():
-            self.assertTrue(isinstance(obj,ExprEvaluator))
         
     def test_add_objective(self):
         try:

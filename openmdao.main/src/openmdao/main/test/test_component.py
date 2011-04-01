@@ -176,6 +176,19 @@ class TestCase(unittest.TestCase):
 
     def test_get_entry_group(self):
         self.assertEqual(_get_entry_group(Component()), 'openmdao.component')
+        
+    def test_setattr_dependency_invalidation(self):
+        # i.e., comp should not need to re-run if you set an input to the same value.
+        
+        self.comp.set('x', 45.5)
+        self.assertEqual(self.comp._valid_dict['xout'], False)
+        self.comp.run()
+        self.assertEqual(self.comp._valid_dict['xout'], True)
+        self.comp.set('x', 45.5)
+        self.assertEqual(self.comp._valid_dict['xout'], True)
+        self.comp.set('x', 99.999)
+        self.assertEqual(self.comp._valid_dict['xout'], False)
+        
 
 
 if __name__ == '__main__':
