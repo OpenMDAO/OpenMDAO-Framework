@@ -9,12 +9,12 @@ from openmdao.util.fileutil import build_directory
 
 _setup_py_template = '''
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
    name = '%(name)s',
    version = '%(version)s',
-   packages = ['%(name)s'],
+   packages = find_packages(),
    package_dir = {'': 'src'},
    zip_safe = False,
    install_requires = %(requires)s,
@@ -23,13 +23,24 @@ setup(
 
 '''
 
+_ns_template = '''
+# this is a namespace package
+try:
+    import pkg_resources
+    pkg_resources.declare_namespace(__name__)
+except ImportError:
+    import pkgutil
+    __path__ = pkgutil.extend_path(__path__, __name__)
+'''
 
 def mkpseudo(argv=None):
     """A command line script (mkpseudo) points to this.  It generates a
     source distribution package that's empty aside from
     having a number of dependencies on other packages.
     
-    usage: make_pseudopkg -n <pkg_name> -v <version> [-d <dest_dir>] [-l <links_url>] req1 ... req_n
+    usage: make_pseudopkg <pkg_name> <version> [-d <dest_dir>] [-l <links_url>] [-r req1] ... [-r req_n]
+    
+    If pkg_name contains dots, a namespace package will be built.
     
     Required dependencies are specified using the same notation used by
     setuptools/easy_install/distribute/pip
@@ -43,73 +54,95 @@ def mkpseudo(argv=None):
         argv = sys.argv[1:]
     
     parser = OptionParser()
-    parser.usage = "mkpseudo [options] [requirements]"
-    parser.add_option("-n", "--name", action="store", type="string", dest='name',
-                      help="name of the package (required)")
-    parser.add_option("-v", "--version", action="store", type="string", dest='version',
-                      help="version id of the package (required)")
+    parser.usage = "mkpseudo <name> <version> [options]"
     parser.add_option("-d", "--dest", action="store", type="string", dest='dest', default='.',
                       help="directory where distribution will be created (optional)")
     parser.add_option("-l", "--link", action="append", type="string", dest='deplinks', default=[],
                       help="URLs to search for dependencies (optional)")
+    parser.add_option("-r", "--req", action="append", type="string", dest='reqs', default=[],
+                      help="requirement strings for dependent distributions (one or more)")
+    parser.add_option("", "--dist", action="store_true", dest="dist",
+                      help="make a source distribution after creating the directory structure")
     
     (options, args) = parser.parse_args(argv)
 
-    name = options.name
-    version = options.version
-    
-    if not name or not version:
+    if len(args) != 2:
         parser.print_help()
         sys.exit(-1)
+        
+    name = args[0]
+    names = name.split('.')
+    version = args[1]
     
     for i,url in enumerate(options.deplinks):
         if not url.startswith('http:') and not url.startswith('https:'):
             options.deplinks[i] = "http://%s" % url
 
-    options.dest = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dest)))
+    dest = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dest)))
 
-    if len(args) == 0:
-        print "No dependencies have been specified, so no pseudo package will be created"
-        sys.exit(-1)
+    if len(options.reqs) == 0 and options.dist:
+        print "No dependencies have been specified, so the distribution will not be built"
+        options.dist = False
 
     setup_options = {
-        'requires': args,
+        'requires': options.reqs,
         'name': name,
         'version': version,
         'deplinks': options.deplinks,
         }
     
     startdir = os.getcwd()
-    tdir = tempfile.mkdtemp()
+    if options.dist:
+        tdir = tempfile.mkdtemp()
+    else:
+        tdir = dest
     
     try:
         os.chdir(tdir)
         
+        rnames = names[::-1]
+        for i,ns in enumerate(rnames):
+            if i == 0:
+                dct = { '__init__.py': '' }
+            else:
+                dct = { 
+                    '__init__.py': _ns_template,
+                    rnames[i-1] : dct,
+                }
+        
+        dct = { names[0]: dct }
+
         dirstruct = {
-            'setup.py': _setup_py_template % setup_options,
-            'src': {
-                name: {
-                    '__init__.py': '',
-                    },
+            name: {
+                'setup.py': _setup_py_template % setup_options,
+                'src': dct,
                 },
         }
+        
+        if not options.dist:
+            if os.path.exists(name):
+                print "'%s' already exists.  aborting..." % name
+                sys.exit(-1)
 
         build_directory(dirstruct)
         
-        dest = os.path.expanduser(os.path.expandvars(options.dest))
-        tarname = os.path.join(dest, "%s-%s.tar.gz" % (name,version))
-        zipname = os.path.join(dest, "%s-%s.zip" % (name,version))
-        for fname in [tarname, zipname]:
-            if os.path.exists(fname):
-                print "%s already exists" % fname
-                sys.exit(-1)
+        os.chdir(name)
         
-        cmd = [sys.executable, 'setup.py', 'sdist', '-d', options.dest]
-        subprocess.check_call(cmd)
+        if options.dist:
+            tarname = os.path.join(dest, "%s-%s.tar.gz" % (name,version))
+            zipname = os.path.join(dest, "%s-%s.zip" % (name,version))
+            for fname in [tarname, zipname]:
+                if os.path.exists(fname):
+                    print "%s already exists" % fname
+                    sys.exit(-1)
+            
+            cmd = [sys.executable, 'setup.py', 'sdist', '-d', dest]
+            subprocess.check_call(cmd)
         
     finally:
         os.chdir(startdir)
-        shutil.rmtree(tdir)
+        if options.dist:
+            shutil.rmtree(tdir)
 
 
 if __name__ == '__main__':
