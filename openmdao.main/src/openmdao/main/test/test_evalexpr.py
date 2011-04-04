@@ -321,6 +321,7 @@ class ExprEvalTestCase(unittest.TestCase):
             ('-a.a1d', "-scope.get('a.a1d')"),
             ('+a.a1d', "+scope.get('a.a1d')"),
             ('a.a1d[0]', "scope.get('a.a1d',[(0,0)])"),
+            ('a.a2d[0][0]', "scope.get('a.a2d',[(0,0),(0,0)])"),
             ('a.a2d[-a.a1d[2]]', "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)]))])"),
             ('a.a2d[-a.a1d[2]][foo.bar]', 
              "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)])),(0,scope.get('foo.bar'))])"),
@@ -378,7 +379,6 @@ class ExprEvalTestCase(unittest.TestCase):
         ex = ExprEvaluator('comp.x', self.top)
         self.assertEqual(3.14, ex.evaluate())
 
-        # test setting the value of a referenced variable
         ex.set(75.4)
         self.assertEqual(75.4, self.top.comp.x)
         
@@ -398,6 +398,33 @@ class ExprEvalTestCase(unittest.TestCase):
         
         ex = ExprEvaluator("comp.get_cont(1).a1d[2]", self.top)
         self.assertEqual(ex.evaluate(), 4)
+        
+        ex = ExprEvaluator("a2d[1][0]", self.top.a)
+        self.assertEqual(ex.evaluate(), 2.)
+        ex.set(7.)
+        self.assertEqual(self.top.a.a2d[1][0], 7.)
+        
+        ex = ExprEvaluator("a2d[1,0]", self.top.a)
+        self.assertEqual(ex.evaluate(), 7.)
+        ex.set(11.)
+        self.assertEqual(self.top.a.a2d[1][0], 11.)
+        
+        ex = ExprEvaluator("a2d[1]", self.top.a)
+        self.assertTrue(all(ex.evaluate() == numpy.array([11.,3.])))
+        ex.set([0.1,0.2])
+        self.assertTrue(all(self.top.a.a2d[1] == numpy.array([0.1,0.2])))
+        
+        self.top.comp.cont = A()
+        
+        ex = ExprEvaluator("comp.cont.a2d[1][0]", self.top)
+        self.assertEqual(ex.evaluate(), 2.)
+        ex.set(7.)
+        self.assertEqual(self.top.comp.cont.a2d[1][0], 7.)
+        
+        ex = ExprEvaluator("comp.cont.a2d[1,0]", self.top)
+        self.assertEqual(ex.evaluate(), 7.)
+        ex.set(11.)
+        self.assertEqual(self.top.comp.cont.a2d[1][0], 11.)
         
         ex = ExprEvaluator("comp.get_cont(1).a1d", self.top)
         self.assertTrue(all(ex.evaluate() == numpy.array([4,4,4,123,4])))

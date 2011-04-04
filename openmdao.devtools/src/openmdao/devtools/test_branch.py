@@ -76,11 +76,11 @@ def _testbranch(hostname):
             #unpack the tarfile
             run("7z.exe x %s" % tarfilename)
             tf2 = tarfilename.split(".")
-	    del tf2[-1]
+            del tf2[-1]
             run("""call 7z.exe x """ + tarfilename.split(".")[0] + """.tar""")
             run("""call python testbranch\go-openmdao-dev.py""")  
-	    #Hack - Must build and test from a batch file in order for environment to be correct
-	    #Windows and fabric don't always play nicely together
+            #Hack - Must build and test from a batch file in order for environment to be correct
+            #Windows and fabric don't always play nicely together
             teststeps="""chdir testbranch\devenv\Scripts    
                 call activate.bat
                 set PYTHON_EGG_CACHE=C:\Users\\%USERNAME%\\testbranch
@@ -104,8 +104,8 @@ def waitForLine(fname, linePattern, grepArgs=''):
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
-	
-    #Figure out what branch we're in    
+
+    #Figure out what branch we're in
     startdir=os.getcwd()
     branchdir=subprocess.Popen(["bzr root"], stdout=subprocess.PIPE, shell=True).communicate()[0]
     print("Testing on branch %s" % branchdir)
@@ -113,9 +113,9 @@ def main(argv=None):
     #parse through any command line options
     parser = OptionParser()
     parser.add_option("-l", "--runlocal", action="store_true", dest="runlocal", default=False,
-                  help="force tests to run also on current platform")	
+                  help="force tests to run also on current platform")
     parser.add_option("-i", "--ignorebzr", action="store_true", dest="ignoreBzrStatus", default=False,
-                   help="runs tests even if there are uncommitted files")			   	   		   
+                   help="runs tests even if there are uncommitted files")   
     parser.add_option("-p", "--platform", action="append", dest="runplatforms",  
                    help="add a host url to run the tests on")  
     (options, args) = parser.parse_args(argv)
@@ -146,7 +146,7 @@ def main(argv=None):
             if not runlocal and (currenthost == hostname):
                 print("skipping tests on %s" % currenthost)  #skip local platform unless runlocal is true
             else:
-	        _testbranch(hostname)
+                _testbranch(hostname)
     finally:
         for key in connections.keys():
             connections[key].close()

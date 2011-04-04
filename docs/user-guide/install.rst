@@ -152,31 +152,12 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
    will have installed OpenMDAO. There are just a couple more steps to follow
    before you can start using it.
    
-   You can also specify names or URLs of files defining additional
-   required packages by passing *--reqs* arguments to go-openmdao.py, e.g.,
+   You can also specify additional required packages by passing *-r* arguments 
+   to go-openmdao.py, e.g.,
    
    ::
    
-      python go-openmdao.py --reqs=mysitereqs --reqs=http://mywebserver/morefiles.req
-      
-   The following lines are allowed in a requirements file:
-   
-        - A blank line
-        - A python style comment
-        - A line starting with -f, followed by the URL of a find-links server
-        - A line containing a requirement specifier, which has the same form as those seen 
-          in setup.py files or buildout.cfg files.  Here's an example:
-   
-   ::
-   
-      #  a comment
-      
-      -f http://myserver.org:8432   # another comment
-      mypackage<1.5
-      anotherpackage==2.1
-      
-      -f http://anotherserver.com
-      pyawesome>0.3,<1.4
+      python go-openmdao.py -r myplugin -r myotherplugin==1.3
       
 
 **Activate your virtual environment**
