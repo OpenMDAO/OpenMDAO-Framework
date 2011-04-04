@@ -35,7 +35,7 @@ config.add_extension('newsumtinterruptible',
                      library_dirs=library_dirs)
 
 kwds = {'install_requires':['numpy'],
-        'version': '1.0.0',
+        'version': '1.1.0',
         'zip_safe': False,
         'license': 'public domain',
    # NOTE: we use 'url' here, but it really translates to 'home-page'

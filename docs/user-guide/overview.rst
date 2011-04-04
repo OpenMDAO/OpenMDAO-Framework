@@ -28,6 +28,7 @@ calculation that it performs is to add the two inputs to produce the output.
 
 .. figure:: ../generated_images/Component.png
    :align: center
+   :alt: The component is represented by a box with 2 inputs entering from the left and an output leaving at the right; calculation is performed inside the component.
 
    Conceptual View of a Simple Component
 
@@ -59,6 +60,7 @@ appears in two different workflows.
 
 .. figure:: ../generated_images/IterationHierarchy.png
    :align: center
+   :alt: Figure shows workflows for each of 4 drivers; the workflows contain a total of 5 components
 
    View of an Iteration Hierarchy
 
@@ -75,6 +77,7 @@ connected objects.
 
 .. figure:: ../generated_images/Intro-Driver2.png
    :align: center
+   :alt: Refer to adjacent text
 
    View of an Assembly Showing Data Flow
 
@@ -87,6 +90,7 @@ containing two other components, resulting in the following:
 
 .. figure:: ../generated_images/Intro-Driver1.png
    :align: center
+   :alt: Refer to caption
 
    View of an Assembly within an Assembly
 
@@ -106,6 +110,7 @@ that the framework expects.  To learn how to create your own plugins, see the
 
 .. figure:: ../generated_images/TopContext.png
    :align: center
+   :alt: A large circle contains plugins that surround the framework (a box); inside the framework are tools and interfaces.
 
    Top Level Context Diagram
 

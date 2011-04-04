@@ -1,13 +1,13 @@
 """
     conmindriver.py - Driver for the CONMIN optimizer.
     
-    See Appendix B for additional information on the :ref:`CONMINDriver`.
+    See the Standard Library Reference for additional information on the :ref:`CONMINDriver`.
     
     The CONMIN driver can be a good example of how to wrap another Driver for
     OpenMDAO. However, there are some things to keep in mind.
     
     1. This implementation of the CONMIN Fortran driver is interruptable, in
-    that control is returned every time an objective or contstraint evaluation
+    that control is returned every time an objective or constraint evaluation
     is needed. Most external optimizers just expect a functions to be passed
     for these, so they require a slightly different driver implementation than
     this.
@@ -29,6 +29,7 @@ __all__ = ['CONMINdriver']
 # pylint: disable-msg=E0611,F0401
 from numpy import zeros, ones
 from numpy import int as numpy_int
+from numpy.linalg import norm
 
 import conmin.conmin as conmin
 
@@ -38,6 +39,7 @@ from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
+from openmdao.main.uses_derivatives import UsesGradients
 from openmdao.util.decorators import add_delegate
 
 
@@ -120,7 +122,7 @@ class _consav(object):
         self.dx1 = 0.0
         self.fi = 0.0
         self.xi = 0.0
-        self.dftdf1 = 0.0
+        self.d_objtdf1 = 0.0
         self.alp = 0.0
         self.fff = 0.0
         self.a1 = 0.0
@@ -170,7 +172,7 @@ class _consav(object):
         self.ispace = [0, 0]
         # pylint: enable-msg=W0201
 
-@add_delegate(HasParameters, HasIneqConstraints, HasObjective)
+@add_delegate(HasParameters, HasIneqConstraints, HasObjective, UsesGradients)
 class CONMINdriver(Driver):
     """ Driver wrapper of Fortran version of CONMIN. 
         
@@ -201,15 +203,15 @@ class CONMINdriver(Driver):
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
                     'termination.')
     fdch = Float(.01, iotype='in', desc='Relative change in parameters '
-                      'when calculating finite difference gradients.')
+                      'when calculating finite difference gradients.'
+                      ' (only when CONMIN calculates gradient)')
     fdchm = Float(.01, iotype='in', desc='Minimum absolute step in finite '
-                      'difference gradient calculations.')
+                      'difference gradient calculations.'
+                      ' (only when CONMIN calculates gradient)')
     icndir = Float(0, iotype='in', desc='Conjugate gradient restart '
                       'parameter.')
     nscal = Float(0, iotype='in', desc='Scaling control parameter -- '
                       'controls scaling of decision variables.')
-    nfdg = Int(0, iotype='in', desc='User-defined gradient flag (not yet '
-                      'supported).')
     ct = Float(-0.1, iotype='in', desc='Constraint thickness parameter.')
     ctmin = Float(0.004, iotype='in', desc='Minimum absolute value of ct '
                       'used in optimization.')
@@ -254,10 +256,10 @@ class CONMINdriver(Driver):
         self._scal = zeros(0,'d')
         self.cons_active_or_violated = zeros(0, 'i') 
         self._cons_is_linear = zeros(0, 'i')
-        self.gradients = zeros(0, 'd')
+        self.d_const = zeros(0, 'd')
         
         # gradient of objective w.r.t x[i]
-        self.df = zeros(0, 'd')
+        self.d_obj = zeros(0, 'd')
 
         # move direction in the optimization space
         self.s = zeros(0, 'd')
@@ -270,10 +272,13 @@ class CONMINdriver(Driver):
         # temp storage for constraints
         self.g1 = zeros(0,'d')
         self.g2 = zeros(0,'d')
-
         
+
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
+        
+        # Flag used to figure out if we are starting a new finite difference
+        self.baseline_point = True
         
         self._config_conmin()
         self.cnmn1.igoto = 0
@@ -330,15 +335,15 @@ class CONMINdriver(Driver):
         #print self.design_vals
         try:
             (self.design_vals,
-             self._scal, self.gradients, self.s,
+             self._scal, self.d_const, self.s,
              self.g1, self.g2, self._b, self._c,
              self._cons_is_linear,
              self.cons_active_or_violated, self._ms1) = \
                  conmin.conmin(self.design_vals,
                                self._lower_bounds, self._upper_bounds,
                                self.constraint_vals,
-                               self._scal, self.df,
-                               self.gradients,
+                               self._scal, self.d_obj,
+                               self.d_const,
                                self.s, self.g1, self.g2, self._b, self._c,
                                self._cons_is_linear,
                                self.cons_active_or_violated, self._ms1)
@@ -348,18 +353,34 @@ class CONMINdriver(Driver):
         
         self._save_common_blocks()
         
-        #print "After %s" % self.get_pathname()
-        #print self.design_vals
-        
-        # update the parameters in the model
-        dvals = [float(val) for val in self.design_vals[:-2]]
-        self.set_parameters(dvals)
-        
         # calculate objective and constraints
         if self.cnmn1.info == 1:
             
-            # update the model
-            super(CONMINdriver, self).run_iteration()
+            # Note. CONMIN is driving the finite difference estimation of the
+            # gradient. However, we still take advantage of a component's
+            # user-defined gradients via Fake Finite Difference.
+            if self.cnmn1.igoto == 3:
+                # Save baseline states and calculate derivatives
+                if self.baseline_point:
+                    super(CONMINdriver, self).calc_derivatives(first=True)
+                self.baseline_point = False
+                
+                # update the parameters in the model
+                dvals = [float(val) for val in self.design_vals[:-2]]
+                self.set_parameters(dvals)
+        
+                # Run model under Fake Finite Difference
+                self.ffd_order = 1
+                super(CONMINdriver, self).run_iteration()
+                self.ffd_order = 0
+            else:
+                # update the parameters in the model
+                dvals = [float(val) for val in self.design_vals[:-2]]
+                self.set_parameters(dvals)
+        
+                # Run the model for this step
+                super(CONMINdriver, self).run_iteration()
+                self.baseline_point = True
         
             # calculate objective
             self.cnmn1.obj = self.eval_objective()
@@ -374,25 +395,34 @@ class CONMINdriver(Driver):
                 
             #self._logger.debug('constraints = %s'%self.constraint_vals)
                 
-        # calculate gradient of constraints and graident of objective
-        elif self.cnmn1.info == 2:
+        # calculate gradient of constraints and gradient of objective
+        # We also have to determine which constrints are active/violated, and
+        # only return gradients of active/violated constraints.
+        elif self.cnmn1.info == 2 and self.cnmn1.nfdg == 1:
             
-            # Placeholder for future use of component gradient calc.
-            
-            # User-defined gradients for objective and constraints
-            if self.cnmn1.nfdg == 1:
-                self.raise_exception('User defined gradients not yet \
-                           supported for constraints', NotImplementedError)
+            super(CONMINdriver, self).calc_derivatives(first=True)
+            self.ffd_order = 1
+            self.differentiator.calc_gradient()
+            self.ffd_order = 0
                 
-            # User-defined gradients for just the objective
-            elif self.cnmn1.nfdg == 2:
-                self.raise_exception('User defined gradients not yet \
-                           supported', NotImplementedError)
+            self.d_obj[:-2] = self.differentiator.gradient_obj
             
+            for i in range(len(self.cons_active_or_violated)):
+                self.cons_active_or_violated[i] = 0
+                
+            ncon = self.differentiator.n_ineqconst
+            self.cnmn1.nac = 0
+            for i in range(ncon):
+                if self.constraint_vals[i] >= self.cnmn1.ct:
+                    self.cons_active_or_violated[self.cnmn1.nac] = i+1
+                    self.d_const[:-2, self.cnmn1.nac] = \
+                        self.differentiator.gradient_ineq_const[:, i]
+                    self.cnmn1.nac += 1
+                    
         else:
             self.raise_exception('Unexpected value for flag INFO returned \
                     from CONMIN', RuntimeError)
-
+        
             
     def post_iteration(self):
         """ Checks CONMIN's return status and writes out cases."""
@@ -434,9 +464,6 @@ class CONMINdriver(Driver):
         self.cnmn1.clear()
         self.consav.clear()
         
-        #if not isinstance(self.objective, basestring):
-            #self.raise_exception('no objective specified', RuntimeError)
-        
         params = self.get_parameters().values()
         
         # size arrays based on number of parameters
@@ -468,7 +495,6 @@ class CONMINdriver(Driver):
             for i, scale_factor in enumerate(self.scal):
                 self._scal[i] = scale_factor
             
-        self.df = zeros(num_dvs+2, 'd')
         self.s = zeros(num_dvs+2, 'd')
         
         # size constraint related arrays
@@ -508,7 +534,15 @@ class CONMINdriver(Driver):
                 
         # array of active or violated constraints (ic in CONMIN)
         self.cons_active_or_violated = zeros(n3, 'i')
-        self.gradients = zeros((int(n1), int(n3)), 'd')
+        
+        # stuff for gradients
+        if self.differentiator:
+            self.nfdg = 1
+        else:
+            self.nfdg = 0
+                
+        self.d_const = zeros((int(n1), int(n3)), 'd')
+        self.d_obj = zeros(num_dvs+2, 'd')
         
         # these are all temp storage
         self._b = zeros((int(n3), int(n3)), 'd')

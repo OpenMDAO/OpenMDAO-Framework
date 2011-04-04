@@ -120,7 +120,7 @@ class HasEqConstraints(_HasConstraintsBase):
         
         
         *Parameters:*
-
+        
         expr_string: str
             Expression string containing the constraint.
         

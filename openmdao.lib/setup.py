@@ -43,7 +43,7 @@ Component, Driver, and Variable plugins for OpenMDAO
           'setuptools',
           'openmdao.main',
           'conmin==1.0.1',
-          'newsumt==1.0.0',
+          'newsumt==1.1.0',
           'Pyevolve==0.6',
           'ordereddict',
           'scipy',
@@ -71,6 +71,9 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.components.prob_intersect.ProbIntersect = openmdao.lib.components.prob_intersect:ProbIntersect
       openmdao.lib.components.nastran.nastran.NastranComponent = openmdao.lib.components.nastran.nastran:NastranComponent
 
+      [openmdao.differentiator]
+      openmdao.lib.differentiators.finite_difference.FiniteDifference = openmdao.lib.differentiators.finite_difference:FiniteDifference
+      
       [openmdao.variable]
       openmdao.lib.datatypes.array.Array = openmdao.lib.datatypes.array:Array
       openmdao.lib.datatypes.enum.Enum = openmdao.lib.datatypes.enum:Enum

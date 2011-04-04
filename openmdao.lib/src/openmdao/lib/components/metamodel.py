@@ -18,7 +18,7 @@ from openmdao.main.mp_support import has_interface
 class MetaModel(Component):
     """ A component that provides general Meta Modeling capability.
     
-    See Appendix B for additional information on the :ref:`MetaModel` component."""
+    See the Standard Library Reference for additional information on the :ref:`MetaModel` component."""
     
     # pylint: disable-msg=E1101
     model = Instance(Component, allow_none=True,

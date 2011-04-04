@@ -3,7 +3,7 @@
 
 python module newsum__user__routines 
     interface newsum_user_interface 
-        subroutine analys(e_1_e,x0,obj,dobj,ddobj,g,gb,dg,n1,n2,n3,n4,ran,nrandm,ian,niandm) ! in :newsumt:newsumt.f:newsum:unknown_interface
+        subroutine analys(e_1_e,x0,obj,dobj,ddobj,g,gb,dg,n1,n2,n3,n4,imode) ! in :newsumt:newsumt.f:newsum:unknown_interface
             intent(in) analys
             integer :: e_1_e
             double precision dimension(n1),intent(in) :: x0
@@ -17,10 +17,7 @@ python module newsum__user__routines
             integer intent(in) :: n2
             integer intent(in) :: n3
             integer intent(in) :: n4
-            double precision dimension(nrandm),intent(hide),depend(nrandm) :: ran
-            integer intent(in) :: nrandm
-            integer dimension(niandm),intent(hide),depend(niandm) :: ian
-            integer intent(in) :: niandm
+            integer intent(in) :: imode
         end subroutine analys
     end interface newsum_user_interface
 end python module newsum__user__routines
@@ -68,7 +65,7 @@ python module newsumtinterruptible ! in
             integer optional :: iflapp=0
             common /contrl/ c,epsgsn,epsodm,epsrsf,g0,p,ra,racut,ramin,stepmx,ifd,jprint,jsigng,lobj,maxgsn,maxodm,maxrsf,mflag,ndv,ntce,iflapp
         end block data 
-        subroutine newsuminterruptible(analys,bl,bu,ddobj,dg,dh,dobj,fdcv,fmin,g,gb,g1,g2,g3,obj,objmin,s,sn,x,x0,iik,ilin,iside,n1,n2,n3,n4,ran,nrandm,ian,niandm,isdone,resume) ! in :newsumt:newsumt.f
+        subroutine newsuminterruptible(analys,bl,bu,ddobj,dg,dh,dobj,fdcv,fmin,g,gb,g1,g2,g3,obj,objmin,s,sn,x,x0,iik,ilin,iside,n1,n2,n3,n4,isdone,resume) ! in :newsumt:newsumt.f
             use newsum__user__routines
             external analys
             double precision dimension(n1),intent(in),depend(n1) :: bl
@@ -109,10 +106,6 @@ python module newsumtinterruptible ! in
             !integer optional,intent(in),check(len(ilin)>=n2),depend(ilin) :: n2=len(ilin)
             integer intent(in) :: n3
             integer intent(in) :: n4
-            double precision dimension(nrandm),intent(inplace),depend(nrandm) :: ran
-            integer intent(in) :: nrandm
-            integer dimension(niandm),intent(inplace),depend(niandm) :: ian
-            integer intent(in) :: niandm
             logical intent(in,out) :: isdone
             logical intent(in,out) :: resume
 

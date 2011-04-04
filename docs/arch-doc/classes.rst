@@ -33,6 +33,7 @@ allows for many levels of nested iteration *within the same Assembly.*
 
 .. figure:: ../generated_images/ModelClasses.png
    :align: center
+   :alt: Class diagram showing the core classes: Container, Component, Assembly, Driver, and Workflow 
 
    Class Diagram of Core Classes
 
@@ -65,6 +66,7 @@ units and range checking.
 
 .. figure:: ../generated_images/VariableClasses.png
     :align: center
+    :alt: Class diagream showing the built-in traits, including custom traits and those from Enthought's Traits package
     
     Class Diagram of Built-in Traits
     
@@ -87,7 +89,8 @@ matter.
 
 .. figure:: ../generated_images/CreatorClasses.png
    :align: center
-
+   :alt: Class diagram showing Factory classes: FactoryManager, Factory, ImportFactory, and ObjServerFactory
+   
    Class Diagram of Factory Classes
  
    
@@ -111,6 +114,7 @@ component and the ResourceAllocationManager for this simulation object.
 
 .. figure:: ../generated_images/ServerClasses.png
    :align: center
+   :alt: Class diagram of the server classes: ObjServerFactory, Simulation, Server, ServerManager, and ObjServer
 
    Class Diagram of Server Classes
 
