@@ -17,9 +17,10 @@ from pkg_resources import working_set, Requirement
 #      EDIT THE FOLLOWING TWO LISTS TO CONTROL THE PACKAGES THAT WILL BE
 #      REQUIRED FOR THE OPENMDAO RELEASE AND DEVELOPMENT ENVIRONMENTS
 #
-# List of packages that must be pre-installed before openmdao can be installed
+# List of packages that must be pre-installed before openmdao can be installed.
 # The presence of these will be checked at the beginning and the install will abort
-# if they're not found
+# if they're not found, because otherwise easy_install will try to build them
+# and will fail with massive output of stuff that may be confusing to the user.
 openmdao_prereqs = ['numpy', 'scipy']
 
 # list of tuples of the form: (openmdao package, parent directory relative to

@@ -43,7 +43,7 @@ class DepTestCase(unittest.TestCase):
                    'openmdao.driver',
                    'openmdao.variable']
         types = set([x[0] for x in get_available_types(groups)])
-        types = [x.rsplit('.',1)[1] for x in types]
+        types = [x.rsplit('.',1)[1] for x in types if x.startswith('openmdao.')]
         
         cset = set(comps)
         tset = set(types)

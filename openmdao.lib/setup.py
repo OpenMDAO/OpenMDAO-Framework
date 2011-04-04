@@ -72,10 +72,10 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.components.nastran.nastran.NastranComponent = openmdao.lib.components.nastran.nastran:NastranComponent
 
       [openmdao.variable]
-      opendao.lib.datatypes.array.Array = openmdao.lib.datatypes.array:Array
-      opendao.lib.datatypes.enum.Enum = openmdao.lib.datatypes.enum:Enum
-      opendao.lib.datatypes.file.File = openmdao.lib.datatypes.file:File
-      opendao.lib.datatypes.float.Float = openmdao.lib.datatypes.float:Float
-      opendao.lib.datatypes.int.Int = openmdao.lib.datatypes.int:Int
+      openmdao.lib.datatypes.array.Array = openmdao.lib.datatypes.array:Array
+      openmdao.lib.datatypes.enum.Enum = openmdao.lib.datatypes.enum:Enum
+      openmdao.lib.datatypes.file.File = openmdao.lib.datatypes.file:File
+      openmdao.lib.datatypes.float.Float = openmdao.lib.datatypes.float:Float
+      openmdao.lib.datatypes.int.Int = openmdao.lib.datatypes.int:Int
       """,
       )
