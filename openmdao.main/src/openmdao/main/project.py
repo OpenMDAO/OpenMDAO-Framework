@@ -66,6 +66,38 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None):
     proj = Project(projpath)
     return proj
 
+#def find_distrib_for_obj(obj):
+    #"""Return the name of the distribution containing the module that
+    #contains the given object, or None if it's not part of a distribution.
+    #"""
+    #try:
+        #fname = inspect.getfile(obj)
+    #except TypeError:
+        #return None
+    
+    #modpath = get_module_path(fname)
+    #parts = modpath.split('.')
+    #l = len(parts)
+    #for i in range(l):
+        #try:
+            #dist = get_distribution('.'.join(parts[:l-i]))
+        #except DistributionNotFound:
+            #continue
+        #return dist
+    #return None
+    
+    
+def model_to_class(model, classname, stream):
+    """Takes a model and creates a new class inherited from the model's
+    class that is initialized with the current model's non-default
+    configuration.  The class definition is written to the given stream.
+    Note that this does not save the exact state of the model, but only
+    key inputs and attributes recommended by the model and its children.
+    """
+    cfg = model.get_configinfo()
+    cfg.save_as_class(stream, classname)
+
+
 def _is_valid_project_dir(dpath):
     if not os.path.isdir(dpath):
         return False
@@ -82,7 +114,7 @@ class Project(object):
         projpath: str
             Path to the project's directory
         """
-        self.path = projpath
+        self.path = expand_path(projpath)
         modeldir = os.path.join(self.path, 'model')
         self.activate()
         if os.path.isdir(projpath):
@@ -93,23 +125,15 @@ class Project(object):
             statefile = os.path.join(projpath, '_project_state')
             with open(statefile, 'r') as f:
                 self.__dict__ = pickle.load(f)
+            self.path = expand_path(projpath) # set again in case loading project state changed it
         else:  # new project
             os.makedirs(projpath)
             os.mkdir(modeldir)
             self.top = Assembly()
             set_as_top(self.top)
             self.save()
-            
-        self.path = projpath # need to do this again in case loading project state changed it
-        SimulationRoot.chroot(modeldir)
 
-    def clear(self):
-        """Removes all project files and subdirectories in the project directory."""
-        for f in os.listdir(self.path):
-            if os.path.isdir(f):
-                shutil.rmtree(f)
-            else:
-                os.remove(f)
+        SimulationRoot.chroot(self.path)
 
     @property
     def name(self):
@@ -168,34 +192,3 @@ class Project(object):
         finally:
             os.chdir(startdir)
             
-def find_distrib_for_obj(obj):
-    """Return the name of the distribution containing the module that
-    contains the given object, or None if it's not part of a distribution.
-    """
-    try:
-        fname = inspect.getfile(obj)
-    except TypeError:
-        return None
-    
-    modpath = get_module_path(fname)
-    parts = modpath.split('.')
-    l = len(parts)
-    for i in range(l):
-        try:
-            dist = get_distribution('.'.join(parts[:l-i]))
-        except DistributionNotFound:
-            continue
-        return dist
-    return None
-    
-    
-def model_to_class(model, classname, stream):
-    """Takes a model and creates a new class inherited from the model's
-    class that is initialized with the current model's non-default
-    configuration.  The class definition is written to the given stream.
-    Note that this does not save the exact state of the model, but only
-    key inputs and attributes recommended by the model and its children.
-    """
-    cfg = model.get_configinfo()
-    cfg.save_as_class(stream, classname)
-

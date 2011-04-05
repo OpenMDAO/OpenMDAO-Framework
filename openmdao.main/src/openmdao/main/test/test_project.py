@@ -25,11 +25,16 @@ class Multiplier(Component):
 
 class ProjectTestCase(unittest.TestCase):
     def setUp(self):
+        self.startdir = os.getcwd()
         self.tdir = tempfile.mkdtemp()
+        os.chdir(self.tdir)
         
     def tearDown(self):
-        shutil.rmtree(self.tdir)
-        
+        try:
+            shutil.rmtree(self.tdir)
+        finally:
+            os.chdir(self.startdir)
+
     def _fill_project(self, top):
         comp1 = top.add('comp1', Multiplier())
         comp2 = top.add('comp2', Multiplier())
@@ -71,6 +76,23 @@ class ProjectTestCase(unittest.TestCase):
             self.assertTrue(str(err).endswith(' already exists'))
         else:
             self.fail("Exception expected")
+            
+    def test_using(self):
+            proj = Project('a_proj')
+            self._fill_project(proj.top)
+            proj.top.run()
+            self.assertEqual(proj.top.comp1.rval_out, 10.)
+            self.assertEqual(proj.top.comp2.rval_out, 40.)
+            proj.top.comp1.rval_in = 0.5
+            os.chdir(self.tdir)
+            proj.export(projname='fooproj')
+            
+            fooproj = project_from_archive('fooproj.proj')
+            self.assertEqual(fooproj.top.comp1.rval_in, proj.top.comp1.rval_in)
+            fooproj.top.run()
+            self.assertEqual(fooproj.top.comp1.rval_out, 1.)
+            self.assertEqual(fooproj.top.comp2.rval_out, 4.)
+            
 
 if __name__ == "__main__":
     unittest.main()
