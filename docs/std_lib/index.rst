@@ -3,13 +3,14 @@
 .. _Standard-Library-Reference:
 
 =======================================
-Appendix B:  Standard Library Reference
+Appendix A:  Standard Library Reference
 =======================================
 
 .. toctree::
    :maxdepth: 2
    
    component.rst
+   differentiator.rst
    doegenerator.rst
    driver.rst
    surrogatemodels.rst

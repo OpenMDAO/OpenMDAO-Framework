@@ -36,10 +36,6 @@ class HasObjective(object):
         """Returns the expression string for the objective."""
         return self._objective.text
     
-    def get_objective(self):
-        """Returns the objective object."""
-        return self._objective
-    
     def eval_objective(self):
         """Returns the value of the evaluated objective."""
         if not self._objective:
@@ -113,10 +109,6 @@ class HasObjectives(object):
         """Removes all objectives."""
         self._objectives = ordereddict.OrderedDict()
         
-    def get_objectives(self):
-        """Returns an ordered dict of objective objects."""
-        return self._objectives
-
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
         return [obj.evaluate() for obj in self._objectives.values()]

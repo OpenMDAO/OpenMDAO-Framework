@@ -138,7 +138,7 @@ Glossary
       **eggs**
         See :term:`egg` above. 
 
-
+      
       **Enum**
         A variable type which supports a 
         list of discrete allowed values. The list of allowed values can be of arbitrary
@@ -157,7 +157,16 @@ Glossary
         the FactoryManager to allow creation of objects in various ways, e.g., locally
         via import and remotely via an ObjServer.
 
+      
+      **Fake Finite Difference**
+        The Fake Finite Difference (FFD) method was developed to support an efficient way to calculate
+	gradients for mixed models, that is, models  that contain both components that can provide
+	derivatives and components that cannot. When a component has a set of specified derivatives,
+	they are used to replace the component's output with the first-order Taylor series expansion
+	whenever the optimizer initiates a finite difference estimation of the gradient. This is
+	called Fake Finite Difference.
 
+           
       **FEM**
         Finite Element Method. A numerical technique for finding approximate
         solutions of partial differential equations (PDE) as well as of integral

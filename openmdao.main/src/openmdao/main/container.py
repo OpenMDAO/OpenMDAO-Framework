@@ -497,8 +497,8 @@ class Container(HasTraits):
             # if an old child with that name exists, remove it
             if self.contains(name) and getattr(self, name):
                 self.remove(name)
-            setattr(self, name, obj)
             obj.name = name
+            setattr(self, name, obj)
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
@@ -786,7 +786,17 @@ class Container(HasTraits):
                             setattr(self, path, value)
                         finally:
                             self._input_check = chk
-                        self._input_updated(path)
+                        # Note: This was done to make foo.bar = 3 behave the
+                        # same as foo.set('bar', 3).
+                        # Without this, the output of the comp was
+                        # always invalidated when you call set_parameters.
+                        # This meant that component was always executed
+                        # even when the inputs were unchanged.
+                        # _call_execute is set in the on-trait-changed
+                        # callback, so it's a good test for whether the
+                        # value changed.
+                        if hasattr(self, "_call_execute") and self._call_execute:
+                            self._input_updated(path)
                     else:  # array index specified
                         self._index_set(path, value, index)
                 elif index:  # array index specified for output
