@@ -57,12 +57,20 @@ class ProjectTestCase(unittest.TestCase):
         
         newproj = project_from_archive(os.path.join(self.tdir,
                                                     'proj1%s' % PROJ_FILE_EXT), 
-                                       'proj2',
-                                       self.tdir)
+                                       proj_name='proj2',
+                                       dest_dir=self.tdir)
 
         self.assertEqual(newproj.path, os.path.join(self.tdir, 'proj2'))
         self.assertTrue(_is_valid_project_dir(proj.path))
     
+        try:
+            newproj = project_from_archive(os.path.join(self.tdir,
+                                                        'proj1%s' % PROJ_FILE_EXT), 
+                                           dest_dir=self.tdir)
+        except Exception, err:
+            self.assertTrue(str(err).endswith(' already exists'))
+        else:
+            self.fail("Exception expected")
 
 if __name__ == "__main__":
     unittest.main()
