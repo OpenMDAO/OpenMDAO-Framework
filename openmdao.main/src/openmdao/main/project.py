@@ -12,7 +12,10 @@ from pkg_resources import get_distribution, DistributionNotFound
 
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
-from openmdao.util.fileutil import get_module_path
+from openmdao.util.fileutil import get_module_path, expand_path
+
+# extension for project files
+PROJ_FILE_EXT = '.proj'
 
 
 def _parse_archive_name(pathname):
@@ -22,28 +25,54 @@ def _parse_archive_name(pathname):
     return os.path.basename(pathname).split('.')[0]
 
 
-def project_from_archive(archive_name, dest_dir):
+def project_from_archive(archive_name, proj_name=None, dest_dir=None):
     """Expand the given project archive file in the specified destination
-    directory and return a Project object that points to newly
+    directory and return a Project object that points to the newly
     expanded project.
     
     archive_name: str
         Path to the project archive to be expanded
         
-    dest_dir: str
+    proj_name: str (optional)
+        Name of the new project. Defaults to the name of the project contained
+        in the name of the archive.
+        
+    dest_dir: str (optional)
         Directory where the project directory for the expanded archive will
-        reside.
+        reside. Defaults to the directory where the archive is located.
     """
-    projname = _parse_archive_name(archive_name)
-    projpath = os.path.join(dest_dir, projname)
+    archive_name = expand_path(archive_name)
+
+    if dest_dir is None:
+        dest_dir = os.path.dirname(archive_name)
+    else:
+        dest_dir = expand_path(dest_dir)
+        
+    if proj_name is None:
+        proj_name = _parse_archive_name(archive_name)
+
+    projpath = os.path.join(dest_dir, proj_name)
+    
+    if os.path.exists(projpath):
+        raise RuntimeError("Directory '%s' already exists" % projpath)
+
     os.mkdir(projpath)
+    startdir = os.getcwd()
     tf = tarfile.open(archive_name)
     try:
         tf.extractall(projpath)
     finally:
         tf.close()
-    return Project(projpath)
+    proj = Project(projpath)
+    return proj
 
+def _is_valid_project_dir(dpath):
+    if not os.path.isdir(dpath):
+        return False
+    for path in ['model','_project_state']:
+        if not os.path.exists(os.path.join(dpath,path)):
+            return False
+    return True
     
 class Project(object):
     def __init__(self, projpath):
@@ -54,28 +83,26 @@ class Project(object):
             Path to the project's directory
         """
         self.path = projpath
+        modeldir = os.path.join(self.path, 'model')
         self.activate()
         if os.path.isdir(projpath):
+            if not _is_valid_project_dir(projpath):
+                raise RuntimeError("Directory '%s' is not a valid OpenMDAO project directory")
+
             # locate the state file containing the state of the project
             statefile = os.path.join(projpath, '_project_state')
-            if os.path.isfile(statefile):
-                with open(statefile, 'r') as f:
-                    self.__dict__ = pickle.load(f)
-            else:
-                self.top = Assembly()
-        else:
+            with open(statefile, 'r') as f:
+                self.__dict__ = pickle.load(f)
+        else:  # new project
             os.makedirs(projpath)
-            self.top = Assembly()
-            
-        modeldir = os.path.join(self.path, 'model')
-        if not os.path.isdir(modeldir):
             os.mkdir(modeldir)
+            self.top = Assembly()
+            set_as_top(self.top)
+            self.save()
             
-        self.top.directory = modeldir
-        SimulationRoot.chroot(self.top.directory)
-        set_as_top(self.top)
+        self.path = projpath # need to do this again in case loading project state changed it
+        SimulationRoot.chroot(modeldir)
 
-        
     def clear(self):
         """Removes all project files and subdirectories in the project directory."""
         for f in os.listdir(self.path):
@@ -106,23 +133,36 @@ class Project(object):
         with open(fname, 'w') as f:
             pickle.dump(self.__dict__, f)
         
-    def export(self, destdir='.'):
-        """Creates an archive of the current project for export.
+    def export(self, projname=None, destdir='.'):
+        """Creates an archive of the current project for export. 
         
-        destdir: str
-            The directory where the project archive will be placed.
+        projname: str (optional)
+            The name that the project in the archive will have. Defaults to
+            the current project name.
+        
+        destdir: str (optional)
+            The directory where the project archive will be placed. Defaults to
+            the current directory.
         """
-        ddir = os.path.abspath(destdir)
+        
+        ddir = expand_path(destdir)
+        if projname is None:
+            projname = self.name
+        projpath = os.path.join(ddir, projname)
+        
         if ddir.startswith(self.path):  # the project contains the dest directory... bad
             raise RuntimeError("Destination directory for export (%s) is within project directory (%s)" %
                                (ddir, self.path))
+        
         self.save()
         startdir = os.getcwd()
-        os.chdir(os.path.dirname(self.path))
+        os.chdir(self.path)
         try:
             try:
-                tf = tarfile.open(os.path.join(ddir,self.name+'.proj'), mode='w:gz')
-                tf.add(os.path.basename(self.path))
+                tf = tarfile.open(os.path.join(ddir,projname+PROJ_FILE_EXT), 
+                                  mode='w:gz')
+                for entry in os.listdir(self.path):
+                    tf.add(entry)
             finally:
                 tf.close()
         finally:
@@ -158,3 +198,4 @@ def model_to_class(model, classname, stream):
     """
     cfg = model.get_configinfo()
     cfg.save_as_class(stream, classname)
+

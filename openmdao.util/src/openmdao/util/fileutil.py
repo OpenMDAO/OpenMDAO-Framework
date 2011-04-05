@@ -32,6 +32,8 @@ class DirContext(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         os.chdir(self.startdir)
 
+def expand_path(path):
+    return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))
 
 def find_in_dir_list(fname, dirlist, exts=('',)):
     """Search the given list of directories for the specified file.

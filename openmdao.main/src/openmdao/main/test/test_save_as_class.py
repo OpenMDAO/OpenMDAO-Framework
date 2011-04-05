@@ -19,7 +19,7 @@ class Multiplier(Component):
     def __init__(self):
         super(Multiplier, self).__init__()
         self.rval_in = 4.
-        self.rval_out = 7.
+        self.rval_out = 6.
         self.mult = 1.5
 
     def execute(self):
