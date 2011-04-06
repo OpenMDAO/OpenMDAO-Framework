@@ -50,6 +50,7 @@ the module and then executes the constructor for the requested type.
 
 .. figure:: ../generated_images/LocalCreate.png
    :align: center
+   :alt: Boxes, lines, and arrows showing the creation of local components as described in the text
    
    Creation Process for Local Components
 
@@ -79,6 +80,7 @@ shows a more `detailed creation process`_ for a distributed component.
 
 .. figure:: ../generated_images/DistribCreate2.png
    :align: center
+   :alt: Refer to adjacent text
    
    Creation Process for a Distributed Component
 
@@ -91,6 +93,7 @@ shows a more `detailed creation process`_ for a distributed component.
 
 .. figure:: ../generated_images/DistributedCreate.png
    :align: center
+   :alt: Refer to caption
    
    Detailed Creation Process for a Distributed Component
 
@@ -111,6 +114,7 @@ be possible to create an adaptor -- if available -- between incompatible Variabl
 
 .. figure:: ../generated_images/ConnectInteraction.png
    :align: center
+   :alt: a line drawing showing how variables are linked
 
    Linking Variables
 
@@ -168,6 +172,7 @@ remote serialized state so that it can be located later during a load operation.
 
 .. figure:: ../generated_images/VersionSaveState.png
    :align: center
+   :alt: Refer to adjacent text
 
    Saving a Model with Versioned Components
 
@@ -177,6 +182,7 @@ remote serialized state so that it can be located later during a load operation.
 
 .. figure:: ../generated_images/VersionRestoreState.png
    :align: center
+   :alt: Refer to adjacent text
 
    Loading a Model with Versioned Components
 
@@ -211,13 +217,14 @@ iterate over its Workflow until it uses up all of the cases in the
 CaseIterator. 
 
 
-The following figure describes how a single Driver interacts with a Workflow
+The following figure shows how a single Driver interacts with a Workflow
 during execution.
 
 
 .. figure:: ../generated_images/RunInteraction.png
    :align: center
-
+   :alt: Refer to adjacent text
+   
    Execution
 
 In the figure `External Tool Run`_ the :term:`CommandLineWrapper`, when executed,
@@ -261,6 +268,7 @@ deployment of the new process.
 
 .. figure:: ../generated_images/ExtToolRun.png
    :align: center
+   :alt: Refer to adjacent text
 
    External Tool Run
  
@@ -281,6 +289,7 @@ any required unit conversion or other translation.
 
 .. figure:: ../generated_images/AssemblyXfer.png
    :align: center
+   :alt: Refer to adjacent text
 
    Variable Transfers Between Components
 
@@ -326,6 +335,7 @@ be configured to *pull* as necessary.
 
 .. figure:: ../generated_images/FirewallXfer.png
    :align: center
+   :alt: Refer to adjacent text
 
    Transfer Through a Firewall
 
@@ -337,6 +347,7 @@ peer as an argument.
 
 .. figure:: ../generated_images/ThirdPartyTransfer.png
    :align: center
+   :alt: In this drawing, two hosts are on one side of the firewall and one host on the other to illustrate 3rd-party transfers
 
    Third Party Transfers
 
@@ -355,6 +366,7 @@ ObjServer process that was started independently of an ObjServerFactory.
 
 .. figure:: ../generated_images/DistribPhysical.png
    :align: center
+   :alt: Refer to adjacent text
 
    Remote Distributed Execution
 
@@ -383,6 +395,7 @@ to require login or be open to anyone.
 
 .. figure:: ../generated_images/EggServer.png
    :align: center
+   :alt: Refer to adjacent text
 
    Component Publishing
    

@@ -23,15 +23,15 @@ Contents:
    :hidden:
         
    glossary
-   arch-doc/index
    std_lib/index
+   arch-doc/index
    
 
 Appendixes, Glossary, and Indexes
 ==================================
 
-* :ref:`appendix`
 * :ref:`stdlib`
+* :ref:`appendix`
 * :ref:`glossary`
 * :ref:`genindex`
 * :ref:`modindex`

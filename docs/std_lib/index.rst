@@ -3,7 +3,7 @@
 .. _Standard-Library-Reference:
 
 =======================================
-Appendix B:  Standard Library Reference
+Appendix A:  Standard Library Reference
 =======================================
 
 .. toctree::

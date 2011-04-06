@@ -54,7 +54,8 @@ The full process model is shown below.
 
 .. figure:: ../images/user-guide/Process_Diagram.png
    :align: center
-
+   :alt: Diagram of process model showing the vehicle assembly, the driving simulation component, and the optimizer
+   
    Process Model for Tutorial Problem
 
 
@@ -332,6 +333,7 @@ computer screen. The actual velocity profiles are available on the EPA website a
 
 .. figure:: ../images/user-guide/EPA-city.gif
    :align: center
+   :alt: line graph showing EPA city driving profile
 
    EPA City Driving Profile
 
@@ -339,6 +341,7 @@ computer screen. The actual velocity profiles are available on the EPA website a
 
 .. figure:: ../images/user-guide/EPA-highway.gif
    :align: center
+   :alt: line graph showing EPA highway driving profile 
 
    EPA Highway Driving Profile
 

@@ -31,6 +31,7 @@ All of these tutorials use the Sellar problem which consists of two disciplines 
 
 .. figure:: ../images/user-guide/SellarResized.png
    :align: center
+   :alt: Equations showing the two disciplines for the Sellar problem 
  
 Variables *z1, z2,* and *x1* are the design variables over which we'd like to minimize
 the objective. Both disciplines are functions of *z1* and *z2,* so they are called the 
@@ -129,8 +130,9 @@ following diagram illustrates the data flow for MDF applied to the Sellar proble
 
 .. figure:: ../images/user-guide/Arch-MDF.png
    :align: center
+   :alt: Diagram consists of boxes and arrows to show data flow for MDF applied to the Sellar problem.
    
-   Data Flow for MDF Applied to the Sellar Prroblem
+   Data Flow for MDF Applied to the Sellar Problem
 
 This diagram introduces a component called a *Broadcaster.* A Broadcaster is a component that
 enables a design variable to be set to the same value at multiple locations. If you recall, a
@@ -204,6 +206,7 @@ following diagram shows an iteration hierarchy for the MDF problem.
    
 .. figure:: ../images/user-guide/Arch-MDF-OpenMDAO.png
    :align: center
+   :alt: Diagram showing the Optimizer, workflow for the Optimizer, and workflow for the Solver
    
    Iteration Hierarchy for the MDF Problem
    
@@ -509,7 +512,8 @@ flow for IDF is illustrated in the following diagram:
 
 .. figure:: ../images/user-guide/Arch-IDF.png
    :align: center
-
+   :alt: diagram of boxes and arrows showing the data flow for the Individual Design Feasible 
+   
    Data Flow for IDF
    
 IDF needs only one driver, so there is just one workflow. The broadcaster and
@@ -517,7 +521,8 @@ the two disciplines are executed sequentially.
    
 .. figure:: ../images/user-guide/Arch-IDF-OpenMDAO.png
    :align: center
-   
+   :alt: The Broadcaster and two disciplines are represented by rounded boxes inside a square box, which is the workflow.
+    
    Iteration Hierarchy for IDF
    
 Next, we will create the ``SellarIDF`` assembly. First, all of our components
@@ -654,7 +659,8 @@ parameters of the various optimizers, as shown in the next diagram.
 
 .. figure:: ../images/user-guide/Arch-CO.png
    :align: center
-
+   :alt: Arrows and boxes showing data flow for collaborative optimization; there is one optimizer, one broadcaster, and two workflows.
+   
    Data Flow for CO
 
 The CO model has three optimizers, so there are three workflows. The top level
@@ -664,7 +670,8 @@ seen in the next figure.
    
 .. figure:: ../images/user-guide/Arch-CO-OpenMDAO.png
    :align: center
-   
+   :alt: Rounded and straight-sided rectangles showing the iteration hierarchy of the three workflows for CO
+      
    Iteration Hierarchy for CO
 
 First, we create the component instances and set up this iteration hierarchy. Notice
