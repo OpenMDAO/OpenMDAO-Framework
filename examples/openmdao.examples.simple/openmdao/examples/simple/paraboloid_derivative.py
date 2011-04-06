@@ -20,7 +20,7 @@ class ParaboloidDerivative(Component):
     def __init__(self):
         """ declare what derivatives that we can provide"""
         
-        super(Paraboloid_Derivative, self).__init__()
+        super(ParaboloidDerivative, self).__init__()
 
         self.derivatives.declare_first_derivative(self, 'f_xy', 'x')
         self.derivatives.declare_first_derivative(self, 'f_xy', 'y')
