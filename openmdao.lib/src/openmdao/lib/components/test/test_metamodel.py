@@ -143,16 +143,16 @@ class MetaModelTestCase(unittest.TestCase):
         metamodel.b = 2.
         metamodel.train_next = True
         metamodel.run()
-        inputs = [('meta2.a',None,metamodel.a),('meta2.b',None,metamodel.b)]
-        outputs = [('meta2.c',None,metamodel.c.mu),('meta2.d',None,metamodel.d.mu)]
+        inputs = [('meta2.a',metamodel.a),('meta2.b',metamodel.b)]
+        outputs = [('meta2.c',metamodel.c.mu),('meta2.d',metamodel.d.mu)]
         cases.append(Case(inputs=inputs,outputs=outputs))
         
         metamodel.a = 3.
         metamodel.b = 5.
         metamodel.train_next = True
         metamodel.run()
-        inputs = [('meta2.a',None,metamodel.a),('meta2.b',None,metamodel.b)]
-        outputs = [('meta2.c',None,metamodel.c.mu),('meta2.d',None,metamodel.d.mu)]
+        inputs = [('meta2.a',metamodel.a),('meta2.b',metamodel.b)]
+        outputs = [('meta2.c',metamodel.c.mu),('meta2.d',metamodel.d.mu)]
         cases.append(Case(inputs=inputs,outputs=outputs))
         
         case_iter = ListCaseIterator(cases)

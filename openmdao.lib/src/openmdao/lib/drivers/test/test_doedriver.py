@@ -189,7 +189,7 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), self.model.driver.DOEgenerator.num_sample_points)
-        msg = "driver: Exception getting 'driven.sum_z': " \
+        msg = "driver: Exception getting case outputs: " \
             "driven: object has no attribute 'sum_z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)
@@ -238,8 +238,8 @@ class TestCase(unittest.TestCase):
                 self.assertEqual(case.msg, 'driven: Forced error')
             else:
                 self.assertEqual(case.msg, None)
-                self.assertEqual(case.outputs[0][2],
-                                 rosen_suzuki(*[x[2] for x in case.inputs[:4]]))
+                self.assertEqual(case['driven.rosen_suzuki'],
+                                 rosen_suzuki(*[case['driven.x%s'%i] for i in range(4)]))
 
 if __name__ == "__main__":
     unittest.main()

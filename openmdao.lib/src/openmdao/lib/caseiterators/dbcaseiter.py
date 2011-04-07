@@ -8,7 +8,7 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.api import Case
 
 _casetable_attrs = set(['id','cname','msg','retries','model_id','timeEnter'])
-_vartable_attrs = set(['var_id','name','case_id','sense','value','idx'])
+_vartable_attrs = set(['var_id','name','case_id','sense','value'])
 
 def _query_split(query):
     """Return a tuple of lhs, relation, rhs after splitting on 
@@ -73,7 +73,7 @@ class DBCaseIterator(object):
         casecur = self._connection.cursor()
         casecur.execute(' '.join(sql))
           
-        sql = ['SELECT var_id,name,case_id,sense,value,idx from casevars WHERE case_id=%s']
+        sql = ['SELECT var_id,name,case_id,sense,value from casevars WHERE case_id=%s']
         if self.selectors is not None:
             for sel in self.selectors:
                 rhs,rel,lhs = _query_split(sel)
@@ -86,7 +86,7 @@ class DBCaseIterator(object):
             varcur.execute(combined % cid)
             inputs = []
             outputs = []
-            for var_id, vname, case_id, sense, value, idx in varcur:
+            for var_id, vname, case_id, sense, value in varcur:
                 if not isinstance(value, (float,int,str)):
                     try:
                         value = loads(str(value))
@@ -94,9 +94,9 @@ class DBCaseIterator(object):
                         raise UnpicklingError("can't unpickle value '%s' for case '%s' from database: %s" %
                                               (vname, cname, str(err)))
                 if sense=='i':
-                    inputs.append((vname, idx, value))
+                    inputs.append((vname, value))
                 else:
-                    outputs.append((vname, idx, value))
+                    outputs.append((vname, value))
             if len(inputs) > 0 or len(outputs) > 0:
                 yield Case(inputs=inputs, outputs=outputs,retries=retries,msg=msg,ident=cname)
             

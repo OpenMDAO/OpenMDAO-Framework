@@ -68,26 +68,27 @@ class DBCaseRecorder(object):
             case.msg = ''
         cur.execute("""insert into cases(id,cname,msg,retries,model_id,timeEnter) 
                            values (?,?,?,?,?,DATETIME('NOW'))""", 
-                                     (None, case.ident, case.msg, case.retries, self.model_id))
+                                     (None, str(case.ident), case.msg, case.retries, self.model_id))
         case_id = cur.lastrowid
         # insert the inputs and outputs into the vars table.  Pickle them if they're not one of the
         # built-in types int, float, or str.
         vlist = []
         
-        for name,idx,value in case.inputs:
+        for name,value in case.items(iotype='in'):
             if isinstance(value, (float,int,str)):
-                vlist.append((None, name, case_id, 'i', value, idx))
+                vlist.append((None, name, case_id, 'i', value))
             else:
-                vlist.append((None, name, case_id, 'i', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)), idx))
-        for name,idx,value in case.outputs:
+                vlist.append((None, name, case_id, 'i', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL))))
+        for name,value in case.items(iotype='out'):
             if isinstance(value, (float,int,str)):
-                vlist.append((None, name, case_id, 'o', value, idx))
+                vlist.append((None, name, case_id, 'o', value))
             else:
-                vlist.append((None, name, case_id, 'o', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)), idx))
+                vlist.append((None, name, case_id, 'o', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL))))
         for v in vlist:
-            cur.execute("insert into casevars(var_id,name,case_id,sense,value,idx) values(?,?,?,?,?,?)", 
+            cur.execute("insert into casevars(var_id,name,case_id,sense,value) values(?,?,?,?,?)", 
                             v)
         self._connection.commit()
+    
     def get_iterator(self):
         """Return a DBCaseIterator that points to our current DB."""
         return DBCaseIterator(dbfile=self._dbfile, connection=self._connection)

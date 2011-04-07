@@ -25,10 +25,10 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         driver.workflow.add(['comp1', 'comp2'])
         
         # now create some Cases
-        outputs = [('comp1.z', None, None), ('comp2.z', None, None)]
+        outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(10):
-            inputs = [('comp1.x', None, i), ('comp1.y', None, i*2)]
+            inputs = [('comp1.x', i), ('comp1.y', i*2)]
             cases.append(Case(inputs=inputs, outputs=outputs, ident='case%s'%i))
         driver.iterator = ListCaseIterator(cases)
 

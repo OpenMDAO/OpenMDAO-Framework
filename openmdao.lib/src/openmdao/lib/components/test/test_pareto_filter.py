@@ -12,13 +12,13 @@ class ParetoFilterTests(unittest.TestCase):
     def test_1d_filter(self):
         pf = ParetoFilter()
         x = [1,2,3,4,5,6,7,8,9,10]
-        cases = [Case(outputs=[("x",None,x_0)]) for x_0 in x]
+        cases = [Case(outputs=[("x",x_0)]) for x_0 in x]
         pf.case_sets = [ListCaseIterator(cases),]
         pf.criteria = ['x']
         pf.execute()
        
-        x_p = [case.outputs[0][2] for case in pf.pareto_set]
-        x_dom = [case.outputs[0][2] for case in pf.dominated_set]
+        x_p = [case['x'] for case in pf.pareto_set]
+        x_dom = [case['x'] for case in pf.dominated_set]
         
         self.assertEqual([1],x_p)
         self.assertEqual([2,3,4,5,6,7,8,9,10],x_dom)
@@ -29,14 +29,14 @@ class ParetoFilterTests(unittest.TestCase):
         y = [1,2,3,1,2,3,1,2,3]
         cases = []
         for x_0,y_0 in zip(x,y):
-            cases.append(Case(outputs=[("x",None,x_0),("y",None,y_0)]))
+            cases.append(Case(outputs=[("x",x_0),("y",y_0)]))
         
         pf.case_sets = [ListCaseIterator(cases),]
         pf.criteria = ['x','y']
         pf.execute()
 
-        x_p,y_p = zip(*[(case.outputs[0][2],case.outputs[1][2]) for case in pf.pareto_set])
-        x_dom,y_dom = zip(*[(case.outputs[0][2],case.outputs[1][2]) for case in pf.dominated_set])
+        x_p,y_p = zip(*[(case['x'],case['y']) for case in pf.pareto_set])
+        x_dom,y_dom = zip(*[(case['x'],case['y']) for case in pf.dominated_set])
         
         self.assertEqual((1,),x_p)
         self.assertEqual((1,),y_p)
@@ -49,14 +49,14 @@ class ParetoFilterTests(unittest.TestCase):
         y = [2,3,1,2,3,1,2,3]
         cases = []
         for x_0,y_0 in zip(x,y):
-            cases.append(Case(outputs=[("x",None,x_0),("y",None,y_0)]))
+            cases.append(Case(outputs=[("x",x_0),("y",y_0)]))
         
         pf.case_sets = [ListCaseIterator(cases),]
         pf.criteria = ['x','y']
         pf.execute()
 
-        x_p,y_p = zip(*[(case.outputs[0][2],case.outputs[1][2]) for case in pf.pareto_set])
-        x_dom,y_dom = zip(*[(case.outputs[0][2],case.outputs[1][2]) for case in pf.dominated_set])
+        x_p,y_p = zip(*[(case['x'],case['y']) for case in pf.pareto_set])
+        x_dom,y_dom = zip(*[(case['x'],case['y']) for case in pf.dominated_set])
         
         self.assertEqual((1,2),x_p)
         self.assertEqual((2,1),y_p)

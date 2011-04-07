@@ -30,10 +30,10 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         driver.workflow.add(['comp1', 'comp2'])
         
         # now create some Cases
-        outputs = [('comp1.z', None, None), ('comp2.z', None, None)]
+        outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(10):
-            inputs = [('comp1.x', None, i), ('comp1.y', None, i*2)]
+            inputs = [('comp1.x', i), ('comp1.y', i*2)]
             cases.append(Case(inputs=inputs, outputs=outputs, ident='case%s'%i))
         driver.iterator = ListCaseIterator(cases)
 
@@ -67,23 +67,23 @@ class DBCaseRecorderTestCase(unittest.TestCase):
     def test_pickle_conversion(self):
         recorder = DBCaseRecorder()
         for i in range(10):
-            inputs = [('comp1.x', None, i), ('comp1.y', None, i*2.)]
-            outputs = [('comp1.z', None, i*1.5), ('comp2.normal', None, NormalDistribution(float(i),0.5))]
+            inputs = [('comp1.x', i), ('comp1.y', i*2.)]
+            outputs = [('comp1.z', i*1.5), ('comp2.normal', NormalDistribution(float(i),0.5))]
             recorder.record(Case(inputs=inputs, outputs=outputs, ident='case%s'%i))
         iterator = recorder.get_iterator()
         for i,case in enumerate(iterator.get_iter()):
-            self.assertTrue(isinstance(case.outputs[1][2], NormalDistribution))
-            self.assertEqual(case.outputs[1][2].mu, float(i))
-            self.assertEqual(case.outputs[1][2].sigma, 0.5)
-            self.assertTrue(isinstance(case.inputs[1][2], float))
-            self.assertEqual(case.inputs[1][2], i*2.)
-            self.assertEqual(case.outputs[0][2], i*1.5)
+            self.assertTrue(isinstance(case['comp2.normal'], NormalDistribution))
+            self.assertEqual(case['comp2.normal'].mu, float(i))
+            self.assertEqual(case['comp2.normal'].sigma, 0.5)
+            self.assertTrue(isinstance(case['comp1.y'], float))
+            self.assertEqual(case['comp1.y'], i*2.)
+            self.assertEqual(case['comp1.z'], i*1.5)
             
     def test_query(self):
         recorder = DBCaseRecorder()
         for i in range(10):
-            inputs = [('comp1.x', None, i), ('comp1.y', None, i*2.)]
-            outputs = [('comp1.z', None, i*1.5), ('comp2.normal', None, NormalDistribution(float(i),0.5))]
+            inputs = [('comp1.x', i), ('comp1.y', i*2.)]
+            outputs = [('comp1.z', i*1.5), ('comp2.normal', NormalDistribution(float(i),0.5))]
             recorder.record(Case(inputs=inputs, outputs=outputs, ident='case%s'%i))
         iterator = recorder.get_iterator()
         iterator.selectors = ["value>=0","value<3"]
@@ -91,9 +91,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         count = 0
         for i,case in enumerate(iterator.get_iter()):
             count += 1
-            for name,idx,value in case.inputs:
-                self.assertTrue(value >= 0 and value<3)
-            for name,idx,value in case.outputs:
+            for name,value in case.items():
                 self.assertTrue(value >= 0 and value<3)
         self.assertEqual(count, 3)
 
@@ -123,7 +121,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         recorder = DBCaseRecorder(dfile)
         
         # create some Cases where some are missing a variable
-        outputs = [('comp1.z', None, None), ('comp2.z', None, None)]
+        outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(10):
             if i>1:
@@ -131,10 +129,10 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             else:
                 msg = 'an error occurred'
             if i<5:
-                inputs = [('comp1.x', None, i), ('comp1.y', None, i*2), ('comp1.y2', None, i*3)]
+                inputs = [('comp1.x', i), ('comp1.y', i*2), ('comp1.y2', i*3)]
             else:
-                inputs = [('comp1.x', None, i), ('comp1.y', None, i*2)]
-            recorder.record(Case(inputs=inputs, outputs=outputs, ident='case%s'%i, msg=msg))
+                inputs = [('comp1.x', i), ('comp1.y', i*2)]
+            recorder.record(Case(inputs=inputs, outputs=outputs, msg=msg))
 
         varnames = ['comp1.x','comp1.y','comp1.y2']
         varinfo = case_db_to_dict(dfile, varnames)

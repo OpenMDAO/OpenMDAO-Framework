@@ -32,9 +32,7 @@ def caseiter_to_dict(caseiter, varnames, include_errors=False):
         if include_errors is False and case.msg:
             continue  # case reported an error or warning message
 
-        for vname,idx,value in chain(case.inputs, case.outputs):
-            if idx:
-                vname = "%s%s" % (vname, idx)
+        for vname,value in case.items():
             if vname in varnames:
                 casedict[vname] = value
         
