@@ -1,0 +1,163 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* chrome puts 1em before and after ul */
+ul {
+    -webkit-margin-before: 0;
+    -webkit-margin-after: 0;
+    /* -moz-padding-start: 0; */
+    margin: 0;
+}
+
+/* menu at the top, console at the bottom, desktop in between */
+#menubar {
+  margin: 0;
+  clear: both;
+  width: 99.75%;
+}
+#desktop {
+  margin: 0;
+  clear: both;
+  width: 99.75%;
+  height: 70%;
+}
+#console {
+  margin: 0;
+  clear: both;
+  width: 99.75%;
+  height: 20%;
+}
+
+/* desktop (20% left & right columns, 59% central) */
+#leftcol {
+  margin: 0;
+  float: left;
+  width: 20%;
+  height: 100%;
+  overflow: auto;
+}
+#central {
+  margin: 0;
+  float: left;
+  width: 59%;
+  height: 100%;
+  overflow: auto;
+}
+#rightcol {
+  margin: 0;
+  float: left;
+  width: 20%;
+  height: 100%;
+  overflow: auto;
+}
+
+/* menus */
+nav {
+  display:block;
+  margin:0 auto 20px;
+  position:relative;
+  z-index:99;
+}
+nav ul {
+  padding: 0;
+  margin: 0;
+}
+nav ul:after {
+  content: ".";
+  display: block;
+  height: 0;
+  clear: both;
+  visibility: hidden;
+}
+nav li {
+  position: relative;
+  float: left;
+  list-style-type: none;
+  z-index: 99;
+}
+nav li a {
+  display: block;
+  padding: 10px 20px;
+}
+nav a span {
+  display: block;
+  float: right;
+  margin-left: 5px;
+}
+nav ul ul {
+  display: none;
+  width: 100%;
+  position: absolute;
+  left: 0;
+  z-index: 99;
+}
+nav ul ul li {
+  float: none;
+}
+nav ul ul a {
+  padding: 5px 10px;
+}
+
+.context-menu {
+  visibility: hidden; /* No, you cannot use display:none; */
+  position: absolute;
+}
+
+/* desktop tabbed panes (left, center & right) */
+dd {
+  margin: 0;
+}
+dl#central_tabs, dl#leftcol_tabs, dl#rightcol_tabs {
+  margin: 0;
+  width: 100%;
+  /* height: 100%; */
+  position: relative;
+}
+dl#central_tabs dt, dl#leftcol_tabs dt, dl#rightcol_tabs dt {
+  top: 0; 
+  margin: 0; 
+  position: relative; 
+  float: left;
+  display: block;
+  width: 75px;
+  height: 20px;
+  text-align: center;
+}
+dl#central_tabs dd, dl#leftcol_tabs dd, dl#rightcol_tabs dd {
+  margin: 0;
+  position: absolute;
+  left: 0;
+  top: 25px;
+  height: 100%;
+  width: 100%;
+}
+
+#otree, #ftree, #propertieseditor, #palette {
+  height: 100%;
+  width: 100%;
+}
+
+/* console (includes history and command form) */
+#historybox {
+  margin: 0;
+  width: 99%;
+  clear: both;
+  height: 80%;
+  overflow: auto;
+}
+#cmdform {
+  position: relative;
+  left: 3px;
+  clear: both;
+}
+#command {
+  width: 89.5%;
+  float: left;
+}
+#command-button {
+  width: 9%;
+  float: left;
+}
