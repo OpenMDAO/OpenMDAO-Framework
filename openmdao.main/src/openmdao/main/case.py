@@ -2,7 +2,7 @@
 from uuid import uuid1
 import re
 
-import ordereddict
+#import ordereddict
 
 from openmdao.main.expreval import ExprEvaluator
 
@@ -36,7 +36,7 @@ class Case(object):
         """
         self._exprs = None
         self._outputs = None
-        self._inputs = ordereddict.OrderedDict()
+        self._inputs = {}
 
         self.max_retries = max_retries  # times to retry after error(s)
         self.retries = retries          # times case was retried
@@ -186,7 +186,8 @@ class Case(object):
         """If the given string contains an expression, create an ExprEvaluator and
         store it in self._exprs
         """
-        if _namecheck_rgx.match(s) is None:
+        match = _namecheck_rgx.match(s)
+        if match is None or match.group() != s:
             expr =  ExprEvaluator(s)
             if self._exprs is None:
                 self._exprs = { s: expr }
