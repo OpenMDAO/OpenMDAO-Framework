@@ -205,7 +205,10 @@ class FiniteDifference(HasTraits):
         self.setup()
         
         # Dimension the matrices that will store the answers
-        self.hessian_obj = zeros([self.n_param, self.n_param], 'd')
+        if self.multi_obj:
+            self.hessian_obj = zeros([self.n_param, self.n_param, self.n_objective], 'd')
+        else:
+            self.hessian_obj = zeros([self.n_param, self.n_param], 'd')
         self.hessian_ineq_const = zeros([self.n_param, self.n_param, 
                                          self.n_ineqconst], 'd')
         self.hessian_eq_const = zeros([self.n_param, self.n_param, 
@@ -316,8 +319,14 @@ class FiniteDifference(HasTraits):
             eps = stepsize[icase]
             
             # Calculate Hessians
-            self.hessian_obj[icase, icase] = \
-                 diff_2nd_xx(case[0]['obj'], base_obj, case[1]['obj'], eps)
+            if self.multi_obj:
+                for j in range(0, self.n_objective):
+                    self.hessian_obj[icase, icase, j] = \
+                        diff_2nd_xx(case[0]['obj'][j], base_obj[j],
+                                    case[1]['obj'][j], eps)
+            else:
+                self.hessian_obj[icase, icase] = \
+                    diff_2nd_xx(case[0]['obj'], base_obj, case[1]['obj'], eps)
                  
             for j in range(0, self.n_ineqconst):
                 self.hessian_ineq_const[icase, icase, j] = \
@@ -339,14 +348,26 @@ class FiniteDifference(HasTraits):
                 eps2 = stepsize[jcase]
                 
                 # Calculate Hessians
-                self.hessian_obj[icase, jcase] = \
-                     diff_2nd_xy(case[0]['obj'], 
-                                 case[1]['obj'],
-                                 case[2]['obj'],
-                                 case[3]['obj'],
-                                 eps1, eps2)
-                
-                self.hessian_obj[jcase, icase] = self.hessian_obj[icase, jcase]
+                if self.multi_obj:
+                    for j in range(0, self.n_objective):
+                        self.hessian_obj[icase, jcase, j] = \
+                             diff_2nd_xy(case[0]['obj'][j], 
+                                         case[1]['obj'][j],
+                                         case[2]['obj'][j],
+                                         case[3]['obj'][j],
+                                         eps1, eps2)
+                        
+                    self.hessian_obj[jcase, icase, j] = self.hessian_obj[icase, jcase, j]
+                     
+                else:
+                    self.hessian_obj[icase, jcase] = \
+                         diff_2nd_xy(case[0]['obj'], 
+                                     case[1]['obj'],
+                                     case[2]['obj'],
+                                     case[3]['obj'],
+                                     eps1, eps2)
+                            
+                    self.hessian_obj[jcase, icase] = self.hessian_obj[icase, jcase]
                      
                 for j in range(0, self.n_ineqconst):
                     self.hessian_ineq_const[icase, jcase, j] = \
