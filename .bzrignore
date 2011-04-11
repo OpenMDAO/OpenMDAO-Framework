@@ -21,7 +21,6 @@ docs/readme.html
 wingproj.wpr
 _build
 doctrees
-html
 generated_images
 repo_lock
 docs/srcdocs/packages/*.rst
