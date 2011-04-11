@@ -21,10 +21,12 @@ class DumpCaseRecorder(object):
             out = self.out
             out.write("Case: %s\n" % case.ident)
             out.write("   inputs:\n")
-            for name,value in case.items(iotype='in'):
+            inputs = dict(case.items(iotype='in'))
+            for name,value in [(k,inputs[k]) for k in sorted(inputs.keys())]:
                 out.write('      %s = %s\n' % (name, value))
             out.write("   outputs:\n")
-            for name,value in case.items(iotype='out'):
+            outputs = dict(case.items(iotype='out'))
+            for name,value in [(k,outputs[k]) for k in sorted(outputs.keys())]:
                 out.write('      %s = %s\n' % (name, value))
             out.write("   max_retries: %s, retries: %s\n" % (case.max_retries, 
                                                              case.retries))
