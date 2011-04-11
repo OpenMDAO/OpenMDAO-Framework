@@ -30,7 +30,9 @@ class DBCaseRecorder(object):
         self._connection.execute("""
         create table %s cases(
          id INTEGER PRIMARY KEY,
-         cname TEXT,
+         text_id TEXT,
+         parent TEXT,
+         desc TEXT,
          msg TEXT,
          retries INTEGER,
          model_id TEXT,
@@ -43,8 +45,7 @@ class DBCaseRecorder(object):
          name TEXT,
          case_id INTEGER,
          sense TEXT,
-         value BLOB,
-         idx TEXT
+         value BLOB
          )""" % exstr)
 
     @property
@@ -66,9 +67,11 @@ class DBCaseRecorder(object):
         
         if not case.msg:
             case.msg = ''
-        cur.execute("""insert into cases(id,cname,msg,retries,model_id,timeEnter) 
-                           values (?,?,?,?,?,DATETIME('NOW'))""", 
-                                     (None, str(case.ident), case.msg, case.retries, self.model_id))
+        cur.execute("""insert into cases(id,text_id,parent,desc,msg,retries,model_id,timeEnter) 
+                           values (?,?,?,?,?,?,?,DATETIME('NOW'))""", 
+                                     (None, case.ident, case.parent_id, case.desc,
+                                      case.msg, case.retries, 
+                                      self.model_id))
         case_id = cur.lastrowid
         # insert the inputs and outputs into the vars table.  Pickle them if they're not one of the
         # built-in types int, float, or str.
@@ -107,14 +110,9 @@ def list_db_vars(dbname):
         The name of the sqlite DB file.
     """
     connection = sqlite3.connect(dbname)
-    varnames = set()
     varcur = connection.cursor()
-    varcur.execute("SELECT name, idx from casevars")
-    for vname, idx in varcur:
-        if idx:
-            vname = "vname%s" % idx
-        varnames.add(vname)
-
+    varcur.execute("SELECT name from casevars")
+    varnames = set([v for v in varcur])
     return varnames
 
 def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=False):
@@ -160,7 +158,7 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
     casecur = connection.cursor()
     casecur.execute(' '.join(sql))
     
-    sql = ["SELECT name, value, idx from casevars WHERE case_id=%s"]
+    sql = ["SELECT name, value from casevars WHERE case_id=%s"]
     vars_added = False
     for i,name in enumerate(varnames):
         if i==0:
@@ -184,15 +182,13 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
     for case_id in casecur:
         casedict = {}
         varcur.execute(combined % case_id)
-        for vname, value, idx in varcur:
+        for vname, value in varcur:
             if not isinstance(value, (float,int,str)):
                 try:
                     value = loads(str(value))
                 except UnpicklingError as err:
                     raise UnpicklingError("can't unpickle value '%s' from database: %s" %
                                           (vname, str(err)))
-            if idx:
-                vname = "%s%s" % (vname,idx)
             casedict[vname] = value
         
         if len(casedict) != len(varnames):

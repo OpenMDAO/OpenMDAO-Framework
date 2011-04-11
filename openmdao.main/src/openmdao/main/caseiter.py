@@ -1,4 +1,5 @@
-from itertools import chain
+
+from openmdao.main.case import Case
 
 
 def caseiter_to_dict(caseiter, varnames, include_errors=False):
@@ -43,4 +44,21 @@ def caseiter_to_dict(caseiter, varnames, include_errors=False):
             vardict[name].append(value)
             
     return vardict
+    
+
+#class CaseSet(object):
+    #"""A CaseIterator that produces Cases with the same set of input/output strings
+    #but different data.
+    #"""
+    #def __init__(self, input_names=None, output_names=None):
+        #self._inputs = {}
+        #self._outputs = {}
+        #if input_names is not None:
+            #for name in input_names:
+                #self._inputs[name] = []
+        #if output_names is not None:
+            #for name in output_names:
+                #self._outputs[name] = []
+                
+
     

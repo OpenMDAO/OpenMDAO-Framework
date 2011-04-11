@@ -224,7 +224,7 @@ class Assembly (Component):
         
     def execute (self):
         """Runs driver and updates our boundary variables."""
-        self.driver.run(ffd_order=self.ffd_order)
+        self.driver.run(ffd_order=self.ffd_order, case_id=self._case_id)
         
         # now update boundary outputs
         valids = self._valid_dict

@@ -7,7 +7,7 @@ from openmdao.lib.datatypes.api import implements
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.api import Case
 
-_casetable_attrs = set(['id','cname','msg','retries','model_id','timeEnter'])
+_casetable_attrs = set(['id','text_id','parent','desc','msg','retries','model_id','timeEnter'])
 _vartable_attrs = set(['var_id','name','case_id','sense','value'])
 
 def _query_split(query):
@@ -82,7 +82,7 @@ class DBCaseIterator(object):
         combined = ' '.join(sql)
         varcur = self._connection.cursor()
         
-        for cid,cname,msg,retries,model_id,timeEnter in casecur:
+        for cid,text_id,parent,desc,msg,retries,model_id,timeEnter in casecur:
             varcur.execute(combined % cid)
             inputs = []
             outputs = []
@@ -98,5 +98,5 @@ class DBCaseIterator(object):
                 else:
                     outputs.append((vname, value))
             if len(inputs) > 0 or len(outputs) > 0:
-                yield Case(inputs=inputs, outputs=outputs,retries=retries,msg=msg,ident=cname)
+                yield Case(inputs=inputs, outputs=outputs,retries=retries,msg=msg,desc=desc)
             

@@ -34,7 +34,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         cases = []
         for i in range(10):
             inputs = [('comp1.x', i), ('comp1.y', i*2)]
-            cases.append(Case(inputs=inputs, outputs=outputs, ident='case%s'%i))
+            cases.append(Case(inputs=inputs, outputs=outputs, desc='case%s'%i))
         driver.iterator = ListCaseIterator(cases)
 
     def test_inoutDB(self):
@@ -60,8 +60,9 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             '   outputs:',
             '      comp1.z = 24.0',
             '      comp2.z = 25.0',
-            '   max_retries: None, retries: 1',
+            '   max_retries: None, retries: None',
             ]
+        
         self.assertTrue('\n'.join(expected) in sout.getvalue())
     
     def test_pickle_conversion(self):
@@ -69,7 +70,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         for i in range(10):
             inputs = [('comp1.x', i), ('comp1.y', i*2.)]
             outputs = [('comp1.z', i*1.5), ('comp2.normal', NormalDistribution(float(i),0.5))]
-            recorder.record(Case(inputs=inputs, outputs=outputs, ident='case%s'%i))
+            recorder.record(Case(inputs=inputs, outputs=outputs, desc='case%s'%i))
         iterator = recorder.get_iterator()
         for i,case in enumerate(iterator.get_iter()):
             self.assertTrue(isinstance(case['comp2.normal'], NormalDistribution))
@@ -84,7 +85,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         for i in range(10):
             inputs = [('comp1.x', i), ('comp1.y', i*2.)]
             outputs = [('comp1.z', i*1.5), ('comp2.normal', NormalDistribution(float(i),0.5))]
-            recorder.record(Case(inputs=inputs, outputs=outputs, ident='case%s'%i))
+            recorder.record(Case(inputs=inputs, outputs=outputs, desc='case%s'%i))
         iterator = recorder.get_iterator()
         iterator.selectors = ["value>=0","value<3"]
 

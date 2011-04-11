@@ -27,7 +27,7 @@ class Case(object):
 
     """
     def __init__(self, inputs=None, outputs=None, max_retries=None,
-                 retries=None, ident=None, msg=''):
+                 retries=None, desc=None, parent_id=None, msg=''):
         """If inputs are supplied to the constructor, it must be an
         iterator that returns (name,value) tuples, where name is allowed
         to contain array notation and/or function calls. outputs must be
@@ -42,7 +42,9 @@ class Case(object):
         self.retries = retries          # times case was retried
         self.msg = msg                  # If non-null, error message.
                                         # Implies outputs are invalid. 
-        self.ident = ident if ident is not None else uuid1()
+        self.desc = desc   # optional description
+        self.ident = str(uuid1())  # unique identifier
+        self.parent_id = parent_id  # identifier of parent case, if any
 
         if inputs: 
             self.add_inputs(inputs)
@@ -54,13 +56,18 @@ class Case(object):
             outs = self._outputs.items()
         else:
             outs = []
-        return 'Case %s:\n' \
+        return 'Case %s: (parent_id %s)\n' \
+               '    description: %s\n' \
                '    inputs: %s\n' \
                '    outputs: %s\n' \
                '    max_retries: %s, retries: %s\n' \
                '    msg: %s' % \
-               (str(self.ident), self._inputs.items(), outs,
-                self.max_retries, self.retries, self.msg)
+               (self.ident, self.parent_id, 
+                self.desc,
+                self._inputs.items(), 
+                outs,
+                self.max_retries, self.retries, 
+                self.msg)
     
     #def __eq__(self,other): 
         #if self._inputs == other._inputs and self._outputs == other._outputs: 
@@ -87,7 +94,12 @@ class Case(object):
         return name in self._inputs or (self._outputs and name in self._outputs)
     
     def items(self, iotype=None):
-        if iotype == 'in':
+        if iotype is None:
+            lst = self._inputs.items()
+            if self._outputs:
+                lst.extend(self._outputs.items())
+            return lst
+        elif iotype == 'in':
             return self._inputs.items()
         elif iotype == 'out':
             if self._outputs:
@@ -95,27 +107,21 @@ class Case(object):
             else:
                 return []
         else:
-            lst = self._inputs.items()
-            if self._outputs:
-                lst.extend(self._outputs.items())
-            return lst
+            raise NameError("invalid iotype arg (%s) passed to items()" % str(iotype))
 
     def apply_inputs(self, scope):
         """Set all of the inputs in this case to their specified values in
         the given scope.
         """
-        if self.retries is None:
-            self.retries = 0
-        else:
-            self.retries += 1
-        for name,value in self._inputs.items():
-            if self._exprs:
+        if self._exprs:
+            for name,value in self._inputs.items():
                 expr = self._exprs.get(name)
                 if expr:
                     expr.set(value, scope)
-            else:
-                expr = None
-            if expr is None:
+                else:
+                    scope.set(name, value)
+        else:
+            for name,value in self._inputs.items():
                 scope.set(name, value)
 
     def update_outputs(self, scope, msg=None):
@@ -127,14 +133,12 @@ class Case(object):
         if self._outputs is not None:
             # TODO: make this smart enough to do a multiget on a component
             #       instead of multiple individual gets
-            for name in self._outputs.keys():
-                if self._exprs:
+            if self._exprs:
+                for name in self._outputs.keys():
                     expr = self._exprs.get(name)
-                else:
-                    expr = None
-                if expr:
-                    self._outputs[name] = expr.evaluate(scope)
-                else:
+                    self._outputs[name] = expr.evaluate(scope) if expr else scope.get(name)
+            else:
+                for name in self._outputs.keys():
                     self._outputs[name] = scope.get(name)
 
     def add_input(self, name, value):

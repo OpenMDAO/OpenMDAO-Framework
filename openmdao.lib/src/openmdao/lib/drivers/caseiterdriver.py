@@ -485,6 +485,7 @@ class CaseIterDriverBase(Driver):
                 case.max_retries = self.max_retries
             case.retries = 0
         case.msg = None
+        case.parent_case_id = self._case_id
 
         try:
             for event in self.get_events(): 
