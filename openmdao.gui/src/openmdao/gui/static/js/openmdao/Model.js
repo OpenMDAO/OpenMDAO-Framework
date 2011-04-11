@@ -249,7 +249,7 @@ openmdao.Model=function() {
     this.removeFile = function(filepath) {
         jQuery.ajax({
             url: 'remove',
-            type: 'GET',
+            type: 'POST',
             dataType: 'text',
             data: { 'file': filepath },
             success: that.updateListeners

@@ -429,7 +429,7 @@ class File:
 class Remove:
     ''' remove the specified file or object
     '''
-    def GET(self):
+    def POST(self):
         x = web.input()
         if hasattr(x,'file'):
             web.debug("removing file: " + str(x.file))
