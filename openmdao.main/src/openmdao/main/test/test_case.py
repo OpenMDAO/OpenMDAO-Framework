@@ -52,7 +52,27 @@ class CaseTestCase(unittest.TestCase):
         self.assertTrue('comp2.c+comp2.d' in self.case)
         
     def test_items(self):
-        self.assertEqual(set(self.case.items(iotype='in')), set(self.inputs))
+        inputs = dict(self.case.items(iotype='in'))
+        self.assertEqual(len(self.inputs), len(inputs))
+        for name,val in self.inputs:
+            self.assertTrue(name in inputs)
+            self.assertEqual(val, inputs[name])
+            
+        outputs = dict(self.case.items(iotype='out'))
+        expected_outs = dict([(k,v) for k,v in zip(self.outputs, [12,24])])
+        self.assertEqual(len(expected_outs), len(outputs))
+        for name, val in expected_outs.items():
+            self.assertTrue(name in outputs)
+            self.assertEqual(val, outputs[name])
+            
+        both = dict(self.case.items())
+        expected = expected_outs
+        expected.update(self.inputs)
+        self.assertEqual(len(both), len(self.inputs)+len(self.outputs))
+        for name, val in expected.items():
+            self.assertTrue(name in both)
+            self.assertEqual(val, both[name])
+        
 
 if __name__ == "__main__":
     unittest.main()
