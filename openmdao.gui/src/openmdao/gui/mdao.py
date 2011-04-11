@@ -276,7 +276,7 @@ class Exit:
         if cserver_dict.has_key(session.session_id):
             cserver = cserver_dict[session.session_id]
             web.debug("cleanup on aisle " + str(cserver.get_pid()))
-            cserver.cleanup();
+            Process(target=cserver.cleanup).start()
         session.kill()
         quit(0)
         

@@ -2,6 +2,12 @@ html {
   font:12px Tahoma, Sans-serif;
 }
 
+ul {
+  margin-left: 1em;
+  padding-left: 1em;
+}
+
+
 /* colors & borders */
 #menubar {
   background:#000;
