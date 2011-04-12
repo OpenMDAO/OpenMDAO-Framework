@@ -1,0 +1,20 @@
+<title>Projects</title>
+
+{% if user.is_authenticated %}
+    <p>Welcome, {{ user.username }}. Here are your projects:</p>
+{% else %}
+    <p>Welcome, new user. Please log in.</p>
+{% endif %}
+
+{% if project_list %}
+    <ul>
+    {% for project in project_list %}
+        <li><a href="/projects/{{ project.id }}/">{{ project.projectname }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No projects are available.</p>
+{% endif %}
+
+
+<a href="/accounts/logout?next=/">Logout</a>
