@@ -19,9 +19,10 @@ class DumpCaseRecorder(object):
         """Dump the given Case in a "pretty" form."""
         if self.out:  # if self.out is None, just do nothing
             out = self.out
-            out.write("Case: %s" % case.ident)
+            out.write("Case: %s" % case.desc)
+            out.write("\n   id: %s" % case.ident)
             if case.parent_id:
-                out.write(" (parent id %s)" % case.parent_id)
+                out.write("\n   parent id: %s)" % case.parent_id)
             out.write("\n   inputs:\n")
             inputs = dict(case.items(iotype='in'))
             for name,value in [(k,inputs[k]) for k in sorted(inputs.keys())]:

@@ -54,6 +54,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         self.top.run()
         expected = [
             'Case: case8',
+            '   id: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   inputs:',
             '      comp1.x = 8',
             '      comp1.y = 16',
@@ -62,8 +63,13 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             '      comp2.z = 25.0',
             '   max_retries: None, retries: None',
             ]
-        
-        self.assertTrue('\n'.join(expected) in sout.getvalue())
+        lines = sout.getvalue().split('\n')
+        index = lines.index('Case: case8')
+        for i in range(len(expected)):
+            if expected[i].startswith('   id:'):
+                self.assertTrue(lines[index+i].startswith('   id:'))
+            else:
+                self.assertEqual(lines[index+i], expected[i])
     
     def test_pickle_conversion(self):
         recorder = DBCaseRecorder()
