@@ -24,41 +24,19 @@ def caseiter_to_dict(caseiter, varnames, include_errors=False):
         
     """
     
-    varnames = set(varnames)
-    
     vardict = dict([(name,[]) for name in varnames])
 
     for case in caseiter.get_iter():
-        casedict = {}
         if include_errors is False and case.msg:
             continue  # case reported an error or warning message
-
-        for vname,value in case.items():
-            if vname in varnames:
-                casedict[vname] = value
-        
-        if len(casedict) != len(varnames):
-            continue   # case doesn't contain a complete set of specified vars, so skip it to avoid data mismatches
-        
-        for name, value in casedict.items():
-            vardict[name].append(value)
-            
+        try:
+            casevals = [case[name] for name in vardict]
+            idx = 0
+            for name, lst in vardict.items():
+                lst.append(casevals[idx])
+                idx += 1
+        except KeyError:
+            continue # case doesn't contain a complete set of specified vars, 
+                     # so skip it to avoid data mismatches
     return vardict
-    
-
-#class CaseSet(object):
-    #"""A CaseIterator that produces Cases with the same set of input/output strings
-    #but different data.
-    #"""
-    #def __init__(self, input_names=None, output_names=None):
-        #self._inputs = {}
-        #self._outputs = {}
-        #if input_names is not None:
-            #for name in input_names:
-                #self._inputs[name] = []
-        #if output_names is not None:
-            #for name in output_names:
-                #self._outputs[name] = []
-                
-
     

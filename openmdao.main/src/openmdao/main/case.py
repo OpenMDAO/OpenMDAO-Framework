@@ -93,6 +93,12 @@ class Case(object):
     def __contains__(self, name):
         return name in self._inputs or (self._outputs and name in self._outputs)
     
+    def __len__(self):
+        if self._outputs is None:
+            return len(self._inputs)
+        else:
+            return len(self._inputs) + len(self._outputs)
+    
     def items(self, iotype=None):
         if iotype is None:
             lst = self._inputs.items()

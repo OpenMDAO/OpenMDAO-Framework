@@ -143,8 +143,9 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
         If True, include data from cases that reported an error.
         
     """
-    varnames = set(varnames)
     connection = sqlite3.connect(dbname)
+    vardict = dict([(name,[]) for name in varnames])
+
     sql = ["SELECT id FROM cases"]
     qlist = []
     if case_sql:
@@ -160,7 +161,7 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
     
     sql = ["SELECT name, value from casevars WHERE case_id=%s"]
     vars_added = False
-    for i,name in enumerate(varnames):
+    for i,name in enumerate(vardict.keys()):
         if i==0:
             sql.append("AND (")
         else:
@@ -175,10 +176,6 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
     
     varcur = connection.cursor()
     
-    vardict = {}
-    for name in varnames:
-        vardict[name] = []
-
     for case_id in casecur:
         casedict = {}
         varcur.execute(combined % case_id)
@@ -191,7 +188,7 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
                                           (vname, str(err)))
             casedict[vname] = value
         
-        if len(casedict) != len(varnames):
+        if len(casedict) != len(vardict):
             continue   # case doesn't contain a complete set of specified vars, so skip it to avoid data mismatches
         
         for name, value in casedict.items():

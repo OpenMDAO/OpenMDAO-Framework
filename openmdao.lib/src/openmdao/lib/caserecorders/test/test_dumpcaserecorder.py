@@ -29,7 +29,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         cases = []
         for i in range(10):
             inputs = [('comp1.x', i), ('comp1.y', i*2)]
-            cases.append(Case(inputs=inputs, outputs=outputs, ident='case%s'%i))
+            cases.append(Case(inputs=inputs, outputs=outputs, desc='case%s'%i))
         driver.iterator = ListCaseIterator(cases)
 
     def test_dumprecorder(self):
@@ -38,15 +38,22 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         self.top.run()
         expected = [
             'Case: case8',
+            '   id: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   inputs:',
             '      comp1.x = 8',
             '      comp1.y = 16',
             '   outputs:',
             '      comp1.z = 24.0',
             '      comp2.z = 25.0',
-            '   max_retries: None, retries: 0',
+            '   max_retries: None, retries: None',
             ]
-        self.assertTrue('\n'.join(expected) in sout.getvalue())
+        lines = sout.getvalue().split('\n')
+        index = lines.index('Case: case8')
+        for i in range(len(expected)):
+            if expected[i].startswith('   id:'):
+                self.assertTrue(lines[index+i].startswith('   id:'))
+            else:
+                self.assertEqual(lines[index+i], expected[i])
         
 if __name__ == '__main__':
     unittest.main()
