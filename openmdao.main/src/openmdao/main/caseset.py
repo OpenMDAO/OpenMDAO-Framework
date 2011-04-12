@@ -5,7 +5,7 @@ class CaseSet(object):
     """A CaseRecorder/CaseIterator containing Cases having the same set of input/output strings
     but different data.
     """
-    def __init__(self, obj=None, parent_id=None):
+    def __init__(self, obj=None, parent_id=None, unique=False):
         """
         obj: dict, Case, or None
             if obj is a dict, it is assumed to contain all var names as keys, with
@@ -20,27 +20,30 @@ class CaseSet(object):
         
         parent_id: str
             The id of the parent Case (if any)
+            
+        unique: bool
+            If True, don't add cases with values that duplicate existing cases in the
+            set.
         """
-        self._inputs = None
-        self._outputs = None
         self._parent_id = parent_id
+        self._names = []
+        self._values = []
+        if unique:
+            self._tupset = set()
+        else:
+            self._tupset = None
         if isinstance(obj, dict):
-            self._validate_dict(obj)
-            self._casedata = obj.copy()
+            self._add_dict_cases(obj)
         elif isinstance(obj, Case):
-            self._casedata = {}
-            for name,val in obj.items():
-                self._casedata[name] = [val]
-            self._inputs = set(obj._inputs.keys())
-            if obj._outputs:
-                self._outputs = set(obj._outputs.keys())
+            self.record(obj)
         elif obj is None:
-            self._casedata = None
+            pass
         else:
             raise TypeError("obj must be a dict, a Case, or None")
                 
-    def _validate_dict(self, dct):
+    def _add_dict_cases(self, dct):
         length = -1
+        inputs = [] # we can't tell what's an input or an output, so assume all are inputs
         for key, val in dct.items():
             if not isinstance(key, basestring):
                 raise TypeError("dictionary key '%s' is not a string" % key)
@@ -49,49 +52,53 @@ class CaseSet(object):
             if length != len(val):
                 raise ValueError("number of values at key '%s' (%d) differs " % (key,len(val)) +
                                  "from number of other values (%d) in CaseSet" % length)
+            ???
 
     def record(self, case):
         """Record the given Case."""
-        if self._casedata is None:
-            for name,val in case.items():
-                self._casedata[name] = [val]
-            self._inputs = set(case._inputs.keys())
-            if case._outputs:
-                self._outputs = set(case._outputs.keys())
+        if not self._values:
+            self._names = case.keys(iotype='in')
+            tmp = [v for k,v in case.items(iotype='in')]
+            self._split_idx = len(self._names)  # index where we switch from inputs to outputs
+            self._names.extend(case.keys(iotype='out'))
+            tmp.extend([v for k,v in case.items(iotype='out')])
+            if self._tupset is not None:
+                tmp = tuple(tmp)  # if we're storing tuples in a set, store values as tuple
+                                  # and store the same tuple in both places to save space
+                self._tupset.add(tmp)
+            self._values.append(tmp)  # so _values may contain lists or tuples
         else:
+            if len(self._names) != len(case):
+                raise ValueError("case has different inputs/outputs than CaseSet")
             try:
-                for name,val in case.items():
-                    self._casedata[name].append(val)
-            except KeyError:
-                badname = name
-                for name,val in case.items():
-                    if name == badname:
-                        break
-                    self._casedata[name].pop() # remove value we added for this bad Case
+                tmp = [case[n] for n in self._names]
+            except KeyError, err:
+                raise KeyError("input or output is missing from case: %s" % str(err))
+            if self._tupset is None:
+                self._values.append(tmp)
+            else:
+                tmp = tuple(tmp)
+                if tmp not in self._tupset:
+                    self._tupset.add(tmp)
+                    self._values.append(tmp)
     
     def get_iter(self):
         return self._next_case()
 
     def _next_case(self):
-        numvals = 0
-        for name, lst in self._casedata.iteritems(): 
-            numvals = len(lst)  # just need to get number of values, so grab first variable
-            break
-        
-        for i in range(numvals):
+        for i in range(len(self._values)):
             yield self.__getitem__(i)
     
-    def __getitem__(self, idx):
-        if isinstance(idx, basestring):
-            return self._casedata[idx].copy()  # return all of the values for the given name
-        else:  # return Case number idx
-            for name, lst in self._casedata.items():
-                inputs = []
-                outputs = []
-                if self._outputs and name in self._outputs:
-                    outputs.append((name, lst[idx]))
-                else:
-                    inputs.append((name, lst[idx]))
-            return Case(inputs=inputs, output=outputs, parent_id=self._parent_id)
+    def __getitem__(self, key):
+        if isinstance(key, basestring): # return all of the values for the given name
+            idx = self._names.index(key)
+            return [lst[idx] for lst in self._values]
+        else:  # key is the case number
+            lst = self._values[key]
+            return Case(inputs=[(n,v) for n,v in zip(self._names[0:self._split_idx],
+                                                     lst[0:self._split_idx])],
+                        outputs=[(n,v) for n,v in zip(self._names[self._split_idx:],
+                                                      lst[self._split_idx:])],
+                        parent_id=self._parent_id)
             
             

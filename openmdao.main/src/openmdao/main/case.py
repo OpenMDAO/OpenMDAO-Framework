@@ -69,10 +69,18 @@ class Case(object):
                 self.max_retries, self.retries, 
                 self.msg)
     
-    #def __eq__(self,other): 
-        #if self._inputs == other._inputs and self._outputs == other._outputs: 
-            #return True
-        #return False
+    def __eq__(self,other): 
+        if self is other:
+            return True
+        try:
+            if len(self) != len(other):
+                return False
+            for selftup, othertup in zip(self.items(), other.items()):
+                if selftup[0] != othertup[0] or selftup[1] != othertup[1]:
+                    return False
+        except:
+            pass
+        return False
     
     def __getitem__(self, name):
         val = self._inputs.get(name, _Missing)
@@ -114,6 +122,23 @@ class Case(object):
                 return []
         else:
             raise NameError("invalid iotype arg (%s) passed to items()" % str(iotype))
+        
+    def keys(self, iotype=None):
+        if iotype is None:
+            lst = self._inputs.keys()
+            if self._outputs:
+                lst.extend(self._outputs.keys())
+            return lst
+        elif iotype == 'in':
+            return self._inputs.keys()
+        elif iotype == 'out':
+            if self._outputs:
+                return self._outputs.keys()
+            else:
+                return []
+        else:
+            raise NameError("invalid iotype arg (%s) passed to keys()" % str(iotype))
+        
 
     def apply_inputs(self, scope):
         """Set all of the inputs in this case to their specified values in
