@@ -2,8 +2,8 @@
 from openmdao.main.case import Case
 
 class CaseSet(object):
-    """A CaseRecorder/CaseIterator containing Cases having the same set of input/output strings
-    but different data.
+    """A CaseRecorder/CaseIterator containing Cases having the same set of
+    input/output strings but different data.
     """
     def __init__(self, obj=None, parent_id=None, unique=False):
         """
@@ -23,7 +23,8 @@ class CaseSet(object):
             
         unique: bool
             If True, don't add cases with values that duplicate existing cases in the
-            set.
+            set. Note that if unique is True, exceptions will be raised if any data values 
+            in an added case are not hashable, i.e. lists, dicts, etc.
         """
         self._parent_id = parent_id
         self._names = []
@@ -43,8 +44,8 @@ class CaseSet(object):
                 
     def _add_dict_cases(self, dct):
         length = -1
-        inputs = [] # we can't tell what's an input or an output, so treat all as inputs
         self._names = dct.keys()
+        self._split_idx = len(self._names) # treat all names as inputs
         biglist = []
         for key, val in dct.items():
             if not isinstance(key, basestring):
@@ -75,16 +76,12 @@ class CaseSet(object):
         self._split_idx = len(self._names)  # index where we switch from inputs to outputs
         self._names.extend(case.keys(iotype='out'))
         tmp.extend([v for k,v in case.items(iotype='out')])
-        if self._tupset is not None:
-            tmp = tuple(tmp)  # if we're storing tuples in a set, store values as tuple
-                              # and store the same tuple in both places to save space
-            self._tupset.add(tmp)
-        self._values.append(tmp)  # _values may contain either lists or tuples
+        return tmp
         
     def record(self, case):
         """Record the given Case."""
         if not self._values:
-            self._first_case(case)
+            tmp = self._first_case(case)
         else:
             if len(self._names) != len(case):
                 raise ValueError("case has different inputs/outputs than CaseSet")
@@ -92,13 +89,14 @@ class CaseSet(object):
                 tmp = [case[n] for n in self._names]
             except KeyError, err:
                 raise KeyError("input or output is missing from case: %s" % str(err))
-            if self._tupset is None:
+        if self._tupset is not None:
+            tmp = tuple(tmp) # if we're storing tuples in a set, store values as tuple
+                              # and store the same tuple in both places to save space
+            if tmp not in self._tupset:
+                self._tupset.add(tmp)
                 self._values.append(tmp)
-            else:
-                tmp = tuple(tmp)
-                if tmp not in self._tupset:
-                    self._tupset.add(tmp)
-                    self._values.append(tmp)
+        else:
+            self._values.append(tmp)
     
     def get_iter(self):
         return self._next_case()
@@ -124,4 +122,5 @@ class CaseSet(object):
                                                       lst[self._split_idx:])],
                         parent_id=self._parent_id)
             
-            
+    def __len__(self):
+        return len(self._values)
