@@ -9,6 +9,7 @@ import os
 import tempfile
 import logging
 import shutil
+import copy
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
@@ -162,6 +163,44 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         except OSError:
             logging.error("problem removing directory %s" % tmpdir)
 
+
+class NestedCaseTestCase(unittest.TestCase):
+
+    def _create_assembly(self, top=None):
+        asm = Assembly()
+        driver = asm.add('driver', SimpleCaseIterDriver())
+        asm.add('comp1', ExecComp(exprs=['z=x+y']))
+        asm.add('comp2', ExecComp(exprs=['z=x+y']))
+        asm.connect('comp1.z', 'comp2.x')
+        driver.workflow.add(['comp1', 'comp2'])
+        if top:
+            top.add('asm', asm)
+            top.driver.workflow.add('asm')
+        return asm
+
+    def setUp(self):
+        self.top = set_as_top(self._create_assembly())
+        self._create_assembly(self.top)
+        self._create_assembly(self.top)
+        
+        # now create some Cases
+        outputs = ['comp1.z', 'comp2.z']
+        cases = []
+        for i in range(5):
+            inputs = [('comp1.x', i), ('comp1.y', i*2)]
+            cases.append(Case(inputs=inputs, outputs=outputs, desc='case%s'%i))
+            
+        self.top.driver.iterator = ListCaseIterator(cases)
+        self.top.asm.driver.iterator = ListCaseIterator(copy.deepcopy(cases))
+        self.top.asm.asm.driver.iterator = ListCaseIterator(copy.deepcopy(cases))
+        
+        
+    def test_nested(self):
+        self.top.run()
+        
+
+            
+            
 if __name__ == '__main__':
     unittest.main()
 
