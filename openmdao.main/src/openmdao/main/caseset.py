@@ -28,7 +28,7 @@ class CaseSet(object):
         self._parent_id = parent_id
         self._names = []
         self._values = []
-        if unique:
+        if unique: # if uniqe is True, store values as tuples in a set and force uniqueness
             self._tupset = set()
         else:
             self._tupset = None
@@ -43,7 +43,9 @@ class CaseSet(object):
                 
     def _add_dict_cases(self, dct):
         length = -1
-        inputs = [] # we can't tell what's an input or an output, so assume all are inputs
+        inputs = [] # we can't tell what's an input or an output, so treat all as inputs
+        self._names = dct.keys()
+        biglist = []
         for key, val in dct.items():
             if not isinstance(key, basestring):
                 raise TypeError("dictionary key '%s' is not a string" % key)
@@ -52,21 +54,37 @@ class CaseSet(object):
             if length != len(val):
                 raise ValueError("number of values at key '%s' (%d) differs " % (key,len(val)) +
                                  "from number of other values (%d) in CaseSet" % length)
-            ???
+            biglist.append(val)
+        self._values = []
+        if length > 0:
+            idxs = range(len(self._names))
+            for i in range(length):
+                lst = [biglist[j][i] for j in idxs]
+                if self._tupset is None:
+                    self._values.append(lst)
+                else:
+                    tup = tuple(lst)
+                    if tup not in self._tupset:
+                        self._tupset.add(tup)
+                        self._values.append(tup)
 
+    def _first_case(self, case):
+        """Called the first time we record a Case"""
+        self._names = case.keys(iotype='in')
+        tmp = [v for k,v in case.items(iotype='in')]
+        self._split_idx = len(self._names)  # index where we switch from inputs to outputs
+        self._names.extend(case.keys(iotype='out'))
+        tmp.extend([v for k,v in case.items(iotype='out')])
+        if self._tupset is not None:
+            tmp = tuple(tmp)  # if we're storing tuples in a set, store values as tuple
+                              # and store the same tuple in both places to save space
+            self._tupset.add(tmp)
+        self._values.append(tmp)  # _values may contain either lists or tuples
+        
     def record(self, case):
         """Record the given Case."""
         if not self._values:
-            self._names = case.keys(iotype='in')
-            tmp = [v for k,v in case.items(iotype='in')]
-            self._split_idx = len(self._names)  # index where we switch from inputs to outputs
-            self._names.extend(case.keys(iotype='out'))
-            tmp.extend([v for k,v in case.items(iotype='out')])
-            if self._tupset is not None:
-                tmp = tuple(tmp)  # if we're storing tuples in a set, store values as tuple
-                                  # and store the same tuple in both places to save space
-                self._tupset.add(tmp)
-            self._values.append(tmp)  # so _values may contain lists or tuples
+            self._first_case(case)
         else:
             if len(self._names) != len(case):
                 raise ValueError("case has different inputs/outputs than CaseSet")
@@ -90,6 +108,11 @@ class CaseSet(object):
             yield self.__getitem__(i)
     
     def __getitem__(self, key):
+        """If given a string with a varname or expression, returns a list of
+        all of the recorded values corresponding to that string. If given an 
+        index 'i', returns a Case object containing the data for the i'th recorded 
+        case.
+        """
         if isinstance(key, basestring): # return all of the values for the given name
             idx = self._names.index(key)
             return [lst[idx] for lst in self._values]
