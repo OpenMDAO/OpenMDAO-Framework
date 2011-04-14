@@ -121,39 +121,13 @@ class Case(object):
             else:
                 return []
         else:
-            raise NameError("invalid iotype arg (%s) passed to items()" % str(iotype))
+            raise NameError("invalid iotype arg (%s). Must be 'in','out',or None" % str(iotype))
         
     def keys(self, iotype=None):
-        if iotype is None:
-            lst = self._inputs.keys()
-            if self._outputs:
-                lst.extend(self._outputs.keys())
-            return lst
-        elif iotype == 'in':
-            return self._inputs.keys()
-        elif iotype == 'out':
-            if self._outputs:
-                return self._outputs.keys()
-            else:
-                return []
-        else:
-            raise NameError("invalid iotype arg (%s) passed to keys()" % str(iotype))
+        return [k for k,v in self.items(iotype)]
         
     def values(self, iotype=None):
-        if iotype is None:
-            lst = self._inputs.values()
-            if self._outputs:
-                lst.extend(self._outputs.values())
-            return lst
-        elif iotype == 'in':
-            return self._inputs.values()
-        elif iotype == 'out':
-            if self._outputs:
-                return self._outputs.values()
-            else:
-                return []
-        else:
-            raise NameError("invalid iotype arg (%s) passed to values()" % str(iotype))
+        return [v for k,v in self.items(iotype)]
 
     def apply_inputs(self, scope):
         """Set all of the inputs in this case to their specified values in
