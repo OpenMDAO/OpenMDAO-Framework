@@ -16,7 +16,7 @@ openmdao.Menu = function(id) {
      *  private (available only to privileged methods) 
      ***********************************************************************/
      
-    var that = this,
+    var self = this,
         elm = jQuery("#"+id),
         menus = [
             { text: "Session", 

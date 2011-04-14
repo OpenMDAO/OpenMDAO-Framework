@@ -15,7 +15,7 @@ openmdao.PropertiesEditor = function(id,model) {
      *  private (available only to privileged methods) 
      ***********************************************************************/
      
-    var that = this,
+    var self = this,
         elm = jQuery("#"+id),
         pathname = '',
         filterChars = '_' // filter vars with names that start with these chars
@@ -46,7 +46,7 @@ openmdao.PropertiesEditor = function(id,model) {
         accept: '.obj',
         drop: function(ev,ui) { 
             var droppedObject = jQuery(ui.draggable).clone();
-            that.editObject(droppedObject.attr("path"));
+            self.editObject(droppedObject.attr("path"));
         }
     });
     /**/
@@ -54,23 +54,23 @@ openmdao.PropertiesEditor = function(id,model) {
     /** load the table with the properties of the given object
      * (in the case of a non-object, load properties of the parent object) */
     function loadTable(obj) {
-        debug.info("PropertiesEditor.loadTable: (pathname="+that.pathname+")")
+        debug.info("PropertiesEditor.loadTable: (pathname="+self.pathname+")")
         debug.log(obj)
         debug.log(elm)
         debug.log(this.elm)
-        debug.log(that.elm)
+        debug.log(self.elm)
         if (obj == null || typeof obj !== 'object') {
-            lastdot = that.pathname.lastIndexOf('.')
+            lastdot = self.pathname.lastIndexOf('.')
             if (lastdot>0)
-                that.editObject(that.pathname.substring(0,lastdot))
+                self.editObject(self.pathname.substring(0,lastdot))
             else
-                that.editObject('')
+                self.editObject('')
         }
         else {
             elm.empty()
             
             // no caption for a pop-up, it's in the title bar
-            elm.hasClass('ui-dialog-content') ? elm.setCaption('') : elm.setCaption(that.pathname)
+            elm.hasClass('ui-dialog-content') ? elm.setCaption('') : elm.setCaption(self.pathname)
             
             // if obj has a py/state, then those are the properties we want
             if (typeof obj['py/state'] !== "undefined")
@@ -109,9 +109,9 @@ openmdao.PropertiesEditor = function(id,model) {
     
     /** get outer box of jqGrid */
     function getOuter() {
-        debug.info("PropertiesEditor.getOuter: (pathname="+that.pathname+")")
+        debug.info("PropertiesEditor.getOuter: (pathname="+self.pathname+")")
         debug.log(elm)
-        debug.log(that.elm)
+        debug.log(self.elm)
         // jqGrid buries the table 4 layers deep <gbox <gview <bdiv <div <table>>>>>
         debug.info(elm.parent().parent().parent().parent())
         return elm.parent().parent().parent().parent()  // FUGLY
@@ -123,12 +123,12 @@ openmdao.PropertiesEditor = function(id,model) {
     
     /** get the specified object from model, load properties into table */
     this.editObject = function(path) {
-        debug.info("PropertiesEditor.editObject: "+path+" (pathname="+that.pathname+")")
-        if (that.pathname !== path) {
-            that.pathname = path
+        debug.info("PropertiesEditor.editObject: "+path+" (pathname="+self.pathname+")")
+        if (self.pathname !== path) {
+            self.pathname = path
             model.getObject(path, loadTable,
                 function(jqXHR, textStatus, errorThrown) {
-                    that.pathname = ''
+                    self.pathname = ''
                     alert("Error editing object: "+jqXHR.statusText)
                 }
             )

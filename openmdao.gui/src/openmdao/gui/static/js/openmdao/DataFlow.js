@@ -15,7 +15,7 @@ openmdao.DataFlow = function(id,model) {
      *  private (available only to privileged methods) 
      ***********************************************************************/
      
-    var that = this,
+    var self = this,
         elm = jQuery("#"+id).width(screen.width).height(screen.height),
         dataflow  = new draw2d.Workflow(id)
         

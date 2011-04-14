@@ -16,7 +16,7 @@ openmdao.Model=function() {
      *  private (available only to privileged methods) 
      ***********************************************************************/
      
-    var that = this,
+    var self = this,
         callbacks = [],
         modelJSON = null,
         types = null
@@ -85,7 +85,7 @@ openmdao.Model=function() {
             return
 
         if (modelJSON == null)
-            that.getJSON()
+            self.getJSON()
             
         var obj = modelJSON
 
@@ -115,7 +115,7 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'add',
             data: {'type': typepath, 'name': name, 'x': x, 'y': y },
-            success: that.updateListeners
+            success: self.updateListeners
         })
     }
 
@@ -133,7 +133,7 @@ openmdao.Model=function() {
                         if (typeof callback == 'function') {
                             callback(txt)
                         };
-                        that.updateListeners()
+                        self.updateListeners()
                      },
             error: errorHandler
         })
@@ -158,7 +158,7 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'folder',
             data: { 'folder': folder },
-            success: that.updateListeners
+            success: self.updateListeners
         })
     }
 
@@ -205,7 +205,7 @@ openmdao.Model=function() {
             url: 'file',
             type: 'POST',
             data: { 'filename': filepath, 'contents': contents},
-            success: that.updateListeners,
+            success: self.updateListeners,
             error: errorHandler
         })
     }
@@ -216,7 +216,7 @@ openmdao.Model=function() {
             url: 'file',
             type: 'POST',
             data: { 'filename': folderpath, 'isFolder': true},
-            success: that.updateListeners
+            success: self.updateListeners
         })
     }
 
@@ -226,7 +226,7 @@ openmdao.Model=function() {
             if (folderpath)
                 name = folderpath+'/'+name
             var contents = '"""\n   '+name+'\n"""\n\n'
-            that.setFile(name,contents)
+            self.setFile(name,contents)
         })
     }
 
@@ -235,7 +235,7 @@ openmdao.Model=function() {
         openmdao.Util.promptForName(function(name) {
             if (folderpath)
                 name = folderpath+'/'+name
-            that.createFolder(name,that.updateListeners)
+            self.createFolder(name,self.updateListeners)
         })
     }
 
@@ -252,7 +252,7 @@ openmdao.Model=function() {
             type: 'POST',
             dataType: 'text',
             data: { 'file': filepath },
-            success: that.updateListeners
+            success: self.updateListeners
         })
     }
     
@@ -262,8 +262,8 @@ openmdao.Model=function() {
         var path = filepath.replace(/.py/g,'').
                             replace(/\\/g,'.').
                             replace(/\//g,'.')
-        that.issueCommand("from "+path+" import *")
-        that.updateListeners
+        self.issueCommand("from "+path+" import *")
+        self.updateListeners
     }
 
     /** execute the specified file */
@@ -281,7 +281,7 @@ openmdao.Model=function() {
             url: 'exec',
             type: 'POST',
             data: { 'filename': path },
-            success: that.updateListeners
+            success: self.updateListeners
         })
     }
 

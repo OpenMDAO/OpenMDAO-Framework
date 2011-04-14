@@ -15,7 +15,7 @@ openmdao.Console = function(formID,commandID,historyID,model) {
      *  private (available only to privileged methods) 
      ***********************************************************************/
      
-    var that = this,
+    var self = this,
         command = jQuery('#'+commandID),
         history = jQuery('#'+historyID),
         historyBox = history.parent(),

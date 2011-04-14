@@ -15,7 +15,7 @@ openmdao.ObjectTree = function(id,model,edit_function) {
      *  private (available only to privileged methods) 
      ***********************************************************************/
      
-    var that = this,
+    var self = this,
         elm = jQuery('#'+id),
         filterChars = '_' // filter objects with names that start with these chars
         

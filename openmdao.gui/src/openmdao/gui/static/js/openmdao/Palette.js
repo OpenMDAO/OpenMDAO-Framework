@@ -15,7 +15,7 @@ openmdao.Palette = function(id,model) {
      *  private (available only to privileged methods) 
      ***********************************************************************/
      
-    var that = this,
+    var self = this,
         elm = jQuery("#"+id)
 
     // dropping a filename onto the palette pane means import *
