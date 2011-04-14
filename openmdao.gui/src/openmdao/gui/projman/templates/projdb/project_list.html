@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Projects
+{% endblock %}
+
+{% block content %}
+    {% if user.is_authenticated %}
+        <p>Welcome, {{ user.username }}. Here are your projects:</p>
+    {% else %}
+        <p>Welcome, new user. Please log in.</p>
+    {% endif %}
+
+    {% if project_list %}
+        <ul>
+        {% for project in project_list %}
+            <li><a href="/projects/{{ project.id }}/">{{ project.projectname }}</a></li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No projects are available.</p>
+    {% endif %}
+{% endblock %}
+
+
+{% block footer %}
+    <a href="/accounts/logout?next=/">Logout</a>
+{% endblock %}

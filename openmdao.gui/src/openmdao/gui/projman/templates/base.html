@@ -8,7 +8,13 @@
     <title>{% block title %}{% endblock %}</title>
 </head>
 
-<body id="{% block body_id %}{% endblock %}">
+<body id="{% block body_id %}{% endblock %}" bgcolor="Grey">
+	<!----------------------------------------->
+	<!-- load all the scripts & style sheets -->
+	<!----------------------------------------->
+
+    <link rel="stylesheet" href="/css/mdao-styles.css">
+
     <div id="body">
     {% block body %}
         <div>
@@ -19,6 +25,10 @@
         </div>
     {% endblock %}
     </div>
+
+    {% block footer %}
+    {% endblock %}
+    
 </body>
 
 </html>

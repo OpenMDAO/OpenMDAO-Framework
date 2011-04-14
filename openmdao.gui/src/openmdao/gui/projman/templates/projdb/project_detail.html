@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ project.projectname }}
+{% endblock %}
+
+{% block content %}
+
+    {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+    <h1>{{ project.projectname }}</h1>
+    
+    <form action="/projects/{{ project.id }}/" method="POST">
+        {% csrf_token %}
+        <b>Project Name: </b> 
+        <input type="textfield" name="projectname" value="{{ project.projectname }}" />
+        <br>
+        <b>Description: </b> 
+        <input type="textfield" size="100" name="description" value="{{ project.description }}"  />
+        <br>
+        <b>Shared: </b>
+        <input type="checkbox" name="shared" {% if project.shared %} CHECKED {% endif %}  />
+        <br>
+    <input type="submit" value="Submit Changes" />
+    </form>
+
+    <p>
+    <b>Last Modified: </b> {{ project.modified }}
+    <br>
+{% endblock %}
+
+{% block footer %}
+    <a href="/projects/">Back to Projects</a>
+{% endblock %}
