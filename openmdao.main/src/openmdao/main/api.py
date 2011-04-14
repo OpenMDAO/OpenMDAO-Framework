@@ -25,7 +25,7 @@ from openmdao.main.exceptions import ConstraintError
 from openmdao.main.filevar import FileMetadata, FileRef
 
 from openmdao.main.case import Case
-from openmdao.main.caseset import CaseSet
+from openmdao.main.caseset import CaseSet, CaseArray
 
 from openmdao.util.eggsaver import SAVE_YAML, SAVE_LIBYAML, \
                                    SAVE_PICKLE, SAVE_CPICKLE

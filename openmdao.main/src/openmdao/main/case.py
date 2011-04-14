@@ -108,6 +108,13 @@ class Case(object):
             return len(self._inputs) + len(self._outputs)
     
     def items(self, iotype=None):
+        """Return a list of (name,value) tuples for variables/expressions in this Case.
+        
+        iotype: str or None
+            If 'in', only inputs are returned.
+            If 'out', only outputs are returned
+            If None (the default), inputs and outputs are returned
+        """
         if iotype is None:
             lst = self._inputs.items()
             if self._outputs:
@@ -124,14 +131,28 @@ class Case(object):
             raise NameError("invalid iotype arg (%s). Must be 'in','out',or None" % str(iotype))
         
     def keys(self, iotype=None):
+        """Return a list of name/expression strings for this Case.
+        
+        iotype: str or None
+            If 'in', only inputs are returned.
+            If 'out', only outputs are returned
+            If None (the default), inputs and outputs are returned
+        """
         return [k for k,v in self.items(iotype)]
         
     def values(self, iotype=None):
+        """Return a list of values for this Case.
+        
+        iotype: str or None
+            If 'in', only inputs are returned.
+            If 'out', only outputs are returned
+            If None (the default), inputs and outputs are returned
+        """
         return [v for k,v in self.items(iotype)]
 
     def apply_inputs(self, scope):
-        """Set all of the inputs in this case to their specified values in
-        the given scope.
+        """Take the values of all of the inputs in this case and apply them
+        to the specified scope.
         """
         if self._exprs:
             for name,value in self._inputs.items():
@@ -144,15 +165,11 @@ class Case(object):
             for name,value in self._inputs.items():
                 scope.set(name, value)
 
-    def update_outputs(self, scope, msg=None):
-        """Update the value of all outputs of interest, using the given scope.
-        If msg is not None, save it as part of the case.
+    def update_outputs(self, scope, msg=''):
+        """Update the value of all outputs in this Case, using the given scope.
         """
-        if msg:
-            self.msg = msg
+        self.msg = msg
         if self._outputs is not None:
-            # TODO: make this smart enough to do a multiget on a component
-            #       instead of multiple individual gets
             if self._exprs:
                 for name in self._outputs.keys():
                     expr = self._exprs.get(name)
@@ -165,10 +182,11 @@ class Case(object):
         """Adds an input and its value to this case.
         
         name: str
-            name of the input to be added
+            Name of the input to be added. May contain an expression as long
+            as it is valid when placed on the left hand side of an assignment.
             
         value: 
-            value that the input will be assigned to
+            Value that the input will be assigned to.
         """
         self._register_expr(name)
         self._inputs[name] = value
