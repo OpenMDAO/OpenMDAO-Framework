@@ -12,15 +12,20 @@
     
     <form action="/projects/{{ project.id }}/" method="POST">
         {% csrf_token %}
-        <b>Project Name: </b> 
-        <input type="textfield" name="projectname" value="{{ project.projectname }}" />
+        <table>
+        <tr>
+            <td><b>Project Name: </b> </td>
+            <td><input type="textfield" name="projectname" value="{{ project.projectname }}" /> </td>
+        </tr>
+        <tr>
+            <td><b>Description: </b>  </td>
+            <td><input type="textfield" size="100" name="description" value="{{ project.description }}"  /> </td>
         <br>
-        <b>Description: </b> 
-        <input type="textfield" size="100" name="description" value="{{ project.description }}"  />
+        </tr>
+            <td><b>Shared: </b> </td>
+            <td><input type="checkbox" name="shared" {% if project.shared %} CHECKED {% endif %}  /> <td>
         <br>
-        <b>Shared: </b>
-        <input type="checkbox" name="shared" {% if project.shared %} CHECKED {% endif %}  />
-        <br>
+        </table>
     <input type="submit" value="Submit Changes" />
     </form>
 
