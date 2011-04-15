@@ -1,13 +1,13 @@
 import unittest
 from openmdao.main.api import Assembly, Component
 from openmdao.lib.components.broadcaster import Broadcaster
-from openmdao.lib.datatypes.api import Any
+from openmdao.lib.datatypes.api import Float,Str
 
 
 class Dummy(Component): 
     
-    x = Any(iotype="out")
-    y = Any(iotype="in")    
+    x = Float(iotype="out")
+    y = Float(iotype="in")    
 
 class testBroadcaster(unittest.TestCase): 
     
@@ -40,12 +40,12 @@ class testBroadcaster(unittest.TestCase):
         b1 = Broadcaster(['x','y'])
         
         b1.x_in = 2
-        b1.y_in = "a"
+        b1.y_in = 1
         
         b1.run()
         
         self.assertEqual(b1.x,2)
-        self.assertEqual(b1.y,"a")
+        self.assertEqual(b1.y,1)
         
         
     def test_connections(self): 
