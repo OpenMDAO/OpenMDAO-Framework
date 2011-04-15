@@ -5,7 +5,7 @@ class CaseArray(object):
     """A CaseRecorder/CaseIterator containing Cases having the same set of
     input/output strings but different data. Cases are not necessarily unique.
     """
-    def __init__(self, obj=None, parent_id=None):
+    def __init__(self, obj=None, parent_id=None, names=None):
         """
         obj: dict, Case, or None
             if obj is a dict, it is assumed to contain all var names as keys, with
@@ -20,9 +20,17 @@ class CaseArray(object):
         
         parent_id: str
             The id of the parent Case (if any)
+            
+        names: iter of str
+            names/expressions that the Cases will contain. This is useful if you
+            only want this container to keep track of some subset of the contents
+            of Cases that are recorded in it.
         """
         self._parent_id = parent_id
-        self._names = []
+        if names is None:
+            self._names = []
+        else:
+            self._names = names[:]
         self._values = []
         if isinstance(obj, dict):
             self._add_dict_cases(obj)
@@ -35,10 +43,16 @@ class CaseArray(object):
                 
     def _add_dict_cases(self, dct):
         length = -1
-        self._names = dct.keys()
+        if self._names:
+            for name in self._names:
+                if name not in dct:
+                    raise KeyError("'%s' is not a member of the dict" % name)
+        else:
+            self._names = dct.keys()
         self._split_idx = len(self._names) # treat all names as inputs
         biglist = []
-        for key, val in dct.items():
+        for key in self._names:
+            val = dct[key]
             if not isinstance(key, basestring):
                 raise TypeError("dictionary key '%s' is not a string" % key)
             if length < 0:
@@ -56,11 +70,24 @@ class CaseArray(object):
 
     def _record_first_case(self, case):
         """Called the first time we record a Case"""
-        self._names = case.keys(iotype='in')
-        tmp = [v for k,v in case.items(iotype='in')]
-        self._split_idx = len(self._names)  # index where we switch from inputs to outputs
-        self._names.extend(case.keys(iotype='out'))
-        tmp.extend([v for k,v in case.items(iotype='out')])
+        if self._names:
+            names = [n for n in case.keys(iotype='in') if n in self._names]
+            tmp = [case[n] for n in names]
+        else:
+            names = case.keys(iotype='in')
+            tmp = case.values(iotype='in')
+        self._split_idx = len(tmp)  # index where we switch from inputs to outputs
+        if self._names:
+            outs = [t for t in case.items(iotype='out') if t[0] in self._names]
+            names.extend([t[0] for t in outs])
+            tmp.extend([t[1] for t in outs])
+            if len(names) != len(self._names):
+                return  # case didn't have all necessary variables/expressions
+        else:
+            names.extend(case.keys(iotype='out'))
+            tmp.extend(case.values(iotype='out'))
+
+        self._names = names
         self._add_values(tmp)
         
     def record(self, case):
@@ -96,10 +123,8 @@ class CaseArray(object):
             
     def _get_case_data(self, case):
         """Return a list of values for the case in the same order as our values.
-        If the keys in the given case don't match ours, raise a KeyError.
+        Raise a KeyError if any of our names are missing from the case.
         """
-        if len(self._names) != len(case):
-            raise ValueError("case has different inputs/outputs than CaseSet")
         try:
             return [case[n] for n in self._names]
         except KeyError, err:
@@ -147,7 +172,7 @@ class CaseSet(CaseArray):
     """A CaseRecorder/CaseIterator containing Cases having the same set of
     input/output strings but different data.  All Cases in the set are unique.
     """
-    def __init__(self, obj=None, parent_id=None):
+    def __init__(self, obj=None, parent_id=None, names=None):
         """
         obj: dict, Case, or None
             if obj is a dict, it is assumed to contain all var names as keys, with
@@ -160,11 +185,16 @@ class CaseSet(CaseArray):
             if obj is None, the first Case that is recorded will be used to set
             the inputs and outputs for the CaseSet.
         
-        parent_id: str
+        parent_id: str (optional)
             The id of the parent Case (if any)
+            
+        names: iter of str (optional)
+            names/expressions that the Cases will contain. This is useful if you
+            only want this container to keep track of some subset of the contents
+            of Cases that are recorded in it.
         """
         self._tupset = set()
-        super(CaseSet, self).__init__(obj, parent_id)
+        super(CaseSet, self).__init__(obj, parent_id, names)
 
     def _add_values(self, vals):
         tup = tuple(vals)
@@ -280,4 +310,45 @@ class CaseSet(CaseArray):
     def __and__(self, caseset): return self.intersection(caseset)
     
     def __sub__(self, caseset): return self.difference(caseset)
+    
+    
+def caseiter_to_caseset(caseiter, varnames=None, include_errors=False):
+    """
+    Retrieve the values of specified variables from cases in a CaseIterator.
+    
+    Returns a CaseSet containing cases with the specified varnames.
+    
+    Cases in the case iterator that do not have all of the specified 
+    varnames are ignored.
+    
+    caseiter: CaseIterator
+        A CaseIterator containing the cases of interest.
+
+    varnames: iterator returning strs (optional) [None]
+        Iterator of names of variables to be retrieved. If None, the list
+        of varnames in the first Case without errors returned from the case 
+        iterator will be used.
+        
+    include_errors: bool (optional) [False]
+        If True, include data from cases that reported an error.
+        
+    """
+    
+    caseset = CaseSet()
+
+    for case in caseiter.get_iter():
+        if include_errors is False and case.msg:
+            continue  # case reported an error or warning message
+        if varnames is not None:
+            varnames = case.keys()
+        try:
+            casevals = [case[name] for name in vardict]
+            idx = 0
+            for name, lst in vardict.items():
+                lst.append(casevals[idx])
+                idx += 1
+        except KeyError:
+            continue # case doesn't contain a complete set of specified vars, 
+                     # so skip it to avoid data mismatches
+    return vardict
     

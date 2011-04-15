@@ -88,6 +88,20 @@ class CaseSetTestCase(unittest.TestCase):
         expected = Case(inputs=[('comp1.a',4),('comp1.b',8),('comp2.b',2)])
         self.assertEqual(case._inputs, expected._inputs)
         
+    def test_subset_from_dict(self):
+        dct = { 'comp1.a': [2,4,6],
+                'comp1.b': [4,8,12],
+                'comp2.b': [1,2,3],
+            }
+        cs = CaseSet(dct, names=['comp1.a','comp2.b'])
+        self.assertEqual(3, len(cs))
+        self.assertEqual(set(['comp1.a','comp2.b']),
+                         set(cs._names))
+        self.assertEqual(cs['comp1.a'], [2,4,6])
+        case = cs[1]
+        expected = Case(inputs=[('comp1.a',4),('comp2.b',2)])
+        self.assertEqual(case._inputs, expected._inputs)
+        
     def test_from_case(self):
         cs = CaseSet(self.case1)
         self.assertEqual(1, len(cs))
@@ -107,6 +121,22 @@ class CaseSetTestCase(unittest.TestCase):
         self.assertEqual(cs[0]._outputs, self.case1_dup._outputs)
         self.assertEqual(cs[1]._inputs, self.case2._inputs)
         self.assertEqual(cs[1]._outputs, self.case2._outputs)
+        
+    def test_start_empty_subset(self):
+        names=['comp1.a','comp2.c+comp2.d','comp1.b']
+        ins = [names[0], names[2]]
+        outs = [names[1]]
+        cs = CaseSet(names=names)
+        cs.record(self.case1)
+        cs.record(self.case2)
+        cs.record(self.case1_dup)
+        self.assertEqual(2, len(cs))
+        self.assertEqual(3, len(cs[0].items()))
+        self.assertEqual(2, len(cs[0].items('in')))
+        self.assertEqual(1, len(cs[0].items('out')))
+        self.assertEqual(set(names), set(cs[0].keys()))
+        self.assertEqual(set(ins), set(cs[0].keys('in')))
+        self.assertEqual(set(outs), set(cs[0].keys('out')))
         
     def test_iteration(self):
         cs = CaseSet()
