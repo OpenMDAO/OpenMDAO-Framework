@@ -157,31 +157,29 @@ class DBCaseRecorder(object):
         """Record the given Case."""
         cur = self._connection.cursor()
         
-        if not case.msg:
-            case.msg = ''
         cur.execute("""insert into cases(id,text_id,parent,desc,msg,retries,model_id,timeEnter) 
                            values (?,?,?,?,?,?,?,DATETIME('NOW'))""", 
-                                     (None, case.ident, case.parent_id, case.desc,
-                                      case.msg, case.retries, 
+                                     (None, str(case.ident), case.parent_id, case.desc,
+                                      case.msg or '', case.retries, 
                                       self.model_id))
         case_id = cur.lastrowid
         # insert the inputs and outputs into the vars table.  Pickle them if they're not one of the
         # built-in types int, float, or str.
-        vlist = []
         
         for name,value in case.items(iotype='in'):
             if isinstance(value, (float,int,str)):
-                vlist.append((None, name, case_id, 'i', value))
+                v = (None, name, case_id, 'i', value)
             else:
-                vlist.append((None, name, case_id, 'i', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL))))
+                v = (None, name, case_id, 'i', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)))
+            cur.execute("insert into casevars(var_id,name,case_id,sense,value) values(?,?,?,?,?)", 
+                        v)
         for name,value in case.items(iotype='out'):
             if isinstance(value, (float,int,str)):
-                vlist.append((None, name, case_id, 'o', value))
+                v = (None, name, case_id, 'o', value)
             else:
-                vlist.append((None, name, case_id, 'o', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL))))
-        for v in vlist:
+                v = (None, name, case_id, 'o', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)))
             cur.execute("insert into casevars(var_id,name,case_id,sense,value) values(?,?,?,?,?)", 
-                            v)
+                        v)
         self._connection.commit()
     
     def get_iterator(self):

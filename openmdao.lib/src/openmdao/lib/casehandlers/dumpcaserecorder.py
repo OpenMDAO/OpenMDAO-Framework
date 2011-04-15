@@ -20,7 +20,7 @@ class DumpCaseRecorder(object):
         if self.out:  # if self.out is None, just do nothing
             out = self.out
             out.write("Case: %s" % case.desc)
-            out.write("\n   id: %s" % case.ident)
+            out.write("\n   id: %s" % str(case.ident))
             if case.parent_id:
                 out.write("\n   parent id: %s)" % case.parent_id)
             out.write("\n   inputs:\n")

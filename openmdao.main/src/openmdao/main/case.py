@@ -43,7 +43,7 @@ class Case(object):
         self.msg = msg                  # If non-null, error message.
                                         # Implies outputs are invalid. 
         self.desc = desc   # optional description
-        self.ident = str(uuid1())  # unique identifier
+        self.ident = uuid1()  # unique identifier
         self.parent_id = parent_id  # identifier of parent case, if any
 
         if inputs: 
@@ -62,7 +62,7 @@ class Case(object):
                '    outputs: %s\n' \
                '    max_retries: %s, retries: %s\n' \
                '    msg: %s' % \
-               (self.ident, self.parent_id, 
+               (str(self.ident), self.parent_id, 
                 self.desc,
                 self._inputs.items(), 
                 outs,
