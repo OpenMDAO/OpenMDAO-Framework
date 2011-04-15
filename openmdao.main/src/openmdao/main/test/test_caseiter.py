@@ -1,6 +1,6 @@
 import unittest
 
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.main.api import Case
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.caseiter import caseiter_to_dict

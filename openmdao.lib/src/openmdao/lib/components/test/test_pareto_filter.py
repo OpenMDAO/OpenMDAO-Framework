@@ -3,7 +3,7 @@
 import unittest
 
 from openmdao.lib.components.pareto_filter import ParetoFilter
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.main.case import Case
 
 

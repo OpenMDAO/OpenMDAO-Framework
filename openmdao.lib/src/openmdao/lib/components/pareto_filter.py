@@ -5,7 +5,7 @@ from openmdao.lib.datatypes.api import Instance, List, ListStr
 
 from openmdao.main.component import Component
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 
 
 

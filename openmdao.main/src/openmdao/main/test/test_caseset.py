@@ -1,7 +1,7 @@
 import unittest
 
-
-from openmdao.main.api import Case, CaseSet, CaseArray
+from openmdao.main.api import Case
+from openmdao.lib.casehandlers.api import CaseSet, CaseArray
 
 class CaseArrayTestCase(unittest.TestCase):
 

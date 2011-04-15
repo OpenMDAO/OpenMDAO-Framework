@@ -10,7 +10,7 @@ from openmdao.main.interfaces import ICaseRecorder
 
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
 from openmdao.lib.surrogatemodels.logistic_regression import LogisticRegression

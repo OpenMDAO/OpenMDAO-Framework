@@ -13,8 +13,8 @@ import copy
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.caseiterators.api import DBCaseIterator, ListCaseIterator
-from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder, case_db_to_dict 
+from openmdao.lib.casehandlers.api import DBCaseIterator, ListCaseIterator
+from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder, case_db_to_dict 
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.main.uncertain_distributions import NormalDistribution
 
@@ -166,22 +166,25 @@ class DBCaseRecorderTestCase(unittest.TestCase):
 
 class NestedCaseTestCase(unittest.TestCase):
 
-    def _create_assembly(self, top=None):
+    def _create_assembly(self, top=None, dbname=':memory:'):
         asm = Assembly()
         driver = asm.add('driver', SimpleCaseIterDriver())
         asm.add('comp1', ExecComp(exprs=['z=x+y']))
         asm.add('comp2', ExecComp(exprs=['z=x+y']))
         asm.connect('comp1.z', 'comp2.x')
         driver.workflow.add(['comp1', 'comp2'])
+        driver.recorder = DBCaseRecorder(dbname, append=True)
         if top:
             top.add('asm', asm)
             top.driver.workflow.add('asm')
         return asm
 
     def setUp(self):
-        self.top = set_as_top(self._create_assembly())
-        self._create_assembly(self.top)
-        self._create_assembly(self.top)
+        self.tdir = tempfile.mkdtemp()
+        dbname = os.path.join(self.tdir,'dbfile')
+        self.top = set_as_top(self._create_assembly(None, dbname))
+        asm = self._create_assembly(self.top, dbname)
+        asm = self._create_assembly(asm, dbname)
         
         # now create some Cases
         outputs = ['comp1.z', 'comp2.z']
@@ -194,7 +197,9 @@ class NestedCaseTestCase(unittest.TestCase):
         self.top.asm.driver.iterator = ListCaseIterator(copy.deepcopy(cases))
         self.top.asm.asm.driver.iterator = ListCaseIterator(copy.deepcopy(cases))
         
-        
+    def tearDown(self):
+        shutil.rmtree(self.tdir)
+
     def test_nested(self):
         self.top.run()
         

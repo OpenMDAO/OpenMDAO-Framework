@@ -27,7 +27,7 @@ class Case(object):
 
     """
     def __init__(self, inputs=None, outputs=None, max_retries=None,
-                 retries=None, desc=None, parent_id=None, msg=''):
+                 retries=None, desc=None, parent_id=None, msg=None):
         """If inputs are supplied to the constructor, it must be an
         iterator that returns (name,value) tuples, where name is allowed
         to contain array notation and/or function calls. outputs must be
@@ -165,7 +165,7 @@ class Case(object):
             for name,value in self._inputs.items():
                 scope.set(name, value)
 
-    def update_outputs(self, scope, msg=''):
+    def update_outputs(self, scope, msg=None):
         """Update the value of all outputs in this Case, using the given scope.
         """
         self.msg = msg

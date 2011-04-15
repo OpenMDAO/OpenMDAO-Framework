@@ -9,8 +9,8 @@ import os
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.caseiterators.api import DBCaseIterator, ListCaseIterator
-from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder
+from openmdao.lib.casehandlers.api import DBCaseIterator, ListCaseIterator
+from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.main.uncertain_distributions import NormalDistribution
     

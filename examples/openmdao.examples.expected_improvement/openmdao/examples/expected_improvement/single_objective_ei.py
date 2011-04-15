@@ -13,9 +13,9 @@ from openmdao.lib.surrogatemodels.api import KrigingSurrogate
 from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
 
 from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
-from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder
+from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
 
-from openmdao.lib.caseiterators.api import DBCaseIterator
+from openmdao.lib.casehandlers.api import DBCaseIterator
 from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
 from openmdao.examples.expected_improvement.branin_component import BraninComponent
 from openmdao.util.decorators import add_delegate
@@ -116,7 +116,7 @@ class Analysis(Assembly):
 if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
-    from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
+    from openmdao.lib.casehandlers.db import case_db_to_dict
     
     seed = None
     backend = None

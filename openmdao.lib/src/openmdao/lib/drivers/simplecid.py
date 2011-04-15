@@ -41,7 +41,7 @@ class SimpleCaseIterDriver(Driver):
             self.recorder.record(case)
 
     def _run_case(self, case):
-        msg = ''
+        msg = None
         case.apply_inputs(self.parent)
         try:
             self.workflow.run()

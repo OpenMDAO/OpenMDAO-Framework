@@ -21,9 +21,10 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
 from openmdao.lib.datatypes.api import Float, Bool, Array
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
-from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
+from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
+from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
 
 from openmdao.test.cluster import init_cluster
 
@@ -68,13 +69,16 @@ class DrivenComponent(Component):
         if self.stop_exec:
             self.parent.driver.stop()  # Only valid if sequential!
 
+def _get_driver():
+    return CaseIteratorDriver()
+    #return SimpleCaseIterDriver()
 
 class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
-        self.add('driver', CaseIteratorDriver())
+        self.add('driver', _get_driver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
 

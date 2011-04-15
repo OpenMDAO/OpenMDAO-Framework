@@ -66,7 +66,7 @@ class Analysis(Assembly):
 if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
-    from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
+    from openmdao.lib.casehandlers.db import case_db_to_dict
 
     analysis = Analysis()
     
