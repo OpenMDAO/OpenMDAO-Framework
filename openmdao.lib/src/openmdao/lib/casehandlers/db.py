@@ -23,7 +23,8 @@ def _query_split(query):
             return (parts[0].strip(), op, parts[1].strip())
     else:
         raise ValueError("No allowable operator found in query '%s'" % query)
-        
+
+
 class DBCaseIterator(object):
     """Pulls Cases from a relational DB (sqlite). It doesn't support
     general sql queries, but it does allow for a series of boolean
@@ -100,7 +101,8 @@ class DBCaseIterator(object):
                 else:
                     outputs.append((vname, value))
             if len(inputs) > 0 or len(outputs) > 0:
-                yield Case(inputs=inputs, outputs=outputs,retries=retries,msg=msg,desc=desc)
+                yield Case(inputs=inputs, outputs=outputs,
+                           retries=retries,msg=msg,desc=desc,parent_id=parent)
             
 
 class DBCaseRecorder(object):

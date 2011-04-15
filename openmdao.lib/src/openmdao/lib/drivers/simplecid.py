@@ -42,9 +42,10 @@ class SimpleCaseIterDriver(Driver):
 
     def _run_case(self, case):
         msg = None
+        case.parent_id = self._case_id
         case.apply_inputs(self.parent)
         try:
-            self.workflow.run()
+            self.workflow.run(case_id=str(case.ident))
         except Exception as err:
             msg = str(err)
         try:
