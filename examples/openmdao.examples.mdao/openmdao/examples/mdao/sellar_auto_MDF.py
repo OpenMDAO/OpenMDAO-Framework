@@ -51,6 +51,8 @@ class SellarMDF(Assembly):
         self.add('dis1', SellarDiscipline1())
         self.add('dis2', SellarDiscipline2())
         
+        
+        #START OF MDAO Problem Definition
         g1 = GlobalDesVar()
         g1.name = "z1"
         g1.vars = ('dis1.z1',"dis2.z1")
@@ -85,7 +87,11 @@ class SellarMDF(Assembly):
         self.constraints = ['3.16 < dis1.y1',
                             'dis2.y2 < 24.0' ]
         
-        
+        #End of MDAO Problem Definition
+     
+    #Known issues with this hack implementation: 
+    #1) need some sort of clear functionality that can delete all teh drivers/connections/workflows/etc. that are created by auto configure
+    #1) Not sure I like the behavior of passing in discipline names
     def configure_MDF(self,discipline1,discipline2): 
         """setup and MDF architecture inside this assembly.
         
