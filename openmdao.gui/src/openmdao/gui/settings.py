@@ -72,7 +72,7 @@ STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    'C:/Odin_local_backup/projects/MDAO/dev/T377_gooey/openmdao.gui/src/openmdao/gui/static/',
+    'E:/projects/MDAO/T377_gooey/openmdao.gui/src/openmdao/gui/static/',
 )
 
 # List of finder classes that know how to find static files in
@@ -101,13 +101,13 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-ROOT_URLCONF = 'projman.urls'
+ROOT_URLCONF = 'urls'
 
 TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    'C:/Odin_local_backup/projects/MDAO/dev/T377_gooey/openmdao.gui/src/openmdao/gui/projman/templates'    
+    'E:/projects/MDAO/T377_gooey/openmdao.gui/src/openmdao/gui/templates',    
 )
 
 INSTALLED_APPS = (
@@ -117,9 +117,9 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'projdb',
     'django.contrib.admin',
     'django.contrib.admindocs',
+    'projdb',
 )
 
 # A sample logging configuration. The only tangible logging
