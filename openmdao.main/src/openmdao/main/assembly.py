@@ -321,7 +321,7 @@ class Assembly (Component):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
         """
-        simple, compmap = _partition_names_by_comp(outnames)
+        simple, compmap = partition_names_by_comp(outnames)
         if simple:  # boundary outputs
             self.update_inputs('@bout', simple)
         for cname, vnames in compmap.items():  # auto passthroughs to internal variables
@@ -336,7 +336,7 @@ class Assembly (Component):
         ret = [None]*len(names)
         posdict = dict([(name,i) for i,name in enumerate(names)])
         
-        simple,compmap = _partition_names_by_comp(names)
+        simple,compmap = partition_names_by_comp(names)
         if simple:
             vals = super(Assembly, self).get_valid(simple)
             for i,val in enumerate(vals):
@@ -468,7 +468,7 @@ def dump_iteration_tree(obj):
     return f.getvalue()
 
 
-def _partition_names_by_comp(names):
+def partition_names_by_comp(names):
     """Take an iterator of names and return a tuple of the form (namelist,
     compmap) where namelist is a list of simple names (no dots) and compmap is
     a dict with component names keyed to lists of variable names.
