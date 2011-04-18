@@ -1,17 +1,15 @@
 
-============ 
-User Guide 
-============ 
+
+================ 
+Getting Started
+================ 
 
 .. toctree::
    :maxdepth: 2
    
    overview.rst
+   requirements.rst
    install.rst
-   simple_example.rst
-   example.rst
-   example_mdao.rst
-   userguide_script.rst
-   units.rst
+   
 
 

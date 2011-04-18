@@ -2,9 +2,9 @@
 
 .. _Standard-Library-Reference:
 
-=======================================
-Appendix A:  Standard Library Reference
-=======================================
+==============================
+ Standard Library Reference
+==============================
 
 .. toctree::
    :maxdepth: 2

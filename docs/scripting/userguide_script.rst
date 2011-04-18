@@ -1,29 +1,27 @@
-.. index:: scripting interface
+.. index:: script interface
 
-.. _`OpenMDAO-scripting-interface`:
+.. _`OpenMDAO-script-interface`:
 
-OpenMDAO Scripting Interface
-================================
+
+OpenMDAO Fundamentals
+=====================
 
 OpenMDAO provides a programmatic interface that allows you to write a Python
 script that describes the structure of the model and provides the ability to
 interact with objects in the framework.
 
-The goal of this section of the *User Guide* is to explain and demonstrate
-several aspects of the OpenMDAO script interface. This section is intended
-primarily as a reference. If you are an inexperienced user, you would best be 
-served by reading and understanding the examples in
-:ref:`Getting-Started-with-OpenMDAO` and :ref:`A-More-Complex-Tutorial-Problem`.
-
-OpenMDAO Fundamentals
----------------------
+The goal of this section is to explain and demonstrate several aspects of the OpenMDAO
+script interface. This section is intended primarily as a reference. If you are an
+inexperienced user, we recommend that you read and understand the examples in
+:ref:`Getting-Started-with-OpenMDAO` and :ref:`A-More-Complex-Tutorial-Problem` before
+reading this section.
 
 The following sections discuss the the basics of OpenMDAO.
 
 .. index:: package
 
-*OpenMDAO Package Hierarchy*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+OpenMDAO Package Hierarchy
+---------------------------
 
 *Package* is a Python concept that provides a structure for organizing
 variables and functions in a logical hierarchical fashion. Packages allow you
@@ -78,8 +76,8 @@ from the given module into the current namespace.
     from openmdao.main.api import Component, Assembly, Driver
 
 
-*Naming Conventions*
-~~~~~~~~~~~~~~~~~~~~
+Naming Conventions
+--------------------
 
 Components and variables that are instantiated into the OpenMDAO model 
 hierarchy must follow the same naming syntax as attributes in the Python
@@ -111,7 +109,7 @@ that will be forced on users, but it is a good style guideline.
 .. index:: Component
 
 Creating New Components
------------------------
+=======================
 
 Components are the basic building block of the OpenMDAO model, so you need 
 to be familiar with how to create and execute them. The concept of the component
@@ -187,7 +185,7 @@ class.
 .. _Variables:
 
 Variables
----------
+==========
 
 In OpenMDAO, a *variable* is an attribute that can be seen or manipulated by
 other entities in the framework. Any data that is passed between components in a
@@ -294,8 +292,8 @@ Here is an example of the ``set`` function:
 
 .. index:: Traits
 
-*Traits*
-~~~~~~~~
+Traits
+--------
 
 The underlying implementation of variables in OpenMDAO was accomplished
 through a Python add-on called :term:`Traits`. Traits provide a way to 
@@ -309,8 +307,8 @@ implemented, but those of you who want to create custom datatypes can do so by
 defining a new custom trait. More details on traits can be found on
 Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
 
-*Built-in Variable Types*
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Built-in Variable Types
+------------------------
 
 .. index:: variable types
     
@@ -392,8 +390,8 @@ For an example of a user-created variable, see :ref:`Building-a-Variable-Plugin`
 
 .. index:: Array
 
-Arrays
-++++++
+*Arrays*
+++++++++
 
 It is possible to use an array as a variable through use of the *Array*
 trait. The value for an Array can be expressed as either a Python array or a NumPy
@@ -481,8 +479,8 @@ which is much faster than sum.
 
 .. _Enums:
 
-Enums
-+++++
+*Enums*
++++++++
 
 It is possible to use an *Enum* (enumeration) type as a variable in
 OpenMDAO. This is useful for cases where an input has certain fixed values
@@ -599,8 +597,8 @@ the integers 1 to 6. Note that the Enum doesn't need an iotype, but the List doe
 
 .. index:: File Variables, File
 
-File Variables
-++++++++++++++
+*File Variables*
+++++++++++++++++
 
 The *File* variable contains a reference to an input or output file on disk. It
 is more than just a text string that contains a path and filename; it is
@@ -628,8 +626,8 @@ mark a file as binary.
                 
 .. index:: Instance Traits
 
-Instance Traits
-+++++++++++++++
+*Instance Traits*
+++++++++++++++++++
 
 An *Instance* is a trait that requires any value assigned to it to be either an instance of a
 specific class or an implementation of a specific Interface. The class or Interface to be matched is
@@ -671,8 +669,8 @@ if the object is not present.
 .. index:: Float; Array; unit conversion with
 .. index:: unit conversion; with Float
 
-Unit Conversions with Float and Array
-+++++++++++++++++++++++++++++++++++++
+*Unit Conversions with Float and Array*
+++++++++++++++++++++++++++++++++++++++++
 
 OpenMDAO also supports variables with explicitly defined units using the Float and Array
 variable types, which are included as part of the Standard Library. Both
@@ -729,8 +727,8 @@ the function ``convert_units`` from ``openmdao.main.api``.
     >>> convert_units(12.0,'inch','ft')
     1.0
 
-Coercion and Casting
-++++++++++++++++++++
+*Coercion and Casting*
+++++++++++++++++++++++
 
 OpenMDAO variables have a certain pre-defined behavior when a value from a
 variable of a different type is assigned. Variables were created
@@ -746,8 +744,8 @@ More details can be found in the `Traits 3 User Manual`__.
 
 .. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#predefined-traits-for-simple-types
 
-*Variable Containers*
-~~~~~~~~~~~~~~~~~~~~~
+Variable Containers
+--------------------
 
 For components with many variables, it is often useful to compartmentalize
 them into a hierarchy of containers to enhance readability and "findability."
@@ -816,7 +814,7 @@ to create a custom data structure that the framework sees as a single entity
 for connection purposes. This is explained in :ref:`Building-a-Variable-Plugin`.
 
 Building a Simulation Model
----------------------------
+===========================
 
 A *model* is a hierarchical collection of components with an assembly at its root. 
 The root assembly is also called the *top level assembly.* 
@@ -863,8 +861,8 @@ the Paraboloid is accessed via ``self.paraboloid``.
 
 A Component can also be removed from an Assembly using ``remove``.
 
-*Assemblies*
-~~~~~~~~~~~~
+Assemblies
+-----------
 
 An Assembly is a special type of Component with the characteristics below. It contains:
 
@@ -875,8 +873,8 @@ An Assembly retains the Component API (i.e., it can be executed, added to
 models, and exists in the model hierarchy), but it also extends the API to
 include functions that support the above-listed characteristics.
 
-*Connecting Components*
-~~~~~~~~~~~~~~~~~~~~~~~
+Connecting Components
+----------------------
 
 Consider once again the top level assembly that was created for the 
 :ref:`simple tutorial <Getting-Started-with-OpenMDAO>`. We would like to create a few
@@ -970,8 +968,8 @@ need to reconfigure their connections during runtime, so it is available.
 
 .. _Files-and-Directories:
 
-*Interacting with Files and Directories*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interacting with Files and Directories
+---------------------------------------
 
 Many components will need to read from and write to files during
 model execution. For example, a component might need to generate input files
@@ -1017,19 +1015,19 @@ needs to run on a scratch disc), then this can be accomplished by using
 multiprocessing, wherein each process has its own top level.
 
 Drivers
--------
+========
 
 Drivers are generally iterative solvers, such as optimizers, that operate on
 their respective workflow until certain conditions are met. OpenMDAO includes
 several drivers that are distributable (i.e., either open source or
 public domain.) This section describes the driver interface that is common
 to most drivers. A more complete discussion on how to use each of the
-drivers can be found in the section on :ref:`Drivers` in *Appendix B: Standard Library Reference.*
+drivers can be found in the section on :ref:`Drivers` in the *Standard Library Reference.*
 
 .. _Driver-API: 
 
-*The Driver API*
-~~~~~~~~~~~~~~~~
+The Driver API
+--------------
 
 Drivers in OpenMDAO share a functional interface for setting up certain common
 parts of the problem. There are functions to handle parameters, which are inputs
@@ -1265,8 +1263,8 @@ for the objective value.
 
 .. _Adding-new-Drivers:
 
-*Adding new Drivers*
-~~~~~~~~~~~~~~~~~~~~
+Adding new Drivers
+---------------------
 
 .. todo::
 
@@ -1277,23 +1275,23 @@ for the objective value.
 .. _Derivatives:
 
 Derivatives
------------
+===========
 
 OpenMDAO provides the capability for a driver to determine the derivative of
 its outputs (typically the objective and constraints) with respect to its
-inputs (the parameters). Both first derivative (gradients) and second
-derivatives (Hessians) are supported. This capability is particularly useful
+inputs (the parameters). It supports both first derivative (gradients) and second
+derivatives (Hessians). This capability is particularly useful
 for gradient-descent optimizers and Newton solvers, where the solution moves
 toward the optimum value by traveling in the direction of the steepest
 gradient of the objective function.
 
-Some drivers, such as CONMINdriver and NEWSUMTdriver, include their own
-methods to calculate derivatives. These are usually based on a finite
-difference approximation of the derivatives of interest, and thus require one
-or more additional evaluations of the driver's workflow. OpenMDAO includes its
-own differentiator that uses the Finite Difference method to calculate both
-gradients and Hessians. 
-
+Some drivers, such as CONMINdriver and NEWSUMTdriver, include their own methods for
+calculating derivatives. These are usually based on a finite difference approximation
+of specific derivatives, and thus requires one or more additional evaluations
+of the driver's workflow. OpenMDAO includes its own differentiator that uses the
+Finite Difference method to calculate both gradients and Hessians. (See the section
+on the :ref:`FiniteDifference` differentiator in the *Standard Library*)
+.
 Sometimes, the solution process can be sped up by having a component supply
 its own derivatives. These derivatives may be analytical, or they might be
 estimated by some other means. The derivatives provided by a component may be
@@ -1303,8 +1301,8 @@ are also independent of the choice of step-size parameter.
 .. index:: Fake Finite Difference
 
 OpenMDAO can take advantage of the derivatives that a component supplies to
-potentially speed up the computation through the process of Fake Finite
-Difference (FFD). During a finite difference step, a component can be told to
+potentially speed up the computation through the process of *Fake Finite
+Difference (FFD).* During a finite difference step, a component can be told to
 use its derivatives and the first (or second) Taylor series term to produce
 its output. This output is not an accurate output at the requested input, but
 it is *the output that yields the exact derivative when finite differenced*.
@@ -1314,8 +1312,8 @@ A simple tutorial that covers the specification of derivatives can be found in
 
 .. _Calculating-Derivatives-with-Finite-Difference:
 
-*Calculating Derivatives with Finite Difference*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Calculating Derivatives with Finite Difference
+------------------------------------------------
 
 OpenMDAO's finite differencing capability can be accessed via the
 ``FiniteDifference`` object, which is part of a special class of
@@ -1379,12 +1377,12 @@ the ``add_parameter`` call. The code fragment above shows an example of all of t
 
 
 Running OpenMDAO
------------------
+==================
 
 .. _Setting-the-Top-Level-Assembly:
 
-*Setting the Top Level Assembly*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Setting the Top Level Assembly
+------------------------------
 
 When a Component or Assembly is instantiated as a standalone object, it is not
 aware of the directory where it resides. Any component added to such an assembly
@@ -1413,8 +1411,8 @@ All components added into this assembly will have this same absolute path. If a
 component or assembly does not have a valid absolute directory, then File 
 variables will not be able to read, write, or even open their target files.
 
-*Executing Models*
-~~~~~~~~~~~~~~~~~~
+Executing Models
+------------------
 
 .. todo::
 
@@ -1424,36 +1422,36 @@ variables will not be able to read, write, or even open their target files.
 
     Discuss Reset to Defaults.
 
-*Error Logging & Debugging*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Error Logging & Debugging
+---------------------------
 
 .. todo::
 
     Explain the error logging capability.
 
-*Saving & Loading*
-~~~~~~~~~~~~~~~~~~
+Saving & Loading
+-----------------
 
 .. todo::
 
     Show how to save and load.
 
-*Sharing Models*
-~~~~~~~~~~~~~~~~
+Sharing Models
+----------------
 
 .. todo::
 
     Discuss sharing models.
 
 Workflow
---------
+=========
 
 The execution order for components in a model is determined by the workflow object
 that the components belong to. OpenMDAO current has two available workflow classes that
 are described below.  They are Dataflow and SequentialWorkflow.
 
-*Dataflow*
-~~~~~~~~~~
+Dataflow
+-----------
 
 The "default" workflow for a model is inferred from the data flow connections.
 This means that a component is available to run once its inputs become valid,
@@ -1474,8 +1472,8 @@ when a model is instantiated, all outputs are invalid, which ensures that the
 whole model always executes the first time it is run.
 
 
-*SequentialWorkflow*
-~~~~~~~~~~~~~~~~~~~~
+SequentialWorkflow
+-----------------------
 
 This workflow is a simple sequence of components.  The components will be executed
 in the order that they were added to the workflow regardless of data dependencies.
@@ -1484,7 +1482,7 @@ exact sequence must be specified.
 
 
 Geometry in OpenMDAO
---------------------
+=====================
 
 We are currently investigating an API to provide a unified geometry interface. More
 information on the notional prototype can be found in

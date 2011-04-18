@@ -605,19 +605,15 @@ they are not dependent on the right choice of a step-size parameter.
 
 .. index:: Fake Finite Difference
 
-OpenMDAO supports specifing derivatives in the component API. When
-a component has a set of specified derivatives, they are used to replace that
-component's output with the first-order Taylor series expansion whenever the
-optimizer initiates a finite difference estimation of the gradient. This is
-called *Fake Finite Difference* and was developed to support an efficient way
-to calculate gradients for mixed models -- models that contain both components
-that can provide derivatives and those that cannot. More detail can be found
-in the Scripting User Interface :ref:`Derivatives`.
+In OpenMDAO derivatives can be specified in the component API. A component's a set of specified
+derivatives is used to replace that component's output with the first-order Taylor series expansion
+whenever the optimizer initiates a finite difference estimation of the gradient. This is called
+*Fake Finite Difference*. It provides an efficient way of calculating gradients for mixed models --
+models with components that can provide derivatives and those that cannot. Via Fake Finite
+Difference you can specify gradients (first derivatives) and Hessians (second derivatives) in mixed
+models. The CONMIN driver uses only gradients, but the NEWSUMT optimizer can use both gradients and
+Hessians. For details, see the :ref:`Derivatives` section in the *Script Interface.*
 
-OpenMDAO supports specifing gradients (first derivatives) and
-Hessians (second derivatives) in mixed models via Fake Finite Difference. The
-CONMIN driver only uses gradients, but the NEWSUMT optimizer can use both
-gradients and Hessians.
 
 Two steps are involved in specifying derivatives for a component:
 
