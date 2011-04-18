@@ -10,5 +10,5 @@ from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 
 from openmdao.lib.casehandlers.dumpcaserecorder import DumpCaseRecorder
 
-from openmdao.lib.casehandlers.caseset import CaseArray, CaseSet
+from openmdao.lib.casehandlers.caseset import CaseArray, CaseSet, caseiter_to_caseset
 

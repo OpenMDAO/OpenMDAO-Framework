@@ -340,15 +340,8 @@ def caseiter_to_caseset(caseiter, varnames=None, include_errors=False):
         if include_errors is False and case.msg:
             continue  # case reported an error or warning message
         if varnames is not None:
-            varnames = case.keys()
-        try:
-            casevals = [case[name] for name in vardict]
-            idx = 0
-            for name, lst in vardict.items():
-                lst.append(casevals[idx])
-                idx += 1
-        except KeyError:
-            continue # case doesn't contain a complete set of specified vars, 
-                     # so skip it to avoid data mismatches
-    return vardict
+            caseset.record(case.subcase(varnames))
+        else:
+            caseset.record(case)
+    return caseset
     

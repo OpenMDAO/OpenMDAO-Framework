@@ -241,6 +241,24 @@ class Case(object):
                 self.add_output(entry)
             else: # assume it's a tuple of the form (name, value)
                 self.add_output(entry[0], entry[1])
+                
+    def subcase(self, names):
+        """Return a new Case having a specified subset of this Case's inputs
+        and outputs.
+        """
+        ins = []
+        outs = []
+        for name in names:
+            val =  self._inputs.get(name)
+            if val is not None:
+                ins.append((name,val))
+            elif self._outputs:
+                outs.append((name,self._outputs[name]))
+            else:
+                raise KeyError("'%s' is not part of this Case" % name)
+        return Case(inputs=ins, outputs=outs, parent_id=self.parent_id,
+                    max_retries=self.max_retries)
+
         
     def _register_expr(self, s):
         """If the given string contains an expression, create an ExprEvaluator and

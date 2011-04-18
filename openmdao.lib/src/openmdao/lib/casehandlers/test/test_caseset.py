@@ -1,7 +1,8 @@
 import unittest
 
 from openmdao.main.api import Case
-from openmdao.lib.casehandlers.api import CaseSet, CaseArray
+from openmdao.lib.casehandlers.api import CaseSet, CaseArray, ListCaseIterator, \
+                                          caseiter_to_caseset
 
 class CaseArrayTestCase(unittest.TestCase):
 
@@ -35,6 +36,7 @@ class CaseArrayTestCase(unittest.TestCase):
         cs.record(self.case2)
         cs.record(self.case1_dup)
         self.assertEqual(3, len(cs))
+        self.assertTrue(self.case2 in cs)
         
     def test_start_empty(self):
         cs = CaseArray()
@@ -192,7 +194,17 @@ class CaseSetTestCase(unittest.TestCase):
         self.assertEqual(len(cs_intersect), 1)
         self.assertEqual(cs_intersect[0], self.case1)
         
-
+    def test_caseiter_to_caseset(self):
+        cases = ListCaseIterator(self.caselist[3:])
+        cs = caseiter_to_caseset(cases)
+        for case1,case2 in zip(cases.get_iter(), cs.get_iter()):
+            self.assertTrue(case1 == case2)
+        cssub = caseiter_to_caseset(cases, ['comp1.b','comp2.b','comp2.c+comp2.d'])
+        for case1,case2 in zip(cases.get_iter(), cssub.get_iter()):
+            self.assertTrue(set(case2.keys('in')).issubset(case1.keys('in')))
+            self.assertTrue(set(case2.keys('out')).issubset(case1.keys('out')))
+        
+        
 if __name__ == "__main__":
     unittest.main()
 
