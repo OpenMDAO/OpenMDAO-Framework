@@ -21,13 +21,32 @@ from openmdao.examples.expected_improvement.branin_component import BraninCompon
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
         
+
+
+class GlobalDesVar(object): 
+    def __init__(self): 
+        self.name = None
+        self.vars = []
+        self.low = None
+        self.high = None
+        
+class LocalDesVar(object): 
+    def __init__(self): 
+        self.var = []
+        self.low = None
+        self.high = None      
+        
+class CouplingVar(object): 
+    def __init__(self): 
+        self.vary = None
+        self.constraint= None
     
 class MyDriver(Driver): 
     def __init__(self,doc=None):
         super(MyDriver,self).__init__(doc)
         
-        self.ins = ['branin_meta_model.x','branin_meta_model.y']
-        self.outs = ['branin_meta_model.f_xy']  
+        self.ins = ['branin.x','branin.y']
+        self.outs = ['branin.f_xy']  
         
     def execute(self):
         self.set_events()
@@ -40,7 +59,6 @@ class MyDriver(Driver):
                     outputs = outputs)
         self.recorder.record(case)
         
-
         
 class Analysis(Assembly): 
     def __init__(self,*args,**kwargs):
@@ -48,30 +66,59 @@ class Analysis(Assembly):
         
         self._tdir = mkdtemp()
         
-        #Components
-        self.add("branin_meta_model",MetaModel())
-        self.branin_meta_model.surrogate = {'default':KrigingSurrogate()}
-        self.branin_meta_model.model = BraninComponent()
-        self.branin_meta_model.recorder = DBCaseRecorder(':memory:')
-        self.branin_meta_model.force_execute = True        
+        self.add('branin',BraninComponent())
+        
+        loc1 = LocalDesVar()
+        loc1.var = "branin.x"
+        
+        loc2 = LocalDesVar()
+        loc2.var = "branin.y"
+        
+        self.global_des_vars = []
+        self.local_des_vars = [loc1,loc2]
+        self.coupling_vars = []
+        
+        self.objective = 'branin.f_xy'
+        self.constraints = []
+        
+        
+        
+    def setup_single_EI(self,comp,min_ei=.0001):
+        
+        #change name of component to add '_model' to it. lets me name the metamodel as the old name
+        name = comp.name
+        comp.name = "%s_model"%name
+        
+        #add in the metamodel
+        meta_model = self.add(name,MetaModel()) #metamodel now replaces old component with same name
+        meta_model.surrogate = {'default':KrigingSurrogate()}
+        meta_model.model = comp
+        
+        meta_model_recorder = DBCaseRecorder(':memory:')
+        meta_model.recorder = meta_model_recorder
+        meta_model.force_execute = True        
         
         
         self.add("EI",ExpectedImprovement())
-        self.EI.criteria = "branin_meta_model.f_xy"
+        self.EI.criteria = self.objective
         
         self.add("filter",ParetoFilter())
-        self.filter.criteria = ['branin_meta_model.f_xy']
-        self.filter.case_sets = [self.branin_meta_model.recorder.get_iterator(),]
+        self.filter.criteria = [self.objective]
+        self.filter.case_sets = [meta_model_recorder.get_iterator(),]
         self.filter.force_execute = True
+        
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
         self.DOE_trainer.sequential = True
         self.DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=15)
         #self.DOE_trainer.DOEgenerator = FullFactorial(num_levels=5)
-        self.DOE_trainer.add_parameter("branin_meta_model.x")
-        self.DOE_trainer.add_parameter("branin_meta_model.y")
-        self.DOE_trainer.add_event("branin_meta_model.train_next")
-        self.DOE_trainer.case_outputs = ["branin_meta_model.f_xy"]
+        
+        for dvar in self.local_des_vars: 
+            self.DOE_trainer.add_parameter(dvar.var)
+
+        self.DOE_trainer.add_event("%s.train_next"%name)
+        
+        self.DOE_trainer.case_outputs = [self.objective]
         self.DOE_trainer.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
 
         
@@ -80,39 +127,43 @@ class Analysis(Assembly):
         self.EI_opt.population_size = 100
         self.EI_opt.generations = 10
         self.EI_opt.selection_method = "tournament"
-        self.EI_opt.add_parameter("branin_meta_model.x")
-        self.EI_opt.add_parameter("branin_meta_model.y")
+        
+        
+        for dvar in self.local_des_vars: 
+            self.EI_opt.add_parameter(dvar.var)
         self.EI_opt.add_objective("EI.EI")
         self.EI_opt.force_execute = True
         
+        
         self.add("retrain",MyDriver())
-        self.retrain.add_event("branin_meta_model.train_next")
+        self.retrain.add_event("%s.train_next"%name)
         self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
         self.retrain.force_execute = True
         
         self.add("iter",IterateUntil())
         self.iter.max_iterations = 30
-        self.iter.add_stop_condition('EI.EI <= .0001')
+        self.iter.add_stop_condition('EI.EI <= %s'%min_ei)
         
         #Iteration Heirarchy
         self.driver.workflow.add(['DOE_trainer', 'iter'])
         
-        self.DOE_trainer.workflow.add('branin_meta_model')
+        self.DOE_trainer.workflow.add(name)
         
         self.iter.workflow = SequentialWorkflow()
         self.iter.workflow.add(['filter', 'EI_opt', 'retrain'])
         
-        self.EI_opt.workflow.add(['branin_meta_model','EI'])
-        self.retrain.workflow.add('branin_meta_model')
+        self.EI_opt.workflow.add([name,'EI'])
+        self.retrain.workflow.add(name)
         
         #Data Connections
         self.connect("filter.pareto_set","EI.best_case")
-        self.connect("branin_meta_model.f_xy","EI.predicted_value")
+        self.connect(self.objective,"EI.predicted_value")
         
     def cleanup(self):
         shutil.rmtree(self._tdir, ignore_errors=True)
         
-
+        
+        
 if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
@@ -143,17 +194,17 @@ if __name__ == "__main__": #pragma: no cover
     analysis = Analysis()
        
     set_as_top(analysis)
-    
+    analysis.setup_single_EI(analysis.branin,.0001)
     analysis.run()
         
     points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
     for x,y,z in points: 
         print "x: ", x, "; y: ", y
-        analysis.branin_meta_model.x = x
-        analysis.branin_meta_model.y = y
-        analysis.branin_meta_model.execute()
-        print "f_xy: ",analysis.branin_meta_model.f_xy, " % error: ", \
-              (analysis.branin_meta_model.f_xy.mu - z)/z*100
+        analysis.branin.x = x
+        analysis.branin.y = y
+        analysis.branin.execute()
+        print "f_xy: ",analysis.branin.f_xy, " % error: ", \
+              (analysis.branin.f_xy.mu - z)/z*100
     
     #Generate the Contour plot to show the function
     def branin(x,y): 
@@ -166,7 +217,7 @@ if __name__ == "__main__": #pragma: no cover
     X,Y = meshgrid(X_range,Y_range)
     Z = branin(X,Y)
     
-    iterator = analysis.branin_meta_model.recorder.get_iterator()
+    iterator = analysis.branin.recorder.get_iterator()
     
     plt.contour(X,Y,Z,arange(1,200,2),zorder=1)
     
@@ -174,25 +225,25 @@ if __name__ == "__main__": #pragma: no cover
     
     #plot the initial training data
     data_train = case_db_to_dict(os.path.join(analysis._tdir,'trainer.db'),
-                                     ['branin_meta_model.y',
-                                      'branin_meta_model.x',
-                                      'branin_meta_model.f_xy'])
+                                     ['branin.y',
+                                      'branin.x',
+                                      'branin.f_xy'])
     
-    plt.scatter(data_train['branin_meta_model.x'],
-                data_train['branin_meta_model.y'],s=30,c='#572E07',zorder=10)
+    plt.scatter(data_train['branin.x'],
+                data_train['branin.y'],s=30,c='#572E07',zorder=10)
     
     data_EI = case_db_to_dict(os.path.join(analysis._tdir,'retrain.db'),
-                                     ['branin_meta_model.y',
-                                      'branin_meta_model.x',
-                                      'branin_meta_model.f_xy'])
+                                     ['branin.y',
+                                      'branin.x',
+                                      'branin.f_xy'])
     
-    count = len(data_EI['branin_meta_model.x'])
+    count = len(data_EI['branin.x'])
     colors = arange(0,count)/float(count)
 
     color_map = get_cmap('spring')
     
     
-    plt.scatter(data_EI['branin_meta_model.x'],data_EI['branin_meta_model.y'],
+    plt.scatter(data_EI['branin.x'],data_EI['branin.y'],
                 s=30,
                 c=colors,
                 zorder=11,
@@ -213,10 +264,10 @@ if __name__ == "__main__": #pragma: no cover
     for x_row,y_row in zip(X,Y): 
         row = []
         for x,y in zip(x_row,y_row): 
-            analysis.branin_meta_model.x = x
-            analysis.branin_meta_model.y = y
-            analysis.branin_meta_model.execute()
-            row.append(analysis.branin_meta_model.f_xy.mu)
+            analysis.branin.x = x
+            analysis.branin.y = y
+            analysis.branin.execute()
+            row.append(analysis.branin.f_xy.mu)
         Z2.append(row)
     Z2 = array(Z2)
     plt.contour(X,Y,Z2,arange(1,200,2),zorder=1)
@@ -230,4 +281,4 @@ if __name__ == "__main__": #pragma: no cover
     plt.show()
 
     analysis.cleanup()
-    
+            

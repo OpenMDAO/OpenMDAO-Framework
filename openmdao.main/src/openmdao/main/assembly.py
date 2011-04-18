@@ -339,9 +339,9 @@ class Assembly (Component):
             cname, _, vname = name.partition('.')
             if vname:
                 comp = getattr(self, cname)
-                ret.extend(comp.get_valid(vname))
+                ret.extend(comp.get_valid([vname]))
             else:
-                ret.extend(sup.get_valid(name))
+                ret.extend(sup.get_valid([name]))
         return ret
 
     def _input_updated(self, name):
