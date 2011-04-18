@@ -6,6 +6,25 @@
 Components
 ==========
 
+.. index:: Mux
+
+.. _Mux:
+
+Mux
+~~~~~~~~~~~
+
+Blah Blah Blah
+
+.. index:: DeMux
+
+.. _DeMux:
+
+DeMux
+~~~~~~~~~~~
+
+Blah Blah Blah
+
+
 .. index:: MetaModel
 
 .. _MetaModel:

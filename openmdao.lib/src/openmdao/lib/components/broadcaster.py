@@ -12,7 +12,10 @@ class Broadcaster(Component):
                  "'default' name is used if no other type is set explicitly")
     
     
-    def __init__(self,names,types=None): 
+    def __init__(self,names,types=None):
+        """names: ListSrt, list of the variable names you would like the broadcaster to create for you. all inputs will be named with a '_in' added. Outputs will follow the name given. 
+        types: Dict, dictionary of the name/type pairs describing which types you would like to broadcast. If given, the name 'default' indicates the default variable type to use."""
+        
         super(Broadcaster,self).__init__()
         self._vars = []
         if types is not None: self.types = types

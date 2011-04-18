@@ -143,47 +143,25 @@ in the model. We can overcome this by creating a component that passes an input 
 Thus, CONMIN can set the design variable in this Broadcaster, and when the Broadcaster executes,
 the new value gets passed to all of the components that need it.
 
-OpenMDAO doesn't have a built-in Broadcaster, so we need to make our own. It's a simple
-component with some inputs, some outputs, and an ``execute`` function that passes the inputs
-to the outputs.
+OpenMDAO has a built-in Broadcaster. It's a component, delived in the standard library,
+which performs the job of broadcasting outputs to all interested parties. 
+
 
 .. testcode:: Broadcaster
 
-    from openmdao.main.api import Component
-    from openmdao.lib.datatypes.api import Float
+    from openmdao.lib.components.api import Broadcaster
     
-    
-    class Broadcaster(Component):
-        """Component that holds some design variables.
-        This is only needed because we can't hook an optimizer up to multiple
-        locations of the same design variable"""
-        
-        # pylint: disable-msg=E1101
-        z1_in = Float(0.0, iotype='in', desc='Global Design Variable')
-        z2_in = Float(0.0, iotype='in', desc='Global Design Variable')
-        x1_in = Float(0.0, iotype='in', desc='Local Design Variable for CO')
-        y1_in = Float(0.0, iotype='in', desc='Coupling Variable')
-        y2_in = Float(0.0, iotype='in', desc='Coupling Variable')
-        z1 = Float(0.0, iotype='out', desc='Global Design Variable')
-        z2 = Float(0.0, iotype='out', desc='Global Design Variable')
-        x1 = Float(0.0, iotype='out', desc='Local Design Variable for CO')
-        y1 = Float(0.0, iotype='out', desc='Coupling Variable')
-        y2 = Float(0.0, iotype='out', desc='Coupling Variable')
-        
-        def execute(self):
-            """ Pass everything through"""
-            self.z1 = self.z1_in
-            self.z2 = self.z2_in
-            self.x1 = self.x1_in
-            self.y1 = self.y1_in
-            self.y2 = self.y2_in
+    bcastr = Broadcaster(['z1','z2','x1','y1','y2'])
 
-We've added the coupling variables in our Broadcaster as well, foreseeing the need
-for them in some of the other MDAO architectures.
+In the above code, we just instantiated a broadcaster and told it to broadcast the variables
+'z1', 'z2', 'x1', 'y1', 'y2'. The broadcaster automatically creates the inputs named 'z1_in', 'z2_in', 'x1_in', 'y1_in', 'y2_in'
+and outputs named 'z1', 'z2', 'x1', 'y1', 'y2'. For MDF you won't need to broadcast all of these variables, but it 
+does not hurt to have them all in there. The rest will be needed later to implement additional 
+architectures. We'll incorporate this broadcaster into the MDF architecture code down below
 
 .. index:: WorkFlow, BroydenSolver, FixedPointIterator
 
-The diagram also shows a solver that takes the output of the component dataflow
+The diagram above also shows a solver that takes the output of the component dataflow
 and feeds it back into the input. OpenMDAO presently has two solvers: FixedPointIterator
 and BroydenSolver. The FixedPointIterator is a solver that performs fixed point iteration,
 which means that it keeps driving ``x_new = f(x_old)`` until convergence is achieved. In
@@ -234,8 +212,8 @@ the top level optimization loop.
 
         from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                        SellarDiscipline2
-        from openmdao.examples.mdao.broadcaster import Broadcaster
-        
+ 
+        from openmdao.lib.components.api import Broadcaster       
         from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver, FixedPointIterator
         
@@ -258,7 +236,7 @@ the top level optimization loop.
                 self.add('driver', CONMINdriver())
                 
                 # Outer Loop - Global Optimization
-                self.add('bcastr', Broadcaster())
+                self.add('bcastr', Broadcaster(['z1','z2','x1','y1','y2']))
                 self.add('fixed_point_iterator', FixedPointIterator())
                 self.driver.workflow.add(['bcastr', 'fixed_point_iterator'])
                 
@@ -366,8 +344,8 @@ Finally, putting it all together gives:
 
         from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                        SellarDiscipline2
-        from openmdao.examples.mdao.broadcaster import Broadcaster
         
+        from openmdao.lib.components.api import Broadcaster                                               
         from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver, FixedPointIterator
         
@@ -390,7 +368,7 @@ Finally, putting it all together gives:
                 self.add('driver', CONMINdriver())
                 
                 # Outer Loop - Global Optimization
-                self.add('bcastr', Broadcaster())
+                self.add('bcastr', Broadcaster(['z1','z2','x1','y1','y2']))
                 self.add('fixed_point_iterator', FixedPointIterator())
                 self.driver.workflow.add(['bcastr', 'fixed_point_iterator'])
         
@@ -457,7 +435,7 @@ looks like this:
         from openmdao.lib.drivers.api import BroydenSolver
 
         # Outer Loop - Global Optimization
-        self.add('bcastr', Broadcaster())
+        self.add('bcastr', Broadcaster(['z1','z2','x1','y1','y2']))
         self.add('solver', BroydenSolver())
         self.driver.workflow.add(['bcastr', 'solver'])
 
@@ -532,8 +510,7 @@ are instantiated and the workflow is defined.
 
         from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                        SellarDiscipline2
-        from openmdao.examples.mdao.broadcaster import Broadcaster
-        
+        from openmdao.lib.components.api import Broadcaster
         from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver
         
@@ -556,7 +533,7 @@ are instantiated and the workflow is defined.
                 self.add('driver', CONMINdriver())
         
                 # Disciplines
-                self.add('bcastr', Broadcaster())
+                self.add('bcastr', Broadcaster(['z1','z2','x1','y1','y2']))
                 self.add('dis1', SellarDiscipline1())
                 self.add('dis2', SellarDiscipline2())
                 
@@ -681,8 +658,8 @@ that there are three drivers, and we add each component to one of the three work
 
         from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                        SellarDiscipline2
-        from openmdao.examples.mdao.broadcaster import Broadcaster
         
+        from openmdao.lib.components.api import Broadcaster
         from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver
 
@@ -702,7 +679,7 @@ that there are three drivers, and we add each component to one of the three work
                 
                 # Global Optimization
                 self.add('driver', CONMINdriver())
-                self.add('bcastr', Broadcaster())
+                self.add('bcastr', Broadcaster(['z1','z2','x1','y1','y2']))
                 self.add('localopt1', CONMINdriver())
                 self.add('localopt2', CONMINdriver())
                 self.driver.workflow.add(['bcastr', 'localopt1', 

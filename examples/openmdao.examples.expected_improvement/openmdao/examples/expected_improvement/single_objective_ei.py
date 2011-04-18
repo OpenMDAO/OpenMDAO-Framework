@@ -30,6 +30,7 @@ class MyDriver(Driver):
         self.outs = ['branin_meta_model.f_xy']  
         
     def execute(self):
+        print "TEST"
         self.set_events()
         self.run_iteration()
         
@@ -145,9 +146,9 @@ if __name__ == "__main__": #pragma: no cover
     set_as_top(analysis)
     
     analysis.run()
+        
     
-    print "for damon: " , analysis.iter.iteration
-    
+    exit()
     points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
     for x,y,z in points: 
         print "x: ", x, "; y: ", y
