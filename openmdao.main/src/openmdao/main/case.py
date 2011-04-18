@@ -1,8 +1,7 @@
 
 from uuid import uuid1
 import re
-
-#import ordereddict
+from StringIO import StringIO
 
 from openmdao.main.expreval import ExprEvaluator
 
@@ -54,25 +53,41 @@ class Case(object):
     def __str__(self):
         if self._outputs:
             outs = self._outputs.items()
+            outs.sort()
         else:
             outs = []
-        return 'Case %s: (parent_id %s)\n' \
-               '    description: %s\n' \
-               '    inputs: %s\n' \
-               '    outputs: %s\n' \
-               '    max_retries: %s, retries: %s\n' \
-               '    msg: %s' % \
-               (str(self.ident), self.parent_id, 
-                self.desc,
-                self._inputs.items(), 
-                outs,
-                self.max_retries, self.retries, 
-                self.msg)
+        ins = self._inputs.items()
+        ins.sort()
+        stream = StringIO()
+        stream.write("Case %s: " % str(self.ident))
+        if self.parent_id:
+            stream.write("(parent_id %s)\n" % self.parent_id)
+        else:
+            stream.write("\n")
+        if self.desc:
+            stream.write("   description: %s\n" % self.desc)
+        if ins:
+            stream.write("   inputs:\n")
+            for name,val in ins:
+                stream.write("      %s: %s\n" % (name,val))
+        if outs:
+            stream.write("   outputs:\n")
+            for name,val in outs:
+                stream.write("      %s: %s\n" % (name,val))
+        if self.max_retries is not None:
+            stream.write("   max_retries: %s\n" % self.max_retries)
+        if self.retries is not None:
+            stream.write("   retries: %s\n" % self.retries)
+        if self.msg:
+            stream.write("   msg: %s\n" % self.msg)
+        return stream.getvalue()
     
     def __eq__(self,other): 
         if self is other:
             return True
         try:
+            if self.msg != other.msg or self.desc != other.desc:
+                return False
             if len(self) != len(other):
                 return False
             for selftup, othertup in zip(self.items(), other.items()):
@@ -173,7 +188,10 @@ class Case(object):
             if self._exprs:
                 for name in self._outputs.keys():
                     expr = self._exprs.get(name)
-                    self._outputs[name] = expr.evaluate(scope) if expr else scope.get(name)
+                    if expr:
+                        self._outputs[name] = expr.evaluate(scope)
+                    else:
+                        self._outputs[name] = scope.get(name)
             else:
                 for name in self._outputs.keys():
                     self._outputs[name] = scope.get(name)

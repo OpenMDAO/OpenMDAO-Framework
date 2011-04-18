@@ -1,4 +1,5 @@
 import unittest
+import copy
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.lib.datatypes.api import Int, List
@@ -36,7 +37,7 @@ class CaseTestCase(unittest.TestCase):
         self.top.driver.workflow.add(['comp1','comp2'])
         
         self.inputs = [('comp1.a',2),('comp1.b',4),('comp1.a_lst', [4,5,6])]
-        self.outputs = ['comp2.c+comp2.d', 'comp2.c_lst[2]']
+        self.outputs = ['comp2.c+comp2.d', 'comp2.c_lst[2]', 'comp2.d']
         self.case = case = Case(inputs=self.inputs, outputs=self.outputs)
         case.apply_inputs(self.top)
         self.top.run()
@@ -46,10 +47,60 @@ class CaseTestCase(unittest.TestCase):
         self.assertEqual(self.case['comp1.a'], 2)
         self.assertEqual(self.case['comp2.c_lst[2]'], 24)
         
+        self.case['comp1.a'] = 5
+        self.assertEqual(self.case['comp1.a'], 5)
+        
     def test_case_containment(self):
         self.assertTrue('comp1.a' in self.case)
         self.assertFalse('comp1.z' in self.case)
         self.assertTrue('comp2.c+comp2.d' in self.case)
+        
+        
+    def test_len(self):
+        self.assertEqual(len(self.case), 6)
+
+    def test_str(self):
+        expected = ["Case blah-blah-blah:",
+                    "   inputs:",
+                    "      comp1.a: 2",
+                    "      comp1.a_lst: [4, 5, 6]",
+                    "      comp1.b: 4",
+                    "   outputs:",
+                    "      comp2.c+comp2.d: 12",
+                    "      comp2.c_lst[2]: 24",
+                    "      comp2.d: 8",
+                    "",
+               ]
+        for i,line in enumerate(str(self.case).split('\n')):
+            if i==0: # case id will always change
+                self.assertTrue(line.startswith('Case '))
+            else:
+                self.assertEqual(line, expected[i])
+                
+        case = Case(inputs=[('comp1.a',4), ('comp1.b',8)],desc='foo',
+                    parent_id='abc-xyz-pdq', max_retries=5, retries=4,
+                    msg='failed')
+        expected = ["Case blah-blah-blah: (parent_id: abc-xyz-pdq)",
+                    "   description: foo",
+                    "   inputs:",
+                    "      comp1.a: 4",
+                    "      comp1.b: 8",
+                    "   max_retries: 5",
+                    "   retries: 4",
+                    "   msg: failed",
+                    "",
+               ]
+        for i,line in enumerate(str(case).split('\n')):
+            if i==0: # case id will always change
+                self.assertTrue(line.startswith('Case '))
+                self.assertTrue(line.endswith(' (parent_id abc-xyz-pdq)'))
+            else:
+                self.assertEqual(line, expected[i])
+                
+        self.assertFalse(case == self.case)
+        self.assertTrue(case == case)
+        self.assertTrue(case == copy.deepcopy(case))
+        
         
     def test_items(self):
         inputs = dict(self.case.items(iotype='in'))
@@ -59,7 +110,7 @@ class CaseTestCase(unittest.TestCase):
             self.assertEqual(val, inputs[name])
             
         outputs = dict(self.case.items(iotype='out'))
-        expected_outs = dict([(k,v) for k,v in zip(self.outputs, [12,24])])
+        expected_outs = dict([(k,v) for k,v in zip(self.outputs, [12,24,8])])
         self.assertEqual(len(expected_outs), len(outputs))
         for name, val in expected_outs.items():
             self.assertTrue(name in outputs)
