@@ -11,7 +11,7 @@ from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
 
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver
-from openmdao.lib.components.api import FloatBroadcaster
+from openmdao.lib.components.api import Broadcaster
 from openmdao.lib.datatypes.api import Float
 
 
@@ -91,7 +91,7 @@ class SellarMDF(Assembly):
      
     #Known issues with this hack implementation: 
     #1) need some sort of clear functionality that can delete all teh drivers/connections/workflows/etc. that are created by auto configure
-    #1) Not sure I like the behavior of passing in discipline names
+    #1) Not sure I like the behavior of passing in discipline names, but no better ideas right now
     def configure_MDF(self,discipline1,discipline2): 
         """setup and MDF architecture inside this assembly.
         
@@ -101,7 +101,7 @@ class SellarMDF(Assembly):
         
         #make a broadcaster for the globals
         glb_names = [g.name for g in self.global_des_vars]
-        self.add('bcast',FloatBroadcaster(glb_names))
+        self.add('bcast',Broadcaster(glb_names))
         
         #create the top level optimizer
         self.add("driver",CONMINdriver())

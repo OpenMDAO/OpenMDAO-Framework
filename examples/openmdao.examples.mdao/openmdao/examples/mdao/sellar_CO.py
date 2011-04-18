@@ -5,8 +5,7 @@
 # pylint: disable-msg=E0611,F0401
 from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                SellarDiscipline2
-from openmdao.examples.mdao.broadcaster import Broadcaster
-
+from openmdao.lib.components.api import Broadcaster
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.drivers.api import CONMINdriver
 
@@ -27,7 +26,7 @@ class SellarCO(Assembly):
         
         # Global Optimization
         self.add('driver', CONMINdriver())
-        self.add('bcastr', Broadcaster())
+        self.add('bcastr', Broadcaster(['z1','z2','x1','y1','y2']))
         self.add('localopt1', CONMINdriver())
         self.add('localopt2', CONMINdriver())
         self.driver.workflow.add(['bcastr', 'localopt1', 

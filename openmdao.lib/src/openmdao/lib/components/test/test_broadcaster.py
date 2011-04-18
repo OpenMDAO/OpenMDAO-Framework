@@ -8,7 +8,8 @@ class Dummy(Component):
     
     x = Float(iotype="out")
     y = Float(iotype="in")    
-
+        
+        
 class testBroadcaster(unittest.TestCase): 
     
     def test_create(self): 
@@ -30,6 +31,12 @@ class testBroadcaster(unittest.TestCase):
         self.assertFalse(hasattr(b1,"z_in"))
         self.assertFalse(hasattr(b1,"z"))
         
+        self.assertTrue(hasattr(b1,'a_in'))
+        self.assertTrue(hasattr(b1,'a'))
+        self.assertTrue(hasattr(b1,'b_in'))
+        self.assertTrue(hasattr(b1,'b'))
+        
+        b1.types = {'a':Float,'default':Float}
         self.assertTrue(hasattr(b1,'a_in'))
         self.assertTrue(hasattr(b1,'a'))
         self.assertTrue(hasattr(b1,'b_in'))
@@ -61,8 +68,22 @@ class testBroadcaster(unittest.TestCase):
         self.assertEqual(set(asm.list_connections()),set([('dummy1.x', 'bcast.x_in'), ('bcast.x', 'dummy2.y')]))
         asm.bcast.names = ['z']
         
-        self.assertEqual(asm.list_connections(),[])
+        self.assertEqual(asm.list_connections(),[])    
         
+        
+    def test_error(self):    
+        try: 
+            b = Broadcaster(['x'],{'y':Float})
+        except ValueError, err: 
+            self.assertEqual(str(err),': No type was provided for "x" and no "default" type was provided. '
+                'Specify at least one of these')
+        else: 
+            self.fail('ValueError Expected')
+            
+        
+        
+            
+            
         
         
         
