@@ -1,4 +1,6 @@
-# Django settings for projman project.
+# Django settings for openmdao.gui
+
+import os
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -72,7 +74,8 @@ STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    'E:/projects/MDAO/T377_gooey/openmdao.gui/src/openmdao/gui/static/',
+    os.path.join(os.path.dirname(__file__), 'static').replace('\\','/'),
+
 )
 
 # List of finder classes that know how to find static files in
@@ -104,10 +107,7 @@ MIDDLEWARE_CLASSES = (
 ROOT_URLCONF = 'urls'
 
 TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-    'E:/projects/MDAO/T377_gooey/openmdao.gui/src/openmdao/gui/templates',    
+    os.path.join(os.path.dirname(__file__), 'templates').replace('\\','/'),    
 )
 
 INSTALLED_APPS = (

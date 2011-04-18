@@ -7,7 +7,7 @@ from projdb.models import Project
 
 @login_required()
 def index(request):
-    project_list = Project.objects.filter(user=request.user).order_by('-modified')[:5]
+    project_list = Project.objects.filter(user=request.user)
     return render_to_response('projdb/project_list.html', 
                               {'project_list': project_list, 'user': request.user})
     

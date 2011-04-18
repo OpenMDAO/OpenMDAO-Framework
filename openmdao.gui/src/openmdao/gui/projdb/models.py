@@ -11,3 +11,10 @@ class Project(models.Model):
     filename    = models.FileField(max_length=200,upload_to='projects/%Y/%m/%d')
     shared      = models.BooleanField()
     active      = models.BooleanField()
+
+    def __unicode__(self):
+        return self.projectname
+
+    class Meta:
+        ordering = ['-modified']
+
