@@ -38,8 +38,7 @@ class MyDriver(Driver):
         
         case = Case(inputs = inputs,
                     outputs = outputs)
-        for recorder in self.recorders:
-            recorder.record(case)
+        self.recorder.record(case)
         
 
         
@@ -73,8 +72,7 @@ class Analysis(Assembly):
         self.DOE_trainer.add_parameter("branin_meta_model.y")
         self.DOE_trainer.add_event("branin_meta_model.train_next")
         self.DOE_trainer.case_outputs = ["branin_meta_model.f_xy"]
-        self.DOE_trainer.recorders = [DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))]
-
+        self.DOE_trainer.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
         
         self.add("EI_opt",Genetic())
         self.EI_opt.opt_type = "maximize"

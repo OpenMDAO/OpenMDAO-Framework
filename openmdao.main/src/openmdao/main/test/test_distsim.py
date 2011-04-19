@@ -127,7 +127,7 @@ class BoxDriver(Driver):
 
     def __init__(self):
         super(BoxDriver, self).__init__()
-        self.recorders = [ListCaseRecorder()]
+        self.recorder = ListCaseRecorder()
 
     def execute(self):
         """ Runs with various box parameter values. """
@@ -148,8 +148,7 @@ class BoxDriver(Driver):
                                     ('area', None, area),
                                     ('pid', None, self.parent.box.pid)]
                                    # Just to show access to remote from driver.
-                    for recorder in self.recorders:
-                        recorder.record(case)
+                    self.recorder.record(case)
 
 
 class BoxSource(ExecComp):
@@ -438,7 +437,7 @@ class TestCase(unittest.TestCase):
         for width in range(1, 2):
             for height in range(1, 3):
                 for depth in range(1, 4):
-                    case = model.driver.recorders[0].cases.pop(0)
+                    case = model.driver.recorder.cases.pop(0)
                     self.assertEqual(case.outputs[0][2], width*height*depth)
 
         self.assertTrue(is_instance(model.box.parent, Assembly))
@@ -532,7 +531,7 @@ class TestCase(unittest.TestCase):
         for width in range(1, 2):
             for height in range(1, 3):
                 for depth in range(1, 4):
-                    case = model.driver.recorders[0].cases.pop(0)
+                    case = model.driver.recorder.cases.pop(0)
                     self.assertEqual(case.outputs[0][2], width*height*depth)
 
         # Check access protections.
@@ -612,7 +611,7 @@ class TestCase(unittest.TestCase):
             for width in range(1, 2):
                 for height in range(1, 3):
                     for depth in range(1, 4):
-                        case = model.driver.recorders[0].cases.pop(0)
+                        case = model.driver.recorder.cases.pop(0)
                         self.assertEqual(case.outputs[0][2], width*height*depth)
         finally:
             if factory is not None:

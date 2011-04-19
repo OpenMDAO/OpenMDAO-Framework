@@ -34,7 +34,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
 
     def test_dumprecorder(self):
         sout = StringIO.StringIO()
-        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.driver.recorder = DumpCaseRecorder(sout)
         self.top.run()
         expected = [
             'Case: case8',

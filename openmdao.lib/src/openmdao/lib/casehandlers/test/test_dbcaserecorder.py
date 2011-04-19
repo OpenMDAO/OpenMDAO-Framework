@@ -44,14 +44,14 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         by a DBCaseIterator.  Finally the cases are dumped to a string after
         being run for the second time.
         """
-        self.top.driver.recorders = [DBCaseRecorder()]
+        self.top.driver.recorder = DBCaseRecorder()
         self.top.run()
         
         # now use the DB as source of Cases
-        self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
+        self.top.driver.iterator = self.top.driver.recorder.get_iterator()
         
         sout = StringIO.StringIO()
-        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.driver.recorder = DumpCaseRecorder(sout)
         self.top.run()
         expected = [
             'Case: case8',
@@ -173,7 +173,7 @@ class NestedCaseTestCase(unittest.TestCase):
         asm.add('comp2', ExecComp(exprs=['z=x+y']))
         asm.connect('comp1.z', 'comp2.x')
         driver.workflow.add(['comp1', 'comp2'])
-        driver.recorders = [DBCaseRecorder(dbname, append=True)]
+        driver.recorder = DBCaseRecorder(dbname, append=True)
         if top:
             top.add('asm', asm)
             top.driver.workflow.add('asm')

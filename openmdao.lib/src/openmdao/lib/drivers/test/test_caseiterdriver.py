@@ -138,7 +138,7 @@ class TestCase(unittest.TestCase):
         stop_case['driven.stop_exec'] = True
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
+        self.model.driver.recorder = results
         self.model.driver.sequential = True
 
         try:
@@ -198,7 +198,7 @@ class TestCase(unittest.TestCase):
             self.model.driven.sleep = 0.2
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
+        self.model.driver.recorder = results
 
         self.model.run()
 
@@ -207,7 +207,7 @@ class TestCase(unittest.TestCase):
 
     def verify_results(self, forced_errors=False):
         """ Verify recorded results match expectations. """
-        for case in self.model.driver.recorders[0].cases:
+        for case in self.model.driver.recorder.cases:
             i = int(case.desc)  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
@@ -228,7 +228,7 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
+        self.model.driver.recorder = results
 
         # Set local dir in case we're running in a different directory.
         py_dir = self.directory
@@ -252,7 +252,7 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(cases)
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
+        self.model.driver.recorder = results
 
         self.model.run()
 
@@ -277,7 +277,7 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(cases)
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
+        self.model.driver.recorder = results
 
         self.model.run()
 
@@ -292,7 +292,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noiterator')
 
         # Check resoponse to no iterator set.
-        self.model.driver.recorders = [ListCaseRecorder()]
+        self.model.driver.recorder = ListCaseRecorder()
         try:
             self.model.run()
         except ValueError as exc:

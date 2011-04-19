@@ -235,7 +235,7 @@ class CONMINdriver(Driver):
         
     # Extra variables for printing
     printvars = List(Str, iotype='in', desc='List of extra variables to '
-                               'output in the recorders.')
+                               'output in the recorder.')
     
     def __init__(self, doc=None):
         super(CONMINdriver, self).__init__( doc)
@@ -435,7 +435,7 @@ class CONMINdriver(Driver):
         if self.iter_count != self.cnmn1.iter:
             self.iter_count = self.cnmn1.iter 
             
-            if self.recorders:
+            if self.recorder:
                 # Write out some relevant information to the recorder
                 
                 dvals = [float(val) for val in self.design_vals[:-2]]
@@ -457,8 +457,7 @@ class CONMINdriver(Driver):
                 case = Case(case_input, case_output, desc='case%s' % self.iter_count,
                             parent_id=self._case_id)
                 
-                for recorder in self.recorders:
-                    recorder.record(case)
+                self.recorder.record(case)
         
 
     def _config_conmin(self):

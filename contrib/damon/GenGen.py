@@ -85,7 +85,7 @@ class Analysis(Assembly):
         self.add("A",MetaModel())
         self.A .surrogate = {'default':KrigingSurrogate()}
         self.A.model = ConceptA()
-        self.A.recorders = [DBCaseRecorder(':memory:')]
+        self.A.recorder = DBCaseRecorder(':memory:')
 
         self.add('DOE_maker',DOE_Maker())
         self.DOE_maker.cases = [10]*3
@@ -99,7 +99,7 @@ class Analysis(Assembly):
         self.trainA.add_parameter("A.z")
         self.trainA.add_event("A.train_next")
         self.trainA.case_outputs = ['A.f1','A.f2']
-        self.trainA.recorders = [DBCaseRecorder(os.path.join(self._tdir,'A.db'))]
+        self.trainA.recorder = DBCaseRecorder(os.path.join(self._tdir,'A.db'))
         
         self.add('driver',Iterator())
         self.driver.add_stop_condition('len(DOE_maker.cases)==0')
