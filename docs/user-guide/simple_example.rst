@@ -646,7 +646,7 @@ declare a derivative, it is assumed to be zero. You don't have to actively
 set it to zero, and there is no superfluous multiplication by zero in any part
 of the calculation. This philosophy leads to a clean interface and efficient
 calculation, but the burden is on the component developer to make sure not
-to miss a declaration of a derivative for an important output pair.
+to miss a declaration of a derivative for an important input-output pair.
 
 You can add analytical derivatives to the Paraboloid component by adding the
 two functions mentioned above.
