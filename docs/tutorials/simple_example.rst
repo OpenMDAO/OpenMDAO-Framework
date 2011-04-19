@@ -275,7 +275,7 @@ The Paraboloid component is now built and ready for inclusion in a larger model.
 
 .. _`using-CONMIN`:
 
-Building a Model - Unconstrained Optimization Using CONMIN
+Building a Model - Unconstrained Optimization using CONMIN
 -----------------------------------------------------------
 
 Your next task is to build a model that finds the minimum value for the Paraboloid component
@@ -594,7 +594,7 @@ objective function. In our simple example problem, the CONMIN driver estimates
 the gradient at various times during the solution procedure by performing a
 local finite-difference step. Calculating the gradient typically involves one or
 more executions of the objective function depending on the finite difference
-method that is used. This, of course, means that your model is executed some
+method that is used. This, of course, means that your model is executed 
 additional times each iteration.
 
 Sometimes, the solution process can be sped up by having a component supply its own
@@ -605,7 +605,7 @@ they are not dependent on the right choice of a step-size parameter.
 
 .. index:: Fake Finite Difference
 
-In OpenMDAO derivatives can be specified in the component API. A component's a set of specified
+In OpenMDAO, derivatives can be specified in the component API. A component's a set of specified
 derivatives is used to replace that component's output with the first-order Taylor series expansion
 whenever the optimizer initiates a finite difference estimation of the gradient. This is called
 *Fake Finite Difference*. It provides an efficient way of calculating gradients for mixed models --
@@ -619,8 +619,8 @@ Two steps are involved in specifying derivatives for a component:
 
 :: 
  
-  1. Declare derivatives in the ``__init__`` method
-  2. Calculate the derivatives in the ``calculate_derivatives`` method
+  1. Declare derivatives in the "__init__" method
+  2. Calculate the derivatives in the "calculate_derivatives" method
 
 You must declare the derivatives that you want to define so that the component can
 be checked for missing derivatives. In declaration, you aren't defining a value

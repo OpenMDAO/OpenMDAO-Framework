@@ -446,23 +446,21 @@ used here, including the *Enum* type.
 
 .. index:: PEP 8
 
-In this example, we use more complicated names for our variables, so we should
-cover what makes a valid variable name. Variables are also Python variables,
-so they must follow Python's standard naming convention. They must begin with
-a letter or underscore and should consist of only alphanumeric characters and
-the underscore. Keep in mind that a leading underscore is generally used for
-private data or functions. **Spaces cannot be used in a variable name.**
-Generally, we've tried to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_ 
-standard for component instance
-names as well as Python variable names. PEP 8 prescribes the use of lower case
-names with words separated by underscores.
+In this example, we use more complicated names for our variables, so we should cover what makes a
+valid variable name. Variables are also Python variables, so they must follow Python's standard
+naming convention. They must begin with a letter or underscore and should consist of only
+alphanumeric characters and the underscore. Keep in mind that a leading underscore is generally used
+for private data or functions. **Spaces cannot be used in a variable name.** Generally, we've tried
+to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_  standard for component instance 
+names as well as Python variable names. PEP 8 prescribes the use of lower case names with words
+separated by underscores.
 
 The required parameter *iotype*, the optional parameter *desc*, and the
 default value are covered in previous tutorials. The parameter *units* is
 introduced here and is used in a few of the variables in Transmission. OpenMDAO contains a Units
 module that allows for unit checking and conversion between outputs and
 inputs of components. Our units definitions are based on the those given in
-Scientific Python and can be found the :ref:`Appendix:-Summary-of-Units`. If an output and an
+Scientific Python and can be found in :ref:`units`. If an output and an
 input of the same unit class (e.g., length) are connected in the framework, the value is automatically
 converted as it is passed from the output to the input. If an output and an input
 of a different unit class are connected (e.g., length and time), an exception is

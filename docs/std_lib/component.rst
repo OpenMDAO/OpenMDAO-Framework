@@ -13,18 +13,16 @@ Components
 MetaModel
 ~~~~~~~~~~~
 
-MetaModel is a class which supports generalized meta modeling capabilities. There are two 
-sockets, one for surrogate model generators and a second for the 
-model that is being approximated. The first socket, named `surrogate`, must 
-always be filled before anything else is done. This socket gets filled with 
-a dictionary that specifies which surrogate model generator should be used for 
-which outputs. The keys of the dictionary are the variable names, and the values
-are the particular surrogate model generators which adhere to the ISurrogate
-interface. A special key, 'default', can be used to indicate a surrogate model
-generator to be used if no specific one is given for a particular variable. 
-Any specific variables specified will override the default. 
-OpenMDAO provides some surrogate modelers in ``openmdao.lib.surrogatemodels``. 
-    
+MetaModel is a class which supports generalized meta modeling capabilities. It has two  sockets, one
+for surrogate model generators and a second for the  model that is being approximated. The first
+socket, named `surrogate`, must  always be filled before anything else is done. This socket gets
+filled with  a dictionary that specifies which surrogate model generator should be used for  which
+outputs. The keys of the dictionary are the variable names, and the values are the particular
+surrogate model generators which adhere to the ISurrogate interface. A special key, ``'default'``,
+can be used to indicate a surrogate model generator to be used if no specific one is given for a
+particular variable.  Any specified variables will override the default. OpenMDAO provides some
+surrogate modelers in ``openmdao.lib.surrogatemodels``. 
+
 .. testcode:: MetaModel_sockets
         
    from openmdao.main.api import Assembly
@@ -127,9 +125,9 @@ or
             #include only the y input
             self.meta_model.includes=['y']
 
-MetaModel treats inputs and outputs a little differently. All the inputs, regardless of which ones are
-being included/excluded, will be mirrored by a MetaModel. But if inputs are excluded, then MetaModel won't
-pass down their values to the surrogate models as inputs to training cases. 
+MetaModel treats inputs and outputs a little differently. All the inputs, regardless of which ones
+are being included/excluded, will be mirrored by a MetaModel. But if inputs are excluded, then
+MetaModel won't pass down their values to the surrogate models as inputs to training cases. 
 
 When outputs are excluded, they no longer get mirrored by MetaModel. They won't get
 surrogate models fit to them, and consequently, they won't be available to the simulation from
@@ -226,9 +224,9 @@ surrogate model training is only done when a prediction is needed and new traini
 MSC NastranComponent
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The following documentation refers to the MSC (MacNeal-Schwendler Corporation) Nastran Component. This component is
-a wrapper for MSC Nastran, but it does not include the MSC Nastran executable. You need to have installed MSC Nastran
-with a valid license before this wrapper will work. 
+The following documentation refers to MSC (MacNeal-Schwendler Corporation) Nastran. This component is a
+wrapper for MSC Nastran but does not include the MSC Nastran executable. MSC Nastran must be installed with a
+valid license before this wrapper will work. 
 
 *Overview*
 ----------

@@ -680,17 +680,15 @@ types provide the following useful effects when utilized in the framework.
 - Raise an exception when attempting to pass a value from an output to an input having incompatible units (e.g., ``'kg'`` and ``'m'``)
 - Allow values to be passed between unitless variables and variables with units; no unit conversion occurs
 
-A complete list of the available units is given in the :ref:`Appendix:-Summary-of-Units`.
-The unit conversion code and the base set of units come from the
-PhysicalQuantities package found in `Scientific Python
-<http://dirac.cnrs-orleans.fr/plone/software/scientificpython>`_. It was
-necessary to add a few units to the existing ones in PhysicalQuantities (in
-particular, a currency unit), so a new Units package was derived and is
-included in OpenMDAO as ``openmdao.units``. This package has the same basic
-function as that of PhysicalQuantities, but to make it more extensible, the
-unit definitions were moved from the internal dictionary into an externally
-readable text file called ``unitLibdefault.ini``. See the source documentation for more information on the
-OpenMDAO :ref:`Units package<openmdao.units.units.py>`, including how to add units.
+A complete list of the available units is given in the :ref:`units`. The unit conversion code
+and the base set of units come from the PhysicalQuantities package found in `Scientific Python
+<http://dirac.cnrs-orleans.fr/plone/software/scientificpython>`_. It was necessary to add a few
+units to the existing ones in PhysicalQuantities (in particular, a currency unit), so a new
+Units package was derived and is included in OpenMDAO as ``openmdao.units``. This package has
+the same basic function as that of PhysicalQuantities, but to make it more extensible, the unit
+definitions were moved from the internal dictionary into an externally readable text file called
+``unitLibdefault.ini``. See the source documentation for more information on the OpenMDAO
+:ref:`units package<openmdao.units.units.py>`, including how to add units.
 
 As an example, consider a component that calculates a pressure (in Pascals) given
 a known force (in Newtons) applied to a known area (in square meters). Such a
@@ -1286,12 +1284,12 @@ toward the optimum value by traveling in the direction of the steepest
 gradient of the objective function.
 
 Some drivers, such as CONMINdriver and NEWSUMTdriver, include their own methods for
-calculating derivatives. These are usually based on a finite difference approximation
-of specific derivatives, and thus requires one or more additional evaluations
-of the driver's workflow. OpenMDAO includes its own differentiator that uses the
-Finite Difference method to calculate both gradients and Hessians. (See the section
-on the :ref:`FiniteDifference` differentiator in the *Standard Library*)
-.
+calculating derivatives. These are usually based on a finite difference
+approximation of specific derivatives, and thus requires one or more additional
+evaluations of the driver's workflow. OpenMDAO includes its own differentiator that
+uses the Finite Difference method to calculate both gradients and Hessians. (See the
+section :ref:`FiniteDifference` in the *Standard Library Reference.*)
+
 Sometimes, the solution process can be sped up by having a component supply
 its own derivatives. These derivatives may be analytical, or they might be
 estimated by some other means. The derivatives provided by a component may be
@@ -1307,7 +1305,7 @@ use its derivatives and the first (or second) Taylor series term to produce
 its output. This output is not an accurate output at the requested input, but
 it is *the output that yields the exact derivative when finite differenced*.
 
-A simple tutorial that covers the specification of derivatives can be found in
+A simple tutorial that covers how to specify derivatives can be found in
 :ref:`Adding-Derivatives-to-Your-Components`.
 
 .. _Calculating-Derivatives-with-Finite-Difference:
@@ -1315,13 +1313,12 @@ A simple tutorial that covers the specification of derivatives can be found in
 Calculating Derivatives with Finite Difference
 ------------------------------------------------
 
-OpenMDAO's finite differencing capability can be accessed via the
-``FiniteDifference`` object, which is part of a special class of
-``Differentiator`` objects which can be used by a driver to provide
-derivatives between the parameters and the constraints and objectives of a
-driver. If a driver supports derivative calculation (like the CONMIN and
-NEWSUMT optimizers), then it contains a socket called *differentiator*,
-into which a FiniteDifference instance can be placed:
+In OpenMDAO finite differencing is accomplished by using the ``FiniteDifference`` object, which
+is a part of a special class of ``Differentiator`` objects that a driver uses to provide 
+derivatives between the parameters and the constraints and objectives. If a driver supports
+derivative calculation (like the CONMIN and NEWSUMT optimizers do), then it contains a socket
+called *differentiator*, into which a FiniteDifference instance can be placed:
+
 
 .. testcode:: NEWSUMT_fd
 
