@@ -94,7 +94,9 @@ class Analysis(Assembly):
         self.constraints = []
         
         
-        
+    #TODO: Passing arguments here for component name, and any other options. I don't like giving it a component name. 
+    #    What if I was optimizting more than a single component? could I specify a whole workflow then? Right now you 
+    #    would always have to wrap up your analysis in an assmebly so it looked like a single box. 
     def setup_single_EI(self,comp,min_ei=.0001):
         
         #change name of component to add '_model' to it. lets me name the metamodel as the old name
