@@ -46,11 +46,15 @@ class DependencyGraph(object):
     """
     A dependency graph for Components.  Each edge contains a _Link object, which 
     maps all connected inputs and outputs between the two Components.  Graph
-    nodes starting with '@' are abstract nodes that represent boundary connections.
+    nodes starting with '@' are abstract nodes that represent boundary 
+    connections.
     
     @xin is external to our input boundary
+
     @bin is our input boundary
+
     @bout is our output boundary
+
     @xout is external to our output boundary
     """
 
