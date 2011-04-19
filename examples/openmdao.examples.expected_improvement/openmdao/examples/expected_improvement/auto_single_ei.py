@@ -22,7 +22,14 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
         
 
-#TODO: Can the DesVar objects allow some sort of mapping, used for normalization? 
+#TODO: Can the DesVar objects allow some sort of mapping, used for normalization?
+#    Normalization is common in problem formulation, and it would be nice to support it 
+#    without having to make changes to the components themselves
+
+#TODO: Currently, I just create a broadcaster to make use of these vars. But
+#      They could be special objects that the driver sets the value of directly, and 
+#      then they push the value to wherever... including any mapping functions needed for
+#      the above thoughts on normalization
 class GlobalDesVar(object): 
     def __init__(self): 
         self.name = None
