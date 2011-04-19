@@ -22,6 +22,7 @@ jQuery(document).ready(function() {
         new openmdao.CodeEditor("texteditor",model).editFile)
     new openmdao.Palette("palette",model)
     new openmdao.DataFlow("dataflow",model)
+    new openmdao.Plotter("plotter",model)
     new openmdao.Console("cmdform","command","history",model);
     
     // initialize views

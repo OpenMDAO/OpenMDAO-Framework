@@ -26,3 +26,27 @@ def detail(request, project_id):
     else:
         return render_to_response('projdb/project_detail.html', {'project': p},
                                   context_instance=RequestContext(request))
+
+def display_meta(request):
+    html = []
+    
+    html.append('<h3>GET Data:</h3>')
+    values = request.GET.values()
+    values.sort()
+    for k, v in values:
+        html.append('<tr><td>%s</td><td>%s</td></tr>' % (k, v))
+    html.append('<p>')
+    
+    html.append('<h3>POST Data:</h3>')
+    values = request.POST.values()
+    values.sort()
+    for k, v in values:
+        html.append('<tr><td>%s</td><td>%s</td></tr>' % (k, v))
+    html.append('<p>')
+    
+    html.append('<h3>META Data:</h3>')
+    values = request.META.items()
+    values.sort()
+    for k, v in values:
+        html.append('<tr><td>%s</td><td>%s</td></tr>' % (k, v))
+    return HttpResponse('<table>%s</table>' % '\n'.join(html))

@@ -8,4 +8,7 @@ urlpatterns = patterns('projdb.views',
     # custom views
     (r'^$', 'index'),
     (r'^(?P<project_id>\d+)/$', 'detail'),
+    
+    # debugging views
+    (r'^meta$', 'display_meta'),
 )
