@@ -619,12 +619,14 @@ Hessians (second derivatives) in mixed models via Fake Finite Difference. The
 CONMIN driver only uses gradients, but the NEWSUMT optimizer can use both
 gradients and Hessians.
 
-Two steps are involved in specifying derivatives for a component:
+Four steps are involved in specifying derivatives for a component:
 
 :: 
  
-  1. Declare derivatives in the ``__init__`` method
-  2. Calculate the derivatives in the ``calculate_derivatives`` method
+  1. Inherit from ComponentWithDerivatives instead of Component
+  2. Declare derivatives in the ``__init__`` method
+  3. Calculate the first derivatives in the ``calculate_first_derivatives`` method
+  4. (If needed) Calculate the second derivatives in the ``calculate_second_derivatives`` method
 
 You must declare the derivatives that you want to define so that the component can
 be checked for missing derivatives. In declaration, you aren't defining a value
@@ -679,34 +681,32 @@ include it.**
 Also, don't forget the cross-variable terms when declaring second derivatives
 (in this case, the second derivative of ``f_xy`` with respect to `x` **and** `y`.)
 
-Next, we define the ``calculate_derivatives`` method.
+Next, we define the ``calculate_first_derivatives`` and the
+``calculate_second_derivatives`` method.
 
 .. testcode:: Paraboloid_derivative
 
-    def calculate_derivatives(self, first, second):
-        """Analytical derivatives"""
+    def calculate_first_derivatives(self):
+        """Analytical first derivatives"""
         
-        if first:
+        df_dx = 2.0*self.x - 6.0 + self.y
+        df_dy = 2.0*self.y + 8.0 + self.x
+    
+        self.derivatives.set_first_derivative('f_xy', 'x', df_dx)
+        self.derivatives.set_first_derivative('f_xy', 'y', df_dy)
         
-            df_dx = 2.0*self.x - 6.0 + self.y
-            df_dy = 2.0*self.y + 8.0 + self.x
+    def calculate_second_derivatives(self):
+        """Analytical second derivatives"""
         
-            self.derivatives.set_first_derivative('f_xy', 'x', df_dx)
-            self.derivatives.set_first_derivative('f_xy', 'y', df_dy)
+        df_dxdx = 2.0
+        df_dxdy = 1.0
+        df_dydy = 2.0
         
-        if second:
-        
-            df_dxdx = 2.0
-            df_dxdy = 1.0
-            df_dydy = 2.0
+        self.derivatives.set_second_derivative('f_xy', 'x', 'x', df_dxdx)
+        self.derivatives.set_second_derivative('f_xy', 'x', 'y', df_dxdy)
+        self.derivatives.set_second_derivative('f_xy', 'y', 'y', df_dydy)
             
-            self.derivatives.set_second_derivative('f_xy', 'x', 'x', df_dxdx)
-            self.derivatives.set_second_derivative('f_xy', 'x', 'y', df_dxdy)
-            self.derivatives.set_second_derivative('f_xy', 'y', 'y', df_dydy)
-            
-This ``calculate_derivatives`` method calculated both the first and second
-derivatives, but we can take advantage of two Booleans, *first* and *second*,
-so that we only perform the calculation that is requested by the optimizer.
+
 Note that the Hessian matrix is symmetric, so ``df/dxdy`` is the same as
 ``df/dydx``, and only one has to be set.
 
