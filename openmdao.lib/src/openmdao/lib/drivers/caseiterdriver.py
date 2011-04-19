@@ -35,9 +35,6 @@ class CaseIterDriverBase(Driver):
     :class:`ResourceAllocationManager`.
     """
 
-    recorder = Instance(ICaseRecorder, allow_none=True, 
-                        desc='Something to save cases to.')
-    
     sequential = Bool(True, iotype='in',
                       desc='If True, evaluate cases sequentially.')
 
@@ -78,7 +75,7 @@ class CaseIterDriverBase(Driver):
 
     def execute(self):
         """
-        Runs all cases and records results in `recorder`.
+        Runs all cases and records results in `recorders`.
         Uses :meth:`setup` and :meth:`resume` with default arguments.
         """
         self.setup()
@@ -352,7 +349,7 @@ class CaseIterDriverBase(Driver):
     def _server_ready(self, server, stepping=False):
         """
         Responds to asynchronous callbacks during :meth:`execute` to run cases
-        retrieved from `self._iter`.  Results are processed by `recorder`.
+        retrieved from `self._iter`.  Results are processed by `recorders`.
         If `stepping`, then we don't grab any new cases.
         Returns True if this server is still in use.
         """
@@ -519,8 +516,8 @@ class CaseIterDriverBase(Driver):
             case.retries += 1
             self._rerun.append(case)
         else:
-            if self.recorder is not None:
-                self.recorder.record(case)
+            for recorder in self.recorders:
+                recorder.record(case)
 
     def _service_loop(self, name, resource_desc, credentials, reply_q):
         """ Each server has an associated thread executing this. """

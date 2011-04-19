@@ -54,7 +54,7 @@ class Analysis(Assembly):
         self.DOE_A.add_parameter("A.x")
         self.DOE_A.add_parameter("A.y")
         self.DOE_A.case_outputs = ['A.f1','A.f2']
-        self.DOE_A.recorder = DBCaseRecorder(os.path.join(self._tdir,'A.db'))
+        self.DOE_A.recorders = [DBCaseRecorder(os.path.join(self._tdir,'A.db'))]
 
         #Iteration Hierarchy
         self.driver.workflow.add(['DOE_A'])

@@ -158,7 +158,7 @@ def run_suite(resource_desc=None, name=None):
     print '\nInitializing egg module analysis'
     template = Case(inputs=[('sleeper.delay', None, 0.01)])
     model.driver.iterator = Iterator(template)
-    model.driver.recorder = Recorder(model.driver.iterator, 1000)
+    model.driver.recorders = [Recorder(model.driver.iterator, 1000)]
     start = time.time()
     egg_filename, required_distributions, orphan_modules = \
         model.save_to_egg('caseperf', '0')
@@ -179,17 +179,17 @@ def run_test(model, initial, limit, max_servers):
         print 'run test, delay %s' % duration
         template = Case(inputs=[('sleeper.delay', None, duration)])
         model.driver.iterator = Iterator(template)
-        model.driver.recorder = Recorder(model.driver.iterator, duration)
+        model.driver.recorders = [Recorder(model.driver.iterator, duration)]
         start = time.time()
-        model.driver.recorder.start = start
+        model.driver.recorders[0].start = start
         model.run()
         et = time.time() - start
-        n_cases = model.driver.recorder.n_cases
+        n_cases = model.driver.recorders[0].n_cases
         if n_cases > 0:
             print '    %d cases done in %.2f (%.2f sec/case)' \
                   % (n_cases, et, et/n_cases)
             if n_cases < MAX_TRIALS:
-                payoff_case = model.driver.recorder.payoff_case
+                payoff_case = model.driver.recorders[0].payoff_case
                 if payoff_case < n_cases:
                     print '    payoff at %d' % payoff_case
                 results.append((duration, payoff_case, n_cases, et))

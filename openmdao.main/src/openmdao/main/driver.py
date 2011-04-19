@@ -25,7 +25,7 @@ class Driver(Component):
     
     implements(IDriver, IHasEvents)
 
-    recorder = Instance(ICaseRecorder, desc='Case recorder for iteration data.', 
+    recorders = List(Instance(ICaseRecorder), desc='Case recorders for iteration data.', 
                         required=False)
 
     workflow = Instance(Workflow, allow_none=True)

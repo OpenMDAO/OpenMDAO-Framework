@@ -153,7 +153,9 @@ class MyDriver(Driver):
 
         case = Case(inputs = inputs,
                     outputs = outputs)
-        self.recorder.record(case)
+        
+        for recorder in self.recorders:
+            recorder.record(case)
 
         self.plot_results()
 
@@ -212,7 +214,7 @@ class Analysis(Assembly):
         self.DOE_trainer1.add_parameter("c1.x")
         self.DOE_trainer1.add_event("c1.train_next")
         self.DOE_trainer1.case_outputs = ['c1.f1','c1.f2']
-        self.DOE_trainer1.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer1.db'))
+        self.DOE_trainer1.recorders = [DBCaseRecorder(os.path.join(self._tdir,'trainer1.db'))]
 
         self.add("DOE_trainer2",DOEdriver())
         self.DOE_trainer2.sequential = True
@@ -220,7 +222,7 @@ class Analysis(Assembly):
         self.DOE_trainer2.add_parameter("c2.y")
         self.DOE_trainer2.add_event("c2.train_next")
         self.DOE_trainer2.case_outputs = ['c2.f1','c2.f2']
-        self.DOE_trainer2.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer2.db'))
+        self.DOE_trainer2.recorders = [DBCaseRecorder(os.path.join(self._tdir,'trainer2.db'))]
 
         self.add("opt",Genetic())
         self.opt.opt_type = "maximize"
@@ -237,7 +239,7 @@ class Analysis(Assembly):
 
         self.add("retrain",MyDriver())
         self.retrain.add_event("c1.train_next")
-        self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
+        self.retrain.recorders = [DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))]
         self.retrain.force_execute = True
 
         self.add("iter",IterateUntil())

@@ -183,7 +183,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_nooutput')
 
         results = ListCaseRecorder()
-        self.model.driver.recorder = results
+        self.model.driver.recorders = [results]
         self.model.driver.case_outputs.append('driven.sum_z')
         
         self.model.run()
@@ -199,7 +199,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noiterator')
 
         # Check resoponse to no iterator set.
-        self.model.driver.recorder = ListCaseRecorder()
+        self.model.driver.recorders = [ListCaseRecorder()]
         self.model.driver.DOEgenerator = None
         try:
             self.model.run()
@@ -213,7 +213,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_norecorder')
 
-        self.model.driver.recorder = None
+        self.model.driver.recorders = []
         self.model.run()
 
     def run_cases(self, sequential, forced_errors=False):
@@ -221,7 +221,7 @@ class TestCase(unittest.TestCase):
         
         self.model.driver.sequential = sequential
         results = ListCaseRecorder()
-        self.model.driver.recorder = results
+        self.model.driver.recorders = [results]
         if forced_errors:
             self.model.driver.add_event('driven.err_event')
 
@@ -233,7 +233,7 @@ class TestCase(unittest.TestCase):
     def verify_results(self, forced_errors=False):
         # Verify recorded results match expectations.
         
-        for case in self.model.driver.recorder.cases:
+        for case in self.model.driver.recorders[0].cases:
             if forced_errors:
                 self.assertEqual(case.msg, 'driven: Forced error')
             else:

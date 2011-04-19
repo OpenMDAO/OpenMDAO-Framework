@@ -23,8 +23,6 @@ class SimpleCaseIterDriver(Driver):
 
     # pylint: disable-msg=E1101
     iterator = Instance(ICaseIterator, desc='Source of Cases.', required=True)
-    recorder = Instance(ICaseRecorder, desc='Where Case results are recorded.',
-                        required=True)
     
     def __init__(self, *args, **kwargs):
         super(SimpleCaseIterDriver, self).__init__(*args, **kwargs)
@@ -38,7 +36,8 @@ class SimpleCaseIterDriver(Driver):
         """ Run each case in `iterator` and record results in `recorder`. """
         for case in self.iterator.get_iter():
             self._run_case(case)
-            self.recorder.record(case)
+            for recorder in self.recorders:
+                recorder.record(case)
 
     def _run_case(self, case):
         msg = None
