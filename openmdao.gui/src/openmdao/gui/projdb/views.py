@@ -8,7 +8,7 @@ from projdb.models import Project
 @login_required()
 def index(request):
     project_list = Project.objects.filter(user=request.user)
-    return render_to_response('projdb/project_list.html', 
+    return render_to_response('project_list.html', 
                               {'project_list': project_list, 'user': request.user})
     
 @login_required()
@@ -24,7 +24,7 @@ def detail(request, project_id):
         p.save()
         return HttpResponseRedirect('')
     else:
-        return render_to_response('projdb/project_detail.html', {'project': p},
+        return render_to_response('project_detail.html', {'project': p},
                                   context_instance=RequestContext(request))
 
 def display_meta(request):
