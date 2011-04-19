@@ -8,7 +8,7 @@ class CaseArray(object):
     def __init__(self, obj=None, parent_id=None, names=None):
         """
         obj: dict, Case, or None
-            if obj is a dict, it is assumed to contain all var names as keys, with
+            if obj is a dict, it is assumed to contain all var names/exprs as keys, with
             values that are lists.  All lists are assumed to have the same length.
             
             if obj is a Case, the inputs and outputs of the Case will become those
@@ -114,13 +114,15 @@ class CaseArray(object):
             idx = self._names.index(key)
             return [lst[idx] for lst in self._values]
         else:  # key is the case number
-            lst = self._values[key]
-            return Case(inputs=[(n,v) for n,v in zip(self._names[0:self._split_idx],
-                                                     lst[0:self._split_idx])],
-                        outputs=[(n,v) for n,v in zip(self._names[self._split_idx:],
-                                                      lst[self._split_idx:])],
-                        parent_id=self._parent_id)
+            return self._case_from_values(self._values[key])
             
+    def _case_from_values(self, values):
+        return Case(inputs=[(n,v) for n,v in zip(self._names[0:self._split_idx],
+                                                 values[0:self._split_idx])],
+                    outputs=[(n,v) for n,v in zip(self._names[self._split_idx:],
+                                                  values[self._split_idx:])],
+                    parent_id=self._parent_id)
+        
     def _get_case_data(self, case):
         """Return a list of values for the case in the same order as our values.
         Raise a KeyError if any of our names are missing from the case.
@@ -137,6 +139,8 @@ class CaseArray(object):
         return len(self._values)
     
     def __contains__(self, case):
+        if not isinstance(case, Case):
+            return False
         try:
             values = self._get_case_data(case)
         except KeyError:
@@ -159,7 +163,7 @@ class CaseArray(object):
                 self._add_values(vals)
                 
     def pop(self, idx=-1):
-        return self._values.pop(idx)
+        return self._case_from_values(self._values.pop(idx))
                 
     def _check_compatability(self, case_container):
         if self._names != case_container._names:
@@ -281,9 +285,9 @@ class CaseSet(CaseArray):
         self._tupset = set()
 
     def pop(self, idx=-1):
-        val = self._values.pop(idx)
-        self._tupset.remove(val)
-        return val
+        vals = self._values.pop(idx)
+        self._tupset.remove(vals)
+        return self._case_from_values(vals)
                 
     def __eq__(self, caseset):
         self._check_compatability(caseset)

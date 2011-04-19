@@ -61,6 +61,14 @@ class CaseArrayTestCase(unittest.TestCase):
             self.assertEqual(case._inputs, expected[i]._inputs)
             self.assertEqual(case._outputs, expected[i]._outputs)
 
+    def test_contains(self):
+        ca = CaseArray()
+        ca.record(self.case1)
+        self.assertTrue(self.case1_dup in ca)
+        self.assertFalse(self.case2 in ca)
+        self.assertFalse(None in ca)
+        
+
 class CaseSetTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -158,8 +166,7 @@ class CaseSetTestCase(unittest.TestCase):
             cs2.record(case)
         self.assertEqual(len(cs), len(self.caselist)-2)
         self.assertTrue(cs == cs2)
-        case = self.caselist[1]
-        vals = cs2.pop(1)
+        case = cs2.pop(1)
         self.assertFalse(cs == cs2)
         self.assertTrue(cs2 < cs)
         self.assertFalse(cs < cs)
@@ -171,6 +178,9 @@ class CaseSetTestCase(unittest.TestCase):
         self.assertFalse(case in cs2)
         self.assertTrue(case not in cs2)
         self.assertFalse(case not in cs)
+        diffset = cs - cs2
+        self.assertEqual(len(diffset), 1)
+        self.assertTrue(case in diffset)
         
         cs3 = CaseSet()
         cs4 = CaseSet()
@@ -203,6 +213,13 @@ class CaseSetTestCase(unittest.TestCase):
         for case1,case2 in zip(cases.get_iter(), cssub.get_iter()):
             self.assertTrue(set(case2.keys('in')).issubset(case1.keys('in')))
             self.assertTrue(set(case2.keys('out')).issubset(case1.keys('out')))
+            
+    def test_contains(self):
+        cs = CaseSet()
+        cs.record(self.case1)
+        self.assertTrue(self.case1_dup in cs)
+        self.assertFalse(self.case2 in cs)
+        self.assertFalse(None in cs)
         
         
 if __name__ == "__main__":
