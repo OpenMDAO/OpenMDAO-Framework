@@ -22,7 +22,7 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
         
 
-
+#TODO: Can the DesVar objects allow some sort of mapping, used for normalization? 
 class GlobalDesVar(object): 
     def __init__(self): 
         self.name = None
@@ -78,7 +78,12 @@ class Analysis(Assembly):
         self.local_des_vars = [loc1,loc2]
         self.coupling_vars = []
         
+        #IDEA: Architectures can support the same sub-interfaces as regular drivers, then 
+        #    assembly can check against the objective/constraints listed to see if it's compatible. 
+        #TODO: Should drivers list the type of variables they support, so this can be checked as well? 
+        #TODO: Multiple objectives? What happens if you put an achitecture in that only supports one objective
         self.objective = 'branin.f_xy'
+        #TODO: What happens if you put in a type of constraint that is not supported by an achitecture
         self.constraints = []
         
         
