@@ -21,6 +21,14 @@
         {% block content_title %}{% endblock %}
         </div>
         <div class="content">
+        {% if messages %}
+        <ul>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
         {% block content %}{% endblock %}
         </div>
     {% endblock %}

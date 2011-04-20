@@ -8,8 +8,12 @@ admin.autodiscover()
 urlpatterns = patterns('',
     # default to projdb app
     (r'^$', 'projdb.views.index'),
+    
     # projects
     (r'^projects/', include('projdb.urls')),
+    
+    # registration view is in projdb at the moment
+    (r'^accounts/register/$', 'projdb.views.register'),
     
     # authentication
     (r'^accounts/login/$',              'django.contrib.auth.views.login', {'template_name': 'login.html'}),
