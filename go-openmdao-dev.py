@@ -1160,7 +1160,7 @@ def _single_install(cmds, req, bin_dir):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'Pygments==1.3.1', 'ordereddict==1.1', 'Traits==3.3.0', 'pycrypto==2.3', 'PyYAML==3.09', 'Jinja2==2.4', 'decorator==3.2.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'paramiko==1.7.6', 'virtualenv==1.4.6', 'newsumt==1.1.0', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'nose==0.11.3']
+    reqs = ['numpy', 'scipy', 'networkx==1.3', 'rdflib==3.1.0', 'selenium==2.0b4dev', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'paramiko==1.7.6', 'nose==0.11.3', 'Pyevolve==0.6', 'PyYAML==3.09', 'Jinja2==2.4', 'Sphinx==1.0.6', 'Django==1.3', 'decorator==3.2.0', 'docutils==0.6', 'jsonpickle==0.3.1', 'newsumt==1.1.0', 'ordereddict==1.1', 'Traits==3.3.0', 'web.py==0.34', 'virtualenv==1.4.6', 'Fabric==0.9.3', 'conmin==1.0.1', 'pycrypto==2.3']
     url = 'http://openmdao.org/dists'
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
@@ -1199,6 +1199,7 @@ def after_install(options, home_dir):
  ('openmdao.main', '', 'sdist'),
  ('openmdao.lib', '', 'sdist'),
  ('openmdao.test', '', 'sdist'),
+ ('openmdao.gui', '', 'sdist'),
  ('openmdao.examples.simple', 'examples', 'sdist'),
  ('openmdao.examples.bar3simulation', 'examples', 'bdist_egg'),
  ('openmdao.examples.enginedesign', 'examples', 'bdist_egg'),

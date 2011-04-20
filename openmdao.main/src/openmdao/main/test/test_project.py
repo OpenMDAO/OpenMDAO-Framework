@@ -32,6 +32,8 @@ class ProjectTestCase(unittest.TestCase):
     def tearDown(self):
         try:
             shutil.rmtree(self.tdir)
+        except:
+            pass
         finally:
             os.chdir(self.startdir)
 
