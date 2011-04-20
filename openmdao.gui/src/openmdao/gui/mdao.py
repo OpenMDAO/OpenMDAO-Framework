@@ -551,9 +551,9 @@ def launch_browser(port):
     url = 'http://localhost:'+str(port)    
     web.debug('Opening URL in browser: '+url+' (pid='+str(pid)+')')
     
-    #preferred_browser = None;
+    preferred_browser = None;
     #preferred_browser = 'firefox';
-    preferred_browser = 'chrome';
+    #preferred_browser = 'chrome';
     
     # webbrowser doesn't know about chrome, so try to find it (this is for win7)
     if preferred_browser and preferred_browser.lower() == 'chrome':
