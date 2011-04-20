@@ -20,9 +20,9 @@ class DumpCaseRecorder(object):
         if self.out:  # if self.out is None, just do nothing
             out = self.out
             out.write("Case: %s" % case.desc)
-            out.write("\n   id: %s" % str(case.ident))
-            if case.parent_id:
-                out.write("\n   parent id: %s)" % case.parent_id)
+            out.write("\n   id: %s" % case.uuid)
+            if case.parent_uuid:
+                out.write("\n   parent id: %s)" % case.parent_uuid)
             out.write("\n   inputs:\n")
             inputs = dict(case.items(iotype='in'))
             for name,value in [(k,inputs[k]) for k in sorted(inputs.keys())]:

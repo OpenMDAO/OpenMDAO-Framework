@@ -75,7 +75,7 @@ class CaseSetTestCase(unittest.TestCase):
         inputs=[('comp1.a',4),('comp1.b',8),('comp2.b',2)]
         outputs=['comp2.c+comp2.d','max(comp1.d,comp2.d)']
         self.case1 = Case(inputs=inputs, outputs=outputs)
-        self.case1_dup = Case(inputs=inputs, outputs=outputs)
+        self.case1_dup = Case(inputs=inputs, outputs=outputs) # a duplicate case
         inputs[1] = ('comp1.b',9)
         self.case2 = Case(inputs=inputs, outputs=outputs)
         self.caselist = [self.case1, self.case2, self.case1_dup]

@@ -1,6 +1,7 @@
 
 import sys
 import sqlite3
+import uuid
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser
 
@@ -9,7 +10,7 @@ from openmdao.lib.datatypes.api import implements
 from openmdao.main.interfaces import ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
 
-_casetable_attrs = set(['id','text_id','parent','desc','msg','retries','model_id','timeEnter'])
+_casetable_attrs = set(['id','uuid','parent','desc','msg','retries','model_id','timeEnter'])
 _vartable_attrs = set(['var_id','name','case_id','sense','value'])
 
 def _query_split(query):
@@ -102,7 +103,8 @@ class DBCaseIterator(object):
                     outputs.append((vname, value))
             if len(inputs) > 0 or len(outputs) > 0:
                 yield Case(inputs=inputs, outputs=outputs,
-                           retries=retries,msg=msg,desc=desc,parent_id=parent)
+                           retries=retries,msg=msg,desc=desc,
+                           case_uuid=text_id, parent_uuid=parent)
             
 
 class DBCaseRecorder(object):
@@ -124,7 +126,7 @@ class DBCaseRecorder(object):
         self._connection.execute("""
         create table %s cases(
          id INTEGER PRIMARY KEY,
-         text_id TEXT,
+         uuid TEXT,
          parent TEXT,
          desc TEXT,
          msg TEXT,
@@ -159,9 +161,9 @@ class DBCaseRecorder(object):
         """Record the given Case."""
         cur = self._connection.cursor()
         
-        cur.execute("""insert into cases(id,text_id,parent,desc,msg,retries,model_id,timeEnter) 
+        cur.execute("""insert into cases(id,uuid,parent,desc,msg,retries,model_id,timeEnter) 
                            values (?,?,?,?,?,?,?,DATETIME('NOW'))""", 
-                                     (None, str(case.ident), case.parent_id, case.desc,
+                                     (None, case.uuid, case.parent_uuid, case.desc,
                                       case.msg or '', case.retries, 
                                       self.model_id))
         case_id = cur.lastrowid

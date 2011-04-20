@@ -455,7 +455,7 @@ class CONMINdriver(Driver):
                     case_output.append(["Constraint%d" % i, val])
                 
                 case = Case(case_input, case_output, desc='case%s' % self.iter_count,
-                            parent_id=self._case_id)
+                            parent_uuid=self._case_id)
                 
                 self.recorder.record(case)
         

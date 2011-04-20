@@ -26,7 +26,8 @@ class Case(object):
 
     """
     def __init__(self, inputs=None, outputs=None, max_retries=None,
-                 retries=None, desc=None, parent_id=None, msg=None):
+                 retries=None, desc=None, case_uuid=None, parent_uuid=None, 
+                 msg=None):
         """If inputs are supplied to the constructor, it must be an
         iterator that returns (name,value) tuples, where name is allowed
         to contain array notation and/or function calls. outputs must be
@@ -42,8 +43,11 @@ class Case(object):
         self.msg = msg                  # If non-null, error message.
                                         # Implies outputs are invalid. 
         self.desc = desc   # optional description
-        self.ident = uuid1()  # unique identifier
-        self.parent_id = parent_id  # identifier of parent case, if any
+        if case_uuid:
+            self.uuid = str(case_uuid)
+        else:
+            self.uuid = str(uuid1())  # unique identifier
+        self.parent_uuid = str(parent_uuid) if parent_uuid is not None else ''  # identifier of parent case, if any
 
         if inputs: 
             self.add_inputs(inputs)
@@ -59,9 +63,9 @@ class Case(object):
         ins = self._inputs.items()
         ins.sort()
         stream = StringIO()
-        stream.write("Case %s: " % str(self.ident))
-        if self.parent_id:
-            stream.write("(parent_id %s)\n" % self.parent_id)
+        stream.write("Case %s: " % self.uuid)
+        if self.parent_uuid:
+            stream.write("(parent_uuid %s)\n" % self.parent_uuid)
         else:
             stream.write("\n")
         if self.desc:
@@ -256,7 +260,7 @@ class Case(object):
                 outs.append((name,self._outputs[name]))
             else:
                 raise KeyError("'%s' is not part of this Case" % name)
-        return Case(inputs=ins, outputs=outs, parent_id=self.parent_id,
+        return Case(inputs=ins, outputs=outs, parent_uuid=self.parent_uuid,
                     max_retries=self.max_retries)
 
         

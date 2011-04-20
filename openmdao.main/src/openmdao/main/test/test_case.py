@@ -78,9 +78,9 @@ class CaseTestCase(unittest.TestCase):
                 self.assertEqual(line, expected[i])
                 
         case = Case(inputs=[('comp1.a',4), ('comp1.b',8)],desc='foo',
-                    parent_id='abc-xyz-pdq', max_retries=5, retries=4,
+                    parent_uuid='abc-xyz-pdq', max_retries=5, retries=4,
                     msg='failed')
-        expected = ["Case blah-blah-blah: (parent_id: abc-xyz-pdq)",
+        expected = ["Case blah-blah-blah: (parent_uuid: abc-xyz-pdq)",
                     "   description: foo",
                     "   inputs:",
                     "      comp1.a: 4",
@@ -93,7 +93,7 @@ class CaseTestCase(unittest.TestCase):
         for i,line in enumerate(str(case).split('\n')):
             if i==0: # case id will always change
                 self.assertTrue(line.startswith('Case '))
-                self.assertTrue(line.endswith(' (parent_id abc-xyz-pdq)'))
+                self.assertTrue(line.endswith(' (parent_uuid abc-xyz-pdq)'))
             else:
                 self.assertEqual(line, expected[i])
                 

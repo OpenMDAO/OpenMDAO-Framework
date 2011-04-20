@@ -163,48 +163,126 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         except OSError:
             logging.error("problem removing directory %s" % tmpdir)
 
+class MyComp(ExecComp):
+    def __init__(self, *args, **kwargs):
+        super(MyComp, self).__init__(*args, **kwargs)
+        self.count = 0
+        
+    def execute(self):
+        super(MyComp, self).execute()
+        self.count += 1
 
 class NestedCaseTestCase(unittest.TestCase):
 
-    def _create_assembly(self, top=None, dbname=':memory:'):
+    def setUp(self):
+        self.tdir = tempfile.mkdtemp()
+        
+    def tearDown(self):
+        try:
+            shutil.rmtree(self.tdir)
+        except OSError:
+            logging.error("problem removing directory %s" % self.tdir)
+
+    def _create_assembly(self, dbname):
         asm = Assembly()
         driver = asm.add('driver', SimpleCaseIterDriver())
-        asm.add('comp1', ExecComp(exprs=['z=x+y']))
-        asm.add('comp2', ExecComp(exprs=['z=x+y']))
+        asm.add('comp1', MyComp(exprs=['z=x+y']))
+        asm.add('comp2', MyComp(exprs=['z=x+y']))
         asm.connect('comp1.z', 'comp2.x')
         driver.workflow.add(['comp1', 'comp2'])
         driver.recorder = DBCaseRecorder(dbname, append=True)
-        if top:
-            top.add('asm', asm)
-            top.driver.workflow.add('asm')
         return asm
-
-    def setUp(self):
-        self.tdir = tempfile.mkdtemp()
-        dbname = os.path.join(self.tdir,'dbfile')
-        self.top = set_as_top(self._create_assembly(None, dbname))
-        asm = self._create_assembly(self.top, dbname)
-        asm = self._create_assembly(asm, dbname)
+    
+    def _create_nested_assemblies(self, dbname):
+        top = set_as_top(self._create_assembly(dbname))
+        top.add('asm', self._create_assembly(dbname))
+        top.driver.workflow.add('asm')
+        top.asm.add('asm', self._create_assembly(dbname))
+        top.asm.driver.workflow.add('asm')
         
-        # now create some Cases
+        top.driver.iterator = ListCaseIterator(self._create_cases(1))
+        top.driver.recorder = DBCaseRecorder(dbname, append=True)
+        top.asm.driver.iterator = ListCaseIterator(self._create_cases(2))
+        top.asm.driver.recorder = DBCaseRecorder(dbname, append=True)
+        top.asm.asm.driver.iterator = ListCaseIterator(self._create_cases(3))
+        top.asm.asm.driver.recorder = DBCaseRecorder(dbname, append=True)
+        
+        return top
+
+    def _create_nested_workflows(self, dbname):
+        # this is kind of bogus because the inner driver loops are
+        # overwriting the values set by the outer loops, but for
+        # this test I'm only interested in checking if the 
+        # Case hierarchy is structured properly
+        top = set_as_top(self._create_assembly(dbname))
+        driver2 = top.add('driver2', SimpleCaseIterDriver())
+        driver2.recorder = DBCaseRecorder(dbname, append=True)
+        top.driver.workflow.add(['comp1','comp2','driver2'])
+        driver3 = top.add('driver3', SimpleCaseIterDriver())
+        driver3.recorder = DBCaseRecorder(dbname, append=True)
+        top.driver2.workflow.add(['comp1','comp2','driver3'])
+        
+        top.driver.iterator = ListCaseIterator(self._create_cases(1))
+        top.driver2.iterator = ListCaseIterator(self._create_cases(2))
+        top.driver3.iterator = ListCaseIterator(self._create_cases(3))
+        return top
+
+    def _create_cases(self, level):
         outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(5):
-            inputs = [('comp1.x', i), ('comp1.y', i*2)]
-            cases.append(Case(inputs=inputs, outputs=outputs, desc='case%s'%i))
-            
-        self.top.driver.iterator = ListCaseIterator(cases)
-        self.top.asm.driver.iterator = ListCaseIterator(copy.deepcopy(cases))
-        self.top.asm.asm.driver.iterator = ListCaseIterator(copy.deepcopy(cases))
-        
-    def tearDown(self):
-        shutil.rmtree(self.tdir)
+            inputs = [('comp1.x', 100*level+i), ('comp1.y', 100*level+i+1)]
+            cases.append(Case(inputs=inputs, outputs=outputs, 
+                              desc='L%d_case%d'%(level,i)))
+        return cases
+    
+    def _get_level_cases(self, caseiter):
+        levels = [[],[],[]]
+        for case in caseiter.get_iter():
+            print 'case %s: %s   parent: %s' % (case.desc,case.uuid[:8], case.parent_uuid[:8])
+        for case in caseiter.get_iter():
+            if case.desc.startswith('L1_'):
+                levels[0].append(case)
+            elif case.desc.startswith('L2_'):
+                levels[1].append(case)
+            elif case.desc.startswith('L3_'):
+                levels[2].append(case)
+            else:
+                raise RuntimeError("case desc doesn't start with 'L?_'")
+        return levels
 
-    def test_nested(self):
+    def _check_cases(self, caseiter):
+        levels = self._get_level_cases(caseiter)
+        for level in range(3):
+            for j,case in enumerate(levels[level]):
+                if j==0:
+                    parent_uuid = case.parent_uuid
+                    if level>0:
+                        self.assertTrue(parent_uuid is not None)
+                else:
+                    self.assertEqual(parent_uuid, case.parent_uuid)
+                    if level > 0:
+                        self.assertTrue(case.parent_uuid in [c.uuid for c in levels[level-1]])
+        return levels
+        
+    def test_nested_assemblies(self):
+        dbname = os.path.join(self.tdir,'dbfile')
+        self.top = self._create_nested_assemblies(dbname)
         self.top.run()
+        levels = self._check_cases(DBCaseIterator(dbname))
+        self.assertEqual(len(levels[0]), self.top.comp1.count)
+        self.assertEqual(len(levels[1]), self.top.asm.comp1.count)
+        self.assertEqual(len(levels[2]), self.top.asm.asm.comp1.count)
         
-
-            
+    def test_nested_workflows(self):
+        print '**** test_nested_workflows ****'
+        dbname = os.path.join(self.tdir,'dbfile')
+        self.top = self._create_nested_workflows(dbname)
+        self.top.run()
+        levels = self._check_cases(DBCaseIterator(dbname))
+        self.assertEqual(len(levels[0])+len(levels[1])+len(levels[2]),
+                         self.top.comp1.count)
+        
             
 if __name__ == '__main__':
     unittest.main()

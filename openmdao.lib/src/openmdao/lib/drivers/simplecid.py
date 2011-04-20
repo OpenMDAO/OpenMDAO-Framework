@@ -40,10 +40,11 @@ class SimpleCaseIterDriver(Driver):
 
     def _run_case(self, case):
         msg = None
-        case.parent_id = self._case_id
+        case.parent_uuid = self._case_id
         case.apply_inputs(self.parent)
         try:
-            self.workflow.run(case_id=str(case.ident))
+            print '%s - %s - case %s,  parent: %s' % (self.get_pathname(),case.desc,case.uuid[:8], case.parent_uuid[:8])
+            self.workflow.run(case_id=case.uuid)
         except Exception as err:
             msg = str(err)
         try:

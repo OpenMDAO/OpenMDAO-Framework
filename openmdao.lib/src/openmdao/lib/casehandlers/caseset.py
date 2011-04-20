@@ -5,7 +5,7 @@ class CaseArray(object):
     """A CaseRecorder/CaseIterator containing Cases having the same set of
     input/output strings but different data. Cases are not necessarily unique.
     """
-    def __init__(self, obj=None, parent_id=None, names=None):
+    def __init__(self, obj=None, parent_uuid=None, names=None):
         """
         obj: dict, Case, or None
             if obj is a dict, it is assumed to contain all var names/exprs as keys, with
@@ -18,7 +18,7 @@ class CaseArray(object):
             if obj is None, the first Case that is recorded will be used to set
             the inputs and outputs for the CaseSet.
         
-        parent_id: str
+        parent_uuid: UUID
             The id of the parent Case (if any)
             
         names: iter of str
@@ -26,7 +26,7 @@ class CaseArray(object):
             only want this container to keep track of some subset of the contents
             of Cases that are recorded in it.
         """
-        self._parent_id = parent_id
+        self._parent_uuid = parent_uuid
         if names is None:
             self._names = []
         else:
@@ -121,7 +121,7 @@ class CaseArray(object):
                                                  values[0:self._split_idx])],
                     outputs=[(n,v) for n,v in zip(self._names[self._split_idx:],
                                                   values[self._split_idx:])],
-                    parent_id=self._parent_id)
+                    parent_uuid=self._parent_uuid)
         
     def _get_case_data(self, case):
         """Return a list of values for the case in the same order as our values.
@@ -176,7 +176,7 @@ class CaseSet(CaseArray):
     """A CaseRecorder/CaseIterator containing Cases having the same set of
     input/output strings but different data.  All Cases in the set are unique.
     """
-    def __init__(self, obj=None, parent_id=None, names=None):
+    def __init__(self, obj=None, parent_uuid=None, names=None):
         """
         obj: dict, Case, or None
             if obj is a dict, it is assumed to contain all var names as keys, with
@@ -189,7 +189,7 @@ class CaseSet(CaseArray):
             if obj is None, the first Case that is recorded will be used to set
             the inputs and outputs for the CaseSet.
         
-        parent_id: str (optional)
+        parent_uuid: UUID (optional)
             The id of the parent Case (if any)
             
         names: iter of str (optional)
@@ -198,7 +198,7 @@ class CaseSet(CaseArray):
             of Cases that are recorded in it.
         """
         self._tupset = set()
-        super(CaseSet, self).__init__(obj, parent_id, names)
+        super(CaseSet, self).__init__(obj, parent_uuid, names)
 
     def _add_values(self, vals):
         tup = tuple(vals)
@@ -216,7 +216,7 @@ class CaseSet(CaseArray):
         return values in self._tupset
     
     def _make_case_set(self, tupset):
-        cs = CaseSet(parent_id=self._parent_id)
+        cs = CaseSet(parent_uuid=self._parent_uuid)
         cs._names = self._names[:]
         cs._values = list(tupset)
         cs._tupset = tupset
