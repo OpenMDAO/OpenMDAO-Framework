@@ -38,7 +38,8 @@ class CaseTestCase(unittest.TestCase):
         
         self.inputs = [('comp1.a',2),('comp1.b',4),('comp1.a_lst', [4,5,6])]
         self.outputs = ['comp2.c+comp2.d', 'comp2.c_lst[2]', 'comp2.d']
-        self.case = case = Case(inputs=self.inputs, outputs=self.outputs)
+        self.case = case = Case(inputs=self.inputs, outputs=self.outputs, 
+                                label='blah blah')
         case.apply_inputs(self.top)
         self.top.run()
         case.update_outputs(self.top)
@@ -60,7 +61,8 @@ class CaseTestCase(unittest.TestCase):
         self.assertEqual(len(self.case), 6)
 
     def test_str(self):
-        expected = ["Case blah-blah-blah:",
+        expected = ["Case: blah blah",
+                    "   uuid: sdfsfdasfdasdf",
                     "   inputs:",
                     "      comp1.a: 2",
                     "      comp1.a_lst: [4, 5, 6]",
@@ -72,16 +74,18 @@ class CaseTestCase(unittest.TestCase):
                     "",
                ]
         for i,line in enumerate(str(self.case).split('\n')):
-            if i==0: # case id will always change
-                self.assertTrue(line.startswith('Case '))
+            if expected[i].startswith('   uuid:'):
+                self.assertTrue(line.startswith('   uuid:'))
             else:
                 self.assertEqual(line, expected[i])
                 
-        case = Case(inputs=[('comp1.a',4), ('comp1.b',8)],desc='foo',
-                    parent_uuid='abc-xyz-pdq', max_retries=5, retries=4,
+        case = Case(inputs=[('comp1.a',4), ('comp1.b',8)],label='foo',
+                    case_uuid='abcd-efg', parent_uuid='abc-xyz-pdq', 
+                    max_retries=5, retries=4,
                     msg='failed')
-        expected = ["Case blah-blah-blah: (parent_uuid: abc-xyz-pdq)",
-                    "   description: foo",
+        expected = ["Case: foo",
+                    "   uuid: abcd-efg",
+                    "   parent_uuid: abc-xyz-pdq",
                     "   inputs:",
                     "      comp1.a: 4",
                     "      comp1.b: 8",
@@ -91,11 +95,7 @@ class CaseTestCase(unittest.TestCase):
                     "",
                ]
         for i,line in enumerate(str(case).split('\n')):
-            if i==0: # case id will always change
-                self.assertTrue(line.startswith('Case '))
-                self.assertTrue(line.endswith(' (parent_uuid abc-xyz-pdq)'))
-            else:
-                self.assertEqual(line, expected[i])
+            self.assertEqual(line, expected[i])
                 
         self.assertFalse(case == self.case)
         self.assertTrue(case == case)

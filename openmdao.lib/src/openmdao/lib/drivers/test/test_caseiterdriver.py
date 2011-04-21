@@ -106,7 +106,7 @@ class TestCase(unittest.TestCase):
                       ('driven.raise_error', raise_error),
                       ('driven.stop_exec', False)]
             outputs = ['driven.rosen_suzuki','driven.sum_y']
-            self.cases.append(Case(inputs, outputs, desc=str(i)))
+            self.cases.append(Case(inputs, outputs, label=str(i)))
 
     def tearDown(self):
         self.model.pre_delete()
@@ -208,7 +208,7 @@ class TestCase(unittest.TestCase):
     def verify_results(self, forced_errors=False):
         """ Verify recorded results match expectations. """
         for case in self.model.driver.recorder.cases:
-            i = int(case.desc)  # Correlation key.
+            i = int(case.label)  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
                 if self.model.driver.sequential:

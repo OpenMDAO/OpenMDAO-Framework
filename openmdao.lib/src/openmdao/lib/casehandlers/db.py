@@ -10,7 +10,7 @@ from openmdao.lib.datatypes.api import implements
 from openmdao.main.interfaces import ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
 
-_casetable_attrs = set(['id','uuid','parent','desc','msg','retries','model_id','timeEnter'])
+_casetable_attrs = set(['id','uuid','parent','label','msg','retries','model_id','timeEnter'])
 _vartable_attrs = set(['var_id','name','case_id','sense','value'])
 
 def _query_split(query):
@@ -86,7 +86,7 @@ class DBCaseIterator(object):
         combined = ' '.join(sql)
         varcur = self._connection.cursor()
         
-        for cid,text_id,parent,desc,msg,retries,model_id,timeEnter in casecur:
+        for cid,text_id,parent,label,msg,retries,model_id,timeEnter in casecur:
             varcur.execute(combined % cid)
             inputs = []
             outputs = []
@@ -103,7 +103,7 @@ class DBCaseIterator(object):
                     outputs.append((vname, value))
             if len(inputs) > 0 or len(outputs) > 0:
                 yield Case(inputs=inputs, outputs=outputs,
-                           retries=retries,msg=msg,desc=desc,
+                           retries=retries,msg=msg,label=label,
                            case_uuid=text_id, parent_uuid=parent)
             
 
@@ -128,7 +128,7 @@ class DBCaseRecorder(object):
          id INTEGER PRIMARY KEY,
          uuid TEXT,
          parent TEXT,
-         desc TEXT,
+         label TEXT,
          msg TEXT,
          retries INTEGER,
          model_id TEXT,
@@ -161,9 +161,9 @@ class DBCaseRecorder(object):
         """Record the given Case."""
         cur = self._connection.cursor()
         
-        cur.execute("""insert into cases(id,uuid,parent,desc,msg,retries,model_id,timeEnter) 
+        cur.execute("""insert into cases(id,uuid,parent,label,msg,retries,model_id,timeEnter) 
                            values (?,?,?,?,?,?,?,DATETIME('NOW'))""", 
-                                     (None, case.uuid, case.parent_uuid, case.desc,
+                                     (None, case.uuid, case.parent_uuid, case.label,
                                       case.msg or '', case.retries, 
                                       self.model_id))
         case_id = cur.lastrowid

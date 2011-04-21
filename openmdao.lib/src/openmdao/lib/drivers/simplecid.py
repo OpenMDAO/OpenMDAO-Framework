@@ -6,6 +6,8 @@ from openmdao.main.api import Driver
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.lib.datatypes.api import Instance
 
+testdict = {}
+
 class SimpleCaseIterDriver(Driver):
     """
     A Driver that sequentially runs a set of cases provided by an :class:`ICaseIterator`
@@ -32,6 +34,9 @@ class SimpleCaseIterDriver(Driver):
     def _iterator_modified(self, obj, name, value):
         self._call_execute = True
     
+    def _pre_execute(self, force=False):
+        super(SimpleCaseIterDriver, self)._pre_execute(force)
+        
     def execute(self):
         """ Run each case in `iterator` and record results in `recorder`. """
         for case in self.iterator.get_iter():
@@ -39,16 +44,21 @@ class SimpleCaseIterDriver(Driver):
             self.recorder.record(case)
 
     def _run_case(self, case):
+        global testdict
         msg = None
         case.parent_uuid = self._case_id
         case.apply_inputs(self.parent)
         try:
-            print '%s - %s - case %s,  parent: %s' % (self.get_pathname(),case.desc,case.uuid[:8], case.parent_uuid[:8])
+            testdict[case.uuid] = case.parent_uuid
+            print 'running case %s' % case.label
+            print 'inputs are: %s' % case.items('in')
+            #print '%s - %s - case %s,  parent: %s' % (self.get_pathname(),case.label,case.uuid[:8], case.parent_uuid[:8])
             self.workflow.run(case_id=case.uuid)
         except Exception as err:
             msg = str(err)
         try:
             case.update_outputs(self.parent, msg)
+            print 'outputs are: %s' % case.items('out')
         except Exception as err:
             case.msg = msg + " : " + str(err)
 

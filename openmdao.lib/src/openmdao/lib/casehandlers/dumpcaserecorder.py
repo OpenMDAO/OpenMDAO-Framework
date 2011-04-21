@@ -18,20 +18,4 @@ class DumpCaseRecorder(object):
     def record(self, case):
         """Dump the given Case in a "pretty" form."""
         if self.out:  # if self.out is None, just do nothing
-            out = self.out
-            out.write("Case: %s" % case.desc)
-            out.write("\n   id: %s" % case.uuid)
-            if case.parent_uuid:
-                out.write("\n   parent id: %s)" % case.parent_uuid)
-            out.write("\n   inputs:\n")
-            inputs = dict(case.items(iotype='in'))
-            for name,value in [(k,inputs[k]) for k in sorted(inputs.keys())]:
-                out.write('      %s = %s\n' % (name, value))
-            out.write("   outputs:\n")
-            outputs = dict(case.items(iotype='out'))
-            for name,value in [(k,outputs[k]) for k in sorted(outputs.keys())]:
-                out.write('      %s = %s\n' % (name, value))
-            out.write("   max_retries: %s, retries: %s\n" % (case.max_retries, 
-                                                             case.retries))
-            if case.msg:
-                out.write('   msg: %s\n' % case.msg)
+            self.out.write(str(case))

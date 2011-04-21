@@ -26,7 +26,7 @@ class Case(object):
 
     """
     def __init__(self, inputs=None, outputs=None, max_retries=None,
-                 retries=None, desc=None, case_uuid=None, parent_uuid=None, 
+                 retries=None, label='', case_uuid=None, parent_uuid='', 
                  msg=None):
         """If inputs are supplied to the constructor, it must be an
         iterator that returns (name,value) tuples, where name is allowed
@@ -42,12 +42,12 @@ class Case(object):
         self.retries = retries          # times case was retried
         self.msg = msg                  # If non-null, error message.
                                         # Implies outputs are invalid. 
-        self.desc = desc   # optional description
+        self.label = label   # optional label
         if case_uuid:
             self.uuid = str(case_uuid)
         else:
             self.uuid = str(uuid1())  # unique identifier
-        self.parent_uuid = str(parent_uuid) if parent_uuid is not None else ''  # identifier of parent case, if any
+        self.parent_uuid = str(parent_uuid)  # identifier of parent case, if any
 
         if inputs: 
             self.add_inputs(inputs)
@@ -63,13 +63,10 @@ class Case(object):
         ins = self._inputs.items()
         ins.sort()
         stream = StringIO()
-        stream.write("Case %s: " % self.uuid)
+        stream.write("Case: %s\n" % self.label)
+        stream.write("   uuid: %s\n" % self.uuid)
         if self.parent_uuid:
-            stream.write("(parent_uuid %s)\n" % self.parent_uuid)
-        else:
-            stream.write("\n")
-        if self.desc:
-            stream.write("   description: %s\n" % self.desc)
+            stream.write("   parent_uuid: %s\n" % self.parent_uuid)
         if ins:
             stream.write("   inputs:\n")
             for name,val in ins:
@@ -90,7 +87,7 @@ class Case(object):
         if self is other:
             return True
         try:
-            if self.msg != other.msg or self.desc != other.desc:
+            if self.msg != other.msg or self.label != other.label:
                 return False
             if len(self) != len(other):
                 return False
@@ -168,6 +165,18 @@ class Case(object):
             If None (the default), inputs and outputs are returned
         """
         return [v for k,v in self.items(iotype)]
+    
+    def reset(self):
+        """Remove any saved output values, set retries to None, get a new uuid
+        and reset the parent_uuid.  Essentially this Case becomes like a new 
+        Case with the same set of inputs and outputs that hasn't been executed
+        yet.
+        """
+        self.parent_uuid = ''
+        self.uuid = str(uuid1())
+        self.retries = None
+        for key in self._outputs.keys():
+            self._outputs[key] = _Missing
 
     def apply_inputs(self, scope):
         """Take the values of all of the inputs in this case and apply them
