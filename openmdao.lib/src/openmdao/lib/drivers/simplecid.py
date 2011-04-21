@@ -44,21 +44,15 @@ class SimpleCaseIterDriver(Driver):
             self.recorder.record(case)
 
     def _run_case(self, case):
-        global testdict
         msg = None
         case.parent_uuid = self._case_id
         case.apply_inputs(self.parent)
         try:
-            testdict[case.uuid] = case.parent_uuid
-            print 'running case %s' % case.label
-            print 'inputs are: %s' % case.items('in')
-            #print '%s - %s - case %s,  parent: %s' % (self.get_pathname(),case.label,case.uuid[:8], case.parent_uuid[:8])
             self.workflow.run(case_id=case.uuid)
         except Exception as err:
             msg = str(err)
         try:
             case.update_outputs(self.parent, msg)
-            print 'outputs are: %s' % case.items('out')
         except Exception as err:
             case.msg = msg + " : " + str(err)
 
