@@ -33,13 +33,13 @@ from openmdao.main.hasstopcond import HasStopConditions
 class GlobalDesVar(object): 
     def __init__(self): 
         self.name = None
-        self.vars = []
+        self.targets = []
         self.low = None
         self.high = None
         
 class LocalDesVar(object): 
     def __init__(self): 
-        self.var = []
+        self.target = ""
         self.low = None
         self.high = None      
         
@@ -76,10 +76,10 @@ class Analysis(Assembly):
         self.add('branin',BraninComponent())
         
         loc1 = LocalDesVar()
-        loc1.var = "branin.x"
+        loc1.target = "branin.x"
         
         loc2 = LocalDesVar()
-        loc2.var = "branin.y"
+        loc2.target = "branin.y"
         
         self.global_des_vars = []
         self.local_des_vars = [loc1,loc2]
@@ -128,7 +128,7 @@ class Analysis(Assembly):
         #self.DOE_trainer.DOEgenerator = FullFactorial(num_levels=5)
         
         for dvar in self.local_des_vars: 
-            self.DOE_trainer.add_parameter(dvar.var)
+            self.DOE_trainer.add_parameter(dvar.target)
 
         self.DOE_trainer.add_event("%s.train_next"%name)
         
@@ -144,7 +144,7 @@ class Analysis(Assembly):
         
         
         for dvar in self.local_des_vars: 
-            self.EI_opt.add_parameter(dvar.var)
+            self.EI_opt.add_parameter(dvar.target)
         self.EI_opt.add_objective("EI.EI")
         self.EI_opt.force_execute = True
         

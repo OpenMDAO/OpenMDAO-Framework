@@ -1,6 +1,6 @@
 from openmdao.lib.datatypes.api import ListStr, Dict, Float
 
-from openmdao.main.api import Component
+from openmdao.main.api import Component,ExprEvaluator
 from openmdao.main.interfaces import IComponent
                         
 class Broadcaster(Component): 
@@ -10,7 +10,6 @@ class Broadcaster(Component):
     names = ListStr(iotype="in",desc="names of the variables you want to broadcast from this component")
     types = Dict({'default':Float},iotype="in",desc="name/type pairs describing the variable types of each broadcast variable."
                  "'default' name is used if no other type is set explicitly")
-    
     
     def __init__(self,names,types=None):
         """names: ListSrt, list of the variable names you would like the broadcaster to create for you. all inputs will be named with a '_in' added. Outputs will follow the name given. 
