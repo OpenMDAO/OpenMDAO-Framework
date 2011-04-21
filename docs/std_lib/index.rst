@@ -8,7 +8,7 @@
 
 .. toctree::
    :maxdepth: 2
-   
+      
    component.rst
    differentiator.rst
    doegenerator.rst

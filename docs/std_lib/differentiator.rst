@@ -20,11 +20,11 @@ called `Differentiator`. This socket can take a Differentiator object.
 FiniteDifference
 ~~~~~~~~~~~~~~~~
 
-The ``FiniteDifference`` differentiator provides the gradient vector and
-Hessian matrix of the workflow using the finite difference method. For first
-derivatives, you have a choice of forward, backward, or central
-differences. Second derivatives are calculated using the standard three-point
-difference for both on-diagonal and off-diagonal terms.
+The ``FiniteDifference`` differentiator provides the gradient vector and Hessian
+matrix of the workflow using the finite difference method. For first derivatives,
+you have a choice of forward, backward, or central differencing. Second
+derivatives are calculated using the standard three-point difference for both
+on-diagonal and off-diagonal terms.
 
 The ``FiniteDifference`` differentiator can be used with the CONMIN or NEWSUMT
 optimizer by plugging it into the differentiator socket.
@@ -68,16 +68,14 @@ optimizer by plugging it into the differentiator socket.
             # Constraints
             self.driver.add_constraint('paraboloid.x-paraboloid.y >= 15.0')
             
-The only argument that ``FiniteDifference`` takes is the driver you are
-plugging into.
+The only argument that ``FiniteDifference`` takes is the driver you are plugging into.
 
-``FiniteDifference`` has two additional control variables. The ``form`` parameter is
-used to declare which difference (central, backward, or forward) the first
-derivative will use. The ``default_stepsize`` parameter is used to set a
-default finite difference step size. Note that you can declare a separate finite
-difference step size for each parameter in the call to ``add_parameter``. Here, the
-finite difference step size for the input ``'x'`` to paraboloid is set to .01. If you
-don't specify ``fd_step`` for a parameter, then the default step size is used.
+``FiniteDifference`` has two additional control variables. The ``form`` parameter is used to declare
+which difference the first derivative will use. (The default is ``'central'``.) The ``default_stepsize`` parameter is used to set a
+default finite difference step size. Note that you can declare a separate finite difference step size
+for each parameter in the call to ``add_parameter``. Here, the finite difference step size for the input
+``'x'`` to paraboloid is set to .01. If you don't specify ``fd_step`` for a parameter, then the default
+step size is used.
 
 Fake Finite Difference is fully supported by the finite difference generator.
 

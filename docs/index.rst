@@ -9,14 +9,15 @@ Contents:
 
 .. toctree::
    :maxdepth: 1
-    
    
    user-guide/index
-   tutorials/index
+   simple/index
+   complex/index
+   mdao/index
    scripting/index
+   srcdocs/index
    plugin-guide/index
    dev-guide/index
-   srcdocs/index
    std_lib/index
    licenses/index
    resources/index

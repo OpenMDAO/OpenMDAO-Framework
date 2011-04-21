@@ -6,4 +6,11 @@ Script Interface
 .. toctree::
    :maxdepth: 2
 
-   userguide_script.rst
+   fundamentals
+   creating_comps
+   variables
+   simulation
+   drivers
+   derivatives
+   running_openmdao
+   workflow
