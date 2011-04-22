@@ -84,8 +84,7 @@ Glossary
 
       **CONMIN**   
         Stands for "CONstraint MINimization." CONMIN is a gradient descent
-        optimization algorithm developed by NASA. The simple tutorial in the *User
-        Guide* contains information on using CONMIN for an both an :ref:`unconstrained
+        optimization algorithm developed by NASA. The simple tutorial contains information on using CONMIN for an both an :ref:`unconstrained
         <using-CONMIN>` optimization and a :ref:`constrained
         <constrained-optimization>` optimization.
 

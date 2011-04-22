@@ -11,7 +11,7 @@ component.
 
 You can create a variable for a component in two ways. The first is to
 declare it in the component's class definition as shown in the example 
-given in the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>`. A simple component that takes
+given in the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>`. A simple component that takes
 a floating point number as an input and provides a floating point number as an
 output would look like this:
 

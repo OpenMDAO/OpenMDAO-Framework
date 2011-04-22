@@ -2,8 +2,8 @@
 
 .. _Geometry-Interfaces-in-OpenMDAO:
 
-Geometry Interfaces in OpenMDAO (Working Document)
---------------------------------------------------
+An OpenMDAO Process Model
+==============================
 
 .. figure:: ../images/arch-doc/top_level.png
    :align: center

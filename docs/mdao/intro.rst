@@ -17,8 +17,8 @@ hierarchy to set up models with nested optimization loops, using a solver to "cl
 the loop" in a coupled multidisciplinary simulation, and using a broadcaster to set
 the values of design variables in multiple places at one time.
 
-This tutorial covers some of the more advanced capabilities of OpenMDAO. You should read and understand
-the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>` before starting this one. An
+This tutorial covers some of the more advanced capabilities of OpenMDAO. You should read and
+understand :ref:`A-Simple-Tutorial-Problem` before starting this one. An
 understanding of the material presented in :ref:`A-More-Complex-Tutorial-Problem` is also
 recommended.
 

@@ -6,7 +6,7 @@ The root assembly is also called the *top level assembly.*
 Executing the top level assembly executes the entire model.
 
 Consider the top level assembly that was created for the 
-:ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>`.
+:ref:`simple tutorial problem <A-Simple-Tutorial-Problem>`.
 
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -62,7 +62,7 @@ Connecting Components
 ----------------------
 
 Consider once again the top level assembly that was created for the 
-:ref:`simple tutorial <Getting-Started-with-OpenMDAO>`. We would like to create a few
+:ref:`simple tutorial <A-Simple-Tutorial-Problem>`. We would like to create a few
 instances of the ``Paraboloid`` function and connect them together in series.
 
 .. testcode:: connect_components

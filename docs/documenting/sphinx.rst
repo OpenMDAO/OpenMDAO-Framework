@@ -115,14 +115,14 @@ Hyperlinks
  label names must be unique.
 
  For example, if you are in the *Developer's Guide* and want to refer the user to
- the tutorial problem overview in the *User Guide*, you would type
+ the problem overview in the more complex tutorial, you would type
  something like the following in the source file:
 
  ::
   
-   Please see the tutorial problem, specifically the :ref:`Problem-Overview`.
+   Please see the more complex tutorial problem, specifically the :ref:`Problem-Overview`.
 
- In the *User Guide* you would place the label before the section title, as follows:
+ In the more complex tutorial you would place the label before the section title, as follows:
 
  ::
 
@@ -147,9 +147,9 @@ Hyperlinks
 
     :ref:`process model <process-model>`
   
-  The label below was placed above the paragraph in the *User Guide* that discusses the process model and shows
-  a figure of it, 
-   
+  The label below was placed above the paragraph in the more complex tutorial that discusses the
+  process model and shows a figure of it, 
+
      ``.. _`process-model`:``
    
   So clicking on the cross reference in the text file takes you to where the label was placed. In this case an  
@@ -286,7 +286,7 @@ Figures
 **- Static figures** 
 
   Static figures are stored in ``docs/images/<document_directory>`` on your branch. Here is an
-  example from the *User Guide* where the author pulled in a static figure titled *EPA City
+  example from the complex tutorial where the author pulled in a static figure titled *EPA City
   Driving Profile.* 
 
 

@@ -5,7 +5,7 @@ Problem Overview
 ==================
 
 This tutorial covers some of the more advanced capabilities of OpenMDAO. You should read and understand
-the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>` before starting this one.
+the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>` before starting this one.
 
 
 The objective of this tutorial problem is to design an automobile that performs "well" as measured
@@ -1173,7 +1173,7 @@ You can run this same problem at the command prompt by typing:
     python engine_optimization.py
 
 This script prints out a little more information than we've shown in this
-example. See the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>` 
+example. See the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>` 
 for a refresher on how to set up a component to run at the command prompt.
 
 String expressions can be used to pose more sophisticated objective expressions

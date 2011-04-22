@@ -1,6 +1,4 @@
-.. index:: simple example
-
-.. _`A-Simple-Tutorial`:
+.. index:: simple tutorial
 
 Overview
 ==========

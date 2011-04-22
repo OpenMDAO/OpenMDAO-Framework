@@ -1,4 +1,3 @@
- 
 ======================
 OpenMDAO Documentation
 ======================
@@ -20,7 +19,7 @@ Contents:
    dev-guide/index
    std_lib/index
    licenses/index
-   resources/index
+   documenting/index
    
    
 .. toctree::
@@ -28,6 +27,7 @@ Contents:
         
    units
    arch-doc/index
+   geometry/index
    glossary
 
 Appendixes, Glossary, and Indexes
@@ -35,6 +35,7 @@ Appendixes, Glossary, and Indexes
 
 * :ref:`units`
 * :ref:`appendix`
+* :ref:`geometry`
 * :ref:`glossary`
 * :ref:`genindex`
 * :ref:`modindex`

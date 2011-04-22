@@ -13,7 +13,7 @@ interact with objects in the framework.
 The goal of this section is to explain and demonstrate several aspects of the OpenMDAO
 script interface. This section is intended primarily as a reference. If you are an
 inexperienced user, we recommend that you read and understand the examples in
-:ref:`A-Simple-Tutorial` and :ref:`A-More-Complex-Tutorial-Problem` before
+:ref:`A-Simple-Tutorial-Problem` and :ref:`A-More-Complex-Tutorial-Problem` before
 reading this section.
 
 The following sections discuss the the basics of OpenMDAO.
@@ -57,7 +57,7 @@ listing of what is available in this module by using the ``dir()`` command in
 Python. Likewise, a pseudo-package was also created to house some of the most
 commonly used imports from the standard library. In general, it contains
 variables and drivers. Most of these items are also explained elsewhere
-in the *User Guide.*
+in the documentation.
 
 Importing more objects into the namespace of your module increases the
 likelihood of name collision, so you should import only the objects that you need.

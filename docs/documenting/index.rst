@@ -9,7 +9,7 @@ Documenting OpenMDAO
    :maxdepth: 2
    
    style
-   documenting
+   updating
    sphinx
   
   

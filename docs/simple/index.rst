@@ -1,6 +1,9 @@
-===================
- A Simple Tutorial
-===================
+
+.. _`A-Simple-Tutorial-Problem`:
+
+===========================
+ A Simple Tutorial Problem
+===========================
 
 .. toctree::
    :maxdepth: 1
