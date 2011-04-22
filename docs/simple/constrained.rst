@@ -22,6 +22,15 @@ minimum violates this constraint, so a new minimum must be found by
 the optimizer. You can add a constraint to your existing ``OptimizationUnconstrained``
 model by adding one line to the ``initialize`` function:
 
+.. testsetup:: simple_model_Unconstrained_pieces
+
+    from openmdao.main.api import Assembly
+    from openmdao.lib.drivers.api import CONMINdriver
+    from openmdao.examples.simple.paraboloid import Paraboloid
+    from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
+    
+    self = OptimizationUnconstrained()
+    
 .. testcode:: simple_model_Unconstrained_pieces
 
         # CONMIN Constraints
