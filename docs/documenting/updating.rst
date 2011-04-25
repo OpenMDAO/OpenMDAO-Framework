@@ -5,9 +5,8 @@ Updating OpenMDAO Documents
 
 You must update the OpenMDAO documentation any time you make a change that will affect users or developers.
 
-All documentation is located in the ``docs/`` directory on your branch. There are  subdirectories
-for each user document; many of these have a hyphen in their name, such
-as ``user-guide, plugin-guide, dev-guide``. 
+All documentation is located in the ``docs/`` directory on your branch. Each user document has
+subdirectories, for example, `plugin-guide, dev-guide, std_lib`, etc.
 
 Several other files and subdirectories are in this directory also (e.g., ``images,
 generated_images, config.py, Makefile, _build, _static``), but you can ignore them for now. User
@@ -18,7 +17,7 @@ Updating an Existing Document
 -----------------------------
 
 * If you are merely changing a file in an existing document, (e.g., ``intro.rst`` in
-  the *Developer's Guide*), from top level of your branch, go to ``docs/dev-guide``. 
+  the *Developer Guide*), from top level of your branch, go to ``docs/dev-guide``. 
   
 * Use the editor of your choice to open ``intro.rst`` and make your changes. 
 
@@ -27,7 +26,7 @@ Updating an Existing Document
   Your doc changes will be incorporated when your
   branch is merged.
 
-If you need to create a new file in an existing document (e.g., the *Developer's Guide*), do
+If you need to create a new file in an existing document (e.g., the *Developer Guide*), do
 the following:
 
 * Create a file in the ``dev-guide`` directory with a text editor of your
@@ -41,9 +40,9 @@ the following:
 
 ::
       
-      =================
-      Developer's Guide
-      =================
+      ================
+      Developer Guide
+      ================
       
       .. toctree::
          :maxdepth: 2
@@ -135,11 +134,16 @@ See the example that follows.
 	:maxdepth: 1	
 
 	user-guide/index
+	simple/index
+	complex/index
+	mdao/index
+	scripting/index
+	srcdocs/index
 	plugin-guide/index
 	dev-guide/index
-	srcdocs/index
+	std_lib/index
 	licenses/index
-	resources/index
+	documenting/index
 
 
 Use your text editor to add ``new-guide/index`` to the desired location in the project's

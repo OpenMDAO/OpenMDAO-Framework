@@ -1,4 +1,3 @@
- 
 ======================
 OpenMDAO Documentation
 ======================
@@ -9,29 +8,34 @@ Contents:
 
 .. toctree::
    :maxdepth: 1
-    
    
    user-guide/index
+   simple/index
+   complex/index
+   mdao/index
+   scripting/index
+   srcdocs/index
    plugin-guide/index
    dev-guide/index
-   srcdocs/index
+   std_lib/index
    licenses/index
-   resources/index
+   documenting/index
    
    
 .. toctree::
    :hidden:
         
-   glossary
-   std_lib/index
+   units
    arch-doc/index
-   
+   geometry/index
+   glossary
 
 Appendixes, Glossary, and Indexes
 ==================================
 
-* :ref:`stdlib`
+* :ref:`units`
 * :ref:`appendix`
+* :ref:`geometry`
 * :ref:`glossary`
 * :ref:`genindex`
 * :ref:`modindex`

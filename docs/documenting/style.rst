@@ -245,9 +245,9 @@ titles as shown in the following example:
 
 ::
 
-  ============
-  User Guide
-  ============
+  ================
+  Developer Guide
+  ================
 
 The overline and underline must be the same length, or you will get an error and the
 build will fail. If you use just underline and it is shorter than the text, you will get
@@ -324,7 +324,7 @@ Although, if you are not consistent, Sphinx will complain when you try to build.
 
 Use italics for the following:
 
-* Titles of books and our OpenMDAO documents (e.g., *User Guide*)
+* Titles of books and our OpenMDAO documents (e.g., *Developer Guide*)
 
 * The first time you refer to a term  (". . . is called a *Component*.")
 

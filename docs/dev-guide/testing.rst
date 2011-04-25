@@ -225,7 +225,7 @@ Testing Code in the Documentation
 The OpenMDAO documentation includes quite a few examples of Python code. These
 examples illustrate how to use features of the OpenMDAO API as well as
 how to develop new components and plugins. Thus, it is imperative that any code
-examples included in the documentation (particularly the *User Guide* and the
+examples included in the documentation (particularly the tutorials and the
 *Developer Guide*) be tested to ensure that the code is error-free. 
 
 Fortunately, there are tools built into the :term:`Sphinx` reStructuredText processor that

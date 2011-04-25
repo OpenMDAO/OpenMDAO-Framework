@@ -1,3 +1,6 @@
+
+.. _resources:
+
 =====================
 Documenting OpenMDAO
 =====================
@@ -6,7 +9,7 @@ Documenting OpenMDAO
    :maxdepth: 2
    
    style
-   documenting
+   updating
    sphinx
   
   

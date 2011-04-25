@@ -1,16 +1,12 @@
 
 .. index:: tutorial problem
 
-.. _A-More-Complex-Tutorial-Problem:
-
-A More Complex Tutorial Problem
-================================
+Problem Overview
+==================
 
 This tutorial covers some of the more advanced capabilities of OpenMDAO. You should read and understand
-the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>` before starting this one.
+the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>` before starting this one.
 
-Problem Overview
-----------------
 
 The objective of this tutorial problem is to design an automobile that performs "well" as measured
 by these three metrics: 
@@ -66,8 +62,8 @@ design variables to minimize the 0-60 acceleration time and maximize the
 EPA city and highway mileage.
 
 
-*The Transmission Model*
-________________________
+The Transmission Model
+--------------------------
 
 The transmission model must perform two tasks:
 
@@ -131,8 +127,8 @@ Variable           Description                                  Units
 =================  ===========================================  ======
 
   
-*The Engine Model*
-__________________
+The Engine Model
+------------------
 
 The engine model must provide two pieces of information:
 
@@ -242,8 +238,8 @@ _`2`. Shikida, Takasuke, Yoshikatsu Nakamura, Tamio Nakakubo, and Hiroyuki Kawas
 Speed 2ZZ-GE Engine," SAE World Congress, March 6-9 2000, SAE 2000-01-0671.
 
   
-*The Chassis Model*
-____________________________
+The Chassis Model
+-------------------
 
 The chassis model must provide the vehicle acceleration given the torque
 produced by the engine and scaled by the transmission. The equation used for
@@ -295,9 +291,9 @@ acceleration       Vehicle instantaneous acceleration           m/(s*s)
 =================  ===========================================  ======
 
 |
- 
-*Simulating the Acceleration Test (0-60)*
-_________________________________________
+
+Simulating the Acceleration Test (0-60)
+------------------------------------------
 
 .. todo:  I am hiding this quote by using the todo directive without the last colon. When more humor is
    ready to be injected, these lines can be deleted and the quote will show up.
@@ -318,8 +314,8 @@ would also be possible to use the shift points as variables and let an optimizer
 locations.
 
 
-*Simulating the EPA Mileage Tests*
-__________________________________
+Simulating the EPA Mileage Tests
+--------------------------------
 
 The EPA mileage tests give an estimate of the fuel consumed while driving a pre-determined
 velocity profile that represents a particular class of driving, the two most well-known of
@@ -370,7 +366,7 @@ points, so simulating these driving profiles consumes much more CPU time than th
 .. index:: Component
 
 Components and Variables
-------------------------
+==========================
 
 In the previous section, three component models were outlined that together form a vehicle model that can simulate
 performance. These models have all been implemented as OpenMDAO components written in Python. This
@@ -446,23 +442,21 @@ used here, including the *Enum* type.
 
 .. index:: PEP 8
 
-In this example, we use more complicated names for our variables, so we should
-cover what makes a valid variable name. Variables are also Python variables,
-so they must follow Python's standard naming convention. They must begin with
-a letter or underscore and should consist of only alphanumeric characters and
-the underscore. Keep in mind that a leading underscore is generally used for
-private data or functions. **Spaces cannot be used in a variable name.**
-Generally, we've tried to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_ 
-standard for component instance
-names as well as Python variable names. PEP 8 prescribes the use of lower case
-names with words separated by underscores.
+In this example, we use more complicated names for our variables, so we should cover what makes a
+valid variable name. Variables are also Python variables, so they must follow Python's standard
+naming convention. They must begin with a letter or underscore and should consist of only
+alphanumeric characters and the underscore. Keep in mind that a leading underscore is generally used
+for private data or functions. **Spaces cannot be used in a variable name.** Generally, we've tried
+to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_  standard for component instance 
+names as well as Python variable names. PEP 8 prescribes the use of lower case names with words
+separated by underscores.
 
 The required parameter *iotype*, the optional parameter *desc*, and the
 default value are covered in previous tutorials. The parameter *units* is
 introduced here and is used in a few of the variables in Transmission. OpenMDAO contains a Units
 module that allows for unit checking and conversion between outputs and
 inputs of components. Our units definitions are based on the those given in
-Scientific Python and can be found the :ref:`Appendix:-Summary-of-Units`. If an output and an
+Scientific Python and can be found in :ref:`units`. If an output and an
 input of the same unit class (e.g., length) are connected in the framework, the value is automatically
 converted as it is passed from the output to the input. If an output and an input
 of a different unit class are connected (e.g., length and time), an exception is
@@ -537,7 +531,7 @@ exception will be raised. OpenMDAO execution is terminated unless this
 exception is caught elsewhere and some kind of recovery behavior is defined.
 
 Executing a Component in the Python Shell
------------------------------------------
+==========================================
 
 The Python implementations of the three component models (``engine.py,
 transmission.py, chassis.py``) should all make sense now. This section will
@@ -597,7 +591,7 @@ component with ``run.``
 .. index:: Assembly
 
 Assemblies
-----------
+=============
 
 Now that we've created Python components representing the three vehicle
 subsystems, we need to connect them so that they can be executed in sequence.
@@ -794,7 +788,7 @@ Transmission components. While this might seem redundant, it demonstrates
 a way that Assemblies can be used to define a more consistent external interface.
 
 Executing the Vehicle Assembly
-------------------------------
+==============================
 
 We can manipulate the Vehicle Assembly in the Python shell just like we did with the engine component
 above. As inputs, the Vehicle takes a commanded velocity, throttle position, a gear position, and
@@ -822,7 +816,7 @@ violate the maximum RPM that the engine allows.)
 .. _Wrapping-an-External-Module-Using-F2PY:
 
 Wrapping an External Module Using F2PY
---------------------------------------
+=======================================
 
 As the most computationally intensive component, the engine model in ``engine.py`` is the main performance
 bottleneck during repeated execution. As an interpreted language, Python is not the ideal choice for
@@ -901,7 +895,7 @@ implementation. Both of these scripts run the engine 50 times before termination
 .. _Sockets-and-Interfaces:
 
 Sockets and Interfaces
-----------------------
+========================
 
 Now that we have a functional and quick Vehicle assembly, we need to complete
 the problem by providing a way to simulate the acceleration and the EPA fuel
@@ -1047,7 +1041,7 @@ is done with the ``add`` command.
     Vehicle()``). If you do this, vital framework connections will be bypassed, and the component will not execute properly.
 
 Setting up an Optimization Problem
-----------------------------------
+==================================
 
 The final step is to create a top level Assembly that defines the problem
 using DrivingSim and the vehicle assembly.
@@ -1123,7 +1117,7 @@ from the OpenMDAO variable will be used if they have been specified.
 We are now ready to solve an optimization problem.
 
 Solving the Optimization Problem
----------------------------------
+==================================
 
 First, let's run the problem inside the Python shell. Load and create an instance of the
 EngineOptimization class, setting it as the top assembly.
@@ -1179,7 +1173,7 @@ You can run this same problem at the command prompt by typing:
     python engine_optimization.py
 
 This script prints out a little more information than we've shown in this
-example. See the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>` 
+example. See the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>` 
 for a refresher on how to set up a component to run at the command prompt.
 
 String expressions can be used to pose more sophisticated objective expressions
