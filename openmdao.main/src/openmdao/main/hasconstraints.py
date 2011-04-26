@@ -155,6 +155,9 @@ class HasEqConstraints(_HasConstraintsBase):
             msg = "Constraint right-hand-side (%s) is not a string" % rhs
             raise ValueError(msg)
         ident = _remove_spaces('='.join([lhs, rhs]))
+        if ident in self._constraints: 
+            self._parent.raise_exception('A constraint of the form "%s" already exists '
+                                         'in the driver. Add Failed.'%ident)
         self._constraints[ident] = Constraint(lhs, '=', rhs, scaler, adder, \
                                               scope=self._parent)
         
@@ -209,6 +212,9 @@ class HasIneqConstraints(_HasConstraintsBase):
             msg = "Constraint right-hand-side (%s) is not a string" % rhs
             raise ValueError(msg)
         ident = _remove_spaces(rel.join([lhs, rhs]))
+        if ident in self._constraints: 
+            self._parent.raise_exception('A constraint of the form "%s" already exists in '
+                                         'the driver. Add Failed.'%ident)
         self._constraints[ident] = Constraint(lhs, rel, rhs, scaler, adder, \
                                             scope=self._parent)
         

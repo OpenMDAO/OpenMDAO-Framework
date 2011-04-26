@@ -52,6 +52,15 @@ class HasConstraintsTestCase(unittest.TestCase):
             self.assertEqual(len(drv.get_ineq_constraints()), 0)
             drv.add_constraint(' comp1.a > comp1.b')
             
+            try: 
+                drv.add_constraint('comp1.a>comp1.b')
+            except Exception as err: 
+                self.assertEqual(str(err),
+                                 'driver: A constraint of the form "comp1.a>comp1.b" already exists '
+                                 'in the driver. Add Failed.')
+            else: 
+                self.fail("Exception Expected")
+            
         if eq: 
             self.assertEqual(len(drv.get_eq_constraints()), 0)
         if ineq: 
@@ -60,6 +69,16 @@ class HasConstraintsTestCase(unittest.TestCase):
         if eq: 
             drv.add_constraint('comp1.c =      comp1.d ')
             self.assertEqual(len(drv.get_eq_constraints()), 1)
+            
+            try: 
+                drv.add_constraint('comp1.c=comp1.d')
+            except Exception as err: 
+                self.assertEqual(str(err),
+                                 'driver: A constraint of the form "comp1.c=comp1.d" already exists '
+                                 'in the driver. Add Failed.')
+            else: 
+                self.fail("Exception Expected")
+                
         if ineq: 
             self.assertEqual(len(drv.get_ineq_constraints()), 1)
         
@@ -172,6 +191,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.assertEqual(result[0][0], -1.0)
         self.assertEqual(result[0][1], 1.0)
         
+        drv.remove_constraint('comp1.a < comp1.b') #cant add constraints that are already there
         try:
             drv.add_constraint('comp1.a < comp1.b', scaler=-5.0)
         except ValueError as err:
@@ -179,7 +199,7 @@ class HasConstraintsTestCase(unittest.TestCase):
                "Scaler parameter should be a float > 0")
         else:
             self.fail('expected ValueError')
-            
+        
         try:
             drv.add_constraint('comp1.a < comp1.b', scaler=2)
         except ValueError as err:
