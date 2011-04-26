@@ -83,7 +83,7 @@ class test_basicgui(unittest.TestCase):
         sel.click("link=Exit")
     
     def tearDown(self):
-        os.chdir(startdir)
+        os.chdir(self.startdir)
         self.selenium.stop()
         self.assertEqual([''], self.verificationErrors)  # what's this empty string?
         try:
