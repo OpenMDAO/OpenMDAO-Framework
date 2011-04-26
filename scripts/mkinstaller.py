@@ -171,46 +171,6 @@ def after_install(options, home_dir):
     except Exception as err:
         logger.error("ERROR: build failed: %%s" %% str(err))
         sys.exit(-1)
-        
-    if sys.platform != 'win32':
-        import fnmatch
-        def _find_files(startdir, pat):
-            for path, dirlist, filelist in os.walk(startdir):
-                for name in fnmatch.filter(filelist, pat):
-                    yield os.path.join(path, name)
-
-       # in order to find all of our shared libraries, modify the activate
-       # script to put their directories in LD_LIBRARY_PATH
-        pkgdir = os.path.join(lib_dir, 'site-packages')
-        sofiles = [os.path.abspath(x) for x in _find_files(pkgdir,'*.so')]
-                      
-        final = set()
-        for f in sofiles:
-            pyf = os.path.splitext(f)[0]+'.py'
-            if not os.path.exists(pyf):
-                final.add(os.path.dirname(f))
-                
-        subdict = { 'libpath': 'LD_LIBRARY_PATH',
-                    'add_on': os.pathsep.join(final)
-                    }
-                    
-        if len(final) > 0:
-            activate_template = '\\n'.join([
-            'export VIRTUAL_ENV',
-            '',
-            'if [ -z "$%%(libpath)s" ] ; then',
-            '   %%(libpath)s=""',
-            'fi',
-            '',
-            '%%(libpath)s=$%%(libpath)s:%%(add_on)s',
-            'export %%(libpath)s',
-            ])
-            f = open(os.path.join(absbin, 'activate'), 'r')
-            content = f.read()
-            f.close()
-            f = open(os.path.join(absbin, 'activate'), 'w')
-            f.write(content.replace('export VIRTUAL_ENV', activate_template %% subdict, 1))
-            f.close()
 
     abshome = os.path.abspath(home_dir)
     

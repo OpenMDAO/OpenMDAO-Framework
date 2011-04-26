@@ -282,10 +282,11 @@ copyright =
 
 
 # This dict contains string templates corresponding to skeleton python source files
-# for each of the recognized plugin types.  These should be updated to reflect
-# best practices because most plugin developers will start with these when they
-# create new plugins.
+# for each of the recognized plugin types.  
 _class_templates = {}
+
+# TODO: These should be updated to reflect best practices because most plugin
+# developers will start with these when they create new plugins.
 
 _class_templates['openmdao.component'] = '''
 
@@ -885,6 +886,60 @@ def plugin_install(argv=None):
     if retcode:
         sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
         sys.exit(-1)
+        
+    fix_activate()  # make sure LD_LIBRARY_PATH is updated if necessary in activate script
+
+        
+def fix_activate():
+    """Find all of the shared libraries in the current environment and modify
+    the activate script to put their directories in LD_LIBRARY_PATH
+    """
+    if sys.platform != 'win32':
+        topdir = os.path.dirname(os.path.dirname(sys.executable))
+        bindir = os.path.join(topdir, 'bin')
+        pkgdir = os.path.join(topdir, 'lib', 'python%s.%s' % sys.version_info[:2], 
+                              'site-packages')
+        sofiles = [os.path.abspath(x) for x in find_files(pkgdir,'*.so')]
+                      
+        final = set()
+        for f in sofiles:
+            pyf = os.path.splitext(f)[0]+'.py'
+            if not os.path.exists(pyf):
+                final.add(os.path.dirname(f))
+                
+        libpathvname = 'LD_LIBRARY_PATH'
+        subdict = { 'libpath': libpathvname,
+                    'add_on': os.pathsep.join(final)
+                    }
+                    
+        if len(final) > 0:
+            activate_lines = [
+            '# BEGIN MODIFICATION\n',
+            'if [ -z "$%(libpath)s" ] ; then\n',
+            '   %(libpath)s=""\n',
+            'fi\n',
+            '\n',
+            '%(libpath)s=%(libpath)s:%(add_on)s\n',
+            'export %(libpath)s\n',
+            '# END MODIFICATION\n',
+            '\n',
+            ]
+            absbin = os.path.abspath(bindir)
+            with open(os.path.join(absbin, 'activate'), 'r') as f:
+                lines = f.readlines()
+                try:
+                    idx = lines.index(activate_lines[0])
+                    del lines[idx:idx+len(activate_lines)]
+                except ValueError:
+                    pass
+                
+                idx = lines.index('export PATH\n')
+                lines[idx+2:idx+2] = activate_lines
+                
+            content = ''.join(lines)
+            
+            with open(os.path.join(absbin, 'activate'), 'w') as f:
+                f.write(content % subdict)
 
     
 def _plugin_build_docs(destdir, cfg):
@@ -956,3 +1011,7 @@ def plugin_build_docs(argv=None):
     build_directory(dirstruct, force=True, topdir=destdir)
     _plugin_build_docs(destdir, cfg)
 
+
+if __name__ == '__main__':
+    fix_activate()
+    
