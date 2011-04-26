@@ -1,6 +1,6 @@
 
-import unittest, time, re, os
-from nose import SkipTest
+import unittest, time, re, os, inspect
+from selenium import selenium
 
 from multiprocessing        import Process
 from openmdao.gui.mdao_util import PickUnusedPort
@@ -8,7 +8,9 @@ from openmdao.gui.mdao      import launch_server
 
 class test_basicgui(unittest.TestCase):
     def setUp(self):
-        os.chdir('..')  # so server can find it's static files
+	gui_path = os.path.dirname(inspect.getfile(launch_server))
+	os.chdir(gui_path)  # so server can find it's static files
+
         self.port = PickUnusedPort()
         self.server = Process(target=launch_server,args=(self.port,))
         self.server.start()
@@ -89,9 +91,4 @@ class test_basicgui(unittest.TestCase):
             print "server terminate failed: ", e
             
 if __name__ == "__main__":
-        try:
-            from selenium import selenium
-            unittest.main()
-        except ImportError:
-            # don't perform this test if we don't have selenium
-            raise SkipTest("this test requires Selenium")
+    unittest.main()
