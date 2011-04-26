@@ -42,7 +42,7 @@ class HasGlobalDesVars(object):
     def add_global_des_var(self,name,targets,low,high,scalar=1.0,adder=0):
         """adds a global design variable to the assembly"""
         if name in self._des_vars: 
-            self._parent.raise_exception("A global design variable named '%s' already exists",%name,ValueError)
+            self._parent.raise_exception("A global design variable named '%s' already exists"%name,ValueError)
         gdv =  GlobalDesVar(name,targets,low,high,scalar,adder)
         self._des_vars[name] = gdv
         return gdv
@@ -220,9 +220,13 @@ class HasCouplingVar(object):
         #cant have any coupling variable with duplicate indep or constraint equations
         if indep not in self._indeps:
             self._indeps[indep] = constraint
-            #TODO: HasConstraints needs to check to see if a constraint is a duplicate and throw an error if it is
-            #   we will catch that error and report our own accordingly. 
-            self._has_constraints.add_constraint(constraint,scalar,adder) #TODO, constraint tolerance???
+            try: 
+                #TODO, constraint tolerance???
+                self._has_constraints.add_constraint(constraint,scalar,adder)
+            except ValueError as err: 
+                self._parent.raise_exception("A coupling variable with the "
+                                             "constraint of the form '%s' already exists "
+                                             "in the Aseembly"%constraint, ValueError)
             
         elif indep in self._indeps:
             self._parent.raise_exception("A coupling variable with indep of '%s' already "
