@@ -16,8 +16,8 @@ from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array, List
 from openmdao.lib.components.api import MetaModel,MultiObjExpectedImprovement,\
      ProbIntersect,ParetoFilter, Mux
 from openmdao.lib.drivers.api import DOEdriver,Genetic,CaseIteratorDriver,FixedPointIterator
-from openmdao.lib.caserecorders.api import DBCaseRecorder,DumpCaseRecorder
-from openmdao.lib.caseiterators.api import DBCaseIterator
+from openmdao.lib.casehandlers.api import DBCaseRecorder,DumpCaseRecorder
+from openmdao.lib.casehandlers.api import DBCaseIterator
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions

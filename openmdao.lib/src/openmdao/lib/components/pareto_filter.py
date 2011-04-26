@@ -5,7 +5,7 @@ from openmdao.lib.datatypes.api import Instance, List, ListStr
 
 from openmdao.main.component import Component
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 
 
 
@@ -61,7 +61,7 @@ class ParetoFilter(Component):
             #TODO: Implement extraction of output from case, 'case.get_output('x')'
             outputs = []
             for crit in self.criteria: 
-                outputs.extend([o[2] for o in case.outputs if crit in o[0]])
+                outputs.extend([v for k,v in case.items(iotype='out') if crit in k])
             #outputs = [o[2] for o in case.outputs if o[0] in self.criteria]
             
             if len(outputs) == criteria_count:

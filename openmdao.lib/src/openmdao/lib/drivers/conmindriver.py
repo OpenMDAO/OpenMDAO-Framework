@@ -33,7 +33,7 @@ from numpy.linalg import norm
 
 import conmin.conmin as conmin
 
-from openmdao.main.api import Case, Driver
+from openmdao.main.api import Case, Driver, ExprEvaluator
 from openmdao.main.exceptions import RunStopped
 from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
 from openmdao.main.hasparameters import HasParameters
@@ -442,18 +442,22 @@ class CONMINdriver(Driver):
                 
                 case_input = []
                 for var, val in zip(self.get_parameters().keys(), dvals):
-                    case_input.append([var, None, val])
-                    
-                case_output = []
-                for var in self.printvars:
-                    case_output.append([var, None, self.get(var)])
-                case_output.append(["objective", None, self.cnmn1.obj])
+                    case_input.append([var, val])
+                
+                if self.printvars:
+                    case_output = [(name, ExprEvaluator(name, scope=self).evaluate()) 
+                                           for name in self.printvars]
+                else:
+                    case_output = []
+                case_output.append(["objective", self.cnmn1.obj])
             
                 for i, val in enumerate(self.constraint_vals):
-                    case_output.append(["Constraint%d" % i, None, val])
+                    case_output.append(["Constraint%d" % i, val])
                 
-                self.recorder.record(Case(case_input, case_output, 
-                                          'case%s' % self.iter_count))
+                case = Case(case_input, case_output, desc='case%s' % self.iter_count,
+                            parent_uuid=self._case_id)
+                
+                self.recorder.record(case)
         
 
     def _config_conmin(self):

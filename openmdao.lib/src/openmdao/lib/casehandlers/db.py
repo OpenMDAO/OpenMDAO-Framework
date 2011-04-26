@@ -1,15 +1,111 @@
 
 import sys
 import sqlite3
+import uuid
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser
 
 from openmdao.lib.datatypes.api import implements
 
-from openmdao.main.interfaces import ICaseRecorder
+from openmdao.main.interfaces import ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
-from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
 
+_casetable_attrs = set(['id','uuid','parent','label','msg','retries','model_id','timeEnter'])
+_vartable_attrs = set(['var_id','name','case_id','sense','value'])
+
+def _query_split(query):
+    """Return a tuple of lhs, relation, rhs after splitting on 
+    a list of allowed operators.
+    """
+    # FIXME: make this more robust
+    for op in ['<>', '<=', '>=', '==', '!=', '<', '>', '=']:
+        parts = query.split(op, 1)
+        if len(parts) > 1:
+            return (parts[0].strip(), op, parts[1].strip())
+    else:
+        raise ValueError("No allowable operator found in query '%s'" % query)
+
+
+class DBCaseIterator(object):
+    """Pulls Cases from a relational DB (sqlite). It doesn't support
+    general sql queries, but it does allow for a series of boolean
+    selectors, e.g., 'x<=y', that are ANDed together.
+    """
+    
+    implements(ICaseIterator)
+    
+    def __init__(self, dbfile=':memory:', selectors=None, connection=None):
+        if connection is not None:
+            self._dbfile = dbfile
+            self._connection = connection
+        else:
+            self._connection = None
+            self.dbfile = dbfile
+        self.selectors = selectors
+
+    @property
+    def dbfile(self):
+        """The name of the database. This can be a filename or :memory: for
+        an in-memory database.
+        """
+        return self._dbfile
+    
+    @dbfile.setter
+    def dbfile(self, value):
+        """Set the DB file and connect to it."""
+        self._dbfile = value
+        if self._connection:
+            self._connection.close()
+        self._connection = sqlite3.connect(value)
+
+    def get_iter(self):
+        return self._next_case()
+
+    def _next_case(self):
+        """ Generator which returns Cases one at a time. """
+        # figure out which selectors are for cases and which are for variables
+        sql = ["SELECT * FROM cases"]
+        if self.selectors is not None:
+            for sel in self.selectors:
+                rhs,rel,lhs = _query_split(sel)
+                if rhs in _casetable_attrs:
+                    if len(sql) == 1:
+                        sql.append("WHERE %s%s%s" % (rhs,rel,lhs))
+                    else:
+                        sql.append("AND %s%s%s" % (rhs,rel,lhs))
+            
+        casecur = self._connection.cursor()
+        casecur.execute(' '.join(sql))
+          
+        sql = ['SELECT var_id,name,case_id,sense,value from casevars WHERE case_id=%s']
+        if self.selectors is not None:
+            for sel in self.selectors:
+                rhs,rel,lhs = _query_split(sel)
+                if rhs in _vartable_attrs:
+                    sql.append("AND %s%s%s" % (rhs,rel,lhs))
+        combined = ' '.join(sql)
+        varcur = self._connection.cursor()
+        
+        for cid,text_id,parent,label,msg,retries,model_id,timeEnter in casecur:
+            varcur.execute(combined % cid)
+            inputs = []
+            outputs = []
+            for var_id, vname, case_id, sense, value in varcur:
+                if not isinstance(value, (float,int,str)):
+                    try:
+                        value = loads(str(value))
+                    except UnpicklingError as err:
+                        raise UnpicklingError("can't unpickle value '%s' for case '%s' from database: %s" %
+                                              (vname, cname, str(err)))
+                if sense=='i':
+                    inputs.append((vname, value))
+                else:
+                    outputs.append((vname, value))
+            if len(inputs) > 0 or len(outputs) > 0:
+                yield Case(inputs=inputs, outputs=outputs,
+                           retries=retries,msg=msg,label=label,
+                           case_uuid=text_id, parent_uuid=parent)
+            
 
 class DBCaseRecorder(object):
     """Records Cases to a relational DB (sqlite). Values other than floats,
@@ -30,7 +126,9 @@ class DBCaseRecorder(object):
         self._connection.execute("""
         create table %s cases(
          id INTEGER PRIMARY KEY,
-         cname TEXT,
+         uuid TEXT,
+         parent TEXT,
+         label TEXT,
          msg TEXT,
          retries INTEGER,
          model_id TEXT,
@@ -43,8 +141,7 @@ class DBCaseRecorder(object):
          name TEXT,
          case_id INTEGER,
          sense TEXT,
-         value BLOB,
-         idx TEXT
+         value BLOB
          )""" % exstr)
 
     @property
@@ -64,30 +161,31 @@ class DBCaseRecorder(object):
         """Record the given Case."""
         cur = self._connection.cursor()
         
-        if not case.msg:
-            case.msg = ''
-        cur.execute("""insert into cases(id,cname,msg,retries,model_id,timeEnter) 
-                           values (?,?,?,?,?,DATETIME('NOW'))""", 
-                                     (None, case.ident, case.msg, case.retries, self.model_id))
+        cur.execute("""insert into cases(id,uuid,parent,label,msg,retries,model_id,timeEnter) 
+                           values (?,?,?,?,?,?,?,DATETIME('NOW'))""", 
+                                     (None, case.uuid, case.parent_uuid, case.label,
+                                      case.msg or '', case.retries, 
+                                      self.model_id))
         case_id = cur.lastrowid
         # insert the inputs and outputs into the vars table.  Pickle them if they're not one of the
         # built-in types int, float, or str.
-        vlist = []
         
-        for name,idx,value in case.inputs:
+        for name,value in case.items(iotype='in'):
             if isinstance(value, (float,int,str)):
-                vlist.append((None, name, case_id, 'i', value, idx))
+                v = (None, name, case_id, 'i', value)
             else:
-                vlist.append((None, name, case_id, 'i', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)), idx))
-        for name,idx,value in case.outputs:
+                v = (None, name, case_id, 'i', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)))
+            cur.execute("insert into casevars(var_id,name,case_id,sense,value) values(?,?,?,?,?)", 
+                        v)
+        for name,value in case.items(iotype='out'):
             if isinstance(value, (float,int,str)):
-                vlist.append((None, name, case_id, 'o', value, idx))
+                v = (None, name, case_id, 'o', value)
             else:
-                vlist.append((None, name, case_id, 'o', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)), idx))
-        for v in vlist:
-            cur.execute("insert into casevars(var_id,name,case_id,sense,value,idx) values(?,?,?,?,?,?)", 
-                            v)
+                v = (None, name, case_id, 'o', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)))
+            cur.execute("insert into casevars(var_id,name,case_id,sense,value) values(?,?,?,?,?)", 
+                        v)
         self._connection.commit()
+    
     def get_iterator(self):
         """Return a DBCaseIterator that points to our current DB."""
         return DBCaseIterator(dbfile=self._dbfile, connection=self._connection)
@@ -106,14 +204,9 @@ def list_db_vars(dbname):
         The name of the sqlite DB file.
     """
     connection = sqlite3.connect(dbname)
-    varnames = set()
     varcur = connection.cursor()
-    varcur.execute("SELECT name, idx from casevars")
-    for vname, idx in varcur:
-        if idx:
-            vname = "vname%s" % idx
-        varnames.add(vname)
-
+    varcur.execute("SELECT name from casevars")
+    varnames = set([v for v in varcur])
     return varnames
 
 def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=False):
@@ -144,8 +237,9 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
         If True, include data from cases that reported an error.
         
     """
-    varnames = set(varnames)
     connection = sqlite3.connect(dbname)
+    vardict = dict([(name,[]) for name in varnames])
+
     sql = ["SELECT id FROM cases"]
     qlist = []
     if case_sql:
@@ -159,9 +253,9 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
     casecur = connection.cursor()
     casecur.execute(' '.join(sql))
     
-    sql = ["SELECT name, value, idx from casevars WHERE case_id=%s"]
+    sql = ["SELECT name, value from casevars WHERE case_id=%s"]
     vars_added = False
-    for i,name in enumerate(varnames):
+    for i,name in enumerate(vardict.keys()):
         if i==0:
             sql.append("AND (")
         else:
@@ -176,25 +270,19 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
     
     varcur = connection.cursor()
     
-    vardict = {}
-    for name in varnames:
-        vardict[name] = []
-
     for case_id in casecur:
         casedict = {}
         varcur.execute(combined % case_id)
-        for vname, value, idx in varcur:
+        for vname, value in varcur:
             if not isinstance(value, (float,int,str)):
                 try:
                     value = loads(str(value))
                 except UnpicklingError as err:
                     raise UnpicklingError("can't unpickle value '%s' from database: %s" %
                                           (vname, str(err)))
-            if idx:
-                vname = "%s%s" % (vname,idx)
             casedict[vname] = value
         
-        if len(casedict) != len(varnames):
+        if len(casedict) != len(vardict):
             continue   # case doesn't contain a complete set of specified vars, so skip it to avoid data mismatches
         
         for name, value in casedict.items():

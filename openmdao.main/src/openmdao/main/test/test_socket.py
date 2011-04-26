@@ -3,7 +3,7 @@ import unittest
 
 from openmdao.main.api import Assembly, Component, Case
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.lib.caseiterators.api import ListCaseIterator
+from openmdao.lib.casehandlers.api import ListCaseIterator
 from openmdao.lib.datatypes.api import Int, Instance, TraitError
 
 class SocketComp(Assembly):
