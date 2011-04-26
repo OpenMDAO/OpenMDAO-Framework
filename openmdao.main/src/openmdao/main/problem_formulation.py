@@ -1,5 +1,6 @@
 import ordereddict
 
+from openmdao.main.hasconstraints import HasConstraints
 from openmdao.lib.components.api import Broadcaster
 
 class GlobalDesVar(object): 
@@ -14,9 +15,9 @@ class GlobalDesVar(object):
     high: Float
         upper limit allowed for the variable value
     scalar: Float (optional)
-        scalar to be applied to the variable 
+        When a driver sets the value of the target variable, this value will be first multiplied by this scalar 
     adder: Float (optional)
-        adder to be applie to the variable
+        When a driver sets the value of the target variable, this value will be first added to set value
     """
     
     def __init__(self,name,targets,low,high,scalar=None,adder=None): 
@@ -28,8 +29,7 @@ class GlobalDesVar(object):
         self.adder = adder
 
 class HasGlobalDesVars(object): 
-    """Delegate object which handles configuration of broadcasters and drivers for
-    an Assembly, based on a set of GlobalDesVar objects
+    """This class provides an implementation of teh IHasGlobalDesVars interface
     
     parent: Assembly
         containing assembly where the HasGlobalDesVars lives. 
@@ -39,7 +39,7 @@ class HasGlobalDesVars(object):
         self._des_vars = ordereddict.OrderedDict()
         self._parent = parent
         
-    def add_global_des_var(self,name,targets,low,high,scalar=None,adder=None):
+    def add_global_des_var(self,name,targets,low,high,scalar=1.0,adder=0):
         """adds a global design variable to the assembly"""
         if name in self._des_vars: 
             self._parent.raise_exception("A global design variable named '%s' already exists",%name,ValueError)
@@ -57,14 +57,22 @@ class HasGlobalDesVars(object):
     
     def clear_global_des_vars(self): 
         """removes all global design variables from the assembly"""
-        self._des_vars = []
+        self._des_vars = ordereddict.OrderedDict()
         
     def list_global_des_vars(self): 
         """returns a list of all the names of global design variable objects in the assembly"""
         return sorted(self._des_vars.keys())
     
-    def get_global_des_vars(self): 
-        """returns and ordered dict of global design variable objects in the assembly"""
+    def get_global_des_vars(self,name=None): 
+        """returns and ordered dict of global design variable objects in the assembly
+        key: str (optional)
+            if provided, function returns the local design variable matching the name
+        """
+        if name is not None and name in self._des_vars: 
+            return self._des_vars[name]
+        elif name is not None: 
+            self._parent.raise_exception("No global design variable named '%s' "
+                                         "has been added to the assembly"%name,ValueError)
         return self._des_vars
         
     def setup_global_broadcaster(self,bcast_name,drivers=None): 
@@ -101,9 +109,9 @@ class LocalDesVar(object):
     high: float (optional)
         maximum allowed value for the local design variable
     scalar: float (optional)
-        scalar to be applied to the variable 
+        When a driver sets the value of the target variable, this value will be first multiplied by this scalar
     addar: float (optional)
-        adder to be applied to the variable
+        When a driver sets the value of the target variable, this value will be first added to set value
     """
     
     def __init__(self,target="",low=None,high=None,scalar=None,addar=None): 
@@ -114,8 +122,7 @@ class LocalDesVar(object):
         self.adder=adder
         
 class HasLocalDesVar(object): 
-    """Delegate object which handles configuration of drivers for
-    an Assembly, based on a set of LocalDesVar objects
+    """This class provides an implementation of the IHasLocalDesVar interface
     
     parent: Assembly
         containing assembly where the HasGlobalDesVars lives. 
@@ -125,7 +132,9 @@ class HasLocalDesVar(object):
         self._parent = parent
         self._des_vars = ordereddict.OrderedDict()
         
-    def add_local_des_var(self,target,low=None,high=None,scalar=None,adder=None):
+    def add_local_des_var(self,target,low=None,high=None,scalar=1.0,adder=0):
+        """adds a local design variable to the assembly"""
+        
         if target in self._des_vars: 
             self._parent.raise_exception('A LocalDesVar with target "%s" has already been '
                                          'added to this assembly',ValueError)
@@ -135,6 +144,8 @@ class HasLocalDesVar(object):
         return ldv
         
     def remove_local_des_var(self,target):
+        """removes the local design variable from the assembly"""
+        
         if target not in self._des_vars: 
             self._parent.raise_exception('No local design variable named "%s"'
                                          ' has been added to the assembly'%target,ValueError)
@@ -143,15 +154,118 @@ class HasLocalDesVar(object):
         return ldv 
     
     def list_local_des_vars(self): 
+        """returns a list of all the names of the local design variables in the assembly"""
         return sorted(self._des_vars.keys())
     
+    def get_local_des_vars(self,target=None): 
+        """returns an ordered dictionary of all the local des vars in the assembly
+        target: str (optional)
+            if provided, returns the local design variable with a target matching the given key"""
+        if target is not None and target in self._des_vars: 
+            return self._des_vars[target]
+        elif target is not None: 
+            self._parent.raise_exception("No local design variable named '%s' "
+                                         "has been added to the assembly"%target,ValueError)
+        return self._des_vars    
+    
     def clear_local_des_vars(self):
-        self._des_vars = []
-        
+        """clears all local design variables from the assembly"""
+        self._des_vars = ordereddict.OrderedDict()
+
 class CouplingVar(object): 
-    def __init__(self): 
-        self.vary = None
-        self.constraint= None
+    
+    def __init__(self,indep,expr): 
+        self.indep = indep
+        self.expr = expr
+        
+    def __eq__(self,other): 
+        return (self.indep==other.indep and self.expr==other.expr)
+    
+    def __str__(self): 
+        return "(%s,%s)"%(self.indep,self.expr)
+    
+    def __repr__(self): 
+        return "<CouplingVar(%s,%s)>)"%(self.indep,self.expr)
+
+class HasCouplingVar(object):
+    """This class provides an implementation of the IHasCouplingVar interface 
+    
+    parent: Assembly
+        assembly object that this object belongs to
+    """
+    
+    def __init__(self,parent):
+        self._parent = parent
+        self._indeps= ordereddict.OrderedDict()
+        self._has_constraints = HasConstraints()
+        
+    def add_coupling_var(self,indep,constraint,tollerance=.0001,scalar=1.0,adder=0.0):
+        """adds a new coupling var to the assembly
+        indep: str
+            name of the independent variable, or the variable that should be varied, to meet the coupling 
+            constraint
+        constraint: str
+            constraint equation, meeting the requirements of the IHasConstraints interface, which must be met 
+            to enforce the coupling
+        tolerance: float (optional)
+            default value of .0001, specifies the tolerance to which the coupling constraint must be met to be 
+            statisfied
+        scalar: float (optional)
+            default value of 1.0, specifies the scalar value that the constraint equation will be multiplied by 
+            before being returned
+        adder: float (optional)
+            default value of 0.0, specifies the value which will be added to the constraint before being returned
+        """
+        cpl = CouplingVar(indep,constraint)
+        #cant have any coupling variable with duplicate indep or constraint equations
+        if indep not in self._indeps:
+            self._indeps[indep] = constraint
+            #TODO: HasConstraints needs to check to see if a constraint is a duplicate and throw an error if it is
+            #   we will catch that error and report our own accordingly. 
+            self._has_constraints.add_constraint(constraint,scalar,adder) #TODO, constraint tolerance???
             
+        elif indep in self._indeps:
+            self._parent.raise_exception("A coupling variable with indep of '%s' already "
+                                         "exists in the assembly"%indep,ValueError) 
             
+    def remove_coupling_var(self,indep):
+        """removes the coupling var, idenfied by the indepent name, from the assembly. 
+        
+        indep: str 
+            name of the independent variable from the CouplingVar   
+        """
+        if indep in self._indeps: 
+            expr = self._indeps[indep]         
+            self._constraints.remove(expr)
+            
+        else: 
+            self._parent.raise_exception("No coupling variable with the indep '%s' has been "
+                                         "added to the assembly"%indep,ValueError)
+        
+    def list_coupling_vars(self): 
+        """returns a ordered list of names of the coupling vars in the assembly"""
+        return sorted(self._indeps.keys())
+    
+    def get_coupling_vars(self,indep=None): 
+        """returns an ordered dictionary of coupling vars, keyed to the name of 
+        the independent associated with each one
+        
+        indep:str (optional)
+            if provided, returns the coupling variable associated with the independent given
+        """
+            
+        if indep is not None and indep in self._indeps: 
+            return self._indeps[indep]
+        
+        elif indep is not None: 
+            self._parent.raise_exception("No couling variable with indep '%s' "
+                                         "exists in the assembly"%indep,ValueError)
+        return self._indeps
+    
+    def clear_coupling_cars(self): 
+        """removes all coupling variables from the assembly"""
+        self._indeps = ordereddict.OrderedDict()
+        self._has_constraints.clear_constraints()
+        
+     
         
