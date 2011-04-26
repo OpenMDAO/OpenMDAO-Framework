@@ -8,8 +8,9 @@ from openmdao.gui.mdao      import launch_server
 
 class test_basicgui(unittest.TestCase):
     def setUp(self):
-	gui_path = os.path.dirname(inspect.getfile(launch_server))
-	os.chdir(gui_path)  # so server can find it's static files
+        self.startdir = os.getcwd()
+        gui_path = os.path.dirname(inspect.getfile(launch_server))
+        os.chdir(gui_path)  # so server can find it's static files
 
         self.port = PickUnusedPort()
         self.server = Process(target=launch_server,args=(self.port,))
@@ -82,6 +83,7 @@ class test_basicgui(unittest.TestCase):
         sel.click("link=Exit")
     
     def tearDown(self):
+        os.chdir(startdir)
         self.selenium.stop()
         self.assertEqual([''], self.verificationErrors)  # what's this empty string?
         try:

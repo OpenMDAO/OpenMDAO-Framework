@@ -25,6 +25,7 @@ packages = [
     'openmdao.lib',
     'openmdao.util',
     'openmdao.units',
+    'openmdao.gui',
 ]
 
 
@@ -126,7 +127,7 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
     
     #excluding traits now since they need to be sorted separately
     names = list(_get_resource_files(dist,
-                                    ['*__init__.py','*setup.py','*/test/*.py', '*datatypes*.py'],
+                                    ['*__init__.py','*setup.py','*/test/*.py','*datatypes*.py','*/gui/manage.py'],
                                     ['*.py']))
     names.sort()
     
