@@ -1,6 +1,6 @@
 
-from selenium import selenium
 import unittest, time, re, os
+from nose import SkipTest
 
 from multiprocessing        import Process
 from openmdao.gui.mdao_util import PickUnusedPort
@@ -15,11 +15,13 @@ class test_basicgui(unittest.TestCase):
         self.url = "http://localhost:"+str(self.port)
         
         self.verificationErrors = []
+        # the selenium standalone server should be running on port 4444
         self.selenium = selenium("localhost", 4444, "*chrome", self.url)
         self.selenium.start()
     
     def test_basicstuff(self):
         sel = self.selenium
+        sel.set_speed("1000")   # s l o w l y
         sel.open("/login")
         sel.type("username", "testuser")
         sel.type("password", "testpass")
@@ -79,7 +81,7 @@ class test_basicgui(unittest.TestCase):
     
     def tearDown(self):
         self.selenium.stop()
-        self.assertEqual([], self.verificationErrors)
+        self.assertEqual([''], self.verificationErrors)  # what's this empty string?
         try:
             print "terminating server..."
             self.server.terminate()
@@ -87,4 +89,9 @@ class test_basicgui(unittest.TestCase):
             print "server terminate failed: ", e
             
 if __name__ == "__main__":
-    unittest.main()
+        try:
+            from selenium import selenium
+            unittest.main()
+        except ImportError:
+            # don't perform this test if we don't have selenium
+            raise SkipTest("this test requires Selenium")
