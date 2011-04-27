@@ -880,21 +880,27 @@ def plugin_install(argv=None):
             cmdargs.extend(['-f', options.findlinks])
         else:
             cmdargs.extend(['-f', 'http://openmdao.org/dists']) # make openmdao.org the default
-        cmdargs.append(argv[0])
+        cmdargs.extend(args)
     cmd = ' '.join(cmdargs)
     retcode = call(cmdargs)
     if retcode:
         sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
         sys.exit(-1)
         
-    fix_activate()  # make sure LD_LIBRARY_PATH is updated if necessary in activate script
+    update_libpath()  # make sure LD_LIBRARY_PATH is updated if necessary in activate script
 
         
-def fix_activate():
+def update_libpath():
     """Find all of the shared libraries in the current environment and modify
     the activate script to put their directories in LD_LIBRARY_PATH
     """
-    if sys.platform != 'win32':
+    ldict = {
+        'linux2': 'LD_LIBRARY_PATH',
+        'linux': 'LD_LIBRARY_PATH',
+        'darwin': 'DYLD_LIBRARY_PATH',
+        }
+    libpathvname = ldict.get(sys.platform, None)
+    if libpathvname:
         topdir = os.path.dirname(os.path.dirname(sys.executable))
         bindir = os.path.join(topdir, 'bin')
         pkgdir = os.path.join(topdir, 'lib', 'python%s.%s' % sys.version_info[:2], 
@@ -907,7 +913,6 @@ def fix_activate():
             if not os.path.exists(pyf):
                 final.add(os.path.dirname(f))
                 
-        libpathvname = 'LD_LIBRARY_PATH'
         subdict = { 'libpath': libpathvname,
                     'add_on': os.pathsep.join(final)
                     }
@@ -919,7 +924,7 @@ def fix_activate():
             '   %(libpath)s=""\n',
             'fi\n',
             '\n',
-            '%(libpath)s=%(libpath)s:%(add_on)s\n',
+            '%(libpath)s=$%(libpath)s:%(add_on)s\n',
             'export %(libpath)s\n',
             '# END MODIFICATION\n',
             '\n',
@@ -940,7 +945,6 @@ def fix_activate():
             
             with open(os.path.join(absbin, 'activate'), 'w') as f:
                 f.write(content % subdict)
-
     
 def _plugin_build_docs(destdir, cfg):
     """Builds the Sphinx docs for the plugin distribution, assuming it has
