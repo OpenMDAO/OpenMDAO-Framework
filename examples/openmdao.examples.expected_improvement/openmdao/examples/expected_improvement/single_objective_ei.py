@@ -13,9 +13,9 @@ from openmdao.lib.surrogatemodels.api import KrigingSurrogate
 from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
 
 from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
-from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder
+from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
 
-from openmdao.lib.caseiterators.api import DBCaseIterator
+from openmdao.lib.casehandlers.api import DBCaseIterator
 from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
 from openmdao.examples.expected_improvement.branin_component import BraninComponent
 from openmdao.util.decorators import add_delegate
@@ -73,7 +73,6 @@ class Analysis(Assembly):
         self.DOE_trainer.add_event("branin_meta_model.train_next")
         self.DOE_trainer.case_outputs = ["branin_meta_model.f_xy"]
         self.DOE_trainer.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
-
         
         self.add("EI_opt",Genetic())
         self.EI_opt.opt_type = "maximize"
@@ -87,7 +86,7 @@ class Analysis(Assembly):
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("branin_meta_model.train_next")
-        self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
+        self.retrain.recorder = [DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))]
         self.retrain.force_execute = True
         
         self.add("iter",IterateUntil())
@@ -116,7 +115,7 @@ class Analysis(Assembly):
 if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
-    from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
+    from openmdao.lib.casehandlers.db import case_db_to_dict
     
     seed = None
     backend = None

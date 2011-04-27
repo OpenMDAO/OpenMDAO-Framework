@@ -20,13 +20,22 @@ class GlobalDesVar(object):
         When a driver sets the value of the target variable, this value will be first added to set value
     """
     
-    def __init__(self,name,targets,low,high,scalar=None,adder=None): 
+    def __init__(self,name,targets,low,high,scalar=1.0,adder=0.0): 
         self.name = name
-        self.targets = targets
+        #TODO: should there be some verification of the validity of these targets? 
+        self.targets = set(targets)
         self.low = low
         self.high = high
         self.scalar = scalar
         self.adder = adder
+        
+    def __eq__(self,other): 
+        return all([self.targets==other.targets,
+                    self.name==other.name,
+                    self.low==other.low,
+                    self.high==other.high,
+                    self.scalar==other.scalar,
+                    self.adder==other.adder])
 
 class HasGlobalDesVars(object): 
     """This class provides an implementation of teh IHasGlobalDesVars interface
@@ -39,18 +48,18 @@ class HasGlobalDesVars(object):
         self._des_vars = ordereddict.OrderedDict()
         self._parent = parent
         
-    def add_global_des_var(self,name,targets,low,high,scalar=1.0,adder=0):
+    def add_global_des_var(self,name,targets,low,high,scalar=1.0,adder=0.0):
         """adds a global design variable to the assembly"""
         if name in self._des_vars: 
-            self._parent.raise_exception("A global design variable named '%s' already exists"%name,ValueError)
+            self._parent.raise_exception("A global design variable named '%s' already exists in this assembly"%name,ValueError)
         gdv =  GlobalDesVar(name,targets,low,high,scalar,adder)
         self._des_vars[name] = gdv
-        return gdv
+        
     
     def remove_global_des_var(self,name): 
         """removed the global design variable from the assembly"""
         if name not in self._des_vars: 
-            self._parent.raise_exception("No global design variable names '%s' exists"%name,ValueError)
+            self._parent.raise_exception("No global design variable names '%s' exists in this assembly"%name,ValueError)
         gdv = self._des_vars[name]
         del self._des_vars[name]
         return gdv
@@ -75,7 +84,9 @@ class HasGlobalDesVars(object):
                                          "has been added to the assembly"%name,ValueError)
         return self._des_vars
         
-    def setup_global_broadcaster(self,bcast_name,drivers=None): 
+    #TODO: How do I handle calling of this method more than once? Need to clear out old broadcaster
+    #    break any connections, and remove any possible parameters
+    def setup_global_broadcaster(self,bcast_name,drivers=[]): 
         """creates a broadcaster with all the global design variables in the assembly.
         Calls add_parameter for all inputs in broadcaster on each driver specified
         
@@ -87,12 +98,12 @@ class HasGlobalDesVars(object):
         
         #make a broadcaster for the globals
         glb_names = self._des_vars.keys()
-        self.add(bcast_name,Broadcaster(glb_names))
+        self._parent.add(bcast_name,Broadcaster(glb_names))
         
         #connect the broadcast outputs to the disciplines
         # and add the broadcast parameters to the driver
-        for gdv_name,gdv in self._des_vars.iteritems: 
-            for var in glb_var.vars:
+        for gdv_name,gdv in self._des_vars.iteritems(): 
+            for var in gdv.targets:
                 #This is just an initialization needed for the broadcaster
                 self._parent.set('%s.%s_in'%(bcast_name,gdv_name),self._parent.get(var)) 
                 self._parent.connect('%s.%s'%(bcast_name,gdv_name),var) 
@@ -121,7 +132,7 @@ class LocalDesVar(object):
         self.scalar = scalar
         self.adder=adder
         
-class HasLocalDesVar(object): 
+class HasLocalDesVars(object): 
     """This class provides an implementation of the IHasLocalDesVar interface
     
     parent: Assembly
@@ -187,7 +198,7 @@ class CouplingVar(object):
     def __repr__(self): 
         return "<CouplingVar(%s,%s)>)"%(self.indep,self.expr)
 
-class HasCouplingVar(object):
+class HasCouplingVars(object):
     """This class provides an implementation of the IHasCouplingVar interface 
     
     parent: Assembly
@@ -197,7 +208,7 @@ class HasCouplingVar(object):
     def __init__(self,parent):
         self._parent = parent
         self._indeps= ordereddict.OrderedDict()
-        self._has_constraints = HasConstraints()
+        self._has_constraints = HasConstraints(self._parent)
         
     def add_coupling_var(self,indep,constraint,tollerance=.0001,scalar=1.0,adder=0.0):
         """adds a new coupling var to the assembly

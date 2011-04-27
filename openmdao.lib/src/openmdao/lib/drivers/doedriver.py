@@ -46,12 +46,11 @@ class DOEdriver(CaseIterDriverBase):
                     raise ValueError('Array entry design vars '
                                      'not supported yet.')
                 else:
-                    inputs.append((parameter.expreval.text, None, value))
+                    inputs.append((parameter.expreval.text, value))
             
             # now add any event variables
             for varname in self.get_events():
-                inputs.append((varname, None, True))
+                inputs.append((varname, True))
 
-            outputs = [(x, None, None) for x in self.case_outputs]
-            yield Case(inputs=inputs, outputs=outputs)
+            yield Case(inputs=inputs, outputs=self.case_outputs)
             

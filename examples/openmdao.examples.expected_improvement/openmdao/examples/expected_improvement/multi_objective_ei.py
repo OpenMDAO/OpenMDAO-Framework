@@ -17,8 +17,8 @@ from openmdao.main.hasstopcond import HasStopConditions
 from openmdao.lib.components.api import MetaModel, MultiObjExpectedImprovement,\
      ParetoFilter, Mux
 from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
-from openmdao.lib.caseiterators.api import DBCaseIterator
-from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder
+from openmdao.lib.casehandlers.api import DBCaseIterator
+from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
 
 from openmdao.lib.surrogatemodels.api import KrigingSurrogate
 
@@ -127,7 +127,7 @@ class Analysis(Assembly):
 if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
-    from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
+    from openmdao.lib.casehandlers.db import case_db_to_dict
     
     seed = None
     backend = None

@@ -55,6 +55,8 @@ class Constraint(object):
         rhs = (self.rhs.evaluate() + self.adder)*self.scaler
         return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
         
+    def __str__(self):
+        return ' '.join([self.lhs, self.comparator, self.rhs])
 
 def _parse_constraint(expr_string):
     """ Parses the constraint expression string and returns the lhs string, 

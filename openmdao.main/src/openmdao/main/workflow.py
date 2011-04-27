@@ -54,24 +54,24 @@ class Workflow(object):
         self._scope = scope
         self.config_changed()
     
-    def run(self, ffd_order=0):
+    def run(self, ffd_order=0, case_id=''):
         """ Run the Components in this Workflow. """
         self._stop = False
         self._iterator = self.__iter__()
         for node in self._iterator:
-            node.run(ffd_order=ffd_order)
+            node.run(ffd_order=ffd_order, case_id=case_id)
             if self._stop:
                 raise RunStopped('Stop requested')
         self._iterator = None
             
-    def step(self, ffd_order=0):
+    def step(self, ffd_order=0, case_id=''):
         """Run a single component in this Workflow."""
         if self._iterator is None:
             self._iterator = self.__iter__()
             
         comp = self._iterator.next()
         try:
-            comp.run(ffd_order=ffd_order)
+            comp.run(ffd_order=ffd_order, case_id='')
         except StopIteration, err:
             self._iterator = None
             raise err

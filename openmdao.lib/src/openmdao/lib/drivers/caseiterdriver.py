@@ -35,9 +35,6 @@ class CaseIterDriverBase(Driver):
     :class:`ResourceAllocationManager`.
     """
 
-    recorder = Instance(ICaseRecorder, allow_none=True, 
-                        desc='Something to save cases to.')
-    
     sequential = Bool(True, iotype='in',
                       desc='If True, evaluate cases sequentially.')
 
@@ -393,14 +390,13 @@ class CaseIterDriverBase(Driver):
             exc = self._model_status(server)
             if exc is None:
                 # Grab the data from the model.
-                for i, niv in enumerate(case.outputs):
-                    try:
-                        case.outputs[i] = (niv[0], niv[1],
-                            self._model_get(server, niv[0], niv[1]))
-                    except Exception as exc:
-                        msg = 'Exception getting %r: %s' % (niv[0], exc)
-                        self._logger.debug('    %s', msg)
-                        case.msg = '%s: %s' % (self.get_pathname(), msg)
+                scope = self.parent if server is None else self._top_levels[server]
+                try:
+                    case.update_outputs(scope)
+                except Exception as exc:
+                    msg = 'Exception getting case outputs: %s' % exc
+                    self._logger.debug('    %s', msg)
+                    case.msg = '%s: %s' % (self.get_pathname(), msg)
             else:
                 self._logger.debug('    exception while executing: %r', exc)
                 case.msg = str(exc)
@@ -486,6 +482,7 @@ class CaseIterDriverBase(Driver):
                 case.max_retries = self.max_retries
             case.retries = 0
         case.msg = None
+        case.parent_uuid = self._case_id
 
         try:
             for event in self.get_events(): 
@@ -495,13 +492,13 @@ class CaseIterDriverBase(Driver):
                     msg = 'Exception setting %r: %s' % (event, exc)
                     self._logger.debug('    %s', msg)
                     self.raise_exception(msg, _ServerError)
-            for name, index, value in case.inputs:
-                try:
-                    self._model_set(server, name, index, value)
-                except Exception as exc:
-                    msg = 'Exception setting %r: %s' % (name, exc)
-                    self._logger.debug('    %s', msg)
-                    self.raise_exception(msg, _ServerError)
+            try:
+                scope = self.parent if server is None else self._top_levels[server]
+                case.apply_inputs(scope)
+            except Exception as exc:
+                msg = 'Exception setting case inputs: %s' % exc
+                self._logger.debug('    %s', msg)
+                self.raise_exception(msg, _ServerError)
             self._server_cases[server] = case
             self._model_execute(server)
             self._server_states[server] = _EXECUTING

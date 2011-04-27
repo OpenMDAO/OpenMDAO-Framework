@@ -15,9 +15,9 @@ level of your OpenMDAO source repository.
 System Requirements
 ===================
 
-Working with OpenMDAO as a developer has some system requirements in
-addition to those mentioned in the :ref:`System-Requirements` section of the *User
-Guide.*  These requirements are described below.
+Working with OpenMDAO as a developer has some system requirements in addition to those mentioned in
+the :ref:`System-Requirements` section under *Getting Started.*  These requirements are described
+below.
 
 
 **Bazaar**
@@ -269,7 +269,7 @@ The directory structure of your repository should look like this:
 ``docs``  
     The directory containing all user documentation for OpenMDAO. The
     documentation is broken up into several major documents, each found in a separate 
-    subdirectory, e.g., ``user-guide`` contains the *User Guide,* ``dev-guide`` contains
+    subdirectory, e.g., ``plugin-guide`` contains the *Plugin Developer Guide,* ``dev-guide`` contains
     the *Developer Guide,* and so on.
   
 ``examples``

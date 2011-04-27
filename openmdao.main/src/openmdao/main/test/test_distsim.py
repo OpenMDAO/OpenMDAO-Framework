@@ -34,7 +34,7 @@ from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
 
 from openmdao.lib.datatypes.api import Float, Int
-from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
+from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
 
 from openmdao.test.execcomp import ExecComp
 
