@@ -21,9 +21,10 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
 from openmdao.lib.datatypes.api import Float, Bool, Array
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
-from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
+from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
+from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
 
 from openmdao.test.cluster import init_cluster
 
@@ -68,13 +69,16 @@ class DrivenComponent(Component):
         if self.stop_exec:
             self.parent.driver.stop()  # Only valid if sequential!
 
+def _get_driver():
+    return CaseIteratorDriver()
+    #return SimpleCaseIterDriver()
 
 class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
-        self.add('driver', CaseIteratorDriver())
+        self.add('driver', _get_driver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
 
@@ -97,13 +101,12 @@ class TestCase(unittest.TestCase):
         self.cases = []
         for i in range(10):
             raise_error = force_errors and i%4 == 3
-            inputs = [('driven.x', None, numpy_random.normal(size=4)),
-                      ('driven.y', None, numpy_random.normal(size=10)),
-                      ('driven.raise_error', None, raise_error),
-                      ('driven.stop_exec', None, False)]
-            outputs = [('driven.rosen_suzuki', None, None),
-                       ('driven.sum_y', None, None)]
-            self.cases.append(Case(inputs, outputs, ident=i))
+            inputs = [('driven.x', numpy_random.normal(size=4)),
+                      ('driven.y', numpy_random.normal(size=10)),
+                      ('driven.raise_error', raise_error),
+                      ('driven.stop_exec', False)]
+            outputs = ['driven.rosen_suzuki','driven.sum_y']
+            self.cases.append(Case(inputs, outputs, label=str(i)))
 
     def tearDown(self):
         self.model.pre_delete()
@@ -132,7 +135,7 @@ class TestCase(unittest.TestCase):
 
         self.generate_cases()
         stop_case = self.cases[1]  # Stop after 2 cases run.
-        stop_case.inputs[3] = ('driven.stop_exec', None, True)
+        stop_case['driven.stop_exec'] = True
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
         self.model.driver.recorder = results
@@ -205,7 +208,7 @@ class TestCase(unittest.TestCase):
     def verify_results(self, forced_errors=False):
         """ Verify recorded results match expectations. """
         for case in self.model.driver.recorder.cases:
-            i = case.ident  # Correlation key.
+            i = int(case.label)  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
                 if self.model.driver.sequential:
@@ -214,10 +217,10 @@ class TestCase(unittest.TestCase):
                     self.assertEqual(case.msg, 'driven: Forced error')
             else:
                 self.assertEqual(case.msg, None)
-                self.assertEqual(case.outputs[0][2],
-                                 rosen_suzuki(case.inputs[0][2]))
-                self.assertEqual(case.outputs[1][2],
-                                 sum(case.inputs[1][2]))
+                self.assertEqual(case['driven.rosen_suzuki'],
+                                 rosen_suzuki(case['driven.x']))
+                self.assertEqual(case['driven.sum_y'],
+                                 sum(case['driven.y']))
 
     def test_save_load(self):
         logging.debug('')
@@ -241,10 +244,10 @@ class TestCase(unittest.TestCase):
         # Create cases with missing input 'dc.z'.
         cases = []
         for i in range(2):
-            inputs = [('driven.x', None, numpy_random.normal(size=4)),
-                      ('driven.z', None, numpy_random.normal(size=10))]
-            outputs = [('driven.rosen_suzuki', None, None),
-                       ('driven.sum_y', None, None)]
+            inputs = [('driven.x', numpy_random.normal(size=4)),
+                      ('driven.z', numpy_random.normal(size=10))]
+            outputs = [('driven.rosen_suzuki', None),
+                       ('driven.sum_y', None)]
             cases.append(Case(inputs, outputs))
 
         self.model.driver.iterator = ListCaseIterator(cases)
@@ -254,7 +257,7 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
-        msg = "driver: Exception setting 'driven.z':" \
+        msg = "driver: Exception setting case inputs:" \
               " driven: object has no attribute 'z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)
@@ -266,10 +269,10 @@ class TestCase(unittest.TestCase):
         # Create cases with missing output 'dc.sum_z'.
         cases = []
         for i in range(2):
-            inputs = [('driven.x', None, numpy_random.normal(size=4)),
-                      ('driven.y', None, numpy_random.normal(size=10))]
-            outputs = [('driven.rosen_suzuki', None, None),
-                       ('driven.sum_z', None, None)]
+            inputs = [('driven.x', numpy_random.normal(size=4)),
+                      ('driven.y', numpy_random.normal(size=10))]
+            outputs = [('driven.rosen_suzuki', None),
+                       ('driven.sum_z', None)]
             cases.append(Case(inputs, outputs))
 
         self.model.driver.iterator = ListCaseIterator(cases)
@@ -279,7 +282,7 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
-        msg = "driver: Exception getting 'driven.sum_z': " \
+        msg = "driver: Exception getting case outputs: " \
             "driven: object has no attribute 'sum_z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)

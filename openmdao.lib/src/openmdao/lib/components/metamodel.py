@@ -92,9 +92,9 @@ class MetaModel(Component):
                 inp_val = None
                 #TODO: Fix case object, so it has a get_input method to clean up this loop
                 var_name = "%s.%s"%(self.name,inp_name)
-                for inp in case.inputs: 
-                    if inp[0] == var_name:
-                        inp_val = inp[2]
+                for name,val in case.items(iotype='in'): 
+                    if name == var_name:
+                        inp_val = val
                         break
                 if inp_val is not None: 
                     inputs.append(inp_val)
@@ -109,9 +109,9 @@ class MetaModel(Component):
                 #grab value from case data
                 output_val = None
                 var_name = "%s.%s"%(self.name,output_name)
-                for output in case.outputs: 
-                    if output[0]==var_name: 
-                        output_val = output[2]
+                for name,val in case.items(iotype='out'): 
+                    if name==var_name: 
+                        output_val = val
                         break
                 if output_val is not None: 
                     # save to training output history
@@ -146,10 +146,10 @@ class MetaModel(Component):
                     
                     for name, tup in self._surrogate_info.items():
                         surrogate, output_history = tup
-                        case_outputs.append(('.'.join([self.name,name]), None, output_history[-1]))
+                        case_outputs.append(('.'.join([self.name,name]), output_history[-1]))
                     # save the case, making sure to add out name to the local input name since
                     # this Case is scoped to our parent Assembly
-                    case_inputs = [('.'.join([self.name,name]),None,val) for name,val in zip(self._surrogate_input_names, inputs)]
+                    case_inputs = [('.'.join([self.name,name]),val) for name,val in zip(self._surrogate_input_names, inputs)]
                     self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
                     
             else:

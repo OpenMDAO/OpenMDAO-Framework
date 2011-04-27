@@ -28,8 +28,8 @@ from openmdao.main.api import Assembly, Case, Component, set_as_top
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
-from openmdao.lib.caseiterators.api import ListCaseIterator
-from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
+from openmdao.lib.casehandlers.api import ListCaseIterator
+from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
 from openmdao.lib.datatypes.api import Float, implements
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.lib.drivers.api import CaseIteratorDriver

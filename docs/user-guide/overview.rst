@@ -1,4 +1,3 @@
-.. index:: User Guide overview
 .. index:: MDAO
 .. index:: OpenMDAO
 .. index:: Component

@@ -357,8 +357,8 @@ class Component (Container):
         self._call_execute = False
         
     @rbac('*', 'owner')
-    def run (self, force=False, ffd_order=0):
-        """Run this object. This should include fetching input variables,
+    def run (self, force=False, ffd_order=0, case_id=''):
+        """Run this object. This should include fetching input variables if necessary,
         executing, and updating output variables. Do not override this function.
 
         force: bool
@@ -369,6 +369,9 @@ class Component (Container):
             Order of the derivatives to be used during Fake
             Finite Difference (typically 1 or 2). During regular execution,
             ffd_order should be 0. (Default is 0)
+            
+        case_id: str
+            Identifier for the Case that is associated with this run. (Default is '')
         """
         if self.directory:
             self.push_dir()
@@ -378,6 +381,7 @@ class Component (Container):
 
         self._stop = False
         self.ffd_order = ffd_order
+        self._case_id = case_id
         try:
             self._pre_execute(force)
             if self._call_execute or force:
