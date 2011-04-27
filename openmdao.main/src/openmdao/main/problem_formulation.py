@@ -63,8 +63,9 @@ class HasGlobalDesVars(object):
         exprs = []    
         for target in targets: 
             expr = ExprEvaluator(target,self._parent)
-            if not expr.is_valid_assignee():
-                self._parent.raise_exception("Cant add global design variable '%s' because the target '%s' refers to multiple assignees"%(name,target),
+            
+            if not expr.check_resolve() or not expr.is_valid_assignee():
+                self._parent.raise_exception("Cant add global design variable '%s' because the target '%s' is an invalid target"%(name,target),
                                              ValueError)
             exprs.append(expr) 
             
@@ -88,18 +89,6 @@ class HasGlobalDesVars(object):
         """returns a list of all the names of global design variable objects in the assembly"""
         return sorted(self._des_vars.keys())
     
-    def get_global_des_vars(self,name=None): 
-        """returns and ordered dict of global design variable objects in the assembly
-        key: str (optional)
-            if provided, function returns the local design variable matching the name
-        """
-        if name is not None and name in self._des_vars: 
-            return self._des_vars[name]
-        elif name is not None: 
-            self._parent.raise_exception("No global design variable named '%s' "
-                                         "has been added to the assembly"%name,ValueError)
-        return self._des_vars
-        
     #TODO: How do I handle calling of this method more than once? Need to clear out old broadcaster
     #    break any connections, and remove any possible parameters
     def setup_global_broadcaster(self,bcast_name,drivers=[]): 
@@ -142,12 +131,20 @@ class LocalDesVar(object):
         When a driver sets the value of the target variable, this value will be first added to set value
     """
     
-    def __init__(self,target="",low=None,high=None,scalar=None,addar=None): 
+    def __init__(self,target,low,high,scalar,adder): 
         self.target = target
         self.low = low
         self.high = high  
         self.scalar = scalar
         self.adder=adder
+        
+    def __eq__(self,other): 
+        return all([self.target==other.target,
+                    self.low==other.low,
+                    self.high==other.high,
+                    self.scalar==other.scalar,
+                    self.adder==other.adder
+                    ])
         
 class HasLocalDesVars(object): 
     """This class provides an implementation of the IHasLocalDesVar interface
@@ -160,41 +157,40 @@ class HasLocalDesVars(object):
         self._parent = parent
         self._des_vars = ordereddict.OrderedDict()
         
-    def add_local_des_var(self,target,low=None,high=None,scalar=1.0,adder=0):
+    def add_local_des_var(self,target,low=None,high=None,scalar=None,adder=None):
         """adds a local design variable to the assembly"""
-        
+        expr = ExprEvaluator(target,self._parent)
+        if not expr.check_resolve() or not expr.is_valid_assignee():
+                self._parent.raise_exception("Cant add local design variable for '%s' "
+                                             "because '%s' is invalid"%(target,target),
+                                             ValueError)
         if target in self._des_vars: 
             self._parent.raise_exception('A LocalDesVar with target "%s" has already been '
-                                         'added to this assembly',ValueError)
+                                         'added to this assembly'%target,ValueError)
          
-        ldv = LocalDesVar(target,low,high,scalar,adder)
-        self._des_vars[target] = ldv
-        return ldv
+        ldv = LocalDesVar(expr,low,high,scalar,adder)
+        self._des_vars[target] = ldv    
         
     def remove_local_des_var(self,target):
         """removes the local design variable from the assembly"""
         
         if target not in self._des_vars: 
-            self._parent.raise_exception('No local design variable named "%s"'
-                                         ' has been added to the assembly'%target,ValueError)
+            self._parent.raise_exception('No local design variable named "%s" has been '
+                                         'added to the assembly'%target,ValueError)
         ldv = self._des_vars[target]
         del self._des_vars[target]
         return ldv 
     
-    def list_local_des_vars(self): 
-        """returns a list of all the names of the local design variables in the assembly"""
-        return sorted(self._des_vars.keys())
-    
-    def get_local_des_vars(self,target=None): 
-        """returns an ordered dictionary of all the local des vars in the assembly
-        target: str (optional)
-            if provided, returns the local design variable with a target matching the given key"""
-        if target is not None and target in self._des_vars: 
-            return self._des_vars[target]
-        elif target is not None: 
-            self._parent.raise_exception("No local design variable named '%s' "
-                                         "has been added to the assembly"%target,ValueError)
-        return self._des_vars    
+    def list_local_des_vars(self,show_target_comp=False): 
+        """returns a list of all the names of the local design variables in the assembly
+        show_target_comp: bool (optional)
+            if True, will return a list of 2-tuples of the form (name,target_comp_name) 
+            giving the name of the local design variable and the name of the component that
+            variable belongs to
+        """
+        if show_target_comp: 
+            return [(list(ldv.target.get_referenced_compnames())[0],target) for target,ldv in self._des_vars.iteritems()]
+        return sorted(self._des_vars.keys())  
     
     def clear_local_des_vars(self):
         """clears all local design variables from the assembly"""
@@ -252,12 +248,12 @@ class HasCouplingVars(object):
                 #TODO, constraint tolerance???
                 self._has_constraints.add_constraint(constraint,scalar,adder)
             except ValueError as err: 
-                self._parent.raise_exception("A coupling variable with the "
+                self._parent.raise_exception("Coupling variable with the "
                                              "constraint of the form '%s' already exists "
-                                             "in the Aseembly"%constraint, ValueError)
+                                             "in the assembly"%constraint, ValueError)
             
         elif indep in self._indeps:
-            self._parent.raise_exception("A coupling variable with indep of '%s' already "
+            self._parent.raise_exception("Coupling variable with indep '%s' already "
                                          "exists in the assembly"%indep,ValueError) 
             
     def remove_coupling_var(self,indep):
@@ -278,21 +274,6 @@ class HasCouplingVars(object):
         """returns a ordered list of names of the coupling vars in the assembly"""
         return sorted(self._indeps.keys())
     
-    def get_coupling_vars(self,indep=None): 
-        """returns an ordered dictionary of coupling vars, keyed to the name of 
-        the independent associated with each one
-        
-        indep:str (optional)
-            if provided, returns the coupling variable associated with the independent given
-        """
-            
-        if indep is not None and indep in self._indeps: 
-            return self._indeps[indep]
-        
-        elif indep is not None: 
-            self._parent.raise_exception("No couling variable with indep '%s' "
-                                         "exists in the assembly"%indep,ValueError)
-        return self._indeps
     
     def clear_coupling_cars(self): 
         """removes all coupling variables from the assembly"""
