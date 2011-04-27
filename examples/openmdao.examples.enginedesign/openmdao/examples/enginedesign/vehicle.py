@@ -100,6 +100,8 @@ class Vehicle(Assembly):
         self.create_passthrough('engine.power')
         self.create_passthrough('engine.torque')
         self.create_passthrough('engine.fuel_burn')
+        self.create_passthrough('engine.overspeed')
+        self.create_passthrough('engine.underspeed')
 
         # Promoted From Transmission
         self.create_passthrough('transmission.ratio1')
@@ -115,12 +117,13 @@ class Vehicle(Assembly):
         self.create_passthrough('chassis.Cf')
         self.create_passthrough('chassis.Cd')
         self.create_passthrough('chassis.area')
+        self.create_passthrough('chassis.acceleration')
         
+        # These vars have unit conversions
         self.connect('velocity', 'chassis.velocity')
         self.connect('velocity', 'transmission.velocity')
         self.connect('tire_circumference', 'chassis.tire_circ')
         self.connect('tire_circumference', 'transmission.tire_circ')
-        self.create_passthrough('chassis.acceleration')
 
         # Hook it all up
         self.connect('transmission.RPM','engine.RPM')

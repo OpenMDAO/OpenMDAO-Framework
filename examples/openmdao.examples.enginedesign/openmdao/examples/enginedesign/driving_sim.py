@@ -1,159 +1,197 @@
 """
-    driving_sim.py - Driving Simulation for the vehicle example problem.
+  driving_sim.py - Driving Simulation for the vehicle example problem.
+
+  Contains OpenMDAO drivers that can simulate different driving regimes
+  for a Vehicle assembly.
+  
+  SimAcceleration: Determines 0-60 acceleration time
+  SimEconomy: Simulates fuel economy over a velocity profile
+              as used to estimate EPA city and highway mpg
 """
 
-# Simulates a vehicle to obatain the following:
-# - 0-60mph acceleration time
-# - EPA fuel economy estimate for city driving
-# - EPA fuel economy estimate for highway driving
-#
-# Includes a socket for a Vehicle assembly.
-
-from csv import reader
-
 # pylint: disable-msg=E0611,F0401
-from pkg_resources import resource_stream
-from openmdao.lib.datatypes.api import TraitError, Float, Instance
-
-from openmdao.main.api import Assembly
-
-from openmdao.examples.enginedesign.vehicle import Vehicle
-
-
-# Settings for the EPA profile simulation
-THROTTLE_MIN = .07
-THROTTLE_MAX = 1.0
-SHIFTPOINT1 = 10.0
-MAX_ERROR = .01
-CONVERT_TO_MPHPS = 2.23693629
+from openmdao.lib.datatypes.api import Float
+from openmdao.main.api import Driver, convert_units
+from openmdao.main.hasobjective import HasObjectives
+from openmdao.main.hasparameters import HasParameters
+from openmdao.util.decorators import add_delegate
 
 
-class DrivingSim(Assembly):
-    """ Simulation of vehicle performance.
-        
-    # Simulation inputs
-    end_speed          # Simulation ending speed in mph.
-    timestep           # Simulation time step in sec.
-        
-    # Outputs
-    accel_time        # Time to reach 60 mph from start
-    EPA_city          # Fuel economy for city driving
-    EPA_highway       # Fuel economy for highway driving
-    """    
+@add_delegate(HasObjectives, HasParameters)
+class SimAcceleration(Driver):
+    """ Simulation of vehicle acceleration performance. This is a specialized
+    simulation driver whose workflow should consist of a Vehicle assembly, and
+    whose connections are as follows:
     
-    # Simulation Parameters
-    end_speed = Float(60.0, iotype='in', units='m/h',
-                           desc='Simulation final speed')
+    Connections
+    Parameters: [ velocity (Float),
+                  throttle (Float),
+                  current_gear (Enum) ]
+    Objectives: [ acceleration (Float), 
+                  overspeed (Bool) ]
+                  
+    Inputs
+    end_speed: float
+        Ending speed for the simulation (default 60 mph)
+    
+    timestep: float
+        Simulation time step (default .01)
+        
+    Outputs
+    accel_time: float
+        Time to perform the acceleration test.
+    """
+
+    end_speed = Float(60.0, iotype='in', units='mi/h',
+                      desc='Simulation final speed')
     timestep = Float(0.1, iotype='in', units='s', 
-                          desc='Simulation time step size')
+                     desc='Simulation time step size')
     
-    # Sockets
-    vehicle = Instance(Vehicle, allow_none=False, 
-                       desc='Socket for a Vehicle')
+    accel_time = Float(0.0, iotype='out', units='s',
+                       desc = 'Acceleration time')
     
-    # Outputs
-    accel_time = Float(0., iotype='out', units='s', 
-                            desc='Time to reach end_speed starting from rest')
-    EPA_city = Float(0., iotype='out', units='mi/galUS', 
-                          desc='EPA Fuel economy - City')
-    EPA_highway = Float(0., iotype='out', units='mi/galUS', 
-                             desc='EPA Fuel economy - Highway')
-        
-    def __init__(self):
-        """Creates a new DrivingSim instance"""
-
-        super(DrivingSim, self).__init__()    
-
-    def _vehicle_changed(self, oldvehicle, newvehicle):
-        """Callback whenever a new Vehicle is added to the DrivingSim
-        """
-        
-        self.driver.workflow.add(newvehicle.name)
-        
-        # set up interface to the framework  
-        # pylint: disable-msg=E1101
-
-        # Promoted From Vehicle -> Engine
-        self.create_passthrough('vehicle.stroke')
-        self.create_passthrough('vehicle.bore')
-        self.create_passthrough('vehicle.conrod')
-        self.create_passthrough('vehicle.comp_ratio')
-        self.create_passthrough('vehicle.spark_angle')
-        self.create_passthrough('vehicle.n_cyl')
-        self.create_passthrough('vehicle.IVO')
-        self.create_passthrough('vehicle.IVC')
-        self.create_passthrough('vehicle.L_v')
-        self.create_passthrough('vehicle.D_v')
-
-        # Promoted From Vehicle -> Transmission
-        self.create_passthrough('vehicle.ratio1')
-        self.create_passthrough('vehicle.ratio2')
-        self.create_passthrough('vehicle.ratio3')
-        self.create_passthrough('vehicle.ratio4')
-        self.create_passthrough('vehicle.ratio5')
-        self.create_passthrough('vehicle.final_drive_ratio')
-        self.create_passthrough('vehicle.tire_circumference')
-
-        # Promoted From Vehicle -> Chassis
-        self.create_passthrough('vehicle.mass_vehicle')
-        self.create_passthrough('vehicle.Cf')
-        self.create_passthrough('vehicle.Cd')
-        self.create_passthrough('vehicle.area')
-
-        
     def execute(self):
         """ Simulate the vehicle model at full throttle."""
         
-        #--------------------------------------------------------------------
-        # Simulate acceleration time from 0 to end_speed
-        #--------------------------------------------------------------------
-        
-        velocity = 0.0
+        # Set initial throttle, gear, and velocity
         time = 0.0
+        velocity = 0.0
+        throttle = 1.0
+        gear = 1
         
-        end_speed = self.end_speed
-        
-        # Set throttle and gear
-        self.vehicle.current_gear = 1
-        self.vehicle.throttle = 1.0
-        self.vehicle.velocity = 0.0
-                   
-        while velocity < end_speed:
+        while velocity < self.end_speed:
             
-            # Find acceleration.
+            self.set_parameters([velocity, throttle, gear])
+            self.run_iteration()
+            
+            objs = self.eval_objectives()
+            overspeed = objs[1]
+            
             # If RPM goes over MAX RPM, shift gears
             # (i.e.: shift at redline)
-            try:
-                self.vehicle.run()
-            except TraitError:
-                if self.vehicle.engine.RPM != self.vehicle.transmission.RPM:
-                    self.vehicle.current_gear += 1
-                else:
-                    raise
-                try:
-                    self.vehicle.run()
-                except TraitError:
-                    if self.vehicle.engine.RPM != self.vehicle.transmission.RPM:
-                        self.raise_exception("Gearing problem in Accel test.", 
+            if overspeed:
+                gear += 1
+                self.set_parameters([velocity, throttle, gear])
+                self.run_iteration()
+                objs = self.eval_objectives()
+                overspeed = objs[1]
+                
+                if overspeed:
+                    self.raise_exception("Gearing problem in Accel test.", 
                                              RuntimeError)
-                    else:
-                        raise
 
             # Accleration converted to mph/s
-            acceleration = self.vehicle.acceleration*CONVERT_TO_MPHPS
+            acceleration = convert_units(objs[0], 'm/(s*s)', 'mi/(h*s)')
+            #acceleration = objs[0]*2.2369362920544025
             
             if acceleration <= 0.0:
                 self.raise_exception("Vehicle could not reach maximum speed "+\
                                      "in Acceleration test.", RuntimeError)
                 
             velocity += (acceleration*self.timestep)
-            self.vehicle.velocity = velocity
         
             time += self.timestep
-            #print time, self.vehicle.current_gear, velocity, 
-            #self.vehicle.transmission.RPM, self.vehicle.engine.RPM
                    
         self.accel_time = time
+
+        
+@add_delegate(HasObjectives, HasParameters)
+class SimEconomy(Driver):
+    """ Simulation of vehicle performance over a given velocity profile. Such
+    a simulation can be used to mimic the EPA city and highway driving tests.
+    This is a specialized simulation driver whose workflow should consist of a
+    Vehicle assembly, and whose connections are as follows:
+    
+    Connections
+    Parameters: [ velocity (Float),
+                  throttle (Float),
+                  current_gear (Enum) ]
+    Objectives: [ acceleration (Float), 
+                  fuel burn (Float),
+                  overspeed (Bool),
+                  underspeed (Bool) ]
+                  
+    Inputs
+    end_speed: float
+        Ending speed for the simulation (default 60 mph)
+    
+    timestep: float
+        Simulation time step (default .01)
+        
+    Outputs
+    fuel_economy: float
+        Fuel economy over the simulated profile.
+    """
+
+    # These can be used to adjust driving style.
+    throttle_min = Float(.07, iotype='in', desc='Minimum throttle position')
+    throttle_max = Float(1.0, iotype='in', desc='Maximum throttle position')
+    shiftpoint1 = Float(10.0, iotype='in', \
+                        desc='Always in first gear below this speed')
+    
+    tolerance = Float(0.01, iotype='in', 
+                      desc='Convergence tolerance for Bisection solution')
+    
+    fuel_economy = Float(0.0, iotype='out', units='s',
+                       desc = 'Simulated fuel economy over profile')
+    
+
+    def execute(self):
+        """ Simulate the vehicle over a velocity profile."""
+        
+        # Set initial throttle, gear, and velocity
+        time = 0.0
+        velocity = 0.0
+        throttle = 1.0
+        gear = 1
+       
+    def _findgear(self):
+        """ Finds the nearest gear in the appropriate range for the
+        currently commanded vehicle state (throttle, velocity).
+        
+        This is intended to be called recursively.
+        """
+
+        self.run_iteration()
+        
+        objs = self.eval_objectives()
+        overspeed = objs[2]
+        underspeed = objs[3]
+        
+        if overspeed:
+            params = self.get_parameters().values()
+            gear = params[2].expreval.evaluate()
+            gear += 1
+            
+            if gear > 4:
+                self.raise_exception("Transmission gearing cannot " \
+                "achieve acceleration and speed required by EPA " \
+                "test.", RuntimeError)
+            
+        elif overspeed:
+            params = self.get_parameters().values()
+            gear = params[2].expreval.evaluate()
+            gear -= 1
+            
+            # Note, no check needed for low gearing -- we allow underspeed 
+            # while in first gear.
+                
+        else:
+            return
+            
+        params[2] = gear
+        self.set_parameters(params)
+        self._findgear()        
+
+
+'''
+class DrivingSim(Assembly):
+    """ Simulation of vehicle performance.
+        
+        
+    def execute(self):
+        """ Simulate the vehicle model at full throttle."""
+        
         
         #--------------------------------------------------------------------
         # Simulate EPA driving profiles
@@ -166,35 +204,6 @@ class DrivingSim(Assembly):
         
         fuel_economy = []
         
-        def findgear():
-            """ Finds the nearest gear in the appropriate range for the
-            currently commanded velocity. 
-            This is intended to be called recursively.
-            """
-            # Note, shifts gear if RPM is too low or too high
-            try:
-                self.vehicle.run()
-            except TraitError:
-                if self.vehicle.engine.RPM < self.vehicle.transmission.RPM:
-                    
-                    if self.vehicle.current_gear > 4:
-                        self.raise_exception("Transmission gearing cannot " \
-                        "achieve acceleration and speed required by EPA " \
-                        "test.", RuntimeError)
-                    
-                    self.vehicle.current_gear += 1
-                    
-                elif self.vehicle.engine.RPM > self.vehicle.transmission.RPM:
-
-                    # Note, no check needed for low gearing -- you cannot go \
-                    # too slow for first gear.
-                    
-                    self.vehicle.current_gear -= 1
-                    
-                else:
-                    raise
-                
-                findgear()
                 
         
         for profilename in profilenames:
@@ -324,24 +333,58 @@ class DrivingSim(Assembly):
             
         self.EPA_city = fuel_economy[0]
         self.EPA_highway = fuel_economy[1]
-    
-def test_it(): # pragma: no cover    
-    """simple testing"""
+'''
+
+if __name__ == "__main__": # pragma: no cover
     
     import time
     ttime = time.time()
     
-    toplevel = DrivingSim()  
-    toplevel.add('vehicle', Vehicle())
-    toplevel.run()
+    from openmdao.main.api import set_as_top, Assembly
+    from openmdao.examples.enginedesign.vehicle import Vehicle
     
-    print "Time (0-60): ", toplevel.accel_time
-    print "City MPG: ", toplevel.EPA_city
-    print "Highway MPG: ", toplevel.EPA_highway
+    top = set_as_top(Assembly())
+    top.add('sim_acc', SimAcceleration())
+    top.add('sim_EPA_city', SimEconomy())
+    top.add('sim_EPA_highway', SimEconomy())
+    top.add('vehicle', Vehicle())
+    
+    top.driver.workflow.add('sim_acc')
+    top.driver.workflow.add('sim_EPA_city')
+    top.driver.workflow.add('sim_EPA_highway')
+    
+    top.sim_acc.workflow.add('vehicle')
+    top.sim_acc.add_parameters([('vehicle.velocity', 0, 99999),
+                               ('vehicle.throttle', 0.01, 1.0),
+                               ('vehicle.current_gear', 0, 5)])
+    top.sim_acc.add_objective('vehicle.acceleration')
+    top.sim_acc.add_objective('vehicle.overspeed')
+    
+    top.sim_EPA_city.workflow.add('vehicle')
+    top.sim_EPA_city.add_parameters([('vehicle.velocity', 0, 99999),
+                                     ('vehicle.throttle', 0.01, 1.0),
+                                     ('vehicle.current_gear', 0, 5)])
+    top.sim_EPA_city.add_objective('vehicle.acceleration')
+    top.sim_EPA_city.add_objective('vehicle.fuel_burn')
+    top.sim_EPA_city.add_objective('vehicle.overspeed')
+    top.sim_EPA_city.add_objective('vehicle.underspeed')
+    
+    top.sim_EPA_highway.workflow.add('vehicle')
+    top.sim_EPA_highway.add_parameters([('vehicle.velocity', 0, 99999),
+                                        ('vehicle.throttle', 0.01, 1.0),
+                                        ('vehicle.current_gear', 0, 5)])
+    top.sim_EPA_highway.add_objective('vehicle.acceleration')
+    top.sim_EPA_highway.add_objective('vehicle.fuel_burn')
+    top.sim_EPA_highway.add_objective('vehicle.overspeed')
+    top.sim_EPA_highway.add_objective('vehicle.underspeed')
+    
+    top.run()
+    
+    print "Time (0-60): ", top.sim_acc.accel_time
+    print "City MPG: ", top.sim_EPA_city.fuel_economy
+    print "Highway MPG: ", top.sim_EPA_highway.fuel_economy
     
     print "\nElapsed time: ", time.time()-ttime
     
-if __name__ == "__main__": # pragma: no cover    
-    test_it()
 
 # End driving_sim.py        
