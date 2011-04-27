@@ -1,6 +1,7 @@
 import unittest
 import ordereddict
 from openmdao.main.api import Component,Assembly, Driver, set_as_top
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.problem_formulation import HasGlobalDesVars,\
      HasCouplingVars, HasLocalDesVars, GlobalDesVar, LocalDesVar, CouplingVar
 
@@ -43,7 +44,9 @@ class HasGlobalDesVarsTest(unittest.TestCase):
         
         self.assertEqual(set(self.asm.list_connections()),set([('bcstr.x','D1.x'),('bcstr.x','D2.x')]))
     
-        gdv = GlobalDesVar('x',['D1.x','D2.x'],1.0,0.0)
+        gdv = GlobalDesVar('x',
+                           [ExprEvaluator('D1.x',self.asm),ExprEvaluator('D2.x',self.asm,)]
+                           ,1.0,0.0)
         self.assertEqual(gdv,self.asm.get_global_des_vars('x'))
         try: 
             self.asm.get_global_des_vars('y')
@@ -66,7 +69,10 @@ class HasGlobalDesVarsTest(unittest.TestCase):
         self.asm.remove_global_des_var('x')
         self.assertEqual(set(),set(self.asm.list_global_des_vars()))
         
-        self.asm.add_global_des_var('x',['D1.x','D2.x'],1.0,0.0)
+        
+        self.asm.add_global_des_var('x',
+                                    ['D1.x','D2.x'],
+                                    1.0,0.0)
         self.asm.clear_global_des_vars()
         self.assertEqual(set(),set(self.asm.list_global_des_vars()))
         

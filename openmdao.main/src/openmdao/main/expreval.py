@@ -450,6 +450,11 @@ class ExprEvaluator(object):
                 return True
             return False
         return True
+    
+    def __eq__(self,other):
+        if isinstance(other,self.__class__): 
+            return self.text == other.text
+        return False
 
 
 if __name__ == '__main__':

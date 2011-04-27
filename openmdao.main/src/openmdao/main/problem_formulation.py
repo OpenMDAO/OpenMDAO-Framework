@@ -1,6 +1,8 @@
 import ordereddict
 
 from openmdao.main.hasconstraints import HasConstraints
+from openmdao.main.expreval import ExprEvaluator
+
 from openmdao.lib.components.api import Broadcaster
 
 class GlobalDesVar(object): 
@@ -22,20 +24,25 @@ class GlobalDesVar(object):
     
     def __init__(self,name,targets,low,high,scalar=1.0,adder=0.0): 
         self.name = name
-        #TODO: should there be some verification of the validity of these targets? 
-        self.targets = set(targets)
+        
         self.low = low
         self.high = high
         self.scalar = scalar
         self.adder = adder
         
+        self.targets = targets
+        
+        
+        
     def __eq__(self,other): 
-        return all([self.targets==other.targets,
-                    self.name==other.name,
-                    self.low==other.low,
-                    self.high==other.high,
-                    self.scalar==other.scalar,
-                    self.adder==other.adder])
+        if isinstance(other,self.__class__): 
+            return all([self.targets==other.targets,
+                        self.name==other.name,
+                        self.low==other.low,
+                        self.high==other.high,
+                        self.scalar==other.scalar,
+                        self.adder==other.adder])
+        return False
 
 class HasGlobalDesVars(object): 
     """This class provides an implementation of teh IHasGlobalDesVars interface
@@ -52,7 +59,16 @@ class HasGlobalDesVars(object):
         """adds a global design variable to the assembly"""
         if name in self._des_vars: 
             self._parent.raise_exception("A global design variable named '%s' already exists in this assembly"%name,ValueError)
-        gdv =  GlobalDesVar(name,targets,low,high,scalar,adder)
+        
+        exprs = []    
+        for target in targets: 
+            expr = ExprEvaluator(target,self._parent)
+            if not expr.is_valid_assignee():
+                self._parent.raise_exception("Cant add global design variable '%s' because the target '%s' refers to multiple assignees"%(name,target),
+                                             ValueError)
+            exprs.append(expr) 
+            
+        gdv =  GlobalDesVar(name,exprs,low,high,scalar,adder)
         self._des_vars[name] = gdv
         
     
@@ -103,10 +119,11 @@ class HasGlobalDesVars(object):
         #connect the broadcast outputs to the disciplines
         # and add the broadcast parameters to the driver
         for gdv_name,gdv in self._des_vars.iteritems(): 
-            for var in gdv.targets:
-                #This is just an initialization needed for the broadcaster
-                self._parent.set('%s.%s_in'%(bcast_name,gdv_name),self._parent.get(var)) 
-                self._parent.connect('%s.%s'%(bcast_name,gdv_name),var) 
+            for expr in gdv.targets:
+                #This is just an initialization needed for the broadcaster, related to a HasParameters Bug 
+                self._parent.set('%s.%s_in'%(bcast_name,gdv_name),self._parent.get(expr.text)) 
+                
+                self._parent.connect('%s.%s'%(bcast_name,gdv_name),expr.text) 
             for driver in drivers:    
                 driver.add_parameter('%s.%s_in'%(bcast_name,gdv_name),low=gdv.low,high=gdv.high)    
         
