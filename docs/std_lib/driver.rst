@@ -219,7 +219,7 @@ method of Fletcher and Reeves is used for this purpose.
 
 More information on CONMIN can be found in the `CONMIN User's Manual
 <http://www.eng.buffalo.edu/Research/MODEL/mdo.test.orig/CONMIN/manual.html>`_. (In the :ref:`simple
-tutorial <Getting-Started-with-OpenMDAO>` in the *User Guide*, CONMIN is used for an
+tutorial <A-Simple-Tutorial-Problem>`, CONMIN is used for an
 unconstrained and a constrained optimization.)
 
 CONMIN has been included in the OpenMDAO standard library to provide users

@@ -1,6 +1,6 @@
 import unittest
 
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.main.api import Case
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.caseiter import caseiter_to_dict
@@ -11,13 +11,15 @@ class CaseIterTestCase(unittest.TestCase):
     def setUp(self):
         cases = []
         for i in range(20):
-            inputs = [('comp1.x', None, float(i)), ('comp1.y', None, i*2.)]
-            outputs = [('comp1.z', None, i*1.5), ('comp2.normal', None, NormalDistribution(float(i),0.5))]
+            inputs = [('comp1.x', float(i)), ('comp1.y', i*2.)]
+            outputs = [('comp1.z', i*1.5), ('comp2.normal', NormalDistribution(float(i),0.5))]
             if i < 10:
                 msg = ''
             else:
                 msg = 'had an error'
-            cases.append(Case(inputs=inputs, outputs=outputs, ident='case%s'%i, msg=msg))
+            case = Case(inputs=inputs, msg=msg)
+            case._outputs = dict(outputs)
+            cases.append(case)
         self.caseiter = ListCaseIterator(cases)
         self.varnames = ['comp2.normal', 'comp1.x', 'comp1.z']
         

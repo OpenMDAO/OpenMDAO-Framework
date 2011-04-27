@@ -224,7 +224,7 @@ class Assembly (Component):
         
     def execute (self):
         """Runs driver and updates our boundary variables."""
-        self.driver.run(ffd_order=self.ffd_order)
+        self.driver.run(ffd_order=self.ffd_order, case_id=self._case_id)
         
         # now update boundary outputs
         valids = self._valid_dict
@@ -321,7 +321,7 @@ class Assembly (Component):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
         """
-        simple, compmap = _partition_names_by_comp(outnames)
+        simple, compmap = partition_names_by_comp(outnames)
         if simple:  # boundary outputs
             self.update_inputs('@bout', simple)
         for cname, vnames in compmap.items():  # auto passthroughs to internal variables
@@ -333,15 +333,21 @@ class Assembly (Component):
         variables are valid (True) or invalid (False). Entries in names may
         specify either direct traits of self or those of children.
         """
-        sup = super(Assembly,self)
-        ret = []
-        for name in names:
-            cname, _, vname = name.partition('.')
-            if vname:
-                comp = getattr(self, cname)
-                ret.extend(comp.get_valid(vname))
-            else:
-                ret.extend(sup.get_valid(name))
+        ret = [None]*len(names)
+        posdict = dict([(name,i) for i,name in enumerate(names)])
+        
+        simple,compmap = partition_names_by_comp(names)
+        if simple:
+            vals = super(Assembly, self).get_valid(simple)
+            for i,val in enumerate(vals):
+                ret[posdict[simple[i]]] = val
+
+        if compmap:
+            for compname, varnames in compmap.items():
+                vals = getattr(self, compname).get_valid(varnames)
+                for i,val in enumerate(vals):
+                    full = '.'.join([compname,varnames[i]])
+                    ret[posdict[full]] = val
         return ret
 
     def _input_updated(self, name):
@@ -462,10 +468,10 @@ def dump_iteration_tree(obj):
     return f.getvalue()
 
 
-def _partition_names_by_comp(names):
-    """Take an iterator of names and return a tuple of the form (namelist, compmap)
-    where namelist is a list of simple names (no dots) and compmap is a dict with component names
-    keyed to lists of variable names.  
+def partition_names_by_comp(names):
+    """Take an iterator of names and return a tuple of the form (namelist,
+    compmap) where namelist is a list of simple names (no dots) and compmap is
+    a dict with component names keyed to lists of variable names.
     """
     simple = []
     compmap = {}

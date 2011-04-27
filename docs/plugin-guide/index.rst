@@ -11,6 +11,7 @@ Plugin Developer Guide
    overview
    plugin_creation
    module_plugin
+   variable_plugin
    extension_plugin
    filewrapper_plugin
   
