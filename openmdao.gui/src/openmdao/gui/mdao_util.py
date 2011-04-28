@@ -1,7 +1,17 @@
 ## utility functions used by mdao.py
 
 import os, os.path
+import webbrowser
 from xml.dom.minidom import Document
+
+# a decorator to make a class a singleton
+def singleton(cls):
+    instances = {}
+    def getinstance():
+        if cls not in instances:
+            instances[cls] = cls()
+        return instances[cls]
+    return getinstance
 
 # make sure a directory exists
 def ensure_dir(d):
@@ -60,7 +70,6 @@ def filepathdict(path):
             dict[fullname] = os.path.getsize(fullname)
     return dict
 
-
 # find an unused port    
 # ref: http://code.activestate.com/recipes/531822-pick-unused-port/
 # note: use the port before it's taken by some other process!
@@ -71,3 +80,37 @@ def PickUnusedPort():
   addr, port = s.getsockname()
   s.close()
   return port
+
+#
+# launch web browser on specified port
+#
+def launch_browser(port,preferred_browser=None):
+    ''' try to use preferred browser if specified, fall back to default 
+    '''
+    url = 'http://localhost:'+str(port)    
+    print 'Opening URL in browser: '+url+' (pid='+str(os.getpid())+')'
+    
+    # webbrowser doesn't know about chrome, so try to find it (this is for win7)
+    if preferred_browser and preferred_browser.lower() == 'chrome':
+        print 'Trying to find Google Chrome...'
+        USERPROFILE = os.getenv("USERPROFILE").replace('\\','/')
+        CHROMEPATH = USERPROFILE+'/AppData/Local/Google/Chrome/Application/chrome.exe'
+        if os.path.isfile(CHROMEPATH):
+            preferred_browser = CHROMEPATH+' %s'
+    
+    # try to get preferred browser, fall back to default
+    if preferred_browser:
+        try:
+            browser = webbrowser.get(preferred_browser);
+        except:
+            print "Couldn't launch preferred browser ("+preferred_browser+"), using default..."
+            browser = webbrowser.get()
+    else:
+        browser = webbrowser.get()
+    
+    # open new browser window (may open in a tab depending on user preferences, etc.)
+    if browser:
+            browser.open(url,1,True)
+    else:
+        print "Couldn't launch browser: "+str(browser)
+   

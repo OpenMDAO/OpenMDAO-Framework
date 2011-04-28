@@ -4,16 +4,17 @@ from selenium import selenium
 
 from multiprocessing        import Process
 from openmdao.gui.mdao_util import PickUnusedPort
-from openmdao.gui.mdao      import launch_server
+from openmdao.gui.mdao      import run_server
 
 class test_basicgui(unittest.TestCase):
+    
     def setUp(self):
         self.startdir = os.getcwd()
-        gui_path = os.path.dirname(inspect.getfile(launch_server))
+        gui_path = os.path.dirname(inspect.getfile(run_server))
         os.chdir(gui_path)  # so server can find it's static files
 
         self.port = PickUnusedPort()
-        self.server = Process(target=launch_server,args=(self.port,))
+        self.server = Process(target=run_server,args=(self.port,))
         self.server.start()
         self.url = "http://localhost:"+str(self.port)
         
@@ -30,25 +31,25 @@ class test_basicgui(unittest.TestCase):
         sel.type("password", "testpass")
         sel.click("submit")
         sel.wait_for_page_to_load("30000")
-        try: self.failUnless(sel.is_text_present("Session^"))
+        try: self.assertTrue(sel.is_text_present("Session^"),'Session menu is missing')
         except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.failUnless(sel.is_text_present("File^"))
+        try: self.assertTrue(sel.is_text_present("File^"),'File menu is missing')
         except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.failUnless(sel.is_text_present("View^"))
+        try: self.assertTrue(sel.is_text_present("View^"),'View menu is missing')
         except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.failUnless(sel.is_text_present("Install Addon"))
+        try: self.assertTrue(sel.is_text_present("Install Addon"),'Addon menu is missing')
         except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.failUnless(sel.is_text_present("About"))
+        try: self.assertTrue(sel.is_text_present("About"),'About menu is missing')
         except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.failUnless(sel.is_text_present("New"))
+        try: self.assertTrue(sel.is_text_present("New"),'New menu option is missing')
         except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.failUnless(sel.is_text_present("Objects"))
+        try: self.assertTrue(sel.is_text_present("Objects"),'Options tab is missing')
         except AssertionError, e: self.verificationErrors.append(str(e))
         sel.click("otree_tab")
         sel.click("ftree_tab")
         sel.click("dataflow_tab")
         sel.click("editor_tab")
-        try: self.failUnless(sel.is_text_present("1"))
+        try: self.assertTrue(sel.is_text_present("1"),'Line numbers missing in editor')
         except AssertionError, e: self.verificationErrors.append(str(e))
         sel.click("palette_tab")
         for i in range(60):
@@ -57,14 +58,15 @@ class test_basicgui(unittest.TestCase):
             except: pass
             time.sleep(1)
         else: self.fail("time out")
-        sel.click("//div[@id='library']/div[1]/h3")
-        sel.click("//div[@id='library']/ul[1]/div[3]/h3")
-        try: self.failUnless(sel.is_text_present("Assembly"))
+        sel.click("//div[@id='library']/div[1]/h3")             # openmdao
+        sel.click("//div[@id='library']/ul[1]/div[2]/h3")       # main
+        sel.click("//div[@id='library']/ul[1]/ul[2]/div/h3")    # assembly
+        try: self.assertTrue(sel.is_text_present("Assembly"),'Assembly not found in palette')
         except AssertionError, e: self.verificationErrors.append(str(e))
         sel.click("properties_tab")
-        try: self.failUnless(sel.is_text_present("Property"))
+        try: self.assertTrue(sel.is_text_present("Property"),'Property not found in Properties panel')
         except AssertionError, e: self.verificationErrors.append(str(e))
-        try: self.failUnless(sel.is_text_present("Value"))
+        try: self.assertTrue(sel.is_text_present("Value"),'Value not found in Properties panel')
         except AssertionError, e: self.verificationErrors.append(str(e))
         sel.click("//ul[@id='history-menu']/li")
         sel.click("link=Command Line")
@@ -74,10 +76,6 @@ class test_basicgui(unittest.TestCase):
         sel.click("otree_tab")
         sel.select_window("null")
         sel.click("link=A")
-        sel.click("palette_tab")
-        sel.click("//div[@id='library']/div[1]/h3")
-        sel.click("//div[@id='library']/ul[1]/div[3]/h3")
-        sel.click("dataflow_tab")
         
         # don't forget to exit (shutting down the server)
         sel.click("link=Exit")
@@ -85,12 +83,12 @@ class test_basicgui(unittest.TestCase):
     def tearDown(self):
         os.chdir(self.startdir)
         self.selenium.stop()
-        self.assertEqual([''], self.verificationErrors)  # what's this empty string?
-        try:
-            print "terminating server..."
-            self.server.terminate()
-        except Exception,e:
-            print "server terminate failed: ", e
+        self.assertEqual([], self.verificationErrors)
+        # wait 5 seconds, then verify server has shut down (kill it if not)
+        # time.sleep(5)
+        # if self.server.is_alive:
+            # print "server still running after 5 sec, terminating..."
+            # self.server.terminate()
             
 if __name__ == "__main__":
     unittest.main()
