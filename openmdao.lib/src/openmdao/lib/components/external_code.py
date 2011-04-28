@@ -10,7 +10,7 @@ import time
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Bool, Dict, Str, Float, Int
 
-from openmdao.main.api import Component
+from openmdao.main.api import ComponentWithDerivatives
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 from openmdao.main.rbac import AccessController, RoleError, rbac, remote_access
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -19,7 +19,7 @@ from openmdao.util.shellproc import ShellProc
 
 
 
-class ExternalCode(Component):
+class ExternalCode(ComponentWithDerivatives):
     """ Run an external code as a component. """
 
     PIPE   = subprocess.PIPE
