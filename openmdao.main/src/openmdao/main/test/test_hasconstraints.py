@@ -67,7 +67,7 @@ class HasConstraintsTestCase(unittest.TestCase):
             self.assertEqual(len(drv.get_ineq_constraints()), 1)
         
         if eq: 
-            drv.add_constraint('comp1.c =      comp1.d ')
+            drv.add_constraint('comp1.c ==      comp1.d ')
             self.assertEqual(len(drv.get_eq_constraints()), 1)
             
             try: 
@@ -231,7 +231,7 @@ class HasConstraintsTestCase(unittest.TestCase):
             drv.add_constraint('comp1.a + comp1.b')
         except ValueError, err:
             self.assertEqual(str(err),
-                             "driver: Constraints require an explicit comparator (=, <, >, <=, or >=)")
+                             "driver: Constraints require an explicit comparator (==, =, <, >, <=, or >=)")
         else:
             self.fail('ValueError expected')
             

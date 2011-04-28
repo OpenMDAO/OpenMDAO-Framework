@@ -33,6 +33,7 @@ class Constraint(object):
                               % ' '.join([lhs, comparator, rhs]))
         self.comparator = comparator
         self.rhs = ExprEvaluator(rhs, scope=scope)
+        
         if not self.rhs.check_resolve():
             raise ValueError("Constraint '%s' has an invalid right-hand-side." \
                               % ' '.join([lhs, comparator, rhs]))
@@ -62,12 +63,12 @@ def _parse_constraint(expr_string):
     """ Parses the constraint expression string and returns the lhs string, 
     the rhs string, and comparator
     """
-    for comparator in ['>=', '<=', '>', '<', '=']:
+    for comparator in ['==','>=', '<=', '>', '<', '=']:
         parts = expr_string.split(comparator)
         if len(parts) > 1:
             return (parts[0].strip(), comparator, parts[1].strip())
     else:
-        msg = "Constraints require an explicit comparator (=, <, >, <=, or >=)"
+        msg = "Constraints require an explicit comparator (==, =, <, >, <=, or >=)"
         raise ValueError( msg )
     
 def _remove_spaces(s):
@@ -140,7 +141,7 @@ class HasEqConstraints(_HasConstraintsBase):
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
             self._parent.raise_exception(str(err), type(err))
-        if rel == '=':
+        if rel == '=' or rel=='==':
             self.add_eq_constraint(lhs, rhs, scaler, adder)
         else:
             msg = "Inequality constraints are not supported on this driver"
