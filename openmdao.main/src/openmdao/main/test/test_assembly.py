@@ -377,6 +377,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(asm.nested.comp1.a, 4.)
         self.assertEqual(asm.nested.comp2.b, 5.)
         self.assertEqual(asm.nested.comp2.get_valid(['b']), [False])
+        self.assertEqual(asm.nested.get_valid(['comp2.b']), [False])
         asm.run()
         self.assertEqual(asm.nested.comp1.a, 0.5)
         self.assertEqual(asm.nested.comp2.b, 0.5)

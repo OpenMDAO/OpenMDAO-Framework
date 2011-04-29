@@ -16,9 +16,9 @@ from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.datatypes.api import Float, Bool, Array
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.doedriver import DOEdriver
-from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
+from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.main.eggchecker import check_save_load
 from openmdao.util.testutil import find_python
@@ -189,7 +189,7 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), self.model.driver.DOEgenerator.num_sample_points)
-        msg = "driver: Exception getting 'driven.sum_z': " \
+        msg = "driver: Exception getting case outputs: " \
             "driven: object has no attribute 'sum_z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)
@@ -238,8 +238,8 @@ class TestCase(unittest.TestCase):
                 self.assertEqual(case.msg, 'driven: Forced error')
             else:
                 self.assertEqual(case.msg, None)
-                self.assertEqual(case.outputs[0][2],
-                                 rosen_suzuki(*[x[2] for x in case.inputs[:4]]))
+                self.assertEqual(case['driven.rosen_suzuki'],
+                                 rosen_suzuki(*[case['driven.x%s'%i] for i in range(4)]))
 
 if __name__ == "__main__":
     unittest.main()

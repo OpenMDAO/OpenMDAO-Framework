@@ -110,7 +110,7 @@ If you use Windows, please follow these instructions for SSH key creation and re
    directory and type ``md .ssh``.
 
 2. Assuming :term:`PuTTY` is installed in ``C:\Putty``, go there and run :term:`PuTTYgen`. If it isn't
-   installed, go to this `page <http://www.putty.org>`_ and download it. 
+   installed, go to this `page <http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html>`_ and download it. 
 
 3. Within PuTTYgen, click the *Generate* button and move your mouse around as instructed. **Do not 
    enter a key passphrase.**

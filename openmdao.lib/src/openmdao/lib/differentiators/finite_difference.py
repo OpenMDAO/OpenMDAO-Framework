@@ -53,6 +53,7 @@ class FiniteDifference(HasTraits):
         self.n_eqconst = 0
         self.n_ineqconst = 0
         self.n_param = 0
+        self.n_objective = 0
         
         self.gradient_case = []
         self.gradient_obj = zeros(0, 'd')
@@ -64,12 +65,22 @@ class FiniteDifference(HasTraits):
         self.hessian_obj = zeros(0, 'd')
         self.hessian_ineq_const = zeros(0, 'd')
         self.hessian_eq_const = zeros(0, 'd')
+        
+        # Some drivers will use the HasObjectives delegate, so we must allow
+        # for the possibility of multiple objectives.
+        self.multi_obj = False
     
     def setup(self):
         """Sets some dimensions."""
 
         self.n_param = len(self._parent._hasparameters._parameters)
-        #self.n_objective = len(self._parent._hasobjective._objective)
+        
+        if hasattr(self._parent, '_hasobjectives'):
+            self.n_objective = len(self._parent._hasobjectives._objectives)
+            self.multi_obj = True
+        else:
+            self.n_objective = 1
+            
         if hasattr(self._parent, '_hasineqconstraints'):
             self.n_ineqconst = len(self._parent._hasineqconstraints._constraints)
         if hasattr(self._parent, '_haseqconstraints'):
@@ -84,7 +95,10 @@ class FiniteDifference(HasTraits):
         self.setup()
 
         # Dimension the matrices that will store the answers
-        self.gradient_obj = zeros(self.n_param, 'd')
+        if self.multi_obj:
+            self.gradient_obj = zeros([self.n_param, self.n_objective], 'd')
+        else:
+            self.gradient_obj = zeros(self.n_param, 'd')
         self.gradient_ineq_const = zeros([self.n_param, self.n_ineqconst], 'd')
         self.gradient_eq_const = zeros([self.n_param, self.n_eqconst], 'd')
         
@@ -154,8 +168,13 @@ class FiniteDifference(HasTraits):
             eps = stepsize[icase]
             
             # Calculate gradients
-            self.gradient_obj[icase] = \
-                 func(case[0]['obj'], case[1]['obj'], eps)
+            if self.multi_obj:
+                for j in range(0, self.n_objective):
+                    self.gradient_obj[icase, j] = \
+                        func(case[0]['obj'][j], case[1]['obj'][j], eps)
+            else:
+                self.gradient_obj[icase] = \
+                    func(case[0]['obj'], case[1]['obj'], eps)
 
             for j in range(0, self.n_ineqconst):
                 self.gradient_ineq_const[icase, j] = \
@@ -186,7 +205,10 @@ class FiniteDifference(HasTraits):
         self.setup()
         
         # Dimension the matrices that will store the answers
-        self.hessian_obj = zeros([self.n_param, self.n_param], 'd')
+        if self.multi_obj:
+            self.hessian_obj = zeros([self.n_param, self.n_param, self.n_objective], 'd')
+        else:
+            self.hessian_obj = zeros([self.n_param, self.n_param], 'd')
         self.hessian_ineq_const = zeros([self.n_param, self.n_param, 
                                          self.n_ineqconst], 'd')
         self.hessian_eq_const = zeros([self.n_param, self.n_param, 
@@ -297,8 +319,14 @@ class FiniteDifference(HasTraits):
             eps = stepsize[icase]
             
             # Calculate Hessians
-            self.hessian_obj[icase, icase] = \
-                 diff_2nd_xx(case[0]['obj'], base_obj, case[1]['obj'], eps)
+            if self.multi_obj:
+                for j in range(0, self.n_objective):
+                    self.hessian_obj[icase, icase, j] = \
+                        diff_2nd_xx(case[0]['obj'][j], base_obj[j],
+                                    case[1]['obj'][j], eps)
+            else:
+                self.hessian_obj[icase, icase] = \
+                    diff_2nd_xx(case[0]['obj'], base_obj, case[1]['obj'], eps)
                  
             for j in range(0, self.n_ineqconst):
                 self.hessian_ineq_const[icase, icase, j] = \
@@ -320,14 +348,26 @@ class FiniteDifference(HasTraits):
                 eps2 = stepsize[jcase]
                 
                 # Calculate Hessians
-                self.hessian_obj[icase, jcase] = \
-                     diff_2nd_xy(case[0]['obj'], 
-                                 case[1]['obj'],
-                                 case[2]['obj'],
-                                 case[3]['obj'],
-                                 eps1, eps2)
-                
-                self.hessian_obj[jcase, icase] = self.hessian_obj[icase, jcase]
+                if self.multi_obj:
+                    for j in range(0, self.n_objective):
+                        self.hessian_obj[icase, jcase, j] = \
+                             diff_2nd_xy(case[0]['obj'][j], 
+                                         case[1]['obj'][j],
+                                         case[2]['obj'][j],
+                                         case[3]['obj'][j],
+                                         eps1, eps2)
+                        
+                    self.hessian_obj[jcase, icase, j] = self.hessian_obj[icase, jcase, j]
+                     
+                else:
+                    self.hessian_obj[icase, jcase] = \
+                         diff_2nd_xy(case[0]['obj'], 
+                                     case[1]['obj'],
+                                     case[2]['obj'],
+                                     case[3]['obj'],
+                                     eps1, eps2)
+                            
+                    self.hessian_obj[jcase, icase] = self.hessian_obj[icase, jcase]
                      
                 for j in range(0, self.n_ineqconst):
                     self.hessian_ineq_const[icase, jcase, j] = \
@@ -357,7 +397,6 @@ class FiniteDifference(HasTraits):
         some differences require the baseline point."""
 
         # Temp storage of all responses
-        data_obj = zeros([1], 'd')
         data_ineqconst = zeros([self.n_ineqconst], 'd')
         data_eqconst = zeros([self.n_eqconst], 'd')
 
@@ -366,8 +405,11 @@ class FiniteDifference(HasTraits):
         
         # Runs the model
         super(type(self._parent), self._parent).run_iteration()
-        
-        data_obj = self._parent.eval_objective()
+
+        if self.multi_obj:
+            data_obj = self._parent.eval_objectives()
+        else:
+            data_obj = self._parent.eval_objective()
 
         if self.n_ineqconst:
             for j, v in enumerate(self._parent.get_ineq_constraints().values()):

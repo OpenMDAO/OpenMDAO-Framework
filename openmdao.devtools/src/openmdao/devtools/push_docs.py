@@ -1,13 +1,13 @@
 
 import os
-import os.path
+from os.path import dirname, join, exists
 import sys
 import tarfile
 
 from fabric.api import run, env, local, put, cd, get, settings
 from fabric.state import connections
 
-from openmdao.devtools.build_docs import build_docs, _get_dirnames
+from openmdao.devtools.build_docs import build_docs
 
 
 def push_docs():
@@ -15,15 +15,16 @@ def push_docs():
     to the development doc area on openmdao.org.
     """
     startdir = os.getcwd()
-    branchdir, docdir, bindir =_get_dirnames()
-    idxpath = os.path.join(docdir, '_build', 'html', 'index.html')
+    branchdir = dirname(dirname(dirname(sys.executable)))
+    docdir = join(branchdir, 'docs')
+    idxpath = join(docdir, '_build', 'html', 'index.html')
     if not os.path.isfile(idxpath):
         build_docs()
 
     try:
-        os.chdir(os.path.join(docdir, '_build'))
+        os.chdir(join(docdir, '_build'))
         try:
-            if os.path.exists('docs.tar.gz'):
+            if exists('docs.tar.gz'):
                 os.remove('docs.tar.gz')
             archive = tarfile.open('docs.tar.gz', 'w:gz')
             archive.add('html')
@@ -34,7 +35,7 @@ def push_docs():
         with settings(host_string='openmdao@web103.webfaction.com'):
             # tar up the docs so we can upload them to the server
             # put the docs on the server and untar them
-            put(os.path.join(docdir,'_build','docs.tar.gz'), 'downloads/docs.tar.gz')
+            put(join(docdir,'_build','docs.tar.gz'), 'downloads/docs.tar.gz')
             with cd('downloads'):
                 run('tar xzf docs.tar.gz')
                 run('rm -rf dev_docs')

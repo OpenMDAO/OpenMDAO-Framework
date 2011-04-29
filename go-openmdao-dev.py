@@ -1130,8 +1130,8 @@ def create_bootstrap_script(extra_text, python_version=''):
 openmdao_prereqs = ['numpy', 'scipy']
 
 def extend_parser(parser):
-    parser.add_option("--reqs", action="append", type="string", dest='reqs', 
-                      help="specify file with additional requirements", default=[])
+    parser.add_option("-r","--req", action="append", type="string", dest='reqs', 
+                      help="specify additional required distributions", default=[])
 
 
 def adjust_options(options, args):
@@ -1149,9 +1149,13 @@ def adjust_options(options, args):
 
 
 
-def _single_install(cmds, req, bin_dir):
+def _single_install(cmds, req, bin_dir, dodeps=False):
     global logger
-    cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
+    if dodeps:
+        extarg = '-Z'
+    else:
+        extarg = '-NZ'
+    cmdline = [join(bin_dir, 'easy_install'), extarg] + cmds + [req]
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     logger.debug("running command: %s" % ' '.join(cmdline))
@@ -1216,15 +1220,9 @@ def after_install(options, home_dir):
             os.chdir(startdir)
         
 
-        # add packages from any specified requirements files
-        if options.reqs:
-            if sys.platform == 'win32':
-                reqscript = 'add_reqs-script.py'
-            else:
-                reqscript = 'add_reqs'
-            subprocess.check_call([join(bin_dir, 'python'),
-                                   join(bin_dir, reqscript), '-f', url] + options.reqs,
-                                  env=os.environ)
+        # add any additional packages specified on the command line
+        for req in options.reqs:
+            _single_install(cmds, req, bin_dir, True)
 
     except Exception as err:
         logger.error("ERROR: build failed: %s" % str(err))

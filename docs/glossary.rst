@@ -84,8 +84,7 @@ Glossary
 
       **CONMIN**   
         Stands for "CONstraint MINimization." CONMIN is a gradient descent
-        optimization algorithm developed by NASA. The simple tutorial in the *User
-        Guide* contains information on using CONMIN for an both an :ref:`unconstrained
+        optimization algorithm developed by NASA. The simple tutorial contains information on using CONMIN for an both an :ref:`unconstrained
         <using-CONMIN>` optimization and a :ref:`constrained
         <constrained-optimization>` optimization.
 
@@ -159,8 +158,8 @@ Glossary
 
       
       **Fake Finite Difference**
-        The Fake Finite Difference (FFD) method was developed to support an efficient way to calculate
-	gradients for mixed models, that is, models  that contain both components that can provide
+        The Fake Finite Difference (FFD) method was developed to efficiently calculate
+	gradients for mixed models, that is, models that contain components that can provide
 	derivatives and components that cannot. When a component has a set of specified derivatives,
 	they are used to replace the component's output with the first-order Taylor series expansion
 	whenever the optimizer initiates a finite difference estimation of the gradient. This is
