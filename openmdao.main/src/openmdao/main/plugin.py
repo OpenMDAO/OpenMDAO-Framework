@@ -891,7 +891,7 @@ def plugin_install(argv=None):
 
         
 def update_libpath():
-    """Find all of the shared libraries in the current environment and modify
+    """Find all of the shared libraries in the current virtual environment and modify
     the activate script to put their directories in LD_LIBRARY_PATH
     """
     ldict = {
@@ -930,7 +930,8 @@ def update_libpath():
             '\n',
             ]
             absbin = os.path.abspath(bindir)
-            with open(os.path.join(absbin, 'activate'), 'r') as f:
+            activate_fname = os.path.join(absbin, 'activate')
+            with open(activate_fname, 'r') as f:
                 lines = f.readlines()
                 try:
                     idx = lines.index(activate_lines[0])
@@ -943,9 +944,14 @@ def update_libpath():
                 
             content = ''.join(lines)
             
-            with open(os.path.join(absbin, 'activate'), 'w') as f:
+            with open(activate_fname, 'w') as f:
                 f.write(content % subdict)
-    
+                
+            print "\nThe 'activate' file has been updated with new values added to %s" % libpathvname
+            print "You must deactivate and reactivate your virtual environment for the"
+            print "changes to take effect\n"
+
+
 def _plugin_build_docs(destdir, cfg):
     """Builds the Sphinx docs for the plugin distribution, assuming it has
     a structure like the one created by plugin_quickstart.
