@@ -32,17 +32,6 @@ class GlobalDesVar(object):
         
         self.targets = targets
         
-        
-        
-    def __eq__(self,other): 
-        if isinstance(other,self.__class__): 
-            return all([self.targets==other.targets,
-                        self.name==other.name,
-                        self.low==other.low,
-                        self.high==other.high,
-                        self.scalar==other.scalar,
-                        self.adder==other.adder])
-        return False
 
 class HasGlobalDesVars(object): 
     """This class provides an implementation of teh IHasGlobalDesVars interface
@@ -138,14 +127,6 @@ class LocalDesVar(object):
         self.scalar = scalar
         self.adder=adder
         
-    def __eq__(self,other): 
-        return all([self.target==other.target,
-                    self.low==other.low,
-                    self.high==other.high,
-                    self.scalar==other.scalar,
-                    self.adder==other.adder
-                    ])
-        
 class HasLocalDesVars(object): 
     """This class provides an implementation of the IHasLocalDesVar interface
     
@@ -198,9 +179,9 @@ class HasLocalDesVars(object):
 
 class CouplingVar(object): 
     
-    def __init__(self,indep,expr): 
+    def __init__(self,indep,constraint): 
         self.indep = indep
-        self.expr = expr
+        self.constraint = constraint
         
     def __eq__(self,other): 
         return (self.indep==other.indep and self.expr==other.expr)
@@ -240,21 +221,27 @@ class HasCouplingVars(object):
         adder: float (optional)
             default value of 0.0, specifies the value which will be added to the constraint before being returned
         """
-        cpl = CouplingVar(indep,constraint)
+        expr = ExprEvaluator(indep,self._parent)
+        if not expr.check_resolve() or not expr.is_valid_assignee():
+                self._parent.raise_exception("Cant add coupling variable with indep '%s' "
+                                             "because is not a valid variable"%indep,
+                                             ValueError)
+        
+        cpl = CouplingVar(expr,constraint)
         #cant have any coupling variable with duplicate indep or constraint equations
         if indep not in self._indeps:
-            self._indeps[indep] = constraint
             try: 
                 #TODO, constraint tolerance???
                 self._has_constraints.add_constraint(constraint,scalar,adder)
+                self._indeps[indep] = cpl
             except ValueError as err: 
-                self._parent.raise_exception("Coupling variable with the "
-                                             "constraint of the form '%s' already exists "
-                                             "in the assembly"%constraint, ValueError)
+                self._parent.raise_exception("Coupling variable with "
+                                             "constraint '%s' already exists "
+                                             "in assembly"%constraint, ValueError)
             
         elif indep in self._indeps:
             self._parent.raise_exception("Coupling variable with indep '%s' already "
-                                         "exists in the assembly"%indep,ValueError) 
+                                         "exists in assembly"%indep,ValueError) 
             
     def remove_coupling_var(self,indep):
         """removes the coupling var, idenfied by the indepent name, from the assembly. 
@@ -263,19 +250,20 @@ class HasCouplingVars(object):
             name of the independent variable from the CouplingVar   
         """
         if indep in self._indeps: 
-            expr = self._indeps[indep]         
-            self._constraints.remove(expr)
+            cpl = self._indeps[indep]
+            self._has_constraints.remove_constraint(cpl.constraint)
+            del self._indeps[indep]
             
         else: 
-            self._parent.raise_exception("No coupling variable with the indep '%s' has been "
-                                         "added to the assembly"%indep,ValueError)
+            self._parent.raise_exception("No coupling variable with the indep '%s' exists "
+                                         "in assembly"%indep,ValueError)
         
     def list_coupling_vars(self): 
         """returns a ordered list of names of the coupling vars in the assembly"""
         return sorted(self._indeps.keys())
     
     
-    def clear_coupling_cars(self): 
+    def clear_coupling_vars(self): 
         """removes all coupling variables from the assembly"""
         self._indeps = ordereddict.OrderedDict()
         self._has_constraints.clear_constraints()

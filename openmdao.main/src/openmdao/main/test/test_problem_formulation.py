@@ -22,6 +22,9 @@ class HasGlobalDesVarsTest(unittest.TestCase):
         self.asm = set_as_top(GlobalAssembly())
         self.asm.add("D1",Dummy())
         self.asm.add("D2",Dummy()) 
+        
+    def test_global_des_var_with_driver(self): 
+        
     
     def test_global_des_var(self):
         try:         
@@ -47,6 +50,7 @@ class HasGlobalDesVarsTest(unittest.TestCase):
             self.fail("Exception expected")    
         
         self.assertEqual(['x'],self.asm.list_global_des_vars())
+        
         
         self.asm.setup_global_broadcaster('bcstr')
         
@@ -114,14 +118,14 @@ class HasGlobalDesVarsTest(unittest.TestCase):
         try: 
             self.asm.add_coupling_var("D1.x","D1.x=D2.x")
         except Exception as err:         
-            self.assertEqual(": Coupling variable with indep 'D1.x' already exists in the assembly",str(err))
+            self.assertEqual(": Coupling variable with indep 'D1.x' already exists in assembly",str(err))
         else: 
             self.fail("Exception expected")
         
         try: 
             self.asm.add_coupling_var("D1.y","D1.x=D2.x")
         except Exception as err: 
-            self.assertEqual(": Can't add coupling variable with indep 'D1.y' because is not a valid variable",str(err))
+            self.assertEqual(": Cant add coupling variable with indep 'D1.y' because is not a valid variable",str(err))
         else: 
             self.fail("Exception expected")
             
@@ -139,7 +143,7 @@ class HasGlobalDesVarsTest(unittest.TestCase):
         try: 
             self.asm.remove_coupling_var('D1.x')
         except Exception as err: 
-            self.assertEqual(": No coupling variable with the indep 'D1.x' exists in the assembly",str(err))
+            self.assertEqual(": No coupling variable with the indep 'D1.x' exists in assembly",str(err))
         else: 
             self.fail("Exception expected")
             
