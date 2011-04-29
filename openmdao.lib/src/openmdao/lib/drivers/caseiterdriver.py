@@ -42,7 +42,7 @@ class CaseIterDriverBase(Driver):
                         desc='If True, reload the model between executions.')
 
     error_policy = Enum(values=('ABORT', 'RETRY'), iotype='in',
-                        desc='If ABORT, any error stops the evaluation.')
+                        desc='If ABORT, any error stops the evaluation of the whole set of cases.')
 
     max_retries = Int(1, low=0, iotype='in',
                       desc='Maximum number of times to retry a failed case.')
