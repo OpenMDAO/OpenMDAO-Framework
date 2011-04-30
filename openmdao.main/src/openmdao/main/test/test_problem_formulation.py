@@ -6,6 +6,7 @@ from openmdao.main.problem_formulation import HasGlobalDesVars,\
      HasCouplingVars, HasLocalDesVars
 
 from openmdao.lib.datatypes.api import Float
+from openmdao.lib.drivers.api import CONMINdriver
 
 from openmdao.util.decorators import add_delegate
 
@@ -15,6 +16,8 @@ class GlobalAssembly(Assembly):
 
 class Dummy(Component): 
     x = Float(iotype="in")
+    
+    
 
 class HasGlobalDesVarsTest(unittest.TestCase):
     
@@ -24,26 +27,36 @@ class HasGlobalDesVarsTest(unittest.TestCase):
         self.asm.add("D2",Dummy()) 
         
     def test_global_des_var_with_driver(self): 
+        self.asm.add('driver',CONMINdriver())
+        self.asm.add_global_des_var('x',['D1.x','D2.x'],0.0,1.0)
         
-    
+        self.asm.setup_global_broadcaster('bcstr',['driver'])
+        
+        self.assertTrue(hasattr(self.asm,"bcstr"))
+        self.assertTrue(hasattr(self.asm.bcstr,"x"))
+        self.assertTrue(hasattr(self.asm.bcstr,"x_in"))
+        
+        self.assertTrue(['bcstr.x_in'],self.asm.driver.list_parameters())
+        
+        
     def test_global_des_var(self):
         try:         
-            self.asm.add_global_des_var('x',['D1.y+D1.x','D2.x'],1.0,0.0)
+            self.asm.add_global_des_var('x',['D1.y+D1.x','D2.x'],0.0,1.0)
         except Exception as err: 
             self.assertEqual(": Cant add global design variable 'x' because the target 'D1.y+D1.x' is an invalid target",str(err))
         else: 
             self.fail("Exception Expected")
             
         try:         
-            self.asm.add_global_des_var('x',['D1.y','D2.x'],1.0,0.0)
+            self.asm.add_global_des_var('x',['D1.y','D2.x'],0.0,1.0)
         except Exception as err: 
             self.assertEqual(": Cant add global design variable 'x' because the target 'D1.y' is an invalid target",str(err))
         else: 
             self.fail("Exception Expected")    
             
-        self.asm.add_global_des_var('x',['D1.x','D2.x'],1.0,0.0)
+        self.asm.add_global_des_var('x',['D1.x','D2.x'],0.0,1.0)
         try:
-            self.asm.add_global_des_var('x',['D1.x','D2.x'],1.0,0.0)
+            self.asm.add_global_des_var('x',['D1.x','D2.x'],0.0,1.0)
         except Exception as err: 
             self.assertEqual(": A global design variable named 'x' already exists in this assembly",str(err))
         else: 
@@ -107,6 +120,12 @@ class HasGlobalDesVarsTest(unittest.TestCase):
         
         self.asm.remove_local_des_var('D1.x')
         self.assertEqual([],self.asm.list_local_des_vars())  
+        
+        try: 
+            self.asm.remove_local_des_var('D1.x')
+        except Exception as err: 
+            self.assertEqual(': No local design variable named "D1.x" has been '
+                                         'added to the assembly',str(err))
         
         self.asm.add_local_des_var("D1.x")
         self.asm.clear_local_des_vars()

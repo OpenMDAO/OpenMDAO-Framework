@@ -86,8 +86,8 @@ class HasGlobalDesVars(object):
         
         name: string
             The name that should be used for the new broadcaster object
-        drivers: List of Drivers (optional)
-            The drivers which the global design variables will be added to as parameters
+        drivers: List of str (optional)
+            The names of drivers which the global design variables will be added to as parameters
         """
         
         #make a broadcaster for the globals
@@ -102,8 +102,10 @@ class HasGlobalDesVars(object):
                 self._parent.set('%s.%s_in'%(bcast_name,gdv_name),self._parent.get(expr.text)) 
                 
                 self._parent.connect('%s.%s'%(bcast_name,gdv_name),expr.text) 
-            for driver in drivers:    
-                driver.add_parameter('%s.%s_in'%(bcast_name,gdv_name),low=gdv.low,high=gdv.high)    
+            
+            for driver_name in drivers: 
+                d = self._parent.get(driver_name)
+                d.add_parameter('%s.%s_in'%(bcast_name,gdv_name),low=gdv.low,high=gdv.high)    
         
 class LocalDesVar(object): 
     """Local design variable object
@@ -182,15 +184,6 @@ class CouplingVar(object):
     def __init__(self,indep,constraint): 
         self.indep = indep
         self.constraint = constraint
-        
-    def __eq__(self,other): 
-        return (self.indep==other.indep and self.expr==other.expr)
-    
-    def __str__(self): 
-        return "(%s,%s)"%(self.indep,self.expr)
-    
-    def __repr__(self): 
-        return "<CouplingVar(%s,%s)>)"%(self.indep,self.expr)
 
 class HasCouplingVars(object):
     """This class provides an implementation of the IHasCouplingVar interface 
