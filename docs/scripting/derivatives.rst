@@ -52,7 +52,6 @@ called *differentiator*, into which a FiniteDifference instance can be placed:
 
 .. testcode:: NEWSUMT_fd
 
-    from openmdao.examples.enginedesign.driving_sim import DrivingSim
     from openmdao.examples.enginedesign.vehicle import Vehicle
     from openmdao.main.api import Assembly
     from openmdao.lib.drivers.api import NEWSUMTdriver
@@ -66,29 +65,26 @@ called *differentiator*, into which a FiniteDifference instance can be placed:
         
             super(EngineOptimization, self).__init__()
 
-            # Create DrivingSim component instances
-            self.add('driving_sim', DrivingSim())
-
             # Create NEWSUMT Optimizer instance
             self.add('driver', NEWSUMTdriver())
         
-            # add DrivingSim to workflow
-            self.driver.workflow.add('driving_sim')
+            # Create Vehicle component instances
+            self.add('vehicle', Vehicle())
+
+            # add Vehicle to workflow
+            self.driver.workflow.add('vehicle')
         
-            # Add Vehicle instance to vehicle socket
-            self.driving_sim.add('vehicle', Vehicle())
+            # CONMIN Objective 
+            self.driver.add_objective('vehicle.fuel_burn')
         
             # CONMIN Design Variables 
-            self.driver.add_parameter('driving_sim.spark_angle', low=-50.0, high=10.0, fd_step = .00001)
-            self.driver.add_parameter('driving_sim.bore', low=65.0, high=100.0, fd_step = .005)
+            self.driver.add_parameter('vehicle.spark_angle', low=-50. , high=10.)
+            self.driver.add_parameter('vehicle.bore', low=65. , high=100.)
 
             # Use OpenMDAO to calculate gradients
             self.driver.differentiator = FiniteDifference(self.driver)
             self.driver.differentiator.form = 'central'
             self.driver.differentiator.default_stepsize = 1.0e-6
-
-            # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-            self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
 
 If the driver has its own internal gradient calculation, it is disabled when
 you fill the differentiator socket, and the FiniteDifference component is used

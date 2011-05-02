@@ -6,32 +6,55 @@ import unittest
 
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.examples.enginedesign.vehicle import Vehicle
-from openmdao.examples.enginedesign.driving_sim import DrivingSim
+from openmdao.examples.enginedesign.driving_sim import SimAcceleration, SimEconomy
 
 
 class VehicleTestCase(unittest.TestCase):
     """ Test Vehicle """
 
     def setUp(self):
-        self.sim = DrivingSim()
-        self.sim.add('vehicle', Vehicle())
+        
+        self.top = set_as_top(Assembly())
 
+        self.top.add('sim_acc', SimAcceleration())
+        self.top.add('sim_EPA_city', SimEconomy())
+        self.top.add('vehicle', Vehicle())
+        
+        self.top.driver.workflow.add('sim_acc')
+        self.top.driver.workflow.add('sim_EPA_city')
+        self.top.driver.workflow.add('sim_EPA_highway')
+        
+        self.top.sim_acc.workflow.add('vehicle')
+        self.top.sim_acc.add_parameters([('vehicle.velocity', 0, 99999),
+                                         ('vehicle.throttle', 0.01, 1.0),
+                                         ('vehicle.current_gear', 0, 5)])
+        self.top.sim_acc.add_objective('vehicle.acceleration')
+        self.top.sim_acc.add_objective('vehicle.overspeed')
+        
+        self.top.sim_EPA_city.workflow.add('vehicle')
+        self.top.sim_EPA_city.add_parameters([('vehicle.velocity', 0, 99999),
+                                              ('vehicle.throttle', 0.01, 1.0),
+                                              ('vehicle.current_gear', 0, 5)])
+        self.top.sim_EPA_city.add_objective('vehicle.acceleration')
+        self.top.sim_EPA_city.add_objective('vehicle.fuel_burn')
+        self.top.sim_EPA_city.add_objective('vehicle.overspeed')
+        self.top.sim_EPA_city.add_objective('vehicle.underspeed')
+        self.top.sim_EPA_city.profilename = 'EPA-city.csv'
+        
     def tearDown(self):
         pass
         
     def test_errors(self):
         
-        self.sim.end_speed = 6.0
-        self.timestep = 0.5
-        self.sim.ratio1 = 3.54
-        self.sim.ratio2 = 3.54
-        self.sim.ratio3 = 3.54
-        self.sim.ratio4 = 3.54
-        self.sim.ratio5 = 3.54
+        self.top.vehicle.ratio1 = 3.54
+        self.top.vehicle.ratio2 = 3.54
+        self.top.vehicle.ratio3 = 3.54
+        self.top.vehicle.ratio4 = 3.54
+        self.top.vehicle.ratio5 = 3.54
         try:
-            self.sim.run()
+            self.top.sim_EPA_city.run()
         except RuntimeError, err:
-            msg = ": Transmission gearing cannot " \
+            msg = "sim_EPA_city: Transmission gearing cannot " \
                   "achieve acceleration and speed required by EPA " \
                   "test."
             
@@ -39,33 +62,31 @@ class VehicleTestCase(unittest.TestCase):
         else:
             self.fail('RuntimeError expected.')
         
-        self.sim.end_speed = 12.0
-        self.sim.ratio1 = 18.0
-        self.sim.ratio2 = 18.0
-        self.sim.ratio3 = 18.0
-        self.sim.ratio4 = 18.0
-        self.sim.ratio5 = 18.0
+        self.top.sim_acc.end_speed = 12.0
+        self.top.vehicle.ratio1 = 18.0
+        self.top.vehicle.ratio2 = 18.0
+        self.top.vehicle.ratio3 = 18.0
+        self.top.vehicle.ratio4 = 18.0
+        self.top.vehicle.ratio5 = 18.0
         
         try:
-            self.sim.run()
+            self.top.sim_acc.run()
         except RuntimeError, err:
-            msg = ": Gearing problem in Accel test."
+            msg = "sim_acc: Gearing problem in Accel test."
             self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected.')
         
-        self.sim.end_speed = 6.0
-        self.timestep = 5.0
-        self.sim.ratio1 = 1.0
-        self.sim.ratio2 = 1.0
-        self.sim.ratio3 = 1.0
-        self.sim.ratio4 = 1.0
-        self.sim.ratio5 = 1.0
+        self.top.vehicle.ratio1 = 1.0
+        self.top.vehicle.ratio2 = 1.0
+        self.top.vehicle.ratio3 = 1.0
+        self.top.vehicle.ratio4 = 1.0
+        self.top.vehicle.ratio5 = 1.0
         
         try:
-            self.sim.run()
+            self.top.sim_EPA_city.run()
         except RuntimeError, err:
-            msg = ": Vehicle is unable to achieve " \
+            msg = "sim_EPA_city: Vehicle is unable to achieve " \
                   "acceleration required to match EPA driving profile."
             self.assertEqual(str(err), msg)
         else:

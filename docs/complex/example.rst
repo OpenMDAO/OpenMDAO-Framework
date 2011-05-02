@@ -50,16 +50,16 @@ The full process model is shown below.
 
 .. figure:: ../images/user-guide/Process_Diagram.png
    :align: center
-   :alt: Diagram of process model showing the vehicle assembly, the driving simulation component, and the optimizer
+   :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
    
    Process Model for Tutorial Problem
 
 
-The process model includes a driving simulation component, which performs the
-simulations and calculates the performance metrics. A typical problem would be
-to close an optimization loop around the vehicle model, driving one or more
-design variables to minimize the 0-60 acceleration time and maximize the
-EPA city and highway mileage.
+The process model includes three drivers that performs the acceleration and
+fuel economy simulations and calculate the performance metrics. A typical
+problem might be to close an optimization loop around the vehicle model,
+driving one or more design variables to minimize the 0-60 acceleration time
+and maximize the EPA city and highway mileage.
 
 
 The Transmission Model
@@ -123,7 +123,7 @@ Variable           Description                                  Units
 ``torque_ratio``   Ratio of transmission output power to power 
                    at the wheel
 -----------------  -------------------------------------------  ------
-``RPM``            Engine rotational speed			rpm
+``RPM``            Engine rotational speed                      rpm
 =================  ===========================================  ======
 
   
@@ -177,7 +177,7 @@ weight and provide it as an output.
 **Engine - Design Variables:**
 
 =================  ===========================================  ========
-**Variable**       **Description**            			**Units**
+**Variable**       **Description**                              **Units**
 =================  ===========================================  ========
 ``stroke``         Length of compression zone in cylinder       mm
 -----------------  -------------------------------------------  --------
@@ -207,7 +207,7 @@ weight and provide it as an output.
 =================  ===========================================  ======
 Variable           Description                                  Units
 =================  ===========================================  ======
-RPM		   Engine rotational speed (1000-6000)          rpm
+RPM                Engine rotational speed (1000-6000)          rpm
 -----------------  -------------------------------------------  ------
 throttle           Throttle position                
 =================  ===========================================  ======
@@ -226,6 +226,10 @@ Variable           Description                                  Units
 ``fuel_burn``      Fuel burn rate                               l/sec
 -----------------  -------------------------------------------  ------
 ``engine_weight``  Engine weight estimate                       kg
+-----------------  -------------------------------------------  ------
+``overspeed``      True if engine RPM is over 5000
+-----------------  -------------------------------------------  ------
+``underspeed``      True if engine RPM is under 1000
 =================  ===========================================  ======
 
 
@@ -298,8 +302,8 @@ Simulating the Acceleration Test (0-60)
 .. todo:  I am hiding this quote by using the todo directive without the last colon. When more humor is
    ready to be injected, these lines can be deleted and the quote will show up.
 
-	"I saw this in a movie about a bus that had to **speed** around a city, keeping its **speed** over fifty and if its **speed** dropped, it would explode! I think it was called ... *The Bus That Couldn't Slow Down.*" 
-						-- Homer Simpson
+        "I saw this in a movie about a bus that had to **speed** around a city, keeping its **speed** over fifty and if its **speed** dropped, it would explode! I think it was called ... *The Bus That Couldn't Slow Down.*" 
+            -- Homer Simpson
 
 
 The procedure for simulating the maximum acceleration is straightforward. The vehicle is commanded at
@@ -517,16 +521,21 @@ as ``'inch/min'=``, and then the ``convert_units`` call would not be needed.
 
 The transmission model is now complete; the next section will show how to interact with
 it in the Python shell. The engine and chassis are created in a similar manner. However, the 
-engine's speed is valid only within a range 1000 to 6000 RPM. OpenMDAO's Float and Int
-variables allow you to specify an optional maximum and minimum value.
+engine's speed is valid only within a range 1000 to 6000 RPM, primarilly because the engine model
+is only valid in this range. We addressed this by adding two outputs ``overspeed`` and 
+``underspeed`` to warn when the engine has gone over or under the maximum or minimum RPM.
+
+OpenMDAO's variables also include a way to specify a minimum and a maximum value. For example,
+the throttle is valid from 0.01 (closed with a small amount of idle flow) to 1.0 (wide
+open.)
 
 .. testcode:: Code2
 
-    RPM = Float(1000.0, low=1000., high=6000., iotype='in', 
-                     units='rpm',  desc='Engine RPM')
+    throttle = Float(1.0, low=0.01, high=1.0, iotype='in', 
+                     desc='Throttle position (from low idle to wide open)')
 
-The *low* and *high* arguments are used to specify a minimum and maximum value
-for RPM. If the engine's RPM is set to a value outside of these limits, an
+The *low* and *high* attributes are used to specify a minimum and maximum value
+for the thtrottle. If the throttle is set to a value outside of these limits, an
 exception will be raised. OpenMDAO execution is terminated unless this
 exception is caught elsewhere and some kind of recovery behavior is defined.
 
@@ -541,16 +550,22 @@ Python interpreter so that you can access OpenMDAO and the example problems.
 
 Please enter the Python shell. Create an instance of the Engine class by typing the following:
 
+.. doctest:: vars
+
     >>> from openmdao.examples.enginedesign.engine import Engine
     >>> my_engine = Engine()
 
 The object ``my_engine`` is an engine model with default values for all of its inputs. We can interact
 with the inputs and outputs by direct inspection:
 
+.. doctest:: vars
+
     >>> my_engine.bore
     82.0
 
 Let's change the engine speed from its default value (1000 RPM) to 2500 RPM.
+
+.. doctest:: vars
 
     >>> my_engine.RPM = 2500
     >>> my_engine.RPM
@@ -559,24 +574,29 @@ Let's change the engine speed from its default value (1000 RPM) to 2500 RPM.
 The value of the engine RPM is now 2500. Let's see what happens if we try to
 set the RPM to something invalid.
 
+.. doctest:: vars
+
     >>> my_engine.RPM = "Hello"
     Traceback (most recent call last):
         ...
-    TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of Hello <type 'str'> was specified.
+    TraitError: Trait 'RPM' must be a float having untis compatible with 'rpm' but a value of Hello <type 'str'> was specified.
     
 The value ``"Hello"`` is invalid because RPM expects a value of type Float. Now,
-let's try setting the engine speed to a value that exceeds the maximum, which
-is 6000 RPM.
+let's try setting the throttle to a value that exceeds the maximum.
 
-    >>> my_engine.RPM = 7500
+.. doctest:: vars
+
+    >>> my_engine.throttle = 2.0
     Traceback (most recent call last):
         ...
-    TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of 7500 <type 'int'> was specified.
+    TraitError: Trait 'throttle' must be a float in the range [0.01, 1.0] but a value of 2.0 <type 'float'> was specified.
 
-OpenMDAO raises an exception indicating that the maximum value for RPM has
+OpenMDAO raises an exception indicating that the maximum value for throttle has
 been violated. This exception can be handled to provide some logical response
 to this situation. Now, run the engine and examine the power and torque at
 2500 RPM.
+
+.. doctest:: vars
 
     >>> my_engine.run()
     >>> my_engine.torque
@@ -645,38 +665,38 @@ Now that the components are instantiated in the assembly, they need to be hooked
 
 .. testsetup:: Code5
 
-	# Note: This block of code does not display in the documentation.
+        # Note: This block of code does not display in the documentation.
 
-	from openmdao.main.api import Assembly
-	from openmdao.lib.datatypes.api import Float
+        from openmdao.main.api import Assembly
+        from openmdao.lib.datatypes.api import Float
 
-	from openmdao.examples.enginedesign.engine import Engine
-	from openmdao.examples.enginedesign.transmission import Transmission
-	from openmdao.examples.enginedesign.chassis import Chassis
-	
-	class Vehicle(Assembly):
-	    """ Vehicle assembly. """
-    
-	    def __init__(self):
-	        """ Creates a new Vehicle Assembly object """
-
-	        super(Vehicle, self).__init__()
-
-	        # Create component instances
+        from openmdao.examples.enginedesign.engine import Engine
+        from openmdao.examples.enginedesign.transmission import Transmission
+        from openmdao.examples.enginedesign.chassis import Chassis
         
-	        self.add('transmission', Transmission())
-	        self.add('engine', Engine())
-	        self.add('chassis', Chassis())
+        class Vehicle(Assembly):
+            """ Vehicle assembly. """
+    
+            def __init__(self):
+                """ Creates a new Vehicle Assembly object """
 
-	        # Set up the workflow
-	        self.driver.workflow.add(['transmission', 'engine', 'chassis'])
+                super(Vehicle, self).__init__()
 
-	# This is a trick to get around a limitation in Sphinx's doctest, where
-	# there is no way to preserve the indentation level between code
-	# blocks, and the concept of "self" is not defined when we fall out of
-	# the class scope.
-	
-	self = Vehicle()
+                # Create component instances
+        
+                self.add('transmission', Transmission())
+                self.add('engine', Engine())
+                self.add('chassis', Chassis())
+
+                # Set up the workflow
+                self.driver.workflow.add(['transmission', 'engine', 'chassis'])
+
+        # This is a trick to get around a limitation in Sphinx's doctest, where
+        # there is no way to preserve the indentation level between code
+        # blocks, and the concept of "self" is not defined when we fall out of
+        # the class scope.
+        
+        self = Vehicle()
 
 .. testcode:: Code5
 
@@ -703,16 +723,16 @@ this quickly by creating *passthroughs*:
 
 .. testcode:: Code5
 
-	self.create_passthrough('engine.stroke')
-	self.create_passthrough('engine.bore')
-	# ...
-	# ...
-	self.create_passthrough('transmission.ratio1')
-	self.create_passthrough('transmission.ratio2')
-	# ...
-	# ...
-	self.create_passthrough('chassis.mass_vehicle')
-	self.create_passthrough('chassis.Cf')
+        self.create_passthrough('engine.stroke')
+        self.create_passthrough('engine.bore')
+        # ...
+        # ...
+        self.create_passthrough('transmission.ratio1')
+        self.create_passthrough('transmission.ratio2')
+        # ...
+        # ...
+        self.create_passthrough('chassis.mass_vehicle')
+        self.create_passthrough('chassis.Cf')
 
 The ``create_passthrough`` function creates an identical variable
 in the assembly and connects it to the corresponding component variable. So now, all of the
@@ -729,52 +749,52 @@ by declaring variables in our assembly.
 
 .. testcode:: Code5
 
-	class Vehicle(Assembly):
-	    """ Vehicle assembly. """
+        class Vehicle(Assembly):
+            """ Vehicle assembly. """
     
-	    tire_circumference = Float(75.0, iotype='in', units='inch', 
+            tire_circumference = Float(75.0, iotype='in', units='inch', 
                                 desc='Circumference of tire (inches)')
     
-	    velocity = Float(75.0, iotype='in', units='mi/h', 
+            velocity = Float(75.0, iotype='in', units='mi/h', 
                        desc='Vehicle velocity needed to determine engine RPM (mi/h)')
 
 Now these inputs are available to connect to the components, so we connect them manually.
 
 .. testsetup:: Code7b
 
-	from openmdao.lib.datatypes.api import implements, Interface
+        from openmdao.lib.datatypes.api import implements, Interface
 
-	from openmdao.main.api import Assembly
-	from openmdao.lib.datatypes.api import Float, Int
+        from openmdao.main.api import Assembly
+        from openmdao.lib.datatypes.api import Float, Int
 
-	from openmdao.examples.enginedesign.engine import Engine
-	from openmdao.examples.enginedesign.transmission import Transmission
-	from openmdao.examples.enginedesign.chassis import Chassis
-	
-	class Vehicle(Assembly):
-	    """ Vehicle assembly. """
+        from openmdao.examples.enginedesign.engine import Engine
+        from openmdao.examples.enginedesign.transmission import Transmission
+        from openmdao.examples.enginedesign.chassis import Chassis
+        
+        class Vehicle(Assembly):
+            """ Vehicle assembly. """
     
-	    tire_circumference = Float(75.0, iotype='in', units='inch', 
+            tire_circumference = Float(75.0, iotype='in', units='inch', 
                                     desc='Circumference of tire (inches)')
     
-	    velocity = Float(75.0, iotype='in', units='mi/h', 
+            velocity = Float(75.0, iotype='in', units='mi/h', 
                 desc='Vehicle velocity needed to determine engine RPM (mi/h)')
     
-	    def __init__(self):
-	        """ Creates a new Vehicle Assembly object. """
+            def __init__(self):
+                """ Creates a new Vehicle Assembly object. """
         
-	        super(Vehicle, self).__init__()
+                super(Vehicle, self).__init__()
 
-	        # Create component instances
+                # Create component instances
         
-	        self.add('transmission', Transmission())
-	        self.add('engine', Engine())
-	        self.add('chassis', Chassis())
+                self.add('transmission', Transmission())
+                self.add('engine', Engine())
+                self.add('chassis', Chassis())
 
-	        # Set up the workflow
-	        self.driver.workflow.add(['transmission', 'engine', 'chassis'])
+                # Set up the workflow
+                self.driver.workflow.add(['transmission', 'engine', 'chassis'])
 
-	self = Vehicle()
+        self = Vehicle()
 
 .. testcode:: Code7b
 
@@ -795,16 +815,16 @@ above. As inputs, the Vehicle takes a commanded velocity, throttle position, a g
 a set of vehicle design parameters, and outputs the vehicle's instantaneous acceleration and rate of fuel
 burn. 
 
-	>>> from openmdao.examples.enginedesign.vehicle import Vehicle
-	>>> my_car = Vehicle()
-	>>> my_car.velocity = 25.0
-	>>> my_car.current_gear = 3
-	>>> my_car.throttle = .5
-	>>> my_car.run()
-	>>> my_car.acceleration
-	1.1086409681...
-	>>> my_car.fuel_burn
-	0.0027991856...
+        >>> from openmdao.examples.enginedesign.vehicle import Vehicle
+        >>> my_car = Vehicle()
+        >>> my_car.velocity = 25.0
+        >>> my_car.current_gear = 3
+        >>> my_car.throttle = .5
+        >>> my_car.run()
+        >>> my_car.acceleration
+        1.1086409681...
+        >>> my_car.fuel_burn
+        0.0027991856...
 
 When we run the Vehicle, we are performing a simple multidisciplinary analysis via the
 OpenMDAO framework. Try setting the simulation variables to other values, including ones that should
@@ -890,13 +910,8 @@ How much faster is the C implementation? We found it to be almost 10 times as fa
 implementation. Both of these scripts run the engine 50 times before termination.
 
 
-.. index:: Sockets and Interfaces
-.. index:: Interfaces
-.. _Sockets-and-Interfaces:
-
-Sockets and Interfaces
-========================
-
+Drivers for Simulation
+======================
 Now that we have a functional and quick Vehicle assembly, we need to complete
 the problem by providing a way to simulate the acceleration and the EPA fuel
 economy estimates. The acceleration test requires an integration in time to
@@ -905,140 +920,143 @@ to be executed at each time step to produce the instantaneous acceleration.
 The EPA fuel economy tests are a bit more tricky, though they also require an integration in
 time. For these tests, the vehicle assembly must be executed while varying the throttle and
 gear position inputs to match a desired acceleration for the integration
-segment. Both of these solution procedures were implemented in a Python component
-called *DrivingSim.*  This component is found in ``driving_sim.py.``
+segment. Both of these solution procedures were implemented in Python as *drivers.* The
+``SimAcceleration`` driver simulates the acceleration test, and the ``SimEcomony`` driver
+simlates the EPA fuel economy test.
 
-The component DrivingSim contains an ``execute`` function that performs the time
-integration on a Vehicle component. It is not important to understand the
-execution details. The basic premise is that this simulation component needs
-to contain another OpenMDAO component. This can be done by using a *Socket.*
+Recall that in the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>`, a ``Driver``
+called CONMINdriver was used to optimize the Paraboloid problem. Similarly, the algorithms
+that perform these tests have been implemented as OpenMDAO drivers that can be found
+in ``driving_sim.py``. These drivers use the ``add_parameter`` and ``add_objective``
+interface to specify their connections to the Vehicle assembly. This interface should be
+familiar to you from setting up the Optimization problems in earlier examples. The
+``add_parameters`` function is used to specify the variables that these drivers will
+manipulate during solution. Specifically, in order to drive the Vehicle assembly, you
+need to be able to set the velocity, throttle, and gear positions. Likewise, the
+``add_objective`` function is used to specify the variables that these drivers need to
+obtain as a result of running the vehicles at the input state. For the acceleration test, the
+vehicle's instantaneous acceleration is needed, and for the economy test, both the 
+acceleration and fuel burn are needed.
 
-In OpenMDAO, Sockets are placeholders where different objects can be
-substituted to modify the function of a Component. They are used by
-Components, Assemblies, and Drivers to provide a place where users can insert
-objects that satisfy a certain interface and whose purpose is to perform some
-additional calculations. For example, a component calculating the drag on a
-wing might provide a Socket to allow the user to insert a custom flap drag
-calculation. In the example problem section, a Design Of Experiment (DOE)
-Driver uses a Socket to allow different types of DOE to be used.
+You may want to examine the ``SimAcceleration`` and the ``SimEconomy`` drivers that are
+found in ``driving_sim.py``. This tutorial does not cover how to create an OpenMDAO
+Driver, but a future tutorial will teach this. Until then, you can gain some understanding
+by studying these drivers, as well as the ones included in the standard library.
 
-A Socket can be declared in the DrivingSim class using an *Instance* trait:
 
-.. testcode:: Socket_to_me
-
-    from openmdao.main.api import Assembly
-    from openmdao.lib.datatypes.api import Float, Instance
-
-    from openmdao.examples.enginedesign.vehicle import Vehicle
-	
-    class DrivingSim(Assembly):
-	""" Simulation of vehicle performance.
-	    
-	# Simulation inputs
-	end_speed          # Simulation ending speed in mph.
-	timestep           # Simulation time step in sec.
-	    
-	# Outputs
-	accel_time        # Time to reach 60 mph from start
-	EPA_city          # Fuel economy for city driving
-	EPA_highway       # Fuel economy for highway driving
-	"""    
-	
-	# Simulation Parameters
-	end_speed = Float(60.0, iotype='in', units='m/h',
-			       desc='Simulation final speed')
-	timestep = Float(0.1, iotype='in', units='s', 
-			      desc='Simulation time step size')
-	
-	# Sockets
-	vehicle = Instance(Vehicle, allow_none=False, 
-			   desc='Socket for a Vehicle')
-	
-	# Outputs
-	accel_time = Float(0., iotype='out', units='s', 
-				desc='Time to reach end_speed starting from rest')
-	EPA_city = Float(0., iotype='out', units='mi/galUS', 
-			      desc='EPA Fuel economy - City')
-	EPA_highway = Float(0., iotype='out', units='mi/galUS', 
-				 desc='EPA Fuel economy - Highway')
-
-An *Instance* is a special type of variable that holds an object. The
-first argument in the constructor is the type of object that is allowed to fit in
-the socket, which in this case is a Vehicle. The attribute ``allow_none`` can be used
-to declare whether filling the socket is optional. For our driving simulation to
-run, the socket must be filled with a Vehicle. Notice that a socket is neither an
-input or an output, so it does not require an iotype, and it is not available for
-passing data in the framework.
-
-.. todo:: We eventually will need to create our own Instance class in order to define the inputs/outputs of an interface.
-
-**DrivingSim - Outputs:**
+**SimAcceleration - Output:**
 
 =================  ===========================================  ========
-Variable	   Description			                Units
+Variable           Description                                  Units
 =================  ===========================================  ========
-``accel_time``	   Time for vehicle to accelerate to 60 mph 	s
-		   from a stop.
------------------  -------------------------------------------  --------
-``EPA_city``       Fuel economy estimate based on EPA city	mi/galUS
-		   driving profile
------------------  -------------------------------------------  --------
-``EPA_highway``    Fuel economy estimate based on EPA highway	mi/galUS
-		   driving profile
+``accel_time``     Time for vehicle to accelerate to 60 mph     s
+                   from a stop.
 =================  ===========================================  ========
 
-Ultimately, we want the DrivingSim component to be executed in a model with an optimizer,
-which can set the Vehicle's design variables to try and minimize the simulation outputs. To
-accomplish this, we need to promote the design variables to become inputs to the DrivingSim.
-We did this in the Vehicle assembly by creating a passthrough for each design variable. The
-passthrough feature is only available in an assembly, so the DrivingSim component must
-inherit from Assembly instead of Component.
 
-Because the socket won't be filled until after the DrivingSim is instantiated, the design
-variables cannot be promoted in the ``initialization`` function. Instead, we have to
-create a ``callback`` function named ``_xxx_changed`` where ``xxx`` is the name of our socket. For our
-case, the socket is named *vehicle,* so the function should be named ``_vehicle_changed``. This
-``callback`` function is executed whenever a Vehicle instance is assigned to this socket.
+**SimEcomony - Output:**
 
-.. testcode:: Socket_to_me
+=================  ===========================================  ========
+Variable           Description                                  Units
+=================  ===========================================  ========
+``fuel_economy``   Fuel economy estimate based on EPA           mi/galUS
+                   driving profile
+=================  ===========================================  ========
 
-    def _vehicle_changed(self, oldvehicle, newvehicle):
-        """Callback whenever a new Vehicle is added to the DrivingSim
-        """
+
+.. testsetup:: SingleSim
+
+        from openmdao.main.api import Assembly
+        from openmdao.examples.enginedesign.driving_sim import SimAcceleration
+        from openmdao.examples.enginedesign.vehicle import Vehicle
         
-        self.driver.workflow.add(newvehicle.name)
+        class EngineOptimization(Assembly):
+            """Optimization of a Vehicle."""
+            
+            def __init__(self):
+                """ Creates a new Assembly for vehicle performance optimization."""
+                
+                super(EngineOptimization, self).__init__()
         
-        # set up interface to the framework  
-        # pylint: disable-msg=E1101
+                # Create Vehicle instance
+                self.add('vehicle', Vehicle())
+                
+                # Create Driving Simulation instances
+                self.add('sim_acc', SimAcceleration())
+                
+                # add Sims to default workflow
+                self.driver.workflow.add(['sim_acc'])
+                
+                # Add vehicle to sim workflows.
+                self.sim_acc.workflow.add('vehicle')
+            
+                # Acceleration Sim setup
+                self.sim_acc.add_parameters([('vehicle.velocity', 0, 99999),
+                                           ('vehicle.throttle', 0.01, 1.0),
+                                           ('vehicle.current_gear', 0, 5)])
+                self.sim_acc.add_objective('vehicle.acceleration')
+                self.sim_acc.add_objective('vehicle.overspeed')
+                
 
-        # Promoted From Vehicle -> Engine
-        self.create_passthrough('vehicle.stroke')
-        self.create_passthrough('vehicle.bore')
-	# ...
+.. testsetup:: ThreeSim
 
-In ``_vehicle_changed``, we create passthroughs to all of our design variables. We
-also add the vehicle to the DrivingSim's workflow to tell the
-assembly to run the Vehicle whenever it executes.
-
-The final piece of the puzzle is to learn how to insert a vehicle into our socket. This
-is done with the ``add`` command.
-	
-    >>> from openmdao.examples.enginedesign.driving_sim import DrivingSim
-    >>> my_sim = DrivingSim()
-    >>> from openmdao.examples.enginedesign.vehicle import Vehicle
-    >>> my_sim.add('vehicle', Vehicle())
-    <openmdao.examples.enginedesign.vehicle.Vehicle object at ...>
-    >>> my_sim.run()
-    >>> my_sim.accel_time
-    7.49...
-    >>> my_sim.EPA_city
-    24.80...
-    >>> my_sim.EPA_highway
-    33.45...
-    
-.. note::
-    Be careful not to simply assign the new vehicle instance to the socket (i.e., ``my_sim.vehicle =
-    Vehicle()``). If you do this, vital framework connections will be bypassed, and the component will not execute properly.
+        from openmdao.main.api import Assembly
+        from openmdao.examples.enginedesign.driving_sim import SimAcceleration, \
+                                                               SimEconomy
+        from openmdao.examples.enginedesign.vehicle import Vehicle
+        
+        class EngineOptimization(Assembly):
+            """Optimization of a Vehicle."""
+            
+            def __init__(self):
+                """ Creates a new Assembly for vehicle performance optimization."""
+                
+                super(EngineOptimization, self).__init__()
+        
+                # Create Vehicle instance
+                self.add('vehicle', Vehicle())
+                
+                # Create Driving Simulation instances
+                self.add('sim_acc', SimAcceleration())
+                self.add('sim_EPA_city', SimEconomy())
+                self.add('sim_EPA_highway', SimEconomy())
+                
+                # add Sims to default workflow
+                self.driver.workflow.add(['sim_acc', 'sim_EPA_city', 'sim_EPA_highway'])
+                
+                # Add vehicle to sim workflows.
+                self.sim_acc.workflow.add('vehicle')
+                self.sim_EPA_city.workflow.add('vehicle')
+                self.sim_EPA_highway.workflow.add('vehicle')
+            
+                # Acceleration Sim setup
+                self.sim_acc.add_parameters([('vehicle.velocity', 0, 99999),
+                                           ('vehicle.throttle', 0.01, 1.0),
+                                           ('vehicle.current_gear', 0, 5)])
+                self.sim_acc.add_objective('vehicle.acceleration')
+                self.sim_acc.add_objective('vehicle.overspeed')
+                
+                # EPA City MPG Sim Setup
+                self.sim_EPA_city.add_parameters([('vehicle.velocity', 0, 99999),
+                                                 ('vehicle.throttle', 0.01, 1.0),
+                                                 ('vehicle.current_gear', 0, 5)])
+                self.sim_EPA_city.add_objective('vehicle.acceleration')
+                self.sim_EPA_city.add_objective('vehicle.fuel_burn')
+                self.sim_EPA_city.add_objective('vehicle.overspeed')
+                self.sim_EPA_city.add_objective('vehicle.underspeed')
+                self.sim_EPA_city.profilename = 'EPA-city.csv'
+                self.sim_EPA_city.force_execute = True
+                
+                # EPA Highway MPG Sim Setup
+                self.sim_EPA_highway.add_parameters([('vehicle.velocity', 0, 99999),
+                                                    ('vehicle.throttle', 0.01, 1.0),
+                                                    ('vehicle.current_gear', 0, 5)])
+                self.sim_EPA_highway.add_objective('vehicle.acceleration')
+                self.sim_EPA_highway.add_objective('vehicle.fuel_burn')
+                self.sim_EPA_highway.add_objective('vehicle.overspeed')
+                self.sim_EPA_highway.add_objective('vehicle.underspeed')
+                self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
+                self.sim_EPA_highway.force_execute = True
 
 Setting up an Optimization Problem
 ==================================
@@ -1061,42 +1079,82 @@ socket in DrivingSim:
 
 .. testcode:: Code9
 
-    from openmdao.main.api import Assembly
-    from openmdao.lib.drivers.api import CONMINdriver
-
-    from openmdao.examples.enginedesign.driving_sim import DrivingSim
-
-    class EngineOptimization(Assembly):
-        """Optimization of a Vehicle."""
-    
-        def __init__(self):
-            """ Creates a new Assembly containing a DrivingSim and an optimizer"""
+        from openmdao.main.api import Assembly
+        from openmdao.lib.drivers.api import CONMINdriver
         
-            super(EngineOptimization, self).__init__()
-
-            # Create CONMIN Optimizer instance
-            self.add('driver', CONMINdriver())
+        from openmdao.examples.enginedesign.driving_sim import SimAcceleration, SimEconomy
+        from openmdao.examples.enginedesign.vehicle import Vehicle
         
-            # Create DrivingSim instance
-            self.add('driving_sim', Driving_Sim())
-
-            # Add Vehicle instance to vehicle socket
-            self.driving_sim.vehicle = Vehicle()
+        class EngineOptimization(Assembly):
+            """Optimization of a Vehicle."""
+            
+            def __init__(self):
+                """ Creates a new Assembly for vehicle performance optimization."""
+                
+                super(EngineOptimization, self).__init__()
         
-            # add DrivingSim to workflow
-            self.driver.workflow.add('driving_sim')
-
-            # CONMIN Flags
-            self.driver.iprint = 1
-            self.driver.itmax = 30
+                # pylint: disable-msg=E1101
+                
+                # Create CONMIN Optimizer instance
+                self.add('driver', CONMINdriver())
+                
+                # Create Vehicle instance
+                self.add('vehicle', Vehicle())
+                
+                # Create Driving Simulation instances
+                self.add('sim_acc', SimAcceleration())
+                self.add('sim_EPA_city', SimEconomy())
+                self.add('sim_EPA_highway', SimEconomy())
+                
+                # add Sims to optimizer workflow
+                self.driver.workflow.add(['sim_acc', 'sim_EPA_city', 'sim_EPA_highway'])
+                
+                # Add vehicle to sim workflows.
+                self.sim_acc.workflow.add('vehicle')
+                self.sim_EPA_city.workflow.add('vehicle')
+                self.sim_EPA_highway.workflow.add('vehicle')
+            
+                # CONMIN Flags
+                self.driver.iprint = 0
+                self.driver.itmax = 30
+                
+                # CONMIN Objective 
+                self.driver.add_objective('sim_acc.accel_time')
+                
+                # CONMIN Design Variables 
+                self.driver.add_parameters([('vehicle.spark_angle', -50., 10.),
+                                            ('vehicle.bore', 65., 100.)])
+                
+                # Acceleration Sim setup
+                self.sim_acc.add_parameters([('vehicle.velocity', 0, 99999),
+                                           ('vehicle.throttle', 0.01, 1.0),
+                                           ('vehicle.current_gear', 0, 5)])
+                self.sim_acc.add_objective('vehicle.acceleration')
+                self.sim_acc.add_objective('vehicle.overspeed')
+                
+                # EPA City MPG Sim Setup
+                self.sim_EPA_city.add_parameters([('vehicle.velocity', 0, 99999),
+                                                 ('vehicle.throttle', 0.01, 1.0),
+                                                 ('vehicle.current_gear', 0, 5)])
+                self.sim_EPA_city.add_objective('vehicle.acceleration')
+                self.sim_EPA_city.add_objective('vehicle.fuel_burn')
+                self.sim_EPA_city.add_objective('vehicle.overspeed')
+                self.sim_EPA_city.add_objective('vehicle.underspeed')
+                self.sim_EPA_city.profilename = 'EPA-city.csv'
+                self.sim_EPA_city.force_execute = True
+                
+                # EPA Highway MPG Sim Setup
+                self.sim_EPA_highway.add_parameters([('vehicle.velocity', 0, 99999),
+                                                    ('vehicle.throttle', 0.01, 1.0),
+                                                    ('vehicle.current_gear', 0, 5)])
+                self.sim_EPA_highway.add_objective('vehicle.acceleration')
+                self.sim_EPA_highway.add_objective('vehicle.fuel_burn')
+                self.sim_EPA_highway.add_objective('vehicle.overspeed')
+                self.sim_EPA_highway.add_objective('vehicle.underspeed')
+                self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
+                self.sim_EPA_highway.force_execute = True
         
-            # CONMIN Objective 
-            self.driver.add_objective('driving_sim.accel_time')
         
-            # CONMIN Design Variables 
-            self.add_parameters([('driving_sim.spark_angle', -50., 10.),
-                                 ('driving_sim.bore', 65., 100.)])
-
 Recall that the *iprint* flag enables or disables the printing of diagnostics
 internal to CONMIN, while the *itmax* parameter specifies the maximum number
 of iterations for the optimization loop.
@@ -1109,7 +1167,7 @@ again with our objectives and design variables. We could submit the design
 variables one at a time using multiple calls to ``add_parameter``, but we can
 also submit them with a single call to ``add_parameters`` by placing the information
 for each design variable in a list of tuples. The information we need for each
-variable is the expression that points to it (e.g., ``driving_sim.spark_angle``), and
+variable is the expression that points to it (e.g., ``vehicle.spark_angle``), and
 the minimum and maximum value of the search range for that variable (e.g., ``-.50, 10``).
 Once again, if the min and max aren't specified, the low and high attributes
 from the OpenMDAO variable will be used if they have been specified.
@@ -1131,18 +1189,18 @@ EngineOptimization class, setting it as the top assembly.
     <openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at ...>
 
 The problem is set up like above. We could run it now, but first let's find out how
-the current design performs. We can do this by running the Vehicle component once
+the current design performs. We can do this by running the acceleration simulation driver once
 and printing the value of the acceleration time.
 
 .. doctest:: optimization_fun
 
-    >>> prob.driving_sim.run()
-    >>> prob.driving_sim.accel_time
-    7.499...
-    >>> prob.driving_sim.bore
+    >>> prob.vehicle.bore
     82.0
-    >>> prob.driving_sim.spark_angle
+    >>> prob.vehicle.spark_angle
     -37.0
+    >>> prob.sim_acc.run()
+    >>> prob.sim_acc.accel_time
+    7.499...
     
 The unit for this variable is seconds, so the default vehicle design can
 accelerate from 0 to 60 mph in seven and a half seconds. We've also printed
@@ -1152,14 +1210,14 @@ but should be finished in less than a minute.
 
 :: 
 
-	>>> prob.run()
-	...
-	>>> prob.driving_sim.accel_time
-	5.399...
-	>>> prob.driving_sim.bore
-	100.0
-	>>> prob.driving_sim.spark_angle
-	-28.965...
+        >>> prob.run()
+        ...
+        >>> prob.vehicle.accel_time
+        5.399...
+        >>> prob.vehicle.bore
+        100.0
+        >>> prob.vehicle.spark_angle
+        -28.965...
 
 The optimizer has found a new solution that has a much faster acceleration
 time: 5.4 seconds vs 7.5. This was accomplished by increasing the bore to
@@ -1183,70 +1241,49 @@ the expression:
 
 .. testsetup:: Code10
 
-	from openmdao.main.api import Assembly
-	from openmdao.lib.drivers.api import CONMINdriver
-
-	from openmdao.examples.enginedesign.driving_sim import DrivingSim
-
-	class EngineOptimization(Assembly):
-	    """Optimization of a Vehicle."""
-    
-	    def __init__(self):
-        	""" Creates a new Assembly containing a SimVehicle and an optimizer"""
+        from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+        self = EngineOptimization()
         
-	        super(EngineOptimization, self).__init__()
-
-	        # Create DrivingSim instance
-        	self.add('driving_sim', DrivingSim())
-
-	        # Create CONMIN Optimizer instance
-        	self.add('driver', CONMINdriver())
-
-	        # add DrivingSim to workflow
-	        self.driver.workflow.add('driving_sim')
-
-	self = EngineOptimization()
-	
 .. testcode:: Code10
 
-	        # CONMIN Objective = Maximize accel_time 
-        	self.driver.add_objective('-driving_sim.accel_time')
-		
+                # CONMIN Objective = Maximize accel_time 
+                self.driver.add_objective('-sim_acc.accel_time')
+                
 You can build up more complicated expressions from any number of OpenMDAO variables using Python's mathematical syntax:
 
 .. testcode:: Code10
 
-	        # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-        	self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
+                # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
+                self.driver.add_objective('-(.93*sim_EPA_city.fuel_economy + 1.07*sim_EPA_highway.fuel_economy)')
 
 Here we used a weighted sum of the EPA city and highway fuel economy estimates as the objective in a maximization problem.
 Try solving the same optimization problem using this objective.
 
 ::
 
-	>>> from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
-	>>> from openmdao.main.api import set_as_top
-	>>> prob = EngineOptimization()
-	>>> set_as_top(prob)
-	<openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at 0xe80c3b0>
-	>>> prob.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
-	>>> prob.driving_sim.spark_angle
-	-37.0
-	>>> prob.driving_sim.bore
-	82.0
-	>>> prob.driving_sim.run()
-	>>> prob.driving_sim.EPA_city
-	24.807...
-	>>> prob.driving_sim.EPA_highway
-	33.454...
-	>>> prob.run()
-	>>> prob.driving_sim.spark_angle
-	-7.225...
-	>>> prob.driving_sim.bore
-	90.581...
-	>>> prob.driving_sim.EPA_city
-	25.713...
-	>>> prob.driving_sim.EPA_highway
-	38.696...
+        >>> from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+        >>> from openmdao.main.api import set_as_top
+        >>> prob = EngineOptimization()
+        >>> set_as_top(prob)
+        <openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at 0xe80c3b0>
+        >>> prob.driver.add_objective('-(.93*sim_EPA_city.fuel_economy + 1.07*sim_EPA_highway.fuel_economy)')
+        >>> prob.vehicle.spark_angle
+        -37.0
+        >>> prob.vehicle.bore
+        82.0
+        >>> prob.vehicle.run()
+        >>> prob.sim_EPA_city.fuel_economy
+        24.807...
+        >>> prob.sim_EPA_highway.fuel_economy
+        33.454...
+        >>> prob.run()
+        >>> prob.vehicle.spark_angle
+        -7.225...
+        >>> prob.vehicle.bore
+        90.581...
+        >>> prob.sim_EPA_city.fuel_economy
+        25.713...
+        >>> prob.sim_EPA_highway.fuel_economy
+        38.696...
 
 You have now completed the more complex tutorial problem.

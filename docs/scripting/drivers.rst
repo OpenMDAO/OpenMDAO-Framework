@@ -28,6 +28,7 @@ the CONMINdriver optimizer.
 
 .. testcode:: Parameter_API
 
+    from openmdao.examples.enginedesign.vehicle import Vehicle
     from openmdao.main.api import Assembly
     from openmdao.lib.drivers.api import CONMINdriver
 
@@ -35,18 +36,18 @@ the CONMINdriver optimizer.
         """ Top level assembly for optimizing a vehicle. """
     
         def __init__(self):
-            """ Creates a new Assembly containing a DrivingSim and an optimizer"""
+            """ Creates a new Assembly containing a Vehicle and an optimizer"""
         
             super(EngineOptimization, self).__init__()
 
-            # Create DrivingSim component instances
-            self.add('driving_sim', DrivingSim())
+            # Create Vehicle component instances
+            self.add('vehicle', Vehicle())
 
             # Create CONMIN Optimizer instance
             self.add('driver', CONMINdriver())
         
-            # add DrivingSim to workflow
-            driver.workflow.add('driving_sim')
+            # add Vehicle to workflow
+            driver.workflow.add('vehicle')
 
 We add design variables to the driver ``self.driver`` using the ``add_parameter``
 function. 
@@ -60,8 +61,8 @@ function.
 .. testcode:: Parameter_API
 
     # CONMIN Design Variables 
-    self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
-    self.driver.add_parameter('driving_sim.bore', low=65. , high=100.)
+    self.driver.add_parameter('vehicle.spark_angle', low=-50. , high=10.)
+    self.driver.add_parameter('vehicle.bore', low=65. , high=100.)
 
 Parameters are assigned via a string that contains the pathname of an OpenMDAO
 variable. This variable must exist in the scope of the assembly that contains
@@ -86,8 +87,8 @@ Multiple parameters can also be added in a single call to ``add_parameters`` (no
 .. testcode:: Parameter_API
 
     # Some more Design Variables 
-    self.driver.add_parameters([ ('driving_sim.conrod', 65.0 , 90.0), 
-                                 ('driving_sim.IVC', 0.0, 90.0) ])
+    self.driver.add_parameters([ ('vehicle.conrod', 65.0 , 90.0), 
+                                 ('vehicle.IVC', 0.0, 90.0) ])
 
 
 The ``IHasParameters`` interface also includes some other functions that are more useful when
@@ -127,7 +128,7 @@ Constraints are added to a driver using the ``add_constraint`` method.
 
 .. testcode:: Parameter_API
 
-    self.driver.add_constraint('driving_sim.stroke < driving_sim.bore')
+    self.driver.add_constraint('vehicle.stroke < vehicle.bore')
 
 Constraints are defined using boolean expressions, so they are considered to
 be satisfied when the expressions evaluate to *True* and violated when they
@@ -135,9 +136,9 @@ evaluate to *False*. The following constraint declarations are all equivalent:
 
 .. testcode:: Parameter_API
 
-    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore < 0')
-    self.driver.add_constraint('driving_sim.stroke < driving_sim.bore')
-    self.driver.add_constraint('driving_sim.bore > driving_sim.stroke')
+    self.driver.add_constraint('vehicle.stroke - vehicle.bore < 0')
+    self.driver.add_constraint('vehicle.stroke < vehicle.bore')
+    self.driver.add_constraint('vehicle.bore > vehicle.stroke')
     
 Using the ``eval_eq_constraints`` and ``eval_ineq_constraints`` methods,
 an optimizer or solver can query for the status and values of its constraints. Both
@@ -179,7 +180,7 @@ conveniently with the optional ``scale`` argument in the call to ``add_constrain
 
 .. testcode:: Parameter_API
 
-    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore < .00001', scaler=10000.0)
+    self.driver.add_constraint('vehicle.stroke - vehicle.bore < .00001', scaler=10000.0)
     
 Here, the constraint has been scaled up so that when its value is passed to the optimizer, it is in
 a similar range (and hence, of similar weight) as the other constraints in the model. Although an 
@@ -218,8 +219,8 @@ a string expression built up from available OpenMDAO outputs.
 
 .. testcode:: Parameter_API
 
-    # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-    self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
+    # CONMIN Objective = Maximize weighted sum of two variables
+    self.driver.add_objective('-(-.93*vehicle.fuel_burn + 1.07*vehicle.torque)')
 
 In this example, the objective is to maximize the weighted sum of two variables.
 The equation must be constructed using valid Python operators. All variables in
@@ -231,9 +232,9 @@ replace the current objective by calling ``add_objective`` with the new objectiv
 
 .. testcode:: Parameter_API
 
-    self.driver.add_objective('-driving_sim.EPA_city')
-    # Replace the objective with EPA_highway
-    self.driver.add_objective('-driving_sim.EPA_highway')
+    self.driver.add_objective('-vehicle.fuel_burn')
+    # Replace the objective with torque
+    self.driver.add_objective('-vehicle.torque')
 
 The *IHasObjective* interface also includes functions to list the objective and to query
 for the objective value.
