@@ -16,8 +16,30 @@ import parser
 
 import networkx as nx
 
-from openmdao.util.fileutil import find_files, get_module_path
+from openmdao.util.fileutil import find_files, get_module_path, find_module
 from openmdao.main.api import Component as mycomp
+
+def _get_long_name(self, node):
+    # If this node is an Attribute or Name node that is composed
+    # only of other Attribute or Name nodes, then return the full
+    # dotted name for this node. Otherwise, i.e., if this node
+    # contains Subscripts or Calls, return None.
+    if isinstance(node, ast.Name):
+        return node.id
+    elif not isinstance(node, ast.Attribute):
+        return None
+    val = node.value
+    parts = [node.attr]
+    while True:
+        if isinstance(val, ast.Attribute):
+            parts.append(val.attr)
+            val = val.value
+        elif isinstance(val, ast.Name):
+            parts.append(val.id)
+            break
+        else:  # it's more than just a simple dotted name
+            return None
+    return '.'.join(parts[::-1])
 
 class StrVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -85,6 +107,32 @@ class ClassInfo(object):
         self.bases = [_real_name(b, finfo) for b in self.bases]
         
 
+class ImportVisitor(ast.NodeVisitor):
+    """Collects info about imports from a python file."""
+    def __init__(self, fname):
+        ast.NodeVisitor.__init__(self)
+        self.fname = os.path.abspath(fname)
+        self.modpath = get_module_path(fname)
+        
+    def visit_Import(self, node):
+        """This executes every time an 'import foo' style import statement 
+        is parsed.
+        """
+        for al in node.names:
+            self._add_import(al.name)
+
+    def visit_ImportFrom(self, node):
+        """This executes every time a 'from foo import bar' style import
+        statement is parsed.
+        """
+        self._add_import(node.module)
+        
+    def _add_import(self, name):
+        # import name to filename to distribution
+        # store distribution
+        fname = find_module(name)
+
+                
 class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
     python file.
