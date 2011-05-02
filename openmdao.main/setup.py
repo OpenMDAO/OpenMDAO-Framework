@@ -60,6 +60,7 @@ setup(name='openmdao.main',
       plugin_install=openmdao.main.plugin:plugin_install
       plugin_makedist=openmdao.main.plugin:plugin_makedist
       plugin_quickstart=openmdao.main.plugin:plugin_quickstart
+      update_libpath=openmdao.main.plugin:update_libpath
       
       [openmdao.component]
       openmdao.main.assembly.Assembly = openmdao.main.assembly:Assembly
