@@ -25,24 +25,21 @@ def run_server(port):
     
     # URL mapping
     global urls
-    urls = ('/',            'MDAO',
-            '/add',         'AddComponent',
-            '/addon',       'AddOn',
-            '/command',     'Command',
-            '/exec',        'Exec',
-            '/exit',        'Exit',
-            '/favicon.ico', 'Favicon',
-            '/file',        'File',
-            '/files.xml',   'FilesXML',
-            '/files.json',  'FilesJSON',
-            '/folder',      'Folder',
-            '/login',       'Login',
-            '/model.json',  'ModelJSON',
-            '/new',         'NewModel',
-            '/output',      'Output',
-            '/remove',      'Remove',
-            '/types',       'Types',
-            '/upload',      'Upload')
+    urls = ('/',                'MDAO',
+            '/component/(.*)',  'Component',
+            '/addons',          'AddOns',
+            '/command',         'Command',
+            '/exec',            'Exec',
+            '/exit',            'Exit',
+            '/favicon.ico',     'Favicon',
+            '/file/(.*)',       'File',
+            '/files',           'Files',
+            '/cwd',             'CWD',
+            '/login',           'Login',
+            '/model',           'Model',
+            '/output',          'Output',
+            '/types',           'Types',
+            '/upload',          'Upload')
 
     # create the app
     global app
@@ -124,7 +121,7 @@ class Login:
         session.user = x.username		
         web.redirect('/')
 
-class AddComponent:
+class Component:
     ''' add component controller
     '''
     addForm = form.Form(
@@ -133,25 +130,40 @@ class AddComponent:
         form.Button('submit'),
     )
     
-    ''' render the add component form 
+    ''' render the add component form
+        TODO: this is not a RESTful get... figure out a better way
     '''
-    def GET(self):
+    def GET(self,name):
         form = self.addForm()
         x = web.input()
         if hasattr(x, "type"):
             form['type'].value = str(x.type)
         return render.addcomponent(form)
 
-    ''' get component type and name, add to model
+    ''' add new component to model
     '''
-    def POST(self):
+    def POST(self,name):
         x = web.input()
         cserver = server_mgr.console_server(session.session_id)
         try:
-            cserver.create(str(x.type),x.name);
+            cserver.create(str(x.type),name);
         except Exception,e:
             print e
             result = sys.exc_info()
+            
+    ''' remove the specified component
+    '''
+    def DELETE(self,name):
+        x = web.input()
+        if hasattr(x,'objname'):
+            cserver = server_mgr.console_server(session.session_id)
+            result = ''
+            try:
+                result = cserver.onecmd('del '+name)
+            except Exception,e:
+                print e
+                result = sys.exc_info()
+            return result
             
 class Command:
     ''' command controller
@@ -162,6 +174,7 @@ class Command:
     )
     
     ''' render the command form
+        TODO: this is not a RESTful get... probabaly ok though?
     '''
     def GET(self):
         form = self.commandForm()
@@ -191,7 +204,7 @@ class Command:
 class Exec:
     ''' have the cserver execute a file, return response
     '''
-    def POST(self):
+    def PUT(self):
         cserver = server_mgr.console_server(session.session_id)
         x = web.input()
         history = ''
@@ -216,17 +229,17 @@ class Output:
         cserver = server_mgr.console_server(session.session_id)
         return cserver.get_output()
         
-class NewModel:
+class Model:
     ''' delete existing console server and get a new one
     '''
-    def GET(self):
+    def POST(self):
         server_mgr.delete_server(session.session_id)
         web.redirect('/')
 
 class Exit:
     ''' exit
     '''
-    def GET(self):
+    def PUT(self):
         render.closewindow()
         server_mgr.delete_server(session.session_id)
         session.kill()
@@ -276,7 +289,7 @@ class Upload:
                     
         return render.closewindow()
 
-class ModelJSON:
+class Model:
     ''' get a JSON representation of the model
     '''
     def GET(self):
@@ -284,38 +297,42 @@ class ModelJSON:
         json = cserver.get_JSON()
         web.header('Content-Type', 'application/json')
         return json
-
-class FilesXML:
-    ''' get a list of the users files in XML format
+        
+    ''' delete existing console server and get a new one
     '''
-    def GET(self):
-        cserver = server_mgr.console_server(session.session_id)
-        root = cserver.getcwd()
-        doc = Document()
-        doc.appendChild(makenode(doc,root))
-        return doc.toprettyxml().replace(root,'')
-    
-class FilesJSON:
+    def POST(self):
+        server_mgr.delete_server(session.session_id)
+        web.redirect('/')
+
+class Files:
     ''' get a list of the users files in JSON format
     '''
     def GET(self):
         cserver = server_mgr.console_server(session.session_id)
         root = cserver.getcwd()
-        dict = filepathdict(root)
-        json = jsonpickle.encode(dict)
-        root = root.replace('\\','\\\\')  # TODO: investigate this
-        json = json.replace(root,'')
-        web.header('Content-Type', 'application/json')
-        return json
+        web.debug("Files: root="+root)
+        x = web.input()
+        print_dict(x)
+        if False: # TODO: check the requested datatype, maybe they wany XML?
+            doc = Document()
+            doc.appendChild(makenode(doc,root))
+            return doc.toprettyxml().replace(root,'')
+        else:
+            dict = filepathdict(root)
+            json = jsonpickle.encode(dict)
+            root = root.replace('\\','\\\\')  # TODO: investigate this
+            json = json.replace(root,'')
+            web.header('Content-Type', 'application/json')
+            return json
 
-class Folder:
+class CWD:
     ''' get/set the current working directory for the cserver
     '''
     def GET(self):
         cserver = server_mgr.console_server(session.session_id)
         return cserver.getcwd()
         
-    def POST(self):
+    def PUT(self):
         cserver = server_mgr.console_server(session.session_id)
         x = web.input()
         userdir = server_mgr.get_tempdir('files') +'/'+ session.user;
@@ -325,10 +342,10 @@ class Folder:
 class File:
     ''' get/set the specified file
     '''
-    def GET(self):
+    def GET(self,filename):
+        web.debug("FILE GET "+filename)
         cserver = server_mgr.console_server(session.session_id)
-        x = web.input()
-        filepath = cserver.getcwd()+'/'+str(x.file)
+        filepath = cserver.getcwd()+'/'+str(filename)
         if os.path.exists(filepath):
             f=open(filepath, 'r')
             return f.read()
@@ -338,12 +355,12 @@ class File:
     ''' if "isFolder" is specified, create the folder, else
         create and write the posted contents to the specified file
     '''
-    def POST(self):
-        x = web.input()
+    def POST(self,filename):
+        web.debug("FILE POST "+filename)
         userdir = server_mgr.get_tempdir('files') +'/'+ session.user;
         ensure_dir(userdir)
-        filepath=x.filename.replace('\\','/')
-        filepath = userdir +'/'+ filepath
+        filepath = userdir +'/'+ filename
+        x = web.input()
         if hasattr(x, "isFolder"):
             ensure_dir(filepath)
         else:
@@ -351,34 +368,24 @@ class File:
             if hasattr(x, "contents"):
                 fout.write(x.contents)
             fout.close()
-
-class Remove:
-    ''' remove the specified file or object
+            
+    '''  remove the specified file
     '''
-    def POST(self):
-        x = web.input()
-        if hasattr(x,'file'):
-            userdir = server_mgr.get_tempdir('files') +'/'+ session.user;
-            filepath = userdir+'/'+str(x.file)
-            if os.path.exists(filepath):
-                if os.path.isdir(filepath):
+    def DELETE(self,filename):
+        web.debug("FILE DELETE "+filename)
+        userdir = server_mgr.get_tempdir('files') +'/'+ session.user;
+        filepath = userdir+'/'+str(filename)
+        web.debug("DELETING FILE"+filepath)
+        if os.path.exists(filepath):
+            web.debug("DELETING FILE (exists)"+filepath)
+            if os.path.isdir(filepath):
+                    web.debug("DELETING FILE (folder)"+filepath)
                     os.rmdir(filepath)
-                else:
-                    os.remove(filepath)
             else:
-                return web.notfound("Sorry, the file was not found.")
-        elif hasattr(x,'objname'):
-            cserver = server_mgr.console_server(session.session_id)
-            result = ''
-            try:
-                result = cserver.onecmd('del '+x.objname)
-            except Exception,e:
-                print e
-                result = sys.exc_info()
-            return result
+                    web.debug("DELETING FILE (file)"+filepath)
+                    os.remove(filepath)
         else:
-            web.debug(prefix+"what am I suppsed to remove?!")
-            print_dict(x)
+            return web.notfound("Sorry, the file was not found.")
 
 class Types:
     ''' get a list of object types that the user can create
@@ -428,7 +435,7 @@ class Types:
         xml = xml + '</response>\n'
         return xml
 
-class AddOn:
+class AddOns:
     ''' addon installation utility
     '''
     addonForm = form.Form( 
@@ -436,7 +443,7 @@ class AddOn:
         form.Button('Install'),
     )
     
-    ''' prompt for addon to be installed
+    ''' show available addons, prompt for addon to be installed
     '''
     def GET(self):
         form = self.addonForm()

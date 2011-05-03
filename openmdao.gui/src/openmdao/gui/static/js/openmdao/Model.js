@@ -46,7 +46,8 @@ openmdao.Model=function() {
             return;
 
         jQuery.ajax({
-            url: 'types',
+            type: 'GET',
+            url:  'types',
             dataType: 'xml',
             data: {},
             success: function(xml) {
@@ -54,6 +55,18 @@ openmdao.Model=function() {
                         callback(types)
                      },
             error: errorHandler
+        })
+    }
+
+    /** get a new (empty) model */
+    this.newModel = function(typepath,name,x,y) {
+        // invalidate cached model data
+        modelJSON = null
+        
+        jQuery.ajax({
+            type: 'POST',
+            url:  'model',
+            success: self.updateListeners
         })
     }
 
@@ -67,7 +80,8 @@ openmdao.Model=function() {
         }
         else {
             jQuery.ajax({
-                url: 'model.json',
+                type: 'GET',
+                url:  'model',
                 dataType: 'json',
                 data: {},
                 success: function(json) {
@@ -113,8 +127,8 @@ openmdao.Model=function() {
         
         jQuery.ajax({
             type: 'POST',
-            url:  'add',
-            data: {'type': typepath, 'name': name, 'x': x, 'y': y },
+            url:  'component/'+name,
+            data: {'type': typepath, 'x': x, 'y': y },
             success: self.updateListeners
         })
     }
@@ -153,19 +167,20 @@ openmdao.Model=function() {
     }
 
     /** set the working directory of the model */
-    this.setFolder = function(folder) {
+    this.setWD = function(folder) {
         jQuery.ajax({
-            type: 'POST',
-            url:  'folder',
+            type: 'PUT',
+            url:  'cwd',
             data: { 'folder': folder },
             success: self.updateListeners
         })
     }
 
     /** get the working directory of the model */
-    this.getFolder = function() {
+    this.getWD = function() {
         jQuery.ajax({
-            url: 'folder',
+            type: 'GET',
+            url:  'cwd',
             success: function(folder) { return folder }
         })
     }
@@ -176,7 +191,8 @@ openmdao.Model=function() {
             return
 
         jQuery.ajax({
-            url: 'files.json',
+            type: 'GET',
+            url:  'files',
             dataType: 'json',
             data: {},
             success: callback,
@@ -190,10 +206,9 @@ openmdao.Model=function() {
             return;
 
         jQuery.ajax({
-            url: 'file',
             type: 'GET',
+            url:  'file/'+filepath.replace(/\\/g,'/'),
             dataType: 'text',
-            data: { 'file': filepath },
             success: callback,
             error: errorHandler
         })
@@ -202,9 +217,9 @@ openmdao.Model=function() {
     /** set the contents of the specified file */
     this.setFile = function(filepath, contents, errorHandler) {
         jQuery.ajax({
-            url: 'file',
             type: 'POST',
-            data: { 'filename': filepath, 'contents': contents},
+            url:  'file/'+filepath.replace(/\\/g,'/'),
+            data: { 'contents': contents},
             success: self.updateListeners,
             error: errorHandler
         })
@@ -213,9 +228,9 @@ openmdao.Model=function() {
     /** create a new folder in the model working directory with the specified path */
     this.createFolder = function(folderpath) {
         jQuery.ajax({
-            url: 'file',
             type: 'POST',
-            data: { 'filename': folderpath, 'isFolder': true},
+            url:  'file/'+folderpath.replace(/\\/g,'/'),
+            data: { 'isFolder': true},
             success: self.updateListeners
         })
     }
@@ -232,6 +247,7 @@ openmdao.Model=function() {
 
     /** prompt for name & create a new folder */
     this.newFolder = function(folderpath) {
+        debug.info("model.newFolder folderpath="+folderpath)
         openmdao.Util.promptForName(function(name) {
             if (folderpath)
                 name = folderpath+'/'+name
@@ -248,9 +264,8 @@ openmdao.Model=function() {
     /** delete the file in the model working directory with the specified path */
     this.removeFile = function(filepath) {
         jQuery.ajax({
-            url: 'remove',
-            type: 'POST',
-            dataType: 'text',
+            type: 'DELETE',
+            url:  'file'+filepath.replace(/\\/g,'/'),
             data: { 'file': filepath },
             success: self.updateListeners
         })
@@ -278,8 +293,8 @@ openmdao.Model=function() {
 
         // make the call
         jQuery.ajax({
-            url: 'exec',
-            type: 'POST',
+            type: 'PUT',
+            url:  'exec',
             data: { 'filename': path },
             success: self.updateListeners
         })
@@ -288,8 +303,8 @@ openmdao.Model=function() {
     /** exit the model */
     this.exit = function() {
         jQuery.ajax({
+            type: 'PUT',
             url: 'exit',
-            type: 'GET',
         })
     }
     

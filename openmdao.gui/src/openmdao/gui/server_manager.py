@@ -57,5 +57,3 @@ class ServerManager:
             f = self.temp_files[name]
             if os.path.exists(f):
                 rmtree(f)
-
-    

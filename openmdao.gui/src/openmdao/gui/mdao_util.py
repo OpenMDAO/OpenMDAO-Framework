@@ -27,8 +27,7 @@ def print_list (list):
 def print_dict (dict):
     for item in dict.items():
         key, value = item
-        print key
-        print value
+        print key+' = '+value
 
 # modified version of:
 # http://code.activestate.com/recipes/305313-xml-directory-tree/        

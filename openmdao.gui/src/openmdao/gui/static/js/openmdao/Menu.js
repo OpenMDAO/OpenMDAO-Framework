@@ -21,7 +21,7 @@ openmdao.Menu = function(id) {
         menus = [
             { text: "Session", 
               items: [
-                { text: "New",           url: "/new"   },
+                { text: "New",           onclick: "model.newModel()"   },
                 { text: "Logout",        url: "/login" },
                 { text: "Exit",          onclick: "model.exit();openmdao.Util.closeWindow()"}
               ]
@@ -45,7 +45,7 @@ openmdao.Menu = function(id) {
             },
             { text: "Tools", 
               items: [
-                { text: "Install Addon", onclick: "openmdao.Util.popupWindow('/addon','Addon',575,540)"}
+                { text: "Addons", onclick: "openmdao.Util.popupWindow('/addons','Addons',575,540)"}
               ]
             },
             { text: "Help", 
