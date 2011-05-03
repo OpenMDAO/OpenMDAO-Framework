@@ -20,7 +20,7 @@ class ParaboloidDerivative(Component):
     def __init__(self):
         """ declare what derivatives that we can provide"""
         
-        super(Paraboloid_Derivative, self).__init__()
+        super(ParaboloidDerivative, self).__init__()
 
         self.derivatives.declare_first_derivative(self, 'f_xy', 'x')
         self.derivatives.declare_first_derivative(self, 'f_xy', 'y')
@@ -39,26 +39,25 @@ class ParaboloidDerivative(Component):
         
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
-    def calculate_derivatives(self, first, second):
-        """Analytical derivatives"""
+    def calculate_first_derivatives(self):
+        """Analytical first derivatives"""
         
-        if first:
+        df_dx = 2.0*self.x - 6.0 + self.y
+        df_dy = 2.0*self.y + 8.0 + self.x
+    
+        self.derivatives.set_first_derivative('f_xy', 'x', df_dx)
+        self.derivatives.set_first_derivative('f_xy', 'y', df_dy)
         
-            df_dx = 2.0*self.x - 6.0 + self.y
-            df_dy = 2.0*self.y + 8.0 + self.x
+    def calculate_second_derivatives(self):
+        """Analytical second derivatives"""
         
-            self.derivatives.set_first_derivative('f_xy', 'x', df_dx)
-            self.derivatives.set_first_derivative('f_xy', 'y', df_dy)
+        df_dxdx = 2.0
+        df_dxdy = 1.0
+        df_dydy = 2.0
         
-        if second:
-        
-            df_dxdx = 2.0
-            df_dxdy = 1.0
-            df_dydy = 2.0
-            
-            self.derivatives.set_second_derivative('f_xy', 'x', 'x', df_dxdx)
-            self.derivatives.set_second_derivative('f_xy', 'x', 'y', df_dxdy)
-            self.derivatives.set_second_derivative('f_xy', 'y', 'y', df_dydy)
+        self.derivatives.set_second_derivative('f_xy', 'x', 'x', df_dxdx)
+        self.derivatives.set_second_derivative('f_xy', 'x', 'y', df_dxdy)
+        self.derivatives.set_second_derivative('f_xy', 'y', 'y', df_dydy)
         
 
 # End paraboloid_derivative.py

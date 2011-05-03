@@ -117,7 +117,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             
             # Save baseline states and calculate derivatives
             if driver.baseline_point:
-                super(NEWSUMTdriver, driver).calc_derivatives(first=True)
+                driver.calc_derivatives(first=True)
             driver.baseline_point = False
             
             # update the parameters in the model
@@ -155,11 +155,11 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         if not driver.differentiator:
             return obj, dobj, ddobj, g, dg
         
-        super(NEWSUMTdriver, driver).calc_derivatives(first=True)
+        driver.calc_derivatives(first=True)
         driver.ffd_order = 1
         driver.differentiator.calc_gradient()
         
-        super(NEWSUMTdriver, driver).calc_derivatives(second=True)
+        driver.calc_derivatives(second=True)
         driver.ffd_order = 2
         driver.differentiator.calc_hessian(reuse_first=True)
         
@@ -184,7 +184,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             if not driver.differentiator:
                 return obj, dobj, ddobj, g, dg
 
-            super(NEWSUMTdriver, driver).calc_derivatives(first=True)
+            driver.calc_derivatives(first=True)
             driver.ffd_order = 1
             driver.differentiator.calc_gradient()
             driver.ffd_order = 0
