@@ -118,13 +118,13 @@ class CONMINdriverTestCase(unittest.TestCase):
         
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.eval_objective(), places=2)
+                               self.top.driver.eval_objective(), places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
                                self.top.comp.x[0], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
-                               self.top.comp.x[1], places=2)
+                               self.top.comp.x[1], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
-                               self.top.comp.x[2], places=2)
+                               self.top.comp.x[2], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
                                self.top.comp.x[3], places=1)
 
