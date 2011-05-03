@@ -4,7 +4,7 @@ import sys
 import thread
 import threading
 
-from openmdao.lib.datatypes.api import Bool, Instance
+from openmdao.lib.datatypes.api import Bool, Enum, Instance
 
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
@@ -41,6 +41,9 @@ class CaseIterDriverBase(Driver):
     reload_model = Bool(True, iotype='in',
                         desc='If True, reload the model between executions.')
 
+    error_policy = Enum(values=('ABORT', 'RETRY'), iotype='in',
+                        desc='If ABORT, any error stops the evaluation of the whole set of cases.')
+
     max_retries = Int(1, low=0, iotype='in',
                       desc='Maximum number of times to retry a failed case.')
 
@@ -50,6 +53,7 @@ class CaseIterDriverBase(Driver):
 
         self._iter = None  # Set to None when iterator is empty.
         self._replicants = 0
+        self._abort_exc = None  # Set if error_policy == ABORT.
 
         self._egg_file = None
         self._egg_required_distributions = None
@@ -91,6 +95,7 @@ class CaseIterDriverBase(Driver):
             eliminate a lot of startup overhead.
         """
         self._stop = False
+        self._abort_exc = None
         if self._iter is None:
             self.raise_exception('Run already complete', RuntimeError)
 
@@ -111,11 +116,16 @@ class CaseIterDriverBase(Driver):
             self._cleanup(remove_egg)
 
         if self._stop:
-            self.raise_exception('Run stopped', RunStopped)
+            if self._abort_exc is None:
+                self.raise_exception('Run stopped', RunStopped)
+            else:
+                self.raise_exception('Run aborted: %r' % self._abort_exc,
+                                     RuntimeError)
 
     def step(self):
         """ Evaluate the next case. """
         self._stop = False
+        self._abort_exc = None
         if self._iter is None:
             self.setup()
 
@@ -376,13 +386,20 @@ class CaseIterDriverBase(Driver):
                 in_use = self._start_next_case(server, stepping)
             else:
                 self._logger.debug('    exception while loading: %r', exc)
-                self._load_failures[server] += 1
-                if self._load_failures[server] < 3:
-                    in_use = self._start_processing(server, stepping)
-                else:
-                    self._logger.debug('    too many load failures')
+                if self.error_policy == 'ABORT':
+                    if self._abort_exc is None:
+                        self._abort_exc = exc
+                    self._stop = True
                     self._server_states[server] = _EMPTY
                     in_use = False
+                else:
+                    self._load_failures[server] += 1
+                    if self._load_failures[server] < 3:
+                        in_use = self._start_processing(server, stepping)
+                    else:
+                        self._logger.debug('    too many load failures')
+                        self._server_states[server] = _EMPTY
+                        in_use = False
 
         elif state == _EXECUTING:
             case = self._server_cases[server]
@@ -400,6 +417,10 @@ class CaseIterDriverBase(Driver):
             else:
                 self._logger.debug('    exception while executing: %r', exc)
                 case.msg = str(exc)
+                if self.error_policy == 'ABORT':
+                    if self._abort_exc is None:
+                        self._abort_exc = exc
+                    self._stop = True
 
             # Record the data.
             self._record_case(case)
@@ -411,6 +432,10 @@ class CaseIterDriverBase(Driver):
         else:  #pragma no cover
             self._logger.error('unexpected state %r for server %r',
                                state, server)
+            if self.error_policy == 'ABORT':
+                if self._abort_exc is None:
+                    self._abort_exc = exc
+                self._stop = True
             in_use = False
 
         return in_use
