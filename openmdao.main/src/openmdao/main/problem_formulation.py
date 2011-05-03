@@ -37,7 +37,8 @@ class HasGlobalDesVars(object):
     """This class provides an implementation of teh IHasGlobalDesVars interface
     
     parent: Assembly
-        containing assembly where the HasGlobalDesVars lives. 
+        containing assembly where the HasGlobalDesVars lives.
+        
     """
     
     def __init__(self,parent): 
@@ -45,9 +46,27 @@ class HasGlobalDesVars(object):
         self._parent = parent
         
     def add_global_des_var(self,name,targets,low,high,scalar=1.0,adder=0.0):
-        """adds a global design variable to the assembly"""
+        """adds a global design variable to the assembly
+        
+        name: str
+            name given to the global design variable
+        targets: list of str
+            names of the component variables that this global design variable should link to
+        low: float
+            minimum allowed value for the global design variable
+        high: float
+            maximum allowed value for the global design variable
+        scalar: float (optional)
+            default: 1.0. scalar value which is multiplied by the value of the global design 
+            variable before setting target values
+        adder: float (optiona)
+            default: 0.0. amount which is added to the value of the global 
+            design variable before setting target values
+            
+        """
         if name in self._des_vars: 
-            self._parent.raise_exception("A global design variable named '%s' already exists in this assembly"%name,ValueError)
+            self._parent.raise_exception("A global design variable named '%s' already "
+                                         "exists in this assembly"%name,ValueError)
         
         exprs = []    
         for target in targets: 
@@ -134,6 +153,7 @@ class HasLocalDesVars(object):
     
     parent: Assembly
         containing assembly where the HasGlobalDesVars lives. 
+        
     """
     
     def __init__(self,parent): 
@@ -142,6 +162,7 @@ class HasLocalDesVars(object):
         
     def add_local_des_var(self,target,low=None,high=None,scalar=None,adder=None):
         """adds a local design variable to the assembly"""
+        
         expr = ExprEvaluator(target,self._parent)
         if not expr.check_resolve() or not expr.is_valid_assignee():
                 self._parent.raise_exception("Cant add local design variable for '%s' "
@@ -166,11 +187,13 @@ class HasLocalDesVars(object):
     
     def list_local_des_vars(self,show_target_comp=False): 
         """returns a list of all the names of the local design variables in the assembly
+        
         show_target_comp: bool (optional)
             if True, will return a list of 2-tuples of the form (name,target_comp_name) 
             giving the name of the local design variable and the name of the component that
             variable belongs to
         """
+        
         if show_target_comp: 
             return [(list(ldv.target.get_referenced_compnames())[0],target) for target,ldv in self._des_vars.iteritems()]
         return sorted(self._des_vars.keys())  
@@ -199,6 +222,7 @@ class HasCouplingVars(object):
         
     def add_coupling_var(self,indep,constraint,tollerance=.0001,scalar=1.0,adder=0.0):
         """adds a new coupling var to the assembly
+        
         indep: str
             name of the independent variable, or the variable that should be varied, to meet the coupling 
             constraint
@@ -213,6 +237,7 @@ class HasCouplingVars(object):
             before being returned
         adder: float (optional)
             default value of 0.0, specifies the value which will be added to the constraint before being returned
+            
         """
         expr = ExprEvaluator(indep,self._parent)
         if not expr.check_resolve() or not expr.is_valid_assignee():

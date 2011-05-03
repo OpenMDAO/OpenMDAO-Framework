@@ -148,10 +148,10 @@ class MultiDriverTestCase(unittest.TestCase):
         
         drv.itmax = 30
         drv.add_objective('adder3.sum+50.')
-        drv.add_parameters([('comp1.x', -10., 99.),
-                            ('comp2.x', -10., 99.),
-                            ('comp3.x', -10., 99.),
-                            ('comp4.x', -10., 99.),])
+        drv.add_parameters([('comp1.x', -10., 99.,None),
+                            ('comp2.x', -10., 99.,None),
+                            ('comp3.x', -10., 99.,None),
+                            ('comp4.x', -10., 99.,None),])
         map(drv.add_constraint, [
             'comp1.x**2 + comp2.x**2 + comp3.x**2 + comp4.x**2 + comp1.x-comp2.x+comp3.x-comp4.x < 8.0',
             'comp1.x**2 + 2.*comp2.x**2 + comp3.x**2 + 2.*comp4.x**2 - comp1.x - comp4.x < 10.',

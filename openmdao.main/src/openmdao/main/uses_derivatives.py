@@ -85,6 +85,7 @@ class UsesGradients(UsesDerivatives_Base):
         """Run check_derivatives on our workflow."""
         
         driver_inputs, driver_outputs = self._list_driver_connections()
+        print driver_inputs
         self._parent.workflow.check_derivatives(1, driver_inputs, driver_outputs)     
         
         

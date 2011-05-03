@@ -208,6 +208,11 @@ Finally, the CONIM optimization is set up.
         self.driver.add_parameter('dis1.x1',      low = 0.0,   high = 10.0)
         
         self.driver.add_constraint('3.16 < dis1.y1')
+        #Or use any of the equivilent forms below
+        #self.driver.add_constraint('3.16 - dis1.y1 < 0')
+        #self.driver.add_constraint('3.16 < dis1.y1')
+        #self.driver.add_constraint('-3.16 > -dis1.y1')
+        
         self.driver.add_constraint('dis2.y2 < 24.0')
         
         self.driver.cons_is_linear = [1, 1]
@@ -232,15 +237,9 @@ the minimum constraint thickness for the linear constraints. We also use
 can speed up the algorithm, though it hardly matters here.
 
 As before, the ``add_constraint`` method is used to add our constraints. This
-time however, we used a more general expression for the first constraint. Expression strings
-in OpenMDAO can also be parsed as inequalities, so all of the following are
-equivalent ways of defining this constraint:
-
-.. testcode:: MDF_parts
-
-        self.driver.add_constraint('3.16 - dis1.y1 < 0')
-        self.driver.add_constraint('3.16 < dis1.y1')
-        self.driver.add_constraint('-3.16 > -dis1.y1')
+time however, we used a more general expression for the first constraint. Commented 
+out below that are three more examples of the same exact constraint composed slightly 
+differently. 
 
 Finally, putting it all together gives:
 
@@ -352,6 +351,8 @@ though we only have one input and one output in this example.
         # Iteration loop
         self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
         self.solver.add_constraint('dis2.y2 = dis1.y2')
+        # equivilent form
+        # self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
         self.solver.itmax = 10
         self.solver.alpha = .4
         self.solver.tol = .0000001
@@ -363,14 +364,8 @@ term *independent* used to describe this. Here, we've given a *low* and a
 as the Broyden solver doesn't use either of these. The output is specified by adding an equality constraint.
 A solver essentially tries to drive something to zero. In this case, we want to
 drive the residual error in the coupled variable *y2* to zero. An equality constraint
-is defined with an expression string which is parsed for the equals sign, so the
-following constraints are equivalent:
-
-.. testcode:: MDF_parts
-
-        # Iteration loop
-        self.solver.add_constraint('dis2.y2 = dis1.y2')
-        self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
+is defined with an expression string which is parsed for the equals sign, in the above example
+you see that 'dis2.y2 = dis1.y2' is equivilent to 'dis2.y2 - dis1.y2 = 0'.
         
 Equality constraints may also be available for some optimizers, but you should 
 verify that they are supported. CONMIN does not support equality constraints.

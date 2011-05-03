@@ -21,6 +21,20 @@ from openmdao.main.constants import SAVE_CPICKLE
 # a class calls 'implements' or not.  has_traits_interface, on the other hand,
 # believes whatever the class says it implements and doesn't verify anything.
 
+class IArchitecture(Interface): 
+    """Interface for an object which configures an MDAO architecture based on
+    IHasGlobalDesVars, IHasLocalDesVars, IHasCouplingVars, IHasObjectives, and
+    IHasConstraints interfaces applied to an assembly"""
+    parent = Str('',desc="Parent assembly that the Architecture plugs into. Gets set automatically when added to socket.")
+    
+    def add(self):
+        """Adds objects to the parent assembly"""
+        pass
+    
+    def cleanup(self): 
+        """removes all objects, breaks all connections added to the parent assembly by a configure call."""
+
+
 class IContainer(Interface):
     """Interface for an object containing variables and other IContainers."""
     # FIXME: figure out how to declare parent as a reference to an IContainer. Syntax below doesn't work.
@@ -422,6 +436,84 @@ class ICaseRecorder(Interface):
         
     def get_iterator():
         """Return an iterator that matches the format that this recorder uses."""
+        
+class IHasCouplingVars(Interface): 
+    """An interface for assemblies to support the declaration of coupling vars"""
+    
+    def add_coupling_var(self,indep,constraint,tollerance=.0001,scalar=1.0,adder=0.0):
+        """adds a new coupling var to the assembly
+        
+        indep: str
+            name of the independent variable, or the variable that should be varied, to meet the coupling 
+            constraint
+        constraint: str
+            constraint equation, meeting the requirements of the IHasConstraints interface, which must be met 
+            to enforce the coupling
+        tolerance: float (optional)
+            default value of .0001, specifies the tolerance to which the coupling constraint must be met to be 
+            statisfied
+        scalar: float (optional)
+            default value of 1.0, specifies the scalar value that the constraint equation will be multiplied by 
+            before being returned
+        adder: float (optional)
+            default value of 0.0, specifies the value which will be added to the constraint before being returned
+        """        
+        pass
+    
+    def remove_coupling_var(self,indep):
+        """removes the coupling var, idenfied by the indepent name, from the assembly. 
+        
+        indep: str 
+            name of the independent variable from the CouplingVar   
+        """
+        pass
+    
+    def list_coupling_vars(self): 
+        """returns a ordered list of names of the coupling vars in the assembly"""
+        pass
+    
+    def clear_coupling_vars(self): 
+        """removes all coupling variables from the assembly"""
+        pass
+    
+class IHasGlobalDesVars(Interface): 
+    """Interface for managing global design variables in assemblies
+        
+    parent: Assembly
+        containing assembly where the HasGlobalDesVars lives. 
+    """
+        
+    def add_global_des_var(self,name,targets,low,high,scalar=1.0,adder=0.0):
+        """adds a global design variable to the assembly
+        
+        name: str
+            name given to the global design variable
+        targets: list of str
+            names of the component variables that this global design variable should link to
+        low: float
+            minimum allowed value for the global design variable
+        high: float
+            maximum allowed value for the global design variable
+        scalar: float (optional)
+            default: 1.0. scalar value which is multiplied by the value of the global design 
+            variable before setting target values
+        adder: float (optiona)
+            default: 0.0. amount which is added to the value of the global 
+            design variable before setting target values
+        """
+        pass
+    
+    def remove_global_des_var(self,name): 
+        """removed the global design variable from the assembly"""
+        pass
+        
+    def clear_global_des_vars(self): 
+        """removes all global design variables from the assembly"""
+        pass
+    
+    def list_global_des_vars(self): 
+        """returns a list of all the names of global design variable objects in the assembly"""
+        pass
         
 class ISurrogate(Interface):
     

@@ -128,16 +128,15 @@ Constraints are added to a driver using the ``add_constraint`` method.
 .. testcode:: Parameter_API
 
     self.driver.add_constraint('driving_sim.stroke < driving_sim.bore')
+    #Equivilent formulation
+    #self.driver.add_constraint('driving_sim.stroke - driving_sim.bore < 0')
+    #self.driver.add_constraint('driving_sim.stroke < driving_sim.bore')
+    #self.driver.add_constraint('driving_sim.bore > driving_sim.stroke')
 
 Constraints are defined using boolean expressions, so they are considered to
 be satisfied when the expressions evaluate to *True* and violated when they
-evaluate to *False*. The following constraint declarations are all equivalent:
-
-.. testcode:: Parameter_API
-
-    self.driver.add_constraint('driving_sim.stroke - driving_sim.bore < 0')
-    self.driver.add_constraint('driving_sim.stroke < driving_sim.bore')
-    self.driver.add_constraint('driving_sim.bore > driving_sim.stroke')
+evaluate to *False*. So all of the above constraint formulations are equivilent, 
+and can be used interchangably. 
     
 Using the ``eval_eq_constraints`` and ``eval_ineq_constraints`` methods,
 an optimizer or solver can query for the status and values of its constraints. Both
