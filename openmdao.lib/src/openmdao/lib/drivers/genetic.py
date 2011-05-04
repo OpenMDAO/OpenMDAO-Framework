@@ -79,31 +79,14 @@ class Genetic(Driver):
         count = 0
         for param in self.get_parameters().values():
             count += 1    
-            expreval = param.expreval
-            val = expreval.evaluate() #now grab the value 
-            ref = expreval.text
-        
-            
-            #split up the ref string to be able to get the trait.
-            
-            #get the path to the object
-            path = ".".join(ref.split(".")[0:-1]) 
-            #get the last part of the string after the last "."
-            target = ref.split(".")[-1] 
-            
+            val = param.evaluate() #now grab the value 
             low = param.low
             high = param.high
-            
-            #bunch of logic to check for array elements being passed as refs
-            
-            obj = getattr(self.parent, path)
-            
-            t = obj.get_trait(target) #get the trait
-                      
-            metadata = obj.get_metadata(target.split('[')[0])
+      
+            metadata = param.get_metadata()
             
             #then it's a float or an int, or a member of an array
-            if ('low' in metadata or 'high' in metadata) or array_test.search(target): 
+            if ('low' in metadata or 'high' in metadata) or array_test(param.target): 
                 if isinstance(val,(float,float32,float64)):                
                     #some kind of float
                     allele = GAllele.GAlleleRange(begin=low, end=high, real=True)
@@ -118,7 +101,7 @@ class Genetic(Driver):
                 alleles.add(allele)
             else: 
                 self.raise_exception("%s is not a float, int, or enumerated \
-                datatype. Only these 3 types are allowed"%target,ValueError)
+                datatype. Only these 3 types are allowed"%(param.target),ValueError)
         
         self.count = count
         return alleles

@@ -3,18 +3,59 @@ import itertools
 from numpy import float32, float64, int32, int64
 
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.util.decorators import add_delegate
 
 class Parameter(object): 
     
-    def __init__(self, low=None, high=None, expr=None, fd_step=None):
-        self.low = low
-        self.high = high
-        self.expreval = expr
-        self.fd_step = fd_step
+    def __init__(self,expr=None,):
+        self.low = None
+        self.high = None
+        
+        self.fd_step = None
+        
+        self._expreval = expr
         
     def __repr__(self): 
-        return '<Parameter(low=%s,high=%s,expr=%s,fd_step=%s)>'%(self.low,self.high,self.expreval.text,self.fd_step)
+        return '<Parameter(low=%s,high=%s,expr=%s,fd_step=%s)>'%(self.low,self.high,self._expreval.text,self.fd_step)
     
+    def set(self,value,scope=None): 
+        self._expreval.set(value,scope)
+        
+    def evaluate(self,scope=None):
+        return self._expreval.evaluate(scope)
+    
+    def get_metadata(self): 
+        var_name=list(self._expreval.get_referenced_varpaths())[0]
+        return self._expreval.parent.parent.get_metadata(var_name)
+    
+    @property
+    def target(self): 
+        return self._expreval.text
+    
+class BroadcastParameter(object): 
+    
+    def __init__(self, parameters):
+        self._exprs = []
+        for p in parameters: 
+            self.low = p.low
+            self.high = p.high
+            self.fd_step = p.fd_step
+            self._exprs.append(p._expreval)
+            
+    def set(self,value,scope=None): 
+        for e in self._exprs: 
+            e.set(value,scope)
+            
+    def evaluate(self,scope=None):
+        return self._exprs[0].evaluate(scope)
+        
+    def get_metadata(self): 
+        var_name=list(self._exprs[0].get_referenced_varpaths())[0]
+        return self._exprs[0].parent.parent.get_metadata(var_name)
+    
+    @property
+    def target(self): 
+        return tuple([e.text for e in self._exprs])
 
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface."""
@@ -79,22 +120,22 @@ class HasParameters(object):
                                              AttributeError)
         parameters = []        
         for name in names: 
-            parameter = Parameter()
-            parameter.expreval = ExprEvaluator(name, self._parent)
+            parameter = Parameter(self)
+            parameter._expreval = ExprEvaluator(name, self._parent)
         
-            if not parameter.expreval.is_valid_assignee():
+            if not parameter._expreval.is_valid_assignee():
                 self._parent.raise_exception("Can't add parameter '%s' because it refers to multiple objects." % name,
                                              ValueError)
         
             
             try:
-                var_name = list(parameter.expreval.get_referenced_varpaths())[0]
+                var_name = list(parameter._expreval.get_referenced_varpaths())[0]
                 metadata = self._parent.parent.get_metadata(var_name)
             except AttributeError:
                 self._parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % name,
                                              AttributeError)
             try:
-                val = parameter.expreval.evaluate()
+                val = parameter.evaluate()
             except Exception as err:
                 self._parent.raise_exception("Can't add parameter because I can't evaluate '%s'." % name, 
                                              ValueError)
@@ -145,7 +186,7 @@ class HasParameters(object):
     
             parameter.fd_step = fd_step
             parameters.append(parameter)
-        types = set([type(param.expreval.evaluate()) for param in parameters])
+        types = set([type(param.evaluate()) for param in parameters])
         if len(types) > 1: 
             self._parent.raise_exception("Can not add parameter %s because "
                              "%s are not the same type"%(tuple(orig_names)," and ".join(orig_names)))
@@ -153,7 +194,7 @@ class HasParameters(object):
         if len(parameters) == 1: #just one in there       
             self._parameters[orig_names] = parameters[0]
         else: 
-            self._parameters[orig_names] = parameters
+            self._parameters[orig_names] = BroadcastParameter(parameters)
         
             
     def remove_parameter(self, name):
@@ -195,10 +236,10 @@ class HasParameters(object):
                                  #(val, param.low, param.high))
 
             try:
-                param.expreval.set(val)
+                param.set(val)
             except AttributeError:    #broadcast parameters 
                 for p in param: 
-                    p.expreval.set(val)        
+                    p.set(val)        
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
@@ -207,7 +248,7 @@ class HasParameters(object):
         conn_list = []
         pname = self._parent.name
         for name,param in self._parameters.items():
-            for cname in param.expreval.get_referenced_compnames():
+            for cname in param._expreval.get_referenced_compnames():
                 conn_list.append((pname, cname))
         return conn_list
     

@@ -42,7 +42,7 @@ class DOEdriver(CaseIterDriverBase):
                 
                 #convert DOE values to variable values
                 value = parameter.low+(parameter.high-parameter.low)*val
-                if '[' in parameter.expreval.text:
+                if '[' in parameter.target:
                     raise ValueError('Array entry design vars '
                                      'not supported yet.')
                 else:

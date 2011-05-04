@@ -286,8 +286,9 @@ class CONMINdriver(Driver):
         
         # get the initial values of the parameters
         # check if any min/max constraints are violated by initial values
+        
         for i, val in enumerate(self.get_parameters().values()):
-            self.design_vals[i] = dval = val.expreval.evaluate()
+            self.design_vals[i] = dval = val.evaluate()
             
             if dval > val.high:
                 if (dval - val.high) < self.ctlmin:
