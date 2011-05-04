@@ -11,7 +11,6 @@ from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
 
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver
-from openmdao.lib.components.api import Broadcaster
 from openmdao.lib.datatypes.api import Float
 
 
@@ -83,7 +82,7 @@ class SellarMDF(Assembly):
         self.local_des_vars = [loc1,]
         self.coupling_vars = [c1,c2]
         
-        self.objective = '(dis1.x1)**2 + bcast.z2 + dis1.y1 + math.exp(-dis2.y2)'
+        self.objective = '(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)'
         self.constraints = ['3.16 < dis1.y1',
                             'dis2.y2 < 24.0' ]
         
@@ -98,11 +97,7 @@ class SellarMDF(Assembly):
         discipline1: Name of component which should comprise Discipline 1 for the MDF
         discipline2: Name of component which should comprise Discipline 2 for the MDF
         """
-        
-        #make a broadcaster for the globals
-        glb_names = [g.name for g in self.global_des_vars]
-        self.add('bcast',Broadcaster(glb_names))
-        
+                
         #create the top level optimizer
         self.add("driver",CONMINdriver())
         self.driver.cons_is_linear = [1]*len(self.constraints)
@@ -117,10 +112,8 @@ class SellarMDF(Assembly):
         #connect the broadcast outputs to the disciplines
         # and add the broadcast parameters to the driver
         for glb_var in self.global_des_vars: 
-            for var in glb_var.vars:
-                self.set('bcast.%s_in'%glb_var.name,self.get(var))
-                self.connect('bcast.%s'%glb_var.name,var) 
-            self.driver.add_parameter('bcast.%s_in'%glb_var.name,low=glb_var.low,high=glb_var.high)    
+            targets = [var for var in glb_var.vars]
+            self.driver.add_parameter(targets,low=glb_var.low,high=glb_var.high)    
                 
         #add the constraints to the driver
         for const in self.constraints: 
@@ -145,7 +138,7 @@ class SellarMDF(Assembly):
             self.solver.add_constraint(cpl_var.constraint)
             
         #setup the workflows
-        self.driver.workflow.add(['bcast','solver'])
+        self.driver.workflow.add(['solver'])
         self.solver.workflow.add([discipline1,discipline2])
         
         
@@ -158,11 +151,10 @@ if __name__ == "__main__": # pragma: no cover
     prob.configure_MDF('dis1','dis2')
     # pylint: disable-msg=E1101
         
-    prob.bcast.z1_in = 5.0
-    prob.bcast.z2_in = 2.0
+    prob.dis1.z1 = prob.dis2.z1 = 5.0
+    prob.dis1.z2 = prob.dis2.z2 = 2.0
     prob.dis1.x1 = 1.0
-    prob.dis2.z1_in = 5.0
-    prob.dis2.z2_in = 2.0
+
     
     
     
@@ -171,8 +163,8 @@ if __name__ == "__main__": # pragma: no cover
 
     print "\n"
     print "CONMIN Iterations: ", prob.driver.iter_count
-    print "Minimum found at (%f, %f, %f)" % (prob.bcast.z1_in, \
-                                             prob.bcast.z2_in, \
+    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
+                                             prob.dis1.z2, \
                                              prob.dis1.x1)
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.driver.eval_objective()

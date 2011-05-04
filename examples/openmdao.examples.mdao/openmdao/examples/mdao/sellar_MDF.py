@@ -71,6 +71,7 @@ if __name__ == "__main__": # pragma: no cover
     import time
     
     prob = SellarMDF()
+    prob.name = "top"
     set_as_top(prob)
     
     # pylint: disable-msg=E1101
@@ -82,7 +83,6 @@ if __name__ == "__main__": # pragma: no cover
     
     tt = time.time()
     prob.run()
-    exit()
     print "\n"
     print "CONMIN Iterations: ", prob.driver.iter_count
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \

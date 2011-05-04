@@ -106,6 +106,7 @@ class HasParameters(object):
             names = frozenset([name])
         else: 
             names = frozenset(name)
+            orig_names = tuple(orig_names)
             
 
         if orig_names in self._parameters: 

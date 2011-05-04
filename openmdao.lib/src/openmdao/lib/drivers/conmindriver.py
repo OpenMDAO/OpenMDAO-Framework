@@ -286,7 +286,6 @@ class CONMINdriver(Driver):
         
         # get the initial values of the parameters
         # check if any min/max constraints are violated by initial values
-        
         for i, val in enumerate(self.get_parameters().values()):
             self.design_vals[i] = dval = val.evaluate()
             
@@ -330,7 +329,6 @@ class CONMINdriver(Driver):
         # TODO: 'step around' ill-behaved cases.
         
         self._load_common_blocks()
-        
         #print "Iteration %s: " % self.get_pathname(), self.iter_count
         #print "Before"
         #print self.design_vals
