@@ -39,7 +39,7 @@ class SellarIDF(Assembly):
         self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
         
         self.driver.add_parameter(('dis1.z1','dis2.z1'), low = -10.0, high=10.0)
-        self.driver.add_parameter(('dis2.z2','dis2.z2'), low = 0.0,   high=10.0)
+        self.driver.add_parameter(('dis1.z2','dis2.z2'), low = 0.0,   high=10.0)
         self.driver.add_parameter('dis1.x1',      low = 0.0,   high=10.0)
         self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
         self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
@@ -68,7 +68,7 @@ if __name__ == "__main__": # pragma: no cover
     
     # pylint: disable-msg=E1101
         
-    prob.dis1.z1 = prob.dis2.z1 = 5.0
+    prob.dis1.z1 = prob.dis2.z1 = 5.2
     prob.dis1.z2 = prob.dis2.z2 = 2.0
     prob.dis1.x1 = 1.0
     prob.dis2.y1 = 3.16
