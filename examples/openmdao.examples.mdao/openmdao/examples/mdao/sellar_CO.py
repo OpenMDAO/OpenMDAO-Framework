@@ -82,8 +82,8 @@ class SellarCO(Assembly):
         self.localopt1.itmax = 100
         self.localopt1.fdch = .003
         self.localopt1.fdchm = .003
-        self.localopt1.delfun = .001
-        self.localopt1.dabfun = .00001
+        self.localopt1.delfun = .0001
+        self.localopt1.dabfun = .000001
         
         #Parameters - Local Optimization 2
         self.localopt2.add_objective('(bcastr.z1-dis2.z1)**2 + ' + \

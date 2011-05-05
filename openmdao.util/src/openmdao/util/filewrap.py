@@ -412,12 +412,14 @@ class InputFileGenerator(object):
 class FileParser(object):
     """Utility to locate and read data from a file."""
     
-    def __init__(self):
+    def __init__(self, end_of_line_comment_char=None, full_line_comment_char=None):
         
         self.filename = []
         self.data = []
         
         self.delimiter = " \t"
+        self.end_of_line_comment_char = end_of_line_comment_char
+        self.full_line_comment_char = full_line_comment_char
         
         self.current_row = 0
         self.anchored = False
@@ -431,7 +433,13 @@ class FileParser(object):
         self.filename = filename
         
         inputfile = open(filename, 'r')
-        self.data = inputfile.readlines()
+        if not self.end_of_line_comment_char and not self.full_line_comment_char:
+            self.data = inputfile.readlines()
+        else:
+            self.data = []
+            for line in inputfile :
+                if line[0] == self.full_line_comment_char : continue
+                self.data.append( line.split( self.end_of_line_comment_char )[0] )
         inputfile.close()
 
     def set_delimiters(self, delimiter):

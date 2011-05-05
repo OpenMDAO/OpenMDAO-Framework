@@ -5,11 +5,11 @@ Test of the derivatives capability.
 import unittest
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Component, Assembly
+from openmdao.main.api import Component, Assembly, ComponentWithDerivatives
 from openmdao.lib.datatypes.api import Float, Int
 from openmdao.util.testutil import assert_rel_error
 
-class Paraboloid_Derivative(Component):
+class Paraboloid_Derivative(ComponentWithDerivatives):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
     # set up interface to the framework  
@@ -47,26 +47,25 @@ class Paraboloid_Derivative(Component):
         self.ran_real = True
         
         
-    def calculate_derivatives(self, first, second):
-        """Analytical derivatives"""
+    def calculate_first_derivatives(self):
+        """Analytical first derivatives"""
         
-        if first:
+        df_dx = 2.0*self.x - 6.0 + self.y
+        df_dy = 2.0*self.y + 8.0 + self.x
+    
+        self.derivatives.set_first_derivative('f_xy', 'x', df_dx)
+        self.derivatives.set_first_derivative('f_xy', 'y', df_dy)
         
-            df_dx = 2.0*self.x - 6.0 + self.y
-            df_dy = 2.0*self.y + 8.0 + self.x
+    def calculate_second_derivatives(self):
+        """Analytical second derivatives"""
         
-            self.derivatives.set_first_derivative('f_xy', 'x', df_dx)
-            self.derivatives.set_first_derivative('f_xy', 'y', df_dy)
+        df_dxdx = 2.0
+        df_dxdy = 1.0
+        df_dydy = 2.0
         
-        if second:
-        
-            df_dxdx = 2.0
-            df_dxdy = 1.0
-            df_dydy = 2.0
-            
-            self.derivatives.set_second_derivative('f_xy', 'x', 'x', df_dxdx)
-            self.derivatives.set_second_derivative('f_xy', 'x', 'y', df_dxdy)
-            self.derivatives.set_second_derivative('f_xy', 'y', 'y', df_dydy)
+        self.derivatives.set_second_derivative('f_xy', 'x', 'x', df_dxdx)
+        self.derivatives.set_second_derivative('f_xy', 'x', 'y', df_dxdy)
+        self.derivatives.set_second_derivative('f_xy', 'y', 'y', df_dydy)
 
 class SimpleAssembly(Assembly):
     """ Simple assembly"""
@@ -108,7 +107,7 @@ class TopAssembly(Assembly):
         self.add('assy1', BottomAssembly())
         self.driver.workflow.add(['assy1'])
         
-class A(Component):
+class A(ComponentWithDerivatives):
     """ Simple Comp with no Deriv """
 
     x1 = Float(0.0, iotype='in', desc='The variable x1')
@@ -160,28 +159,27 @@ class A_D(A):
         
         self.ran_real = False
         
-    def calculate_derivatives(self, first, second):
-        """Analytical derivatives"""
-        
-        if first:
+    def calculate_first_derivatives(self):
+        """Analytical first derivatives"""
             
-            dy1_dx1 = 2.0
-            dy2_dx1 = 3.0
-            dy1_dx2 = -self.x2
-            dy2_dx2 = -0.4*self.x2
+        dy1_dx1 = 2.0
+        dy2_dx1 = 3.0
+        dy1_dx2 = -self.x2
+        dy2_dx2 = -0.4*self.x2
+    
+        self.derivatives.set_first_derivative('y1', 'x1', dy1_dx1)
+        self.derivatives.set_first_derivative('y1', 'x2', dy1_dx2)
+        self.derivatives.set_first_derivative('y2', 'x1', dy2_dx1)
+        self.derivatives.set_first_derivative('y2', 'x2', dy2_dx2)
         
-            self.derivatives.set_first_derivative('y1', 'x1', dy1_dx1)
-            self.derivatives.set_first_derivative('y1', 'x2', dy1_dx2)
-            self.derivatives.set_first_derivative('y2', 'x1', dy2_dx1)
-            self.derivatives.set_first_derivative('y2', 'x2', dy2_dx2)
+    def calculate_second_derivatives(self):
+        """Analytical second derivatives"""
         
-        if second:
+        dy1_dx2dx2 = -1.0
+        dy2_dx2dx2 = -0.4
         
-            dy1_dx2dx2 = -1.0
-            dy2_dx2dx2 = -0.4
-            
-            self.derivatives.set_second_derivative('y1', 'x2', 'x2', dy1_dx2dx2)
-            self.derivatives.set_second_derivative('y2', 'x2', 'x2', dy2_dx2dx2)
+        self.derivatives.set_second_derivative('y1', 'x2', 'x2', dy1_dx2dx2)
+        self.derivatives.set_second_derivative('y2', 'x2', 'x2', dy2_dx2dx2)
 
 class MultiAssy(Assembly):
     """ A reasonably complicated assembly with multiple connections"""

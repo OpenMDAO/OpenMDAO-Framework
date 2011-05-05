@@ -112,6 +112,9 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_sequential_errors')
         self.model.driver._call_execute = True
+        self.run_cases(sequential=True, forced_errors=True, retry=True)
+        
+    def test_sequential_errors_abort(self):
         self.run_cases(sequential=True, forced_errors=True)
         
     def test_no_parameter(self):
@@ -216,19 +219,24 @@ class TestCase(unittest.TestCase):
         self.model.driver.recorder = None
         self.model.run()
 
-    def run_cases(self, sequential, forced_errors=False):
+    def run_cases(self, sequential, forced_errors=False, retry=True):
         # Evaluate cases, either sequentially or across  multiple servers.
         
         self.model.driver.sequential = sequential
         results = ListCaseRecorder()
         self.model.driver.recorder = results
+        self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
         if forced_errors:
             self.model.driver.add_event('driven.err_event')
 
-        self.model.run()
-
-        self.assertEqual(len(results), 10)
-        self.verify_results(forced_errors)
+        if retry:
+            self.model.run()
+            self.assertEqual(len(results), 10)
+            self.verify_results(forced_errors)
+        else:
+            assert_raises(self, 'self.model.run()', globals(), locals(),
+                          RuntimeError,
+                          "driver: Run aborted: RuntimeError('driven: Forced error',)")
 
     def verify_results(self, forced_errors=False):
         # Verify recorded results match expectations.

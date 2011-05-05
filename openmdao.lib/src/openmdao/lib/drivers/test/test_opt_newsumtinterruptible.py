@@ -43,7 +43,7 @@ import numpy
 #     really can import
 # pylint: disable-msg=F0401,E0611
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, ComponentWithDerivatives
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import NEWSUMTdriver
@@ -647,7 +647,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             self.fail("Coarsening CONMIN gradient step size did not make the objective worse.")
 
             
-class OptRosenSuzukiComponent_Deriv(Component):
+class OptRosenSuzukiComponent_Deriv(ComponentWithDerivatives):
     """ From the NEWSUMT User's Manual:
     EXAMPLE 2 - CONSTRAINED ROSEN-SUZUKI FUNCTION. NO GRADIENT INFORMATION.
     
@@ -710,32 +710,31 @@ class OptRosenSuzukiComponent_Deriv(Component):
                        2.*self.x3**2 - 21.*self.x3 + 
                        self.x4**2 + 7.*self.x4 + 50)
 
-    def calculate_derivatives(self, first, second):
-        """Analytical derivatives"""
+    def calculate_first_derivatives(self):
+        """Analytical first derivatives"""        
         
-        if first:
+        df_dx1 = 2.0*self.x1 - 5.0
+        df_dx2 = 2.0*self.x2 - 5.0
+        df_dx3 = 4.0*self.x3 - 21.0
+        df_dx4 = 2.0*self.x4 + 7.0
+    
+        self.derivatives.set_first_derivative('result', 'x1', df_dx1)
+        self.derivatives.set_first_derivative('result', 'x2', df_dx2)
+        self.derivatives.set_first_derivative('result', 'x3', df_dx3)
+        self.derivatives.set_first_derivative('result', 'x4', df_dx4)
         
-            df_dx1 = 2.0*self.x1 - 5.0
-            df_dx2 = 2.0*self.x2 - 5.0
-            df_dx3 = 4.0*self.x3 - 21.0
-            df_dx4 = 2.0*self.x4 + 7.0
+    def calculate_second_derivatives(self):
+        """Analytical second derivatives"""        
         
-            self.derivatives.set_first_derivative('result', 'x1', df_dx1)
-            self.derivatives.set_first_derivative('result', 'x2', df_dx2)
-            self.derivatives.set_first_derivative('result', 'x3', df_dx3)
-            self.derivatives.set_first_derivative('result', 'x4', df_dx4)
+        df_dx1dx1 = 2.0
+        df_dx2dx2 = 2.0
+        df_dx3dx3 = 4.0
+        df_dx4dx4 = 2.0
         
-        if second:
-        
-            df_dx1dx1 = 2.0
-            df_dx2dx2 = 2.0
-            df_dx3dx3 = 4.0
-            df_dx4dx4 = 2.0
-            
-            self.derivatives.set_second_derivative('result', 'x1', 'x1', df_dx1dx1)
-            self.derivatives.set_second_derivative('result', 'x2', 'x2', df_dx2dx2)
-            self.derivatives.set_second_derivative('result', 'x3', 'x3', df_dx3dx3)
-            self.derivatives.set_second_derivative('result', 'x4', 'x4', df_dx4dx4)
+        self.derivatives.set_second_derivative('result', 'x1', 'x1', df_dx1dx1)
+        self.derivatives.set_second_derivative('result', 'x2', 'x2', df_dx2dx2)
+        self.derivatives.set_second_derivative('result', 'x3', 'x3', df_dx3dx3)
+        self.derivatives.set_second_derivative('result', 'x4', 'x4', df_dx4dx4)
 
 class NEWSUMTdriverRosenSuzukiTestCaseDeriv(unittest.TestCase):
     """test NEWSUMT optimizer component using the Rosen Suzuki problem"""
