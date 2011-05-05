@@ -26,7 +26,7 @@ class Parameter(object):
     
     def get_metadata(self): 
         var_name=list(self._expreval.get_referenced_varpaths())[0]
-        return self._expreval.parent.parent.get_metadata(var_name)
+        return self._expreval.scope.parent.get_metadata(var_name)
     
     @property
     def target(self): 
@@ -51,7 +51,7 @@ class BroadcastParameter(object):
         
     def get_metadata(self): 
         var_name=list(self._exprs[0].get_referenced_varpaths())[0]
-        return self._exprs[0].parent.parent.get_metadata(var_name)
+        return self._exprs[0].scope.get_metadata(var_name)
     
     @property
     def target(self): 
@@ -131,7 +131,8 @@ class HasParameters(object):
             
             try:
                 var_name = list(parameter._expreval.get_referenced_varpaths())[0]
-                metadata = self._parent.parent.get_metadata(var_name)
+                #metadata = self._parent.parent.get_metadata(var_name)
+                metadata = parameter.get_metadata()
             except AttributeError:
                 self._parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % name,
                                              AttributeError)

@@ -127,7 +127,8 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_sequential_errors')
         self.generate_cases(force_errors=True)
-        self.run_cases(sequential=True, forced_errors=True)
+        self.run_cases(sequential=True, forced_errors=True, retry=False)
+        self.run_cases(sequential=True, forced_errors=True, retry=True)
 
     def test_run_stop_step_resume(self):
         logging.debug('')
@@ -181,7 +182,8 @@ class TestCase(unittest.TestCase):
         logging.debug('test_concurrent_errors')
         init_cluster(encrypted=True, allow_shell=True)
         self.generate_cases(force_errors=True)
-        self.run_cases(sequential=False, forced_errors=True)
+        self.run_cases(sequential=False, forced_errors=True, retry=False)
+        self.run_cases(sequential=False, forced_errors=True, retry=True)
 
     def test_unencrypted(self):
         logging.debug('')
@@ -190,7 +192,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.extra_reqs = {'allocator': name}
         self.run_cases(sequential=False)
 
-    def run_cases(self, sequential, forced_errors=False):
+    def run_cases(self, sequential, forced_errors=False, retry=True):
         """ Evaluate cases, either sequentially or across multiple servers. """
         self.model.driver.sequential = sequential
         if not sequential:
@@ -199,11 +201,16 @@ class TestCase(unittest.TestCase):
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
         self.model.driver.recorder = results
+        self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
 
-        self.model.run()
-
-        self.assertEqual(len(results), len(self.cases))
-        self.verify_results(forced_errors)
+        if retry:
+            self.model.run()
+            self.assertEqual(len(results), len(self.cases))
+            self.verify_results(forced_errors)
+        else:
+            assert_raises(self, 'self.model.run()', globals(), locals(),
+                          RuntimeError,
+                          "driver: Run aborted: RuntimeError('driven: Forced error',)")
 
     def verify_results(self, forced_errors=False):
         """ Verify recorded results match expectations. """

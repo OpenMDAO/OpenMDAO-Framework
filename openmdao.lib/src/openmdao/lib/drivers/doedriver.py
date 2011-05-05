@@ -46,7 +46,12 @@ class DOEdriver(CaseIterDriverBase):
                     raise ValueError('Array entry design vars '
                                      'not supported yet.')
                 else:
-                    inputs.append((parameter.expreval.text, value))
+                    target = parameter.target
+                    if isinstance(target,str): 
+                        inputs.append((target, value))
+                    else: #then it's a broadcast-parameter
+                        for t in target: 
+                            inputs.append(t,value)
             
             # now add any event variables
             for varname in self.get_events():

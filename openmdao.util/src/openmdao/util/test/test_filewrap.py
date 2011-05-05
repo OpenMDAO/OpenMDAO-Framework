@@ -6,8 +6,6 @@ import unittest, os
 
 from numpy import array, isnan, isinf
 
-from openmdao.lib.datatypes.api import Float, Bool, Int, Str, Array, File, List, Enum
-from openmdao.main.api import Container, Component
 from openmdao.util.filewrap import InputFileGenerator, FileParser
 
 
@@ -393,9 +391,49 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('ValueError expected')  
 
+
+    def test_comment_char(self):
+
+        # Check to see if the use of the comment
+        #   characters works
+        data = "Junk\n" + \
+                   "CAnchor\n" + \
+                   " Z 11, 22 344, Test 1e65\n" + \
+                   " B 4 Stuff\n" + \
+                   "  $ Anchor\n" + \
+                   " Q 1, 2 34, Test 1e65\n" + \
+                   " B 4 Stuff\n" + \
+                   "Anchor\n" + \
+                   " A 1, 2 34, Test 1e65\n" + \
+                   " B 4 Stuff\n" + \
+                   "Anchor\n" + \
+                   " C 77 False NaN 333.444\n" + \
+                   " 1,2,3,4,5\n" + \
+                   " Inf 1.#QNAN -1.#IND\n"
+        
+        outfile = open(self.filename, 'w')
+        outfile.write(data)
+        outfile.close()
+
+        # Test full line comments
+        gen = FileParser(full_line_comment_char="C")
+        gen.set_file(self.filename)
+        gen.set_delimiters(' ')
+        gen.mark_anchor('Anchor')
+        val = gen.transfer_var(1, 1)
+        self.assertEqual(val, 'A')
+            
+        # Test end of line comments also
+        gen = FileParser(full_line_comment_char="C", end_of_line_comment_char="$")
+        gen.set_file(self.filename)
+        gen.set_delimiters(' ')
+        gen.mark_anchor('Anchor')
+        val = gen.transfer_var(1, 1)
+        self.assertEqual(val, 'A')
             
 if __name__ == '__main__':
     import nose
+    import sys
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()

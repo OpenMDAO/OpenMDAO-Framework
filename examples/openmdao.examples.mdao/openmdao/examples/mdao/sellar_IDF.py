@@ -28,24 +28,18 @@ class SellarIDF(Assembly):
         self.add('driver', CONMINdriver())
 
         # Disciplines
-        self.add('bcastr', Broadcaster(['z1','z2','x1','y1','y2']))
         self.add('dis1', SellarDiscipline1())
         self.add('dis2', SellarDiscipline2())
         
         # Driver process definition
-        self.driver.workflow.add(['bcastr', 'dis1', 'dis2'])
+        self.driver.workflow.add(['dis1', 'dis2'])
         
-        # Make all connections
-        self.connect('bcastr.z1','dis1.z1')
-        self.connect('bcastr.z1','dis2.z1')
-        self.connect('bcastr.z2','dis1.z2')
-        self.connect('bcastr.z2','dis2.z2')
 
         # Optimization parameters
-        self.driver.add_objective('(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)')
+        self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
         
-        self.driver.add_parameter('bcastr.z1_in', low = -10.0, high=10.0)
-        self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high=10.0)
+        self.driver.add_parameter(('dis1.z1','dis2.z1'), low = -10.0, high=10.0)
+        self.driver.add_parameter(('dis2.z2','dis2.z2'), low = 0.0,   high=10.0)
         self.driver.add_parameter('dis1.x1',      low = 0.0,   high=10.0)
         self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
         self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
@@ -74,8 +68,8 @@ if __name__ == "__main__": # pragma: no cover
     
     # pylint: disable-msg=E1101
         
-    prob.bcastr.z1_in = 5.0
-    prob.bcastr.z2_in = 2.0
+    prob.dis1.z1 = prob.dis2.z1 = 5.0
+    prob.dis1.z2 = prob.dis2.z2 = 2.0
     prob.dis1.x1 = 1.0
     prob.dis2.y1 = 3.16
     
@@ -84,8 +78,8 @@ if __name__ == "__main__": # pragma: no cover
 
     print "\n"
     print "CONMIN Iterations: ", prob.driver.iter_count
-    print "Minimum found at (%f, %f, %f)" % (prob.bcastr.z1_in, \
-                                             prob.bcastr.z2_in, \
+    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
+                                             prob.dis2.z2, \
                                              prob.dis1.x1)
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.driver.eval_objective()

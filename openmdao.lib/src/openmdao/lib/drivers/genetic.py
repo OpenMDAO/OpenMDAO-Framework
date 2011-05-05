@@ -86,7 +86,7 @@ class Genetic(Driver):
             metadata = param.get_metadata()
             
             #then it's a float or an int, or a member of an array
-            if ('low' in metadata or 'high' in metadata) or array_test(param.target): 
+            if ('low' in metadata or 'high' in metadata) or array_test.search(param.target): 
                 if isinstance(val,(float,float32,float64)):                
                     #some kind of float
                     allele = GAllele.GAlleleRange(begin=low, end=high, real=True)
@@ -95,7 +95,7 @@ class Genetic(Driver):
                     allele = GAllele.GAlleleRange(begin=low, end=high, real=False)           
                     
             elif "values" in metadata and isinstance(metadata['values'],(list,tuple,array,set)):
-                allele = GAllele.GAlleleList(t.values)
+                allele = GAllele.GAlleleList(metadata['values'])
 
             if allele:     
                 alleles.add(allele)

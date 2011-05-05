@@ -196,27 +196,27 @@ class TestCase(unittest.TestCase):
     def test_MDF(self):
         prob = SellarMDF()
         set_as_top(prob)
-        prob.bcastr.z1_in = 5.0
-        prob.bcastr.z2_in = 2.0
+        prob.dis1.z1 = prob.dis2.z1 = 5.0
+        prob.dis1.z2 = prob.dis2.z2 = 2.0
         prob.dis1.x1 = 1.0
     
         prob.run()
-        assert_rel_error(self, prob.bcastr.z1_in, 1.977, 0.01)
-        assert_rel_error(self, 1.0-prob.bcastr.z2_in, 1.0, 0.01)
+        assert_rel_error(self, prob.dis1.z1, 1.977, 0.01)
+        assert_rel_error(self, 1.0-prob.dis1.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
 
     def test_IDF(self):
         prob = SellarIDF()
         set_as_top(prob)
     
-        prob.bcastr.z1_in = 5.0
-        prob.bcastr.z2_in = 2.0
+        prob.dis1.z1 = prob.dis2.z1 = 5.0
+        prob.dis1.z2 = prob.dis2.z2 = 2.0
         prob.dis1.x1 = 1.0
         prob.dis2.y1 = 3.16
     
         prob.run()
-        assert_rel_error(self, prob.bcastr.z1_in, 1.977, 0.04)
-        assert_rel_error(self, 1.0-prob.bcastr.z2_in, 1.0, 0.01)
+        assert_rel_error(self, prob.dis1.z1, 1.977, 0.04)
+        assert_rel_error(self, 1.0-prob.dis1.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
         
     def test_CO(self):
