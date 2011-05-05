@@ -27,7 +27,7 @@ def print_list (list):
 def print_dict (dict):
     for item in dict.items():
         key, value = item
-        print key+' = '+value
+        print str(key)+' = '+str(value)
 
 # modified version of:
 # http://code.activestate.com/recipes/305313-xml-directory-tree/        
@@ -69,6 +69,60 @@ def filepathdict(path):
             dict[fullname] = os.path.getsize(fullname)
     return dict
 
+# create a nested list for a package structure
+def packagedict(types):
+    dict={}
+    for t in types:
+        parent = dict
+        nodes = t[0].split('.');
+        name = nodes[len(nodes)-1]
+        for node in nodes:
+            if node==name:
+                parent[node] = { 'path':t[0], 'version':t[1] }
+            else:
+                if not node in parent:
+                    parent[node] = {}
+            parent = parent[node]
+    return dict
+
+from xml.etree.ElementTree import Element, SubElement, tostring
+from xml.dom.minidom import Document
+def packageXML(types):
+        xml = '<?xml version=\"1.0\"?>\n'
+        xml = xml + '<response>\n'
+        typeTree = Element("Types")
+        # get the installed types
+        for t in types:
+            path = t[0].split('.');
+            last = path[len(path)-1]
+            parent = typeTree
+            for node in path:
+                if not node==last:
+                    # it's a package name, see if we have it already
+                    existingElem = None
+                    packages = parent.findall('Package')
+                    for p in packages:
+                        if p.get("name") == node:
+                            existingElem = p
+                    # set the parent to this package
+                    if existingElem is None:
+                        pkgElem = SubElement(parent,"Package")
+                        pkgElem.set("name",node)
+                        parent = pkgElem
+                    else:
+                        parent = existingElem
+                else:
+                    # it's the class name, add it under current package
+                    typeElem = SubElement(parent,"Type")
+                    typeElem.set("name",node)
+                    typeElem.set("path",t[0])
+        # get the "working" types
+        pkgElem = SubElement(typeTree,"Package")
+        pkgElem.set("name","working")
+        xml = xml + tostring(typeTree)
+        xml = xml + '</response>\n'
+        return xml    
+    
 # find an unused port    
 # ref: http://code.activestate.com/recipes/531822-pick-unused-port/
 # note: use the port before it's taken by some other process!

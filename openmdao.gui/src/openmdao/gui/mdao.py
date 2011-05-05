@@ -2,11 +2,8 @@ import web
 from web import form
 from web import template
 
-import sys, os
+import sys, os, getpass
 import zipfile, jsonpickle
-
-from xml.etree.ElementTree import Element, SubElement, tostring
-from xml.dom.minidom import Document
 
 from setuptools.command import easy_install
 
@@ -14,10 +11,15 @@ from server_manager import ServerManager
 from openmdao.main.factorymanager import get_available_types
 from mdao_util import *
 
-prefix = '<<<'+str(os.getpid())+'>>> '
+# from mdao_setup import createDB
+# db = 'mdao.db'
+
+PREFIX = '<<<'+str(os.getpid())+'>>> '
 
 web.config.debug = False
 web.webapi.internalerror = web.debugerror 
+
+single_user = True
 
 def run_server(port):
     ''' run the web server
@@ -25,7 +27,7 @@ def run_server(port):
     
     # URL mapping
     global urls
-    urls = ('/',                'MDAO',
+    urls = ('/',                'Workspace',
             '/component/(.*)',  'Component',
             '/addons',          'AddOns',
             '/command',         'Command',
@@ -83,12 +85,19 @@ class Favicon:
         ico = open('static/images/favicon.ico','r')
         return ico.read();
 
-class MDAO:
-    ''' if user is not logged in, redirect to the login form
+        
+class Workspace:
+    ''' if user is not logged in & not in single user mode, redirect to login form
         otherwise, make sure we have a server then render the GUI 
     '''
     def GET(self):
-        if not hasattr(session, "user") :
+        if single_user:
+            session.user = getpass.getuser()
+            
+        if not hasattr(session, "user"):
+            # if not os.path.exists(db):
+                # web.debug(PREFIX+'User/Project database not found, creating...')
+                # createDB(db)
             web.redirect('/login')
         else:
             userdir = server_mgr.get_tempdir('files') +'/'+ session.user;
@@ -97,7 +106,7 @@ class MDAO:
             return render.mdao("OpenMDAO: "+session.user)
 
 class Login:
-    ''' login controller
+    ''' login 
     '''
     loginForm = form.Form(
         form.Textbox('username'),
@@ -118,11 +127,11 @@ class Login:
     '''
     def POST(self):
         x = web.input()
-        session.user = x.username		
+        session.user = x.username
         web.redirect('/')
 
 class Component:
-    ''' add component controller
+    ''' component 
     '''
     addForm = form.Form(
         form.Textbox('type'),
@@ -166,7 +175,7 @@ class Component:
             return result
             
 class Command:
-    ''' command controller
+    ''' command 
     '''
     commandForm = form.Form( 
         form.Textbox('command'),
@@ -391,49 +400,14 @@ class Types:
     ''' get a list of object types that the user can create
     '''
     def GET(self):
-        xml = '<?xml version=\"1.0\"?>\n'
-        xml = xml + '<response>\n'
-        typeTree = Element("Types")
-        # get the installed types
-        server_mgr.console_server(session.session_id)
         types = get_available_types()
-        for t in types:
-            path = t[0].split('.');
-            last = path[len(path)-1]
-            parent = typeTree
-            for node in path:
-                if not node==last:
-                    # it's a package name, see if we have it already
-                    existingElem = None
-                    packages = parent.findall('Package')
-                    for p in packages:
-                        if p.get("name") == node:
-                            existingElem = p
-                    # set the parent to this package
-                    if existingElem is None:
-                        pkgElem = SubElement(parent,"Package")
-                        pkgElem.set("name",node)
-                        parent = pkgElem
-                    else:
-                        parent = existingElem
-                else:
-                    # it's the class name, add it under current package
-                    typeElem = SubElement(parent,"Type")
-                    typeElem.set("name",node)
-                    typeElem.set("path",t[0])
-        # get the "working" types
-        pkgElem = SubElement(typeTree,"Package")
-        pkgElem.set("name","working")
-        parent = pkgElem
+        types = packagedict(types)
+        
         cserver = server_mgr.console_server(session.session_id)
-        types = cserver.get_workingtypes()
-        for t in types:
-            typeElem = SubElement(parent,"Type")
-            typeElem.set("name",t)
-            typeElem.set("path",t)
-        xml = xml + tostring(typeTree)
-        xml = xml + '</response>\n'
-        return xml
+        types['working'] = packagedict(cserver.get_workingtypes())
+        
+        web.header('Content-Type', 'application/json')
+        return jsonpickle.encode(types)
 
 class AddOns:
     ''' addon installation utility

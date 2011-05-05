@@ -12,6 +12,9 @@ urlpatterns = patterns('',
     # projects
     (r'^projects/', include('projdb.urls')),
     
+    # workspace
+    (r'^workspace/', include('workspace.urls')),
+    
     # registration view is in projdb at the moment
     (r'^accounts/register/$', 'projdb.views.register'),
     

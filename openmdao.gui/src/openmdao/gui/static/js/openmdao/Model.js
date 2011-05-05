@@ -48,12 +48,8 @@ openmdao.Model=function() {
         jQuery.ajax({
             type: 'GET',
             url:  'types',
-            dataType: 'xml',
-            data: {},
-            success: function(xml) {
-                        types = jQuery("Types",xml)
-                        callback(types)
-                     },
+            dataType: 'json',
+            success: callback,
             error: errorHandler
         })
     }

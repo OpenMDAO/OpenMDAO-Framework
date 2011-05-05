@@ -8,7 +8,10 @@ import jsonpickle
 
 from cStringIO import StringIO
 
+from enthought.traits.api import HasTraits
+
 from openmdao.main.factory import Factory
+
 from multiprocessing.managers import BaseManager
 
 from openmdao.main.factorymanager import create
@@ -146,8 +149,10 @@ class ConsoleServer(cmd.Cmd):
         types = []
         g = self._globals.items()
         for k,v in g:
-            if str(v).startswith('<class'):
-                types.append(k)
+            if (type(v).__name__ == 'classobj') or str(v).startswith('<class'):
+                obj = self._globals[k]()
+                if isinstance(obj, HasTraits):
+                    types.append( ( k , 'n/a') )
         return types
 
     def create(self,typname,name):
