@@ -52,7 +52,7 @@ The full process model is shown below.
    :align: center
    :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
    
-   Process Model for Tutorial Problem
+   Process Model for the Optimization Problem
 
 
 The process model includes three drivers that performs the acceleration and
@@ -521,7 +521,7 @@ as ``'inch/min'=``, and then the ``convert_units`` call would not be needed.
 
 The transmission model is now complete; the next section will show how to interact with
 it in the Python shell. The engine and chassis are created in a similar manner. However, the 
-engine's speed is valid only within a range 1000 to 6000 RPM, primarilly because the engine model
+engine's speed is valid only within a range 1000 to 6000 RPM, primarily because the engine model
 is only valid in this range. We addressed this by adding two outputs ``overspeed`` and 
 ``underspeed`` to warn when the engine has gone over or under the maximum or minimum RPM.
 
@@ -535,7 +535,7 @@ open.)
                      desc='Throttle position (from low idle to wide open)')
 
 The *low* and *high* attributes are used to specify a minimum and maximum value
-for the thtrottle. If the throttle is set to a value outside of these limits, an
+for the throttle. If the throttle is set to a value outside of these limits, an
 exception will be raised. OpenMDAO execution is terminated unless this
 exception is caught elsewhere and some kind of recovery behavior is defined.
 
@@ -579,7 +579,7 @@ set the RPM to something invalid.
     >>> my_engine.RPM = "Hello"
     Traceback (most recent call last):
         ...
-    TraitError: Trait 'RPM' must be a float having untis compatible with 'rpm' but a value of Hello <type 'str'> was specified.
+    TraitError: Trait 'RPM' must be a float having units compatible with 'rpm' but a value of Hello <type 'str'> was specified.
     
 The value ``"Hello"`` is invalid because RPM expects a value of type Float. Now,
 let's try setting the throttle to a value that exceeds the maximum.
@@ -657,9 +657,10 @@ Engine, and Chassis components.
 The Engine, Transmission, and Chassis components all need to be imported so
 their instances can be created; they can be added to the assembly
 with ``add``. Please notice that an assembly inherits from Assembly
-instead of from Component. When the instances of the Transmission, Engine, and
-Chassis are created, their members and data are internally accessible using
-*self* plus the instance name, e.g., ``self.transmission``.
+instead of from Component. We also need to add the instances to the driver's
+workflow using the ``add`` method. Note that the order we add these doesn't
+matter here, because the  execution order is inferred from the data connections,
+which we now need to make.
 
 Now that the components are instantiated in the assembly, they need to be hooked up:
 
@@ -921,8 +922,8 @@ The EPA fuel economy tests are a bit more tricky, though they also require an in
 time. For these tests, the vehicle assembly must be executed while varying the throttle and
 gear position inputs to match a desired acceleration for the integration
 segment. Both of these solution procedures were implemented in Python as *drivers.* The
-``SimAcceleration`` driver simulates the acceleration test, and the ``SimEcomony`` driver
-simlates the EPA fuel economy test.
+``SimAcceleration`` driver simulates the acceleration test, and the ``SimEconomy`` driver
+simulates the EPA fuel economy test.
 
 Recall that in the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>`, a ``Driver``
 called CONMINdriver was used to optimize the Paraboloid problem. Similarly, the algorithms
@@ -943,6 +944,7 @@ found in ``driving_sim.py``. This tutorial does not cover how to create an OpenM
 Driver, but a future tutorial will teach this. Until then, you can gain some understanding
 by studying these drivers, as well as the ones included in the standard library.
 
+The simulation drivers have a variable that stores the result of the simulation:
 
 **SimAcceleration - Output:**
 
@@ -954,7 +956,7 @@ Variable           Description                                  Units
 =================  ===========================================  ========
 
 
-**SimEcomony - Output:**
+**SimEconomy - Output:**
 
 =================  ===========================================  ========
 Variable           Description                                  Units
@@ -963,55 +965,157 @@ Variable           Description                                  Units
                    driving profile
 =================  ===========================================  ========
 
+These variables can be accessed like any other component output, and can be connected to the 
+input of another OpenMDAO component if needed.
 
-.. testsetup:: SingleSim
+Let's set up a model that runs all three of these simulations to calculate
+these results: 0-60 acceleration time, EPA city mpg, and EPA highway mpg. In order
+to build these model, we need to learn a little more about the :term:`iteration hierarchy`. In
+the simple example, we used the iteration hierarchy to define a problem which contained
+an optimizer and a simple Python component. The iteration hierarchy was defined by adding
+the component to the driver's workflow with the ``add`` method. If we want to run the
+``SimAcceleration`` driver on the ``Vehicle`` component, we can set up a similar iteration
+hierarchy where we add the Vehicle component to the SimAcceleration driver's workflow. The
+top level assembly would look like this:
+
+
+.. testcode:: SingleSim
 
         from openmdao.main.api import Assembly
         from openmdao.examples.enginedesign.driving_sim import SimAcceleration
         from openmdao.examples.enginedesign.vehicle import Vehicle
         
-        class EngineOptimization(Assembly):
+        class VehicleSim(Assembly):
             """Optimization of a Vehicle."""
             
             def __init__(self):
                 """ Creates a new Assembly for vehicle performance optimization."""
                 
-                super(EngineOptimization, self).__init__()
+                super(VehicleSim, self).__init__()
         
                 # Create Vehicle instance
                 self.add('vehicle', Vehicle())
                 
-                # Create Driving Simulation instances
-                self.add('sim_acc', SimAcceleration())
-                
-                # add Sims to default workflow
-                self.driver.workflow.add(['sim_acc'])
+                # Create 0-60 Acceleration Simulation instance
+                self.add('driver', SimAcceleration())
                 
                 # Add vehicle to sim workflows.
-                self.sim_acc.workflow.add('vehicle')
+                self.driver.workflow.add('vehicle')
             
                 # Acceleration Sim setup
-                self.sim_acc.add_parameters([('vehicle.velocity', 0, 99999),
+                self.driver.add_parameters([('vehicle.velocity', 0, 99999),
                                            ('vehicle.throttle', 0.01, 1.0),
                                            ('vehicle.current_gear', 0, 5)])
-                self.sim_acc.add_objective('vehicle.acceleration')
-                self.sim_acc.add_objective('vehicle.overspeed')
+                self.driver.add_objective('vehicle.acceleration')
+                self.driver.add_objective('vehicle.overspeed')
                 
+        if __name__ == "__main__": 
+        
+            from openmdao.main.api import set_as_top
+            my_sim = VehicleSim()
+            set_as_top(my_sim)
+    
+            my_sim.run()
+            
+            print "Time (0-60): ", my_sim.driver.accel_time
 
-.. testsetup:: ThreeSim
+Here, we add a SimAcceleration instance as our top level driver, and then we add our Vehicle
+instance to the driver's workflow. Note also that we add our three simulation inputs from vehicle
+-- velocity, throttle, and current_gear -- as parameters. Our simulation outputs contain
+values that are needed to calculate the 0-60 acceleration time as the driver performs that
+simulation. We use the ``add_objective`` function to specify the vehicle's acceleration and
+overspeed as the output variables. These are not actually objectives, since the driver is
+not an optimizer, but under the hood they work the same way (those values are set when the
+driver's workflow executes), so it was convenient to keep the same interface that is used
+with optimizer drivers.
+
+We also introduce the ``add_parameters`` method, which allows us to define multiple parameters
+for the driver (recall that ``add_parameter` defines a single parameter.) The argument for
+``add_parameters`` is a list containing tuples structured like (variable name, min, max). You
+can also use three calls to ``add_parameter`` to accomplish the same thing.
+
+This is a very simple problem, and hence the workflows and iteration hierarchy are also very
+simple. In OpenMDAO, it is possible to build models with arbitrary levels of complexity. To
+understand how this works, it is beneficial to use a diagram like this:
+
+.. figure:: ../images/user-guide/Driver_Process_Definition3.png
+   :align: center
+   :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
+   
+   Iteration Hierarchy for One Vehicle Simulation
+
+This is the iteration hierarchy for the model we just built. The gray bubbles represent drivers,
+the white bubble represent components, and the yellow rectangles represent workflows. The Gray
+bubble in the upper left hand corner of a yellow rectangle is the driver that owns that
+workflow. The remaining items in that rectangle are the components that are contained within
+that workflow. Note that a workflow can also contain assemblies and drivers, though in this
+case it just contains a component.
+
+The top level driver in an assembly is always called "driver". If no specific
+driver instance (e.g., SimAcceleration in our example) is declared with the
+name "driver", then the assembly's default driver is used. The behavior for
+this default driver is to execute the components in its workflow sequentially,
+inferring the execution order from the data connections. If there are no data
+connections, then the components are executed in the order they were added to
+the workflow.
+
+When we created the Vehicle component above, we made use of this default driver to
+create a sequential execution of the Transmission, Engine, and Chassis components
+in the order that the data connections required. The iteration hierarchy is
+shown in this diagram:
+
+.. figure:: ../images/user-guide/Driver_Process_Definition4.png
+   :align: center
+   :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
+   
+   Iteration Hierarchy for Vehicle Component
+
+Notice that the workflow contains the 3 components that we used to build the vehicle
+assembly. The top level driver of the assembly is just called "driver".
+   
+Now, let's see how we can make a new assembly that performs all three simulations. Just
+as we did with the Vehicle assembly, we want to run these three simulations
+sequentially. In this case, they are drivers, but the mechanics of adding a driver
+to another driver's workflow is the same as with a component. An additional "level"
+is introduced to this iteration hierarchy, because each of the simulation drivers
+also has its own workflow. Each of these workflows contains the Vehicle instance. The
+iteration hierarchy for a model that performs the 0-60 accelerations test, the EPA
+city estimated fuel economy test, and the EPA highway estimated fuel economy test
+is shown in this diagram:
+
+.. figure:: ../images/user-guide/Driver_Process_Definition2.png
+   :align: center
+   :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
+   
+   Iteration Hierarchy for All Vehicle Simulations
+
+Again, the top level driver commands a sequential execution of the SimAcceleration instance and
+the two SimEconomy instances. Note that, since there is no data connection between these
+drivers, they could be executed in parallel if the option is available. This will be supported
+in a future release. The three simulation drivers contain the same Vehicle instance in each
+of their workflows. When the second driver starts is simulation, the vehicle's variables
+are just as the previous simulation left them. This is not so important for these drivers,
+because both simulation components reset the velocity to 0, the throttle to idle, and the 
+gear to first before starting. However, this persistence of the variables is what enables
+us to perform cascade optimization (i.e., using multiple optimizers sequentially on the
+same workflow.)
+
+Now, let's build a new assembly that includes all three simulations run sequentially.
+
+.. testcode:: ThreeSim
 
         from openmdao.main.api import Assembly
         from openmdao.examples.enginedesign.driving_sim import SimAcceleration, \
                                                                SimEconomy
         from openmdao.examples.enginedesign.vehicle import Vehicle
         
-        class EngineOptimization(Assembly):
+        class VehicleSim2(Assembly):
             """Optimization of a Vehicle."""
             
             def __init__(self):
                 """ Creates a new Assembly for vehicle performance optimization."""
                 
-                super(EngineOptimization, self).__init__()
+                super(VehicleSim2, self).__init__()
         
                 # Create Vehicle instance
                 self.add('vehicle', Vehicle())
@@ -1057,6 +1161,42 @@ Variable           Description                                  Units
                 self.sim_EPA_highway.add_objective('vehicle.underspeed')
                 self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
                 self.sim_EPA_highway.force_execute = True
+                
+        if __name__ == "__main__": 
+        
+            from openmdao.main.api import set_as_top
+            my_sim = VehicleSim2()
+            set_as_top(my_sim)
+    
+            my_sim.run()
+            
+            print "Time (0-60): ", my_sim.sim_acc.accel_time
+            print "City MPG: ", my_sim.sim_EPA_city.fuel_economy
+            print "Highway MPG: ", my_sim.sim_EPA_highway.fuel_economy
+            
+First, all of the components are instantiated in the assembly, including the Vehicle
+instance, the SimAcceleration instance, and the two SimEconomy instances, which are named
+"sim_EPA_city" and "sim_EPA_highway". Next, the three simulation component instances
+are added to the driver's workflow. Multiple components can be added to a workflow
+with a single call to ``add`` by passing a list of the name strings. Since there are no
+data connections between them, they will be executed in the order they appear in
+this list.
+
+Each simulation driver has a workflow, so the "vehicle" instance is added to each
+of their workflows. After that, each of the simulation drivers is connected to the
+inputs and output it needs with ``add_parameters`` and ``add_objective``. The variable
+"profilename" is the name of the file that contains the EPA driving profile, which
+is essentially velocity as a function of time.
+
+Finally, notice that the variable "force_execute" is set to True. All drivers have a
+"force_execute" flag, which can be set to true to ensure that a component will always
+run when its workflow is executed. Since these drivers are basically independent, and
+have no data connections, there is no way to automatically determine if they have become
+invalidated (as changing an upstream input would do), and hence need to be run. With
+force_execute set to true, the driver always runs. Note that out top level driver is
+the default sequential execution driver, so this model can run without force_execute.
+However, force_execute is definitely needed if we want to take this model and optimize
+it (which we will do next), so it's good to practice using it for cascaded drivers.
 
 Setting up an Optimization Problem
 ==================================
@@ -1071,6 +1211,18 @@ first variable should be quite intuitive (i.e., larger bore means faster acceler
 but the second variable cannot be optimized by mere inspection. 
 
 The optimization will be handled by the gradient optimizer CONMIN.
+
+To tackle this problem, let's take a look at the iteration hierarchy. 
+
+.. figure:: ../images/user-guide/Driver_Process_Definition.png
+   :align: center
+   :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
+   
+   Iteration Hierarchy for Vehicle Design Optimization
+   
+This time, our top level driver is the CONMIN optimizer. Its workflow contains the three
+simulations. Note that there is very little difference between this iteration hierarchy
+and the one we just built, so it should be pretty easy to change the code.
 
 In ``engine_optimization.py``, we define the class EngineOptimization and
 create an instance of CONMINdriver and DrivingSim, which are added to the
@@ -1154,7 +1306,40 @@ socket in DrivingSim:
                 self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
                 self.sim_EPA_highway.force_execute = True
         
+        if __name__ == "__main__":
+
+            def prz(title):
+                """ Print before and after"""
         
+                print '---------------------------------'
+                print title
+                print '---------------------------------'
+                print 'Engine: Bore = ', opt_problem.vehicle.bore
+                print 'Engine: Spark Angle = ', opt_problem.vehicle.spark_angle
+                print '---------------------------------'
+                print '0-60 Accel Time = ', opt_problem.sim_acc.accel_time
+                print 'EPA City MPG = ', opt_problem.sim_EPA_city.fuel_economy
+                print 'EPA Highway MPG = ', opt_problem.sim_EPA_highway.fuel_economy
+                print '\n'
+    
+            import time
+            from openmdao.main.api import set_as_top
+    
+            opt_problem = EngineOptimization()
+            set_as_top(opt_problem)
+    
+            opt_problem.sim_acc.run()
+            opt_problem.sim_EPA_city.run()
+            opt_problem.sim_EPA_highway.run()
+            prz('Old Design')
+
+            tt = time.time()
+            opt_problem.run()
+            prz('New Design')
+            print "CONMIN Iterations: ", opt_problem.driver.iter_count
+            print ""
+            print "Elapsed time: ", time.time()-tt
+    
 Recall that the *iprint* flag enables or disables the printing of diagnostics
 internal to CONMIN, while the *itmax* parameter specifies the maximum number
 of iterations for the optimization loop.
@@ -1285,5 +1470,142 @@ Try solving the same optimization problem using this objective.
         25.713...
         >>> prob.sim_EPA_highway.fuel_economy
         38.696...
+
+If we only care about optimizing the 0-60 acceleration time, we can be a little smarter with our
+iteration hierarchy. In such a case, we don't need to run the EPA fuel economy simulations while
+we are optimizing, since their outputs won't be used until the conclusion of the optimization, when
+we would like to inspect them. We need a new iteration hierarchy in which we optimize the 
+acceleration simulation first, and then run the two fuel economy simulations. We can do this with
+what we've already learned. We can use the default 'driver' at the top level to sequentially run
+the optimizer and the two simulations.
+
+.. figure:: ../images/user-guide/Driver_Process_Definition6.png
+   :align: center
+   :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
+   
+   Iteration Hierarchy for Vehicle Acceleration Optimization Only
+   
+The code for this looks like this:
+
+.. testcode:: OptimizationSmarter
+
+        # pylint: disable-msg=E0611,F0401
+        from openmdao.main.api import Assembly
+        from openmdao.lib.drivers.api import CONMINdriver
+        
+        from openmdao.examples.enginedesign.driving_sim import SimAcceleration, \
+                                                               SimEconomy
+        from openmdao.examples.enginedesign.vehicle import Vehicle
+        
+        class EngineOptimization(Assembly):
+            """Optimization of a Vehicle."""
+            
+            def __init__(self):
+                """ Creates a new Assembly for vehicle performance optimization."""
+                
+                super(EngineOptimization, self).__init__()
+        
+                # pylint: disable-msg=E1101
+                
+                # Create CONMIN Optimizer instance
+                self.add('optimizer', CONMINdriver())
+                
+                # Create Vehicle instance
+                self.add('vehicle', Vehicle())
+                
+                # Create Driving Simulation instances
+                self.add('sim_acc', SimAcceleration())
+                self.add('sim_EPA_city', SimEconomy())
+                self.add('sim_EPA_highway', SimEconomy())
+                
+                # add the optimizer and economy sims to driver workflow
+                self.driver.workflow.add(['optimizer', 'sim_EPA_city', 'sim_EPA_highway'])
+                
+                # add the acceleration sim to the optimizer workflow
+                self.optimizer.workflow.add('sim_acc')
+        
+                # Add vehicle to sim workflows.
+                self.sim_acc.workflow.add('vehicle')
+                self.sim_EPA_city.workflow.add('vehicle')
+                self.sim_EPA_highway.workflow.add('vehicle')
+            
+                # CONMIN Flags
+                self.optimizer.iprint = 0
+                self.optimizer.itmax = 30
+                
+                # CONMIN Objective 
+                self.optimizer.add_objective('sim_acc.accel_time')
+                
+                # CONMIN Design Variables 
+                self.optimizer.add_parameters([('vehicle.spark_angle', -50., 10.),
+                                            ('vehicle.bore', 65., 100.)])
+                
+                # Acceleration Sim setup
+                self.sim_acc.add_parameters([('vehicle.velocity', 0, 99999),
+                                           ('vehicle.throttle', 0.01, 1.0),
+                                           ('vehicle.current_gear', 0, 5)])
+                self.sim_acc.add_objective('vehicle.acceleration')
+                self.sim_acc.add_objective('vehicle.overspeed')
+                
+                # EPA City MPG Sim Setup
+                self.sim_EPA_city.add_parameters([('vehicle.velocity', 0, 99999),
+                                                 ('vehicle.throttle', 0.01, 1.0),
+                                                 ('vehicle.current_gear', 0, 5)])
+                self.sim_EPA_city.add_objective('vehicle.acceleration')
+                self.sim_EPA_city.add_objective('vehicle.fuel_burn')
+                self.sim_EPA_city.add_objective('vehicle.overspeed')
+                self.sim_EPA_city.add_objective('vehicle.underspeed')
+                self.sim_EPA_city.profilename = 'EPA-city.csv'
+                self.sim_EPA_city.force_execute = True
+                
+                # EPA Highway MPG Sim Setup
+                self.sim_EPA_highway.add_parameters([('vehicle.velocity', 0, 99999),
+                                                    ('vehicle.throttle', 0.01, 1.0),
+                                                    ('vehicle.current_gear', 0, 5)])
+                self.sim_EPA_highway.add_objective('vehicle.acceleration')
+                self.sim_EPA_highway.add_objective('vehicle.fuel_burn')
+                self.sim_EPA_highway.add_objective('vehicle.overspeed')
+                self.sim_EPA_highway.add_objective('vehicle.underspeed')
+                self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
+                self.sim_EPA_highway.force_execute = True
+        
+        if __name__ == "__main__":
+        
+            def prz(title):
+                """ Print before and after"""
+                
+                print '---------------------------------'
+                print title
+                print '---------------------------------'
+                print 'Engine: Bore = ', opt_problem.vehicle.bore
+                print 'Engine: Spark Angle = ', opt_problem.vehicle.spark_angle
+                print '---------------------------------'
+                print '0-60 Accel Time = ', opt_problem.sim_acc.accel_time
+                print 'EPA City MPG = ', opt_problem.sim_EPA_city.fuel_economy
+                print 'EPA Highway MPG = ', opt_problem.sim_EPA_highway.fuel_economy
+                print '\n'
+    
+
+                import time
+                from openmdao.main.api import set_as_top
+                
+                opt_problem = EngineOptimization()
+                set_as_top(opt_problem)
+                
+                opt_problem.sim_acc.run()
+                opt_problem.sim_EPA_city.run()
+                opt_problem.sim_EPA_highway.run()
+                prz('Old Design')
+            
+                tt = time.time()
+                opt_problem.run()
+                prz('New Design')
+                print "CONMIN Iterations: ", opt_problem.optimizer.iter_count
+                print ""
+                print "Elapsed time: ", time.time()-tt
+
+The code for this example can also be found in the file ``engine_optimization_smarter.py``. You
+should notice that this runs considerably faster than ``engine_optimization.py``, which runs
+all three sims during every iteration of CONMIN.
 
 You have now completed the more complex tutorial problem.
