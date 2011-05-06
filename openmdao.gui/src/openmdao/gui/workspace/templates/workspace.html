@@ -10,7 +10,7 @@
     <title>{% block title %} OpenMDAO: {{ user.username }} {% endblock %}</title>
 </head>
 
-<body>
+<body bgcolor="Grey">
 	<!----------------------------------------->
 	<!-- load all the scripts & style sheets -->
 	<!----------------------------------------->
@@ -56,6 +56,8 @@
     <script src="/static/js/jquery.jstree.js"></script>
 	<script src="/static/js/modernizr.js"></script>
 
+    <!-- flot -->
+    <script src="/static/js/jquery.flot.js"></script>
     <!-- context menus -->
     <script src="/static/js/ContextMenu.js"></script>
 
@@ -72,6 +74,7 @@
 	<script src="/static/js/openmdao/DataFlow.js"></script>
 	<script src="/static/js/openmdao/CodeEditor.js"></script>
 	<script src="/static/js/openmdao/PropertiesEditor.js"></script>
+	<script src="/static/js/openmdao/Plotter.js"></script>
 	<script src="/static/js/mdao.js"></script>
 
 	<!--------------------------------------->
@@ -106,6 +109,10 @@
                 <dd id="editor_pane">
                     <textarea id="texteditor"></textarea>
                 </dd>
+                <dt id="plotter_tab" target="plotter_pane">Plot</dt>
+                <dd id="plotter_pane">
+                    <div id="plotter" style="width:600px;height:300px;"></div>
+                </dd>
             </dl>
         </div>
 
@@ -132,7 +139,7 @@
         </div>
 
         <!-- cmd line --> 
-        <form id="cmdform" style="display:none;"  method="post">
+        <form id="cmdform" nostyle="display:none;"  method="post">
             <input type="text" id="command" />
             <input type="submit" value="Submit" class="button" id="command-button"/>
         </form>  

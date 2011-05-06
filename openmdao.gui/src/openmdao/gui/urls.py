@@ -6,8 +6,12 @@ from django.contrib import admin
 admin.autodiscover()
 
 urlpatterns = patterns('',
+    # favicon
+    (r'^favicon\.ico$', 'django.views.generic.simple.redirect_to', {'url': '/static/images/favicon.ico'}),
+    
     # default to projdb app
-    (r'^$', 'projdb.views.index'),
+    (r'^$',         'projdb.views.index'),
+    (r'^login/$',   'workspace.views.Exit'),  # Workspace Logout menu item currently currently points to /login
     
     # projects
     (r'^projects/', include('projdb.urls')),

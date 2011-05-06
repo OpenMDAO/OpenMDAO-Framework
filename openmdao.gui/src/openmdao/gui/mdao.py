@@ -238,13 +238,6 @@ class Output:
         cserver = server_mgr.console_server(session.session_id)
         return cserver.get_output()
         
-class Model:
-    ''' delete existing console server and get a new one
-    '''
-    def POST(self):
-        server_mgr.delete_server(session.session_id)
-        web.redirect('/')
-
 class Exit:
     ''' exit
     '''
