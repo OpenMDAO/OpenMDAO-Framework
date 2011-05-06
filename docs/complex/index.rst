@@ -7,4 +7,12 @@ A More Complex Tutorial Problem
 .. toctree::
    :maxdepth: 1
    
-   example
+   overview
+   components-variables
+   python_shell
+   assemblies
+   vehicle
+   external_module
+   drivers
+   setting_up_opt
+   solving_opt
