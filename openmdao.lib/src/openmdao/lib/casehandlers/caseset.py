@@ -113,8 +113,10 @@ class CaseArray(object):
         if isinstance(key, basestring): # return all of the values for the given name
             idx = self._names.index(key)
             return [lst[idx] for lst in self._values]
-        else:  # key is the case number
+        else:  # key is the case numbe
             return self._case_from_values(self._values[key])
+        
+    
             
     def _case_from_values(self, values):
         return Case(inputs=[(n,v) for n,v in zip(self._names[0:self._split_idx],
@@ -158,7 +160,7 @@ class CaseArray(object):
 
     def update(self, *case_containers):
         """Add Cases from other CaseSets or CaseArrays to this one."""
-        for cset in case_sets:
+        for cset in case_containers:
             for vals in cset._values:
                 self._add_values(vals)
                 

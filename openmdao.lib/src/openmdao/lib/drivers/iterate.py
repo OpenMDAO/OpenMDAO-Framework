@@ -7,7 +7,7 @@ are used as termination criteria.
 # pylint: disable-msg=E0611,F0401
 from numpy import zeros
 
-from openmdao.lib.datatypes.api import Float, Int, Str
+from openmdao.lib.datatypes.api import Float, Int, Str, Bool
 from openmdao.main.api import Driver
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
@@ -93,12 +93,13 @@ class IterateUntil(Driver):
 
     max_iterations = Int(10,iotype="in", desc="maximun number of iterations")
     iteration = Int(0,iotype="out",desc="current iteration counter")
+    run_at_least_once = Bool(True, iotype="in", desc="If True, driver will ignore stop conditions for the first iteration, and run at least one iteration")
     
     def start_iteration(self):
         self.iterations = 0
     
     def continue_iteration(self): 
-        if self.should_stop():
+        if self.should_stop() and (self.iteration>=1 and self.run_at_least_once):
             return False
         if self.iteration < self.max_iterations: 
             self.iteration += 1

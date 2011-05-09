@@ -15,7 +15,7 @@ from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, Ite
 from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
 from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
 
-from openmdao.lib.casehandlers.api import DBCaseIterator
+from openmdao.lib.casehandlers.api import caseiter_to_caseset
 from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
 from openmdao.examples.expected_improvement.branin_component import BraninComponent
 from openmdao.util.decorators import add_delegate
@@ -33,13 +33,11 @@ class MyDriver(Driver):
         self.set_events()
         self.run_iteration()
         
-        inputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.ins]
-        outputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.outs]
-        
+        inputs = [(name,self.parent.get(name)) for name in self.ins]
+        outputs = [(name,self.parent.get(name)) for name in self.outs]
         case = Case(inputs = inputs,
                     outputs = outputs)
         self.recorder.record(case)
-        
 
         
 class Analysis(Assembly): 
@@ -61,12 +59,13 @@ class Analysis(Assembly):
         
         self.add("filter",ParetoFilter())
         self.filter.criteria = ['branin_meta_model.f_xy']
-        self.filter.case_sets = [self.branin_meta_model.recorder.get_iterator(),]
+        self.filter.case_sets = [self.branin_meta_model.recorder.get_iterator(),] #TODO: can't use caseiter_to_caseset here, like I would like to... 
         self.filter.force_execute = True
+        
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
         self.DOE_trainer.sequential = True
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=15)
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=30)
         #self.DOE_trainer.DOEgenerator = FullFactorial(num_levels=5)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
@@ -81,12 +80,12 @@ class Analysis(Assembly):
         self.EI_opt.selection_method = "tournament"
         self.EI_opt.add_parameter("branin_meta_model.x")
         self.EI_opt.add_parameter("branin_meta_model.y")
-        self.EI_opt.add_objective("EI.EI")
+        self.EI_opt.add_objective("EI.PI")
         self.EI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("branin_meta_model.train_next")
-        self.retrain.recorder = [DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))]
+        self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
         self.retrain.force_execute = True
         
         self.add("iter",IterateUntil())
@@ -145,7 +144,7 @@ if __name__ == "__main__": #pragma: no cover
     
     analysis.run()
     
-    print "for damon: " , analysis.iter.iteration
+    print "Adaptive Sampling Iterations: " , analysis.iter.iteration
     
     points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
     for x,y,z in points: 
@@ -192,7 +191,7 @@ if __name__ == "__main__": #pragma: no cover
 
     color_map = get_cmap('spring')
     
-    
+
     plt.scatter(data_EI['branin_meta_model.x'],data_EI['branin_meta_model.y'],
                 s=30,
                 c=colors,
@@ -228,7 +227,7 @@ if __name__ == "__main__": #pragma: no cover
     plt.title("Branin Meta Model Contours")
     plt.text(10.9,11,"Meta Model\nFunction\nValue")
     
-    plt.show()
+    #plt.show()
 
     analysis.cleanup()
     

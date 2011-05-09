@@ -8,12 +8,12 @@ from openmdao.lib.datatypes.api import Instance, Str, ListStr, Enum, \
 
 from openmdao.main.component import Component
 
-from openmdao.main.interfaces import ICaseIterator
+from openmdao.lib.casehandlers.api import CaseSet
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 
 class MultiObjExpectedImprovement(Component):
-    best_cases = Instance(ICaseIterator, iotype="in",
+    best_cases = Instance(CaseSet, iotype="in",
                     desc="CaseIterator which contains only Pareto optimal cases \
                     according to criteria")
     
@@ -44,16 +44,10 @@ class MultiObjExpectedImprovement(Component):
         flat_crit= self.criteria.ravel()
 
         #y_star is a 2D list of pareto points
-        y_star = []
 
-        for case in self.best_cases:
-            c = []
-            for crit in self.criteria:
-                c.extend([o[2] for o in case.outputs if crit in o[0]])
-                #c = [o[2] for o in case.outputs if o[0] in flat_crit]
-                
-            if len(c) == criteria_count :
-                y_star.append(c)
+        
+        y_star = zip(*[self.best_cases[crit] for crit in self.criteria])
+
         if not y_star: #empty y_star set means no cases met the criteria!
             self.raise_exception('no cases in the provided case_set had output '
                  'matching the provided criteria, %s'%self.criteria, ValueError)

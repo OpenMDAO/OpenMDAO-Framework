@@ -4,16 +4,16 @@ from numpy import exp, abs, pi
 from scipy.special import erf
 
 from openmdao.lib.datatypes.api import Instance, Str, Float
+from openmdao.lib.casehandlers.api import CaseSet
 
 from openmdao.main.api import Component
 
-from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 
 class ExpectedImprovement(Component):
-    best_case = Instance(ICaseIterator, iotype="in",
-                    desc="CaseIterator which contains a single case, "
+    best_case = Instance(CaseSet, iotype="in",
+                    desc="CaseSet which contains a single case, "
                          "representing the criteria value.", required=True)
     
     criteria = Str(iotype="in",
@@ -36,14 +36,9 @@ class ExpectedImprovement(Component):
         mu = self.predicted_value.mu
         sigma = self.predicted_value.sigma
         best_case = self.best_case[0]
-        target = False
-        for output in best_case.outputs: 
-            if output[0] == self.criteria: 
-                #TODO: check that criteria is only one thing, error if not
-                target = output[2]
-                break
-                
-        if target is False: 
+        try: 
+            target = best_case[self.criteria]
+        except KeyError: 
             self.raise_exception("best_case did not have an output which "
                                  "matched the criteria, '%s'"%self.criteria,
                                  ValueError)  
@@ -56,10 +51,7 @@ class ExpectedImprovement(Component):
             self.EI = abs(T1+T2)
         except (ValueError,ZeroDivisionError): 
             self.EI = 0
-            self.PI = 0
-            
-        #print "ei: ", self.EI
-            
+            self.PI = 0            
             
     
     
