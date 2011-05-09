@@ -3,6 +3,7 @@ from django.shortcuts import render_to_response, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.template import RequestContext
+
 from projdb.models import Project
 
 #
@@ -34,14 +35,14 @@ def detail(request, project_id):
                                   context_instance=RequestContext(request))
 
 #
-# new project
+# new (empty) project
 #                              
 @login_required()
 def new(request):
     return HttpResponse('New project - Not yet implemented')
 
 #
-# add project
+# add existing project
 #                              
 @login_required()
 def add(request):

@@ -40,7 +40,7 @@ class ServerManager:
             del cserver
         
     def get_tempdir(self,name):
-        ''' create a temporary file prefixed with the given name
+        ''' create a temporary directory prefixed with the given name
         '''
         if not name in self.temp_files:
             self.temp_files[name] = tempfile.mkdtemp(prefix='mdao-'+name+'.')

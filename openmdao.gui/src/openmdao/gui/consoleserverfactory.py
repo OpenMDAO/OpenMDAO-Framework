@@ -5,16 +5,17 @@ import platform
 import shutil
 import cmd
 import jsonpickle
+import tempfile
 
 from cStringIO import StringIO
 
 from enthought.traits.api import HasTraits
 
-from openmdao.main.factory import Factory
-
 from multiprocessing.managers import BaseManager
-
+from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create
+
+from openmdao.main.project import *
 
 class ConsoleServerFactory(Factory):
     """
@@ -41,6 +42,8 @@ class ConsoleServer(cmd.Cmd):
     def __init__(self, name='', host=''):
         cmd.Cmd.__init__(self)
 
+        print '<<<'+str(os.getpid())+'>>> ConsoleServer ..............'
+        
         #intercept stdout & stderr
         self.cout = StringIO()
         sys.stdout = self.cout
@@ -55,15 +58,16 @@ class ConsoleServer(cmd.Cmd):
 
         self.host = host
         self.pid = os.getpid()
-        self.name = name or ('console-%d' % self.pid)
+        self.name = name or ('-cserver-%d' % self.pid)
         self.orig_dir = os.getcwd()
-        self.root_dir = os.path.join(self.orig_dir, self.name)
+        self.root_dir = tempfile.mkdtemp(self.name)
         if os.path.exists(self.root_dir):
             logging.warning('%s: Removing existing directory %s',
                             self.name, self.root_dir)
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
+        
 
     def getcwd(self):
         return os.getcwd()
@@ -131,6 +135,11 @@ class ConsoleServer(cmd.Cmd):
     def get_pid(self):
         """ Return this server's :attr:`pid`. """
         return self.pid
+        
+    def get_project(self):
+        """ Return the current model as a project archive. """
+        # TODO:
+        return 
 
     def get_history(self):
         """ Return this server's :attr:`_hist`. """
@@ -155,6 +164,14 @@ class ConsoleServer(cmd.Cmd):
                     types.append( ( k , 'n/a') )
         return types
 
+    def load_project(self,filename):
+        print "loading project at: "+filename
+        proj = project_from_archive(filename,dest_dir=self.getcwd())
+        name = proj.name
+        print "project name: "+name
+        self._globals[name] = proj.top
+        set_as_top(proj.top)
+        
     def create(self,typname,name):
         """ create a new object of the given type. """
         try:

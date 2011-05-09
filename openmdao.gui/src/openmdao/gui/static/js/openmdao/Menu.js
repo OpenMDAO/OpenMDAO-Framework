@@ -23,7 +23,7 @@ openmdao.Menu = function(id) {
               items: [
                 { text: "New",           onclick: "model.newModel()"   },
                 { text: "Logout",        url: "/login" },
-                { text: "Exit",          onclick: "model.exit();openmdao.Util.closeWindow()"}
+                //{ text: "Exit",          onclick: "model.exit();openmdao.Util.closeWindow()"}
               ]
             },
             { text: "File", 

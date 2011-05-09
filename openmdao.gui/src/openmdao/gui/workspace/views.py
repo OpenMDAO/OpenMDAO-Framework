@@ -9,9 +9,6 @@ from django.contrib.auth import logout
 import sys, os
 import zipfile, jsonpickle
 
-from xml.etree.ElementTree import Element, SubElement, tostring
-from xml.dom.minidom import Document
-
 from setuptools.command import easy_install
 
 from server_manager import ServerManager
@@ -61,7 +58,7 @@ def Component(request,name):
             result = sys.exc_info()
         return HttpResponse(result)
     elif request.DELETE:
-        cserver = server_mgr.console_server(session.session_id)
+        cserver = server_mgr.console_server(request.session.session_key)
         result = ''
         try:
             result = cserver.onecmd('del '+request.name)
@@ -111,13 +108,7 @@ def File(request,filename):
     '''
     cserver = server_mgr.console_server(request.session.session_key)
     filepath = cserver.getcwd()+'/'+str(filename)
-    if request.GET:
-        if os.path.exists(filepath):
-            f=open(filepath, 'r')
-            return HttpResponse(f.read())
-        else:
-            return HttpResponse("Sorry, the file was not found.")
-    elif request.POST:
+    if request.POST:
         if "isFolder" in request.POST:
             ensure_dir(filepath)
             return HttpResponse("Folder created")
@@ -137,6 +128,12 @@ def File(request,filename):
                     return HttpResponse("Folder deleted")
         else:
             return HttpResponse("Sorry, the file was not found.")
+    elif request.GET:
+        if os.path.exists(filepath):
+            f=open(filepath, 'r')
+            return HttpResponse(f.read())
+        else:
+            return HttpResponse("Sorry, the file was not found.")
 
 def Files(request):
     ''' get a list of the users files in JSON format
@@ -152,12 +149,11 @@ def Files(request):
 
 def Model(request):
     ''' GET: get JSON representation of the model
-        POST: delete existing console server and get a new one
+        POST: get a new model (delete existing console server)
     '''
     if request.POST:
-        server_mgr.delete_server(session.session_id)
-        return render_to_response('workspace.html',
-                                  context_instance=RequestContext(request))
+        server_mgr.delete_server(session.session.session_key)
+        return HttpResponseRedirect('/')
     else:
         cserver = server_mgr.console_server(request.session.session_key)
         json = cserver.get_JSON()
@@ -169,6 +165,28 @@ def Output(request):
     cserver = server_mgr.console_server(request.session.session_key)
     return HttpResponse(cserver.get_output())
 
+from openmdao.gui.settings import MEDIA_ROOT
+def Project(request):
+    ''' GET: get a project archive of the current model
+        POST: load model fom the given project archive
+    '''
+    server_mgr.delete_server(request.session.session_key) # delete old server
+    cserver = server_mgr.console_server(request.session.session_key)
+    print prefix+'workspace.views() Project: ------------------'
+    if request.POST:
+        print "workspace.views() - POST Project: "+request.POST['filename']
+        filepath = MEDIA_ROOT+'/'+request.POST['filename']
+        print prefix+'workspace.views() Project: loading '+filepath
+        cserver.load_project(filepath)
+        print "workspace.views() - Project: done, redirecting to workspace..."
+        return HttpResponseRedirect('workspace')
+    else:
+        print "workspace.views() - GET Project"
+        proj = cserver.get_project()
+        response = HttpResponse(proj, mimetype='application/openmdao')
+        response['Content-Disposition'] = 'attachment; filename='+proj.name()+'.proj'
+        return response
+    
 def Types(request):
     ''' get hierarchy of package/types to populate the Palette
     '''

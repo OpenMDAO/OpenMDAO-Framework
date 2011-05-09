@@ -18,6 +18,7 @@ urlpatterns = patterns('workspace.views',
     (r'^login',           'Exit'),
     (r'^model',           'Model'),
     (r'^output',          'Output'),
+    (r'^project',         'Project'),
     (r'^types',           'Types'),
     # (r'^upload',          'Upload'),
 )

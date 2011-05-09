@@ -31,11 +31,17 @@
 
     <p>
     <b>Last Modified: </b> {{ project.modified }}
+    <p>
+    
+    <form action="/workspace/project/" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="filename" value="{{ project.filename }}" />
+        <input type="submit" value="Load this project into Workspace" />
+    </form>
+    
     <br>
 {% endblock %}
 
 {% block footer %}
-   <a href="/workspace/">Load this project into Workspace</a> 
-   <p>   
    <a href="/projects/">Back to Projects</a>    <a href="/accounts/logout?next=/">Logout</a>
 {% endblock %}
