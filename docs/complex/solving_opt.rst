@@ -248,5 +248,3 @@ The code for this looks like this:
 The code for this example can also be found in the file ``engine_optimization_smarter.py``. You
 should notice that this runs considerably faster than ``engine_optimization.py``, which runs
 all three sims during every iteration of CONMIN.
-
-You have now completed the more complex tutorial problem.

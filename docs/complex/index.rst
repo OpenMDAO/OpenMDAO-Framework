@@ -16,3 +16,4 @@ A More Complex Tutorial Problem
    drivers
    setting_up_opt
    solving_opt
+   iteration
