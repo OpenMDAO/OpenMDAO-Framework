@@ -227,7 +227,7 @@ if __name__ == "__main__": #pragma: no cover
     plt.title("Branin Meta Model Contours")
     plt.text(10.9,11,"Meta Model\nFunction\nValue")
     
-    #plt.show()
+    plt.show()
 
     analysis.cleanup()
     

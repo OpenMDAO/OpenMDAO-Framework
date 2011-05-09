@@ -64,7 +64,6 @@ class ParetoFilter(Component):
             case_set = case_sets[0].union(*case_sets[1:])
         else: 
             case_set = case_sets[0]
-        print "HERE"
         criteria_count = len(self.criteria)        
         
         try: 
