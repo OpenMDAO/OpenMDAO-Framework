@@ -3,13 +3,15 @@
 Summary: Using the Iteration Hierarchy
 =======================================
 
-This tutorial
+This tutorial introduced the iteration hierarchy, a powerful concept which allows
+you to form arbitrarily complex process models. Some of the key points are
+summarized here:
 
  ::
 
-   * Every driver has a workflow
-   * The top driver in an assembly is always called 'driver'
+   * The top driver in an assembly is always called "driver"
    * An assembly can contain multiple drivers
+   * Every driver has a workflow
    * Workflows can contain multiple components (assemblies, drivers)
    * A component instance can appear in multiple workflows
    * Execution order in a workflow is infered from the data connections
