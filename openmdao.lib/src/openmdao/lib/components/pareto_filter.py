@@ -39,6 +39,8 @@ class ParetoFilter(Component):
         """Tests to see if the point y1 is dominated by the point y2. 
         True if y1 is dominated by y2, False otherwise.
         """
+        if y1 == y2:
+            return False
         for a,b in zip(y1, y2): 
             if a<b: return False
 
@@ -62,10 +64,10 @@ class ParetoFilter(Component):
             case_set = case_sets[0].union(*case_sets[1:])
         else: 
             case_set = case_sets[0]
-        print "HERE"
-        criteria_count = len(self.criteria)        
-        # need to transpose the list of outputs from the 
+        criteria_count = len(self.criteria)
+        
         try: 
+            # need to transpose the list of outputs
             y_list = zip(*[case_set[crit] for crit in self.criteria]) 
         except KeyError: 
             self.raise_exception('no cases provided had all of the outputs '
@@ -82,8 +84,7 @@ class ParetoFilter(Component):
                 if self._is_dominated(point1, point2):
                     self.dominated_set.record(case)
                     y_temp.remove(point1)
-                    dominated = True                    
-                    #self.pareto_set.remove(case) #TODO: need a remove function
+                    dominated = True
                     break
             if not dominated: 
                 self.pareto_set.record(case)

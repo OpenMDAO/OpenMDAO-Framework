@@ -43,7 +43,7 @@ class CaseArray(object):
     
     def copy(self):
         ca = CaseArray(parent_uuid=self._parent_uuid, names=self._names)
-        ca._values = self._values.copy()
+        ca._values = self._values[:]
         ca._split_idx = self._split_idx
         return ca
         
@@ -221,7 +221,7 @@ class CaseSet(CaseArray):
 
     def copy(self):
         cs = CaseSet(parent_uuid=self._parent_uuid, names=self._names)
-        cs._values = self._values.copy()
+        cs._values = self._values[:]
         cs._tupset = self._tupset.copy()
         cs._split_idx = self._split_idx
         return cs
@@ -376,7 +376,7 @@ def caseiter_to_caseset(caseiter, varnames=None, include_errors=False):
 
     for case in caseiter.get_iter():
         if include_errors is False and case.msg:
-            continue  # case reported an error or warning message
+            continue  # case reported an error, so don't use it
         if varnames is not None:
             caseset.record(case.subcase(varnames))
         else:

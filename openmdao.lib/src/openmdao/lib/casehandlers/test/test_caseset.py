@@ -51,6 +51,15 @@ class CaseArrayTestCase(unittest.TestCase):
         self.assertEqual(cs[2]._inputs, self.case1_dup._inputs)
         self.assertEqual(cs[2]._outputs, self.case1_dup._outputs)
         
+    def test_copy(self):
+        cs = CaseArray()
+        cs.record(self.case1)
+        cs.record(self.case2)
+        cs.record(self.case1_dup)
+        cscopy = cs.copy()
+        for c1, c2 in zip(cs.get_iter(), cscopy.get_iter()):
+            self.assertEqual(c1, c2)
+
     def test_iteration(self):
         cs = CaseArray()
         cs.record(self.case1)
@@ -158,6 +167,15 @@ class CaseSetTestCase(unittest.TestCase):
             self.assertEqual(case._inputs, expected[i]._inputs)
             self.assertEqual(case._outputs, expected[i]._outputs)
             
+    def test_copy(self):
+        cs = CaseSet()
+        cs.record(self.case1)
+        cs.record(self.case2)
+        cs.record(self.case1_dup)
+        cscopy = cs.copy()
+        for c1, c2 in zip(cs.get_iter(), cscopy.get_iter()):
+            self.assertEqual(c1, c2)
+
     def test_set_ops(self):
         cs = CaseSet()
         cs2 = CaseSet()
