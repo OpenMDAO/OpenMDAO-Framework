@@ -47,6 +47,14 @@ class CaseArray(object):
         ca._split_idx = self._split_idx
         return ca
         
+    def remove(self, case):
+        """Remove the given Case from this CaseArray."""
+        try:
+            values = self._get_case_data(case)
+        except KeyError:
+            raise KeyError("Case to be removed is not a member of this CaseArray")
+        self._values.remove(values)
+
     def _add_dict_cases(self, dct):
         length = -1
         if self._names:
