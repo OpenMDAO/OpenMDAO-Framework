@@ -16,7 +16,7 @@ class CaseArray(object):
             same set of inputs and outputs.
             
             if obj is None, the first Case that is recorded will be used to set
-            the inputs and outputs for the CaseSet.
+            the inputs and outputs for the CaseArray.
         
         parent_uuid: UUID
             The id of the parent Case (if any)
@@ -40,7 +40,13 @@ class CaseArray(object):
             pass
         else:
             raise TypeError("obj must be a dict, a Case, or None")
-                
+    
+    def copy(self):
+        ca = CaseArray(parent_uuid=self._parent_uuid, names=self._names)
+        ca._values = self._values.copy()
+        ca._split_idx = self._split_idx
+        return ca
+        
     def _add_dict_cases(self, dct):
         length = -1
         if self._names:
@@ -205,6 +211,13 @@ class CaseSet(CaseArray):
         self._tupset = set()
         super(CaseSet, self).__init__(obj, parent_uuid, names)
 
+    def copy(self):
+        cs = CaseSet(parent_uuid=self._parent_uuid, names=self._names)
+        cs._values = self._values.copy()
+        cs._tupset = self._tupset.copy()
+        cs._split_idx = self._split_idx
+        return cs
+        
     def _add_values(self, vals):
         tup = tuple(vals)
         if tup not in self._tupset:
@@ -294,6 +307,14 @@ class CaseSet(CaseArray):
         self._tupset.remove(vals)
         return self._case_from_values(vals)
                 
+    def remove(self, case):
+        try:
+            values = tuple(self._get_case_data(case))
+        except KeyError:
+            raise KeyError("Case to be removed is not a member of this CaseSet")
+        self._tupset.remove(values)
+        self._values.remove(values)
+
     def __eq__(self, caseset):
         self._check_compatability(caseset)
         return self._tupset == caseset._tupset
