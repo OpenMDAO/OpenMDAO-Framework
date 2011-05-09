@@ -39,10 +39,9 @@ class ParetoFilter(Component):
         """Tests to see if the point y1 is dominated by the point y2. 
         True if y1 is dominated by y2, False otherwise.
         """
-        if y1 == y2:
-            return False
-        if any([a<b for a, b in zip(y1, y2)]):
-            return False
+        for a,b in zip(y1, y2): 
+            if a<b: return False
+
         return True
     
     def execute(self):
