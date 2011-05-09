@@ -63,15 +63,13 @@ class ParetoFilter(Component):
             case_set = case_sets[0].union(*case_sets[1:])
         else: 
             case_set = case_sets[0]
-        
+        print "HERE"
         criteria_count = len(self.criteria)        
         # need to transpose the list of outputs from the 
- 
-        y_list = zip(*[case_set[crit] for crit in self.criteria]) 
-        
-        
-        if not y_list: #empty y_list set means no cases met the criteria!
-            self.raise_exception('no cases in the provided case_set had output '
+        try: 
+            y_list = zip(*[case_set[crit] for crit in self.criteria]) 
+        except KeyError: 
+            self.raise_exception('no cases provided had all of the outputs '
                  'matching the provided criteria, %s'%self.criteria, ValueError)
             
         y_temp = list(y_list)

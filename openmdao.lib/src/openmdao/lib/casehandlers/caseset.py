@@ -111,7 +111,10 @@ class CaseArray(object):
         case.
         """
         if isinstance(key, basestring): # return all of the values for the given name
-            idx = self._names.index(key)
+            try: 
+                idx = self._names.index(key)
+            except ValueError as err: 
+                raise KeyError("CaseSet has no input or outputs named %s"%key )
             return [lst[idx] for lst in self._values]
         else:  # key is the case numbe
             return self._case_from_values(self._values[key])
