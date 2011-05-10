@@ -267,4 +267,4 @@ invalidated (as changing an upstream input would do) and hence need to be run. W
 ``force_execute`` set to True, the driver always runs. Note that our top level driver is
 the default sequential execution driver, so this model can run without ``force_execute``.
 However, ``force_execute`` is definitely needed if we want to take this model and optimize
-it (which we will do next), so it's good to practice using it for cascaded drivers.
+it, which we will do next.
