@@ -25,20 +25,20 @@ class VehicleTestCase(unittest.TestCase):
         self.top.driver.workflow.add('sim_EPA_highway')
         
         self.top.sim_acc.workflow.add('vehicle')
-        self.top.sim_acc.add_parameters([('vehicle.velocity', 0, 99999),
-                                         ('vehicle.throttle', 0.01, 1.0),
-                                         ('vehicle.current_gear', 0, 5)])
-        self.top.sim_acc.add_objective('vehicle.acceleration')
-        self.top.sim_acc.add_objective('vehicle.overspeed')
+        self.top.sim_acc.velocity_str = 'vehicle.velocity'
+        self.top.sim_acc.throttle_str = 'vehicle.throttle'
+        self.top.sim_acc.gear_str = 'vehicle.current_gear'
+        self.top.sim_acc.acceleration_str = 'vehicle.acceleration'
+        self.top.sim_acc.overspeed_str = 'vehicle.overspeed'
         
         self.top.sim_EPA_city.workflow.add('vehicle')
-        self.top.sim_EPA_city.add_parameters([('vehicle.velocity', 0, 99999),
-                                              ('vehicle.throttle', 0.01, 1.0),
-                                              ('vehicle.current_gear', 0, 5)])
-        self.top.sim_EPA_city.add_objective('vehicle.acceleration')
-        self.top.sim_EPA_city.add_objective('vehicle.fuel_burn')
-        self.top.sim_EPA_city.add_objective('vehicle.overspeed')
-        self.top.sim_EPA_city.add_objective('vehicle.underspeed')
+        self.top.sim_EPA_city.velocity_str = 'vehicle.velocity'
+        self.top.sim_EPA_city.throttle_str = 'vehicle.throttle'
+        self.top.sim_EPA_city.gear_str = 'vehicle.current_gear'
+        self.top.sim_EPA_city.acceleration_str = 'vehicle.acceleration'
+        self.top.sim_EPA_city.fuel_burn_str = 'vehicle.fuel_burn'
+        self.top.sim_EPA_city.overspeed_str = 'vehicle.overspeed'
+        self.top.sim_EPA_city.underspeed_str = 'vehicle.underspeed'
         self.top.sim_EPA_city.profilename = 'EPA-city.csv'
         
     def tearDown(self):

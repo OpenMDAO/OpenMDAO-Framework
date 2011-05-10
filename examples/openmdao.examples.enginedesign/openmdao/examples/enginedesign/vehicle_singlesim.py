@@ -24,11 +24,11 @@ class VehicleSim(Assembly):
         self.driver.workflow.add('vehicle')
     
         # Acceleration Sim setup
-        self.driver.add_parameters([('vehicle.velocity', 0, 99999),
-                                   ('vehicle.throttle', 0.01, 1.0),
-                                   ('vehicle.current_gear', 0, 5)])
-        self.driver.add_objective('vehicle.acceleration')
-        self.driver.add_objective('vehicle.overspeed')
+        self.driver.velocity_str = 'vehicle.velocity'
+        self.driver.throttle_str = 'vehicle.throttle'
+        self.driver.gear_str = 'vehicle.current_gear'
+        self.driver.acceleration_str = 'vehicle.acceleration'
+        self.driver.overspeed_str = 'vehicle.overspeed'
         
 if __name__ == "__main__": 
 

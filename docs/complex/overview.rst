@@ -313,9 +313,8 @@ integration was adequate. Gears are shifted at the red line, which is the 6000 R
 
 Shifting at the red line is not always optimal, though it is optimal for the default
 engine given here. The optimal shifting RPMs are dependent on the engine's torque curve as well as the gear
-ratios, so creating a generalized yet more optimal shifting procedure would be more numerically intensive. It
-would also be possible to use the shift points as variables and let an optimizer solve for their
-locations.
+ratios, so creating a generalized yet more optimal shifting procedure would be more numerically intensive, though
+it could be done.
 
 
 Simulating the EPA Mileage Tests

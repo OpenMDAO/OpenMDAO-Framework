@@ -76,37 +76,38 @@ socket in DrivingSim:
                 self.driver.add_objective('sim_acc.accel_time')
                 
                 # CONMIN Design Variables 
-                self.driver.add_parameters([('vehicle.spark_angle', -50., 10.),
-                                            ('vehicle.bore', 65., 100.)])
+                self.driver.add_parameter('vehicle.spark_angle', -50., 10.)
+                self.driver.add_parameter('vehicle.bore', 65., 100.)
                 
                 # Acceleration Sim setup
-                self.sim_acc.add_parameters([('vehicle.velocity', 0, 99999),
-                                           ('vehicle.throttle', 0.01, 1.0),
-                                           ('vehicle.current_gear', 0, 5)])
-                self.sim_acc.add_objective('vehicle.acceleration')
-                self.sim_acc.add_objective('vehicle.overspeed')
+                self.sim_acc.velocity_str = 'vehicle.velocity'
+                self.sim_acc.throttle_str = 'vehicle.throttle'
+                self.sim_acc.gear_str = 'vehicle.current_gear'
+                self.sim_acc.acceleration_str = 'vehicle.acceleration'
+                self.sim_acc.overspeed_str = 'vehicle.overspeed'
                 
                 # EPA City MPG Sim Setup
-                self.sim_EPA_city.add_parameters([('vehicle.velocity', 0, 99999),
-                                                 ('vehicle.throttle', 0.01, 1.0),
-                                                 ('vehicle.current_gear', 0, 5)])
-                self.sim_EPA_city.add_objective('vehicle.acceleration')
-                self.sim_EPA_city.add_objective('vehicle.fuel_burn')
-                self.sim_EPA_city.add_objective('vehicle.overspeed')
-                self.sim_EPA_city.add_objective('vehicle.underspeed')
+                self.sim_EPA_city.velocity_str = 'vehicle.velocity'
+                self.sim_EPA_city.throttle_str = 'vehicle.throttle'
+                self.sim_EPA_city.gear_str = 'vehicle.current_gear'
+                self.sim_EPA_city.acceleration_str = 'vehicle.acceleration'
+                self.sim_EPA_city.fuel_burn_str = 'vehicle.fuel_burn'
+                self.sim_EPA_city.overspeed_str = 'vehicle.overspeed'
+                self.sim_EPA_city.underspeed_str = 'vehicle.underspeed'
                 self.sim_EPA_city.profilename = 'EPA-city.csv'
                 self.sim_EPA_city.force_execute = True
                 
                 # EPA Highway MPG Sim Setup
-                self.sim_EPA_highway.add_parameters([('vehicle.velocity', 0, 99999),
-                                                    ('vehicle.throttle', 0.01, 1.0),
-                                                    ('vehicle.current_gear', 0, 5)])
-                self.sim_EPA_highway.add_objective('vehicle.acceleration')
-                self.sim_EPA_highway.add_objective('vehicle.fuel_burn')
-                self.sim_EPA_highway.add_objective('vehicle.overspeed')
-                self.sim_EPA_highway.add_objective('vehicle.underspeed')
+                self.sim_EPA_highway.velocity_str = 'vehicle.velocity'
+                self.sim_EPA_highway.throttle_str = 'vehicle.throttle'
+                self.sim_EPA_highway.gear_str = 'vehicle.current_gear'
+                self.sim_EPA_highway.acceleration_str = 'vehicle.acceleration'
+                self.sim_EPA_highway.fuel_burn_str = 'vehicle.fuel_burn'
+                self.sim_EPA_highway.overspeed_str = 'vehicle.overspeed'
+                self.sim_EPA_highway.underspeed_str = 'vehicle.underspeed'
                 self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
                 self.sim_EPA_highway.force_execute = True
+
         
         if __name__ == "__main__":
 
@@ -150,10 +151,7 @@ The optimization objective is to minimize the 0-60 mph acceleration time by
 adjusting the design variables *bore* and *spark angle*. In the previous
 examples, we learned to use strings to build mathematical expressions with
 variables that point to locations in the data hierarchy, so here we do it once
-again with our objectives and design variables. We could submit the design
-variables one at a time using multiple calls to ``add_parameter``, but we can
-also submit them with a single call to ``add_parameters`` by placing the information
-for each design variable in a list of tuples. The information we need for each
+again with our objectives and design variables. The information we need for each
 variable is the expression that points to it (e.g., ``vehicle.spark_angle``), and
 the minimum and maximum value of the search range for that variable (e.g., ``-.50, 10``).
 Once again, if the min and max aren't specified, the `low` and `high` attributes

@@ -100,7 +100,7 @@ Now that the components are instantiated in the assembly, they need to be hooked
 The first argument in the call to ``self.connect`` is the output variable of
 the source component instance, and the second argument is the input variable
 of the target component instance. For a connection to be valid, the units of
-the output and input must be of the same unit class (e.g., length, speed, etc.) If
+the output and input must be compatible (e.g., length, speed, etc.) If
 they differ within the same class (e.g., meters vs. inches), then the value is
 converted from the source unit to the target unit before setting the value at
 the input. If the classes are incompatible (e.g., meters vs. seconds), then an

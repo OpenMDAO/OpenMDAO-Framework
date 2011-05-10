@@ -91,10 +91,10 @@ default value are covered in previous tutorials. The parameter *units* is
 introduced here and is used in a few of the variables in Transmission. OpenMDAO contains a Units
 module that allows for unit checking and conversion between outputs and
 inputs of components. Our units definitions are based on the those given in
-Scientific Python and can be found in :ref:`units`. If an output and an
-input of the same unit class (e.g., length) are connected in the framework, the value is automatically
-converted as it is passed from the output to the input. If an output and an input
-of a different unit class are connected (e.g., length and time), an exception is
+Scientific Python and can be found in :ref:`units`. If a compatible output and 
+input are connected in the framework, the value is automatically
+converted as it is passed from the output to the input. If an incompatible output and input
+are connected (e.g., length and time), an exception is
 raised. A variable with no units defined can be connected to a variable with units.
 
 **Only the Float and Array types perform automatic unit conversion and checking.**

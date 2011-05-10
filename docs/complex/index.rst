@@ -10,9 +10,9 @@ A More Complex Tutorial Problem
    overview
    components-variables
    python_shell
+   external_module
    assemblies
    vehicle
-   external_module
    drivers
    setting_up_opt
    solving_opt
