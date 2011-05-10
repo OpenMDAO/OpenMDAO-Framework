@@ -224,7 +224,7 @@ class CONMINdriver(Driver):
     phi = Float(5.0, iotype='in', desc='Participation coefficient - penalty '
                       'parameter that pushes designs towards the feasible '
                       'region.')
-    delfun = Float(0.001, iotype='in', low=0.0001, 
+    delfun = Float(0.001, iotype='in', low=0.0, 
                    desc='Relative convergence tolerance.')
     dabfun = Float(0.001, iotype='in', low=1.0e-10, 
                    desc='Absolute convergence tolerance.')
