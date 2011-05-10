@@ -178,8 +178,8 @@ class CaseArray(object):
     def update(self, *case_containers):
         """Add Cases from other CaseSets or CaseArrays to this one."""
         for cset in case_containers:
-            for vals in cset._values:
-                self._add_values(vals)
+            for case in cset.get_iter():
+                self.record(case)
                 
     def pop(self, idx=-1):
         return self._case_from_values(self._values.pop(idx))

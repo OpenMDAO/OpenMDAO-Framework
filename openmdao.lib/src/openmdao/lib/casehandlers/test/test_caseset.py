@@ -239,6 +239,19 @@ class CaseSetTestCase(unittest.TestCase):
         self.assertFalse(self.case2 in cs)
         self.assertFalse(None in cs)
         
+    def test_update_empty(self):
+        c1 = Case(inputs=[('x',10),], outputs=[('y',10)])
+        c2 = Case(inputs=[('x',1),], outputs=[('y',1)])
+        
+        cs1 = CaseSet()
+        cs1.record(c1)
+        cs1.record(c2)
+        
+        cs2 = CaseSet()
+        cs2.update(cs1)
+        
+        for c1,c2 in zip(cs1.get_iter(), cs2.get_iter()):
+            self.assertEqual(c1, c2)
         
 if __name__ == "__main__":
     unittest.main()
