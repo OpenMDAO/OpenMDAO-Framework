@@ -1,4 +1,4 @@
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponsePermanentRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -179,12 +179,12 @@ def Project(request):
         print prefix+'workspace.views() Project: loading '+filepath
         cserver.load_project(filepath)
         print "workspace.views() - Project: done, redirecting to workspace..."
-        return HttpResponseRedirect('workspace')
+        return HttpResponsePermanentRedirect('/workspace/')
     else:
         print "workspace.views() - GET Project"
         proj = cserver.get_project()
         response = HttpResponse(proj, mimetype='application/openmdao')
-        response['Content-Disposition'] = 'attachment; filename='+proj.name()+'.proj'
+        response['Content-Disposition'] = 'attachment; filename='+proj.name+'.proj'
         return response
     
 def Types(request):
