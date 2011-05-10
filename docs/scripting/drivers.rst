@@ -80,16 +80,6 @@ defined in either place, then an exception is raised. Some drivers (in particula
 low or high value; in such a case, you can just set each of them to a large number, e.g., ``low=-1e99`` and
 ``high=1e99``.
 
-Multiple parameters can also be added in a single call to ``add_parameters`` (note the letter
-*s*) by passing a list of tuples.
-
-.. testcode:: Parameter_API
-
-    # Some more Design Variables 
-    self.driver.add_parameters([ ('driving_sim.conrod', 65.0 , 90.0), 
-                                 ('driving_sim.IVC', 0.0, 90.0) ])
-
-
 The ``IHasParameters`` interface also includes some other functions that are more useful when
 used interactively or when writing more advanced components. The functions ``list_parameters``,
 ``remove_parameters``, and ``clear_parameters`` can be used to respectively list all parameters, delete a

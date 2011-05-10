@@ -1094,8 +1094,8 @@ socket in DrivingSim:
             self.driver.add_objective('driving_sim.accel_time')
         
             # CONMIN Design Variables 
-            self.add_parameters([('driving_sim.spark_angle', -50., 10.),
-                                 ('driving_sim.bore', 65., 100.)])
+            self.add_parameter('driving_sim.spark_angle', low=-50., high=10.)
+            self.add_parameter('driving_sim.bore', low=65., high=100.)
 
 Recall that the *iprint* flag enables or disables the printing of diagnostics
 internal to CONMIN, while the *itmax* parameter specifies the maximum number
@@ -1105,10 +1105,8 @@ The optimization objective is to minimize the 0-60 mph acceleration time by
 adjusting the design variables *bore* and *spark angle*. In the previous
 examples, we learned to use strings to build mathematical expressions with
 variables that point to locations in the data hierarchy, so here we do it once
-again with our objectives and design variables. We could submit the design
-variables one at a time using multiple calls to ``add_parameter``, but we can
-also submit them with a single call to ``add_parameters`` by placing the information
-for each design variable in a list of tuples. The information we need for each
+again with our objectives and design variables. We submit each design
+variable using a call to ``add_parameter``. The information we need for each
 variable is the expression that points to it (e.g., ``driving_sim.spark_angle``), and
 the minimum and maximum value of the search range for that variable (e.g., ``-.50, 10``).
 Once again, if the min and max aren't specified, the low and high attributes

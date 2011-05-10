@@ -555,14 +555,6 @@ class IHasParameters(Interface):
             then the *high* value from the variable is used.
         """
         
-    def add_parameters(self, param_iter):
-        """Adds the given iterator of parameters to the driver.
-        
-        param_iter: Iterator returning entries of the form (param_name, low, high)
-            Adds each parameter in the iterator to the driver, setting lower and
-            upper bounds based on the values of *low* and *high*.
-        """
-
     def remove_parameter(self,param_name):
         """Removes the specified parameter. Raises a KeyError if param_name is not found.
         
