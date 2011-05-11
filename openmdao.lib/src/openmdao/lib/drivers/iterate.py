@@ -29,8 +29,8 @@ class FixedPointIterator(Driver):
                                             'tolerance between iterations.')
 
 
-    def __init__(self, doc=None):
-        super(FixedPointIterator, self).__init__(doc)
+    def __init__(self):
+        super(FixedPointIterator, self).__init__()
         
         self.history = zeros(0)
         self.current_iteration = 0
@@ -40,7 +40,7 @@ class FixedPointIterator(Driver):
         
         self._check_config()
 
-        # perform an initial run for self-consistency
+        # perform our initial run
         self.run_iteration()
         
         self.current_iteration = 0
