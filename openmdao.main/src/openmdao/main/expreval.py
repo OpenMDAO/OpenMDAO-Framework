@@ -406,17 +406,21 @@ class ExprEvaluator(object):
         
     def get_metadata(self, metaname=None, scope=None):
         """Return the specified piece of metadata if metaname is provided. Otherwise
-        return the whole metadata dictionary.  If this expression references multiple
-        variables, return a list of tuples containing (varname, metadata) 
-        corresponding to each variable.
+        return the whole metadata dictionary.  
+        
+        Returns a list of tuples containing (varname, metadata) 
+        corresponding to each variable referenced by this expression.
         """
         varnames = self.get_referenced_varpaths()
         scope = self._get_updated_scope(scope)
         lst = []
         for name in varnames:
-            lst.append((name, scope.get_metadata(name, metaname)))
-        if len(lst) == 1:
-            return lst[0][1]
+            if scope.contains(name):
+                lst.append((name, scope.get_metadata(name, metaname)))
+            elif scope.parent and scope.parent.contains(name):
+                lst.append((name, scope.parent.get_metadata(name, metaname)))
+            else:
+                raise AttributeError("'%s' not found" % name)
         return lst
 
     def get_referenced_varpaths(self):

@@ -12,15 +12,17 @@ class Parameter(object):
         self.high = high
         self.fd_step = fd_step
         if not expreval.is_valid_assignee():
-            raise ValueError("Parameter '%s' cannot be assigned to" % expreval.text)
+            raise ValueError("'%s' is not a valid parameter expression" % expreval.text)
         self._expreval = expreval
 
     def __str__(self):
-        return self.target
+        return self._expreval.text
 
     def __repr__(self): 
-        return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s)>'%(self.target,self.low,self.high,self.fd_step)
-    
+        return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s)>'%(self._expreval.text,
+                                                                   self.low,
+                                                                   self.high,
+                                                                   self.fd_step)
     @property
     def target(self): 
         return self._expreval.text
@@ -32,9 +34,16 @@ class Parameter(object):
         self._expreval.set(val, scope)
 
     def get_metadata(self, metaname=None):
-        return self._expreval.get_metadata(metaname)
+        """Returns the specified piece of metadata if metaname is provided. 
+        Otherwise retrieves the whole metadata dictionary.
+        """
+        return self._expreval.get_metadata(metaname)[0][1]
 
-class ParameterGroup(object): 
+
+class ParameterGroup(object):
+    """A group of Parameters that are treated as one, i.e., they are all
+    set to the same value.
+    """
     
     def __init__(self, params):
         self._params = params[:]
@@ -54,6 +63,12 @@ class ParameterGroup(object):
         """
         return self._params[0].evaluate(scope)
 
+    def get_metadata(self, metaname=None):
+        dct = {}
+        for param in self._params:
+            tup = param.get_metadata(metaname)
+            dct.setdefault(tup[0], tup[1])
+        return dct.items()
 
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface."""
@@ -68,7 +83,7 @@ class HasParameters(object):
         """Adds a parameter to the driver.
         
         name: string or iter of strings
-            Name of the variable the driver should vary during execution.
+            Name of the variable(s) the driver should vary during execution.
             If an iterator of names is given, then the driver will set all names given
             to the same value whenever it varies this parameter during execution
             
@@ -100,6 +115,7 @@ class HasParameters(object):
                 self._parent.raise_exception("'%s' is already the target of a Parameter" % name,
                                              ValueError)
         parameters = []
+        vals = []
         for name in names:
             try:
                 parameter = Parameter(ExprEvaluator(name, self._parent),
@@ -114,6 +130,7 @@ class HasParameters(object):
                                              AttributeError)
             try:
                 val = parameter.evaluate()
+                vals.append(val)
             except Exception as err:
                 self._parent.raise_exception("Can't add parameter because I can't evaluate '%s'." % name, 
                                              ValueError)
@@ -164,15 +181,16 @@ class HasParameters(object):
     
             parameter.fd_step = fd_step
             parameters.append(parameter)
-        types = set([type(param.evaluate()) for param in parameters])
+        
+        types = set([type(val) for val in vals])
         if len(types) > 1: 
             self._parent.raise_exception("Can not add parameter %s because "
-                             "%s are not the same type"%(tuple(orig_names)," and ".join(orig_names)))
+                             "%s are not the same type"%(key," and ".join(names)))
             
         if len(parameters) == 1: #just one in there
-            self._parameters[orig_names] = parameters[0]
+            self._parameters[key] = parameters[0]
         else: 
-            self._parameters[orig_names] = ParameterGroup(parameters)
+            self._parameters[key] = ParameterGroup(parameters)
         
             
     def remove_parameter(self, name):

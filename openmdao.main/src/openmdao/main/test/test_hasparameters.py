@@ -81,8 +81,7 @@ class HasParametersTestCase(unittest.TestCase):
         try: 
             self.top.driver.add_parameter(('comp.x','comp.y'), low=0.,high=1e99)
         except Exception as err: 
-            self.assertEqual(str(err),"driver: Trying to add parameter '('comp.x', 'comp.y')' to driver, "
-                                             "but it's already there")
+            self.assertEqual(str(err),"driver: 'comp.x' is already the target of a Parameter")
         else: 
             self.fail("Exception expected")
             
@@ -112,8 +111,7 @@ class HasParametersTestCase(unittest.TestCase):
         try:
             self.top.driver.add_parameter(('comp.x+comp.y','comp.x'), low=0, high=1.e99)
         except Exception, err:
-            self.assertEqual(str(err), "driver: Can't add parameter 'comp.x+comp.y' because it "
-                             "refers to multiple objects.")
+            self.assertEqual(str(err), "driver: Can't add parameter: 'comp.x+comp.y' is not a valid parameter expression")
         else:
             self.fail("Exception expected")
         
@@ -136,16 +134,14 @@ class HasParametersTestCase(unittest.TestCase):
         try:
             self.top.driver.add_parameter(('comp.x','comp.y'), low=0, high=1.e99)
         except Exception, err:
-            self.assertEqual(str(err), "driver: Trying to add group of parameters '('comp.x', 'comp.y')' to driver, "
-                                             "but one of them is already there")
+            self.assertEqual(str(err), "driver: 'comp.x' is already the target of a Parameter")
         else:
             self.fail("Exception expected")        
         
         try:
             self.top.driver.add_parameter('comp.x+comp.y', low=0, high=1.e99)
         except Exception, err:
-            self.assertEqual(str(err), "driver: Can't add parameter 'comp.x+comp.y' because "
-                             "it refers to multiple objects.")
+            self.assertEqual(str(err), "driver: Can't add parameter: 'comp.x+comp.y' is not a valid parameter expression")
         else:
             self.fail("Exception expected")
 
@@ -172,8 +168,8 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.y', low=0., high=1.e99)
         try: 
             self.top.driver.add_parameter('comp.y')
-        except AttributeError,err: 
-            self.assertEqual(str(err),"driver: Trying to add parameter 'comp.y' to driver, but it's already there")
+        except ValueError,err: 
+            self.assertEqual(str(err),"driver: 'comp.y' is already the target of a Parameter")
         else: 
             self.fail('RuntimeError expected')
         
