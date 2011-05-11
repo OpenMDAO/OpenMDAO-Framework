@@ -70,7 +70,7 @@ class HasParametersTestCase(unittest.TestCase):
             self.top.driver.add_parameter(('d_float.x','d_int.x'), low=-1,high=10)
         except Exception as err: 
             self.assertEqual(str(err),"driver: Can not add parameter ('d_float.x', 'd_int.x') because "
-                             "d_float.x and d_int.x are not the same type")
+                             "d_float.x and d_int.x are not all of the same type")
         else: 
             self.fail("Exception Expected")
         
@@ -86,8 +86,8 @@ class HasParametersTestCase(unittest.TestCase):
             self.fail("Exception expected")
             
         
-        params = self.top.driver.list_parameters()
-        self.assertEqual(frozenset(params[0]),frozenset(['comp.x','comp.y']))
+        targets = self.top.driver.list_targets()
+        self.assertEqual(frozenset(targets),frozenset(['comp.x','comp.y']))
         
         try: 
             self.top.driver.remove_parameter('comp.foo')
@@ -106,7 +106,7 @@ class HasParametersTestCase(unittest.TestCase):
             self.fail('RuntimeError Expected')    
             
         self.top.driver.remove_parameter(('comp.x','comp.y'))
-        self.assertEqual([],self.top.driver.list_parameters())
+        self.assertEqual([],self.top.driver.list_targets())
         
         try:
             self.top.driver.add_parameter(('comp.x+comp.y','comp.x'), low=0, high=1.e99)
@@ -114,7 +114,6 @@ class HasParametersTestCase(unittest.TestCase):
             self.assertEqual(str(err), "driver: Can't add parameter: 'comp.x+comp.y' is not a valid parameter expression")
         else:
             self.fail("Exception expected")
-        
         
     
     def test_list_add_remove_clear_params(self):
@@ -136,7 +135,7 @@ class HasParametersTestCase(unittest.TestCase):
         except Exception, err:
             self.assertEqual(str(err), "driver: 'comp.x' is already the target of a Parameter")
         else:
-            self.fail("Exception expected")        
+            self.fail("Exception expected")
         
         try:
             self.top.driver.add_parameter('comp.x+comp.y', low=0, high=1.e99)
@@ -150,7 +149,7 @@ class HasParametersTestCase(unittest.TestCase):
 
         self.top.driver.remove_parameter('comp.x')
         params = self.top.driver.list_parameters()
-        self.assertEqual(params,['comp.y'])  
+        self.assertEqual(params,['comp.y'])
 
         try: 
             self.top.driver.remove_parameter('comp.foo')

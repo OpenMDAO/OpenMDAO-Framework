@@ -24,8 +24,8 @@ class Parameter(object):
                                                                    self.high,
                                                                    self.fd_step)
     @property
-    def target(self): 
-        return self._expreval.text
+    def targets(self): 
+        return [self._expreval.text]
     
     def evaluate(self, scope=None):
         return self._expreval.evaluate(scope)
@@ -37,7 +37,7 @@ class Parameter(object):
         """Returns the specified piece of metadata if metaname is provided. 
         Otherwise retrieves the whole metadata dictionary.
         """
-        return self._expreval.get_metadata(metaname)[0][1]
+        return self._expreval.get_metadata(metaname)
 
 
 class ParameterGroup(object):
@@ -46,11 +46,14 @@ class ParameterGroup(object):
     """
     
     def __init__(self, params):
+        for param in params:
+            if not isinstance(param, Parameter):
+                raise ValueError("tried to add a non-Parameter object to a ParameterGroup")
         self._params = params[:]
             
     @property
     def targets(self): 
-        return [p.target for p in self._params]
+        return [p.targets[0] for p in self._params]
     
     def set(self, value, scope=None):
         """Set all targets to the given value."""
@@ -58,8 +61,8 @@ class ParameterGroup(object):
             p.set(value, scope)
             
     def evaluate(self, scope=None):
-        """Return the value of the first parameter in our target list. Values of
-        all of our targets are assumed to be the same.
+        """Return the value of the first parameter in our target list. Values
+        of all of our targets are assumed to be the same.
         """
         return self._params[0].evaluate(scope)
 
@@ -124,7 +127,9 @@ class HasParameters(object):
                 self._parent.raise_exception("Can't add parameter: %s" % str(err),
                                              err.__class__)
             try:
-                metadata = parameter.get_metadata()
+                # metadata is in the form [(varname, metadata)], so use [0][1] to get
+                # the actual metadata dict
+                metadata = parameter.get_metadata()[0][1]
             except AttributeError:
                 self._parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % name,
                                              AttributeError)
@@ -185,7 +190,7 @@ class HasParameters(object):
         types = set([type(val) for val in vals])
         if len(types) > 1: 
             self._parent.raise_exception("Can not add parameter %s because "
-                             "%s are not the same type"%(key," and ".join(names)))
+                             "%s are not all of the same type"%(key," and ".join(names)))
             
         if len(parameters) == 1: #just one in there
             self._parameters[key] = parameters[0]
@@ -193,6 +198,19 @@ class HasParameters(object):
             self._parameters[key] = ParameterGroup(parameters)
         
             
+    def update_case(self, values, case, normalized):
+        """Given a list of values and a Case object, add an input to the Case
+        for each target specified by our list of targets. If normalized is
+        True, assume the values are between 0. and 1. and scale them to lie
+        between the high and low values of the corresponding parameter.
+        """
+        for value, parameter in zip(values, self._parameters.values()):
+            if normalized:
+                value = parameter.low+(parameter.high-parameter.low)*value
+            for target in parameter.targets:
+                case.add_input(target, value)
+        return case
+
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
             
@@ -202,20 +220,13 @@ class HasParameters(object):
             self._parent.raise_exception("Trying to remove parameter '%s' "
                                          "that is not in this driver." % (name,),
                                          AttributeError)
-    def list_parameters(self):
-        """Returns an alphabetized list of parameter names."""
-        return sorted(self._parameters.keys())
-    
     def list_targets(self):
         """Returns an alphabetized list of parameter targets, including
         all targets of ParameterGroup objects.
         """
         targets = []
         for param in self._parameters.values():
-            if isinstance(param, ParameterGroup):
-                targets.extend(param.targets)
-            else:
-                targets.append(param.target)
+            targets.extend(param.targets)
         return sorted(targets)
     
     def clear_parameters(self):

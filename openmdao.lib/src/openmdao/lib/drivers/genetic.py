@@ -78,12 +78,13 @@ class Genetic(Driver):
         alleles = GAllele.GAlleles()
         count = 0
         for param in self.get_parameters().values():
-            count += 1    
+            allele = None
+            count += 1
             val = param.evaluate() #now grab the value 
             low = param.low
             high = param.high
       
-            metadata = param.get_metadata()
+            metadata = param.get_metadata()[0][1]
             
             #then it's a float or an int, or a member of an array
             if ('low' in metadata or 'high' in metadata) or array_test.search(param.target): 
@@ -92,12 +93,12 @@ class Genetic(Driver):
                     allele = GAllele.GAlleleRange(begin=low, end=high, real=True)
                 #some kind of int    
                 if isinstance(val,(int,int32,int64)):
-                    allele = GAllele.GAlleleRange(begin=low, end=high, real=False)           
+                    allele = GAllele.GAlleleRange(begin=low, end=high, real=False)
                     
             elif "values" in metadata and isinstance(metadata['values'],(list,tuple,array,set)):
                 allele = GAllele.GAlleleList(metadata['values'])
 
-            if allele:     
+            if allele:
                 alleles.add(allele)
             else: 
                 self.raise_exception("%s is not a float, int, or enumerated \

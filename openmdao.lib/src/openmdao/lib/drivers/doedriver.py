@@ -37,21 +37,7 @@ class DOEdriver(CaseIterDriverBase):
         self.DOEgenerator.num_parameters = len(params)
         
         for row in self.DOEgenerator:
-            inputs = []
-            for val, parameter in zip(row, params):
-                
-                #convert DOE values to variable values
-                value = parameter.low+(parameter.high-parameter.low)*val
-                if '[' in parameter.target:
-                    raise ValueError('Array entry design vars '
-                                     'not supported yet.')
-                else:
-                    target = parameter.target
-                    if isinstance(target,str): 
-                        inputs.append((target, value))
-                    else: #then it's a broadcast-parameter
-                        for t in target: 
-                            inputs.append(t,value)
+            inputs = self.get_case_inputs(values=row, params=params, normalized=True)
             
             # now add any event variables
             for varname in self.get_events():
