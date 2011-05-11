@@ -293,16 +293,16 @@ class CONMINdriver(Driver):
                 if (dval - val.high) < self.ctlmin:
                     self.design_vals[i] = val.high
                 else:
-                    self.raise_exception('maximum exceeded for initial value'
-                                         ' of: %s' % val.expreval.text,
-                                         ValueError)
+                    msg = 'initial value of: %s ' % val.expreval.text + \
+                                         'is greater than maximum'
+                    self.raise_exception(msg, ValueError)
             if dval < val.low:
                 if (val.low - dval) < self.ctlmin:
                     self.design_vals[i] = val.low
                 else:
-                    self.raise_exception('minimum exceeded for initial value'
-                                         ' of: %s' % val.expreval.text,
-                                         ValueError)
+                    msg = 'initial value of: %s ' % val.expreval.text + \
+                                         'is less than minimum'
+                    self.raise_exception(msg, ValueError)
 
         
     def continue_iteration(self):
