@@ -9,7 +9,7 @@ import ast
 import copy
 import __builtin__
 
-# a copy of this dict will act as the local scope when we eval our expressions
+# this dict will act as the local scope when we eval our expressions
 _expr_dict = {
     'math': math,
     }
@@ -404,6 +404,21 @@ class ExprEvaluator(object):
         else: # self._allow_set is False
             raise ValueError("expression '%s' can't be set to a value" % self.text)
         
+    def get_metadata(self, metaname=None, scope=None):
+        """Return the specified piece of metadata if metaname is provided. Otherwise
+        return the whole metadata dictionary.  If this expression references multiple
+        variables, return a list of tuples containing (varname, metadata) 
+        corresponding to each variable.
+        """
+        varnames = self.get_referenced_varpaths()
+        scope = self._get_updated_scope(scope)
+        lst = []
+        for name in varnames:
+            lst.append((name, scope.get_metadata(name, metaname)))
+        if len(lst) == 1:
+            return lst[0][1]
+        return lst
+
     def get_referenced_varpaths(self):
         """Return a set of source or dest Variable pathnames relative to
         *scope.parent* and based on the names of Variables referenced in our 
@@ -456,6 +471,11 @@ class ExprEvaluator(object):
             return self.text == other.text
         return False
 
+    def __repr__(self): 
+        return '<ExprEval(text=%s)>' % self._text
+    
+    def __str__(self):
+        return self._text
 
 if __name__ == '__main__':
     import sys

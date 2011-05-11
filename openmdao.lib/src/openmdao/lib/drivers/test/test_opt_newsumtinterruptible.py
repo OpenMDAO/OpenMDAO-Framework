@@ -234,12 +234,10 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
         
         self.top.driver.add_objective('comp.result')
 
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', -100.0, 100.0),
-            ('comp.x[1]', -100.0, 100.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', -100.0, 100.0)
+        self.top.driver.add_parameter('comp.x[1]', -100.0, 100.0)
         
-        map(self.top.driver.add_constraint,[ ])    
+        map(self.top.driver.add_constraint,[ ])
         self.top.run()
         self.assertAlmostEqual(self.top.comp.opt_objective, 
                                self.top.driver.eval_objective(), places=2)
@@ -252,10 +250,8 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
         
         self.top.driver.add_objective('comp.result')
 
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', float( '-inf' ), float( 'inf' ) ),
-            ('comp.x[1]', float( '-inf' ), float( 'inf' ) ),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', float( '-inf' ), float( 'inf' ) )
+        self.top.driver.add_parameter('comp.x[1]', float( '-inf' ), float( 'inf' ) )
         
         map(self.top.driver.add_constraint,[ ])    
         self.top.run()
@@ -291,10 +287,8 @@ class NEWSUMTdriverParaboloidWithLinearConstraintTestCase(unittest.TestCase):
 
         self.top.driver.add_objective( 'comp.result' )
         
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', -100.0, 100.0),
-            ('comp.x[1]', -100.0, 100.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', -100.0, 100.0)
+        self.top.driver.add_parameter('comp.x[1]', -100.0, 100.0)
 
         map(self.top.driver.add_constraint,[ 'comp.x[0] - 4.0 > 0.0' ] )
         self.top.run()
@@ -327,10 +321,8 @@ class NEWSUMTdriverParaboloidWithNonLinearConstraintTestCase(unittest.TestCase):
 
         self.top.driver.add_objective( 'comp.result' )
 
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', -100.0, 100.0),
-            ('comp.x[1]', -100.0, 100.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', -100.0, 100.0)
+        self.top.driver.add_parameter('comp.x[1]', -100.0, 100.0)
 
         map(self.top.driver.add_constraint,[ '- comp.x[0]**2 - ( comp.x[1] - 3.0 )**2 + 1.0 > 0.0' ] )
         self.top.run()
@@ -367,10 +359,8 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
 
         self.top.driver.add_objective( 'comp.result' )
 
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', 2.0, 50.0),
-            ('comp.x[1]', -50.0, 50.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', 2.0, 50.0)
+        self.top.driver.add_parameter('comp.x[1]', -50.0, 50.0)
         
         map(self.top.driver.add_constraint,[ '-10.0 + 10.0 * comp.x[0] - comp.x[1] > 0.0' ] )
         self.top.driver.ilin = [1]
@@ -390,10 +380,8 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
 
         self.top.driver.add_objective( 'comp.result' )
 
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', 2.0, 50.0),
-            ('comp.x[1]', -50.0, 50.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', 2.0, 50.0)
+        self.top.driver.add_parameter('comp.x[1]', -50.0, 50.0)
         
         map(self.top.driver.add_constraint,[ '-10.0 + 10.0 * comp.x[0] - comp.x[1] > 0.0' ] )
         self.top.driver.ilin = [1]
@@ -432,12 +420,10 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
 
         self.top.driver.add_objective('comp.result')
 
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', -10.0, 99.0),
-            ('comp.x[1]', -10.0, 99.0),
-            ('comp.x[2]', -10.0, 99.0),
-            ('comp.x[3]', -10.0, 99.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', -10.0, 99.0)
+        self.top.driver.add_parameter('comp.x[1]', -10.0, 99.0)
+        self.top.driver.add_parameter('comp.x[2]', -10.0, 99.0)
+        self.top.driver.add_parameter('comp.x[3]', -10.0, 99.0)
 
         map(self.top.driver.add_constraint,[
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
@@ -485,10 +471,8 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
 
         self.top.driver.add_objective('comp.result')
         
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', 0.0, 100.0),
-            ('comp.x[1]', 0.0, 100.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', 0.0, 100.0)
+        self.top.driver.add_parameter('comp.x[1]', 0.0, 100.0)
 
         map(self.top.driver.add_constraint,[
             '2.0 * comp.x[0] - comp.x[1] - 1.0 > 0.0',
@@ -509,10 +493,8 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         
         self.top.driver.add_objective('comp.result')
         
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', 0.0, 100.0),
-            ('comp.x[1]', 0.0, 100.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', 0.0, 100.0)
+        self.top.driver.add_parameter('comp.x[1]', 0.0, 100.0)
 
         map(self.top.driver.add_constraint,[
             '2.0 * comp.x[0] - comp.x[1] - 1.0 > 0.0',
@@ -581,10 +563,8 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
 
 
         try:
-            self.top.driver.add_parameters( [
-                ('comp.x[0]', -10.0, 99.0),
-                ('comp.x[1]',  99.0, -10.0),
-                ] )
+            self.top.driver.add_parameter('comp.x[0]', -10.0, 99.0)
+            self.top.driver.add_parameter('comp.x[1]',  99.0, -10.0)
         except ValueError, err:
             self.assertEqual(str(err),
                              "driver: Parameter 'comp.x[1]' " + \
@@ -599,10 +579,8 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
 
         self.top.driver.add_objective('comp.result' )
         
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', -10.0, 99.0),
-            ('comp.x[1]', -10.0, 99.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', -10.0, 99.0)
+        self.top.driver.add_parameter('comp.x[1]', -10.0, 99.0)
 
         map(self.top.driver.add_constraint,[
             '2.0 * comp.x[0] - comp.x[1] - 1.0 > 0.0',
@@ -614,7 +592,6 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         
         self.top.run()
         
-
         self.assertEqual(self.top.driver.iter_count,2)
         
     def test_gradient_step_size_large(self):
@@ -622,10 +599,8 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         
         self.top.driver.add_objective( 'comp.result' )
         
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', 0.0, 100.0),
-            ('comp.x[1]', 0.0, 100.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', 0.0, 100.0)
+        self.top.driver.add_parameter('comp.x[1]', 0.0, 100.0)
 
         map(self.top.driver.add_constraint,[
             '2.0 * comp.x[0] - comp.x[1] - 1.0 > 0.0',

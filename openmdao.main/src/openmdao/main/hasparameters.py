@@ -7,55 +7,53 @@ from openmdao.util.decorators import add_delegate
 
 class Parameter(object): 
     
-    def __init__(self,expr=None,):
-        self.low = None
-        self.high = None
-        
-        self.fd_step = None
-        
-        self._expreval = expr
-        
+    def __init__(self, expreval, high=None, low=None, fd_step=None):
+        self.low = low
+        self.high = high
+        self.fd_step = fd_step
+        if not expreval.is_valid_assignee():
+            raise ValueError("Parameter '%s' cannot be assigned to" % expreval.text)
+        self._expreval = expreval
+
+    def __str__(self):
+        return self.target
+
     def __repr__(self): 
-        return '<Parameter(low=%s,high=%s,expr=%s,fd_step=%s)>'%(self.low,self.high,self._expreval.text,self.fd_step)
-    
-    def set(self,value,scope=None): 
-        self._expreval.set(value,scope)
-        
-    def evaluate(self,scope=None):
-        return self._expreval.evaluate(scope)
-    
-    def get_metadata(self): 
-        var_name=list(self._expreval.get_referenced_varpaths())[0]
-        return self._expreval.scope.parent.get_metadata(var_name)
+        return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s)>'%(self.target,self.low,self.high,self.fd_step)
     
     @property
     def target(self): 
         return self._expreval.text
     
-class BroadcastParameter(object): 
+    def evaluate(self, scope=None):
+        return self._expreval.evaluate(scope)
     
-    def __init__(self, parameters):
-        self._exprs = []
-        for p in parameters: 
-            self.low = p.low
-            self.high = p.high
-            self.fd_step = p.fd_step
-            self._exprs.append(p._expreval)
-            
-    def set(self,value,scope=None): 
-        for e in self._exprs: 
-            e.set(value,scope)
-            
-    def evaluate(self,scope=None):
-        return self._exprs[0].evaluate(scope)
-        
-    def get_metadata(self): 
-        var_name=list(self._exprs[0].get_referenced_varpaths())[0]
-        return self._exprs[0].scope.get_metadata(var_name)
+    def set(self, val, scope=None):
+        self._expreval.set(val, scope)
+
+    def get_metadata(self, metaname=None):
+        return self._expreval.get_metadata(metaname)
+
+class ParameterGroup(object): 
     
+    def __init__(self, params):
+        self._params = params[:]
+            
     @property
-    def target(self): 
-        return tuple([e.text for e in self._exprs])
+    def targets(self): 
+        return [p.target for p in self._params]
+    
+    def set(self, value, scope=None):
+        """Set all targets to the given value."""
+        for p in self._params: 
+            p.set(value, scope)
+            
+    def evaluate(self, scope=None):
+        """Return the value of the first parameter in our target list. Values of
+        all of our targets are assumed to be the same.
+        """
+        return self._params[0].evaluate(scope)
+
 
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface."""
@@ -66,24 +64,12 @@ class HasParameters(object):
         self._parameters = ordereddict.OrderedDict()
         self._parent = parent
 
-    def add_parameters(self, param_iter):
-        """Takes an iterator of tuples of the form (param_name, low, high,fd_step)
-        and adds the parameters to the driver.
-        """
-        if len(param_iter[0]) ==3: 
-            for name, low, high in param_iter:
-                self._parent.add_parameter(name, low=low, high=high)
-                
-        if len(param_iter[0]) ==4: 
-            for name, low, high, fd_step in param_iter:
-                self._parent.add_parameter(name, low=low, high=high, fd_step=fd_step)        
-            
     def add_parameter(self, name, low=None, high=None, fd_step=None):
-        """Adds a parameter to the driver. 
+        """Adds a parameter to the driver.
         
-        name: string or tuple of strings
+        name: string or iter of strings
             Name of the variable the driver should vary during execution.
-            If a tuple of names is given, then the driver will set all names given
+            If an iterator of names is given, then the driver will set all names given
             to the same value whenever it varies this parameter during execution
             
         low: float (optional)
@@ -101,37 +87,27 @@ class HasParameters(object):
         referenced. If they are not specified in the metadata and not provided
         as arguments, a ValueError is raised.
         """
-        orig_names = name
-        if isinstance(name,str): 
-            names = frozenset([name])
+        if isinstance(name, str): 
+            names = [name]
+            key = name
         else: 
-            names = frozenset(name)
-            orig_names = tuple(orig_names)
-            
+            names = name
+            key = tuple(name)
 
-        if orig_names in self._parameters: 
-                self._parent.raise_exception("Trying to add parameter '%s' to driver, "
-                                             "but it's already there" % (orig_names,),
-                                             AttributeError)
-        flat_names = list(itertools.chain(self.list_parameters()))
+        all_names = set(self.list_targets())
         for name in names: 
-            if name in flat_names: 
-                self._parent.raise_exception("Trying to add group of parameters '%s' to driver, "
-                                             "but one of them is already there" % (orig_names,),
-                                             AttributeError)
-        parameters = []        
-        for name in names: 
-            parameter = Parameter(self)
-            parameter._expreval = ExprEvaluator(name, self._parent)
-        
-            if not parameter._expreval.is_valid_assignee():
-                self._parent.raise_exception("Can't add parameter '%s' because it refers to multiple objects." % name,
+            if name in all_names: 
+                self._parent.raise_exception("'%s' is already the target of a Parameter" % name,
                                              ValueError)
-        
-            
+        parameters = []
+        for name in names:
             try:
-                var_name = list(parameter._expreval.get_referenced_varpaths())[0]
-                #metadata = self._parent.parent.get_metadata(var_name)
+                parameter = Parameter(ExprEvaluator(name, self._parent),
+                                      low=low, high=high, fd_step=fd_step)
+            except Exception as err:
+                self._parent.raise_exception("Can't add parameter: %s" % str(err),
+                                             err.__class__)
+            try:
                 metadata = parameter.get_metadata()
             except AttributeError:
                 self._parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % name,
@@ -193,10 +169,10 @@ class HasParameters(object):
             self._parent.raise_exception("Can not add parameter %s because "
                              "%s are not the same type"%(tuple(orig_names)," and ".join(orig_names)))
             
-        if len(parameters) == 1: #just one in there       
+        if len(parameters) == 1: #just one in there
             self._parameters[orig_names] = parameters[0]
         else: 
-            self._parameters[orig_names] = BroadcastParameter(parameters)
+            self._parameters[orig_names] = ParameterGroup(parameters)
         
             
     def remove_parameter(self, name):
@@ -212,6 +188,18 @@ class HasParameters(object):
         """Returns an alphabetized list of parameter names."""
         return sorted(self._parameters.keys())
     
+    def list_targets(self):
+        """Returns an alphabetized list of parameter targets, including
+        all targets of ParameterGroup objects.
+        """
+        targets = []
+        for param in self._parameters.values():
+            if isinstance(param, ParameterGroup):
+                targets.extend(param.targets)
+            else:
+                targets.append(param.target)
+        return sorted(targets)
+    
     def clear_parameters(self):
         """Removes all parameters."""
         self._parameters = ordereddict.OrderedDict()
@@ -225,23 +213,16 @@ class HasParameters(object):
         variables in the model.
         
         values: iterator
-            Iterator of input values with an order defined to match the order of parameters returned 
-            by the list_parameter method. 'values' must support the len() function.
+            Iterator of input values with an order defined to match the 
+            order of parameters returned by the list_parameter method. 
+            'values' must support the len() function.
         """
         if len(values) != len(self._parameters):
             raise ValueError("number of input values (%s) != number of parameters (%s)" % 
                              (len(values),len(self._parameters)))
 
         for val, param in zip(values, self._parameters.values()):
-            #if (param.low is not None and val < param.low) or (param.high is not None and val > param.high):
-                #raise ValueError("parameter value (%s) is outside of allowed range [%s to %s]" %
-                                 #(val, param.low, param.high))
-
-            try:
-                param.set(val)
-            except AttributeError:    #broadcast parameters 
-                for p in param: 
-                    p.set(val)        
+            param.set(val)
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
@@ -250,7 +231,7 @@ class HasParameters(object):
         conn_list = []
         pname = self._parent.name
         for name,param in self._parameters.items():
-            for cname in param._expreval.get_referenced_compnames():
+            for cname in param.get_referenced_compnames():
                 conn_list.append((pname, cname))
         return conn_list
     

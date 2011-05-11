@@ -36,8 +36,8 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.driver.workflow.add('comp')
         
     def test_set_params(self):
-        self.top.driver.add_parameters([('comp.x', 0., 1.e99,None), 
-                                        ('comp.y', 0., 1.e99,None)])
+        self.top.driver.add_parameter('comp.x', 0., 1.e99, None) 
+        self.top.driver.add_parameter('comp.y', 0., 1.e99, None)
         self.top.driver.set_parameters([22., 33.])
         self.assertEqual(self.top.comp.x, 22.)
         self.assertEqual(self.top.comp.y, 33.)
