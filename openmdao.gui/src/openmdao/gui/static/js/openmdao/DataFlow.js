@@ -48,7 +48,8 @@ openmdao.DataFlow = function(id,model) {
         var x = 50, y = 50;
         jQuery.each(json,function(name,val) {
             if (val) {
-                var typepath = val["py/object"]
+                // var typepath = val["py/object"]
+                var typepath = name // FIXME: just getting a name atm
                 if (typepath !== undefined) {
                     var tokens = typepath.split('.'),
                         typename = tokens[tokens.length-1]
@@ -77,7 +78,7 @@ openmdao.DataFlow = function(id,model) {
     
     /** update the schematic, with data from the model */
     function update() {
-        model.getJSON( updateFigures )
+        model.getComponents(updateFigures)
     }
     
     // ask model for an update whenever something changes

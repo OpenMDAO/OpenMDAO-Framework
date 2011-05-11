@@ -1,6 +1,5 @@
 import logging
-import os.path
-import sys
+import os, os.path, sys
 import platform
 import shutil
 import cmd
@@ -10,28 +9,78 @@ import tempfile
 from cStringIO import StringIO
 
 from enthought.traits.api import HasTraits
+from openmdao.main.variable import Variable
 
 from multiprocessing.managers import BaseManager
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create
+from openmdao.main.component import Component
+
+from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.main.project import *
 
+from mdao_util import *
+
 class ConsoleServerFactory(Factory):
-    """
-    An :class:`ConsoleServerFactory` creates :class:`ConsoleServers` 
-    """
+    ''' creates and keeps track of :class:`ConsoleServer`s
+    '''
 
     def __init__(self):
         super(ConsoleServerFactory, self).__init__()
+        self.cserver_dict = {}
+        self.temp_files = {}
+
+    def __del__(self):
+        ''' make sure we clean up on exit
+        '''
+        #self.cleanup()  # this locks up python :/
 
     def create(self, name, **ctor_args):
-        """ Create an :class:`ConsoleServer` and return a proxy for it. """
+        """ Create a :class:`ConsoleServer` and return a proxy for it. """
         manager = BaseManager()
         manager.register('ConsoleServer', ConsoleServer)
         manager.start()
         return manager.ConsoleServer()
-    
+        
+    def console_server(self,server_id):
+        ''' create a new :class:`ConsoleServer` associated with an id
+        '''
+        if not self.cserver_dict.has_key(server_id):
+            cserver = self.create('mdao-'+server_id)
+            self.cserver_dict[server_id] = cserver;
+        else:
+            cserver = self.cserver_dict[server_id]
+        return cserver
+        
+    def delete_server(self,server_id):
+        ''' delete the :class:`ConsoleServer` associated with an id
+        '''
+        if self.cserver_dict.has_key(server_id):
+            cserver = self.cserver_dict[server_id]
+            del self.cserver_dict[server_id]
+            cserver.cleanup()
+            del cserver
+        
+    def get_tempdir(self,name):
+        ''' create a temporary directory prefixed with the given name
+        '''
+        if not name in self.temp_files:
+            self.temp_files[name] = tempfile.mkdtemp(prefix='mdao-'+name+'.')
+        return self.temp_files[name]
+        
+    def cleanup(self):        
+        ''' clean up temporary files, etc
+        '''
+        for server_id, cserver in self.cserver_dict:
+            del self.cserver_dict[server_id]
+            cserver.cleanup()
+            del cserver            
+        for name in self.temp_files:
+            f = self.temp_files[name]
+            if os.path.exists(f):
+                rmtree(f)
+                
 class ConsoleServer(cmd.Cmd):
     """
     Object which knows how to load a model.
@@ -49,8 +98,8 @@ class ConsoleServer(cmd.Cmd):
         sys.stdout = self.cout
         sys.stderr = self.cout
 
-        self.prompt = "OpenMDAO>> "
-        self.intro  = "Welcome to OpenMDAO!"
+        self.intro  = 'OpenMDAO '+__version__+' ('+__date__+')'
+        self.prompt = 'OpenMDAO>> '
         
         self._hist    = []      ## No history yet
         self._locals  = {}      ## Initialize execution namespace for user
@@ -68,7 +117,6 @@ class ConsoleServer(cmd.Cmd):
         os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
         
-
     def getcwd(self):
         return os.getcwd()
 
@@ -121,13 +169,21 @@ class ConsoleServer(cmd.Cmd):
             except Exception, e:
                 print str(e.__class__.__name__), ":", e
 
-    def execfile(self, file):       
+    def run(self):
+        """ run the model (i.e. the top assembly) """
+        if 'top' in self._globals:
+            self._globals['top'].run()
+        else:
+            print "Execution failed: No top level assembly was found."
+        
+    def execfile(self, file):
         """ execfile in server's globals. """        
         # set name so any "if __name__ == __main__" code will be executed
         self._globals['__name__'] = '__main__'
         execfile(file,self._globals)
 
     def get_output(self):
+        """ get any pending output and clear the outputput buffer """
         output = self.cout.getvalue()     
         self.cout.truncate(0)
         return output
@@ -148,11 +204,40 @@ class ConsoleServer(cmd.Cmd):
     def get_JSON(self):
         return jsonpickle.encode(self._globals)
         
-    def get_objects(self):  # TODO:
-        """ get hierarchy of openmdao objects (per get_avaialable_types())
-            and their I/O traits (list_inputs() & list_outputs()). """
-        return jsonpickle.encode(self._globals)
+    def _get_components(self,cont):
+        comps = {}
+        for n,v in cont.items():
+            if isinstance(v, HasTraits):
+                if isinstance(v,Component):
+                    comps[n] = self._get_components(v)
+                else:
+                    comps[n] = v
+        return comps
         
+    def get_components(self):
+        """ get hierarchical dictionary of openmdao objects """
+        comps = {}
+        if 'top' in self._globals:
+            comps = self._get_components(self._globals['top'])
+        return comps
+
+    def _get_attributes(self,obj):
+        """ get attributes of object """
+        attr = {}
+        for n,v in obj.items():
+            if isinstance(v,Component):
+                attr[n] = self._get_attributes(v)
+            else:
+                attr[n] = v
+        return attr
+        
+    def get_attributes(self,name):
+        attr = {}
+        if 'top' in self._globals:
+            obj = self._globals['top'].get(name)
+            attr = self._get_attributes(obj)
+        return attr
+    
     def get_workingtypes(self):
         """ Return this server's user defined types. """
         types = []
@@ -165,11 +250,9 @@ class ConsoleServer(cmd.Cmd):
         return types
 
     def load_project(self,filename):
-        print "loading project at: "+filename
         proj = project_from_archive(filename,dest_dir=self.getcwd())
         name = proj.name
-        print "project name: "+name
-        self._globals[name] = proj.top
+        self._globals['top'] = proj.top # TODO: use proj.name instead of 'top'
         set_as_top(proj.top)
         
     def create(self,typname,name):
@@ -196,3 +279,50 @@ class ConsoleServer(cmd.Cmd):
                 print "failed to rmtree ",self.root_dir
                 print e
         
+    def get_files(self):
+        ''' get a nested dictionary of files in the working directory
+        '''
+        cwd = os.getcwd()
+        return filedict(cwd,root=cwd)
+
+    def get_file(self,filename):
+        ''' get contents of file in working directory
+            returns None if file was not found
+        '''
+        filepath = os.getcwd()+'/'+str(filename)
+        if os.path.exists(filepath):
+            contents=open(filepath, 'r').read()
+            return contents
+        else:
+            return None
+            
+    def write_file(self,filename,contents):
+        ''' write contents to file in working directory
+        '''
+        filepath = os.getcwd()+'/'+str(filename)
+        fout = open(filepath,'wb')
+        fout.write(contents)
+        fout.close()
+    
+    def delete_file(self,filename):
+        ''' delete file in working directory
+            returns False if file was not found, otherwise returns True
+        '''
+        filepath = os.getcwd()+'/'+str(filename)
+        if os.path.exists(filepath):
+            if os.path.isdir(filepath):
+                os.rmdir(filepath)
+            else:
+                os.remove(filepath)
+            return True
+        else:
+            return False
+            
+    def ensure_dir(self,dirname):
+        ''' create directory in working directory
+            (does nothing if directory already exists)
+        '''
+        dirpath = os.getcwd()+'/'+str(dirname)
+        if not os.path.isdir(dirpath):
+            os.makedirs(dirpath)
+            

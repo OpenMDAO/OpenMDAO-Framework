@@ -7,6 +7,7 @@ admin.autodiscover()
 urlpatterns = patterns('workspace.views',
     # custom views
     (r'^$',               'Workspace'),
+    (r'^components',      'Components'),
     (r'^component/(.*)',  'Component'),
     # (r'^addons',          'AddOns'),
     (r'^command',         'Command'),
@@ -14,9 +15,8 @@ urlpatterns = patterns('workspace.views',
     (r'^exit',            'Exit'),
     (r'^file/(.*)',       'File'),
     (r'^files',           'Files'),
-    (r'^cwd',             'CWD'),
     (r'^login',           'Exit'),
-    (r'^model',           'Model'),
+    (r'^model',           'Model'),    # TODO: remove?
     (r'^output',          'Output'),
     (r'^project',         'Project'),
     (r'^types',           'Types'),

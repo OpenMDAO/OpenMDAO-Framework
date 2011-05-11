@@ -126,7 +126,7 @@ openmdao.PropertiesEditor = function(id,model) {
         debug.info("PropertiesEditor.editObject: "+path+" (pathname="+self.pathname+")")
         if (self.pathname !== path) {
             self.pathname = path
-            model.getObject(path, loadTable,
+            model.getComponent(path, loadTable,
                 function(jqXHR, textStatus, errorThrown) {
                     self.pathname = ''
                     alert("Error editing object: "+jqXHR.statusText)

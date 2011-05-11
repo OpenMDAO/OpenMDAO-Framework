@@ -11,17 +11,17 @@ import zipfile, jsonpickle
 
 from setuptools.command import easy_install
 
-from server_manager import ServerManager
 from openmdao.main.factorymanager import get_available_types
 from mdao_util import *
 
 # TODO:
 prefix = '<<<'+str(os.getpid())+'>>> '
 print prefix+'workspace.views() -------------------------------------'
-from server_manager import ServerManager
-server_mgr = ServerManager()
+from consoleserverfactory import ConsoleServerFactory
+server_mgr = ConsoleServerFactory()
 
 @csrf_exempt
+@login_required()
 def Command(request):
     ''' get the command, send it to the cserver, return response
     '''
@@ -44,12 +44,12 @@ def Command(request):
         return HttpResponse('') # not used for now, could render a form
 
 @csrf_exempt
+@login_required()
 def Component(request,name):
     ''' add or remove a component
     '''
-    print request
+    cserver = server_mgr.console_server(request.session.session_key)
     if request.POST:
-        cserver = server_mgr.console_server(request.session.session_key)
         result = ''
         try:
             cserver.create(request.POST['type'],name);
@@ -57,96 +57,81 @@ def Component(request,name):
             print e
             result = sys.exc_info()
         return HttpResponse(result)
-    elif request.DELETE:
-        cserver = server_mgr.console_server(request.session.session_key)
+    elif request.method=='DELETE':
         result = ''
         try:
             result = cserver.onecmd('del '+request.name)
         except Exception,e:
             print e
             result = sys.exc_info()
-        return result
+        return HttpResponse(result)
+    else:
+        attr = cserver.get_attributes(name)
+        json = jsonpickle.encode(attr)
+        return HttpResponse(json,mimetype='application/json')
 
-def CWD(request):
-    ''' get/set the current working directory for the cserver
-    '''
+def Components(request):
     cserver = server_mgr.console_server(request.session.session_key)
-    if request.PUT:
-        userdir = server_mgr.get_tempdir('files');
-        ensure_dir(userdir+request.PUT['folder'])
-        cserver.chdir(userdir+request.PUT['folder'])
-    return HttpResponse(cserver.getcwd())
+    json = jsonpickle.encode(cserver.get_components())
+    return HttpResponse(json,mimetype='application/json')
 
+@login_required()
 def Exec(request):
     ''' have the cserver execute a file, return result
     '''
-    history = ''
-    if request.PUT:
+    result = ''
+    if request.POST:
         cserver = server_mgr.console_server(request.session.session_key)
-        result = ''
         # if there is a filename, execute it & get the result
         if 'filename' in request.PUT:
             try:
-                result = cserver.execfile(request.PUT['filename'])
+                result = cserver.execfile(request.POST['filename'])
             except Exception,e:
                 print e
-                result = sys.exc_info()
-            if result:
-                history = history + str(result) + '\n'
+                result = result + str(sys.exc_info()) + '\n'
+                
         else:
-            result = ''
-    return HttpResponse(history)
+            try:
+                cserver.run()
+            except Exception,e:
+                print e
+                result = result + str(sys.exc_info()) + '\n'
+    return HttpResponse(result)
 
+@login_required()
 def Exit(request):
     server_mgr.delete_server(request.session.session_key)
     logout(request)
     return HttpResponseRedirect('/')
 
 @csrf_exempt
+@login_required()
 def File(request,filename):
     ''' get/set the specified file/folder
     '''
     cserver = server_mgr.console_server(request.session.session_key)
-    filepath = cserver.getcwd()+'/'+str(filename)
-    if request.POST:
+    if request.method=='POST':
         if "isFolder" in request.POST:
-            ensure_dir(filepath)
-            return HttpResponse("Folder created")
+            return HttpResponse(cserver.ensure_dir(filename))
         else:
-            fout = open(filepath,'wb')
-            if "contents" in request.POST:
-                fout.write(request.POST["contents"])
-            fout.close()
-            return HttpResponse("File created")
+            return HttpResponse(cserver.write_file(filename,request.POST["contents"]))
     elif request.method=='DELETE':
-        if os.path.exists(filepath):
-            if os.path.isdir(filepath):
-                    os.rmdir(filepath)
-                    return HttpResponse("File deleted")
-            else:
-                    os.remove(filepath)
-                    return HttpResponse("Folder deleted")
-        else:
-            return HttpResponse("Sorry, the file was not found.")
-    elif request.GET:
-        if os.path.exists(filepath):
-            f=open(filepath, 'r')
-            return HttpResponse(f.read())
-        else:
-            return HttpResponse("Sorry, the file was not found.")
+        return HttpResponse(cserver.delete_file(filename))
+    elif request.method=='GET':
+        return HttpResponse(cserver.get_file(filename))
+    return HttpResponse("How did I get here?")
 
+@login_required()
 def Files(request):
     ''' get a list of the users files in JSON format
     '''
     cserver = server_mgr.console_server(request.session.session_key)
-    root = cserver.getcwd()
-    print "Files: root="+root
-    dict = filepathdict(root)
-    json = jsonpickle.encode(dict)
-    root = root.replace('\\','\\\\')  # TODO: investigate this
-    json = json.replace(root,'')
+    filedict = cserver.get_files()
+    json = jsonpickle.encode(filedict)
     return HttpResponse(json,mimetype='application/json')
 
+@csrf_exempt
+@login_required()
 def Model(request):
     ''' GET: get JSON representation of the model
         POST: get a new model (delete existing console server)
@@ -159,6 +144,7 @@ def Model(request):
         json = cserver.get_JSON()
         return HttpResponse(json,mimetype='application/json')
 
+@login_required()
 def Output(request):
     ''' get any outstanding output from the model
     '''
@@ -166,6 +152,7 @@ def Output(request):
     return HttpResponse(cserver.get_output())
 
 from openmdao.gui.settings import MEDIA_ROOT
+@login_required()
 def Project(request):
     ''' GET: get a project archive of the current model
         POST: load model fom the given project archive
@@ -187,6 +174,7 @@ def Project(request):
         response['Content-Disposition'] = 'attachment; filename='+proj.name+'.proj'
         return response
     
+@login_required()
 def Types(request):
     ''' get hierarchy of package/types to populate the Palette
     '''

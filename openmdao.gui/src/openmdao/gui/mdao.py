@@ -213,7 +213,7 @@ class Command:
 class Exec:
     ''' have the cserver execute a file, return response
     '''
-    def PUT(self):
+    def POST(self):
         cserver = server_mgr.console_server(session.session_id)
         x = web.input()
         history = ''
@@ -241,7 +241,7 @@ class Output:
 class Exit:
     ''' exit
     '''
-    def PUT(self):
+    def POST(self):
         render.closewindow()
         server_mgr.delete_server(session.session_id)
         session.kill()
@@ -334,7 +334,7 @@ class CWD:
         cserver = server_mgr.console_server(session.session_id)
         return cserver.getcwd()
         
-    def PUT(self):
+    def POST(self):
         cserver = server_mgr.console_server(session.session_id)
         x = web.input()
         userdir = server_mgr.get_tempdir('files') +'/'+ session.user;

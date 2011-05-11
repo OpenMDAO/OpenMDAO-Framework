@@ -89,6 +89,38 @@ openmdao.Model=function() {
         }
     }
     
+    /** get  model components*/
+    this.getComponents = function(callback,errorHandler) {
+        if (typeof callback != 'function')
+            return
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'components',
+                dataType: 'json',
+                data: {},
+                success: callback,
+                error: errorHandler
+            })
+        }
+    }
+    
+    /** get  model components*/
+    this.getComponent = function(name,callback,errorHandler) {
+        if (typeof callback != 'function')
+            return
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'component/'+name,
+                dataType: 'json',
+                data: {},
+                success: callback,
+                error: errorHandler
+            })
+        }
+    }
+    
     /** get a JSON representation the specified object in the model */
     this.getObject = function(pathname, callback, errorHandler) {
         if (typeof callback != 'function')
@@ -165,7 +197,7 @@ openmdao.Model=function() {
     /** set the working directory of the model */
     this.setWD = function(folder) {
         jQuery.ajax({
-            type: 'PUT',
+            type: 'POST',
             url:  'cwd',
             data: { 'folder': folder },
             success: self.updateListeners
@@ -203,7 +235,7 @@ openmdao.Model=function() {
 
         jQuery.ajax({
             type: 'GET',
-            url:  'file/'+filepath.replace(/\\/g,'/'),
+            url:  'file'+filepath.replace(/\\/g,'/'),
             dataType: 'text',
             success: callback,
             error: errorHandler
@@ -289,7 +321,7 @@ openmdao.Model=function() {
 
         // make the call
         jQuery.ajax({
-            type: 'PUT',
+            type: 'POST',
             url:  'exec',
             data: { 'filename': path },
             success: self.updateListeners
@@ -299,7 +331,7 @@ openmdao.Model=function() {
     /** exit the model */
     this.exit = function() {
         jQuery.ajax({
-            type: 'PUT',
+            type: 'POST',
             url: 'exit',
         })
     }

@@ -4,8 +4,9 @@ import os, os.path
 import webbrowser
 from xml.dom.minidom import Document
 
-# a decorator to make a class a singleton
 def singleton(cls):
+    ''' a decorator to make a class a singleton
+    '''
     instances = {}
     def getinstance():
         if cls not in instances:
@@ -13,25 +14,29 @@ def singleton(cls):
         return instances[cls]
     return getinstance
 
-# make sure a directory exists
 def ensure_dir(d):
+    ''' create directory if it doesn't exist
+    '''
     if not os.path.isdir(d):
         os.makedirs(d)
 
-# print the contents of a list
 def print_list (list):
+    ''' print the contents of a list
+    '''
     for item in list:
         print item
 
-# print the contents of a dictionary
 def print_dict (dict):
+    ''' print the contents of a dictionary
+    '''
     for item in dict.items():
         key, value = item
         print str(key)+' = '+str(value)
 
-# modified version of:
-# http://code.activestate.com/recipes/305313-xml-directory-tree/        
 def makenode(doc,path):
+    ''' modified version of:
+        http://code.activestate.com/recipes/305313-xml-directory-tree/        
+    '''
     "Return a document node contains a directory tree for the path."
     node = doc.createElement('dir')
     node.setAttribute('name', path)
@@ -45,32 +50,28 @@ def makenode(doc,path):
         node.appendChild(elem)
     return node
 
-# create a nested dictionary for a file structure with file names as keys   
-def filedict(path):
-    "Return a directory tree for the path."
+def filedict(path,key='pathname',root=''):
+    ''' create a nested dictionary for a file structure
+        the key may be:
+            filename    the name of the file
+            pathname    the full pathname of the file (default)
+    '''
     dict = {}
-    for f in os.listdir(path):
-        fullname = os.path.join(path, f)
-        if os.path.isdir(fullname):
-            dict[f] = filedict(fullname)
+    for filename in os.listdir(path):
+        pathname = os.path.join(path, filename)
+        k = locals()[key]
+        l = len(root)
+        if key=='pathname' and l > 0:
+            k = k[l:]
+        if os.path.isdir(pathname):
+            dict[k] = filedict(pathname,key,root)
         else:
-            dict[f] = os.path.getsize(fullname)
+            dict[k] = os.path.getsize(pathname)
     return dict
 
-# create a nested dictionary for a file structure with pathnames as keys   
-def filepathdict(path):
-    "Return a directory tree for the path."
-    dict = {}
-    for f in os.listdir(path):
-        fullname = os.path.join(path, f)
-        if os.path.isdir(fullname):
-            dict[fullname] = filepathdict(fullname)
-        else:
-            dict[fullname] = os.path.getsize(fullname)
-    return dict
-
-# create a nested list for a package structure
 def packagedict(types):
+    ''' create a nested list for a package structure
+    '''
     dict={}
     for t in types:
         parent = dict

@@ -181,7 +181,7 @@ openmdao.ObjectTree = function(id,model,edit_function) {
     
     /** update the tree, with data from the model  */
     function update() {
-        model.getJSON(updateTree)
+        model.getComponents(updateTree)
     }
     
     /** ask model for an update whenever something changes */

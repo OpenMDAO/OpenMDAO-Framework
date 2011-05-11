@@ -20,8 +20,8 @@ openmdao.CodeEditor = function(id,model) {
         filepath = "",
         editor = CodeMirror.fromTextArea(id, {
             parserfile: ["../contrib/python/js/parsepython.js"],
-            stylesheet: "static/codemirror/contrib/python/css/pythoncolors.css",
-            path:       "static/codemirror/js/",
+            stylesheet: "/static/codemirror/contrib/python/css/pythoncolors.css",
+            path:       "/static/codemirror/js/",
             lineNumbers: true,
             textWrapping: false,
             indentUnit: 4,
@@ -62,6 +62,8 @@ openmdao.CodeEditor = function(id,model) {
             },
             // failure
             function(jqXHR, textStatus, errorThrown) {
+                debug.info(textStatus)
+                debug.info(errorThrown)
                 alert("Error editing file: "+jqXHR.statusText)
             }
         )
