@@ -124,8 +124,7 @@ class ParameterGroup(object):
         low and high values of our first parameter. The value is assumed to be
         between 0. and 1.
         """
-        p = self._params[0]
-        return p.low+(p.high-p.low)*value
+        return self.low+(self.high-self.low)*value
 
 
 class HasParameters(object): 
