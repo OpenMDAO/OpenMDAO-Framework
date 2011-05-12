@@ -23,7 +23,7 @@ class EngineOptimization(Assembly):
         # pylint: disable-msg=E1101
         
         # Create CONMIN Optimizer instance
-        self.add('driver', CONMINdriver())
+        self.add('optimizer', CONMINdriver())
         
         # Create Vehicle instance
         self.add('vehicle', Vehicle())
@@ -33,8 +33,11 @@ class EngineOptimization(Assembly):
         self.add('sim_EPA_city', SimEconomy())
         self.add('sim_EPA_highway', SimEconomy())
         
-        # add Sims to optimizer workflow
-        self.driver.workflow.add(['sim_acc', 'sim_EPA_city', 'sim_EPA_highway'])
+        # add the optimizer and economy sims to driver workflow
+        self.driver.workflow.add(['optimizer', 'sim_EPA_city', 'sim_EPA_highway'])
+        
+        # add the acceleration sim to the optimizer workflow
+        self.optimizer.workflow.add('sim_acc')
         
         # Add vehicle to sim workflows.
         self.sim_acc.workflow.add('vehicle')
@@ -42,15 +45,15 @@ class EngineOptimization(Assembly):
         self.sim_EPA_highway.workflow.add('vehicle')
     
         # CONMIN Flags
-        self.driver.iprint = 0
-        self.driver.itmax = 30
+        self.optimizer.iprint = 0
+        self.optimizer.itmax = 30
         
         # CONMIN Objective 
-        self.driver.add_objective('sim_acc.accel_time')
+        self.optimizer.add_objective('sim_acc.accel_time')
         
         # CONMIN Design Variables 
-        self.driver.add_parameter('vehicle.spark_angle', -50., 10.)
-        self.driver.add_parameter('vehicle.bore', 65., 100.)
+        self.optimizer.add_parameter('vehicle.spark_angle', -50., 10.)
+        self.optimizer.add_parameter('vehicle.bore', 65., 100.)
         
         # Acceleration Sim setup
         self.sim_acc.velocity_str = 'vehicle.velocity'
@@ -114,7 +117,7 @@ if __name__ == "__main__": # pragma: no cover
     tt = time.time()
     opt_problem.run()
     prz('New Design')
-    print "CONMIN Iterations: ", opt_problem.driver.iter_count
+    print "CONMIN Iterations: ", opt_problem.optimizer.iter_count
     print ""
     print "Elapsed time: ", time.time()-tt
     

@@ -10,7 +10,7 @@ In a Multidisciplinary Design Feasible (MDF) problem, the disciplines are direct
 via some kind of solver, and the design variables are optimized in a single loop. The
 following diagram illustrates the data flow for MDF applied to the Sellar problem.
 
-.. figure:: ../images/user-guide/Arch-MDF.png
+.. figure:: ../images/tutorials/Arch-MDF.png
    :align: center
    :alt: Diagram consists of boxes and arrows to show data flow for MDF applied to the Sellar problem.
    
@@ -86,7 +86,7 @@ Although in many cases a WorkFlow contains just Components, it can also
 contain Drivers. This allows nested iterative processes to be created. The
 following diagram shows an iteration hierarchy for the MDF problem.
    
-.. figure:: ../images/user-guide/Arch-MDF-OpenMDAO.png
+.. figure:: ../images/tutorials/Arch-MDF-OpenMDAO.png
    :align: center
    :alt: Diagram showing the Optimizer, workflow for the Optimizer, and workflow for the Solver
    
