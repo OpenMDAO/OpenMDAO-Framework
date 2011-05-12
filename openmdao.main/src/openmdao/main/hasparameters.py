@@ -119,6 +119,14 @@ class ParameterGroup(object):
             result.union(param.get_referenced_compnames())
         return result
     
+    def denormalize(self, value):
+        """Return a scaled version of the given value that lies between the
+        low and high values of our first parameter. The value is assumed to be
+        between 0. and 1.
+        """
+        return self._params[0].low+(self._params[0].high-self._params[0].low)*value
+
+
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface."""
 
