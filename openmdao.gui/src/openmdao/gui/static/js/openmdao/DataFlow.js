@@ -67,6 +67,8 @@ openmdao.DataFlow = function(id,model) {
                     img.src = "/static/images/"+typename+".png";
                     jQuery(img).ready(function(){
                         if (img.width > 0) {
+                            img.style.width = "50px";
+                            img.style.height = "50px";
                             newObj.setImage(img.src);
                             newObj.setDimension(img.width,img.height)
                         }

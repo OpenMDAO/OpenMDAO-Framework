@@ -31,7 +31,7 @@ openmdao.Menu = function(id) {
                 { text: "New File",      onclick: "model.newFile();" },
                 { text: "New Folder",    onclick: "model.newFolder();" },
                 { text: "Add File",      onclick: "model.uploadFile();" },
-                { text: "Save",          url: "/save"  }
+                { text: "Save Project",  onclick: "model.saveProject();" }
               ]
             },
             { text: "View", 

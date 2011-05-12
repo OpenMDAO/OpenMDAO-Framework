@@ -65,7 +65,15 @@ openmdao.Model=function() {
             success: self.updateListeners
         })
     }
-
+    /** save the current project */
+    this.saveProject = function() {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'project',
+            success: self.updateListeners
+        })
+    }
+    
     /** get a JSON representation of the model */
     this.getJSON = function(callback, errorHandler) {
         if (typeof callback != 'function')

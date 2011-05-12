@@ -118,20 +118,28 @@ class Project(object):
         modeldir = os.path.join(self.path, 'model')
         self.activate()
         if os.path.isdir(projpath):
-            if not _is_valid_project_dir(projpath):
-                raise RuntimeError("Directory '%s' is not a valid OpenMDAO project directory")
+            # I don't think model dir and state are manadatory
+            # e.g. when creating a project from an existing non-Project directory
+            # if not _is_valid_project_dir(projpath):
+                # raise RuntimeError("Directory '%s' is not a valid OpenMDAO project directory")
 
-            # locate the state file containing the state of the project
+            # locate file containing state, create it if it doesn't exist
             statefile = os.path.join(projpath, '_project_state')
-            with open(statefile, 'r') as f:
-                self.__dict__ = pickle.load(f)
+            if os.path.exists(statefile):
+                with open(statefile, 'r') as f:
+                    self.__dict__ = pickle.load(f)
+            else:
+                self.top = Assembly()
+
+            
             self.path = expand_path(projpath) # set again in case loading project state changed it
         else:  # new project
             os.makedirs(projpath)
             os.mkdir(modeldir)
             self.top = Assembly()
-            set_as_top(self.top)
-            self.save()
+
+        set_as_top(self.top)
+        self.save()
 
         SimulationRoot.chroot(self.path)
 

@@ -2,12 +2,15 @@ draw2d.Component=function(name,type,path){
     // the default image will be a letter corresponding to the object type
     imgURL = "/static/images/alphabet/"+type.charAt(0).toUpperCase()+".png";
     draw2d.ImageFigure.call(this,imgURL);
+    
     this.name = name
     this.type = type
     this.path = path
+    
     // default size & border
     this.setDimension(50,50);
     this.setBorder(new draw2d.LineBorder(1))
+    
     // TODO: inputs & outputs based on type
     this.inputPort=null;
     this.outputPort=null;

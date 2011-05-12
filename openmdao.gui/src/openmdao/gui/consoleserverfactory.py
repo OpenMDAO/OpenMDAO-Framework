@@ -34,7 +34,7 @@ class ConsoleServerFactory(Factory):
     def __del__(self):
         ''' make sure we clean up on exit
         '''
-        #self.cleanup()  # this locks up python :/
+        self.cleanup()
 
     def create(self, name, **ctor_args):
         """ Create a :class:`ConsoleServer` and return a proxy for it. """
@@ -94,6 +94,8 @@ class ConsoleServer(cmd.Cmd):
         print '<<<'+str(os.getpid())+'>>> ConsoleServer ..............'
         
         #intercept stdout & stderr
+        self.sysout = sys.stdout
+        self.syserr = sys.stderr
         self.cout = StringIO()
         sys.stdout = self.cout
         sys.stderr = self.cout
@@ -116,6 +118,11 @@ class ConsoleServer(cmd.Cmd):
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
+        
+        print 'root_dir=',self.root_dir
+        
+        self.projfile = ''
+        self.proj = None
         
     def getcwd(self):
         return os.getcwd()
@@ -194,14 +201,14 @@ class ConsoleServer(cmd.Cmd):
         
     def get_project(self):
         """ Return the current model as a project archive. """
-        # TODO:
-        return 
+        return self.proj
 
     def get_history(self):
         """ Return this server's :attr:`_hist`. """
         return self._hist
 
     def get_JSON(self):
+        """ return current state as JSON """
         return jsonpickle.encode(self._globals)
         
     def _get_components(self,cont):
@@ -250,10 +257,30 @@ class ConsoleServer(cmd.Cmd):
         return types
 
     def load_project(self,filename):
-        proj = project_from_archive(filename,dest_dir=self.getcwd())
-        name = proj.name
-        self._globals['top'] = proj.top # TODO: use proj.name instead of 'top'
-        set_as_top(proj.top)
+        self.projfile = filename
+        self.proj = project_from_archive(filename,dest_dir=self.getcwd())
+        name = self.proj.name
+        self._globals['top'] = self.proj.top # TODO: use proj.name instead of 'top'
+        set_as_top(self.proj.top)
+        
+    def save_project(self):
+        """ save the cuurent project state & export it whence it came
+        """
+        if self.proj:
+            try:
+                self.proj.save()
+                print 'Project state saved.'
+                if len(self.projfile)>0:
+                    dir = os.path.dirname(self.projfile)
+                    ensure_dir(dir)
+                    self.proj.export(destdir=dir)
+                    print 'Exported to ',dir+'/'+self.proj.name
+                else:
+                    print 'Export failed, directory not known'
+            except Exception, err:
+                print "Save failed:", str(err)                
+        else:
+            print 'No Project to save'
         
     def create(self,typname,name):
         """ create a new object of the given type. """
@@ -269,6 +296,8 @@ class ConsoleServer(cmd.Cmd):
 
     def cleanup(self):
         """ Cleanup this server's directory. """
+        self.stdout = self.sysout
+        self.stderr = self.syserr
         logging.shutdown()
         os.chdir(self.orig_dir)
         if os.path.exists(self.root_dir):

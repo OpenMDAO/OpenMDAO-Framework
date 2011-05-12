@@ -133,8 +133,8 @@ def Files(request):
 @csrf_exempt
 @login_required()
 def Model(request):
-    ''' GET: get JSON representation of the model
-        POST: get a new model (delete existing console server)
+    ''' POST: get a new model (delete existing console server)
+        GET:  get JSON representation of the model
     '''
     if request.POST:
         server_mgr.delete_server(session.session.session_key)
@@ -152,27 +152,22 @@ def Output(request):
     return HttpResponse(cserver.get_output())
 
 from openmdao.gui.settings import MEDIA_ROOT
+@csrf_exempt
 @login_required()
 def Project(request):
-    ''' GET: get a project archive of the current model
-        POST: load model fom the given project archive
+    ''' GET:  load model fom the given project archive
+        POST: save project archive of the current project
     '''
-    server_mgr.delete_server(request.session.session_key) # delete old server
-    cserver = server_mgr.console_server(request.session.session_key)
-    print prefix+'workspace.views() Project: ------------------'
-    if request.POST:
-        print "workspace.views() - POST Project: "+request.POST['filename']
-        filepath = MEDIA_ROOT+'/'+request.POST['filename']
-        print prefix+'workspace.views() Project: loading '+filepath
-        cserver.load_project(filepath)
-        print "workspace.views() - Project: done, redirecting to workspace..."
-        return HttpResponsePermanentRedirect('/workspace/')
+    if request.method=='POST':
+        cserver = server_mgr.console_server(request.session.session_key)
+        cserver.save_project()
+        return HttpResponse('Saved.')
     else:
-        print "workspace.views() - GET Project"
-        proj = cserver.get_project()
-        response = HttpResponse(proj, mimetype='application/openmdao')
-        response['Content-Disposition'] = 'attachment; filename='+proj.name+'.proj'
-        return response
+        server_mgr.delete_server(request.session.session_key) # delete old server
+        cserver = server_mgr.console_server(request.session.session_key)        
+        filepath = MEDIA_ROOT+'/'+request.GET['filename']
+        cserver.load_project(filepath)
+        return HttpResponsePermanentRedirect('/workspace/')
     
 @login_required()
 def Types(request):

@@ -33,7 +33,7 @@
     <b>Last Modified: </b> {{ project.modified }}
     <p>
     
-    <form action="/workspace/project/" method="POST">
+    <form action="/workspace/project/" method="GET">
         {% csrf_token %}
         <input type="hidden" name="filename" value="{{ project.filename }}" />
         <input type="submit" value="Load this project into Workspace" />
