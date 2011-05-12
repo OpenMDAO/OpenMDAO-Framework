@@ -24,21 +24,37 @@ class Parameter(object):
                                                                    self.high,
                                                                    self.fd_step)
     @property
-    def targets(self): 
+    def target(self):
+        """Returns the target of this parameter."""
+        return self._expreval.text
+    
+    @property
+    def targets(self):
+        """Returns a one element list containing the target of this parameter."""
         return [self._expreval.text]
     
     def evaluate(self, scope=None):
+        """Returns the value of this parameter."""
         return self._expreval.evaluate(scope)
     
     def set(self, val, scope=None):
+        """Assigns the given value to the variable referenced by this parameter."""
         self._expreval.set(val, scope)
 
     def get_metadata(self, metaname=None):
-        """Returns the specified piece of metadata if metaname is provided. 
-        Otherwise retrieves the whole metadata dictionary.
+        """Returns a list of tuples of the form (varname, metadata), with one
+        entry for each variable referenced by the parameter expression. The
+        metadata value found in the tuple with be either the specified piece
+        of metadata if metaname is provided, or the whole metadata dictionary
+        for that variable if it is not.
         """
         return self._expreval.get_metadata(metaname)
 
+    def get_referenced_compnames(self):
+        """Return a set of Component names based on the 
+        pathnames of Variables referenced in our target string. 
+        """
+        return self._expreval.get_referenced_compnames()
 
 class ParameterGroup(object):
     """A group of Parameters that are treated as one, i.e., they are all
@@ -47,13 +63,21 @@ class ParameterGroup(object):
     
     def __init__(self, params):
         for param in params:
+            # prevent multiply nested ParameterGroups
             if not isinstance(param, Parameter):
                 raise ValueError("tried to add a non-Parameter object to a ParameterGroup")
         self._params = params[:]
+        self.low = self._params[0].low
+        self.high = self._params[0].high
+        self.fd_step = self._params[0].fd_step
             
     @property
+    def target(self): 
+        return self._params[0].target
+    
+    @property
     def targets(self): 
-        return [p.targets[0] for p in self._params]
+        return [p.target for p in self._params]
     
     def set(self, value, scope=None):
         """Set all targets to the given value."""
@@ -67,12 +91,27 @@ class ParameterGroup(object):
         return self._params[0].evaluate(scope)
 
     def get_metadata(self, metaname=None):
+        """Returns a list of tuples of the form (varname, metadata), with one
+        entry for each variable referenced by a target expression. The
+        metadata value found in the tuple with be either the specified piece
+        of metadata if metaname is provided, or the whole metadata dictionary
+        for that variable if it is not.
+        """
         dct = {}
         for param in self._params:
             tup = param.get_metadata(metaname)
             dct.setdefault(tup[0], tup[1])
         return dct.items()
 
+    def get_referenced_compnames(self):
+        """Return a set of Component names based on the 
+        pathnames of Variables referenced in our target strings. 
+        """
+        result = set()
+        for param in self._params:
+            result.union(param.get_referenced_compnames())
+        return result
+    
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface."""
 
@@ -83,7 +122,7 @@ class HasParameters(object):
         self._parent = parent
 
     def add_parameter(self, name, low=None, high=None, fd_step=None):
-        """Adds a parameter to the driver.
+        """Adds a parameter or group of parameters to the driver.
         
         name: string or iter of strings
             Name of the variable(s) the driver should vary during execution.
@@ -112,7 +151,7 @@ class HasParameters(object):
             names = name
             key = tuple(name)
 
-        all_names = set(self.list_targets())
+        all_names = set(self.list_param_targets())
         for name in names: 
             if name in all_names: 
                 self._parent.raise_exception("'%s' is already the target of a Parameter" % name,
@@ -220,9 +259,10 @@ class HasParameters(object):
             self._parent.raise_exception("Trying to remove parameter '%s' "
                                          "that is not in this driver." % (name,),
                                          AttributeError)
-    def list_targets(self):
-        """Returns an alphabetized list of parameter targets, including
-        all targets of ParameterGroup objects.
+    def list_param_targets(self):
+        """Returns an alphabetized list of parameter targets. Note that this
+        list may contain more entries than the list of Parameter and
+        ParameterGroup objects since ParameterGroups have multiple targets.
         """
         targets = []
         for param in self._parameters.values():

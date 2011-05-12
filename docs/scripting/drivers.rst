@@ -81,21 +81,21 @@ low or high value; in such a case, you can just set each of them to a large numb
 ``high=1e99``.
 
 The ``IHasParameters`` interface also includes some other functions that are more useful when
-used interactively or when writing more advanced components. The functions ``list_parameters``,
-``remove_parameters``, and ``clear_parameters`` can be used to respectively list all parameters, delete a
-single parameter, and clear all parameters.
+used interactively or when writing more advanced components. The functions ``list_param_targets``,
+``remove_parameters``, and ``clear_parameters`` can be used to respectively list all parameter 
+targets, delete a single parameter, and clear all parameters.
 
 .. doctest:: more_parameter_interface
 
     >>> from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
     >>> top = OptimizationConstrained()
-    >>> top.driver.list_parameters()
+    >>> top.driver.list_param_targets()
     ['paraboloid.x', 'paraboloid.y']
     >>> top.driver.remove_parameter('paraboloid.x')
-    >>> top.driver.list_parameters()
+    >>> top.driver.list_param_targets()
     ['paraboloid.y']
     >>> top.driver.clear_parameters()
-    >>> top.driver.list_parameters()
+    >>> top.driver.list_param_targets()
     []
 
 There are also ``get_parameters`` and ``set_parameters`` methods, but these

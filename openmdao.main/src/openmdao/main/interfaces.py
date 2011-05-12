@@ -562,8 +562,8 @@ class IHasParameters(Interface):
             Name of the parameter to remove.
         """
         
-    def list_parameters(self):
-        """Lists all the parameters."""
+    def list_param_targets(self):
+        """Lists the targets of all parameters."""
         
     def clear_parameters(self):
         """Removes all parameters."""

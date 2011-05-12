@@ -86,7 +86,7 @@ class HasParametersTestCase(unittest.TestCase):
             self.fail("Exception expected")
             
         
-        targets = self.top.driver.list_targets()
+        targets = self.top.driver.list_param_targets()
         self.assertEqual(frozenset(targets),frozenset(['comp.x','comp.y']))
         
         try: 
@@ -106,7 +106,7 @@ class HasParametersTestCase(unittest.TestCase):
             self.fail('RuntimeError Expected')    
             
         self.top.driver.remove_parameter(('comp.x','comp.y'))
-        self.assertEqual([],self.top.driver.list_targets())
+        self.assertEqual([],self.top.driver.list_param_targets())
         
         try:
             self.top.driver.add_parameter(('comp.x+comp.y','comp.x'), low=0, high=1.e99)
@@ -144,12 +144,12 @@ class HasParametersTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
-        params = self.top.driver.list_parameters()
-        self.assertEqual(params,['comp.x','comp.y'])
+        targets = self.top.driver.list_param_targets()
+        self.assertEqual(targets,['comp.x','comp.y'])
 
         self.top.driver.remove_parameter('comp.x')
-        params = self.top.driver.list_parameters()
-        self.assertEqual(params,['comp.y'])
+        targets = self.top.driver.list_param_targets()
+        self.assertEqual(targets,['comp.y'])
 
         try: 
             self.top.driver.remove_parameter('comp.foo')
@@ -161,8 +161,8 @@ class HasParametersTestCase(unittest.TestCase):
 
         self.top.driver.add_parameter('comp.x', low=0., high=1.e99)
         self.top.driver.clear_parameters()
-        params = self.top.driver.list_parameters()
-        self.assertEqual(params,[])
+        targets = self.top.driver.list_param_targets()
+        self.assertEqual(targets,[])
 
         self.top.driver.add_parameter('comp.y', low=0., high=1.e99)
         try: 

@@ -149,9 +149,8 @@ class TestCase(unittest.TestCase):
     def test_param_already_added(self):
         try:
             self.model.driver.add_parameter('driven.x3')
-        except AttributeError as err:
-            self.assertEqual(str(err), "driver: Trying to add parameter 'driven.x3' to driver, "
-                             "but it's already there")
+        except ValueError as err:
+            self.assertEqual(str(err), "driver: 'driven.x3' is already the target of a Parameter")
         else:
             self.fail("expected AttributeError")
     
@@ -164,10 +163,10 @@ class TestCase(unittest.TestCase):
         self.assertEqual(lst, [])
         
     def test_param_removal(self):
-        lst = self.model.driver.list_parameters()
+        lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0','driven.x1','driven.x2','driven.x3'])
         self.model.driver.remove_parameter('driven.x1')
-        lst = self.model.driver.list_parameters()
+        lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0','driven.x2','driven.x3'])
 
     def test_no_event(self):

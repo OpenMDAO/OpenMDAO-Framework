@@ -87,7 +87,7 @@ class Genetic(Driver):
             metadata = param.get_metadata()[0][1]
             
             #then it's a float or an int, or a member of an array
-            if ('low' in metadata or 'high' in metadata) or array_test.search(param.target): 
+            if ('low' in metadata or 'high' in metadata) or array_test.search(param.targets[0]): 
                 if isinstance(val,(float,float32,float64)):                
                     #some kind of float
                     allele = GAllele.GAlleleRange(begin=low, end=high, real=True)
@@ -102,7 +102,7 @@ class Genetic(Driver):
                 alleles.add(allele)
             else: 
                 self.raise_exception("%s is not a float, int, or enumerated \
-                datatype. Only these 3 types are allowed"%(param.target),ValueError)
+                datatype. Only these 3 types are allowed"%(param.targets[0]),ValueError)
         
         self.count = count
         return alleles
