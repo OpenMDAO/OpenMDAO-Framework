@@ -55,6 +55,13 @@ class Parameter(object):
         pathnames of Variables referenced in our target string. 
         """
         return self._expreval.get_referenced_compnames()
+    
+    def denormalize(self, value):
+        """Return a scaled version of the given value that lies between
+        our low and high values.  The value is assumed to be between
+        0. and 1.
+        """
+        return self.low+(self.high-self.low)*value
 
 class ParameterGroup(object):
     """A group of Parameters that are treated as one, i.e., they are all
@@ -237,19 +244,6 @@ class HasParameters(object):
             self._parameters[key] = ParameterGroup(parameters)
         
             
-    def update_case(self, values, case, normalized):
-        """Given a list of values and a Case object, add an input to the Case
-        for each target specified by our list of targets. If normalized is
-        True, assume the values are between 0. and 1. and scale them to lie
-        between the high and low values of the corresponding parameter.
-        """
-        for value, parameter in zip(values, self._parameters.values()):
-            if normalized:
-                value = parameter.low+(parameter.high-parameter.low)*value
-            for target in parameter.targets:
-                case.add_input(target, value)
-        return case
-
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
             
@@ -277,21 +271,42 @@ class HasParameters(object):
         """Returns an ordered dict of parameter objects."""
         return self._parameters
 
-    def set_parameters(self, values): 
+    def set_parameters(self, values, case=None, normalized=False): 
         """Pushes the values in the iterator 'values' into the corresponding 
-        variables in the model.
+        variables in the model.  If the 'case' arg is supplied, the values
+        will be set into the case and not into the model.
         
         values: iterator
             Iterator of input values with an order defined to match the 
             order of parameters returned by the list_parameter method. 
             'values' must support the len() function.
+            
+        case: Case (optional)
+            If supplied, the values will be associated with their corresponding
+            targets and added as inputs to the Case instead of being set directly
+            into the model.
+            
+        normalized: bool (optional)
+            If True, the given values will be assumed to be between 0. and 1. and
+            will be scaled to lie between the low and high values of the corresponding
+            parameter.  Defaults to False.
         """
         if len(values) != len(self._parameters):
             raise ValueError("number of input values (%s) != number of parameters (%s)" % 
                              (len(values),len(self._parameters)))
 
-        for val, param in zip(values, self._parameters.values()):
-            param.set(val)
+        if normalized:
+            values = [p.denormalize(v) for v,p in zip(values, self._parameters.values())]
+
+        if case is None:
+            for val, param in zip(values, self._parameters.values()):
+                param.set(val)
+        else:
+            for val, parameter in zip(values, self._parameters.values()):
+                for target in parameter.targets:
+                    case.add_input(target, val)
+            return case
+
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
