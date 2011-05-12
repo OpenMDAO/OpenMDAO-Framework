@@ -9,6 +9,8 @@ Interfaces for the OpenMDAO project.
 from enthought.traits.api import Interface, Instance, Int, Str, HasTraits
 from enthought.traits.trait_types import validate_implements
 
+import zope.interface
+
 from openmdao.main.workflow import Workflow
 from openmdao.main.constants import SAVE_CPICKLE
 
@@ -308,7 +310,7 @@ class IDriver(Interface):
         in all of the workflows managed by this Driver.
         """
 
-class IFactory (Interface):
+class IFactory (zope.interface.Interface):
     """An object that creates and returns objects based on a type string."""
 
     def create (typ):
@@ -337,7 +339,7 @@ class IFactory (Interface):
     #The API is still to be determined.
     #"""
     
-class IResourceAllocator (Interface):
+class IResourceAllocator (zope.interface.Interface):
     """An object responsible for allocating CPU/disk resources for a particular
     host, cluster, load balancer, etc."""
 
@@ -370,7 +372,7 @@ class IResourceAllocator (Interface):
         Component currently allocated by this allocator."""
 
     
-class ICaseIterator(Interface):
+class ICaseIterator(zope.interface.Interface):
     """An iterator that returns Case objects."""
     
     # unfortunately we can't just use __iter__ here because
@@ -381,12 +383,12 @@ class ICaseIterator(Interface):
         """Return an iterator of Case objects."""
         
         
-class IDOEgenerator(Interface):
-    """An iterator that returns arrays of normalized values that are mapped
+class IDOEgenerator(zope.interface.Interface):
+    """An iterator that returns lists of normalized values that are mapped
     to design variables by a Driver.
     """
     
-    num_parameters = Int(desc="number of parameters in the DOE")
+    num_parameters = zope.interface.Attribute("number of parameters in the DOE")
     
     def __iter__():
         """Return an iterator object."""
@@ -402,7 +404,7 @@ class IDifferentiator(Interface):
         """Returns the Hessian matrix for this Driver's workflow"""
         
         
-class IUncertainVariable(Interface):
+class IUncertainVariable(zope.interface.Interface):
     """A variable which supports uncertainty"""
     def getvalue():
         """Returns either value from expected() or from sample() depending on 
@@ -414,7 +416,7 @@ class IUncertainVariable(Interface):
     def sample():
         """Generates a random number from an uncertain distribution."""
 
-class ICaseRecorder(Interface):
+class ICaseRecorder(zope.interface.Interface):
     """A recorder of Cases."""
     
     def record(case):
@@ -423,7 +425,7 @@ class ICaseRecorder(Interface):
     def get_iterator():
         """Return an iterator that matches the format that this recorder uses."""
         
-class ISurrogate(Interface):
+class ISurrogate(zope.interface.Interface):
     
     def get_uncertain_value(self,value): 
         """Converts a deterministic value into an uncertain quantity which 
@@ -674,7 +676,9 @@ def obj_has_interface(obj, *ifaces):
         return obj.has_traits_interface(*ifaces)
     else:
         for iface in ifaces:
-            if validate_implements(obj, iface):
+            if issubclass(iface, zope.interface.Interface):
+                return iface.providedBy(obj)
+            elif validate_implements(obj, iface):
                 return True
     return False
     

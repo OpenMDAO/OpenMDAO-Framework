@@ -20,6 +20,7 @@ from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.seqentialflow import SequentialWorkflow
 from openmdao.main.variable import Variable
+from openmdao.main.pluginsock import Socket
 
 from openmdao.main.exceptions import ConstraintError
 

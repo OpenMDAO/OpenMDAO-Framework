@@ -1,13 +1,19 @@
 
 import unittest
 
-from openmdao.main.api import Assembly, Component, Case
-from openmdao.main.interfaces import ICaseIterator
-from openmdao.lib.casehandlers.api import ListCaseIterator
-from openmdao.lib.datatypes.api import Int, Instance, TraitError
+from enthought.traits.api import TraitError, Int
 
+from openmdao.main.api import Assembly, Component, Container, Case, Socket
+from openmdao.main.interfaces import ICaseIterator
+
+import zope.interface
+
+class CIterator(object):
+    zope.interface.implements(ICaseIterator)
+    pass
+    
 class SocketComp(Assembly):
-    iterator = Instance(ICaseIterator, allow_none=False, desc='cases to evaluate')
+    iterator = Socket(ICaseIterator, allow_none=False, desc='cases to evaluate')
     num_cases = Int(0, iotype='out')
     
     def __init__(self):
@@ -19,12 +25,12 @@ class SocketComp(Assembly):
             self.num_cases += 1
 
 class SocketComp2(SocketComp):
-    somesocket = Instance(Assembly)
+    somesocket = Socket(Assembly)
     def __init__(self):
         super(SocketComp2, self).__init__()
         
 class SocketComp3(SocketComp2):
-    iterator = Instance(Assembly, desc='another dumb socket')
+    iterator = Socket(Assembly, desc='another dumb socket')
     
     def __init__(self):
         super(SocketComp3, self).__init__()
@@ -114,7 +120,55 @@ class SocketTestCase(unittest.TestCase):
         else:
             self.fail('TraitError expected')
         
+class MyIface(zope.interface.Interface):
+    
+    xx = zope.interface.Attribute("some attribute")
 
+    def myfunct(a, b):
+        """some function"""
+    
+class MyClass(object):
+    zope.interface.implements(MyIface)
+    
+    def __init__(self):
+        self.x = 1
+
+    def myfunct(a, b):
+        return a+b
+    
+class MyOtherClass(object):
+    def __init__(self):
+        self.x = 1
+
+    def myfunct(a, b):
+        return a+b
+
+class SocketTestCase2(unittest.TestCase):
+
+    def setUp(self):
+        """this setup function will be called before each test in this class"""
+        self.hobj = Container()
+        self.hobj.add_trait('iface_sock', Socket(MyIface))
+        self.hobj.add_trait('class_sock', Socket(MyClass))
+                       
+    def test_set(self):
+        mc = MyClass()
+        self.hobj.class_sock = mc
+        self.hobj.iface_sock = mc
+        
+    def test_bad_set(self):
+        moc = MyOtherClass()
+        try:
+            self.hobj.iface_sock = moc
+        except TraitError as err:
+            self.assertEqual(str(err), ": iface_sock must provide interface 'MyIface'")
+            
+        try:
+            self.hobj.class_sock = 3.14
+        except TraitError as err:
+            self.assertEqual(str(err), ": class_sock must be an instance of class 'MyClass'")
+        
+            
 if __name__ == "__main__":
     unittest.main()
 

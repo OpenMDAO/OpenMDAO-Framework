@@ -12,6 +12,7 @@ from enthought.traits.api import Instance, TraitError, Missing
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
+from openmdao.main.pluginsock import Socket
 from openmdao.main.driver import Driver
 from openmdao.main.tvalwrapper import TraitValWrapper
 from openmdao.main.rbac import rbac
@@ -40,8 +41,8 @@ class Assembly (Component):
     """
     
     driver = Instance(Driver, allow_none=True,
-                      desc="The top level Driver that manages execution of "
-                           "this Assembly.")
+                    desc="The top level Driver that manages execution of "
+                    "this Assembly.")
     
     def __init__(self, doc=None, directory=''):
         super(Assembly, self).__init__(doc=doc, directory=directory)
