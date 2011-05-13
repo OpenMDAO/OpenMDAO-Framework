@@ -4,11 +4,14 @@
 
 import unittest
 
-from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+from openmdao.main.api import set_as_top
+from openmdao.examples.enginedesign.engine_optimization_smarter import EngineOptimization
+from openmdao.examples.enginedesign.vehicle_singlesim import VehicleSim
+from openmdao.examples.enginedesign.vehicle_threesim import VehicleSim2
 
 
-class EngineOptimizationTestCase(unittest.TestCase):
-    """ Test Vehicle """
+class EngineOptimizationSmarterTestCase(unittest.TestCase):
+    """ Test """
 
     def setUp(self):
         self.model = EngineOptimization()
@@ -35,6 +38,34 @@ class EngineOptimizationTestCase(unittest.TestCase):
                                25.203, places=3)
         self.assertAlmostEqual(self.model.sim_EPA_highway.fuel_economy, 
                                32.8139, places=4)
+
+class SimVehicleScriptsTestCase(unittest.TestCase):
+    """ Test """
+
+    def setUp(self):
+        pass
+    
+    def tearDown(self):
+        pass
+    
+    def test_simvehicle_one(self):
+        my_sim = VehicleSim()
+        set_as_top(my_sim)
+
+        my_sim.run()
+        
+        self.assertAlmostEqual(my_sim.driver.accel_time, 7.5, places=2)
+
+    def test_simvehicle_three(self):
+        my_sim = VehicleSim2()
+        set_as_top(my_sim)
+
+        my_sim.run()
+        
+        self.assertAlmostEqual(my_sim.sim_acc.accel_time, 7.5, places=2)
+        self.assertAlmostEqual(my_sim.sim_EPA_city.fuel_economy, 24.8079694553, places=2)
+        self.assertAlmostEqual(my_sim.sim_EPA_highway.fuel_economy, 33.4540583989, places=2)
+        
 
 if __name__ == "__main__":
     import sys

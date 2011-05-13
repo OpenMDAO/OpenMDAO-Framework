@@ -31,8 +31,8 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_load')
 
-        self.model.driving_sim.bore = 95
-        self.model.driving_sim.spark_angle = -35.368341874
+        self.model.vehicle.bore = 95
+        self.model.vehicle.spark_angle = -35.368341874
         self.model.driver.itmax = 1
 
         # Set local dir in case we're running in a different directory.
@@ -82,11 +82,11 @@ class TestCase(unittest.TestCase):
         loader = __import__('%s_loader')
         model = loader.load()
         model.run()
-        self.assertAlmostEqual(model.driving_sim.accel_time, 
+        self.assertAlmostEqual(model.sim_acc.accel_time, 
                                5.5999999999999961, places=6)
-        self.assertAlmostEqual(model.driving_sim.EPA_city, 
+        self.assertAlmostEqual(model.sim_EPA_city.fuel_economy, 
                                25.203, places=3)
-        self.assertAlmostEqual(model.driving_sim.EPA_highway, 
+        self.assertAlmostEqual(model.sim_EPA_highway.fuel_economy, 
                                32.8139, places=4)
                               
 if __name__ == '__main__':
