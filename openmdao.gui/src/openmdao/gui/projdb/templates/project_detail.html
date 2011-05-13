@@ -13,19 +13,9 @@
     <form action="/projects/{{ project.id }}/" method="POST">
         {% csrf_token %}
         <table>
-        <tr>
-            <td><b>Project Name: </b> </td>
-            <td><input type="textfield" name="projectname" value="{{ project.projectname }}" /> </td>
-        </tr>
-        <tr>
-            <td><b>Description: </b>  </td>
-            <td><input type="textfield" size="100" name="description" value="{{ project.description }}"  /> </td>
-        <br>
-        </tr>
-            <td><b>Shared: </b> </td>
-            <td><input type="checkbox" name="shared" {% if project.shared %} CHECKED {% endif %}  /> <td>
-        <br>
+        {{ project_form.as_table }} 
         </table>
+    <br>
     <input type="submit" value="Submit Changes" />
     </form>
 
@@ -33,11 +23,13 @@
     <b>Last Modified: </b> {{ project.modified }}
     <p>
     
+    {% if project.filename %}
     <form action="/workspace/project/" method="GET">
         {% csrf_token %}
         <input type="hidden" name="filename" value="{{ project.filename }}" />
         <input type="submit" value="Load this project into Workspace" />
     </form>
+    {% endif %}    
     
     <br>
 {% endblock %}

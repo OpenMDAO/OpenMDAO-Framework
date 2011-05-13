@@ -7,8 +7,8 @@ import zipfile, jsonpickle
 
 from setuptools.command import easy_install
 
-from server_manager import ServerManager
 from openmdao.main.factorymanager import get_available_types
+from consoleserverfactory import ConsoleServerFactory
 from mdao_util import *
 
 # from mdao_setup import createDB
@@ -49,7 +49,7 @@ def run_server(port):
 
     # the singleton server manager handles console servers, temporary files, etc.
     global server_mgr
-    server_mgr = ServerManager()
+    server_mgr = ConsoleServerFactory()
 
     # workaround for debug mode... so multiples sessions are not created on server restart
     global session
@@ -100,9 +100,7 @@ class Workspace:
                 # createDB(db)
             web.redirect('/login')
         else:
-            userdir = server_mgr.get_tempdir('files') +'/'+ session.user;
-            ensure_dir(userdir)
-            server_mgr.console_server(session.session_id).chdir(userdir)
+            server_mgr.console_server(session.session_id)
             return render.mdao("OpenMDAO: "+session.user)
 
 class Login:
@@ -311,21 +309,9 @@ class Files:
     '''
     def GET(self):
         cserver = server_mgr.console_server(session.session_id)
-        root = cserver.getcwd()
-        web.debug("Files: root="+root)
-        x = web.input()
-        print_dict(x)
-        if False: # TODO: check the requested datatype, maybe they wany XML?
-            doc = Document()
-            doc.appendChild(makenode(doc,root))
-            return doc.toprettyxml().replace(root,'')
-        else:
-            dict = filepathdict(root)
-            json = jsonpickle.encode(dict)
-            root = root.replace('\\','\\\\')  # TODO: investigate this
-            json = json.replace(root,'')
-            web.header('Content-Type', 'application/json')
-            return json
+        filedict = cserver.get_files()
+        json = jsonpickle.encode(filedict)
+        return json
 
 class CWD:
     ''' get/set the current working directory for the cserver
@@ -347,47 +333,30 @@ class File:
     def GET(self,filename):
         web.debug("FILE GET "+filename)
         cserver = server_mgr.console_server(session.session_id)
-        filepath = cserver.getcwd()+'/'+str(filename)
-        if os.path.exists(filepath):
-            f=open(filepath, 'r')
-            return f.read()
-        else:
-            return web.notfound("Sorry, the file was not found.")
+        return cserver.get_file(filename)
 
     ''' if "isFolder" is specified, create the folder, else
         create and write the posted contents to the specified file
     '''
     def POST(self,filename):
         web.debug("FILE POST "+filename)
-        userdir = server_mgr.get_tempdir('files') +'/'+ session.user;
-        ensure_dir(userdir)
-        filepath = userdir +'/'+ filename
+        cserver = server_mgr.console_server(session.session_id)
         x = web.input()
         if hasattr(x, "isFolder"):
-            ensure_dir(filepath)
+            cserver.ensure_dir(filename)
         else:
-            fout = open(filepath,'wb')
             if hasattr(x, "contents"):
-                fout.write(x.contents)
-            fout.close()
+                cserver.write_file(filename,x.contents)
+            else:
+                cserver.write_file(filename,'')
+            
             
     '''  remove the specified file
     '''
     def DELETE(self,filename):
         web.debug("FILE DELETE "+filename)
-        userdir = server_mgr.get_tempdir('files') +'/'+ session.user;
-        filepath = userdir+'/'+str(filename)
-        web.debug("DELETING FILE"+filepath)
-        if os.path.exists(filepath):
-            web.debug("DELETING FILE (exists)"+filepath)
-            if os.path.isdir(filepath):
-                    web.debug("DELETING FILE (folder)"+filepath)
-                    os.rmdir(filepath)
-            else:
-                    web.debug("DELETING FILE (file)"+filepath)
-                    os.remove(filepath)
-        else:
-            return web.notfound("Sorry, the file was not found.")
+        cserver = server_mgr.console_server(session.session_id)
+        cserver.delete_file(filename)
 
 class Types:
     ''' get a list of object types that the user can create

@@ -118,7 +118,7 @@ class Project(object):
         modeldir = os.path.join(self.path, 'model')
         self.activate()
         if os.path.isdir(projpath):
-            # I don't think model dir and state are manadatory
+            # I don't think model dir and state should be manadatory
             # e.g. when creating a project from an existing non-Project directory
             # if not _is_valid_project_dir(projpath):
                 # raise RuntimeError("Directory '%s' is not a valid OpenMDAO project directory")

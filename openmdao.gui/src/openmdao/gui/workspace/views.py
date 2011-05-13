@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.template import RequestContext
 from django.views.decorators.csrf import csrf_exempt                                          
 from django.contrib.auth import logout
+from django.views.decorators.cache import never_cache
 
 import sys, os
 import zipfile, jsonpickle
@@ -20,6 +21,7 @@ print prefix+'workspace.views() -------------------------------------'
 from consoleserverfactory import ConsoleServerFactory
 server_mgr = ConsoleServerFactory()
 
+@never_cache
 @csrf_exempt
 @login_required()
 def Command(request):
@@ -43,6 +45,7 @@ def Command(request):
     else:
         return HttpResponse('') # not used for now, could render a form
 
+@never_cache
 @csrf_exempt
 @login_required()
 def Component(request,name):
@@ -70,11 +73,13 @@ def Component(request,name):
         json = jsonpickle.encode(attr)
         return HttpResponse(json,mimetype='application/json')
 
+@never_cache
 def Components(request):
     cserver = server_mgr.console_server(request.session.session_key)
     json = jsonpickle.encode(cserver.get_components())
     return HttpResponse(json,mimetype='application/json')
 
+@never_cache
 @login_required()
 def Exec(request):
     ''' have the cserver execute a file, return result
@@ -98,12 +103,13 @@ def Exec(request):
                 result = result + str(sys.exc_info()) + '\n'
     return HttpResponse(result)
 
+@never_cache
 @login_required()
 def Exit(request):
     server_mgr.delete_server(request.session.session_key)
-    logout(request)
     return HttpResponseRedirect('/')
 
+@never_cache
 @csrf_exempt
 @login_required()
 def File(request,filename):
@@ -111,16 +117,17 @@ def File(request,filename):
     '''
     cserver = server_mgr.console_server(request.session.session_key)
     if request.method=='POST':
-        if "isFolder" in request.POST:
+        if 'isFolder' in request.POST:
             return HttpResponse(cserver.ensure_dir(filename))
         else:
-            return HttpResponse(cserver.write_file(filename,request.POST["contents"]))
+            return HttpResponse(cserver.write_file(filename,request.POST['contents']))
     elif request.method=='DELETE':
         return HttpResponse(cserver.delete_file(filename))
     elif request.method=='GET':
         return HttpResponse(cserver.get_file(filename))
     return HttpResponse("How did I get here?")
 
+@never_cache
 @login_required()
 def Files(request):
     ''' get a list of the users files in JSON format
@@ -130,6 +137,14 @@ def Files(request):
     json = jsonpickle.encode(filedict)
     return HttpResponse(json,mimetype='application/json')
 
+@never_cache
+@login_required()
+def Logout(request):
+    server_mgr.delete_server(request.session.session_key)
+    logout(request)
+    return HttpResponseRedirect('/')
+    
+@never_cache
 @csrf_exempt
 @login_required()
 def Model(request):
@@ -144,6 +159,7 @@ def Model(request):
         json = cserver.get_JSON()
         return HttpResponse(json,mimetype='application/json')
 
+@never_cache
 @login_required()
 def Output(request):
     ''' get any outstanding output from the model
@@ -152,6 +168,7 @@ def Output(request):
     return HttpResponse(cserver.get_output())
 
 from openmdao.gui.settings import MEDIA_ROOT
+@never_cache
 @csrf_exempt
 @login_required()
 def Project(request):
@@ -165,10 +182,10 @@ def Project(request):
     else:
         server_mgr.delete_server(request.session.session_key) # delete old server
         cserver = server_mgr.console_server(request.session.session_key)        
-        filepath = MEDIA_ROOT+'/'+request.GET['filename']
-        cserver.load_project(filepath)
+        cserver.load_project(MEDIA_ROOT+'/'+request.GET['filename'])
         return HttpResponsePermanentRedirect('/workspace/')
     
+@never_cache
 @login_required()
 def Types(request):
     ''' get hierarchy of package/types to populate the Palette
@@ -180,6 +197,7 @@ def Types(request):
     json = jsonpickle.encode(types)
     return HttpResponse(json,mimetype='application/json')
 
+@never_cache
 @login_required()
 def Workspace(request):
     ''' initialize the server manager &  render the workspace

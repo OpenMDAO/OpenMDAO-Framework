@@ -21,9 +21,10 @@ openmdao.Menu = function(id) {
         menus = [
             { text: "Session", 
               items: [
-                { text: "New",           onclick: "model.newModel()"   },
-                { text: "Logout",        url: "/login" },
+                //{ text: "New",           onclick: "model.newModel()"   },
+                { text: "New",          url: "/workspace/exit" },
                 //{ text: "Exit",          onclick: "model.exit();openmdao.Util.closeWindow()"}
+                { text: "Exit",        url: "/workspace/logout" },
               ]
             },
             { text: "File", 

@@ -257,6 +257,7 @@ class ConsoleServer(cmd.Cmd):
         return types
 
     def load_project(self,filename):
+        print 'loading project from:',filename
         self.projfile = filename
         self.proj = project_from_archive(filename,dest_dir=self.getcwd())
         name = self.proj.name

@@ -3,9 +3,25 @@ from django.shortcuts import render_to_response, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.template import RequestContext
+from django import forms
+from django.core.files.base import ContentFile
 
+from openmdao.gui.settings import MEDIA_ROOT
 from projdb.models import Project
 
+from time import strftime
+
+import os.path
+
+class ProjectForm(forms.Form):
+    projectname = forms.CharField(label='Project Name')
+    description = forms.CharField(label='Description', required=False)
+    version     = forms.CharField(label='Version',     required=False, max_length=5)
+    shared      = forms.BooleanField(label='Shared',   required=False)
+
+class ProjectFileForm(forms.Form):
+    filename    = forms.HiddenInput()
+    
 #
 # project list
 #
@@ -22,24 +38,69 @@ def index(request):
 def detail(request, project_id):
     p = get_object_or_404(Project, pk=project_id)
     if request.POST:
-        p.projectname   = request.POST['projectname']
-        p.description   = request.POST['description']
-        if 'shared' in request.POST:
-            p.shared = True
-        else:
-            p.shared = False
-        p.save()
-        return HttpResponseRedirect('')
-    else:
-        return render_to_response('project_detail.html', {'project': p},
-                                  context_instance=RequestContext(request))
+        form = ProjectForm(request.POST)
+        if form.is_valid():
+            p.projectname   = form.cleaned_data['projectname']
+            p.description   = form.cleaned_data['description']
+            p.version       = form.cleaned_data['version']
+            p.shared        = form.cleaned_data['shared']
+            
+            # if there's no proj file yet, create en empty one
+            if not p.filename:
+                dir = 'projects/'+request.user.username
+                if not os.path.isdir(dir):
+                    os.makedirs(dir)
+                if len(p.version):
+                    filename = p.projectname+'-'+p.version+'.proj'
+                else:
+                    filename = p.projectname+'.proj'  
+                i=1
+                while os.path.exists(MEDIA_ROOT+'/'+dir+'/'+filename):
+                    filename = filename+str(i)
+                    i = i+1
+                file_content = ContentFile('')
+                p.filename.save(filename, file_content)                
+            p.save()
+            return HttpResponseRedirect('')
+            
+    # not a POST or validation failed
+    proj_form = ProjectForm({
+        'projectname': p.projectname,
+        'description': p.description,
+        'version':     p.version,
+        'shared':      p.shared,
+    })
+    file_form = ProjectFileForm({
+        'filename':    p.filename
+    })
+    return render_to_response('project_detail.html', {
+                              'project':      p, 
+                              'project_form': proj_form,
+                              'file_form':    file_form},
+                              context_instance=RequestContext(request))
 
 #
 # new (empty) project
 #                              
 @login_required()
 def new(request):
-    return HttpResponse('New project - Not yet implemented')
+    p = Project(user=request.user)
+    p.projectname   = 'New Project '+strftime("%Y-%m-%d %H:%M:%S")
+    p.save()
+    proj_form = ProjectForm({
+        'projectname': p.projectname,
+        'description': p.description,
+        'version':     p.version,
+        'shared':      p.shared,
+    })
+    file_form = ProjectFileForm({
+        'filename':    p.filename
+    })
+    return render_to_response('project_detail.html', {
+                              'project':      p, 
+                              'project_form': proj_form,
+                              'file_form':    file_form},
+                              context_instance=RequestContext(request))
 
 #
 # add existing project

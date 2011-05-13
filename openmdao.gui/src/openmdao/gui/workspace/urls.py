@@ -15,7 +15,7 @@ urlpatterns = patterns('workspace.views',
     (r'^exit',            'Exit'),
     (r'^file/(.*)',       'File'),
     (r'^files',           'Files'),
-    (r'^login',           'Exit'),
+    (r'^logout',          'Logout'),
     (r'^model',           'Model'),    # TODO: remove?
     (r'^output',          'Output'),
     (r'^project',         'Project'),
