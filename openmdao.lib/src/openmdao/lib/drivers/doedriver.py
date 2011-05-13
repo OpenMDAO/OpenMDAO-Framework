@@ -42,4 +42,4 @@ class DOEdriver(CaseIterDriverBase):
             for varname in self.get_events():
                 inputs.append((varname, True))
             case = Case(inputs=inputs, outputs=self.case_outputs)
-            yield self.set_parameters(row, case, normalized=True)
+            yield self.set_parameters(row, case)

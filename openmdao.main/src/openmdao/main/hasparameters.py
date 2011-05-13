@@ -7,22 +7,99 @@ from openmdao.util.decorators import add_delegate
 
 class Parameter(object): 
     
-    def __init__(self, expreval, high=None, low=None, fd_step=None):
+    def __init__(self, name, parent, high=None, low=None, 
+                 scaler=1.0, adder=0.0, fd_step=None):
         self.low = low
         self.high = high
+        self.scaler = scaler
+        self.adder = adder
         self.fd_step = fd_step
+        
+        try:
+            expreval = ExprEvaluator(name, parent)
+        except Exception as err:
+            parent.raise_exception("Can't add parameter: %s" % str(err),
+                                   err.__class__)
         if not expreval.is_valid_assignee():
             raise ValueError("'%s' is not a valid parameter expression" % expreval.text)
+
         self._expreval = expreval
+        
+        try:
+            # metadata is in the form [(varname, metadata)], so use [0][1] to get
+            # the actual metadata dict
+            metadata = expreval.get_metadata()[0][1]
+        except AttributeError:
+            parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % name,
+                                   AttributeError)
+        try:
+            val = expreval.evaluate()
+        except Exception as err:
+            parent.raise_exception("Can't add parameter because I can't evaluate '%s'." % name, 
+                                   ValueError)
+        if not isinstance(val,(float,float32,float64,int,int32,int64)):
+            parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
+                                   (name,type(val).__name__), ValueError)
+        
+        self.typename = type(val).__name__
+        meta_low = metadata.get('low') # this will be None if 'low' isn't there
+        if low is None:
+            self.low = meta_low
+        else:  # low is not None
+            if meta_low is not None and low < self._transform(meta_low):
+                parent.raise_exception("Trying to add parameter '%s', " 
+                                       "but the lower limit supplied (%s) exceeds the " 
+                                       "built-in lower limit (%s)." % 
+                                       (name, low, meta_low), ValueError)
+            self.low = low
+
+        meta_high = metadata.get('high') # this will be None if 'high' isn't there
+        if high is None:
+            self.high = meta_high
+        else:  # high is not None
+            if meta_high is not None and high > self._transform(meta_high):
+                parent.raise_exception("Trying to add parameter '%s', " 
+                                       "but the upper limit supplied (%s) exceeds the " 
+                                       "built-in upper limit (%s)." % 
+                                       (name, high, meta_high), ValueError)
+            self.high = high
+            
+        values = metadata.get('values')
+        if values is not None and len(values) > 0:
+            pass    # assume it's an Enum, so no need to set high or low
+        else:
+            if self.low is None:
+                parent.raise_exception("Trying to add parameter '%s', "
+                                       "but no lower limit was found and no " 
+                                       "'low' argument was given. One or the "
+                                       "other must be specified." % name,ValueError)
+            if self.high is None: 
+                parent.raise_exception("Trying to add parameter '%s', "
+                                       "but no upper limit was found and no " 
+                                       "'high' argument was given. One or the "
+                                       "other must be specified." % name,ValueError)
+        if low is None:
+            self.low = self._transform(self.low)
+        if high is None:
+            self.high = self._transform(self.high)
+
+        if self.low > self.high:
+            parent.raise_exception("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
+                                   (name, self.low, self.high), ValueError)
 
     def __str__(self):
         return self._expreval.text
 
     def __repr__(self): 
-        return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s)>'%(self._expreval.text,
-                                                                   self.low,
-                                                                   self.high,
-                                                                   self.fd_step)
+        return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s)>' % \
+               (self.target, self.low, self.high, self.fd_step, self.scaler, self.adder)
+    
+    def _transform(self, val):
+        return (val+self.adder)*self.scaler
+    
+    def _untransform(self, val):
+        return val/self.scaler - self.adder
+    
     @property
     def target(self):
         """Returns the target of this parameter."""
@@ -35,11 +112,11 @@ class Parameter(object):
     
     def evaluate(self, scope=None):
         """Returns the value of this parameter."""
-        return self._expreval.evaluate(scope)
+        return self._untransform(self._expreval.evaluate(scope))
     
     def set(self, val, scope=None):
         """Assigns the given value to the variable referenced by this parameter."""
-        self._expreval.set(val, scope)
+        self._expreval.set(self._transform(val), scope)
 
     def get_metadata(self, metaname=None):
         """Returns a list of tuples of the form (varname, metadata), with one
@@ -56,13 +133,6 @@ class Parameter(object):
         """
         return self._expreval.get_referenced_compnames()
     
-    def denormalize(self, value):
-        """Return a scaled version of the given value that lies between
-        our low and high values.  The value is assumed to be between
-        0. and 1.
-        """
-        return self.low+(self.high-self.low)*value
-
 class ParameterGroup(object):
     """A group of Parameters that are treated as one, i.e., they are all
     set to the same value.
@@ -76,8 +146,17 @@ class ParameterGroup(object):
         self._params = params[:]
         self.low = self._params[0].low
         self.high = self._params[0].high
+        self.scaler = self._params[0].scaler
+        self.adder = self._params[0].adder
         self.fd_step = self._params[0].fd_step
             
+    def __str__(self):
+        return "%s" % self.targets
+
+    def __repr__(self): 
+        return '<ParameterGroup(targets=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s)>' % \
+               (self.targets, self.low, self.high, self.fd_step, self.scaler, self.adder)
+
     @property
     def target(self): 
         return self._params[0].target
@@ -118,14 +197,6 @@ class ParameterGroup(object):
         for param in self._params:
             result.union(param.get_referenced_compnames())
         return result
-    
-    def denormalize(self, value):
-        """Return a scaled version of the given value that lies between the
-        low and high values of our first parameter. The value is assumed to be
-        between 0. and 1.
-        """
-        return self.low+(self.high-self.low)*value
-
 
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface."""
@@ -136,7 +207,8 @@ class HasParameters(object):
         self._parameters = ordereddict.OrderedDict()
         self._parent = parent
 
-    def add_parameter(self, name, low=None, high=None, fd_step=None):
+    def add_parameter(self, name, low=None, high=None, 
+                      scaler=1.0, adder=0.0, fd_step=None):
         """Adds a parameter or group of parameters to the driver.
         
         name: string or iter of strings
@@ -145,11 +217,19 @@ class HasParameters(object):
             to the same value whenever it varies this parameter during execution
             
         low: float (optional)
-            Minimum allowed value of the parameter.
+            Minimum allowed value of the parameter. If scaler and/or adder
+            are supplied, use the transformed value here.
             
         high: float (optional)
-            Maximum allowed value of the parameter.
+            Maximum allowed value of the parameter. If scaler and/or adder
+            are supplied, use the transformed value here.
             
+        scaler: float (optional)
+            Value to multiply the possibly offset parameter value by 
+            
+        adder: float (optional)
+            Value to add to parameter prior to possible scaling
+
         fd_step: float (optional)
             Step-size to use for finite difference calculation. If no value is
             given, the differentitator will use its own default
@@ -159,96 +239,29 @@ class HasParameters(object):
         referenced. If they are not specified in the metadata and not provided
         as arguments, a ValueError is raised.
         """
-        if isinstance(name, str): 
+        if isinstance(name, basestring): 
             names = [name]
             key = name
         else: 
             names = name
             key = tuple(name)
 
-        all_names = set(self.list_param_targets())
-        for name in names: 
-            if name in all_names: 
-                self._parent.raise_exception("'%s' is already the target of a Parameter" % name,
-                                             ValueError)
-        parameters = []
-        vals = []
-        for name in names:
-            try:
-                parameter = Parameter(ExprEvaluator(name, self._parent),
-                                      low=low, high=high, fd_step=fd_step)
-            except Exception as err:
-                self._parent.raise_exception("Can't add parameter: %s" % str(err),
-                                             err.__class__)
-            try:
-                # metadata is in the form [(varname, metadata)], so use [0][1] to get
-                # the actual metadata dict
-                metadata = parameter.get_metadata()[0][1]
-            except AttributeError:
-                self._parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % name,
-                                             AttributeError)
-            try:
-                val = parameter.evaluate()
-                vals.append(val)
-            except Exception as err:
-                self._parent.raise_exception("Can't add parameter because I can't evaluate '%s'." % name, 
-                                             ValueError)
-            if not isinstance(val,(float,float32,float64,int,int32,int64)):
-                self._parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
-                                             (name,type(val).__name__), ValueError)
-            
-            meta_low = metadata.get('low') # this will be None if 'low' isn't there
-            if low is None:
-                parameter.low = meta_low
-            else:  # low is not None
-                if meta_low is not None and low < meta_low:
-                    self._parent.raise_exception("Trying to add parameter '%s', " 
-                                                 "but the lower limit supplied (%s) exceeds the " 
-                                                 "built-in lower limit (%s)." % 
-                                                 (name, low, meta_low), ValueError)
-                parameter.low = low
-    
-            meta_high = metadata.get('high') # this will be None if 'high' isn't there
-            if high is None:
-                parameter.high = meta_high
-            else:  # high is not None
-                if meta_high is not None and high > meta_high:
-                    self._parent.raise_exception("Trying to add parameter '%s', " 
-                                                 "but the upper limit supplied (%s) exceeds the " 
-                                                 "built-in upper limit (%s)." % 
-                                                 (name, high, meta_high), ValueError)
-                parameter.high = high
-                
-            values = metadata.get('values')
-            if values is not None and len(values)>0:
-                pass    # assume it's an Enum, so no need to set high or low
-            else:
-                if parameter.low is None:
-                    self._parent.raise_exception("Trying to add parameter '%s', "
-                                                 "but no lower limit was found and no " 
-                                                 "'low' argument was given. One or the "
-                                                 "other must be specified." % name,ValueError)
-                if parameter.high is None: 
-                    self._parent.raise_exception("Trying to add parameter '%s', "
-                                                 "but no upper limit was found and no " 
-                                                 "'high' argument was given. One or the "
-                                                 "other must be specified." % name,ValueError)
-                    
-            if parameter.low > parameter.high:
-                self._parent.raise_exception("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
-                                             (name, parameter.low, parameter.high), ValueError)
-    
-            parameter.fd_step = fd_step
-            parameters.append(parameter)
+        dups = set(self.list_param_targets()).intersection(names)
+        if len(dups) > 0:
+            self._parent.raise_exception("%s are already Parameter targets" % 
+                                         list(dups), ValueError)
+        parameters = [Parameter(name, self._parent, low=low, high=high, 
+                                scaler=scaler, adder=adder, fd_step=fd_step) 
+                      for name in names]
         
-        types = set([type(val) for val in vals])
-        if len(types) > 1: 
-            self._parent.raise_exception("Can not add parameter %s because "
-                             "%s are not all of the same type"%(key," and ".join(names)))
-            
-        if len(parameters) == 1: #just one in there
+        if len(parameters) == 1:
             self._parameters[key] = parameters[0]
-        else: 
+        else: # defining a ParameterGroup
+            types = set([p.typename for p in parameters])
+            if len(types) > 1: 
+                self._parent.raise_exception("Can not add parameter %s because "
+                    "%s are not all of the same type. Different types found were %s" %
+                    (key," and ".join(names), list(types)), ValueError)
             self._parameters[key] = ParameterGroup(parameters)
         
             
@@ -279,7 +292,7 @@ class HasParameters(object):
         """Returns an ordered dict of parameter objects."""
         return self._parameters
 
-    def set_parameters(self, values, case=None, normalized=False): 
+    def set_parameters(self, values, case=None): 
         """Pushes the values in the iterator 'values' into the corresponding 
         variables in the model.  If the 'case' arg is supplied, the values
         will be set into the case and not into the model.
@@ -302,9 +315,6 @@ class HasParameters(object):
         if len(values) != len(self._parameters):
             raise ValueError("number of input values (%s) != number of parameters (%s)" % 
                              (len(values),len(self._parameters)))
-
-        if normalized:
-            values = [p.denormalize(v) for v,p in zip(values, self._parameters.values())]
 
         if case is None:
             for val, param in zip(values, self._parameters.values()):

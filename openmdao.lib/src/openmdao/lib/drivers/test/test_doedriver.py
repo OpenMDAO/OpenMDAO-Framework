@@ -79,7 +79,8 @@ class MyModel(Assembly):
         self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
         self.driver.case_outputs = ['driven.rosen_suzuki']
         for name in ['x0', 'x1','x2', 'x3']:
-            self.driver.add_parameter("driven.%s"%name,low=-10.,high=10.)
+            self.driver.add_parameter("driven.%s"%name,low=-10.,high=10.,
+                                      scaler=20., adder=10.)
                                     
 
 
@@ -150,7 +151,7 @@ class TestCase(unittest.TestCase):
         try:
             self.model.driver.add_parameter('driven.x3')
         except ValueError as err:
-            self.assertEqual(str(err), "driver: 'driven.x3' is already the target of a Parameter")
+            self.assertEqual(str(err), "driver: ['driven.x3'] are already Parameter targets")
         else:
             self.fail("expected AttributeError")
     

@@ -81,7 +81,7 @@ class HasParametersTestCase(unittest.TestCase):
         try: 
             self.top.driver.add_parameter(('comp.x','comp.y'), low=0.,high=1e99)
         except Exception as err: 
-            self.assertEqual(str(err),"driver: 'comp.x' is already the target of a Parameter")
+            self.assertEqual(str(err),"driver: ['comp.y', 'comp.x'] are already Parameter targets")
         else: 
             self.fail("Exception expected")
             
@@ -133,7 +133,7 @@ class HasParametersTestCase(unittest.TestCase):
         try:
             self.top.driver.add_parameter(('comp.x','comp.y'), low=0, high=1.e99)
         except Exception, err:
-            self.assertEqual(str(err), "driver: 'comp.x' is already the target of a Parameter")
+            self.assertEqual(str(err), "driver: ['comp.x'] are already Parameter targets")
         else:
             self.fail("Exception expected")
         
@@ -168,7 +168,7 @@ class HasParametersTestCase(unittest.TestCase):
         try: 
             self.top.driver.add_parameter('comp.y')
         except ValueError,err: 
-            self.assertEqual(str(err),"driver: 'comp.y' is already the target of a Parameter")
+            self.assertEqual(str(err),"driver: ['comp.y'] are already Parameter targets")
         else: 
             self.fail('RuntimeError expected')
         
