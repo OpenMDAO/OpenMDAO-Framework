@@ -100,8 +100,9 @@ openmdao.PropertiesEditor = function(id,model) {
     
     /** if there is an object loaded, update it from the model */
     function update() {
-        if (pathname.length > 0)
-            model.getJSON(editObject)
+        debug.info('PropertiesEditor.update() pathname='+pathname)
+        if (self.pathname && self.pathname.length>0)
+            self.editObject(self.pathname)
     }
     
     /** ask model for an update whenever something changes */
@@ -124,17 +125,14 @@ openmdao.PropertiesEditor = function(id,model) {
     /** get the specified object from model, load properties into table */
     this.editObject = function(path) {
         debug.info("PropertiesEditor.editObject: "+path+" (pathname="+self.pathname+")")
-        if (self.pathname !== path) {
+        if (self.pathname !== path)
             self.pathname = path
-            model.getComponent(path, loadTable,
-                function(jqXHR, textStatus, errorThrown) {
-                    self.pathname = ''
-                    alert("Error editing object: "+jqXHR.statusText)
-                }
-            )
-        }
-        else
-            debug.info('PropertiesEditor.editObject: Already editing '+path)
+        model.getComponent(path, loadTable,
+            function(jqXHR, textStatus, errorThrown) {
+                self.pathname = ''
+                alert("Error editing object: "+jqXHR.statusText)
+            }
+        )
         return this
     }
 

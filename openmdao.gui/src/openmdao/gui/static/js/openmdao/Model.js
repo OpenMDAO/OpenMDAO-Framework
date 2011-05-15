@@ -18,7 +18,6 @@ openmdao.Model=function() {
      
     var self = this,
         callbacks = [],
-        modelJSON = null,
         types = null
         
     /***********************************************************************
@@ -56,15 +55,13 @@ openmdao.Model=function() {
 
     /** get a new (empty) model */
     this.newModel = function(typepath,name,x,y) {
-        // invalidate cached model data
-        modelJSON = null
-        
         jQuery.ajax({
             type: 'POST',
             url:  'model',
             success: self.updateListeners
         })
     }
+
     /** save the current project */
     this.saveProject = function() {
         jQuery.ajax({
@@ -79,65 +76,21 @@ openmdao.Model=function() {
         if (typeof callback != 'function')
             return
             
-        if (modelJSON != null) {
-            callback(modelJSON)
-        }
-        else {
-            jQuery.ajax({
-                type: 'GET',
-                url:  'model',
-                dataType: 'json',
-                data: {},
-                success: function(json) {
-                            modelJSON = json
-                            callback(modelJSON)
-                         },
-                error: errorHandler
-            })
-        }
+        jQuery.ajax({
+            type: 'GET',
+            url:  'model',
+            dataType: 'json',
+            success: callback,
+            error: errorHandler
+        })
     }
-    
-    /** get  model components*/
-    this.getComponents = function(callback,errorHandler) {
-        if (typeof callback != 'function')
-            return
-        else {
-            jQuery.ajax({
-                type: 'GET',
-                url:  'components',
-                dataType: 'json',
-                data: {},
-                success: callback,
-                error: errorHandler
-            })
-        }
-    }
-    
-    /** get  model components*/
-    this.getComponent = function(name,callback,errorHandler) {
-        if (typeof callback != 'function')
-            return
-        else {
-            jQuery.ajax({
-                type: 'GET',
-                url:  'component/'+name,
-                dataType: 'json',
-                data: {},
-                success: callback,
-                error: errorHandler
-            })
-        }
-    }
-    
+
     /** get a JSON representation the specified object in the model */
     this.getObject = function(pathname, callback, errorHandler) {
         if (typeof callback != 'function')
             return
 
-        if (modelJSON == null)
-            self.getJSON()
-            
-        var obj = modelJSON
+        var obj = self.getJSON()
 
         if (pathname.length >0) {
             var tokens = pathname.split('.'),
@@ -153,11 +106,40 @@ openmdao.Model=function() {
         callback(obj)
     }
     
+    /** get  hierarchical list of components*/
+    this.getComponents = function(callback,errorHandler) {
+        if (typeof callback != 'function')
+            return
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'components',
+                dataType: 'json',
+                data: {},
+                success: callback,
+                error: errorHandler
+            })
+        }
+    }
+    
+    /** get  attributes of a component*/
+    this.getComponent = function(name,callback,errorHandler) {
+        if (typeof callback != 'function')
+            return
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'component/'+name,
+                dataType: 'json',
+                data: {},
+                success: callback,
+                error: errorHandler
+            })
+        }
+    }
+    
     /** add an object of the specified type & name to the model (at x,y) */
     this.addComponent = function(typepath,name,x,y) {
-        // invalidate cached model data
-        modelJSON = null
-        
         if (typeof(x) !== 'number')  x = 1
         if (typeof(y) !== 'number')  y = 1
         
@@ -171,9 +153,6 @@ openmdao.Model=function() {
 
     /** issue the specified command against the model */
     this.issueCommand = function(cmd, callback, errorHandler) {
-        // invalidate cached model data
-        modelJSON = null
-        
         // make the call
         jQuery.ajax({
             type: 'POST',
@@ -318,10 +297,18 @@ openmdao.Model=function() {
     }
 
     /** execute the specified file */
+    this.runModel = function() {
+        // make the call
+        jQuery.ajax({
+            type: 'POST',
+            url:  'exec',
+            data: { },
+            success: self.updateListeners
+        })
+    }
+    
+    /** execute the specified file */
     this.execFile = function(filepath) {
-        // invalidate cached model data
-        modelJSON = null
-
         // convert to relative path with forward slashes
         var path = filepath.replace(/\\/g,'/')
         if (path[0] == '/')

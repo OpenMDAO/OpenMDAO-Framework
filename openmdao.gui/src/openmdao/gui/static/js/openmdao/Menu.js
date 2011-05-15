@@ -19,12 +19,14 @@ openmdao.Menu = function(id) {
     var self = this,
         elm = jQuery("#"+id),
         menus = [
-            { text: "Session", 
+            { text: "Project", 
               items: [
+                { text: "Save",          onclick: "model.saveProject();" },
+                { text: "Run",           onclick: "model.runModel();" },
                 //{ text: "New",           onclick: "model.newModel()"   },
-                { text: "New",          url: "/workspace/exit" },
+                { text: "New",           url: "/workspace/exit" },
+                { text: "Logout",        url: "/workspace/logout" },
                 //{ text: "Exit",          onclick: "model.exit();openmdao.Util.closeWindow()"}
-                { text: "Exit",        url: "/workspace/logout" },
               ]
             },
             { text: "File", 
@@ -32,7 +34,6 @@ openmdao.Menu = function(id) {
                 { text: "New File",      onclick: "model.newFile();" },
                 { text: "New Folder",    onclick: "model.newFolder();" },
                 { text: "Add File",      onclick: "model.uploadFile();" },
-                { text: "Save Project",  onclick: "model.saveProject();" }
               ]
             },
             { text: "View", 

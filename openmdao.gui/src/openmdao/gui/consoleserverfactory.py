@@ -123,6 +123,7 @@ class ConsoleServer(cmd.Cmd):
         
         self.projfile = ''
         self.proj = None
+        self.top = None
         
     def getcwd(self):
         return os.getcwd()
@@ -178,8 +179,8 @@ class ConsoleServer(cmd.Cmd):
 
     def run(self):
         """ run the model (i.e. the top assembly) """
-        if 'top' in self._globals:
-            self._globals['top'].run()
+        if self.top:
+            self.top.run()
         else:
             print "Execution failed: No top level assembly was found."
         
@@ -224,8 +225,8 @@ class ConsoleServer(cmd.Cmd):
     def get_components(self):
         """ get hierarchical dictionary of openmdao objects """
         comps = {}
-        if 'top' in self._globals:
-            comps = self._get_components(self._globals['top'])
+        if self.top:
+            comps = self._get_components(self.top)
         return comps
 
     def _get_attributes(self,obj):
@@ -240,9 +241,8 @@ class ConsoleServer(cmd.Cmd):
         
     def get_attributes(self,name):
         attr = {}
-        if 'top' in self._globals:
-            obj = self._globals['top'].get(name)
-            attr = self._get_attributes(obj)
+        if self.top:
+            attr = self._get_attributes(self.top.get(name))
         return attr
     
     def get_workingtypes(self):
@@ -260,9 +260,8 @@ class ConsoleServer(cmd.Cmd):
         print 'loading project from:',filename
         self.projfile = filename
         self.proj = project_from_archive(filename,dest_dir=self.getcwd())
-        name = self.proj.name
-        self._globals['top'] = self.proj.top # TODO: use proj.name instead of 'top'
-        set_as_top(self.proj.top)
+        self.top = self.proj.top
+        set_as_top(self.top)
         
     def save_project(self):
         """ save the cuurent project state & export it whence it came
@@ -282,7 +281,17 @@ class ConsoleServer(cmd.Cmd):
                 print "Save failed:", str(err)                
         else:
             print 'No Project to save'
-        
+
+    def add_component(self,name,classname):
+        """ add a new component of the given type to the top assembly. """
+        try:
+            if (classname.find('.')>0):
+                self.top.add(name,create(classname))
+            else:
+                self.top.add(name,self._globals[classname]())
+        except Exception, err:
+            print "Add component failed:", str(err)
+            
     def create(self,typname,name):
         """ create a new object of the given type. """
         try:

@@ -1,4 +1,4 @@
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponsePermanentRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -27,7 +27,7 @@ server_mgr = ConsoleServerFactory()
 def Command(request):
     ''' get the command, send it to the cserver, return response
     '''
-    if request.POST:
+    if request.method=='POST':
         cserver = server_mgr.console_server(request.session.session_key)
         history = ''
         # if there is a command, execute it & get the result
@@ -49,13 +49,13 @@ def Command(request):
 @csrf_exempt
 @login_required()
 def Component(request,name):
-    ''' add or remove a component
+    ''' add, remove or get a component
     '''
     cserver = server_mgr.console_server(request.session.session_key)
-    if request.POST:
+    if request.method=='POST':
         result = ''
         try:
-            cserver.create(request.POST['type'],name);
+            cserver.add_component(name,request.POST['type']);
         except Exception,e:
             print e
             result = sys.exc_info()
@@ -80,15 +80,17 @@ def Components(request):
     return HttpResponse(json,mimetype='application/json')
 
 @never_cache
+@csrf_exempt
 @login_required()
 def Exec(request):
-    ''' have the cserver execute a file, return result
+    ''' if a filename is POST'd, have the cserver execute the file
+        otherwise just run() the project
     '''
     result = ''
-    if request.POST:
+    if request.method=='POST':
         cserver = server_mgr.console_server(request.session.session_key)
         # if there is a filename, execute it & get the result
-        if 'filename' in request.PUT:
+        if 'filename' in request.POST:
             try:
                 result = cserver.execfile(request.POST['filename'])
             except Exception,e:
@@ -151,7 +153,7 @@ def Model(request):
     ''' POST: get a new model (delete existing console server)
         GET:  get JSON representation of the model
     '''
-    if request.POST:
+    if request.method=='POST':
         server_mgr.delete_server(session.session.session_key)
         return HttpResponseRedirect('/')
     else:
@@ -180,10 +182,11 @@ def Project(request):
         cserver.save_project()
         return HttpResponse('Saved.')
     else:
+        print "Loading project into workspace:",request.GET['filename']
         server_mgr.delete_server(request.session.session_key) # delete old server
         cserver = server_mgr.console_server(request.session.session_key)        
         cserver.load_project(MEDIA_ROOT+'/'+request.GET['filename'])
-        return HttpResponsePermanentRedirect('/workspace/')
+        return HttpResponseRedirect('/workspace')
     
 @never_cache
 @login_required()
