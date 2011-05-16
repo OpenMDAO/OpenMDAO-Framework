@@ -12,6 +12,7 @@ Developer Guide
    accessing
    working
    testing
+   trac
    bazaar
    todo
    
