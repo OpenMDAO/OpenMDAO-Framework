@@ -262,6 +262,7 @@ class ConsoleServer(cmd.Cmd):
         self.proj = project_from_archive(filename,dest_dir=self.getcwd())
         self.top = self.proj.top
         set_as_top(self.top)
+        self._globals['top'] = self.top
         
     def save_project(self):
         """ save the cuurent project state & export it whence it came
