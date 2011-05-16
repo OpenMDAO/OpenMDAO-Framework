@@ -85,7 +85,7 @@ class MetaModel(Component):
         
         #build list of inputs         
         inputs = []
-        for case in newval.get_iter():
+        for case in newval:
             self.recorder.record(case)
             inputs = []
             for inp_name in self._surrogate_input_names:

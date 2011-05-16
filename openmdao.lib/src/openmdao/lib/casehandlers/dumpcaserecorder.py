@@ -1,7 +1,7 @@
 
 import sys
 
-from openmdao.lib.datatypes.api import implements
+import zope.interface
 
 from openmdao.main.interfaces import ICaseRecorder
 
@@ -10,7 +10,7 @@ class DumpCaseRecorder(object):
     If out is None, cases will be ignored.
     """
     
-    implements(ICaseRecorder)
+    zope.interface.implements(ICaseRecorder)
     
     def __init__(self, out=sys.stdout):
         self.out = out

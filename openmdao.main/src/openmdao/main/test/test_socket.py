@@ -10,7 +10,8 @@ import zope.interface
 
 class CIterator(object):
     zope.interface.implements(ICaseIterator)
-    pass
+    def __iter__(self):
+        return iter([])
     
 class SocketComp(Assembly):
     iterator = Socket(ICaseIterator, allow_none=False, desc='cases to evaluate')
@@ -50,9 +51,9 @@ class SocketTestCase(unittest.TestCase):
         pass
 
     def test_normal(self):
-        self.sc.iterator = ListCaseIterator([Case(), Case(), Case()])
+        self.sc.iterator = CIterator()
         self.sc.run()
-        self.assertEqual(self.sc.num_cases, 3)
+        self.assertEqual(self.sc.num_cases, 0)
 
     def test_no_socket(self):
         try:
@@ -70,14 +71,13 @@ class SocketTestCase(unittest.TestCase):
         try:
             self.sc.iterator = Component('dummy')
         except TraitError, exc:
-            self.assertTrue(str(exc).startswith(
-                "The 'iterator' trait of a SocketComp instance must be an ICaseIterator, but a value of"))
+            self.assertEqual(str(exc), ": iterator must provide interface 'ICaseIterator'")
         else:
             self.fail('TraitError expected')
 
     def test_socket_filled(self):
         self.assertEqual(self.sc.iterator, None)
-        self.sc.iterator = ListCaseIterator([Case(), Case(), Case()])
+        self.sc.iterator = CIterator()
         self.assertNotEqual(self.sc.iterator, None)
 
         try:
@@ -91,7 +91,7 @@ class SocketTestCase(unittest.TestCase):
     def test_inherit_sockets(self):
         sc2 = SocketComp2()
         self.assertEqual(sc2.iterator, None)
-        lci = ListCaseIterator([Case(), Case(), Case()])
+        lci = CIterator()
         sc2.iterator = lci
         self.assertEqual(sc2.iterator, lci)
 
@@ -103,7 +103,7 @@ class SocketTestCase(unittest.TestCase):
         
     def test_socket_override(self):
         sc2 = SocketComp2()
-        sc2.iterator = ListCaseIterator([Case(), Case(), Case()])
+        sc2.iterator = CIterator()
         try:
             sc2.iterator = Assembly()
         except TraitError:
@@ -114,7 +114,7 @@ class SocketTestCase(unittest.TestCase):
         sc4 = SocketComp4()
         sc4.iterator = Assembly()
         try:
-            sc4.iterator = ListCaseIterator([Case(), Case(), Case()])
+            sc4.iterator = CIterator()
         except TraitError:
             pass
         else:

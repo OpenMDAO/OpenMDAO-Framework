@@ -31,7 +31,7 @@ class Socket(TraitType):
         else:
             self._instance = Instance(klass=klass, allow_none=allow_none, 
                                       **metadata)
-        super(Socket, self).__init__(**metadata)
+        super(Socket, self).__init__(default_value=None, **metadata)
 
     def validate ( self, obj, name, value ):
         """ Validates that the value is a valid object instance."""

@@ -4,7 +4,7 @@ import sys
 import thread
 import threading
 
-from openmdao.lib.datatypes.api import Bool, Enum, Instance
+from openmdao.lib.datatypes.api import Bool, Enum
 
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
@@ -14,6 +14,7 @@ from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
 from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer
+from openmdao.main.pluginsock import Socket
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
@@ -675,12 +676,12 @@ class CaseIteratorDriver(CaseIterDriverBase):
     servers obtained from the :class:`ResourceAllocationManager`.
     """
 
-    iterator = Instance(ICaseIterator, iotype='in',
-                        desc='Iterator supplying Cases to evaluate.')
+    iterator = Socket(ICaseIterator, iotype='in',
+                      desc='Iterator supplying Cases to evaluate.')
     
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
         if self.iterator is not None:
-            return self.iterator.get_iter()
+            return iter(self.iterator)
         else:
             self.raise_exception("iterator has not been set", ValueError)

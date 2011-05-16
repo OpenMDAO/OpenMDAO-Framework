@@ -8,22 +8,16 @@ from numpy.linalg import det, linalg, lstsq
 from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import fmin
 
-from enthought.traits.api import HasTraits
-
-from openmdao.lib.datatypes.api import implements
+import zope.interface
 
 from openmdao.main.interfaces import ISurrogate
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 
-class KrigingSurrogate(HasTraits): 
-    implements(ISurrogate)
+class KrigingSurrogate(object): 
+    zope.interface.implements(ISurrogate)
     
     def __init__(self,X=None,Y=None):
-        
-        # must call HasTraits init to set up Traits stuff
-        super(KrigingSurrogate, self).__init__() 
-
         self.m = None #number of independent
         self.n = None #number of training points
         self.thetas = None

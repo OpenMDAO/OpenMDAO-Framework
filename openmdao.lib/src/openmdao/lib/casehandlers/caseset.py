@@ -111,7 +111,7 @@ class CaseArray(object):
         else:
             self._add_values(self._get_case_data(case))
     
-    def get_iter(self):
+    def __iter__(self):
         return self._next_case()
 
     def _next_case(self):
@@ -178,7 +178,7 @@ class CaseArray(object):
     def update(self, *case_containers):
         """Add Cases from other CaseSets or CaseArrays to this one."""
         for cset in case_containers:
-            for case in cset.get_iter():
+            for case in cset:
                 self.record(case)
                 
     def pop(self, idx=-1):
@@ -374,7 +374,7 @@ def caseiter_to_caseset(caseiter, varnames=None, include_errors=False):
     
     caseset = CaseSet()
 
-    for case in caseiter.get_iter():
+    for case in caseiter:
         if include_errors is False and case.msg:
             continue  # case reported an error, so don't use it
         if varnames is not None:

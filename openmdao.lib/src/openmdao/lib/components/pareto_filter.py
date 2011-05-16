@@ -78,7 +78,7 @@ class ParetoFilter(Component):
         self.dominated_set = CaseSet()
         self.pareto_set = CaseSet() #TODO: need a way to copy casesets
 
-        for point1, case in zip(y_list, case_set.get_iter()):
+        for point1, case in zip(y_list, iter(case_set)):
             dominated = False
             for point2 in y_temp:
                 if self._is_dominated(point1, point2):

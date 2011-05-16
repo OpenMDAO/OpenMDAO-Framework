@@ -23,6 +23,8 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint apparently doesn't understand namespace packages...
 # pylint: disable-msg=E0611,F0401
 
+import zope.interface
+
 from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
                                  push_exception_handler, Python, \
                                  Interface, Instance
@@ -1150,6 +1152,9 @@ def _get_entry_group(obj):
     for cls, group in _get_entry_group.group_map:
         if issubclass(cls, Interface):
             if obj_has_interface(obj, cls):
+                return group
+        elif issubclass(cls, zope.interface.Interface):
+            if cls.providedBy(obj):
                 return group
         else:
             if isinstance(obj, cls):

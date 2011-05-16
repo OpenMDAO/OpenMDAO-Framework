@@ -17,6 +17,7 @@ from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
 from openmdao.main.mp_support import is_instance
 from openmdao.main.rbac import rbac
+from openmdao.main.pluginsock import Socket
 
 @add_delegate(HasEvents)
 class Driver(Component):
@@ -25,7 +26,7 @@ class Driver(Component):
     
     implements(IDriver, IHasEvents)
 
-    recorder = Instance(ICaseRecorder, desc='Case recorder for iteration data.', 
+    recorder = Socket(ICaseRecorder, desc='Case recorder for iteration data.', 
                         required=False)
 
     workflow = Instance(Workflow, allow_none=True)

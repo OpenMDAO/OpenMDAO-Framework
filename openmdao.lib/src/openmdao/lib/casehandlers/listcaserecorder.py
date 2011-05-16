@@ -1,7 +1,8 @@
 
 import sys
 
-from openmdao.lib.datatypes.api import implements
+import zope.interface
+
 from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 
 from openmdao.main.interfaces import ICaseRecorder
@@ -9,7 +10,7 @@ from openmdao.main.interfaces import ICaseRecorder
 class ListCaseRecorder(object):
     """Stores cases in a list."""
     
-    implements(ICaseRecorder)
+    zope.interface.implements(ICaseRecorder)
     
     def __init__(self):
         self.cases = []

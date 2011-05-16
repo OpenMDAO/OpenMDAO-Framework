@@ -22,7 +22,7 @@ import time
 logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger('mp_distributing').setLevel(logging.DEBUG)
 
-from enthought.traits.api import HasTraits
+import zope.interface
 
 from openmdao.main.api import Assembly, Case, Component, set_as_top
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
@@ -39,17 +39,17 @@ from openmdao.test.cluster import init_cluster
 MAX_TRIALS = 1000
 
 
-class Iterator(HasTraits):
+class Iterator(object):
     """ Just keeps returning `case` until told to stop. """
 
-    implements(ICaseIterator)
+    zope.interface.implements(ICaseIterator)
 
     def __init__(self, case):
         super(Iterator, self).__init__()
         self.case = case
         self.stop = False
 
-    def get_iter(self):
+    def __iter__(self):
         return self._next_case()
 
     def _next_case(self):
@@ -59,10 +59,10 @@ class Iterator(HasTraits):
         raise StopIteration
 
 
-class Recorder(HasTraits):
+class Recorder(object):
     """ Consumes cases until elapsed time is < #cases * delay. """
 
-    implements(ICaseRecorder)
+    zope.interface.implements(ICaseRecorder)
 
     def __init__(self, iterator, delay):
         super(Recorder, self).__init__()

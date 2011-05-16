@@ -375,13 +375,9 @@ class IResourceAllocator (zope.interface.Interface):
 class ICaseIterator(zope.interface.Interface):
     """An iterator that returns Case objects."""
     
-    # unfortunately we can't just use __iter__ here because
-    # double underscore members are ignored when the implementation
-    # is validated, meaning that ANY class would match this interface
-    # if we just used __iter__.
-    def get_iter():
-        """Return an iterator of Case objects."""
-        
+    def __iter__():
+        """Returns an iterator of Cases"""
+
         
 class IDOEgenerator(zope.interface.Interface):
     """An iterator that returns lists of normalized values that are mapped

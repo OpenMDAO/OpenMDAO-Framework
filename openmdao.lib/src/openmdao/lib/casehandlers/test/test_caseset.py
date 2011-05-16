@@ -57,7 +57,7 @@ class CaseArrayTestCase(unittest.TestCase):
         cs.record(self.case2)
         cs.record(self.case1_dup)
         cscopy = cs.copy()
-        for c1, c2 in zip(cs.get_iter(), cscopy.get_iter()):
+        for c1, c2 in zip(cs, cscopy):
             self.assertEqual(c1, c2)
 
     def test_iteration(self):
@@ -66,7 +66,7 @@ class CaseArrayTestCase(unittest.TestCase):
         cs.record(self.case2)
         cs.record(self.case1_dup)
         expected = [self.case1, self.case2, self.case1_dup]
-        for i,case in enumerate(cs.get_iter()):
+        for i,case in enumerate(cs):
             self.assertEqual(case._inputs, expected[i]._inputs)
             self.assertEqual(case._outputs, expected[i]._outputs)
 
@@ -163,7 +163,7 @@ class CaseSetTestCase(unittest.TestCase):
         cs.record(self.case2)
         cs.record(self.case1_dup)
         expected = [self.case1, self.case2, self.case1_dup]
-        for i,case in enumerate(cs.get_iter()):
+        for i,case in enumerate(cs):
             self.assertEqual(case._inputs, expected[i]._inputs)
             self.assertEqual(case._outputs, expected[i]._outputs)
             
@@ -173,7 +173,7 @@ class CaseSetTestCase(unittest.TestCase):
         cs.record(self.case2)
         cs.record(self.case1_dup)
         cscopy = cs.copy()
-        for c1, c2 in zip(cs.get_iter(), cscopy.get_iter()):
+        for c1, c2 in zip(cs, cscopy):
             self.assertEqual(c1, c2)
 
     def test_set_ops(self):
@@ -225,10 +225,10 @@ class CaseSetTestCase(unittest.TestCase):
     def test_caseiter_to_caseset(self):
         cases = ListCaseIterator(self.caselist[3:])
         cs = caseiter_to_caseset(cases)
-        for case1,case2 in zip(cases.get_iter(), cs.get_iter()):
+        for case1,case2 in zip(cases, cs):
             self.assertTrue(case1 == case2)
         cssub = caseiter_to_caseset(cases, ['comp1.b','comp2.b','comp2.c+comp2.d'])
-        for case1,case2 in zip(cases.get_iter(), cssub.get_iter()):
+        for case1,case2 in zip(cases, cssub):
             self.assertTrue(set(case2.keys('in')).issubset(case1.keys('in')))
             self.assertTrue(set(case2.keys('out')).issubset(case1.keys('out')))
             
@@ -250,7 +250,7 @@ class CaseSetTestCase(unittest.TestCase):
         cs2 = CaseSet()
         cs2.update(cs1)
         
-        for c1,c2 in zip(cs1.get_iter(), cs2.get_iter()):
+        for c1,c2 in zip(cs1, cs2):
             self.assertEqual(c1, c2)
         
 if __name__ == "__main__":
