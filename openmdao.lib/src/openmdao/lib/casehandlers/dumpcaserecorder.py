@@ -1,16 +1,14 @@
 
 import sys
 
-import zope.interface
-
-from openmdao.main.interfaces import ICaseRecorder
+from openmdao.main.interfaces import implements, ICaseRecorder
 
 class DumpCaseRecorder(object):
     """Dumps cases in a "pretty" form to a file-like object called "out" (defaults to ``sys.stdout``).
     If out is None, cases will be ignored.
     """
     
-    zope.interface.implements(ICaseRecorder)
+    implements(ICaseRecorder)
     
     def __init__(self, out=sys.stdout):
         self.out = out

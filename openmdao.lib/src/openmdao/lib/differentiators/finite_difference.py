@@ -6,8 +6,8 @@ variety of difference types are available for both first and second order."""
 from numpy import zeros, ones
 
 from enthought.traits.api import HasTraits
-from openmdao.lib.datatypes.api import implements, Enum, Float
-from openmdao.main.interfaces import IDifferentiator
+from openmdao.lib.datatypes.api import Enum, Float
+from openmdao.main.interfaces import implements, IDifferentiator
 from openmdao.main.container import find_name
 
 

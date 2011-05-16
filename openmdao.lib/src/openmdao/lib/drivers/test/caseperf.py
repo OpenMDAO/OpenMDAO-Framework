@@ -22,15 +22,13 @@ import time
 logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger('mp_distributing').setLevel(logging.DEBUG)
 
-import zope.interface
-
 from openmdao.main.api import Assembly, Case, Component, set_as_top
-from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
+from openmdao.main.interfaces import implements, ICaseIterator, ICaseRecorder
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
 from openmdao.lib.casehandlers.api import ListCaseIterator
 from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
-from openmdao.lib.datatypes.api import Float, implements
+from openmdao.lib.datatypes.api import Float
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.lib.drivers.api import CaseIteratorDriver
 
@@ -42,7 +40,7 @@ MAX_TRIALS = 1000
 class Iterator(object):
     """ Just keeps returning `case` until told to stop. """
 
-    zope.interface.implements(ICaseIterator)
+    implements(ICaseIterator)
 
     def __init__(self, case):
         super(Iterator, self).__init__()
@@ -62,7 +60,7 @@ class Iterator(object):
 class Recorder(object):
     """ Consumes cases until elapsed time is < #cases * delay. """
 
-    zope.interface.implements(ICaseRecorder)
+    implements(ICaseRecorder)
 
     def __init__(self, iterator, delay):
         super(Recorder, self).__init__()

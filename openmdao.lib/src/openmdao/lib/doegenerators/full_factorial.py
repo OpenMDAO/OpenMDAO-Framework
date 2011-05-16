@@ -6,7 +6,8 @@ from itertools import product
 # pylint: disable-msg=E0611,F0401
 from numpy import linspace
 from enthought.traits.api import HasTraits
-from openmdao.lib.datatypes.api import implements, Int
+from openmdao.main.interfaces import implements
+from openmdao.lib.datatypes.api import Int
 
 from openmdao.main.interfaces import IDOEgenerator
 

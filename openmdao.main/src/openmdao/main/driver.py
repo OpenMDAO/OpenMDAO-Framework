@@ -3,12 +3,11 @@
 #public symbols
 __all__ = ["Driver"]
 
-
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import implements, List, Instance
+from enthought.traits.api import List, Instance
 
 from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, \
-                                     IHasEvents, obj_has_interface
+                                     IHasEvents, obj_has_interface, implements
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
@@ -27,9 +26,9 @@ class Driver(Component):
     implements(IDriver, IHasEvents)
 
     recorder = Socket(ICaseRecorder, desc='Case recorder for iteration data.', 
-                        required=False)
+                      required=False) 
 
-    workflow = Instance(Workflow, allow_none=True)
+    workflow = Socket(Workflow, allow_none=True)
     
     def __init__(self, doc=None):
         self._iter = None

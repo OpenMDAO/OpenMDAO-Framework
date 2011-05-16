@@ -10,12 +10,12 @@ from scipy.optimize import fmin
 
 import zope.interface
 
-from openmdao.main.interfaces import ISurrogate
+from openmdao.main.interfaces import implements, ISurrogate
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 
 class KrigingSurrogate(object): 
-    zope.interface.implements(ISurrogate)
+    implements(ISurrogate)
     
     def __init__(self,X=None,Y=None):
         self.m = None #number of independent

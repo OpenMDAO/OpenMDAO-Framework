@@ -742,8 +742,6 @@ Now these inputs are available to connect to the components, so we connect them 
 
 .. testsetup:: Code7b
 
-	from openmdao.lib.datatypes.api import implements, Interface
-
 	from openmdao.main.api import Assembly
 	from openmdao.lib.datatypes.api import Float, Int
 

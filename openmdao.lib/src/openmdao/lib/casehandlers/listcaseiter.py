@@ -1,7 +1,5 @@
 
-import zope.interface
-
-from openmdao.main.interfaces import ICaseIterator
+from openmdao.main.interfaces import implements, ICaseIterator
 
 class ListCaseIterator(list):
     """An iterator that returns :class:`Case` objects from a passed-in iterator
@@ -9,7 +7,7 @@ class ListCaseIterator(list):
     optimizer, etc.
     """
     
-    zope.interface.implements(ICaseIterator)
+    implements(ICaseIterator)
     
     def __init__(self, cases):
         super(ListCaseIterator, self).__init__(cases)

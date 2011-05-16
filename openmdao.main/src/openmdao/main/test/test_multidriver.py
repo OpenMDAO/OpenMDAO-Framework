@@ -176,7 +176,6 @@ class MultiDriverTestCase(unittest.TestCase):
         print "*** test_one_driver ***"
         self.rosen_setUp()
         self.top.run()
-        print '*** run finished ***'
         self.assertAlmostEqual(self.opt_objective, 
                                self.top.driver1.eval_objective(), places=2)
         self.assertAlmostEqual(self.opt_design_vars[0], 

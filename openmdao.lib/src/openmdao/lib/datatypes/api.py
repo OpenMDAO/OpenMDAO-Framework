@@ -12,5 +12,4 @@ from openmdao.main.pluginsock import Socket
 # Traits from Enthought
 from enthought.traits.api import Bool, List, Str, Instance, \
      Complex, CBool, Dict, ListStr, Any, TraitError, on_trait_change,\
-     implements, Interface, Python, Event, Dict
-
+     Python, Event, Dict

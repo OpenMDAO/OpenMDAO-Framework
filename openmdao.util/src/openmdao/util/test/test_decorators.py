@@ -1,6 +1,6 @@
 
 import unittest
-from inspect import getmembers, ismethod
+from inspect import getmembers, ismethod, isfunction
 
 from enthought.traits.api import HasTraits, Float
 

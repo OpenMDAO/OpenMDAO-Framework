@@ -7,8 +7,9 @@ __all__ = ['Assembly']
 import cStringIO
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Instance, TraitError, Missing
+from enthought.traits.api import TraitError, Missing
 
+from openmdao.main.interfaces import implements, IDriver
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
@@ -40,7 +41,7 @@ class Assembly (Component):
     Driver called 'driver'.
     """
     
-    driver = Instance(Driver, allow_none=True,
+    driver = Socket(IDriver, allow_none=True,
                     desc="The top level Driver that manages execution of "
                     "this Assembly.")
     

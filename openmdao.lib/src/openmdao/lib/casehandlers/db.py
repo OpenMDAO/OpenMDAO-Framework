@@ -5,9 +5,7 @@ import uuid
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser
 
-import zope.interface
-
-from openmdao.main.interfaces import ICaseRecorder, ICaseIterator
+from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
 
 _casetable_attrs = set(['id','uuid','parent','label','msg','retries','model_id','timeEnter'])
@@ -32,7 +30,7 @@ class DBCaseIterator(object):
     selectors, e.g., 'x<=y', that are ANDed together.
     """
     
-    zope.interface.implements(ICaseIterator)
+    implements(ICaseIterator)
     
     def __init__(self, dbfile=':memory:', selectors=None, connection=None):
         if connection is not None:
@@ -112,7 +110,7 @@ class DBCaseRecorder(object):
     ints or strings are pickled and are opaque to SQL queries.
     """
     
-    zope.interface.implements(ICaseRecorder)
+    implements(ICaseRecorder)
     
     def __init__(self, dbfile=':memory:', model_id='', append=False):
         self.dbfile = dbfile  # this creates the connection

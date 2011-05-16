@@ -4,7 +4,7 @@ Some useful decorators
 import types
 
 from decorator import FunctionMaker
-from inspect import getmembers, ismethod, getargspec, formatargspec
+from inspect import getmembers, ismethod, isfunction, getargspec, formatargspec, getmro
 
 # this decorator is based on a code snippet by vegaseat at daniweb.
 # See http://www.daniweb.com/code/snippet216689.html
@@ -72,7 +72,12 @@ def add_delegate(*delegates):
             skip = cls._do_not_promote
         else:
             skip = []
-        added_set = set([n for n,v in getmembers(cls) if not n.startswith('_') and n not in skip])
+        # inspect.getmembers dies if cls is a HasTraits subclass, so use __dict__ instead. :(
+        for klass in getmro(cls):
+            if klass is object:
+                continue
+            added_set = set([n for n,v in klass.__dict__.items() if not n.startswith('_') 
+                             and n not in skip])
     
         listofdels = []
         for tup in delegates:
@@ -89,8 +94,15 @@ def add_delegate(*delegates):
                 
             listofdels.append((delegatename, delegate))
             
-            for memname,mem in getmembers(delegate, ismethod):
-                if not memname.startswith('_'):
+            alldict = {}
+            for klass in getmro(delegate):
+                if klass is object:
+                    continue
+                for k,v in klass.__dict__.items():
+                    if k not in alldict:
+                        alldict[k] = v
+            for memname,mem in alldict.items():
+                if not memname.startswith('_') and (isfunction(mem) or ismethod(mem)):
                     if memname in added_set:
                         continue   # skip adding member if it's already part of the class
                     added_set.add(memname)

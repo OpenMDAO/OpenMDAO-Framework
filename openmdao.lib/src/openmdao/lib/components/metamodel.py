@@ -2,12 +2,12 @@
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array
-from openmdao.lib.datatypes.api import Instance, ListStr, Event, \
-     List, Str, Dict
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
-from openmdao.main.api import Component, Case
+from openmdao.main.api import Component, Case, Socket
+from openmdao.lib.datatypes.api import Instance, ListStr, Event, \
+     List, Str, Dict
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
      ICaseIterator
 from openmdao.main.uncertain_distributions import UncertainDistribution, \
@@ -21,24 +21,24 @@ class MetaModel(Component):
     See the Standard Library Reference for additional information on the :ref:`MetaModel` component."""
     
     # pylint: disable-msg=E1101
-    model = Instance(Component, allow_none=True,
-                     desc='Socket for the Component or Assembly being '
-                          'encapsulated.')
+    model = Socket(IComponent, allow_none=True,
+                   desc='Socket for the Component or Assembly being '
+                   'encapsulated.')
     includes = ListStr(iotype='in', 
-                           desc='A list of names of variables to be included '
+                       desc='A list of names of variables to be included '
                                 'in the public interface.')
     excludes = ListStr(iotype='in',
-                           desc='A list of names of variables to be excluded '
-                                'from the public interface.')
+                       desc='A list of names of variables to be excluded '
+                       'from the public interface.')
     
-    warm_start_data = Instance(ICaseIterator,iotype="in",
+    warm_start_data = Socket(ICaseIterator,iotype="in",
                               desc="CaseIterator containing cases to use as "
                               "initial training data. When this is set, all "
                               "previous training data is cleared, and replaced "
                               "with data from this CaseIterator")
     
     surrogate = Dict(key_train=Str,
-                     value_trait=ISurrogate,
+                     value_trait=Socket(ISurrogate),
                      allow_none=True,
                      desc='An dictionary provides a mapping between variables and '
                           'surrogate models for each output. The "default" '
@@ -48,7 +48,7 @@ class MetaModel(Component):
                     )
                        
     
-    recorder = Instance(ICaseRecorder,
+    recorder = Socket(ICaseRecorder,
                         desc = 'Records training cases')
 
     # when fired, the next execution will train the metamodel

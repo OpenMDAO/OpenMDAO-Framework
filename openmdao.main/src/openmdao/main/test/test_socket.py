@@ -4,12 +4,12 @@ import unittest
 from enthought.traits.api import TraitError, Int
 
 from openmdao.main.api import Assembly, Component, Container, Case, Socket
-from openmdao.main.interfaces import ICaseIterator
+from openmdao.main.interfaces import implements, ICaseIterator
 
 import zope.interface
 
 class CIterator(object):
-    zope.interface.implements(ICaseIterator)
+    implements(ICaseIterator)
     def __iter__(self):
         return iter([])
     
@@ -128,7 +128,7 @@ class MyIface(zope.interface.Interface):
         """some function"""
     
 class MyClass(object):
-    zope.interface.implements(MyIface)
+    implements(MyIface)
     
     def __init__(self):
         self.x = 1

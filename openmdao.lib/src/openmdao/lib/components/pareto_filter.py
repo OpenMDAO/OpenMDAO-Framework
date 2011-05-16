@@ -5,10 +5,9 @@ from openmdao.lib.datatypes.api import Instance, List, ListStr
 from openmdao.lib.casehandlers.api import CaseSet, caseiter_to_caseset
 
 from openmdao.main.component import Component
+from openmdao.main.pluginsock import Socket
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
-
-
 
 class ParetoFilter(Component):
     """Takes a set of cases and filters out the subset of cases which are
@@ -26,14 +25,14 @@ class ParetoFilter(Component):
     #                    desc="CaseIterator with the cases to be filtered to "
     #                         "Find the pareto optimal subset.")
                              
-    case_sets = List(ICaseIterator, value=[], iotype="in",
-                        desc="CaseSet with the cases to be filtered to "
-                             "Find the pareto optimal subset.")
+    case_sets = List(Socket(ICaseIterator), value=[], iotype="in",
+                     desc="CaseSet with the cases to be filtered to "
+                     "Find the pareto optimal subset.")
     
-    pareto_set = Instance(CaseSet, iotype="out", 
-                          desc="Resulting collection of pareto optimal cases.",copy="shallow")
-    dominated_set = Instance(CaseSet, iotype="out",
-                             desc="Resulting collection of dominated cases.",copy="shallow")
+    pareto_set = Socket(CaseSet, iotype="out", 
+                        desc="Resulting collection of pareto optimal cases.",copy="shallow")
+    dominated_set = Socket(CaseSet, iotype="out",
+                           desc="Resulting collection of dominated cases.",copy="shallow")
     
     def _is_dominated(self, y1, y2):
         """Tests to see if the point y1 is dominated by the point y2. 
