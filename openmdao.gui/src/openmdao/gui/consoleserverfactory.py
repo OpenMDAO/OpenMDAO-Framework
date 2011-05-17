@@ -15,6 +15,7 @@ from multiprocessing.managers import BaseManager
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create
 from openmdao.main.component import Component
+from openmdao.main.factorymanager import get_available_types
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
@@ -245,6 +246,9 @@ class ConsoleServer(cmd.Cmd):
             attr = self._get_attributes(self.top.get(name))
         return attr
     
+    def get_available_types(self):
+        return get_available_types()
+        
     def get_workingtypes(self):
         """ Return this server's user defined types. """
         types = []
@@ -261,7 +265,6 @@ class ConsoleServer(cmd.Cmd):
         self.projfile = filename
         self.proj = project_from_archive(filename,dest_dir=self.getcwd())
         self.top = self.proj.top
-        set_as_top(self.top)
         self._globals['top'] = self.top
         
     def save_project(self):
@@ -286,10 +289,10 @@ class ConsoleServer(cmd.Cmd):
     def add_component(self,name,classname):
         """ add a new component of the given type to the top assembly. """
         try:
-            if (classname.find('.')>0):
-                self.top.add(name,create(classname))
-            else:
+            if classname in self._globals:
                 self.top.add(name,self._globals[classname]())
+            else:
+                self.top.add(name,create(classname))
         except Exception, err:
             print "Add component failed:", str(err)
             

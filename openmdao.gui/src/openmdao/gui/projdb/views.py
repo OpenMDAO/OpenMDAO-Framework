@@ -85,7 +85,7 @@ def detail(request, project_id):
 @login_required()
 def new(request):
     p = Project(user=request.user)
-    p.projectname   = 'New Project '+strftime("%Y-%m-%d %H:%M:%S")
+    p.projectname   = 'New Project '+strftime("%Y-%m-%d %H%M%S")
     p.save()
     proj_form = ProjectForm({
         'projectname': p.projectname,

@@ -12,7 +12,6 @@ import zipfile, jsonpickle
 
 from setuptools.command import easy_install
 
-from openmdao.main.factorymanager import get_available_types
 from mdao_util import *
 
 # TODO:
@@ -193,9 +192,9 @@ def Project(request):
 def Types(request):
     ''' get hierarchy of package/types to populate the Palette
     '''
-    types = get_available_types()
-    types = packagedict(types)
     cserver = server_mgr.console_server(request.session.session_key)
+    types = cserver.get_available_types()
+    types = packagedict(types)
     types['working'] = packagedict(cserver.get_workingtypes())
     json = jsonpickle.encode(types)
     return HttpResponse(json,mimetype='application/json')
