@@ -78,18 +78,20 @@ def get_traits_info(app, what, name, obj, options, lines):
     for t,val in keepers.items():
         #As long as it's not an excluded type, add it.
         if not isinstance(val.trait_type, excludes):
-            if (val.trait_type._metadata.has_key("iotype")):
+            if val.trait_type._metadata.has_key("iotype"):
                 if (val.trait_type._metadata["iotype"] =="in"):
                     keepers_in[t]=val
                 elif  (val.trait_type._metadata["iotype"] == "out"):
                     keepers_out[t]=val
-            elif (type(val.trait_type).__name__ == "Instance"):
+            elif type(val.trait_type).__name__ in ["Instance","Socket"]:
                 keepers_instance[t]=val        
             else:
                 keepers_undefined[t]=val
                 
     dicts = (keepers_instance, keepers_in, keepers_out, keepers_undefined)
     
+    dontdo_meta=set(['iotype', 'units', 'low', 'high', 'type', 
+                     'desc', 'instance_handler', 'parent', 'array'])
     for dic in dicts:
         sortedDict = _sortedDictVals(dic)
         for t, val in sortedDict:
@@ -123,10 +125,9 @@ def get_traits_info(app, what, name, obj, options, lines):
                     lines.extend(['  * high:  %s' %val.high])
     
             #now to put in the metadata added by users, or not specially handled.
-            dontdo=('iotype', 'units', 'low', 'high', 'type', 'desc', 'instance_handler', 'parent', 'array')
             metadata = val.trait_type._metadata.items()
             for m, v in metadata:
-                if m not in dontdo:
+                if m not in dontdo_meta:
                     if isinstance(v, basestring):
                         v = "'%s'" %v  
                     lines.extend(['  *  %s:  %s' %(m, v)])

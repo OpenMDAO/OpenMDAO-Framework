@@ -9,7 +9,9 @@ from openmdao.lib.datatypes.int import Int
 from openmdao.lib.datatypes.array import Array
 from openmdao.main.pluginsock import Socket
 
+Instance = Socket
+
 # Traits from Enthought
-from enthought.traits.api import Bool, List, Str, Instance, \
+from enthought.traits.api import Bool, List, Str, \
      Complex, CBool, Dict, ListStr, Any, TraitError, on_trait_change,\
      Python, Event, Dict

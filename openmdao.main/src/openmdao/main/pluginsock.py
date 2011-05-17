@@ -24,10 +24,17 @@ class Socket(TraitType):
     """
     
     def __init__(self, klass = None, allow_none = True, **metadata):
-        if issubclass(klass, zope.interface.Interface):
-            self.klass = klass
-            self.allow_none = allow_none
-            self._instance = None
+        try:
+            iszopeiface = issubclass(klass, zope.interface.Interface)
+        except TypeError:
+            iszopeiface = False
+        
+        metadata.setdefault( 'copy', 'deep' )
+
+        self._allow_none = allow_none
+        if iszopeiface:
+                self.klass = klass
+                self._instance = None
         else:
             self._instance = Instance(klass=klass, allow_none=allow_none, 
                                       **metadata)
