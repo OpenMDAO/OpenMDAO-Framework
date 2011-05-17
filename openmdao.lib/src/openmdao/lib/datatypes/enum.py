@@ -85,7 +85,7 @@ class Enum(Variable):
         vtype = type( value )
         if value not in self.values:
             info = str(self.values)
-            msg = "Trait '%s' must be in %s, " % (name, info) + \
+            msg = "Variable '%s' must be in %s, " % (name, info) + \
                 "but a value of %s %s was specified." % (value, vtype)
         else:
             msg = "Unknown error while setting trait '%s';" % (name) +\

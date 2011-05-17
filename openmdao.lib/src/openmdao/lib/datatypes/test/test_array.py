@@ -136,7 +136,7 @@ class ArrayTestCase(unittest.TestCase):
         try:
             self.hobj.sh1 = array([[11.0, 2.0]])
         except ValueError, err:
-            msg = ": Trait 'sh1' must be a numpy array of shape (2, 2), but a shape of (1, 2) (<type 'numpy.ndarray'>) was specified."
+            msg = ": Variable 'sh1' must be a numpy array of shape (2, 2), but a shape of (1, 2) (<type 'numpy.ndarray'>) was specified."
             self.assertEqual(str(err), msg)
         else:
             self.fail('ValueError expected')

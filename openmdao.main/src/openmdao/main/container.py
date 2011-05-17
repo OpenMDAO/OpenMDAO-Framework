@@ -706,8 +706,15 @@ class Container(HasTraits):
         if metaname is None:
             return t.trait_type._metadata.copy()
         else:
-            return getattr(t, metaname)
-        
+            val = getattr(t, metaname, Missing)
+            if val is Missing:
+                if metaname == 'vartypename':
+                    return t.__class__.__name__
+                else:
+                    self.raise_exception("'%s' not found" % metaname,
+                                         AttributeError)
+            return val
+
     def _get_failed(self, path, index=None):
         """If get() cannot locate the variable specified by the given
         path, raise an exception.  Inherited classes can override this

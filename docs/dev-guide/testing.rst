@@ -355,7 +355,7 @@ More details on the ``literalinclude`` directive can be found at http://sphinx.p
     >>> my_engine.set("throttle",3.0)
     Traceback (most recent call last):
         ...
-    ValueError: Trait 'RPM' must be a float in the range [0.01, 1.0] but a value 
+    ValueError: Variable 'RPM' must be a float in the range [0.01, 1.0] but a value 
     of 3.0 <type 'float'> was specified.
 
 * Indentation is not preserved between code blocks in the same group. This means that all functions and

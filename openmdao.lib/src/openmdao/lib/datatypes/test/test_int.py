@@ -91,7 +91,7 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.int1 = 3.1
         except ValueError, err:
-            errstring = ": Trait 'int1' must be 0 <= an integer <= 99, but " + \
+            errstring = ": Variable 'int1' must be 0 <= an integer <= 99, but " + \
                         "a value of 3.1 <type 'float'> was specified."
             self.assertEqual(str(err), errstring)
         else:
@@ -115,7 +115,7 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.int1 = 124
         except ValueError, err:
-            errstring = ": Trait 'int1' must be" + \
+            errstring = ": Variable 'int1' must be" + \
                       " 0 <= an integer <= 99, but a value of 124" + \
                       " <type 'int'> was specified."
             self.assertEqual(str(err), errstring)
@@ -124,7 +124,7 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.int1 = -3
         except ValueError, err:
-            errstring = ": Trait 'int1' must be" + \
+            errstring = ": Variable 'int1' must be" + \
                       " 0 <= an integer <= 99, but a value of -3" + \
                       " <type 'int'> was specified."
             self.assertEqual(str(err), errstring)
@@ -153,7 +153,7 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.int4 = 3
         except ValueError, err:
-            errstring = ": Trait 'int4' must be" + \
+            errstring = ": Variable 'int4' must be" + \
                       " 3 < an integer < 4, but a value of 3" + \
                       " <type 'int'> was specified."
             self.assertEqual(str(err), errstring)

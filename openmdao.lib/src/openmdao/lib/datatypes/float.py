@@ -99,7 +99,7 @@ class Float(Variable):
         metadata['low'] = low
         metadata['high'] = high
         super(Float, self).__init__(default_value=default_value,
-                                         **metadata)
+                                    **metadata)
 
     def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.

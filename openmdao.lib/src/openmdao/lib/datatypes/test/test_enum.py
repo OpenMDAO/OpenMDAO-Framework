@@ -87,7 +87,7 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.e1 = "brown"
         except Exception, err:
-            errstring = ": Trait 'e1' must be in ('red', 'green', 'blue'), but a value of brown <type 'str'> was specified."
+            errstring = ": Variable 'e1' must be in ('red', 'green', 'blue'), but a value of brown <type 'str'> was specified."
             self.assertEqual(str(err), errstring)
         else:
             self.fail("Exception expected")

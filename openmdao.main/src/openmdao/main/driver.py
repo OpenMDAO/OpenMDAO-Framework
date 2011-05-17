@@ -7,14 +7,14 @@ __all__ = ["Driver"]
 from enthought.traits.api import List, Instance
 
 from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, \
-                                     IHasEvents, obj_has_interface, implements
+                                     IHasEvents, implements
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
-from openmdao.main.mp_support import is_instance
+from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.pluginsock import Socket
 
@@ -74,7 +74,7 @@ class Driver(Component):
         allcomps = set()
         for child in self.workflow.get_components():
             allcomps.add(child)
-            if is_instance(child, Driver):
+            if has_interface(child, IDriver):
                 allcomps.update(child.iteration_set())
         return allcomps
         

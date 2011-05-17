@@ -110,7 +110,7 @@ class Array(TraitArray):
                 wvalue = str(value.shape)
 
         vtype = type( value )
-        msg = "Trait '%s' must be %s, but a %s of %s (%s) was specified." % \
+        msg = "Variable '%s' must be %s, but a %s of %s (%s) was specified." % \
                                (name, info, wtype, wvalue, vtype)
         obj.raise_exception(msg, ValueError)
 
