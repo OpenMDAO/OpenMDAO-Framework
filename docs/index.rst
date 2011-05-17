@@ -9,11 +9,11 @@ Contents:
 .. toctree::
    :maxdepth: 1
    
-   user-guide/index
+   getting-started/index
    simple/index
    complex/index
    mdao/index
-   scripting/index
+   user-guide/index
    srcdocs/index
    plugin-guide/index
    dev-guide/index

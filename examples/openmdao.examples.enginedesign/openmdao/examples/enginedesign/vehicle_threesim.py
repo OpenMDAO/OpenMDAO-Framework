@@ -1,30 +1,21 @@
 """
-    engine_optimization.py - Top level assembly for the example problem.
+    Model that simulates the 0-60 acceleration time, the EPA city fuel economy,
+    and the EPA highway fuel economy of a Vehicle.
 """
 
-# Optimize a Vehicle design with CONMIN
-
-# pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Assembly
-from openmdao.lib.drivers.api import CONMINdriver
-
 from openmdao.examples.enginedesign.driving_sim import SimAcceleration, \
                                                        SimEconomy
 from openmdao.examples.enginedesign.vehicle import Vehicle
 
-class EngineOptimization(Assembly):
+class VehicleSim2(Assembly):
     """Optimization of a Vehicle."""
     
     def __init__(self):
         """ Creates a new Assembly for vehicle performance optimization."""
         
-        super(EngineOptimization, self).__init__()
+        super(VehicleSim2, self).__init__()
 
-        # pylint: disable-msg=E1101
-        
-        # Create CONMIN Optimizer instance
-        self.add('driver', CONMINdriver())
-        
         # Create Vehicle instance
         self.add('vehicle', Vehicle())
         
@@ -33,7 +24,7 @@ class EngineOptimization(Assembly):
         self.add('sim_EPA_city', SimEconomy())
         self.add('sim_EPA_highway', SimEconomy())
         
-        # add Sims to optimizer workflow
+        # add Sims to default workflow
         self.driver.workflow.add(['sim_acc', 'sim_EPA_city', 'sim_EPA_highway'])
         
         # Add vehicle to sim workflows.
@@ -41,17 +32,6 @@ class EngineOptimization(Assembly):
         self.sim_EPA_city.workflow.add('vehicle')
         self.sim_EPA_highway.workflow.add('vehicle')
     
-        # CONMIN Flags
-        self.driver.iprint = 0
-        self.driver.itmax = 30
-        
-        # CONMIN Objective 
-        self.driver.add_objective('sim_acc.accel_time')
-        
-        # CONMIN Design Variables 
-        self.driver.add_parameter('vehicle.spark_angle', -50., 10.)
-        self.driver.add_parameter('vehicle.bore', 65., 100.)
-        
         # Acceleration Sim setup
         self.sim_acc.velocity_str = 'vehicle.velocity'
         self.sim_acc.throttle_str = 'vehicle.throttle'
@@ -80,42 +60,15 @@ class EngineOptimization(Assembly):
         self.sim_EPA_highway.underspeed_str = 'vehicle.underspeed'
         self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
         self.sim_EPA_highway.force_execute = True
-
-if __name__ == "__main__": # pragma: no cover         
-
-    # pylint: disable-msg=E1101
-
-    def prz(title):
-        """ Print before and after"""
         
-        print '---------------------------------'
-        print title
-        print '---------------------------------'
-        print 'Engine: Bore = ', opt_problem.vehicle.bore
-        print 'Engine: Spark Angle = ', opt_problem.vehicle.spark_angle
-        print '---------------------------------'
-        print '0-60 Accel Time = ', opt_problem.sim_acc.accel_time
-        print 'EPA City MPG = ', opt_problem.sim_EPA_city.fuel_economy
-        print 'EPA Highway MPG = ', opt_problem.sim_EPA_highway.fuel_economy
-        print '\n'
-    
+if __name__ == "__main__": 
 
-    import time
     from openmdao.main.api import set_as_top
-    
-    opt_problem = EngineOptimization()
-    set_as_top(opt_problem)
-    
-    opt_problem.sim_acc.run()
-    opt_problem.sim_EPA_city.run()
-    opt_problem.sim_EPA_highway.run()
-    prz('Old Design')
+    my_sim = VehicleSim2()
+    set_as_top(my_sim)
 
-    tt = time.time()
-    opt_problem.run()
-    prz('New Design')
-    print "CONMIN Iterations: ", opt_problem.driver.iter_count
-    print ""
-    print "Elapsed time: ", time.time()-tt
+    my_sim.run()
     
-# end engine_optimization.py
+    print "Time (0-60): ", my_sim.sim_acc.accel_time
+    print "City MPG: ", my_sim.sim_EPA_city.fuel_economy
+    print "Highway MPG: ", my_sim.sim_EPA_highway.fuel_economy

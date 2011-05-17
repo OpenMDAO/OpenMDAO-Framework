@@ -1,343 +1,503 @@
 """
-    driving_sim.py - Driving Simulation for the vehicle example problem.
+  driving_sim.py - Driving Simulation for the vehicle example problem.
+
+  Contains OpenMDAO drivers that can simulate different driving regimes
+  for a Vehicle assembly.
+  
+  SimAcceleration: Determines 0-60 acceleration time
+  SimEconomy: Simulates fuel economy over a velocity profile
+              as used to estimate EPA city and highway mpg
 """
 
-# Simulates a vehicle to obatain the following:
-# - 0-60mph acceleration time
-# - EPA fuel economy estimate for city driving
-# - EPA fuel economy estimate for highway driving
-#
-# Includes a socket for a Vehicle assembly.
-
 from csv import reader
+from pkg_resources import resource_stream
 
 # pylint: disable-msg=E0611,F0401
-from pkg_resources import resource_stream
-from openmdao.lib.datatypes.api import Float, Instance
-
-from openmdao.main.api import Assembly
-
-from openmdao.examples.enginedesign.vehicle import Vehicle
-
-
-# Settings for the EPA profile simulation
-THROTTLE_MIN = .07
-THROTTLE_MAX = 1.0
-SHIFTPOINT1 = 10.0
-MAX_ERROR = .01
-CONVERT_TO_MPHPS = 2.23693629
+from openmdao.lib.datatypes.api import Float, Str
+from openmdao.main.api import Driver, convert_units
+from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.hasobjective import HasObjectives
+from openmdao.main.hasparameters import HasParameters
+from openmdao.util.decorators import add_delegate
 
 
-class DrivingSim(Assembly):
-    """ Simulation of vehicle performance.
-        
-    # Simulation inputs
-    end_speed          # Simulation ending speed in mph.
-    timestep           # Simulation time step in sec.
-        
-    # Outputs
-    accel_time        # Time to reach 60 mph from start
-    EPA_city          # Fuel economy for city driving
-    EPA_highway       # Fuel economy for highway driving
-    """    
+class SimAcceleration(Driver):
+    """ Simulation of vehicle acceleration performance. This is a specialized
+    simulation driver whose workflow should consist of a Vehicle assembly, and
+    whose connections are as follows:
     
-    # Simulation Parameters
-    end_speed = Float(60.0, iotype='in', units='m/h',
-                           desc='Simulation final speed')
+    Connection Inputs
+    velocity_str: str
+        Variable location for vehicle velocity.
+    
+    throttle_str: str
+        Variable location for vehicle throttle position.
+    
+    gear_str: str
+        Variable location for vehicle gear position.
+    
+    acceleration_str: str
+        Variable location for vehicle acceleration.
+    
+    overspeed_str: str
+        Variable location for vehicle overspeed.
+    
+    Simulation Inputs
+    end_speed: float
+        Ending speed for the simulation (default 60 mph)
+    
+    timestep: float
+        Simulation time step (default .01)
+        
+    Outputs
+    accel_time: float
+        Time to perform the acceleration test.
+    """
+    
+    velocity_str = Str(iotype='in',
+                       desc='Location of vehicle input: velocity.')
+    throttle_str = Str(iotype='in',
+                       desc='Location of vehicle input: throttle.')
+    gear_str = Str(iotype='in',
+                       desc='Location of vehicle input: current_gear.')
+    acceleration_str = Str(iotype='in',
+                       desc='Location of vehicle output: acceleration.')
+    overspeed_str = Str(iotype='in',
+                       desc='Location of vehicle output: overspeed.')
+
+    end_speed = Float(60.0, iotype='in', units='mi/h',
+                      desc='Simulation final speed')
     timestep = Float(0.1, iotype='in', units='s', 
-                          desc='Simulation time step size')
+                     desc='Simulation time step size')
     
-    # Sockets
-    vehicle = Instance(Vehicle, allow_none=False, 
-                       desc='Socket for a Vehicle')
+    accel_time = Float(0.0, iotype='out', units='s',
+                       desc = 'Acceleration time')
     
-    # Outputs
-    accel_time = Float(0., iotype='out', units='s', 
-                            desc='Time to reach end_speed starting from rest')
-    EPA_city = Float(0., iotype='out', units='mi/galUS', 
-                          desc='EPA Fuel economy - City')
-    EPA_highway = Float(0., iotype='out', units='mi/galUS', 
-                             desc='EPA Fuel economy - Highway')
-        
     def __init__(self):
-        """Creates a new DrivingSim instance"""
-
-        super(DrivingSim, self).__init__()    
-
-    def _vehicle_changed(self, oldvehicle, newvehicle):
-        """Callback whenever a new Vehicle is added to the DrivingSim
-        """
+        super(SimAcceleration, self).__init__()
         
-        self.driver.workflow.add(newvehicle.name)
-        
-        # set up interface to the framework  
-        # pylint: disable-msg=E1101
-
-        # Promoted From Vehicle -> Engine
-        self.create_passthrough('vehicle.stroke')
-        self.create_passthrough('vehicle.bore')
-        self.create_passthrough('vehicle.conrod')
-        self.create_passthrough('vehicle.comp_ratio')
-        self.create_passthrough('vehicle.spark_angle')
-        self.create_passthrough('vehicle.n_cyl')
-        self.create_passthrough('vehicle.IVO')
-        self.create_passthrough('vehicle.IVC')
-        self.create_passthrough('vehicle.L_v')
-        self.create_passthrough('vehicle.D_v')
-
-        # Promoted From Vehicle -> Transmission
-        self.create_passthrough('vehicle.ratio1')
-        self.create_passthrough('vehicle.ratio2')
-        self.create_passthrough('vehicle.ratio3')
-        self.create_passthrough('vehicle.ratio4')
-        self.create_passthrough('vehicle.ratio5')
-        self.create_passthrough('vehicle.final_drive_ratio')
-        self.create_passthrough('vehicle.tire_circumference')
-
-        # Promoted From Vehicle -> Chassis
-        self.create_passthrough('vehicle.mass_vehicle')
-        self.create_passthrough('vehicle.Cf')
-        self.create_passthrough('vehicle.Cd')
-        self.create_passthrough('vehicle.area')
-
-        
+        self._velocity_str_expr = None
+        self._throttle_str_expr = None
+        self._gear_str_expr = None
+        self._acceleration_str_expr = None
+        self._overspeed_str_expr = None
+    
+    def _velocity_str_changed(self, oldval, newval):
+        self._velocity_str_expr = ExprEvaluator(newval, scope=self)
+    
+    def _throttle_str_changed(self, oldval, newval):
+        self._throttle_str_expr = ExprEvaluator(newval, scope=self)
+    
+    def _gear_str_changed(self, oldval, newval):
+        self._gear_str_expr = ExprEvaluator(newval, scope=self)
+    
+    def _acceleration_str_changed(self, oldval, newval):
+        self._acceleration_str_expr = ExprEvaluator(newval, scope=self)
+    
+    def _overspeed_str_changed(self, oldval, newval):
+        self._overspeed_str_expr = ExprEvaluator(newval, scope=self)
+    
     def execute(self):
         """ Simulate the vehicle model at full throttle."""
         
-        #--------------------------------------------------------------------
-        # Simulate acceleration time from 0 to end_speed
-        #--------------------------------------------------------------------
-        
-        velocity = 0.0
+        # Set initial throttle, gear, and velocity
         time = 0.0
+        velocity = 0.0
+        throttle = 1.0
+        gear = 1
         
-        end_speed = self.end_speed
-        
-        # Set throttle and gear
-        self.vehicle.current_gear = 1
-        self.vehicle.throttle = 1.0
-        self.vehicle.velocity = 0.0
-                   
-        while velocity < end_speed:
+        while velocity < self.end_speed:
             
-            # Find acceleration.
+            self._velocity_str_expr.set(velocity)
+            self._throttle_str_expr.set(throttle)
+            self._gear_str_expr.set(gear)
+            self.run_iteration()
+            
+            acceleration = self._acceleration_str_expr.evaluate()
+            overspeed = self._overspeed_str_expr.evaluate()
+            
+            # If the next gear can produce more torque, let's shift.
+            if gear < 5:
+                self._gear_str_expr.set(gear+1)
+                self.run_iteration()
+            
+                acceleration2 = self._acceleration_str_expr.evaluate()
+                if acceleration2 > acceleration:
+                    gear += 1
+                    acceleration = acceleration2
+                    overspeed = self._overspeed_str_expr.evaluate()
+                
+            
             # If RPM goes over MAX RPM, shift gears
             # (i.e.: shift at redline)
-            try:
-                self.vehicle.run()
-            except ValueError:
-                if self.vehicle.engine.RPM != self.vehicle.transmission.RPM:
-                    self.vehicle.current_gear += 1
-                else:
-                    raise
-                try:
-                    self.vehicle.run()
-                except ValueError:
-                    if self.vehicle.engine.RPM != self.vehicle.transmission.RPM:
-                        self.raise_exception("Gearing problem in Accel test.", 
+            if overspeed:
+                gear += 1
+                self._gear_str_expr.set(gear)
+                self.run_iteration()
+                acceleration = self._acceleration_str_expr.evaluate()
+                overspeed = self._overspeed_str_expr.evaluate()
+                
+                if overspeed:
+                    self.raise_exception("Gearing problem in Accel test.", 
                                              RuntimeError)
-                    else:
-                        raise
 
-            # Accleration converted to mph/s
-            acceleration = self.vehicle.acceleration*CONVERT_TO_MPHPS
+            acceleration = convert_units(acceleration, 'm/(s*s)', 'mi/(h*s)')
             
             if acceleration <= 0.0:
                 self.raise_exception("Vehicle could not reach maximum speed "+\
                                      "in Acceleration test.", RuntimeError)
                 
             velocity += (acceleration*self.timestep)
-            self.vehicle.velocity = velocity
         
             time += self.timestep
-            #print time, self.vehicle.current_gear, velocity, 
-            #self.vehicle.transmission.RPM, self.vehicle.engine.RPM
                    
         self.accel_time = time
-        
-        #--------------------------------------------------------------------
-        # Simulate EPA driving profiles
-        #--------------------------------------------------------------------
-        
-        profilenames = [ "EPA-city.csv", "EPA-highway.csv" ]
-        
-        self.vehicle.current_gear = 1
-        self.vehicle.velocity = 0.0
-        
-        fuel_economy = []
-        
-        def findgear():
-            """ Finds the nearest gear in the appropriate range for the
-            currently commanded velocity. 
-            This is intended to be called recursively.
-            """
-            # Note, shifts gear if RPM is too low or too high
-            try:
-                self.vehicle.run()
-            except ValueError:
-                if self.vehicle.engine.RPM < self.vehicle.transmission.RPM:
-                    
-                    if self.vehicle.current_gear > 4:
-                        self.raise_exception("Transmission gearing cannot " \
-                        "achieve acceleration and speed required by EPA " \
-                        "test.", RuntimeError)
-                    
-                    self.vehicle.current_gear += 1
-                    
-                elif self.vehicle.engine.RPM > self.vehicle.transmission.RPM:
 
-                    # Note, no check needed for low gearing -- you cannot go \
-                    # too slow for first gear.
-                    
-                    self.vehicle.current_gear -= 1
-                    
-                else:
-                    raise
-                
-                findgear()
-                
         
-        for profilename in profilenames:
-            
-            profile_stream = resource_stream('openmdao.examples.enginedesign',
-                                             profilename)
-            profile_reader = reader(profile_stream, delimiter=',')
-            
-            time1 = 0.0
-            velocity1 = 0.0
-            distance = 0.0
-            fuelburn = 0.0
-            
-            for row in profile_reader:
-                
-                time2 = float(row[0])
-                velocity2 = float(row[1])
-                CONVERGED = 0
-                
-                self.vehicle.velocity = velocity1
-                command_accel = (velocity2-velocity1)/(time2-time1)
-                
-                #------------------------------------------------------------
-                # Choose the correct Gear
-                #------------------------------------------------------------
+class SimEconomy(Driver):
+    """ Simulation of vehicle performance over a given velocity profile. Such
+    a simulation can be used to mimic the EPA city and highway driving tests.
+    This is a specialized simulation driver whose workflow should consist of a
+    Vehicle assembly, and whose connections are as follows:
+    
+    Connections
+    Parameters: [ velocity (Float),
+                  throttle (Float),
+                  current_gear (Enum) ]
+    Objectives: [ acceleration (Float), 
+                  fuel burn (Float),
+                  overspeed (Bool),
+                  underspeed (Bool) ]
+                  
+    Connection Inputs
+    velocity_str: str
+        Variable location for vehicle velocity.
+    
+    throttle_str: str
+        Variable location for vehicle throttle position.
+    
+    gear_str: str
+        Variable location for vehicle gear position.
+    
+    acceleration_str: str
+        Variable location for vehicle acceleration.
+    
+    fuel_burn_str: str
+        Variable location for vehicle fuel burn.
+    
+    overspeed_str: str
+        Variable location for vehicle overspeed.
+    
+    underspeed_str: str
+        Variable location for vehicle underspeed.
+    
+    Simulation Inputs
+    profilename: str
+        Name of the file that contains profile (csv format)
+        
+    end_speed: float
+        Ending speed for the simulation (default 60 mph)
+    
+    timestep: float
+        Simulation time step (default .01)
+        
+    Outputs
+    fuel_economy: float
+        Fuel economy over the simulated profile.
+    """
 
-                # First, if speed is less than 10 mph, put it in first gear.
-                # Note: some funky gear ratios might not like this.
-                # So, it's a hack for now.
-                
-                if velocity1 < SHIFTPOINT1:
-                    self.vehicle.current_gear = 1
-                    
-                # Find out min and max accel in current gear.
-                
-                self.vehicle.throttle = THROTTLE_MIN
-                findgear()                    
-                accel_min = self.vehicle.acceleration*CONVERT_TO_MPHPS
-                
-                # Upshift if commanded accel is less than closed-throttle accel
-                # The net effect of this will often be a shift to a higher gear
-                # when the vehicle stops accelerating, which is reasonable.
-                # Note, this isn't a While loop, because we don't want to shift
-                # to 5th every time we slow down.
-                if command_accel < accel_min and \
-                   self.vehicle.current_gear < 5 and \
-                   velocity1 > SHIFTPOINT1:
-                    
-                    self.vehicle.current_gear += 1
-                    findgear()
-                    accel_min = self.vehicle.acceleration*CONVERT_TO_MPHPS
-                
-                self.vehicle.throttle = THROTTLE_MAX
-                self.vehicle.run()
-                accel_max = self.vehicle.acceleration*CONVERT_TO_MPHPS
-                
-                # Downshift if commanded accel > wide-open-throttle accel
-                while command_accel > accel_max and \
-                      self.vehicle.current_gear > 1:
-                    
-                    self.vehicle.current_gear -= 1
-                    findgear()
-                    accel_max = self.vehicle.acceleration*CONVERT_TO_MPHPS
-                
-                # If engine cannot accelerate quickly enough to match profile, 
-                # then raise exception    
-                if command_accel > accel_max:
-                    self.raise_exception("Vehicle is unable to achieve " \
-                    "acceleration required to match EPA driving profile.", 
-                                                    RuntimeError)
-                        
-                #------------------------------------------------------------
-                # Bisection solution to find correct Throttle position
-                #------------------------------------------------------------
+    velocity_str = Str(iotype='in',
+                       desc='Location of vehicle input: velocity.')
+    throttle_str = Str(iotype='in',
+                       desc='Location of vehicle input: throttle.')
+    gear_str = Str(iotype='in',
+                       desc='Location of vehicle input: current_gear.')
+    acceleration_str = Str(iotype='in',
+                       desc='Location of vehicle output: acceleration.')
+    fuel_burn_str = Str(iotype='in',
+                       desc='Location of vehicle output: fuel_burn.')
+    overspeed_str = Str(iotype='in',
+                       desc='Location of vehicle output: overspeed.')
+    underspeed_str = Str(iotype='in',
+                       desc='Location of vehicle output: underspeed.')
 
-                # Deceleration at closed throttle
-                if command_accel < accel_min:
-                    self.vehicle.throttle = THROTTLE_MIN
-                    self.vehicle.run()                   
-                else:
-                    self.vehicle.throttle = THROTTLE_MIN
-                    self.vehicle.run()
+    profilename = Str('', iotype='in', \
+                        desc='Name of the file that contains profile (csv)')
+    
+    # These can be used to adjust driving style.
+    throttle_min = Float(.07, iotype='in', desc='Minimum throttle position')
+    throttle_max = Float(1.0, iotype='in', desc='Maximum throttle position')
+    shiftpoint1 = Float(10.0, iotype='in', \
+                        desc='Always in first gear below this speed')
+    
+    tolerance = Float(0.01, iotype='in', 
+                      desc='Convergence tolerance for Bisection solution')
+    
+    fuel_economy = Float(0.0, iotype='out', units='s',
+                       desc = 'Simulated fuel economy over profile')
+    
+
+    def __init__(self, *args, **kwargs):
+        super(SimEconomy, self).__init__(*args, **kwargs)
+        
+        self._velocity_str_expr = None
+        self._throttle_str_expr = None
+        self._gear_str_expr = None
+        self._acceleration_str_expr = None
+        self._fuel_burn_str_expr = None
+        self._overspeed_str_expr = None
+        self._underspeed_str_expr = None
+    
+    def _velocity_str_changed(self, oldval, newval):
+        self._velocity_str_expr = ExprEvaluator(newval, scope=self)
+    
+    def _throttle_str_changed(self, oldval, newval):
+        self._throttle_str_expr = ExprEvaluator(newval, scope=self)
+    
+    def _gear_str_changed(self, oldval, newval):
+        self._gear_str_expr = ExprEvaluator(newval, scope=self)
+    
+    def _acceleration_str_changed(self, oldval, newval):
+        self._acceleration_str_expr = ExprEvaluator(newval, scope=self)
+    
+    def _fuel_burn_str_changed(self, oldval, newval):
+        self._fuel_burn_str_expr = ExprEvaluator(newval, scope=self)
+    
+    def _overspeed_str_changed(self, oldval, newval):
+        self._overspeed_str_expr = ExprEvaluator(newval, scope=self)
+    
+    def _underspeed_str_changed(self, oldval, newval):
+        self._underspeed_str_expr = ExprEvaluator(newval, scope=self)
+    
+    def execute(self):
+        """ Simulate the vehicle over a velocity profile."""
+        
+        # Set initial throttle, gear, and velocity
+        throttle = 1.0
+        gear = 1
+        time1 = 0.0
+        velocity1 = 0.0
+        
+        profile_stream = resource_stream('openmdao.examples.enginedesign',
+                                         self.profilename)
+        profile_reader = reader(profile_stream, delimiter=',')
+        
+        distance = 0.0
+        fuelburn = 0.0
+        
+        self._gear_str_expr.set(gear)
+        
+        for row in profile_reader:
+            
+            time2 = float(row[0])
+            velocity2 = float(row[1])
+            converged = 0
+            
+            command_accel = (velocity2-velocity1)/(time2-time1)
+            
+            #------------------------------------------------------------
+            # Choose the correct Gear
+            #------------------------------------------------------------
+
+            # First, if speed is less than 10 mph, put it in first gear.
+            # Note: some funky gear ratios might not like this.
+            # So, it's a hack for now.
+            
+            if velocity1 < self.shiftpoint1:
+                gear = 1
+                self._gear_str_expr.set(gear)
+                
+            # Find out min and max accel in current gear.
+            
+            throttle = self.throttle_min
+            self._velocity_str_expr.set(velocity1)
+            self._throttle_str_expr.set(throttle)
+            gear = self._findgear(velocity1, throttle, gear)                    
+            acceleration = self._acceleration_str_expr.evaluate()
+            accel_min = convert_units(acceleration, 'm/(s*s)', 'mi/(h*s)')
+            
+            # Upshift if commanded accel is less than closed-throttle accel
+            # The net effect of this will often be a shift to a higher gear
+            # when the vehicle stops accelerating, which is reasonable.
+            # Note, this isn't a While loop, because we don't want to shift
+            # to 5th every time we slow down.
+            if command_accel < accel_min and gear < 5 and \
+               velocity1 > self.shiftpoint1:
+                
+                gear += 1
+                self._gear_str_expr.set(gear)
+                gear = self._findgear(velocity1, throttle, gear)                    
+                acceleration = self._acceleration_str_expr.evaluate()
+                accel_min = convert_units(acceleration, 'm/(s*s)', 'mi/(h*s)')
+            
+            throttle = self.throttle_max
+            self._throttle_str_expr.set(throttle)
+            self.run_iteration()
+            acceleration = self._acceleration_str_expr.evaluate()
+            accel_max = convert_units(acceleration, 'm/(s*s)', 'mi/(h*s)')
+            
+            # Downshift if commanded accel > wide-open-throttle accel
+            while command_accel > accel_max and gear > 1:
+                
+                gear -= 1
+                self._gear_str_expr.set(gear)
+                gear = self._findgear(velocity1, throttle, gear)                    
+                acceleration = self._acceleration_str_expr.evaluate()
+                accel_max = convert_units(acceleration, 'm/(s*s)', 'mi/(h*s)')
+            
+            # If engine cannot accelerate quickly enough to match profile, 
+            # then raise exception    
+            if command_accel > accel_max:
+                self.raise_exception("Vehicle is unable to achieve " \
+                "acceleration required to match EPA driving profile.", 
+                                                RuntimeError)
                     
-                    min_acc = self.vehicle.acceleration*CONVERT_TO_MPHPS
-                    max_acc = accel_max
-                    min_throttle = THROTTLE_MIN
-                    max_throttle = THROTTLE_MAX
-                    new_throttle = .5*(min_throttle + max_throttle)
+            #------------------------------------------------------------
+            # Bisection solution to find correct Throttle position
+            #------------------------------------------------------------
+
+            # Deceleration at closed throttle
+            throttle = self.throttle_min
+            self._throttle_str_expr.set(throttle)
+            self.run_iteration()
+            acceleration = self._acceleration_str_expr.evaluate()
+            
+            if command_accel >= accel_min:
+                
+                min_acc = convert_units(acceleration, 'm/(s*s)', 'mi/(h*s)')
+                max_acc = accel_max
+                min_throttle = self.throttle_min
+                max_throttle = self.throttle_max
+                new_throttle = .5*(min_throttle + max_throttle)
+                
+                # Numerical solution to find throttle that matches accel
+                while not converged:
+                
+                    throttle = new_throttle
+                    self._throttle_str_expr.set(throttle)
+                    self.run_iteration()
+                    acceleration = self._acceleration_str_expr.evaluate()
+                    new_acc = convert_units(acceleration, 'm/(s*s)', 'mi/(h*s)')
                     
-                    # Numerical solution to find throttle that matches accel
-                    while not CONVERGED:
-                    
-                        self.vehicle.throttle = new_throttle
-                        self.vehicle.run()
-                        new_acc = self.vehicle.acceleration*CONVERT_TO_MPHPS
-                        
-                        if abs(command_accel-new_acc) < MAX_ERROR:
-                            CONVERGED = 1
+                    if abs(command_accel-new_acc) < self.tolerance:
+                        converged = 1
+                    else:
+                        if new_acc < command_accel:
+                            min_throttle = new_throttle
+                            min_acc = new_acc
+                            step = (command_accel-min_acc)/(max_acc-new_acc)
+                            new_throttle = min_throttle + \
+                                        step*(max_throttle-min_throttle)
                         else:
-                            if new_acc < command_accel:
-                                min_throttle = new_throttle
-                                min_acc = new_acc
-                                step = (command_accel-min_acc)/(max_acc-new_acc)
-                                new_throttle = min_throttle + \
-                                            step*(max_throttle-min_throttle)
-                            else:
-                                max_throttle = new_throttle
-                                step = (command_accel-min_acc)/(new_acc-min_acc)
-                                new_throttle = min_throttle + \
-                                            step*(max_throttle-min_throttle)
-                                max_acc = new_acc
-                          
-                distance += .5*(velocity2+velocity1)*(time2-time1)
-                fuelburn += self.vehicle.fuel_burn*(time2-time1)
-                
-                velocity1 = velocity2
-                time1 = time2
-                
-                #print "T = %f, V = %f, Acc = %f" % (time1, velocity1, 
-                #command_accel)
-                #print self.vehicle.current_gear, accel_min, accel_max
-                
-            # Convert liter to gallon and sec/hr to hr/hr
-            distance = distance/3600.0
-            fuelburn = fuelburn*(0.264172052)
-            fuel_economy.append(distance/fuelburn)
+                            max_throttle = new_throttle
+                            step = (command_accel-min_acc)/(new_acc-min_acc)
+                            new_throttle = min_throttle + \
+                                        step*(max_throttle-min_throttle)
+                            max_acc = new_acc
+                      
+            distance += .5*(velocity2+velocity1)*(time2-time1)
+            burn_rate = self._fuel_burn_str_expr.evaluate()
+            fuelburn += burn_rate*(time2-time1)
             
-        self.EPA_city = fuel_economy[0]
-        self.EPA_highway = fuel_economy[1]
-    
-    
+            velocity1 = velocity2
+            time1 = time2
+            
+            #print "T = %f, V = %f, Acc = %f" % (time1, velocity1, 
+            #command_accel)
+            #print gear, accel_min, accel_max
+            
+        # Convert liter to gallon and sec/hr to hr/hr
+        distance = convert_units(distance, 'mi*s/h', 'mi')
+        fuelburn = convert_units(fuelburn, 'l', 'galUS')
+        self.fuel_economy = distance/fuelburn
+        
+       
+    def _findgear(self, velocity, throttle, gear):
+        """ Finds the nearest gear in the appropriate range for the
+        currently commanded vehicle state (throttle, velocity).
+        
+        This is intended to be called recursively.
+        """
+
+        self.run_iteration()
+        
+        overspeed = self._overspeed_str_expr.evaluate()
+        underspeed = self._underspeed_str_expr.evaluate()
+        
+        if overspeed:
+            gear += 1
+            
+            if gear > 4:
+                self.raise_exception("Transmission gearing cannot " \
+                "achieve acceleration and speed required by EPA " \
+                "test.", RuntimeError)
+            
+        elif underspeed:
+            gear -= 1
+            
+            # Note, no check needed for low gearing -- we allow underspeed 
+            # while in first gear.
+                
+        else:
+            return gear
+            
+        self._gear_str_expr.set(gear)
+        gear = self._findgear(velocity, throttle, gear)        
+
+        return gear
+
 if __name__ == "__main__": # pragma: no cover
+    
     import time
     ttime = time.time()
     
-    toplevel = DrivingSim()  
-    toplevel.add('vehicle', Vehicle())
-    toplevel.run()
+    from openmdao.main.api import set_as_top, Assembly
+    from openmdao.examples.enginedesign.vehicle import Vehicle
     
-    print "Time (0-60): ", toplevel.accel_time
-    print "City MPG: ", toplevel.EPA_city
-    print "Highway MPG: ", toplevel.EPA_highway
+    top = set_as_top(Assembly())
+    top.add('sim_acc', SimAcceleration())
+    top.add('sim_EPA_city', SimEconomy())
+    top.add('sim_EPA_highway', SimEconomy())
+    top.add('vehicle', Vehicle())
+    
+    top.driver.workflow.add('sim_acc')
+    top.driver.workflow.add('sim_EPA_city')
+    top.driver.workflow.add('sim_EPA_highway')
+    
+    top.sim_acc.workflow.add('vehicle')
+    top.sim_acc.velocity_str = 'vehicle.velocity'
+    top.sim_acc.throttle_str = 'vehicle.throttle'
+    top.sim_acc.gear_str = 'vehicle.current_gear'
+    top.sim_acc.acceleration_str = 'vehicle.acceleration'
+    top.sim_acc.overspeed_str = 'vehicle.overspeed'
+    
+    top.sim_EPA_city.workflow.add('vehicle')
+    top.sim_EPA_city.velocity_str = 'vehicle.velocity'
+    top.sim_EPA_city.throttle_str = 'vehicle.throttle'
+    top.sim_EPA_city.gear_str = 'vehicle.current_gear'
+    top.sim_EPA_city.acceleration_str = 'vehicle.acceleration'
+    top.sim_EPA_city.fuel_burn_str = 'vehicle.fuel_burn'
+    top.sim_EPA_city.overspeed_str = 'vehicle.overspeed'
+    top.sim_EPA_city.underspeed_str = 'vehicle.underspeed'
+    top.sim_EPA_city.profilename = 'EPA-city.csv'
+    
+    top.sim_EPA_highway.workflow.add('vehicle')
+    top.sim_EPA_highway.velocity_str = 'vehicle.velocity'
+    top.sim_EPA_highway.throttle_str = 'vehicle.throttle'
+    top.sim_EPA_highway.gear_str = 'vehicle.current_gear'
+    top.sim_EPA_highway.acceleration_str = 'vehicle.acceleration'
+    top.sim_EPA_highway.fuel_burn_str = 'vehicle.fuel_burn'
+    top.sim_EPA_highway.overspeed_str = 'vehicle.overspeed'
+    top.sim_EPA_highway.underspeed_str = 'vehicle.underspeed'
+    top.sim_EPA_highway.profilename = 'EPA-highway.csv'
+    
+    top.run()
+    
+    print "Time (0-60): ", top.sim_acc.accel_time
+    print "City MPG: ", top.sim_EPA_city.fuel_economy
+    print "Highway MPG: ", top.sim_EPA_highway.fuel_economy
     
     print "\nElapsed time: ", time.time()-ttime
+    
 
-# End driving_sim.py
+# End driving_sim.py        

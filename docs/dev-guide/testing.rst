@@ -352,11 +352,11 @@ More details on the ``literalinclude`` directive can be found at http://sphinx.p
 * Tracebacks don't have to be accurately reproduced (and they can't be
   anyway). Handle these by replacing the traceback with ellipses:
 
-    >>> my_engine.set("RPM",7500)
+    >>> my_engine.set("throttle",3.0)
     Traceback (most recent call last):
         ...
-    ValueError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value 
-    of 7500 <type 'int'> was specified.
+    ValueError: Trait 'RPM' must be a float in the range [0.01, 1.0] but a value 
+    of 3.0 <type 'float'> was specified.
 
 * Indentation is not preserved between code blocks in the same group. This means that all functions and
   class definitions effectively close when the block ends. If you need to show code from the middle of a
@@ -405,6 +405,6 @@ If any tests fail, they will be noted in this summary, and specific tracebacks
 will be given for each failure earlier in the output.
 
 .. note:: If you make changes to the docs, rebuild the documentation by running ``openmdao_build_docs``
-	  and display them by typing ``openmdao_docs``.
+      and display them by typing ``openmdao_docs``.
 
 

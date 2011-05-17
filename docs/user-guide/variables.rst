@@ -323,7 +323,7 @@ Then we can interact like this:
     >>> test.color2="Purple"
     Traceback (most recent call last):
     ...
-    ValueError: : Trait 'color2' must be in ('Red', 'Yellow', 'Green'), but a value of Purple <type 'str'> was specified.
+    TraitError: : Trait 'color2' must be in ('Red', 'Yellow', 'Green'), but a value of Purple <type 'str'> was specified.
     >>> test.color2="Green"
     >>> test.color2
     'Green'
@@ -358,7 +358,7 @@ If we set to an invalid value, an exception is raised.
     >>> test.color=4
     Traceback (most recent call last):
     ...
-    ValueError: : Trait 'color' must be in (0, 1, 2), but a value of 4 <type 'int'> was specified.`
+    TraitError: : Trait 'color' must be in (0, 1, 2), but a value of 4 <type 'int'> was specified.`
 
 We can also access the list of indices and the list of aliases directly from the trait.
 
@@ -409,7 +409,7 @@ the integers 1 to 6. Note that the Enum doesn't need an iotype, but the List doe
     >>> my_dice.roll = [1, 6, 3, 2, 7]
     Traceback (most recent call last):
     ...
-    ValueError: : Trait 'roll' must be in (1, 2, 3, 4, 5, 6), but a value of 7 <type 'int'> was specified.
+    TraitError: : Trait 'roll' must be in (1, 2, 3, 4, 5, 6), but a value of 7 <type 'int'> was specified.
 
 
 .. index:: File Variables, File
@@ -549,7 +549,7 @@ OpenMDAO variables have a certain pre-defined behavior when a value from a
 variable of a different type is assigned. Variables were created
 using the *casting* traits as opposed to the *coercion* traits. This means that
 most mis-assignments in variable connections (e.g., a float connected to
-a string) should generate an exception. However, certain widening
+a string) should generate a TraitError exception. However, certain widening
 coercions are permitted (e.g., ``Int->Float, Bool->Int, Bool->Float``). No
 coercion from Str or to Str is allowed. If you need to apply different
 coercion behavior, it should be simple to create a Python component to

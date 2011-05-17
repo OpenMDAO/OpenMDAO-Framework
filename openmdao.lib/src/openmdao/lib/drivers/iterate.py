@@ -21,7 +21,7 @@ class FixedPointIterator(Driver):
 
     # pylint: disable-msg=E1101
     x_out = Str(iotype='in', desc='loop output to pass to input.') 
-    x_in = Str(iotype='out', desc='loop input, taken from the input.')
+    x_in = Str(iotype='in', desc='loop input, taken from the input.')
     
     max_iteration = Int(25, iotype='in', desc='Maximum number of '
                                          'iterations before termination.')
@@ -30,8 +30,8 @@ class FixedPointIterator(Driver):
                                             'tolerance between iterations.')
 
 
-    def __init__(self, doc=None):
-        super(FixedPointIterator, self).__init__(doc)
+    def __init__(self):
+        super(FixedPointIterator, self).__init__()
         
         self.history = zeros(0)
         self.current_iteration = 0
