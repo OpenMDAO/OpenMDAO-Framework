@@ -361,7 +361,7 @@ class PhysicalUnit(object):
         else:
             self.names = names
             
-        self.factor = factor
+        self.factor = float(factor)
         self.offset = offset
         self.powers = powers
 
@@ -591,7 +591,7 @@ def add_offset_unit(name, baseunit, factor, offset, comment=''):
     unit = PhysicalUnit(baseunit.names, baseunit.factor*factor, 
                         baseunit.powers, offset)
     unit.set_name(name)
-    if _unit_lib.unit_table.has_key(name):
+    if name in _unit_lib.unit_table:
         if (_unit_lib.unit_table[name].factor!=unit.factor or \
             _unit_lib.unit_table[name].powers!=unit.powers):
             raise KeyError, "Unit %s already defined with " % name + \
@@ -609,7 +609,7 @@ def add_unit(name, unit, comment=''):
     if isinstance(unit, str):
         unit = eval(unit, {'__builtins__':None}, _unit_lib.unit_table)
     unit.set_name(name)
-    if _unit_lib.unit_table.has_key(name):
+    if name in _unit_lib.unit_table:
         if (_unit_lib.unit_table[name].factor!=unit.factor or \
             _unit_lib.unit_table[name].powers!=unit.powers):
             raise KeyError, "Unit %s already defined with " % name + \

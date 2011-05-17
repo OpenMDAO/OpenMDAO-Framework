@@ -108,7 +108,7 @@ class Float(Variable):
         
         # pylint: disable-msg=E1101
         # If both source and target have units, we need to process differently
-        if isinstance(value, TraitValWrapper) and value.metadata.has_key('units'):
+        if isinstance(value, TraitValWrapper) and 'units' in value.metadata:
             if self.units and value.metadata['units']:
                 return self._validate_with_metadata(obj, name, 
                                                     value.value, 

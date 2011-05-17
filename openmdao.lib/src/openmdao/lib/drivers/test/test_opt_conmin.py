@@ -299,8 +299,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         try:
             self.top.run()
         except ValueError, err:
-            self.assertEqual(str(err),
-                             "driver: maximum exceeded for initial value of: comp.x[0]")
+            msg = 'driver: initial value of: comp.x[0] is greater than maximum'
+            self.assertEqual(str(err), msg)
         else:
             self.fail('ValueError expected')
 
@@ -308,8 +308,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         try:
             self.top.run()
         except ValueError, err:
-            self.assertEqual(str(err),
-                             "driver: minimum exceeded for initial value of: comp.x[0]")
+            msg = 'driver: initial value of: comp.x[0] is less than minimum'
+            self.assertEqual(str(err), msg)
         else:
             self.fail('ValueError expected')
 

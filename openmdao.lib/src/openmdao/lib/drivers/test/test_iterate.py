@@ -14,6 +14,7 @@ class Simple1(Component):
     """ Testing convergence failure"""
     
     invar = Float(0, iotype='in')
+    extra_invar = Float(0, iotype='in')
     outvar = Float(1, iotype='out')
     
     def execute(self):
@@ -70,8 +71,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.add("simple", Simple2())
         self.top.driver.workflow.add('simple')
         
-        self.top.driver.x_out = 'simple.outvar'
-        self.top.driver.x_in = 'simple.invar'
+        self.top.driver.add_constraint('simple.outvar - simple.invar = 0')
+        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
         self.top.run()
         
         self.assertAlmostEqual(self.top.simple.invar, 
@@ -82,8 +83,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.add("driver", FixedPointIterator())
         self.top.add("simple", Simple1())
         self.top.driver.workflow.add('simple')
-        self.top.driver.x_out = 'simple.outvar'
-        self.top.driver.x_in = 'simple.invar'
+        self.top.driver.add_constraint('simple.outvar - simple.invar = 0')
+        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
         self.top.driver.max_iteration = 3
         try:
             self.top.run()
@@ -97,8 +98,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.add("driver", FixedPointIterator())
         self.top.add("simple", Simple3())
         self.top.driver.workflow.add('simple')
-        self.top.driver.x_out = 'simple.outvar'
-        self.top.driver.x_in = 'simple.invar'
+        self.top.driver.add_constraint('simple.outvar - simple.invar = 0')
+        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
         self.top.driver.max_iteration = 2
         self.top.driver.tolerance = .001
         try:
@@ -111,6 +112,53 @@ class FixedPointIteratorTestCase(unittest.TestCase):
             
         self.top.driver.tolerance = 0.1
         self.top.run()
+
+    def test_check_config(self):
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", Simple1())
+        self.top.driver.workflow.add('simple')
+        
+        try:
+            self.top.run()
+        except RuntimeError, err:
+            msg = "driver: FixedPointIterator requires a constraint equation."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('RuntimeError expected')
+            
+        self.top.driver.add_constraint('simple.outvar - simple.invar = 0')
+
+        try:
+            self.top.run()
+        except RuntimeError, err:
+            msg = "driver: FixedPointIterator requires an input parameter."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('RuntimeError expected')
+
+        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.extra_invar', -9e99, 9e99)
+
+        try:
+            self.top.run()
+        except RuntimeError, err:
+            msg = "driver: FixedPointIterator can only take a single " + \
+                  "input parameter."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('RuntimeError expected')
+
+        self.top.driver.add_constraint('simple.outvar - 2.0*simple.invar = 0')
+
+        try:
+            self.top.run()
+        except RuntimeError, err:
+            msg = "driver: FixedPointIterator can only take a single " + \
+                  "constraint equation."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('RuntimeError expected')
+
 
 class TestIterateUntill(unittest.TestCase): 
     """Test case for the IterateUntil Driver""" 

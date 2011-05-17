@@ -141,12 +141,12 @@ class HasEqConstraints(_HasConstraintsBase):
         except Exception as err:
             self._parent.raise_exception(str(err), type(err))
         if rel == '=':
-            self.add_eq_constraint(lhs, rhs, scaler, adder)
+            self._add_eq_constraint(lhs, rhs, scaler, adder)
         else:
             msg = "Inequality constraints are not supported on this driver"
             self._parent.raise_exception(msg, ValueError)
 
-    def add_eq_constraint(self, lhs, rhs, scaler, adder):
+    def _add_eq_constraint(self, lhs, rhs, scaler, adder):
         """Adds an equality constraint as two strings, a left-hand side and
         a right-hand side.
         """
@@ -194,9 +194,9 @@ class HasIneqConstraints(_HasConstraintsBase):
         """
         
         lhs, rel, rhs = _parse_constraint(expr_string)
-        self.add_ineq_constraint(lhs, rel, rhs, scaler, adder)
+        self._add_ineq_constraint(lhs, rel, rhs, scaler, adder)
 
-    def add_ineq_constraint(self, lhs, rel, rhs, scaler, adder):
+    def _add_ineq_constraint(self, lhs, rel, rhs, scaler, adder):
         """Adds an inequality constraint as three strings; a left-hand side,
         a comparator ('<','>','<=', or '>='), and a right-hand side.
         """
@@ -254,9 +254,9 @@ class HasConstraints(object):
         
         lhs, rel, rhs = _parse_constraint(expr_string)
         if rel == '==' or rel == '=':
-            self._eq.add_eq_constraint(lhs, rhs, scaler, adder)
+            self._eq._add_eq_constraint(lhs, rhs, scaler, adder)
         else:
-            self._ineq.add_ineq_constraint(lhs, rel, rhs, scaler, adder)
+            self._ineq._add_ineq_constraint(lhs, rel, rhs, scaler, adder)
 
     def remove_constraint(self, expr_string):
         """Removes the constraint with the given string."""
@@ -271,17 +271,17 @@ class HasConstraints(object):
         self._eq.clear_constraints()
         self._ineq.clear_constraints()
         
-    def add_ineq_constraint(self, lhs, comparator, rhs, scaler, adder):
+    def _add_ineq_constraint(self, lhs, comparator, rhs, scaler, adder):
         """Adds an inequality constraint as three strings; a left-hand side,
         a comparator ('<','>','<=', or '>='), and a right hand side.
         """
-        self._ineq.add_ineq_constraint(lhs, comparator, rhs, scaler, adder)
+        self._ineq._add_ineq_constraint(lhs, comparator, rhs, scaler, adder)
     
-    def add_eq_constraint(self, lhs, rhs, scaler, adder):
+    def _add_eq_constraint(self, lhs, rhs, scaler, adder):
         """Adds an equality constraint as two strings, a left-hand side and
         a right-hand side.
         """
-        self._eq.add_eq_constraint(lhs, rhs, scaler, adder)
+        self._eq._add_eq_constraint(lhs, rhs, scaler, adder)
 
     def get_eq_constraints(self):
         """Returns an ordered dict of equality constraint objects."""
