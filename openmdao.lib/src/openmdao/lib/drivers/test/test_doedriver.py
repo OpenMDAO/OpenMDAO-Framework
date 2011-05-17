@@ -10,7 +10,7 @@ import platform
 import sys
 import unittest
 
-from openmdao.lib.datatypes.api import TraitError, Event
+from openmdao.lib.datatypes.api import Event
 
 from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.exceptions import RunStopped
@@ -206,11 +206,11 @@ class TestCase(unittest.TestCase):
         self.model.driver.DOEgenerator = None
         try:
             self.model.run()
-        except TraitError as exc:
+        except Exception as exc:
             msg = "driver: required plugin 'DOEgenerator' is not present"
             self.assertEqual(str(exc), msg)
         else:
-            self.fail('TraitError expected')
+            self.fail('Exception expected')
 
     def test_norecorder(self):
         logging.debug('')

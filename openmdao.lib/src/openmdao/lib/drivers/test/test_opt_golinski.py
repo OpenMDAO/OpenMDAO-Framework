@@ -8,7 +8,7 @@ import sys
 import unittest
 import numpy
 
-from openmdao.lib.datatypes.api import TraitError, Float, Array
+from openmdao.lib.datatypes.api import Float, Array
 
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Component, Assembly, set_as_top

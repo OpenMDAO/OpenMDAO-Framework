@@ -13,7 +13,7 @@ from csv import reader
 
 # pylint: disable-msg=E0611,F0401
 from pkg_resources import resource_stream
-from openmdao.lib.datatypes.api import TraitError, Float, Instance
+from openmdao.lib.datatypes.api import Float, Instance
 
 from openmdao.main.api import Assembly
 
@@ -125,14 +125,14 @@ class DrivingSim(Assembly):
             # (i.e.: shift at redline)
             try:
                 self.vehicle.run()
-            except TraitError:
+            except ValueError:
                 if self.vehicle.engine.RPM != self.vehicle.transmission.RPM:
                     self.vehicle.current_gear += 1
                 else:
                     raise
                 try:
                     self.vehicle.run()
-                except TraitError:
+                except ValueError:
                     if self.vehicle.engine.RPM != self.vehicle.transmission.RPM:
                         self.raise_exception("Gearing problem in Accel test.", 
                                              RuntimeError)
@@ -174,7 +174,7 @@ class DrivingSim(Assembly):
             # Note, shifts gear if RPM is too low or too high
             try:
                 self.vehicle.run()
-            except TraitError:
+            except ValueError:
                 if self.vehicle.engine.RPM < self.vehicle.transmission.RPM:
                     
                     if self.vehicle.current_gear > 4:
@@ -325,9 +325,8 @@ class DrivingSim(Assembly):
         self.EPA_city = fuel_economy[0]
         self.EPA_highway = fuel_economy[1]
     
-def test_it(): # pragma: no cover    
-    """simple testing"""
     
+if __name__ == "__main__": # pragma: no cover
     import time
     ttime = time.time()
     
@@ -340,8 +339,5 @@ def test_it(): # pragma: no cover
     print "Highway MPG: ", toplevel.EPA_highway
     
     print "\nElapsed time: ", time.time()-ttime
-    
-if __name__ == "__main__": # pragma: no cover    
-    test_it()
 
-# End driving_sim.py        
+# End driving_sim.py

@@ -14,8 +14,7 @@ import numpy
 from scipy.optimize.nonlin import norm
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import on_trait_change, TraitError, \
-     Float, Int, Enum
+from openmdao.lib.datatypes.api import Float, Int, Enum
                                  
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped

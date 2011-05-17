@@ -15,7 +15,7 @@ import weakref
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
-from enthought.traits.api import Bool, List, Str, Int, Property, TraitError
+from enthought.traits.api import Bool, List, Str, Int, Property
 
 from openmdao.main.container import Container
 from openmdao.main.interfaces import implements, IComponent, ICaseIterator
@@ -192,7 +192,7 @@ class Component (Container):
         for name, value in self.traits(required=True).items():
             if value.is_trait_type(Socket) and getattr(self, name) is None:
                 self.raise_exception("required plugin '%s' is not present" %
-                                     name, TraitError)
+                                     name, RuntimeError)
     
     @rbac(('owner', 'user'))
     def tree_rooted(self):

@@ -2,7 +2,6 @@
 
 import unittest
 
-from enthought.traits.api import TraitError
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.lib.datatypes.api import Float, Str, Instance, List
 from openmdao.util.decorators import add_delegate
@@ -146,11 +145,11 @@ class AssemblyTestCase(unittest.TestCase):
         oldval = self.asm.comp2.r
         try:
             self.asm.comp2.r = 44
-        except TraitError, err:
+        except Exception, err:
             self.assertEqual(str(err), "comp2: 'r' is already connected to source 'parent.comp1.rout'"+
                                        " and cannot be directly set")
         else:
-            self.fail("Expected a TraitError when setting a connected input")
+            self.fail("Expected an Exception when setting a connected input")
         
         # verify that old value of connected input hasn't changed
         self.assertEqual(oldval, self.asm.comp2.r)
@@ -183,11 +182,11 @@ class AssemblyTestCase(unittest.TestCase):
         oldval = self.asm.comp2.r
         try:
             self.asm.comp2.r = 44
-        except TraitError, err:
+        except Exception, err:
             self.assertEqual(str(err), "comp2: 'r' is already connected to source 'parent.comp1.rout'"+
                                        " and cannot be directly set")
         else:
-            self.fail("Expected a TraitError when setting a connected input")
+            self.fail("Expected an Exception when setting a connected input")
         
         # verify that old value of connected input hasn't changed
         self.assertEqual(oldval, self.asm.comp2.r)
@@ -229,10 +228,12 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.create_passthrough('comp3.rout')
         try:
             self.asm.create_passthrough('comp3.rout')
-        except TraitError as err:
-            self.assertEqual(str(err), ": 'rout' already exists")
+        except Exception, err:
+            # for some reason, KeyError turns 'rout' into \'rout\', so
+            # test against str(KeyError(msg)) instead of just msg  :(
+            self.assertEqual(str(err), str(KeyError(": 'rout' already exists")))
         else:
-            self.fail('expected TraitError')
+            self.fail('expected Exception')
         
     def test_autopassthrough_nested(self):
         self.asm.set('comp1.r', 8.)

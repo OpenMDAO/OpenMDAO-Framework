@@ -7,7 +7,7 @@ __all__ = ['Assembly']
 import cStringIO
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import TraitError, Missing
+from enthought.traits.api import Missing
 
 from openmdao.main.interfaces import implements, IDriver
 from openmdao.main.container import find_trait_and_value
@@ -87,7 +87,7 @@ class Assembly (Component):
 
         if newname in self.__dict__:
             self.raise_exception("'%s' already exists" %
-                                 newname, TraitError)
+                                 newname, KeyError)
         parts = pathname.split('.', 1)
         if len(parts) < 2:
             self.raise_exception('destination of passthrough must be a dotted path',
@@ -105,7 +105,7 @@ class Assembly (Component):
         else:
             if not self.contains(pathname):
                 self.raise_exception("the variable named '%s' can't be found" %
-                                     pathname, TraitError)
+                                     pathname, KeyError)
             iotype = self.get_metadata(pathname, 'iotype')
             
         metadata = self.get_metadata(pathname)
@@ -179,9 +179,9 @@ class Assembly (Component):
                     pass  # no validate function on destination trait. Most likely
                           # it's a property trait.  No way to validate without
                           # unknown side effects.
-            except TraitError, err:
+            except Exception as err:
                 self.raise_exception("can't connect '%s' to '%s': %s" %
-                                     (srcpath, destpath, str(err)), TraitError)
+                                     (srcpath, destpath, str(err)), RuntimeError)
                     
         super(Assembly, self).connect(srcpath, destpath)
         

@@ -8,7 +8,7 @@ and was written by someone without much 'mool' knowledge.
 __all__ = ('MidFidelity',)
 
 
-from openmdao.lib.datatypes.api import TraitError, Float, Int, Array, Str, Instance
+from openmdao.lib.datatypes.api import Float, Int, Array, Str, Instance
 
 import mool.Optimization.MidFiModel
 
@@ -188,7 +188,7 @@ class MidFidelity(Assembly):
                     high = trait.high
                 else:
                     msg = 'Unexpected input %d trait type %r' % (i, trait)
-                    self.raise_exception(msg, TraitError)
+                    self.raise_exception(msg, ValueError)
                 xlb.append(low)
                 xub.append(high)
 

@@ -14,7 +14,7 @@ zope.interface).
 __all__ = ["Socket"]
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import TraitType, Instance, TraitError, Interface
+from enthought.traits.api import TraitType, Instance, Interface
 import zope.interface
 
 class Socket(TraitType):
@@ -33,8 +33,8 @@ class Socket(TraitType):
 
         self._allow_none = allow_none
         if iszopeiface:
-                self.klass = klass
-                self._instance = None
+            self.klass = klass
+            self._instance = None
         else:
             self._instance = Instance(klass=klass, allow_none=allow_none, 
                                       **metadata)
@@ -55,14 +55,15 @@ class Socket(TraitType):
         else:
             try:
                 return self._instance.validate(obj, name, value)
-            except TraitError:
+            except Exception:
                 if issubclass(self._instance.klass, Interface):
                     self._iface_error(obj, name, self._instance.klass.__name__)
                 else:
                     obj.raise_exception("%s must be an instance of class '%s'" %
-                                        (name, self._instance.klass.__name__), TraitError)
+                                        (name, self._instance.klass.__name__), 
+                                        TypeError)
 
     def _iface_error(self, obj, name, iface_name):
         obj.raise_exception("%s must provide interface '%s'" % 
-                            (name, iface_name), TraitError)
+                            (name, iface_name), TypeError)
         

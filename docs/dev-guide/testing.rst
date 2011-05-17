@@ -355,7 +355,7 @@ More details on the ``literalinclude`` directive can be found at http://sphinx.p
     >>> my_engine.set("RPM",7500)
     Traceback (most recent call last):
         ...
-    TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value 
+    ValueError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value 
     of 7500 <type 'int'> was specified.
 
 * Indentation is not preserved between code blocks in the same group. This means that all functions and

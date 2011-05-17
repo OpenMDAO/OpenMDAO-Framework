@@ -11,7 +11,7 @@ import numpy
 import random
 import numpy.random as numpy_random
 
-from openmdao.lib.datatypes.api import TraitError, Float, Array, Enum, Int, Str
+from openmdao.lib.datatypes.api import Float, Array, Enum, Int, Str
 from pyevolve import Selectors
 
 from openmdao.main.api import Assembly, Component, set_as_top

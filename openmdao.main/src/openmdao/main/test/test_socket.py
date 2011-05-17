@@ -1,7 +1,7 @@
 
 import unittest
 
-from enthought.traits.api import TraitError, Int
+from enthought.traits.api import Int
 
 from openmdao.main.api import Assembly, Component, Container, Case, Socket
 from openmdao.main.interfaces import implements, ICaseIterator
@@ -70,10 +70,10 @@ class SocketTestCase(unittest.TestCase):
     def test_wrong_interface(self):
         try:
             self.sc.iterator = Component('dummy')
-        except TraitError, exc:
+        except TypeError, exc:
             self.assertEqual(str(exc), ": iterator must provide interface 'ICaseIterator'")
         else:
-            self.fail('TraitError expected')
+            self.fail('TypeError expected')
 
     def test_socket_filled(self):
         self.assertEqual(self.sc.iterator, None)
@@ -106,19 +106,19 @@ class SocketTestCase(unittest.TestCase):
         sc2.iterator = CIterator()
         try:
             sc2.iterator = Assembly()
-        except TraitError:
+        except TypeError:
             pass
         else:
-            self.fail('TraitError expected')
+            self.fail('TypeError expected')
             
         sc4 = SocketComp4()
         sc4.iterator = Assembly()
         try:
             sc4.iterator = CIterator()
-        except TraitError:
+        except TypeError:
             pass
         else:
-            self.fail('TraitError expected')
+            self.fail('TypeError expected')
         
 class MyIface(zope.interface.Interface):
     
@@ -160,12 +160,12 @@ class SocketTestCase2(unittest.TestCase):
         moc = MyOtherClass()
         try:
             self.hobj.iface_sock = moc
-        except TraitError as err:
+        except TypeError as err:
             self.assertEqual(str(err), ": iface_sock must provide interface 'MyIface'")
             
         try:
             self.hobj.class_sock = 3.14
-        except TraitError as err:
+        except TypeError as err:
             self.assertEqual(str(err), ": class_sock must be an instance of class 'MyClass'")
         
             

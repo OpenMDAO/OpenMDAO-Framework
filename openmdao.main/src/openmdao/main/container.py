@@ -25,7 +25,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 import zope.interface
 
-from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
+from enthought.traits.api import HasTraits, Missing, Undefined, \
                                  push_exception_handler, Python, \
                                  Interface, Instance
 from enthought.traits.trait_handlers import NoDefaultSpecified
@@ -36,6 +36,7 @@ from multiprocessing import connection
 
 from openmdao.main.variable import Variable
 from openmdao.main.filevar import FileRef
+from openmdao.main.pluginsock import Socket
 
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
@@ -422,7 +423,7 @@ class Container(HasTraits):
             self.raise_exception(
                 "'%s' is already connected to source '%s' and "
                 "cannot be directly set"%
-                (name, self._depgraph.get_source(name)), TraitError)
+                (name, self._depgraph.get_source(name)), RuntimeError)
             
     def _input_nocheck(self, name, old):
         """This method is substituted for _input_check to avoid source
@@ -558,10 +559,10 @@ class Container(HasTraits):
             if obj is not None and not is_instance(obj, Container):
                 self.raise_exception('attribute %s is not a Container' % name,
                                      RuntimeError)
-            if trait.is_trait_type(Instance):
+            if trait.is_trait_type(Instance) or trait.is_trait_type(Socket):
                 try:
                     setattr(self, name, None)
-                except TraitError as err:
+                except TypeError as err:
                     self.raise_exception(str(err), RuntimeError)
             else:
                 self.remove_trait(name)
@@ -744,7 +745,7 @@ class Container(HasTraits):
         and set its value.
         """
         self.raise_exception("object has no attribute '%s'" % path, 
-                             TraitError)
+                             AttributeError)
         
     def _check_source(self, path, src):
         """Raise an exception if the given source variable is not the one
@@ -755,7 +756,7 @@ class Container(HasTraits):
             self.raise_exception(
                 "'%s' is connected to source '%s' and cannot be "
                 "set by source '%s'" %
-                (path,source,src), TraitError)
+                (path,source,src), RuntimeError)
 
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
@@ -1119,7 +1120,7 @@ class Container(HasTraits):
 
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
-        full_msg = '%s: %s' % (self.get_pathname(), msg)
+        full_msg = "%s: " % self.get_pathname() + msg
         self._logger.error(msg)
         raise exception_class(full_msg)
     
@@ -1276,5 +1277,5 @@ def create_io_traits(cont, obj_info, iotype='in'):
                 pass
         else:
             cont.raise_exception('create_io_traits cannot add trait %s' % entry,
-                                 TraitError)
+                                 RuntimeError)
         cont.add_trait(name, cont.build_trait(ref_name, iostat, trait))

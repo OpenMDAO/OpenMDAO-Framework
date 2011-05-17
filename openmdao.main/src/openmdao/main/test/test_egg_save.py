@@ -23,7 +23,7 @@ from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
 from openmdao.lib.datatypes.api import Int, Bool, List, Str, Array, Instance, \
-     File, TraitError
+     File
 from openmdao.util.testutil import assert_raises, find_python, \
                                    make_protected_dir
 

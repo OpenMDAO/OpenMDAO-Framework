@@ -13,5 +13,5 @@ Instance = Socket
 
 # Traits from Enthought
 from enthought.traits.api import Bool, List, Str, \
-     Complex, CBool, Dict, ListStr, Any, TraitError, on_trait_change,\
+     Complex, CBool, Dict, ListStr, Any, on_trait_change,\
      Python, Event, Dict
