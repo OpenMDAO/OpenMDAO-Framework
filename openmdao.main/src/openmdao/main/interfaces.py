@@ -526,16 +526,6 @@ class IHasEqConstraints(Interface):
             A string containing an assignment, e.g., 'a = 2*b+5'
         """
 
-    def add_eq_constraint(lhs, rhs):
-        """Adds an equality constraint.
-        
-        lhs: str
-            Left-hand side of the equality.
-            
-        rhs: str
-            Right-hand side of the equality.
-        """
-        
     def remove_constraint(expr_string):
         """Removes the given constraint.
         
@@ -567,12 +557,6 @@ class IHasIneqConstraints(Interface):
     def add_constraint(expr_string):
         """Adds an inequality constraint as a string containing an inequality, 
         for example, 'a > b'.
-        """
-
-    def add_ineq_constraint(lhs, rel, rhs):
-        """Adds an inequality constraint as three strings; a left-hand side,
-        a right-hand side, and a relation.  The relation must be one of the 
-        following: '<', '>', '<=', or '>='.
         """
 
     def remove_constraint(expr_string):

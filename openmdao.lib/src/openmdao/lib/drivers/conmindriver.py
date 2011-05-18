@@ -1,7 +1,8 @@
 """
     conmindriver.py - Driver for the CONMIN optimizer.
     
-    See the Standard Library Reference for additional information on the :ref:`CONMINDriver`.
+    See the Standard Library Reference for additional information on the
+    :ref:`CONMINDriver`.
     
     The CONMIN driver can be a good example of how to wrap another Driver for
     OpenMDAO. However, there are some things to keep in mind.
@@ -29,7 +30,6 @@ __all__ = ['CONMINdriver']
 # pylint: disable-msg=E0611,F0401
 from numpy import zeros, ones
 from numpy import int as numpy_int
-from numpy.linalg import norm
 
 import conmin.conmin as conmin
 
@@ -224,7 +224,7 @@ class CONMINdriver(Driver):
     phi = Float(5.0, iotype='in', desc='Participation coefficient - penalty '
                       'parameter that pushes designs towards the feasible '
                       'region.')
-    delfun = Float(0.001, iotype='in', low=0.0001, 
+    delfun = Float(0.001, iotype='in', low=0.0, 
                    desc='Relative convergence tolerance.')
     dabfun = Float(0.001, iotype='in', low=1.0e-10, 
                    desc='Absolute convergence tolerance.')
@@ -293,16 +293,16 @@ class CONMINdriver(Driver):
                 if (dval - val.high) < self.ctlmin:
                     self.design_vals[i] = val.high
                 else:
-                    self.raise_exception('maximum exceeded for initial value'
-                                         ' of: %s' % val.expreval.text,
-                                         ValueError)
+                    msg = 'initial value of: %s ' % val.expreval.text + \
+                                         'is greater than maximum'
+                    self.raise_exception(msg, ValueError)
             if dval < val.low:
                 if (val.low - dval) < self.ctlmin:
                     self.design_vals[i] = val.low
                 else:
-                    self.raise_exception('minimum exceeded for initial value'
-                                         ' of: %s' % val.expreval.text,
-                                         ValueError)
+                    msg = 'initial value of: %s ' % val.expreval.text + \
+                                         'is less than minimum'
+                    self.raise_exception(msg, ValueError)
 
         
     def continue_iteration(self):
@@ -445,7 +445,8 @@ class CONMINdriver(Driver):
                     case_input.append([var, val])
                 
                 if self.printvars:
-                    case_output = [(name, ExprEvaluator(name, scope=self).evaluate()) 
+                    case_output = [(name,
+                                    ExprEvaluator(name, scope=self).evaluate())
                                            for name in self.printvars]
                 else:
                     case_output = []
@@ -454,7 +455,8 @@ class CONMINdriver(Driver):
                 for i, val in enumerate(self.constraint_vals):
                     case_output.append(["Constraint%d" % i, val])
                 
-                case = Case(case_input, case_output, label='case%s' % self.iter_count,
+                case = Case(case_input, case_output,
+                            desc='case%s' % self.iter_count,
                             parent_uuid=self._case_id)
                 
                 self.recorder.record(case)

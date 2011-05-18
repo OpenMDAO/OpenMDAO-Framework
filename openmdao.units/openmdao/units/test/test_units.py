@@ -164,9 +164,15 @@ class test__PhysicalQuantity(unittest.TestCase):
 
     def test_currency_unit(self):
         try:
-            x = units.PhysicalQuantity('1 $')
+            x = units.PhysicalQuantity('1$')
         except ValueError:
             self.fail("Error: Currency Unit ($) is not working")
+        
+    def test_hour_unit(self):
+        # Added to test problem in Ticket 466
+        x = units.PhysicalQuantity('7200s')
+        x.convert_to_unit('h')
+        self.assertEqual(x,units.PhysicalQuantity('2h'))
         
     def test_add_known_Values(self):
         """addition should give known result with known input. 
@@ -525,7 +531,7 @@ class test__PhysicalUnit(unittest.TestCase):
     def test_repr_str(self):
         """__repr__should return a string which could be used to contruct the unit instance, __str__ should return a string with just the unit name for str"""
         u = units.PhysicalQuantity('1 d')
-        self.assertEqual(repr(u.unit),"PhysicalUnit({'d': 1},86400,[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],0)")
+        self.assertEqual(repr(u.unit),"PhysicalUnit({'d': 1},86400.0,[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],0)")
         self.assertEqual(str(u.unit),"<PhysicalUnit d>")
 
     def test_cmp(self):
