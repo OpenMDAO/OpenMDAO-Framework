@@ -726,8 +726,33 @@ class Container(HasTraits):
         
     @rbac(('owner', 'user'))
     def get(self, path, index=None):
-        """Return the object specified by the given 
-        path, which may contain '.' characters.  
+        """Return the object specified by the given path, which may 
+        contain '.' characters.  *index*, if not None,
+        should be either a list of non-tuple hashable objects, at most one 
+        for each array dimension of the target value, or a list of tuples of 
+        the form (operation_id, stuff).
+              
+        The forms of the various tuples are:
+        
+        ::
+        
+            INDEX:   (0, idx)  
+                where idx is some hashable value
+            ATTR:    (1, name) 
+                where name is the attribute name
+            CALL:    (2, args, kwargs) 
+                where args is a list of values and kwargs is a list of 
+                tuples of the form (keyword,value).
+                kwargs can be left out if empty.  args can be left out 
+                if empty as long as kwargs are also empty, for example, 
+                (2,) and (2,[],[('foo',1)]) are valid but (2,[('foo',1)]) is not.
+            SLICE:   (3, lower, upper, step) 
+                All members must be present and should have a value 
+                of None if not set.
+
+        If you want to use a tuple as a key into a dict, you'll have to
+        nest your key tuple inside of an INDEX tuple to avoid ambiguity, 
+        for example, (0, my_tuple)
         """
         childname, _, restofpath = path.partition('.')
         if restofpath:
@@ -770,8 +795,31 @@ class Container(HasTraits):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
         value, subject to validation and constraints. *index*, if not None,
-        should be a list of ints, at most one for each array dimension of the
-        target value.
+        should be either a list of non-tuple hashable objects, at most one 
+        for each array dimension of the target value, or a list of tuples of 
+        the form (operation_id, stuff).
+              
+        The forms of the various tuples are:
+        
+        ::
+        
+            INDEX:   (0, idx)  
+                where idx is some hashable value
+            ATTR:    (1, name) 
+                where name is the attribute name
+            CALL:    (2, args, kwargs) 
+                where args is a list of values and kwargs is a list of 
+                tuples of the form (keyword,value).
+                kwargs can be left out if empty.  args can be left out 
+                if empty as long as kwargs are also empty, for example, 
+                (2,) and (2,[],[('foo',1)]) are valid but (2,[('foo',1)]) is not.
+            SLICE:   (3, lower, upper, step) 
+                All members must be present and should have a value 
+                of None if not set.
+
+        If you want to use a tuple as a key into a dict, you'll have to
+        nest your key tuple inside of an INDEX tuple to avoid ambiguity, 
+        for example, (0, my_tuple)
         """ 
         childname, _, restofpath = path.partition('.')
         if restofpath:
