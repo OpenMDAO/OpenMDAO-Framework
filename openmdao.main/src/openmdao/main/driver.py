@@ -28,7 +28,9 @@ class Driver(Component):
     recorder = Socket(ICaseRecorder, desc='Case recorder for iteration data.', 
                       required=False) 
 
-    workflow = Socket(Workflow, allow_none=True)
+    # set factory here so we see a default value in the docs, even
+    # though we replace it with a new Dataflow in __init__
+    workflow = Socket(Workflow, allow_none=True, required=True, factory=Dataflow)
     
     def __init__(self, doc=None):
         self._iter = None

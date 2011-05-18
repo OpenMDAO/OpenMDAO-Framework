@@ -23,7 +23,9 @@ class Socket(TraitType):
     supported.
     """
     
-    def __init__(self, klass = None, allow_none = True, **metadata):
+    def __init__(self, klass = None, allow_none = True, 
+                 factory = None, args = None, kw = None,
+                 **metadata):
         try:
             iszopeiface = issubclass(klass, zope.interface.Interface)
         except TypeError:
@@ -33,12 +35,19 @@ class Socket(TraitType):
 
         self._allow_none = allow_none
         self.klass = klass
+        default_value = None
+
         if iszopeiface:
             self._instance = None
+            self.factory = factory
+            self.args = args
+            self.kw = kw
         else:
             self._instance = Instance(klass=klass, allow_none=allow_none, 
+                                      factory=factory, args=args, kw=kw,
                                       **metadata)
-        super(Socket, self).__init__(default_value=None, **metadata)
+            default_value = self._instance.default_value
+        super(Socket, self).__init__(default_value, **metadata)
 
     def validate ( self, obj, name, value ):
         """ Validates that the value is a valid object instance."""

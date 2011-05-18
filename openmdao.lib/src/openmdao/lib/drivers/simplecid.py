@@ -10,13 +10,13 @@ testdict = {}
 class SimpleCaseIterDriver(Driver):
     """
     A Driver that sequentially runs a set of cases provided by an :class:`ICaseIterator`
-    and records the results in a :class:`CaseRecorder`. This is
+    and optionally records the results in a :class:`CaseRecorder`. This is
     intended for test cases or very simple models only. For a more full-featured Driver 
-    with similar functionality, see
-    :class:`CaseIteratorDriver`.
+    with similar functionality, see :class:`CaseIteratorDriver`.
 
     - The `iterator` socket provides the cases to be evaluated.
-    - The `recorder` socket is used to record results.
+    - The `recorder` socket is used to record results. This is inherited from
+                  the :class:`Driver` class.
     
     For each case coming from the `iterator`, the workflow will
     be executed once.

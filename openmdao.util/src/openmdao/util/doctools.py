@@ -8,11 +8,42 @@ from sys import maxint, float_info
 from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, Event, \
                                  Instance
 from enthought.traits.trait_base import not_none
+from enthought.traits.trait_types import _InstanceArgs
 from inspect import getmro, ismodule, getmembers, ismethod, isfunction, isclass
 
 from openmdao.main.pluginsock import Socket
 
 excludes = (Any, Python, Event, type)
+
+def _print_funct(funct, args, kw):
+    arglst = []
+    if args:
+        for arg in args:
+            if isinstance(arg, basestring):
+                arglst.append("'%s'" % arg)
+            else:
+                arglst.append("%s" % arg)
+    argstr = ', '.join(arglst)
+    kwlst = []
+    if kw:
+        for k,v in kw.items():
+            if isinstance(v,basestring):
+                kwlst.append("%s='%s'" % (k,v))
+            else:
+                kwlst.append("%s=%s" % (k,v))
+    kwstr = ', '.join(kwlst)
+    if kwstr and len(argstr)>0:
+        kwstr = ', '+kwstr
+    return "%s(%s%s)" % (funct.__name__, argstr, kwstr)
+
+def _get_instance_default(trait):
+    if trait.factory:
+        return _print_funct(trait.factory, trait.args, trait.kw)
+    elif isinstance(trait.default_value, _InstanceArgs):
+        return _print_funct(trait.default_value.args[0],
+                            trait.default_value.args[1:],
+                            trait.default_value.kw)
+    return trait.default_value
 
 def get_traits_info(app, what, name, obj, options, lines):
     """
@@ -105,7 +136,10 @@ def get_traits_info(app, what, name, obj, options, lines):
             if val.desc is not None:
                 lines.extend(["  %s" %val.desc])
                 lines.append('')
-            lines.extend(["  * default:  '%s'" %(val.trait_type).default_value]) 
+            if val.is_trait_type(Instance) or val.is_trait_type(Socket):
+                lines.extend(["  * default:  %s" % _get_instance_default(val.trait_type)]) 
+            else:
+                lines.extend(["  * default:  '%s'" %(val.trait_type).default_value]) 
             if val.iotype is not None:
                 lines.extend(["  * iotype:  '%s'" %val.iotype])
             if val.units is not None:
@@ -130,7 +164,7 @@ def get_traits_info(app, what, name, obj, options, lines):
             for m, v in metadata:
                 if m not in dontdo_meta:
                     if isinstance(v, basestring):
-                        v = "'%s'" %v  
+                        v = "'%s'" % v
                     lines.extend(['  *  %s:  %s' %(m, v)])
                     
             lines.append('')
