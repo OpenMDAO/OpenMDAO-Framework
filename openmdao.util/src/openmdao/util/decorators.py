@@ -4,7 +4,7 @@ Some useful decorators
 import types
 
 from decorator import FunctionMaker
-from inspect import getmembers, ismethod, isfunction, getargspec, formatargspec, getmro
+from inspect import getmembers, ismethod, getargspec, formatargspec, getmro
 
 # this decorator is based on a code snippet by vegaseat at daniweb.
 # See http://www.daniweb.com/code/snippet216689.html
@@ -68,16 +68,10 @@ def add_delegate(*delegates):
         that match the public members in the delegate class.  Any public members in the
         delegate that have a name matching anything in the scoping object are ignored.
         """
-        if hasattr(cls, '_do_not_promote'):
-            skip = cls._do_not_promote
-        else:
-            skip = []
-        # inspect.getmembers dies if cls is a HasTraits subclass, so use __dict__ instead. :(
+        member_set = set()
+
         for klass in getmro(cls):
-            if klass is object:
-                continue
-            added_set = set([n for n,v in klass.__dict__.items() if not n.startswith('_') 
-                             and n not in skip])
+            member_set.update(klass.__dict__.keys())
     
         listofdels = []
         for tup in delegates:
@@ -96,18 +90,14 @@ def add_delegate(*delegates):
             
             alldict = {}
             for klass in getmro(delegate):
-                if klass is object:
-                    continue
-                for k,v in klass.__dict__.items():
-                    if k not in alldict:
-                        alldict[k] = v
-            for memname,mem in alldict.items():
-                if not memname.startswith('_') and (isfunction(mem) or ismethod(mem)):
-                    if memname in added_set:
-                        continue   # skip adding member if it's already part of the class
-                    added_set.add(memname)
-                    f = forwarder(cls, mem, delegatename)
-                    setattr(cls, memname, f)
+                if hasattr(klass, '_do_not_promote'):
+                    skip = klass._do_not_promote
+                else:
+                    skip = []
+                for k,v in getmembers(klass, ismethod):
+                    if not k.startswith('_') and k not in alldict and k not in member_set and k not in skip:
+                        member_set.add(k)
+                        setattr(cls, k, forwarder(cls, v, delegatename))
             cls.__init__ = init_wrapper(cls, listofdels)
         return cls
     return _add_delegate

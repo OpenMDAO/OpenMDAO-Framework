@@ -84,9 +84,7 @@ class Dataflow(SequentialWorkflow):
         for comp in contents:
             cname = comp.name
             if has_interface(comp, IDriver):
-                print cname,'is a driver'
                 iterset = [c.name for c in comp.iteration_set()]
-                print 'iterset = %s' % iterset
                 itersets[cname] = iterset
                 removes.update(iterset)
                 for u,v in graph.edges_iter(nbunch=iterset): # outgoing edges
@@ -95,10 +93,6 @@ class Dataflow(SequentialWorkflow):
                 for u,v in graph.in_edges_iter(nbunch=iterset): # incoming edges
                     if u != cname and u not in iterset:
                         collapsed_graph.add_edge(u, cname)
-            else:
-                print cname,'is NOT a driver'
-        print 'collapsed nodes = %s' % collapsed_graph.nodes()
-        print 'collapsed edges = %s' % collapsed_graph.edges()
         # connect all of the edges from each driver's iterset members to itself
         to_add = []
         for drv,iterset in itersets.items():

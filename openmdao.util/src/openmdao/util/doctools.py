@@ -1,14 +1,16 @@
 """
-A utility to extract Traits information from the code and get it into the Sphinx documentation.
-NOTE: No traits docs will be generated unless the class containing the traits has a doc string!
+A utility to extract Traits information from the code and get it into the
+Sphinx documentation. NOTE: No traits docs will be generated unless the class
+containing the traits has a doc string!
 """
-
-from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, Event
-from enthought.traits.trait_base import not_none
-from inspect import getmro, ismodule, getmembers, ismethod, isclass
-import inspect
 from sys import maxint, float_info
-from enthought.traits.api import Instance
+
+from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, Event, \
+                                 Instance
+from enthought.traits.trait_base import not_none
+from inspect import getmro, ismodule, getmembers, ismethod, isfunction, isclass
+
+from openmdao.main.pluginsock import Socket
 
 excludes = (Any, Python, Event, type)
 
@@ -18,27 +20,26 @@ def get_traits_info(app, what, name, obj, options, lines):
     """
 
     #Get the API information for OpenMDAO
-    if (name.endswith(".api") and ismodule(obj)):
+    if name.endswith(".api") and ismodule(obj):
 
         #get functions
-        fns = getmembers(obj, inspect.isfunction)
+        fns = getmembers(obj, isfunction)
         for n,v in fns:
             filename = v.__module__ + ".py"
             lines.append(":ref:`%s<%s>`" %(n,filename))
             lines.append('\n')
       
         #get classes
-        cls = getmembers(obj, inspect.isclass)
+        cls = getmembers(obj, isclass)
         for n1, v1 in cls:
             module = v1.__module__
-            if (module=="enthought.traits.trait_types"):
+            if module=="enthought.traits.trait_types":
                 filename2 = ("http://code.enthought.com/projects/files/ETS32_API/enthought.traits.trait_types.%s.html" %n1)
                 lines.append("`%s <%s>`_" %(n1, filename2))
             else:
                 filename2 = module + ".py"
                 lines.append(":ref:`%s<%s>`" %(n1,filename2))
             lines.append('\n')
-        
     
     if not (isinstance(obj, MetaHasTraits) or isinstance(obj, HasTraits)):
         return
@@ -60,13 +61,13 @@ def get_traits_info(app, what, name, obj, options, lines):
     keepers = {}
     
     for trt, trt_val in this_class_traits.items():
-        if not (base_class_traits.has_key(trt)):
+        if not base_class_traits.has_key(trt):
             keepers[trt] = trt_val        
         else:
             #the names are the same, so check the objects
             #to see if they are the same.  if they aren't,
             # there's an override in this class; keep it!
-            if not (trt_val == base_class_traits[trt]):
+            if not trt_val == base_class_traits[trt]:
                 keepers[trt] = trt_val
                 
     keepers_in={}
@@ -79,9 +80,9 @@ def get_traits_info(app, what, name, obj, options, lines):
         #As long as it's not an excluded type, add it.
         if not isinstance(val.trait_type, excludes):
             if val.trait_type._metadata.has_key("iotype"):
-                if (val.trait_type._metadata["iotype"] =="in"):
+                if val.trait_type._metadata["iotype"] =="in":
                     keepers_in[t]=val
-                elif  (val.trait_type._metadata["iotype"] == "out"):
+                elif val.trait_type._metadata["iotype"] == "out":
                     keepers_out[t]=val
             elif type(val.trait_type).__name__ in ["Instance","Socket"]:
                 keepers_instance[t]=val        
@@ -97,26 +98,26 @@ def get_traits_info(app, what, name, obj, options, lines):
         for t, val in sortedDict:
             lines.append('')
             #Now just need to spit out the traits in the proper format into the documentation 
-            if (val.is_trait_type(Instance)):
+            if val.is_trait_type(Instance) or val.is_trait_type(Socket):
                 lines.extend(["*%s* (%s) **%s**" %(type(val.trait_type).__name__, val.trait_type.klass.__name__, t)])
             else:
                 lines.extend(["*%s* **%s**" %(type(val.trait_type).__name__, t)])
-            if (val.desc is not None):
+            if val.desc is not None:
                 lines.extend(["  %s" %val.desc])
                 lines.append('')
             lines.extend(["  * default:  '%s'" %(val.trait_type).default_value]) 
-            if (val.iotype is not None):
+            if val.iotype is not None:
                 lines.extend(["  * iotype:  '%s'" %val.iotype])
-            if (val.units is not None):
+            if val.units is not None:
                 lines.extend(["  * units: '%s'" %val.units])    
-            if (val.low is not None):
-                if (val.low == (-1 * maxint)):
+            if val.low is not None:
+                if val.low == (-1 * maxint):
                     continue
-                elif (val.low == (-float_info.max)):
+                elif val.low == (-float_info.max):
                     continue
                 else:
                     lines.extend(['  * low:  %s' %val.low])
-            if (val.high is not None):
+            if val.high is not None:
                 if val.high is maxint:
                     continue
                 elif val.high is float_info.max:

@@ -32,8 +32,8 @@ class Socket(TraitType):
         metadata.setdefault( 'copy', 'deep' )
 
         self._allow_none = allow_none
+        self.klass = klass
         if iszopeiface:
-            self.klass = klass
             self._instance = None
         else:
             self._instance = Instance(klass=klass, allow_none=allow_none, 
