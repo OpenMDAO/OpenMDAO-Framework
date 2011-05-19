@@ -4,7 +4,6 @@
 __all__ = ["Driver"]
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import List, Instance
 
 from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, \
                                      IHasEvents, implements

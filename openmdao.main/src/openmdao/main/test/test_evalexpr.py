@@ -6,7 +6,7 @@ import numpy
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.api import Assembly, Container, Component, set_as_top
-from openmdao.lib.datatypes.api import Float, Array, List, Instance, Dict
+from openmdao.lib.datatypes.api import Float, Array, List, Socket, Dict
 
 class A(Component):
     f = Float(iotype='in')
@@ -33,8 +33,8 @@ class Comp(Component):
     y = Float(iotype='in')
     indct = Dict(iotype='in')
     outdct = Dict(iotype='out')
-    cont = Instance(A, iotype='in')
-    contlist = List(Instance(A), iotype='in')
+    cont = Socket(A, iotype='in')
+    contlist = List(Socket(A), iotype='in')
     
     def get_cont(self, i):
         return self.contlist[i]

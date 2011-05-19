@@ -3,7 +3,7 @@
 from numpy import exp, abs, pi
 from scipy.special import erf
 
-from openmdao.lib.datatypes.api import Instance, Str, Float
+from openmdao.lib.datatypes.api import Socket, Str, Float
 from openmdao.lib.casehandlers.api import CaseSet
 
 from openmdao.main.api import Component
@@ -12,22 +12,24 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 
 
 class ExpectedImprovement(Component):
-    best_case = Instance(CaseSet, iotype="in",
-                    desc="CaseSet which contains a single case, "
-                         "representing the criteria value.", required=True)
+    best_case = Socket(CaseSet, iotype="in",
+                       desc="CaseSet which contains a single case, "
+                            "representing the criteria value.", required=True)
     
     criteria = Str(iotype="in",
-                    desc="Name of the variable to maximize the expected "
-                         "improvement around. Must be a NormalDistrubtion type.")
+                   desc="Name of the variable to maximize the expected "
+                        "improvement around. Must be a NormalDistrubtion type.")
     
-    predicted_value = Instance(NormalDistribution,iotype="in",
-                               desc="the Normal Distribution of the predicted value for some \
-                               function at some point where you wish to calculate the EI.")
+    predicted_value = Socket(NormalDistribution,iotype="in",
+                             desc="the Normal Distribution of the predicted value "
+                                  "for some function at some point where you wish to"
+                                  " calculate the EI.")
     
-    EI = Float(0.0, iotype="out", desc="The expected improvement of the "
-                                       "predicted_value")
+    EI = Float(0.0, iotype="out", 
+               desc="The expected improvement of the predicted_value")
     
-    PI = Float(0.0, iotype="out", desc="The probability of improvement of the predicted_value")
+    PI = Float(0.0, iotype="out", 
+               desc="The probability of improvement of the predicted_value")
     
     def execute(self): 
         """ Calculates the expected improvement of the model at a given point.

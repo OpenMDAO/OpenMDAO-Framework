@@ -14,18 +14,19 @@ zope.interface).
 __all__ = ["Socket"]
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import TraitType, Instance, Interface
+from enthought.traits.api import Instance, Interface
 import zope.interface
 
-class Socket(TraitType):
+from openmdao.main.variable import Variable
+
+class Socket(Variable):
     """A trait for an object of a particular type or implementing a particular
     interface. Both Traits Interfaces and zope.interface.Interfaces are
     supported.
     """
     
-    def __init__(self, klass = None, allow_none = True, 
-                 factory = None, args = None, kw = None,
-                 **metadata):
+    def __init__(self, klass = None, allow_none = True, factory = None, 
+                 args = None, kw = None, **metadata):
         try:
             iszopeiface = issubclass(klass, zope.interface.Interface)
         except TypeError:

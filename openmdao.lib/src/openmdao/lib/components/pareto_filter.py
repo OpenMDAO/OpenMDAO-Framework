@@ -1,7 +1,7 @@
 """ Pareto Filter -- finds non-dominated cases. """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Instance, List, ListStr
+from openmdao.lib.datatypes.api import Socket, List, ListStr
 from openmdao.lib.casehandlers.api import CaseSet, caseiter_to_caseset
 
 from openmdao.main.component import Component
@@ -21,7 +21,7 @@ class ParetoFilter(Component):
                             "filtering. Note that only case outputs are allowed as "
                             "criteria.")
     
-    #case_set = Instance(ICaseIterator, iotype="in",
+    #case_set = Socket(ICaseIterator, iotype="in",
     #                    desc="CaseIterator with the cases to be filtered to "
     #                         "Find the pareto optimal subset.")
                              

@@ -26,8 +26,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 import zope.interface
 
 from enthought.traits.api import HasTraits, Missing, Undefined, \
-                                 push_exception_handler, Python, \
-                                 Interface, Instance
+                                 push_exception_handler, Python
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
@@ -553,13 +552,13 @@ class Container(HasTraits):
                                  name, NameError)
         trait = self.get_trait(name)
         if trait is not None:
-            # for Instance traits, set their value to None but don't remove
+            # for Socket traits, set their value to None but don't remove
             # the trait
             obj = getattr(self, name)
             if obj is not None and not is_instance(obj, Container):
                 self.raise_exception('attribute %s is not a Container' % name,
                                      RuntimeError)
-            if trait.is_trait_type(Instance) or trait.is_trait_type(Socket):
+            if trait.is_trait_type(Socket):
                 try:
                     setattr(self, name, None)
                 except TypeError as err:
@@ -703,16 +702,19 @@ class Container(HasTraits):
         t = self.get_trait(traitpath)
         if not t:
             return self._get_metadata_failed(traitpath, metaname)
+        t = t.trait_type
         if metaname is None:
-            return t.trait_type._metadata.copy()
+            mdict = t._metadata.copy()
+            mdict.setdefault('vartypename', t.__class__.__name__)
+            return mdict
         else:
-            val = getattr(t, metaname, Missing)
-            if val is Missing:
+            val = t._metadata.get(metaname, None)
+            # vartypename isn't present in the metadata of traits
+            # that don't inherit from Variable, so fake it out here
+            # so we'll be consistent across all traits
+            if val is None:
                 if metaname == 'vartypename':
                     return t.__class__.__name__
-                else:
-                    self.raise_exception("'%s' not found" % metaname,
-                                         AttributeError)
             return val
 
     def _get_failed(self, path, index=None):
@@ -1206,10 +1208,7 @@ def _get_entry_group(obj):
         ]
 
     for cls, group in _get_entry_group.group_map:
-        if issubclass(cls, Interface):
-            if obj_has_interface(obj, cls):
-                return group
-        elif issubclass(cls, zope.interface.Interface):
+        if issubclass(cls, zope.interface.Interface):
             if cls.providedBy(obj):
                 return group
         else:

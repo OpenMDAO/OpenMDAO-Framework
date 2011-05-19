@@ -5,7 +5,7 @@ import shutil
 
 from numpy import sin, cos
 
-from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
+from openmdao.lib.datatypes.api import Str, Array, Float, Int
 
 from openmdao.main.api import Assembly, Component, Driver, \
      SequentialWorkflow, Case

@@ -3,7 +3,7 @@
 import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Float, Str, Instance, List
+from openmdao.lib.datatypes.api import Float, Str, Socket, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
 
@@ -53,9 +53,9 @@ class DummyComp(Component):
     sout = Str(iotype='out')
     slistout = List(Str, iotype='out')
     
-    dummy_in = Instance(Component, iotype='in')
-    dummy_out = Instance(Component, iotype='out')
-    dummy_out_no_copy = Instance(Component, iotype='out', copy=None)
+    dummy_in = Socket(Component, iotype='in')
+    dummy_out = Socket(Component, iotype='out')
+    dummy_out_no_copy = Socket(Component, iotype='out', copy=None)
     
     def __init__(self):
         super(DummyComp, self).__init__()
@@ -315,7 +315,10 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(units, 'ft')
         
         meta = self.asm.comp1.get_metadata('rout')
-        self.assertEqual(set(meta.keys()), set(['units','high','iotype','type','low']))
+        self.assertEqual(set(meta.keys()), 
+                         set(['vartypename','units','high','iotype','type','low']))
+        self.assertEqual(meta['vartypename'], 'Float')
+        self.assertEqual(self.asm.comp1.get_metadata('slistout','vartypename'), 'List')
         
     def test_missing_metadata(self):
         foo = self.asm.comp1.get_metadata('rout', 'foo')

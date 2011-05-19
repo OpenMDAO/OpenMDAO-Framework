@@ -22,7 +22,7 @@ from openmdao.main.filevar import FileMetadata
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
-from openmdao.lib.datatypes.api import Int, Bool, List, Str, Array, Instance, \
+from openmdao.lib.datatypes.api import Int, Bool, List, Str, Array, \
      File
 from openmdao.util.testutil import assert_raises, find_python, \
                                    make_protected_dir
@@ -183,9 +183,9 @@ class Oddball(Assembly):
     # FIXME: I tried the built-in trait types of Callable, Method, and Function
     # for these two sockets and couldn't get them to work.  We may have to
     # create new Variables for these...
-    #function_socket = Instance(Callable, none_allowed=True,
+    #function_socket = Socket(Callable, none_allowed=True,
     #                           desc='Just something to call.', required=False)
-    #method_socket = Instance(Callable, none_allowed=True,
+    #method_socket = Socket(Callable, none_allowed=True,
     #                         desc='Just something to call.', required=False)
     executions = Int(0, iotype='out', desc='Counts instance_method() calls.')
 

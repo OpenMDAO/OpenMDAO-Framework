@@ -6,7 +6,7 @@ from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
 from openmdao.main.api import Component, Case, Socket
-from openmdao.lib.datatypes.api import Instance, ListStr, Event, \
+from openmdao.lib.datatypes.api import Socket, ListStr, Event, \
      List, Str, Dict
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
      ICaseIterator
@@ -237,7 +237,7 @@ class MetaModel(Component):
                             "surrogate model for all outputs",ValueError)
                     trait_type = surrogate.get_uncertain_value(1.0).__class__()
                     self.add_trait(name, 
-                                   Instance(trait_type, iotype='out', desc=trait.desc))
+                                   Socket(trait_type, iotype='out', desc=trait.desc))
                     self._surrogate_info[name] = (surrogate.__class__(), []) # (surrogate,output_history)
                     new_model_traitnames.add(name)
                     setattr(self, name, surrogate.get_uncertain_value(getattr(newmodel,name)))

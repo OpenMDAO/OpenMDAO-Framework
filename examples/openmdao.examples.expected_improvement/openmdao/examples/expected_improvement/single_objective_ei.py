@@ -3,23 +3,17 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
-from openmdao.main.api import Assembly, Component, Driver, \
+from openmdao.main.api import Assembly, Driver, \
      SequentialWorkflow, Case
-from openmdao.main.interfaces import ICaseIterator
-from openmdao.main.expreval import ExprEvaluator
 
 from openmdao.lib.components.api import MetaModel, ExpectedImprovement, ParetoFilter
 from openmdao.lib.surrogatemodels.api import KrigingSurrogate
-from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
+from openmdao.lib.drivers.api import DOEdriver, Genetic, IterateUntil
 
-from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
-from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
+from openmdao.lib.doegenerators.api import OptLatinHypercube
+from openmdao.lib.casehandlers.api import DBCaseRecorder
 
-from openmdao.lib.casehandlers.api import caseiter_to_caseset
-from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
 from openmdao.examples.expected_improvement.branin_component import BraninComponent
-from openmdao.util.decorators import add_delegate
-from openmdao.main.hasstopcond import HasStopConditions
         
     
 class MyDriver(Driver): 
@@ -133,9 +127,8 @@ if __name__ == "__main__": #pragma: no cover
         matplotlib.use(backend)
     elif sys.platform == 'win32':
         matplotlib.use('WxAgg')
-    from matplotlib import pyplot as plt, cm 
+    from matplotlib import pyplot as plt
     from matplotlib.pylab import get_cmap
-    from mpl_toolkits.mplot3d import Axes3D
     from numpy import meshgrid,array, pi,arange,cos
     
     analysis = Analysis()
