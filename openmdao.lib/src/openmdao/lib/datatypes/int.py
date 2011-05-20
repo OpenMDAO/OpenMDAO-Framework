@@ -1,5 +1,5 @@
 """
-Trait for floating point variables, with optional min and max.
+Trait for integer variables, with optional high and low.
 """
 
 #public symbols
@@ -8,7 +8,7 @@ __all__ = ["Int"]
 from sys import maxint
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Range, TraitError
+from enthought.traits.api import Range
 
 from openmdao.main.variable import Variable
 
@@ -37,19 +37,19 @@ class Int(Variable):
             high = maxint
             
         if not isinstance(default_value, int):
-            raise TraitError("Default value for an Int must be an integer.")
+            raise ValueError("Default value for an Int must be an integer.")
         
         if not isinstance(low, int):
-            raise TraitError("Lower bound for an Int must be an integer.")
+            raise ValueError("Lower bound for an Int must be an integer.")
         
         if not isinstance(high, int):
-            raise TraitError("Upper bound for an Int must be an integer.")
+            raise ValueError("Upper bound for an Int must be an integer.")
         
         if low > high:
-            raise TraitError("Lower bound is greater than upper bound.")
+            raise ValueError("Lower bound is greater than upper bound.")
         
         if default_value > high or default_value < low:
-            raise TraitError("Default value is outside of bounds [%s, %s]." %
+            raise ValueError("Default value is outside of bounds [%s, %s]." %
                 (str(low), str(high)))
 
         # Put iotype in the metadata dictionary
@@ -78,7 +78,7 @@ class Int(Variable):
         
         try:
             return self._validator.validate(obj, name, value)
-        except TraitError:
+        except Exception:
             self.error(obj, name, value)
 
     def error(self, obj, name, value):
@@ -102,6 +102,6 @@ class Int(Variable):
             info = "a float with a value <%s %s"% (right, self.high)
 
         vtype = type( value )
-        msg = "Trait '%s' must be %s, but a value of %s %s was specified." % \
+        msg = "Variable '%s' must be %s, but a value of %s %s was specified." % \
                                (name, info, value, vtype)
-        obj.raise_exception(msg, TraitError)       
+        obj.raise_exception(msg, ValueError)       

@@ -12,8 +12,7 @@ from openmdao.examples.mdao.sellar_MDF import SellarMDF
 from openmdao.examples.mdao.sellar_IDF import SellarIDF
 
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.main.exceptions import RunStopped
-from openmdao.lib.drivers.api import CONMINdriver, FixedPointIterator 
+from openmdao.lib.drivers.api import CONMINdriver
 from openmdao.lib.datatypes.api import Float
 from openmdao.util.testutil import assert_rel_error
 

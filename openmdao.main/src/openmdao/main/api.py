@@ -20,6 +20,7 @@ from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.seqentialflow import SequentialWorkflow
 from openmdao.main.variable import Variable
+from openmdao.main.pluginsock import Socket
 
 from openmdao.main.exceptions import ConstraintError
 
@@ -32,4 +33,4 @@ from openmdao.util.eggsaver import SAVE_YAML, SAVE_LIBYAML, \
 
 from openmdao.units import convert_units
 
-
+from zope.interface import implements, Attribute, Interface

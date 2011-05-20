@@ -58,16 +58,16 @@ can be directly set:
                      units='m',  desc='height')    
         fillet1 = Bool(True, iotype='in')    
     
-        def __init__(self, directory=''):
+        def __init__(self):
             """ Creates a new Vehicle Assembly object """
 
-            super(GeoMan, self).__init__(directory)
+            super(GeoMan, self).__init__()
     
     class TLA(Assembly):
     
-        def __init__(self, directory=''):
+        def __init__(self):
         
-            super(TLA, self).__init__(directory)
+            super(TLA, self).__init__()
 
             # Create GeoMan component instances
             self.add('geo_manipulator', GeoMan())
@@ -93,8 +93,8 @@ to a model.
 .. testcode:: parameter_interface
 
     # CONMIN Design Variables 
-    self.driver.add_parameters([('geo_manipulator.radius', 3.0, 12.),
-                                ('geo_manipulator.height', 6.5, 25.)])
+    self.driver.add_parameter('geo_manipulator.radius', low=3.0, high=12.)
+    self.driver.add_parameter('geo_manipulator.height', low=6.5, high=25.)
                  
 
 Here, *self* is the top level assembly that contains an optimizer, the geometry

@@ -36,8 +36,8 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.driver.workflow.add('comp')
         
     def test_set_params(self):
-        self.top.driver.add_parameters([('comp.x', 0., 1.e99,None), 
-                                        ('comp.y', 0., 1.e99,None)])
+        self.top.driver.add_parameter('comp.x', 0., 1.e99) 
+        self.top.driver.add_parameter('comp.y', 0., 1.e99)
         self.top.driver.set_parameters([22., 33.])
         self.assertEqual(self.top.comp.x, 22.)
         self.assertEqual(self.top.comp.y, 33.)
@@ -69,8 +69,8 @@ class HasParametersTestCase(unittest.TestCase):
         try: 
             self.top.driver.add_parameter(('d_float.x','d_int.x'), low=-1,high=10)
         except Exception as err: 
-            self.assertEqual(str(err),"driver: Can not add parameter ('d_float.x', 'd_int.x') because "
-                             "d_float.x and d_int.x are not the same type")
+            self.assertEqual(str(err),"driver: Can't add parameter ('d_float.x', 'd_int.x') because "
+                             "d_float.x and d_int.x are not all of the same type")
         else: 
             self.fail("Exception Expected")
         
@@ -81,14 +81,13 @@ class HasParametersTestCase(unittest.TestCase):
         try: 
             self.top.driver.add_parameter(('comp.x','comp.y'), low=0.,high=1e99)
         except Exception as err: 
-            self.assertEqual(str(err),"driver: Trying to add parameter '('comp.x', 'comp.y')' to driver, "
-                                             "but it's already there")
+            self.assertEqual(str(err),"driver: ['comp.x', 'comp.y'] are already Parameter targets")
         else: 
             self.fail("Exception expected")
             
         
-        params = self.top.driver.list_parameters()
-        self.assertEqual(frozenset(params[0]),frozenset(['comp.x','comp.y']))
+        targets = self.top.driver.list_param_targets()
+        self.assertEqual(frozenset(targets),frozenset(['comp.x','comp.y']))
         
         try: 
             self.top.driver.remove_parameter('comp.foo')
@@ -107,16 +106,14 @@ class HasParametersTestCase(unittest.TestCase):
             self.fail('RuntimeError Expected')    
             
         self.top.driver.remove_parameter(('comp.x','comp.y'))
-        self.assertEqual([],self.top.driver.list_parameters())
+        self.assertEqual([],self.top.driver.list_param_targets())
         
         try:
             self.top.driver.add_parameter(('comp.x+comp.y','comp.x'), low=0, high=1.e99)
         except Exception, err:
-            self.assertEqual(str(err), "driver: Can't add parameter 'comp.x+comp.y' because it "
-                             "refers to multiple objects.")
+            self.assertEqual(str(err), "driver: Can't add parameter: 'comp.x+comp.y' is not a valid parameter expression")
         else:
             self.fail("Exception expected")
-        
         
     
     def test_list_add_remove_clear_params(self):
@@ -136,25 +133,23 @@ class HasParametersTestCase(unittest.TestCase):
         try:
             self.top.driver.add_parameter(('comp.x','comp.y'), low=0, high=1.e99)
         except Exception, err:
-            self.assertEqual(str(err), "driver: Trying to add group of parameters '('comp.x', 'comp.y')' to driver, "
-                                             "but one of them is already there")
+            self.assertEqual(str(err), "driver: ['comp.x', 'comp.y'] are already Parameter targets")
         else:
-            self.fail("Exception expected")        
+            self.fail("Exception expected")
         
         try:
             self.top.driver.add_parameter('comp.x+comp.y', low=0, high=1.e99)
         except Exception, err:
-            self.assertEqual(str(err), "driver: Can't add parameter 'comp.x+comp.y' because "
-                             "it refers to multiple objects.")
+            self.assertEqual(str(err), "driver: Can't add parameter: 'comp.x+comp.y' is not a valid parameter expression")
         else:
             self.fail("Exception expected")
 
-        params = self.top.driver.list_parameters()
-        self.assertEqual(params,['comp.x','comp.y'])
+        targets = self.top.driver.list_param_targets()
+        self.assertEqual(targets,['comp.x','comp.y'])
 
         self.top.driver.remove_parameter('comp.x')
-        params = self.top.driver.list_parameters()
-        self.assertEqual(params,['comp.y'])  
+        targets = self.top.driver.list_param_targets()
+        self.assertEqual(targets,['comp.y'])
 
         try: 
             self.top.driver.remove_parameter('comp.foo')
@@ -166,14 +161,14 @@ class HasParametersTestCase(unittest.TestCase):
 
         self.top.driver.add_parameter('comp.x', low=0., high=1.e99)
         self.top.driver.clear_parameters()
-        params = self.top.driver.list_parameters()
-        self.assertEqual(params,[])
+        targets = self.top.driver.list_param_targets()
+        self.assertEqual(targets,[])
 
         self.top.driver.add_parameter('comp.y', low=0., high=1.e99)
         try: 
             self.top.driver.add_parameter('comp.y')
-        except AttributeError,err: 
-            self.assertEqual(str(err),"driver: Trying to add parameter 'comp.y' to driver, but it's already there")
+        except ValueError,err: 
+            self.assertEqual(str(err),"driver: ['comp.y'] are already Parameter targets")
         else: 
             self.fail('RuntimeError expected')
         

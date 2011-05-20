@@ -36,7 +36,7 @@ class HasGlobalDesVarsTest(unittest.TestCase):
         self.assertTrue(hasattr(self.asm.bcstr,"x"))
         self.assertTrue(hasattr(self.asm.bcstr,"x_in"))
         
-        self.assertTrue(['bcstr.x_in'],self.asm.driver.list_parameters())
+        self.assertTrue(['bcstr.x_in'],self.asm.driver.list_param_targets())
         
         
     def test_global_des_var(self):

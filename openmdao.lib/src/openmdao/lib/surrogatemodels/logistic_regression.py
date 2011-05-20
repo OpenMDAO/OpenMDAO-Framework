@@ -8,10 +8,8 @@ from scipy.optimize.optimize import fmin_bfgs
 
 from enthought.traits.api import HasTraits
 
-from openmdao.lib.datatypes.api import implements, Float, Bool
-from openmdao.main.interfaces import ISurrogate
-
-
+from openmdao.lib.datatypes.api import Float, Bool
+from openmdao.main.interfaces import implements, ISurrogate
 
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))

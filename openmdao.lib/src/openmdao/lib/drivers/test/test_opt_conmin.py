@@ -5,8 +5,6 @@ Test the CONMIN optimizer component
 import unittest
 import numpy
 
-from openmdao.lib.datatypes.api import TraitError
-
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.datatypes.api import Float, Array, Str
@@ -197,7 +195,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.assertEqual(str(err), 
                 "driver: Can't add parameter 'comp_bogus.x[0]' because it doesn't exist.")
         else:
-            self.fail('TraitError expected')
+            self.fail('Exception expected')
     
     def test_scale_design_vector_size_mismatch(self):
         self.top.driver.add_objective('comp.result')
@@ -299,8 +297,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         try:
             self.top.run()
         except ValueError, err:
-            self.assertEqual(str(err),
-                             "driver: maximum exceeded for initial value of: comp.x[0]")
+            msg = 'driver: initial value of: comp.x[0] is greater than maximum'
+            self.assertEqual(str(err), msg)
         else:
             self.fail('ValueError expected')
 
@@ -308,8 +306,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         try:
             self.top.run()
         except ValueError, err:
-            self.assertEqual(str(err),
-                             "driver: minimum exceeded for initial value of: comp.x[0]")
+            msg = 'driver: initial value of: comp.x[0] is less than minimum'
+            self.assertEqual(str(err), msg)
         else:
             self.fail('ValueError expected')
 

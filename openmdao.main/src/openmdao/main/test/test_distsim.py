@@ -19,8 +19,6 @@ import nose
 
 from Crypto.Random import get_random_bytes
 
-from enthought.traits.api import TraitError
-
 from openmdao.main.api import Assembly, Case, Component, Container, Driver, \
                               set_as_top
 from openmdao.main.container import get_closest_proxy
@@ -390,9 +388,9 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, obj.get('solid_volume'), 2.5766295747, 0.000001)
         assert_rel_error(self, obj.get('surface_area'), 50.265482457, 0.000001)
 
-        msg = ": Trait 'radius' must be a float in the range (0.0, "
+        msg = ": Variable 'radius' must be a float in the range (0.0, "
         assert_raises(self, "obj.set('radius', -1)", globals(), locals(),
-                      TraitError, msg)
+                      ValueError, msg)
 
         # Now a Box, accessed via attribute methods.
         obj = factory.create(_MODULE+'.Box')

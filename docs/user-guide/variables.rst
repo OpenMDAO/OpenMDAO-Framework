@@ -156,16 +156,16 @@ Built-in Variable Types
 |          | exclude_low = False, exclude_high = False,                   |
 |          | units = None] )``                                            |
 +----------+--------------------------------------------------------------+
-| Instance | ``Instance( [klass = None, desc = None, iotype = None,       |
-|          | factory = None, args = None, kw = None,                      |
-|          | allow_none = True, adapt = None, module = None,              |
-|          | required = False] )``                                        |
-+----------+--------------------------------------------------------------+
 | Int      | ``Int( [default_value = None, iotype = None,                 |
 |          | desc = None, low = None, high = None,                        |
 |          | exclude_low = False, exclude_high = False] )``               |
 +----------+--------------------------------------------------------------+
 | Range    | Deprecated. Use OpenMDAO's Int or Float.                     |
++----------+--------------------------------------------------------------+
+| Socket   | ``Socket( [klass = None, desc = None, iotype = None,         |
+|          | factory = None, args = None, kw = None,                      |
+|          | allow_none = True, adapt = None,                             |
+|          | required = False] )``                                        |
 +----------+--------------------------------------------------------------+
 | Str      | ``Str( [value = None, desc = None, iotype = None] )``        |
 +----------+--------------------------------------------------------------+
@@ -323,7 +323,7 @@ Then we can interact like this:
     >>> test.color2="Purple"
     Traceback (most recent call last):
     ...
-    TraitError: : Trait 'color2' must be in ('Red', 'Yellow', 'Green'), but a value of Purple <type 'str'> was specified.
+    ValueError: : Variable 'color2' must be in ('Red', 'Yellow', 'Green'), but a value of Purple <type 'str'> was specified.
     >>> test.color2="Green"
     >>> test.color2
     'Green'
@@ -358,7 +358,7 @@ If we set to an invalid value, an exception is raised.
     >>> test.color=4
     Traceback (most recent call last):
     ...
-    TraitError: : Trait 'color' must be in (0, 1, 2), but a value of 4 <type 'int'> was specified.`
+    ValueError: : Variable 'color' must be in (0, 1, 2), but a value of 4 <type 'int'> was specified.`
 
 We can also access the list of indices and the list of aliases directly from the trait.
 
@@ -409,7 +409,7 @@ the integers 1 to 6. Note that the Enum doesn't need an iotype, but the List doe
     >>> my_dice.roll = [1, 6, 3, 2, 7]
     Traceback (most recent call last):
     ...
-    TraitError: : Trait 'roll' must be in (1, 2, 3, 4, 5, 6), but a value of 7 <type 'int'> was specified.
+    ValueError: : Variable 'roll' must be in (1, 2, 3, 4, 5, 6), but a value of 7 <type 'int'> was specified.
 
 
 .. index:: File Variables, File
@@ -441,15 +441,15 @@ mark a file as binary.
 
     Provide some examples to demonstrate the options.
                 
-.. index:: Instance Traits
+.. index:: Socket Traits
 
-*Instance Traits*
+*Socket Traits*
 ++++++++++++++++++
 
-An *Instance* is a trait that requires any value assigned to it to be either an instance of a
+An *Socket* is a trait that requires any value assigned to it to be either an instance of a
 specific class or an implementation of a specific Interface. The class or Interface to be matched is
 the first argument to the constructor. Failure to match the specified class or Interface will result
-in an exception being raised. Instance traits are typically used to implement Sockets, which are
+in an exception being raised. Socket traits are typically used to implement 
 placeholders for plugins within a component, but they may also be used to implement Variables by
 setting their *iotype* metadata attribute to ``'in'`` or ``'out'``.  In this case, it is important
 to  also set the *copy* metadata attribute so the framework knows how to copy the data to connected
@@ -461,19 +461,19 @@ made.
 .. testcode:: instance_example
 
     from openmdao.main.api import Component
-    from openmdao.lib.datatypes.api import Instance
+    from openmdao.lib.datatypes.api import Socket
     from openmdao.main.interfaces import ICaseRecorder, ICaseIterator
     
     
     class Fred(Component):
         """ A component that takes a class as an input """
     
-        recorder = Instance(ICaseRecorder, desc='Something to append() to.',
-                            required=True)
-        caseiter = Instance(ICaseIterator, desc='set of cases to run.',
-                            iotype='in')
+        recorder = Socket(ICaseRecorder, desc='Something to append() to.',
+                          required=True)
+        caseiter = Socket(ICaseIterator, desc='set of cases to run.',
+                          iotype='in')
  
-In this example, we have one Socket and one input that are Instances. The
+In this example, we have one Socket and one input that is a Socket. The
 input called *caseiter* requires data objects that implement the ``ICaseIterator``
 interface. The Socket called *recorder* is required to implement the
 ``ICaseRecorder`` interface.
@@ -549,7 +549,7 @@ OpenMDAO variables have a certain pre-defined behavior when a value from a
 variable of a different type is assigned. Variables were created
 using the *casting* traits as opposed to the *coercion* traits. This means that
 most mis-assignments in variable connections (e.g., a float connected to
-a string) should generate a TraitError exception. However, certain widening
+a string) should generate an exception. However, certain widening
 coercions are permitted (e.g., ``Int->Float, Bool->Int, Bool->Float``). No
 coercion from Str or to Str is allowed. If you need to apply different
 coercion behavior, it should be simple to create a Python component to

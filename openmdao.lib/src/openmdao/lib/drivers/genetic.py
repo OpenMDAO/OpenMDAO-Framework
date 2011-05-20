@@ -10,7 +10,7 @@ from pyevolve import G1DList, GAllele, GenomeBase, Scaling
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Python, Enum, Float, Int, Bool, Instance
+from openmdao.lib.datatypes.api import Python, Enum, Float, Int, Bool, Socket
 
 from openmdao.main.api import Driver 
 from openmdao.main.hasparameters import HasParameters
@@ -59,7 +59,7 @@ class Genetic(Driver):
     elitism = Bool(False, iotype="in", desc="Controls the use of elitism in "
                                             "the creation of new generations.")
     
-    best_individual = Instance(klass = GenomeBase.GenomeBase, iotype="out", 
+    best_individual = Socket(klass = GenomeBase.GenomeBase, iotype="out", 
                                desc="The genome with the "
                                "best score from the optimization.") 
     
@@ -78,30 +78,31 @@ class Genetic(Driver):
         alleles = GAllele.GAlleles()
         count = 0
         for param in self.get_parameters().values():
-            count += 1    
+            allele = None
+            count += 1
             val = param.evaluate() #now grab the value 
             low = param.low
             high = param.high
       
-            metadata = param.get_metadata()
+            metadata = param.get_metadata()[0][1]
             
             #then it's a float or an int, or a member of an array
-            if ('low' in metadata or 'high' in metadata) or array_test.search(param.target): 
+            if ('low' in metadata or 'high' in metadata) or array_test.search(param.targets[0]): 
                 if isinstance(val,(float,float32,float64)):                
                     #some kind of float
                     allele = GAllele.GAlleleRange(begin=low, end=high, real=True)
                 #some kind of int    
                 if isinstance(val,(int,int32,int64)):
-                    allele = GAllele.GAlleleRange(begin=low, end=high, real=False)           
+                    allele = GAllele.GAlleleRange(begin=low, end=high, real=False)
                     
             elif "values" in metadata and isinstance(metadata['values'],(list,tuple,array,set)):
                 allele = GAllele.GAlleleList(metadata['values'])
 
-            if allele:     
+            if allele:
                 alleles.add(allele)
             else: 
                 self.raise_exception("%s is not a float, int, or enumerated \
-                datatype. Only these 3 types are allowed"%(param.target),ValueError)
+                datatype. Only these 3 types are allowed"%(param.targets[0]),ValueError)
         
         self.count = count
         return alleles

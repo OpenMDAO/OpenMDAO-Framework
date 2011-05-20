@@ -6,7 +6,6 @@
 # pylint: disable-msg=E0611,F0401
 from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                SellarDiscipline2
-from openmdao.lib.components.api import Broadcaster
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.drivers.api import CONMINdriver, FixedPointIterator
 
@@ -41,8 +40,8 @@ class SellarMDF(Assembly):
         self.connect('dis1.y1','dis2.y1')
         
         # Iteration loop
-        self.fixed_point_iterator.x_out = 'dis2.y2'
-        self.fixed_point_iterator.x_in = 'dis1.y2'
+        self.fixed_point_iterator.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
+        self.fixed_point_iterator.add_constraint('dis2.y2 = dis1.y2')
         self.fixed_point_iterator.max_iteration = 1000
         self.fixed_point_iterator.tolerance = .0001
 

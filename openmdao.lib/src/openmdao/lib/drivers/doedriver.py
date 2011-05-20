@@ -5,7 +5,7 @@
 """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import ListStr, Instance
+from openmdao.lib.datatypes.api import ListStr, Socket
 
 from openmdao.main.case import Case
 from openmdao.main.interfaces import IDOEgenerator
@@ -18,12 +18,9 @@ from openmdao.main.hasparameters import HasParameters
 class DOEdriver(CaseIterDriverBase):
     """ Driver for Design of Experiments """
     
-    def __init__(self, *args, **kwargs):
-        super(DOEdriver, self).__init__(*args, **kwargs)
-    
     # pylint: disable-msg=E1101
-    DOEgenerator = Instance(IDOEgenerator, iotype='in', required=True,
-                            desc='Iterator supplying normalized DOE values.')
+    DOEgenerator = Socket(IDOEgenerator, iotype='in', required=True,
+                          desc='Iterator supplying normalized DOE values.')
     
     case_outputs = ListStr([], iotype='in', 
                            desc='A list of outputs to be saved with each case.')
@@ -38,24 +35,8 @@ class DOEdriver(CaseIterDriverBase):
         
         for row in self.DOEgenerator:
             inputs = []
-            for val, parameter in zip(row, params):
-                
-                #convert DOE values to variable values
-                value = parameter.low+(parameter.high-parameter.low)*val
-                if '[' in parameter.target:
-                    raise ValueError('Array entry design vars '
-                                     'not supported yet.')
-                else:
-                    target = parameter.target
-                    if isinstance(target,str): 
-                        inputs.append((target, value))
-                    else: #then it's a broadcast-parameter
-                        for t in target: 
-                            inputs.append(t,value)
-            
             # now add any event variables
             for varname in self.get_events():
                 inputs.append((varname, True))
-
-            yield Case(inputs=inputs, outputs=self.case_outputs)
-            
+            case = Case(inputs=inputs, outputs=self.case_outputs)
+            yield self.set_parameters(row, case)

@@ -9,7 +9,7 @@ __all__ = ["Float"]
 from sys import float_info
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Range, TraitError
+from enthought.traits.api import Range
 from enthought.traits.api import Float as TraitFloat
 from openmdao.units import PhysicalQuantity
 
@@ -40,7 +40,7 @@ class Float(Variable):
                 if isinstance(default_value, int):
                     default_value = float(default_value)
                 else:
-                    raise TraitError("Default value should be a float.")
+                    raise ValueError("Default value should be a float.")
               
         # excludes must be saved locally because we override error()
         self.exclude_low = exclude_low
@@ -73,10 +73,10 @@ class Float(Variable):
                 high = float(high)
 
             if low > high:
-                raise TraitError("Lower bound is greater than upper bound.")
+                raise ValueError("Lower bound is greater than upper bound.")
         
             if default_value > high or default_value < low:
-                raise TraitError("Default value is outside of bounds [%s, %s]." %
+                raise ValueError("Default value is outside of bounds [%s, %s]." %
                                  (str(low), str(high)))
                      
             # Range can be float or int, so we need to force these to be float.
@@ -92,14 +92,14 @@ class Float(Variable):
             try:
                 pq = PhysicalQuantity(0., metadata['units'])
             except:
-                raise TraitError("Units of '%s' are invalid" %
+                raise ValueError("Units of '%s' are invalid" %
                                  metadata['units'])
             
         # Add low and high to the trait's dictionary so they can be accessed
         metadata['low'] = low
         metadata['high'] = high
         super(Float, self).__init__(default_value=default_value,
-                                         **metadata)
+                                    **metadata)
 
     def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
@@ -108,7 +108,7 @@ class Float(Variable):
         
         # pylint: disable-msg=E1101
         # If both source and target have units, we need to process differently
-        if isinstance(value, TraitValWrapper) and value.metadata.has_key('units'):
+        if isinstance(value, TraitValWrapper) and 'units' in value.metadata:
             if self.units and value.metadata['units']:
                 return self._validate_with_metadata(obj, name, 
                                                     value.value, 
@@ -119,7 +119,7 @@ class Float(Variable):
             value = value.getvalue()
         try:
             return self._validator.validate(obj, name, value)
-        except TraitError:
+        except Exception:
             self.error(obj, name, value)
 
     def error(self, obj, name, value):
@@ -146,9 +146,9 @@ class Float(Variable):
             info = "a float with a value < %s"% self.high
 
         vtype = type( value )
-        msg = "Trait '%s' must be %s, but a value of %s %s was specified." % \
+        msg = "Variable '%s' must be %s, but a value of %s %s was specified." % \
                                (name, info, value, vtype)
-        obj.raise_exception(msg, TraitError)
+        obj.raise_exception(msg, ValueError)
 
     def get_val_wrapper(self, value):
         """Return a TraitValWrapper object.  Its value attribute
@@ -171,7 +171,7 @@ class Float(Variable):
             
         # FIXME: The try blocks testing whether the unit is bogus or undefined
         # are generally redundant because that test is done at creation. HOWEVER
-        # you might have a case where it wasn't tested because it's technicalyl
+        # you might have a case where it wasn't tested because it's technically
         # not a float. NPSS wrapper may be such a case. A test needs to be 
         # constructed to test these lines.
 
@@ -179,28 +179,28 @@ class Float(Variable):
         if src_units == dst_units:
             try:
                 return self._validator.validate(obj, name, value)
-            except TraitError:
+            except Exception:
                 self.error(obj, name, value)
 
         try:
             pq = PhysicalQuantity(value, src_units)
         except NameError:
-            raise TraitError("while setting value of %s: undefined unit '%s'" %
+            raise NameError("while setting value of %s: undefined unit '%s'" %
                              (src_units, name))
         
         try:
             pq.convert_to_unit(dst_units)
         except NameError:
-            raise TraitError("undefined unit '%s' for variable '%s'" %
+            raise NameError("undefined unit '%s' for variable '%s'" %
                              (dst_units, name))
         except TypeError:
             msg = "%s: units '%s' are incompatible " % (name, src_units) + \
                    "with assigning units of '%s'" % (dst_units)
-            raise TraitError(msg)
+            raise TypeError(msg)
         
         try:
             return self._validator.validate(obj, name, pq.value)
-        except TraitError:
+        except Exception:
             self.error(obj, name, pq.value)
 
         

@@ -2,7 +2,7 @@
     bar3_optimization.py - Top level assembly for the example problem.
 """
 
-# Optimize the bar3 design using the driving_sim component.
+# Optimize the bar3 design using the CONMIN optimizer.
 
 import os
 # pylint: disable-msg=E0611,F0401

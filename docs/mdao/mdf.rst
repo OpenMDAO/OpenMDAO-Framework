@@ -10,7 +10,7 @@ In a Multidisciplinary Design Feasible (MDF) problem, the disciplines are direct
 via some kind of solver, and the design variables are optimized in a single loop. The
 following diagram illustrates the data flow for MDF applied to the Sellar problem.
 
-.. figure:: ../images/user-guide/Arch-MDF.png
+.. figure:: ../images/tutorials/Arch-MDF.png
    :align: center
    :alt: Diagram consists of boxes and arrows to show data flow for MDF applied to the Sellar problem.
    
@@ -76,7 +76,7 @@ algorithm that uses a Broyden update to approximate the Jacobian. This solver re
 the output and calculates a new input each iteration. Convergence is achieved when the
 residual between the output and input is driven to zero.
 
-The major difference between the MDF problem and previous examples is the
+The major difference between the MDF problem and some of the previous examples is the
 presence of nested drivers. Drivers can be nested in OpenMDAO using WorkFlows
 in the iteration hierarchy. A :term:`WorkFlow` is an object that determines execution
 order for a group of Components. Each driver contains a single WorkFlow. For
@@ -86,7 +86,7 @@ Although in many cases a WorkFlow contains just Components, it can also
 contain Drivers. This allows nested iterative processes to be created. The
 following diagram shows an iteration hierarchy for the MDF problem.
    
-.. figure:: ../images/user-guide/Arch-MDF-OpenMDAO.png
+.. figure:: ../images/tutorials/Arch-MDF-OpenMDAO.png
    :align: center
    :alt: Diagram showing the Optimizer, workflow for the Optimizer, and workflow for the Solver
    
@@ -179,20 +179,27 @@ so that the design variables carry through to the discipline components.
         self.connect('dis1.y1','dis2.y1')
 
 
-Next, the parameters for the fixed point iterator must be set. ``FixedPointIterator``
-is a specialized solver that is applicable only to single-input/single-output problems.
-As such, it does not conform to the standard driver interface. The output from ``SellarDiscipline2``
-is ``'dis2.y2'``. During iteration, this is the variable that is going to be sent to the input
-of ``SellarDiscipline1``, which is ``'dis1y2'``. The parameter ``x_out`` takes the output variable
-while the parameter ``x_in`` takes the input variable. These are expression strings, but fixed point
-iteration doesn't make sense using anything other than a single input and output. We also set the
-maximum number of iterations and a convergence tolerance.
-        
+Next, the parameters for the fixed point iterator must be set.
+``FixedPointIterator`` is a specialized solver that is applicable only to
+single-input/single-output problems. The interface for this driver requires a
+single parameter and a single objective. The input is selected using
+``add_parameter``. For this paramter, we've given a *low* and a *high*
+attribute, but we've set them to very large negative and positive values as
+the Broyden solver doesn't use either of these. The output is specified by
+adding an equality constraint. A fixed point iterator essentially tries to
+drive to zero the difference between two quantities, where one has been
+expressed as an output and the other as an input, by iteratively feeding the
+ouput into the input. This can be viewed as solving the equation ``x = f(x)``.
+In this case, we want to drive the residual error in the
+coupled variable *y2* to zero. An equality constraint is defined with an
+expression string which is parsed for the equals sign, so the following
+constraints are equivalent:
+
 .. testcode:: MDF_parts
 
         # Iteration loop
-        self.fixed_point_iterator.x_out = 'dis2.y2'
-        self.fixed_point_iterator.x_in = 'dis1.y2'
+        self.fixed_point_iterator.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
+        self.fixed_point_iterator.add_constraint('dis2.y2 = dis1.y2')
         self.fixed_point_iterator.max_iteration = 1000
         self.fixed_point_iterator.tolerance = .0001       
 
@@ -238,8 +245,8 @@ can speed up the algorithm, though it hardly matters here.
 
 As before, the ``add_constraint`` method is used to add our constraints. This
 time however, we used a more general expression for the first constraint. Commented 
-out below that are three more examples of the same exact constraint composed slightly 
-differently. 
+out in the code above are three more examples of the same exact constraint written 
+in different ways. 
 
 Finally, putting it all together gives:
 
@@ -288,8 +295,8 @@ Finally, putting it all together gives:
                 self.connect('dis1.y1','dis2.y1')
         
                 # Iteration loop
-                self.fixed_point_iterator.x_out = 'dis2.y2'
-                self.fixed_point_iterator.x_in = 'dis1.y2'
+                self.fixed_point_iterator.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
+                self.fixed_point_iterator.add_constraint('dis2.y2 = dis1.y2')
                 self.fixed_point_iterator.max_iteration = 1000
                 self.fixed_point_iterator.tolerance = .0001
         
@@ -358,8 +365,8 @@ though we only have one input and one output in this example.
         self.solver.tol = .0000001
         self.solver.algorithm = "broyden2"
         
-The input is selected using ``add_parameter``. You might also be familiar with the
-term *independent* used to describe this. Here, we've given a *low* and a
+The input is selected using ``add_parameter``. Note that the interface is the same
+as in the FixedPointIterator. As before, we've given a *low* and a
 *high* attribute, but we've set them to very large negative and positive values
 as the Broyden solver doesn't use either of these. The output is specified by adding an equality constraint.
 A solver essentially tries to drive something to zero. In this case, we want to

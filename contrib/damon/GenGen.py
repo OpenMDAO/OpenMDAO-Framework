@@ -4,14 +4,13 @@ import os.path
 import shutil
 
 from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, Case
-from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 from openmdao.lib.surrogatemodels.api import KrigingSurrogate
 from openmdao.lib.doegenerators.api import OptLatinHypercube,FullFactorial
 from openmdao.lib.doegenerators.uniform import Uniform
 
-from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array, List
+from openmdao.lib.datatypes.api import Float, Int, Socket, Str, Array, List
 
 from openmdao.lib.components.api import MetaModel,MultiObjExpectedImprovement,\
      ProbIntersect,ParetoFilter, Mux
@@ -40,7 +39,7 @@ class ConceptA(Component):
 class DOE_Maker(Component):
 
     cases = List([],iotype='in',desc='list of integers of maximum sample size')
-    DOEgen = Instance(IDOEgenerator,iotype='out')
+    DOEgen = Socket(IDOEgenerator,iotype='out')
     
     def __init__(self,doc=None):
         super(DOE_Maker,self).__init__(doc)

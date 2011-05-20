@@ -65,5 +65,8 @@ setup(name='openmdao.main',
       [openmdao.component]
       openmdao.main.assembly.Assembly = openmdao.main.assembly:Assembly
       openmdao.main.assembly.ComponentWithDerivatives = openmdao.main.assembly:ComponentWithDerivatives
+      
+      [openmdao.variable]
+      openmdao.main.pluginsock.Socket = openmdao.main.pluginsock:Socket
       """,
     )

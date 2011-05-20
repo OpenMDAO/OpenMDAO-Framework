@@ -24,8 +24,6 @@ class Broadcaster(Component):
     def _types_changed(self,old,new): 
         if self.names: 
             self._names_changed(self.names,self.names)
-        else: 
-            pass
         
     #code to create inputs and outputs when names is changed
     def _names_changed(self,old,new):
@@ -54,8 +52,7 @@ class Broadcaster(Component):
             
     def execute(self,*args,**kwargs): 
         for in_var,out_var in self._vars:
-            val = getattr(self,in_var)
-            setattr(self,out_var,val)            
+            setattr(self, out_var, getattr(self,in_var))
             
             
             
