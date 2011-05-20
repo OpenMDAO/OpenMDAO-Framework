@@ -32,6 +32,7 @@ class MyDriver(Driver):
         case = Case(inputs = inputs,
                     outputs = outputs)
         self.recorder.record(case)
+        
 
         
 class Analysis(Assembly): 
@@ -53,13 +54,12 @@ class Analysis(Assembly):
         
         self.add("filter",ParetoFilter())
         self.filter.criteria = ['branin_meta_model.f_xy']
-        self.filter.case_sets = [self.branin_meta_model.recorder.get_iterator(),] #TODO: can't use caseiter_to_caseset here, like I would like to... 
+        self.filter.case_sets = [self.branin_meta_model.recorder.get_iterator(),]
         self.filter.force_execute = True
-        
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
         self.DOE_trainer.sequential = True
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=30)
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=15)
         #self.DOE_trainer.DOEgenerator = FullFactorial(num_levels=5)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
@@ -74,7 +74,7 @@ class Analysis(Assembly):
         self.EI_opt.selection_method = "tournament"
         self.EI_opt.add_parameter("branin_meta_model.x")
         self.EI_opt.add_parameter("branin_meta_model.y")
-        self.EI_opt.add_objective("EI.PI")
+        self.EI_opt.add_objective("EI.EI")
         self.EI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
@@ -136,9 +136,7 @@ if __name__ == "__main__": #pragma: no cover
     set_as_top(analysis)
     
     analysis.run()
-    
-    print "Adaptive Sampling Iterations: " , analysis.iter.iteration
-    
+        
     points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
     for x,y,z in points: 
         print "x: ", x, "; y: ", y
@@ -184,7 +182,7 @@ if __name__ == "__main__": #pragma: no cover
 
     color_map = get_cmap('spring')
     
-
+    
     plt.scatter(data_EI['branin_meta_model.x'],data_EI['branin_meta_model.y'],
                 s=30,
                 c=colors,

@@ -25,7 +25,7 @@ class Driver(Component):
     implements(IDriver, IHasEvents)
 
     recorder = Socket(ICaseRecorder, desc='Case recorder for iteration data.', 
-                      required=False) 
+                     required=False) 
 
     # set factory here so we see a default value in the docs, even
     # though we replace it with a new Dataflow in __init__

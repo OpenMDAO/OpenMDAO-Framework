@@ -43,124 +43,143 @@ class HasConstraintsTestCase(unittest.TestCase):
         drv.add_constraint('comp1.c >= comp1.d')
         self.assertEqual(drv.list_constraints(), ['comp1.a<comp1.b','comp1.c>=comp1.d'])
         
-    def _check_add_constraint(self, drv, eq=False, ineq=False):
+    def _check_ineq_add_constraint(self, drv):
         self.asm.add('driver', drv)
 
-        if eq: 
-            self.assertEqual(len(drv.get_eq_constraints()), 0)
-        if ineq: 
-            self.assertEqual(len(drv.get_ineq_constraints()), 0)
-            drv.add_constraint(' comp1.a > comp1.b')
-            
-        if eq: 
-            self.assertEqual(len(drv.get_eq_constraints()), 0)
-        if ineq: 
-            self.assertEqual(len(drv.get_ineq_constraints()), 1)
+        try:
+            drv.add_constraint('comp1.b==comp1.a')
+        except Exception as err:
+            self.assertEqual(str(err), "driver: Constraints require an explicit comparator (=, <, >, <=, or >=)")
+        else:
+            self.fail("Exception expected")
+    
+        self.assertEqual(len(drv.get_ineq_constraints()), 0)
+        drv.add_constraint(' comp1.a > comp1.b')
         
-        if eq: 
-            drv.add_constraint('comp1.c =      comp1.d ')
-            self.assertEqual(len(drv.get_eq_constraints()), 1)
-        if ineq: 
-            self.assertEqual(len(drv.get_ineq_constraints()), 1)
+        try: 
+            drv.add_constraint('comp1.a>comp1.b')
+        except Exception as err: 
+            self.assertEqual(str(err),
+                             'driver: A constraint of the form "comp1.a>comp1.b" already exists '
+                             'in the driver. Add Failed.')
+        else: 
+            self.fail("Exception Expected")
         
-        if eq: 
-            drv.remove_constraint(' comp1.c=comp1.d')
-            self.assertEqual(len(drv.get_eq_constraints()), 0)
-            try:
-                drv.remove_constraint('comp1.bogus = comp1.d')
-            except Exception as err:
-                self.assertEqual(str(err), 
-                    "driver: Constraint 'comp1.bogus = comp1.d' was not found. Remove failed.")
-            else:
-                self.fail("Exception expected")
-        if ineq: 
-            self.assertEqual(len(drv.get_ineq_constraints()), 1)
-            drv.remove_constraint(' comp1.a>  comp1.b  ')
-            self.assertEqual(len(drv.get_ineq_constraints()), 0)
-            try:
-                drv.remove_constraint('comp1.bogus < comp1.d')
-            except Exception as err:
-                self.assertEqual(str(err), 
-                    "driver: Constraint 'comp1.bogus < comp1.d' was not found. Remove failed.")
-            else:
-                self.fail("Exception expected")
-        if eq: 
-            self.assertEqual(len(drv.get_eq_constraints()), 0)
-        
-        if ineq: 
-            drv.add_constraint(' comp1.a > comp1.b')
-            self.assertEqual(len(drv.get_ineq_constraints()), 1)
-        if eq: 
-            drv.add_constraint('comp1.c =comp1.d ')
-            self.assertEqual(len(drv.get_eq_constraints()), 1)
+        self.assertEqual(len(drv.get_ineq_constraints()), 1)
+        self.assertEqual(len(drv.get_ineq_constraints()), 1)
+        self.assertEqual(len(drv.get_ineq_constraints()), 1)
+        drv.remove_constraint(' comp1.a>  comp1.b  ')
+        self.assertEqual(len(drv.get_ineq_constraints()), 0)
+        try:
+            drv.remove_constraint('comp1.bogus < comp1.d')
+        except Exception as err:
+            self.assertEqual(str(err), 
+                "driver: Constraint 'comp1.bogus < comp1.d' was not found. Remove failed.")
+        else:
+            self.fail("Exception expected")
+        drv.add_constraint(' comp1.a > comp1.b')
+        self.assertEqual(len(drv.get_ineq_constraints()), 1)
         
         drv.clear_constraints()
-        if eq: 
-            self.assertEqual(len(drv.get_eq_constraints()), 0)
-        if ineq: 
-            self.assertEqual(len(drv.get_ineq_constraints()), 0)
-        
-        if ineq:
-            try:
-                drv.add_constraint('comp1.b < comp1.qq')
-            except ValueError as err:
-                self.assertEqual(str(err), 
-                    "Constraint 'comp1.b < comp1.qq' has an invalid right-hand-side.")
-            else:
-                self.fail('expected ValueError')
+
+        self.assertEqual(len(drv.get_ineq_constraints()), 0)
+    
+        try:
+            drv.add_constraint('comp1.b < comp1.qq')
+        except ValueError as err:
+            self.assertEqual(str(err), 
+                "Constraint 'comp1.b < comp1.qq' has an invalid right-hand-side.")
         else:
-            try:
-                drv.add_constraint('comp1.qq = comp1.b')
-            except ValueError as err:
-                self.assertEqual(str(err), 
-                   "Constraint 'comp1.qq = comp1.b' has an invalid left-hand-side.")
-            else:
-                self.fail('expected ValueError')
+            self.fail('expected ValueError')
+                
+    def _check_eq_add_constraint(self, drv):
+        self.asm.add('driver', drv)
+
+        self.assertEqual(len(drv.get_eq_constraints()), 0)
+        self.assertEqual(len(drv.get_eq_constraints()), 0)
+        drv.add_constraint('comp1.c =      comp1.d ')
+        self.assertEqual(len(drv.get_eq_constraints()), 1)
         
-    def _check_eval_constraints(self, drv, eq=False, ineq=False):
+        try: 
+            drv.add_constraint('comp1.c=comp1.d')
+        except Exception as err: 
+            self.assertEqual(str(err),
+                             'driver: A constraint of the form "comp1.c=comp1.d" already exists '
+                             'in the driver. Add Failed.')
+        else: 
+            self.fail("Exception Expected")
+
+        drv.remove_constraint(' comp1.c=comp1.d')
+        self.assertEqual(len(drv.get_eq_constraints()), 0)
+        try:
+            drv.remove_constraint('comp1.bogus = comp1.d')
+        except Exception as err:
+            self.assertEqual(str(err), 
+                "driver: Constraint 'comp1.bogus = comp1.d' was not found. Remove failed.")
+        else:
+            self.fail("Exception expected")
+        self.assertEqual(len(drv.get_eq_constraints()), 0)
+    
+        drv.add_constraint('comp1.c =comp1.d ')
+        self.assertEqual(len(drv.get_eq_constraints()), 1)
+        
+        drv.clear_constraints()
+
+        self.assertEqual(len(drv.get_eq_constraints()), 0)
+        try:
+            drv.add_constraint('comp1.qq = comp1.b')
+        except ValueError as err:
+            self.assertEqual(str(err), 
+               "Constraint 'comp1.qq = comp1.b' has an invalid left-hand-side.")
+        else:
+            self.fail('expected ValueError')
+                
+    def _check_eq_eval_constraints(self, drv):
         self.asm.add('driver', drv)
         
-        if eq: 
-            vals = drv.eval_eq_constraints()
-            self.assertEqual(len(vals), 0)
-        
-        if ineq: 
-            vals = drv.eval_ineq_constraints()
-            self.assertEqual(len(vals), 0)
-        
-        if ineq: 
-            drv.add_constraint(' comp1.a > comp1.b')
-        if eq: 
-            drv.add_constraint('comp1.c = comp1.d ')
+        vals = drv.eval_eq_constraints()
+        self.assertEqual(len(vals), 0)
+        drv.add_constraint('comp1.c = comp1.d ')
         
         self.asm.comp1.a = 4
         self.asm.comp1.b = 5
         self.asm.comp1.c = 9
         self.asm.comp1.d = 9
         
-        if eq:
-            vals = drv.eval_eq_constraints()
-            self.assertEqual(len(vals), 1)
-            self.assertEqual(vals[0][0], 9)
-            self.assertEqual(vals[0][1], 9)
-            self.assertEqual(vals[0][2], '=')
-            self.assertEqual(vals[0][3], False)
-            
-            vals = drv.get_eq_constraints()
-            self.assertEqual(len(vals), 1)
-            self.assertTrue(isinstance(vals['comp1.c=comp1.d'], Constraint))
+        vals = drv.eval_eq_constraints()
+        self.assertEqual(len(vals), 1)
+        self.assertEqual(vals[0][0], 9)
+        self.assertEqual(vals[0][1], 9)
+        self.assertEqual(vals[0][2], '=')
+        self.assertEqual(vals[0][3], False)
+        
+        vals = drv.get_eq_constraints()
+        self.assertEqual(len(vals), 1)
+        self.assertTrue(isinstance(vals['comp1.c=comp1.d'], Constraint))
 
-        if ineq:
-            vals = drv.eval_ineq_constraints()
-            self.assertEqual(len(vals), 1)
-            self.assertEqual(vals[0][0], 4)
-            self.assertEqual(vals[0][1], 5)
-            self.assertEqual(vals[0][2], '>')
-            self.assertEqual(vals[0][3], True)
+    def _check_ineq_eval_constraints(self, drv):
+        self.asm.add('driver', drv)
+        
+        vals = drv.eval_ineq_constraints()
+        self.assertEqual(len(vals), 0)
+    
+        drv.add_constraint(' comp1.a > comp1.b')
+        
+        self.asm.comp1.a = 4
+        self.asm.comp1.b = 5
+        self.asm.comp1.c = 9
+        self.asm.comp1.d = 9
+        
+        vals = drv.eval_ineq_constraints()
+        self.assertEqual(len(vals), 1)
+        self.assertEqual(vals[0][0], 4)
+        self.assertEqual(vals[0][1], 5)
+        self.assertEqual(vals[0][2], '>')
+        self.assertEqual(vals[0][3], True)
 
-            vals = drv.get_ineq_constraints()
-            self.assertEqual(len(vals), 1)
-            self.assertTrue(isinstance(vals['comp1.a>comp1.b'], Constraint))
+        vals = drv.get_ineq_constraints()
+        self.assertEqual(len(vals), 1)
+        self.assertTrue(isinstance(vals['comp1.a>comp1.b'], Constraint))
 
     def test_constraint_scaler_adder(self):
         drv = self.asm.add('driver', MyDriver())
@@ -172,6 +191,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.assertEqual(result[0][0], -1.0)
         self.assertEqual(result[0][1], 1.0)
         
+        drv.remove_constraint('comp1.a < comp1.b') #cant add constraints that are already there
         try:
             drv.add_constraint('comp1.a < comp1.b', scaler=-5.0)
         except ValueError as err:
@@ -179,7 +199,7 @@ class HasConstraintsTestCase(unittest.TestCase):
                "Scaler parameter should be a float > 0")
         else:
             self.fail('expected ValueError')
-            
+        
         try:
             drv.add_constraint('comp1.a < comp1.b', scaler=2)
         except ValueError as err:
@@ -196,14 +216,26 @@ class HasConstraintsTestCase(unittest.TestCase):
         else:
             self.fail('expected ValueError')
     
+    def test_add_constraint_eq_eq(self):
+        drv = MyDriver()
+        self.asm.add('driver', drv)
+        try:
+            drv.add_constraint('comp1.b==comp1.a')
+        except Exception as err:
+            self.assertEqual(str(err), "driver: Constraints require an explicit comparator (=, <, >, <=, or >=)")
+        else:
+            self.fail("Exception expected")
+
     def test_add_constraint(self):
-        self._check_add_constraint(MyDriver(), eq=True, ineq=True)
+        drv = MyDriver()
+        self._check_eq_add_constraint(drv)
+        self._check_ineq_add_constraint(drv)
     
     def test_add_eq_constraint(self):
-        self._check_add_constraint(MyEqDriver(), eq=True)
+        self._check_eq_add_constraint(MyEqDriver())
     
     def test_add_ineq_constraint(self):
-        self._check_add_constraint(MyInEqDriver(), ineq=True)
+        self._check_ineq_add_constraint(MyInEqDriver())
     
     def test_implicit_constraint(self):
         drv = self.asm.add('driver', MyEqDriver())
@@ -215,15 +247,15 @@ class HasConstraintsTestCase(unittest.TestCase):
         else:
             self.fail('ValueError expected')
             
-        
     def test_eval_constraint(self):
-        self._check_eval_constraints(MyDriver(), eq=True, ineq=True)
+        self._check_eq_eval_constraints(MyDriver())
+        self._check_ineq_eval_constraints(MyDriver())
 
     def test_eval_eq_constraint(self):
-        self._check_eval_constraints(MyEqDriver(), eq=True)
+        self._check_eq_eval_constraints(MyEqDriver())
 
     def test_eval_ineq_constraint(self):
-        self._check_eval_constraints(MyInEqDriver(), ineq=True)
+        self._check_ineq_eval_constraints(MyInEqDriver())
 
 if __name__ == "__main__":
     unittest.main()

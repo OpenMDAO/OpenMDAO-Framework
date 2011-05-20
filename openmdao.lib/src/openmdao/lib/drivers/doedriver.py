@@ -35,19 +35,8 @@ class DOEdriver(CaseIterDriverBase):
         
         for row in self.DOEgenerator:
             inputs = []
-            for val, parameter in zip(row, params):
-                
-                #convert DOE values to variable values
-                value = parameter.low+(parameter.high-parameter.low)*val
-                if '[' in parameter.expreval.text:
-                    raise ValueError('Array entry design vars '
-                                     'not supported yet.')
-                else:
-                    inputs.append((parameter.expreval.text, value))
-            
             # now add any event variables
             for varname in self.get_events():
                 inputs.append((varname, True))
-
-            yield Case(inputs=inputs, outputs=self.case_outputs)
-            
+            case = Case(inputs=inputs, outputs=self.case_outputs)
+            yield self.set_parameters(row, case)

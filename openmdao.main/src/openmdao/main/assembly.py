@@ -335,6 +335,7 @@ class Assembly (Component):
         variables are valid (True) or invalid (False). Entries in names may
         specify either direct traits of self or those of children.
         """
+
         ret = [None]*len(names)
         posdict = dict([(name,i) for i,name in enumerate(names)])
         
