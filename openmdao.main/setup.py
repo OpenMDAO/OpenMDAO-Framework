@@ -51,6 +51,7 @@ setup(name='openmdao.main',
           'setuptools',
           'Sphinx',
           'Traits==3.3.0',
+          'zope.interface',
       ],
       entry_points = """
       [console_scripts]
