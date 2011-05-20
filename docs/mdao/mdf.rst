@@ -183,13 +183,13 @@ Next, the parameters for the fixed point iterator must be set.
 ``FixedPointIterator`` is a specialized solver that is applicable only to
 single-input/single-output problems. The interface for this driver requires a
 single parameter and a single objective. The input is selected using
-``add_parameter``. For this paramter, we've given a *low* and a *high*
+``add_parameter``. For this parameter, we've given a *low* and a *high*
 attribute, but we've set them to very large negative and positive values as
 the Broyden solver doesn't use either of these. The output is specified by
 adding an equality constraint. A fixed point iterator essentially tries to
 drive to zero the difference between two quantities, where one has been
 expressed as an output and the other as an input, by iteratively feeding the
-ouput into the input. This can be viewed as solving the equation ``x = f(x)``.
+output into the input. This can be viewed as solving the equation ``x = f(x)``.
 In this case, we want to drive the residual error in the
 coupled variable *y2* to zero. An equality constraint is defined with an
 expression string which is parsed for the equals sign, so the following
