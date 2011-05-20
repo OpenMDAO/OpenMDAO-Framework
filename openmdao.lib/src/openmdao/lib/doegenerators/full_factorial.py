@@ -24,16 +24,14 @@ class FullFactorial(HasTraits):
     num_levels = Int(0, iotype="in", desc="Number of levels of values for "
                                           "each parameter.")
     
-    def __init__(self, num_levels=None, *args, **kwargs):
+    def __init__(self, num_levels=0, *args, **kwargs):
         
         super(FullFactorial, self).__init__(*args, **kwargs)
-        
-        if num_levels is not None: 
-            self.num_levels = num_levels
+        self.num_levels = num_levels
     
     def __iter__(self):
         """Return an iterator over our sets of input values."""
         
-        return product(*[linspace(0., 1., self.num_levels) \
+        return product(*[linspace(0., 1., self.num_levels)
                          for i in range(self.num_parameters)])
         

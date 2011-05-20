@@ -20,6 +20,7 @@ from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.doedriver import DOEdriver
 from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
+from openmdao.lib.doegenerators.full_factorial import FullFactorial
 from openmdao.main.eggchecker import check_save_load
 from openmdao.util.testutil import find_python
 
@@ -37,8 +38,6 @@ def rosen_suzuki(x0,x1,x2,x3):
     """ Evaluate polynomial from CONMIN manual. """
     return x0**2 - 5.*x0 + x1**2 - 5.*x1 + \
            2.*x2**2 - 21.*x2 + x3**2 + 7.*x3 + 50
-
-
 
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
@@ -65,8 +64,6 @@ class DrivenComponent(Component):
             self.raise_exception('Forced error', RuntimeError)
         if self.stop_exec:
             self.parent.driver.stop()  # Only valid if sequential!
-
-
 
 class MyModel(Assembly):
     """ Use DOEdriver with DrivenComponent. """
@@ -238,6 +235,12 @@ class TestCase(unittest.TestCase):
                           RuntimeError,
                           "driver: Run aborted: RuntimeError('driven: Forced error',)")
 
+    def test_scaling(self):
+        self.model.driver.DOEgenerator = ff = FullFactorial(num_levels=3)
+        ff.num_parameters = 4
+        for case in self.model.driver._get_cases():
+            print case
+        
     def verify_results(self, forced_errors=False):
         # Verify recorded results match expectations.
         
@@ -248,6 +251,8 @@ class TestCase(unittest.TestCase):
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
                                  rosen_suzuki(*[case['driven.x%s'%i] for i in range(4)]))
+
+        
 
 if __name__ == "__main__":
     unittest.main()

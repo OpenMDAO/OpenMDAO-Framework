@@ -4,7 +4,7 @@ import unittest
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.lib.datatypes.api import Int, Event, Float
 from openmdao.util.decorators import add_delegate
-from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.test.execcomp import ExecComp
 
 class DummyFloat(Component): 
@@ -185,6 +185,35 @@ class HasParametersTestCase(unittest.TestCase):
             self.assertEqual(param[0].fd_step, 0.001)
             self.assertEqual(param[1].fd_step, None)
             
+            
+class ParametersTestCase(unittest.TestCase):
+    def setUp(self):
+        self.top = set_as_top(Assembly())
+        self.top.add('driver', MyDriver())
+        self.top.add('driver2', MyDriver())
+        self.top.add('comp', ExecComp(exprs=['z=a+b+c+d']))
+        self.top.driver.workflow.add('comp')
+        
+    def test_transform(self):
+        self.top.driver.add_parameter('comp.a', low=-3., high=5., scaler=1.5, adder=1.)
+        self.top.driver2.add_parameter('comp.a', low=-6., high=10., scaler=4., adder=-2.)
+        params = self.top.driver.get_parameters()
+        params2 = self.top.driver2.get_parameters()
+        
+        self.top.comp.a = 15.
+        
+        d1val = params['comp.a'].evaluate()
+        d2val = params2['comp.a'].evaluate()
+        
+        self.assertNotEqual(d1val, d2val)
+        
+        params['comp.a'].set(d1val)
+        self.assertEqual(self.top.comp.a, 15.)
+        
+        params2['comp.a'].set(d2val)
+        self.assertEqual(self.top.comp.a, 15.)
+        
+        
             
 if __name__ == "__main__":
     unittest.main()
