@@ -18,12 +18,13 @@ openmdao.Model=function() {
      
     var self = this,
         callbacks = [],
-        types = null
+        modes = ['design', 'analysis'],
+        mode = modes[0]
         
     /***********************************************************************
      *  privileged (can access privates, accessible to public and outside) 
      ***********************************************************************/
-     
+    
     /** add a listener, i.e. a function that will be called when something changes */
     this.addListener = function(callback) {
         callbacks.push(callback)
@@ -37,6 +38,23 @@ openmdao.Model=function() {
                 callbacks[i]()
             else
                 debug.error('Model: listener did not provide a valid callback function!')
+    }
+
+    /** get current mode (design/analysis) */
+    this.getMode = function() {
+        return mode;
+    }
+    
+    /** set mode as 'design' */
+    this.setModeDesign = function() {
+        self.mode = 'design'
+        self.updateListeners()
+    }
+
+    /** set mode as 'analysis' */
+    this.setModeAnalysis = function() {
+        self.mode = 'analysis'
+        self.updateListeners()
     }
 
     /** get the list of object types that are available for creation */

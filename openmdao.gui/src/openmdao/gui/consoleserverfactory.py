@@ -264,6 +264,7 @@ class ConsoleServer(cmd.Cmd):
         print 'loading project from:',filename
         self.projfile = filename
         self.proj = project_from_archive(filename,dest_dir=self.getcwd())
+        self.proj.activate()
         self.top = self.proj.top
         self._globals['top'] = self.top
         
