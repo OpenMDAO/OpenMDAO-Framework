@@ -62,6 +62,8 @@ class Parameter(object):
                                    (name,type(val).__name__), ValueError)
         
         self.typename = type(val).__name__
+        self.name = self._expreval.text
+
         meta_low = metadata.get('low') # this will be None if 'low' isn't there
         if low is None:
             self.low = meta_low
@@ -328,11 +330,6 @@ class HasParameters(object):
             If supplied, the values will be associated with their corresponding
             targets and added as inputs to the Case instead of being set directly
             into the model.
-            
-        normalized: bool (optional)
-            If True, the given values will be assumed to be between 0. and 1. and
-            will be scaled to lie between the low and high values of the corresponding
-            parameter.  Defaults to False.
         """
         if len(values) != len(self._parameters):
             raise ValueError("number of input values (%s) != number of parameters (%s)" % 
