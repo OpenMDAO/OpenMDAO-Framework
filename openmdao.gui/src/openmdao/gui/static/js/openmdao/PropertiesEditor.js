@@ -18,29 +18,53 @@ openmdao.PropertiesEditor = function(id,model) {
     var self = this,
         elm = jQuery("#"+id),
         pathname = '',
-        filterChars = '_' // filter vars with names that start with these chars
-    
-    debug.info('PropertiesEditor parent:')
-    debug.info(elm.parent())
-    debug.info('PropertiesEditor elm:')
-    debug.info(elm)
-    
-    /**  build a jqGrid on the table */
-    elm.jqGrid({ 
-        defaults : {
-            loadtext:       "Loading...",
-            autowidth:      true,
-            height:         '100%',
-            shrinktofit:    true,
+        requiredFieldValidator = function(value) {
+            if (value == null || value == undefined || !value.length)
+                return {valid:false, msg:"This is a required field"};
+            else
+                return {valid:true, msg:null};
+        }
+        columns = [
+            {id:"name",  name:"Name",  field:"name"},
+            {id:"value", name:"Value", field:"value", editor:TextCellEditor},
+        ],
+        options = {
+            editable: true,
+            asyncEditorLoading: false,
+            editOnDoubleClick: true,
+            multiSelect: false,
+            forceFitColumns: false,            
+            autoHeight: true,
+            autoEdit: false,
+            //enableAddRow: true,
         },
-        datatype: "json",
-        colNames: ['Property','Value'],
-        colModel: [ {name:'property', index:'property'},
-                    {name:'value',    index:'value', sortable:false} ],
-        caption: "Properties" 
-    });
-    //jQuery("#list2").jqGrid('navGrid','#pager2',{edit:false,add:false,del:false})
-
+        grid = new Slick.Grid("#"+id, [], columns, options)
+        
+        grid.onCellChange.subscribe(function(e,args) {
+            // TODO: better way to do this (e.g. model.setProperty(path,name,value)
+            cmd = 'top.'+self.pathname+'.'+args.item.name+'='+args.item.value
+            model.issueCommand(cmd)
+        })
+        
+        // grid.onAddNewRow.subscribe(function(e, args) {
+            // var item = args.item,
+                // column = args.column;
+            // debug.info("Added item:")
+            // debug.info(item)
+            // debug.info(column)
+            // grid.invalidateRow(data.length);
+            // data.push(item);
+            // grid.updateRowCount();
+            // grid.render();
+        // });
+        
+        function requiredFieldValidator(value) {
+            if (value == null || value == undefined || !value.length)
+                return {valid:false, msg:"This is a required field"};
+            else
+                return {valid:true, msg:null};
+        }
+    
     /** make the parent element (tabbed pane) a drop target for obj objects * /
     elm.parent().droppable ({
         accept: '.obj',
@@ -51,56 +75,16 @@ openmdao.PropertiesEditor = function(id,model) {
     });
     /**/
   
-    /** load the table with the properties of the given object
-     * (in the case of a non-object, load properties of the parent object) */
-    function loadTable(obj) {
-        debug.info("PropertiesEditor.loadTable: (pathname="+self.pathname+")")
-        debug.log(obj)
-        debug.log(elm)
-        debug.log(this.elm)
-        debug.log(self.elm)
-        if (obj == null || typeof obj !== 'object') {
-            lastdot = self.pathname.lastIndexOf('.')
-            if (lastdot>0)
-                self.editObject(self.pathname.substring(0,lastdot))
-            else
-                self.editObject('')
-        }
-        else {
-            elm.empty()
-            
-            // no caption for a pop-up, it's in the title bar
-            elm.hasClass('ui-dialog-content') ? elm.setCaption('') : elm.setCaption(self.pathname)
-            
-            // if obj has a py/state, then those are the properties we want
-            if (typeof obj['py/state'] !== "undefined")
-                obj = obj['py/state']
-            
-            // get the list of properties and their values
-            var data = [],
-                types = ['number', 'string', 'boolean']
-            
-            jQuery.each(obj, function(property,value) {
-                if (filterChars.indexOf(property[0])<0 && property.indexOf('py/')<0) {
-                    propertyType = typeof value
-                    if (types.indexOf(propertyType)>=0)
-                        data.push( { 'property' : property, 'value' : value })
-                    else
-                        debug.warn("Not an editable property: "+property)
-                }
-            })
-            elm.addRowData('property', data)
-        }
-        debug.info('PropertiesEditor parent:')
-        debug.info(elm.parent())
-        debug.info('PropertiesEditor elm:')
-        debug.info(elm)
-        return this
+    /** load the table with the given properties */
+    function loadTable(properties) {
+        data = properties
+        grid.setData(properties)
+        grid.updateRowCount()      
+        grid.render()
     }
     
     /** if there is an object loaded, update it from the model */
     function update() {
-        debug.info('PropertiesEditor.update() pathname='+pathname)
         if (self.pathname && self.pathname.length>0)
             self.editObject(self.pathname)
     }
@@ -108,23 +92,12 @@ openmdao.PropertiesEditor = function(id,model) {
     /** ask model for an update whenever something changes */
     model.addListener(update)
     
-    /** get outer box of jqGrid */
-    function getOuter() {
-        debug.info("PropertiesEditor.getOuter: (pathname="+self.pathname+")")
-        debug.log(elm)
-        debug.log(self.elm)
-        // jqGrid buries the table 4 layers deep <gbox <gview <bdiv <div <table>>>>>
-        debug.info(elm.parent().parent().parent().parent())
-        return elm.parent().parent().parent().parent()  // FUGLY
-    }
-    
     /***********************************************************************
      *  privileged (can access privates, accessible to public and outside) 
      ***********************************************************************/
     
     /** get the specified object from model, load properties into table */
     this.editObject = function(path) {
-        debug.info("PropertiesEditor.editObject: "+path+" (pathname="+self.pathname+")")
         if (self.pathname !== path)
             self.pathname = path
         model.getComponent(path, loadTable,
@@ -136,8 +109,4 @@ openmdao.PropertiesEditor = function(id,model) {
         return this
     }
 
-    /** return the new outer element (after building the jqGrid) */
-    this.getOuterElement = function() {
-        return getOuter()
-    }
 }

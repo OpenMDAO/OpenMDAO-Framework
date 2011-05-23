@@ -232,13 +232,19 @@ class ConsoleServer(cmd.Cmd):
 
     def _get_attributes(self,obj):
         """ get attributes of object """
-        attr = {}
+        attrs = []
         for n,v in obj.items():
+            attr = {}
             if isinstance(v,Component):
-                attr[n] = self._get_attributes(v)
+                attr['name'] = n
+                attr['type'] = type(v).__name__
+                attr['value'] = self._get_attributes(v)
             else:
-                attr[n] = v
-        return attr
+                attr['name'] = n
+                attr['type'] = type(v).__name__
+                attr['value'] = v
+            attrs.append(attr)
+        return attrs
         
     def get_attributes(self,name):
         attr = {}

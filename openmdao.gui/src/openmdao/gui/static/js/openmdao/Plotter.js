@@ -47,15 +47,15 @@ openmdao.Plotter = function(id,model) {
     var updateInterval = 30;
     
     /** setup control widget * /
-    $("#updateInterval").val(updateInterval).change(function () {
-        var v = $(this).val();
+    jQuery("#updateInterval").val(updateInterval).change(function () {
+        var v = jQuery(this).val();
         if (v && !isNaN(+v)) {
             updateInterval = +v;
             if (updateInterval < 1)
                 updateInterval = 1;
             if (updateInterval > 2000)
                 updateInterval = 2000;
-            $(this).val("" + updateInterval);
+            jQuery(this).val("" + updateInterval);
         }
     });
     /**/
@@ -66,7 +66,7 @@ openmdao.Plotter = function(id,model) {
         yaxis: { min: 0, max: 100 },
         xaxis: { show: false }
     };
-    var plot = $.plot(elm, [ getRandomData() ], options);
+    var plot = jQuery.plot(elm, [ getRandomData() ], options);
 
     function update() {
         plot.setData([ getRandomData() ]);
