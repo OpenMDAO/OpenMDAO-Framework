@@ -4,12 +4,11 @@ $def with (title)
 
 <META HTTP-EQUIV="CACHE-CONTROL" CONTENT="NO-CACHE">
 
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" bgcolor="Grey">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 	<title>$title</title>
-    <meta charset="utf-8">
 </head>
 
 <body bgcolor="Grey">
@@ -19,7 +18,19 @@ $def with (title)
 
     <link rel="stylesheet" href="/static/css/mdao-layout.css">
     <link rel="stylesheet" href="/static/css/mdao-styles.css">
-
+    
+    <!-- jQuery -->
+    <link rel="stylesheet" href="/static/css/ui-darkness/jquery-ui-1.8.7.custom.css">
+    <script src="/static/js/jquery-1.6.1.min.js"></script>
+    <script src="/static/js/jquery-ui-1.8.7.custom.min.js"></script>
+    <script src="/static/js/jquery.cookie.js"></script>
+    <script src="/static/js/jquery.hotkeys.js"></script>
+    <script language="javascript" type="text/javascript">
+        try{
+           jQuery.noConflict();
+         } catch(e){};
+    </script>
+    
     <!--  ben alman's debug script (for development only, remove for flight)  -->
     <script src="/static/js/ba-debug.min.js"></script>
     
@@ -43,17 +54,13 @@ $def with (title)
 	<SCRIPT src="/static/js/example/CrossConnectionDecorator.js"></SCRIPT>
 	<SCRIPT src="/static/js/example/PolygonConnectionDecorator.js"></SCRIPT>
 
-    <!-- jQuery -->
-    <link rel="stylesheet" href="/static/css/ui-darkness/jquery-ui-1.8.7.custom.css">
-    <script src="/static/js/jquery-1.4.4.min.js"></script>
-    <script src="/static/js/jquery-ui-1.8.7.custom.min.js"></script>
-    <script src="/static/js/jquery.cookie.js"></script>
-    <script src="/static/js/jquery.hotkeys.js"></script>
-    
-    <!-- use jqGrid for properties editor -->
-    <script src="/static/js/jquery.jqGrid.min.js"></script>
-    <link rel="stylesheet" type="text/css" media="screen" href="/static/css/ui.jqgrid.css" />
-    
+    <!-- use SlickGrid for properties editor -->
+    <link rel="stylesheet" href="/static/css/slick.grid.css" type="text/css" media="screen" charset="utf-8" />
+    <script src="/static/js/jquery.event.drag-2.0.min.js"></script>
+    <script src="/static/js/slick.core.js"></script>
+    <script src="/static/js/slick.grid.js"></script>
+    <script src="/static/js/slick.editors.js"></script>
+
     <!-- jstree -->
     <script src="/static/js/jquery.jstree.js"></script>
 	<script src="/static/js/modernizr.js"></script>

@@ -6,6 +6,7 @@ from django.template import RequestContext
 from django.views.decorators.csrf import csrf_exempt                                          
 from django.contrib.auth import logout
 from django.views.decorators.cache import never_cache
+from django.core.urlresolvers import reverse
 
 import sys, os
 import zipfile, jsonpickle
@@ -185,7 +186,7 @@ def Project(request):
         server_mgr.delete_server(request.session.session_key) # delete old server
         cserver = server_mgr.console_server(request.session.session_key)        
         cserver.load_project(MEDIA_ROOT+'/'+request.GET['filename'])
-        return HttpResponseRedirect('/workspace')
+        return HttpResponseRedirect(reverse('workspace.views.Workspace'))
     
 @never_cache
 @login_required()

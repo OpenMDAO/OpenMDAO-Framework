@@ -28,18 +28,20 @@ def run_server(port):
     # URL mapping
     global urls
     urls = ('/',                'Workspace',
-            '/component/(.*)',  'Component',
             '/addons',          'AddOns',
             '/command',         'Command',
+            '/component/(.*)',  'Component',
+            '/components',      'Components',
             '/exec',            'Exec',
             '/exit',            'Exit',
             '/favicon.ico',     'Favicon',
             '/file/(.*)',       'File',
             '/files',           'Files',
-            '/cwd',             'CWD',
             '/login',           'Login',
+            '/logout',          'Exit',
             '/model',           'Model',
             '/output',          'Output',
+            '/project',         'Project',
             '/types',           'Types',
             '/upload',          'Upload')
 
@@ -85,93 +87,28 @@ class Favicon:
         ico = open('static/images/favicon.ico','r')
         return ico.read();
 
-        
-class Workspace:
-    ''' if user is not logged in & not in single user mode, redirect to login form
-        otherwise, make sure we have a server then render the GUI 
+class AddOns:
+    ''' addon installation utility
     '''
-    def GET(self):
-        if single_user:
-            session.user = getpass.getuser()
-            
-        if not hasattr(session, "user"):
-            # if not os.path.exists(db):
-                # web.debug(PREFIX+'User/Project database not found, creating...')
-                # createDB(db)
-            web.redirect('/login')
-        else:
-            server_mgr.console_server(session.session_id)
-            return render.mdao("OpenMDAO: "+session.user)
-
-class Login:
-    ''' login 
-    '''
-    loginForm = form.Form(
-        form.Textbox('username'),
-        form.Password('password'),
-        form.Button('submit'),
+    addonForm = form.Form( 
+        form.Textbox('Distribution'),
+        form.Button('Install'),
     )
-   
-    ''' clear the session and render the login form 
+    
+    ''' show available addons, prompt for addon to be installed
     '''
     def GET(self):
-        if session.has_key('user'):
-            web.setcookie('user', '', 'Mon, 01-Jan-2000 00:00:00 GMT')
-            server_mgr.delete_server(session.session_id)
-        form = self.loginForm()
-        return render.login(form)
+        form = self.addonForm()
+        return render.addon(form)
 
-    ''' get login information, set user and go to main page 
+    ''' easy_install the POST'd addon
     '''
     def POST(self):
         x = web.input()
-        session.user = x.username
-        web.redirect('/')
+        url = 'http://openmdao.org/dists'
+        easy_install.main( ["-U","-f",url,x.Distribution] )
+        return render.closewindow()
 
-class Component:
-    ''' component 
-    '''
-    addForm = form.Form(
-        form.Textbox('type'),
-        form.Textbox('name'),
-        form.Button('submit'),
-    )
-    
-    ''' render the add component form
-        TODO: this is not a RESTful get... figure out a better way
-    '''
-    def GET(self,name):
-        form = self.addForm()
-        x = web.input()
-        if hasattr(x, "type"):
-            form['type'].value = str(x.type)
-        return render.addcomponent(form)
-
-    ''' add new component to model
-    '''
-    def POST(self,name):
-        x = web.input()
-        cserver = server_mgr.console_server(session.session_id)
-        try:
-            cserver.create(str(x.type),name);
-        except Exception,e:
-            print e
-            result = sys.exc_info()
-            
-    ''' remove the specified component
-    '''
-    def DELETE(self,name):
-        x = web.input()
-        if hasattr(x,'objname'):
-            cserver = server_mgr.console_server(session.session_id)
-            result = ''
-            try:
-                result = cserver.onecmd('del '+name)
-            except Exception,e:
-                print e
-                result = sys.exc_info()
-            return result
-            
 class Command:
     ''' command 
     '''
@@ -208,6 +145,54 @@ class Command:
             command = ''
         return history
 
+class Component:
+    ''' component 
+    '''
+    addForm = form.Form(
+        form.Textbox('type'),
+        form.Textbox('name'),
+        form.Button('submit'),
+    )
+    
+    ''' render the add component form
+        TODO: this is not a RESTful get... figure out a better way
+    '''
+    def GET(self,name):
+        attr = cserver.get_attributes(name)
+        json = jsonpickle.encode(attr)
+        return json
+        
+    ''' add new component to model
+    '''
+    def POST(self,name):
+        x = web.input()
+        cserver = server_mgr.console_server(session.session_id)
+        try:
+            cserver.add_component(name,str(x.type));
+        except Exception,e:
+            print e
+            result = sys.exc_info()
+            
+    ''' remove the specified component
+    '''
+    def DELETE(self,name):
+        x = web.input()
+        if hasattr(x,'objname'):
+            cserver = server_mgr.console_server(session.session_id)
+            result = ''
+            try:
+                result = cserver.onecmd('del '+name)
+            except Exception,e:
+                print e
+                result = sys.exc_info()
+            return result
+
+class Components:
+    def GET(self):
+        cserver = server_mgr.console_server(session.session_id)
+        json = jsonpickle.encode(cserver.get_components())
+        return json
+
 class Exec:
     ''' have the cserver execute a file, return response
     '''
@@ -229,13 +214,6 @@ class Exec:
             result = ''
         return history
 
-class Output:
-    ''' get any outstanding output from the model
-    '''
-    def GET(self):
-        cserver = server_mgr.console_server(session.session_id)
-        return cserver.get_output()
-        
 class Exit:
     ''' exit
     '''
@@ -244,6 +222,122 @@ class Exit:
         server_mgr.delete_server(session.session_id)
         session.kill()
         sys.exit(0)
+
+class File:
+    ''' get/set the specified file
+    '''
+    def GET(self,filename):
+        web.debug("FILE GET "+filename)
+        cserver = server_mgr.console_server(session.session_id)
+        return cserver.get_file(filename)
+
+    ''' if "isFolder" is specified, create the folder, else
+        create and write the posted contents to the specified file
+    '''
+    def POST(self,filename):
+        web.debug("FILE POST "+filename)
+        cserver = server_mgr.console_server(session.session_id)
+        x = web.input()
+        if hasattr(x, "isFolder"):
+            cserver.ensure_dir(filename)
+        else:
+            if hasattr(x, "contents"):
+                cserver.write_file(filename,x.contents)
+            else:
+                cserver.write_file(filename,'')
+            
+            
+    '''  remove the specified file
+    '''
+    def DELETE(self,filename):
+        web.debug("FILE DELETE "+filename)
+        cserver = server_mgr.console_server(session.session_id)
+        cserver.delete_file(filename)
+
+class Files:
+    ''' get a list of the users files in JSON format
+    '''
+    def GET(self):
+        cserver = server_mgr.console_server(session.session_id)
+        filedict = cserver.get_files()
+        json = jsonpickle.encode(filedict)
+        return json
+
+class Login:
+    ''' login 
+    '''
+    loginForm = form.Form(
+        form.Textbox('username'),
+        form.Password('password'),
+        form.Button('submit'),
+    )
+   
+    ''' clear the session and render the login form 
+    '''
+    def GET(self):
+        if session.has_key('user'):
+            web.setcookie('user', '', 'Mon, 01-Jan-2000 00:00:00 GMT')
+            server_mgr.delete_server(session.session_id)
+        form = self.loginForm()
+        return render.login(form)
+
+    ''' get login information, set user and go to main page 
+    '''
+    def POST(self):
+        x = web.input()
+        session.user = x.username
+        web.redirect('/')
+
+class Model:
+    ''' get a JSON representation of the model
+    '''
+    def GET(self):
+        cserver = server_mgr.console_server(session.session_id)
+        json = cserver.get_JSON()
+        web.header('Content-Type', 'application/json')
+        return json
+        
+    ''' delete existing console server and get a new one
+    '''
+    def POST(self):
+        server_mgr.delete_server(session.session_id)
+        web.redirect('/')
+
+class Output:
+    ''' get any outstanding output from the model
+    '''
+    def GET(self):
+        cserver = server_mgr.console_server(session.session_id)
+        return cserver.get_output()
+        
+class Project:
+    ''' load model fom the given project archive
+    '''
+    def GET(self):
+        print "Loading project into workspace:",request.GET['filename']
+        server_mgr.delete_server(session.session_id) # delete old server
+        cserver = server_mgr.console_server(session.session_id)
+        cserver.load_project(MEDIA_ROOT+'/'+request.GET['filename'])
+        web.redirect('/')
+        
+    ''' save project archive of the current project
+    '''
+    def POST(self):
+        cserver = server_mgr.console_server(session.session_id)
+        cserver.save_project()
+   
+class Types:
+    ''' get a list of object types that the user can create
+    '''
+    def GET(self):
+        types = get_available_types()
+        types = packagedict(types)
+        
+        cserver = server_mgr.console_server(session.session_id)
+        types['working'] = packagedict(cserver.get_workingtypes())
+        
+        web.header('Content-Type', 'application/json')
+        return jsonpickle.encode(types)
 
 class Upload:
     ''' display the upload form (file chooser)
@@ -289,109 +383,22 @@ class Upload:
                     
         return render.closewindow()
 
-class Model:
-    ''' get a JSON representation of the model
+class Workspace:
+    ''' if user is not logged in & not in single user mode, redirect to login form
+        otherwise, make sure we have a server then render the GUI 
     '''
     def GET(self):
-        cserver = server_mgr.console_server(session.session_id)
-        json = cserver.get_JSON()
-        web.header('Content-Type', 'application/json')
-        return json
-        
-    ''' delete existing console server and get a new one
-    '''
-    def POST(self):
-        server_mgr.delete_server(session.session_id)
-        web.redirect('/')
-
-class Files:
-    ''' get a list of the users files in JSON format
-    '''
-    def GET(self):
-        cserver = server_mgr.console_server(session.session_id)
-        filedict = cserver.get_files()
-        json = jsonpickle.encode(filedict)
-        return json
-
-class CWD:
-    ''' get/set the current working directory for the cserver
-    '''
-    def GET(self):
-        cserver = server_mgr.console_server(session.session_id)
-        return cserver.getcwd()
-        
-    def POST(self):
-        cserver = server_mgr.console_server(session.session_id)
-        x = web.input()
-        userdir = server_mgr.get_tempdir('files') +'/'+ session.user;
-        ensure_dir(userdir+x.folder)
-        cserver.chdir(userdir+x.folder)
-
-class File:
-    ''' get/set the specified file
-    '''
-    def GET(self,filename):
-        web.debug("FILE GET "+filename)
-        cserver = server_mgr.console_server(session.session_id)
-        return cserver.get_file(filename)
-
-    ''' if "isFolder" is specified, create the folder, else
-        create and write the posted contents to the specified file
-    '''
-    def POST(self,filename):
-        web.debug("FILE POST "+filename)
-        cserver = server_mgr.console_server(session.session_id)
-        x = web.input()
-        if hasattr(x, "isFolder"):
-            cserver.ensure_dir(filename)
+        if single_user:
+            session.user = getpass.getuser()
+            
+        if not hasattr(session, "user"):
+            # if not os.path.exists(db):
+                # web.debug(PREFIX+'User/Project database not found, creating...')
+                # createDB(db)
+            web.redirect('/login')
         else:
-            if hasattr(x, "contents"):
-                cserver.write_file(filename,x.contents)
-            else:
-                cserver.write_file(filename,'')
-            
-            
-    '''  remove the specified file
-    '''
-    def DELETE(self,filename):
-        web.debug("FILE DELETE "+filename)
-        cserver = server_mgr.console_server(session.session_id)
-        cserver.delete_file(filename)
-
-class Types:
-    ''' get a list of object types that the user can create
-    '''
-    def GET(self):
-        types = get_available_types()
-        types = packagedict(types)
-        
-        cserver = server_mgr.console_server(session.session_id)
-        types['working'] = packagedict(cserver.get_workingtypes())
-        
-        web.header('Content-Type', 'application/json')
-        return jsonpickle.encode(types)
-
-class AddOns:
-    ''' addon installation utility
-    '''
-    addonForm = form.Form( 
-        form.Textbox('Distribution'),
-        form.Button('Install'),
-    )
-    
-    ''' show available addons, prompt for addon to be installed
-    '''
-    def GET(self):
-        form = self.addonForm()
-        return render.addon(form)
-
-    ''' easy_install the POST'd addon
-    '''
-    def POST(self):
-        x = web.input()
-        url = 'http://openmdao.org/dists'
-        easy_install.main( ["-U","-f",url,x.Distribution] )
-        return render.closewindow()
+            server_mgr.console_server(session.session_id)
+            return render.mdao("OpenMDAO: "+session.user)
 
 if __name__ == "__main__":
     ''' pick an open port, launch web browser and run the server on that port

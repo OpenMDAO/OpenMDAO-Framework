@@ -56,7 +56,7 @@ openmdao.Palette = function(id,model) {
         // collapse all and add click functionality
         jQuery('.library-list').hide()
         jQuery('.library-header').click(function () {
-            $(this).next().toggle("normal")
+            jQuery(this).next().toggle("normal")
             return false;
         });
         
