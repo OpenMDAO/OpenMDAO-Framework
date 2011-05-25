@@ -3,7 +3,7 @@
 from numpy import exp, abs, pi, array,isnan
 from scipy.special import erf
 
-from openmdao.lib.datatypes.api import Socket, Str, ListStr, Enum, \
+from openmdao.lib.datatypes.api import Slot, Str, ListStr, Enum, \
      Float, Array,Event
 
 from openmdao.main.component import Component
@@ -13,7 +13,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 
 
 class MultiObjExpectedImprovement(Component):
-    best_cases = Socket(CaseSet, iotype="in",
+    best_cases = Slot(CaseSet, iotype="in",
                     desc="CaseIterator which contains only Pareto optimal cases \
                     according to criteria")
     

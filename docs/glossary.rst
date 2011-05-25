@@ -467,16 +467,16 @@ Glossary
         Database Abstraction Library
 
 
-      **Socket**
+      **Slot**
         A placeholder for a plugin within a :term:`Component`.
 
       
-      **SocketList**
+      **SlotList**
         A list that holds only objects that provide a particular interface.
 
 
-      **Sockets**
-        See :term:`Socket`.
+      **Slots**
+        See :term:`Slot`.
 
 
       **SWIG**

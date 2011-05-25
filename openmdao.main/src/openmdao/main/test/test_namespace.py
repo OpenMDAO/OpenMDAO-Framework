@@ -2,7 +2,7 @@
 import unittest
 
 from openmdao.main.api import Container, Component, Assembly, set_as_top
-from openmdao.lib.datatypes.api import Float, Socket
+from openmdao.lib.datatypes.api import Float, Slot
 
 class DumbContainer2(Container):
     def __init__(self, *args, **kwargs):
@@ -24,8 +24,8 @@ class DumbContainer(Container):
     
 
 class SimpleComp(Component):
-    cont_in = Socket(DumbContainer, iotype='in')
-    cont_out = Socket(DumbContainer, iotype='out')
+    cont_in = Slot(DumbContainer, iotype='in')
+    cont_out = Slot(DumbContainer, iotype='out')
     mult = Float(1., iotype='in')
     
     def __init__(self, *args, **kwargs):

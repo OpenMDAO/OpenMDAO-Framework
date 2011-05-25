@@ -5,8 +5,8 @@ from numpy import array
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
-from openmdao.main.api import Component, Case, Socket
-from openmdao.lib.datatypes.api import Socket, ListStr, Event, \
+from openmdao.main.api import Component, Case, Slot
+from openmdao.lib.datatypes.api import Slot, ListStr, Event, \
      List, Str, Dict
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
      ICaseIterator
@@ -21,8 +21,8 @@ class MetaModel(Component):
     See the Standard Library Reference for additional information on the :ref:`MetaModel` component."""
     
     # pylint: disable-msg=E1101
-    model = Socket(IComponent, allow_none=True,
-                   desc='Socket for the Component or Assembly being '
+    model = Slot(IComponent, allow_none=True,
+                   desc='Slot for the Component or Assembly being '
                    'encapsulated.')
     includes = ListStr(iotype='in', 
                        desc='A list of names of variables to be included '
@@ -31,14 +31,14 @@ class MetaModel(Component):
                        desc='A list of names of variables to be excluded '
                        'from the public interface.')
     
-    warm_start_data = Socket(ICaseIterator,iotype="in",
+    warm_start_data = Slot(ICaseIterator,iotype="in",
                               desc="CaseIterator containing cases to use as "
                               "initial training data. When this is set, all "
                               "previous training data is cleared, and replaced "
                               "with data from this CaseIterator")
     
     surrogate = Dict(key_train=Str,
-                     value_trait=Socket(ISurrogate),
+                     value_trait=Slot(ISurrogate),
                      allow_none=True,
                      desc='An dictionary provides a mapping between variables and '
                           'surrogate models for each output. The "default" '
@@ -48,7 +48,7 @@ class MetaModel(Component):
                     )
                        
     
-    recorder = Socket(ICaseRecorder,
+    recorder = Slot(ICaseRecorder,
                         desc = 'Records training cases')
 
     # when fired, the next execution will train the metamodel
@@ -237,7 +237,7 @@ class MetaModel(Component):
                             "surrogate model for all outputs",ValueError)
                     trait_type = surrogate.get_uncertain_value(1.0).__class__()
                     self.add_trait(name, 
-                                   Socket(trait_type, iotype='out', desc=trait.desc))
+                                   Slot(trait_type, iotype='out', desc=trait.desc))
                     self._surrogate_info[name] = (surrogate.__class__(), []) # (surrogate,output_history)
                     new_model_traitnames.add(name)
                     setattr(self, name, surrogate.get_uncertain_value(getattr(newmodel,name)))

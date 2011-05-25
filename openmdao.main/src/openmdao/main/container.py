@@ -35,7 +35,7 @@ from multiprocessing import connection
 
 from openmdao.main.variable import Variable
 from openmdao.main.filevar import FileRef
-from openmdao.main.pluginsock import Socket
+from openmdao.main.slot import Slot
 
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
@@ -552,13 +552,13 @@ class Container(HasTraits):
                                  name, NameError)
         trait = self.get_trait(name)
         if trait is not None:
-            # for Socket traits, set their value to None but don't remove
+            # for Slot traits, set their value to None but don't remove
             # the trait
             obj = getattr(self, name)
             if obj is not None and not is_instance(obj, Container):
                 self.raise_exception('attribute %s is not a Container' % name,
                                      RuntimeError)
-            if trait.is_trait_type(Socket):
+            if trait.is_trait_type(Slot):
                 try:
                     setattr(self, name, None)
                 except TypeError as err:

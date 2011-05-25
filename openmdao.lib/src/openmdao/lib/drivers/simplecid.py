@@ -4,7 +4,7 @@ with a CaseRecorder """
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Driver
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
-from openmdao.main.pluginsock import Socket
+from openmdao.main.slot import Slot
 testdict = {}
 
 class SimpleCaseIterDriver(Driver):
@@ -23,7 +23,7 @@ class SimpleCaseIterDriver(Driver):
     """
 
     # pylint: disable-msg=E1101
-    iterator = Socket(ICaseIterator, desc='Source of Cases.', required=True)
+    iterator = Slot(ICaseIterator, desc='Source of Cases.', required=True)
     
     def __init__(self, *args, **kwargs):
         super(SimpleCaseIterDriver, self).__init__(*args, **kwargs)

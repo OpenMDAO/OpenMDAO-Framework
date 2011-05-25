@@ -5,7 +5,7 @@
 """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import ListStr, Socket
+from openmdao.lib.datatypes.api import ListStr, Slot
 
 from openmdao.main.case import Case
 from openmdao.main.interfaces import IDOEgenerator
@@ -19,7 +19,7 @@ class DOEdriver(CaseIterDriverBase):
     """ Driver for Design of Experiments """
     
     # pylint: disable-msg=E1101
-    DOEgenerator = Socket(IDOEgenerator, iotype='in', required=True,
+    DOEgenerator = Slot(IDOEgenerator, iotype='in', required=True,
                           desc='Iterator supplying normalized DOE values.')
     
     case_outputs = ListStr([], iotype='in', 

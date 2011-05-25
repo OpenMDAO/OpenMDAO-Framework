@@ -10,7 +10,7 @@ from pyevolve import G1DList, GAllele, GenomeBase, Scaling
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Python, Enum, Float, Int, Bool, Socket
+from openmdao.lib.datatypes.api import Python, Enum, Float, Int, Bool, Slot
 
 from openmdao.main.api import Driver 
 from openmdao.main.hasparameters import HasParameters
@@ -59,7 +59,7 @@ class Genetic(Driver):
     elitism = Bool(False, iotype="in", desc="Controls the use of elitism in "
                                             "the creation of new generations.")
     
-    best_individual = Socket(klass = GenomeBase.GenomeBase, iotype="out", 
+    best_individual = Slot(klass = GenomeBase.GenomeBase, iotype="out", 
                                desc="The genome with the "
                                "best score from the optimization.") 
     

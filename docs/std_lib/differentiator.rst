@@ -10,7 +10,7 @@ A `differentiator` is a special object that can be used by a driver to calculate
 the first or second derivatives of a workflow. The derivatives are calculated
 from the parameter inputs to the objective and constraint outputs. Any driver
 that has been decorated with the ``add_delegate`` decorator containing the
-UsesGradients or UsesHessians delegates contains a Socket 
+UsesGradients or UsesHessians delegates contains a Slot 
 called `Differentiator`. This socket can take a Differentiator object.
  
 .. index:: FiniteDifference

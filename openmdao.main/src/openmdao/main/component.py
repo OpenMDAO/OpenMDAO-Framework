@@ -25,7 +25,7 @@ from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
-from openmdao.main.pluginsock import Socket
+from openmdao.main.slot import Slot
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -190,7 +190,7 @@ class Component (Container):
         version.
         """
         for name, value in self.traits(required=True).items():
-            if value.is_trait_type(Socket) and getattr(self, name) is None:
+            if value.is_trait_type(Slot) and getattr(self, name) is None:
                 self.raise_exception("required plugin '%s' is not present" %
                                      name, RuntimeError)
     
