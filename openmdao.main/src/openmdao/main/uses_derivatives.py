@@ -10,7 +10,7 @@
 """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.pluginsock import Socket
+from openmdao.main.slot import Slot
 from openmdao.main.interfaces import IDifferentiator
 
 
@@ -21,8 +21,8 @@ class UsesDerivatives_Base(object):
         self._parent = parent
         
         parent.add_trait("differentiator", 
-                         Socket(IDifferentiator, iotype='in',
-                                desc = "Socket for a differentiator"))
+                         Slot(IDifferentiator, iotype='in',
+                                desc = "Slot for a differentiator"))
                                                          
 
     def _list_driver_connections(self):

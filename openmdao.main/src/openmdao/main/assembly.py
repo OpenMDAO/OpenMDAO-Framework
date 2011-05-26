@@ -13,7 +13,7 @@ from openmdao.main.interfaces import implements, IDriver
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
-from openmdao.main.pluginsock import Socket
+from openmdao.main.slot import Slot
 from openmdao.main.driver import Driver
 from openmdao.main.tvalwrapper import TraitValWrapper
 from openmdao.main.rbac import rbac
@@ -41,7 +41,7 @@ class Assembly (Component):
     Driver called 'driver'.
     """
     
-    driver = Socket(IDriver, allow_none=True,
+    driver = Slot(IDriver, allow_none=True,
                     desc="The top level Driver that manages execution of "
                     "this Assembly.")
     

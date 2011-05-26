@@ -8,7 +8,7 @@ and was written by someone without much 'mool' knowledge.
 __all__ = ('MidFidelity',)
 
 
-from openmdao.lib.datatypes.api import Float, Int, Array, Str, Socket
+from openmdao.lib.datatypes.api import Float, Int, Array, Str, Slot
 
 import mool.Optimization.MidFiModel
 
@@ -20,11 +20,9 @@ import wrapper
 class MidFidelity(Assembly):
     """ Wrapper for M4 variable fidelity capability. """
 
-    # Sockets.
-    # TODO: make a Socket Trait that supports required/optional, or determine
-    # if existing traits class will work
-    lofi_model = Socket(Component, desc='Low fidelity model', required=True)
-    hifi_model = Socket(Component, desc='High fidelity model', required=True)
+    # Slots.
+    lofi_model = Slot(Component, desc='Low fidelity model', required=True)
+    hifi_model = Slot(Component, desc='High fidelity model', required=True)
 
     # Inputs.
     # No 'Option' variables yet.

@@ -1,11 +1,11 @@
 """ Pareto Filter -- finds non-dominated cases. """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Socket, List, ListStr
+from openmdao.lib.datatypes.api import Slot, List, ListStr
 from openmdao.lib.casehandlers.api import CaseSet, caseiter_to_caseset
 
 from openmdao.main.component import Component
-from openmdao.main.pluginsock import Socket
+from openmdao.main.slot import Slot
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 
@@ -21,17 +21,17 @@ class ParetoFilter(Component):
                             "filtering. Note that only case outputs are allowed as "
                             "criteria.")
     
-    #case_set = Socket(ICaseIterator, iotype="in",
+    #case_set = Slot(ICaseIterator, iotype="in",
     #                    desc="CaseIterator with the cases to be filtered to "
     #                         "Find the pareto optimal subset.")
                              
-    case_sets = List(Socket(ICaseIterator), value=[], iotype="in",
+    case_sets = List(Slot(ICaseIterator), value=[], iotype="in",
                      desc="CaseSet with the cases to be filtered to "
                      "Find the pareto optimal subset.")
     
-    pareto_set = Socket(CaseSet, iotype="out", 
+    pareto_set = Slot(CaseSet, iotype="out", 
                         desc="Resulting collection of pareto optimal cases.",copy="shallow")
-    dominated_set = Socket(CaseSet, iotype="out",
+    dominated_set = Slot(CaseSet, iotype="out",
                            desc="Resulting collection of dominated cases.",copy="shallow")
     
     def _is_dominated(self, y1, y2):

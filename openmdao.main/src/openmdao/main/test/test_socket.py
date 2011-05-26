@@ -3,7 +3,7 @@ import unittest
 
 from enthought.traits.api import Int
 
-from openmdao.main.api import Assembly, Component, Container, Case, Socket
+from openmdao.main.api import Assembly, Component, Container, Case, Slot
 from openmdao.main.interfaces import implements, ICaseIterator
 
 import zope.interface
@@ -13,38 +13,38 @@ class CIterator(object):
     def __iter__(self):
         return iter([])
     
-class SocketComp(Assembly):
-    iterator = Socket(ICaseIterator, allow_none=False, desc='cases to evaluate')
+class SlotComp(Assembly):
+    iterator = Slot(ICaseIterator, allow_none=False, desc='cases to evaluate')
     num_cases = Int(0, iotype='out')
     
     def __init__(self):
-        super(SocketComp, self).__init__('SocketComp')
+        super(SlotComp, self).__init__('SlotComp')
         
     def execute(self):
         self.num_cases = 0
         for case in self.iterator:
             self.num_cases += 1
 
-class SocketComp2(SocketComp):
-    somesocket = Socket(Assembly)
+class SlotComp2(SlotComp):
+    somesocket = Slot(Assembly)
     def __init__(self):
-        super(SocketComp2, self).__init__()
+        super(SlotComp2, self).__init__()
         
-class SocketComp3(SocketComp2):
-    iterator = Socket(Assembly, desc='another dumb socket')
+class SlotComp3(SlotComp2):
+    iterator = Slot(Assembly, desc='another dumb socket')
     
     def __init__(self):
-        super(SocketComp3, self).__init__()
+        super(SlotComp3, self).__init__()
         
-class SocketComp4(SocketComp3):
+class SlotComp4(SlotComp3):
     def __init__(self):
-        super(SocketComp4, self).__init__()
+        super(SlotComp4, self).__init__()
         
-class SocketTestCase(unittest.TestCase):
+class SlotTestCase(unittest.TestCase):
 
     def setUp(self):
         """this setup function will be called before each test in this class"""
-        self.sc = SocketComp()
+        self.sc = SlotComp()
     
     def tearDown(self):
         """this teardown function will be called after each test"""
@@ -59,7 +59,7 @@ class SocketTestCase(unittest.TestCase):
         try:
             plugin = self.sc.no_socket
         except AttributeError, exc:
-            self.assertEqual("'SocketComp' object has no attribute 'no_socket'",                             str(exc))
+            self.assertEqual("'SlotComp' object has no attribute 'no_socket'",                             str(exc))
         else:
             self.fail('AttributeError expected')
 
@@ -83,26 +83,26 @@ class SocketTestCase(unittest.TestCase):
         try:
             x = self.sc.no_socket
         except AttributeError, exc:
-            self.assertEqual("'SocketComp' object has no attribute 'no_socket'",
+            self.assertEqual("'SlotComp' object has no attribute 'no_socket'",
                              str(exc))
         else:
             self.fail('AttributeError expected')
             
     def test_inherit_sockets(self):
-        sc2 = SocketComp2()
+        sc2 = SlotComp2()
         self.assertEqual(sc2.iterator, None)
         lci = CIterator()
         sc2.iterator = lci
         self.assertEqual(sc2.iterator, lci)
 
-        sc3 = SocketComp3()
+        sc3 = SlotComp3()
         self.assertEqual(sc3.somesocket, None)
         asm = Assembly()
         sc3.somesocket = asm
         self.assertEqual(sc3.somesocket, asm)
         
     def test_socket_override(self):
-        sc2 = SocketComp2()
+        sc2 = SlotComp2()
         sc2.iterator = CIterator()
         try:
             sc2.iterator = Assembly()
@@ -111,7 +111,7 @@ class SocketTestCase(unittest.TestCase):
         else:
             self.fail('TypeError expected')
             
-        sc4 = SocketComp4()
+        sc4 = SlotComp4()
         sc4.iterator = Assembly()
         try:
             sc4.iterator = CIterator()
@@ -143,13 +143,13 @@ class MyOtherClass(object):
     def myfunct(a, b):
         return a+b
 
-class SocketTestCase2(unittest.TestCase):
+class SlotTestCase2(unittest.TestCase):
 
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.hobj = Container()
-        self.hobj.add_trait('iface_sock', Socket(MyIface))
-        self.hobj.add_trait('class_sock', Socket(MyClass))
+        self.hobj.add_trait('iface_sock', Slot(MyIface))
+        self.hobj.add_trait('class_sock', Slot(MyClass))
                        
     def test_set(self):
         mc = MyClass()

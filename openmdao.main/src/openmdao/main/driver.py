@@ -15,7 +15,7 @@ from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
 from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
-from openmdao.main.pluginsock import Socket
+from openmdao.main.slot import Slot
 
 @add_delegate(HasEvents)
 class Driver(Component):
@@ -24,12 +24,12 @@ class Driver(Component):
     
     implements(IDriver, IHasEvents)
 
-    recorder = Socket(ICaseRecorder, desc='Case recorder for iteration data.', 
+    recorder = Slot(ICaseRecorder, desc='Case recorder for iteration data.', 
                      required=False) 
 
     # set factory here so we see a default value in the docs, even
     # though we replace it with a new Dataflow in __init__
-    workflow = Socket(Workflow, allow_none=True, required=True, factory=Dataflow)
+    workflow = Slot(Workflow, allow_none=True, required=True, factory=Dataflow)
     
     def __init__(self, doc=None):
         self._iter = None

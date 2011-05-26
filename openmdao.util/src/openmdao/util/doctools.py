@@ -11,7 +11,7 @@ from enthought.traits.trait_base import not_none
 from enthought.traits.trait_types import _InstanceArgs
 from inspect import getmro, ismodule, getmembers, ismethod, isfunction, isclass
 
-from openmdao.main.pluginsock import Socket
+from openmdao.main.slot import Slot
 
 excludes = (Any, Python, Event, type)
 
@@ -115,7 +115,7 @@ def get_traits_info(app, what, name, obj, options, lines):
                     keepers_in[t]=val
                 elif val.trait_type._metadata["iotype"] == "out":
                     keepers_out[t]=val
-            elif type(val.trait_type).__name__ in ["Instance","Socket"]:
+            elif type(val.trait_type).__name__ in ["Instance","Slot"]:
                 keepers_instance[t]=val        
             else:
                 keepers_undefined[t]=val
@@ -129,14 +129,14 @@ def get_traits_info(app, what, name, obj, options, lines):
         for t, val in sortedDict:
             lines.append('')
             #Now just need to spit out the traits in the proper format into the documentation 
-            if val.is_trait_type(Instance) or val.is_trait_type(Socket):
+            if val.is_trait_type(Instance) or val.is_trait_type(Slot):
                 lines.extend(["*%s* (%s) **%s**" %(type(val.trait_type).__name__, val.trait_type.klass.__name__, t)])
             else:
                 lines.extend(["*%s* **%s**" %(type(val.trait_type).__name__, t)])
             if val.desc is not None:
                 lines.extend(["  %s" %val.desc])
                 lines.append('')
-            if val.is_trait_type(Instance) or val.is_trait_type(Socket):
+            if val.is_trait_type(Instance) or val.is_trait_type(Slot):
                 lines.extend(["  * default:  %s" % _get_instance_default(val.trait_type)]) 
             else:
                 lines.extend(["  * default:  '%s'" %(val.trait_type).default_value]) 

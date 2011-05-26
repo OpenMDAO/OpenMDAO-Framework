@@ -14,7 +14,7 @@ from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
 from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer
-from openmdao.main.pluginsock import Socket
+from openmdao.main.slot import Slot
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
@@ -676,7 +676,7 @@ class CaseIteratorDriver(CaseIterDriverBase):
     servers obtained from the :class:`ResourceAllocationManager`.
     """
 
-    iterator = Socket(ICaseIterator, iotype='in',
+    iterator = Slot(ICaseIterator, iotype='in',
                       desc='Iterator supplying Cases to evaluate.')
     
     def get_case_iterator(self):

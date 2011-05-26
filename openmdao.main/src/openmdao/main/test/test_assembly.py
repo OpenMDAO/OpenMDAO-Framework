@@ -3,7 +3,7 @@
 import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Float, Str, Socket, List
+from openmdao.lib.datatypes.api import Float, Str, Slot, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
 
@@ -53,9 +53,9 @@ class DummyComp(Component):
     sout = Str(iotype='out')
     slistout = List(Str, iotype='out')
     
-    dummy_in = Socket(Component, iotype='in')
-    dummy_out = Socket(Component, iotype='out')
-    dummy_out_no_copy = Socket(Component, iotype='out', copy=None)
+    dummy_in = Slot(Component, iotype='in')
+    dummy_out = Slot(Component, iotype='out')
+    dummy_out_no_copy = Slot(Component, iotype='out', copy=None)
     
     def __init__(self):
         super(DummyComp, self).__init__()

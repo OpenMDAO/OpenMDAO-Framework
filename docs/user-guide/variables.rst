@@ -162,7 +162,7 @@ Built-in Variable Types
 +----------+--------------------------------------------------------------+
 | Range    | Deprecated. Use OpenMDAO's Int or Float.                     |
 +----------+--------------------------------------------------------------+
-| Socket   | ``Socket( [klass = None, desc = None, iotype = None,         |
+| Slot     | ``Slot( [klass = None, desc = None, iotype = None,           |
 |          | factory = None, args = None, kw = None,                      |
 |          | allow_none = True, adapt = None,                             |
 |          | required = False] )``                                        |
@@ -441,15 +441,15 @@ mark a file as binary.
 
     Provide some examples to demonstrate the options.
                 
-.. index:: Socket Traits
+.. index:: Slot Traits
 
-*Socket Traits*
+*Slot Traits*
 ++++++++++++++++++
 
-An *Socket* is a trait that requires any value assigned to it to be either an instance of a
+An *Slot* is a trait that requires any value assigned to it to be either an instance of a
 specific class or an implementation of a specific Interface. The class or Interface to be matched is
 the first argument to the constructor. Failure to match the specified class or Interface will result
-in an exception being raised. Socket traits are typically used to implement 
+in an exception being raised. Slot traits are typically used to implement 
 placeholders for plugins within a component, but they may also be used to implement Variables by
 setting their *iotype* metadata attribute to ``'in'`` or ``'out'``.  In this case, it is important
 to  also set the *copy* metadata attribute so the framework knows how to copy the data to connected
@@ -461,25 +461,25 @@ made.
 .. testcode:: instance_example
 
     from openmdao.main.api import Component
-    from openmdao.lib.datatypes.api import Socket
+    from openmdao.lib.datatypes.api import Slot
     from openmdao.main.interfaces import ICaseRecorder, ICaseIterator
     
     
     class Fred(Component):
         """ A component that takes a class as an input """
     
-        recorder = Socket(ICaseRecorder, desc='Something to append() to.',
+        recorder = Slot(ICaseRecorder, desc='Something to append() to.',
                           required=True)
-        caseiter = Socket(ICaseIterator, desc='set of cases to run.',
+        caseiter = Slot(ICaseIterator, desc='set of cases to run.',
                           iotype='in')
  
-In this example, we have one Socket and one input that is a Socket. The
+In this example, we have one Slot and one input that is a Slot. The
 input called *caseiter* requires data objects that implement the ``ICaseIterator``
-interface. The Socket called *recorder* is required to implement the
+interface. The Slot called *recorder* is required to implement the
 ``ICaseRecorder`` interface.
 
 The attribute *required* is used to indicate whether the object that plugs into
-a Socket is required. If ``required`` is True, then an exception will be raised
+a Slot is required. If ``required`` is True, then an exception will be raised
 if the object is not present.
 
 

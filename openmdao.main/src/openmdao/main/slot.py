@@ -1,5 +1,5 @@
 """
-Trait for a Socket meant to contain an object of a particular type
+Trait for a Slot meant to contain an object of a particular type
 or having a particular interface (either a Traits interface or a
 zope.interface).  
 """
@@ -11,7 +11,7 @@ zope.interface).
 # don't have this problem.
 
 #public symbols
-__all__ = ["Socket"]
+__all__ = ["Slot"]
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Instance, Interface
@@ -19,7 +19,7 @@ import zope.interface
 
 from openmdao.main.variable import Variable
 
-class Socket(Variable):
+class Slot(Variable):
     """A trait for an object of a particular type or implementing a particular
     interface. Both Traits Interfaces and zope.interface.Interfaces are
     supported.
@@ -48,7 +48,7 @@ class Socket(Variable):
                                       factory=factory, args=args, kw=kw,
                                       **metadata)
             default_value = self._instance.default_value
-        super(Socket, self).__init__(default_value, **metadata)
+        super(Slot, self).__init__(default_value, **metadata)
 
     def validate ( self, obj, name, value ):
         """ Validates that the value is a valid object instance."""

@@ -3,7 +3,7 @@
 from numpy import exp, abs, pi
 from scipy.special import erf
 
-from openmdao.lib.datatypes.api import Socket, Str, Float
+from openmdao.lib.datatypes.api import Slot, Str, Float
 from openmdao.lib.casehandlers.api import CaseSet
 
 from openmdao.main.api import Component
@@ -12,7 +12,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 
 
 class ExpectedImprovement(Component):
-    best_case = Socket(CaseSet, iotype="in",
+    best_case = Slot(CaseSet, iotype="in",
                        desc="CaseSet which contains a single case, "
                             "representing the criteria value.", required=True)
     
@@ -20,7 +20,7 @@ class ExpectedImprovement(Component):
                    desc="Name of the variable to maximize the expected "
                         "improvement around. Must be a NormalDistrubtion type.")
     
-    predicted_value = Socket(NormalDistribution,iotype="in",
+    predicted_value = Slot(NormalDistribution,iotype="in",
                              desc="the Normal Distribution of the predicted value "
                                   "for some function at some point where you wish to"
                                   " calculate the EI.")
