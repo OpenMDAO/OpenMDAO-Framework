@@ -1,8 +1,6 @@
 """
     Solution of the sellar analytical problem using IDF.
 """
-
-# pylint: disable-msg=E0611,F0401
 from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                SellarDiscipline2
 from openmdao.main.api import Assembly, set_as_top
@@ -18,9 +16,7 @@ class SellarIDF(Assembly):
         Optimal Design at (1.9776, 0, 0)
         
         Optimal Objective = 3.18339"""
-        
-        # pylint: disable-msg=E1101
-        
+                
         super(SellarIDF, self).__init__()
 
         # create Optimizer instance
@@ -37,8 +33,11 @@ class SellarIDF(Assembly):
         # Optimization parameters
         self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
         
+        #Global Design Variables
         self.driver.add_parameter(('dis1.z1','dis2.z1'), low = -10.0, high=10.0)
         self.driver.add_parameter(('dis1.z2','dis2.z2'), low = 0.0,   high=10.0)
+        
+        #Local Design Variables and Coupling Variables
         self.driver.add_parameter('dis1.x1',      low = 0.0,   high=10.0)
         self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
         self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
