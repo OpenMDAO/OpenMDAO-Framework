@@ -299,7 +299,7 @@ Finally, putting it all together gives:
         # End sellar_MDF.py
 
 This problem is contained in 
-`:download:`sellar_MDF.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_MDF.py>`. 
+:download:`sellar_MDF.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_MDF.py>`. 
 We added just a few lines at the end to instantiate the assembly class we defined, and then run it and 
 print out some useful information. Executing it at the command line should produce
 output that resembles this:
@@ -314,10 +314,8 @@ output that resembles this:
         Elapsed time:  0.121051073074 seconds
 
         
-Our problem formulation only has two coupling variables, so we can use a fixed point iterator as the solver
-to converge the disciplines. But you can replace that witha a better solver. Fixed point
-iteration works for some problems, including this one, but may not converge to
-a solution for other problems and can't support more than two coupling variables. 
+We chose initially chose to use *FixedPointIterator* for our solver, but you can replace that witha a better one. Fixed point
+iteration works for some problems, including this one, but sometimes another type of solver might be prefered. 
 OpenMDAO also contains a Broyden solver called
 *BroydenSolver*. This solver is based on a quasi-Newton-Raphson algorithm found in 
 ``scipy.nonlinear``. It uses a Broyden update to approximate the Jacobian. If we
@@ -350,8 +348,10 @@ We just change some of solver specific settings.
         self.solver.tol = .0000001
         self.solver.algorithm = "broyden2"
         
-The rest of the file does not change at all. So you can see that it's pretty easy to reconfigure drivers 
-using this setup. 
+The rest of the file does not change at all either. So you can see that it's pretty easy to reconfigure drivers 
+using this setup. Here is the new file, with the modifications: 
+:download:`sellar_MDF_solver.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_MDF_solver.py>`.
+
         
 
 

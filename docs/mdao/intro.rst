@@ -12,12 +12,12 @@ two coupled disciplines using several MDAO strategies, including:
 #. Independent Design Feasible (IDF)
 #. Collaborative Optimization (CO)
 
-The tutorial will introduce you to some new topics that include using the iteration
-hierarchy to set up models with nested optimization loops, using a solver to "close
-the loop" in a coupled multidisciplinary simulation, and using a broadcaster to set
-the values of design variables in multiple places at one time.
+The tutorial will introduce you to using the iteration hierarchy to construct these three 
+common MDAO architectures from scratch. If you are thinking about creating a new architecture, 
+or just implementing one you have seen, but is not currently available within OpenMDAO, then this 
+tutorial will show you how. 
 
-This tutorial covers some of the more advanced capabilities of OpenMDAO. You should read and
+We will cover some of the more advanced capabilities of OpenMDAO. You should read and
 understand :ref:`A-Simple-Tutorial-Problem` before starting this one. An
 understanding of the material presented in :ref:`A-More-Complex-Tutorial-Problem` is also
 recommended.
