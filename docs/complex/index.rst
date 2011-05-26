@@ -12,7 +12,6 @@ A More Complex Tutorial Problem
    python_shell
    external_module
    assemblies
-   vehicle
    drivers
    setting_up_opt
    solving_opt

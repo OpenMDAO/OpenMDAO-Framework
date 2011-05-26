@@ -64,6 +64,8 @@ def _testbranch(hostname):
                     print("Please wait while the environment is activated and the tests are run")
                     run('source activate && echo $PATH && echo environment activated, please wait while tests run && openmdao_test -xv')
                     print('Tests completed on %s' % hostname)
+            res2=run('%s testbranch' % removeit) 
+	    res3=run('%s *testbranch.tar *testbranch.tar.gz' % removeit)
          
         else:  #we're remoting into windows (storm)
             #remove any previous testbranches on remote host
@@ -97,6 +99,9 @@ def _testbranch(hostname):
             #change to devenv\Scripts, activate the envronment, and run tests
             run('call winteststeps.bat')
             print('Tests completed on %s' % hostname)   
+            run("""if exist testbranch/nul rmdir /s /q testbranch""") 
+            run("""if exist stormtestbranch.tar del stormtestbranch.tar""")     
+            run("""if exist stormtestbranch.tar.gz del stormtestbranch.tar.gz""")    
 
 def waitForLine(fname, linePattern, grepArgs=''):
     run("tail -F '%s' | grep -m 1 %s '%s'" % (fname, grepArgs, linePattern))

@@ -856,7 +856,7 @@ like this.
 The *x* input and the *F(x)* output equation are specified as string expressions using the
 ``add_parameter`` and ``add_constraint`` methods. The constraint contains the
 equation ``x = f(x)``, which we are trying to solve. Note that this is a single-input
-single-output method, so it os only valid to specify one constraint and one parameter.
+single-output method, so it is only valid to specify one constraint and one parameter.
             
 .. doctest:: FPI
 
