@@ -25,7 +25,7 @@ calculation that it performs is to add the two inputs to produce the output.
 .. _`Conceptual-View-of-a-Simple-Component`:
 
 
-.. figure:: ../generated_images/Component.png
+.. figure:: Component.png
    :align: center
    :alt: The component is represented by a box with 2 inputs entering from the left and an output leaving at the right; calculation is performed inside the component.
 
@@ -57,7 +57,7 @@ appears in two different workflows.
    
 .. _`iteration hierarchy concept`:
 
-.. figure:: ../generated_images/IterationHierarchy.png
+.. figure:: IterationHierarchy.png
    :align: center
    :alt: Figure shows workflows for each of 4 drivers; the workflows contain a total of 5 components
 
@@ -74,7 +74,7 @@ connected objects.
 
 .. _`driver intro2`:
 
-.. figure:: ../generated_images/Intro-Driver2.png
+.. figure:: Intro-Driver2.png
    :align: center
    :alt: Refer to adjacent text
 
@@ -87,7 +87,7 @@ containing two other components, resulting in the following:
 
 .. _`driver intro1`:
 
-.. figure:: ../generated_images/Intro-Driver1.png
+.. figure:: Intro-Driver1.png
    :align: center
    :alt: Refer to caption
 
@@ -107,7 +107,7 @@ that the framework expects.  To learn how to create your own plugins, see the
 :ref:`Plugin-Developer-Guide`.
 
 
-.. figure:: ../generated_images/TopContext.png
+.. figure:: TopContext.png
    :align: center
    :alt: A large circle contains plugins that surround the framework (a box); inside the framework are tools and interfaces.
 

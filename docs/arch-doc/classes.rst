@@ -31,7 +31,7 @@ allows for many levels of nested iteration *within the same Assembly.*
 
 .. _`Class Diagram of Core Classes`:
 
-.. figure:: ../generated_images/ModelClasses.png
+.. figure:: ModelClasses.png
    :align: center
    :alt: Class diagram showing the core classes: Container, Component, Assembly, Driver, and Workflow 
 
@@ -64,7 +64,7 @@ units and range checking.
 
 .. _Traits: http://code.enthought.com/projects/traits/documentation.php
 
-.. figure:: ../generated_images/VariableClasses.png
+.. figure:: VariableClasses.png
     :align: center
     :alt: Class diagream showing the built-in traits, including custom traits and those from Enthought's Traits package
     
@@ -87,7 +87,7 @@ local Python object, and the true location of the object requested doesn't
 matter.
 
 
-.. figure:: ../generated_images/CreatorClasses.png
+.. figure:: CreatorClasses.png
    :align: center
    :alt: Class diagram showing Factory classes: FactoryManager, Factory, ImportFactory, and ObjServerFactory
    
@@ -112,7 +112,7 @@ protocols and services, while the Simulation class contains the top-level
 component and the ResourceAllocationManager for this simulation object.
 
 
-.. figure:: ../generated_images/ServerClasses.png
+.. figure:: ServerClasses.png
    :align: center
    :alt: Class diagram of the server classes: ObjServerFactory, Simulation, Server, ServerManager, and ObjServer
 

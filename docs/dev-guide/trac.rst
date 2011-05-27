@@ -21,7 +21,7 @@ To create a Trac ticket for yourself, follow these steps:
     
     The *Create New Ticket* page will appear, as shown below:
     
-    .. figure:: ../images/dev-guide/create_ticket.png
+    .. figure:: create_ticket.png
        :align: center
  
        Creating a ticket in Trac 
@@ -39,7 +39,7 @@ To create a Trac ticket for yourself, follow these steps:
     
 |
     
-    .. figure:: ../images/dev-guide/new_ticket.png
+    .. figure:: new_ticket.png
        :align: center
    
        New ticket with assigned number (partial page)
@@ -81,7 +81,7 @@ While working on a branch/ticket, you may want to edit the ticket for several re
     *ready_merge*, click on the radio button next to **submit_for_merge** and then click the **Submit
     changes** button.
 
-    .. figure:: ../images/dev-guide/working.png
+    .. figure:: working.png
        :align: center
      
  
