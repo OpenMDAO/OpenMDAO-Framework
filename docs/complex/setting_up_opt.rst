@@ -16,7 +16,7 @@ The optimization will be handled by the gradient optimizer CONMIN.
 
 To tackle this problem, let's take a look at the iteration hierarchy. 
 
-.. figure:: ../images/tutorials/Driver_Process_Definition.png
+.. figure:: Driver_Process_Definition.png
    :align: center
    :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
    
