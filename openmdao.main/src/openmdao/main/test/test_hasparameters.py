@@ -35,6 +35,14 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.add('comp', ExecComp(exprs=['c=x+y','d=x-y']))
         self.top.driver.workflow.add('comp')
         
+    def test_single_get_referenced_compnames(self): 
+        self.top.driver.add_parameter('comp.x', 0., 1.e99) 
+        self.assertEqual(set(["comp"]),self.top.driver.get_parameters()['comp.x'].get_referenced_compnames())
+        
+    def test_group_get_referenced_compnames(self): 
+        self.top.driver.add_parameter(('comp.x','comp.y'), 0., 1.e99) 
+        self.assertEqual(set(["comp"]),self.top.driver.get_parameters()[('comp.x','comp.y')].get_referenced_compnames())    
+        
     def test_set_params(self):
         self.top.driver.add_parameter('comp.x', 0., 1.e99) 
         self.top.driver.add_parameter('comp.y', 0., 1.e99)

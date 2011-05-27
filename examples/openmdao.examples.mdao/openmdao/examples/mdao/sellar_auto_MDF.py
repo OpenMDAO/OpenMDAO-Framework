@@ -41,16 +41,13 @@ class MDF(object):
         #identify disciplines on a more granular level. This is all done via the parameter
         disciplines = set()
 
-        #TODO: methods in has parameters for this? 
-        #need to split into global and local des vars
-        for k,v in params.iteritems(): 
-            if isinstance(k,tuple): 
-                global_dvs.append(v)
-                disciplines.update(v.get_referenced_compnames())
-            else: 
-                local_dvs.append(v)
-                disciplines.update(v.get_referenced_compnames())
         
+        for k,v in self.parent.get_global_des_vars().iteritems(): 
+            global_dvs.append(v)
+            disciplines.update(v.get_referenced_compnames())
+        for k,v in self.parent.get_local_des_vars().iteritems(): 
+            local_dvs.append(v)
+            disciplines.update(v.get_referenced_compnames())
         
         #TODO: possibly add methods for passing parameters directly?         
         #connect the broadcast outputs to the disciplines
@@ -66,7 +63,7 @@ class MDF(object):
         #TODO: possibly add method for passing constraint directly?     
         #add the constraints to the driver
         for const in self.parent.list_constraints(): 
-            self.parent.driver.add_constraint(str(const))
+            self.parent.driver.add_constraint(const)
             
         #set the global objective
         self.parent.driver.add_objective(self.parent.list_objective())
@@ -82,7 +79,7 @@ class MDF(object):
         for indep,dep in self.parent.list_coupling_vars(): 
             self.parent.solver.add_parameter(indep, low=-9.e99, high=9.e99)
             self.parent.solver.add_constraint("%s=%s"%(indep,dep))
-            
+
         #setup the workflows
         self.parent.driver.workflow.add(['solver'])
         self.parent.solver.workflow.add(disciplines)
@@ -115,16 +112,16 @@ class SellarMDF(ArchitectureAssembly):
         
         #START OF MDAO Problem Definition
         #Global Des Vars
-        self.add_parameter(('dis1.z1',"dis2.z1"),low=-10,high=10)
+        self.add_parameter(("dis1.z1","dis2.z1"),low=-10,high=10)
         self.add_parameter(("dis1.z2","dis2.z2"),low=0,high=10)
         
         #Local Des Vars 
         self.add_parameter("dis1.x1",low=0,high=10)
         
         #Coupling Vars
-        self.add_coupling_var("dis2.y1","dis1.y1=dis2.y1")        
-        self.add_coupling_var("dis1.y2","dis1.y2=dis2.y2")
-        
+        self.add_coupling_var("dis2.y1","dis1.y1")        
+        self.add_coupling_var("dis1.y2","dis2.y2")
+                           
         self.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
         self.add_constraint('3.16 < dis1.y1')
         self.add_constraint('dis2.y2 < 24.0')
@@ -146,6 +143,7 @@ if __name__ == "__main__": # pragma: no cover
     prob.dis1.z1 = prob.dis2.z1 = 5.0
     prob.dis1.z2 = prob.dis2.z2 = 2.0
     prob.dis1.x1 = 1.0
+    prob.dis1.y2 = 3.0
 
     tt = time.time()
     prob.run()

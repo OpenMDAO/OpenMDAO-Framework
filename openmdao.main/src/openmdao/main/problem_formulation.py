@@ -6,7 +6,7 @@ from openmdao.util.decorators import add_delegate
 
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
-from openmdao.main.hasobjective import HasObjective
+from openmdao.main.hasobjective import HasObjective, HasObjectives
 
 class IArchitecture(Interface): 
     def __init__(self): 
@@ -96,7 +96,7 @@ class HasCouplingVars(object):
         """removes all coupling variables from the assembly"""
         self._couples = []    
     
-@add_delegate(HasConstraints,HasConstraints,HasParameters,HasObjective,HasCouplingVars)
+@add_delegate(HasConstraints,HasConstraints,HasParameters,HasObjective,HasCouplingVars,HasObjectives)
 class ArchitectureAssembly(Assembly): 
     
     architecture = Slot(IArchitecture,iotype="in",desc="Slot for the use of automatic architecture configurations")
@@ -109,6 +109,13 @@ class ArchitectureAssembly(Assembly):
     
     def configure(self): 
         self.architecture.configure()    
+    
+    
+    def get_local_des_vars(self): 
+        return ordereddict.OrderedDict([(k,v) for k,v in self.get_parameters().iteritems() if not isinstance(k,tuple)])
+    
+    def get_global_des_vars(self): 
+        return ordereddict.OrderedDict([(k,v) for k,v in self.get_parameters().iteritems() if isinstance(k,tuple)])
         
      
         
