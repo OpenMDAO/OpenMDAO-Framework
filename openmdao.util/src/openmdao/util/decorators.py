@@ -30,6 +30,8 @@ def forwarder(cls, fnc, delegatename):
     f = FunctionMaker.create('%s%s' % (fname,sig), body, {}, defaults=spec[3],
                              doc=fnc.__doc__)
     return types.MethodType(f, None, cls)
+        
+    
 
 def add_delegate(*delegates):
     """A class decorator that takes delegate classes or (name,delegate) tuples as
