@@ -3,9 +3,6 @@
     Problem forumulation is specified, and MDF is automatically
     set up for you. 
 """
-
-from zope.interface import Interface
-
 from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                SellarDiscipline2
 
@@ -13,31 +10,10 @@ from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
 from openmdao.main.api import Assembly, set_as_top, Slot, implements, Component
 
 from openmdao.util.decorators import add_delegate
-from openmdao.main.problem_formulation import HasCouplingVars
-from openmdao.main.hasconstraints import HasConstraints
-from openmdao.main.hasparameters import HasParameters
-from openmdao.main.hasobjective import HasObjective
+from openmdao.main.problem_formulation import IArchitecture, ArchitectureAssembly
 
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver
 from openmdao.lib.datatypes.api import Float, List
-
-
-class IArchitecture(Interface): 
-    def __init__(self): 
-        self.parent = None
-        
-    def configure(self): 
-        """sets up drivers,workflows, and data connections in 
-        the assembly to configure the architecture
-        """        
-        pass
-    
-    def tear_down(self): 
-        """removes all the drivers, workflows, and data connections in the assembly, 
-        leaving the assembly cleaned up. 
-        """
-        
-        pass
 
 class MDF(object): 
     implements(IArchitecture)
@@ -115,20 +91,6 @@ class MDF(object):
     #      I could just by hand tear it all down. 
     def tear_down(self): 
         pass
-
-@add_delegate(HasConstraints,HasConstraints,HasParameters,HasObjective,HasCouplingVars)
-class ArchitectureAssembly(Assembly): 
-    
-    architecture = Slot(IArchitecture,iotype="in",desc="Slot for the use of automatic architecture configurations")
-    
-    def _architecture_changed(self): 
-        #TODO: When architecture is added, need to check to make sure it can support all the types of
-        #      stuff in the assembly. (single vs. multiple objectives, constraints, all the variable types, etc.)
-        self.architecture.parent = self
-        pass    
-    
-    def configure(self): 
-        self.architecture.configure()
         
 
 class SellarMDF(ArchitectureAssembly):

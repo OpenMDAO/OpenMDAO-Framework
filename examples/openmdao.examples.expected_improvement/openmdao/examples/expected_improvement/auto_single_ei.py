@@ -3,50 +3,30 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
+from enthought.traits.api import HasTraits
+
 from openmdao.main.api import Assembly, Component, Driver, \
-     SequentialWorkflow, Case
-from openmdao.main.interfaces import ICaseIterator
-from openmdao.main.expreval import ExprEvaluator
+     SequentialWorkflow, Case, ExprEvaluator, implements
+
+from openmdao.util.decorators import add_delegate
+from openmdao.main.problem_formulation import HasCouplingVars, IArchitecture, \
+     ArchitectureAssembly
+from openmdao.main.hasconstraints import HasConstraints
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasobjective import HasObjective
 
 from openmdao.lib.components.api import MetaModel, ExpectedImprovement, ParetoFilter
 from openmdao.lib.surrogatemodels.api import KrigingSurrogate
 from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
 
-from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
-from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder
+from openmdao.lib.doegenerators.api import OptLatinHypercube
+from openmdao.lib.casehandlers.api import DBCaseRecorder, DBCaseIterator
+from openmdao.lib.datatypes.api import Str, Array, Float, Int
 
-from openmdao.lib.caseiterators.api import DBCaseIterator
-from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
 from openmdao.examples.expected_improvement.branin_component import BraninComponent
+
 from openmdao.util.decorators import add_delegate
-from openmdao.main.hasstopcond import HasStopConditions
         
-
-#TODO: Can the DesVar objects allow some sort of mapping, used for normalization?
-#    Normalization is common in problem formulation, and it would be nice to support it 
-#    without having to make changes to the components themselves
-
-#TODO: Currently, I just create a broadcaster to make use of these vars. But
-#      They could be special objects that the driver sets the value of directly, and 
-#      then they push the value to wherever... including any mapping functions needed for
-#      the above thoughts on normalization
-class GlobalDesVar(object): 
-    def __init__(self): 
-        self.name = None
-        self.targets = []
-        self.low = None
-        self.high = None
-        
-class LocalDesVar(object): 
-    def __init__(self): 
-        self.target = ""
-        self.low = None
-        self.high = None      
-        
-class CouplingVar(object): 
-    def __init__(self): 
-        self.vary = None
-        self.constraint= None
     
 class MyDriver(Driver): 
     def __init__(self,doc=None):
@@ -59,129 +39,145 @@ class MyDriver(Driver):
         self.set_events()
         self.run_iteration()
         
-        inputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.ins]
-        outputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.outs]
+        inputs = [(name,self.parent.get(name)) for name in self.ins]
+        outputs = [(name,self.parent.get(name)) for name in self.outs]
         
         case = Case(inputs = inputs,
                     outputs = outputs)
         self.recorder.record(case)
         
+ 
+#Only supports HasObjective,HasParameters, real/contiunous variables        
+class EGO(HasTraits): 
+    implements(IArchitecture)
+    
+    min_ei = Float(default=0.001, iotype="in", desc="EI to use for stopping condition of optimization")
+    
+    def configure(self):    
+        self._tdir = mkdtemp()        
         
-class Analysis(Assembly): 
-    def __init__(self,*args,**kwargs):
-        super(Analysis,self).__init__(self,*args,**kwargs)
-        
-        self._tdir = mkdtemp()
-        
-        self.add('branin',BraninComponent())
-        
-        loc1 = LocalDesVar()
-        loc1.target = "branin.x"
-        
-        loc2 = LocalDesVar()
-        loc2.target = "branin.y"
-        
-        self.global_des_vars = []
-        self.local_des_vars = [loc1,loc2]
-        self.coupling_vars = []
-        
-        #IDEA: Architectures can support the same sub-interfaces as regular drivers, then 
-        #    assembly can check against the objective/constraints listed to see if it's compatible. 
-        #TODO: Should drivers list the type of variables they support, so this can be checked as well? 
-        #TODO: Multiple objectives? What happens if you put an achitecture in that only supports one objective
-        self.objective = 'branin.f_xy'
-        #TODO: What happens if you put in a type of constraint that is not supported by an achitecture
-        self.constraints = []
-        
-        
-    #TODO: Passing arguments here for component name, and any other options. I don't like giving it a component name. 
-    #    What if I was optimizting more than a single component? could I specify a whole workflow then? Right now you 
-    #    would always have to wrap up your analysis in an assmebly so it looked like a single box. 
-    def setup_single_EI(self,comp,min_ei=.0001):
-        
-        #change name of component to add '_model' to it. lets me name the metamodel as the old name
-        name = comp.name
-        comp.name = "%s_model"%name
+        self.comp_name = None
+        #check to make sure no more than one component is being referenced
+        #TODO: possibly wrap multiple components up into an enclosing assembly automatigally? 
+        for target,param in self.parent.get_parameters().iteritems():
+            comp = param.get_referenced_compnames()
+            if len(comp) > 1:
+                self.parent.raise_exception('The EGO architecture can only be used on one'
+                                            'component at a time, but parameters from %s '
+                                            'were added to the problem formulation.'%comp,ValueError)
+            elif self.comp_name is None: 
+                self.comp_name = comp.pop()
+            else:
+                comp = comp.pop()                
+                if comp != self.comp_name: 
+                    self.parent.raise_exception('The EGO architecture can only be used on one'
+                                            'component at a time, but parameters from %s '
+                                            'were added to the problem formulation.'%([comp[0],self.comp_name],),ValueError)
+                
+                
+        #change name of component to add '_model' to it. 
+        #     lets me name the metamodel as the old name
+        self.comp= getattr(self.parent,self.comp_name)
+        self.comp.name = "%s_model"%self.comp_name
         
         #add in the metamodel
-        meta_model = self.add(name,MetaModel()) #metamodel now replaces old component with same name
+        meta_model = self.parent.add(self.comp_name,MetaModel()) #metamodel now replaces old component with same name
         meta_model.surrogate = {'default':KrigingSurrogate()}
-        meta_model.model = comp
+        meta_model.model = self.comp
         
         meta_model_recorder = DBCaseRecorder(':memory:')
         meta_model.recorder = meta_model_recorder
         meta_model.force_execute = True        
         
+        EI = self.parent.add("EI",ExpectedImprovement())
+        self.objective = self.parent.list_objective()        
+        EI.criteria = self.objective
         
-        self.add("EI",ExpectedImprovement())
-        self.EI.criteria = self.objective
-        
-        self.add("filter",ParetoFilter())
-        self.filter.criteria = [self.objective]
-        self.filter.case_sets = [meta_model_recorder.get_iterator(),]
-        self.filter.force_execute = True
+        pfilter = self.parent.add("filter",ParetoFilter())
+        pfilter.criteria = [self.objective]
+        pfilter.case_sets = [meta_model_recorder.get_iterator(),]
+        pfilter.force_execute = True
         
         #Driver Configuration
-        self.add("DOE_trainer",DOEdriver())
-        self.DOE_trainer.sequential = True
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=15)
-        #self.DOE_trainer.DOEgenerator = FullFactorial(num_levels=5)
+        DOE_trainer = self.parent.add("DOE_trainer",DOEdriver())
+        DOE_trainer.sequential = True
+        DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=30)
         
-        for dvar in self.local_des_vars: 
-            self.DOE_trainer.add_parameter(dvar.target)
+        for target in self.parent.get_parameters(): 
+            DOE_trainer.add_parameter(target)
 
-        self.DOE_trainer.add_event("%s.train_next"%name)
+        DOE_trainer.add_event("%s.train_next"%self.comp_name)
         
-        self.DOE_trainer.case_outputs = [self.objective]
-        self.DOE_trainer.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
-
+        DOE_trainer.case_outputs = [self.objective]
+        DOE_trainer.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
         
-        self.add("EI_opt",Genetic())
-        self.EI_opt.opt_type = "maximize"
-        self.EI_opt.population_size = 100
-        self.EI_opt.generations = 10
-        self.EI_opt.selection_method = "tournament"
-        
-        
-        for dvar in self.local_des_vars: 
-            self.EI_opt.add_parameter(dvar.target)
-        self.EI_opt.add_objective("EI.EI")
-        self.EI_opt.force_execute = True
+        EI_opt = self.parent.add("EI_opt",Genetic())
+        EI_opt.opt_type = "maximize"
+        EI_opt.population_size = 100
+        EI_opt.generations = 10
+        EI_opt.selection_method = "tournament"
         
         
-        self.add("retrain",MyDriver())
-        self.retrain.add_event("%s.train_next"%name)
-        self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
-        self.retrain.force_execute = True
+        for target in self.parent.get_parameters(): 
+            EI_opt.add_parameter(target)
+        EI_opt.add_objective("EI.EI")
+        EI_opt.force_execute = True
         
-        self.add("iter",IterateUntil())
-        self.iter.max_iterations = 30
-        self.iter.add_stop_condition('EI.EI <= %s'%min_ei)
+        
+        retrain = self.parent.add("retrain",MyDriver())
+        retrain.add_event("%s.train_next"%self.comp_name)
+        retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
+        retrain.force_execute = True
+        
+        iter = self.parent.add("iter",IterateUntil())
+        iter.max_iterations = 30
+        iter.add_stop_condition('EI.EI <= %s'%self.min_ei)
         
         #Iteration Heirarchy
-        self.driver.workflow.add(['DOE_trainer', 'iter'])
+        self.parent.driver.workflow.add(['DOE_trainer', 'iter'])
         
-        self.DOE_trainer.workflow.add(name)
+        DOE_trainer.workflow.add(self.comp_name)
         
-        self.iter.workflow = SequentialWorkflow()
-        self.iter.workflow.add(['filter', 'EI_opt', 'retrain'])
+        iter.workflow = SequentialWorkflow()
+        iter.workflow.add(['filter', 'EI_opt', 'retrain'])
         
-        self.EI_opt.workflow.add([name,'EI'])
-        self.retrain.workflow.add(name)
+        EI_opt.workflow.add([self.comp_name,'EI'])
+        retrain.workflow.add(self.comp_name)
         
         #Data Connections
-        self.connect("filter.pareto_set","EI.best_case")
-        self.connect(self.objective,"EI.predicted_value")
+        self.parent.connect("filter.pareto_set","EI.best_case")
+        self.parent.connect(self.objective,"EI.predicted_value")
         
     def cleanup(self):
         shutil.rmtree(self._tdir, ignore_errors=True)
         
+class Analysis(ArchitectureAssembly): 
+    def __init__(self,*args,**kwargs):
+        super(Analysis,self).__init__(self,*args,**kwargs)
         
         
-if __name__ == "__main__": #pragma: no cover
+        
+        self.add('branin',BraninComponent())
+        
+        #Problem Formulation 
+        
+        #Local Des Vars
+        self.add_parameter('branin.x')        
+        self.add_parameter('branin.y')
+        
+        #No Global Des Vars or Coupling Vars
+        
+        #Objective (single only)    
+        self.add_objective('branin.f_xy')
+        #No constraints for this problem
+        
+        
+        
+        
+if __name__ == "__main__":
     import sys
     from openmdao.main.api import set_as_top
-    from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
+    from openmdao.lib.casehandlers.api import case_db_to_dict
     
     seed = None
     backend = None
@@ -205,10 +201,9 @@ if __name__ == "__main__": #pragma: no cover
     from mpl_toolkits.mplot3d import Axes3D
     from numpy import meshgrid,array, pi,arange,cos
     
-    analysis = Analysis()
-       
-    set_as_top(analysis)
-    analysis.setup_single_EI(analysis.branin,.0001)
+    analysis = set_as_top(Analysis())
+    analysis.architecture = EGO()
+    analysis.configure()
     analysis.run()
         
     points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
@@ -238,7 +233,7 @@ if __name__ == "__main__": #pragma: no cover
     cb = plt.colorbar(shrink=.45)
     
     #plot the initial training data
-    data_train = case_db_to_dict(os.path.join(analysis._tdir,'trainer.db'),
+    data_train = case_db_to_dict(os.path.join(analysis.architecture._tdir,'trainer.db'),
                                      ['branin.y',
                                       'branin.x',
                                       'branin.f_xy'])
@@ -246,7 +241,7 @@ if __name__ == "__main__": #pragma: no cover
     plt.scatter(data_train['branin.x'],
                 data_train['branin.y'],s=30,c='#572E07',zorder=10)
     
-    data_EI = case_db_to_dict(os.path.join(analysis._tdir,'retrain.db'),
+    data_EI = case_db_to_dict(os.path.join(analysis.architecture._tdir,'retrain.db'),
                                      ['branin.y',
                                       'branin.x',
                                       'branin.f_xy'])
@@ -294,5 +289,5 @@ if __name__ == "__main__": #pragma: no cover
     
     plt.show()
 
-    analysis.cleanup()
+    analysis.EGO.cleanup()
             
