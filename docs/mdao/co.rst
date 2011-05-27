@@ -21,7 +21,7 @@ the inputs in any of the disciplines. Instead, the Global optimizer works on
 a set of copies of the global design variables. These copies are sometimes called ''targets'', 
 and we'll follow that convention here by puting an ''_t'' at the end of the variable name. Each discipline has its own 
 local optimization which works with the local input associated with the global target. This is all
-represented in the figure below, and it's a real mess. You can see why it's important to seperate out
+represented in the figure below, and it's a bit of a mess. You can see why it's important to seperate out
 data flow and workflow, to help keep things manageable. 
 
 
@@ -284,7 +284,7 @@ data about it.
                 self.localopt2.dabfun = .00001
         
         
-        if __name__ == "__main__": # pragma: no cover         
+        if __name__ == "__main__":
         
             import time
             
