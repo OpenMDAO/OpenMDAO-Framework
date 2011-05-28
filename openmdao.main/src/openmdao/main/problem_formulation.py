@@ -18,7 +18,7 @@ class IArchitecture(Interface):
         """        
         pass
     
-    def tear_down(self): 
+    def clear(self): 
         """removes all the drivers, workflows, and data connections in the assembly, 
         leaving the assembly cleaned up. 
         """
