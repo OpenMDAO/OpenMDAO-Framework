@@ -252,9 +252,9 @@ Figures
 **- Generated figures**
 
   In the OpenMDAO documentation, we have been using the open source Dia application to create
-  diagrams (figures) and saving them as .png files. (A script automatically resizes the Dia
-  files for our documentation.) Since these files may need to be updated, they go in the
-  ``docs/generated_images`` directory on your branch.
+  diagrams (figures) and saving them as .png files. A script automatically resizes the Dia
+  files for our documentation. Generated images go in the directory with
+  the .rst files they are associated with.
 
   Here is an example of how to link to a figure:
 
@@ -262,7 +262,7 @@ Figures
 
     .. _`Class Diagram of Core Classes`:
 
-    .. figure:: ../generated_images/ModelClasses.png     
+    .. figure:: ModelClasses.png     
        :align: center
 
        Class Diagram of Core Classes
@@ -273,9 +273,9 @@ Figures
   Core Classes`_ shows...``. A cross reference is not necessary, but if you are discussing a figure
   that appears later in the text, it is helpful to the reader. 
 
-  The path to the image is: ``.. figure:: ../generated_images/ModelClasses.png``.
-  Generally we align our figures *center*, as shown in the example, but that is up to the
-  author.
+  Since we have moved all the images into the directory with the reST files, there is no path, just
+  the file name. Generally we align our figures *center*, as shown in the example, but that is up to
+  the author.
 
   Last is the figure caption: ``Class Diagram of Core Classes``. You must leave a blank
   line before the caption. You would also leave a blank line after it, since it is the end of a
@@ -285,14 +285,14 @@ Figures
 
 **- Static figures** 
 
-  Static figures are stored in ``docs/images/<document_directory>`` on your branch. Here is an
-  example from the complex tutorial where the author pulled in a static figure titled *EPA City
-  Driving Profile.* 
-
+  Static figures were formerly stored in separate ``images/`` directory, but like generated images,
+  they now reside in the folder with the .rst file that points to them. Here is an example from the
+  complex tutorial where the author pulled in a static figure titled *EPA City Driving Profile.* 
+  Static figures may be a .gif, .png, .jpg, or another file type; it's up to the author.
 
   :: 
 
-    .. figure:: ../images/user-guide/EPA-city.gif
+    .. figure:: EPA-city.gif
        :align: center
 
        EPA City Driving Profile
@@ -443,7 +443,7 @@ Tables
  ==================  ===========================================  =======
 
  The table that is generated does not have a box outline around it. And to get the
- header rows to be boldface, you must use the two asteriks (**) markup before and
+ header rows to be boldface, you must use the two asterisks (**) markup before and
  after the text you want in bold. 
 
  However, with Sphinx 1.0 beta 2 (released May 30, 2010), the header row

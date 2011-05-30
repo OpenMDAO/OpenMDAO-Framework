@@ -98,7 +98,7 @@ The Fortran code ``bar3.f`` contains the subroutine ``runbar3truss``, which cont
 for a three-bar truss with the following specific geometry:
 
 
-.. figure:: ../images/plugin-guide/ThreeBar.jpg
+.. figure:: ThreeBar.jpg
    :align: center
    :alt: Lines and errors showing the geometry of the 3-bar truss
 

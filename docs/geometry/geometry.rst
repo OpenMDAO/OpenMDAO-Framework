@@ -5,7 +5,7 @@
 An OpenMDAO Process Model
 ==============================
 
-.. figure:: ../images/arch-doc/top_level.png
+.. figure:: top_level.png
    :align: center
    :alt: Refer to caption
 
@@ -310,7 +310,7 @@ The Mesh Object
 Use Cases
 =========
 
-.. figure:: ../images/arch-doc/top_level2.png
+.. figure:: top_level2.png
    :align: center
    :alt: Refer to caption
 

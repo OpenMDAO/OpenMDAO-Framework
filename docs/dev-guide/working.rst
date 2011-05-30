@@ -238,7 +238,7 @@ files or directories, but it will also indicate the number of conflicts and
 where they occur. See the following example:
 
 
-.. figure:: ../images/quick-ref/merge_conflict.png
+.. figure:: merge_conflict.png
    :align: center
    :alt: a screen capture from a Linux machine showing a list of changes and conflicts on a branch
    
