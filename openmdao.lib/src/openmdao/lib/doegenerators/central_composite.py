@@ -27,21 +27,19 @@ class CentralComposite(HasTraits):
         
         super(CentralComposite, self).__init__(*args, **kwargs)
         
+        self.type = type
+        self.alpha = alpha
         self.center_points = center_points
-        
-        if type == "Face-Centered":
-            self.alpha = 1.0
-        if type == "Spherical":
-            if alpha == None:
-                self.alpha = self.num_parameters**0.5
-            else:
-                self.alpha = alpha
         
     def __iter__(self):
         """Return an iterator over our sets of input values."""
 
-        print self.num_parameters
-        
+        if self.type == "Face-Centered":
+            self.alpha = 1.0
+        if self.type == "Spherical":
+            if self.alpha == None:
+                self.alpha = self.num_parameters**0.5
+
         return chain(product(*[[0.5-0.5/max(self.alpha,1.),0.5+0.5/max(self.alpha,1.)] for i in range(self.num_parameters)]), \
                      set(permutations([0.5-0.5*min(self.alpha,1.)]+(self.num_parameters-1)*[0.5])), \
                      set(permutations([0.5+0.5*min(self.alpha,1.)]+(self.num_parameters-1)*[0.5])), \
