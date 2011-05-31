@@ -18,28 +18,17 @@ class TestCase(unittest.TestCase):
     
     def test_face_centered(self): 
         
-        fcc = CentralComposite(type="Face-Centered", alpha=0.8, center_points=1)
+        fcc = CentralComposite(type="Face-Centered")
         fcc.num_parameters = 2
         cases = [case for case in fcc]
         expected = [(0.0,0.0),(0.0,1.0),(1.0,0.0),(1.0,1.0),(0.0,0.5),(0.5,0.0),(0.5,1.0),(1.0,0.5),[0.5,0.5]]
         self.assertEqual(expected,cases)
 
-    def test_user_defined(self):
-        ccc = CentralComposite(type="Spherical", alpha=0.8, center_points=1)
-        ccc.num_parameters = 2
-        cases = [case for case in ccc]
-        expected = [(0,0),(0,1),(1,0),(1,1),(0.5,0.1),(0.1,0.5),(0.9,0.5),(0.5,0.9),[0.5,0.5]]
-        # self.assertEqual(expected,cases)
-        
-        for case,expected in zip(cases,expected): 
-            self.assertAlmostEquals(case[0],expected[0],8)
-            self.assertAlmostEquals(case[1],expected[1],8)
-
     def test_rotatable(self):
-        ccc = CentralComposite(type="Spherical", alpha=None, center_points=1)
+        ccc = CentralComposite(type="Inscribed")
         ccc.num_parameters = 2
         cases = [case for case in ccc]
-        expected = [(0.146446609406726,0.146446609406726),(0.853553390593274,0.146446609406726),(0.853553390593274,0.853553390593274),(0.146446609406726,0.853553390593274),(0.5,0),(1,0.5),(0.5,1),(0,0.5),[0.5,0.5]]
+        expected = [(0.146446609406726,0.146446609406726),(0.146446609406726,0.853553390593274),(0.853553390593274,0.146446609406726),(0.853553390593274,0.853553390593274),(0,0.5),(0.5,0),(0.5,1),(1,0.5),[0.5,0.5]]
         for case,expected in zip(cases,expected): 
             self.assertAlmostEquals(case[0],expected[0],8)
             self.assertAlmostEquals(case[1],expected[1],8)
