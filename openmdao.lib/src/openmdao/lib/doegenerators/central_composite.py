@@ -20,8 +20,6 @@ class CentralComposite(HasTraits):
     # pylint: disable-msg=E1101
     num_parameters = Int(0, iotype="in", desc="Number of independent parameters in the DOE.")
     type = Enum("Face-Centered", ["Face-Centered", "Inscribed"], iotype="in", desc="Type of central composite design")
-    alpha = Float(0.0, iotype="in", desc="Scaling factor which sets the location of the axial (star) points")
-    center_points = Int(1, iotype="in", desc="Number of center points to be added.")
     
     def __init__(self, type="Face-Centered", *args, **kwargs):
         
@@ -32,12 +30,13 @@ class CentralComposite(HasTraits):
     def __iter__(self):
         """Return an iterator over our sets of input values."""
 
+        center_points = 1
         if self.type == "Face-Centered":
-            self.alpha = 1.0
+            alpha = 1.0
         if self.type == "Inscribed":
-            self.alpha = self.num_parameters**0.5
+            alpha = self.num_parameters**0.5
 
-        return chain(product(*[[0.5-0.5/max(self.alpha,1.),0.5+0.5/max(self.alpha,1.)] for i in range(self.num_parameters)]), \
-                     set(permutations([0.5-0.5*min(self.alpha,1.)]+(self.num_parameters-1)*[0.5])), \
-                     set(permutations([0.5+0.5*min(self.alpha,1.)]+(self.num_parameters-1)*[0.5])), \
-                     self.center_points*[self.num_parameters*[0.5]])
+        return chain(product(*[[0.5-0.5/max(alpha,1.),0.5+0.5/max(alpha,1.)] for i in range(self.num_parameters)]), \
+                     set(permutations([0.5-0.5*min(alpha,1.)]+(self.num_parameters-1)*[0.5])), \
+                     set(permutations([0.5+0.5*min(alpha,1.)]+(self.num_parameters-1)*[0.5])), \
+                     center_points*[self.num_parameters*[0.5]])
