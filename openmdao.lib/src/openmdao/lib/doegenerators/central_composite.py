@@ -30,13 +30,32 @@ class CentralComposite(HasTraits):
     def __iter__(self):
         """Return an iterator over our sets of input values."""
 
-        center_points = 1
+        # Set the number of center points and the alpha parameter based on the type of central composite design
+        num_center_points = 1
         if self.type == "Face-Centered":
             alpha = 1.0
         if self.type == "Inscribed":
-            alpha = self.num_parameters**0.5
-
-        return chain(product(*[[0.5-0.5/max(alpha,1.),0.5+0.5/max(alpha,1.)] for i in range(self.num_parameters)]), \
-                     set(permutations([0.5-0.5*min(alpha,1.)]+(self.num_parameters-1)*[0.5])), \
-                     set(permutations([0.5+0.5*min(alpha,1.)]+(self.num_parameters-1)*[0.5])), \
-                     center_points*[self.num_parameters*[0.5]])
+            alpha = self.num_parameters**0.5  # Based on recommendation from "Response Surface Methodology" by R.H. Myers and D.C. Montgomery
+            
+        # Form the iterator for the corner points using a 2 level full factorial
+        low_corner_val = 0.5-0.5/max(alpha,1.)
+        high_corner_val = 0.5+0.5/max(alpha,1.)
+        corner_points = product(*[[low_corner_val,high_corner_val] for i in range(self.num_parameters)])
+        
+        # Form iterators for the face centered points (one for low value faces, one for high value faces)
+        low_face_val = [0.5-0.5*min(alpha,1.)]
+        high_face_val = [0.5+0.5*min(alpha,1.)]
+        center_list = (self.num_parameters-1)*[0.5]
+        low_face_points = set(permutations(low_face_val+center_list))
+        high_face_points = set(permutations(high_face_val+center_list))
+        
+        # Form iterator for center point(s)
+        center_points = num_center_points*[self.num_parameters*[0.5]]
+        
+        # Chain case lists together to get complete iterator
+        return chain(corner_points,low_face_points,high_face_points,center_points)
+        
+        # return chain(product(*[[0.5-0.5/max(alpha,1.),0.5+0.5/max(alpha,1.)] for i in range(self.num_parameters)]), \
+                     # set(permutations([0.5-0.5*min(alpha,1.)]+(self.num_parameters-1)*[0.5])), \
+                     # set(permutations([0.5+0.5*min(alpha,1.)]+(self.num_parameters-1)*[0.5])), \
+                     # center_points*[self.num_parameters*[0.5]])
