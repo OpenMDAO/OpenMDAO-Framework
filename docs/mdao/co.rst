@@ -20,7 +20,7 @@ CO for the Sellar case is very interesting because there are no component data c
 All values are passed through the expression strings for the objectives, constraints, and
 parameters of the various optimizers, as shown in the next diagram.
 
-.. figure:: ../images/tutorials/Arch-CO.png
+.. figure:: Arch-CO.png
    :align: center
    :alt: Arrows and boxes showing data flow for collaborative optimization; there is one optimizer, one broadcaster, and two workflows.
    
@@ -31,7 +31,7 @@ workflow includes the broadcaster and the two lower level optimizers, and each o
 those optimizers has a workflow with just the discipline component. This can be
 seen in the next figure.
    
-.. figure:: ../images/tutorials/Arch-CO-OpenMDAO.png
+.. figure:: Arch-CO-OpenMDAO.png
    :align: center
    :alt: Rounded and straight-sided rectangles showing the iteration hierarchy of the three workflows for CO
       

@@ -23,7 +23,7 @@ If we express the problem as a block diagram, we can see how to set it up in Ope
 
 .. _`OpenMDAO-overview`:
 
-.. figure:: ../../examples/openmdao.examples.simple/openmdao/examples/simple/Simple1.png
+.. figure:: Simple1.png
    :align: center
    :alt: Diagram shows the Paraboloid component and optimizer with arrows going between them representing the variables and minimization objective.
 

@@ -48,7 +48,7 @@ Chassis.
 
 The full process model is shown below.
 
-.. figure:: ../images/tutorials/Process_Diagram.png
+.. figure:: Process_Diagram.png
    :align: center
    :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
    
@@ -330,7 +330,7 @@ computer screen. The actual velocity profiles are available on the EPA website a
 
 .. _`EPA City Driving Profile`:
 
-.. figure:: ../images/tutorials/EPA-city.gif
+.. figure:: EPA-city.gif
    :align: center
    :alt: line graph showing EPA city driving profile
 
@@ -338,7 +338,7 @@ computer screen. The actual velocity profiles are available on the EPA website a
 
 .. _`EPA Highway Driving Profile`:
 
-.. figure:: ../images/tutorials/EPA-highway.gif
+.. figure:: EPA-highway.gif
    :align: center
    :alt: line graph showing EPA highway driving profile 
 
