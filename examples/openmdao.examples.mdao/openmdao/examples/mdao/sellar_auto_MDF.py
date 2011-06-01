@@ -11,8 +11,6 @@ from openmdao.main.api import Assembly, set_as_top, Slot, implements, Component
 
 from openmdao.main.problem_formulation import ArchitectureAssembly
 
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver
-from openmdao.lib.datatypes.api import Float, List
 from openmdao.lib.architectures.api import MDF
         
 
@@ -20,7 +18,6 @@ class SellarMDF(ArchitectureAssembly):
     """ Optimization of the Sellar problem using MDF
     Disciplines coupled with BroydenSolver.
     """
-    
     
     def __init__(self):
         """ Creates a new Assembly with this problem
@@ -45,7 +42,7 @@ class SellarMDF(ArchitectureAssembly):
         self.add_parameter("dis1.x1",low=0,high=10)
         
         #Coupling Vars
-        self.add_coupling_var("dis2.y1","dis1.y1")        
+        self.add_coupling_var("dis2.y1","dis1.y1")
         self.add_coupling_var("dis1.y2","dis2.y2")
                            
         self.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
@@ -58,7 +55,7 @@ class SellarMDF(ArchitectureAssembly):
     
         
         
-if __name__ == "__main__": # pragma: no cover         
+if __name__ == "__main__": # pragma: no cover
 
     import time
     
@@ -76,8 +73,8 @@ if __name__ == "__main__": # pragma: no cover
 
     print "\n"
     print "CONMIN Iterations: ", prob.driver.iter_count
-    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
-                                             prob.dis1.z2, \
+    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,
+                                             prob.dis1.z2,
                                              prob.dis1.x1)
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.driver.eval_objective()
