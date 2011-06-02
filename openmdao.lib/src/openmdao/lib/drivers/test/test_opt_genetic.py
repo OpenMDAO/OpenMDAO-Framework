@@ -202,7 +202,8 @@ class TestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.y')
 
         params = self.top.driver.list_param_targets()
-        self.assertEqual(params,['comp.x','comp.y'])
+        self.assertEqual(set(params),set(['comp.x','comp.y']))
+        self.assertEqual(len(params), 2)
 
         self.top.driver.remove_parameter('comp.x')
         params = self.top.driver.list_param_targets()

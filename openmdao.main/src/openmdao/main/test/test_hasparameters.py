@@ -153,7 +153,8 @@ class HasParametersTestCase(unittest.TestCase):
             self.fail("Exception expected")
 
         targets = self.top.driver.list_param_targets()
-        self.assertEqual(targets,['comp.x','comp.y'])
+        self.assertEqual(set(targets),set(['comp.x','comp.y']))
+        self.assertEqual(len(targets), 2)
 
         self.top.driver.remove_parameter('comp.x')
         targets = self.top.driver.list_param_targets()

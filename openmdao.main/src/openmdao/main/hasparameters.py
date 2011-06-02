@@ -299,14 +299,14 @@ class HasParameters(object):
                                          "that is not in this driver." % (name,),
                                          AttributeError)
     def list_param_targets(self):
-        """Returns an alphabetized list of parameter targets. Note that this
+        """Returns a list of parameter targets. Note that this
         list may contain more entries than the list of Parameter and
         ParameterGroup objects since ParameterGroups have multiple targets.
         """
         targets = []
         for param in self._parameters.values():
             targets.extend(param.targets)
-        return sorted(targets)
+        return targets
     
     def clear_parameters(self):
         """Removes all parameters."""
