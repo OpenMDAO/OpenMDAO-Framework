@@ -33,19 +33,7 @@ algorithm that uses a Broyden update to approximate the Jacobian. This solver re
 the output and calculates a new input each iteration. Convergence is achieved when the
 residual between the output and input is driven to zero.
 
-<<<<<<< TREE
-Between the top-level optimizer and the solver that converges the disciplines there are two 
-levels of iteration needed to complete the MDF architecture. Below we show the iteration 
-hierarchy which describes the two levels of iteration. In the top left of this diagram, 
-the gray box labeled *Optimizer* is the
-top-level driver. This driver has a workflow that contains only the solver. 
-The Solver has its own workflow which contains the two discipline components. 
-With the nesting of the drivers we get the behavior we want, namely, that for 
-each optimizer iteration, the solver runs the discipline components until they 
-converge. We now have a nested driver loop.
 
-.. figure:: ../images/tutorials/Arch-MDF-OpenMDAO.png
-=======
 The major difference between the MDF problem and some of the previous examples is the
 presence of nested drivers. Drivers can be nested in OpenMDAO using WorkFlows
 in the iteration hierarchy. A :term:`WorkFlow` is an object that determines execution
@@ -57,7 +45,6 @@ contain Drivers. This allows nested iterative processes to be created. The
 following diagram shows an iteration hierarchy for the MDF problem.
    
 .. figure:: Arch-MDF-OpenMDAO.png
->>>>>>> MERGE-SOURCE
    :align: center
    :alt: Diagram showing the Optimizer, workflow for the Optimizer, and workflow for the Solver
    

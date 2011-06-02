@@ -34,13 +34,11 @@ are instantiated and the workflow is defined.
    
 .. testcode:: IDF_parts
 
-        from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
-                                               SellarDiscipline2
+        from openmdao.examples.mdao.disciplines import SellarDiscipline1, SellarDiscipline2
         from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver
         
-        
-        class SellarIDF(Assembly):
+        class SellarIDF(Assembly): #TEST
             """ Optimization of the Sellar problem using IDF"""
             
             def __init__(self):
@@ -123,8 +121,8 @@ Once again, we added a small amount of code at the end to execute, and then prin
 optimization. 
 
 .. testcode:: IDF_full
-        from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
-                                                       SellarDiscipline2
+
+        from openmdao.examples.mdao.disciplines import SellarDiscipline1, SellarDiscipline2
         from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver
         

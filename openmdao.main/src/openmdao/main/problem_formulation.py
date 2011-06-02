@@ -8,7 +8,8 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 
-class IArchitecture(Interface): 
+class IArchitecture(Interface):
+    
     def __init__(self): 
         self.parent = None
         
@@ -49,7 +50,7 @@ class HasCouplingVars(object):
             name of the independent variable, or the variable that should be varied, to meet the coupling 
             constraint
         dep: str
-            name of the dependent variable, or the variable that needs to be forced to be consitent with the 
+            name of the dependent variable, or the variable that needs to be forced to be consistent with the 
             independent    
         """
         expr_indep = ExprEvaluator(indep,self._parent)
@@ -96,26 +97,29 @@ class HasCouplingVars(object):
         """removes all coupling variables from the assembly"""
         self._couples = []    
     
-@add_delegate(HasConstraints,HasConstraints,HasParameters,HasObjective,HasCouplingVars,HasObjectives)
+@add_delegate(HasConstraints,HasParameters,HasObjective,HasCouplingVars,HasObjectives)
 class ArchitectureAssembly(Assembly): 
     
-    architecture = Slot(IArchitecture,iotype="in",desc="Slot for the use of automatic architecture configurations")
+    architecture = Slot(IArchitecture, iotype="in",
+                        desc="Slot for the use of automatic architecture configurations")
     
     def _architecture_changed(self): 
-        #TODO: When architecture is added, need to check to make sure it can support all the types of
-        #      stuff in the assembly. (single vs. multiple objectives, constraints, all the variable types, etc.)
+        #TODO: When architecture is added, need to check to make sure it can
+        #support all the types of stuff in the assembly. (single vs. multiple
+        #objectives, constraints, all the variable types, etc.)
         self.architecture.parent = self
-        pass    
     
     def configure(self): 
-        self.architecture.configure()    
+        self.architecture.configure()
     
     
     def get_local_des_vars(self): 
-        return ordereddict.OrderedDict([(k,v) for k,v in self.get_parameters().iteritems() if not isinstance(k,tuple)])
+        return [(k,v) for k,v in self.get_parameters().iteritems() 
+                                        if not isinstance(k,tuple)]
     
     def get_global_des_vars(self): 
-        return ordereddict.OrderedDict([(k,v) for k,v in self.get_parameters().iteritems() if isinstance(k,tuple)])
+        return [(k,v) for k,v in self.get_parameters().iteritems() 
+                                        if isinstance(k,tuple)]
         
      
         

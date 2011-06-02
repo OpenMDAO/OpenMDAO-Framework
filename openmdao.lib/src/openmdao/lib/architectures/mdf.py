@@ -31,10 +31,10 @@ class MDF(object):
         disciplines = set()
 
         
-        for k,v in self.parent.get_global_des_vars().iteritems(): 
+        for k,v in self.parent.get_global_des_vars(): 
             global_dvs.append(v)
             disciplines.update(v.get_referenced_compnames())
-        for k,v in self.parent.get_local_des_vars().iteritems(): 
+        for k,v in self.parent.get_local_des_vars(): 
             local_dvs.append(v)
             disciplines.update(v.get_referenced_compnames())
         
