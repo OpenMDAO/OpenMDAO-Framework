@@ -48,7 +48,7 @@ ImportFactory, which first uses the normal Python import mechanism to import
 the module and then executes the constructor for the requested type.
 
 
-.. figure:: ../generated_images/LocalCreate.png
+.. figure:: LocalCreate.png
    :align: center
    :alt: Boxes, lines, and arrows showing the creation of local components as described in the text
    
@@ -78,7 +78,7 @@ shows a more `detailed creation process`_ for a distributed component.
 
 .. _`Creation Process for a Distributed Component`:
 
-.. figure:: ../generated_images/DistribCreate2.png
+.. figure:: DistribCreate2.png
    :align: center
    :alt: Refer to adjacent text
    
@@ -91,7 +91,7 @@ shows a more `detailed creation process`_ for a distributed component.
 .. _`detailed creation process`:
 
 
-.. figure:: ../generated_images/DistributedCreate.png
+.. figure:: DistributedCreate.png
    :align: center
    :alt: Refer to caption
    
@@ -112,7 +112,7 @@ be possible to create an adaptor -- if available -- between incompatible Variabl
 
 .. _`Linking Variables`:
 
-.. figure:: ../generated_images/ConnectInteraction.png
+.. figure:: ConnectInteraction.png
    :align: center
    :alt: a line drawing showing how variables are linked
 
@@ -170,7 +170,7 @@ object on the same host as the remote object and just return the location of the
 remote serialized state so that it can be located later during a load operation.
 
 
-.. figure:: ../generated_images/VersionSaveState.png
+.. figure:: VersionSaveState.png
    :align: center
    :alt: Refer to adjacent text
 
@@ -180,7 +180,7 @@ remote serialized state so that it can be located later during a load operation.
 
 |
 
-.. figure:: ../generated_images/VersionRestoreState.png
+.. figure:: VersionRestoreState.png
    :align: center
    :alt: Refer to adjacent text
 
@@ -221,7 +221,7 @@ The following figure shows how a single Driver interacts with a Workflow
 during execution.
 
 
-.. figure:: ../generated_images/RunInteraction.png
+.. figure:: RunInteraction.png
    :align: center
    :alt: Refer to adjacent text
    
@@ -266,7 +266,7 @@ deployment of the new process.
 
 .. _`External Tool Run`:
 
-.. figure:: ../generated_images/ExtToolRun.png
+.. figure:: ExtToolRun.png
    :align: center
    :alt: Refer to adjacent text
 
@@ -287,7 +287,7 @@ any required unit conversion or other translation.
 .. _`Variable Transfers Between Components`:
 
 
-.. figure:: ../generated_images/AssemblyXfer.png
+.. figure:: AssemblyXfer.png
    :align: center
    :alt: Refer to adjacent text
 
@@ -333,7 +333,7 @@ be configured to *pull* as necessary.
 
 .. _`Transfer Through a Firewall`:
 
-.. figure:: ../generated_images/FirewallXfer.png
+.. figure:: FirewallXfer.png
    :align: center
    :alt: Refer to adjacent text
 
@@ -345,7 +345,7 @@ assembly checks the link type and then has the component proxy invoke a send or
 receive operation on the remote component, with a reference to that component's
 peer as an argument.
 
-.. figure:: ../generated_images/ThirdPartyTransfer.png
+.. figure:: ThirdPartyTransfer.png
    :align: center
    :alt: In this drawing, two hosts are on one side of the firewall and one host on the other to illustrate 3rd-party transfers
 
@@ -364,7 +364,7 @@ ObjServer process that was started independently of an ObjServerFactory.
 
 .. _`Remote Distributed Execution`:
 
-.. figure:: ../generated_images/DistribPhysical.png
+.. figure:: DistribPhysical.png
    :align: center
    :alt: Refer to adjacent text
 
@@ -393,7 +393,7 @@ to require login or be open to anyone.
 
 .. _`Component Publishing`:
 
-.. figure:: ../generated_images/EggServer.png
+.. figure:: EggServer.png
    :align: center
    :alt: Refer to adjacent text
 

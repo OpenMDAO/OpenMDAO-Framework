@@ -28,7 +28,7 @@ recommended.
 All of these tutorials use the Sellar problem which consists of two disciplines as follows:
 
 
-.. figure:: ../images/tutorials/SellarResized.png
+.. figure:: SellarResized.png
    :align: center
    :alt: Equations showing the two disciplines for the Sellar problem 
  

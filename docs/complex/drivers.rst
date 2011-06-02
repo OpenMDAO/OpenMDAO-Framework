@@ -114,7 +114,7 @@ This is a very simple problem, and hence the workflows and iteration hierarchy a
 simple. In OpenMDAO, you can build models with arbitrary levels of complexity. To
 understand how this works, it is beneficial to use a diagram like this:
 
-.. figure:: ../images/tutorials/Driver_Process_Definition3.png
+.. figure:: Driver_Process_Definition3.png
    :align: center
    :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
    
@@ -140,7 +140,7 @@ create a sequential execution of the Transmission, Engine, and Chassis component
 in the order that the data connections required. The iteration hierarchy is
 shown in this diagram:
 
-.. figure:: ../images/tutorials/Driver_Process_Definition4.png
+.. figure:: Driver_Process_Definition4.png
    :align: center
    :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
    
@@ -159,7 +159,7 @@ iteration hierarchy for a model that performs the 0-60 accelerations test, the E
 city estimated fuel economy test, and the EPA highway estimated fuel economy test
 is shown in this diagram:
 
-.. figure:: ../images/tutorials/Driver_Process_Definition2.png
+.. figure:: Driver_Process_Definition2.png
    :align: center
    :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
    

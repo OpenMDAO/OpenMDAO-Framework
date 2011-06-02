@@ -14,7 +14,7 @@ This assures that the solution is a feasible coupling, though it is achieved
 through the optimizer's additional effort instead of a solver. The data
 flow for IDF is illustrated in the following diagram:
 
-.. figure:: ../images/tutorials/Arch-IDF.png
+.. figure:: Arch-IDF.png
    :align: center
    :alt: diagram of boxes and arrows showing the data flow for the Individual Design Feasible 
    
@@ -23,7 +23,7 @@ flow for IDF is illustrated in the following diagram:
 IDF needs only one driver, so there is just one workflow where the two disciplines are executed sequentially.
 From the perspective of the iteration hierarchy, IDF is extremely simple.
    
-.. figure:: ../images/tutorials/Arch-IDF-OpenMDAO.png
+.. figure:: Arch-IDF-OpenMDAO.png
    :align: center
    :alt: The Broadcaster and two disciplines are represented by rounded boxes inside a square box, which is the workflow.
     

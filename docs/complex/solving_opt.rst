@@ -120,7 +120,7 @@ acceleration simulation first and then run the two fuel economy simulations. We 
 what we've already learned. We can use the default driver at the top level to sequentially run
 the optimizer and the two simulations.
 
-.. figure:: ../images/tutorials/Driver_Process_Definition6.png
+.. figure:: Driver_Process_Definition6.png
    :align: center
    :alt: Diagram of process model showing the vehicle assembly, some simulation drivers, and the optimizer
    

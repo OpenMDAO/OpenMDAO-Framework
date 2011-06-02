@@ -336,7 +336,7 @@ as shown below.
 
 .. _`N squared`:
 
-.. figure:: ../generated_images/NSquaredView.png
+.. figure:: NSquaredView.png
    :align: center
    :alt: Refer to the caption
 
@@ -348,7 +348,7 @@ as shown below.
 
 .. _`free form`:
 
-.. figure:: ../generated_images/DataFlowView.png
+.. figure:: DataFlowView.png
    :align: center
    :alt:  Refer to the caption
 
@@ -379,7 +379,7 @@ branching.
 
 .. _`control flow`:
 
-.. figure:: ../generated_images/ControlFlow.png
+.. figure:: ControlFlow.png
    :align: center
    :alt: Diagram shows 3 drivers and 4 components as part of an Assembly's Workflow
 
@@ -412,7 +412,7 @@ components repeatedly until some condition is satisfied.
 
 .. _formulation:
 
-.. figure:: ../images/arch-doc/DataDrivenPic.png
+.. figure:: DataDrivenPic.png
    :align: center
    :alt: Refer to adjacent text
 
@@ -428,7 +428,7 @@ problem formulation view.
 
 .. _`N-squared`:
 
-.. figure:: ../generated_images/NSquaredViewDD.png
+.. figure:: NSquaredViewDD.png
    :align: center
    :alt: Refer to caption
 
@@ -454,7 +454,7 @@ runtime simply by dragging and dropping objects onto the Component.
 
 .. _`plugin view`:
 
-.. figure:: ../generated_images/PluginView.png
+.. figure:: PluginView.png
    :align: center
    :alt: Diagram shows different socket types for a Component
 

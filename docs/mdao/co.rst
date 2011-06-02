@@ -25,7 +25,7 @@ represented in the figure below, and it's a bit of a mess. You can see why it's 
 data flow and workflow, to help keep things manageable. 
 
 
-.. figure:: ../images/tutorials/Arch-CO.png
+.. figure:: Arch-CO.png
    :align: center
    :alt: Arrows and boxes showing data flow for collaborative optimization
    
@@ -35,7 +35,7 @@ The CO model has three optimizers, so there are three workflows. The top level
 workflow just the two lower level optimizers, and each of those optimizers has a 
 workflow with just the discipline component. This can be seen in the next figure.
    
-.. figure:: ../images/tutorials/Arch-CO-OpenMDAO.png
+.. figure:: Arch-CO-OpenMDAO.png
    :align: center
    :alt: Rounded and straight-sided rectangles showing the iteration hierarchy of the three workflows for CO
       

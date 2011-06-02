@@ -10,7 +10,7 @@ In a Multidisciplinary Design Feasible (MDF) problem, the disciplines are direct
 via some kind of solver, and the design variables are optimized all at the top level. The
 following spaghetti diagram illustrates MDF applied to the Sellar problem.
 
-.. figure:: ../images/tutorials/Arch-MDF.png
+.. figure:: Arch-MDF.png
    :align: center
    :alt: Diagram consists of boxes and arrows to show data flow for MDF applied to the Sellar problem.
    
@@ -33,6 +33,7 @@ algorithm that uses a Broyden update to approximate the Jacobian. This solver re
 the output and calculates a new input each iteration. Convergence is achieved when the
 residual between the output and input is driven to zero.
 
+<<<<<<< TREE
 Between the top-level optimizer and the solver that converges the disciplines there are two 
 levels of iteration needed to complete the MDF architecture. Below we show the iteration 
 hierarchy which describes the two levels of iteration. In the top left of this diagram, 
@@ -44,6 +45,19 @@ each optimizer iteration, the solver runs the discipline components until they
 converge. We now have a nested driver loop.
 
 .. figure:: ../images/tutorials/Arch-MDF-OpenMDAO.png
+=======
+The major difference between the MDF problem and some of the previous examples is the
+presence of nested drivers. Drivers can be nested in OpenMDAO using WorkFlows
+in the iteration hierarchy. A :term:`WorkFlow` is an object that determines execution
+order for a group of Components. Each driver contains a single WorkFlow. For
+each iteration, a Driver will execute one pass through the WorkFlow, executing
+the components contained therein in the order the WorkFlow prescribes.
+Although in many cases a WorkFlow contains just Components, it can also
+contain Drivers. This allows nested iterative processes to be created. The
+following diagram shows an iteration hierarchy for the MDF problem.
+   
+.. figure:: Arch-MDF-OpenMDAO.png
+>>>>>>> MERGE-SOURCE
    :align: center
    :alt: Diagram showing the Optimizer, workflow for the Optimizer, and workflow for the Solver
    
