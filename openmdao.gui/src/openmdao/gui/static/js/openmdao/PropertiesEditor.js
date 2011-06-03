@@ -18,6 +18,12 @@ openmdao.PropertiesEditor = function(id,model) {
     var self = this,
         elm = jQuery("#"+id),
         pathname = '',
+        headerStyle = "class='ui-state-default slick-header-column'  style='float: none; width: 100%'",
+        nameHeader = jQuery("<div "+headerStyle+">"),
+        inputsHeader = jQuery("<div "+headerStyle+">Inputs</div>"),
+        outputsHeader = jQuery("<div "+headerStyle+">Outputs</div>"),
+        inputsDiv = jQuery("<div id='inputs'>"),
+        outputsDiv = jQuery("<div id='outputs'>"),
         requiredFieldValidator = function(value) {
             if (value == null || value == undefined || !value.length)
                 return {valid:false, msg:"This is a required field"};
@@ -28,43 +34,52 @@ openmdao.PropertiesEditor = function(id,model) {
             {id:"name",  name:"Name",  field:"name"},
             {id:"value", name:"Value", field:"value", editor:TextCellEditor},
         ],
-        options = {
+        inputs_options = {
             editable: true,
             asyncEditorLoading: false,
             editOnDoubleClick: true,
             multiSelect: false,
-            forceFitColumns: false,            
             autoHeight: true,
             autoEdit: false,
             //enableAddRow: true,
         },
-        grid = new Slick.Grid("#"+id, [], columns, options)
-        
-        grid.onCellChange.subscribe(function(e,args) {
-            // TODO: better way to do this (e.g. model.setProperty(path,name,value)
-            cmd = 'top.'+self.pathname+'.'+args.item.name+'='+args.item.value
-            model.issueCommand(cmd)
-        })
-        
-        // grid.onAddNewRow.subscribe(function(e, args) {
-            // var item = args.item,
-                // column = args.column;
-            // debug.info("Added item:")
-            // debug.info(item)
-            // debug.info(column)
-            // grid.invalidateRow(data.length);
-            // data.push(item);
-            // grid.updateRowCount();
-            // grid.render();
-        // });
-        
-        function requiredFieldValidator(value) {
-            if (value == null || value == undefined || !value.length)
-                return {valid:false, msg:"This is a required field"};
-            else
-                return {valid:true, msg:null};
+        outputs_options = {
+            asyncEditorLoading: false,
+            multiSelect: false,
+            autoHeight: true,
+            autoEdit: false,
         }
+        
+    elm.html("")
+    elm.append(nameHeader);
+    elm.append('<p>')
+    elm.append(inputsHeader)
+    elm.append(inputsDiv)
+    elm.append('<p>')
+    elm.append(outputsHeader)
+    elm.append(outputsDiv)
+
+    var inputs = new Slick.Grid(inputsDiv, [], columns, inputs_options)       
+    inputs.onCellChange.subscribe(function(e,args) {
+        // TODO: better way to do this (e.g. model.setProperty(path,name,value)
+        cmd = 'top.'+self.pathname+'.'+args.item.name+'='+args.item.value
+        model.issueCommand(cmd)
+    })
     
+    var outputs = new Slick.Grid(outputsDiv, [], columns, outputs_options)       
+        
+    // grid.onAddNewRow.subscribe(function(e, args) {
+        // var item = args.item,
+            // column = args.column;
+        // debug.info("Added item:")
+        // debug.info(item)
+        // debug.info(column)
+        // grid.invalidateRow(data.length);
+        // data.push(item);
+        // grid.updateRowCount();
+        // grid.render();
+    // });
+        
     /** make the parent element (tabbed pane) a drop target for obj objects * /
     elm.parent().droppable ({
         accept: '.obj',
@@ -76,11 +91,14 @@ openmdao.PropertiesEditor = function(id,model) {
     /**/
   
     /** load the table with the given properties */
-    function loadTable(properties) {
-        data = properties
-        grid.setData(properties)
-        grid.updateRowCount()      
-        grid.render()
+    function loadTables(properties) {
+        nameHeader.html(self.pathname)
+        inputs.setData(properties['inputs'])
+        inputs.updateRowCount()      
+        inputs.render()
+        outputs.setData(properties['outputs'])
+        outputs.updateRowCount()      
+        outputs.render()
     }
     
     /** if there is an object loaded, update it from the model */
@@ -100,7 +118,7 @@ openmdao.PropertiesEditor = function(id,model) {
     this.editObject = function(path) {
         if (self.pathname !== path)
             self.pathname = path
-        model.getComponent(path, loadTable,
+        model.getComponent(path, loadTables,
             function(jqXHR, textStatus, errorThrown) {
                 self.pathname = ''
                 alert("Error editing object: "+jqXHR.statusText)

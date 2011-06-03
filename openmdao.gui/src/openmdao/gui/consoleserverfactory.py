@@ -35,7 +35,7 @@ class ConsoleServerFactory(Factory):
     def __del__(self):
         ''' make sure we clean up on exit
         '''
-        self.cleanup()
+        #self.cleanup()
 
     def create(self, name, **ctor_args):
         """ Create a :class:`ConsoleServer` and return a proxy for it. """
@@ -181,7 +181,9 @@ class ConsoleServer(cmd.Cmd):
     def run(self):
         """ run the model (i.e. the top assembly) """
         if self.top:
+            print "Executing..."
             self.top.run()
+            print "Executiion complete."
         else:
             print "Execution failed: No top level assembly was found."
         
@@ -230,20 +232,39 @@ class ConsoleServer(cmd.Cmd):
             comps = self._get_components(self.top)
         return comps
 
-    def _get_attributes(self,obj):
+    def _get_attributes(self,comp):
         """ get attributes of object """
-        attrs = []
-        for n,v in obj.items():
+        inputs = []
+        for vname in comp.list_inputs():
+            v = comp.get(vname)
             attr = {}
             if isinstance(v,Component):
-                attr['name'] = n
+                attr['name'] = vname
                 attr['type'] = type(v).__name__
                 attr['value'] = self._get_attributes(v)
             else:
-                attr['name'] = n
+                attr['name'] = vname
                 attr['type'] = type(v).__name__
                 attr['value'] = v
-            attrs.append(attr)
+            inputs.append(attr)
+            
+        outputs = []
+        for vname in comp.list_outputs():
+            v = comp.get(vname)
+            attr = {}
+            if isinstance(v,Component):
+                attr['name'] = vname
+                attr['type'] = type(v).__name__
+                attr['value'] = self._get_attributes(v)
+            else:
+                attr['name'] = vname
+                attr['type'] = type(v).__name__
+                attr['value'] = v
+            outputs.append(attr)
+            
+        attrs = {}
+        attrs['inputs'] = inputs
+        attrs['outputs'] = outputs
         return attrs
         
     def get_attributes(self,name):
