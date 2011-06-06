@@ -100,8 +100,8 @@ class _HasConstraintsBase(object):
         return self._constraints.keys()
     
     def get_expr_depends(self):
-        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by a constraint.
+        """Returns a list of tuples of the form (comp_name, parent_name)
+        for each component name referenced by a constraint.
         """
         conn_list = []
         pname = self._parent.name
@@ -112,6 +112,17 @@ class _HasConstraintsBase(object):
                 conn_list.append((cname, pname))
         return conn_list
     
+    def get_required_compnames(self, assembly):
+        """Returns a set of names of components that are required to evaluate
+        all objectives.  This set will include all components within the given
+        Assembly that are directly referenced in objective expressions or ones
+        that supply inputs, either directly or indirectly, to components
+        referenced in objective expressions.
+        """
+        full = set()
+        return full.union(*[obj.get_required_compnames(assembly) 
+                            for obj in self._objectives.values()])
+
         
 class HasEqConstraints(_HasConstraintsBase):
     """Add this class as a delegate if your Driver supports equality

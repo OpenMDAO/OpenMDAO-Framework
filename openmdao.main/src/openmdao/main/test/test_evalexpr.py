@@ -272,6 +272,26 @@ class ExprPrinter(ast.NodeVisitor):
         # generating code that isn't correct.
         raise RuntimeError("ExprPrinter can't handle a node of type %s" % node.__class__.__name__)
 
+
+class Simple(Component):
+    
+    a = Float(iotype='in')
+    b = Float(iotype='in')
+    c = Float(iotype='out')
+    d = Float(iotype='out')
+    
+    def __init__(self):
+        super(Simple, self).__init__()
+        self.a = 4.
+        self.b = 5.
+        self.c = 7.
+        self.d = 1.5
+
+    def execute(self):
+        self.c = self.a + self.b
+        self.d = self.a - self.b
+        
+        
 class ExprEvalTestCase(unittest.TestCase):
     def setUp(self):
         self.top = set_as_top(Assembly())
@@ -291,7 +311,6 @@ class ExprEvalTestCase(unittest.TestCase):
         for tst in tests:
             ex = ExprEvaluator(tst[0], top)
             self.assertEqual(self._ast_to_text(ex._parse()), tst[1])
-    
             
     def test_eq(self): 
         ex1 = ExprEvaluator('comp.x', self.top)
@@ -592,6 +611,44 @@ class ExprEvalTestCase(unittest.TestCase):
             self.assertEqual(str(err), "can't evaluate expression 'abcd.efg': : object has no attribute 'abcd.efg'")
         else:
             raise AssertionError('AttributeError expected')
+        
+    def test_get_required_comps(self):
+        top = set_as_top(Assembly())
+        top.add('comp1', Simple())
+        top.add('comp2', Simple())
+        top.add('comp3', Simple())
+        top.add('comp4', Simple())
+        top.add('comp5', Simple())
+        top.add('comp6', Simple())
+        top.add('comp7', Simple())
+        top.add('comp8', Simple())
+        top.add('comp9', Simple())
+        top.connect('comp1.c','comp3.a')
+        top.connect('comp2.c','comp3.b')
+        top.connect('comp3.c','comp5.a')
+        top.connect('comp3.d','comp9.a')
+        top.connect('comp3.d','comp4.a')
+        top.connect('comp4.c','comp7.a')
+        top.connect('comp3.c','comp6.a')
+        top.connect('comp6.c','comp7.b')
+        top.connect('comp8.c','comp9.b')
+        
+        exp = ExprEvaluator('comp9.c+comp5.d', top.driver)
+        self.assertEqual(exp.get_required_compnames(top),
+                         set(['comp1','comp2','comp3','comp5','comp8','comp9']))
+        exp = ExprEvaluator('comp7.a', top.driver)
+        self.assertEqual(exp.get_required_compnames(top),
+                         set(['comp1','comp2','comp3','comp4','comp6','comp7']))
+        exp = ExprEvaluator('comp8.a', top.driver)
+        self.assertEqual(exp.get_required_compnames(top),
+                         set(['comp8']))
+        exp = ExprEvaluator('comp9.c+comp7.d', top.driver)
+        self.assertEqual(exp.get_required_compnames(top),
+                         set(['comp1','comp2','comp3','comp4','comp6',
+                              'comp7','comp8','comp9']))
+        exp = ExprEvaluator('sin(0.3)', top.driver)
+        self.assertEqual(exp.get_required_compnames(top),
+                         set())
         
 if __name__ == "__main__":
     unittest.main()

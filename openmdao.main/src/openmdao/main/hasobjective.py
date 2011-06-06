@@ -31,7 +31,7 @@ class HasObjective(object):
             self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
                                          ValueError)
         self._objective = expreval
-            
+
     def list_objective(self):
         """Returns the expression string for the objective."""
         return self._objective.text
@@ -43,14 +43,22 @@ class HasObjective(object):
         return self._objective.evaluate()
 
     def get_expr_depends(self):
-        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by our objective.
+        """Returns a list of tuples of the form (comp_name, parent_name)
+        for each component name referenced by our objective.
         """
         if not self._objective:
             return []
         pname = self._parent.name
         return [(cname,pname) for cname in self._objective.get_referenced_compnames()]
     
+    def get_required_compnames(self, assembly):
+        """Returns a set of names of components that are required to evaluate
+        the objective.  This set will include all components within the given
+        Assembly that are directly referenced in the objective expression or ones
+        that supply inputs, either directly or indirectly, to components
+        referenced in the objective expression.
+        """
+        return self._objective.get_required_compnames(assembly) 
 
 class HasObjectives(object): 
     """This class provides an implementation of the IHasObjectives interface."""
@@ -114,8 +122,8 @@ class HasObjectives(object):
         return [obj.evaluate() for obj in self._objectives.values()]
 
     def get_expr_depends(self):
-        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by our objectives.
+        """Returns a list of tuples of the form (comp_name, parent_name)
+        for each component referenced by our objectives.
         """
         pname = self._parent.name
         conn_list = []
@@ -123,3 +131,14 @@ class HasObjectives(object):
             conn_list.extend([(cname,pname) for cname in obj.get_referenced_compnames()])
         return conn_list
     
+    def get_required_compnames(self, assembly):
+        """Returns a set of names of components that are required to evaluate
+        all objectives.  This set will include all components within the given
+        Assembly that are directly referenced in objective expressions or ones
+        that supply inputs, either directly or indirectly, to components
+        referenced in objective expressions.
+        """
+        full = set()
+        return full.union(*[obj.get_required_compnames(assembly) 
+                            for obj in self._objectives.values()])
+
