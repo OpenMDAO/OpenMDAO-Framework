@@ -18,10 +18,9 @@ openmdao.PropertiesEditor = function(id,model) {
     var self = this,
         elm = jQuery("#"+id),
         pathname = '',
-        headerStyle = "class='ui-state-default slick-header-column'  style='float: none; width: 100%'",
-        nameHeader = jQuery("<div "+headerStyle+">"),
-        inputsHeader = jQuery("<div "+headerStyle+">Inputs</div>"),
-        outputsHeader = jQuery("<div "+headerStyle+">Outputs</div>"),
+        nameHeader = jQuery("<h3>"),
+        inputsHeader = jQuery("<h3>Inputs</h3>"),
+        outputsHeader = jQuery("<h3>Outputs</h3>"),
         inputsDiv = jQuery("<div id='inputs'>"),
         outputsDiv = jQuery("<div id='outputs'>"),
         requiredFieldValidator = function(value) {
