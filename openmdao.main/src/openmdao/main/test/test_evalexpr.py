@@ -623,6 +623,7 @@ class ExprEvalTestCase(unittest.TestCase):
         top.add('comp7', Simple())
         top.add('comp8', Simple())
         top.add('comp9', Simple())
+        
         top.connect('comp1.c','comp3.a')
         top.connect('comp2.c','comp3.b')
         top.connect('comp3.c','comp5.a')
