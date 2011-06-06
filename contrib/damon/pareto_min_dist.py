@@ -3,7 +3,7 @@ from numpy import exp, abs, pi, array,isnan,sum,sqrt,argsort, min
 from scipy.special import erf
 from scipy.integrate import dblquad
 
-from openmdao.lib.datatypes.api import Instance, Str, ListStr, Enum, \
+from openmdao.lib.datatypes.api import Str, ListStr, Enum, \
      Float, Array, Event, List
 
 from openmdao.main.component import Component

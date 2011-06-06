@@ -6,8 +6,8 @@ variety of difference types are available for both first and second order."""
 from numpy import zeros, ones
 
 from enthought.traits.api import HasTraits
-from openmdao.lib.datatypes.api import implements, Enum, Float
-from openmdao.main.interfaces import IDifferentiator
+from openmdao.lib.datatypes.api import Enum, Float
+from openmdao.main.interfaces import implements, IDifferentiator
 from openmdao.main.container import find_name
 
 
@@ -106,7 +106,7 @@ class FiniteDifference(HasTraits):
         base_param = zeros(self.n_param, 'd')
         stepsize = ones(self.n_param, 'd')*self.default_stepsize
         for i_param, item in enumerate(self._parent.get_parameters().values()):
-            base_param[i_param] = item.expreval.evaluate()
+            base_param[i_param] = item.evaluate()
             
             fd_step = item.fd_step
             if fd_step:
@@ -237,7 +237,7 @@ class FiniteDifference(HasTraits):
             # Pull initial state from driver's parameters
             base_param = zeros(self.n_param, 'd')
             for i_param, item in enumerate(self._parent.get_parameters().values()):
-                base_param[i_param] = item.expreval.evaluate()
+                base_param[i_param] = item.evaluate()
                     
             base_obj, base_ineqconst, base_eqconst = \
                     self._run_point(base_param)

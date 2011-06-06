@@ -15,7 +15,6 @@ from Crypto.Cipher import AES
 from multiprocessing import current_process, connection
 from multiprocessing.managers import BaseProxy, dispatch, listener_client
 
-from openmdao.main.interfaces import obj_has_interface
 from openmdao.main.rbac import rbac_methods
 
 from openmdao.util.publickey import decode_public_key

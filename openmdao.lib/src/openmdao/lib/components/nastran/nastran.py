@@ -10,7 +10,7 @@ import copy
 
 from openmdao.lib.components.external_code import ExternalCode
 
-from openmdao.lib.datatypes.api import TraitError, Float, Int, Array, Str, Bool
+from openmdao.lib.datatypes.api import Float, Int, Array, Str, Bool
 
 from openmdao.util.filewrap import FileParser
 

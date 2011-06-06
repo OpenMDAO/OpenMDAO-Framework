@@ -17,7 +17,6 @@ import parser
 import networkx as nx
 
 from openmdao.util.fileutil import find_files, get_module_path
-from openmdao.main.api import Component as mycomp
 
 class StrVisitor(ast.NodeVisitor):
     def __init__(self):

@@ -7,9 +7,6 @@
 import unittest
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.datatypes.api import Float, Int, Str, Bool, Enum
-from enthought.traits.api import TraitError
-
-
 
 class Oneout(Component):
     """ A simple output component    """
@@ -117,106 +114,106 @@ class VariableTestCase(unittest.TestCase):
         self.top.oneout.ratio1 = 12.0
         try:
             self.top.connect('oneout.ratio1','oneinp.ratio2')  # float to int
-        except TraitError, err:
+        except Exception, err:
             msg = "but a value of 12.0 <type 'float'> was specified"
             self.assertTrue( msg in str(err))
         else:
-            self.fail('TraitError Expected')
+            self.fail('Exception Expected')
 
     def test_var5(self):
         self.top.oneout.ratio1 = 12.0   
         try:
             self.top.connect('oneout.ratio1','oneinp.ratio3')  # float to Bool  
-        except TraitError, err:
+        except Exception, err:
             msg = ": can't connect 'oneout.ratio1' to 'oneinp.ratio3': " +\
                   "The 'ratio3' trait of an Oneinp instance must be a"\
                   " boolean, but a value of 12.0 <type 'float'> was specified."
             self.assertEqual(str(err), msg)
         else:
-            self.fail('TraitError Expected')
+            self.fail('Exception Expected')
 
     def test_var6(self):
         self.top.oneout.ratio1 = 12.0   
         try:
             self.top.connect('oneout.ratio1','oneinp.ratio5')  # float to Str   
-        except TraitError, err:
+        except Exception, err:
             msg = ": can't connect 'oneout.ratio1' to 'oneinp.ratio5': " +\
                   "The 'ratio5' trait of an Oneinp instance must be a"\
                   " string, but a value of 12.0 <type 'float'> was specified."
             self.assertEqual(str(err), msg)
         else:
-            self.fail('TraitError Expected')
+            self.fail('Exception Expected')
 
     def test_var7(self):
         self.top.oneout.ratio2 = 20     
         try:
             self.top.connect('oneout.ratio2','oneinp.ratio3')  # int to Bool    
-        except TraitError, err:
+        except Exception, err:
             msg = ": can't connect 'oneout.ratio2' to 'oneinp.ratio3': " +\
                   "The 'ratio3' trait of an Oneinp instance must be a"\
                   " boolean, but a value of 20 <type 'int'> was specified."
             self.assertEqual(str(err), msg)
         else:
-            self.fail('TraitError Expected')
+            self.fail('Exception Expected')
 
     def test_var8(self):
         self.top.oneout.ratio2 = 20     
         try:
             self.top.connect('oneout.ratio2','oneinp.ratio5')  # int to Str     
-        except TraitError, err:
+        except Exception, err:
             msg = ": can't connect 'oneout.ratio2' to 'oneinp.ratio5': " +\
                   "The 'ratio5' trait of an Oneinp instance must be a"\
                   " string, but a value of 20 <type 'int'> was specified."
             self.assertEqual(str(err), msg)
         else:
-            self.fail('TraitError Expected')
+            self.fail('Exception Expected')
 
     def test_var9(self):
         self.top.oneout.ratio3 = True   
         try:
             self.top.connect('oneout.ratio3','oneinp.ratio5')  # Bool to Str    
-        except TraitError, err:
+        except Exception, err:
             msg = ": can't connect 'oneout.ratio3' to 'oneinp.ratio5': " +\
                   "The 'ratio5' trait of an Oneinp instance must be a"\
                   " string, but a value of True <type 'bool'> was specified."
             self.assertEqual(str(err), msg)
         else:
-            self.fail('TraitError Expected')
+            self.fail('Exception Expected')
 
 
     def test_var10(self):
         self.top.oneout.ratio5 = '55555'
         try:
             self.top.connect('oneout.ratio5','oneinp.ratio2')  # Str to int
-        except TraitError, err:
+        except Exception, err:
             msg = "a value of 55555 <type 'str'> was specified"
             self.assertTrue( msg in str(err))
         else:
-            self.fail('TraitError Expected')
+            self.fail('Exception Expected')
 
     def test_var11(self):
         self.top.oneout.ratio5 = '55555'
         try:
             self.top.connect('oneout.ratio5','oneinp.ratio1')  # Str to Float
-        except TraitError, err:
+        except Exception, err:
             msg = ": can't connect 'oneout.ratio5' to 'oneinp.ratio1': oneinp: " + \
-                  "Trait 'ratio1' must be a float, but a value of 55555" + \
+                  "Variable 'ratio1' must be a float, but a value of 55555" + \
                       " <type 'str'> was specified."
             self.assertEqual(str(err), msg)
         else:
-            self.fail('TraitError Expected')
+            self.fail('Exception Expected')
 
     def test_var12(self):
         self.top.oneout.ratio5 = '55555'
         try:
             self.top.connect('oneout.ratio5','oneinp.ratio3')  # Str to Bool
-        except TraitError, err:
+        except Exception, err:
             msg = ": can't connect 'oneout.ratio5' to 'oneinp.ratio3': " +\
                   "The 'ratio3' trait of an Oneinp instance must be a boolean, but a"\
                   " value of '55555' <type 'str'> was specified."
             self.assertEqual(str(err), msg)
         else:
-            self.fail('TraitError Expected')
+            self.fail('Exception Expected')
 
     def test_var13_units(self):
         self.top.connect('oneout.unit','oneinp.no_unit')      # Bool to  Float 

@@ -287,22 +287,20 @@ class CONMINdriver(Driver):
         # get the initial values of the parameters
         # check if any min/max constraints are violated by initial values
         for i, val in enumerate(self.get_parameters().values()):
-            self.design_vals[i] = dval = val.expreval.evaluate()
+            self.design_vals[i] = dval = val.evaluate()
             
             if dval > val.high:
                 if (dval - val.high) < self.ctlmin:
                     self.design_vals[i] = val.high
                 else:
-                    msg = 'initial value of: %s ' % val.expreval.text + \
-                                         'is greater than maximum'
-                    self.raise_exception(msg, ValueError)
+                    self.raise_exception('initial value of: %s is greater than maximum' % val.target,
+                                         ValueError)
             if dval < val.low:
                 if (val.low - dval) < self.ctlmin:
                     self.design_vals[i] = val.low
                 else:
-                    msg = 'initial value of: %s ' % val.expreval.text + \
-                                         'is less than minimum'
-                    self.raise_exception(msg, ValueError)
+                    self.raise_exception('initial value of: %s is less than minimum' % val.target,
+                                         ValueError)
 
         
     def continue_iteration(self):
@@ -445,7 +443,7 @@ class CONMINdriver(Driver):
                     case_input.append([var, val])
                 
                 if self.printvars:
-                    case_output = [(name, \
+                    case_output = [(name,
                                     ExprEvaluator(name, scope=self).evaluate())
                                            for name in self.printvars]
                 else:
@@ -455,7 +453,7 @@ class CONMINdriver(Driver):
                 for i, val in enumerate(self.constraint_vals):
                     case_output.append(["Constraint%d" % i, val])
                 
-                case = Case(case_input, case_output, \
+                case = Case(case_input, case_output,
                             desc='case%s' % self.iter_count,
                             parent_uuid=self._case_id)
                 

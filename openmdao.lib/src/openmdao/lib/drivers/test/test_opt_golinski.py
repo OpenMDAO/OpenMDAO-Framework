@@ -8,7 +8,7 @@ import sys
 import unittest
 import numpy
 
-from openmdao.lib.datatypes.api import TraitError, Float, Array
+from openmdao.lib.datatypes.api import Float, Array
 
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Component, Assembly, set_as_top
@@ -199,8 +199,10 @@ class GolinskiTestCase(unittest.TestCase):
         #                                
         #  maximize x[0] value
         iter  = 1
-        self.top.driver.add_parameters([('comp.x[1]',.7,.8),('comp.x[2]',17.,28.),
-                                       ('comp.x[3]',7.3,8.3),('comp.x[4]',7.3,8.3)])
+        self.top.driver.add_parameter('comp.x[1]',.7,.8)
+        self.top.driver.add_parameter('comp.x[2]',17.,28.)
+        self.top.driver.add_parameter('comp.x[3]',7.3,8.3)
+        self.top.driver.add_parameter('comp.x[4]',7.3,8.3)
         #  25 CONSTRAINTS  defined in the problem
         #  reduced to 1 constraint
         self.top.driver.add_constraint('40.0/(comp.x[2] * comp.x[3]) > 1.0')

@@ -1,8 +1,6 @@
 
-from enthought.traits.api import implements
-
 from openmdao.main.workflow import Workflow
-from openmdao.main.interfaces import IComponent
+from openmdao.main.interfaces import implements, IComponent
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.mp_support import has_interface
 
@@ -18,7 +16,7 @@ class SequentialWorkflow(Workflow):
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
-        return self.get_components().__iter__()
+        return iter(self.get_components())
     
     def __len__(self):
         return len(self._names)
@@ -32,11 +30,13 @@ class SequentialWorkflow(Workflow):
     
     def add(self, compnames):
         """ Add new component(s) to the end of the workflow by name. """
-        if isinstance(compnames, list) or isinstance(compnames, tuple):
-            nodes = compnames
-        elif isinstance(compnames, basestring):
+        if isinstance(compnames, basestring):
             nodes = [compnames]
         else:
+            nodes = compnames
+        try:
+            nodeit = iter(nodes)
+        except TypeError:
             raise TypeError("Components must be added by name to a workflow.")
         for node in nodes:
             if isinstance(node, basestring):

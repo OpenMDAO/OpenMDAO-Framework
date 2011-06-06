@@ -51,6 +51,7 @@ setup(name='openmdao.main',
           'setuptools',
           'Sphinx',
           'Traits==3.3.0',
+          'zope.interface',
       ],
       entry_points = """
       [console_scripts]
@@ -65,5 +66,9 @@ setup(name='openmdao.main',
       [openmdao.component]
       openmdao.main.assembly.Assembly = openmdao.main.assembly:Assembly
       openmdao.main.assembly.ComponentWithDerivatives = openmdao.main.assembly:ComponentWithDerivatives
+      openmdao.main.problem_formulation.ArchitectureAssembly = openmdao.main.problem_formulation:ArchitectureAssembly
+      
+      [openmdao.variable]
+      openmdao.main.slot.Slot = openmdao.main.slot:Slot
       """,
     )

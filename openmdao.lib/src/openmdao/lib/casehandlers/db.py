@@ -5,9 +5,7 @@ import uuid
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser
 
-from openmdao.lib.datatypes.api import implements
-
-from openmdao.main.interfaces import ICaseRecorder, ICaseIterator
+from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
 
 _casetable_attrs = set(['id','uuid','parent','label','msg','retries','model_id','timeEnter'])
@@ -58,7 +56,7 @@ class DBCaseIterator(object):
             self._connection.close()
         self._connection = sqlite3.connect(value)
 
-    def get_iter(self):
+    def __iter__(self):
         return self._next_case()
 
     def _next_case(self):

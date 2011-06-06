@@ -2,8 +2,6 @@
 
 import unittest
 
-from enthought.traits.api import TraitError
-
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Container
 from openmdao.lib.datatypes.enum import Enum
@@ -24,7 +22,7 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.add_trait('nothing',
                             Enum(iotype='in'))
-        except TraitError, err:
+        except Exception, err:
             errstring = "Enum must contain at least one value."
             self.assertEqual(str(err), errstring)
         else:
@@ -49,7 +47,7 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.add_trait('out_of_bounds',
                             Enum(4,(1,2,3), iotype='in'))
-        except TraitError, err:
+        except Exception, err:
             errstring = "Default value not in values."
             self.assertEqual(str(err), errstring)
         else:
@@ -59,7 +57,7 @@ class IntTestCase(unittest.TestCase):
             self.hobj.add_trait('bad_alias_size',
                             Enum(3,(1,2,3), iotype='in',
                                  aliases=('a','b')))
-        except TraitError, err:
+        except Exception, err:
             errstring = "Length of aliases does not match length of values."
             self.assertEqual(str(err), errstring)
         else:
@@ -88,8 +86,8 @@ class IntTestCase(unittest.TestCase):
         self.assertEqual('red', self.hobj.e1)
         try:
             self.hobj.e1 = "brown"
-        except TraitError, err:
-            errstring = ": Trait 'e1' must be in ('red', 'green', 'blue'), but a value of brown <type 'str'> was specified."
+        except Exception, err:
+            errstring = ": Variable 'e1' must be in ('red', 'green', 'blue'), but a value of brown <type 'str'> was specified."
             self.assertEqual(str(err), errstring)
         else:
             self.fail("Exception expected")

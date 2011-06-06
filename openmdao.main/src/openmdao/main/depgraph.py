@@ -123,9 +123,7 @@ class DependencyGraph(object):
             the dependency chain was already invalid.
         """
         graph = self._graph
-        stack = []
-        for cname, varset in zip(cnames, varsets):
-            stack.append((cname, varset))
+        stack = zip(cnames, varsets)
         outset = set()  # set of changed boundary outputs
         while(stack):
             src, varset = stack.pop()

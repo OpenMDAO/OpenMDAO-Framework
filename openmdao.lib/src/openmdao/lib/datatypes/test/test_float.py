@@ -2,9 +2,6 @@
 
 import unittest
 
-from enthought.traits.api import TraitError
-
-from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Container
 from openmdao.lib.datatypes.float import Float
 from openmdao.units import convert_units
@@ -67,16 +64,16 @@ class FloatTestCase(unittest.TestCase):
         self.hobj.float2 = 1200.  # inches
         try:
             self.hobj.float1 = self.hobj.get_wrapped_attr('float2')
-        except TraitError, err:
+        except ValueError, err:
             self.assertEqual(str(err), 
-                ": Trait 'float1' must be a float in the range [0.0, 99.0], but a value of 100.0 <type 'float'> was specified.")
+                ": Variable 'float1' must be a float in the range [0.0, 99.0], but a value of 100.0 <type 'float'> was specified.")
         else:
-            self.fail('ConstraintError expected')
+            self.fail('ValueError expected')
         
     def test_bogus_units(self):
         try:
             uf = Float(0., iotype='in', units='bogus')
-        except TraitError, err:
+        except ValueError, err:
             self.assertEqual(str(err), 
                              "Units of 'bogus' are invalid")
         else:
@@ -100,26 +97,26 @@ class FloatTestCase(unittest.TestCase):
         d1 = f1.default_value/2
         self.assertAlmostEqual(d1, 1.5, places=4)
         
-    def test_constraint_violations(self):
+    def test_range_violations(self):
         try:
             self.hobj.float1 = 124
-        except TraitError, err:
+        except ValueError, err:
             self.assertEqual(str(err), 
-                ": Trait 'float1' must be a float in the range [0.0, 99.0], but a value of 124 <type 'int'> was specified.")
+                ": Variable 'float1' must be a float in the range [0.0, 99.0], but a value of 124 <type 'int'> was specified.")
         else:
-            self.fail('TraitError expected')
+            self.fail('ValueError expected')
         try:
             self.hobj.float1 = -3
-        except TraitError, err:
+        except ValueError, err:
             self.assertEqual(str(err),
-                ": Trait 'float1' must be a float in the range [0.0, 99.0], but a value of -3 <type 'int'> was specified.")
+                ": Variable 'float1' must be a float in the range [0.0, 99.0], but a value of -3 <type 'int'> was specified.")
         else:
-            self.fail('TraitError exception')
+            self.fail('ValueError exception')
 
     def test_attributes(self):
         try:
             self.hobj.add_trait('badbounds', Float(98.0, low=100.0, high=0.0, iotype='in'))
-        except TraitError, err:
+        except Exception, err:
             errstring = "Lower bound is greater than upper bound."
             self.assertEqual(str(err), errstring)
         else:
@@ -162,11 +159,11 @@ class FloatTestCase(unittest.TestCase):
                                   iotype='in', units='kg'))
         try:
             self.hobj.float4 = 3.0
-        except TraitError, err:
+        except ValueError, err:
             self.assertEqual(str(err), 
-                ": Trait 'float4' must be a float in the range (3.0, 4.0), but a value of 3.0 <type 'float'> was specified.")
+                ": Variable 'float4' must be a float in the range (3.0, 4.0), but a value of 3.0 <type 'float'> was specified.")
         else:
-            self.fail('TraitError expected')
+            self.fail('ValueError expected')
         
     def test_int_limits(self):
         # Ensure limits that are ints don't cause something like this:
@@ -181,21 +178,21 @@ class FloatTestCase(unittest.TestCase):
         try:
             self.hobj.add_trait('bad_default',
                                 Float('Bad Wolf'))
-        except TraitError, err:
+        except ValueError, err:
             self.assertEqual(str(err), 
                 "Default value should be a float.")
         else:
-            self.fail('TraitError expected')
+            self.fail('ValueError expected')
 
     def test_default_value(self):
         try:
             self.hobj.add_trait('out_of_bounds',
                                 Float(5.0, low=3, high=4))
-        except TraitError, err:
+        except ValueError, err:
             self.assertEqual(str(err), 
                 "Default value is outside of bounds [3.0, 4.0].")
         else:
-            self.fail('TraitError expected')
+            self.fail('ValueError expected')
             
             
 if __name__ == "__main__":

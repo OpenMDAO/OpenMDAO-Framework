@@ -13,8 +13,6 @@ import nose
 import random
 import numpy.random as numpy_random
 
-from openmdao.lib.datatypes.api import TraitError
-
 from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
