@@ -148,10 +148,10 @@ class MultiDriverTestCase(unittest.TestCase):
         
         drv.itmax = 30
         drv.add_objective('adder3.sum+50.')
-        drv.add_parameters([('comp1.x', -10., 99.),
-                            ('comp2.x', -10., 99.),
-                            ('comp3.x', -10., 99.),
-                            ('comp4.x', -10., 99.),])
+        drv.add_parameter('comp1.x', -10., 99.)
+        drv.add_parameter('comp2.x', -10., 99.)
+        drv.add_parameter('comp3.x', -10., 99.)
+        drv.add_parameter('comp4.x', -10., 99.)
         map(drv.add_constraint, [
             'comp1.x**2 + comp2.x**2 + comp3.x**2 + comp4.x**2 + comp1.x-comp2.x+comp3.x-comp4.x < 8.0',
             'comp1.x**2 + 2.*comp2.x**2 + comp3.x**2 + 2.*comp4.x**2 - comp1.x - comp4.x < 10.',
@@ -176,7 +176,6 @@ class MultiDriverTestCase(unittest.TestCase):
         print "*** test_one_driver ***"
         self.rosen_setUp()
         self.top.run()
-        print '*** run finished ***'
         self.assertAlmostEqual(self.opt_objective, 
                                self.top.driver1.eval_objective(), places=2)
         self.assertAlmostEqual(self.opt_design_vars[0], 
@@ -265,7 +264,8 @@ class MultiDriverTestCase(unittest.TestCase):
         #inner_driver.fdch = .000001
         #inner_driver.fdchm = .000001
         #inner_driver.add_objective('comp4.f_xy')
-        #inner_driver.add_parameters(('comp1.x',-50,50), ('comp3.y',-50,50)])
+        #inner_driver.add_parameter('comp1.x',-50,50)
+        #inner_driver.add_parameter('comp3.y',-50,50)
         ##inner_driver.constraints = ['comp1.x**2 + comp3.y**2']
             
         inner_driver.itmax = 30

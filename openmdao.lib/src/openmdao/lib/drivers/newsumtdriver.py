@@ -382,25 +382,11 @@ class NEWSUMTdriver(Driver):
         # check if any min/max constraints are violated by initial values
         for i, val in enumerate(self.get_parameters().values()):
             
-            value = val.expreval.evaluate()
+            value = val.evaluate()
             self.design_vals[i] = value
             # next line is specific to NEWSUMT
             self.__design_vals_tmp[i] = value
             
-#             if dval > val.high:
-#                 if (dval - val.high) < self.ctlmin:
-#                     self.design_vals[i] = val.high
-#                 else:
-#                     self.raise_exception('maximum exceeded for initial value'
-#                                          ' of: %s' % str(val.expreval),
-#                                          ValueError)
-#             if dval < val.low:
-#                 if (val.low - dval) < self.ctlmin:
-#                     self.design_vals[i] = val.low
-#                 else:
-#                     self.raise_exception('minimum exceeded for initial value'
-#                                          ' of: %s' % str(val.expreval),
-#                                          ValueError)
 
 
         # Call the interruptible version of SUMT in a loop that we manage

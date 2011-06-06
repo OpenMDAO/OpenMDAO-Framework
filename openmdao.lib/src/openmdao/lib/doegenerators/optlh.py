@@ -25,10 +25,10 @@ from numpy.linalg import norm
 
 from enthought.traits.api import HasTraits
 
-from openmdao.lib.datatypes.api import implements, Int, Enum, Float
+from openmdao.lib.datatypes.api import Int, Enum, Float
 
 from openmdao.util.mdo import rand_latin_hypercube
-from openmdao.main.interfaces import IDOEgenerator
+from openmdao.main.interfaces import implements, IDOEgenerator
 
 class LatinHypercube(object):
     

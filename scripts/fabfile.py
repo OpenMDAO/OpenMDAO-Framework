@@ -150,14 +150,14 @@ def _update_dev_docs():
     startdir = os.getcwd()
     try:
         # tar up the docs so we can upload them to the server
-	topdir = _find_top_dir()
+        topdir = _find_top_dir()
         devtools_dir = os.path.join(topdir,'openmdao.devtools',
                                     'src','openmdao','devtools')
         check_call([sys.executable, os.path.join(devtools_dir,'build_docs.py')])        
 
         try:
             archive = tarfile.open(os.path.join(topdir,'docs','docs.tar.gz'), 'w:gz')
-	    os.chdir(os.path.join(topdir, 'docs', '_build'))	
+            os.chdir(os.path.join(topdir, 'docs', '_build'))	
             archive.add('html')
             archive.close()
         finally:
@@ -168,7 +168,7 @@ def _update_dev_docs():
         with cd('~/downloads/dev_docs'):
             run('tar xzf docs.tar.gz')
             run('mv html/* ~/downloads/dev_docs')
-	    run('rm -rf html')
+            run('rm -rf html')
             run('rm -f docs.tar.gz')
  
     finally:
@@ -280,7 +280,9 @@ def _testbranch():
 
 @hosts('storm.grc.nasa.gov', 'torpedo.grc.nasa.gov', 'viper.grc.nasa.gov')
 def testbranch():
-     _testbranch()
+    _testbranch()
+    
+testbranch.__test__ = False
 
 #------------------------------------------------------------------------------------------------------
 #Part of script needed to test releases
@@ -363,13 +365,16 @@ def testrelease(releaseurl='%s/downloads/latest/go-openmdao.py' % REAL_URL):
         raise RuntimeError("OpenMDAO releases should be tested from Windows since that's where releases are created by config mgr.")
     _testrelease(releaseurl)
 
+testrelease.__test__ = False
+
 # release testing on the local mirror (torpedo)
 @hosts('torpedo.grc.nasa.gov', 'viper.grc.nasa.gov', 'storm.grc.nasa.gov')
 def testlocalrelease(releaseurl='%s/downloads/latest/go-openmdao.py' % TEST_URL):
     if sys.platform != 'win32':
         raise RuntimeError("OpenMDAO releases should be tested from Windows since that's where releases are created by config mgr.")
 
-    
+testlocalrelease.__test__ = False
+
 #Do not need to run this separately since testlocalrelease calls it - just here for debugging purposes
 def getlocalrelease(releaseurl='%s/downloads/latest/go-openmdao.py' % TEST_URL):
     _getrelease(releaseurl)

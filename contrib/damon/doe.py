@@ -3,9 +3,7 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
-from openmdao.main.api import Assembly, Component, Driver, \
-     SequentialWorkflow, Case
-from openmdao.main.interfaces import ICaseIterator
+from openmdao.main.api import Assembly, Component
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
@@ -13,7 +11,7 @@ from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
 from openmdao.lib.doegenerators.uniform import Uniform
 
-from openmdao.lib.datatypes.api import Float, Int, Instance, Str, Array
+from openmdao.lib.datatypes.api import Float, Int, Str, Array
 
 from openmdao.lib.api import MetaModel,MultiObjExpectedImprovement,\
      ProbIntersect,ParetoFilter,DOEdriver,Genetic,CaseIteratorDriver,\

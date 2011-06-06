@@ -2,7 +2,7 @@
 
 import unittest
 
-from enthought.traits.api import TraitError, Event
+from enthought.traits.api import Event
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.main.container import _get_entry_group
 

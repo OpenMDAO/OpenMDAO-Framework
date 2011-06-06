@@ -10,7 +10,7 @@ import unittest
 
 from numpy.testing import assert_equal
 
-from enthought.traits.api import Bool, Str, TraitError
+from enthought.traits.api import Bool, Str
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.datatypes.file import File

@@ -7,8 +7,8 @@ Multidisciplinary Design Feasible (MDF)
 =======================================
 
 In a Multidisciplinary Design Feasible (MDF) problem, the disciplines are directly coupled
-via some kind of solver, and the design variables are optimized in a single loop. The
-following diagram illustrates the data flow for MDF applied to the Sellar problem.
+via some kind of solver, and the design variables are optimized all at the top level. The
+following spaghetti diagram illustrates MDF applied to the Sellar problem.
 
 .. figure:: Arch-MDF.png
    :align: center
@@ -16,57 +16,14 @@ following diagram illustrates the data flow for MDF applied to the Sellar proble
    
    Data Flow for MDF Applied to the Sellar Problem
 
-This diagram introduces a component called a *Broadcaster.* A Broadcaster is a component that
-enables a design variable to be set to the same value at multiple locations. If you recall, a
-driver such as the CONMIN optimizer contains a list of *parameters,* where each parameter is
-a location in OpenMDAO's data hierarchy. Each parameter is a single design variable, and there
-is no way to indicate that one design variable might be needed at multiple component inputs
-in the model. We can overcome this by creating a component that passes an input to its output.
-Thus, CONMIN can set the design variable in this Broadcaster, and when the Broadcaster executes,
-the new value gets passed to all of the components that need it.
-
-OpenMDAO doesn't have a built-in Broadcaster, so we need to make our own. It's a simple
-component with some inputs, some outputs, and an ``execute`` function that passes the inputs
-to the outputs.
-
-.. testcode:: Broadcaster
-
-    from openmdao.main.api import Component
-    from openmdao.lib.datatypes.api import Float
-    
-    
-    class Broadcaster(Component):
-        """Component that holds some design variables.
-        This is only needed because we can't hook an optimizer up to multiple
-        locations of the same design variable"""
-        
-        # pylint: disable-msg=E1101
-        z1_in = Float(0.0, iotype='in', desc='Global Design Variable')
-        z2_in = Float(0.0, iotype='in', desc='Global Design Variable')
-        x1_in = Float(0.0, iotype='in', desc='Local Design Variable for CO')
-        y1_in = Float(0.0, iotype='in', desc='Coupling Variable')
-        y2_in = Float(0.0, iotype='in', desc='Coupling Variable')
-        z1 = Float(0.0, iotype='out', desc='Global Design Variable')
-        z2 = Float(0.0, iotype='out', desc='Global Design Variable')
-        x1 = Float(0.0, iotype='out', desc='Local Design Variable for CO')
-        y1 = Float(0.0, iotype='out', desc='Coupling Variable')
-        y2 = Float(0.0, iotype='out', desc='Coupling Variable')
-        
-        def execute(self):
-            """ Pass everything through"""
-            self.z1 = self.z1_in
-            self.z2 = self.z2_in
-            self.x1 = self.x1_in
-            self.y1 = self.y1_in
-            self.y2 = self.y2_in
-
-We've added the coupling variables in our Broadcaster as well, foreseeing the need
-for them in some of the other MDAO architectures.
+Notice in this diagram, that the optimizer at the top has some data that passes from it to each of the disciplines. 
+In MDF, both the global and local design variables are all controlled by the top level solver. So the data connections
+you see represent both. 
 
 .. index:: WorkFlow, BroydenSolver, FixedPointIterator
 
 The diagram also shows a solver that takes the output of the component dataflow
-and feeds it back into the input. OpenMDAO presently has two solvers: FixedPointIterator
+and feeds it back into the input. OpenMDAO has two solvers: FixedPointIterator
 and BroydenSolver. The FixedPointIterator is a solver that performs fixed point iteration,
 which means that it keeps driving ``x_new = f(x_old)`` until convergence is achieved. In
 other words, *y2* is passed from the output of ``SellarDiscipline2`` to the input of ``SellarDiscipline1``,
@@ -75,6 +32,7 @@ smaller than a tolerance. The BroydenSolver is a solver based on a quasi-Newton-
 algorithm that uses a Broyden update to approximate the Jacobian. This solver reads
 the output and calculates a new input each iteration. Convergence is achieved when the
 residual between the output and input is driven to zero.
+
 
 The major difference between the MDF problem and some of the previous examples is the
 presence of nested drivers. Drivers can be nested in OpenMDAO using WorkFlows
@@ -92,32 +50,19 @@ following diagram shows an iteration hierarchy for the MDF problem.
    
    Iteration Hierarchy for the MDF Problem
    
-In the top left of this diagram, the gray box labeled *Optimizer* is the
-top level (or outermost) driver. This driver has a workflow that contains
-two objects -- the Broadcaster and a Solver -- so each time the optimizer runs
-an iteration, both of these components run. The Solver also has a workflow
-which contains the two discipline components. With the nesting of the drivers
-we get the behavior we want, namely, that for each optimizer iteration, the 
-solver runs the discipline components until they converge. We now have a nested
-driver loop.
 
-The execution order is determined by the components' dataflow. Here, the
-broadcaster feeds the design variables to the discipline components, which
-are contained in the solver's workflow, so the broadcaster must run first. Also,
-the data connection between the two discipline components means that ``SellarDiscipline1``
-runs before ``SellarDiscipline2``. Sometimes a workflow may contain components that are
-not directly connected and can be run concurrently. Future tutorials will
-demonstrate this.
+Note that this iteration hierarchy does not contain any information about the data 
+connections necessary to complete the MDF implemenation. Workflows describe only 
+process.
 
-Now, let's create the assembly for the MDF problem. First, we'll create
-the top level optimization loop.
+Now, let's take the iteration hierarchy we just discussed and put in into an 
+assembly, so we can actually run it. 
 
 .. testcode:: MDF_parts
 
         from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                        SellarDiscipline2
-        from openmdao.examples.mdao.broadcaster import Broadcaster
-        
+                                                       
         from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver, FixedPointIterator
         
@@ -128,29 +73,26 @@ the top level optimization loop.
             
             def __init__(self):
                 """ Creates a new Assembly with this problem
-                
+        
                 Optimal Design at (1.9776, 0, 0)
                 
                 Optimal Objective = 3.18339"""
                 
-                # pylint: disable-msg=E1101
                 super(SellarMDF, self).__init__()
         
                 # create Optimizer instance
                 self.add('driver', CONMINdriver())
                 
                 # Outer Loop - Global Optimization
-                self.add('bcastr', Broadcaster())
-                self.add('fixed_point_iterator', FixedPointIterator())
-                self.driver.workflow.add(['bcastr', 'fixed_point_iterator'])
+                self.add('solver', FixedPointIterator())
+                self.driver.workflow.add(['solver'])
                 
-So far nothing is really new in terms of syntax. Note that the top level driver is
-always named *'driver'*. However, all other drivers can be given any valid name. For this
-model, we've chosen to use the ``FixedPointIterator``.
+So far nothing is really new in terms of syntax. Note that the top level driver, in this case an 
+instance of CONMINdriver, is always named *'driver'*. However, all other drivers can be given any valid name. For this
+model, we've chosen to use the ``FixedPointIterator`` for our solver.
 
-Next, we need to create the workflow for the solver. We create instances of ``SellarDiscipline1``
-and ``SellarDiscipline2`` and add them to the assembly. Then, instead of adding them to the
-workflow of ``'driver'``, we add them to the workflow of ``'fixed_point_iterator'``.
+Next, we need to create the workflow for the solver. Add instances of ``SellarDiscipline1``
+and ``SellarDiscipline2`` to the assembly. Then add those instances to the workflow of ``'solver'``
 
 .. testcode:: MDF_parts
     :hide:
@@ -162,59 +104,78 @@ workflow of ``'driver'``, we add them to the workflow of ``'fixed_point_iterator
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
         self.add('dis1', SellarDiscipline1())
         self.add('dis2', SellarDiscipline2())
-        self.fixed_point_iterator.workflow.add(['dis1', 'dis2'])
+        self.solver.workflow.add(['dis1', 'dis2'])
         
-Now the iteration hierarchy is finished. We still need to hook up the data connections
-and set up the CONMIN optimization and the fixed point iteration.
+Now the iteration hierarchy pictured above is finished. To complete the MDF architecture though, 
+we still need to hook up the data connections and configure CONMIN optimization and the fixed point iteration.
 
-We need one connection between ``'dis1'`` and ``'dis2'``. We also need to hook up ``'bcastr'``
-so that the design variables carry through to the discipline components.
+Recall that there are two global design variables, ``z1`` and ``z2``. In the model we constructed, 
+you find ``z1`` in two places: ``dis1.z1`` and ``dis2.z1``. The same is true for ``z2``: 
+``dis1.z2`` and ``dis2.z2``. This means that when you add a parameter to the driver for ``z1`` or ``z2``, 
+it needs to point to both locations in the model. We accomplish that below, by just passing a tuple of 
+variable names, as the first argument to the add_parameter method. 
 
 .. testcode:: MDF_parts
 
-        self.connect('bcastr.z1','dis1.z1')
-        self.connect('bcastr.z1','dis2.z1')
-        self.connect('bcastr.z2','dis1.z2')
-        self.connect('bcastr.z2','dis2.z2')
+        # Add Parameters to optimizer
+        self.driver.add_parameter(('dis1.z1','dis2.z1'), low = -10.0, high = 10.0)
+        self.driver.add_parameter(('dis1.z2','dis2.z2'), low = 0.0,   high = 10.0)
+
+There is only one local design variable for this problem, ``x1``, which is found in ``dis1.x1``. Since
+local design variables only point to one place in the model, we just add them using add_parameters with a single
+name as the first argument (just like we've shown you in previous tutorials). 
+
+.. testcode:: MDF_parts
+
+        self.driver.add_parameter('dis1.x1', low = 0.0,   high = 10.0)   
+        
+        
+Since we're using a fixed point iteration to converge the disciplines, only one of the coupling 
+variables (``y2``) is directly varied by the solver. The other one  (``y1``) is just passed from 
+the discipline 1 to discipline 2 directly each iteration. The choice of which variable to 
+let the solver vary and which to pass directly is arbitrary. You could have swapped the two 
+and the problem would still converge.  
+               
+To tell a ``FixedPointIterator`` which variable to vary, we just use add_parameter again. 
+During iteration, this is the variable that is going to be sent to the input
+of ``SellarDiscipline1``, which is ``'dis1y2'``. We specify very small and large values for the 
+low and high arguments because solvers shouldn't really be constrained like that. 
+Similarly, we setup the convergence constraint, as an equality constraint. A solver 
+essentially tries to drive something to zero. In this case, we want to
+drive the residual error in the coupled variable *y2* to zero. An equality constraint
+is defined with an expression string which is parsed for the equals sign, in the above example
+you see that 'dis2.y2 = dis1.y2' is equivilent to 'dis2.y2 - dis1.y2 = 0'. We also set the
+maximum number of iterations and a convergence tolerance.
+        
+.. testcode:: MDF_parts
+
+        # Make all connections
         self.connect('dis1.y1','dis2.y1')
 
-
-Next, the parameters for the fixed point iterator must be set.
-``FixedPointIterator`` is a specialized solver that is applicable only to
-single-input/single-output problems. The interface for this driver requires a
-single parameter and a single objective. The input is selected using
-``add_parameter``. For this parameter, we've given a *low* and a *high*
-attribute, but we've set them to very large negative and positive values as
-the Broyden solver doesn't use either of these. The output is specified by
-adding an equality constraint. A fixed point iterator essentially tries to
-drive to zero the difference between two quantities, where one has been
-expressed as an output and the other as an input, by iteratively feeding the
-output into the input. This can be viewed as solving the equation ``x = f(x)``.
-In this case, we want to drive the residual error in the
-coupled variable *y2* to zero. An equality constraint is defined with an
-expression string which is parsed for the equals sign, so the following
-constraints are equivalent:
-
-.. testcode:: MDF_parts
-
         # Iteration loop
-        self.fixed_point_iterator.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
-        self.fixed_point_iterator.add_constraint('dis2.y2 = dis1.y2')
-        self.fixed_point_iterator.max_iteration = 1000
-        self.fixed_point_iterator.tolerance = .0001       
+        self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
+        self.solver.add_constraint('dis2.y2 = dis1.y2')
+        self.solver.max_iteration = 1000
+        self.solver.tolerance = .0001     
 
-Finally, the CONIM optimization is set up.
+Finally, the CONIM optimization is set up. We add the objective function as well as the 
+constraints, from the problem formulation, to the driver. We also set some configuration 
+options which control the details of CONMIN's behavior. The objective function includes 
+references to the global design variables. When this happens, you can pick any of the locations
+where that global design variable points to. In this case, we used ``dis1.z2``, but we could have
+just as easily picked ``dis2.z2``. 
 
 .. testcode:: MDF_parts
 
         # Optimization parameters
-        self.driver.add_objective('(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)')
-                
-        self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
-        self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
-        self.driver.add_parameter('dis1.x1',      low = 0.0,   high = 10.0)
+        self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
         
         self.driver.add_constraint('3.16 < dis1.y1')
+        #Or use any of the equivilent forms below
+        #self.driver.add_constraint('3.16 - dis1.y1 < 0')
+        #self.driver.add_constraint('3.16 < dis1.y1')
+        #self.driver.add_constraint('-3.16 > -dis1.y1')
+        
         self.driver.add_constraint('dis2.y2 < 24.0')
         
         self.driver.cons_is_linear = [1, 1]
@@ -239,15 +200,9 @@ the minimum constraint thickness for the linear constraints. We also use
 can speed up the algorithm, though it hardly matters here.
 
 As before, the ``add_constraint`` method is used to add our constraints. This
-time however, we used a more general expression for the first constraint. Expression strings
-in OpenMDAO can also be parsed as inequalities, so all of the following are
-equivalent ways of defining this constraint:
-
-.. testcode:: MDF_parts
-
-        self.driver.add_constraint('3.16 - dis1.y1 < 0')
-        self.driver.add_constraint('3.16 < dis1.y1')
-        self.driver.add_constraint('-3.16 > -dis1.y1')
+time however, we used a more general expression for the first constraint. Commented 
+out below that are three more examples of the same exact constraint composed slightly 
+differently. 
 
 Finally, putting it all together gives:
 
@@ -255,8 +210,6 @@ Finally, putting it all together gives:
 
         from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                        SellarDiscipline2
-        from openmdao.examples.mdao.broadcaster import Broadcaster
-        
         from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver, FixedPointIterator
         
@@ -272,45 +225,44 @@ Finally, putting it all together gives:
                 
                 Optimal Objective = 3.18339"""
                 
-                # pylint: disable-msg=E1101
                 super(SellarMDF, self).__init__()
         
                 # create Optimizer instance
                 self.add('driver', CONMINdriver())
                 
                 # Outer Loop - Global Optimization
-                self.add('bcastr', Broadcaster())
-                self.add('fixed_point_iterator', FixedPointIterator())
-                self.driver.workflow.add(['bcastr', 'fixed_point_iterator'])
+                self.add('solver', FixedPointIterator())
+                self.driver.workflow.add(['solver'])
         
                 # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
                 self.add('dis1', SellarDiscipline1())
                 self.add('dis2', SellarDiscipline2())
-                self.fixed_point_iterator.workflow.add(['dis1', 'dis2'])
+                self.solver.workflow.add(['dis1', 'dis2'])
+                
+                # Add Parameters to optimizer
+                self.driver.add_parameter(('dis1.z1','dis2.z1'), low = -10.0, high = 10.0)
+                self.driver.add_parameter(('dis1.z2','dis2.z2'), low = 0.0,   high = 10.0)
+                self.driver.add_parameter('dis1.x1', low = 0.0,   high = 10.0)        
                 
                 # Make all connections
-                self.connect('bcastr.z1','dis1.z1')
-                self.connect('bcastr.z1','dis2.z1')
-                self.connect('bcastr.z2','dis1.z2')
-                self.connect('bcastr.z2','dis2.z2')
                 self.connect('dis1.y1','dis2.y1')
-        
-                # Iteration loop
-                self.fixed_point_iterator.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
-                self.fixed_point_iterator.add_constraint('dis2.y2 = dis1.y2')
-                self.fixed_point_iterator.max_iteration = 1000
-                self.fixed_point_iterator.tolerance = .0001
-        
-                # Optimization parameters
-                self.driver.add_objective('(dis1.x1)**2 + bcastr.z2 + dis1.y1 + math.exp(-dis2.y2)')
                 
-                self.driver.add_parameter('bcastr.z1_in', low = -10.0, high = 10.0)
-                self.driver.add_parameter('bcastr.z2_in', low = 0.0,   high = 10.0)
-                self.driver.add_parameter('dis1.x1',      low = 0.0,   high = 10.0)
-        
+                # Iteration loop
+                self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
+                self.solver.add_constraint('dis2.y2 = dis1.y2')
+                # equivilent form
+                # self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
+                
+                #Driver settings
+                self.solver.max_iteration = 1000
+                self.solver.tolerance = .0001
+                
+                # Optimization parameters
+                self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
+                
                 self.driver.add_constraint('3.16 < dis1.y1')
                 self.driver.add_constraint('dis2.y2 < 24.0')
-                    
+                
                 self.driver.cons_is_linear = [1, 1]
                 self.driver.iprint = 0
                 self.driver.itmax = 30
@@ -319,8 +271,38 @@ Finally, putting it all together gives:
                 self.driver.delfun = .0001
                 self.driver.dabfun = .000001
                 self.driver.ctlmin = 0.0001
+        
+        if __name__ == "__main__": # pragma: no cover         
+        
+            import time
+            
+            prob = SellarMDF()
+            prob.name = "top"
+            set_as_top(prob)
+                    
+            prob.dis1.z1 = prob.dis2.z1 = 5.0
+            prob.dis1.z2 = prob.dis2.z2 = 2.0
+            prob.dis1.x1 = 1.0
+            
+            
+            tt = time.time()
+            prob.run()
+            print "\n"
+            print "CONMIN Iterations: ", prob.driver.iter_count
+            print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
+                                                     prob.dis1.z2, \
+                                                     prob.dis1.x1)
+            print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
+            print "Minimum objective: ", prob.driver.eval_objective()
+            print "Elapsed time: ", time.time()-tt, "seconds"
+        
+            
+        # End sellar_MDF.py
 
-This problem is contained in ``sellar_MDF.py``. Executing it at the command line should produce
+This problem is contained in 
+:download:`sellar_MDF.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_MDF.py>`. 
+We added just a few lines at the end to instantiate the assembly class we defined, and then run it and 
+print out some useful information. Executing it at the command line should produce
 output that resembles this:
 
 ::
@@ -332,9 +314,10 @@ output that resembles this:
         Minimum objective:  3.18346116811
         Elapsed time:  0.121051073074 seconds
 
-We can also replace the fixed point iterator with a better solver. Fixed point
-iteration works for some problems, including this one, but may not converge to
-a solution for other problems. OpenMDAO also contains a Broyden solver called
+        
+We chose initially chose to use *FixedPointIterator* for our solver, but you can replace that witha a better one. Fixed point
+iteration works for some problems, including this one, but sometimes another type of solver might be prefered. 
+OpenMDAO also contains a Broyden solver called
 *BroydenSolver*. This solver is based on a quasi-Newton-Raphson algorithm found in 
 ``scipy.nonlinear``. It uses a Broyden update to approximate the Jacobian. If we
 replace ``FixedPointIterator`` with ``BroydenSolver``, the optimizer's workflow
@@ -346,39 +329,30 @@ looks like this:
         from openmdao.lib.drivers.api import BroydenSolver
 
         # Outer Loop - Global Optimization
-        self.add('bcastr', Broadcaster())
         self.add('solver', BroydenSolver())
-        self.driver.workflow.add(['bcastr', 'solver'])
+        self.driver.workflow.add('solver')
 
-Next, we set up our parameters for the inner loop. The Broyden solver can be
-connected using the standard driver interface. It can take multiple inputs and outputs
-though we only have one input and one output in this example.
+Next, we set up our parameters for the inner loop. The Broyden solver is connected
+using the exact same interface as the fixed point iterator, so that code does not change at all.
+We just change some of solver specific settings. 
         
 .. testcode:: MDF_parts
 
         # Iteration loop
         self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
         self.solver.add_constraint('dis2.y2 = dis1.y2')
+        # equivilent form
+        # self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
+        
         self.solver.itmax = 10
         self.solver.alpha = .4
         self.solver.tol = .0000001
         self.solver.algorithm = "broyden2"
         
-The input is selected using ``add_parameter``. Note that the interface is the same
-as in the FixedPointIterator. As before, we've given a *low* and a
-*high* attribute, but we've set them to very large negative and positive values
-as the Broyden solver doesn't use either of these. The output is specified by adding an equality constraint.
-A solver essentially tries to drive something to zero. In this case, we want to
-drive the residual error in the coupled variable *y2* to zero. An equality constraint
-is defined with an expression string which is parsed for the equals sign, so the
-following constraints are equivalent:
+The rest of the file does not change at all either. So you can see that it's pretty easy to reconfigure drivers 
+using this setup. Here is the new file, with the modifications: 
+:download:`sellar_MDF_solver.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_MDF_solver.py>`.
 
-.. testcode:: MDF_parts
-
-        # Iteration loop
-        self.solver.add_constraint('dis2.y2 = dis1.y2')
-        self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
         
-Equality constraints may also be available for some optimizers, but you should 
-verify that they are supported. CONMIN does not support equality constraints.
+
 

@@ -69,15 +69,15 @@ class ParetoFilterTests(unittest.TestCase):
         y = [2,3,1,2,3,1,2,3]
         cases = []
         for x_0,y_0 in zip(x,y):
-            cases.append(Case(outputs=[("x",None,x_0),("y",None,y_0)]))
+            cases.append(Case(outputs=[("x",x_0),("y",y_0)]))
             
         pf.case_sets = [ListCaseIterator(cases),]
         pf.criteria = ['z','w']
-        
         try:
             pf.execute()
         except ValueError,err: 
-            self.assertEqual(str(err),": no cases in the provided case_set had output matching the provided criteria, ['z', 'w']")
+            self.assertEqual(str(err),": no cases provided had all of the outputs "
+                 "matching the provided criteria, ['z', 'w']")
         else: 
             self.fail("expected ValueError")
 

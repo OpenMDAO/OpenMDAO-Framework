@@ -9,8 +9,6 @@
 import unittest
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.datatypes.api import Float, Int, Str, Bool
-from enthought.traits.api import TraitError
-
 
 
 class Oneout(Component):
@@ -170,13 +168,13 @@ class VariableTestCase(unittest.TestCase):
     def test_unit2(self):
         self.top.oneout.ratio1 = 20
         try:
-            self.top.connect('oneout.ratio1','oneinp.ratio1')      # Pa  to mm       
-        except TraitError, err:
+            self.top.connect('oneout.ratio1','oneinp.ratio1')      # Pa  to mm
+        except Exception, err:
             msg = ": can't connect 'oneout.ratio1' to 'oneinp.ratio1': "+\
                   "ratio1: units 'Pa' are incompatible with assigning units of 'mm'"
             self.assertEqual(str(err), msg)
         else:
-            self.fail('TraitError Expected')
+            self.fail('Exception Expected')
 
 #   def test_unit3(self):
 #       self.top.oneout.ratio9 = 20
@@ -184,12 +182,12 @@ class VariableTestCase(unittest.TestCase):
 #           self.top.connect('oneout.ratio9','oneinp.ratio16')      # no units to dyn     
 #           print  ' oneinp_ratio16(no units/ dyn   )= ',self.top.oneinp.ratio16
 #           #self.top.run( )
-#       # except TraitError, err:
+#       # except Exception, err:
 #       except TypeError, err:
 #           msg =": cannot set 'oneinp.ratio16' from 'oneout.ratio9': None is not a unit"
 #           self.assertEqual(str(err), msg)
 #       else:
-#           self.fail('TraitError Expected')
+#           self.fail('Exception Expected')
 
 
 if __name__ == "__main__":

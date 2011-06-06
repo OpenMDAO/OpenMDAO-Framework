@@ -39,7 +39,7 @@ set the RPM to something invalid.
     >>> my_engine.RPM = "Hello"
     Traceback (most recent call last):
         ...
-    TraitError: Trait 'RPM' must be a float having units compatible with 'rpm' but a value of Hello <type 'str'> was specified.
+    ValueError: Variable 'RPM' must be a float having units compatible with 'rpm' but a value of Hello <type 'str'> was specified.
     
 The value ``"Hello"`` is invalid because RPM expects a value of type Float. Now,
 let's try setting the throttle to a value that exceeds the maximum.
@@ -49,7 +49,7 @@ let's try setting the throttle to a value that exceeds the maximum.
     >>> my_engine.throttle = 2.0
     Traceback (most recent call last):
         ...
-    TraitError: Trait 'throttle' must be a float in the range [0.01, 1.0] but a value of 2.0 <type 'float'> was specified.
+    ValueError: Variable 'throttle' must be a float in the range [0.01, 1.0] but a value of 2.0 <type 'float'> was specified.
 
 OpenMDAO raises an exception indicating that the maximum value for throttle has
 been violated. This exception can be handled to provide some logical response
