@@ -440,6 +440,21 @@ class ExprEvaluator(object):
             self._parse()
         return set([v.split('.',1)[0] for v in self.var_names])
     
+    def get_required_compnames(self, assembly):
+        """Return the set of all names of Components that evaluation
+        of our expression string depends on, either directly or indirectly.
+        """
+        compset = self.get_referenced_compnames()
+        graph = assembly._depgraph.copy_graph()
+        visited = set()
+        while compset:
+            comp = compset.pop()
+            if comp not in visited:
+                visited.add(comp)
+                diff = set(graph.predecessors(comp)).difference(visited)
+                compset.update(diff)
+        return visited
+    
     def refs_valid(self):
         """Return True if all variables referenced by our expression
         are valid.

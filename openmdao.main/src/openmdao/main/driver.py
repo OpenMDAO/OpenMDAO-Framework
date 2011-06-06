@@ -94,6 +94,20 @@ class Driver(Component):
                 new_list.append((src, dest))
         return new_list
 
+    @rbac(('owner', 'user'))
+    def get_required_compnames(self):
+        """Returns a set of names of components that are referenced in 
+        delegate expressions like objectives and constraints.
+        """
+        compset = set()
+        if self.parent is not None:
+            if hasattr(self, '_delegates_'):
+                for name, dclass in self._delegates_.items():
+                    delegate = getattr(self, name)
+                    if hasattr(delegate, 'get_required_compnames'):
+                        compset.update(delegate.get_required_compnames(self.parent))
+        return compset
+
     def execute(self):
         """ Iterate over a workflow of Components until some condition
         is met. If you don't want to structure your driver to use *pre_iteration*,
