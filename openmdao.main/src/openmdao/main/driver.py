@@ -3,6 +3,8 @@
 #public symbols
 __all__ = ["Driver"]
 
+from networkx.algorithms.shortest_paths.generic import shortest_path
+
 # pylint: disable-msg=E0611,F0401
 
 from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, \
@@ -57,12 +59,23 @@ class Driver(Component):
         """Verify that our workflow is able to resolve all of its components."""
         # workflow will raise an exception if it can't resolve a Component
         super(Driver, self).check_config()
+        # if workflow is not defined, try to use objectives and/or
+        # constraint expressions to determine the necessary workflow members
         try:
+            if len(self.workflow) == 0:
+                for compname in self._get_required_compnames():
+                    self.workflow.add(compname)
+            else:
+                reqs = self._get_required_compnames()
+                iterset = set(c.name for c in self.iteration_set())
+                diff = reqs - iterset
+                if len(diff) > 0:
+                    self.raise_exception("Expressions in this Driver require the following "
+                                         "Components that are not part of the "
+                                         "workflow: %s" % list(diff), RuntimeError)
             comps = self.workflow.get_components()
-        except AttributeError as err:
-            self.raise_exception("Component in workflow failed to resolve: %s" % str(err),
-                                 AttributeError)
-            
+        except Exception as err:
+            self.raise_exception(str(err), type(err))
         if hasattr(self, 'check_gradients'):
             self.check_gradients()
         if hasattr(self, 'check_hessians'):
@@ -94,19 +107,46 @@ class Driver(Component):
                 new_list.append((src, dest))
         return new_list
 
-    @rbac(('owner', 'user'))
-    def get_required_compnames(self):
-        """Returns a set of names of components that are referenced in 
-        delegate expressions like objectives and constraints.
+    def _get_required_compnames(self):
+        """Returns a set of names of components that are required by 
+        this Driver in order to evaluate parameters, objectives
+        and constraints.  This list will include any intermediate
+        components in the data flow between components referenced by
+        parameters and those referenced by objectives and/or constraints.
         """
-        compset = set()
-        if self.parent is not None:
-            if hasattr(self, '_delegates_'):
-                for name, dclass in self._delegates_.items():
-                    delegate = getattr(self, name)
-                    if hasattr(delegate, 'get_required_compnames'):
-                        compset.update(delegate.get_required_compnames(self.parent))
-        return compset
+        setcomps = set()
+        try:
+            params = self.get_parameters()
+        except:
+            pass
+        else:
+            for param in params.values():
+                setcomps.update(param.get_referenced_compnames())
+
+        refcomps = set()
+        for src,dest in super(Driver, self).get_expr_depends():
+            refcomps.add(src)
+            refcomps.add(dest)
+        if self.name in refcomps:
+            refcomps.remove(self.name)
+            
+        # if there are no parameters, then include all dependent comps from the 
+        # dependency graph instead of stopping at the parameter components
+        if len(setcomps) == 0:
+            return refcomps
+        
+        getcomps = refcomps - setcomps
+        
+        if self.parent:
+            full = set()
+            graph = self.parent._depgraph
+            for end in getcomps:
+                for start in setcomps:
+                    for names in graph.find_all_paths(start, end):
+                        full.update(set(names))
+            return full
+        else:
+            return refcomps
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition

@@ -97,11 +97,11 @@ class IContainer(Interface):
         """
         
     def get_wrapped_attr(name):
-        """If the named trait can return a TraitValWrapper, then this
+        """If the named trait can return an AttrWrapper, then this
         function will return that, with the value set to the current value of
-        the named variable. Otherwise, it functions like *getattr*, just
-        returning the value of the named variable. Raises an exception if the
-        named trait cannot be found. The value will be copied if the trait has
+        the variable. Otherwise, it functions like *getattr*, just
+        returning the value of the variable. Raises an exception if the
+        variable cannot be found. The value will be copied if the variable has
         a 'copy' metadata attribute that is not None. Possible values for
         'copy' are 'shallow' and 'deep'.
         """

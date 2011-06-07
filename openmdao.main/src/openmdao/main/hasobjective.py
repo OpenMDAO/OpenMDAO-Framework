@@ -14,8 +14,8 @@ class HasObjective(object):
     _do_not_promote = ['get_expr_depends']
 
     def __init__(self, parent):
-        self._objective = ''
         self._parent = parent
+        self._objective = ''
 
     def add_objective(self, expr):
         """Sets the objective of this driver to be the specified expression.
@@ -58,12 +58,15 @@ class HasObjective(object):
         that supply inputs, either directly or indirectly, to components
         referenced in the objective expression.
         """
-        return self._objective.get_required_compnames(assembly) 
+        if isinstance(self._objective, basestring):
+            return set()
+        else:
+            return self._objective.get_required_compnames(assembly) 
 
 class HasObjectives(object): 
     """This class provides an implementation of the IHasObjectives interface."""
 
-    _do_not_promote = ['get_expr_depends']
+    _do_not_promote = ['get_expr_depends','get_required_compnames']
     
     def __init__(self, parent):
         self._objectives = ordereddict.OrderedDict()

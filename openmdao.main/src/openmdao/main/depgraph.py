@@ -392,7 +392,23 @@ class DependencyGraph(object):
             for src,dests in data['link']._srcs.items():
                 stream.write('   %s : %s\n' % (src, dests))
 
-            
+    def find_all_paths(self, start, end, path=None):
+        graph = self._graph
+        if path is None:
+            path = []
+        path.append(start)
+        if start == end:
+            return [path]
+        if not start in graph:
+            return []
+        paths = []
+        for node in graph[start]:
+            if node not in path:
+                newpaths = self.find_all_paths(node, end, path)
+                for newpath in newpaths:
+                    paths.append(newpath)
+        return paths
+
 class _Link(object):
     """A Class for keeping track of all connections between two Components."""
     def __init__(self, srccomp, destcomp):

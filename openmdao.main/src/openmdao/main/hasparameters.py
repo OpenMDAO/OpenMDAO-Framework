@@ -220,7 +220,7 @@ class ParameterGroup(object):
         """
         result = set()
         for param in self._params:
-            result = result.union(param.get_referenced_compnames())
+            result.update(param.get_referenced_compnames())
         return result
 
 class HasParameters(object): 

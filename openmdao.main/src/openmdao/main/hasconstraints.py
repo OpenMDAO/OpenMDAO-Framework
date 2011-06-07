@@ -77,7 +77,7 @@ def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
 
 class _HasConstraintsBase(object):
-    _do_not_promote = ['get_expr_depends']
+    _do_not_promote = ['get_expr_depends','get_required_compnames']
     
     def __init__(self, parent):
         self._parent = parent
@@ -120,10 +120,11 @@ class _HasConstraintsBase(object):
         referenced in objective expressions.
         """
         full = set()
-        return full.union(*[obj.get_required_compnames(assembly) 
-                            for obj in self._objectives.values()])
+        for constraint in self._constraints.values():
+            full.update(constraint.lhs.get_required_compnames(assembly))
+            full.update(constraint.rhs.get_required_compnames(assembly))
+        return full
 
-        
 class HasEqConstraints(_HasConstraintsBase):
     """Add this class as a delegate if your Driver supports equality
     constraints but does not support inequality constraints.

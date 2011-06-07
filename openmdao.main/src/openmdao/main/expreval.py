@@ -438,7 +438,12 @@ class ExprEvaluator(object):
         """
         if self._parse_needed:
             self._parse()
-        return set([v.split('.',1)[0] for v in self.var_names])
+        nameset = set()
+        for name in self.var_names:
+            parts = name.split('.',1)
+            if len(parts) > 1:
+                nameset.add(parts[0])
+        return nameset
     
     def get_required_compnames(self, assembly):
         """Return the set of all names of Components that evaluation
