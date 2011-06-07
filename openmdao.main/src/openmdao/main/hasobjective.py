@@ -11,7 +11,7 @@ def _remove_spaces(s):
 class HasObjective(object): 
     """This class provides an implementation of the IHasObjective interface."""
 
-    _do_not_promote = ['get_expr_depends']
+    _do_not_promote = ['get_expr_depends','get_required_compnames']
 
     def __init__(self, parent):
         self._parent = parent

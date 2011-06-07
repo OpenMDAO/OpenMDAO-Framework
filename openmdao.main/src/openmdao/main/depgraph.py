@@ -392,22 +392,33 @@ class DependencyGraph(object):
             for src,dests in data['link']._srcs.items():
                 stream.write('   %s : %s\n' % (src, dests))
 
-    def find_all_paths(self, start, end, path=None):
-        graph = self._graph
-        if path is None:
-            path = []
-        path.append(start)
+    def find_all_connecting(self, start, end):
+        """Return the set of all nodes along all paths between 
+        start and end.  The start and end nodes are included
+        in the set if they're connected.
+        """
         if start == end:
-            return [path]
-        if not start in graph:
-            return []
-        paths = []
-        for node in graph[start]:
-            if node not in path:
-                newpaths = self.find_all_paths(node, end, path)
-                for newpath in newpaths:
-                    paths.append(newpath)
-        return paths
+            return set()
+        graph = self._graph
+        fwdset = set()
+        backset = set()
+        tmpset = set([end])
+        while tmpset:
+            node = tmpset.pop()
+            if node in backset:
+                continue
+            backset.add(node)
+            tmpset.update(graph.predecessors(node))
+        
+        tmpset = set([start])
+        while tmpset:
+            node = tmpset.pop()
+            if node in fwdset:
+                continue
+            fwdset.add(node)
+            tmpset.update(graph.successors(node))
+        
+        return fwdset.intersection(backset)
 
 class _Link(object):
     """A Class for keeping track of all connections between two Components."""

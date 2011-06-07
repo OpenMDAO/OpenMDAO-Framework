@@ -142,8 +142,7 @@ class Driver(Component):
             graph = self.parent._depgraph
             for end in getcomps:
                 for start in setcomps:
-                    for names in graph.find_all_paths(start, end):
-                        full.update(set(names))
+                    full.update(graph.find_all_connecting(start, end))
             return full
         else:
             return refcomps
