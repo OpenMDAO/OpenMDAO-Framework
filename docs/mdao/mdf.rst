@@ -52,7 +52,7 @@ following diagram shows an iteration hierarchy for the MDF problem.
    
 
 Note that this iteration hierarchy does not contain any information about the data 
-connections necessary to complete the MDF implemenation. Workflows describe only 
+connections necessary to complete the MDF implementation. Workflows describe only 
 process.
 
 Now, let's take the iteration hierarchy we just discussed and put in into an 
@@ -113,7 +113,7 @@ Recall that there are two global design variables, ``z1`` and ``z2``. In the mod
 you find ``z1`` in two places: ``dis1.z1`` and ``dis2.z1``. The same is true for ``z2``: 
 ``dis1.z2`` and ``dis2.z2``. This means that when you add a parameter to the driver for ``z1`` or ``z2``, 
 it needs to point to both locations in the model. We accomplish that below, by just passing a tuple of 
-variable names, as the first argument to the add_parameter method. 
+variable names, as the first argument to the ``add_parameter`` method. 
 
 .. testcode:: MDF_parts
 
@@ -121,9 +121,10 @@ variable names, as the first argument to the add_parameter method.
         self.driver.add_parameter(('dis1.z1','dis2.z1'), low = -10.0, high = 10.0)
         self.driver.add_parameter(('dis1.z2','dis2.z2'), low = 0.0,   high = 10.0)
 
-There is only one local design variable for this problem, ``x1``, which is found in ``dis1.x1``. Since
-local design variables only point to one place in the model, we just add them using add_parameters with a single
-name as the first argument (just like we've shown you in previous tutorials). 
+There is only one local design variable for this problem, ``x1``, which is found in ``dis1.x1``.
+Since local design variables only point to one place in the model, we just add them using
+``add_parameter`` with a single name as the first argument (just like we've shown you in previous
+tutorials). 
 
 .. testcode:: MDF_parts
 
@@ -144,7 +145,7 @@ Similarly, we setup the convergence constraint, as an equality constraint. A sol
 essentially tries to drive something to zero. In this case, we want to
 drive the residual error in the coupled variable *y2* to zero. An equality constraint
 is defined with an expression string which is parsed for the equals sign, in the above example
-you see that 'dis2.y2 = dis1.y2' is equivilent to 'dis2.y2 - dis1.y2 = 0'. We also set the
+you see that 'dis2.y2 = dis1.y2' is equivalent to 'dis2.y2 - dis1.y2 = 0'. We also set the
 maximum number of iterations and a convergence tolerance.
         
 .. testcode:: MDF_parts
@@ -171,7 +172,7 @@ just as easily picked ``dis2.z2``.
         self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
         
         self.driver.add_constraint('3.16 < dis1.y1')
-        #Or use any of the equivilent forms below
+        #Or use any of the equivalent forms below
         #self.driver.add_constraint('3.16 - dis1.y1 < 0')
         #self.driver.add_constraint('3.16 < dis1.y1')
         #self.driver.add_constraint('-3.16 > -dis1.y1')
@@ -250,7 +251,7 @@ Finally, putting it all together gives:
                 # Iteration loop
                 self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
                 self.solver.add_constraint('dis2.y2 = dis1.y2')
-                # equivilent form
+                # equivalent form
                 # self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
                 
                 #Driver settings
@@ -315,8 +316,8 @@ output that resembles this:
         Elapsed time:  0.121051073074 seconds
 
         
-We chose initially chose to use *FixedPointIterator* for our solver, but you can replace that witha a better one. Fixed point
-iteration works for some problems, including this one, but sometimes another type of solver might be prefered. 
+We chose initially chose to use *FixedPointIterator* for our solver, but you can replace that with a better one. Fixed point
+iteration works for some problems, including this one, but sometimes another type of solver might be preferred. 
 OpenMDAO also contains a Broyden solver called
 *BroydenSolver*. This solver is based on a quasi-Newton-Raphson algorithm found in 
 ``scipy.nonlinear``. It uses a Broyden update to approximate the Jacobian. If we
@@ -341,7 +342,7 @@ We just change some of solver specific settings.
         # Iteration loop
         self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
         self.solver.add_constraint('dis2.y2 = dis1.y2')
-        # equivilent form
+        # equivalent form
         # self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')
         
         self.solver.itmax = 10
