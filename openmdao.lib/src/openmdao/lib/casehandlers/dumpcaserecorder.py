@@ -1,9 +1,7 @@
 
 import sys
 
-from openmdao.lib.datatypes.api import implements
-
-from openmdao.main.interfaces import ICaseRecorder
+from openmdao.main.interfaces import implements, ICaseRecorder
 
 class DumpCaseRecorder(object):
     """Dumps cases in a "pretty" form to a file-like object called "out" (defaults to ``sys.stdout``).

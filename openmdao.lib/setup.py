@@ -68,8 +68,8 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.components.metamodel.MetaModel = openmdao.lib.components.metamodel:MetaModel
       openmdao.lib.components.mux.Mux = openmdao.lib.components.mux:Mux
       openmdao.lib.components.mux.DeMux = openmdao.lib.components.mux:DeMux
+      openmdao.lib.components.broadcaster.Broadcaster = openmdao.lib.components.broadcaster:Broadcaster
       openmdao.lib.components.pareto_filter.ParetoFilter = openmdao.lib.components.pareto_filter:ParetoFilter
-      openmdao.lib.components.prob_intersect.ProbIntersect = openmdao.lib.components.prob_intersect:ProbIntersect
       openmdao.lib.components.nastran.nastran.NastranComponent = openmdao.lib.components.nastran.nastran:NastranComponent
 
       [openmdao.differentiator]

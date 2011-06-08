@@ -281,7 +281,6 @@ class Case(object):
         if match is None or match.group() != s:
             expr =  ExprEvaluator(s)
             if self._exprs is None:
-                self._exprs = { s: expr }
-            else:
-                self._exprs[s] = expr
+                self._exprs = {}
+            self._exprs[s] = expr
 

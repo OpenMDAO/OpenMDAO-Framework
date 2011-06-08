@@ -79,8 +79,9 @@ valid. In this particular case, we just need to verify that the value is a
 3-tuple and it has float or int entries. If the value is acceptable, then we
 just return it. We don't need to do it in this case, but in other custom
 traits, we could convert the value before returning it. If the value
-is not acceptable, then we call the ``error`` function, which will raise a
-TraitError exception.
+is not acceptable, then we call the ``error`` function, which will raise an
+exception, typically a ValueError or a TypeError depending on the nature of
+the error.
 
 That's all of the source code required to make our Coordinates variable 
 functional.  As in the earlier section, where we made a component plugin,

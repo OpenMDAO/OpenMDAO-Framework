@@ -15,16 +15,17 @@ import weakref
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
-from enthought.traits.api import Bool, List, Str, Int, Instance, Property, implements, TraitError
+from enthought.traits.api import Bool, List, Str, Int, Property
 
 from openmdao.main.container import Container
-from openmdao.main.interfaces import IComponent, ICaseIterator
+from openmdao.main.interfaces import implements, IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
+from openmdao.main.slot import Slot
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -189,9 +190,9 @@ class Component (Container):
         version.
         """
         for name, value in self.traits(required=True).items():
-            if value.is_trait_type(Instance) and getattr(self, name) is None:
+            if value.is_trait_type(Slot) and getattr(self, name) is None:
                 self.raise_exception("required plugin '%s' is not present" %
-                                     name, TraitError)
+                                     name, RuntimeError)
     
     @rbac(('owner', 'user'))
     def tree_rooted(self):

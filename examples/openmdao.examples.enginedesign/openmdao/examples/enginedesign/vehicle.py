@@ -9,9 +9,9 @@
 
 # pylint: disable-msg=E0611,F0401
 
-from openmdao.lib.datatypes.api import Interface, Float
+from openmdao.lib.datatypes.api import Float
 
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, Interface
 
 from openmdao.examples.enginedesign.transmission import Transmission
 from openmdao.examples.enginedesign.chassis import Chassis

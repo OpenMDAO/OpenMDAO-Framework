@@ -4,27 +4,26 @@ with a CaseRecorder """
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Driver
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
-from openmdao.lib.datatypes.api import Instance
-
+from openmdao.main.slot import Slot
 testdict = {}
 
 class SimpleCaseIterDriver(Driver):
     """
     A Driver that sequentially runs a set of cases provided by an :class:`ICaseIterator`
-    and records the results in a :class:`CaseRecorder`. This is
+    and optionally records the results in a :class:`CaseRecorder`. This is
     intended for test cases or very simple models only. For a more full-featured Driver 
-    with similar functionality, see
-    :class:`CaseIteratorDriver`.
+    with similar functionality, see :class:`CaseIteratorDriver`.
 
     - The `iterator` socket provides the cases to be evaluated.
-    - The `recorder` socket is used to record results.
+    - The `recorder` socket is used to record results. This is inherited from
+                  the :class:`Driver` class.
     
     For each case coming from the `iterator`, the workflow will
     be executed once.
     """
 
     # pylint: disable-msg=E1101
-    iterator = Instance(ICaseIterator, desc='Source of Cases.', required=True)
+    iterator = Slot(ICaseIterator, desc='Source of Cases.', required=True)
     
     def __init__(self, *args, **kwargs):
         super(SimpleCaseIterDriver, self).__init__(*args, **kwargs)
@@ -39,7 +38,7 @@ class SimpleCaseIterDriver(Driver):
         
     def execute(self):
         """ Run each case in `iterator` and record results in `recorder`. """
-        for case in self.iterator.get_iter():
+        for case in self.iterator:
             self._run_case(case)
             self.recorder.record(case)
 

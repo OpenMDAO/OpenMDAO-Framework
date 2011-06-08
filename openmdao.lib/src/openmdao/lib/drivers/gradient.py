@@ -54,8 +54,8 @@ class GradientDriver(Driver):
         
         self._check()
         
-        inputs = self._hasparameters._parameters.keys()
-        outputs = self._hasobjectives._objectives.keys()
+        inputs = self.get_parameters().keys()
+        outputs = self.list_objectives()
         
         for input_name in inputs:
             for output_name in outputs:
@@ -74,8 +74,8 @@ class GradientDriver(Driver):
         self.differentiator.calc_gradient()
         self.ffd_order = 0
             
-        inputs = self._hasparameters._parameters.keys()
-        outputs = self._hasobjectives._objectives.keys()
+        inputs = self.get_parameters().keys()
+        outputs = self.list_objectives()
         
         for i, input_name in enumerate(inputs):
             for j, output_name in enumerate(outputs):
@@ -89,7 +89,7 @@ class GradientDriver(Driver):
     def _check(self):
         """Make sure we aren't missing input or output"""
         
-        if len(self.list_parameters()) < 1:
+        if len(self.get_parameters().values()) < 1:
             msg = "Missing inputs for gradient calculation"
             self.raise_exception(msg, ValueError)
         

@@ -10,7 +10,7 @@ import platform
 import sys
 import unittest
 
-from openmdao.lib.datatypes.api import TraitError, Event
+from openmdao.lib.datatypes.api import Event
 
 from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.exceptions import RunStopped
@@ -20,6 +20,7 @@ from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.doedriver import DOEdriver
 from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
+from openmdao.lib.doegenerators.full_factorial import FullFactorial
 from openmdao.main.eggchecker import check_save_load
 from openmdao.util.testutil import find_python
 
@@ -37,8 +38,6 @@ def rosen_suzuki(x0,x1,x2,x3):
     """ Evaluate polynomial from CONMIN manual. """
     return x0**2 - 5.*x0 + x1**2 - 5.*x1 + \
            2.*x2**2 - 21.*x2 + x3**2 + 7.*x3 + 50
-
-
 
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
@@ -66,8 +65,6 @@ class DrivenComponent(Component):
         if self.stop_exec:
             self.parent.driver.stop()  # Only valid if sequential!
 
-
-
 class MyModel(Assembly):
     """ Use DOEdriver with DrivenComponent. """
 
@@ -79,7 +76,8 @@ class MyModel(Assembly):
         self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
         self.driver.case_outputs = ['driven.rosen_suzuki']
         for name in ['x0', 'x1','x2', 'x3']:
-            self.driver.add_parameter("driven.%s"%name,low=-10.,high=10.)
+            self.driver.add_parameter("driven.%s"%name,low=-10.,high=10.,
+                                      scaler=20., adder=10.)
                                     
 
 
@@ -149,9 +147,8 @@ class TestCase(unittest.TestCase):
     def test_param_already_added(self):
         try:
             self.model.driver.add_parameter('driven.x3')
-        except AttributeError as err:
-            self.assertEqual(str(err), "driver: Trying to add parameter 'driven.x3' to driver, "
-                             "but it's already there")
+        except ValueError as err:
+            self.assertEqual(str(err), "driver: ['driven.x3'] are already Parameter targets")
         else:
             self.fail("expected AttributeError")
     
@@ -164,10 +161,10 @@ class TestCase(unittest.TestCase):
         self.assertEqual(lst, [])
         
     def test_param_removal(self):
-        lst = self.model.driver.list_parameters()
+        lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0','driven.x1','driven.x2','driven.x3'])
         self.model.driver.remove_parameter('driven.x1')
-        lst = self.model.driver.list_parameters()
+        lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0','driven.x2','driven.x3'])
 
     def test_no_event(self):
@@ -206,11 +203,11 @@ class TestCase(unittest.TestCase):
         self.model.driver.DOEgenerator = None
         try:
             self.model.run()
-        except TraitError as exc:
+        except Exception as exc:
             msg = "driver: required plugin 'DOEgenerator' is not present"
             self.assertEqual(str(exc), msg)
         else:
-            self.fail('TraitError expected')
+            self.fail('Exception expected')
 
     def test_norecorder(self):
         logging.debug('')
@@ -238,6 +235,12 @@ class TestCase(unittest.TestCase):
                           RuntimeError,
                           "driver: Run aborted: RuntimeError('driven: Forced error',)")
 
+    def test_scaling(self):
+        self.model.driver.DOEgenerator = ff = FullFactorial(num_levels=3)
+        ff.num_parameters = 4
+        for case in self.model.driver._get_cases():
+            print case
+        
     def verify_results(self, forced_errors=False):
         # Verify recorded results match expectations.
         
@@ -248,6 +251,8 @@ class TestCase(unittest.TestCase):
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
                                  rosen_suzuki(*[case['driven.x%s'%i] for i in range(4)]))
+
+        
 
 if __name__ == "__main__":
     unittest.main()

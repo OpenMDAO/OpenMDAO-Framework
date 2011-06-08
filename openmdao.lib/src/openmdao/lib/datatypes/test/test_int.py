@@ -2,8 +2,6 @@
 
 import unittest
 
-from enthought.traits.api import TraitError
-
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Container
 from openmdao.lib.datatypes.int import Int
@@ -42,7 +40,7 @@ class IntTestCase(unittest.TestCase):
         
         try:
             self.hobj.add_trait('inta', Int(98.0, low=0, high=99, iotype='in'))
-        except TraitError, err:
+        except ValueError, err:
             errstring = "Default value for an Int must be an integer."
             self.assertEqual(str(err), errstring)
         else:
@@ -50,7 +48,7 @@ class IntTestCase(unittest.TestCase):
         
         try:
             self.hobj.add_trait('inta', Int(98, low=0.01, high=99, iotype='in'))
-        except TraitError, err:
+        except ValueError, err:
             errstring = "Lower bound for an Int must be an integer."
             self.assertEqual(str(err), errstring)
         else:
@@ -58,7 +56,7 @@ class IntTestCase(unittest.TestCase):
         
         try:
             self.hobj.add_trait('inta', Int(98, low=0, high=99.9, iotype='in'))
-        except TraitError, err:
+        except ValueError, err:
             errstring = "Upper bound for an Int must be an integer."
             self.assertEqual(str(err), errstring)
         else:
@@ -66,7 +64,7 @@ class IntTestCase(unittest.TestCase):
         
         try:
             self.hobj.add_trait('badbounds', Int(98, low=100, high=0, iotype='in'))
-        except TraitError, err:
+        except ValueError, err:
             errstring = "Lower bound is greater than upper bound."
             self.assertEqual(str(err), errstring)
         else:
@@ -76,11 +74,11 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.add_trait('out_of_bounds',
                                 Int(5, low=3, high=4))
-        except TraitError, err:
+        except ValueError, err:
             self.assertEqual(str(err), 
                 "Default value is outside of bounds [3, 4].")
         else:
-            self.fail('TraitError expected')
+            self.fail('ValueError expected')
             
     def test_assignment(self):
         # check starting value
@@ -92,12 +90,12 @@ class IntTestCase(unittest.TestCase):
         #check assignment with float
         try:
             self.hobj.int1 = 3.1
-        except TraitError, err:
-            errstring = ": Trait 'int1' must be 0 <= an integer <= 99, but " + \
+        except ValueError, err:
+            errstring = ": Variable 'int1' must be 0 <= an integer <= 99, but " + \
                         "a value of 3.1 <type 'float'> was specified."
             self.assertEqual(str(err), errstring)
         else:
-            self.fail('TraitError expected')
+            self.fail('ValueError expected')
 
 
     def test_get(self):
@@ -116,22 +114,22 @@ class IntTestCase(unittest.TestCase):
     def test_constraint_violations(self):
         try:
             self.hobj.int1 = 124
-        except TraitError, err:
-            errstring = ": Trait 'int1' must be" + \
+        except ValueError, err:
+            errstring = ": Variable 'int1' must be" + \
                       " 0 <= an integer <= 99, but a value of 124" + \
                       " <type 'int'> was specified."
             self.assertEqual(str(err), errstring)
         else:
-            self.fail('TraitError expected')
+            self.fail('ValueError expected')
         try:
             self.hobj.int1 = -3
-        except TraitError, err:
-            errstring = ": Trait 'int1' must be" + \
+        except ValueError, err:
+            errstring = ": Variable 'int1' must be" + \
                       " 0 <= an integer <= 99, but a value of -3" + \
                       " <type 'int'> was specified."
             self.assertEqual(str(err), errstring)
         else:
-            self.fail('TraitError exception')
+            self.fail('ValueError exception')
 
     def test_constructor_defaults(self):
         
@@ -154,13 +152,13 @@ class IntTestCase(unittest.TestCase):
                                   iotype='in'))
         try:
             self.hobj.int4 = 3
-        except TraitError, err:
-            errstring = ": Trait 'int4' must be" + \
+        except ValueError, err:
+            errstring = ": Variable 'int4' must be" + \
                       " 3 < an integer < 4, but a value of 3" + \
                       " <type 'int'> was specified."
             self.assertEqual(str(err), errstring)
         else:
-            self.fail('TraitError expected')
+            self.fail('ValueError expected')
         
             
 if __name__ == "__main__":

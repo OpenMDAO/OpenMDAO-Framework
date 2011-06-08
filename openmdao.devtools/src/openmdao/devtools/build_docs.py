@@ -262,7 +262,9 @@ def test_docs():
                       os.path.join(docdir, '_build', 'doctrees'), 
                       docdir, os.path.join(docdir, '_build', 'html')])
 
-    
+# make nose ignore this function
+test_docs.__test__ = False
+
 def _get_border_line(numcols, colwidths, char):
     parts = []
     for i in range(numcols):

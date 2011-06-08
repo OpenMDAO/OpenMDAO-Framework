@@ -82,7 +82,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             outputs = [('comp1.z', i*1.5), ('comp2.normal', NormalDistribution(float(i),0.5))]
             recorder.record(Case(inputs=inputs, outputs=outputs, label='case%s'%i))
         iterator = recorder.get_iterator()
-        for i,case in enumerate(iterator.get_iter()):
+        for i,case in enumerate(iterator):
             self.assertTrue(isinstance(case['comp2.normal'], NormalDistribution))
             self.assertEqual(case['comp2.normal'].mu, float(i))
             self.assertEqual(case['comp2.normal'].sigma, 0.5)
@@ -100,7 +100,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         iterator.selectors = ["value>=0","value<3"]
 
         count = 0
-        for i,case in enumerate(iterator.get_iter()):
+        for i,case in enumerate(iterator):
             count += 1
             for name,value in case.items():
                 self.assertTrue(value >= 0 and value<3)
@@ -234,7 +234,7 @@ class NestedCaseTestCase(unittest.TestCase):
     
     def _get_level_cases(self, caseiter):
         levels = [[],[],[]]
-        for case in caseiter.get_iter():
+        for case in caseiter:
             if case.label.startswith('L1_'):
                 levels[0].append(case)
             elif case.label.startswith('L2_'):
