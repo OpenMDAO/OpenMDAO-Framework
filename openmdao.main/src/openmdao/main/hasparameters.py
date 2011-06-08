@@ -157,6 +157,11 @@ class Parameter(object):
         pathnames of Variables referenced in our target string. 
         """
         return self._expreval.get_referenced_compnames()
+
+    def get_referenced_varpaths(self):
+        """Return a set of Variable names referenced in our target string."""
+        return self._expreval.get_referenced_varpaths()
+
     
 class ParameterGroup(object):
     """A group of Parameters that are treated as one, i.e., they are all
@@ -223,10 +228,18 @@ class ParameterGroup(object):
             result.update(param.get_referenced_compnames())
         return result
 
+    def get_referenced_varpaths(self):
+        """Return a set of Variable names referenced in our target strings."""
+        result = set()
+        for param in self._params:
+            result.update(param.get_referenced_varpaths())
+        return result
+
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface."""
 
-    _do_not_promote = ['get_expr_depends']
+    _do_not_promote = ['get_expr_depends', 'get_referenced_compnames', 
+                       'get_referenced_varpaths']
     
     def __init__(self, parent):
         self._parameters = ordereddict.OrderedDict()
@@ -357,3 +370,19 @@ class HasParameters(object):
                 conn_list.append((pname, cname))
         return conn_list
     
+    def get_referenced_compnames(self):
+        """Return a set of Component names based on the 
+        pathnames of Variables referenced in our target strings. 
+        """
+        result = set()
+        for param in self._parameters.values():
+            result.update(param.get_referenced_compnames())
+        return result
+
+    def get_referenced_varpaths(self):
+        """Return a set of Variable names referenced in our target strings.
+        """
+        result = set()
+        for param in self._parameters.values():
+            result.update(param.get_referenced_varpaths())
+        return result

@@ -6,14 +6,14 @@ import nose
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
 from openmdao.lib.datatypes.api import Int
-from openmdao.main.hasobjective import HasObjective
+from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 
 exec_order = []
 
-@add_delegate(HasObjective, HasParameters, HasConstraints)
+@add_delegate(HasObjectives, HasParameters, HasConstraints)
 class DumbDriver(Driver):
     def execute(self):
         global exec_order
@@ -348,12 +348,16 @@ class DependsTestCase(unittest.TestCase):
     def test_get_required_compnames(self):
         sub = self.top.sub
         sub.add('driver', DumbDriver())
-        sub.driver.add_parameter('comp1.a')
-        sub.driver.add_parameter('comp3.a')
         sub.driver.add_objective('comp6.c')
         sub.driver.add_objective('comp5.d')
         self.assertEqual(sub.driver._get_required_compnames(),
-                         set())
+                         set(['comp6','comp5']))
+        sub.driver.add_parameter('comp1.a')
+        self.assertEqual(sub.driver._get_required_compnames(),
+                         set(['comp6','comp5','comp1','comp4']))
+        sub.driver.add_parameter('comp3.a')
+        self.assertEqual(sub.driver._get_required_compnames(),
+                         set(['comp6','comp5','comp1','comp4','comp3']))
 
 class DependsTestCase2(unittest.TestCase):
 

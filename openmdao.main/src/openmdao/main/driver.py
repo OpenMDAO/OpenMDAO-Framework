@@ -14,6 +14,10 @@ from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.hasevents import HasEvents
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
+from openmdao.main.hasobjective import HasObjective, HasObjectives
+from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
 from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
@@ -115,37 +119,26 @@ class Driver(Component):
         parameters and those referenced by objectives and/or constraints.
         """
         setcomps = set()
-        try:
-            params = self.get_parameters()
-        except:
-            pass
-        else:
-            for param in params.values():
-                setcomps.update(param.get_referenced_compnames())
+        getcomps = set()
 
-        refcomps = set()
-        for src,dest in super(Driver, self).get_expr_depends():
-            refcomps.add(src)
-            refcomps.add(dest)
-        if self.name in refcomps:
-            refcomps.remove(self.name)
-            
-        # if there are no parameters, then include all dependent comps from the 
-        # dependency graph instead of stopping at the parameter components
-        if len(setcomps) == 0:
-            return refcomps
-        
-        getcomps = refcomps - setcomps
+        if hasattr(self, '_delegates_'):
+            for name, dclass in self._delegates_.items():
+                inst = getattr(self, name)
+                if isinstance(inst, HasParameters):
+                    setcomps = inst.get_referenced_compnames()
+                elif isinstance(inst, (HasConstraints, HasEqConstraints, 
+                                       HasIneqConstraints, HasObjective, HasObjectives)):
+                    getcomps.update(inst.get_referenced_compnames())
+
+        full = set(getcomps)
+        full.update(setcomps)
         
         if self.parent:
-            full = set()
             graph = self.parent._depgraph
             for end in getcomps:
                 for start in setcomps:
                     full.update(graph.find_all_connecting(start, end))
-            return full
-        else:
-            return refcomps
+        return full
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition

@@ -73,21 +73,19 @@ class FiniteDifference(HasTraits):
     def setup(self):
         """Sets some dimensions."""
 
-        self.n_param = len(self._parent._hasparameters._parameters)
-        
-        if hasattr(self._parent, '_hasobjectives'):
-            self.n_objective = len(self._parent._hasobjectives._objectives)
+        self.n_param = len(self._parent.get_parameters())
+        self.n_objective = len(self._parent.get_objectives())
+        if self.n_objective != 1:
             self.multi_obj = True
-        else:
-            self.n_objective = 1
-            
-        if hasattr(self._parent, '_hasineqconstraints'):
-            self.n_ineqconst = len(self._parent._hasineqconstraints._constraints)
-        if hasattr(self._parent, '_haseqconstraints'):
-            self.n_eqconst = len(self._parent._haseqconstraints._constraints)
-        if hasattr(self._parent, '_hasconstraints'):
-            self.n_eqconst = len(self._parent._hasconstraints._eq._constraints)
-            self.n_ineqconst = len(self._parent._hasconstraints._ineq._constraints)
+        
+        try:
+            self.n_ineqconst = len(self._parent.get_ineq_constraints())
+        except AttributeError:
+            pass
+        try:
+            self.n_eqconst = len(self._parent.get_eq_constraints())
+        except AttributeError:
+            pass
         
     def calc_gradient(self):
         """Returns the gradient vectors for this Driver's workflow."""

@@ -55,7 +55,7 @@ class MDF(object):
             self.parent.driver.add_constraint(const)
             
         #set the global objective
-        self.parent.driver.add_objective(self.parent.list_objective())
+        self.parent.driver.add_objectives(self.parent.get_objectives().keys())
             
         #setup the inner loop solver    
         self.parent.add('solver',BroydenSolver())    

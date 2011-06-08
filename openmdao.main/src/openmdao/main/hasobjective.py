@@ -7,69 +7,15 @@ from openmdao.main.expreval import ExprEvaluator
 def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
 
-
-class HasObjective(object): 
-    """This class provides an implementation of the IHasObjective interface."""
-
-    _do_not_promote = ['get_expr_depends','get_required_compnames']
-
-    def __init__(self, parent):
-        self._parent = parent
-        self._objective = ''
-
-    def add_objective(self, expr):
-        """Sets the objective of this driver to be the specified expression.
-        If there is a preexisting objective in this driver, it is replaced.
-        
-        expr: string
-            String containing the objective expression.
-         """
-        expr = _remove_spaces(expr)
-        expreval = ExprEvaluator(expr, self._parent)
-        
-        if not expreval.check_resolve():
-            self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
-                                         ValueError)
-        self._objective = expreval
-
-    def list_objective(self):
-        """Returns the expression string for the objective."""
-        return self._objective.text
-    
-    def eval_objective(self):
-        """Returns the value of the evaluated objective."""
-        if not self._objective:
-            self._parent.raise_exception("no objective specified", ValueError)
-        return self._objective.evaluate()
-
-    def get_expr_depends(self):
-        """Returns a list of tuples of the form (comp_name, parent_name)
-        for each component name referenced by our objective.
-        """
-        if not self._objective:
-            return []
-        pname = self._parent.name
-        return [(cname,pname) for cname in self._objective.get_referenced_compnames()]
-    
-    def get_required_compnames(self, assembly):
-        """Returns a set of names of components that are required to evaluate
-        the objective.  This set will include all components within the given
-        Assembly that are directly referenced in the objective expression or ones
-        that supply inputs, either directly or indirectly, to components
-        referenced in the objective expression.
-        """
-        if isinstance(self._objective, basestring):
-            return set()
-        else:
-            return self._objective.get_required_compnames(assembly) 
-
 class HasObjectives(object): 
     """This class provides an implementation of the IHasObjectives interface."""
 
-    _do_not_promote = ['get_expr_depends','get_required_compnames']
+    _do_not_promote = ['get_expr_depends','get_referenced_compnames',
+                       'get_referenced_varpaths']
     
-    def __init__(self, parent):
+    def __init__(self, parent, max_objectives=0):
         self._objectives = ordereddict.OrderedDict()
+        self._max_objectives = max_objectives
         self._parent = parent
 
     def add_objectives(self, obj_iter):
@@ -89,6 +35,9 @@ class HasObjectives(object):
             String containing the objective expression.
             
          """
+        if self._max_objectives > 0 and len(self._objectives) >= self._max_objectives:
+            self._parent.raise_exception("Can't add objective '%s'. Only %d objectives are allowed" % (expr,self._max_objectives),
+                                         RuntimeError)
         expr = _remove_spaces(expr)
         if expr in self._objectives: 
             self._parent.raise_exception("Trying to add objective '%s' to driver, "
@@ -112,9 +61,9 @@ class HasObjectives(object):
             self._parent.raise_exception("Trying to remove objective '%s' "
                                          "that is not in this driver." % expr,
                                          AttributeError)
-    def list_objectives(self):
-        """Returns a list of objective expressions."""
-        return self._objectives.keys()
+    def get_objectives(self):
+        """Returns an OrderedDict of objective expressions."""
+        return self._objectives
     
     def clear_objectives(self):
         """Removes all objectives."""
@@ -134,14 +83,30 @@ class HasObjectives(object):
             conn_list.extend([(cname,pname) for cname in obj.get_referenced_compnames()])
         return conn_list
     
-    def get_required_compnames(self, assembly):
-        """Returns a set of names of components that are required to evaluate
-        all objectives.  This set will include all components within the given
-        Assembly that are directly referenced in objective expressions or ones
-        that supply inputs, either directly or indirectly, to components
-        referenced in objective expressions.
-        """
-        full = set()
-        return full.union(*[obj.get_required_compnames(assembly) 
-                            for obj in self._objectives.values()])
+    def get_referenced_compnames(self):
+        """Returns the names of components referenced by the objectives."""
+        lst = []
+        for obj in self._objectives.values():
+            lst.extend(obj.get_referenced_compnames())
+        return lst
+
+    def get_referenced_varpaths(self):
+        """Returns the names of variables referenced by the objectives."""
+        lst = []
+        for obj in self._objectives.values():
+            lst.extend(obj.get_referenced_varpaths())
+        return lst
+
+
+class HasObjective(HasObjectives):
+    def __init__(self, parent):
+        super(HasObjective, self).__init__(parent, max_objectives=1)
+        
+    def eval_objective(self):
+        """Returns a list of values of the evaluated objectives."""
+        if len(self._objectives) > 0:
+            return super(HasObjective, self).eval_objectives()[0]
+        else:
+            self._parent.raise_exception("no objective specified", Exception)
+
 

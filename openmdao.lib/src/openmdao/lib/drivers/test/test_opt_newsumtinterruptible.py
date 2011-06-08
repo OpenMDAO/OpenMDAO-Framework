@@ -529,7 +529,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
     def test_get_objective(self):
         # test getting the objective function
         self.top.driver.add_objective( 'comp.result' )
-        self.assertEqual('comp.result', self.top.driver.list_objective())
+        self.assertEqual(['comp.result'], self.top.driver.get_objectives().keys())
     
     def test_update_objective(self):
 

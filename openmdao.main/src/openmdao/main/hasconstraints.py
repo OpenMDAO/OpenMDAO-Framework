@@ -55,6 +55,9 @@ class Constraint(object):
         rhs = (self.rhs.evaluate() + self.adder)*self.scaler
         return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
         
+    def get_referenced_compnames(self):
+        return self.lhs.get_referenced_compnames() + self.rhs.get_referenced_compnames()
+
     def __str__(self):
         return ' '.join([self.lhs, self.comparator, self.rhs])
 
@@ -77,7 +80,8 @@ def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
 
 class _HasConstraintsBase(object):
-    _do_not_promote = ['get_expr_depends','get_required_compnames']
+    _do_not_promote = ['get_expr_depends','get_referenced_compnames',
+                       'get_referenced_varpaths']
     
     def __init__(self, parent):
         self._parent = parent
@@ -112,18 +116,26 @@ class _HasConstraintsBase(object):
                 conn_list.append((cname, pname))
         return conn_list
     
-    def get_required_compnames(self, assembly):
-        """Returns a set of names of components that are required to evaluate
-        all objectives.  This set will include all components within the given
-        Assembly that are directly referenced in objective expressions or ones
-        that supply inputs, either directly or indirectly, to components
-        referenced in objective expressions.
+    def get_referenced_compnames(self):
+        """Returns a set of names of each component referenced by a
+        constraint.
         """
-        full = set()
+        names = set()
         for constraint in self._constraints.values():
-            full.update(constraint.lhs.get_required_compnames(assembly))
-            full.update(constraint.rhs.get_required_compnames(assembly))
-        return full
+            names.update(constraint.lhs.get_referenced_compnames())
+            names.update(constraint.rhs.get_referenced_compnames())
+        return names
+    
+    def get_referenced_varpaths(self):
+        """Returns a set of variable names referenced by a
+        constraint.
+        """
+        names = set()
+        for constraint in self._constraints.values():
+            names.update(constraint.lhs.get_referenced_varpaths())
+            names.update(constraint.rhs.get_referenced_varpaths())
+        return names
+    
 
 class HasEqConstraints(_HasConstraintsBase):
     """Add this class as a delegate if your Driver supports equality
@@ -250,7 +262,8 @@ class HasConstraints(object):
     and inequality constraints.
     """
     
-    _do_not_promote = ['get_expr_depends']
+    _do_not_promote = ['get_expr_depends', 'get_referenced_compnames',
+                       'get_referenced_varpaths']
     
     def __init__(self, parent):
         self._parent = parent
@@ -340,4 +353,20 @@ class HasConstraints(object):
         conn_list = self._eq.get_expr_depends()
         conn_list.extend(self._ineq.get_expr_depends())
         return conn_list
+    
+    def get_referenced_compnames(self):
+        """Returns a set of names of each component referenced by a
+        constraint.
+        """
+        names = set(self._eq.get_referenced_compnames())
+        names.update(self._ineq.get_referenced_compnames())
+        return names
+    
+    def get_referenced_varpaths(self):
+        """Returns a set of names of each component referenced by a
+        constraint.
+        """
+        names = set(self._eq.get_referenced_varpaths())
+        names.update(self._ineq.get_referenced_varpaths())
+        return names
     

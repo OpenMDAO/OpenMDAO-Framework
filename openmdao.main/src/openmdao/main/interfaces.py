@@ -652,29 +652,6 @@ class IHasConstraints(IHasEqConstraints, IHasIneqConstraints):
         an assignment or an inequality, e.g., 'a=b' or 'a<=b'.
         """
 
-class IHasObjective(Interface): 
-    """An Interface for objects having a single objective."""
-
-    def add_objective(expr):
-        """Sets the objective of this driver to be the specified expression.
-        If there is a preexisting objective in this driver, it is replaced.
-        
-        expr: string
-            String containing the objective expression.
-         """
-            
-    def list_objective():
-        """Returns the expression string for the objective."""
-    
-    def eval_objective():
-        """Returns the value of the evaluated objective."""
-
-    def get_expr_depends():
-        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by our objective. 
-        """
-    
-
 class IHasObjectives(Interface): 
     """An Interface for objects having a multiple objectives."""
 
@@ -695,9 +672,6 @@ class IHasObjectives(Interface):
         the expression are ignored.
         """
         
-    def list_objectives():
-        """Returns a list of objective expression strings."""
-    
     def clear_objectives():
         """Removes all objectives."""
         
@@ -709,6 +683,13 @@ class IHasObjectives(Interface):
         for each dependency introduced by our objectives.
         """
         
+class IHasObjective(IHasObjectives): 
+    """An Interface for objects having a single objective."""
+
+    def eval_objective():
+        """Returns the value of the evaluated objective."""
+
+
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces
     specified."""
