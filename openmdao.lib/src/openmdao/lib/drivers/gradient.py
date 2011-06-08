@@ -82,7 +82,7 @@ class GradientDriver(Driver):
                 
                 var_name = _findname(input_name, output_name)
                 
-                setattr(self, var_name, \
+                setattr(self, var_name,
                         self.differentiator.gradient_obj[i,j])
                 
         
