@@ -1,5 +1,5 @@
 """
-Test the GradientDriver component
+Test the SensitivityDriver component
 """
 
 import unittest
@@ -7,7 +7,7 @@ import unittest
 # pylint: disable-msg=F0401,E0611
 from openmdao.lib.datatypes.api import Float
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.lib.drivers.api import GradientDriver
+from openmdao.lib.drivers.api import SensitivityDriver
 from openmdao.main.api import Component, Assembly
 from openmdao.util.testutil import assert_rel_error
 
@@ -37,14 +37,14 @@ class Assy(Assembly):
         super(Assy, self).__init__()
 
         self.add('comp', Comp())
-        self.add('driver', GradientDriver())
+        self.add('driver', SensitivityDriver())
         self.driver.workflow.add(['comp'])
         
-        # Gradient inputs
+        # Sensitivity inputs
         self.driver.add_parameter('comp.x', low=-9e99, high=9e99, fd_step=.01)
         self.driver.add_parameter('comp.u', low=-9e99, high=9e99, fd_step=.01)
         
-        # Gradient outputs
+        # Sensitivity outputs
         self.driver.add_objective('comp.y')
         self.driver.add_objective('comp.v')
         
@@ -52,8 +52,8 @@ class Assy(Assembly):
         self.driver.differentiator = FiniteDifference(self.driver)
         
         
-class GradientDriverTestCase(unittest.TestCase):
-    """test GradientDriver component"""
+class SensitivityDriverTestCase(unittest.TestCase):
+    """test SensitivityDriver component"""
 
     def setUp(self):
         self.model = Assy()

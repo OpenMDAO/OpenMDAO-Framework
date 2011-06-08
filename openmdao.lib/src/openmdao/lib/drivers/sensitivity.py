@@ -1,15 +1,15 @@
 """
-    gradient.py -- Driver to calculate the gradient of a workflow, and return
+    sensitivity.py -- Driver to calculate the gradient of a workflow, and return
     it as a driver output. 
     
-    GradientDriver includes a differentiator slot where the differentiation
+    SensitivityDriver includes a differentiator slot where the differentiation
     method can be plugged. Fake finite difference is supported.
 """
 
 # pylint: disable-msg=C0103
 
 #public symbols
-__all__ = ['GradientDriver']
+__all__ = ['SensitivityDriver']
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Float
@@ -28,12 +28,12 @@ def _findname(input_name, output_name):
 
 
 @add_delegate(HasParameters, HasObjectives, UsesGradients)
-class GradientDriver(Driver):
+class SensitivityDriver(Driver):
     """Driver to calculate the gradient of a workflow, and return
     it as a driver output. The gradient is calculated from all
     inputs (Parameters) to all outputs (Objectives).
     
-    GradientDriver includes a differentiator slot where the differentiation
+    SensitivityDriver includes a differentiator slot where the differentiation
     method can be plugged. Fake finite difference is supported.
     """
     
@@ -63,7 +63,7 @@ class GradientDriver(Driver):
                 var_name = _findname(input_name, output_name)
                 
                 self.add_trait(var_name, Float(0.0, iostatus='out',
-                             desc = 'Deritavive output from GradientDriver'))
+                           desc = 'Deritavive output from SensitivityDriver'))
             
     def execute(self):
         """Calculate the gradient of the workflow."""
