@@ -11,9 +11,7 @@ from openmdao.lib.datatypes.api import Float
 
 
 class Broadcaster(Component):
-    """Component that holds some design variables.
-    This is only needed because we can't hook an optimizer up to multiple
-    locations of the same design variable"""
+    """Component that holds some design variables."""
     
     # pylint: disable-msg=E1101
     z1_in = Float(0.0, iotype='in', desc='Global Design Variable')

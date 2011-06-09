@@ -69,7 +69,8 @@ the expression:
 
         from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
         self = EngineOptimization()
-        
+        self.driver.clear_objectives()
+
 .. testcode:: Code10
 
                 # CONMIN Objective = Maximize accel_time 
@@ -77,8 +78,11 @@ the expression:
                 
 You can build up more complicated expressions from any number of OpenMDAO variables using Python's mathematical syntax:
 
+
 .. testcode:: Code10
 
+                # first, clear out old objective
+                self.driver.clear_objectives()
                 # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
                 self.driver.add_objective('-(.93*sim_EPA_city.fuel_economy + 1.07*sim_EPA_highway.fuel_economy)')
 
@@ -92,6 +96,7 @@ Try solving the same optimization problem using this objective.
         >>> prob = EngineOptimization()
         >>> set_as_top(prob)
         <openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at 0xe80c3b0>
+        >>> prob.driver.clear_objectives()
         >>> prob.driver.add_objective('-(.93*sim_EPA_city.fuel_economy + 1.07*sim_EPA_highway.fuel_economy)')
         >>> prob.vehicle.spark_angle
         -37.0

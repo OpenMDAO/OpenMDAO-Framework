@@ -203,6 +203,11 @@ objective (some future optimizers will handle multiple objectives) can be
 added to a driver using the ``add_objective`` method with an argument that is
 a string expression built up from available OpenMDAO outputs.
 
+.. testsetup:: Parameter_API
+
+    self.driver.clear_objectives()
+
+    
 .. testcode:: Parameter_API
 
     # CONMIN Objective = Maximize weighted sum of two variables
