@@ -90,12 +90,8 @@ class MetaModel(Component):
             inputs = []
             for inp_name in self._surrogate_input_names:
                 inp_val = None
-                #TODO: Fix case object, so it has a get_input method to clean up this loop
                 var_name = "%s.%s"%(self.name,inp_name)
-                for name,val in case.items(iotype='in'): 
-                    if name == var_name:
-                        inp_val = val
-                        break
+                inp_val = case[var_name]
                 if inp_val is not None: 
                     inputs.append(inp_val)
                 else: 
