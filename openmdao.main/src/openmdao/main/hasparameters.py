@@ -244,6 +244,7 @@ class HasParameters(object):
     def __init__(self, parent):
         self._parameters = ordereddict.OrderedDict()
         self._parent = parent
+        self._allowed_types = ['continuous']
 
     def add_parameter(self, name, low=None, high=None, 
                       scaler=None, adder=None, fd_step=None):
@@ -386,3 +387,26 @@ class HasParameters(object):
         for param in self._parameters.values():
             result.update(param.get_referenced_varpaths())
         return result
+    
+    def specify_allowed_param_types(self, types):
+        """This should be called during the Driver's __init__ function to specify
+        what types of parameters that the Driver supports.
+        
+        types: list of str
+            Types of parameters supported.  
+            Valid values are: ['continuous','discrete','enum']. If not
+            specified, the default is ['continuous'].
+        """
+        self._allowed_types = list(types)
+    
+    def allows_param_types(self, types):
+        """Returns True if this Driver supports parameters of the give types.
+        
+        types: list of str
+            Types of parameters supported.  Valid values are: ['continuous','discrete','enum']
+        """
+        for kind in types:
+            if kind not in self._allowed_types:
+                return False
+        return True
+    

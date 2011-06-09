@@ -74,9 +74,9 @@ class Driver(Component):
                 iterset = set(c.name for c in self.iteration_set())
                 diff = reqs - iterset
                 if len(diff) > 0:
-                    self.raise_exception("Expressions in this Driver require the following "
-                                         "Components that are not part of the "
-                                         "workflow: %s" % list(diff), RuntimeError)
+                    raise RuntimeError("Expressions in this Driver require the following "
+                                       "Components that are not part of the "
+                                       "workflow: %s" % list(diff))
             comps = self.workflow.get_components()
         except Exception as err:
             self.raise_exception(str(err), type(err))

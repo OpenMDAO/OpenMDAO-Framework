@@ -83,7 +83,7 @@ class _HasConstraintsBase(object):
     _do_not_promote = ['get_expr_depends','get_referenced_compnames',
                        'get_referenced_varpaths']
     
-    def __init__(self, parent):
+    def __init__(self, parent, allowed_types=None):
         self._parent = parent
         self._constraints = ordereddict.OrderedDict()
     
@@ -188,7 +188,6 @@ class HasEqConstraints(_HasConstraintsBase):
                                          'in the driver. Add Failed.'%ident,ValueError)
         self._constraints[ident] = Constraint(lhs, '=', rhs, scaler, adder,
                                               scope=self._parent.parent)
-        
     def get_eq_constraints(self):
         """Returns an ordered dict of constraint objects."""
         return self._constraints
@@ -198,6 +197,10 @@ class HasEqConstraints(_HasConstraintsBase):
         form (lhs, rhs, comparator, is_violated).
         """
         return [c.evaluate(self._parent.parent) for c in self._constraints.values()]
+    
+    def allows_constraint_types(self, types):
+        """Returns True if types is ['eq']."""
+        return types == ['eq']
 
     
 class HasIneqConstraints(_HasConstraintsBase):
@@ -256,6 +259,10 @@ class HasIneqConstraints(_HasConstraintsBase):
         """Returns a list of constraint values"""
         return [c.evaluate(self._parent.parent) for c in self._constraints.values()]
     
+    def allows_constraint_types(self, typ):
+        """Returns True if types is ['ineq']."""
+        return types == ['eq']
+
 
 class HasConstraints(object):
     """Add this class as a delegate if your Driver supports both equality
@@ -370,3 +377,14 @@ class HasConstraints(object):
         names.update(self._ineq.get_referenced_varpaths())
         return names
     
+    def allows_constraint_types(self, types):
+        """Returns True if this Driver supports constraints of the given types.
+        
+        types: list of str
+            Types of constraints supported. Valid values are: ['eq', 'ineq']
+        """
+        for kind in types:
+            if kind not in ['eq','ineq']:
+                return False
+        return True
+

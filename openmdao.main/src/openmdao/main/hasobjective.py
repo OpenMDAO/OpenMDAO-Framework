@@ -96,6 +96,9 @@ class HasObjectives(object):
         for obj in self._objectives.values():
             lst.extend(obj.get_referenced_varpaths())
         return lst
+    
+    def max_objectives(self):
+        return self._max_objectives
 
 
 class HasObjective(HasObjectives):
