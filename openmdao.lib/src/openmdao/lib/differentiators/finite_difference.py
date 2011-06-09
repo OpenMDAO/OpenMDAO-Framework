@@ -411,7 +411,7 @@ class FiniteDifference(HasTraits):
 
         if self.n_ineqconst:
             for j, v in enumerate(self._parent.get_ineq_constraints().values()):
-                val = v.evaluate()
+                val = v.evaluate(self._parent.parent)
                 if '>' in val[2]:
                     data_ineqconst[j] = val[1]-val[0]
                 else:

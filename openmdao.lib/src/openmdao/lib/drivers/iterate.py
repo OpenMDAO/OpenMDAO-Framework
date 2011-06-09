@@ -45,8 +45,8 @@ class FixedPointIterator(Driver):
         
         self.current_iteration = 0
         history = zeros(self.max_iteration)
-        val = self.get_eq_constraints().itervalues().next()
-        term = val.evaluate()
+        val = self.get_eq_constraints().values()[0]
+        term = val.evaluate(self.parent)
         history[0] = term[0] - term[1]
         val0 = 0
         unconverged = True
@@ -71,8 +71,8 @@ class FixedPointIterator(Driver):
             self.current_iteration += 1
         
             # check convergence
-            val = self.get_eq_constraints().itervalues().next()
-            term = val.evaluate()
+            #val = self.get_eq_constraints().itervalues().next()
+            term = val.evaluate(self.parent)
             delta = term[0] - term[1]
             
             history[self.current_iteration] = delta

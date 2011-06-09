@@ -366,24 +366,24 @@ class ExprEvalTestCase(unittest.TestCase):
         ]
         self._do_tests(tests, self.top)
         
-    def test_mixed_scope(self):
-        tests = [
-            ('comp.x < a1d', "scope.parent.get('comp.x')<scope.a1d"),
-            ('math.sin(f)+math.cos(f+math.pi)', 'math.sin(scope.f)+math.cos(scope.f+math.pi)'),
-            ('comp.x[0]', "scope.parent.get('comp.x',[(0,0)])"),
-            ('comp.x[0] = 10*(3.2+ a1d[3]* 1.1*a1d[2 ])', 
-             "scope.parent.set('comp.x',10*(3.2+scope.a1d[3]*1.1*scope.a1d[2]),[(0,0)])"),
-            ('comp.x[0] = some_funct(1,foo.bar)', 
-             "scope.parent.set('comp.x',scope.some_funct(1,scope.parent.get('foo.bar')),[(0,0)])"),
-            ('a.b[2] = -comp.x',
-             "scope.parent.set('a.b',-scope.parent.get('comp.x'),[(0,2)])"),
-            ('a1d[foo]', "scope.a1d[scope.parent.get('foo')]"),
-            ('a1d[1].value', "scope.a1d[1].value"),
-            ('a1d(2).value', "scope.a1d(2).value"),
-            ('a.a1d(2).value', "scope.parent.get('a.a1d',[(2,[2]),(1,'value')])"),
-        ]
+    #def test_mixed_scope(self):
+        #tests = [
+            #('comp.x < a1d', "scope.parent.get('comp.x')<scope.a1d"),
+            #('math.sin(f)+math.cos(f+math.pi)', 'math.sin(scope.f)+math.cos(scope.f+math.pi)'),
+            #('comp.x[0]', "scope.parent.get('comp.x',[(0,0)])"),
+            #('comp.x[0] = 10*(3.2+ a1d[3]* 1.1*a1d[2 ])', 
+             #"scope.parent.set('comp.x',10*(3.2+scope.a1d[3]*1.1*scope.a1d[2]),[(0,0)])"),
+            #('comp.x[0] = some_funct(1,foo.bar)', 
+             #"scope.parent.set('comp.x',scope.some_funct(1,scope.parent.get('foo.bar')),[(0,0)])"),
+            #('a.b[2] = -comp.x',
+             #"scope.parent.set('a.b',-scope.parent.get('comp.x'),[(0,2)])"),
+            #('a1d[foo]', "scope.a1d[scope.parent.get('foo')]"),
+            #('a1d[1].value', "scope.a1d[1].value"),
+            #('a1d(2).value', "scope.a1d(2).value"),
+            #('a.a1d(2).value', "scope.parent.get('a.a1d',[(2,[2]),(1,'value')])"),
+        #]
 
-        self._do_tests(tests, self.top.a)
+        #self._do_tests(tests, self.top.a)
 
     def test_calls(self):
         tests = [
@@ -474,17 +474,27 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(self._ast_to_text(ex._parse()), "scope.get('comp.x')")
         
         ex.scope = self.top.a
-        ex.set(0.5)
-        self.assertEqual(self._ast_to_text(ex._parse()), "scope.parent.get('comp.x')")
-        self.assertEqual(0.5, self.top.comp.x)
-        self.assertEqual(0.5, ex.evaluate(self.top)) # set scope back to self.top
+        try:
+            ex.set(0.5)
+        except AttributeError as err:
+            self.assertEqual(str(err), "a: object has no attribute 'comp.x'")
+        else:
+            self.fail("AttributeError expected")
+        self.assertEqual(self._ast_to_text(ex._parse()), "scope.get('comp.x')")
+        self.assertEqual(99.5, ex.evaluate(self.top)) # set scope back to self.top
         self.assertEqual(self._ast_to_text(ex._parse()), "scope.get('comp.x')")
         
         ex.text = 'comp.y'
-        self.assertEqual(-3.14, ex.evaluate(self.top.a))
+        try:
+            ex.evaluate(self.top.a)
+        except AttributeError as err:
+            self.assertEqual(str(err), "can't evaluate expression 'comp.y': a: object has no attribute 'comp.y'")
+        else:
+            self.fail("AttributeError expected")
+        ex.scope = self.top
         ex.set(11.1)
         self.assertEqual(11.1, self.top.comp.y)
-        self.assertEqual(self._ast_to_text(ex._parse()), "scope.parent.get('comp.y')")
+        self.assertEqual(self._ast_to_text(ex._parse()), "scope.get('comp.y')")
         
     def test_no_scope(self):
         ex = ExprEvaluator('abs(-3)+int(2.3)+math.floor(5.4)')
@@ -509,7 +519,7 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(ex.is_valid_assignee(), True)
         
     def test_resolve(self):
-        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a1d[3]* 1.1*a1d[2 ])', self.top.a)
+        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a.a1d[3]* 1.1*a.a1d[2 ])', self.top)
         self.assertEqual(ex.check_resolve(), True)
         ex.text = 'comp.contlist[1].a2d[2][1]'
         self.assertEqual(ex.check_resolve(), True)
@@ -520,12 +530,12 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(ex.check_resolve(), False)
         
     def test_get_referenced_varpaths(self):
-        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a1d[3]* 1.1*a1d[2 ])', self.top.a)
+        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a.a1d[3]* 1.1*a.a1d[2 ])', self.top.a)
         self.assertEqual(ex.get_referenced_varpaths(), set(['comp.x','a.a1d']))
         ex.text = 'comp.contlist[1].a2d[2][1]'
         self.assertEqual(ex.get_referenced_varpaths(), set(['comp.contlist']))
         ex.scope = self.top.comp
-        ex.text = 'contlist[1]'
+        ex.text = 'comp.contlist[1]'
         self.assertEqual(ex.get_referenced_varpaths(), set(['comp.contlist']))
         
     def test_slice(self):

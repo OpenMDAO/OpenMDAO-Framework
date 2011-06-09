@@ -35,7 +35,7 @@ class Parameter(object):
         self.fd_step = fd_step
         
         try:
-            expreval = ExprEvaluator(name, parent)
+            expreval = ExprEvaluator(name, parent.parent)
         except Exception as err:
             parent.raise_exception("Can't add parameter: %s" % str(err),
                                    type(err))

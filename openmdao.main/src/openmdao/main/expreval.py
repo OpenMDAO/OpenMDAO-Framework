@@ -37,12 +37,12 @@ def _get_attr_node(names):
     return node
 
 class ExprTransformer(ast.NodeTransformer):
-    """Transforms dotted name references, e.g., abc.d.g in an expression AST into 
-    scope.get('abc.d.g') or scope.parent.get('abc.d.g'). Also turns assignments
-    into the appropriate set() calls.  Also translates function calls and indirect
-    attribute accesses into a form that can be passed to a downstream object and
-    executed there.  For example, abc.d[xyz](1, pdq-10).value would translate to, e.g.,
-    scope.get('abc.d', [(0,xyz), (0,[1,pdq-10]), (1,'value')]).
+    """Transforms dotted name references, e.g., abc.d.g in an expression AST
+    into scope.get('abc.d.g'). Also turns assignments into the appropriate
+    set() calls. Also translates function calls and indirect attribute
+    accesses into a form that can be passed to a downstream object and
+    executed there. For example, abc.d[xyz](1, pdq-10).value would translate
+    to, e.g., scope.get('abc.d', [(0,xyz), (0,[1,pdq-10]), (1,'value')]).
     """
     def __init__(self, expreval, rhs=None):
         self.expreval = expreval
@@ -97,17 +97,17 @@ class ExprTransformer(ast.NodeTransformer):
             parts = name.split('.',1)
             names = ['scope']
             if scope.contains(parts[0]):
-                if scope.name:
-                    self.expreval.var_names.add('.'.join([scope.name,name]))
-                else:
-                    self.expreval.var_names.add(name)
+                #if scope.name:
+                    #self.expreval.var_names.add('.'.join([scope.name,name]))
+                #else:
+                self.expreval.var_names.add(name)
                 if len(parts) == 1: # short name, so just do a simple attr lookup on scope
                     names.append(name)
                     return _get_attr_node(names)
             else:
                 self.expreval.var_names.add(name)
-                if scope.parent is not None:
-                    names.append('parent')
+                #if scope.parent is not None:
+                    #names.append('parent')
         else:
             raise RuntimeError("expression has no scope")
 
@@ -417,8 +417,8 @@ class ExprEvaluator(object):
         for name in varnames:
             if scope.contains(name):
                 lst.append((name, scope.get_metadata(name, metaname)))
-            elif scope.parent and scope.parent.contains(name):
-                lst.append((name, scope.parent.get_metadata(name, metaname)))
+            #elif scope.parent and scope.parent.contains(name):
+                #lst.append((name, scope.parent.get_metadata(name, metaname)))
             else:
                 raise AttributeError("'%s' not found" % name)
         return lst
@@ -465,10 +465,11 @@ class ExprEvaluator(object):
         are valid.
         """
         scope = self.scope
-        if scope and scope.parent:
+        if scope: # and scope.parent:
             if self._parse_needed:
                 self._parse()
-            if not all(scope.parent.get_valid(self.var_names)):
+            #if not all(scope.parent.get_valid(self.var_names)):
+            if not all(scope.get_valid(self.var_names)):
                 return False
         return True
     
@@ -481,8 +482,8 @@ class ExprEvaluator(object):
         if len(self.var_names) > 0:
             scope = self.scope
             if scope:
-                if scope.parent:
-                    scope = scope.parent
+                #if scope.parent:
+                    #scope = scope.parent
                 for name in self.var_names:
                     if not scope.contains(name):
                         return False

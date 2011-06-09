@@ -48,11 +48,11 @@ class Constraint(object):
             raise ValueError("Adder parameter should be a float")
         self.adder = adder
         
-    def evaluate(self):
+    def evaluate(self, scope):
         """Returns a tuple of the form (lhs, rhs, comparator, is_violated)."""
         
-        lhs = (self.lhs.evaluate() + self.adder)*self.scaler
-        rhs = (self.rhs.evaluate() + self.adder)*self.scaler
+        lhs = (self.lhs.evaluate(scope) + self.adder)*self.scaler
+        rhs = (self.rhs.evaluate(scope) + self.adder)*self.scaler
         return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
         
     def get_referenced_compnames(self):
@@ -104,7 +104,7 @@ class _HasConstraintsBase(object):
         return self._constraints.keys()
     
     def get_expr_depends(self):
-        """Returns a list of tuples of the form (comp_name, parent_name)
+        """Returns a list of tuples of the form (comp_name, self_name)
         for each component name referenced by a constraint.
         """
         conn_list = []
@@ -187,7 +187,7 @@ class HasEqConstraints(_HasConstraintsBase):
             self._parent.raise_exception('A constraint of the form "%s" already exists '
                                          'in the driver. Add Failed.'%ident,ValueError)
         self._constraints[ident] = Constraint(lhs, '=', rhs, scaler, adder,
-                                              scope=self._parent)
+                                              scope=self._parent.parent)
         
     def get_eq_constraints(self):
         """Returns an ordered dict of constraint objects."""
@@ -197,7 +197,7 @@ class HasEqConstraints(_HasConstraintsBase):
         """Returns a list of tuples of the 
         form (lhs, rhs, comparator, is_violated).
         """
-        return [c.evaluate() for c in self._constraints.values()]
+        return [c.evaluate(self._parent.parent) for c in self._constraints.values()]
 
     
 class HasIneqConstraints(_HasConstraintsBase):
@@ -246,7 +246,7 @@ class HasIneqConstraints(_HasConstraintsBase):
             self._parent.raise_exception('A constraint of the form "%s" already exists in '
                                          'the driver. Add Failed.'%ident,ValueError)
         self._constraints[ident] = Constraint(lhs, rel, rhs, scaler, adder,
-                                              scope=self._parent)
+                                              scope=self._parent.parent)
         
     def get_ineq_constraints(self):
         """Returns an ordered dict of inequality constraint objects."""
@@ -254,7 +254,7 @@ class HasIneqConstraints(_HasConstraintsBase):
 
     def eval_ineq_constraints(self): 
         """Returns a list of constraint values"""
-        return [c.evaluate() for c in self._constraints.values()]
+        return [c.evaluate(self._parent.parent) for c in self._constraints.values()]
     
 
 class HasConstraints(object):

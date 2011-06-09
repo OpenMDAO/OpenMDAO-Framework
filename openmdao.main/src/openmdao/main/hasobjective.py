@@ -43,7 +43,7 @@ class HasObjectives(object):
             self._parent.raise_exception("Trying to add objective '%s' to driver, "
                                          "but it's already there" % expr,
                                          AttributeError)
-        expreval = ExprEvaluator(expr, self._parent)
+        expreval = ExprEvaluator(expr, self._parent.parent)
         
         if not expreval.check_resolve():
             self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
@@ -71,7 +71,7 @@ class HasObjectives(object):
         
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
-        return [obj.evaluate() for obj in self._objectives.values()]
+        return [obj.evaluate(self._parent.parent) for obj in self._objectives.values()]
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, parent_name)
