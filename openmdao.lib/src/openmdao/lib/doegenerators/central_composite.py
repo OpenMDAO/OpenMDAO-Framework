@@ -6,8 +6,9 @@ from itertools import product, permutations, chain
 # pylint: disable-msg=E0611,F0401
 from numpy import linspace
 from enthought.traits.api import HasTraits
-from openmdao.lib.datatypes.api import implements, Int, Float, Enum
+from openmdao.lib.datatypes.api import Int, Float, Enum
 
+from openmdao.main.api import implements
 from openmdao.main.interfaces import IDOEgenerator
 
 
