@@ -4,4 +4,4 @@ OpenMDAO doegenerators standard library."""
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.uniform import Uniform
-
+from openmdao.lib.doegenerators.central_composite import CentralComposite
