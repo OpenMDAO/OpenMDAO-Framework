@@ -23,6 +23,10 @@ def _findname(input_name, output_name):
     """ Assemble the name string for a derivative output based on its input
     and output name."""
     
+    # Sometimes a parameter is connected to multiple inputs.
+    if isinstance(input_name, tuple):
+        input_name = input_name[0]
+    
     return "d__%s__%s" % (output_name.replace('.', '_'),
                           input_name.replace('.', '_'))
 
@@ -56,6 +60,7 @@ class SensitivityDriver(Driver):
         
         inputs = self.get_parameters().keys()
         outputs = self.list_objectives()
+        #outputs = ['Obj%s' % i for i in range(len(self.list_objectives()))]
         
         for input_name in inputs:
             for output_name in outputs:
@@ -76,6 +81,7 @@ class SensitivityDriver(Driver):
             
         inputs = self.get_parameters().keys()
         outputs = self.list_objectives()
+        #outputs = ['Obj%s' % i for i in range(len(self.list_objectives()))]
         
         for i, input_name in enumerate(inputs):
             for j, output_name in enumerate(outputs):
@@ -84,6 +90,10 @@ class SensitivityDriver(Driver):
                 
                 setattr(self, var_name,
                         self.differentiator.gradient_obj[i,j])
+                
+        # Sensitivity is sometimes run sequentially using different submodels,
+        # so we need to return the state to the baseline value.
+        self.differentiator.reset_state()
                 
         
     def _check(self):

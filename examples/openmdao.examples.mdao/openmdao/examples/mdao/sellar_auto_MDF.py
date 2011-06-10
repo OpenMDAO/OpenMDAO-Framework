@@ -7,7 +7,7 @@ from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                SellarDiscipline2
 
 
-from openmdao.main.api import Assembly, set_as_top, Slot, implements, Component
+from openmdao.main.api import Assembly, Slot, implements, Component
 
 from openmdao.main.problem_formulation import ArchitectureAssembly
 
@@ -58,6 +58,7 @@ class SellarMDF(ArchitectureAssembly):
 if __name__ == "__main__": # pragma: no cover
 
     import time
+    from openmdao.main.api import set_as_top
     
     prob = SellarMDF()
     set_as_top(prob)

@@ -429,7 +429,16 @@ class FiniteDifference(HasTraits):
                     
         return data_obj, data_ineqconst, data_eqconst
                     
-                    
+
+    def reset_state(self):
+        """Finite Difference does not leave the model in a clean state. If you
+        require one, then run this method."""
+        
+        dvals = [float(val) for val in self.base_param]
+        self._parent.set_parameters(dvals)
+        super(type(self._parent), self._parent).run_iteration()
+
+        
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         name = find_name(self._parent, self)
