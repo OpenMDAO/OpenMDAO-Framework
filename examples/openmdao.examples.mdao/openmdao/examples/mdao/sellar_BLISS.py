@@ -71,25 +71,31 @@ class SellarBLISS(Assembly):
         # Discipline Optimization
         # (Only discipline1 has an optimization input)
         self.add('bbopt1', CONMINdriver())
-        self.bbopt1.add_parameter('x1_store', low=(0.0-self.dis1.x1), high=(10.0-self.dis1.x1))
+        self.bbopt1.add_parameter('x1_store', low=-1.e99, high=1.e99)
         self.bbopt1.add_objective('(dis1.x1 + x1_store)**2 + ' + \
                                   'dis1.z2 + ' + \
                                   'dis1.y1 + sa_dis1.d__dis1_y1__dis1_x1*x1_store + ' + \
                                   'exp(-dis2.y2)')
         self.bbopt1.add_constraint('dis1.y1 + sa_dis1.d__dis1_y1__dis1_x1*x1_store > 3.16')
+        self.bbopt1.add_constraint('dis1.x1 + x1_store >= 0.0')
+        self.bbopt1.add_constraint('dis1.x1 + x1_store <= 10.0')
         self.bbopt1.linobj = True
         self.bbopt1.iprint = 2
         
         # Global Optimization
         self.add('sysopt', CONMINdriver())
-        self.sysopt.add_parameter('z1_store', low=(-10.0-self.dis1.z1), high=(10.0-self.dis1.z1))
-        self.sysopt.add_parameter('z2_store', low=(0.0-self.dis1.z2), high=(10.0-self.dis1.z2))
+        self.sysopt.add_parameter('z1_store', low=-1.e99, high=1.e99)
+        self.sysopt.add_parameter('z2_store', low=-1.e99, high=1.e99)
         self.sysopt.add_objective('(dis1.x1)**2 + ' + \
                                   'dis1.z2 + z2_store + ' + \
                                   'dis1.y1 + ssa.d__dis1_y1__dis1_z1*z1_store + ssa.d__dis1_y1__dis1_z2*z2_store + ' + \
                                   'exp(-dis2.y2 - ssa.d__dis2_y2__dis1_z1*z1_store - ssa.d__dis2_y2__dis1_z2*z2_store)')
         self.sysopt.add_constraint('dis1.y1 + ssa.d__dis1_y1__dis1_z1*z1_store + ssa.d__dis1_y1__dis1_z2*z2_store > 3.16')
         self.sysopt.add_constraint('dis2.y2 + ssa.d__dis2_y2__dis1_z1*z1_store + ssa.d__dis2_y2__dis1_z2*z2_store < 24.0')
+        self.sysopt.add_constraint('dis1.z1 + z1_store >= -10.0')
+        self.sysopt.add_constraint('dis1.z1 + z1_store <= 10.0')
+        self.sysopt.add_constraint('dis1.z2 + z2_store >= 0.0')
+        self.sysopt.add_constraint('dis1.z2 + z2_store <= 10.0')
         self.sysopt.linobj = True
             
         self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt'])

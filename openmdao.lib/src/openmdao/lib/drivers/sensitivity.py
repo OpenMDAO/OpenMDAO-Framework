@@ -59,7 +59,7 @@ class SensitivityDriver(Driver):
         self._check()
         
         inputs = self.get_parameters().keys()
-        outputs = self.list_objectives()
+        outputs = self.get_objectives().keys()
         #outputs = ['Obj%s' % i for i in range(len(self.list_objectives()))]
         
         for input_name in inputs:
@@ -80,7 +80,7 @@ class SensitivityDriver(Driver):
         self.ffd_order = 0
             
         inputs = self.get_parameters().keys()
-        outputs = self.list_objectives()
+        outputs = self.get_objectives().keys()
         #outputs = ['Obj%s' % i for i in range(len(self.list_objectives()))]
         
         for i, input_name in enumerate(inputs):
@@ -103,7 +103,7 @@ class SensitivityDriver(Driver):
             msg = "Missing inputs for gradient calculation"
             self.raise_exception(msg, ValueError)
         
-        if len(self.list_objectives()) < 1:
+        if len(self.get_objectives().values()) < 1:
             msg = "Missing outputs for gradient calculation"
             self.raise_exception(msg, ValueError)
 
