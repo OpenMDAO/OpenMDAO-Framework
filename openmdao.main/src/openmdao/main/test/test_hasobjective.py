@@ -75,7 +75,7 @@ class HasObjectivesTestCase(unittest.TestCase):
         try:
             self.asm.driver.add_objectives('comp1.d+comp1.a')
         except Exception as err:
-            self.assertEqual(str(err), "driver: add_objectives requires a list of expression strings.")
+            self.assertEqual(str(err), "driver: add_objectives requires an iterator of expression strings.")
         else:
             self.fail("Exception expected")
     

@@ -23,7 +23,7 @@ class HasObjectives(object):
         objectives for them in the driver.
         """
         if isinstance(obj_iter, basestring):
-            self._parent.raise_exception("add_objectives requires a list of expression strings.",
+            self._parent.raise_exception("add_objectives requires an iterator of expression strings.",
                                          ValueError)
         for expr in obj_iter:
             self._parent.add_objective(expr)

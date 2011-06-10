@@ -1,33 +1,16 @@
 import ordereddict
 
 from openmdao.main.api import Interface, ExprEvaluator, Assembly, Slot
-from openmdao.main.hasconstraints import HasConstraints
 from openmdao.util.decorators import add_delegate
+from openmdao.main.interfaces import IArchitecture
 
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
-from openmdao.main.hasobjective import HasObjective, HasObjectives
+from openmdao.main.hasobjective import HasObjectives
 
-class IArchitecture(Interface):
-    
-    def __init__(self): 
-        self.parent = None
-        
-    def configure(self): 
-        """sets up drivers,workflows, and data connections in 
-        the assembly to configure the architecture
-        """        
-        pass
-    
-    def clear(self): 
-        """removes all the drivers, workflows, and data connections in the assembly, 
-        leaving the assembly cleaned up. 
-        """
-        
-        pass
 
 class CouplingVar(object): 
-    
+
     def __init__(self,indep, dep): 
         self.indep = indep
         self.dep = dep
@@ -47,11 +30,11 @@ class HasCouplingVars(object):
         """adds a new coupling var to the assembly
         
         indep: str
-            name of the independent variable, or the variable that should be varied, to meet the coupling 
-            constraint
+            name of the independent variable, or the variable 
+            that should be varied, to meet the coupling constraint
         dep: str
-            name of the dependent variable, or the variable that needs to be forced to be consistent with the 
-            independent    
+            name of the dependent variable, or the variable that 
+            needs to be forced to be consistent with the independent    
         """
         expr_indep = ExprEvaluator(indep,self._parent)
         if not expr_indep.check_resolve() or not expr_indep.is_valid_assignee():
@@ -92,15 +75,15 @@ class HasCouplingVars(object):
         """returns a ordered list of names of the coupling vars in the assembly"""
         return self._couples
     
-    
     def clear_coupling_vars(self): 
         """removes all coupling variables from the assembly"""
         self._couples = []    
-    
-@add_delegate(HasConstraints,HasParameters,HasObjective,HasCouplingVars,HasObjectives)
+
+        
+@add_delegate(HasConstraints,HasParameters,HasCouplingVars,HasObjectives)
 class ArchitectureAssembly(Assembly): 
     
-    architecture = Slot(IArchitecture, iotype="in",
+    architecture = Slot(IArchitecture,
                         desc="Slot for the use of automatic architecture configurations")
     
     def _architecture_changed(self): 
@@ -112,13 +95,16 @@ class ArchitectureAssembly(Assembly):
     def configure(self): 
         self.architecture.configure()
     
-    
-    def get_local_des_vars(self): 
-        return [(k,v) for k,v in self.get_parameters().iteritems() 
+    # TODO: is this the proper naming convention?  Why are some local and
+    # some global when all of them are at the Assembly level?
+    def get_local_des_vars(self):
+        """Return a list of single target Parameters."""
+        return [(k,v) for k,v in self.get_parameters().items() 
                                         if not isinstance(k,tuple)]
     
     def get_global_des_vars(self): 
-        return [(k,v) for k,v in self.get_parameters().iteritems() 
+        """Return a list of multi target Parameters."""
+        return [(k,v) for k,v in self.get_parameters().items() 
                                         if isinstance(k,tuple)]
         
      

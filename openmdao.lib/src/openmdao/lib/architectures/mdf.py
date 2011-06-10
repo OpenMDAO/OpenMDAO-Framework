@@ -1,12 +1,11 @@
 from openmdao.main.problem_formulation import IArchitecture
 
-from openmdao.main.api import Driver, implements
+from openmdao.main.api import Driver, Architecture, implements
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver
 
 #TODO: Only supports HasObjective,HasParameters - real/continuous,
 #HasConstraints, HasCouplingVars
-class MDF(object): 
-    implements(IArchitecture)
+class MDF(Architecture): 
     
     def configure(self): 
         """setup and MDF architecture inside this assembly.
@@ -32,7 +31,6 @@ class MDF(object):
         #level. This is all done via the parameter
         disciplines = set()
 
-        
         for k,v in self.parent.get_global_des_vars(): 
             global_dvs.append(v)
             disciplines.update(v.get_referenced_compnames())

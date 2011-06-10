@@ -300,9 +300,10 @@ class HasParameters(object):
                 self._parent.raise_exception("Can't add parameter %s because "
                     "%s are not all of the same type" %
                     (key," and ".join(names)), ValueError)
-            self._parameters[key] = ParameterGroup(parameters)
+            pg = ParameterGroup(parameters)
+            pg.typename = parameters[0].typename
+            self._parameters[key] = pg
         
-            
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
             
@@ -359,7 +360,6 @@ class HasParameters(object):
                     case.add_input(target, val)
             return case
 
-
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency introduced by a parameter.
@@ -394,7 +394,7 @@ class HasParameters(object):
         
         types: list of str
             Types of parameters supported.  
-            Valid values are: ['continuous','discrete','enum']. If not
+            Valid list entries are: 'continuous', 'discrete', and 'enum'. If not
             specified, the default is ['continuous'].
         """
         self._allowed_types = list(types)
@@ -403,7 +403,8 @@ class HasParameters(object):
         """Returns True if this Driver supports parameters of the give types.
         
         types: list of str
-            Types of parameters supported.  Valid values are: ['continuous','discrete','enum']
+            Types of parameters supported.  
+            Valid list entries are: 'continuous', 'discrete', and 'enum'
         """
         for kind in types:
             if kind not in self._allowed_types:
