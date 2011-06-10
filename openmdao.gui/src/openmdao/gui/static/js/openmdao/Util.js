@@ -103,20 +103,20 @@ openmdao.Util = {
             return;
 
         // Build dialog markup
-        var win = $('<div><p>Enter name:</p></div>');
-        var userInput = $('<input type="text" style="width:100%"></input>');
+        var win = jQuery('<div><p>Enter name:</p></div>');
+        var userInput = jQuery('<input type="text" style="width:100%"></input>');
         userInput.appendTo(win);
 
         // Display dialog
-        $(win).dialog({
+        jQuery(win).dialog({
             'modal': true,
             'buttons': {
                 'Ok': function() {
-                    $(this).dialog('close');
-                    callback($(userInput).val());
+                    jQuery(this).dialog('close');
+                    callback(jQuery(userInput).val());
                 },
                 'Cancel': function() {
-                    $(this).dialog('close');
+                    jQuery(this).dialog('close');
                 }
             }
         });
