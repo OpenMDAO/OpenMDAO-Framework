@@ -11,7 +11,7 @@ import unittest
 from numpy.testing import assert_equal
 
 from openmdao.main.api import Assembly, Component, set_as_top, FileRef
-from openmdao.lib.datatypes.api import Array, Bool, File, Str, TraitError
+from openmdao.lib.datatypes.api import Array, Bool, File, Str
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -205,23 +205,23 @@ class TestCase(unittest.TestCase):
         self.model.source.text_file.content_type = 'invalid'
         try:
             self.model.run()
-        except TraitError, exc:
+        except Exception, exc:
             msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
                   " Content type 'invalid' not one of ['xyzzy', 'txt']"
             self.assertEqual(str(exc), msg)
         else:
-            self.fail('Expected TraitError')
+            self.fail('Expected Exception')
 
         # Set null type and verify error message.
         self.model.source.text_file.content_type = ''
         try:
             self.model.run()
-        except TraitError, exc:
+        except Exception, exc:
             msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
                   " Content type '' not one of ['xyzzy', 'txt']"
             self.assertEqual(str(exc), msg)
         else:
-            self.fail('Expected TraitError')
+            self.fail('Expected Exception')
 
     def test_formatting(self):
         logging.debug('')
@@ -267,64 +267,64 @@ class TestCase(unittest.TestCase):
 
         try:
             File(42)
-        except TraitError, exc:
+        except Exception, exc:
             self.assertEqual(str(exc),
                              'File default value must be a FileRef.')
         else:
-            self.fail('Expected TraitError')
+            self.fail('Expected Exception')
 
         try:
             File()
-        except TraitError, exc:
+        except Exception, exc:
             self.assertEqual(str(exc),
                              "File must have 'iotype' defined.")
         else:
-            self.fail('Expected TraitError')
+            self.fail('Expected Exception')
 
         try:
             File(iotype='out')
-        except TraitError, exc:
+        except Exception, exc:
             self.assertEqual(str(exc),
                              "Output File must have 'path' defined.")
         else:
-            self.fail('Expected TraitError')
+            self.fail('Expected Exception')
 
         try:
             File(iotype='out', path='xyzzy', legal_types=42)
-        except TraitError, exc:
+        except Exception, exc:
             self.assertEqual(str(exc),
                              "'legal_types' invalid for output File.")
         else:
-            self.fail('Expected TraitError')
+            self.fail('Expected Exception')
 
         try:
             File(iotype='out', path='xyzzy', local_path=42)
-        except TraitError, exc:
+        except Exception, exc:
             self.assertEqual(str(exc),
                              "'local_path' invalid for output File.")
         else:
-            self.fail('Expected TraitError')
+            self.fail('Expected Exception')
 
         try:
             File(iotype='in', path='xyzzy')
-        except TraitError, exc:
+        except Exception, exc:
             self.assertEqual(str(exc),
                              "'path' invalid for input File.")
         else:
-            self.fail('Expected TraitError')
+            self.fail('Expected Exception')
 
     def test_bad_value(self):
         logging.debug('')
         logging.debug('test_bad_value')
         try:
             self.model.source.text_file = 42
-        except TraitError, exc:
+        except Exception, exc:
             msg = "The 'text_file' trait of a Source instance must be" \
                   " a legal value, but a value of 42 <type 'int'> was" \
                   " specified."
             self.assertEqual(str(exc), msg)
         else:
-            self.fail('Expected TraitError')
+            self.fail('Expected Exception')
 
 
 if __name__ == '__main__':

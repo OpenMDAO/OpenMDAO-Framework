@@ -6,7 +6,7 @@ import numpy
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.api import Assembly, Container, Component, set_as_top
-from openmdao.lib.datatypes.api import Float, Array, List, Instance, Dict
+from openmdao.lib.datatypes.api import Float, Array, List, Slot, Dict
 
 class A(Component):
     f = Float(iotype='in')
@@ -33,8 +33,8 @@ class Comp(Component):
     y = Float(iotype='in')
     indct = Dict(iotype='in')
     outdct = Dict(iotype='out')
-    cont = Instance(A, iotype='in')
-    contlist = List(Instance(A), iotype='in')
+    cont = Slot(A, iotype='in')
+    contlist = List(Slot(A), iotype='in')
     
     def get_cont(self, i):
         return self.contlist[i]
@@ -291,6 +291,15 @@ class ExprEvalTestCase(unittest.TestCase):
         for tst in tests:
             ex = ExprEvaluator(tst[0], top)
             self.assertEqual(self._ast_to_text(ex._parse()), tst[1])
+    
+            
+    def test_eq(self): 
+        ex1 = ExprEvaluator('comp.x', self.top)
+        ex2 = ExprEvaluator('comp.x', self.top)
+        ex3_bad = "test"
+        
+        self.assertTrue(ex1==ex2)
+        self.assertTrue(ex2!=ex3_bad)
         
     def test_simple(self):
         tests = [

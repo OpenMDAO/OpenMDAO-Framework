@@ -7,7 +7,7 @@ are used as termination criteria.
 # pylint: disable-msg=E0611,F0401
 from numpy import zeros
 
-from openmdao.lib.datatypes.api import Float, Int
+from openmdao.lib.datatypes.api import Float, Int, Bool
 from openmdao.main.api import Driver
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
@@ -117,20 +117,23 @@ class FixedPointIterator(Driver):
 class IterateUntil(Driver):
     """ A simple driver to run a workflow until some stop condition is met """
 
-    max_iterations = Int(10, iotype="in", desc="maximun number of iterations")
-    iteration = Int(0, iotype="out", desc="current iteration counter")
+    max_iterations = Int(10,iotype="in", desc="maximun number of iterations")
+    iteration = Int(0,iotype="out",desc="current iteration counter")
+    run_at_least_once = Bool(True, iotype="in", desc="If True, driver will ignore stop conditions for the first iteration, and run at least one iteration")
     
     def start_iteration(self):
         """ Code executed before the iteration """
         self.iterations = 0
     
-    def continue_iteration(self):
-        """ Returns true to continue iteration """
+    def continue_iteration(self): 
+        if self.iteration<1 and self.run_at_least_once:
+            self.iteration += 1
+            return True
+
         if self.should_stop():
             return False
         if self.iteration < self.max_iterations: 
             self.iteration += 1
-            #print "iteration: ",self.iteration
             return True
         
         return False

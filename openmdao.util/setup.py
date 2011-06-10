@@ -35,6 +35,11 @@ setup(name='openmdao.util',
       zip_safe=False,
       install_requires=[
           'setuptools',
+          'pycrypto',
+          'pyparsing',
+          'numpy',
+          'Traits==3.3.0',
+          'PyYAML==3.09',
       ],
       entry_points = """
       [console_scripts]

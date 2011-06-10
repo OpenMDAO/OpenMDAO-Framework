@@ -14,8 +14,7 @@ import numpy
 from scipy.optimize.nonlin import norm
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import on_trait_change, TraitError, \
-     Float, Int, Enum
+from openmdao.lib.datatypes.api import Float, Int, Enum
                                  
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
@@ -87,7 +86,7 @@ class BroydenSolver(Driver):
         independents = self.get_parameters().values()
         self.xin = numpy.zeros(len(independents),'d')
         for i, val in enumerate(independents):
-            self.xin[i] = val.expreval.evaluate()
+            self.xin[i] = val.evaluate()
             
         # perform an initial run for self-consistency
         self.run_iteration()

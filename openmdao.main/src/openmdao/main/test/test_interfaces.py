@@ -1,14 +1,13 @@
 """
-Tests involving checking of Interfaces
+Tests involving checking of Traits Interfaces
 """
 
 import unittest
 
-from enthought.traits.api import HasTraits
+from enthought.traits.api import HasTraits, implements, Interface, Instance
 from enthought.traits.trait_types import validate_implements
 
-from openmdao.lib.datatypes.api import Int, Str, Instance, Interface, \
-     implements
+from openmdao.lib.datatypes.api import Int, Str
 
 class IMyMarkerInterface(Interface):
     """Just an empty marker interface"""

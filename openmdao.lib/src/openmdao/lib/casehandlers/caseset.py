@@ -16,7 +16,7 @@ class CaseArray(object):
             same set of inputs and outputs.
             
             if obj is None, the first Case that is recorded will be used to set
-            the inputs and outputs for the CaseSet.
+            the inputs and outputs for the CaseArray.
         
         parent_uuid: UUID
             The id of the parent Case (if any)
@@ -40,7 +40,21 @@ class CaseArray(object):
             pass
         else:
             raise TypeError("obj must be a dict, a Case, or None")
-                
+    
+    def copy(self):
+        ca = CaseArray(parent_uuid=self._parent_uuid, names=self._names)
+        ca._values = self._values[:]
+        ca._split_idx = self._split_idx
+        return ca
+        
+    def remove(self, case):
+        """Remove the given Case from this CaseArray."""
+        try:
+            values = self._get_case_data(case)
+        except KeyError:
+            raise KeyError("Case to be removed is not a member of this CaseArray")
+        self._values.remove(values)
+
     def _add_dict_cases(self, dct):
         length = -1
         if self._names:
@@ -97,7 +111,7 @@ class CaseArray(object):
         else:
             self._add_values(self._get_case_data(case))
     
-    def get_iter(self):
+    def __iter__(self):
         return self._next_case()
 
     def _next_case(self):
@@ -111,10 +125,15 @@ class CaseArray(object):
         case.
         """
         if isinstance(key, basestring): # return all of the values for the given name
-            idx = self._names.index(key)
+            try: 
+                idx = self._names.index(key)
+            except ValueError as err: 
+                raise KeyError("CaseSet has no input or outputs named %s"%key )
             return [lst[idx] for lst in self._values]
-        else:  # key is the case number
+        else:  # key is the case numbe
             return self._case_from_values(self._values[key])
+        
+    
             
     def _case_from_values(self, values):
         return Case(inputs=[(n,v) for n,v in zip(self._names[0:self._split_idx],
@@ -158,9 +177,9 @@ class CaseArray(object):
 
     def update(self, *case_containers):
         """Add Cases from other CaseSets or CaseArrays to this one."""
-        for cset in case_sets:
-            for vals in cset._values:
-                self._add_values(vals)
+        for cset in case_containers:
+            for case in cset:
+                self.record(case)
                 
     def pop(self, idx=-1):
         return self._case_from_values(self._values.pop(idx))
@@ -200,6 +219,13 @@ class CaseSet(CaseArray):
         self._tupset = set()
         super(CaseSet, self).__init__(obj, parent_uuid, names)
 
+    def copy(self):
+        cs = CaseSet(parent_uuid=self._parent_uuid, names=self._names)
+        cs._values = self._values[:]
+        cs._tupset = self._tupset.copy()
+        cs._split_idx = self._split_idx
+        return cs
+        
     def _add_values(self, vals):
         tup = tuple(vals)
         if tup not in self._tupset:
@@ -289,6 +315,14 @@ class CaseSet(CaseArray):
         self._tupset.remove(vals)
         return self._case_from_values(vals)
                 
+    def remove(self, case):
+        try:
+            values = tuple(self._get_case_data(case))
+        except KeyError:
+            raise KeyError("Case to be removed is not a member of this CaseSet")
+        self._tupset.remove(values)
+        self._values.remove(values)
+
     def __eq__(self, caseset):
         self._check_compatability(caseset)
         return self._tupset == caseset._tupset
@@ -340,9 +374,9 @@ def caseiter_to_caseset(caseiter, varnames=None, include_errors=False):
     
     caseset = CaseSet()
 
-    for case in caseiter.get_iter():
+    for case in caseiter:
         if include_errors is False and case.msg:
-            continue  # case reported an error or warning message
+            continue  # case reported an error, so don't use it
         if varnames is not None:
             caseset.record(case.subcase(varnames))
         else:

@@ -11,7 +11,7 @@ import numpy
 import random
 import numpy.random as numpy_random
 
-from openmdao.lib.datatypes.api import TraitError, Float, Array, Enum, Int, Str
+from openmdao.lib.datatypes.api import Float, Array, Enum, Int, Str
 from pyevolve import Selectors
 
 from openmdao.main.api import Assembly, Component, set_as_top
@@ -94,7 +94,6 @@ class TestCase(unittest.TestCase):
         self.top.driver.generations = 1
         self.top.driver.opt_type = "minimize"
 
-
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
@@ -119,7 +118,6 @@ class TestCase(unittest.TestCase):
         self.top.driver.mutation_rate = .02
         self.top.driver.generations = 1
         self.top.driver.opt_type = "minimize"
-
 
         self.top.run()
 
@@ -203,11 +201,12 @@ class TestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.x')
         self.top.driver.add_parameter('comp.y')
 
-        params = self.top.driver.list_parameters()
-        self.assertEqual(params,['comp.x','comp.y'])
+        params = self.top.driver.list_param_targets()
+        self.assertEqual(set(params),set(['comp.x','comp.y']))
+        self.assertEqual(len(params), 2)
 
         self.top.driver.remove_parameter('comp.x')
-        params = self.top.driver.list_parameters()
+        params = self.top.driver.list_param_targets()
         self.assertEqual(params,['comp.y'])  
 
         try: 
@@ -220,14 +219,14 @@ class TestCase(unittest.TestCase):
 
         self.top.driver.add_parameter('comp.x')
         self.top.driver.clear_parameters()
-        params = self.top.driver.list_parameters()
+        params = self.top.driver.list_param_targets()
         self.assertEqual(params,[])
 
         self.top.driver.add_parameter('comp.y')
         try: 
             self.top.driver.add_parameter('comp.y')
-        except AttributeError,err: 
-            self.assertEqual(str(err),"driver: Trying to add parameter 'comp.y' to driver, but it's already there")
+        except ValueError,err: 
+            self.assertEqual(str(err),"driver: ['comp.y'] are already Parameter targets")
         else: 
             self.fail('RuntimeError expected')
 

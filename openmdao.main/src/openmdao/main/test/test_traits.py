@@ -7,13 +7,13 @@ about how these things work.
 import unittest
 import copy
 
-from enthought.traits.api import HasTraits, TraitType
-from openmdao.lib.datatypes.api import Int, Instance
+from enthought.traits.api import HasTraits, TraitType, implements, \
+                                 Interface, Instance, Int
 
 class MyClass(object):
     def __init__(self):
         self.val = 2
-
+        
 class MyProp(TraitType):
     def init(self):
         self.val = 47

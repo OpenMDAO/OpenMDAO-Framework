@@ -8,10 +8,9 @@ You must update the OpenMDAO documentation any time you make a change that will 
 All documentation is located in the ``docs/`` directory on your branch. Each user document has
 subdirectories, for example, `plugin-guide, dev-guide, std_lib`, etc.
 
-Several other files and subdirectories are in this directory also (e.g., ``images,
-generated_images, config.py, Makefile, _build, _static``), but you can ignore them for now. User
-document files (e.g., ``index.rst, glossary.rst``) are in :term:`reStructuredText` (reST)
-markup language and always end in ``.rst``. 
+Several other files and subdirectories are in this directory also (e.g., config.py, Makefile, _build,
+_static``), but you can ignore them for now. User document files (e.g., ``index.rst, glossary.rst``) are in
+:term:`reStructuredText` (reST) markup language and always end in ``.rst``. 
 
 Updating an Existing Document
 -----------------------------

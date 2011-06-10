@@ -3,20 +3,19 @@
 #public symbols
 __all__ = ["Driver"]
 
-
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import implements, List, Instance
 
 from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, \
-                                     IHasEvents, obj_has_interface
+                                     IHasEvents, implements
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
-from openmdao.main.mp_support import is_instance
+from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
+from openmdao.main.slot import Slot
 
 @add_delegate(HasEvents)
 class Driver(Component):
@@ -25,10 +24,12 @@ class Driver(Component):
     
     implements(IDriver, IHasEvents)
 
-    recorder = Instance(ICaseRecorder, desc='Case recorder for iteration data.', 
-                        required=False)
+    recorder = Slot(ICaseRecorder, desc='Case recorder for iteration data.', 
+                     required=False) 
 
-    workflow = Instance(Workflow, allow_none=True)
+    # set factory here so we see a default value in the docs, even
+    # though we replace it with a new Dataflow in __init__
+    workflow = Slot(Workflow, allow_none=True, required=True, factory=Dataflow)
     
     def __init__(self, doc=None):
         self._iter = None
@@ -74,7 +75,7 @@ class Driver(Component):
         allcomps = set()
         for child in self.workflow.get_components():
             allcomps.add(child)
-            if is_instance(child, Driver):
+            if has_interface(child, IDriver):
                 allcomps.update(child.iteration_set())
         return allcomps
         

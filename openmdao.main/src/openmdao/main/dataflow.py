@@ -16,21 +16,14 @@ class Dataflow(SequentialWorkflow):
     def __init__(self, parent=None, scope=None, members=None):
         """ Create an empty flow. """
         super(Dataflow, self).__init__(parent, scope, members)
-        self._collapsed_graph = None
+        self.config_changed()
 
     def __iter__(self):
         """Iterate through the nodes in dataflow order."""
-        graph = self._get_collapsed_graph()
-        topsort = nx.topological_sort(graph)
-        if topsort is None:
-            # do a little extra work here to give more info to the user in the error message
-            strcon = strongly_connected_components(graph)
-            scope.raise_exception('circular dependency (%s) found' % str(strcon[0]),
-                                  RuntimeError)
         # resolve all of the components up front so if there's a problem it'll fail early
         # and not waste time running components
         scope = self.scope
-        return [getattr(scope, n) for n in topsort].__iter__()
+        return [getattr(scope, n) for n in self._get_topsort()].__iter__()
 
     def add(self, compname):
         """ Add a new component to the workflow by name. """
@@ -47,7 +40,20 @@ class Dataflow(SequentialWorkflow):
         has changed.
         """
         self._collapsed_graph = None
+        self._topsort = None
 
+    def _get_topsort(self):
+        if self._topsort is None:
+            graph = self._get_collapsed_graph()
+            try:
+                self._topsort = nx.topological_sort(graph)
+            except nx.NetworkXUnfeasible:
+                # do a little extra work here to give more info to the user in the error message
+                strcon = strongly_connected_components(graph)
+                self.scope.raise_exception('circular dependency found between the following: %s' % str(strcon[0]),
+                                           RuntimeError)
+        return self._topsort
+            
     def _get_collapsed_graph(self):
         """Get a dependency graph with only our workflow components
         in it, with additional edges added to it from sub-workflows
@@ -87,7 +93,6 @@ class Dataflow(SequentialWorkflow):
                 for u,v in graph.in_edges_iter(nbunch=iterset): # incoming edges
                     if u != cname and u not in iterset:
                         collapsed_graph.add_edge(u, cname)
-
         # connect all of the edges from each driver's iterset members to itself
         to_add = []
         for drv,iterset in itersets.items():

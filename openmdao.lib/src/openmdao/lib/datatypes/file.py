@@ -9,7 +9,6 @@ __all__ = ['File']
 import os.path
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import TraitError
 from openmdao.main.filevar import FileRef, _get_valid_owner
 
 from openmdao.main.variable import Variable
@@ -27,10 +26,10 @@ class File(Variable):
         
         if default_value is not None:
             if not isinstance(default_value, FileRef):
-                raise TraitError('File default value must be a FileRef.')
+                raise TypeError('File default value must be a FileRef.')
             
         if iotype is None:
-            raise TraitError("File must have 'iotype' defined.")
+            raise ValueError("File must have 'iotype' defined.")
         metadata['iotype'] = iotype
         
         # Put desc in the metadata dictionary
@@ -40,11 +39,11 @@ class File(Variable):
         if iotype == 'out':
             if default_value is None:
                 if 'path' not in metadata:
-                    raise TraitError("Output File must have 'path' defined.")
+                    raise ValueError("Output File must have 'path' defined.")
                 if 'legal_types' in metadata:
-                    raise TraitError("'legal_types' invalid for output File.")
+                    raise ValueError("'legal_types' invalid for output File.")
                 if 'local_path' in metadata:
-                    raise TraitError("'local_path' invalid for output File.")
+                    raise ValueError("'local_path' invalid for output File.")
                 meta = metadata.copy()
                 path = metadata['path']
                 for name in ('path', 'legal_types', 'local_path', 'iotype'):
@@ -53,7 +52,7 @@ class File(Variable):
                 default_value = FileRef(path, **meta)
         else:
             if 'path' in metadata:
-                raise TraitError("'path' invalid for input File.")
+                raise ValueError("'path' invalid for input File.")
             
         super(File, self).__init__(default_value, **metadata)
 
@@ -79,7 +78,7 @@ class File(Variable):
             legal_types = self._metadata.get('legal_types', None)
             if legal_types:
                 if value.content_type not in legal_types:
-                    raise TraitError("Content type '%s' not one of %s"
+                    raise ValueError("Content type '%s' not one of %s"
                                      % (value.content_type, legal_types))
             return value
         else:

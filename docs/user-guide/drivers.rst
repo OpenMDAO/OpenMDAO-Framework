@@ -81,32 +81,23 @@ defined in either place, then an exception is raised. Some drivers (in particula
 low or high value; in such a case, you can just set each of them to a large number, e.g., ``low=-1e99`` and
 ``high=1e99``.
 
-Multiple parameters can also be added in a single call to ``add_parameters`` (note the letter
-*s*) by passing a list of tuples.
-
-.. testcode:: Parameter_API
-
-    # Some more Design Variables 
-    self.driver.add_parameters([ ('vehicle.conrod', 65.0 , 90.0), 
-                                 ('vehicle.IVC', 0.0, 90.0) ])
-
 
 The ``IHasParameters`` interface also includes some other functions that are more useful when
-used interactively or when writing more advanced components. The functions ``list_parameters``,
-``remove_parameters``, and ``clear_parameters`` can be used to respectively list all parameters, delete a
+used interactively or when writing more advanced components. The functions ``list_param_targets``,
+``remove_parameters``, and ``clear_parameters`` can be used to respectively list all parameter targets, delete a
 single parameter, and clear all parameters.
 
 .. doctest:: more_parameter_interface
 
     >>> from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
     >>> top = OptimizationConstrained()
-    >>> top.driver.list_parameters()
+    >>> top.driver.list_param_targets()
     ['paraboloid.x', 'paraboloid.y']
     >>> top.driver.remove_parameter('paraboloid.x')
-    >>> top.driver.list_parameters()
+    >>> top.driver.list_param_targets()
     ['paraboloid.y']
     >>> top.driver.clear_parameters()
-    >>> top.driver.list_parameters()
+    >>> top.driver.list_param_targets()
     []
 
 There are also ``get_parameters`` and ``set_parameters`` methods, but these
@@ -125,11 +116,6 @@ example, the CONMIN driver supports inequality constraints but not equality
 constraints.
 
 Constraints are added to a driver using the ``add_constraint`` method.
-
-.. testcode:: Parameter_API
-
-    self.driver.add_constraint('vehicle.stroke < vehicle.bore')
-
 Constraints are defined using boolean expressions, so they are considered to
 be satisfied when the expressions evaluate to *True* and violated when they
 evaluate to *False*. The following constraint declarations are all equivalent:
@@ -171,8 +157,8 @@ syntax includes an equal sign in the expression.
 
 .. note::
 
-    OpenMDAO does not check for duplicate constraints, so be careful when
-    adding them.
+    OpenMDAO only detects duplicate constraints if the have the exact same
+    form aside from white space, so be careful when adding them.
     
 Sometimes you want to change the scaling on constraints, particularly for
 cases where the constrained variables are of disparate orders of magnitude. You can do this 

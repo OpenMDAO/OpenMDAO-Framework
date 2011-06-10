@@ -355,7 +355,7 @@ More details on the ``literalinclude`` directive can be found at http://sphinx.p
     >>> my_engine.set("throttle",3.0)
     Traceback (most recent call last):
         ...
-    TraitError: Trait 'RPM' must be a float in the range [0.01, 1.0] but a value 
+    ValueError: Variable 'RPM' must be a float in the range [0.01, 1.0] but a value 
     of 3.0 <type 'float'> was specified.
 
 * Indentation is not preserved between code blocks in the same group. This means that all functions and
@@ -405,6 +405,6 @@ If any tests fail, they will be noted in this summary, and specific tracebacks
 will be given for each failure earlier in the output.
 
 .. note:: If you make changes to the docs, rebuild the documentation by running ``openmdao_build_docs``
-	  and display them by typing ``openmdao_docs``.
+      and display them by typing ``openmdao_docs``.
 
 

@@ -10,8 +10,6 @@ import unittest
 
 from nose import SkipTest
 
-from enthought.traits.api import TraitError
-
 from openmdao.main.api import Component, Container
 from openmdao.lib.datatypes.api import Float
 from openmdao.main.container import _get_entry_group

@@ -5,7 +5,7 @@
 An OpenMDAO Process Model
 ==============================
 
-.. figure:: ../images/arch-doc/top_level.png
+.. figure:: top_level.png
    :align: center
    :alt: Refer to caption
 
@@ -93,8 +93,8 @@ to a model.
 .. testcode:: parameter_interface
 
     # CONMIN Design Variables 
-    self.driver.add_parameter('geo_manipulator.radius', 3.0, 12.)
-    self.driver.add_parameter('geo_manipulator.height', 6.5, 25.)
+    self.driver.add_parameter('geo_manipulator.radius', low=3.0, high=12.)
+    self.driver.add_parameter('geo_manipulator.height', low=6.5, high=25.)
                  
 
 Here, *self* is the top level assembly that contains an optimizer, the geometry
@@ -310,7 +310,7 @@ The Mesh Object
 Use Cases
 =========
 
-.. figure:: ../images/arch-doc/top_level2.png
+.. figure:: top_level2.png
    :align: center
    :alt: Refer to caption
 
