@@ -15,7 +15,7 @@ from openmdao.main.component import Component
 from openmdao.main.variable import Variable
 from openmdao.main.slot import Slot
 from openmdao.main.driver import Driver
-from openmdao.main.tvalwrapper import TraitValWrapper
+from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 

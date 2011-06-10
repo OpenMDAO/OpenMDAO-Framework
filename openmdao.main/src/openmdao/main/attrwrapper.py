@@ -1,9 +1,9 @@
 
-__all__ = ['TraitValWrapper']
+__all__ = ['AttrWrapper']
 
-class TraitValWrapper(object):
-    """A class that encapsulates a trait value and any metadata necessary
-    for validation of that trait.  For example, a TraitValWrapper for
+class AttrWrapper(object):
+    """A class that encapsulates a value and any metadata necessary
+    for validation of that value.  For example, an AttrWrapper for
     a Float object would include 'units' metadata to allow for unit
     compatability checking and conversion.
     """

@@ -141,7 +141,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         # evaluate constraint functions
         if info == 2:
             for i, v in enumerate(driver.get_ineq_constraints().values()):
-                val = v.evaluate()
+                val = v.evaluate(driver.parent)
                 if '>' in val[2]:
                     g[i] = val[0]-val[1]
                 else:
@@ -382,7 +382,7 @@ class NEWSUMTdriver(Driver):
         # check if any min/max constraints are violated by initial values
         for i, val in enumerate(self.get_parameters().values()):
             
-            value = val.evaluate()
+            value = val.evaluate(self.parent)
             self.design_vals[i] = value
             # next line is specific to NEWSUMT
             self.__design_vals_tmp[i] = value
