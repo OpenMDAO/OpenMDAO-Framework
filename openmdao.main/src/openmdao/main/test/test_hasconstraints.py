@@ -61,7 +61,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         except Exception as err: 
             self.assertEqual(str(err),
                              'driver: A constraint of the form "comp1.a>comp1.b" already exists '
-                             'in the driver. Add Failed.')
+                             'in the driver. Add failed.')
         else: 
             self.fail("Exception Expected")
         
@@ -105,7 +105,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         except Exception as err: 
             self.assertEqual(str(err),
                              'driver: A constraint of the form "comp1.c=comp1.d" already exists '
-                             'in the driver. Add Failed.')
+                             'in the driver. Add failed.')
         else: 
             self.fail("Exception Expected")
 

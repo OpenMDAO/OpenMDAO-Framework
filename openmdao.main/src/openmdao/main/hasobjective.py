@@ -28,27 +28,38 @@ class HasObjectives(object):
         for expr in obj_iter:
             self._parent.add_objective(expr)
 
-    def add_objective(self, expr):
+    def add_objective(self, expr, name=None):
         """Adds an objective to the driver. 
         
         expr: string
             String containing the objective expression.
             
+        name: string (optional)
+            Name to be used to refer to the objective in place of the expression
+            string.
          """
         if self._max_objectives > 0 and len(self._objectives) >= self._max_objectives:
             self._parent.raise_exception("Can't add objective '%s'. Only %d objectives are allowed" % (expr,self._max_objectives),
                                          RuntimeError)
         expr = _remove_spaces(expr)
         if expr in self._objectives: 
-            self._parent.raise_exception("Trying to add objective '%s' to driver, "
-                                         "but it's already there" % expr,
+            self._parent.raise_exception("Trying to add objective "
+                                         "'%s' to driver, but it's already there" % expr,
+                                         AttributeError)
+        if name is not None and name in self._objectives:
+            self._parent.raise_exception("Trying to add objective "
+                                         "'%s' to driver using name '%s', but it's already there" % (expr,name),
                                          AttributeError)
         expreval = ExprEvaluator(expr, self._parent.parent)
         
         if not expreval.check_resolve():
             self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
                                          ValueError)
-        self._objectives[expr] = expreval
+            
+        if name is None:
+            self._objectives[expr] = expreval
+        else:
+            self._objectives[name] = expreval
             
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within

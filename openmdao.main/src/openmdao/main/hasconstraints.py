@@ -142,7 +142,7 @@ class HasEqConstraints(_HasConstraintsBase):
     constraints but does not support inequality constraints.
     """
     
-    def add_constraint(self, expr_string, scaler=1.0, adder=0.0):
+    def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
         
@@ -160,6 +160,10 @@ class HasEqConstraints(_HasConstraintsBase):
         adder: float (optional)
             Additive scale factor applied to both sides of the constraint's
             boolean expression. Default is no additive shift (0.0).
+            
+        name: str (optional)
+            Name to be used to refer to the constraint rather than its
+            expression string.
         """
         
         try:
@@ -167,12 +171,12 @@ class HasEqConstraints(_HasConstraintsBase):
         except Exception as err:
             self._parent.raise_exception(str(err), type(err))
         if rel == '=':
-            self._add_eq_constraint(lhs, rhs, scaler, adder)
+            self._add_eq_constraint(lhs, rhs, scaler, adder, name)
         else:
             msg = "Inequality constraints are not supported on this driver"
             self._parent.raise_exception(msg, ValueError)
 
-    def _add_eq_constraint(self, lhs, rhs, scaler, adder):
+    def _add_eq_constraint(self, lhs, rhs, scaler, adder, name=None):
         """Adds an equality constraint as two strings, a left-hand side and
         a right-hand side.
         """
@@ -185,9 +189,17 @@ class HasEqConstraints(_HasConstraintsBase):
         ident = _remove_spaces('='.join([lhs, rhs]))
         if ident in self._constraints: 
             self._parent.raise_exception('A constraint of the form "%s" already exists '
-                                         'in the driver. Add Failed.'%ident,ValueError)
-        self._constraints[ident] = Constraint(lhs, '=', rhs, scaler, adder,
-                                              scope=self._parent.parent)
+                                         'in the driver. Add failed.' % ident, ValueError)
+        elif name is not None and name in self._constraints: 
+            self._parent.raise_exception('A constraint named "%s" already exists '
+                                         'in the driver. Add failed.' % name, ValueError)
+        constraint = Constraint(lhs, '=', rhs, scaler, adder,
+                                scope=self._parent.parent)
+        if name is None:
+            self._constraints[ident] = constraint
+        else:
+            self._constraints[name] = constraint
+
     def get_eq_constraints(self):
         """Returns an ordered dict of constraint objects."""
         return self._constraints
@@ -208,7 +220,7 @@ class HasIneqConstraints(_HasConstraintsBase):
     constraints but does not support equality constraints.
     """
     
-    def add_constraint(self, expr_string, scaler=1.0, adder=0.0):
+    def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
         
@@ -223,14 +235,18 @@ class HasIneqConstraints(_HasConstraintsBase):
         adder: float (optional)
             Additive scale factor applied to both sides of the constraint's
             boolean expression. Default is no additive shift (0.0).
+        
+        name: str (optional)
+            Name to be used to refer to the constraint rather than its
+            expression string.
         """
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
             self._parent.raise_exception(str(err), type(err))
-        self._add_ineq_constraint(lhs, rel, rhs, scaler, adder)
+        self._add_ineq_constraint(lhs, rel, rhs, scaler, adder, name)
 
-    def _add_ineq_constraint(self, lhs, rel, rhs, scaler, adder):
+    def _add_ineq_constraint(self, lhs, rel, rhs, scaler, adder, name=None):
         """Adds an inequality constraint as three strings; a left-hand side,
         a comparator ('<','>','<=', or '>='), and a right-hand side.
         """
@@ -247,9 +263,13 @@ class HasIneqConstraints(_HasConstraintsBase):
         ident = _remove_spaces(rel.join([lhs, rhs]))
         if ident in self._constraints: 
             self._parent.raise_exception('A constraint of the form "%s" already exists in '
-                                         'the driver. Add Failed.'%ident,ValueError)
-        self._constraints[ident] = Constraint(lhs, rel, rhs, scaler, adder,
-                                              scope=self._parent.parent)
+                                         'the driver. Add failed.'%ident,ValueError)
+        constraint = Constraint(lhs, rel, rhs, scaler, adder,
+                                scope=self._parent.parent)
+        if name is None:
+            self._constraints[ident] = constraint
+        else:
+            self._constraints[name] = constraint
         
     def get_ineq_constraints(self):
         """Returns an ordered dict of inequality constraint objects."""
@@ -277,7 +297,7 @@ class HasConstraints(object):
         self._eq = HasEqConstraints(parent)
         self._ineq = HasIneqConstraints(parent)
 
-    def add_constraint(self, expr_string, scaler=1.0, adder=0.0):
+    def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
         
@@ -292,15 +312,19 @@ class HasConstraints(object):
         adder: float (optional)
             Additive scale factor applied to both sides of the constraint's
             boolean expression. Default is no additive shift (0.0).
+        
+        name: str (optional)
+            Name to be used to refer to the constraint rather than its
+            expression string.
         """
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
             self._parent.raise_exception(str(err), type(err))
         if rel == '=':
-            self._eq._add_eq_constraint(lhs, rhs, scaler, adder)
+            self._eq._add_eq_constraint(lhs, rhs, scaler, adder, name)
         else:
-            self._ineq._add_ineq_constraint(lhs, rel, rhs, scaler, adder)
+            self._ineq._add_ineq_constraint(lhs, rel, rhs, scaler, adder, name)
 
     def remove_constraint(self, expr_string):
         """Removes the constraint with the given string."""
@@ -315,17 +339,17 @@ class HasConstraints(object):
         self._eq.clear_constraints()
         self._ineq.clear_constraints()
         
-    def _add_ineq_constraint(self, lhs, comparator, rhs, scaler, adder):
+    def _add_ineq_constraint(self, lhs, comparator, rhs, scaler, adder, name=None):
         """Adds an inequality constraint as three strings; a left-hand side,
         a comparator ('<','>','<=', or '>='), and a right hand side.
         """
-        self._ineq._add_ineq_constraint(lhs, comparator, rhs, scaler, adder)
+        self._ineq._add_ineq_constraint(lhs, comparator, rhs, scaler, adder, name)
     
-    def _add_eq_constraint(self, lhs, rhs, scaler, adder):
+    def _add_eq_constraint(self, lhs, rhs, scaler, adder, name=None):
         """Adds an equality constraint as two strings, a left-hand side and
         a right-hand side.
         """
-        self._eq._add_eq_constraint(lhs, rhs, scaler, adder)
+        self._eq._add_eq_constraint(lhs, rhs, scaler, adder, name)
 
     def get_eq_constraints(self):
         """Returns an ordered dict of equality constraint objects."""

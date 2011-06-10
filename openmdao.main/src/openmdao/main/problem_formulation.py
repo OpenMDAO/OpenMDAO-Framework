@@ -5,7 +5,7 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.interfaces import IArchitecture
 
 from openmdao.main.hasconstraints import HasConstraints
-from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.main.hasobjective import HasObjectives
 
 
@@ -100,12 +100,12 @@ class ArchitectureAssembly(Assembly):
     def get_local_des_vars(self):
         """Return a list of single target Parameters."""
         return [(k,v) for k,v in self.get_parameters().items() 
-                                        if not isinstance(k,tuple)]
+                                        if isinstance(v, Parameter)]
     
     def get_global_des_vars(self): 
         """Return a list of multi target Parameters."""
         return [(k,v) for k,v in self.get_parameters().items() 
-                                        if isinstance(k,tuple)]
+                                        if isinstance(v, ParameterGroup)]
         
      
         

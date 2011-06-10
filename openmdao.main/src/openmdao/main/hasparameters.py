@@ -247,7 +247,7 @@ class HasParameters(object):
         self._allowed_types = ['continuous']
 
     def add_parameter(self, name, low=None, high=None, 
-                      scaler=None, adder=None, fd_step=None):
+                      scaler=None, adder=None, fd_step=None, altname=None):
         """Adds a parameter or group of parameters to the driver.
         
         name: string or iter of strings
@@ -272,6 +272,12 @@ class HasParameters(object):
         fd_step: float (optional)
             Step-size to use for finite difference calculation. If no value is
             given, the differentitator will use its own default
+            
+        altname: str (optional)
+            Name used to refer to the parameter in place of the name of the
+            variable referred to in the parameter string.
+            This is sometimes useful if, for example, multiple entries in the
+            same array variable are declared as parameters.
         
         If neither "low" nor "high" is specified, the min and max will
         default to the values in the metadata of the variable being
@@ -284,6 +290,8 @@ class HasParameters(object):
         else: 
             names = name
             key = tuple(name)
+        if altname is not None:
+            key = altname
 
         dups = set(self.list_param_targets()).intersection(names)
         if len(dups) > 0:
