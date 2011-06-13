@@ -7,11 +7,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import logout
 from django.views.decorators.cache import never_cache
 from django.core.urlresolvers import reverse
+from django import forms
 
 import sys, os
 import zipfile, jsonpickle
-
-from setuptools.command import easy_install
 
 from mdao_util import *
 
@@ -21,6 +20,33 @@ print prefix+'workspace.views() -------------------------------------'
 from consoleserverfactory import ConsoleServerFactory
 server_mgr = ConsoleServerFactory()
 
+class AddonForm(forms.Form):
+    distribution = forms.CharField(label='Distribution')
+    
+@never_cache
+@login_required()
+def AddOns(request):
+    ''' addon installation utility
+    '''
+    addons_url = 'http://openmdao.org/dists'
+    
+    if request.method=='POST':
+        ''' easy_install the POST'd addon
+        '''
+        form = AddonForm(request.POST)
+        if form.is_valid():
+            distribution = form.cleaned_data['distribution']
+            cserver = server_mgr.console_server(request.session.session_key)
+            cserver.install_addon(addons_url, distribution)
+            return render_to_response('closewindow.html')
+            
+    ''' show available addons, prompt for addon to be installed
+    '''
+    form = AddonForm()
+    return render_to_response('addons.html', 
+                              {'addons_url': addons_url, 'addon_form': form },
+                              context_instance=RequestContext(request))
+        
 @never_cache
 @csrf_exempt
 @login_required()

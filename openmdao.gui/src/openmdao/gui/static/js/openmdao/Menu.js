@@ -47,7 +47,7 @@ openmdao.Menu = function(id) {
             },
             { text: "Tools", 
               items: [
-                { text: "Addons", onclick: "openmdao.Util.popupWindow('/addons','Addons',575,540)"}
+                { text: "Addons", onclick: "openmdao.Util.popupWindow('addons','Addons',575,540)"}
               ]
             },
             { text: "Help", 

@@ -6,6 +6,8 @@ import cmd
 import jsonpickle
 import tempfile
 
+from setuptools.command import easy_install
+
 from cStringIO import StringIO
 
 from enthought.traits.api import HasTraits
@@ -396,4 +398,8 @@ class ConsoleServer(cmd.Cmd):
         dirpath = os.getcwd()+'/'+str(dirname)
         if not os.path.isdir(dirpath):
             os.makedirs(dirpath)
+            
+    def install_addon(self,url,distribution):
+        print "Installing",distribution,"from",url
+        easy_install.main( ["-U","-f",url,distribution] )
             
