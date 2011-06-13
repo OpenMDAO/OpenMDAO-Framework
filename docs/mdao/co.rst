@@ -16,13 +16,12 @@ discipline, driving its design variables while minimizing the residual between
 the actual value of the design variables and the values commanded by the global
 optimizer.
 
-Unlike IDF and MDF, for CO the golbal optimizer does not work directly with any of
-the inputs in any of the disciplines. Instead, the Global optimizer works on 
-a set of copies of the global design variables. These copies are sometimes called ''targets'', 
-and we'll follow that convention here by puting an ''_t'' at the end of the variable name. Each discipline has its own 
-local optimization which works with the local input associated with the global target. This is all
-represented in the figure below, and it's a bit of a mess. You can see why it's important to seperate out
-data flow and workflow, to help keep things manageable. 
+Unlike IDF and MDF, for CO the global optimizer does not work directly with any of the inputs in any of the
+disciplines. Instead, the global optimizer works on a set of copies of the global design variables. These
+copies are sometimes called *targets*, so we'll put an ``_t`` at the end of the variable name. Each discipline
+has its own  local optimization which works with the local input associated with the global target. This is all
+represented in the figure below, and it's a bit of a mess. You can see that it's important to separate data
+flow and workflow to help keep things manageable. 
 
 
 .. figure:: Arch-CO.png
@@ -32,7 +31,7 @@ data flow and workflow, to help keep things manageable.
    Data Flow for CO
 
 The CO model has three optimizers, so there are three workflows. The top level
-workflow just the two lower level optimizers, and each of those optimizers has a 
+workflow includes just the two lower level optimizers, and each of those optimizers has a 
 workflow with just the discipline component. This can be seen in the next figure.
    
 .. figure:: Arch-CO-OpenMDAO.png
@@ -44,8 +43,8 @@ workflow with just the discipline component. This can be seen in the next figure
 First, we define the global target variables, create the component instances, 
 and set up this iteration hierarchy. Pay special attention to how we define the
 variables. Notice that the ``iotype`` metadata is not set at all. Normally 
-you would set `iotype="in"` or `iotype="out"` when you create a variable. In this 
-case the variables are neither inputs or outputs to the assembly. Instead they are
+you would set ``iotype="in"`` or ``iotype="out"`` when you create a variable. In this 
+case, the variables are neither inputs nor outputs to the assembly. Instead, they are
 meant only to be internal variables, varied by the top level driver and used 
 in the lower level optimization objectives. Hence, no `iotype` is set. 
         
@@ -132,12 +131,12 @@ Now we need to set up the parameters for the outer optimization loop.
         self.driver.ct = -.0008
         self.driver.ctlmin = 0.0008
 
-Here we are able to build up a complicated expression for the sum of the squares
+Here we are able to build a complicated expression for the sum of the squares
 of all of the residuals and use it as our constraint. This is another
 example of a constraint that could be better served as an equality constraint, 
 but there is some research which indicates the performance of CO can be 
 improved by switching to an inequality constraint with a small, but non zero
-tollerance. We created two constraints, one for each discipline.
+tolerance. We created two constraints, one for each discipline.
 
 Finally, we set up our local optimization loops.
 
