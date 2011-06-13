@@ -124,6 +124,22 @@ openmdao.Model=function() {
         callback(obj)
     }
     
+    /** get list of components in the top driver workflow */
+    this.getWorkflow = function(callback,errorHandler) {
+        if (typeof callback != 'function')
+            return
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'workflow',
+                dataType: 'json',
+                data: {},
+                success: callback,
+                error: errorHandler
+            })
+        }
+    }
+    
     /** get  hierarchical list of components*/
     this.getComponents = function(callback,errorHandler) {
         if (typeof callback != 'function')

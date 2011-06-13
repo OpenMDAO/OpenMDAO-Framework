@@ -227,6 +227,12 @@ def Types(request):
     return HttpResponse(json,mimetype='application/json')
 
 @never_cache
+def Workflow(request):
+    cserver = server_mgr.console_server(request.session.session_key)
+    json = jsonpickle.encode(cserver.get_workflow())
+    return HttpResponse(json,mimetype='application/json')
+    
+@never_cache
 @login_required()
 def Workspace(request):
     ''' initialize the server manager &  render the workspace

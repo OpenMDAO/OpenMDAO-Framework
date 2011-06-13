@@ -46,15 +46,18 @@ openmdao.DataFlow = function(id,model) {
     function updateFigures(json) {
         dataflow.clear();        
         var x = 50, y = 50;
-        jQuery.each(json,function(name,val) {
-            if (val) {
-                // var typepath = val["py/object"]
-                var typepath = name // FIXME: just getting a name atm
+        debug.info("dataflow json=",json)
+        jQuery.each(json,function(idx,name) {
+            //if (val) {
+                // FIXME: just getting a name atm
+                // also want type, inputs/ouputs
+                var typepath = name 
                 if (typepath !== undefined) {
                     var tokens = typepath.split('.'),
                         typename = tokens[tokens.length-1]
                     
                     var newObj = new draw2d.Component(name,typename,typepath)
+                    //newObj.setTitle(name);
                     dataflow.addFigure(newObj,x,y)
                     
                     // TODO: get x & y from model... 
@@ -74,13 +77,13 @@ openmdao.DataFlow = function(id,model) {
                         }
                     })
                 }
-            }
+            //}
         })
     }
     
     /** update the schematic, with data from the model */
     function update() {
-        model.getComponents(updateFigures)
+        model.getWorkflow(updateFigures)
     }
     
     // ask model for an update whenever something changes

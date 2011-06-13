@@ -233,6 +233,15 @@ class ConsoleServer(cmd.Cmd):
         if self.top:
             comps = self._get_components(self.top)
         return comps
+        
+    def get_workflow(self):
+        """ get the list of components that make up the workflow
+            for the top level driver 
+        """
+        comps = {}
+        if self.top and self.top.driver:
+            comps = self.top.driver.workflow.get_names()
+        return comps
 
     def _get_attributes(self,comp):
         """ get attributes of object """
