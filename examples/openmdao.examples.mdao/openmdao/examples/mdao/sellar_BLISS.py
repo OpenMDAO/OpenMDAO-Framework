@@ -102,8 +102,8 @@ class SellarBLISS(Assembly):
         self.sysopt.add_constraint('dis1.y1 + ssa.d__dis1_y1__dis1_z1*(z1_store-dis1.z1) + ssa.d__dis1_y1__dis1_z2*(z2_store-dis1.z2) > 3.16')
         self.sysopt.add_constraint('dis2.y2 + ssa.d__dis2_y2__dis1_z1*(z1_store-dis1.z1) + ssa.d__dis2_y2__dis1_z2*(z2_store-dis1.z2) < 24.0')
         self.sysopt.linobj = True
-        self.bbopt1.iprint = 1
-        self.bbopt1.force_execute = True
+        self.sysopt.iprint = 1
+        self.sysopt.force_execute = True
             
         self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt'])
         
