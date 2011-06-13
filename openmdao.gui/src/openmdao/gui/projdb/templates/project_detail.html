@@ -16,7 +16,11 @@
         {{ project_form.as_table }} 
         </table>
     <br>
-    <input type="submit" value="Submit Changes" />
+    {% if project.filename %}
+    <input type="submit" value="Update Project Details" />
+    {% else %}
+    <input type="submit" value="Create Project" />
+    {% endif %}
     </form>
 
     <p>
