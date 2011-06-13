@@ -87,6 +87,7 @@ class SellarCO(Assembly):
         self.localopt1.fdchm = .003
         self.localopt1.delfun = .0001
         self.localopt1.dabfun = .000001
+        self.localopt1.force_execute = True
         
         #Parameters - Local Optimization 2
         self.localopt2.add_objective('(z1_t-dis2.z1)**2 + ' + \
@@ -102,6 +103,7 @@ class SellarCO(Assembly):
         self.localopt2.fdchm = .003
         self.localopt2.delfun = .001
         self.localopt2.dabfun = .00001
+        self.localopt2.force_execute = True
 
 
 if __name__ == "__main__":        
