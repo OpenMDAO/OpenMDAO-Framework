@@ -14,6 +14,7 @@ __all__ = ['SensitivityDriver']
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Float
 from openmdao.main.api import Driver
+from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.uses_derivatives import UsesGradients
@@ -31,11 +32,11 @@ def _findname(input_name, output_name):
                           input_name.replace('.', '_'))
 
 
-@add_delegate(HasParameters, HasObjectives, UsesGradients)
+@add_delegate(HasParameters, HasObjectives, UsesGradients, HasConstraints)
 class SensitivityDriver(Driver):
     """Driver to calculate the gradient of a workflow, and return
     it as a driver output. The gradient is calculated from all
-    inputs (Parameters) to all outputs (Objectives).
+    inputs (Parameters) to all outputs (Objectives and Constraints).
     
     SensitivityDriver includes a differentiator slot where the differentiation
     method can be plugged. Fake finite difference is supported.
@@ -59,11 +60,27 @@ class SensitivityDriver(Driver):
         self._check()
         
         inputs = self.get_parameters().keys()
-        outputs = self.get_objectives().keys()
-        #outputs = ['Obj%s' % i for i in range(len(self.list_objectives()))]
+        objectives = self.get_objectives().keys()
+        eq_con = self.get_eq_constraints().keys()
+        ineq_con = self.get_ineq_constraints().keys()
         
         for input_name in inputs:
-            for output_name in outputs:
+            
+            for output_name in objectives:
+                
+                var_name = _findname(input_name, output_name)
+                
+                self.add_trait(var_name, Float(0.0, iostatus='out',
+                           desc = 'Deritavive output from SensitivityDriver'))
+            
+            for output_name in eq_con:
+                
+                var_name = _findname(input_name, output_name)
+                
+                self.add_trait(var_name, Float(0.0, iostatus='out',
+                           desc = 'Deritavive output from SensitivityDriver'))
+            
+            for output_name in ineq_con:
                 
                 var_name = _findname(input_name, output_name)
                 
@@ -80,11 +97,27 @@ class SensitivityDriver(Driver):
         self.ffd_order = 0
             
         inputs = self.get_parameters().keys()
-        outputs = self.get_objectives().keys()
-        #outputs = ['Obj%s' % i for i in range(len(self.list_objectives()))]
+        objectives = self.get_objectives().keys()
+        eq_con = self.get_eq_constraints().keys()
+        ineq_con = self.get_ineq_constraints().keys()
         
         for i, input_name in enumerate(inputs):
-            for j, output_name in enumerate(outputs):
+            
+            for j, output_name in enumerate(objectives):
+                
+                var_name = _findname(input_name, output_name)
+                
+                setattr(self, var_name,
+                        self.differentiator.gradient_obj[i,j])
+                
+            for j, output_name in enumerate(eq_con):
+                
+                var_name = _findname(input_name, output_name)
+                
+                setattr(self, var_name,
+                        self.differentiator.gradient_obj[i,j])
+                
+            for j, output_name in enumerate(ineq_con):
                 
                 var_name = _findname(input_name, output_name)
                 
@@ -97,13 +130,15 @@ class SensitivityDriver(Driver):
                 
         
     def _check(self):
-        """Make sure we aren't missing input or output"""
+        """Make sure we aren't missing inputs or outputs"""
         
         if len(self.get_parameters().values()) < 1:
             msg = "Missing inputs for gradient calculation"
             self.raise_exception(msg, ValueError)
         
-        if len(self.get_objectives().values()) < 1:
+        if len(self.get_objectives().values()) + \
+           len(self.get_eq_constraints().values()) + \
+           len(self.get_ineq_constraints().values()) < 1:
             msg = "Missing outputs for gradient calculation"
             self.raise_exception(msg, ValueError)
 

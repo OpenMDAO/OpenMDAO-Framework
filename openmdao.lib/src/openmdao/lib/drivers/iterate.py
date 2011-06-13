@@ -19,7 +19,8 @@ from openmdao.main.hasconstraints import HasEqConstraints
 class FixedPointIterator(Driver):
     """ A simple fixed point iteration driver, which runs a workflow and passes
     the value from the output to the input for the next iteration. Relative
-    change and number of iterations are used as termination criterea."""
+    change and number of iterations are used as termination criterea. This type
+    of iteration is also known as Gauss-Seidel."""
 
     # pylint: disable-msg=E1101
     max_iteration = Int(25, iotype='in', desc='Maximum number of '
@@ -42,13 +43,18 @@ class FixedPointIterator(Driver):
 
         # perform our initial run
         self.run_iteration()
-        
         self.current_iteration = 0
-        history = zeros(self.max_iteration)
-        val = self.get_eq_constraints().values()[0]
-        term = val.evaluate(self.parent)
-        history[0] = term[0] - term[1]
-        val0 = 0
+        
+        nvar = len(self.get_eq_constraints().values())
+        history = zeros([self.max_iteration, nvar])
+        delta = zeros(nvar)
+        
+        for i, val in enumerate(self.get_eq_constraints().values()):
+            
+            term = val.evaluate(self.parent)
+            history[0, i] = term[0] - term[1]
+            
+        val0 = zeros(nvar)
         unconverged = True
 
         while unconverged:
@@ -58,44 +64,40 @@ class FixedPointIterator(Driver):
 
             # check max iteration
             if self.current_iteration >= self.max_iteration-1:
-                self.history = history[:self.current_iteration+1]
+                self.history = history[:self.current_iteration+1, :]
                 self.raise_exception('Max iterations exceeded without ' + \
                                      'convergence.', RuntimeError)
                 
             # Pass output to input
-            val0 += history[self.current_iteration]
-            self.set_parameters([val0])
+            val0 += history[self.current_iteration, :]
+            self.set_parameters(val0)
 
             # run the workflow
             self.run_iteration()
             self.current_iteration += 1
         
             # check convergence
-            #val = self.get_eq_constraints().itervalues().next()
-            term = val.evaluate(self.parent)
-            delta = term[0] - term[1]
+            for i, val in enumerate(self.get_eq_constraints().values()):
+            
+                term = val.evaluate(self.parent)
+                delta[i] = term[0] - term[1]
             
             history[self.current_iteration] = delta
             
-            if abs(delta) < self.tolerance:
+            # Note: infinity norm
+            if max(abs(delta)) < self.tolerance:
                 break
             # relative tolerance -- problematic around 0
             #if abs( (val1-val0)/val0 ) < self.tolerance:
             #    break
             
-        self.history = history[:self.current_iteration+1]
+        self.history = history[:self.current_iteration+1, :]
             
     def _check_config(self):
-        """Make sure the problem is set up right. It's single input
-        single output."""
+        """Make sure the problem is set up right."""
         
         ncon = len(self.get_eq_constraints())
         
-        if ncon > 1:
-            msg = "FixedPointIterator can only take a single " + \
-                  "constraint equation."
-            self.raise_exception(msg, RuntimeError)            
-
         if ncon == 0:
             msg = "FixedPointIterator requires a constraint equation."
             self.raise_exception(msg, RuntimeError)
@@ -103,11 +105,6 @@ class FixedPointIterator(Driver):
         params = self.get_parameters().values()
         nparm = len(params)
         
-        if nparm > 1:
-            msg = "FixedPointIterator can only take a single " + \
-                  "input parameter."
-            self.raise_exception(msg, RuntimeError)            
-
         if nparm == 0:
             msg = "FixedPointIterator requires an input parameter."
             self.raise_exception(msg, RuntimeError)

@@ -75,7 +75,11 @@ class FiniteDifference(HasTraits):
 
         self.n_param = len(self._parent.get_parameters())
         self.n_objective = len(self._parent.get_objectives())
-        if self.n_objective != 1:
+        
+        self.multi_obj = False
+        try:
+            self._parent.eval_objective()
+        except AttributeError:
             self.multi_obj = True
         
         try:
@@ -86,6 +90,7 @@ class FiniteDifference(HasTraits):
             self.n_eqconst = len(self._parent.get_eq_constraints())
         except AttributeError:
             pass
+        
         
     def calc_gradient(self):
         """Returns the gradient vectors for this Driver's workflow."""
@@ -407,7 +412,7 @@ class FiniteDifference(HasTraits):
         if self.multi_obj:
             data_obj = self._parent.eval_objectives()
         else:
-            data_obj = self._parent.eval_objective()
+            data_obj = self._parent.eval_objectives()[0]
 
         if self.n_ineqconst:
             for j, v in enumerate(self._parent.get_ineq_constraints().values()):

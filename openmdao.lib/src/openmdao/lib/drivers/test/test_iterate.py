@@ -139,26 +139,6 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
         self.top.driver.add_parameter('simple.extra_invar', -9e99, 9e99)
 
-        try:
-            self.top.run()
-        except RuntimeError, err:
-            msg = "driver: FixedPointIterator can only take a single " + \
-                  "input parameter."
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail('RuntimeError expected')
-
-        self.top.driver.add_constraint('simple.outvar - 2.0*simple.invar = 0')
-
-        try:
-            self.top.run()
-        except RuntimeError, err:
-            msg = "driver: FixedPointIterator can only take a single " + \
-                  "constraint equation."
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail('RuntimeError expected')
-
 
 class TestIterateUntill(unittest.TestCase): 
     """Test case for the IterateUntil Driver""" 
