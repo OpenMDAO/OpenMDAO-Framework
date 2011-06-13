@@ -68,6 +68,15 @@ class HasObjectivesTestCase(unittest.TestCase):
         self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
                          set(['comp1.c-comp1.d']))
         
+    def test_objective_names(self):
+        self.asm.driver.add_objective('comp1.a-comp1.b', name='foobar')
+        self.asm.driver.add_objective('comp1.c-comp1.d')
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+                         set(['comp1.c-comp1.d', 'foobar']))
+        self.asm.driver.remove_objective('foobar')
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+                         set(['comp1.c-comp1.d']))
+        
     def test_add_objectives(self):
         self.asm.driver.add_objectives(['comp1.a-comp1.b', 'comp1.c-comp1.d'])
         self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
