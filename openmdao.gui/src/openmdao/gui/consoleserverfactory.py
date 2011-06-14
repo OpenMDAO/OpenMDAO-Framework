@@ -5,6 +5,7 @@ import shutil
 import cmd
 import jsonpickle
 import tempfile
+import zipfile
 
 from setuptools.command import easy_install
 
@@ -242,12 +243,11 @@ class ConsoleServer(cmd.Cmd):
         connections = []
         if self.top and self.top.driver:
             components = self.top.driver.workflow.get_names()
-            connections = self.top.list_connections()
+            conntuples = self.top.list_connections()
             # convert connection tuples to lists
-            clist = []     
             for connection in connections:
-                clist.append(list(connection))
-        return [ components, clist ]
+                connections.append(list(conntuples))
+        return [ components, connections ]
 
     def _get_attributes(self,comp):
         """ get attributes of object """
@@ -391,7 +391,31 @@ class ConsoleServer(cmd.Cmd):
         fout = open(filepath,'wb')
         fout.write(contents)
         fout.close()
-    
+
+    def add_file(self,filename,contents):
+        ''' add file to working directory
+            if it's a zip file, unzip it
+        '''
+        self.write_file(filename, contents)
+        if zipfile.is_zipfile(filename):
+            zfile = zipfile.ZipFile( filename, "r" )
+            zfile.printdir()
+            for fname in zfile.namelist():
+                if fname.endswith('/'):
+                    dirname = userdir+'/'+fname
+                    if not os.path.exists(dirname):
+                        os.makedirs(dirname)
+            for fname in zfile.namelist():
+                if not fname.endswith('/'):
+                    data = zfile.read(fname)
+                    fname = userdir+'/'+fname
+                    fname = fname.replace('\\','/')
+                    fout = open(fname, "wb")
+                    fout.write(data)
+                    fout.close()
+            zfile.close()
+            os.remove(filename)
+
     def delete_file(self,filename):
         ''' delete file in working directory
             returns False if file was not found, otherwise returns True

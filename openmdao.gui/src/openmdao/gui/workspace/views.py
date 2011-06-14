@@ -227,6 +227,23 @@ def Types(request):
     return HttpResponse(json,mimetype='application/json')
 
 @never_cache
+@csrf_exempt
+@login_required()
+def Upload(request):
+    ''' file upload utility
+    '''
+    if request.method=='POST':
+        cserver = server_mgr.console_server(request.session.session_key)
+        file = request.FILES['myfile']
+        filename = file.name
+        contents = file.read()
+        cserver.add_file(filename,contents)
+        return render_to_response('closewindow.html')
+
+    return render_to_response('upload.html', 
+                              context_instance=RequestContext(request))
+
+@never_cache
 def Workflow(request):
     cserver = server_mgr.console_server(request.session.session_key)
     json = jsonpickle.encode(cserver.get_workflow())

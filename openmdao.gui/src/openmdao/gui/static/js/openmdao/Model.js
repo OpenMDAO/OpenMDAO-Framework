@@ -306,7 +306,7 @@ openmdao.Model=function() {
     /** upload a file to the model working directory */
     this.uploadFile = function() {
         // TODO: make this an AJAX call so we can updateListeners afterwards
-        openmdao.Util.popupWindow('/upload','Add File',150,400);
+        openmdao.Util.popupWindow('upload','Add File',150,400);
     }
 
     /** delete the file in the model working directory with the specified path */
