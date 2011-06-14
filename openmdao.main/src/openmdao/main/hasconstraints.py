@@ -267,6 +267,9 @@ class HasIneqConstraints(_HasConstraintsBase):
         if ident in self._constraints: 
             self._parent.raise_exception('A constraint of the form "%s" already exists in '
                                          'the driver. Add failed.'%ident,ValueError)
+        elif name is not None and name in self._constraints: 
+            self._parent.raise_exception('A constraint named "%s" already exists '
+                                         'in the driver. Add failed.' % name, ValueError)
         constraint = Constraint(lhs, rel, rhs, scaler, adder,
                                 scope=self._parent.parent)
         if name is None:
