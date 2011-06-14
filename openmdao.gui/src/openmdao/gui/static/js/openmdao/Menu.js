@@ -13,7 +13,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  */
 openmdao.Menu = function(id) {
     /***********************************************************************
-     *  private (available only to privileged methods) 
+     *  private
      ***********************************************************************/
      
     var self = this,
@@ -58,7 +58,7 @@ openmdao.Menu = function(id) {
             { text: "About",             onclick: "openmdao.Util.popupWindow('http://openmdao.org/');"}
         ]
 
-    // recursively build HTML for JSON nested menu structure
+    /** recursively build HTML for JSON nested menu structure */
     function getMenuHTML(menu) {
         var menuHTML = '<li><a '
         if ('url' in menu) {

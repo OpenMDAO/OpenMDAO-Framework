@@ -12,7 +12,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  */
 openmdao.Console = function(formID,commandID,historyID,model) {    
     /***********************************************************************
-     *  private (available only to privileged methods) 
+     *  private
      ***********************************************************************/
      
     var self = this,
@@ -44,8 +44,8 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         return false
     })
     
-    // escape anything in the text that might look like HTML or something
-    escapeHTML = function(text) {
+    /** escape anything in the text that might look like HTML, etc. */
+    function escapeHTML(text) {
         var result = "";
         for(var i = 0; i < text.length; i++){
             if(text.charAt(i) == "&" 
@@ -63,8 +63,8 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         return result
     };
 
-    // update the history
-    updateHistory = function(text) {
+    /** update the history */
+    function updateHistory(text) {
         if (text.length > 0) {
             history.append(escapeHTML(text).replace(/\n\r?/g, '<br />'))
             var h = history.height(),
@@ -74,7 +74,7 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         }
     }
     
-    // update the history with any new output from the model
+    /** update the history with any new output from the model */
     function update() {
         model.getOutput(updateHistory)
     }
@@ -83,7 +83,7 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     model.addListener(update)
     
     /***********************************************************************
-     *  privileged (can access privates, accessible to public and outside) 
+     *  privileged
      ***********************************************************************/
  
 }

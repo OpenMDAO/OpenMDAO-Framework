@@ -12,7 +12,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  */
 openmdao.Palette = function(id,model) {
     /***********************************************************************
-     *  private (available only to privileged methods) 
+     *  private
      ***********************************************************************/
      
     var self = this,
@@ -97,7 +97,7 @@ openmdao.Palette = function(id,model) {
     model.addListener(update)
     
     /***********************************************************************
-     *  privileged (can access privates, accessible to public and outside) 
+     *  privileged
      ***********************************************************************/
  
 }

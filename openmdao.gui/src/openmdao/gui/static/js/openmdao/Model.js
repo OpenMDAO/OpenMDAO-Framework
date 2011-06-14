@@ -13,7 +13,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.Model=function() {
 
     /***********************************************************************
-     *  private (available only to privileged methods) 
+     *  private
      ***********************************************************************/
      
     var self = this,
@@ -22,7 +22,7 @@ openmdao.Model=function() {
         mode = modes[0]
         
     /***********************************************************************
-     *  privileged (can access privates, accessible to public and outside) 
+     *  privileged
      ***********************************************************************/
     
     /** add a listener, i.e. a function that will be called when something changes */
@@ -187,7 +187,6 @@ openmdao.Model=function() {
 
     /** issue the specified command against the model */
     this.issueCommand = function(cmd, callback, errorHandler) {
-        // make the call
         jQuery.ajax({
             type: 'POST',
             url:  'command',

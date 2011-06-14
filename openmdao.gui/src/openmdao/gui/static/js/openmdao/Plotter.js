@@ -10,11 +10,9 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @version 0.0.0
  * @constructor
  */
-openmdao.Plotter = function(id,model) {
-    // requires flot.js
-
+openmdao.Plotter = function(id,model) {    // requires flot.js
     /***********************************************************************
-     *  private (available only to privileged methods) 
+     *  private
      ***********************************************************************/
     var elm = jQuery("#"+id)
     

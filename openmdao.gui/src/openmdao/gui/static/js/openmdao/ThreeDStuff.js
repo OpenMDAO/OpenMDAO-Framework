@@ -12,7 +12,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  */
 openmdao.ThreeDStuff = function(id,model) {
     /***********************************************************************
-     *  private (available only to privileged methods) 
+     *  private
      ***********************************************************************/
      
     var self = this,

@@ -12,7 +12,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  */
 openmdao.FileTree = function(id,model,edit_function) {
     /***********************************************************************
-     *  private (available only to privileged methods) 
+     *  private
      ***********************************************************************/
      
     var self = this,
@@ -200,7 +200,7 @@ openmdao.FileTree = function(id,model,edit_function) {
     model.addListener(update)
     
     /***********************************************************************
-     *  privileged (can access privates, accessible to public and outside) 
+     *  privileged
      ***********************************************************************/
     
 }

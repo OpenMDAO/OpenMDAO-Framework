@@ -12,7 +12,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  */
 openmdao.PropertiesEditor = function(id,model) {
     /***********************************************************************
-     *  private (available only to privileged methods) 
+     *  private
      ***********************************************************************/
      
     var self = this,
@@ -110,7 +110,7 @@ openmdao.PropertiesEditor = function(id,model) {
     model.addListener(update)
     
     /***********************************************************************
-     *  privileged (can access privates, accessible to public and outside) 
+     *  privileged
      ***********************************************************************/
     
     /** get the specified object from model, load properties into table */
@@ -121,6 +121,7 @@ openmdao.PropertiesEditor = function(id,model) {
             function(jqXHR, textStatus, errorThrown) {
                 self.pathname = ''
                 alert("Error editing object: "+jqXHR.statusText)
+                debug.error(jqXHR)
             }
         )
         return this

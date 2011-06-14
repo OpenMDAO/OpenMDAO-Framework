@@ -12,7 +12,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  */
 openmdao.ObjectTree = function(id,model,edit_function) {
     /***********************************************************************
-     *  private (available only to privileged methods) 
+     *  private
      ***********************************************************************/
      
     var self = this,
@@ -184,11 +184,11 @@ openmdao.ObjectTree = function(id,model,edit_function) {
         model.getComponents(updateTree)
     }
     
-    /** ask model for an update whenever something changes */
+    // ask model for an update whenever something changes
     model.addListener(update)
     
     /***********************************************************************
-     *  privileged (can access privates, accessible to public and outside) 
+     *  privileged
      ***********************************************************************/
  
 }
