@@ -148,7 +148,7 @@ class TestCase(unittest.TestCase):
         try:
             self.model.driver.add_parameter('driven.x3')
         except ValueError as err:
-            self.assertEqual(str(err), "driver: ['driven.x3'] are already Parameter targets")
+            self.assertEqual(str(err), "driver: 'driven.x3' is already a Parameter target")
         else:
             self.fail("expected AttributeError")
     
