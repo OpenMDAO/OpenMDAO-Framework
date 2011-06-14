@@ -293,6 +293,7 @@ class HasParameters(object):
         else: 
             names = target
             key = tuple(target)
+
         if name is not None:
             key = name
             

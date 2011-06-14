@@ -20,8 +20,7 @@ _ops = {
 def _check_expr(expr):
     """ force checking for existence of vars referenced in expression """
     if not expr.check_resolve():
-        msg = "Invalid expression '%s'" % str(expr)
-        raise ValueError( msg )
+        raise ValueError( "Invalid expression '%s'" % str(expr) )
 
 class Constraint(object):
     """ Object that stores info for a single constraint. """
@@ -102,6 +101,10 @@ class _HasConstraintsBase(object):
     def list_constraints(self):
         """Return a list of strings containing constraint expressions."""
         return self._constraints.keys()
+    
+    def _check_add(self, cnststr):
+        if cnststr in self._constraints:
+            self._parent.raise_exception("'%s' is already a constraint" % cnststr)
     
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, self_name)

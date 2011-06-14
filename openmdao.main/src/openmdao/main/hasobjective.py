@@ -48,7 +48,7 @@ class HasObjectives(object):
                                          AttributeError)
         if name is not None and name in self._objectives:
             self._parent.raise_exception("Trying to add objective "
-                                         "'%s' to driver using name '%s', but it's already there" % (expr,name),
+                                         "'%s' to driver using name '%s', but name is already used" % (expr,name),
                                          AttributeError)
         expreval = ExprEvaluator(expr, self._parent.parent)
         
