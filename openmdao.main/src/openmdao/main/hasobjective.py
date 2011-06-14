@@ -7,58 +7,15 @@ from openmdao.main.expreval import ExprEvaluator
 def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
 
-
-class HasObjective(object): 
-    """This class provides an implementation of the IHasObjective interface."""
-
-    _do_not_promote = ['get_expr_depends']
-
-    def __init__(self, parent):
-        self._objective = ''
-        self._parent = parent
-
-    def add_objective(self, expr):
-        """Sets the objective of this driver to be the specified expression.
-        If there is a preexisting objective in this driver, it is replaced.
-        
-        expr: string
-            String containing the objective expression.
-         """
-        expr = _remove_spaces(expr)
-        expreval = ExprEvaluator(expr, self._parent)
-        
-        if not expreval.check_resolve():
-            self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
-                                         ValueError)
-        self._objective = expreval
-            
-    def list_objective(self):
-        """Returns the expression string for the objective."""
-        return self._objective.text
-    
-    def eval_objective(self):
-        """Returns the value of the evaluated objective."""
-        if not self._objective:
-            self._parent.raise_exception("no objective specified", ValueError)
-        return self._objective.evaluate()
-
-    def get_expr_depends(self):
-        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by our objective.
-        """
-        if not self._objective:
-            return []
-        pname = self._parent.name
-        return [(cname,pname) for cname in self._objective.get_referenced_compnames()]
-    
-
 class HasObjectives(object): 
     """This class provides an implementation of the IHasObjectives interface."""
 
-    _do_not_promote = ['get_expr_depends']
+    _do_not_promote = ['get_expr_depends','get_referenced_compnames',
+                       'get_referenced_varpaths']
     
-    def __init__(self, parent):
+    def __init__(self, parent, max_objectives=0):
         self._objectives = ordereddict.OrderedDict()
+        self._max_objectives = max_objectives
         self._parent = parent
 
     def add_objectives(self, obj_iter):
@@ -66,29 +23,43 @@ class HasObjectives(object):
         objectives for them in the driver.
         """
         if isinstance(obj_iter, basestring):
-            self._parent.raise_exception("add_objectives requires a list of expression strings.",
+            self._parent.raise_exception("add_objectives requires an iterator of expression strings.",
                                          ValueError)
         for expr in obj_iter:
             self._parent.add_objective(expr)
 
-    def add_objective(self, expr):
+    def add_objective(self, expr, name=None):
         """Adds an objective to the driver. 
         
         expr: string
             String containing the objective expression.
             
+        name: string (optional)
+            Name to be used to refer to the objective in place of the expression
+            string.
          """
+        if self._max_objectives > 0 and len(self._objectives) >= self._max_objectives:
+            self._parent.raise_exception("Can't add objective '%s'. Only %d objectives are allowed" % (expr,self._max_objectives),
+                                         RuntimeError)
         expr = _remove_spaces(expr)
         if expr in self._objectives: 
-            self._parent.raise_exception("Trying to add objective '%s' to driver, "
-                                         "but it's already there" % expr,
+            self._parent.raise_exception("Trying to add objective "
+                                         "'%s' to driver, but it's already there" % expr,
                                          AttributeError)
-        expreval = ExprEvaluator(expr, self._parent)
+        if name is not None and name in self._objectives:
+            self._parent.raise_exception("Trying to add objective "
+                                         "'%s' to driver using name '%s', but name is already used" % (expr,name),
+                                         AttributeError)
+        expreval = ExprEvaluator(expr, self._parent.parent)
         
         if not expreval.check_resolve():
             self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
                                          ValueError)
-        self._objectives[expr] = expreval
+            
+        if name is None:
+            self._objectives[expr] = expreval
+        else:
+            self._objectives[name] = expreval
             
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within
@@ -101,9 +72,9 @@ class HasObjectives(object):
             self._parent.raise_exception("Trying to remove objective '%s' "
                                          "that is not in this driver." % expr,
                                          AttributeError)
-    def list_objectives(self):
-        """Returns a list of objective expressions."""
-        return self._objectives.keys()
+    def get_objectives(self):
+        """Returns an OrderedDict of objective expressions."""
+        return self._objectives
     
     def clear_objectives(self):
         """Removes all objectives."""
@@ -111,11 +82,11 @@ class HasObjectives(object):
         
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
-        return [obj.evaluate() for obj in self._objectives.values()]
+        return [obj.evaluate(self._parent.parent) for obj in self._objectives.values()]
 
     def get_expr_depends(self):
-        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by our objectives.
+        """Returns a list of tuples of the form (comp_name, parent_name)
+        for each component referenced by our objectives.
         """
         pname = self._parent.name
         conn_list = []
@@ -123,3 +94,33 @@ class HasObjectives(object):
             conn_list.extend([(cname,pname) for cname in obj.get_referenced_compnames()])
         return conn_list
     
+    def get_referenced_compnames(self):
+        """Returns the names of components referenced by the objectives."""
+        lst = []
+        for obj in self._objectives.values():
+            lst.extend(obj.get_referenced_compnames())
+        return lst
+
+    def get_referenced_varpaths(self):
+        """Returns the names of variables referenced by the objectives."""
+        lst = []
+        for obj in self._objectives.values():
+            lst.extend(obj.get_referenced_varpaths())
+        return lst
+    
+    def max_objectives(self):
+        return self._max_objectives
+
+
+class HasObjective(HasObjectives):
+    def __init__(self, parent):
+        super(HasObjective, self).__init__(parent, max_objectives=1)
+        
+    def eval_objective(self):
+        """Returns a list of values of the evaluated objectives."""
+        if len(self._objectives) > 0:
+            return super(HasObjective, self).eval_objectives()[0]
+        else:
+            self._parent.raise_exception("no objective specified", Exception)
+
+

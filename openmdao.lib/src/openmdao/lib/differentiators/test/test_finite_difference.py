@@ -42,7 +42,7 @@ class Driv(Driver):
         self.run_iteration()
     
     
-@add_delegate(HasParameters, HasObjectives, UsesGradients, \
+@add_delegate(HasParameters, HasObjective, UsesGradients, \
               UsesHessians)
 class MultiDriv(Driver):
     """ Simple dummy driver"""

@@ -10,17 +10,23 @@ from zope.interface import implements, Attribute, Interface
 from openmdao.main.workflow import Workflow
 from openmdao.main.constants import SAVE_CPICKLE
 
-# to check if an interface is implemented, you can call
-# validate_implements(obj, klass) from enthought.traits.trait_types
-# or if the object you're checking inherits from HasTraits, you can call 
-# obj.has_traits_interface(*ifaces) on it.
-# Note that validate_implements checks for existence of attributes and member 
-# functions but does not type check attributes. It also doesn't care whether
-# a class calls 'implements' or not.  has_traits_interface, on the other hand,
-# believes whatever the class says it implements and doesn't verify anything.
+class IArchitecture(Interface):
+    
+    parent = Attribute("parent Assembly")
+    
+    def configure(): 
+        """sets up drivers,workflows, and data connections in 
+        the assembly to configure the architecture
+        """
+   
+    def clear(): 
+        """removes all the drivers, workflows, and data connections in the assembly, 
+        leaving the assembly cleaned up. 
+        """
 
 class IContainer(Interface):
     """Interface for an object containing variables and other IContainers."""
+    
     parent = Attribute("parent of this Container (or None)")
     name = Attribute("name of this Container")
     
@@ -97,11 +103,11 @@ class IContainer(Interface):
         """
         
     def get_wrapped_attr(name):
-        """If the named trait can return a TraitValWrapper, then this
+        """If the named trait can return an AttrWrapper, then this
         function will return that, with the value set to the current value of
-        the named variable. Otherwise, it functions like *getattr*, just
-        returning the value of the named variable. Raises an exception if the
-        named trait cannot be found. The value will be copied if the trait has
+        the variable. Otherwise, it functions like *getattr*, just
+        returning the value of the variable. Raises an exception if the
+        variable cannot be found. The value will be copied if the variable has
         a 'copy' metadata attribute that is not None. Possible values for
         'copy' are 'shallow' and 'deep'.
         """
@@ -290,7 +296,6 @@ class IComponent(IContainer):
         """Do what is necessary to make the specified output Variables valid.
         For a simple Component, this will result in a *run()*.
         """
-
     
     
 class IDriver(Interface):
@@ -418,83 +423,75 @@ class ICaseRecorder(Interface):
     def get_iterator():
         """Return an iterator that matches the format that this recorder uses."""
         
-class IHasCouplingVars(Interface): 
-    """An interface for assemblies to support the declaration of coupling vars"""
+#class IHasCouplingVars(Interface): 
+    #"""An interface for assemblies to support the declaration of coupling vars"""
     
-    def add_coupling_var(indep,constraint,tollerance=.0001,scalar=1.0,adder=0.0):
-        """adds a new coupling var to the assembly
+    #def add_coupling_var(indep,constraint,tollerance=.0001,scalar=1.0,adder=0.0):
+        #"""adds a new coupling var to the assembly
         
-        indep: str
-            name of the independent variable, or the variable that should be varied to meet the coupling 
-            constraint
-        constraint: str
-            constraint equation, meeting the requirements of the IHasConstraints interface, which must be met 
-            to enforce the coupling
-        tolerance: float (optional)
-            default value of .0001, specifies the tolerance to which the coupling constraint must be met to be 
-            statisfied
-        scalar: float (optional)
-            default value of 1.0, specifies the scalar value that the constraint equation will be multiplied by 
-            before being returned
-        adder: float (optional)
-            default value of 0.0, specifies the value which will be added to the constraint before being returned
-        """        
-        pass
+        #indep: str
+            #name of the independent variable, or the variable that should be varied to meet the coupling 
+            #constraint
+        #constraint: str
+            #constraint equation, meeting the requirements of the IHasConstraints interface, which must be met 
+            #to enforce the coupling
+        #tolerance: float (optional)
+            #default value of .0001, specifies the tolerance to which the coupling constraint must be met to be 
+            #statisfied
+        #scalar: float (optional)
+            #default value of 1.0, specifies the scalar value that the constraint equation will be multiplied by 
+            #before being returned
+        #adder: float (optional)
+            #default value of 0.0, specifies the value which will be added to the constraint before being returned
+        #"""        
     
-    def remove_coupling_var(indep):
-        """removes the coupling var, idenfied by the indepent name, from the assembly. 
+    #def remove_coupling_var(indep):
+        #"""removes the coupling var, idenfied by the indepent name, from the assembly. 
         
-        indep: str 
-            name of the independent variable from the CouplingVar   
-        """
-        pass
+        #indep: str 
+            #name of the independent variable from the CouplingVar   
+        #"""
     
-    def list_coupling_vars(): 
-        """returns a ordered list of names of the coupling vars in the assembly"""
-        pass
+    #def list_coupling_vars(): 
+        #"""returns a ordered list of names of the coupling vars in the assembly"""
     
-    def clear_coupling_vars(): 
-        """removes all coupling variables from the assembly"""
-        pass
+    #def clear_coupling_vars(): 
+        #"""removes all coupling variables from the assembly"""
     
-class IHasGlobalDesVars(Interface): 
-    """Interface for managing global design variables in assemblies
+#class IHasGlobalDesVars(Interface): 
+    #"""Interface for managing global design variables in assemblies
         
-    parent: Assembly
-        containing assembly where the HasGlobalDesVars lives. 
-    """
+    #parent: Assembly
+        #containing assembly where the HasGlobalDesVars lives. 
+    #"""
         
-    def add_global_des_var(name,targets,low,high,scalar=1.0,adder=0.0):
-        """adds a global design variable to the assembly
+    #def add_global_des_var(name,targets,low,high,scalar=1.0,adder=0.0):
+        #"""adds a global design variable to the assembly
         
-        name: str
-            name given to the global design variable
-        targets: list of str
-            names of the component variables that this global design variable should link to
-        low: float
-            minimum allowed value for the global design variable
-        high: float
-            maximum allowed value for the global design variable
-        scalar: float (optional)
-            default: 1.0. scalar value which is multiplied by the value of the global design 
-            variable before setting target values
-        adder: float (optiona)
-            default: 0.0. amount which is added to the value of the global 
-            design variable before setting target values
-        """
-        pass
+        #name: str
+            #name given to the global design variable
+        #targets: list of str
+            #names of the component variables that this global design variable should link to
+        #low: float
+            #minimum allowed value for the global design variable
+        #high: float
+            #maximum allowed value for the global design variable
+        #scalar: float (optional)
+            #default: 1.0. scalar value which is multiplied by the value of the global design 
+            #variable before setting target values
+        #adder: float (optiona)
+            #default: 0.0. amount which is added to the value of the global 
+            #design variable before setting target values
+        #"""
     
-    def remove_global_des_var(name): 
-        """removed the global design variable from the assembly"""
-        pass
+    #def remove_global_des_var(name): 
+        #"""removed the global design variable from the assembly"""
         
-    def clear_global_des_vars(): 
-        """removes all global design variables from the assembly"""
-        pass
+    #def clear_global_des_vars(): 
+        #"""removes all global design variables from the assembly"""
     
-    def list_global_des_vars(): 
-        """returns a list of all the names of global design variable objects in the assembly"""
-        pass
+    #def list_global_des_vars(): 
+        #"""returns a list of all the names of global design variable objects in the assembly"""
         
 class ISurrogate(Interface):
     
@@ -652,29 +649,6 @@ class IHasConstraints(IHasEqConstraints, IHasIneqConstraints):
         an assignment or an inequality, e.g., 'a=b' or 'a<=b'.
         """
 
-class IHasObjective(Interface): 
-    """An Interface for objects having a single objective."""
-
-    def add_objective(expr):
-        """Sets the objective of this driver to be the specified expression.
-        If there is a preexisting objective in this driver, it is replaced.
-        
-        expr: string
-            String containing the objective expression.
-         """
-            
-    def list_objective():
-        """Returns the expression string for the objective."""
-    
-    def eval_objective():
-        """Returns the value of the evaluated objective."""
-
-    def get_expr_depends():
-        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by our objective. 
-        """
-    
-
 class IHasObjectives(Interface): 
     """An Interface for objects having a multiple objectives."""
 
@@ -695,9 +669,6 @@ class IHasObjectives(Interface):
         the expression are ignored.
         """
         
-    def list_objectives():
-        """Returns a list of objective expression strings."""
-    
     def clear_objectives():
         """Removes all objectives."""
         
@@ -709,6 +680,13 @@ class IHasObjectives(Interface):
         for each dependency introduced by our objectives.
         """
         
+class IHasObjective(IHasObjectives): 
+    """An Interface for objects having a single objective."""
+
+    def eval_objective():
+        """Returns the value of the evaluated objective."""
+
+
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces
     specified."""

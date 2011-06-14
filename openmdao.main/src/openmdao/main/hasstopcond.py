@@ -22,7 +22,7 @@ class HasStopConditions(object):
     
     def add_stop_condition(self, exprstr):
         ident = _remove_spaces(exprstr)
-        expr = ExprEvaluator(exprstr, scope=self._parent)
+        expr = ExprEvaluator(exprstr, scope=self._parent.parent)
         _check_expr(expr, self._parent)
         self._stop_conditions[ident] = expr
         

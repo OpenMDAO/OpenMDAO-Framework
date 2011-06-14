@@ -7,7 +7,6 @@ import unittest
 
 from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                SellarDiscipline2
-from openmdao.examples.mdao.broadcaster import Broadcaster
 from openmdao.examples.mdao.sellar_MDF import SellarMDF
 from openmdao.examples.mdao.sellar_IDF import SellarIDF
 
@@ -90,6 +89,12 @@ class SellarCO(Assembly):
     January 1996.
     """
 
+    z1 = Float()
+    z2 = Float()
+    x1 = Float()
+    y1 = Float()
+    y2 = Float()
+    
     def __init__(self):
         """ Creates a new Assembly with this problem
         
@@ -102,11 +107,9 @@ class SellarCO(Assembly):
         
         # Global Optimization
         self.add('driver', CONMINdriver())
-        self.add('bcastr', Broadcaster())
         self.add('localopt1', CONMINdriver())
         self.add('localopt2', CONMINdriver())
-        self.driver.workflow.add(['bcastr', 'localopt1', 
-                                  'localopt2'])
+        self.driver.workflow.add(['localopt1', 'localopt2'])
         
         # Local Optimization 1
         self.add('dis1', SellarDiscipline1())
@@ -121,19 +124,21 @@ class SellarCO(Assembly):
         self.localopt2.workflow.add(['dis2a', 'dis2b', 'dis2c'])
         
         #Parameters - Global Optimization
-        self.driver.add_objective('(bcastr.x1)**2 + bcastr.z2 + bcastr.y1' + \
-                                                '+ math.exp(-bcastr.y2)')
-        for param,low,high in zip(['bcastr.z1_in', 'bcastr.z2_in', 'bcastr.x1_in',
-                                   'bcastr.y1_in', 'bcastr.y2_in'],
+        # using group parameters to 'broadcast' same data 
+        self.driver.add_objective('x1**2 + z2 + y1 + math.exp(-y2)')
+        for param,low,high in zip([('z1','dis1.z1','dis2b.z1'), 
+                                   ('z2','dis1.z2','dis2c.z2'), 
+                                   ('x1','dis1.x1'), ('y1','dis2a.y1'), 
+                                   ('y2','dis1.y2')],
                                   [-10.0, 0.0, 0.0, 3.16, -10.0],
                                   [10.0, 10.0, 10.0, 10, 24.0]):
             self.driver.add_parameter(param, low=low, high=high)
 
         map(self.driver.add_constraint, [
-            '(bcastr.z1-dis1.z1)**2 + (bcastr.z2-dis1.z2)**2 + (bcastr.x1-dis1.x1)**2 + '
-            '(bcastr.y1-dis1.y1)**2 + (bcastr.y2-dis1.y2)**2 < 0',
-            '(bcastr.z1-dis2b.z1)**2 + (bcastr.z2-dis2c.z2)**2 + (bcastr.y1-dis2a.y1)**2 + '
-            '(bcastr.y2-dis2c.y2)**2 < 0' ])
+            '(z1-dis1.z1)**2 + (z2-dis1.z2)**2 + (x1-dis1.x1)**2 + '
+            '(y1-dis1.y1)**2 + (y2-dis1.y2)**2 < 0',
+            '(z1-dis2b.z1)**2 + (z2-dis2c.z2)**2 + (y1-dis2a.y1)**2 + '
+            '(y2-dis2c.y2)**2 < 0' ])
         
         self.driver.printvars = ['dis1.y1','dis2c.y2']
         self.driver.iprint = 0
@@ -146,11 +151,11 @@ class SellarCO(Assembly):
         self.driver.ctlmin = 0.0008
 
         #Parameters - Local Optimization 1
-        self.localopt1.add_objective('(bcastr.z1-dis1.z1)**2 + ' + \
-                                   '(bcastr.z2-dis1.z2)**2 + ' + \
-                                   '(bcastr.x1-dis1.x1)**2 + ' + \
-                                   '(bcastr.y1-dis1.y1)**2 + ' + \
-                                   '(bcastr.y2-dis1.y2)**2')
+        self.localopt1.add_objective('(z1-dis1.z1)**2 + ' + \
+                                   '(z2-dis1.z2)**2 + ' + \
+                                   '(x1-dis1.x1)**2 + ' + \
+                                   '(y1-dis1.y1)**2 + ' + \
+                                   '(y2-dis1.y2)**2')
         for param, low, high in zip(['dis1.z1', 'dis1.z2', 'dis1.x1', 'dis1.y2'],
                                     [-10.0, 0.0, 0.0, -10.0],
                                     [10.0, 10.0, 10.0, 24.0]):
@@ -165,10 +170,10 @@ class SellarCO(Assembly):
         self.localopt1.dabfun = .000001
         
         #Parameters - Local Optimization 2
-        self.localopt2.add_objective('(bcastr.z1-dis2b.z1)**2 + ' + \
-                                   '(bcastr.z2-dis2c.z2)**2 + ' + \
-                                   '(bcastr.y1-dis2a.y1)**2 + ' + \
-                                   '(bcastr.y2-dis2c.y2)**2')
+        self.localopt2.add_objective('(z1-dis2b.z1)**2 + ' + \
+                                   '(z2-dis2c.z2)**2 + ' + \
+                                   '(y1-dis2a.y1)**2 + ' + \
+                                   '(y2-dis2c.y2)**2')
         for param, low, high in zip(['dis2b.z1', 'dis2c.z2', 'dis2a.y1'],
                                     [-10.0, 0.0, 3.16],
                                     [10.0, 10.0, 10]):
@@ -224,27 +229,28 @@ class TestCase(unittest.TestCase):
     
         # Set up initial conditions
     
-        prob.bcastr.z1_in = 5.0
+        prob.z1 = 5.0
         prob.dis1.z1 = 5.0
         prob.dis2b.z1 = 5.0
     
-        prob.bcastr.z2_in = 2.0
+        prob.z2 = 2.0
         prob.dis1.z2 = 2.0
         prob.dis2c.z2 = 2.0
     
-        prob.bcastr.x1_in = 1.0
+        prob.x1 = 1.0
         prob.dis1.x1 = 1.0
         
-        prob.bcastr.y1_in = 3.16
-        prob.bcastr.y2_in = 0.0
-        prob.dis1.y2 = 0.0
+        prob.y1 = 3.16
         prob.dis2a.y1 = 3.16
+        
+        prob.y2 = 0.0
+        prob.dis1.y2 = 0.0
         
         prob.run()
 
-        assert_rel_error(self, prob.bcastr.z1_in, 2.0, 0.1)
-        assert_rel_error(self, 1.0-prob.bcastr.z2_in, 1.0, 0.01)
-        assert_rel_error(self, 1.0-prob.bcastr.x1_in, 1.0, 0.1)
+        assert_rel_error(self, prob.z1, 2.0, 0.1)
+        assert_rel_error(self, 1.0-prob.z2, 1.0, 0.01)
+        assert_rel_error(self, 1.0-prob.x1, 1.0, 0.1)
 
         
 if __name__ == '__main__':

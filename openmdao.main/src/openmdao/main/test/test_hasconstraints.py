@@ -61,12 +61,10 @@ class HasConstraintsTestCase(unittest.TestCase):
         except Exception as err: 
             self.assertEqual(str(err),
                              'driver: A constraint of the form "comp1.a>comp1.b" already exists '
-                             'in the driver. Add Failed.')
+                             'in the driver. Add failed.')
         else: 
             self.fail("Exception Expected")
         
-        self.assertEqual(len(drv.get_ineq_constraints()), 1)
-        self.assertEqual(len(drv.get_ineq_constraints()), 1)
         self.assertEqual(len(drv.get_ineq_constraints()), 1)
         drv.remove_constraint(' comp1.a>  comp1.b  ')
         self.assertEqual(len(drv.get_ineq_constraints()), 0)
@@ -78,6 +76,21 @@ class HasConstraintsTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
         drv.add_constraint(' comp1.a > comp1.b')
+        self.assertEqual(len(drv.get_ineq_constraints()), 1)
+        
+        drv.add_constraint('comp1.b < comp1.c', name='foobar')
+        self.assertEqual(len(drv.get_ineq_constraints()), 2)
+        
+        try:
+            drv.add_constraint('comp1.b < comp1.a', name='foobar')
+        except Exception as err:
+            self.assertEqual(str(err), 'driver: A constraint named "foobar" already exists in the driver. Add failed.')
+        else:
+            self.fail("Exception expected")
+
+        self.assertEqual(len(drv.get_ineq_constraints()), 2)
+        
+        drv.remove_constraint('foobar')
         self.assertEqual(len(drv.get_ineq_constraints()), 1)
         
         drv.clear_constraints()
@@ -105,7 +118,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         except Exception as err: 
             self.assertEqual(str(err),
                              'driver: A constraint of the form "comp1.c=comp1.d" already exists '
-                             'in the driver. Add Failed.')
+                             'in the driver. Add failed.')
         else: 
             self.fail("Exception Expected")
 
@@ -121,6 +134,19 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.assertEqual(len(drv.get_eq_constraints()), 0)
     
         drv.add_constraint('comp1.c =comp1.d ')
+        self.assertEqual(len(drv.get_eq_constraints()), 1)
+        
+        drv.add_constraint('comp1.b = comp1.c', name='foobar')
+        self.assertEqual(len(drv.get_eq_constraints()), 2)
+        
+        try:
+            drv.add_constraint('comp1.b = comp1.a', name='foobar')
+        except Exception as err:
+            self.assertEqual(str(err), 'driver: A constraint named "foobar" already exists in the driver. Add failed.')
+        else:
+            self.fail("Exception expected")
+
+        drv.remove_constraint('foobar')
         self.assertEqual(len(drv.get_eq_constraints()), 1)
         
         drv.clear_constraints()

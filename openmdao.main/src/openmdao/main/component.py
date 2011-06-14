@@ -97,7 +97,6 @@ class Component (Container):
     """
 
     implements(IComponent)
-    
   
     directory = Str('', desc='If non-blank, the directory to execute in.', 
                     iotype='in')
