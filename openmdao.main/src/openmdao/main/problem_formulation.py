@@ -95,8 +95,6 @@ class ArchitectureAssembly(Assembly):
     def configure(self): 
         self.architecture.configure()
     
-    # TODO: is this the proper naming convention?  Why are some local and
-    # some global when all of them are at the Assembly level?
     def get_local_des_vars(self):
         """Return a list of single target Parameters."""
         return [(k,v) for k,v in self.get_parameters().items() 
@@ -106,6 +104,4 @@ class ArchitectureAssembly(Assembly):
         """Return a list of multi target Parameters."""
         return [(k,v) for k,v in self.get_parameters().items() 
                                         if isinstance(v, ParameterGroup)]
-        
-     
         
