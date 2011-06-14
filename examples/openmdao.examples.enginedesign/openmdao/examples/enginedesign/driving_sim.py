@@ -83,19 +83,19 @@ class SimAcceleration(Driver):
         self._overspeed_str_expr = None
     
     def _velocity_str_changed(self, oldval, newval):
-        self._velocity_str_expr = ExprEvaluator(newval, scope=self)
+        self._velocity_str_expr = ExprEvaluator(newval, scope=self.parent)
     
     def _throttle_str_changed(self, oldval, newval):
-        self._throttle_str_expr = ExprEvaluator(newval, scope=self)
+        self._throttle_str_expr = ExprEvaluator(newval, scope=self.parent)
     
     def _gear_str_changed(self, oldval, newval):
-        self._gear_str_expr = ExprEvaluator(newval, scope=self)
+        self._gear_str_expr = ExprEvaluator(newval, scope=self.parent)
     
     def _acceleration_str_changed(self, oldval, newval):
-        self._acceleration_str_expr = ExprEvaluator(newval, scope=self)
+        self._acceleration_str_expr = ExprEvaluator(newval, scope=self.parent)
     
     def _overspeed_str_changed(self, oldval, newval):
-        self._overspeed_str_expr = ExprEvaluator(newval, scope=self)
+        self._overspeed_str_expr = ExprEvaluator(newval, scope=self.parent)
     
     def execute(self):
         """ Simulate the vehicle model at full throttle."""
@@ -113,19 +113,19 @@ class SimAcceleration(Driver):
             self._gear_str_expr.set(gear)
             self.run_iteration()
             
-            acceleration = self._acceleration_str_expr.evaluate()
-            overspeed = self._overspeed_str_expr.evaluate()
+            acceleration = self._acceleration_str_expr.evaluate(self.parent)
+            overspeed = self._overspeed_str_expr.evaluate(self.parent)
             
             # If the next gear can produce more torque, let's shift.
             if gear < 5:
                 self._gear_str_expr.set(gear+1)
                 self.run_iteration()
             
-                acceleration2 = self._acceleration_str_expr.evaluate()
+                acceleration2 = self._acceleration_str_expr.evaluate(self.parent)
                 if acceleration2 > acceleration:
                     gear += 1
                     acceleration = acceleration2
-                    overspeed = self._overspeed_str_expr.evaluate()
+                    overspeed = self._overspeed_str_expr.evaluate(self.parent)
                 
             
             # If RPM goes over MAX RPM, shift gears
@@ -134,8 +134,8 @@ class SimAcceleration(Driver):
                 gear += 1
                 self._gear_str_expr.set(gear)
                 self.run_iteration()
-                acceleration = self._acceleration_str_expr.evaluate()
-                overspeed = self._overspeed_str_expr.evaluate()
+                acceleration = self._acceleration_str_expr.evaluate(self.parent)
+                overspeed = self._overspeed_str_expr.evaluate(self.parent)
                 
                 if overspeed:
                     self.raise_exception("Gearing problem in Accel test.", 
@@ -249,25 +249,25 @@ class SimEconomy(Driver):
         self._underspeed_str_expr = None
     
     def _velocity_str_changed(self, oldval, newval):
-        self._velocity_str_expr = ExprEvaluator(newval, scope=self)
+        self._velocity_str_expr = ExprEvaluator(newval, scope=self.parent)
     
     def _throttle_str_changed(self, oldval, newval):
-        self._throttle_str_expr = ExprEvaluator(newval, scope=self)
+        self._throttle_str_expr = ExprEvaluator(newval, scope=self.parent)
     
     def _gear_str_changed(self, oldval, newval):
-        self._gear_str_expr = ExprEvaluator(newval, scope=self)
+        self._gear_str_expr = ExprEvaluator(newval, scope=self.parent)
     
     def _acceleration_str_changed(self, oldval, newval):
-        self._acceleration_str_expr = ExprEvaluator(newval, scope=self)
+        self._acceleration_str_expr = ExprEvaluator(newval, scope=self.parent)
     
     def _fuel_burn_str_changed(self, oldval, newval):
-        self._fuel_burn_str_expr = ExprEvaluator(newval, scope=self)
+        self._fuel_burn_str_expr = ExprEvaluator(newval, scope=self.parent)
     
     def _overspeed_str_changed(self, oldval, newval):
-        self._overspeed_str_expr = ExprEvaluator(newval, scope=self)
+        self._overspeed_str_expr = ExprEvaluator(newval, scope=self.parent)
     
     def _underspeed_str_changed(self, oldval, newval):
-        self._underspeed_str_expr = ExprEvaluator(newval, scope=self)
+        self._underspeed_str_expr = ExprEvaluator(newval, scope=self.parent)
     
     def execute(self):
         """ Simulate the vehicle over a velocity profile."""
@@ -313,7 +313,7 @@ class SimEconomy(Driver):
             self._velocity_str_expr.set(velocity1)
             self._throttle_str_expr.set(throttle)
             gear = self._findgear(velocity1, throttle, gear)                    
-            acceleration = self._acceleration_str_expr.evaluate()
+            acceleration = self._acceleration_str_expr.evaluate(self.parent)
             accel_min = convert_units(acceleration, 'm/(s*s)', 'mi/(h*s)')
             
             # Upshift if commanded accel is less than closed-throttle accel
@@ -327,13 +327,13 @@ class SimEconomy(Driver):
                 gear += 1
                 self._gear_str_expr.set(gear)
                 gear = self._findgear(velocity1, throttle, gear)                    
-                acceleration = self._acceleration_str_expr.evaluate()
+                acceleration = self._acceleration_str_expr.evaluate(self.parent)
                 accel_min = convert_units(acceleration, 'm/(s*s)', 'mi/(h*s)')
             
             throttle = self.throttle_max
             self._throttle_str_expr.set(throttle)
             self.run_iteration()
-            acceleration = self._acceleration_str_expr.evaluate()
+            acceleration = self._acceleration_str_expr.evaluate(self.parent)
             accel_max = convert_units(acceleration, 'm/(s*s)', 'mi/(h*s)')
             
             # Downshift if commanded accel > wide-open-throttle accel
@@ -342,7 +342,7 @@ class SimEconomy(Driver):
                 gear -= 1
                 self._gear_str_expr.set(gear)
                 gear = self._findgear(velocity1, throttle, gear)                    
-                acceleration = self._acceleration_str_expr.evaluate()
+                acceleration = self._acceleration_str_expr.evaluate(self.parent)
                 accel_max = convert_units(acceleration, 'm/(s*s)', 'mi/(h*s)')
             
             # If engine cannot accelerate quickly enough to match profile, 
@@ -360,7 +360,7 @@ class SimEconomy(Driver):
             throttle = self.throttle_min
             self._throttle_str_expr.set(throttle)
             self.run_iteration()
-            acceleration = self._acceleration_str_expr.evaluate()
+            acceleration = self._acceleration_str_expr.evaluate(self.parent)
             
             if command_accel >= accel_min:
                 
@@ -376,7 +376,7 @@ class SimEconomy(Driver):
                     throttle = new_throttle
                     self._throttle_str_expr.set(throttle)
                     self.run_iteration()
-                    acceleration = self._acceleration_str_expr.evaluate()
+                    acceleration = self._acceleration_str_expr.evaluate(self.parent)
                     new_acc = convert_units(acceleration, 'm/(s*s)', 'mi/(h*s)')
                     
                     if abs(command_accel-new_acc) < self.tolerance:
@@ -396,7 +396,7 @@ class SimEconomy(Driver):
                             max_acc = new_acc
                       
             distance += .5*(velocity2+velocity1)*(time2-time1)
-            burn_rate = self._fuel_burn_str_expr.evaluate()
+            burn_rate = self._fuel_burn_str_expr.evaluate(self.parent)
             fuelburn += burn_rate*(time2-time1)
             
             velocity1 = velocity2
@@ -421,8 +421,8 @@ class SimEconomy(Driver):
 
         self.run_iteration()
         
-        overspeed = self._overspeed_str_expr.evaluate()
-        underspeed = self._underspeed_str_expr.evaluate()
+        overspeed = self._overspeed_str_expr.evaluate(self.parent)
+        underspeed = self._underspeed_str_expr.evaluate(self.parent)
         
         if overspeed:
             gear += 1

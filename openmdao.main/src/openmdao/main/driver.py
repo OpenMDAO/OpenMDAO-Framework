@@ -3,6 +3,8 @@
 #public symbols
 __all__ = ["Driver"]
 
+from networkx.algorithms.shortest_paths.generic import shortest_path
+
 # pylint: disable-msg=E0611,F0401
 
 from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, \
@@ -11,6 +13,10 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
+from openmdao.main.hasevents import HasEvents
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
+from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
 from openmdao.main.mp_support import is_instance, has_interface
@@ -57,12 +63,23 @@ class Driver(Component):
         """Verify that our workflow is able to resolve all of its components."""
         # workflow will raise an exception if it can't resolve a Component
         super(Driver, self).check_config()
+        # if workflow is not defined, try to use objectives and/or
+        # constraint expressions to determine the necessary workflow members
         try:
+            if len(self.workflow) == 0:
+                for compname in self._get_required_compnames():
+                    self.workflow.add(compname)
+            else:
+                reqs = self._get_required_compnames()
+                iterset = set(c.name for c in self.iteration_set())
+                diff = reqs - iterset
+                if len(diff) > 0:
+                    raise RuntimeError("Expressions in this Driver require the following "
+                                       "Components that are not part of the "
+                                       "workflow: %s" % list(diff))
             comps = self.workflow.get_components()
-        except AttributeError as err:
-            self.raise_exception("Component in workflow failed to resolve: %s" % str(err),
-                                 AttributeError)
-            
+        except Exception as err:
+            self.raise_exception(str(err), type(err))
         if hasattr(self, 'check_gradients'):
             self.check_gradients()
         if hasattr(self, 'check_hessians'):
@@ -93,6 +110,35 @@ class Driver(Component):
             if src not in iternames and dest not in iternames:
                 new_list.append((src, dest))
         return new_list
+
+    def _get_required_compnames(self):
+        """Returns a set of names of components that are required by 
+        this Driver in order to evaluate parameters, objectives
+        and constraints.  This list will include any intermediate
+        components in the data flow between components referenced by
+        parameters and those referenced by objectives and/or constraints.
+        """
+        setcomps = set()
+        getcomps = set()
+
+        if hasattr(self, '_delegates_'):
+            for name, dclass in self._delegates_.items():
+                inst = getattr(self, name)
+                if isinstance(inst, HasParameters):
+                    setcomps = inst.get_referenced_compnames()
+                elif isinstance(inst, (HasConstraints, HasEqConstraints, 
+                                       HasIneqConstraints, HasObjective, HasObjectives)):
+                    getcomps.update(inst.get_referenced_compnames())
+
+        full = set(getcomps)
+        full.update(setcomps)
+        
+        if self.parent:
+            graph = self.parent._depgraph
+            for end in getcomps:
+                for start in setcomps:
+                    full.update(graph.find_all_connecting(start, end))
+        return full
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition

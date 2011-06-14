@@ -319,7 +319,7 @@ data about it.
                                                      prob.z2_t, \
                                                      prob.dis1.x1)
             print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
-            print "Minimum objective: ", prob.driver.eval_objective()
+            print "Minimum objective: ", prob.driver.eval_objectives()
             print "Elapsed time: ", time.time()-tt, "seconds"
 
 Executing it at the command line should produce
@@ -331,7 +331,7 @@ output that resembles this:
         CONMIN Iterations:  44
         Minimum found at (1.979061, 0.000000, 0.007239)
         Couping vars: 3.157715, 3.788089
-        Minimum objective:  3.18226721772
+        Minimum objective:  [3.18226721772]
         Elapsed time:  16.130461216 seconds
 
 

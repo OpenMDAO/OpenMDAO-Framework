@@ -203,6 +203,11 @@ objective (some future optimizers will handle multiple objectives) can be
 added to a driver using the ``add_objective`` method with an argument that is
 a string expression built up from available OpenMDAO outputs.
 
+.. testsetup:: Parameter_API
+
+    self.driver.clear_objectives()
+
+    
 .. testcode:: Parameter_API
 
     # CONMIN Objective = Maximize weighted sum of two variables
@@ -213,26 +218,17 @@ The equation must be constructed using valid Python operators. All variables in
 the function are expressed in the scope of the local assembly that contains the
 driver.
 
-For drivers that only operate on a single objective (e.g., CONMIN), you can
-replace the current objective by calling ``add_objective`` with the new objective as an argument.
-
-.. testcode:: Parameter_API
-
-    self.driver.add_objective('-vehicle.fuel_burn')
-    # Replace the objective with torque
-    self.driver.add_objective('-vehicle.torque')
-
-The *IHasObjective* interface also includes functions to list the objective and to query
-for the objective value.
+The *IHasObjectives* interface also includes functions to retrieve the objective 
+dict and to query for the objective values.
 
 .. doctest:: more_objective_interface
 
     >>> from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
     >>> model = OptimizationUnconstrained()
-    >>> model.driver.list_objective()
-    'paraboloid.f_xy'
-    >>> model.driver.eval_objective()
-    0.0
+    >>> model.driver.get_objectives().keys()
+    ['paraboloid.f_xy']
+    >>> model.driver.eval_objectives()
+    [0.0]
 
 .. _Adding-new-Drivers:
 

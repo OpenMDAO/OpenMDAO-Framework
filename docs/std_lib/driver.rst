@@ -945,7 +945,7 @@ You add design variables to Genetic using the ``add_parameter`` method.
             self.driver.add_parameter('comp.y')
             self.driver.add_parameter('comp.z')
     
-    top = Simulation()        
+    top = Simulation()
     set_as_top(top)
         
 In the above example, three parameters were added to the optimizer. The optimizer 
@@ -980,8 +980,10 @@ variable name or a more complex function, such as
     
 or 
 
+
 .. testcode:: Genetic
 
+    top.driver.clear_objectives()
     top.driver.add_objective("2*comp.x + comp.y + 3*comp.z")
 
 In the second example above, a more complex objective function was created where the overall objective was 

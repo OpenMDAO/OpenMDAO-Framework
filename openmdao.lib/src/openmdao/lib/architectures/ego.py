@@ -61,10 +61,10 @@ class EGO(HasTraits):
         
         meta_model_recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
         meta_model.recorder = meta_model_recorder
-        meta_model.force_execute = True        
+        meta_model.force_execute = True
         
         EI = self.parent.add("EI",ExpectedImprovement())
-        self.objective = self.parent.list_objective()        
+        self.objective = self.parent.get_objectives().keys()[0]
         EI.criteria = self.objective
         
         pfilter = self.parent.add("filter",ParetoFilter())

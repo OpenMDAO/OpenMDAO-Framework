@@ -22,13 +22,7 @@ class HasObjectiveTestCase(unittest.TestCase):
         self.asm.comp1.b = 2
         self.asm.comp1.c = 3
         self.asm.comp1.d = -1
-        
-    def test_list_objective(self):
-        self.asm.driver.add_objective('comp1.a-comp1.b')
-        # this should replace the previous objective
-        self.asm.driver.add_objective('comp1.c-comp1.d')
-        self.assertEqual(self.asm.driver.list_objective(), 'comp1.c-comp1.d')
-        
+                
     def test_add_objective(self):
         try:
             self.asm.driver.add_objective('blah.foo')
@@ -58,11 +52,6 @@ class HasObjectivesTestCase(unittest.TestCase):
         self.asm.comp1.c = 3
         self.asm.comp1.d = -1
         
-    def test_list_objectives(self):
-        self.asm.driver.add_objective('comp1.a-comp1.b')
-        self.asm.driver.add_objective('comp1.c-comp1.d')
-        self.assertEqual(self.asm.driver.list_objectives(), ['comp1.a-comp1.b', 'comp1.c-comp1.d'])
-        
     def test_add_objective(self):
         try:
             self.asm.driver.add_objective('blah.foo')
@@ -76,15 +65,26 @@ class HasObjectivesTestCase(unittest.TestCase):
         self.asm.driver.add_objective('comp1.a-comp1.b')
         self.asm.driver.add_objective('comp1.c-comp1.d')
         self.asm.driver.remove_objective('comp1.a-comp1.b')
-        self.assertEqual(self.asm.driver.list_objectives(), ['comp1.c-comp1.d'])
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+                         set(['comp1.c-comp1.d']))
+        
+    def test_objective_names(self):
+        self.asm.driver.add_objective('comp1.a-comp1.b', name='foobar')
+        self.asm.driver.add_objective('comp1.c-comp1.d')
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+                         set(['comp1.c-comp1.d', 'foobar']))
+        self.asm.driver.remove_objective('foobar')
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+                         set(['comp1.c-comp1.d']))
         
     def test_add_objectives(self):
         self.asm.driver.add_objectives(['comp1.a-comp1.b', 'comp1.c-comp1.d'])
-        self.assertEqual(self.asm.driver.list_objectives(), ['comp1.a-comp1.b', 'comp1.c-comp1.d'])
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+                         set(['comp1.a-comp1.b', 'comp1.c-comp1.d']))
         try:
             self.asm.driver.add_objectives('comp1.d+comp1.a')
         except Exception as err:
-            self.assertEqual(str(err), "driver: add_objectives requires a list of expression strings.")
+            self.assertEqual(str(err), "driver: add_objectives requires an iterator of expression strings.")
         else:
             self.fail("Exception expected")
     
@@ -97,7 +97,7 @@ class HasObjectivesTestCase(unittest.TestCase):
         self.asm.driver.add_objective('comp1.a-comp1.b')
         self.asm.driver.add_objective('comp1.c-comp1.d')
         self.asm.driver.clear_objectives()
-        self.assertEqual(len(self.asm.driver.list_objectives()), 0)
+        self.assertEqual(len(self.asm.driver.get_objectives()), 0)
 
 if __name__ == "__main__":
     unittest.main()

@@ -188,6 +188,21 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(link.get_dests('c')), set(['a']))
         self.assertEqual(link.get_dests('foo'), [])
         
+    def test_find_all_connecting(self):
+        dep = DependencyGraph()
+        for node in ['A','B','C','D','E','F']:
+            dep.add(node)
+        self.assertEqual(dep.find_all_connecting('A','F'), set())
+        dep.connect('A.c', 'B.a')
+        dep.connect('B.c', 'C.a')
+        dep.connect('C.d', 'D.a')
+        dep.connect('A.d', 'D.b')
+        dep.connect('A.d', 'F.b')
+        self.assertEqual(dep.find_all_connecting('A','F'), set(['A','F']))
+        self.assertEqual(dep.find_all_connecting('A','D'), set(['A','B','C','D']))
+        dep.connect('C.d', 'F.a')
+        self.assertEqual(dep.find_all_connecting('A','F'), set(['A','B','C','F']))
+        
     def test_dump(self):
         s = StringIO.StringIO()
         self.dep.dump(s)

@@ -86,7 +86,7 @@ class BroydenSolver(Driver):
         independents = self.get_parameters().values()
         self.xin = numpy.zeros(len(independents),'d')
         for i, val in enumerate(independents):
-            self.xin[i] = val.evaluate()
+            self.xin[i] = val.evaluate(self.parent)
             
         # perform an initial run for self-consistency
         self.run_iteration()
@@ -95,7 +95,7 @@ class BroydenSolver(Driver):
         dependents = self.get_eq_constraints().values()
         self.F = numpy.zeros(len(dependents),'d')
         for i, val in enumerate(dependents):
-            term = val.evaluate()        
+            term = val.evaluate(self.parent)
             self.F[i] = term[0] - term[1]
                 
         # pick solver algorithm
@@ -136,7 +136,7 @@ class BroydenSolver(Driver):
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):
-                term = val.evaluate()
+                term = val.evaluate(self.parent)
                 self.F[i] = term[0] - term[1]
             
             # successful termination if independents are below tolerance
@@ -199,7 +199,7 @@ class BroydenSolver(Driver):
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):
-                term = val.evaluate()
+                term = val.evaluate(self.parent)
                 self.F[i] = term[0] - term[1]
 
             # successful termination if independents are below tolerance
@@ -253,7 +253,7 @@ class BroydenSolver(Driver):
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):
-                term = val.evaluate()
+                term = val.evaluate(self.parent)
                 self.F[i] = term[0] - term[1]
 
             # successful termination if independents are below tolerance

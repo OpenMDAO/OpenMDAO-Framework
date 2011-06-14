@@ -14,7 +14,7 @@ from enthought.traits.api import Float as TraitFloat
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.variable import Variable
-from openmdao.main.tvalwrapper import TraitValWrapper
+from openmdao.main.attrwrapper import AttrWrapper
 
 from openmdao.main.uncertain_distributions import UncertainDistribution
 
@@ -108,7 +108,7 @@ class Float(Variable):
         
         # pylint: disable-msg=E1101
         # If both source and target have units, we need to process differently
-        if isinstance(value, TraitValWrapper) and 'units' in value.metadata:
+        if isinstance(value, AttrWrapper) and 'units' in value.metadata:
             if self.units and value.metadata['units']:
                 return self._validate_with_metadata(obj, name, 
                                                     value.value, 
@@ -151,11 +151,11 @@ class Float(Variable):
         obj.raise_exception(msg, ValueError)
 
     def get_val_wrapper(self, value):
-        """Return a TraitValWrapper object.  Its value attribute
+        """Return an AttrWrapper object.  Its value attribute
         will be filled in by the caller.
         """
         # pylint: disable-msg=E1101
-        return TraitValWrapper(value, units=self.units)
+        return AttrWrapper(value, units=self.units)
             
     def _validate_with_metadata(self, obj, name, value, srcmeta):
         """Perform validation and unit conversion using metadata from

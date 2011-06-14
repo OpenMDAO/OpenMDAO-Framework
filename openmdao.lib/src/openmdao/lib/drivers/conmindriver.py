@@ -287,7 +287,7 @@ class CONMINdriver(Driver):
         # get the initial values of the parameters
         # check if any min/max constraints are violated by initial values
         for i, val in enumerate(self.get_parameters().values()):
-            self.design_vals[i] = dval = val.evaluate()
+            self.design_vals[i] = dval = val.evaluate(self.parent)
             
             if dval > val.high:
                 if (dval - val.high) < self.ctlmin:
@@ -385,7 +385,7 @@ class CONMINdriver(Driver):
 
             # update constraint value array
             for i, v in enumerate(self.get_ineq_constraints().values()):
-                val = v.evaluate()
+                val = v.evaluate(self.parent)
                 if '>' in val[2]:
                     self.constraint_vals[i] = val[1]-val[0]
                 else:
@@ -444,7 +444,7 @@ class CONMINdriver(Driver):
                 
                 if self.printvars:
                     case_output = [(name,
-                                    ExprEvaluator(name, scope=self).evaluate())
+                                    ExprEvaluator(name, scope=self.parent).evaluate())
                                            for name in self.printvars]
                 else:
                     case_output = []
