@@ -5,14 +5,12 @@
 Individual Design Feasible (IDF)
 =================================
 
-Next, we will look at how to set up the Individual Design Feasible (IDF)
-architecture for the Sellar problem. In IDF, the direct coupling between the
-disciplines is removed, and the input coupling variables are added to
-the optimizer's design variables. The algorithm calls for two new equality
-constraints that enforce the coupling between the disciplines instead. 
-This assures that the solution is a feasible coupling, though it is achieved
-through the optimizer's additional effort instead of a solver. The data
-flow for IDF is illustrated in the following diagram:
+Next, we will look at how to set up the Individual Design Feasible (IDF) architecture for the Sellar
+problem. In IDF, the direct coupling between the disciplines is removed, and the input coupling
+variables are added to the optimizer's design variables. The algorithm calls for two new equality
+constraints that enforce the coupling between the disciplines. This ensures that the solution is a
+feasible coupling, though it is achieved through the optimizer's additional effort instead of a
+solver. The data flow for IDF is illustrated in the following diagram:
 
 .. figure:: Arch-IDF.png
    :align: center
@@ -29,7 +27,7 @@ From the perspective of the iteration hierarchy, IDF is extremely simple.
     
    Iteration Hierarchy for IDF
    
-To implment IDF, we create the ``SellarIDF`` assembly. First, all of our components
+To implement IDF, we create the ``SellarIDF`` assembly. First, all of our components
 are instantiated and the workflow is defined.
    
 .. testcode:: IDF_parts
@@ -60,12 +58,12 @@ are instantiated and the workflow is defined.
                 # Driver process definition
                 self.driver.workflow.add(['dis1', 'dis2'])
 
-Thats all it takes to setup the workflow for IDF. All that is left to do is set up the CONMIN optimizer. 
-Pay attention, in the code below, to how we handle the global design variables z1 and z2. They are setup the same
-way we did it for the MDF architecture. However, unlike for MDF, the coupling variables are also included as optimizer 
-parameters. We also introduce the CONMIN parameter *ct*, which is the constraint thickness for
-nonlinear constraints. Our constraints are nonlinear, but note that any
-constraint that involves a component output is most likely a nonlinear
+That's all it takes to setup the workflow for IDF. All that is left to do is set up the CONMIN
+optimizer.  In the code below, pay attention to how we handle the global design variables ``z1`` and
+``z2``. We set them up the same way we did for the MDF architecture. However, unlike the MDF, the
+coupling variables are also included as optimizer  parameters. We also introduce the CONMIN
+parameter *ct*, which is the constraint thickness for nonlinear constraints. Our constraints are
+nonlinear, but note that any constraint that involves a component output is most likely a nonlinear
 constraint because outputs are usually nonlinear functions of the design variables.
 
 .. testcode:: IDF_parts
@@ -107,17 +105,17 @@ Since CONMIN doesn't support equality constraints, we have to fall back on a
 trick where we replace it with an equivalent pair of inequality constraints.
 For example, if we want to constrain ``x=2``, we could constraint ``x<=2`` and ``x>=2`` and
 let the optimizer converge to a solution where both constraints are active.
-Working with two inequalities is a bit more tricky though, because it can introduce some instability to 
-the optimizer and affect it's final solution. 
+Working with two inequalities is a bit trickier though, because it can introduce some instability to 
+the optimizer and affect its final solution. 
 
 You might consider trying a fancier solution such as constraining ``abs(dis2.y1-dis1.y1)<=0``. Be careful though, 
 because this nonlinear constraint has a discontinuous slope, and CONMIN won't handle that very well. 
 After some experimentation, we found that cubing the difference between the coupling variables, 
-i.e. ``(dis1.y1-dis2.y1)**3``, seemed to make CONMIN happy and helped convergence. 
+i.e., ``(dis1.y1-dis2.y1)**3``, seemed to make CONMIN happy and helped convergence. 
 
 When you put it all together, you get 
 :download:`sellar_IDF.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_IDF.py>`. 
-Once again, we added a small amount of code at the end to execute, and then print out the results of, the IDF
+Once again, we added a small amount of code at the end to execute and then print the results of the IDF
 optimization. 
 
 .. testcode:: IDF_full
@@ -185,7 +183,7 @@ optimization.
             
             # pylint: disable-msg=E1101
                 
-            prob.dis1.z1 = prob.dis2.z1 = 5.2
+            prob.dis1.z1 = prob.dis2.z1 = 5.0
             prob.dis1.z2 = prob.dis2.z2 = 2.0
             prob.dis1.x1 = 1.0
             prob.dis2.y1 = 3.16
