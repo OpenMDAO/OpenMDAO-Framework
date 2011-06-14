@@ -17,14 +17,39 @@ openmdao.DataFlow = function(id,model) {
     // FIXME: really workflow, but there was a naming conflict with draw2d
     var self = this,
         elm = jQuery("#"+id).width(screen.width).height(screen.height),
-        dataflow  = new draw2d.Workflow(id),
+        workflow  = new draw2d.Workflow(id),
         figures = {}
         
-        
     // set background image
-    dataflow.setBackgroundImage( "/static/images/grid_10.png", true)
+    workflow.setBackgroundImage( "/static/images/grid_10.png", true)
     
-    // make the dataflow pane droppable
+    // context menu
+    workflow.getContextMenu=function(){
+        var menu=new draw2d.Menu();
+        menu.appendMenuItem(new draw2d.MenuItem("Show Grid",null,function(x,y){
+            workflow.setGridWidth(10,10);
+            workflow.setBackgroundImage("/static/images/grid_10.png",true);
+        }));
+        menu.appendMenuItem(new draw2d.MenuItem("Hide Grid",null,function(x,y){
+            workflow.setBackgroundImage(null,false);
+        }));
+        menu.appendMenuItem(new draw2d.MenuItem("Add Note",null,function(x,y){
+            var annotation = new draw2d.Annotation("NOTE: ");
+            annotation.setDimension(250,70);
+            var off = elm.parent().offset()
+            x = Math.round(x - off.left)
+            y = Math.round(y - off.top)
+            workflow.addFigure(annotation,x,y);
+        }));
+        
+        return menu;
+    };
+    
+    // toolbar may be useful at some point?
+    // var tbar = new openmdao.Toolbar();
+    // workflow.showDialog(tbar,400,10);
+    
+    // make the workflow pane droppable
     elm.droppable ({
         accept: '.objtype',
         drop: function(ev,ui) { 
@@ -42,7 +67,7 @@ openmdao.DataFlow = function(id,model) {
         }
     });
 
-    /** update dataflow by recreating figures from JSON workflow data
+    /** update workflow by recreating figures from JSON workflow data
      *  TODO: prob just want to iterate through & update existing figures
      */
     function updateFigures(json) {
@@ -50,7 +75,7 @@ openmdao.DataFlow = function(id,model) {
             conns = json[1],
             x = 50, y = 50
         
-        dataflow.clear();
+        workflow.clear();
         
         jQuery.each(comps,function(idx,name) {
             // FIXME: just getting a name atm, also want type I think
@@ -58,10 +83,10 @@ openmdao.DataFlow = function(id,model) {
             if (typepath !== undefined) {
                 var tokens = typepath.split('.'),
                     typename = tokens[tokens.length-1],
-                    fig = new openmdao.ComponentFigure(name,typename)
+                    fig = new openmdao.ComponentFigure(model,name,typename)
                     
                 fig.setTitle(name)
-                dataflow.addFigure(fig,x,y)
+                workflow.addFigure(fig,x,y)
                 figures[name] = fig
                 
                 x = x+125;
@@ -74,10 +99,10 @@ openmdao.DataFlow = function(id,model) {
                 dst_name = conn[1].split('.')[0],
                 src_fig = figures[src_name],
                 dst_fig = figures[dst_name],
-                c = new draw2d.Connection()
+                c = new openmdao.ContextMenuConnection()
             c.setSource(src_fig.getPort("output"));
             c.setTarget(dst_fig.getPort("input"));
-            dataflow.addFigure(c);
+            workflow.addFigure(c);
         })
     }
     

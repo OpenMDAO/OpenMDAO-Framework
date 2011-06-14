@@ -156,13 +156,19 @@ openmdao.ObjectTree = function(id,model,edit_function) {
             "label"  : 'Properties',
             "action" :  function(node) { 
                             var tableID = 'PE-'+path.replace(/\./g,'-'),
-                                table = jQuery('<table id='+tableID+'></table>')                                
+                                table = jQuery('<table id='+tableID+'></table>')
                             table.dialog({
                                 'modal': false,
                                 'title': 'Properties: '+path,
                                 'close': function(ev, ui) { jQuery(tableID).remove() }
                             })
                             new openmdao.PropertiesEditor(tableID,model).editObject(path)
+                        }
+        }
+        menu.add_to_workflow = {
+            "label"  : 'Add to Workflow',
+            "action" :  function(node) { 
+                            model.issueCommand('top.driver.workflow.add("'+path+'")')
                         }
         }
         menu.toggle = {

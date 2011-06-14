@@ -7,7 +7,8 @@ LICENSE: NASA Open Source License
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.ComponentFigure=function(name,type){
+openmdao.ComponentFigure=function(model,name,type){
+    this.model = model;
     this.name = name;
     this.type = type;
     this.cornerWidth=15;
@@ -113,6 +114,7 @@ openmdao.ComponentFigure.prototype.createHTMLElement=function(){
     item.appendChild(this.bottom_right);
     return item;
 };
+
 openmdao.ComponentFigure.prototype.setDimension=function(w,h){
     draw2d.Node.prototype.setDimension.call(this,w,h);
     if(this.top_left!==null){
@@ -159,6 +161,7 @@ openmdao.ComponentFigure.prototype.onDragstart=function(x,y){
         return _5017;
     }
 };
+
 openmdao.ComponentFigure.prototype.setCanDrag=function(flag){
     draw2d.Node.prototype.setCanDrag.call(this,flag);
     this.html.style.cursor="";
@@ -171,6 +174,7 @@ openmdao.ComponentFigure.prototype.setCanDrag=function(flag){
         this.header.style.cursor="";
     }
 };
+
 openmdao.ComponentFigure.prototype.setWorkflow=function(_5019){
     draw2d.Node.prototype.setWorkflow.call(this,_5019);
     if(_5019!==null&&this.inputPort===null){
@@ -185,6 +189,7 @@ openmdao.ComponentFigure.prototype.setWorkflow=function(_5019){
         this.addPort(this.outputPort,this.width+5,this.height/2);
     }
 };
+
 openmdao.ComponentFigure.prototype.toggle=function(){
     if(this.originalHeight==-1){
         this.originalHeight=this.height;
@@ -196,3 +201,16 @@ openmdao.ComponentFigure.prototype.toggle=function(){
         this.setResizeable(true);
     }
 };
+
+openmdao.ComponentFigure.prototype.getContextMenu=function(){
+    var menu=new draw2d.Menu();
+    var oThis=this;
+    menu.appendMenuItem(new draw2d.MenuItem("Remove from Workflow",null,function(){
+        model.issueCommand("top.driver.workflow.remove('"+oThis.name+"')");
+    }));
+    return menu;
+};
+
+// openmdao.ComponentFigure.prototype.onMouseEnter=function(){
+    // this.getWorkflow().showTooltip(new openmdao.Tooltip(this.name),true);
+// };
