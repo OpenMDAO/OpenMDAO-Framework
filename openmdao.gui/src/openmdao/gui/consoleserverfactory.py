@@ -235,13 +235,18 @@ class ConsoleServer(cmd.Cmd):
         return comps
         
     def get_workflow(self):
-        """ get the list of components that make up the workflow
-            for the top level driver 
+        """ get the list of components and connections between them
+            that make up the workflow for the top level driver 
         """
-        comps = {}
+        comps = []
+        conns = []
         if self.top and self.top.driver:
             comps = self.top.driver.workflow.get_names()
-        return comps
+            conns = self.top.list_connections()
+            cl = []     # convert tuples to lists
+            for conn in conns:
+                cl.append(list(conn))
+        return [ comps, cl ]
 
     def _get_attributes(self,comp):
         """ get attributes of object """

@@ -12,12 +12,14 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  */
 openmdao.DataFlow = function(id,model) {
     /***********************************************************************
-     *  private (available only to privileged methods) 
+     *  private
      ***********************************************************************/
-     
+    // FIXME: really workflow, but there was a naming conflict with draw2d
     var self = this,
         elm = jQuery("#"+id).width(screen.width).height(screen.height),
-        dataflow  = new draw2d.Workflow(id)
+        dataflow  = new draw2d.Workflow(id),
+        figures = {}
+        
         
     // set background image
     dataflow.setBackgroundImage( "/static/images/grid_10.png", true)
@@ -40,44 +42,42 @@ openmdao.DataFlow = function(id,model) {
         }
     });
 
-    /** update dataflow by recreating figures from JSON model data
-     *  TODO: iterating through & updating existing figures would be faster
+    /** update dataflow by recreating figures from JSON workflow data
+     *  TODO: prob just want to iterate through & update existing figures
      */
     function updateFigures(json) {
-        dataflow.clear();        
-        var x = 50, y = 50;
-        debug.info("dataflow json=",json)
-        jQuery.each(json,function(idx,name) {
-            //if (val) {
-                // FIXME: just getting a name atm
-                // also want type, inputs/ouputs
-                var typepath = name 
-                if (typepath !== undefined) {
-                    var tokens = typepath.split('.'),
-                        typename = tokens[tokens.length-1]
+        var comps = json[0],
+            conns = json[1],
+            x = 50, y = 50
+        
+        dataflow.clear();
+        
+        jQuery.each(comps,function(idx,name) {
+            // FIXME: just getting a name atm, also want type I think
+            var typepath = name 
+            if (typepath !== undefined) {
+                var tokens = typepath.split('.'),
+                    typename = tokens[tokens.length-1],
+                    fig = new openmdao.ComponentFigure(name,typename)
                     
-                    var newObj = new draw2d.Component(name,typename,typepath)
-                    //newObj.setTitle(name);
-                    dataflow.addFigure(newObj,x,y)
-                    
-                    // TODO: get x & y from model... 
-                    x = x+75;
-                    y = y+75;
-                    
-                    // try to load a custom image for this component
-                    // TODO: should look in the model folder for these
-                    var img = new Image();
-                    img.src = "/static/images/"+typename+".png";
-                    jQuery(img).ready(function(){
-                        if (img.width > 0) {
-                            img.style.width = "50px";
-                            img.style.height = "50px";
-                            newObj.setImage(img.src);
-                            newObj.setDimension(img.width,img.height)
-                        }
-                    })
-                }
-            //}
+                fig.setTitle(name)
+                dataflow.addFigure(fig,x,y)
+                figures[name] = fig
+                
+                x = x+125;
+                y = y+100;                    
+            }
+        })
+        
+        jQuery.each(conns,function(idx,conn) {
+            var src_name = conn[0].split('.')[0],
+                dst_name = conn[1].split('.')[0],
+                src_fig = figures[src_name],
+                dst_fig = figures[dst_name],
+                c = new draw2d.Connection()
+            c.setSource(src_fig.getPort("output"));
+            c.setTarget(dst_fig.getPort("input"));
+            dataflow.addFigure(c);
         })
     }
     
@@ -90,7 +90,7 @@ openmdao.DataFlow = function(id,model) {
     model.addListener(update)
 
     /***********************************************************************
-     *  privileged (can access privates, accessible to public and outside) 
+     *  privileged
      ***********************************************************************/
         
 }
