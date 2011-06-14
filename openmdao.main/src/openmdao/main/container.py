@@ -233,6 +233,7 @@ class Container(HasTraits):
         destpath: str
             Pathname of destination variable.
         """
+        cname = None
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
@@ -249,9 +250,13 @@ class Container(HasTraits):
                 self.raise_exception(
                     "'%s' is already connected to source '%s'" % 
                     (destpath, sname), RuntimeError)
-            cname, _, restofpath = destpath.partition('.')
+            cname2, _, restofpath = destpath.partition('.')
+            if cname == cname2 and cname is not None:
+                self.raise_exception("Can't connect '%s' to '%s'. Both variables are on the same component"%
+                                     (srcpath,destpath), RuntimeError)
+
             if restofpath:
-                child = getattr(self, cname)
+                child = getattr(self, cname2)
                 if is_instance(child, Container):
                     child.connect('parent.'+srcpath, restofpath)
                 
@@ -263,6 +268,7 @@ class Container(HasTraits):
         """Removes the connection between one source variable and one 
         destination variable.
         """
+        cname = cname2 = None
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
@@ -272,10 +278,15 @@ class Container(HasTraits):
         if not destpath.startswith('parent.'):
             if not self.contains(destpath):
                 self.raise_exception("Can't find '%s'" % destpath, AttributeError)
-            cname, _, restofpath = destpath.partition('.')
+            cname2, _, restofpath = destpath.partition('.')
             if restofpath:
-                getattr(self, cname).disconnect('parent.'+srcpath, restofpath)
+                getattr(self, cname2).disconnect('parent.'+srcpath, restofpath)
         
+        if cname == cname2 and cname is not None:
+            self.raise_exception("Can't disconnect '%s' from '%s'. "
+                                 "Both variables are on the same component" %
+                                 (srcpath,destpath), RuntimeError)
+
         self._depgraph.disconnect(srcpath, destpath)
 
     #TODO: get rid of any notion of valid/invalid from Containers.  If they have

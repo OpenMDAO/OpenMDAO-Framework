@@ -1,13 +1,13 @@
 
+import copy
 
 class ContainerAction(object):
     """A class for handling doing/undoing of actions on Containers."""
     def do(self, scope):
-        pass
+        raise NotImplementedError("do function not implemented")
     
     def undo(self, scope):
-        pass
-    
+        raise NotImplementedError("undo function not implemented")
     
 class AddAction(ContainerAction):
     def __init__(self, name, obj):
@@ -15,23 +15,21 @@ class AddAction(ContainerAction):
         self.obj = obj
         
     def do(self, scope):
-        scope.add(name, obj)
+        scope.add(self.name, self.obj)
         
     def undo(self, scope):
-        scope.remove(name)
-        
+        scope.remove(self.name)
         
 class AddVarAction(ContainerAction):
     def __init__(self, name, var):
         self.name = name
-        self.obj = var
+        self.var = var
         
     def do(self, scope):
-        scope.add_trait(name, var)
+        scope.add_trait(self.name, self.var)
         
     def undo(self, scope):
-        scope.remove_trait(name)
-        
+        scope.remove_trait(self.name)
 
 class RenameAction(ContainerAction):
     def __init__(self, oldname, newname):
@@ -63,12 +61,38 @@ class DisconnectAction(ContainerAction):
     def __init__(self, src, dest):
         self.src = src
         self.dest = dest
-        
+    
     def do(self, scope):
         scope.disconnect(self.src, self.dest)
         
     def undo(self, scope):
         scope.connect(self.src, self.dest)
         
+class SetAction(ContainerAction):
+    def __init__(self, name, value):
+        self.name = name
+        self.value = copy.copy(value)
+    
+    def do(self, scope):
+        scope.disconnect(self.src, self.dest)
+        
+    def undo(self, scope):
+        scope.connect(self.src, self.dest)
+        
+
+class ActionManager(object):
+    def __init__(self):
+        self._stack = []
+        
+    def do(self, action, scope):
+        """Do the given action and store it for later undoing"""
+        action.do(scope)
+        self._stack.append(action)
+        
+    def undo(self, scope):
+        """Undo all of the actions."""
+        while self._stack:
+            action = self._stack.pop()
+            action.undo(scope)
 
     
