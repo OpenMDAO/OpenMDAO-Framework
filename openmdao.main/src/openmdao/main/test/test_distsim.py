@@ -61,7 +61,7 @@ class Box(ExecComp):
         self.pid = os.getpid()
         # For get_closest_proxy().
         sub = self.add('subcontainer', Container())
-        sub.add_trait('subvar', Int())
+        sub.add('subvar', Int())
 
     def execute(self):
         print 'Box.execute(), %f %f %f on %s:%d' \
@@ -158,7 +158,7 @@ class BoxSource(ExecComp):
                                          'depth_out  = depth_in'])
         # For get_closest_proxy().
         sub = self.add('subcontainer', Container())
-        sub.add_trait('subvar', Int())
+        sub.add('subvar', Int())
 
 class BoxSink(ExecComp):
     """ Just a pass-through for :class:`BoxDriver` result values. """

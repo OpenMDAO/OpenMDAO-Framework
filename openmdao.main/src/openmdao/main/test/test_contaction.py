@@ -2,7 +2,7 @@ import unittest
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.lib.datatypes.api import Int
-from openmdao.main.contaction import ActionManager, AddAction, AddVarAction, \
+from openmdao.main.contaction import ActionManager, AddAction, \
                                      RenameAction, SetAction, ConnectAction, DisconnectAction
 
 class Simple(Component):
@@ -60,19 +60,6 @@ class ContainerActionTestCase(unittest.TestCase):
         self.assertEqual(set(self.top.list_containers()), 
                          set(['comp1','comp2','driver']))
 
-    def test_addvar(self):
-        self.assertEqual(set(self.top.comp1.list_inputs()+self.top.list_outputs()), 
-                         set(['a','b','c','d']))
-        am = ActionManager()
-        am.do(AddVarAction('invar1', Int(8,iotype='in')), self.top)
-        am.do(AddVarAction('invar2', Int(7,iotype='in')), self.top)
-        am.do(AddVarAction('outvar1', Int(4,iotype='out')), self.top)
-        am.do(AddVarAction('outvar2', Int(3,iotype='out')), self.top)
-        self.assertEqual(set(self.top.list_containers()), 
-                         set(['comp1','comp2','driver','foo','foo2']))
-        am.undo(self.top)
-        self.assertEqual(set(self.top.comp1.list_inputs()+self.top.list_outputs()), 
-                         set(['a','b','c','d']))
 
 if __name__ == "__main__":
     unittest.main()

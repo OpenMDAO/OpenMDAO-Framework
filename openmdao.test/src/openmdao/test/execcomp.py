@@ -33,7 +33,7 @@ class ExecComp(Component):
                     iotype = 'out'
                 else:
                     iotype = 'in'
-                self.add_trait(var, Float(iotype=iotype))
+                self.add(var, Float(iotype=iotype))
         self.runcount = 0
         
     def execute(self):

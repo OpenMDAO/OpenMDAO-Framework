@@ -13,24 +13,20 @@ class AddAction(ContainerAction):
     def __init__(self, name, obj):
         self.name = name
         self.obj = obj
+        self.removed = None
         
     def do(self, scope):
+        try:
+            self.removed = getattr(scope, self.name)
+        except AttributeError:
+            pass
         scope.add(self.name, self.obj)
         
     def undo(self, scope):
         scope.remove(self.name)
+        if self.removed is not None:
+            scope.add(self.name, self.removed)
         
-class AddVarAction(ContainerAction):
-    def __init__(self, name, var):
-        self.name = name
-        self.var = var
-        
-    def do(self, scope):
-        scope.add_trait(self.name, self.var)
-        
-    def undo(self, scope):
-        scope.remove_trait(self.name)
-
 class RenameAction(ContainerAction):
     def __init__(self, oldname, newname):
         self.oldname = oldname

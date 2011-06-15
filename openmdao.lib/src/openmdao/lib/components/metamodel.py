@@ -232,8 +232,7 @@ class MetaModel(Component):
                             " specified. Either specify a default, or specify a "
                             "surrogate model for all outputs",ValueError)
                     trait_type = surrogate.get_uncertain_value(1.0).__class__()
-                    self.add_trait(name, 
-                                   Slot(trait_type, iotype='out', desc=trait.desc))
+                    self.add(name, Slot(trait_type, iotype='out', desc=trait.desc))
                     self._surrogate_info[name] = (surrogate.__class__(), []) # (surrogate,output_history)
                     new_model_traitnames.add(name)
                     setattr(self, name, surrogate.get_uncertain_value(getattr(newmodel,name)))

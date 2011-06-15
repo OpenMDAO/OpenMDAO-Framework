@@ -26,7 +26,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 import zope.interface
 
 from enthought.traits.api import HasTraits, Missing, Undefined, \
-                                 push_exception_handler, Python
+                                 push_exception_handler, TraitType
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
@@ -487,9 +487,9 @@ class Container(HasTraits):
         
         return val
         
-    def add(self, name, obj, **kw_args):
-        """Add a Container object to this Container.
-        Returns the added Container object.
+    def add(self, name, obj):
+        """Add an object to this Container.
+        Returns the added object.
         """
         if '.' in name:
             self.raise_exception(
@@ -516,6 +516,8 @@ class Container(HasTraits):
             # children) that its scope tree back to the root is defined.
             if self._call_tree_rooted is False:
                 obj.tree_rooted()
+        elif is_instance(obj, TraitType):
+            self.add_trait(name, obj)
         else:
             self.raise_exception("'"+str(type(obj))+
                     "' object is not an instance of Container.",
@@ -578,7 +580,7 @@ class Container(HasTraits):
                 self.remove_trait(name)
             return obj
         else:
-            self.raise_exception("cannot remove container '%s': not found"%
+            self.raise_exception("cannot remove '%s': not found"%
                                  name, AttributeError)
 
     @rbac(('owner', 'user'))

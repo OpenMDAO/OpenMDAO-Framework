@@ -14,9 +14,9 @@ class ArrayTestCase(unittest.TestCase):
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.hobj = Component()
-        self.hobj.add_trait('arr1',Array(array([98.9]), iotype='in', units='ft'))
-        self.hobj.add_trait('arr2', Array(array([13.2]), iotype='out', units='inch'))
-        self.hobj.add_trait('arr3', Array(iotype='in', units='kg', desc='stuff'))
+        self.hobj.add('arr1',Array(array([98.9]), iotype='in', units='ft'))
+        self.hobj.add('arr2', Array(array([13.2]), iotype='out', units='inch'))
+        self.hobj.add('arr3', Array(iotype='in', units='kg', desc='stuff'))
         
         self.hobj.arr1 = [1.0, 2.0, 3.0]
         self.hobj.arr2 = [[1.,2.],[3.,4.]]
@@ -28,7 +28,7 @@ class ArrayTestCase(unittest.TestCase):
         self.hobj = None
 
     def test_set_to_default(self):
-        self.hobj.add_trait('arr4', Array(iotype='in', units='kg'))
+        self.hobj.add('arr4', Array(iotype='in', units='kg'))
         self.assertTrue(all(array([]) == self.hobj.arr4))
         self.hobj.arr4 = [6.5]
         self.assertEqual(6.5, self.hobj.arr4[0])
@@ -59,7 +59,7 @@ class ArrayTestCase(unittest.TestCase):
         self.assertAlmostEqual(36., self.hobj.arr2[2])
         
         # unit to unitless
-        self.hobj.add_trait('arr5', Array(iotype='in'))
+        self.hobj.add('arr5', Array(iotype='in'))
         self.hobj.arr5 = [1., 2., 4.]
         self.hobj.arr2 = self.hobj.get_wrapped_attr('arr5')
         self.assertAlmostEqual(1., self.hobj.arr2[0])
@@ -101,17 +101,17 @@ class ArrayTestCase(unittest.TestCase):
 
     def test_constructor_defaults(self):
         
-        self.hobj.add_trait('arr_nodefault3',
+        self.hobj.add('arr_nodefault3',
                             Array(iotype='in', units='kg'))
         self.assertTrue(all(array([]) == self.hobj.arr_nodefault3))
             
-        self.hobj.add_trait('arr_nounits', Array(iotype='in'))
+        self.hobj.add('arr_nounits', Array(iotype='in'))
         if hasattr(self.hobj.arr_nounits, 'units'):
             self.fail("Unitless Array should not have units")
 
     def test_default_value_type(self):
         try:
-            self.hobj.add_trait('bad_default', Array('bad'))
+            self.hobj.add('bad_default', Array('bad'))
         except TypeError, err:
             self.assertEqual(str(err), "Default value should be a numpy array, not a <type 'str'>.")
         else:
@@ -119,11 +119,11 @@ class ArrayTestCase(unittest.TestCase):
             
     def test_shapes(self):
 
-        self.hobj.add_trait('sh1', Array(array([[2.0, 4.5],[3.14, 2.5]]), iotype='in', units='kg', shape=(2,2)))
+        self.hobj.add('sh1', Array(array([[2.0, 4.5],[3.14, 2.5]]), iotype='in', units='kg', shape=(2,2)))
         self.assertEqual(self.hobj.sh1[1][1], 2.5)
         
         try:
-            self.hobj.add_trait('sh1', Array(array([2.0, 2.5]), iotype='in', units='kg', shape=(2,2)))
+            self.hobj.add('sh1', Array(array([2.0, 2.5]), iotype='in', units='kg', shape=(2,2)))
         except ValueError, err:
             msg = "Shape of the default value does not match the shape attribute."
             self.assertEqual(str(err), msg)

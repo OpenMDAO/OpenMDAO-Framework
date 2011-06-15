@@ -20,9 +20,9 @@ class UsesDerivatives_Base(object):
     def __init__(self, parent):
         self._parent = parent
         
-        parent.add_trait("differentiator", 
-                         Slot(IDifferentiator, iotype='in',
-                                desc = "Slot for a differentiator"))
+        parent.add("differentiator", 
+                   Slot(IDifferentiator, iotype='in',
+                        desc = "Slot for a differentiator"))
                                                          
 
     def _list_driver_connections(self):

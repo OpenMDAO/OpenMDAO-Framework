@@ -30,16 +30,11 @@ class IContainer(Interface):
     parent = Attribute("parent of this Container (or None)")
     name = Attribute("name of this Container")
     
-    def add(name, obj, **kw_args):
+    def add(name, obj):
         """Add a Container object to this Container.
         Returns the added Container object.
         """
         
-    def add_trait(name, trait):
-        """Overrides HasTraits definition of *add_trait* in order to
-        keep track of dynamically added traits for serialization.
-        """
-
     def connect(srcpath, destpath):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
@@ -149,11 +144,6 @@ class IContainer(Interface):
         public trait objects that reference that child. Notify any
         observers."""
         
-    def remove_trait(name):
-        """Overrides HasTraits definition of remove_trait in order to
-        keep track of dynamically added traits for serialization.
-        """
-
     def revert_to_defaults(recurse=True):
         """Sets the values of all of the inputs to their default values."""
             
