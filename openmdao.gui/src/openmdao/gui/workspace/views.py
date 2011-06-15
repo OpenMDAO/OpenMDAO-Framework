@@ -9,7 +9,7 @@ from django.views.decorators.cache import never_cache
 from django.core.urlresolvers import reverse
 from django import forms
 
-import sys, os
+import sys, os, traceback
 import zipfile, jsonpickle
 
 from mdao_util import *
@@ -95,7 +95,17 @@ def Component(request,name):
             result = sys.exc_info()
         return HttpResponse(result)
     else:
-        attr = cserver.get_attributes(name)
+        attr = {}
+        try:
+            attr = cserver.get_attributes(name)
+        except Exception, e:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            print 'Exception calling get_attributes on',name
+            print '-'*60
+            print "*** print_exception:"
+            traceback.print_exception(exc_type, exc_value, exc_traceback,                          file=sys.stdout)
+            print "*** print_tb:"
+            traceback.print_tb(exc_traceback, limit=100, file=sys.stdout)
         json = jsonpickle.encode(attr)
         return HttpResponse(json,mimetype='application/json')
 

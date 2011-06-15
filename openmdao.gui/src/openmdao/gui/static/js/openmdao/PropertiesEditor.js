@@ -91,11 +91,19 @@ openmdao.PropertiesEditor = function(id,model) {
   
     /** load the table with the given properties */
     function loadTables(properties) {
-        nameHeader.html(self.pathname)
-        inputs.setData(properties['inputs'])
+        if (properties['type']) {
+            nameHeader.html(properties['type']+': '+self.pathname)
+            inputs.setData(properties['inputs'])
+            outputs.setData(properties['outputs'])
+        }
+        else {
+            nameHeader.html(self.pathname)
+            inputs.setData([])
+            outputs.setData([])
+            alert('Error getting properties for '+self.pathname)
+        }
         inputs.updateRowCount()      
         inputs.render()
-        outputs.setData(properties['outputs'])
         outputs.updateRowCount()      
         outputs.render()
     }

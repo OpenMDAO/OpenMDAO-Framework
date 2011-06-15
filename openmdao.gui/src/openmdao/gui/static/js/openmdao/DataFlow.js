@@ -77,21 +77,18 @@ openmdao.DataFlow = function(id,model) {
         
         workflow.clear();
         
-        jQuery.each(comps,function(idx,name) {
+        jQuery.each(comps,function(idx,comp) {
             // FIXME: just getting a name atm, also want type I think
-            var typepath = name 
-            if (typepath !== undefined) {
-                var tokens = typepath.split('.'),
-                    typename = tokens[tokens.length-1],
-                    fig = new openmdao.ComponentFigure(model,name,typename)
+            var name = comp['name'],
+                type = comp['type'],
+                fig = new openmdao.ComponentFigure(model,name,type)
                     
-                fig.setTitle(name)
-                workflow.addFigure(fig,x,y)
-                figures[name] = fig
-                
-                x = x+125;
-                y = y+100;                    
-            }
+            fig.setTitle(type+': '+name)
+            workflow.addFigure(fig,x,y)
+            figures[name] = fig
+            
+            x = x+125;
+            y = y+100;                    
         })
         
         jQuery.each(conns,function(idx,conn) {

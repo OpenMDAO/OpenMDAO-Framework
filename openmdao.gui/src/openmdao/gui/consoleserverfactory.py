@@ -23,6 +23,7 @@ from openmdao.main.factorymanager import get_available_types
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.main.project import *
+from openmdao.main.mp_support import is_instance
 
 from mdao_util import *
 
@@ -242,11 +243,16 @@ class ConsoleServer(cmd.Cmd):
         components = []
         connections = []
         if self.top and self.top.driver:
-            components = self.top.driver.workflow.get_names()
+            # list of components (name & type)
+            names = self.top.driver.workflow.get_names()
+            for name in names:
+                comp = { 'name': name,
+                         'type': type(self.top.get(name)).__name__ }
+                components.append(comp)
+            # list of connections (convert tuples to lists)
             conntuples = self.top.list_connections()
-            # convert connection tuples to lists
-            for connection in connections:
-                connections.append(list(conntuples))
+            for connection in conntuples:
+                connections.append(list(connection))
         return [ components, connections ]
 
     def _get_attributes(self,comp):
@@ -255,11 +261,7 @@ class ConsoleServer(cmd.Cmd):
         for vname in comp.list_inputs():
             v = comp.get(vname)
             attr = {}
-            if isinstance(v,Component):
-                attr['name'] = vname
-                attr['type'] = type(v).__name__
-                attr['value'] = self._get_attributes(v)
-            else:
+            if not is_instance(v,Component):
                 attr['name'] = vname
                 attr['type'] = type(v).__name__
                 attr['value'] = v
@@ -269,11 +271,7 @@ class ConsoleServer(cmd.Cmd):
         for vname in comp.list_outputs():
             v = comp.get(vname)
             attr = {}
-            if isinstance(v,Component):
-                attr['name'] = vname
-                attr['type'] = type(v).__name__
-                attr['value'] = self._get_attributes(v)
-            else:
+            if not is_instance(v,Component):
                 attr['name'] = vname
                 attr['type'] = type(v).__name__
                 attr['value'] = v
@@ -286,8 +284,10 @@ class ConsoleServer(cmd.Cmd):
         
     def get_attributes(self,name):
         attr = {}
-        if self.top:
-            attr = self._get_attributes(self.top.get(name))
+        comp = self.top.get(name)
+        if self.top and comp:
+            attr = self._get_attributes(comp)
+            attr['type'] = type(comp).__name__
         return attr
     
     def get_available_types(self):
@@ -335,8 +335,10 @@ class ConsoleServer(cmd.Cmd):
         """ add a new component of the given type to the top assembly. """
         try:
             if classname in self._globals:
+                print 'adding',classname,'from globals.'
                 self.top.add(name,self._globals[classname]())
             else:
+                print 'adding',classname,'using factorymanager create().'
                 self.top.add(name,create(classname))
         except Exception, err:
             print "Add component failed:", str(err)
@@ -398,6 +400,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         self.write_file(filename, contents)
         if zipfile.is_zipfile(filename):
+            userdir = os.getcwd()
             zfile = zipfile.ZipFile( filename, "r" )
             zfile.printdir()
             for fname in zfile.namelist():
