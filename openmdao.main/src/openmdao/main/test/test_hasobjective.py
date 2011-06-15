@@ -68,6 +68,31 @@ class HasObjectivesTestCase(unittest.TestCase):
         self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
                          set(['comp1.c-comp1.d']))
         
+    def test_objective_names(self):
+        self.asm.driver.add_objective('comp1.a-comp1.b', name='foobar')
+        self.asm.driver.add_objective('comp1.c-comp1.d')
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+                         set(['comp1.c-comp1.d', 'foobar']))
+        try:
+            self.asm.driver.add_objective('comp1.c-comp1.d', 'blah')
+        except Exception as err:
+            self.assertEqual(str(err), 
+                             "driver: Trying to add objective 'comp1.c-comp1.d' "
+                             "to driver, but it's already there")
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+                         set(['comp1.c-comp1.d', 'foobar']))
+            
+        try:
+            self.asm.driver.add_objective('comp1.c-comp1.a', 'foobar')
+        except Exception as err:
+            self.assertEqual(str(err), 
+                             "driver: Trying to add objective 'comp1.c-comp1.a' "
+                             "to driver using name 'foobar', but name is already used")
+            
+        self.asm.driver.remove_objective('foobar')
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+                         set(['comp1.c-comp1.d']))
+        
     def test_add_objectives(self):
         self.asm.driver.add_objectives(['comp1.a-comp1.b', 'comp1.c-comp1.d'])
         self.assertEqual(set(self.asm.driver.get_objectives().keys()), 

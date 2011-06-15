@@ -246,13 +246,16 @@ class HasParameters(object):
         self._parent = parent
         self._allowed_types = ['continuous']
 
-    def add_parameter(self, name, low=None, high=None, 
-                      scaler=None, adder=None, fd_step=None, altname=None):
+    def add_parameter(self, target, low=None, high=None, 
+                      scaler=None, adder=None, fd_step=None, name=None):
         """Adds a parameter or group of parameters to the driver.
         
-        name: string or iter of strings
-            Name of the variable(s) the driver should vary during execution.
-            If an iterator of names is given, then the driver will set all names given
+        target: string or iter of strings
+            What the driver should vary during execution. A target is an expression
+            that can reside on the left hand side of an assignment statement, so 
+            typically it will be the name of a variable or possibly a subscript 
+            expression indicating an entry within an array variable, e.g., x[3].
+            If an iterator of targets is given, then the driver will set all targets given
             to the same value whenever it varies this parameter during execution
             
         low: float (optional)
@@ -273,7 +276,7 @@ class HasParameters(object):
             Step-size to use for finite difference calculation. If no value is
             given, the differentitator will use its own default
             
-        altname: str (optional)
+        name: str (optional)
             Name used to refer to the parameter in place of the name of the
             variable referred to in the parameter string.
             This is sometimes useful if, for example, multiple entries in the
@@ -284,22 +287,31 @@ class HasParameters(object):
         referenced. If they are not specified in the metadata and not provided
         as arguments, a ValueError is raised.
         """
-        if isinstance(name, basestring): 
-            names = [name]
-            key = name
+        if isinstance(target, basestring): 
+            names = [target]
+            key = target
         else: 
-            names = name
-            key = tuple(name)
-        if altname is not None:
-            key = altname
+            names = target
+            key = tuple(target)
 
+        if name is not None:
+            key = name
+            
         dups = set(self.list_param_targets()).intersection(names)
-        if len(dups) > 0:
+        if len(dups) == 1:
+            self._parent.raise_exception("'%s' is already a Parameter target" % 
+                                         dups.pop(), ValueError)
+        elif len(dups) > 1:
             self._parent.raise_exception("%s are already Parameter targets" % 
                                          sorted(list(dups)), ValueError)
         parameters = [Parameter(name, self._parent, low=low, high=high, 
                                 scaler=scaler, adder=adder, fd_step=fd_step) 
                       for name in names]
+
+        if key in self._parameters:
+            self._parent.raise_exception("%s is already a Parameter" % key,
+                                         ValueError)
+
         if len(parameters) == 1:
             self._parameters[key] = parameters[0]
         else: # defining a ParameterGroup

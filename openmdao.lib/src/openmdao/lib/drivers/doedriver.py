@@ -34,7 +34,11 @@ class DOEdriver(CaseIterDriverBase):
         self.DOEgenerator.num_parameters = len(params)
         
         for row in self.DOEgenerator:
-            inputs = [(p.name,p.low+(p.high-p.low)*val) for p,val in zip(params,row)]
+            vals = [p.low+(p.high-p.low)*val for p,val in zip(params,row)]
+            case = self.set_parameters(vals,Case())
             # now add events
-            inputs.extend([(varname,True) for varname in self.get_events()])
-            yield Case(inputs=inputs, outputs=self.case_outputs)
+            for varname in self.get_events(): 
+                case.add_input(varname,True)
+            case.add_outputs(self.case_outputs)    
+            
+            yield case
