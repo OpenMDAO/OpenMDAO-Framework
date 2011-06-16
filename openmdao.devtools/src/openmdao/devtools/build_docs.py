@@ -1,4 +1,3 @@
-
 import os
 import os.path
 import sys
@@ -10,7 +9,6 @@ import re
 from subprocess import Popen, PIPE, STDOUT
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
 import tarfile
-
 import sphinx
 
 from openmdao.util.dumpdistmeta import get_dist_metadata
@@ -60,6 +58,11 @@ def _mod_sphinx_info(mod, outfile, show_undoc=False):
     outfile.write('.. _%s.py:\n\n' % short)
     outfile.write('%s.py\n' % modbase)
     outfile.write('+'*(3+len(short.split('.').pop()))+'\n\n')
+    
+    rstfile = _get_rst_path(name)
+    if(rstfile):
+        outfile.write('.. include:: %s\n' % rstfile)
+    
     outfile.write('.. automodule:: %s\n' % short)
     outfile.write('   :members:\n')
     if show_undoc:
@@ -177,8 +180,7 @@ def _write_src_docs(branchdir, docdir):
     for pack in packages:
         print 'creating autodoc file for %s' % pack
         with open(os.path.join(pkgdir, pack+'.rst'), 'w') as f:
-            _pkg_sphinx_info(branchdir, pack, f, 
-                             show_undoc=True, underline='-')
+            _pkg_sphinx_info(branchdir, pack, f, show_undoc=True, underline='-')
     
     for src in srcmods:
         with open(os.path.join(docdir, 'srcdocs', 'modules',
@@ -352,8 +354,42 @@ def _compare_traits_path(x, y):
         return -1
     else:
         return 0
-    
 
+def _get_rst_path(obj):
+    """
+    Finds accompanying documentation that exists for some .py files.
+    """
+    bindir = os.path.dirname(sys.executable)
+    branchdir = os.path.dirname(os.path.dirname(bindir))
+    writedir = os.path.join(branchdir, 'docs', 'srcdocs', 'packages')
+    #grab the rightmost bit of the dotted filename and add .py & .rst to it
+    if(obj):
+        fname = obj.rsplit(".")
+        pyfile = fname[-1] + ".py"
+        rstfile = fname[-1] + ".rst"
+    else:
+        return
+    #then we'll walk down through the dirs until we find the py file
+    found = 0
+    for root, dirs, files in os.walk(branchdir):
+        #if we're in the directory that has
+        #the py file, record the root, and stop walking
+        if pyfile in files:
+            containing_dir = root
+            found = 1
+            break
+    if found:
+        docs_dir = os.path.join(containing_dir,"docs")
+        if os.path.isdir(docs_dir):
+            textfilepath = os.path.join(docs_dir, rstfile)
+            if os.path.isfile(textfilepath):
+                #The sphinx include directive needs a relative path
+                #to the text file, rel to the docs dir 
+                relpath= os.path.relpath(textfilepath, writedir)
+                if (relpath):
+                    return relpath
+    else:
+        return
 if __name__ == "__main__": #pragma: no cover
     build_docs()
 
