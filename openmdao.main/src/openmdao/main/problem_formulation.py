@@ -96,7 +96,12 @@ class ArchitectureAssembly(Assembly):
         #TODO: When architecture is added, need to check to make sure it can
         #support all the types of stuff in the assembly. (single vs. multiple
         #objectives, constraints, all the variable types, etc.)
-        self.architecture.parent = self
+        
+        if old is None:
+            self.architecture.parent = self
+        else:
+            self.raise_exception("This Assembly was already configured with another architecture.",
+                                 RuntimeError)
     
     def configure(self): 
         self.architecture.configure()

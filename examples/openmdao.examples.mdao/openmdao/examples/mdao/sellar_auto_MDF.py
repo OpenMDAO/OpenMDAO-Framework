@@ -58,6 +58,8 @@ if __name__ == "__main__": # pragma: no cover
 
     import time
     
+    solution = (1.9776, 0, 0)
+    
     prob = SellarMDF()
     set_as_top(prob)
     prob.configure()
@@ -75,6 +77,11 @@ if __name__ == "__main__": # pragma: no cover
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,
                                              prob.dis1.z2,
                                              prob.dis1.x1)
+    print "Minimum differs from expected by (%f, %f, %f)" % (prob.dis1.z1-solution[0],
+                                                             prob.dis1.z2-solution[1],
+                                                             prob.dis1.x1-solution[2])
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.driver.eval_objective()
-    print "Elapsed time: ", time.time()-tt, "seconds"        
+    print "Elapsed time: ", time.time()-tt, "seconds"
+    
+    
