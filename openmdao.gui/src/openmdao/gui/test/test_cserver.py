@@ -65,6 +65,7 @@ class test_cserver(unittest.TestCase):
         self.print_output()
 
     def tearDown(self):
+        self.server_mgr.delete_server('test')        
         self.server_mgr.cleanup()
             
 if __name__ == "__main__":
