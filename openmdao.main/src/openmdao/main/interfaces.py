@@ -52,14 +52,6 @@ class IContainer(Interface):
         name is contained in this Container. 
         """
     
-    def create_alias(path, alias, iotype=None, trait=None):
-        """Create a trait that maps to some internal variable designated by a
-        dotted path. If a trait is supplied as an argument, use that trait as
-        a validator for the aliased value. The resulting trait will have the
-        alias as its name and will be added to 
-        self.  An exception will be raised if the trait already exists.
-        """
-
     def disconnect(srcpath, destpath):
         """Removes the connection between one source variable and one 
         destination variable.
@@ -98,7 +90,7 @@ class IContainer(Interface):
         """
         
     def get_wrapped_attr(name):
-        """If the named trait can return an AttrWrapper, then this
+        """If the named Variable can return an AttrWrapper, then this
         function will return that, with the value set to the current value of
         the variable. Otherwise, it functions like *getattr*, just
         returning the value of the variable. Raises an exception if the

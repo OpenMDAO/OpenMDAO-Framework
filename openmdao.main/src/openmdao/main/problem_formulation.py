@@ -86,7 +86,7 @@ class ArchitectureAssembly(Assembly):
     architecture = Slot(IArchitecture,
                         desc="Slot for the use of automatic architecture configurations")
     
-    def _architecture_changed(self): 
+    def _architecture_changed(self, old, new): 
         #TODO: When architecture is added, need to check to make sure it can
         #support all the types of stuff in the assembly. (single vs. multiple
         #objectives, constraints, all the variable types, etc.)
