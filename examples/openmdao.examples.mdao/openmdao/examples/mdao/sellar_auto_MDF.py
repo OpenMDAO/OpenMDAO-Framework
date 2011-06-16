@@ -32,7 +32,6 @@ class SellarMDF(ArchitectureAssembly):
         self.add('dis1', SellarDiscipline1())
         self.add('dis2', SellarDiscipline2())
         
-        
         #START OF MDAO Problem Definition
         #Global Des Vars
         self.add_parameter(("dis1.z1","dis2.z1"),low=-10,high=10)

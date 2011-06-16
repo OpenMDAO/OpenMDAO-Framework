@@ -78,6 +78,15 @@ def _remove_spaces(s):
     """ whitespace removal """
     return s.translate(None, ' \n\t\r')
 
+
+def _get_scope(cnst, scope=None):
+    if scope is None:
+        try:
+            return cnst._parent.get_expr_scope()
+        except AttributeError:
+            pass
+    return scope
+
 class _HasConstraintsBase(object):
     _do_not_promote = ['get_expr_depends','get_referenced_compnames',
                        'get_referenced_varpaths']
@@ -86,12 +95,12 @@ class _HasConstraintsBase(object):
         self._parent = parent
         self._constraints = ordereddict.OrderedDict()
     
-    def remove_constraint(self, expr_string):
+    def remove_constraint(self, key):
         """Removes the constraint with the given string."""
         try:
-            del self._constraints[_remove_spaces(expr_string)]
+            del self._constraints[_remove_spaces(key)]
         except KeyError:
-            msg = "Constraint '%s' was not found. Remove failed." % expr_string
+            msg = "Constraint '%s' was not found. Remove failed." % key
             self._parent.raise_exception(msg, AttributeError)
             
     def clear_constraints(self):
@@ -139,13 +148,14 @@ class _HasConstraintsBase(object):
             names.update(constraint.rhs.get_referenced_varpaths())
         return names
     
-
+    
 class HasEqConstraints(_HasConstraintsBase):
     """Add this class as a delegate if your Driver supports equality
     constraints but does not support inequality constraints.
     """
     
-    def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None):
+    def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None,
+                       scope=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
         
@@ -167,6 +177,10 @@ class HasEqConstraints(_HasConstraintsBase):
         name: str (optional)
             Name to be used to refer to the constraint rather than its
             expression string.
+            
+        scope: object (optional)
+            The object to be used as the scope when evaluating the expression.
+        
         """
         
         try:
@@ -174,12 +188,12 @@ class HasEqConstraints(_HasConstraintsBase):
         except Exception as err:
             self._parent.raise_exception(str(err), type(err))
         if rel == '=':
-            self._add_eq_constraint(lhs, rhs, scaler, adder, name)
+            self._add_eq_constraint(lhs, rhs, scaler, adder, name, scope)
         else:
             msg = "Inequality constraints are not supported on this driver"
             self._parent.raise_exception(msg, ValueError)
 
-    def _add_eq_constraint(self, lhs, rhs, scaler, adder, name=None):
+    def _add_eq_constraint(self, lhs, rhs, scaler, adder, name=None, scope=None):
         """Adds an equality constraint as two strings, a left-hand side and
         a right-hand side.
         """
@@ -196,8 +210,8 @@ class HasEqConstraints(_HasConstraintsBase):
         elif name is not None and name in self._constraints: 
             self._parent.raise_exception('A constraint named "%s" already exists '
                                          'in the driver. Add failed.' % name, ValueError)
-        constraint = Constraint(lhs, '=', rhs, scaler, adder,
-                                scope=self._parent.parent)
+            
+        constraint = Constraint(lhs, '=', rhs, scaler, adder, scope=_get_scope(self,scope))
         if name is None:
             self._constraints[ident] = constraint
         else:
@@ -207,11 +221,11 @@ class HasEqConstraints(_HasConstraintsBase):
         """Returns an ordered dict of constraint objects."""
         return self._constraints
 
-    def eval_eq_constraints(self): 
+    def eval_eq_constraints(self, scope=None): 
         """Returns a list of tuples of the 
         form (lhs, rhs, comparator, is_violated).
         """
-        return [c.evaluate(self._parent.parent) for c in self._constraints.values()]
+        return [c.evaluate(_get_scope(self,scope)) for c in self._constraints.values()]
     
     def allows_constraint_types(self, types):
         """Returns True if types is ['eq']."""
@@ -223,7 +237,8 @@ class HasIneqConstraints(_HasConstraintsBase):
     constraints but does not support equality constraints.
     """
     
-    def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None):
+    def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None,
+                       scope=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
         
@@ -242,14 +257,19 @@ class HasIneqConstraints(_HasConstraintsBase):
         name: str (optional)
             Name to be used to refer to the constraint rather than its
             expression string.
+            
+        scope: object (optional)
+            The object to be used as the scope when evaluating the expression.
+        
         """
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
             self._parent.raise_exception(str(err), type(err))
-        self._add_ineq_constraint(lhs, rel, rhs, scaler, adder, name)
+        self._add_ineq_constraint(lhs, rel, rhs, scaler, adder, name, scope)
 
-    def _add_ineq_constraint(self, lhs, rel, rhs, scaler, adder, name=None):
+    def _add_ineq_constraint(self, lhs, rel, rhs, scaler, adder, name=None,
+                             scope=None):
         """Adds an inequality constraint as three strings; a left-hand side,
         a comparator ('<','>','<=', or '>='), and a right-hand side.
         """
@@ -270,8 +290,8 @@ class HasIneqConstraints(_HasConstraintsBase):
         elif name is not None and name in self._constraints: 
             self._parent.raise_exception('A constraint named "%s" already exists '
                                          'in the driver. Add failed.' % name, ValueError)
-        constraint = Constraint(lhs, rel, rhs, scaler, adder,
-                                scope=self._parent.parent)
+            
+        constraint = Constraint(lhs, rel, rhs, scaler, adder, scope=_get_scope(self,scope))
         if name is None:
             self._constraints[ident] = constraint
         else:
@@ -281,9 +301,9 @@ class HasIneqConstraints(_HasConstraintsBase):
         """Returns an ordered dict of inequality constraint objects."""
         return self._constraints
 
-    def eval_ineq_constraints(self): 
+    def eval_ineq_constraints(self, scope=None): 
         """Returns a list of constraint values"""
-        return [c.evaluate(self._parent.parent) for c in self._constraints.values()]
+        return [c.evaluate(_get_scope(self,scope)) for c in self._constraints.values()]
     
     def allows_constraint_types(self, typ):
         """Returns True if types is ['ineq']."""
@@ -303,7 +323,8 @@ class HasConstraints(object):
         self._eq = HasEqConstraints(parent)
         self._ineq = HasIneqConstraints(parent)
 
-    def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None):
+    def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None,
+                       scope=None):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
         
@@ -322,15 +343,19 @@ class HasConstraints(object):
         name: str (optional)
             Name to be used to refer to the constraint rather than its
             expression string.
+            
+        scope: object (optional)
+            The object to be used as the scope when evaluating the expression.
+        
         """
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
             self._parent.raise_exception(str(err), type(err))
         if rel == '=':
-            self._eq._add_eq_constraint(lhs, rhs, scaler, adder, name)
+            self._eq._add_eq_constraint(lhs, rhs, scaler, adder, name, scope)
         else:
-            self._ineq._add_ineq_constraint(lhs, rel, rhs, scaler, adder, name)
+            self._ineq._add_ineq_constraint(lhs, rel, rhs, scaler, adder, name, scope)
 
     def remove_constraint(self, expr_string):
         """Removes the constraint with the given string."""
@@ -345,17 +370,19 @@ class HasConstraints(object):
         self._eq.clear_constraints()
         self._ineq.clear_constraints()
         
-    def _add_ineq_constraint(self, lhs, comparator, rhs, scaler, adder, name=None):
+    def _add_ineq_constraint(self, lhs, comparator, rhs, scaler, adder, name=None,
+                             scope=None):
         """Adds an inequality constraint as three strings; a left-hand side,
         a comparator ('<','>','<=', or '>='), and a right hand side.
         """
-        self._ineq._add_ineq_constraint(lhs, comparator, rhs, scaler, adder, name)
+        self._ineq._add_ineq_constraint(lhs, comparator, rhs, scaler, adder, name,
+                                        scope)
     
-    def _add_eq_constraint(self, lhs, rhs, scaler, adder, name=None):
+    def _add_eq_constraint(self, lhs, rhs, scaler, adder, name=None, scope=None):
         """Adds an equality constraint as two strings, a left-hand side and
         a right-hand side.
         """
-        self._eq._add_eq_constraint(lhs, rhs, scaler, adder, name)
+        self._eq._add_eq_constraint(lhs, rhs, scaler, adder, name, scope)
 
     def get_eq_constraints(self):
         """Returns an ordered dict of equality constraint objects."""
@@ -365,17 +392,17 @@ class HasConstraints(object):
         """Returns an ordered dict of inequality constraint objects."""
         return self._ineq.get_ineq_constraints()
 
-    def eval_eq_constraints(self): 
+    def eval_eq_constraints(self, scope=None): 
         """Returns a list of tuples of the form (lhs, rhs, comparator,
         is_violated) from evalution of equality constraints.
         """
-        return self._eq.eval_eq_constraints()
+        return self._eq.eval_eq_constraints(scope)
     
-    def eval_ineq_constraints(self): 
+    def eval_ineq_constraints(self, scope=None): 
         """Returns a list of tuples of the form (lhs, rhs, comparator,
         is_violated) from evalution of inequality constraints.
         """
-        return self._ineq.eval_ineq_constraints()
+        return self._ineq.eval_ineq_constraints(scope)
     
     def list_constraints(self):
         """Return a list of strings containing constraint expressions."""

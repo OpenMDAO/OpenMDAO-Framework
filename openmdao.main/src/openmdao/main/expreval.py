@@ -9,6 +9,8 @@ import ast
 import copy
 import __builtin__
 
+from openmdao.main.interfaces import IDriver
+
 # this dict will act as the local scope when we eval our expressions
 _expr_dict = {
     'math': math,
@@ -97,17 +99,12 @@ class ExprTransformer(ast.NodeTransformer):
             parts = name.split('.',1)
             names = ['scope']
             if scope.contains(parts[0]):
-                #if scope.name:
-                    #self.expreval.var_names.add('.'.join([scope.name,name]))
-                #else:
                 self.expreval.var_names.add(name)
                 if len(parts) == 1: # short name, so just do a simple attr lookup on scope
                     names.append(name)
                     return _get_attr_node(names)
             else:
                 self.expreval.var_names.add(name)
-                #if scope.parent is not None:
-                    #names.append('parent')
         else:
             raise RuntimeError("expression has no scope")
 

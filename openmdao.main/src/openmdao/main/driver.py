@@ -46,6 +46,10 @@ class Driver(Component):
         if newwf is not None:
             newwf._parent = self
 
+    def get_expr_scope(self):
+        """Return the scope to be used to evaluate ExprEvaluators."""
+        return self.parent
+
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
         or if any of our variables is invalid.

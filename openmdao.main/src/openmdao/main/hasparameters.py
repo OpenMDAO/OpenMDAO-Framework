@@ -1,5 +1,6 @@
 import ordereddict
-import itertools
+import weakref
+
 from numpy import float32, float64, int32, int64
 
 from openmdao.main.expreval import ExprEvaluator
@@ -8,7 +9,7 @@ from openmdao.util.decorators import add_delegate
 class Parameter(object): 
     
     def __init__(self, name, parent, high=None, low=None, 
-                 scaler=None, adder=None, fd_step=None):
+                 scaler=None, adder=None, fd_step=None, scope=None):
         if scaler is None and adder is None:
             self._transform = self._do_nothing
             self._untransform = self._do_nothing
@@ -35,7 +36,7 @@ class Parameter(object):
         self.fd_step = fd_step
         
         try:
-            expreval = ExprEvaluator(name, parent.parent)
+            expreval = ExprEvaluator(name, scope)
         except Exception as err:
             parent.raise_exception("Can't add parameter: %s" % str(err),
                                    type(err))
@@ -247,7 +248,7 @@ class HasParameters(object):
         self._allowed_types = ['continuous']
 
     def add_parameter(self, target, low=None, high=None, 
-                      scaler=None, adder=None, fd_step=None, name=None):
+                      scaler=None, adder=None, fd_step=None, name=None, scope=None):
         """Adds a parameter or group of parameters to the driver.
         
         target: string or iter of strings
@@ -281,6 +282,9 @@ class HasParameters(object):
             variable referred to in the parameter string.
             This is sometimes useful if, for example, multiple entries in the
             same array variable are declared as parameters.
+            
+        scope: object (optional)
+            The object to be used as the scope when evaluating the expression.
         
         If neither "low" nor "high" is specified, the min and max will
         default to the values in the metadata of the variable being
@@ -304,8 +308,10 @@ class HasParameters(object):
         elif len(dups) > 1:
             self._parent.raise_exception("%s are already Parameter targets" % 
                                          sorted(list(dups)), ValueError)
+            
         parameters = [Parameter(name, self._parent, low=low, high=high, 
-                                scaler=scaler, adder=adder, fd_step=fd_step) 
+                                scaler=scaler, adder=adder, fd_step=fd_step,
+                                scope=self._get_scope(scope)) 
                       for name in names]
 
         if key in self._parameters:
@@ -326,7 +332,6 @@ class HasParameters(object):
         
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
-            
         try:
             del self._parameters[name]
         except KeyError:
@@ -351,7 +356,7 @@ class HasParameters(object):
         """Returns an ordered dict of parameter objects."""
         return self._parameters
 
-    def set_parameters(self, values, case=None): 
+    def set_parameters(self, values, case=None, scope=None): 
         """Pushes the values in the iterator 'values' into the corresponding 
         variables in the model.  If the 'case' arg is supplied, the values
         will be set into the case and not into the model.
@@ -372,7 +377,7 @@ class HasParameters(object):
 
         if case is None:
             for val, param in zip(values, self._parameters.values()):
-                param.set(val)
+                param.set(val, self._get_scope(scope))
         else:
             for val, parameter in zip(values, self._parameters.values()):
                 print val,parameter
@@ -419,6 +424,14 @@ class HasParameters(object):
         """
         self._allowed_types = list(types)
     
+    def _get_scope(self, scope=None):
+        if scope is None:
+            try:
+                return self._parent.get_expr_scope()
+            except AttributeError:
+                pass
+        return scope
+
     def allows_param_types(self, types):
         """Returns True if this Driver supports parameters of the give types.
         
@@ -430,4 +443,3 @@ class HasParameters(object):
             if kind not in self._allowed_types:
                 return False
         return True
-    

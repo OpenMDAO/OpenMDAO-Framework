@@ -1,3 +1,5 @@
+import weakref
+
 import ordereddict
 
 from openmdao.main.api import Interface, ExprEvaluator, Assembly, Slot
@@ -86,6 +88,10 @@ class ArchitectureAssembly(Assembly):
     architecture = Slot(IArchitecture,
                         desc="Slot for the use of automatic architecture configurations")
     
+    def get_expr_scope(self):
+        """Return the scope to be used to evaluate ExprEvaluators."""
+        return self
+
     def _architecture_changed(self, old, new): 
         #TODO: When architecture is added, need to check to make sure it can
         #support all the types of stuff in the assembly. (single vs. multiple

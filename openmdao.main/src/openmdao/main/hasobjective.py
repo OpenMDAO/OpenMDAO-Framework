@@ -1,4 +1,5 @@
 
+import weakref
 import ordereddict
 
 from openmdao.main.expreval import ExprEvaluator
@@ -18,7 +19,7 @@ class HasObjectives(object):
         self._max_objectives = max_objectives
         self._parent = parent
 
-    def add_objectives(self, obj_iter):
+    def add_objectives(self, obj_iter, scope=None):
         """Takes an iterator of objective strings and creates
         objectives for them in the driver.
         """
@@ -26,9 +27,9 @@ class HasObjectives(object):
             self._parent.raise_exception("add_objectives requires an iterator of expression strings.",
                                          ValueError)
         for expr in obj_iter:
-            self._parent.add_objective(expr)
+            self._parent.add_objective(expr, scope=scope)
 
-    def add_objective(self, expr, name=None):
+    def add_objective(self, expr, name=None, scope=None):
         """Adds an objective to the driver. 
         
         expr: string
@@ -37,6 +38,10 @@ class HasObjectives(object):
         name: string (optional)
             Name to be used to refer to the objective in place of the expression
             string.
+            
+        scope: object (optional)
+            The object to be used as the scope when evaluating the expression.
+
          """
         if self._max_objectives > 0 and len(self._objectives) >= self._max_objectives:
             self._parent.raise_exception("Can't add objective '%s'. Only %d objectives are allowed" % (expr,self._max_objectives),
@@ -50,7 +55,8 @@ class HasObjectives(object):
             self._parent.raise_exception("Trying to add objective "
                                          "'%s' to driver using name '%s', but name is already used" % (expr,name),
                                          AttributeError)
-        expreval = ExprEvaluator(expr, self._parent.parent)
+            
+        expreval = ExprEvaluator(expr, self._get_scope(scope))
         
         if not expreval.check_resolve():
             self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
@@ -82,7 +88,7 @@ class HasObjectives(object):
         
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
-        return [obj.evaluate(self._parent.parent) for obj in self._objectives.values()]
+        return [obj.evaluate(self._get_scope()) for obj in self._objectives.values()]
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, parent_name)
@@ -110,6 +116,14 @@ class HasObjectives(object):
     
     def max_objectives(self):
         return self._max_objectives
+
+    def _get_scope(self, scope=None):
+        if scope is None:
+            try:
+                return self._parent.get_expr_scope()
+            except AttributeError:
+                pass
+        return scope
 
 
 class HasObjective(HasObjectives):

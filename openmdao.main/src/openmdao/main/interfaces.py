@@ -280,16 +280,15 @@ class IComponent(IContainer):
         """
     
     
-class IDriver(Interface):
-    """A marker interface for Drivers. To make a usable IDriver plug-in,
-    you must still inherit from Driver.
+class IDriver(IComponent):
+    """An interface for objects that manage the iteration of workflows. 
     """
     
     workflow = Attribute("object that knows how to run a single iteration over this Driver's iteration set")
     
     def iteration_set(self):
         """Return a set of names (not pathnames) containing all Components
-        in this Driver's workflow.
+        in this Driver's workflow or any of its sub-workflows.
         """
 
 class IFactory (Interface):
