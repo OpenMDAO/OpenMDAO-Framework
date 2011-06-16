@@ -77,7 +77,7 @@ class ConsoleServerFactory(Factory):
     def cleanup(self):        
         ''' clean up temporary files, etc
         '''
-        for server_id, cserver in self.cserver_dict:
+        for server_id, cserver in self.cserver_dict.items():
             del self.cserver_dict[server_id]
             cserver.cleanup()
             del cserver            
