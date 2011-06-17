@@ -1,5 +1,5 @@
-"""Psudo package providing a central place to access all of the
-OpenMDAO components standard library."""
+"""Pseudo package providing a central place to access all of the
+OpenMDAO components in the standard library."""
 
 from openmdao.lib.components.external_code import ExternalCode
 from openmdao.lib.components.metamodel import MetaModel

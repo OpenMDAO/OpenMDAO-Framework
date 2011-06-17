@@ -17,7 +17,6 @@ Contents:
    srcdocs/index
    plugin-guide/index
    dev-guide/index
-   std_lib/index
    licenses/index
    documenting/index
    

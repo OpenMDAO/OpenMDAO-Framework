@@ -164,7 +164,7 @@ def find_up(name, path=None):
 
 
 def get_module_path(fpath):
-    """Given a module filename, return its full python name including
+    """Given a module filename, return its full Python name including
     enclosing packages. (based on existence of __init__.py files)
     """
     pnames = [os.path.splitext(os.path.basename(fpath))[0]]

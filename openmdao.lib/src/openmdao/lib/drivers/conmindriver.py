@@ -9,7 +9,7 @@
     
     1. This implementation of the CONMIN Fortran driver is interruptable, in
     that control is returned every time an objective or constraint evaluation
-    is needed. Most external optimizers just expect a functions to be passed
+    is needed. Most external optimizers just expect a function to be passed
     for these, so they require a slightly different driver implementation than
     this.
     
@@ -18,7 +18,7 @@
     that you might not need for a pure Python optimizer.
     
     Ultimately, if you are wrapping a new optimizer for OpenMDAO, you should
-    endeavour to understand the purpose for each statement, so that your
+    endeavour to understand the purpose for each statement so that your
     implementation doesn't do any unneccessary or redundant calculation.
 """
 
