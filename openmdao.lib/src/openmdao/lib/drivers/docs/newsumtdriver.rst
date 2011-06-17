@@ -24,7 +24,7 @@ More information on NEWSUMT can be found in the `NEWSUMT Users Guide
 
 
 **Basic Interface**
-F
+
 The NEWSUMT code contains a number of different parameters and switches that
 are useful for controlling the optimization process. These can be subdivided
 into those parameters that will be used in a typical optimization problem and
