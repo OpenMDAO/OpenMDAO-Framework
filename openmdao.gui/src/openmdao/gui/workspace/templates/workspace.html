@@ -87,74 +87,72 @@
         <script src="/static/js/openmdao/ThreeDStuff.js"></script>
         <!-- experimental -->
 	<script src="/static/js/mdao.js"></script>
-
+   
+    <script language="javascript" src="/static/js/jquery.layout-1.3.0.rc29.14.js"></script>
+    
 	<!--------------------------------------->
 	<!-- basic components of the workspace -->
 	<!--------------------------------------->
 
-    <nav id="menu">
+    <nav id="menu" class="ui-layout-north" 
+         onmouseover="layout.allowOverflow('north')" onmouseout="layout.resetOverflow(this)">
     </nav>
     
-    <div id="desktop">    
-        <div id="leftcol">
-            <dl id="leftcol_tabs">
-                <dt id="otree_tab" target="otree_pane">Objects</dt>
-                <dd id="otree_pane">
-                    <ul id="otree"></ul>
-                </dd>
-
-                <dt id="ftree_tab" target="ftree_pane">Files</dt>
-                <dd id="ftree_pane">
-                    <ul id="ftree"></ul>
-                </dd>
-            </dl>
-        </div>
-        
-        <div id="central">
-            <dl id="central_tabs">
-                <dt id="dataflow_tab" target="dataflow_pane">Workflow</dt>
-                <dd id="dataflow_pane">
-                    <div id="dataflow"></div>
-                </dd>
-                <dt id="editor_tab" target="editor_pane">Code</dt>
-                <dd id="editor_pane">
-                    <textarea id="texteditor"></textarea>
-                </dd>
-                <!-- experimental -->
-                <dt id="plotter_tab" target="plotter_pane">Plot</dt>
-                <dd id="plotter_pane">
-                    <div id="plotter" style="width:600px;height:300px;"></div>
-                </dd>
-                <dt id="threed_tab" target="threed_pane">3D</dt>
-                <dd id="threed_pane">
-                    <canvas id="threed" style="width:600px;height:300px;"></canvas>
-                </dd>
-                <!-- experimental -->
-            </dl>
-        </div>
-
-        <div id="rightcol">
-            <dl id="rightcol_tabs">
-                <dt id="palette_tab" target="palette_pane">Libraries</dt>
-                <dd id="palette_pane">
-                    <div id="palette" ></div>
-                </dd>
-                
-                <dt id="properties_tab" target="properties_pane">Properties</dt>
-                <dd id="properties_pane">
-                    <div id="propertieseditor"></div>
-                </dd>
-            </dl>
-        </div>
+    <div id="leftcol" class="ui-layout-west">
+        <dl id="leftcol_tabs">
+            <dt id="otree_tab" target="otree_pane">Objects</dt>
+            <dd id="otree_pane">
+                <ul id="otree"></ul>
+            </dd>
+            <dt id="ftree_tab" target="ftree_pane">Files</dt>
+            <dd id="ftree_pane">
+                <ul id="ftree"></ul>
+            </dd>
+        </dl>
+    </div>
+    
+    <div id="central" class="ui-layout-center">
+        <dl id="central_tabs">
+            <dt id="workflow_tab" target="workflow_pane">Workflow</dt>
+            <dd id="workflow_pane">
+                <div id="workflow"></div>
+            </dd>
+            <dt id="editor_tab" target="editor_pane">Code</dt>
+            <dd id="editor_pane">
+                <textarea id="texteditor"></textarea>
+            </dd>
+            <!-- experimental -->
+            <dt id="plotter_tab" target="plotter_pane">Plot</dt>
+            <dd id="plotter_pane">
+                <div id="plotter" style="width:600px;height:300px;"></div>
+            </dd>
+            <dt id="threed_tab" target="threed_pane">3D</dt>
+            <dd id="threed_pane">
+                <canvas id="threed" style="width:600px;height:300px;"></canvas>
+            </dd>
+            <!-- experimental -->
+        </dl>
     </div>
 
-    <div id="console">
+    <div id="rightcol" class="ui-layout-east">
+        <dl id="rightcol_tabs">
+            <dt id="palette_tab" target="palette_pane">Libraries</dt>
+            <dd id="palette_pane">
+                <div id="palette" ></div>
+            </dd>            
+            <dt id="properties_tab" target="properties_pane">Properties</dt>
+            <dd id="properties_pane">
+                <div id="propertieseditor"></div>
+            </dd>
+        </dl>
+    </div>
+
+    <div id="console" class="ui-layout-south">
         <!--  history  -->
         <div id="historybox">
             <div id="history">
             </div>
         </div>
-
         <!-- cmd line --> 
         <form id="cmdform" nostyle="display:none;"  method="post">
             <input type="text" id="command" />

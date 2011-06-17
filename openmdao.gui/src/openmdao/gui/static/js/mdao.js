@@ -5,8 +5,17 @@
 // create interface to openmdao
 // TODO:  get this out of globals.. currently just here for menu access
 var model = new openmdao.Model();
+var layout
     
 jQuery(document).ready(function() {
+    // set the layout
+    layout = jQuery('body').layout({
+        north__size: 40,
+        north__resizable: false,
+        north_showOverflowOnHover: true,
+        south__size: 150
+    });
+        
     // add menu
     new openmdao.Menu("menu");
     
@@ -21,7 +30,7 @@ jQuery(document).ready(function() {
     new openmdao.FileTree("ftree",model,
         new openmdao.CodeEditor("texteditor",model).editFile)
     new openmdao.Palette("palette",model)
-    new openmdao.DataFlow("dataflow",model)
+    new openmdao.DataFlow("workflow",model)
     new openmdao.Console("cmdform","command","history",model);
 
     // experimental

@@ -12,44 +12,22 @@ ul {
     margin: 0;
 }
 
-/* menu at the top, console at the bottom, desktop in between */
-#menubar {
-  margin: 0;
-  clear: both;
-  width: 99.75%;
-}
-#desktop {
-  margin: 0;
-  clear: both;
-  width: 99.75%;
-  height: 70%;
-}
-#console {
-  margin: 0;
-  clear: both;
-  width: 99.75%;
-  height: 20%;
-}
-
-/* desktop (20% left & right columns, 59% central) */
+/* desktop */
 #leftcol {
   margin: 0;
   float: left;
-  width: 20%;
   height: 100%;
   overflow: auto;
 }
 #central {
   margin: 0;
   float: left;
-  width: 59%;
   height: 100%;
   overflow: auto;
 }
 #rightcol {
   margin: 0;
   float: left;
-  width: 20%;
   height: 100%;
   overflow: auto;
 }
@@ -59,7 +37,7 @@ nav {
   display:block;
   margin:0 auto 20px;
   position:relative;
-  z-index:99;
+  z-index: 100000;
 }
 nav ul {
   padding: 0;
@@ -76,7 +54,7 @@ nav li {
   position: relative;
   float: left;
   list-style-type: none;
-  z-index: 99;
+  z-index: 100000;
 }
 nav li a {
   display: block;
@@ -92,7 +70,7 @@ nav ul ul {
   width: 100%;
   position: absolute;
   left: 0;
-  z-index: 99;
+  z-index: 100000;
 }
 nav ul ul li {
   float: none;
