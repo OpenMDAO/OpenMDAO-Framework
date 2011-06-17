@@ -92,6 +92,16 @@ class FiniteDifference(HasTraits):
             pass
         
         
+    def get_gradient(output_name, input_name):
+        """Returns the gradient between the variable listed in output_name
+        and input_name"""
+
+        
+    def get_Hessian(output_name, input1_name, input2_name):
+        """Returns the Hessian between the variable listed in output_name
+        and input1_name and input2_name"""
+        
+        
     def calc_gradient(self):
         """Returns the gradient vectors for this Driver's workflow."""
         

@@ -1,6 +1,11 @@
 """
-    Solution of the sellar analytical problem using classic BLISS.
-    Disciplines coupled using Fixed Point Iteration
+    Solution of the Sellar analytical problem using classic BLISS.
+    (Bi-Level Integrated System Synthesis)
+    
+    MDA solved with a Broyden solver.
+    Global sensitivity calculated by finite-differencing the MDA-coupled
+    system. The MDA should be replaced with solution of the GSE to fully
+    match the original Sobiesky-Agte implementation.
 """
 
 from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
@@ -39,7 +44,7 @@ class SellarBLISS(Assembly):
         
         # Top level is Fixed-Point Iteration
         self.add('driver', FixedPointIterator())
-        self.driver.add_parameter('dis1.x1', low=  0.0, high=10.0, fd_step=.01)
+        self.driver.add_parameter('dis1.x1', low=  0.0, high=10.0)
         self.driver.add_parameter(['dis1.z1','dis2.z1'], low=-10.0, high=10.0)
         self.driver.add_parameter(['dis1.z2','dis2.z2'], low=  0.0, high=10.0)
         self.driver.add_constraint('x1_store = dis1.x1')
@@ -91,7 +96,7 @@ class SellarBLISS(Assembly):
         self.bbopt1.add_objective('sa_dis1.d__obj__dis1_x1*(x1_store-dis1.x1)')
         self.bbopt1.add_constraint('dis1.y1 + sa_dis1.d__dis1_y1__dis1_x1*(x1_store-dis1.x1) > 3.16')
         self.bbopt1.linobj = True
-        self.bbopt1.iprint = 1
+        self.bbopt1.iprint = 0
         self.bbopt1.force_execute = True
         
         # Global Optimization
@@ -102,7 +107,7 @@ class SellarBLISS(Assembly):
         self.sysopt.add_constraint('dis1.y1 + ssa.d__dis1_y1__dis1_z1*(z1_store-dis1.z1) + ssa.d__dis1_y1__dis1_z2*(z2_store-dis1.z2) > 3.16')
         self.sysopt.add_constraint('dis2.y2 + ssa.d__dis2_y2__dis1_z1*(z1_store-dis1.z1) + ssa.d__dis2_y2__dis1_z2*(z2_store-dis1.z2) < 24.0')
         self.sysopt.linobj = True
-        self.sysopt.iprint = 1
+        self.sysopt.iprint = 0
         self.sysopt.force_execute = True
             
         self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt'])

@@ -14,22 +14,12 @@ __all__ = ['SensitivityDriver']
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Float
 from openmdao.main.api import Driver
+from openmdao.main.derivatives import derivative_name
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.uses_derivatives import UsesGradients
 from openmdao.util.decorators import add_delegate
-
-def _findname(input_name, output_name):
-    """ Assemble the name string for a derivative output based on its input
-    and output name."""
-    
-    # Sometimes a parameter is connected to multiple inputs.
-    if isinstance(input_name, tuple):
-        input_name = input_name[0]
-    
-    return "d__%s__%s" % (output_name.replace('.', '_'),
-                          input_name.replace('.', '_'))
 
 
 @add_delegate(HasParameters, HasObjectives, UsesGradients, HasConstraints)
@@ -68,24 +58,24 @@ class SensitivityDriver(Driver):
             
             for output_name in objectives:
                 
-                var_name = _findname(input_name, output_name)
+                var_name = derivative_name(input_name, output_name)
                 
                 self.add_trait(var_name, Float(0.0, iostatus='out',
-                           desc = 'Deritavive output from SensitivityDriver'))
+                           desc = 'Derivative output from SensitivityDriver'))
             
             for output_name in eq_con:
                 
-                var_name = _findname(input_name, output_name)
+                var_name = derivative_name(input_name, output_name)
                 
                 self.add_trait(var_name, Float(0.0, iostatus='out',
-                           desc = 'Deritavive output from SensitivityDriver'))
+                           desc = 'Derivative output from SensitivityDriver'))
             
             for output_name in ineq_con:
                 
-                var_name = _findname(input_name, output_name)
+                var_name = derivative_name(input_name, output_name)
                 
                 self.add_trait(var_name, Float(0.0, iostatus='out',
-                           desc = 'Deritavive output from SensitivityDriver'))
+                           desc = 'Derivative output from SensitivityDriver'))
             
     def execute(self):
         """Calculate the gradient of the workflow."""
@@ -105,21 +95,21 @@ class SensitivityDriver(Driver):
             
             for j, output_name in enumerate(objectives):
                 
-                var_name = _findname(input_name, output_name)
+                var_name = derivative_name(input_name, output_name)
                 
                 setattr(self, var_name,
                         self.differentiator.gradient_obj[i,j])
                 
             for j, output_name in enumerate(eq_con):
                 
-                var_name = _findname(input_name, output_name)
+                var_name = derivative_name(input_name, output_name)
                 
                 setattr(self, var_name,
                         self.differentiator.gradient_obj[i,j])
                 
             for j, output_name in enumerate(ineq_con):
                 
-                var_name = _findname(input_name, output_name)
+                var_name = derivative_name(input_name, output_name)
                 
                 setattr(self, var_name,
                         self.differentiator.gradient_obj[i,j])

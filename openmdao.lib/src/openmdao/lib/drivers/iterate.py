@@ -6,8 +6,9 @@ are used as termination criteria.
 
 # pylint: disable-msg=E0611,F0401
 from numpy import zeros
+from numpy.linalg import norm
 
-from openmdao.lib.datatypes.api import Float, Int, Bool
+from openmdao.lib.datatypes.api import Float, Int, Bool, Enum
 from openmdao.main.api import Driver
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
@@ -26,8 +27,12 @@ class FixedPointIterator(Driver):
     max_iteration = Int(25, iotype='in', desc='Maximum number of '
                                          'iterations before termination.')
     
-    tolerance = Float(0.00001, iotype='in', desc='Absolute convergence '
+    tolerance = Float(1.0e-5, iotype='in', desc='Absolute convergence '
                                             'tolerance between iterations.')
+    
+    norm_order = Enum('Infinity', ['Infinity', 'Euclidean'], 
+                       desc = 'For multivariable iteration, type of norm'
+                                   'to use to test convergence.')
 
 
     def __init__(self):
@@ -41,22 +46,30 @@ class FixedPointIterator(Driver):
         
         self._check_config()
 
-        # perform our initial run
-        self.run_iteration()
-        self.current_iteration = 0
-        
-        nvar = len(self.get_eq_constraints().values())
+        nvar = len(self.get_parameters().values())
         history = zeros([self.max_iteration, nvar])
         delta = zeros(nvar)
+        
+        # Get and save the intial value of the input parameters
+        val0 = zeros(nvar)
+        for i, val in enumerate(self.get_parameters().values()):
+            val0[i] = val.evaluate(self.parent)
+            
+        # perform an initial run
+        self.run_iteration()
+        self.current_iteration = 0
         
         for i, val in enumerate(self.get_eq_constraints().values()):
             
             term = val.evaluate(self.parent)
             history[0, i] = term[0] - term[1]
-            
-        val0 = zeros(nvar)
-        unconverged = True
 
+        if self.norm_order == 'Infinity':
+            order = float('inf')
+        else:
+            order = 2
+
+        unconverged = True
         while unconverged:
 
             if self._stop:
@@ -84,8 +97,7 @@ class FixedPointIterator(Driver):
             
             history[self.current_iteration] = delta
             
-            # Note: infinity norm
-            if max(abs(delta)) < self.tolerance:
+            if norm(delta, order) < self.tolerance:
                 break
             # relative tolerance -- problematic around 0
             #if abs( (val1-val0)/val0 ) < self.tolerance:
@@ -109,6 +121,10 @@ class FixedPointIterator(Driver):
             msg = "FixedPointIterator requires an input parameter."
             self.raise_exception(msg, RuntimeError)
             
+        if ncon != nparm:
+            msg = "The number of input parameters must equal the number of" + \
+                  " output constraint equations in FixedPointIterator."
+            self.raise_exception(msg, RuntimeError)
 
 @add_delegate(HasStopConditions)
 class IterateUntil(Driver):

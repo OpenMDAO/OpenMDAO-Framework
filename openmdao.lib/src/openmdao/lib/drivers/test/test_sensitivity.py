@@ -65,7 +65,6 @@ class SensitivityDriverTestCase(unittest.TestCase):
         self.model.comp.x = 1.0
         self.model.comp.u = 1.0
         self.model.run()
-        self.model.driver.differentiator.calc_gradient()
         assert_rel_error(self, self.model.driver.d__comp_y__comp_x, 
                                6.0, .001)
         assert_rel_error(self, self.model.driver.d__comp_y__comp_u, 

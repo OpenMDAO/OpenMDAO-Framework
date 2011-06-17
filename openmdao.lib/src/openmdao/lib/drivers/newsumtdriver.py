@@ -38,7 +38,6 @@ from openmdao.main.hasobjective import HasObjective
 from openmdao.main.uses_derivatives import UsesGradients, UsesHessians
 from openmdao.util.decorators import add_delegate
 from openmdao.lib.datatypes.api import Float, Int, Enum
-from openmdao.util.testutil import assert_rel_error
 
 import newsumt.newsumtinterruptible as newsumtinterruptible
 
