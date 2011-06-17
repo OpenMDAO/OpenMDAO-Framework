@@ -403,7 +403,8 @@ class ExprEvaluator(object):
         
     def get_metadata(self, metaname=None, scope=None):
         """Return the specified piece of metadata if metaname is provided. Otherwise
-        return the whole metadata dictionary.  
+        return the whole metadata dictionary.  If metaname is supplied but does not
+        exist for a given variable, None will be returned for the variable.
         
         Returns a list of tuples containing (varname, metadata) 
         corresponding to each variable referenced by this expression.
@@ -414,8 +415,6 @@ class ExprEvaluator(object):
         for name in varnames:
             if scope.contains(name):
                 lst.append((name, scope.get_metadata(name, metaname)))
-            #elif scope.parent and scope.parent.contains(name):
-                #lst.append((name, scope.parent.get_metadata(name, metaname)))
             else:
                 raise AttributeError("'%s' not found" % name)
         return lst

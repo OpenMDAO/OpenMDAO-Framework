@@ -13,6 +13,12 @@ from openmdao.main.constants import SAVE_CPICKLE
 class IArchitecture(Interface):
     
     parent = Attribute("parent Assembly")
+    param_types = Attribute("list of types of allowed parameters.  "
+                            "Valid values are: ['continuous','discrete','enum']")
+    constraint_types = Attribute("list of types of allowed constraints. "
+                                 " Valid values are: ['eq', 'ineq']")
+    num_allowed_objectives = Attribute("number of objectives supported.")
+    has_coupling_vars = Attribute("True if coupling variables are required.")
     
     def configure(): 
         """sets up drivers,workflows, and data connections in 

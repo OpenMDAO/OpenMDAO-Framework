@@ -1,6 +1,6 @@
 import unittest
 import ordereddict
-from openmdao.main.api import Component,Assembly, Driver, set_as_top
+from openmdao.main.api import Component,Assembly, Driver, Architecture, set_as_top
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.problem_formulation import HasCouplingVars
 from openmdao.main.hasconstraints import HasConstraints
@@ -19,6 +19,9 @@ class GlobalAssembly(Assembly):
 class Dummy(Component): 
     x = Float(iotype="in")
     y = Float(iotype="in")
+    
+class DummyArchitecture(Architecture):
+    pass
 
 class ProblemFormulationTest(unittest.TestCase):
     

@@ -178,10 +178,7 @@ class MidFidelity(Assembly):
             xub = []
             for i, mapping in enumerate(self.input_mappings):
                 trait = self.get_trait(mapping[0]).trait_type
-                if isinstance(trait, Int):
-                    low = trait.low
-                    high = trait.high
-                elif isinstance(trait, Float):
+                if isinstance(trait, (Int, Float)):
                     low = trait.low
                     high = trait.high
                 else:

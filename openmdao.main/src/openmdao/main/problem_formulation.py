@@ -99,6 +99,7 @@ class ArchitectureAssembly(Assembly):
         
         if old is None:
             self.architecture.parent = self
+            self.architecture.check_config()
         else:
             self.raise_exception("This Assembly was already configured with another architecture.",
                                  RuntimeError)

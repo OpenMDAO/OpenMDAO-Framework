@@ -72,7 +72,7 @@ def get_traits_info(app, what, name, obj, options, lines):
                 lines.append(":ref:`%s<%s>`" %(n1,filename2))
             lines.append('\n')
     
-    if not (isinstance(obj, MetaHasTraits) or isinstance(obj, HasTraits)):
+    if not isinstance(obj, (MetaHasTraits, HasTraits)):
         return
     
     #gets a list of the class heirarchy.

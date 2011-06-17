@@ -2,20 +2,20 @@
 import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Int, Event, Float, Array
+from openmdao.lib.datatypes.api import Int, Event, Float, Array, Enum
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.test.execcomp import ExecComp
 
-class DummyFloat(Component): 
-    x = Float(0.0,low=-10,high=10)
-    y = Float(0.0,low=0,high=10)
-    arr = Array([1,2,3,4,5])
+class Dummy(Component): 
+    x = Float(0.0,low=-10,high=10, iotype='in')
+    y = Float(0.0,low=0,high=10, iotype='in')
+    arr = Array([1,2,3,4,5], iotype='in')
+    i = Int(0,low=-10,high=10, iotype='in')
+    j = Int(0,low=0,high=10, iotype='in')
+    enum_i = Enum(values=(1,5,8), iotype='in')
+    enum_f = Enum(values=(1.1,5.5,8.8), iotype='in')
     
-class DummyInt(Component): 
-    x = Int(0,low=-10,high=10)
-    y = Int(0,low=0,high=10)    
-
 @add_delegate(HasParameters)
 class MyDriver(Driver):
     def start_iteration(self):
@@ -64,22 +64,21 @@ class HasParametersTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.y, 22.)
         
     def test_add_incompatible_params(self): 
-        self.top.add('d_float',DummyFloat())
-        self.top.add('d_int',DummyInt())
+        self.top.add('dummy',Dummy())
         
         try: 
-            self.top.driver.add_parameter(('d_float.x','d_float.y'), low=-1,high=10)
+            self.top.driver.add_parameter(('dummy.x','dummy.y'), low=-1,high=10)
         except Exception as err: 
-            self.assertEqual(str(err),"driver: Trying to add parameter 'd_float.y', but the lower limit "
+            self.assertEqual(str(err),"driver: Trying to add parameter 'dummy.y', but the lower limit "
                              "supplied (-1) exceeds the built-in lower limit (0.0).")
         else: 
             self.fail("Exception Expected")
         
         try: 
-            self.top.driver.add_parameter(('d_float.x','d_int.x'), low=-1,high=10)
+            self.top.driver.add_parameter(('dummy.x','dummy.i'), low=-1,high=10)
         except Exception as err: 
-            self.assertEqual(str(err),"driver: Can't add parameter ('d_float.x', 'd_int.x') because "
-                             "d_float.x and d_int.x are not all of the same type")
+            self.assertEqual(str(err),"driver: Can't add parameter ('dummy.x', 'dummy.i') because "
+                             "dummy.x and dummy.i are not all of the same type")
         else: 
             self.fail("Exception Expected")
         
@@ -182,7 +181,7 @@ class HasParametersTestCase(unittest.TestCase):
             self.fail('RuntimeError expected')
         
     def test_named_params(self):
-        self.top.add('comp', DummyFloat())
+        self.top.add('comp', Dummy())
         self.top.driver.add_parameter('comp.arr[1]', low=0., high=1.e99, name='foo')
         self.top.driver.add_parameter('comp.arr[3]', low=0., high=1.e99, name='bar')
         
@@ -209,14 +208,29 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.y', low=0., high=100)
         
         param = self.top.driver.get_parameters().values()
-        print param
         
         self.assertEqual(param[0].low, 0.0)
         self.assertEqual(param[0].high, 100.0)
         self.assertEqual(param[0].fd_step, 0.001)
         self.assertEqual(param[1].fd_step, None)
-            
-            
+        
+    def test_types(self):
+        self.top.add('comp', Dummy())
+        self.top.driver.add_parameter('comp.enum_f')
+        self.assertEqual(self.top.driver.get_param_types(), ['enum'])
+        self.top.driver.remove_parameter('comp.enum_f')
+        self.top.driver.add_parameter('comp.enum_i')
+        self.assertEqual(set(self.top.driver.get_param_types()), set(['enum','discrete']))
+        self.top.driver.add_parameter('comp.enum_f')
+        self.assertEqual(set(self.top.driver.get_param_types()), set(['enum','discrete']))
+        self.top.driver.add_parameter('comp.x')
+        self.assertEqual(set(self.top.driver.get_param_types()), set(['enum','discrete',
+                                                                      'continuous']))
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter('comp.i')
+        self.assertEqual(self.top.driver.get_param_types(), ['discrete'])
+
+
 class ParametersTestCase(unittest.TestCase):
     def setUp(self):
         self.top = set_as_top(Assembly())

@@ -1322,7 +1322,7 @@ def create_io_traits(cont, obj_info, iotype='in'):
     
     The newly created traits are added to the specified Container.
     """
-    if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
+    if isinstance(obj_info, (basestring, tuple)):
         it = [obj_info]
     else:
         it = obj_info

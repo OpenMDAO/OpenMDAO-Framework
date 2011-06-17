@@ -114,9 +114,6 @@ class HasObjectives(object):
             lst.extend(obj.get_referenced_varpaths())
         return lst
     
-    def max_objectives(self):
-        return self._max_objectives
-
     def _get_scope(self, scope=None):
         if scope is None:
             try:

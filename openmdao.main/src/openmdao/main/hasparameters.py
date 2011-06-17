@@ -8,8 +8,10 @@ from openmdao.util.decorators import add_delegate
 
 class Parameter(object): 
     
-    def __init__(self, name, parent, high=None, low=None, 
+    def __init__(self, target, parent, high=None, low=None, 
                  scaler=None, adder=None, fd_step=None, scope=None):
+        self._metadata = None
+        
         if scaler is None and adder is None:
             self._transform = self._do_nothing
             self._untransform = self._do_nothing
@@ -36,7 +38,7 @@ class Parameter(object):
         self.fd_step = fd_step
         
         try:
-            expreval = ExprEvaluator(name, scope)
+            expreval = ExprEvaluator(target, scope)
         except Exception as err:
             parent.raise_exception("Can't add parameter: %s" % str(err),
                                    type(err))
@@ -48,22 +50,26 @@ class Parameter(object):
         
         try:
             # metadata is in the form [(varname, metadata)], so use [0][1] to get
-            # the actual metadata dict
-            metadata = expreval.get_metadata()[0][1]
+            # the actual metadata dict (since we're a Parameter we'll only be
+            # referencing one variable.
+            metadata = self.get_metadata()[0][1]
         except AttributeError:
-            parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % name,
+            parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % target,
                                    AttributeError)
         try:
             val = expreval.evaluate()
         except Exception as err:
-            parent.raise_exception("Can't add parameter because I can't evaluate '%s'." % name, 
+            parent.raise_exception("Can't add parameter because I can't evaluate '%s'." % target, 
                                    ValueError)
         if not isinstance(val,(float,float32,float64,int,int32,int64)):
             parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
-                                   (name,type(val).__name__), ValueError)
+                                   (target,type(val).__name__), ValueError)
         
-        self.typename = type(val).__name__
-        self.name = self._expreval.text
+        self.valtypename = type(val).__name__
+        try:
+            self.vartypename = metadata['vartypename']
+        except KeyError:
+            self.vartypename = None
 
         meta_low = metadata.get('low') # this will be None if 'low' isn't there
         if low is None:
@@ -73,7 +79,7 @@ class Parameter(object):
                 parent.raise_exception("Trying to add parameter '%s', " 
                                        "but the lower limit supplied (%s) exceeds the " 
                                        "built-in lower limit (%s)." % 
-                                       (name, low, meta_low), ValueError)
+                                       (target, low, meta_low), ValueError)
             self.low = low
 
         meta_high = metadata.get('high') # this will be None if 'high' isn't there
@@ -84,7 +90,7 @@ class Parameter(object):
                 parent.raise_exception("Trying to add parameter '%s', " 
                                        "but the upper limit supplied (%s) exceeds the " 
                                        "built-in upper limit (%s)." % 
-                                       (name, high, meta_high), ValueError)
+                                       (target, high, meta_high), ValueError)
             self.high = high
             
         values = metadata.get('values')
@@ -95,12 +101,12 @@ class Parameter(object):
                 parent.raise_exception("Trying to add parameter '%s', "
                                        "but no lower limit was found and no " 
                                        "'low' argument was given. One or the "
-                                       "other must be specified." % name,ValueError)
+                                       "other must be specified." % target,ValueError)
             if self.high is None: 
                 parent.raise_exception("Trying to add parameter '%s', "
                                        "but no upper limit was found and no " 
                                        "'high' argument was given. One or the "
-                                       "other must be specified." % name,ValueError)
+                                       "other must be specified." % target,ValueError)
         if low is None:
             self.low = self._transform(self.low)
         if high is None:
@@ -108,7 +114,7 @@ class Parameter(object):
 
         if self.low > self.high:
             parent.raise_exception("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
-                                   (name, self.low, self.high), ValueError)
+                                   (target, self.low, self.high), ValueError)
 
     def __str__(self):
         return self._expreval.text
@@ -151,7 +157,12 @@ class Parameter(object):
         of metadata if metaname is provided, or the whole metadata dictionary
         for that variable if it is not.
         """
-        return self._expreval.get_metadata(metaname)
+        if self._metadata is None:
+            self._metadata = self._expreval.get_metadata()
+        if metaname is None:
+            return self._metadata
+        else:
+            return [(name,self._metadata.get(metaname)) for name,val in self._metadata]
 
     def get_referenced_compnames(self):
         """Return a set of Component names based on the 
@@ -240,7 +251,7 @@ class HasParameters(object):
     """This class provides an implementation of the IHasParameters interface."""
 
     _do_not_promote = ['get_expr_depends', 'get_referenced_compnames', 
-                       'get_referenced_varpaths']
+                       'get_referenced_varpaths', 'get_metadata']
     
     def __init__(self, parent):
         self._parameters = ordereddict.OrderedDict()
@@ -321,13 +332,13 @@ class HasParameters(object):
         if len(parameters) == 1:
             self._parameters[key] = parameters[0]
         else: # defining a ParameterGroup
-            types = set([p.typename for p in parameters])
+            types = set([p.valtypename for p in parameters])
             if len(types) > 1: 
                 self._parent.raise_exception("Can't add parameter %s because "
                     "%s are not all of the same type" %
                     (key," and ".join(names)), ValueError)
             pg = ParameterGroup(parameters)
-            pg.typename = parameters[0].typename
+            pg.typename = parameters[0].valtypename
             self._parameters[key] = pg
         
     def remove_parameter(self, name):
@@ -413,17 +424,6 @@ class HasParameters(object):
             result.update(param.get_referenced_varpaths())
         return result
     
-    def specify_allowed_param_types(self, types):
-        """This should be called during the Driver's __init__ function to specify
-        what types of parameters that the Driver supports.
-        
-        types: list of str
-            Types of parameters supported.  
-            Valid list entries are: 'continuous', 'discrete', and 'enum'. If not
-            specified, the default is ['continuous'].
-        """
-        self._allowed_types = list(types)
-    
     def _get_scope(self, scope=None):
         if scope is None:
             try:
@@ -432,14 +432,20 @@ class HasParameters(object):
                 pass
         return scope
 
-    def allows_param_types(self, types):
-        """Returns True if this Driver supports parameters of the give types.
-        
-        types: list of str
-            Types of parameters supported.  
-            Valid list entries are: 'continuous', 'discrete', and 'enum'
+    def get_param_types(self):
+        """Returns a list of parameter types that are currently present
+        in this object.  Possible entry values are: 'continuous', 'discrete', and 'enum'.
         """
-        for kind in types:
-            if kind not in self._allowed_types:
-                return False
-        return True
+        typeset = set()
+        for param in self._parameters.values():
+            if isinstance(param, Parameter):
+                if param.valtypename in ['int','int32','int64']:
+                    typeset.add('discrete') 
+                if param.vartypename == 'Enum':
+                    typeset.add('enum')
+                # use elif here to prevent Enum with float values from being
+                # treated as continuous
+                elif param.valtypename in ['float','float32','float64']: 
+                    typeset.add('continuous')
+        return list(typeset)
+    
