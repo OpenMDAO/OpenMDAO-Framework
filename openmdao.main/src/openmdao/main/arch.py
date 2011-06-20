@@ -101,8 +101,7 @@ class Architecture(object):
             parent_coupling_vars = self.param_types.list_coupling_vars()
         except AttributeError:
             parent_coupling_vars = []
-        if self.has_coupling_vars and len(parent_coupling_vars) == 0:
-            raise RuntimeError("this Architecture expects the parent "
-                               "to have coupling variables")
+        if len(parent_coupling_vars) > 0 and not self.has_coupling_vars:
+            raise RuntimeError("this Architecture doesn't support coupling variables")
         
     

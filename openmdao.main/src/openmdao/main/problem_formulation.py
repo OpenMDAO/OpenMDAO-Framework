@@ -86,7 +86,7 @@ class HasCouplingVars(object):
 class ArchitectureAssembly(Assembly): 
     
     architecture = Slot(IArchitecture,
-                        desc="Slot for the use of automatic architecture configurations")
+                        desc="Slot for automatic architecture configurations")
     
     def get_expr_scope(self):
         """Return the scope to be used to evaluate ExprEvaluators."""
@@ -99,8 +99,12 @@ class ArchitectureAssembly(Assembly):
         
         if old is None:
             self.architecture.parent = self
-            self.architecture.check_config()
         else:
+            self._trait_change_notify(False)
+            try:
+                self.architecture = old  # put the old value back
+            finally:
+                self._trait_change_notify(True)
             self.raise_exception("This Assembly was already configured with another architecture.",
                                  RuntimeError)
     
@@ -116,4 +120,10 @@ class ArchitectureAssembly(Assembly):
         """Return a list of multi target Parameters."""
         return [(k,v) for k,v in self.get_parameters().items() 
                                         if isinstance(v, ParameterGroup)]
+        
+    def check_config(self):
+        super(ArchitectureAssembly, self).check_config()
+        if self.architecture is not None:
+            self.architecture.check_config()
+
         

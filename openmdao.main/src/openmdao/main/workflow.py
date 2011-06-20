@@ -106,8 +106,8 @@ class Workflow(object):
             comp.stop()
         self._stop = True
 
-    def add(self, comp):
-        """ Add a new component to the workflow by name."""
+    def add(self, compnames):
+        """ Add new component(s) to the workflow by name."""
         raise NotImplementedError("This Workflow has no 'add' function")
     
     def config_changed(self):

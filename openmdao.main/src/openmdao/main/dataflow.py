@@ -25,9 +25,9 @@ class Dataflow(SequentialWorkflow):
         scope = self.scope
         return [getattr(scope, n) for n in self._get_topsort()].__iter__()
 
-    def add(self, compname):
-        """ Add a new component to the workflow by name. """
-        super(Dataflow, self).add(compname)
+    def add(self, compnames):
+        """ Add new component(s) to the workflow by name. """
+        super(Dataflow, self).add(compnames)
         self.config_changed()
 
     def remove(self, compname):
