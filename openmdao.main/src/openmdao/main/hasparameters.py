@@ -57,19 +57,19 @@ class Parameter(object):
             parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % target,
                                    AttributeError)
         try:
+            self.vartypename = metadata['vartypename']
+        except KeyError:
+            self.vartypename = None
+        try:
             val = expreval.evaluate()
         except Exception as err:
             parent.raise_exception("Can't add parameter because I can't evaluate '%s'." % target, 
                                    ValueError)
-        if not isinstance(val,(float,float32,float64,int,int32,int64)):
+        if self.vartypename != 'Enum' and not isinstance(val,(float,float32,float64,int,int32,int64)):
             parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
                                    (target,type(val).__name__), ValueError)
         
         self.valtypename = type(val).__name__
-        try:
-            self.vartypename = metadata['vartypename']
-        except KeyError:
-            self.vartypename = None
 
         meta_low = metadata.get('low') # this will be None if 'low' isn't there
         if low is None:
@@ -93,9 +93,8 @@ class Parameter(object):
                                        (target, high, meta_high), ValueError)
             self.high = high
             
-        values = metadata.get('values')
-        if values is not None and len(values) > 0:
-            return    # assume it's an Enum, so no need to set high or low
+        if self.vartypename == 'Enum':
+            return    # it's an Enum, so no need to set high or low
         else:
             if self.low is None:
                 parent.raise_exception("Trying to add parameter '%s', "
@@ -432,20 +431,3 @@ class HasParameters(object):
                 pass
         return scope
 
-    def get_param_types(self):
-        """Returns a list of parameter types that are currently present
-        in this object.  Possible entry values are: 'continuous', 'discrete', and 'enum'.
-        """
-        typeset = set()
-        for param in self._parameters.values():
-            if isinstance(param, Parameter):
-                if param.valtypename in ['int','int32','int64']:
-                    typeset.add('discrete') 
-                if param.vartypename == 'Enum':
-                    typeset.add('enum')
-                # use elif here to prevent Enum with float values from being
-                # treated as continuous
-                elif param.valtypename in ['float','float32','float64']: 
-                    typeset.add('continuous')
-        return list(typeset)
-    
