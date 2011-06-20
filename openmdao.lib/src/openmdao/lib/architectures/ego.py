@@ -5,8 +5,7 @@ import shutil
 
 from enthought.traits.api import HasTraits
 
-from openmdao.main.problem_formulation import IArchitecture
-from openmdao.main.api import Assembly, Component, Driver, \
+from openmdao.main.api import  Component, Driver, Architecture,\
      SequentialWorkflow, Case, ExprEvaluator, implements
 
 from openmdao.lib.components.api import MetaModel, ExpectedImprovement, ParetoFilter
@@ -17,22 +16,26 @@ from openmdao.lib.doegenerators.api import OptLatinHypercube
 from openmdao.lib.casehandlers.api import DBCaseRecorder, DBCaseIterator
 from openmdao.lib.datatypes.api import Str, Array, Float, Int, Enum
 
-
 #TODO: Only supports HasObjective,HasParameters - real/contiunous variables        
-class EGO(HasTraits): 
-    implements(IArchitecture)
+class EGO(Architecture): 
     
     initial_DOE_size = Int(default=40, iotype="in",desc="number of initial training points to use")
     sample_iterations = Int(default=40, iotype="in", desc="number of adaptively sampled points to use")
     EI_PI = Enum("EI",values=["EI","PI"],iotype="in",desc="switch to decide between EI or PI for infill criterion")
     min_ei_pi = Float(default=0.001, iotype="in", desc="EI or PI to use for stopping condition of optimization")
     
+    def __init__(self,*args,**kwargs): 
+        super(EGO,self).__init__(*args,**kwargs)
+        
+        # the following variables determine the behavior of check_config
+        self.param_types = ['continuous']
+        self.num_allowed_objectives = 1
+    
     def configure(self):    
         self._tdir = mkdtemp()        
         
         self.comp_name = None
         #check to make sure no more than one component is being referenced
-        #TODO: possibly wrap multiple components up into an enclosing assembly automatigally? 
         for target,param in self.parent.get_parameters().iteritems():
             comp = param.get_referenced_compnames()
             if len(comp) > 1:
@@ -106,20 +109,21 @@ class EGO(HasTraits):
         iter.max_iterations = self.sample_iterations
         iter.add_stop_condition('EI.PI <= %s'%self.min_ei_pi)
         
+        #Data Connections
+        self.parent.connect("filter.pareto_set","EI.best_case")
+        self.parent.connect(self.objective,"EI.predicted_value")        
+        
         #Iteration Heirarchy
         self.parent.driver.workflow.add(['DOE_trainer', 'iter'])
-        
-        DOE_trainer.workflow.add(self.comp_name)
+        #DOE_trainer.workflow.add(self.comp_name)
         
         iter.workflow = SequentialWorkflow()
         iter.workflow.add(['filter', 'EI_opt', 'retrain'])
         
-        EI_opt.workflow.add([self.comp_name,'EI'])
+        #EI_opt.workflow.add([self.comp_name,'EI'])
         retrain.workflow.add(self.comp_name)
         
-        #Data Connections
-        self.parent.connect("filter.pareto_set","EI.best_case")
-        self.parent.connect(self.objective,"EI.predicted_value")
+        
         
     def cleanup(self):
         shutil.rmtree(self._tdir, ignore_errors=True)

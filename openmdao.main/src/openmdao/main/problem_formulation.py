@@ -109,6 +109,7 @@ class ArchitectureAssembly(Assembly):
                                  RuntimeError)
     
     def configure(self): 
+        self.architecture.check_config()
         self.architecture.configure()
     
     def get_local_des_vars(self):

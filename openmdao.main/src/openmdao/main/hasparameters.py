@@ -390,7 +390,7 @@ class HasParameters(object):
                 param.set(val, self._get_scope(scope))
         else:
             for val, parameter in zip(values, self._parameters.values()):
-                print val,parameter
+                # print val,parameter
                 for target in parameter.targets:
                     case.add_input(target, val)
             return case

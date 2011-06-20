@@ -167,6 +167,7 @@ class ProblemFormulationTest(unittest.TestCase):
         
     def test_check_config_constraints(self):
         self.asm.architecture = arch = DummyArchitecture()
+        
         arch.constraint_types = ['eq']
         self.asm.add_constraint("D1.x = D2.y")
         self.asm.check_config()
@@ -202,7 +203,12 @@ class ProblemFormulationTest(unittest.TestCase):
             self.fail("Exception expected")
             
         arch.constraint_types = None
-        self.asm.check_config()
+        try:        
+            self.asm.check_config()
+        except RuntimeError as err:
+            self.assertEqual(str(err), "this Architecture doesn't support any constraints")
+        else: 
+            self.fail("RuntimeError expected")
             
     def test_check_config_objectives(self):
         self.asm.add_objective("D1.x + D2.y")
