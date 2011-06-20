@@ -54,58 +54,73 @@ openmdao.DataFlow = function(id,model) {
         accept: '.objtype',
         drop: function(ev,ui) { 
             // get the object that was dropped and where it was dropped
-            var droppedObject = jQuery(ui.draggable).clone()
-            var off = elm.parent().offset()
-            x = Math.round(ui.offset.left - off.left)
-            y = Math.round(ui.offset.top - off.top)
-            // get the type name and path
-            var typename = droppedObject.text()
-            var typepath = droppedObject.attr("path")
+            var droppedObject = jQuery(ui.draggable).clone(),
+                typename = droppedObject.text(),
+                typepath = droppedObject.attr("path"),
+                off = elm.parent().offset(),
+                x = Math.round(ui.offset.left - off.left),
+                y = Math.round(ui.offset.top - off.top)
             openmdao.Util.promptForName(function(name) { 
                 model.addComponent(typepath,name,x,y)
             })
         }
     });
 
+    /** update workflow for top level assembly */
+    function updateWorkflow(json) {
+        workflow.clear();
+        figures = {}
+        updateFigures('',json)
+    }
+    
     /** update workflow by recreating figures from JSON workflow data
      *  TODO: prob just want to iterate through & update existing figures
      */
-    function updateFigures(json) {
-        var comps = json[0],
-            conns = json[1],
-            x = 50, y = 50
-        
-        workflow.clear();
-        
-        jQuery.each(comps,function(idx,comp) {
-            // FIXME: just getting a name atm, also want type I think
+    function updateFigures(asm_name,json) {
+        debug.info('updating figures for ',asm_name,json)
+        jQuery.each(json['components'],function(idx,comp) {
+            // debug.info('idx=',idx)
+            // debug.info('comp=',comp)
             var name = comp['name'],
                 type = comp['type'],
+                flow = comp['workflow'],
                 fig = new openmdao.ComponentFigure(model,name,type)
                     
-            fig.setTitle(type+': '+name)
-            workflow.addFigure(fig,x,y)
+            fig.setTitle(name)
             figures[name] = fig
+            fig.setContent('<center>(('+type+'))'+'</center>')
+            var count = Object.keys(figures).length,
+                x = (count-1)*(fig.getWidth()+20)  + 20,
+                y = (count-1)*(fig.getHeight()+20) + 20
+            debug.info('count=',count,'x=',x,'y=',y)
+            workflow.addFigure(fig,x,y)
             
-            x = x+125;
-            y = y+100;                    
+            if (flow) {
+                updateFigures(name,flow)
+            }            
         })
         
-        jQuery.each(conns,function(idx,conn) {
+        jQuery.each(json['connections'],function(idx,conn) {
             var src_name = conn[0].split('.')[0],
                 dst_name = conn[1].split('.')[0],
-                src_fig = figures[src_name],
-                dst_fig = figures[dst_name],
                 c = new openmdao.ContextMenuConnection()
+            if (conn[0].indexOf('.') < 0)
+                src_name = asm_name
+            var src_fig = figures[src_name]
+            if (conn[1].indexOf('.') < 0)
+                dst_name = asm_name
+            var dst_fig = figures[dst_name]
+            debug.info('connection:',src_name,'==>',dst_name)
+            debug.info('connection:',src_fig,'==>',dst_fig)
             c.setSource(src_fig.getPort("output"));
             c.setTarget(dst_fig.getPort("input"));
             workflow.addFigure(c);
-        })
+        })        
     }
     
-    /** update the schematic, with data from the model */
+    /** update the schematic with data from the model */
     function update() {
-        model.getWorkflow(updateFigures)
+        model.getWorkflow(updateWorkflow)
     }
     
     // ask model for an update whenever something changes

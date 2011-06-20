@@ -236,24 +236,34 @@ class ConsoleServer(cmd.Cmd):
             comps = self._get_components(self.top)
         return comps
         
-    def get_workflow(self):
+    def _get_workflow(self,asm):
         """ get the list of components and connections between them
             that make up the workflow for the top level driver 
         """
         components = []
         connections = []
-        if self.top and self.top.driver:
-            # list of components (name & type)
-            names = self.top.driver.workflow.get_names()
-            for name in names:
-                comp = { 'name': name,
-                         'type': type(self.top.get(name)).__name__ }
-                components.append(comp)
+        if isinstance(asm,Assembly):
+            # list of components (name & type) in the workflow
+            # TODO:  want to get the order using iter()
+            for comp in asm.driver.iteration_set():
+                if isinstance(comp,Assembly):
+                    components.append({ 'name': comp.name,
+                                        'type': type(comp).__name__,
+                                        'workflow': self._get_workflow(comp) })
+                else:
+                    components.append({ 'name': comp.name,
+                                        'type': type(comp).__name__ })
             # list of connections (convert tuples to lists)
-            conntuples = self.top.list_connections()
+            conntuples = asm.list_connections()
             for connection in conntuples:
                 connections.append(list(connection))
-        return [ components, connections ]
+        return { 'components': components, 'connections': connections }
+
+    def get_workflow(self):
+        if self.top:
+            return self._get_workflow(self.top)
+        else:
+            return {}
 
     def _get_attributes(self,comp):
         """ get attributes of object """
