@@ -214,21 +214,6 @@ class HasParametersTestCase(unittest.TestCase):
         self.assertEqual(param[0].fd_step, 0.001)
         self.assertEqual(param[1].fd_step, None)
         
-    def test_types(self):
-        self.top.add('comp', Dummy())
-        self.top.driver.add_parameter('comp.enum_f')
-        self.assertEqual(self.top.driver.get_param_types(), ['enum'])
-        self.top.driver.remove_parameter('comp.enum_f')
-        self.top.driver.add_parameter('comp.enum_i')
-        self.assertEqual(set(self.top.driver.get_param_types()), set(['enum','discrete']))
-        self.top.driver.add_parameter('comp.enum_f')
-        self.assertEqual(set(self.top.driver.get_param_types()), set(['enum','discrete']))
-        self.top.driver.add_parameter('comp.x')
-        self.assertEqual(set(self.top.driver.get_param_types()), set(['enum','discrete',
-                                                                      'continuous']))
-        self.top.driver.clear_parameters()
-        self.top.driver.add_parameter('comp.i')
-        self.assertEqual(self.top.driver.get_param_types(), ['discrete'])
 
 
 class ParametersTestCase(unittest.TestCase):
