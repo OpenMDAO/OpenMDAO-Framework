@@ -118,6 +118,9 @@ class Architecture(object):
                 raise RuntimeError("this Architecture doesn't support the following "
                                    "parameter types: %s" % list(diff))
         
+        if self.constraint_types is None and self._get_constraint_types(): 
+            raise RuntimeError("this Architecture doesn't support any constraints")
+            
         if self.constraint_types is not None:
             try:
                 parent_cnstr_types = self._get_constraint_types()

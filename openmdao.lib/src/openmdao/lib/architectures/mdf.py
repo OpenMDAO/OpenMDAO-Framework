@@ -1,10 +1,6 @@
-from openmdao.main.problem_formulation import IArchitecture
-
 from openmdao.main.api import Driver, Architecture, implements
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver
 
-#TODO: Only supports HasObjective,HasParameters - real/continuous,
-#HasConstraints, HasCouplingVars
 class MDF(Architecture):
     
     def __init__(self, *args, **kwargs):
