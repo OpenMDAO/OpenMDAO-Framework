@@ -18,9 +18,7 @@ class Analysis(ArchitectureAssembly):
         #Local Des Vars
         self.add_parameter('branin.x')        
         self.add_parameter('branin.y')
-        
-        self.add_constraint('branin.x=branin.y')
-        
+                
         #No Global Des Vars or Coupling Vars
         
         #Objective (single only)    
