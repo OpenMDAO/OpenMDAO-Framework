@@ -134,5 +134,5 @@ openmdao.PropertiesEditor = function(id,model) {
         )
         return this
     }
-
+    
 }

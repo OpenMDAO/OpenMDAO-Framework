@@ -77,22 +77,19 @@ openmdao.DataFlow = function(id,model) {
      *  TODO: prob just want to iterate through & update existing figures
      */
     function updateFigures(asm_name,json) {
-        debug.info('updating figures for ',asm_name,json)
         jQuery.each(json['components'],function(idx,comp) {
-            // debug.info('idx=',idx)
-            // debug.info('comp=',comp)
             var name = comp['name'],
                 type = comp['type'],
+                path = comp['pathname'],
                 flow = comp['workflow'],
-                fig = new openmdao.ComponentFigure(model,name,type)
+                fig = new openmdao.ComponentFigure(model,path,name,type)
                     
-            fig.setTitle(name)
             figures[name] = fig
+            fig.setTitle(name)
             fig.setContent('<center>(('+type+'))'+'</center>')
             var count = Object.keys(figures).length,
                 x = (count-1)*(fig.getWidth()+20)  + 20,
                 y = (count-1)*(fig.getHeight()+20) + 20
-            debug.info('count=',count,'x=',x,'y=',y)
             workflow.addFigure(fig,x,y)
             
             if (flow) {
@@ -110,8 +107,6 @@ openmdao.DataFlow = function(id,model) {
             if (conn[1].indexOf('.') < 0)
                 dst_name = asm_name
             var dst_fig = figures[dst_name]
-            debug.info('connection:',src_name,'==>',dst_name)
-            debug.info('connection:',src_fig,'==>',dst_fig)
             c.setSource(src_fig.getPort("output"));
             c.setTarget(dst_fig.getPort("input"));
             workflow.addFigure(c);

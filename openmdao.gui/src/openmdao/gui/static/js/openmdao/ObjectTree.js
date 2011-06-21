@@ -155,14 +155,7 @@ openmdao.ObjectTree = function(id,model,edit_function) {
         menu.properties = {
             "label"  : 'Properties',
             "action" :  function(node) { 
-                            var tableID = 'PE-'+path.replace(/\./g,'-'),
-                                table = jQuery('<table id='+tableID+'></table>')
-                            table.dialog({
-                                'modal': false,
-                                'title': 'Properties: '+path,
-                                'close': function(ev, ui) { jQuery(tableID).remove() }
-                            })
-                            new openmdao.PropertiesEditor(tableID,model).editObject(path)
+                            new openmdao.PopupPropertiesEditor(model,path)
                         }
         }
         menu.add_to_workflow = {

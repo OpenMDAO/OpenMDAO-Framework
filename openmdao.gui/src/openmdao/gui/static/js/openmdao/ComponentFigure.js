@@ -7,8 +7,9 @@ LICENSE: NASA Open Source License
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.ComponentFigure=function(model,name,type){
-    this.model = model;
+openmdao.ComponentFigure=function(myModel,pathname,name,type){
+    this.myModel = myModel;
+    this.pathname = pathname;
     this.name = name;
     this.type = type;
     this.cornerWidth=15;
@@ -206,7 +207,7 @@ openmdao.ComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
     menu.appendMenuItem(new draw2d.MenuItem("Remove from Workflow",null,function(){
-        model.issueCommand("top.driver.workflow.remove('"+oThis.name+"')");
+        oThis.myModel.issueCommand("top.driver.workflow.remove('"+oThis.name+"')");
     }));
     return menu;
 };
@@ -214,3 +215,7 @@ openmdao.ComponentFigure.prototype.getContextMenu=function(){
 // openmdao.ComponentFigure.prototype.onMouseEnter=function(){
     // this.getWorkflow().showTooltip(new openmdao.Tooltip(this.name),true);
 // };
+
+openmdao.ComponentFigure.prototype.onDoubleClick=function(){
+    new openmdao.PopupPropertiesEditor(this.myModel,this.pathname)
+};

@@ -248,10 +248,12 @@ class ConsoleServer(cmd.Cmd):
             for comp in asm.driver.iteration_set():
                 if isinstance(comp,Assembly):
                     components.append({ 'name': comp.name,
+                                        'pathname': comp.get_pathname(),
                                         'type': type(comp).__name__,
                                         'workflow': self._get_workflow(comp) })
                 else:
                     components.append({ 'name': comp.name,
+                                        'pathname': comp.get_pathname(),
                                         'type': type(comp).__name__ })
             # list of connections (convert tuples to lists)
             conntuples = asm.list_connections()
