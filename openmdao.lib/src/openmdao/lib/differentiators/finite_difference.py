@@ -4,7 +4,7 @@ variety of difference types are available for both first and second order."""
 from ordereddict import OrderedDict
 
 # pylint: disable-msg=E0611,F0401
-from numpy import zeros, ones
+from numpy import array
 
 from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import Enum, Float
@@ -56,11 +56,11 @@ class FiniteDifference(HasTraits):
         self.eqconst_names = []
         self.ineqconst_names = []
         
-        self.gradient_case = {}
+        self.gradient_case = OrderedDict()
         self.gradient = {}
         
-        self.hessian_ondiag_case = {}
-        self.hessian_offdiag_case = {}
+        self.hessian_ondiag_case = OrderedDict()
+        self.hessian_offdiag_case = OrderedDict()
         self.hessian = {}
         
     def setup(self):
@@ -91,7 +91,8 @@ class FiniteDifference(HasTraits):
         """
         
         return self.gradient[wrt][output_name]
-        
+
+    
     def get_2nd_derivative(self, output_name, wrt):
         """Returns the 2nd derivative of output_name with respect to both vars
         in the tuple wrt.
@@ -105,21 +106,31 @@ class FiniteDifference(HasTraits):
         """
         
         return self.hessian[wrt[0]][wrt[1]][output_name]
+
+    
+    def get_gradient(self, output_name=None):
+        """Returns the gradient of the given output with respect to all 
+        parameters.
         
-    def get_gradient(self, input_name=None, set_type=None):
-        """Returns the gradient with respect to the given input.
-        
-         input_name: string
-            Name of the input in the local OpenMDAO hierarchy.
-            
-        If input_name is omitted, then the full gradient is returned.
+        output_name: string
+            Name of the output in the local OpenMDAO hierarchy.
         """
         
-    def get_Hessian(self, output_name, input1_name, input2_name):
-        """Returns the Hessian between the variable listed in output_name
-        and input1_name and input2_name"""
+        return array([self.gradient[wrt][output_name] for wrt in self.param_names])
         
         
+    def get_Hessian(self, output_name=None):
+        """Returns the Hessian matrix of the given output with respect to
+        all parameters.
+        
+        output_name: string
+            Name of the output in the local OpenMDAO hierarchy.
+        """       
+                
+
+        return array([self.hessian[wrt[0]][wrt[1]][out] for out in name_list])
+
+
     def calc_gradient(self):
         """Returns the gradient vectors for this Driver's workflow."""
         
@@ -158,7 +169,7 @@ class FiniteDifference(HasTraits):
             deltas = [0, -1]
             func = diff_1st_fwrdbwrd
 
-        self.gradient_case = {}
+        self.gradient_case = OrderedDict()
 
         # Assemble input data
         for param in self.param_names:
@@ -198,6 +209,7 @@ class FiniteDifference(HasTraits):
         # Save these for Hessian calculation
         self.base_param = base_param
         self.base_data = base_data
+
         
     def calc_hessian(self, reuse_first=False):
         """Returns the Hessian matrix for this Driver's workflow.
@@ -218,8 +230,8 @@ class FiniteDifference(HasTraits):
                 for name2 in self.param_names:
                     self.hessian[name1][name2] = {}
                 
-        self.hessian_ondiag_case = {}
-        self.hessian_offdiag_case = {}
+        self.hessian_ondiag_case = OrderedDict()
+        self.hessian_offdiag_case = OrderedDict()
 
         # Pull stepsizes from driver's parameters
         base_param = OrderedDict()
@@ -338,9 +350,10 @@ class FiniteDifference(HasTraits):
                                     case[3]['data'][name],
                                     eps1, eps2)
                     
+                    # Symmetry
+                    # (Should ponder whether we should even store it.)
                     self.hessian[key2][key1][name] = \
                         self.hessian[key1][key2][name]
-                    
                     
     
     def _run_point(self, data_param):
@@ -384,7 +397,7 @@ class FiniteDifference(HasTraits):
         """Finite Difference does not leave the model in a clean state. If you
         require one, then run this method."""
         
-        dvals = [float(val) for val in self.base_param]
+        dvals = [float(val) for val in self.base_param.values()]
         self._parent.set_parameters(dvals)
         super(type(self._parent), self._parent).run_iteration()
 

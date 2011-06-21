@@ -32,7 +32,7 @@ class Comp(Component):
         self.v = (self.x)**3 * (self.u)**2
 
         
-@add_delegate(HasParameters, HasObjective, UsesGradients, \
+@add_delegate(HasParameters, HasObjectives, UsesGradients, \
               UsesHessians, HasConstraints)
 class Driv(Driver):
     """ Simple dummy driver"""
@@ -43,8 +43,6 @@ class Driv(Driver):
         self.run_iteration()
     
     
-@add_delegate(HasParameters, HasObjective, UsesGradients, \
-              UsesHessians, HasConstraints)
 class Assy(Assembly):
     """ Assembly with driver and comp"""
     
@@ -61,6 +59,7 @@ class Assy(Assembly):
         self.driver.differentiator = FiniteDifference(self.driver)
         
         self.driver.add_objective('comp.y')
+        self.driver.add_objective('comp.v')
         
         # Design Variables 
         self.driver.add_parameter('comp.x', low=-50., high=50., fd_step=.01)
@@ -85,13 +84,33 @@ class FiniteDifferenceTestCase(unittest.TestCase):
         assert_rel_error(self, self.model.driver.differentiator.get_derivative('comp.y',wrt='comp.x'),
                                6.0, .001)
         assert_rel_error(self, self.model.driver.differentiator.get_derivative('comp.y',wrt='comp.u'),
-                               13.0, .001)       
+                               13.0, .001)
         assert_rel_error(self, self.model.driver.differentiator.get_derivative('Con1',wrt='comp.x'),
-                               7.0, .001)        
+                               7.0, .001)
         assert_rel_error(self, self.model.driver.differentiator.get_derivative('Con1',wrt='comp.u'),
-                               15.0, .001)        
+                               15.0, .001) 
         assert_rel_error(self, self.model.driver.differentiator.get_derivative('ConE',wrt='comp.u'),
-                               16.0, .001)        
+                               16.0, .001)
+        
+        grad = self.model.driver.differentiator.get_gradient('comp.y')
+        self.assertEqual(len(grad), 2)
+        assert_rel_error(self, grad[0], 6.0, .001)
+        assert_rel_error(self, grad[1], 13.0, .001)
+        
+        grad = self.model.driver.differentiator.get_gradient('comp.v')
+        self.assertEqual(len(grad), 2)
+        assert_rel_error(self, grad[0], 3.0, .001)
+        assert_rel_error(self, grad[1], 2.0, .001)
+        
+        grad = self.model.driver.differentiator.get_gradient('Con1')
+        self.assertEqual(len(grad), 2)
+        assert_rel_error(self, grad[0], 7.0, .001)
+        assert_rel_error(self, grad[1], 15.0, .001)
+        
+        grad = self.model.driver.differentiator.get_gradient('ConE')
+        self.assertEqual(len(grad), 2)
+        assert_rel_error(self, grad[0], 7.0, .001)
+        assert_rel_error(self, grad[1], 16.0, .001)
         
         for key, item in self.model.driver.get_parameters().iteritems():
             self.model.driver._hasparameters._parameters[key].ffd_step = None
@@ -134,6 +153,18 @@ class FiniteDifferenceTestCase(unittest.TestCase):
         assert_rel_error(self, self.model.driver.differentiator.get_2nd_derivative('ConE',wrt=('comp.u', 'comp.x')),
                                4.0, .001)        
         
+    def test_reset_state(self):
+        
+        self.model.driver.form = 'central'
+        self.model.comp.x = 1.0
+        self.model.comp.u = 1.0
+        self.model.run()
+        self.model.driver.differentiator.calc_gradient()
+        assert_rel_error(self, self.model.comp.u,
+                              0.99, .0001)
+        self.model.driver.differentiator.reset_state()
+        assert_rel_error(self, self.model.comp.u,
+                              1.0, .0001)
 
 if __name__ == '__main__':
     unittest.main()

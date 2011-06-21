@@ -164,12 +164,13 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         
         driver.ffd_order = 0
 
-        dobj = driver.differentiator.gradient_obj
+        obj_name = driver.get_objectives().keys()[0]
+        dobj = driver.differentiator.get_gradient(obj_name)
         
         i_current = 0
-        for ii in range(0, driver.differentiator.n_param):
-            for jj in range(0, ii+1):
-                ddobj[i_current] = driver.differentiator.hessian_obj[ii, jj]
+        for row, name1 in enumerate(driver.get_parameters().keys()):
+            for name2 in driver.get_parameters().keys()[0:row+1]:
+                ddobj[i_current] = driver.differentiator.get_2nd_derivative(obj_name, wrt=(name1, name2))
                 i_current += 1
 
     elif info in [4,5]:
@@ -188,12 +189,11 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             driver.differentiator.calc_gradient()
             driver.ffd_order = 0
         
-        nparam = driver.differentiator.n_param
-        ncon = driver.differentiator.n_ineqconst
-        
-        for ii in range(0, nparam):
-            dg[(ii*ncon):(ncon+ii*ncon)] = \
-              -driver.differentiator.gradient_ineq_const[ii, :]
+        i_current = 0
+        for param_name in driver.get_parameters().keys():
+            for con_name in driver.get_ineq_constraints().keys():
+                dg[i_current] = -driver.differentiator.get_derivative(con_name, wrt=param_name)
+                i_current += 1 
             
     return obj, dobj, ddobj, g, dg
 # pylint: enable-msg=W0613

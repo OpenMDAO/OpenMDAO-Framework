@@ -91,28 +91,12 @@ class SensitivityDriver(Driver):
         eq_con = self.get_eq_constraints().keys()
         ineq_con = self.get_ineq_constraints().keys()
         
-        for i, input_name in enumerate(inputs):
-            
-            for j, output_name in enumerate(objectives):
+        for input_name in inputs:
+            for output_name in list(objectives + eq_con + ineq_con):
                 
                 var_name = derivative_name(input_name, output_name)
-                
                 setattr(self, var_name,
-                        self.differentiator.gradient_obj[i,j])
-                
-            for j, output_name in enumerate(eq_con):
-                
-                var_name = derivative_name(input_name, output_name)
-                
-                setattr(self, var_name,
-                        self.differentiator.gradient_obj[i,j])
-                
-            for j, output_name in enumerate(ineq_con):
-                
-                var_name = derivative_name(input_name, output_name)
-                
-                setattr(self, var_name,
-                        self.differentiator.gradient_obj[i,j])
+                        self.differentiator.get_derivative(output_name, wrt=input_name))
                 
         # Sensitivity is sometimes run sequentially using different submodels,
         # so we need to return the state to the baseline value.

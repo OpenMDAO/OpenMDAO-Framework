@@ -403,18 +403,17 @@ class CONMINdriver(Driver):
             self.differentiator.calc_gradient()
             self.ffd_order = 0
                 
-            self.d_obj[:-2] = self.differentiator.gradient_obj
+            self.d_obj[:-2] = self.differentiator.get_gradient(self.get_objectives().keys()[0])
             
             for i in range(len(self.cons_active_or_violated)):
                 self.cons_active_or_violated[i] = 0
                 
-            ncon = self.differentiator.n_ineqconst
             self.cnmn1.nac = 0
-            for i in range(ncon):
+            for i, name in enumerate(self.get_ineq_constraints().keys()):
                 if self.constraint_vals[i] >= self.cnmn1.ct:
                     self.cons_active_or_violated[self.cnmn1.nac] = i+1
                     self.d_const[:-2, self.cnmn1.nac] = \
-                        self.differentiator.gradient_ineq_const[:, i]
+                        self.differentiator.get_gradient(name)
                     self.cnmn1.nac += 1
                     
         else:
