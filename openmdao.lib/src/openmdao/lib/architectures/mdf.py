@@ -15,7 +15,6 @@ class MDF(Architecture):
     def configure(self): 
         """setup and MDF architecture inside this assembly.
         """
-                
         #create the top level optimizer
         self.parent.add("driver",CONMINdriver())
         self.parent.driver.cons_is_linear = [1]*len(self.parent.list_constraints())

@@ -36,21 +36,15 @@ class EGO(Architecture):
         
         self.comp_name = None
         #check to make sure no more than one component is being referenced
-        for target,param in self.parent.get_parameters().iteritems():
-            comp = param.get_referenced_compnames()
-            if len(comp) > 1:
-                self.parent.raise_exception('The EGO architecture can only be used on one'
-                                            'component at a time, but parameters from %s '
-                                            'were added to the problem formulation.'%comp,ValueError)
-            elif self.comp_name is None: 
-                self.comp_name = comp.pop()
-            else:
-                comp = comp.pop()                
-                if comp != self.comp_name: 
-                    self.parent.raise_exception('The EGO architecture can only be used on one'
-                                            'component at a time, but parameters from %s '
-                                            'were added to the problem formulation.'%([comp[0],self.comp_name],),ValueError)
-                
+        compnames = set()
+        for param in self.parent.get_parameters().values():
+            compnames.update(param.get_referenced_compnames())
+
+        if len(compnames) > 1:
+            self.parent.raise_exception('The EGO architecture can only be used on one'
+                                        'component at a time, but parameters from %s '
+                                        'were added to the problem formulation.' %compnames, 
+                                        ValueError)
                 
         #change name of component to add '_model' to it. 
         #     lets me name the metamodel as the old name
@@ -94,12 +88,10 @@ class EGO(Architecture):
         EI_opt.generations = 10
         EI_opt.selection_method = "tournament"
         
-        
         for target in self.parent.get_parameters(): 
             EI_opt.add_parameter(target)
         EI_opt.add_objective("EI.%s"%self.EI_PI)
         EI_opt.force_execute = True
-        
         
         retrain = self.parent.add("retrain",Driver())
         retrain.add_event("%s.train_next"%self.comp_name)
@@ -122,7 +114,6 @@ class EGO(Architecture):
         
         #EI_opt.workflow.add([self.comp_name,'EI'])
         retrain.workflow.add(self.comp_name)
-        
         
         
     def cleanup(self):

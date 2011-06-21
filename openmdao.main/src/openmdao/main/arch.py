@@ -19,6 +19,7 @@ class Architecture(object):
         self.constraint_types = constraint_types
         self.num_allowed_objectives = num_allowed_objectives
         self.has_coupling_vars = has_coupling_vars
+        self.configured = False
     
     @property
     def param_types(self):
@@ -59,9 +60,6 @@ class Architecture(object):
         """setup the architecture inside of the assembly"""
         raise NotImplementedError("configure")
         
-    def clear(self):
-        raise NotImplementedError("clear")
-    
     def _get_param_types(self):
         """Returns a list of parameter types that are currently present
         in the parent.  Possible entry values are: 'continuous', 'discrete', and 'enum'.
@@ -98,39 +96,46 @@ class Architecture(object):
         if self.parent is None:
             raise RuntimeError("no parent Assembly is defined for this Architecture")
         
-        if self.num_allowed_objectives is not None:
-            try:
-                objs = self.parent.get_objectives()
-            except:
-                objs = {}
-            if len(objs) > self.num_allowed_objectives:
+        try:
+            lenobjs = len(self.parent.get_objectives())
+        except:
+            lenobjs = 0
+        if lenobjs > 0:
+            if self.num_allowed_objectives is None:
+                raise RuntimeError("this Architecture doesn't support objectives, but "
+                                   "%d were found in the parent" % lenobjs)
+            elif lenobjs > self.num_allowed_objectives:
                 raise RuntimeError("this Architecture supports %d objectives, but "
                                    "%d were found in the parent" % 
-                                   (self.num_allowed_objectives, len(objs)))
+                                   (self.num_allowed_objectives, lenobjs))
         
-        if self.param_types is not None:
-            try:
-                parent_param_types = self._get_param_types()
-            except AttributeError:
-                parent_param_types = []
-            diff = set(parent_param_types) - set(self.param_types)
-            if len(diff) > 0:
-                raise RuntimeError("this Architecture doesn't support the following "
-                                   "parameter types: %s" % list(diff))
+        try:
+            parent_param_types = self._get_param_types()
+        except AttributeError:
+            parent_param_types = []
+        if len(parent_param_types) > 0:
+            if self.param_types is None:
+                raise RuntimeError("this Architecture doesn't support parameters, but "
+                                   "parameter types %s were found in parent" % 
+                                   parent_param_types)
+            else:
+                diff = set(parent_param_types) - set(self.param_types)
+                if len(diff) > 0:
+                    raise RuntimeError("this Architecture doesn't support the following "
+                                       "parameter types: %s" % list(diff))
         
-        if self.constraint_types is None and self._get_constraint_types(): 
-            raise RuntimeError("this Architecture doesn't support any constraints")
-            
-        if self.constraint_types is not None:
-            try:
-                parent_cnstr_types = self._get_constraint_types()
-            except AttributeError:
-                parent_cnstr_types = []
-            diff = set(parent_cnstr_types) - set(self.constraint_types)
-            if len(diff) > 0:
-                raise RuntimeError("this Architecture doesn't support the following "
-                                   "constraint types: %s" % list(diff))
-                
+        try:
+            parent_cnstr_types = self._get_constraint_types()
+        except AttributeError:
+            parent_cnstr_types = []
+        if len(parent_cnstr_types) > 0:
+            if self.constraint_types is None:
+                raise RuntimeError("this Architecture doesn't support constraints")
+            else:
+                diff = set(parent_cnstr_types) - set(self.constraint_types)
+                if len(diff) > 0:
+                    raise RuntimeError("this Architecture doesn't support the following "
+                                       "constraint types: %s" % list(diff))
         try:
             parent_coupling_vars = self.parent.list_coupling_vars()
         except AttributeError:

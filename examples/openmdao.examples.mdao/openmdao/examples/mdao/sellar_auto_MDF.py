@@ -62,7 +62,6 @@ if __name__ == "__main__": # pragma: no cover
     
     prob = SellarMDF()
     set_as_top(prob)
-    prob.configure()
         
     prob.dis1.z1 = prob.dis2.z1 = 5.0
     prob.dis1.z2 = prob.dis2.z2 = 2.0

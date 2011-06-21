@@ -93,11 +93,7 @@ class ArchitectureAssembly(Assembly):
         return self
 
     def _architecture_changed(self, old, new): 
-        #TODO: When architecture is added, need to check to make sure it can
-        #support all the types of stuff in the assembly. (single vs. multiple
-        #objectives, constraints, all the variable types, etc.)
-        
-        if old is None:
+        if old is None or not old.configured:
             self.architecture.parent = self
         else:
             self._trait_change_notify(False)
@@ -105,13 +101,22 @@ class ArchitectureAssembly(Assembly):
                 self.architecture = old  # put the old value back
             finally:
                 self._trait_change_notify(True)
-            self.raise_exception("This Assembly was already configured with another architecture.",
-                                 RuntimeError)
+            self.raise_exception("This Assembly was already configured with another "
+                                 "architecture.", RuntimeError)
     
     def configure(self): 
         self.architecture.check_config()
         self.architecture.configure()
+        self.architecture.configured = True
     
+    def check_config(self):
+        super(ArchitectureAssembly, self).check_config()
+        if self.architecture is not None:
+            if self.architecture.configured:
+                self.architecture.check_config()
+            else:
+                self.configure()
+
     def get_local_des_vars(self):
         """Return a list of single target Parameters."""
         return [(k,v) for k,v in self.get_parameters().items() 
@@ -121,10 +126,4 @@ class ArchitectureAssembly(Assembly):
         """Return a list of multi target Parameters."""
         return [(k,v) for k,v in self.get_parameters().items() 
                                         if isinstance(v, ParameterGroup)]
-        
-    def check_config(self):
-        super(ArchitectureAssembly, self).check_config()
-        if self.architecture is not None:
-            self.architecture.check_config()
-
         
