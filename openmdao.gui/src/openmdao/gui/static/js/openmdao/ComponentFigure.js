@@ -219,3 +219,10 @@ openmdao.ComponentFigure.prototype.getContextMenu=function(){
 openmdao.ComponentFigure.prototype.onDoubleClick=function(){
     new openmdao.PopupPropertiesEditor(this.myModel,this.pathname)
 };
+
+openmdao.ComponentFigure.prototype.onMouseEnter=function(){
+    this.setColor(new draw2d.Color(0,255,0));
+};
+openmdao.ComponentFigure.prototype.onMouseLeave=function(){
+    this.setColor(null);
+};

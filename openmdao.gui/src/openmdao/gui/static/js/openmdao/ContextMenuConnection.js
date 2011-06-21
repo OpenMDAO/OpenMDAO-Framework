@@ -31,3 +31,9 @@ openmdao.ContextMenuConnection.prototype.getContextMenu=function(){
     );
     return menu;
 };
+openmdao.ContextMenuConnection.prototype.addlabel=function(text){
+    var label=new draw2d.Label(text);
+    label.setBackgroundColor(new draw2d.Color(230,230,250));
+    label.setBorder(new draw2d.LineBorder(1));
+    this.addFigure(label,new draw2d.ManhattanMidpointLocator(this));    
+}
