@@ -153,6 +153,13 @@ class FiniteDifferenceTestCase(unittest.TestCase):
         assert_rel_error(self, self.model.driver.differentiator.get_2nd_derivative('ConE',wrt=('comp.u', 'comp.x')),
                                4.0, .001)        
         
+        hess = self.model.driver.differentiator.get_Hessian('comp.y')
+        print hess
+        assert_rel_error(self, hess[0][0], 2.0, .001)
+        assert_rel_error(self, hess[1][1], 18.0, .001)
+        assert_rel_error(self, hess[0][1], 4.0, .001)
+        assert_rel_error(self, hess[1][0], 4.0, .001)
+        
     def test_reset_state(self):
         
         self.model.driver.form = 'central'

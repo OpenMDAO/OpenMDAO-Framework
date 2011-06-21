@@ -2,6 +2,7 @@
 variety of difference types are available for both first and second order."""
 
 from ordereddict import OrderedDict
+from itertools import product
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array
@@ -128,11 +129,13 @@ class FiniteDifference(HasTraits):
         """       
                 
 
-        return array([self.hessian[wrt[0]][wrt[1]][out] for out in name_list])
+        #return array([self.hessian[in1][in2][output_name] for (in1,in2) in product(self.param_names, self.param_names)])
+        return array([self.hessian[in1][in2][output_name] for (in1,in2) in product(self.param_names, self.param_names)])
 
 
     def calc_gradient(self):
-        """Returns the gradient vectors for this Driver's workflow."""
+        """Calculates the gradient vectors for all outputs in this Driver's
+        workflow."""
         
         self.setup()
 
@@ -212,7 +215,8 @@ class FiniteDifference(HasTraits):
 
         
     def calc_hessian(self, reuse_first=False):
-        """Returns the Hessian matrix for this Driver's workflow.
+        """Returns the Hessian matrix for all outputs in the Driver's
+        workflow.
         
         reuse_first: bool
             Switch to reuse some data from the gradient calculation so that
