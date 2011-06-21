@@ -51,34 +51,36 @@ follows:
 .. testcode:: CONMIN_load
 
     from openmdao.main.api import Assembly
+    from openmdao.examples.enginedesign.vehicle import Vehicle
     from openmdao.lib.drivers.api import CONMINdriver
 
     class EngineOptimization(Assembly):
         """ Top level assembly for optimizing a vehicle. """
     
         def __init__(self):
-            """ Creates a new Assembly containing a DrivingSim and an optimizer"""
-        
+            """ Creates a new Assembly for vehicle performance optimization."""
+            
             super(EngineOptimization, self).__init__()
-
-            # Create DrivingSim component instances
-            self.add('driving_sim', DrivingSim())
 
             # Create CONMIN Optimizer instance
             self.add('driver', CONMINdriver())
         
-            # add DrivingSim to workflow
-            self.driver.workflow.add('driving_sim')
+            # Create Vehicle instance
+            self.add('vehicle', Vehicle())
         
-            # Add Vehicle instance to vehicle socket
-            self.driving_sim.add('vehicle', Vehicle())
+            # add Vehicle to optimizer workflow
+            self.driver.workflow.add('vehicle')
+    
+            # CONMIN Flags
+            self.driver.iprint = 0
+            self.driver.itmax = 30
+            
+            # CONMIN Objective 
+            self.driver.add_objective('vehicle.fuel_burn')
         
             # CONMIN Design Variables 
-            self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
-            self.driver.add_parameter('driving_sim.bore', low=65. , high=100.)
-
-            # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-            self.driver.add_objective('-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)')
+            self.driver.add_parameter('vehicle.spark_angle', low=-50. , high=10.)
+            self.driver.add_parameter('vehicle.bore', low=65. , high=100.)
 
 This first section of code defines an assembly called EngineOptimization.
 This assembly contains a DrivingSim component and a CONMINdriver, both of
@@ -192,10 +194,10 @@ variables as follows:
 
 .. testcode:: CONMIN_show
 
-    map(self.driver.add_constraint, ['driving_sim.stroke < driving_sim.bore',
-                               'driving_sim.stroke * driving_sim.bore > 1.0'])
+    map(self.driver.add_constraint, ['vehicle.stroke < vehicle.bore',
+                               'vehicle.stroke * vehicle.bore > 1.0'])
     self.driver.cons_is_linear = [1, 0]
-
+    
 Here, the first constraint is linear, and the second constraint is nonlinear. If 
 ``cons_is_linear`` is not specified, then all the constraints are assumed to be
 nonlinear. Note that the original CONMIN parameter for this is ``ISC``. If

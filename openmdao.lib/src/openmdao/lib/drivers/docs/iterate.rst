@@ -10,8 +10,8 @@ single-output problem using fixed point iteration. It provides a way
 to iterate on a single input to match an output. In other words, fixed
 point iteration can be used to solve the equation ``x = f(x)``. By extension,
 FixedPointIterator can be used to close a loop in the data flow. The
-algorithm is probably useful for some problems, so it is included here.
-However, it may require more functional evaluations than the :ref:`BroydenSolver`.
+algorithm is useful for some problems, so it is included here.
+However, it may require more functional evaluations than the BroydenSolver.
 
 As an example, let's implement a component that can be run iteratively to
 produce the square root of a number.
@@ -60,11 +60,13 @@ like this.
             self.driver.workflow.add('problem')
             
             # Set our independent and dependent
-            self.driver.x_in = 'problem.x'    
-            self.driver.x_out = 'problem.y'
+            self.driver.add_parameter('problem.x', low=-9.e99, high=9.e99)
+            self.driver.add_constraint('problem.y = problem.x')
 
-The *x* input and the *F(x)* output are specified as string expressions and assigned to
-``x_in`` and ``x_out`` in the solver.
+The *x* input and the *F(x)* output equation are specified as string expressions using the
+``add_parameter`` and ``add_constraint`` methods. The constraint contains the
+equation ``x = f(x)``, which we are trying to solve. Note that this is a single-input
+single-output method, so it is only valid to specify one constraint and one parameter.
             
 .. doctest:: FPI
 
@@ -82,6 +84,5 @@ specifies the number of iterations to run. The default value for
 
 A more useful example in which the FixedPointIterator is used to converge two
 coupled components is shown in :ref:`Tutorial:-MDAO-Architectures`.
-
 *Source Documentation for iterate.py*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
