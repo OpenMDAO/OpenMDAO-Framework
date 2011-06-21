@@ -30,7 +30,8 @@ class Dummy(Component):
     
     
 class DummyArchitecture(Architecture):
-    pass
+    def configure(self):
+        pass
 
 
 class ProblemFormulationTest(unittest.TestCase):
@@ -102,8 +103,11 @@ class ProblemFormulationTest(unittest.TestCase):
         self.assertEqual([],self.asm.list_coupling_vars())
         
     def test_double_set_arch(self):
-        arch = DummyArchitecture()
-        self.asm.architecture = arch
+        self.asm.architecture = DummyArchitecture()
+        # no exception expected since arch isn'g configured yet
+        self.asm.architecture = DummyArchitecture()
+        self.asm.configure()
+        arch = self.asm.architecture
         try:
             self.asm.architecture = DummyArchitecture()
         except RuntimeError as err:
@@ -121,10 +125,10 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.add_parameter("D1.i", low=0, high=9)
         try:
             self.asm.check_config()
-        except RuntimeError as err:
+        except Exception as err:
             self.assertEqual(str(err), "this Architecture doesn't support the following parameter types: ['discrete']")
         else:
-            self.fail("RuntimeError expected")
+            self.fail("Exception expected")
             
         arch.param_types.append('discrete')
         self.asm.check_config()
@@ -132,10 +136,10 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.add_parameter("D1.en")
         try:
             self.asm.check_config()
-        except RuntimeError as err:
+        except Exception as err:
             self.assertEqual(str(err), "this Architecture doesn't support the following parameter types: ['enum']")
         else:
-            self.fail("RuntimeError expected")
+            self.fail("Exception expected")
 
         arch.param_types.append('enum')
         self.asm.check_config()
@@ -148,10 +152,10 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.add_parameter("D1.iarr[2]", low=0, high=9)
         try:
             self.asm.check_config()
-        except RuntimeError as err:
+        except Exception as err:
             self.assertEqual(str(err), "this Architecture doesn't support the following parameter types: ['discrete']")
         else:
-            self.fail("RuntimeError expected")
+            self.fail("Exception expected")
             
         try:
             arch.param_types = ['eq', 'continuous', 'blah']
@@ -162,7 +166,14 @@ class ProblemFormulationTest(unittest.TestCase):
             self.fail("Exception expected")
             
         arch.param_types = None
-        self.asm.check_config()
+        try:
+            self.asm.check_config()
+        except RuntimeError as err:
+            self.assertEqual(str(err), "this Architecture doesn't support parameters, "
+                             "but parameter types ['discrete', 'continuous'] were found "
+                             "in parent")
+        else:
+            self.fail("RuntimeError expected")
 
         
     def test_check_config_constraints(self):
@@ -206,7 +217,7 @@ class ProblemFormulationTest(unittest.TestCase):
         try:        
             self.asm.check_config()
         except RuntimeError as err:
-            self.assertEqual(str(err), "this Architecture doesn't support any constraints")
+            self.assertEqual(str(err), "this Architecture doesn't support constraints")
         else: 
             self.fail("RuntimeError expected")
             
@@ -228,8 +239,13 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.check_config()
         
         arch.num_allowed_objectives = None
-        self.asm.check_config()
-        
+        try:
+            self.asm.check_config()
+        except Exception as err:
+            self.assertEqual(str(err), "this Architecture doesn't support objectives, "
+                             "but 2 were found in the parent")
+        else:
+            self.fail("Exception expected")
 
 if __name__ == "__main__":
     unittest.main()

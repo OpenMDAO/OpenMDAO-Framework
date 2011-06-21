@@ -88,12 +88,10 @@ class EGO(Architecture):
         EI_opt.generations = 10
         EI_opt.selection_method = "tournament"
         
-        
         for target in self.parent.get_parameters(): 
             EI_opt.add_parameter(target)
         EI_opt.add_objective("EI.%s"%self.EI_PI)
         EI_opt.force_execute = True
-        
         
         retrain = self.parent.add("retrain",Driver())
         retrain.add_event("%s.train_next"%self.comp_name)
@@ -116,7 +114,6 @@ class EGO(Architecture):
         
         #EI_opt.workflow.add([self.comp_name,'EI'])
         retrain.workflow.add(self.comp_name)
-        
         
         
     def cleanup(self):

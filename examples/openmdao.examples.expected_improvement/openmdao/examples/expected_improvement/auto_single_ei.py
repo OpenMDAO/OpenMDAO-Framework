@@ -62,7 +62,6 @@ if __name__ == "__main__":
     analysis.architecture.sample_iterations = 20
     analysis.architecture.EI_PI = "PI"
     analysis.architecture.min_ei_pi = .01
-    analysis.configure()
     analysis.run()
     
     
