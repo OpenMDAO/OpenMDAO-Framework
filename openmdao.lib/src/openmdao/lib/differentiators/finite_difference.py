@@ -1,6 +1,7 @@
 """ Differentiates a driver's workflow using the finite difference method. A
 variety of difference types are available for both first and second order."""
 
+from ordereddict import OrderedDict
 
 # pylint: disable-msg=E0611,F0401
 from numpy import zeros, ones
@@ -50,15 +51,13 @@ class FiniteDifference(HasTraits):
         
         self._parent = parent
         
-        self.n_eqconst = 0
-        self.n_ineqconst = 0
-        self.n_param = 0
-        self.n_objective = 0
+        self.param_names = []
+        self.objective_names = []
+        self.eqconst_names = []
+        self.ineqconst_names = []
         
         self.gradient_case = []
-        self.gradient_obj = zeros(0, 'd')
-        self.gradient_ineq_const = zeros(0, 'd')
-        self.gradient_eq_const = zeros(0, 'd')
+        self.gradient = OrderedDict()
         
         self.hessian_ondiag_case = []
         self.hessian_offdiag_case = []
@@ -73,8 +72,8 @@ class FiniteDifference(HasTraits):
     def setup(self):
         """Sets some dimensions."""
 
-        self.n_param = len(self._parent.get_parameters())
-        self.n_objective = len(self._parent.get_objectives())
+        self.param_names = self._parent.get_parameters().keys()
+        self.objective_names = self._parent.get_objectives().keys()
         
         self.multi_obj = False
         try:
@@ -83,21 +82,42 @@ class FiniteDifference(HasTraits):
             self.multi_obj = True
         
         try:
-            self.n_ineqconst = len(self._parent.get_ineq_constraints())
+            self.ineqconst_names = self._parent.get_ineq_constraints().keys()
         except AttributeError:
-            pass
+            self.ineqconst_names = []
         try:
-            self.n_eqconst = len(self._parent.get_eq_constraints())
+            self.eqconst_names = self._parent.get_eq_constraints().keys()
         except AttributeError:
-            pass
+            self.eqconst_names = []
         
         
-    def get_gradient(output_name, input_name):
-        """Returns the gradient between the variable listed in output_name
-        and input_name"""
-
+    def get_derivative(self, output_name, wrt):
+        """Returns the derivative of output_name with respect to wrt.
         
-    def get_Hessian(output_name, input1_name, input2_name):
+        output_name: string
+            Name of the output in the local OpenMDAO hierarchy.
+            
+        wrt: string
+            Name of the input in the local OpenMDAO hierarchy. The
+            derivative is with respect to this variable.
+        """
+        
+    def get_gradient(self, input_name=None, set_type=None):
+        """Returns the gradient with respect to the given input.
+        
+        output_name: string
+            Name of the output in the local OpenMDAO hierarchy. If this is
+            omitted, then a Numpy array containing all outputs is returned.
+            
+        input_name: string
+            Name of the input in the local OpenMDAO hierarchy. If this is
+            omitted, then a Numpy array containing all inputs is returned.
+            
+        If both output_name and input_name are omitted, then the full gradient
+        is returned.
+        """
+        
+    def get_Hessian(self, output_name, input1_name, input2_name):
         """Returns the Hessian between the variable listed in output_name
         and input1_name and input2_name"""
         
@@ -107,23 +127,16 @@ class FiniteDifference(HasTraits):
         
         self.setup()
 
-        # Dimension the matrices that will store the answers
-        if self.multi_obj:
-            self.gradient_obj = zeros([self.n_param, self.n_objective], 'd')
-        else:
-            self.gradient_obj = zeros(self.n_param, 'd')
-        self.gradient_ineq_const = zeros([self.n_param, self.n_ineqconst], 'd')
-        self.gradient_eq_const = zeros([self.n_param, self.n_eqconst], 'd')
-        
         # Pull initial state and stepsizes from driver's parameters
-        base_param = zeros(self.n_param, 'd')
-        stepsize = ones(self.n_param, 'd')*self.default_stepsize
-        for i_param, item in enumerate(self._parent.get_parameters().values()):
-            base_param[i_param] = item.evaluate()
+        base_param = {}
+        stepsize = {}
+        for key, item in self._parent.get_parameters().iteritems():
+            base_param[key] = item.evaluate()
             
-            fd_step = item.fd_step
-            if fd_step:
-                stepsize[i_param] = fd_step
+            if item.fd_step:
+                stepsize[key] = item.fd_step
+            else:
+                stepsize[key] = self.default_stepsize
 
         # For Forward or Backward diff, we want to save the baseline
         # objective and constraints. These are also needed for the
@@ -146,13 +159,13 @@ class FiniteDifference(HasTraits):
         self.gradient_case = []
 
         # Assemble input data
-        for i_param in range(0, self.n_param):
+        for param in self.param_names:
             
             pcase = []
             for j_step, delta in enumerate(deltas):
                 
                 case = base_param.copy()
-                case[i_param] += delta*stepsize[i_param]
+                case[param] += delta*stepsize[param]
                 pcase.append({ 'param': case })
                 
             self.gradient_case.append(pcase)
