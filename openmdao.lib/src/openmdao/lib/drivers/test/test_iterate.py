@@ -8,6 +8,7 @@ import unittest
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.datatypes.api import Float
 from openmdao.lib.drivers.iterate import FixedPointIterator, IterateUntil
+from openmdao.util.testutil import assert_rel_error
 
 
 class Simple1(Component):
@@ -57,6 +58,19 @@ class Simple4(Component):
     def execute(self):
         self.outvar = self.outvar + self.invar
 
+class Multi(Component): 
+    """Testing for iteration counting and stop conditions"""
+    in1 = Float(1.0, iotype="in")
+    in2 = Float(1.0, iotype="in")
+    out1 = Float(0, iotype="out")
+    out2 = Float(0, iotype="out")
+    
+    def __init__(self): 
+        super(Multi, self).__init__()
+    def execute(self):
+        self.out1 = self.in1/10.0
+        self.out2 = self.in2/10.0
+
 class FixedPointIteratorTestCase(unittest.TestCase):
     """test FixedPointIterator component"""
 
@@ -78,6 +92,22 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.top.simple.invar, 
                                self.top.simple.outvar, places=6)
         self.assertEqual(self.top.driver.current_iteration, 1)
+            
+    def test_multi_success(self):
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", Multi())
+        self.top.driver.workflow.add('simple')
+        
+        self.top.driver.add_constraint('simple.out1 = simple.in1')
+        self.top.driver.add_constraint('simple.out2 = simple.in2')
+        self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
+        self.top.driver.tolerance = .02
+        self.top.run()
+        
+        assert_rel_error(self, self.top.simple.in1, .01, .002)
+        assert_rel_error(self, self.top.simple.out1, .001, .0002)
+        self.assertEqual(self.top.driver.current_iteration, 2)
             
     def test_maxiteration(self):
         self.top.add("driver", FixedPointIterator())
@@ -115,7 +145,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
     def test_check_config(self):
         self.top.add("driver", FixedPointIterator())
-        self.top.add("simple", Simple1())
+        self.top.add("simple", Multi())
         self.top.driver.workflow.add('simple')
         
         try:
@@ -126,7 +156,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         else:
             self.fail('RuntimeError expected')
             
-        self.top.driver.add_constraint('simple.outvar - simple.invar = 0')
+        self.top.driver.add_constraint('simple.out1 - simple.in1 = 0')
 
         try:
             self.top.run()
@@ -136,25 +166,14 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         else:
             self.fail('RuntimeError expected')
 
-        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
-        self.top.driver.add_parameter('simple.extra_invar', -9e99, 9e99)
-
+        self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
+        
         try:
             self.top.run()
         except RuntimeError, err:
-            msg = "driver: FixedPointIterator can only take a single " + \
-                  "input parameter."
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail('RuntimeError expected')
-
-        self.top.driver.add_constraint('simple.outvar - 2.0*simple.invar = 0')
-
-        try:
-            self.top.run()
-        except RuntimeError, err:
-            msg = "driver: FixedPointIterator can only take a single " + \
-                  "constraint equation."
+            msg = "driver: The number of input parameters must equal the number" + \
+                  " of output constraint equations in FixedPointIterator."
             self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')

@@ -34,6 +34,7 @@ class SellarDiscipline1(Component):
         y2 = self.y2
         
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
+        #print "(%f, %f, %f)" % (z1, z2, x1)
 
 
 
