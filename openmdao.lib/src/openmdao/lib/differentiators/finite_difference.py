@@ -222,7 +222,8 @@ class FiniteDifference(HasTraits):
             Switch to reuse some data from the gradient calculation so that
             we don't have to re-run some points we already ran (namely the
             baseline, +eps, and -eps cases.) Obviously you do this when the
-            driver needs gradient and hessian information at the same point.
+            driver needs gradient and hessian information at the same point,
+            and calls calc_gradient before calc_hessian.
         """
         
         self.setup()
