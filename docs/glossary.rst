@@ -237,11 +237,6 @@ Glossary
         close proximity to each other, such as within a building. 
 
       
-      **Launchpad**
-        Free open-source project hosting. The repository is based on the Bazaar version control
-        system.
-
-
       **MDAO**  
         Multi-disciplinary Analysis & Optimization
 

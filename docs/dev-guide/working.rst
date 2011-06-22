@@ -11,7 +11,7 @@ OpenMDAO. If you have not activated your environment, please do so before procee
 
 The following sections provide information on how to carry out some basic
 actions in the development environment. You would perform these actions on a
-branch that you pulled from Launchpad.
+branch that you pulled from Github.
 
 .. note::  In some cases the examples are written from the Linux perspective. Windows users
    need to replace the ``/`` with a ``\``.
@@ -254,11 +254,11 @@ If you have a conflict, please refer to `Resolving Conflicts
 in the *Bazaar User Guide.*
 
 
-.. index:: branch; pushing to Launchpad
+.. index:: branch; pushing to Github
 
-.. _Pushing-a-Branch-Back-to-Launchpad:
+.. _Pushing-a-Branch-Back-to-Github:
 
-Pushing a Branch Back to Launchpad
+Pushing a Branch Back to Github
 -----------------------------------
 
 The following instructions are for Linux, OS X, and Windows platforms. 
@@ -276,17 +276,17 @@ related ticket number when she merges it. For more information about submitting 
 the `OpenMDAO Development page <http://openmdao.org/wiki/Development>`_ on our website. 
 
 On the branch to be pushed, type the following command, replacing ``userid`` with your
-Launchpad userid and replacing ``branch_name`` with the name of the branch you are
+Github userid and replacing ``branch_name`` with the name of the branch you are
 pushing.
 
 ::
 
   bzr push lp:~userid/openmdao/branch_name 
 
-Now that your branch is on Launchpad, you can request that it be merged by following 
+Now that your branch is on Github, you can request that it be merged by following 
 the instructions below.
 
-1. Go to `OpenMDAO <https://launchpad.net/openmdao>`_ on Launchpad and log in if you are
+1. Go to `OpenMDAO <https://launchpad.net/openmdao>`_ on Github and log in if you are
    not logged in already.
 
 2. Click on the *Code* tab at the top of the page to go to *Bazaar branches of

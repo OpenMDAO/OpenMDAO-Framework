@@ -7,7 +7,7 @@ version control, testing, deployment, etc. The source files for the
 *Developer Guide* can be found in the ``docs/dev-guide`` directory in the top
 level of your OpenMDAO source repository.
 
-.. index:: Bazaar
+.. index:: Git
 
 
 .. _`developer-requirements`:
@@ -20,11 +20,13 @@ the :ref:`System-Requirements` section under *Getting Started.*  These requireme
 below.
 
 
-**Bazaar**
-  We use Bazaar for version control.  You'll need it to access the OpenMDAO
-  source repository.  Installers for various platforms can be found `here`__.
+**git**
+  We use git for version control.  You'll need it to access the OpenMDAO
+  source repository.  Github, where our source repository is stored, has
+  excellent documentation describing how to install git and how to get
+  familiar with git and github.  You can find it `here`__.
     
-.. __: http://wiki.bazaar.canonical.com/Download
+.. __: http://help.github.com
 
 **C/C++ and Fortran Compilers**
   Certain packages used in OpenMDAO contain Python extensions, meaning that they
@@ -97,17 +99,15 @@ your system for Bazaar and :term:`virtualenv` to function properly. If you're us
 please follow this `link <http://answers.oreilly.com/topic/675-how-to-configure-proxy-settings-in-windows-7/>`_
 for information on configuring proxy settings.
 
-*Bazaar User Setup*
-+++++++++++++++++++
+*Git User Setup*
+++++++++++++++++
 
-If you have not previously used Bazaar on a particular machine where you intend
-to work with Bazaar repositories, you should run the ``whoami``
-command so that Bazaar will know your email address. You need to supply your
-first and last name and your email address in the following way:
+If you have not previously used git on a particular machine where you intend
+to work with git repositories, you should follow the instructions `here`__ to
+set your username, email, and API token.
 
-::
 
-    bzr whoami "Joe Cool <joe@example.com>"
+.. __: http://help.github.com/set-your-user-name-email-and-github-token
 
 
 .. index:: repository
@@ -125,16 +125,27 @@ Getting the Source Code
 +++++++++++++++++++++++
 
 Before you can do any development work on OpenMDAO, you'll need a copy of the source code.
-The source repository for the OpenMDAO  project is available on :term:`Launchpad`. You can
-create a copy of the repository by typing:
+The source repository for the OpenMDAO  project is available on :term:`github`. The first
+step in this process is to *fork* the OpenMDAO repository, which will create your own copy
+of the OpenMDAO repository on github.  To fork a repository, simply go to its page on github
+and click the *Fork* button. 
+
+To get a local copy to work on, you must *clone* the forked OpenMDAO repository on
+github using the following command:
 
 ::
 
-   bzr branch lp:openmdao <branch_name>
+   git clone git@github.com:username/OpenMDAO.git
    
    
-where ``<branch_name>`` is the name you are assigning the top level directory of your branch
-repository. It's a good idea to name branches based on ticket numbers in our bug  tracker
+Then, you should create a branch in your local repository using the following command:
+
+::
+
+   git checkout -b <branch_name>
+
+
+It's a good idea to name branches based on ticket numbers in our bug  tracker
 (:term:`Trac`) using the form ``T<ticket_number>-<desc>``, where ``ticket_number`` is the
 Trac ticket number and ``<desc>`` is a short description of the branch, for example,
 ``T0029-workflow_fix``.  Trac automatically assigns a ticket number when you submit a bug or
