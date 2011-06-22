@@ -2,9 +2,10 @@
 variety of difference types are available for both first and second order."""
 
 from ordereddict import OrderedDict
+from itertools import product
 
 # pylint: disable-msg=E0611,F0401
-from numpy import zeros, ones
+from numpy import array
 
 from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import Enum, Float
@@ -56,30 +57,18 @@ class FiniteDifference(HasTraits):
         self.eqconst_names = []
         self.ineqconst_names = []
         
-        self.gradient_case = []
-        self.gradient = OrderedDict()
+        self.gradient_case = OrderedDict()
+        self.gradient = {}
         
-        self.hessian_ondiag_case = []
-        self.hessian_offdiag_case = []
-        self.hessian_obj = zeros(0, 'd')
-        self.hessian_ineq_const = zeros(0, 'd')
-        self.hessian_eq_const = zeros(0, 'd')
+        self.hessian_ondiag_case = OrderedDict()
+        self.hessian_offdiag_case = OrderedDict()
+        self.hessian = {}
         
-        # Some drivers will use the HasObjectives delegate, so we must allow
-        # for the possibility of multiple objectives.
-        self.multi_obj = False
-    
     def setup(self):
         """Sets some dimensions."""
 
         self.param_names = self._parent.get_parameters().keys()
         self.objective_names = self._parent.get_objectives().keys()
-        
-        self.multi_obj = False
-        try:
-            self._parent.eval_objective()
-        except AttributeError:
-            self.multi_obj = True
         
         try:
             self.ineqconst_names = self._parent.get_ineq_constraints().keys()
@@ -102,33 +91,61 @@ class FiniteDifference(HasTraits):
             derivative is with respect to this variable.
         """
         
-    def get_gradient(self, input_name=None, set_type=None):
-        """Returns the gradient with respect to the given input.
+        return self.gradient[wrt][output_name]
+
+    
+    def get_2nd_derivative(self, output_name, wrt):
+        """Returns the 2nd derivative of output_name with respect to both vars
+        in the tuple wrt.
         
         output_name: string
-            Name of the output in the local OpenMDAO hierarchy. If this is
-            omitted, then a Numpy array containing all outputs is returned.
+            Name of the output in the local OpenMDAO hierarchy.
             
-        input_name: string
-            Name of the input in the local OpenMDAO hierarchy. If this is
-            omitted, then a Numpy array containing all inputs is returned.
-            
-        If both output_name and input_name are omitted, then the full gradient
-        is returned.
+        wrt: tuple containing two strings
+            Names of the inputs in the local OpenMDAO hierarchy. The
+            derivative is with respect to these 2 variables.
         """
         
-    def get_Hessian(self, output_name, input1_name, input2_name):
-        """Returns the Hessian between the variable listed in output_name
-        and input1_name and input2_name"""
+        return self.hessian[wrt[0]][wrt[1]][output_name]
+
+    
+    def get_gradient(self, output_name=None):
+        """Returns the gradient of the given output with respect to all 
+        parameters.
+        
+        output_name: string
+            Name of the output in the local OpenMDAO hierarchy.
+        """
+        
+        return array([self.gradient[wrt][output_name] for wrt in self.param_names])
         
         
+    def get_Hessian(self, output_name=None):
+        """Returns the Hessian matrix of the given output with respect to
+        all parameters.
+        
+        output_name: string
+            Name of the output in the local OpenMDAO hierarchy.
+        """       
+                
+
+        #return array([self.hessian[in1][in2][output_name] for (in1,in2) in product(self.param_names, self.param_names)])
+        return array([self.hessian[in1][in2][output_name] for (in1,in2) in product(self.param_names, self.param_names)])
+
+
     def calc_gradient(self):
-        """Returns the gradient vectors for this Driver's workflow."""
+        """Calculates the gradient vectors for all outputs in this Driver's
+        workflow."""
         
         self.setup()
 
+        # Create our 2D dictionary the first time we execute.
+        if not self.gradient:
+            for name in self.param_names:
+                self.gradient[name] = {}
+                
         # Pull initial state and stepsizes from driver's parameters
-        base_param = {}
+        base_param = OrderedDict()
         stepsize = {}
         for key, item in self._parent.get_parameters().iteritems():
             base_param[key] = item.evaluate()
@@ -142,8 +159,7 @@ class FiniteDifference(HasTraits):
         # objective and constraints. These are also needed for the
         # on-diagonal Hessian terms, so we will save them in the class
         # later.
-        base_obj, base_ineqconst, base_eqconst = \
-                self._run_point(base_param)
+        base_data = self._run_point(base_param)
         
         # Set up problem based on Finite Difference type
         if self.form == 'central':
@@ -156,7 +172,7 @@ class FiniteDifference(HasTraits):
             deltas = [0, -1]
             func = diff_1st_fwrdbwrd
 
-        self.gradient_case = []
+        self.gradient_case = OrderedDict()
 
         # Assemble input data
         for param in self.param_names:
@@ -168,58 +184,39 @@ class FiniteDifference(HasTraits):
                 case[param] += delta*stepsize[param]
                 pcase.append({ 'param': case })
                 
-            self.gradient_case.append(pcase)
+            self.gradient_case[param] = pcase
             
         # Run all "cases".
         # TODO - Integrate OpenMDAO's concurrent processing capability once it
         # is formalized. This operation is inherently paralellizable.
-        for case in self.gradient_case:
+        for key, case in self.gradient_case.iteritems():
             for ipcase, pcase in enumerate(case):
                 if deltas[ipcase]:
-                    data_obj, data_ineqconst, data_eqconst = \
-                            self._run_point(pcase['param'])
-                    
-                    pcase['obj'] = data_obj
-                    pcase['ineqconst'] = data_ineqconst
-                    pcase['eqconst'] = data_eqconst
+                    pcase['data'] = self._run_point(pcase['param'])
                 else:
-                    pcase['obj'] = base_obj
-                    pcase['ineqconst'] = base_ineqconst
-                    pcase['eqconst'] = base_eqconst
+                    pcase['data'] = base_data
                 
         
         # Calculate gradients
-        for icase, case in enumerate(self.gradient_case):
+        for key, case in self.gradient_case.iteritems():
             
-            eps = stepsize[icase]
+            eps = stepsize[key]
             
-            # Calculate gradients
-            if self.multi_obj:
-                for j in range(0, self.n_objective):
-                    self.gradient_obj[icase, j] = \
-                        func(case[0]['obj'][j], case[1]['obj'][j], eps)
-            else:
-                self.gradient_obj[icase] = \
-                    func(case[0]['obj'], case[1]['obj'], eps)
-
-            for j in range(0, self.n_ineqconst):
-                self.gradient_ineq_const[icase, j] = \
-                    func(case[0]['ineqconst'][j],
-                         case[1]['ineqconst'][j], eps)
-                
-            for j in range(0, self.n_eqconst):
-                self.gradient_eq_const[icase, j] = \
-                    func(case[0]['eqconst'][j],
-                         case[1]['eqconst'][j], eps)
+            for name in list(self.objective_names + \
+                             self.eqconst_names + \
+                             self.ineqconst_names):
+                self.gradient[key][name] = \
+                    func(case[0]['data'][name],
+                         case[1]['data'][name], eps)
 
         # Save these for Hessian calculation
         self.base_param = base_param
-        self.base_obj = base_obj
-        self.base_eqconst = base_eqconst
-        self.base_ineqconst = base_ineqconst
+        self.base_data = base_data
+
         
     def calc_hessian(self, reuse_first=False):
-        """Returns the Hessian matrix for this Driver's workflow.
+        """Returns the Hessian matrix for all outputs in the Driver's
+        workflow.
         
         reuse_first: bool
             Switch to reuse some data from the gradient calculation so that
@@ -230,57 +227,52 @@ class FiniteDifference(HasTraits):
         
         self.setup()
         
-        # Dimension the matrices that will store the answers
-        if self.multi_obj:
-            self.hessian_obj = zeros([self.n_param, self.n_param, self.n_objective], 'd')
-        else:
-            self.hessian_obj = zeros([self.n_param, self.n_param], 'd')
-        self.hessian_ineq_const = zeros([self.n_param, self.n_param, 
-                                         self.n_ineqconst], 'd')
-        self.hessian_eq_const = zeros([self.n_param, self.n_param, 
-                                       self.n_eqconst], 'd')
-        
-        self.hessian_ondiag_case = []
-        self.hessian_offdiag_case = []
+        # Create our 3D dictionary the first time we execute.
+        if not self.hessian:
+            for name1 in self.param_names:
+                self.hessian[name1] = {}
+                for name2 in self.param_names:
+                    self.hessian[name1][name2] = {}
+                
+        self.hessian_ondiag_case = OrderedDict()
+        self.hessian_offdiag_case = OrderedDict()
 
         # Pull stepsizes from driver's parameters
-        stepsize = ones(self.n_param, 'd')*self.default_stepsize
-        for i_param, item in enumerate(self._parent.get_parameters().values()):
-            fd_step = item.fd_step
-            if fd_step:
-                stepsize[i_param] = fd_step
+        base_param = OrderedDict()
+        stepsize = {}
+        for key, item in self._parent.get_parameters().iteritems():
+            
+            if item.fd_step:
+                stepsize[key] = item.fd_step
+            else:
+                stepsize[key] = self.default_stepsize
 
         # Diagonal terms in Hessian always need base point
         # Usually, we will have saved this when we calculated
         # the gradient.
         if reuse_first:
             base_param = self.base_param
-            base_obj = self.base_obj
-            base_eqconst = self.base_eqconst
-            base_ineqconst = self.base_ineqconst
+            base_data = self.base_data
         else:
-            
             # Pull initial state from driver's parameters
-            base_param = zeros(self.n_param, 'd')
-            for i_param, item in enumerate(self._parent.get_parameters().values()):
-                base_param[i_param] = item.evaluate()
+            for key, item in self._parent.get_parameters().iteritems():
+                base_param[key] = item.evaluate()
                     
-            base_obj, base_ineqconst, base_eqconst = \
-                    self._run_point(base_param)
+            base_data = self._run_point(base_param)
             
         # Assemble input data
         # Cases : ondiag [fp, fm]
         deltas = [1, -1]
-        for i_param in range(0, self.n_param):
+        for param in self.param_names:
             
             pcase = []
-            for j_step, step in enumerate(deltas):
+            for j_step, delta in enumerate(deltas):
                 
                 case = base_param.copy()
-                case[i_param] += step*stepsize[i_param]
+                case[param] += delta*stepsize[param]
                 pcase.append({ 'param': case })
                 
-            self.hessian_ondiag_case.append(pcase)
+            self.hessian_ondiag_case[param] = pcase
             
         # Assemble input data
         # Cases : offdiag [fpp, fpm, fmp, fmm]
@@ -288,179 +280,128 @@ class FiniteDifference(HasTraits):
                   [1, -1],
                   [-1, 1],
                   [-1, -1]]
-        for i_param in range(0, self.n_param):
+        for i, param1 in enumerate(self.param_names):
             
-            offdiag = []
-            for j_param in range(0, i_param):
+            offdiag = {}
+            for param2 in self.param_names[i+1:]:
             
                 pcase = []
                 for delta in deltas:
                     
                     case = base_param.copy()
-                    case[i_param] += delta[0]*stepsize[i_param]
-                    case[j_param] += delta[1]*stepsize[j_param]
+                    case[param1] += delta[0]*stepsize[param1]
+                    case[param2] += delta[1]*stepsize[param2]
                     pcase.append({ 'param': case })
-                offdiag.append(pcase)
+                offdiag[param2] = pcase
                     
-            self.hessian_offdiag_case.append(offdiag)
+            self.hessian_offdiag_case[param1] = offdiag
             
         # Run all "cases".
         # TODO - Integrate OpenMDAO's concurrent processing capability once it
         # is formalized. This operation is inherently paralellizable.
+        
+        # We don't need to re-run on-diag cases if the gradients were
+        # calculated with Central Difference.
         if reuse_first and self.form=='central':
-            for icase, case in enumerate(self.hessian_ondiag_case):
+            for key, case in self.hessian_ondiag_case.iteritems():
                 
-                gradient_case = self.gradient_case[icase]
+                gradient_case = self.gradient_case[key]
                 for ipcase, pcase in enumerate(case):
                     
                     gradient_ipcase = gradient_case[ipcase]
-                    pcase['obj'] = gradient_ipcase['obj'] 
-                    pcase['ineqconst'] = gradient_ipcase['ineqconst'] 
-                    pcase['eqconst'] = gradient_ipcase['eqconst'] 
+                    pcase['data'] = gradient_ipcase['data'] 
         else:
-            for case in self.hessian_ondiag_case:
+            for case in self.hessian_ondiag_case.values():
                 for pcase in case:
-                    
-                    data_obj, data_ineqconst, data_eqconst = \
-                            self._run_point(pcase['param'])
-                    
-                    pcase['obj'] = data_obj
-                    pcase['ineqconst'] = data_ineqconst
-                    pcase['eqconst'] = data_eqconst
-                
-        for cases in self.hessian_offdiag_case:
-            for case in cases:
+                    data = self._run_point(pcase['param'])
+                    pcase['data'] = data
+
+        # Off-diag cases must always be run.
+        for cases in self.hessian_offdiag_case.values():
+            for case in cases.values():
                 for pcase in case:
+                    pcase['data'] = self._run_point(pcase['param'])
+
                     
-                    data_obj, data_ineqconst, data_eqconst = \
-                            self._run_point(pcase['param'])
-                    
-                    pcase['obj'] = data_obj
-                    pcase['ineqconst'] = data_ineqconst
-                    pcase['eqconst'] = data_eqconst
-                
-        # Calculate Hessians
-        for icase, case in enumerate(self.hessian_ondiag_case):
+        # Calculate Hessians - On Diagonal
+        for key, case in self.hessian_ondiag_case.iteritems():
             
-            eps = stepsize[icase]
+            eps = stepsize[key]
             
-            # Calculate Hessians
-            if self.multi_obj:
-                for j in range(0, self.n_objective):
-                    self.hessian_obj[icase, icase, j] = \
-                        diff_2nd_xx(case[0]['obj'][j], base_obj[j],
-                                    case[1]['obj'][j], eps)
-            else:
-                self.hessian_obj[icase, icase] = \
-                    diff_2nd_xx(case[0]['obj'], base_obj, case[1]['obj'], eps)
-                 
-            for j in range(0, self.n_ineqconst):
-                self.hessian_ineq_const[icase, icase, j] = \
-                    diff_2nd_xx(case[0]['ineqconst'][j],
-                                base_ineqconst[j],
-                                case[1]['ineqconst'][j], eps)
+            for name in list(self.objective_names + \
+                             self.eqconst_names + \
+                             self.ineqconst_names):
+                self.hessian[key][key][name] = \
+                    diff_2nd_xx(case[0]['data'][name],
+                                base_data[name],
+                                case[1]['data'][name], eps)
                 
-            for j in range(0, self.n_eqconst):
-                self.hessian_eq_const[icase, icase, j] = \
-                    diff_2nd_xx(case[0]['eqconst'][j],
-                                base_eqconst[j],
-                                case[1]['eqconst'][j], eps)
-                
-        for icase, cases in enumerate(self.hessian_offdiag_case):
+        # Calculate Hessians - Off Diagonal
+        for key1, cases in self.hessian_offdiag_case.iteritems():
             
-            eps1 = stepsize[icase]
-            for jcase, case in enumerate(cases):
-            
-                eps2 = stepsize[jcase]
+            eps1 = stepsize[key1]
+            for key2, case in cases.iteritems():
                 
-                # Calculate Hessians
-                if self.multi_obj:
-                    for j in range(0, self.n_objective):
-                        self.hessian_obj[icase, jcase, j] = \
-                             diff_2nd_xy(case[0]['obj'][j], 
-                                         case[1]['obj'][j],
-                                         case[2]['obj'][j],
-                                         case[3]['obj'][j],
-                                         eps1, eps2)
-                        
-                    self.hessian_obj[jcase, icase, j] = self.hessian_obj[icase, jcase, j]
-                     
-                else:
-                    self.hessian_obj[icase, jcase] = \
-                         diff_2nd_xy(case[0]['obj'], 
-                                     case[1]['obj'],
-                                     case[2]['obj'],
-                                     case[3]['obj'],
-                                     eps1, eps2)
-                            
-                    self.hessian_obj[jcase, icase] = self.hessian_obj[icase, jcase]
-                     
-                for j in range(0, self.n_ineqconst):
-                    self.hessian_ineq_const[icase, jcase, j] = \
-                        diff_2nd_xy(case[0]['ineqconst'][j],
-                                    case[1]['ineqconst'][j],
-                                    case[2]['ineqconst'][j],
-                                    case[3]['ineqconst'][j],
+                eps2 = stepsize[key2]
+                
+                for name in list(self.objective_names + \
+                                 self.eqconst_names + \
+                                 self.ineqconst_names):
+                    self.hessian[key1][key2][name] = \
+                        diff_2nd_xy(case[0]['data'][name],
+                                    case[1]['data'][name],
+                                    case[2]['data'][name],
+                                    case[3]['data'][name],
                                     eps1, eps2)
                     
-                    self.hessian_ineq_const[jcase, icase, j] = \
-                        self.hessian_ineq_const[icase, jcase, j]
-                    
-                for j in range(0, self.n_eqconst):
-                    self.hessian_eq_const[icase, jcase, j] = \
-                        diff_2nd_xy(case[0]['eqconst'][j],
-                                    case[1]['eqconst'][j],
-                                    case[2]['eqconst'][j],
-                                    case[3]['eqconst'][j],
-                                    eps1, eps2)
-                
-                    self.hessian_eq_const[jcase, icase, j] = \
-                        self.hessian_eq_const[icase, jcase, j]
+                    # Symmetry
+                    # (Should ponder whether we should even store it.)
+                    self.hessian[key2][key1][name] = \
+                        self.hessian[key1][key2][name]
                     
     
     def _run_point(self, data_param):
         """Runs the model at a single point and captures the results. Note that 
         some differences require the baseline point."""
 
-        # Temp storage of all responses
-        data_ineqconst = zeros([self.n_ineqconst], 'd')
-        data_eqconst = zeros([self.n_eqconst], 'd')
-
-        dvals = [float(val) for val in data_param]
+        dvals = [float(val) for val in data_param.values()]
         self._parent.set_parameters(dvals)
         
-        # Runs the model
+        # Run the model
         super(type(self._parent), self._parent).run_iteration()
-
-        if self.multi_obj:
-            data_obj = self._parent.eval_objectives()
-        else:
-            data_obj = self._parent.eval_objectives()[0]
-
-        if self.n_ineqconst:
-            for j, v in enumerate(self._parent.get_ineq_constraints().values()):
-                val = v.evaluate(self._parent.parent)
-                if '>' in val[2]:
-                    data_ineqconst[j] = val[1]-val[0]
-                else:
-                    data_ineqconst[j] = val[0]-val[1]
         
-        if self.n_eqconst:
-            for j, v in enumerate(self._parent.get_eq_constraints().values()):
-                val = v.evaluate()
+        data = {}
+
+        # Get Objectives
+        for key, item in self._parent.get_objectives().iteritems():
+            data[key] = item.evaluate(self._parent.parent)
+
+        # Get Inequality Constraints
+        if self.ineqconst_names:
+            for key, item in self._parent.get_ineq_constraints().iteritems():
+                val = item.evaluate(self._parent.parent)
                 if '>' in val[2]:
-                    data_eqconst[j] = val[1]-val[0]
+                    data[key] = val[1]-val[0]
                 else:
-                    data_eqconst[j] = val[0]-val[1]
-                    
-        return data_obj, data_ineqconst, data_eqconst
+                    data[key] = val[0]-val[1]
+        
+        # Get Equality Constraints
+        if self.eqconst_names:
+            for key, item in self._parent.get_eq_constraints().iteritems():
+                val = item.evaluate(self._parent.parent)
+                if '>' in val[2]:
+                    data[key] = val[1]-val[0]
+                else:
+                    data[key] = val[0]-val[1]
+        
+        return data
                     
 
     def reset_state(self):
         """Finite Difference does not leave the model in a clean state. If you
         require one, then run this method."""
         
-        dvals = [float(val) for val in self.base_param]
+        dvals = [float(val) for val in self.base_param.values()]
         self._parent.set_parameters(dvals)
         super(type(self._parent), self._parent).run_iteration()
 
