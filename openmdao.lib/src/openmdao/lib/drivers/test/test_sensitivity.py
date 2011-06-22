@@ -48,7 +48,6 @@ class Assy(Assembly):
         self.driver.add_objective('comp.y')
         self.driver.add_objective('comp.v')
         
-        self.driver.create_outputs()
         self.driver.differentiator = FiniteDifference(self.driver)
         
         
@@ -65,20 +64,20 @@ class SensitivityDriverTestCase(unittest.TestCase):
         self.model.comp.x = 1.0
         self.model.comp.u = 1.0
         self.model.run()
-        assert_rel_error(self, self.model.driver.d__comp_y__comp_x, 
+        assert_rel_error(self, self.model.driver.dF[0][0], 
                                6.0, .001)
-        assert_rel_error(self, self.model.driver.d__comp_y__comp_u, 
+        assert_rel_error(self, self.model.driver.dF[0][1], 
                                13.0, .001)
-        assert_rel_error(self, self.model.driver.d__comp_v__comp_x, 
+        assert_rel_error(self, self.model.driver.dF[1][0], 
                                3.0, .001)
-        assert_rel_error(self, self.model.driver.d__comp_v__comp_u, 
+        assert_rel_error(self, self.model.driver.dF[1][1], 
                                2.0, .001)
         
     def test_error_messages(self):
         
         self.model.driver.clear_objectives()
         try:
-            self.model.driver.create_outputs()
+            self.model.driver._check()
         except ValueError, err:
             msg = "driver: Missing outputs for gradient calculation"
             self.assertEqual(str(err), msg)
@@ -87,7 +86,7 @@ class SensitivityDriverTestCase(unittest.TestCase):
             
         self.model.driver.clear_parameters()
         try:
-            self.model.driver.create_outputs()
+            self.model.driver._check()
         except ValueError, err:
             msg = "driver: Missing inputs for gradient calculation"
             self.assertEqual(str(err), msg)

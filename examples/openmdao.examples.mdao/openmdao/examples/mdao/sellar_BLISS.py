@@ -8,12 +8,13 @@
     match the original Sobiesky-Agte implementation.
 """
 
-from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
+from openmdao.examples.mdao.disciplines import SellarDiscipline1,\
                                                SellarDiscipline2
 from openmdao.main.api import Assembly
 from openmdao.lib.datatypes.api import Float
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, SensitivityDriver, FixedPointIterator
+from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
+                                     SensitivityDriver, FixedPointIterator
 
 
 class SellarBLISS(Assembly):
