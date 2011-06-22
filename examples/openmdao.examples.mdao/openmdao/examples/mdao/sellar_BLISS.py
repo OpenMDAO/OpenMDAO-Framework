@@ -67,7 +67,6 @@ class SellarBLISS(Assembly):
         self.sa_dis1.add_parameter('dis1.x1', low=  0.0, high=10.0, fd_step=.01)
         self.sa_dis1.add_objective('dis1.y1')
         self.sa_dis1.add_objective(objective, name='obj')
-        self.sa_dis1.create_outputs()
         self.sa_dis1.differentiator = FiniteDifference(self.sa_dis1)
         self.sa_dis1.default_stepsize = 1.0e-6
         
@@ -85,7 +84,6 @@ class SellarBLISS(Assembly):
         self.ssa.add_objective('dis1.y1')
         self.ssa.add_objective('dis2.y2')
         self.ssa.add_objective(objective, name='obj')
-        self.ssa.create_outputs()
         self.ssa.differentiator = FiniteDifference(self.ssa)
         self.ssa.default_stepsize = 1.0e-6
         
@@ -93,8 +91,8 @@ class SellarBLISS(Assembly):
         # (Only discipline1 has an optimization input)
         self.add('bbopt1', CONMINdriver())
         self.bbopt1.add_parameter('x1_store', low=0.0, high=10.0)
-        self.bbopt1.add_objective('sa_dis1.d__obj__dis1_x1*(x1_store-dis1.x1)')
-        self.bbopt1.add_constraint('dis1.y1 + sa_dis1.d__dis1_y1__dis1_x1*(x1_store-dis1.x1) > 3.16')
+        self.bbopt1.add_objective('sa_dis1.dF[1][0]*(x1_store-dis1.x1)')
+        self.bbopt1.add_constraint('dis1.y1 + sa_dis1.dF[0][0]*(x1_store-dis1.x1) > 3.16')
         self.bbopt1.linobj = True
         self.bbopt1.iprint = 0
         self.bbopt1.force_execute = True
@@ -103,9 +101,9 @@ class SellarBLISS(Assembly):
         self.add('sysopt', CONMINdriver())
         self.sysopt.add_parameter('z1_store', low=-10.0, high=10.0)
         self.sysopt.add_parameter('z2_store', low=0.0, high=10.0)
-        self.sysopt.add_objective('ssa.d__obj__dis1_z1*(z1_store-dis1.z1) + ssa.d__obj__dis1_z2*(z2_store-dis1.z2)')
-        self.sysopt.add_constraint('dis1.y1 + ssa.d__dis1_y1__dis1_z1*(z1_store-dis1.z1) + ssa.d__dis1_y1__dis1_z2*(z2_store-dis1.z2) > 3.16')
-        self.sysopt.add_constraint('dis2.y2 + ssa.d__dis2_y2__dis1_z1*(z1_store-dis1.z1) + ssa.d__dis2_y2__dis1_z2*(z2_store-dis1.z2) < 24.0')
+        self.sysopt.add_objective('ssa.dF[2][0]*(z1_store-dis1.z1) + ssa.dF[2][1]*(z2_store-dis1.z2)')
+        self.sysopt.add_constraint('dis1.y1 + ssa.dF[0][0]*(z1_store-dis1.z1) + ssa.dF[0][1]*(z2_store-dis1.z2) > 3.16')
+        self.sysopt.add_constraint('dis2.y2 + ssa.dF[1][0]*(z1_store-dis1.z1) + ssa.dF[1][1]*(z2_store-dis1.z2) < 24.0')
         self.sysopt.linobj = True
         self.sysopt.iprint = 0
         self.sysopt.force_execute = True

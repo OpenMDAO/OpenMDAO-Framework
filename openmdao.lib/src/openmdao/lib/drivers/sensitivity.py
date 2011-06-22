@@ -12,9 +12,10 @@
 __all__ = ['SensitivityDriver']
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Float
+from numpy import zeros
+
+from openmdao.lib.datatypes.api import Array, Float
 from openmdao.main.api import Driver
-from openmdao.main.derivatives import derivative_name
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjectives
@@ -22,7 +23,7 @@ from openmdao.main.uses_derivatives import UsesGradients
 from openmdao.util.decorators import add_delegate
 
 
-@add_delegate(HasParameters, HasObjectives, UsesGradients, HasConstraints)
+@add_delegate(HasParameters, HasObjectives, HasConstraints, UsesGradients)
 class SensitivityDriver(Driver):
     """Driver to calculate the gradient of a workflow, and return
     it as a driver output. The gradient is calculated from all
@@ -32,53 +33,20 @@ class SensitivityDriver(Driver):
     method can be plugged. Fake finite difference is supported.
     """
     
-    def create_outputs(self):
-        """Creates OpenMDAO variables for the gradient outputs.
-        
-        The derivative outputs are named based on their location in
-        the local hierarchy. Dots in the dotted path are replaced by
-        underscores.
-        
-        For example, if our input is comp1.x and the output is comp1.y,
-        then the derivative will be named:
-        
-        d__comp1_y__comp1_x
-        
-        Double underscores separate the numerator and denominator.
-        """
-        
-        self._check()
-        
-        inputs = self.get_parameters().keys()
-        objectives = self.get_objectives().keys()
-        eq_con = self.get_eq_constraints().keys()
-        ineq_con = self.get_ineq_constraints().keys()
-        
-        for input_name in inputs:
-            
-            for output_name in objectives:
-                
-                var_name = derivative_name(input_name, output_name)
-                
-                self.add_trait(var_name, Float(0.0, iostatus='out',
-                           desc = 'Derivative output from SensitivityDriver'))
-            
-            for output_name in eq_con:
-                
-                var_name = derivative_name(input_name, output_name)
-                
-                self.add_trait(var_name, Float(0.0, iostatus='out',
-                           desc = 'Derivative output from SensitivityDriver'))
-            
-            for output_name in ineq_con:
-                
-                var_name = derivative_name(input_name, output_name)
-                
-                self.add_trait(var_name, Float(0.0, iostatus='out',
-                           desc = 'Derivative output from SensitivityDriver'))
-            
+    dF = Array(zeros((0,0),'d'), iotype='out', desc='Sensitivity of the '
+               'objectives withrespect to the parameters.')
+    dG = Array(zeros((0,0),'d'), iotype='out', desc='Sensitivity of the '
+               'constraints withrespect to the parameters.')
+    
+    dF_names = Array(zeros((0,0),'d'), iotype='out', desc='Objective names that'
+                     'correspond to our indices')
+    dG_names = Array(zeros((0,0),'d'), iotype='out', desc='Sensitivity of the constraints with'
+               'respect to the parameters.')
+    
     def execute(self):
         """Calculate the gradient of the workflow."""
+        
+        self._check()
         
         # Calculate gradient of the workflow
         self.calc_derivatives(first=True)
@@ -87,16 +55,21 @@ class SensitivityDriver(Driver):
         self.ffd_order = 0
             
         inputs = self.get_parameters().keys()
-        objectives = self.get_objectives().keys()
-        eq_con = self.get_eq_constraints().keys()
-        ineq_con = self.get_ineq_constraints().keys()
+        objs = self.get_objectives().keys()
+        constraints = list(self.get_eq_constraints().keys() + \
+                           self.get_ineq_constraints().keys())
         
-        for input_name in inputs:
-            for output_name in list(objectives + eq_con + ineq_con):
+        self.dF = zeros((len(objs), len(inputs)), 'd')
+        self.dG = zeros((len(objs), len(inputs)), 'd')
+
+        for i, input_name in enumerate(inputs):
+            for j, output_name in enumerate(objs):
+                self.dF[j][i] = self.differentiator.get_derivative(output_name, 
+                                                                   wrt=input_name)
                 
-                var_name = derivative_name(input_name, output_name)
-                setattr(self, var_name,
-                        self.differentiator.get_derivative(output_name, wrt=input_name))
+            for j, output_name in enumerate(constraints):
+                self.dG[j][i] = self.differentiator.get_derivative(output_name, 
+                                                                   wrt=input_name)
                 
         # Sensitivity is sometimes run sequentially using different submodels,
         # so we need to return the state to the baseline value.
