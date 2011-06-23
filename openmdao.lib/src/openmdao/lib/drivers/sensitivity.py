@@ -40,6 +40,11 @@ class SensitivityDriver(Driver):
                'constraints withrespect to the parameters. Index 1 is the '
                'constraint output, while index 2 is the parameter input')
     
+    F = Array(zeros((0,0),'d'), iotype='out', desc='Values of the objectives which '
+               'sensitivities are taken around.')
+    G = Array(zeros((0,0),'d'), iotype='out', desc='Values of the constraints which '
+               'sensitivities are taken around.')
+    
     dF_names = List([], iotype='out', desc='Objective names that'
                      'correspond to our array indices')
     dG_names = List([], iotype='out', desc='Constraint names that'
