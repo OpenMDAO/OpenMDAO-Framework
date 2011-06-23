@@ -58,7 +58,11 @@ openmdao.PropertiesEditor = function(id,model) {
     elm.append(outputsHeader)
     elm.append(outputsDiv)
 
-    var inputs = new Slick.Grid(inputsDiv, [], columns, inputs_options)       
+    var inputs = new Slick.Grid(inputsDiv, [], columns, inputs_options)
+    inputsHeader.click(function () {
+        inputsDiv.toggle("normal")
+        return false;
+    });
     inputs.onCellChange.subscribe(function(e,args) {
         // TODO: better way to do this (e.g. model.setProperty(path,name,value)
         cmd = 'top.'+self.pathname+'.'+args.item.name+'='+args.item.value
@@ -66,6 +70,10 @@ openmdao.PropertiesEditor = function(id,model) {
     })
     
     var outputs = new Slick.Grid(outputsDiv, [], columns, outputs_options)       
+    outputsHeader.click(function () {
+        outputsDiv.toggle("normal")
+        return false;
+    });
         
     // grid.onAddNewRow.subscribe(function(e, args) {
         // var item = args.item,

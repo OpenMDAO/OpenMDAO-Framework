@@ -7,10 +7,9 @@ LICENSE: NASA Open Source License
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.ComponentFigure=function(myModel,pathname,name,type){
+openmdao.ComponentFigure=function(myModel,pathname,type){
     this.myModel = myModel;
     this.pathname = pathname;
-    this.name = name;
     this.type = type;
     this.cornerWidth=15;
     this.cornerHeight=15;
@@ -19,6 +18,19 @@ openmdao.ComponentFigure=function(myModel,pathname,name,type){
     draw2d.Node.call(this);
     this.setDimension(100,50);
     this.originalHeight=-1;
+    
+    var tok = pathname.split('.')
+    if (tok.length > 1)
+        this.name = tok[tok.length-1]
+    else
+        this.name = pathname
+    this.setTitle(this.name)
+    
+    var tok = type.split('.')
+    if (tok.length > 1)
+        this.setContent('<center>(('+tok[tok.length-1]+'))'+'</center>')
+    else
+        this.setContent('<center>(('+type+'))'+'</center>')
 };
 
 openmdao.ComponentFigure.prototype=new draw2d.Node();

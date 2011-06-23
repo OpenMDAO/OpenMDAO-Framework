@@ -1,19 +1,21 @@
-openmdao.WorkflowFigure=function(myModel,pathname,name,type){
+openmdao.WorkflowFigure=function(myModel,pathname,type){
     this.myModel = myModel;
     this.pathname = pathname;
-    this.name = name;
     this.type = type;
-    if(name){
-        this.title=name;
-    }
-    else{
-        this.title="";
-    }
     this.titlebar=null;
     this.defaultBackgroundColor=new draw2d.Color(230,230,250);
     this.highlightBackgroundColor=new draw2d.Color(250,250,200);
     draw2d.CompartmentFigure.call(this);
     this.setBackgroundColor(this.defaultBackgroundColor);
+    
+    var tok = pathname.split('.')    
+    if (tok.length > 1)
+        this.name = tok[tok.length-1];
+    else
+        this.name = pathname
+    this.setTitle(name);    
+    
+    this.setDimension(110,60);    
 };
 openmdao.WorkflowFigure.prototype=new draw2d.CompartmentFigure();
 openmdao.WorkflowFigure.prototype.createHTMLElement=function(){

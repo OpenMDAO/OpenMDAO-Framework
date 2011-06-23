@@ -235,8 +235,8 @@ class ConsoleServer(cmd.Cmd):
         if self.top:
             comps = self._get_components(self.top)
         return comps
-        
-    def _get_workflow(self,asm):
+
+    def _get_dataflow(self,asm):
         """ get the list of components and connections between them
             that make up the workflow for the top level driver 
         """
@@ -250,7 +250,7 @@ class ConsoleServer(cmd.Cmd):
                     components.append({ 'name': comp.name,
                                         'pathname': comp.get_pathname(),
                                         'type': type(comp).__name__,
-                                        'workflow': self._get_workflow(comp) })
+                                        'workflow': self._get_dataflow(comp) })
                 else:
                     components.append({ 'name': comp.name,
                                         'pathname': comp.get_pathname(),
@@ -260,6 +260,36 @@ class ConsoleServer(cmd.Cmd):
             for connection in conntuples:
                 connections.append(list(connection))
         return { 'components': components, 'connections': connections }
+
+    def get_dataflow(self):
+        if self.top:
+            return self._get_workflow(self.top)
+        else:
+            return {}
+            
+    def _get_workflow(self,asm):
+        """ get the driver info and the list of components that make up the
+            driver's workflow, recurse on nested drivers
+        """
+        ret = {}
+        ret['pathname'] = asm.get_pathname()
+        ret['type'] = type(asm).__module__+'.'+type(asm).__name__ 
+        
+        if asm.driver:
+            ret['driver'] = { 
+                'pathname': asm.driver.get_pathname(),
+                'type':     type(asm.driver).__module__+'.'+type(asm.driver).__name__,
+            }
+            ret['workflow'] = []
+            for comp in asm.driver.iteration_set():
+                if isinstance(comp,Assembly) and comp.driver:
+                    ret['workflow'].append(self._get_workflow(comp))
+                else:
+                    ret['workflow'].append({ 
+                        'pathname': comp.get_pathname(),
+                        'type':     type(comp).__module__+'.'+type(comp).__name__,
+                    })
+        return ret
 
     def get_workflow(self):
         if self.top:
