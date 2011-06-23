@@ -65,8 +65,8 @@ class SellarBLISS(Assembly):
         # Discipline 1 Sensitivity Analysis
         self.add('sa_dis1', SensitivityDriver())
         self.sa_dis1.add_parameter('dis1.x1', low=  0.0, high=10.0, fd_step=.01)
-        self.sa_dis1.add_constraint('3.16 < dis1.y1') 
-        self.sa_dis1.add_constraint('dis2.y2 < 24.0') 
+        self.sa_dis1.add_constraint(constraint1) 
+        self.sa_dis1.add_constraint(constraint2) 
         self.sa_dis1.add_objective(objective, name='obj')
         self.sa_dis1.differentiator = FiniteDifference(self.sa_dis1)
         self.sa_dis1.default_stepsize = 1.0e-6
@@ -83,8 +83,8 @@ class SellarBLISS(Assembly):
         self.ssa.workflow.add(['mda'])
         self.ssa.add_parameter(['dis1.z1','dis2.z1'], low=-10.0, high=10.0)
         self.ssa.add_parameter(['dis1.z2','dis2.z2'], low=  0.0, high=10.0)
-        self.ssa.add_objective('dis1.y1')
-        self.ssa.add_objective('dis2.y2')
+        self.ssa.add_constraint(constraint1)
+        self.ssa.add_constraint(constraint2)
         self.ssa.add_objective(objective, name='obj')
         self.ssa.differentiator = FiniteDifference(self.ssa)
         self.ssa.default_stepsize = 1.0e-6
@@ -94,9 +94,11 @@ class SellarBLISS(Assembly):
         # (Only discipline1 has an optimization input)
         self.add('bbopt1', CONMINdriver())
         self.bbopt1.add_parameter('x1_store', low=0.0, high=10.0)
-        self.bbopt1.add_objective('sa_dis1.dF[0][0]*(x1_store-dis1.x1)')
-        self.bbopt1.add_constraint('dis1.y1 + sa_dis1.dG[0][0]*(x1_store-dis1.x1) > 3.16')
-        self.bbopt1.add_constraint('dis1.y2 + sa_dis1.dG[1][0]*(x1_store-dis1.x1) < 24')
+        self.bbopt1.add_objective('sa_dis1.F[0] + sa_dis1.dF[0][0]*(x1_store-dis1.x1)')
+        self.bbopt1.add_constraint('sa_dis1.G[0] + sa_dis1.dG[0][0]*(x1_store-dis1.x1) > 0')
+        #this one is technically unncessary
+        #self.bbopt1.add_constraint('sa_dis1.G[1] + sa_dis1.dG[1][0]*(x1_store-dis1.x1) < 0')
+        self.bbopt1.add_constraint('abs(x1_store-dis1.x1)<.05')
         self.bbopt1.linobj = True
         self.bbopt1.iprint = 0
         self.bbopt1.force_execute = True
@@ -105,9 +107,9 @@ class SellarBLISS(Assembly):
         self.add('sysopt', CONMINdriver())
         self.sysopt.add_parameter('z1_store', low=-10.0, high=10.0)
         self.sysopt.add_parameter('z2_store', low=0.0, high=10.0)
-        self.sysopt.add_objective('ssa.dF[2][0]*(z1_store-dis1.z1) + ssa.dF[2][1]*(z2_store-dis1.z2)')
-        self.sysopt.add_constraint('dis1.y1 + ssa.dF[0][0]*(z1_store-dis1.z1) + ssa.dF[0][1]*(z2_store-dis1.z2) > 3.16')
-        self.sysopt.add_constraint('dis2.y2 + ssa.dF[1][0]*(z1_store-dis1.z1) + ssa.dF[1][1]*(z2_store-dis1.z2) < 24.0')
+        self.sysopt.add_objective('ssa.F[0]+ ssa.dF[0][0]*(z1_store-dis1.z1) + ssa.dF[0][1]*(z2_store-dis1.z2)')
+        self.sysopt.add_constraint('ssa.G[0] + ssa.dG[0][0]*(z1_store-dis1.z1) + ssa.dG[0][1]*(z2_store-dis1.z2) < 0')
+        self.sysopt.add_constraint('ssa.G[1] + ssa.dG[1][0]*(z1_store-dis1.z1) + ssa.dG[1][1]*(z2_store-dis1.z2) < 0')
         self.sysopt.linobj = True
         self.sysopt.iprint = 0
         self.sysopt.force_execute = True
