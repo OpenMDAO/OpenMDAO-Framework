@@ -1,4 +1,4 @@
-""" Metamodel provides basic Meta Modeling capability"""
+""" Metamodel provides basic Meta Modeling capability."""
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array
@@ -16,9 +16,6 @@ from openmdao.main.mp_support import has_interface
 
 
 class MetaModel(Component):
-    """ A component that provides general Meta Modeling capability.
-    
-    See the Standard Library Reference for additional information on the :ref:`MetaModel` component."""
     
     # pylint: disable-msg=E1101
     model = Slot(IComponent, allow_none=True,

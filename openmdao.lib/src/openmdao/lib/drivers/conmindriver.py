@@ -1,15 +1,12 @@
 """
-    conmindriver.py - Driver for the CONMIN optimizer.
-    
-    See the Standard Library Reference for additional information on the
-    :ref:`CONMINDriver`.
+    ``conmindriver.py`` - Driver for the CONMIN optimizer.
     
     The CONMIN driver can be a good example of how to wrap another Driver for
     OpenMDAO. However, there are some things to keep in mind.
     
     1. This implementation of the CONMIN Fortran driver is interruptable, in
     that control is returned every time an objective or constraint evaluation
-    is needed. Most external optimizers just expect a functions to be passed
+    is needed. Most external optimizers just expect a function to be passed
     for these, so they require a slightly different driver implementation than
     this.
     
@@ -18,7 +15,7 @@
     that you might not need for a pure Python optimizer.
     
     Ultimately, if you are wrapping a new optimizer for OpenMDAO, you should
-    endeavour to understand the purpose for each statement, so that your
+    endeavour to understand the purpose for each statement so that your
     implementation doesn't do any unneccessary or redundant calculation.
 """
 
@@ -178,10 +175,15 @@ class CONMINdriver(Driver):
         
     Note on self.cnmn1.igoto, which reports CONMIN's operation state:
         0: Initial and final state
+	
         1: Initial evaluation of objective and constraint values
+	
         2: Evalute gradients of objective and constraints (internal only)
+	
         3: Evalute gradients of objective and constraints
+	
         4: One-dimensional search on unconstrained function
+	
         5: Solve 1D search problem for unconstrained function
             
     """
@@ -461,7 +463,7 @@ class CONMINdriver(Driver):
         
 
     def _config_conmin(self):
-        """Set up arrays for the FORTRAN conmin routine and perform some
+        """Set up arrays for the Fortran conmin routine, perform some
         validation, and make sure that array sizes are consistent.
         """
         

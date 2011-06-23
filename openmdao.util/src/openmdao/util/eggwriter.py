@@ -1,5 +1,5 @@
 """
-Write Python egg files.
+Writes Python egg files.
 Supports what's needed for saving and loading components/simulations.
 """
 

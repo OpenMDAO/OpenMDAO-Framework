@@ -1,24 +1,17 @@
 
-.. index:: Differentiators
-
-.. _Differentiators:
-
-Differentiators
-===============
+.. index:: Differentiators, FiniteDifference
 
 A `differentiator` is a special object that can be used by a driver to calculate
 the first or second derivatives of a workflow. The derivatives are calculated
 from the parameter inputs to the objective and constraint outputs. Any driver
 that has been decorated with the ``add_delegate`` decorator containing the
-UsesGradients or UsesHessians delegates contains a Slot 
+UsesGradients or UsesHessians delegates contains a socket (i.e., Instance trait)
 called `Differentiator`. This socket can take a Differentiator object.
- 
-.. index:: FiniteDifference
 
 .. _FiniteDifference:
 
-FiniteDifference
-~~~~~~~~~~~~~~~~
+*FiniteDifference*
+~~~~~~~~~~~~~~~~~~
 
 The ``FiniteDifference`` differentiator provides the gradient vector and Hessian
 matrix of the workflow using the finite difference method. For first derivatives,
@@ -79,3 +72,5 @@ step size is used.
 
 Fake Finite Difference is fully supported by the finite difference generator.
 
+*Source Documentation for finite_difference.py*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

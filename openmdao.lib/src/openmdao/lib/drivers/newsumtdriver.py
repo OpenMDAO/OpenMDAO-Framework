@@ -1,7 +1,6 @@
 """
-    newsumtdriver.py - Driver for the NEWSUMT optimizer.
+    ``newsumtdriver.py`` - Driver for the NEWSUMT optimizer.
     
-    (See the Standard Library Reference for additional information on the :ref:`NEWSUMTDriver`.)    
 """
 
 # disable complaints about Module 'numpy' has no 'array' member

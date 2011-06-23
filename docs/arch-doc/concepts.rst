@@ -284,9 +284,9 @@ script that can interact with objects in the framework.
 
 Neither approach to graphical interface development is ideal. Early prototyping
 using the wxPython approach has revealed some platform differences between the
-Windows and linux versions that were not anticipated. Also, packaging and
+Windows and Linux versions that were not anticipated. Also, packaging and
 distribution is difficult due to dependence on underlying libraries like, for
-example, *GTK* on linux.  The current version of the Qt library has a license
+example, *GTK* on Linux.  The current version of the Qt library has a license
 that is not compatible with OpenMDAO, although the next version will have an
 LGPL license, which is compatible. It is assumed that PyQt, the Python wrapper
 for Qt will have a similar license to Qt, but this is not certain. 
@@ -295,7 +295,7 @@ If a web-based interface is used, questions arise about the richness of the
 interface relative to a traditional GUI. A number of javascript
 libraries, like jquery_ and dojo_, for example, are still relatively immature,
 but they offer the promise of a browser-based application with interactivity
-that approaches that of a desktop application. Projects like dojo are being
+that approaches that of a desktop application. Projects like Dojo are being
 actively developed, so they may reach the necessary level of maturity in the
 near future.  
 
