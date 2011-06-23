@@ -47,6 +47,13 @@ class SensitivityDriver(Driver):
     dx_names = List([], iotype='out', desc='Parameter names that'
                      'correspond to our array indices')
     
+    F = Array(zeros(0,'d'), iotype='out', desc='Objective baseline values '
+                        'where sensitivity is evaluated.')
+    G = Array(zeros(0,'d'), iotype='out', desc='Constraint baseline values '
+                        'where sensitivity is evaluated.')
+    x = Array(zeros(0,'d'), iotype='out', desc='Parameter baseline values '
+                        'where sensitivity is evaluated.')
+    
     def execute(self):
         """Calculate the gradient of the workflow."""
         
@@ -65,22 +72,29 @@ class SensitivityDriver(Driver):
         
         self.dF = zeros((len(objs), len(inputs)), 'd')
         self.dG = zeros((len(constraints), len(inputs)), 'd')
+        self.F = zeros(len(objs), 'd')
+        self.G = zeros(len(constraints), 'd')
+        self.x = zeros(len(inputs), 'd')
         self.dF_names = []
         self.dG_names = []
         self.dx_names = []
-
+        
         for i, input_name in enumerate(inputs):
+            
             self.dx_names.append(input_name)
+            self.x[i] = self.differentiator.base_param[input_name]
             
             for j, output_name in enumerate(objs):
                 self.dF[j][i] = self.differentiator.get_derivative(output_name, 
                                                                    wrt=input_name)
                 self.dF_names.append(output_name)
+                self.F[j] = self.differentiator.base_data[output_name]
                 
             for j, output_name in enumerate(constraints):
                 self.dG[j][i] = self.differentiator.get_derivative(output_name, 
                                                                    wrt=input_name)
                 self.dG_names.append(output_name)
+                self.G[j] = self.differentiator.base_data[output_name]
                 
         # Sensitivity is sometimes run sequentially using different submodels,
         # so we need to return the state to the baseline value.
