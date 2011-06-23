@@ -96,6 +96,7 @@ class SellarBLISS(Assembly):
         self.bbopt1.add_parameter('x1_store', low=0.0, high=10.0)
         self.bbopt1.add_objective('sa_dis1.dF[0][0]*(x1_store-dis1.x1)')
         self.bbopt1.add_constraint('dis1.y1 + sa_dis1.dG[0][0]*(x1_store-dis1.x1) > 3.16')
+        self.bbopt1.add_constraint('dis1.y2 + sa_dis1.dG[1][0]*(x1_store-dis1.x1) < 24')
         self.bbopt1.linobj = True
         self.bbopt1.iprint = 0
         self.bbopt1.force_execute = True
