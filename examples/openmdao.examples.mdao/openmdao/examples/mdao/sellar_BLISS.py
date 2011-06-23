@@ -56,7 +56,6 @@ class SellarBLISS(Assembly):
         
         # Multidisciplinary Analysis
         self.add('mda', BroydenSolver())
-        self.mda.workflow.add(['dis1','dis2'])
         self.mda.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
         self.mda.add_constraint('dis2.y2 = dis1.y2')
         self.mda.add_parameter('dis2.y1', low=-9.e99, high=9.e99)
@@ -65,9 +64,9 @@ class SellarBLISS(Assembly):
         
         # Discipline 1 Sensitivity Analysis
         self.add('sa_dis1', SensitivityDriver())
-        self.sa_dis1.workflow.add(['dis1', 'dis2'])
         self.sa_dis1.add_parameter('dis1.x1', low=  0.0, high=10.0, fd_step=.01)
-        self.sa_dis1.add_objective('dis1.y1')
+        self.sa_dis1.add_constraint('3.16 < dis1.y1') 
+        self.sa_dis1.add_constraint('dis2.y2 < 24.0') 
         self.sa_dis1.add_objective(objective, name='obj')
         self.sa_dis1.differentiator = FiniteDifference(self.sa_dis1)
         self.sa_dis1.default_stepsize = 1.0e-6
@@ -95,8 +94,8 @@ class SellarBLISS(Assembly):
         # (Only discipline1 has an optimization input)
         self.add('bbopt1', CONMINdriver())
         self.bbopt1.add_parameter('x1_store', low=0.0, high=10.0)
-        self.bbopt1.add_objective('sa_dis1.dF[1][0]*(x1_store-dis1.x1)')
-        self.bbopt1.add_constraint('dis1.y1 + sa_dis1.dF[0][0]*(x1_store-dis1.x1) > 3.16')
+        self.bbopt1.add_objective('sa_dis1.dF[0][0]*(x1_store-dis1.x1)')
+        self.bbopt1.add_constraint('dis1.y1 + sa_dis1.dG[0][0]*(x1_store-dis1.x1) > 3.16')
         self.bbopt1.linobj = True
         self.bbopt1.iprint = 0
         self.bbopt1.force_execute = True

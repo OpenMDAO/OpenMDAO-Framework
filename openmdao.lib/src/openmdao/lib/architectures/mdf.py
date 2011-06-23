@@ -1,4 +1,4 @@
-from openmdao.main.api import Driver, Architecture, implements
+from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver
 
 class MDF(Architecture):
