@@ -124,11 +124,17 @@ to a :term:`repository` on that machine.
 Getting the Source Code
 +++++++++++++++++++++++
 
-Before you can do any development work on OpenMDAO, you'll need a copy of the source code.
-The source repository for the OpenMDAO  project is available on :term:`github`. The first
-step in this process is to *fork* the OpenMDAO repository, which will create your own copy
-of the OpenMDAO repository on github.  To fork a repository, simply go to its page on github
-and click the *Fork* button. 
+Before you can do any development work on OpenMDAO, you'll need a copy of the
+source code. The source repository for the OpenMDAO project is available on
+:term:`github`.  There is a wealth of good documentation available online 
+about :term:`git` and :term:`github` itself. The :term:`github` 
+`help page <http://help.github.com/>`_ is a good place to start.  
+The `Pro Git book <http://progit.org/book/>`_ is also excellent.
+
+The first step in this process is to *fork* the OpenMDAO
+repository, which will create your personal copy of the OpenMDAO repository on
+github. To fork a repository, simply go to its page on github and click the
+*Fork* button.
 
 To get a local copy to work on, you must *clone* the forked OpenMDAO repository on
 github using the following command:
@@ -138,6 +144,11 @@ github using the following command:
    git clone git@github.com:username/OpenMDAO.git
    
    
+where *username* is your username on github.
+
+Normally, you should only need to do this once on any given machine where you plan
+to do your work.
+
 Then, you should create a branch in your local repository using the following command:
 
 ::
