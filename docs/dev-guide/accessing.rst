@@ -5,15 +5,11 @@ Accessing OpenMDAO on Github -- SSH Keys
 ============================================
 
 The source repository for OpenMDAO is read-accessible to the public, so making
-a :term:`branch` from it does not typically require that you have a :term:`Github` account.
-However, if you are behind a proxy, you *may* need to not only have a Github
-account but also register your public SSH key with your Github account
-before you can read or write to the repository. If you require *write* access
-to the OpenMDAO project on Github, either to push changes directly to the
-trunk or to push up personal branches for merge approval, you will need to
-have a Github account and to register your public SSH key with that
-account, regardless of whether you are behind a proxy or not. The following
-section describes how to register your SSH key with Github.
+a :term:`branch` from it does not require that you have a :term:`Github`
+account. If with to contribute to the OpenMDAO project on Github, you will
+need to have a Github account and to register your public SSH key with that
+account. The following section describes how to register your SSH key with
+Github.
 
 These instructions assume that you already have a Github account. If you do
 not, please go to https://github.com and register for an account. Go ahead

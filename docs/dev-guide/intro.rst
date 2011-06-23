@@ -147,29 +147,36 @@ github using the following command:
 where *username* is your username on github.
 
 Normally, you should only need to do this once on any given machine where you plan
-to do your work.
+to do your work.  The reason for this is that git handles branches differently than
+other version control systems you may have used before.  In git, a branch is not a 
+whole separate copy of the repository like it is in bazaar, for example. In git, you
+can have lots of branches existing in your repository, each one keeping track of 
+commits you make while that branch is active.  To create a branch, do the following:
 
-Then, you should create a branch in your local repository using the following command:
+::
+
+   git branch <branch_name>
+   
+
+To switch to an existing branch, do:
+
+::
+
+   git checkout <branch_name>
+   
+
+A shorthand for creating a branch and then switching to it is:
 
 ::
 
    git checkout -b <branch_name>
 
 
-It's a good idea to name branches based on ticket numbers in our bug  tracker
-(:term:`Trac`) using the form ``T<ticket_number>-<desc>``, where ``ticket_number`` is the
-Trac ticket number and ``<desc>`` is a short description of the branch, for example,
-``T0029-workflow_fix``.  Trac automatically assigns a ticket number when you submit a bug or
-request an enhancement. You can visit the `OpenMDAO website
-<http://openmdao.org/wiki/Home>`_  to find out more about how we use Trac and about the
-OpenMDAO `development <http://openmdao.org/wiki/Development>`_ process.
-
-
-In any case, the name you give your branch should reflect the purpose of the branch to avoid
-confusion if you have multiple branches active at the same time. If you do not supply a
-``<branch_name>``, the name by default will be the last part of the source repository URI,
-which in this case is ``openmdao``.
-
+The name you give your branch should reflect the purpose of the branch to avoid
+confusion with other branches in your repository. And don't fix multiple bugs or
+add multiple features on the same branch.  If you keep your branch changes small by
+targeting a specific bug or feature, the maintainers of the project will have a much
+easier time merging in your changes.
 
 
 .. _Creating-the-Virtual-Environment:
@@ -178,10 +185,9 @@ which in this case is ``openmdao``.
 Creating the Virtual Environment
 ________________________________
 
-
-After you've created your branch, run ``python go-openmdao-dev.py`` from the top directory of your
-branch to set up your development environment. (The ``devenv`` directory that is created is not part
-of the source repository.) The script will check the version of Python you are running. **You must
+OpenMDAO operates inside of a virtual python environment. To create that environment, 
+run ``python go-openmdao-dev.py`` from the top directory of your
+repository. The script will check the version of Python you are running. **You must
 be running version 2.6.** (To find out which Python version you are
 running, you can type ``python --version``.)
 
@@ -194,16 +200,19 @@ running, you can type ``python --version``.)
    slightly different, i.e., replace "Express" with "Professional" or
    "Standard."
 
+
 ::
 
    python go-openmdao-dev.py
    
-Running ``go-openmdao-dev.py`` populates your virtual Python environment with all of the packages that
-OpenMDAO depends upon and installs the openmdao namespace packages in your virtual Python
-environment as "develop" eggs so that you can make changes to the source code and immediately
-see the results without having to rebuild any distributions.
+Running ``go-openmdao-dev.py`` creates a ``devenv`` directory at the top of
+your repository and populates it with all of the packages that OpenMDAO
+depends upon. It also installs the openmdao namespace packages in your virtual
+Python environment as "develop" eggs so that you can make changes to the
+source code and immediately see the results without having to rebuild any
+distributions.
 
-
+      
 .. _Activating-the-Virtual-Environment:
 
 Activating the Virtual Environment
@@ -266,6 +275,13 @@ You can deactivate the environment by typing:
   deactivate
   
  
+  
+.. note:: Whenever you switch to a different branch within your repository,
+   you should deactivate your virtual environment and re-run
+   ``go-openmdao-dev.py``, unless you're certain that no OpenMDAO package
+   dependencies have changed.
+
+
 
 .. index:: source repository
 

@@ -11,7 +11,7 @@ OpenMDAO. If you have not activated your environment, please do so before procee
 
 The following sections provide information on how to carry out some basic
 actions in the development environment. You would perform these actions on a
-branch that you pulled from Github.
+repository that you cloned from your fork of the OpenMDAO repository on Github.
 
 .. note::  In some cases the examples are written from the Linux perspective. Windows users
    need to replace the ``/`` with a ``\``.
@@ -38,27 +38,25 @@ must add them to your repository by running the command:
 
 ::
 
-   bzr add <filename>
+   git add <filename>
         
-If ``<filename>`` is a directory, all files and subdirectories (and their files) within the
-directory will also be added to the repository, unless they match any of the patterns in the
-``.bzrignore`` file located in the top level directory of the branch.  To add a new pattern for
-Bazaar to ignore, type:
-
-::
-
-   bzr ignore <pattern>
-   
-where ``<pattern>`` can be a filename or a wildcard expression, e.g., ``*.exe``.
+If ``<filename>`` is a directory, all files and subdirectories (and their
+files) within the directory will also be added to the repository, unless they
+match any of the patterns in the ``.gitignore`` file(s) located above it in
+the repository directory tree. To add a new pattern for git to ignore, edit the
+appropriate ``.gitignore`` file.  Directories to be ignored should end with a 
+forward slash (/), and glob patterns are allowed.
 
 
 If you add a file or directory to the repository by mistake, type:
 
 ::
 
-   bzr remove <filename> --keep
+   git rm --cached <filename>
    
-This will remove the file from the repository but will **not** delete it.
+This will remove the file from the staging area but will **not** delete it from the
+working tree.  Leaving off the ``--cached`` will cause the file to be deleted from
+the working tree in addition to being removed from the staging area.
 
 
 .. index:: Committing changes
@@ -66,25 +64,51 @@ This will remove the file from the repository but will **not** delete it.
 Committing Changes 
 ------------------
 
-After you make changes on your branch, make sure you :term:`commit`, or record, these changes to your
-local repository. To see if you have uncommitted changes, type:
+After you make changes on your branch, make sure you :term:`commit`, or
+record, these changes to your local repository. To see if you have uncommitted
+changes or untracked files, type:
 
 ::
 
-  bzr status                     
+   git status -s
   
-If there are uncommitted changes, the modified files will be listed. Any files that were not added to
-the repository will be listed as "unknown."  
 
-When you commit changes, you must add a commit message. To commit and add the message on the command
-line (inside quotation marks), type:
+Here's an example of the kind of output you might see:
 
 ::
 
-  bzr commit -m "<commit message>"
+    M README.txt
+   M  go-openmdao-dev.py
+   ?? anewfile.py
+   ?? somejunk.txt
 
-If you omit the ``-m`` and press *Enter,* your default text editor will open a new file where you must
-enter the required commit message. 
+
+For a full discussion of the output format, use git's help command:
+
+::
+
+   git help status
+   
+
+The first thing to look at are the files on lines beginning with ``??``, which indicates
+that the file has not been added to the repository.  If any of these file are supposed
+to be part of the repository, you should ``git add`` them.
+
+The files on lines beginning with ``M`` have been modified.
+
+When you commit changes, you must add a commit message. To commit and add the
+message on the command line (inside quotation marks), type:
+
+::
+
+  git commit -am "<commit message>"
+
+If you omit the ``m`` option and press *Enter,* a text editor will open a
+new file where you must enter the required commit message.
+
+.. note: It's very important not to forget to add the ``-a`` option to ``git commit``,
+   because if you don't, only the *staged* files will be committed.  This can lead
+   to very confusing behavior and should be avoided.
 
 
 Running Tests
@@ -108,7 +132,7 @@ changes, type:
 
 ::
 
-  bzr status                       
+  bzr status
   
 The next step is required only if you have uncommitted changes. You many add a message on the command
 line (using ``-m``) or press *Enter* to type the required message using your default text editor.

@@ -187,6 +187,10 @@ Glossary
         which is a complete genetic algorithm framework written in Python. (PyEvolve
         was developed and is actively maintained by Christian S. Perone.) 
 
+      **Github**
+        A web community for projects using the *git* version control system are
+        located.
+
 
       **GUI**
         Graphical User Interface. A computer operating system that is based upon icons
