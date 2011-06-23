@@ -40,7 +40,7 @@ class SellarBLISS(Assembly):
         self.add('dis2', SellarDiscipline2())
         
         objective = '(dis1.x1)**2 + dis1.z2 + dis1.y1 + exp(-dis2.y2)'
-        constraint1 = '3.16 < dis1.y1'
+        constraint1 = 'dis1.y1 > 3.16'
         constraint2 = 'dis2.y2 < 24.0'
         
         # Top level is Fixed-Point Iteration
@@ -64,9 +64,9 @@ class SellarBLISS(Assembly):
         
         # Discipline 1 Sensitivity Analysis
         self.add('sa_dis1', SensitivityDriver())
-        self.sa_dis1.add_parameter('dis1.x1', low=  0.0, high=10.0, fd_step=.01)
+        self.sa_dis1.add_parameter('dis1.x1', low=  0.0, high=10.0, fd_step=.001)
         self.sa_dis1.add_constraint(constraint1) 
-        self.sa_dis1.add_constraint(constraint2) 
+        #self.sa_dis1.add_constraint(constraint2) 
         self.sa_dis1.add_objective(objective, name='obj')
         self.sa_dis1.differentiator = FiniteDifference(self.sa_dis1)
         self.sa_dis1.default_stepsize = 1.0e-6
@@ -98,7 +98,9 @@ class SellarBLISS(Assembly):
         self.bbopt1.add_constraint('sa_dis1.G[0] + sa_dis1.dG[0][0]*(x1_store-dis1.x1) > 0')
         #this one is technically unncessary
         #self.bbopt1.add_constraint('sa_dis1.G[1] + sa_dis1.dG[1][0]*(x1_store-dis1.x1) < 0')
-        self.bbopt1.add_constraint('abs(x1_store-dis1.x1)<.05')
+        
+        self.bbopt1.add_constraint('x1_store-dis1.x1<1')
+        self.bbopt1.add_constraint('x1_store-dis1.x1>-1')
         self.bbopt1.linobj = True
         self.bbopt1.iprint = 0
         self.bbopt1.force_execute = True
@@ -135,7 +137,7 @@ if __name__ == "__main__": # pragma: no cover
     
     tt = time.time()
     prob.run()
-    
+    print "TEST", prob.sa_dis1.G[0] + prob.sa_dis1.dG[0][0]*(prob.x1_store-prob.dis1.x1)
     print "\n"
     print prob.z1_store, prob.z2_store, prob.x1_store
     print "\n"
