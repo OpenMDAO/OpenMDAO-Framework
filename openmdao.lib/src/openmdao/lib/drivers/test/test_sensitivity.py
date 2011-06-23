@@ -72,6 +72,12 @@ class SensitivityDriverTestCase(unittest.TestCase):
                                3.0, .001)
         assert_rel_error(self, self.model.driver.dF[1][1], 
                                2.0, .001)
+        assert_rel_error(self, self.model.driver.x[0], 
+                               1.0, .001)
+        assert_rel_error(self, self.model.driver.F[0], 
+                               8.0, .001)
+        assert_rel_error(self, self.model.driver.F[1], 
+                               1.0, .001)
         
     def test_error_messages(self):
         
