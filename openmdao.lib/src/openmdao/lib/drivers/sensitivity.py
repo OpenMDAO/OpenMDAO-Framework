@@ -14,7 +14,7 @@ __all__ = ['SensitivityDriver']
 # pylint: disable-msg=E0611,F0401
 from numpy import zeros
 
-from openmdao.lib.datatypes.api import Array, Float
+from openmdao.lib.datatypes.api import Array, Float, List
 from openmdao.main.api import Driver
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
@@ -34,14 +34,18 @@ class SensitivityDriver(Driver):
     """
     
     dF = Array(zeros((0,0),'d'), iotype='out', desc='Sensitivity of the '
-               'objectives withrespect to the parameters.')
+               'objectives withrespect to the parameters. Index 1 is the '
+               'objective output, while index 2 is the parameter input')
     dG = Array(zeros((0,0),'d'), iotype='out', desc='Sensitivity of the '
-               'constraints withrespect to the parameters.')
+               'constraints withrespect to the parameters. Index 1 is the '
+               'constraint output, while index 2 is the parameter input')
     
-    dF_names = Array(zeros((0,0),'d'), iotype='out', desc='Objective names that'
-                     'correspond to our indices')
-    dG_names = Array(zeros((0,0),'d'), iotype='out', desc='Sensitivity of the constraints with'
-               'respect to the parameters.')
+    dF_names = List([], iotype='out', desc='Objective names that'
+                     'correspond to our array indices')
+    dG_names = List([], iotype='out', desc='Constraint names that'
+                     'correspond to our array indices')
+    dx_names = List([], iotype='out', desc='Parameter names that'
+                     'correspond to our array indices')
     
     def execute(self):
         """Calculate the gradient of the workflow."""
@@ -60,16 +64,23 @@ class SensitivityDriver(Driver):
                            self.get_ineq_constraints().keys())
         
         self.dF = zeros((len(objs), len(inputs)), 'd')
-        self.dG = zeros((len(objs), len(inputs)), 'd')
+        self.dG = zeros((len(constraints), len(inputs)), 'd')
+        self.dF_names = []
+        self.dG_names = []
+        self.dx_names = []
 
         for i, input_name in enumerate(inputs):
+            self.dx_names.append(input_name)
+            
             for j, output_name in enumerate(objs):
                 self.dF[j][i] = self.differentiator.get_derivative(output_name, 
                                                                    wrt=input_name)
+                self.dF_names.append(output_name)
                 
             for j, output_name in enumerate(constraints):
                 self.dG[j][i] = self.differentiator.get_derivative(output_name, 
                                                                    wrt=input_name)
+                self.dG_names.append(output_name)
                 
         # Sensitivity is sometimes run sequentially using different submodels,
         # so we need to return the state to the baseline value.
