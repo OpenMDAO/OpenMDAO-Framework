@@ -100,7 +100,7 @@ class SensitivityDriver(Driver):
                                                                    wrt=input_name)
                 self.dG_names.append(output_name)
                 self.G[j] = self.differentiator.base_data[output_name]
-        print self.name, self.G[0], self.dG[0][0], self.parent.dis1.y1       
+        print self.name, self.G[0], self.dG[0][0], self.parent.x1_store       
         # Sensitivity is sometimes run sequentially using different submodels,
         # so we need to return the state to the baseline value.
         self.differentiator.reset_state()

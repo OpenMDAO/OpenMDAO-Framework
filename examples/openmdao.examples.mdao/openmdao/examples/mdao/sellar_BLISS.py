@@ -95,12 +95,12 @@ class SellarBLISS(Assembly):
         self.add('bbopt1', CONMINdriver())
         self.bbopt1.add_parameter('x1_store', low=0.0, high=10.0)
         self.bbopt1.add_objective('sa_dis1.F[0] + sa_dis1.dF[0][0]*(x1_store-dis1.x1)')
-        self.bbopt1.add_constraint('sa_dis1.G[0] + sa_dis1.dG[0][0]*(x1_store-dis1.x1) > 0')
+        self.bbopt1.add_constraint('sa_dis1.G[0] + sa_dis1.dG[0][0]*(x1_store-dis1.x1) < 0')
         #this one is technically unncessary
-        #self.bbopt1.add_constraint('sa_dis1.G[1] + sa_dis1.dG[1][0]*(x1_store-dis1.x1) < 0')
+        #self.bbopt1.add_constraint('sa_dis1.G[1] + sa_dis1.dG[1][0]*(x1_store-dis1.x1) > 0')
         
-        self.bbopt1.add_constraint('x1_store-dis1.x1<1')
-        self.bbopt1.add_constraint('x1_store-dis1.x1>-1')
+        #self.bbopt1.add_constraint('x1_store-dis1.x1<.25')
+        #self.bbopt1.add_constraint('x1_store-dis1.x1>-.25')
         self.bbopt1.linobj = True
         self.bbopt1.iprint = 0
         self.bbopt1.force_execute = True
@@ -130,14 +130,16 @@ if __name__ == "__main__": # pragma: no cover
     prob.name = "top"
     set_as_top(prob)
             
-    prob.dis1.z1 = prob.dis2.z1 = z1_store = 5.0
-    prob.dis1.z2 = prob.dis2.z2 = z2_store = 2.0
-    prob.dis1.x1 = x1_store = 1.0
+    prob.dis1.z1 = prob.dis2.z1 = prob.z1_store = 5.0
+    prob.dis1.z2 = prob.dis2.z2 = prob.z2_store = 2.0
+    prob.dis1.x1 = prob.x1_store = 1.0
     
     
     tt = time.time()
     prob.run()
-    print "TEST", prob.sa_dis1.G[0] + prob.sa_dis1.dG[0][0]*(prob.x1_store-prob.dis1.x1)
+    print "TEST constraint", prob.sa_dis1.G[0] + prob.sa_dis1.dG[0][0]*(prob.x1_store-prob.dis1.x1)
+    prob.sa_dis1.run()
+    print "TEST constraint", prob.sa_dis1.G[0] + prob.sa_dis1.dG[0][0]*(prob.x1_store-prob.dis1.x1)
     print "\n"
     print prob.z1_store, prob.z2_store, prob.x1_store
     print "\n"
