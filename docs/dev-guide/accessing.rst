@@ -5,8 +5,8 @@ Accessing OpenMDAO on Github -- SSH Keys
 ============================================
 
 The source repository for OpenMDAO is read-accessible to the public, so making
-a :term:`branch` from it does not require that you have a :term:`Github`
-account. If with to contribute to the OpenMDAO project on Github, you will
+a clone of it does not require that you have a :term:`Github`
+account. If you plan to contribute to the OpenMDAO project on Github, you will
 need to have a Github account and to register your public SSH key with that
 account. The following section describes how to register your SSH key with
 Github.

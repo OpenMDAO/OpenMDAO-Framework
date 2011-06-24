@@ -167,18 +167,18 @@ Hyperlinks
 
   ::  
 
-    .. seealso:: :ref:`Bazaar-Commands`
+    .. seealso:: :ref:`Git-Commands`
 
   results in:
 
-  .. seealso:: :ref:`Helpful-Bazaar-Commands`
+  .. seealso:: :ref:`Helpful-Git-Commands`
 
 
   You must also place a label before the section referred to, for example:
 
   ::  
 
-    .. _Bazaar-Commands:
+    .. _Git-Commands:
 
 
 **- External link -- to a specific web address**

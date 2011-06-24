@@ -7,7 +7,7 @@ Using Trac
 Creating a New Ticket
 ----------------------
 
-Before you create a development branch in our Bazaar repository, you should have a ticket assigned
+Before you start work on a new branch in our git repository, you should have a ticket assigned
 to you in Trac. You can create the ticket yourself, or someone on the team can assign it. 
 
 To create a Trac ticket for yourself, follow these steps:
@@ -50,9 +50,7 @@ To create a Trac ticket for yourself, follow these steps:
     click on the radio button next to **work** and then click on the **Submit changes** button. 
 
     If you won't be working on the ticket for a while, leave it in the *new* state. 
-       
-    Remember to identify the ticket you are working on when you create and name your branch in the
-    Bazaar repository. 
+        
 
 
 Editing a Ticket

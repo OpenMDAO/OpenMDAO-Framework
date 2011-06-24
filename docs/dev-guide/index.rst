@@ -13,7 +13,7 @@ Developer Guide
    working
    testing
    trac
-   bazaar
+   git
    todo
    
 

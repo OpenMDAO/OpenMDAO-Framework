@@ -95,9 +95,35 @@ System Configuration
 Some steps of the development process, e.g., downloading a branch of the source repository and
 downloading Python distributions, require network access.  If you're using Linux or Mac OS X and
 are behind an http proxy, you may have to set the ``http_proxy`` environment variable on
-your system for Bazaar and :term:`virtualenv` to function properly. If you're using Windows 7,
-please follow this `link <http://answers.oreilly.com/topic/675-how-to-configure-proxy-settings-in-windows-7/>`_
+your system for git and :term:`virtualenv` to function properly. If you're using Windows 7,
+please follow this 
+`link <http://answers.oreilly.com/topic/675-how-to-configure-proxy-settings-in-windows-7/>`_
 for information on configuring proxy settings.
+
+
+*Using Git and Github*
+++++++++++++++++++++++
+
+The source repository for the OpenMDAO project is available on
+:term:`Github`.  There is a wealth of good documentation available online 
+about :term:`git` and Github itself. The 
+`Github help page <http://help.github.com/>`_ is a good place to start.  
+The `Pro Git book <http://progit.org/book/>`_ is also excellent.  It's very
+important to take a look at these, because git differs from other version
+control systems in some significant ways. 
+
+The first major difference is that git has a *staging area* that files must be
+placed in before they're committed.  Luckily the ``git commit`` command has 
+an option, ``-a``, that will eliminate this odd behavior and commit all of the
+modified files in the repository without having to stage them first. See the ???
+section for further explanation of ``git commit``.
+
+The other major difference is how branches are handled.  In git, creating a branch
+does not create a separate copy of the repository, but instead is basically a pointer
+to a commit history within the repository. This makes git branches cheap to create. It
+also changes the workflow that users of OpenMDAO bazaar repositories are used to. This
+new workflow will be discussed in the ??? section.
+
 
 *Git User Setup*
 ++++++++++++++++
@@ -118,40 +144,25 @@ to a :term:`repository` on that machine.
 .. index:: pair: source code; location
 .. index:: pair: branch; creating
 
-.. _Creating-a-Branch:
 
 
 Getting the Source Code
 +++++++++++++++++++++++
 
-Before you can do any development work on OpenMDAO, you'll need a copy of the
-source code. The source repository for the OpenMDAO project is available on
-:term:`github`.  There is a wealth of good documentation available online 
-about :term:`git` and :term:`github` itself. The :term:`github` 
-`help page <http://help.github.com/>`_ is a good place to start.  
-The `Pro Git book <http://progit.org/book/>`_ is also excellent.
-
-The first step in this process is to *fork* the OpenMDAO
-repository, which will create your personal copy of the OpenMDAO repository on
-github. To fork a repository, simply go to its page on github and click the
-*Fork* button.
-
-To get a local copy to work on, you must *clone* the forked OpenMDAO repository on
-github using the following command:
+Before you can do any development work on OpenMDAO, you'll need a local copy of the
+source code. To get this, you must *clone* the OpenMDAO repository on
+Github using the following command:
 
 ::
 
-   git clone git@github.com:username/OpenMDAO.git
+   git clone git@github.com:OpenMDAO/OpenMDAO.git
    
-   
-where *username* is your username on github.
 
 Normally, you should only need to do this once on any given machine where you plan
-to do your work.  The reason for this is that git handles branches differently than
-other version control systems you may have used before.  In git, a branch is not a 
-whole separate copy of the repository like it is in bazaar, for example. In git, you
-can have lots of branches existing in your repository, each one keeping track of 
-commits you make while that branch is active.  To create a branch, do the following:
+to do your work.  Then, each time you start work on a new feature or a bug fix, you'll
+create a new branch in your local repository and switch to that branch.
+
+To create a branch, do the following:
 
 ::
 
@@ -176,7 +187,8 @@ The name you give your branch should reflect the purpose of the branch to avoid
 confusion with other branches in your repository. And don't fix multiple bugs or
 add multiple features on the same branch.  If you keep your branch changes small by
 targeting a specific bug or feature, the maintainers of the project will have a much
-easier time merging in your changes.
+easier time merging in your changes.  And remember, in *git*, creating branches is
+cheap and quick, so there's no need to worry about creating lots of branches.
 
 
 .. _Creating-the-Virtual-Environment:
@@ -264,7 +276,7 @@ After your virtual Python environment has been activated, you can add other
 distributions to the environment by using ``easy_install`` or :term:`pip` in
 the same manner that you would add packages to the system level Python.
 
-If you make doc changes and need to rebuild the docs, you can run ``openmdao_build_docs``.
+If you need to build the OpenMDAO docs, you can run ``openmdao_build_docs``.
 Running ``openmdao_docs`` will display the documents in HTML in the default browser.
 
 You can deactivate the environment by typing:
