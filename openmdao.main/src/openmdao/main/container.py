@@ -1128,6 +1128,7 @@ class Container(HasTraits):
         for name in self.list_containers():
             getattr(self, name).post_load()
 
+    @rbac('owner')
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
         for name in self.list_containers():
@@ -1164,7 +1165,7 @@ class Container(HasTraits):
         else:
             trait = self.get_trait(cname)
             if trait is not None:
-                if trait.iotype != iotype:
+                if iotype is not None and trait.iotype != iotype:
                     self.raise_exception('%s must be an %s variable' % 
                                          (pathname, _iodict[iotype]),
                                          RuntimeError)

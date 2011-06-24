@@ -517,6 +517,40 @@ class ObjServer(object):
                                path, mode, os.getcwd(), exc)
             raise
 
+    @rbac('owner')
+    def isdir(self, path):
+        """
+        Returns ``os.path.isdir(path)`` if `path` is legal.
+
+        path: string
+            Path to check.
+        """
+        self._logger.debug('isdir %r', path)
+        self._check_path(path, 'isdir')
+        try:
+            return os.path.isdir(path)
+        except Exception as exc:
+            self._logger.error('isdir %r in %s failed %s',
+                               path, os.getcwd(), exc)
+            raise
+
+    @rbac('owner')
+    def listdir(self, path):
+        """
+        Returns ``os.listdir(path)`` if `path` is legal.
+
+        path: string
+            Path to directory to list.
+        """
+        self._logger.debug('listdir %r', path)
+        self._check_path(path, 'listdir')
+        try:
+            return os.listdir(path)
+        except Exception as exc:
+            self._logger.error('listdir %r in %s failed %s',
+                               path, os.getcwd(), exc)
+            raise
+
     @rbac('owner', proxy_types=[RemoteFile])
     def open(self, filename, mode='r', bufsize=-1):
         """
