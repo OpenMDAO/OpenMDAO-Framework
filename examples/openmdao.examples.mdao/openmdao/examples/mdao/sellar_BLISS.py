@@ -66,7 +66,7 @@ class SellarBLISS(Assembly):
         self.add('sa_dis1', SensitivityDriver())
         self.sa_dis1.add_parameter('dis1.x1', low=  0.0, high=10.0, fd_step=.001)
         self.sa_dis1.add_constraint(constraint1) 
-        #self.sa_dis1.add_constraint(constraint2) 
+        self.sa_dis1.add_constraint(constraint2) 
         self.sa_dis1.add_objective(objective, name='obj')
         self.sa_dis1.differentiator = FiniteDifference(self.sa_dis1)
         self.sa_dis1.default_stepsize = 1.0e-6
@@ -97,10 +97,10 @@ class SellarBLISS(Assembly):
         self.bbopt1.add_objective('sa_dis1.F[0] + sa_dis1.dF[0][0]*(x1_store-dis1.x1)')
         self.bbopt1.add_constraint('sa_dis1.G[0] + sa_dis1.dG[0][0]*(x1_store-dis1.x1) < 0')
         #this one is technically unncessary
-        #self.bbopt1.add_constraint('sa_dis1.G[1] + sa_dis1.dG[1][0]*(x1_store-dis1.x1) > 0')
+        self.bbopt1.add_constraint('sa_dis1.G[1] + sa_dis1.dG[1][0]*(x1_store-dis1.x1) < 0')
         
-        #self.bbopt1.add_constraint('x1_store-dis1.x1<.25')
-        #self.bbopt1.add_constraint('x1_store-dis1.x1>-.25')
+        self.bbopt1.add_constraint('x1_store-dis1.x1<.5')
+        self.bbopt1.add_constraint('x1_store-dis1.x1>-.5')
         self.bbopt1.linobj = True
         self.bbopt1.iprint = 0
         self.bbopt1.force_execute = True
