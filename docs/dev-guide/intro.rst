@@ -122,9 +122,9 @@ modified files in the repository without having to stage them first. See the
 
 The other major difference is how branches are handled.  In git, creating a branch
 does not create a separate copy of the repository, but instead is basically a pointer
-to a commit history within the repository. This makes git branches cheap to create. It
-also changes the workflow that users of OpenMDAO bazaar repositories are used to. This
-new workflow will be discussed in the :ref:`Working-on-Your-Branch` section.
+to a commit history within the repository. This makes git branches cheap to create. This
+means that you should not hesitate to make a new branch when working on something. This
+will be discussed a little more below in the :ref:`getting-the-source-code` section. 
 
 
 *Git User Setup*
@@ -146,7 +146,7 @@ to a :term:`repository` on that machine.
 .. index:: pair: source code; location
 .. index:: pair: branch; creating
 
-
+.. _getting-the-source-code:
 
 Getting the Source Code
 +++++++++++++++++++++++
