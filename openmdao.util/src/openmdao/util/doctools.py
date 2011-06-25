@@ -1,8 +1,10 @@
 """
 A utility to extract Traits information from the code and get it into the
-Sphinx documentation. NOTE: No traits docs will be generated unless the class
-containing the traits has a doc string!
+Sphinx documentation. 
+
+.. note:: No traits docs will be generated unless the class containing the traits has a doc string!
 """
+
 from sys import maxint, float_info
 
 from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, Event, \
@@ -171,7 +173,7 @@ def get_traits_info(app, what, name, obj, options, lines):
             
 def setup(app):
     """
-    Connect the doctools to the process-docstring hook
+    Connect the doctools to the process-docstring hook.
     """
     app.connect('autodoc-process-docstring', get_traits_info)
 

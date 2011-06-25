@@ -1,4 +1,4 @@
-"""Utilities for the OpenMDAO test process"""
+"""Utilities for the OpenMDAO test process."""
 
 import os.path
 import sys

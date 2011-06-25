@@ -1,5 +1,5 @@
-"""Psudo package providing a central place to access all of the
-OpenMDAO drivers standard library."""
+"""Pseudo package providing a central place to access all of the
+OpenMDAO drivers in the standard library."""
 
 # Drivers
 from openmdao.lib.drivers.conmindriver import CONMINdriver

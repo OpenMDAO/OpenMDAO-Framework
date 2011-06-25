@@ -1,5 +1,6 @@
-""" DOEgenerator that performs a full-factorial Design of Experiments. Plugs
-into the DOEgenerator socket on a DOEdriver."""
+""" The FullFactorial DOEgenerator implements a full factorial Design of Experiments; that is, it
+generates a set of design points that fully span the range of the parameters at the requested
+resolution. It plugs into the DOEgenerator socket on a DOEdriver."""
 
 from itertools import product
 
