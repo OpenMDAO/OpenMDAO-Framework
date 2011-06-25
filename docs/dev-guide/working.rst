@@ -61,6 +61,8 @@ the working tree in addition to being removed from the staging area.
 
 .. index:: Committing changes
 
+.. _Commiting-changes:
+
 Committing Changes 
 ------------------
 

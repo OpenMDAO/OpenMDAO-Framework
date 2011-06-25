@@ -63,10 +63,8 @@ below.
 
     - *mingw32*   (for Fortran and C++)
       
-      Make sure to put the ``bin`` directory of the mingw32 install in your path.
-      You can find mingw32 `here`__.
-      
-      You must do the two following things when installing it:
+     
+      You can find mingw32 `here`__. You must do the following things when installing it:
             
       - Check the C++ compiler installation option to get g++ (required to run OpenMDAO)
       
@@ -76,7 +74,11 @@ below.
       
           [build_ext]
           compiler=mingw32
+       
+      - Make sure to put the ``bin`` directory of the mingw32 install in your path.
+           
 
+         
     - *Visual C++ 2008 (Optional)*
       
       You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it, mingw32 will work fine,
@@ -115,14 +117,14 @@ control systems in some significant ways.
 The first major difference is that git has a *staging area* that files must be
 placed in before they're committed.  Luckily the ``git commit`` command has 
 an option, ``-a``, that will eliminate this odd behavior and commit all of the
-modified files in the repository without having to stage them first. See the ???
-section for further explanation of ``git commit``.
+modified files in the repository without having to stage them first. See the 
+:ref:`Commiting-changes` section for further explanation of ``git commit``.
 
 The other major difference is how branches are handled.  In git, creating a branch
 does not create a separate copy of the repository, but instead is basically a pointer
 to a commit history within the repository. This makes git branches cheap to create. It
 also changes the workflow that users of OpenMDAO bazaar repositories are used to. This
-new workflow will be discussed in the ??? section.
+new workflow will be discussed in the :ref:`Working-on-Your-Branch` section.
 
 
 *Git User Setup*
