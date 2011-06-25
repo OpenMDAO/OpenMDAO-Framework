@@ -11,8 +11,8 @@ Developer Guide
    intro
    accessing
    working
+   issues
    testing
-   trac
    git
    todo
    
