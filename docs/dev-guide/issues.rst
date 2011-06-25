@@ -66,6 +66,12 @@ and we hope you will make use of it!
 .. figure:: existing_issue.png
        :align: center
  
-       Viewing an existing issue.    
+       Viewing an existing issue.  
+       
+       
+When you are done with an issue, you will want to indicate that by putting "close GH-???", 
+replacing "???" with your issue number, into your commit message. Then issue a pull request 
+to the OpenMDAO team. When your pull request gets merged into the main repository, then the 
+issue will be marked as closed automatically. 
     
  
