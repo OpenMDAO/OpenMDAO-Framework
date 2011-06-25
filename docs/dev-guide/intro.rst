@@ -60,18 +60,13 @@ below.
 .. _`Windows`:
 
   - *Windows*:
-   
-    - *Visual C++ 2008*
-      
-      We use the Express version, but others (Professional, Standard) should work too. To get this software,
-      go to the `downloads page <http://www.microsoft.com/express/downloads/#2008-Visual-CPP>`_.
 
-    - *mingw32*   (for Fortran and optionally as a Visual C++ replacement)
+    - *mingw32*   (for Fortran and C++)
       
       Make sure to put the ``bin`` directory of the mingw32 install in your path.
       You can find mingw32 `here`__.
       
-      If you intend to use mingw32 as a Visual C++ replacement, you must do two things when installing it:
+      You must do the two following things when installing it:
             
       - Check the C++ compiler installation option to get g++ (required to run OpenMDAO)
       
@@ -82,7 +77,12 @@ below.
           [build_ext]
           compiler=mingw32
 
-         
+    - *Visual C++ 2008 (Optional)*
+      
+      You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it, mingw32 will work fine,
+      but if you prefer Visual C++ 2008, you're welecome to use it instead. The Express version will work, 
+      but others (Professional, Standard) should work too. To get this software,
+      go to the `downloads page <http://www.microsoft.com/express/downloads/#2008-Visual-CPP>`_.     
          
 .. __: http://sourceforge.net/projects/mingw/files
 
