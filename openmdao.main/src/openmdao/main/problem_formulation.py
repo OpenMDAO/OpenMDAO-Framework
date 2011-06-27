@@ -118,9 +118,18 @@ class ArchitectureAssembly(Assembly):
                 self.configure()
 
     def get_local_des_vars(self):
-        """Return a list of single target Parameters."""
-        return [(k,v) for k,v in self.get_parameters().items() 
-                                        if isinstance(v, Parameter)]
+        """Return a dictionary of component names/list of parameters for 
+        all local parameters."""
+        comps = {}
+        for k,v in self.get_parameters().items():
+            if isinstance(v, Parameter): 
+                comp = v.get_referenced_compnames()
+                try: 
+                    comps[comp].append(v)
+                except AttributeError: 
+                    comps[comp] = [v]
+        
+        return comps
     
     def get_global_des_vars(self): 
         """Return a list of multi target Parameters."""

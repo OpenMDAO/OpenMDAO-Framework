@@ -137,11 +137,6 @@ if __name__ == "__main__": # pragma: no cover
     
     tt = time.time()
     prob.run()
-    print "TEST constraint", prob.sa_dis1.G[0] + prob.sa_dis1.dG[0][0]*(prob.x1_store-prob.dis1.x1)
-    prob.sa_dis1.run()
-    print "TEST constraint", prob.sa_dis1.G[0] + prob.sa_dis1.dG[0][0]*(prob.x1_store-prob.dis1.x1)
-    print "\n"
-    print prob.z1_store, prob.z2_store, prob.x1_store
     print "\n"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
                                              prob.dis1.z2, \
