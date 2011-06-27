@@ -1,5 +1,5 @@
 """
-Routines analyzing dependencies (class and module) in python source
+Routines analyzing dependencies (class and module) in Python source.
 """
 
 import os
@@ -73,11 +73,11 @@ class ClassInfo(object):
     def resolve_true_basenames(self, finfo):
         """Take module pathnames of base classes that may be an indirect names and
         convert them to their true absolute module pathname.  For example,
-        'from openmdao.main.api import Component' implies the module
-        path of Component is openmdao.main.api.Component, but inside
-        of openmdao.main.api is the import statement 
-        'from openmdao.main.component import Component', so the true
-        module pathname of Component is openmdao.main.component.Component.
+        "from openmdao.main.api import Component" implies the module
+        path of Component is ``openmdao.main.api.Component``, but inside
+        of ``openmdao.main.api`` is the import statement 
+        "from openmdao.main.component import Component," so the true
+        module pathname of Component is ``openmdao.main.component.Component``.
         
         finfo: list
         """
@@ -86,7 +86,7 @@ class ClassInfo(object):
 
 class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
-    python file.
+    Python file.
     """
     def __init__(self, fname, stop_classes=None):
         ast.NodeVisitor.__init__(self)
@@ -98,11 +98,11 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
     def translate(self, finfo):
         """Take module pathnames of classes that may be indirect names and
         convert them to their true absolute module pathname.  For example,
-        'from openmdao.main.api import Component' implies the module
-        path of Component is openmdao.main.api.Component, but inside
-        of openmdao.main.api is the import statement 
-        'from openmdao.main.component import Component', so the true
-        module pathname of Component is openmdao.main.component.Component.
+        "from openmdao.main.api import Component" implies the module
+        path of Component is ``openmdao.main.api.Component``, but inside
+        of ``openmdao.main.api`` is the import statement 
+        "from openmdao.main.component import Component," so the true
+        module pathname of Component is ``openmdao.main.component.Component``.
         """
         for classinfo in self.classes.values():
             classinfo.resolve_true_basenames(finfo)
@@ -117,7 +117,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                                            node.decorator_list)
         
     def visit_Import(self, node):
-        """This executes every time an 'import foo' style import statement 
+        """This executes every time an "import foo" style import statement 
         is parsed.
         """
         for al in node.names:
@@ -127,7 +127,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                 self.localnames[al.asname] = al.name
 
     def visit_ImportFrom(self, node):
-        """This executes every time a 'from foo import bar' style import
+        """This executes every time a "from foo import bar" style import
         statement is parsed.
         """
         for al in node.names:

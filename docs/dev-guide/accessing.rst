@@ -12,7 +12,7 @@ account. The following section describes how to register your SSH key with
 Github.
 
 These instructions assume that you already have a Github account. If you do
-not, please go to https://github.com and register for an account. Go ahead
+not, please go to http://github.com and register for an account. Go ahead
 and log in to your Github account, since you will need to be logged in to
 register your key.
 

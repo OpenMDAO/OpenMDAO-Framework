@@ -1,6 +1,8 @@
-"""Surrogate Model based on a logistic regression model, with regularization to 
-adjust for overfitting. Based on work from 
-http://blog.smellthedata.com/2009/06/python-logistic-regression-with-l2.html"""
+"""Surrogate Model based on a logistic regression model, with regularization to  adjust for
+overfitting. Based on work from  `Python logistic regression
+<http://blog.smellthedata.com/2009/06/python-logistic-regression-with-l2.html>`_. 
+"""
+
 from random import seed
 import numpy as np
 from numpy import log

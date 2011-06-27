@@ -251,12 +251,12 @@ class HasParameters(object):
         """Adds a parameter or group of parameters to the driver.
         
         target: string or iter of strings
-            What the driver should vary during execution. A target is an expression
-            that can reside on the left hand side of an assignment statement, so 
+            What the driver should vary during execution. A *target* is an expression
+            that can reside on the left-hand side of an assignment statement, so 
             typically it will be the name of a variable or possibly a subscript 
             expression indicating an entry within an array variable, e.g., x[3].
             If an iterator of targets is given, then the driver will set all targets given
-            to the same value whenever it varies this parameter during execution
+            to the same value whenever it varies this parameter during execution.
             
         low: float (optional)
             Minimum allowed value of the parameter. If scaler and/or adder

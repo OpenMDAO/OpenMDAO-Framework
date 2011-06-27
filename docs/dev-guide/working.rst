@@ -61,6 +61,8 @@ the working tree in addition to being removed from the staging area.
 
 .. index:: Committing changes
 
+.. _Commiting-changes:
+
 Committing Changes 
 ------------------
 
@@ -96,6 +98,13 @@ use git's built-in help:
 
    git help status
    
+
+You can use the ``git help`` command to get detailed help information about
+any git command.  The help command has the form:
+
+::
+
+   git help <command>
 
 
 When you commit changes, you must add a commit message. To commit and add the
@@ -160,8 +169,8 @@ If you haven't created one yet, simply log into Github and go to
 http://github.com/OpenMDAO/OpenMDAO. There, near the top of the page you'll
 see a *Fork* button. Press it and you're done.
 
-Now that we have a remote repository that we want to reference from our local
-repository, let's add a remote for it, calling it *myfork*.
+Now that you have a remote repository that you want to reference from your local
+repository, you can add a remote for it, calling it *myfork*.
 
 ::
 

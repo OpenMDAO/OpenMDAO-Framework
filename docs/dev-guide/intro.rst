@@ -60,18 +60,11 @@ below.
 .. _`Windows`:
 
   - *Windows*:
-   
-    - *Visual C++ 2008*
-      
-      We use the Express version, but others (Professional, Standard) should work too. To get this software,
-      go to the `downloads page <http://www.microsoft.com/express/downloads/#2008-Visual-CPP>`_.
 
-    - *mingw32*   (for Fortran and optionally as a Visual C++ replacement)
+    - *mingw32*   (for Fortran and C++)
       
-      Make sure to put the ``bin`` directory of the mingw32 install in your path.
-      You can find mingw32 `here`__.
-      
-      If you intend to use mingw32 as a Visual C++ replacement, you must do two things when installing it:
+     
+      You can find mingw32 `here`__. You must do the following things when installing it:
             
       - Check the C++ compiler installation option to get g++ (required to run OpenMDAO)
       
@@ -81,8 +74,17 @@ below.
       
           [build_ext]
           compiler=mingw32
+       
+      - Make sure to put the ``bin`` directory of the mingw32 install in your path.
+           
 
          
+    - *Visual C++ 2008 (Optional)*
+      
+      You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it, mingw32 will work fine,
+      but if you prefer Visual C++ 2008, you're welecome to use it instead. The Express version will work, 
+      but others (Professional, Standard) should work too. To get this software,
+      go to the `downloads page <http://www.microsoft.com/express/downloads/#2008-Visual-CPP>`_.     
          
 .. __: http://sourceforge.net/projects/mingw/files
 
@@ -115,14 +117,14 @@ control systems in some significant ways.
 The first major difference is that git has a *staging area* that files must be
 placed in before they're committed.  Luckily the ``git commit`` command has 
 an option, ``-a``, that will eliminate this odd behavior and commit all of the
-modified files in the repository without having to stage them first. See the ???
-section for further explanation of ``git commit``.
+modified files in the repository without having to stage them first. See the 
+:ref:`Commiting-changes` section for further explanation of ``git commit``.
 
 The other major difference is how branches are handled.  In git, creating a branch
 does not create a separate copy of the repository, but instead is basically a pointer
-to a commit history within the repository. This makes git branches cheap to create. It
-also changes the workflow that users of OpenMDAO bazaar repositories are used to. This
-new workflow will be discussed in the ??? section.
+to a commit history within the repository. This makes git branches cheap to create. This
+means that you should not hesitate to make a new branch when working on something. This
+will be discussed a little more below in the :ref:`getting-the-source-code` section. 
 
 
 *Git User Setup*
@@ -144,7 +146,7 @@ to a :term:`repository` on that machine.
 .. index:: pair: source code; location
 .. index:: pair: branch; creating
 
-
+.. _getting-the-source-code:
 
 Getting the Source Code
 +++++++++++++++++++++++
@@ -155,8 +157,18 @@ Github using the following command:
 
 ::
 
-   git clone git@github.com:OpenMDAO/OpenMDAO.git
+   git://github.com/OpenMDAO/OpenMDAO.git
    
+   
+Note that the URL used above will give you only read permission to the
+repository on Github, i.e., you won't be able to push changes directly to it.
+If you happen to have write permission to the OpenMDAO repository, you should
+use an SSH style URL to specify the repository like this:
+
+::
+
+   git clone git@github.com:OpenMDAO/OpenMDAO.git
+
 
 Normally, you should only need to do this once on any given machine where you plan
 to do your work.  Then, each time you start work on a new feature or a bug fix, you'll

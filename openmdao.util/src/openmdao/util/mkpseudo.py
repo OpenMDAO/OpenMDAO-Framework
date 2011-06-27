@@ -50,15 +50,15 @@ def mkpseudo(argv=None):
     source distribution package that's empty aside from
     having a number of dependencies on other packages.
     
-    usage: make_pseudopkg <pkg_name> <version> [-d <dest_dir>] [-l <links_url>] [-r req1] ... [-r req_n]
+    usage: ``make_pseudopkg <pkg_name> <version> [-d <dest_dir>] [-l <links_url>] [-r req1] ... [-r req_n]``
     
-    If pkg_name contains dots, a namespace package will be built.
+    If ``pkg_name`` contains dots, a namespace package will be built.
     
     Required dependencies are specified using the same notation used by
-    setuptools/easy_install/distribute/pip
+    ``setuptools/easy_install/distribute/pip``.
     
-    NOTE: If your required dependencies use the '<' or '>' characters you must put the
-    entire requirement in quotes to avoid misinterpretation by the shell.
+    .. note:: If your required dependencies use the "<" or ">" characters, you must put the
+              entire requirement in quotes to avoid misinterpretation by the shell.
 
     """
     

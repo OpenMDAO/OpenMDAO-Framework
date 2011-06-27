@@ -71,14 +71,14 @@ class Credentials(object):
 
     Essentially all we can prove here is that *someone* *somewhere* created
     a correctly formed credential. Without known client keys at the receiving
-    end the best we can do is detect when more than one client claims the
+    end, the best we can do is detect when more than one client claims the
     same identity.
 
     If the receiver does keep a list of known client keys, then the information
     here will support strict authorization.
 
-    The `client_creds` attribute is simply used to trace back to the original
-    user, it is not part of the credentials signature. It is carried along for
+    The ``client_creds`` attribute is simply used to trace back to the original
+    user; it is not part of the credentials signature. It is carried along for
     auditing purposes when proxy credentials are used to allow a publicly
     accessible proprietary method to invoke other restricted methods on behalf
     of an ordinary user.

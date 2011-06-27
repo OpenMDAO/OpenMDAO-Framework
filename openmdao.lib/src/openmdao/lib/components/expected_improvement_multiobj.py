@@ -1,4 +1,4 @@
-"""Expected Improvement calculation for one or more objectives""" 
+"""Expected Improvement calculation for one or more objectives.""" 
 
 from numpy import exp, abs, pi, array,isnan
 from scipy.special import erf
