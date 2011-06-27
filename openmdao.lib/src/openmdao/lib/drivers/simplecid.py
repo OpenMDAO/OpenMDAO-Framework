@@ -1,5 +1,5 @@
 """ A simple driver that runs cases from a CaseIterator and records them
-with a CaseRecorder """
+with a CaseRecorder. """
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Driver

@@ -105,7 +105,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     """
     Save state and other files to an egg. Analyzes the objects saved for
     distribution dependencies.  Modules not found in any distribution are
-    recorded in an 'egg-info/openmdao_orphans.txt' file.  Also creates and
+    recorded in an ``egg-info/openmdao_orphans.txt`` file.  Also creates and
     saves loader scripts for each entry point.
 
     entry_pts: list

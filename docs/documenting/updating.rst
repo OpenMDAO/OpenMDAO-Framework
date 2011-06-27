@@ -48,16 +48,16 @@ the following:
 
          intro
          accessing
-	 working
-	 testing
-	 bazaar
-	 todo
+         working
+         testing
+         git
+         todo
          
         
 It is not necessary to include the ``.rst`` suffix when adding a file to the index, but it does
 no harm. Save the file.
 
-* Be sure to use the ``bzr add`` command to add the file to the repository. Also, remember to
+* Be sure to use the ``git add`` command to add the file to the repository. Also, remember to
   commit your changes.
 
 
@@ -77,7 +77,7 @@ following:
 * Create your new files in that subdirectory, including an ``index.rst`` 
 * Add the new file(s) to your index
 * Add the document (new subdirectory) to the project index, so Sphinx knows about it
-* Add the new directory and files to the bzr repository
+* Add the new directory and files to the git repository
 
 See the example that follows.
 
@@ -129,26 +129,26 @@ See the example that follows.
 
      Contents:
 
-     .. toctree::
-	:maxdepth: 1	
+     .. toctree:: 
+        :maxdepth: 1
 
-	user-guide/index
-	simple/index
-	complex/index
-	mdao/index
-	scripting/index
-	srcdocs/index
-	plugin-guide/index
-	dev-guide/index
-	std_lib/index
-	licenses/index
-	documenting/index
+        user-guide/index
+        simple/index
+        complex/index
+        mdao/index
+        scripting/index
+        srcdocs/index
+        plugin-guide/index
+        dev-guide/index
+        std_lib/index
+        licenses/index
+        documenting/index
 
 
 Use your text editor to add ``new-guide/index`` to the desired location in the project's
 ``index.rst`` and then save the file. 
 
-*  Use ``bzr add`` to add the new directory and files to the repository. Remember to commit your
+*  Use ``git add`` to add the new directory and files to the repository. Remember to commit your
    changes when ready.
 
 

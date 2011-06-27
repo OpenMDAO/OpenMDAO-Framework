@@ -18,7 +18,7 @@ calculating derivatives. These are usually based on a finite difference
 approximation of specific derivatives, and thus requires one or more additional
 evaluations of the driver's workflow. OpenMDAO includes its own differentiator that
 uses the Finite Difference method to calculate both gradients and Hessians. (See the
-section :ref:`FiniteDifference` in the *Standard Library Reference.*)
+section :ref:`FiniteDifference`.
 
 Sometimes, the solution process can be sped up by having a component supply
 its own derivatives. These derivatives may be analytical, or they might be

@@ -1,5 +1,5 @@
-"""Psudo package providing a central place to access all of the
-OpenMDAO datatypes standard library."""
+"""Pseudo package providing a central place to access all of the
+OpenMDAO datatypes in the standard library."""
 
 # Traits that we've modified
 from openmdao.lib.datatypes.enum import Enum

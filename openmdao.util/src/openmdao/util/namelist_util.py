@@ -304,7 +304,7 @@ class Namelist(object):
         
     def parse_file(self):
         """Parses an existing namelist file and creates a deck of cards to
-        hold the data. After this is executed, you need to call the load_model()
+        hold the data. After this is executed, you need to call the ``load_model()``
         method to extract the variables from this data structure."""
         
         infile = open(self.filename, 'r')
@@ -473,7 +473,7 @@ class Namelist(object):
         rules: dict of lists of strings (optional)
              An optional dictionary of rules can be passed if the component has a
              hierarchy of containers for its input variables. If no rules dictionary
-             is passed, load_model will attempt to find each namelist variable in the
+             is passed, ``load_model`` will attempt to find each namelist variable in the
              top level of the model hierarchy.
         
         ignore: list of strings (optional)
@@ -485,7 +485,7 @@ class Namelist(object):
         
              Returns a tuple containing the following values:
              (empty_groups, unlisted_groups, unlinked_vars). These need to be
-             examined after calling load_model to make sure you loaded every
+             examined after calling ``load_model`` to make sure you loaded every
              variable into your model.
         
         empty_groups: ordereddict( integer : string )

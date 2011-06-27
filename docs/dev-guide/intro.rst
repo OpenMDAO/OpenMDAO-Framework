@@ -7,7 +7,7 @@ version control, testing, deployment, etc. The source files for the
 *Developer Guide* can be found in the ``docs/dev-guide`` directory in the top
 level of your OpenMDAO source repository.
 
-.. index:: Bazaar
+.. index:: Git
 
 
 .. _`developer-requirements`:
@@ -20,11 +20,13 @@ the :ref:`System-Requirements` section under *Getting Started.*  These requireme
 below.
 
 
-**Bazaar**
-  We use Bazaar for version control.  You'll need it to access the OpenMDAO
-  source repository.  Installers for various platforms can be found `here`__.
+**git**
+  We use git for version control.  You'll need it to access the OpenMDAO
+  source repository.  Github, where our source repository is stored, has
+  excellent documentation describing how to install git and how to get
+  familiar with git and github.  You can find it `here`__.
     
-.. __: http://wiki.bazaar.canonical.com/Download
+.. __: http://help.github.com
 
 **C/C++ and Fortran Compilers**
   Certain packages used in OpenMDAO contain Python extensions, meaning that they
@@ -58,18 +60,11 @@ below.
 .. _`Windows`:
 
   - *Windows*:
-   
-    - *Visual C++ 2008*
-      
-      We use the Express version, but others (Professional, Standard) should work too. To get this software,
-      go to the `downloads page <http://www.microsoft.com/express/downloads/#2008-Visual-CPP>`_.
 
-    - *mingw32*   (for Fortran and optionally as a Visual C++ replacement)
+    - *mingw32*   (for Fortran and C++)
       
-      Make sure to put the ``bin`` directory of the mingw32 install in your path.
-      You can find mingw32 `here`__.
-      
-      If you intend to use mingw32 as a Visual C++ replacement, you must do two things when installing it:
+     
+      You can find mingw32 `here`__. You must do the following things when installing it:
             
       - Check the C++ compiler installation option to get g++ (required to run OpenMDAO)
       
@@ -79,8 +74,17 @@ below.
       
           [build_ext]
           compiler=mingw32
+       
+      - Make sure to put the ``bin`` directory of the mingw32 install in your path.
+           
 
          
+    - *Visual C++ 2008 (Optional)*
+      
+      You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it, mingw32 will work fine,
+      but if you prefer Visual C++ 2008, you're welecome to use it instead. The Express version will work, 
+      but others (Professional, Standard) should work too. To get this software,
+      go to the `downloads page <http://www.microsoft.com/express/downloads/#2008-Visual-CPP>`_.     
          
 .. __: http://sourceforge.net/projects/mingw/files
 
@@ -93,21 +97,45 @@ System Configuration
 Some steps of the development process, e.g., downloading a branch of the source repository and
 downloading Python distributions, require network access.  If you're using Linux or Mac OS X and
 are behind an http proxy, you may have to set the ``http_proxy`` environment variable on
-your system for Bazaar and :term:`virtualenv` to function properly. If you're using Windows 7,
-please follow this `link <http://answers.oreilly.com/topic/675-how-to-configure-proxy-settings-in-windows-7/>`_
+your system for git and :term:`virtualenv` to function properly. If you're using Windows 7,
+please follow this 
+`link <http://answers.oreilly.com/topic/675-how-to-configure-proxy-settings-in-windows-7/>`_
 for information on configuring proxy settings.
 
-*Bazaar User Setup*
-+++++++++++++++++++
 
-If you have not previously used Bazaar on a particular machine where you intend
-to work with Bazaar repositories, you should run the ``whoami``
-command so that Bazaar will know your email address. You need to supply your
-first and last name and your email address in the following way:
+*Using Git and Github*
+++++++++++++++++++++++
 
-::
+The source repository for the OpenMDAO project is available on
+:term:`Github`.  There is a wealth of good documentation available online 
+about :term:`git` and Github itself. The 
+`Github help page <http://help.github.com/>`_ is a good place to start.  
+The `Pro Git book <http://progit.org/book/>`_ is also excellent.  It's very
+important to take a look at these, because git differs from other version
+control systems in some significant ways. 
 
-    bzr whoami "Joe Cool <joe@example.com>"
+The first major difference is that git has a *staging area* that files must be
+placed in before they're committed.  Luckily the ``git commit`` command has 
+an option, ``-a``, that will eliminate this odd behavior and commit all of the
+modified files in the repository without having to stage them first. See the 
+:ref:`Commiting-changes` section for further explanation of ``git commit``.
+
+The other major difference is how branches are handled.  In git, creating a branch
+does not create a separate copy of the repository, but instead is basically a pointer
+to a commit history within the repository. This makes git branches cheap to create. This
+means that you should not hesitate to make a new branch when working on something. This
+will be discussed a little more below in the :ref:`getting-the-source-code` section. 
+
+
+*Git User Setup*
+++++++++++++++++
+
+If you have not previously used git on a particular machine where you intend
+to work with git repositories, you should follow the instructions `here`__ to
+set your username, email, and API token.
+
+
+.. __: http://help.github.com/set-your-user-name-email-and-github-token
 
 
 .. index:: repository
@@ -118,36 +146,61 @@ to a :term:`repository` on that machine.
 .. index:: pair: source code; location
 .. index:: pair: branch; creating
 
-.. _Creating-a-Branch:
-
+.. _getting-the-source-code:
 
 Getting the Source Code
 +++++++++++++++++++++++
 
-Before you can do any development work on OpenMDAO, you'll need a copy of the source code.
-The source repository for the OpenMDAO  project is available on :term:`Launchpad`. You can
-create a copy of the repository by typing:
+Before you can do any development work on OpenMDAO, you'll need a local copy of the
+source code. To get this, you must *clone* the OpenMDAO repository on
+Github using the following command:
 
 ::
 
-   bzr branch lp:openmdao <branch_name>
+   git://github.com/OpenMDAO/OpenMDAO.git
    
    
-where ``<branch_name>`` is the name you are assigning the top level directory of your branch
-repository. It's a good idea to name branches based on ticket numbers in our bug  tracker
-(:term:`Trac`) using the form ``T<ticket_number>-<desc>``, where ``ticket_number`` is the
-Trac ticket number and ``<desc>`` is a short description of the branch, for example,
-``T0029-workflow_fix``.  Trac automatically assigns a ticket number when you submit a bug or
-request an enhancement. You can visit the `OpenMDAO website
-<http://openmdao.org/wiki/Home>`_  to find out more about how we use Trac and about the
-OpenMDAO `development <http://openmdao.org/wiki/Development>`_ process.
+Note that the URL used above will give you only read permission to the
+repository on Github, i.e., you won't be able to push changes directly to it.
+If you happen to have write permission to the OpenMDAO repository, you should
+use an SSH style URL to specify the repository like this:
+
+::
+
+   git clone git@github.com:OpenMDAO/OpenMDAO.git
 
 
-In any case, the name you give your branch should reflect the purpose of the branch to avoid
-confusion if you have multiple branches active at the same time. If you do not supply a
-``<branch_name>``, the name by default will be the last part of the source repository URI,
-which in this case is ``openmdao``.
+Normally, you should only need to do this once on any given machine where you plan
+to do your work.  Then, each time you start work on a new feature or a bug fix, you'll
+create a new branch in your local repository and switch to that branch.
 
+To create a branch, do the following:
+
+::
+
+   git branch <branch_name>
+   
+
+To switch to an existing branch, do:
+
+::
+
+   git checkout <branch_name>
+   
+
+A shorthand for creating a branch and then switching to it is:
+
+::
+
+   git checkout -b <branch_name>
+
+
+The name you give your branch should reflect the purpose of the branch to avoid
+confusion with other branches in your repository. And don't fix multiple bugs or
+add multiple features on the same branch.  If you keep your branch changes small by
+targeting a specific bug or feature, the maintainers of the project will have a much
+easier time merging in your changes.  And remember, in *git*, creating branches is
+cheap and quick, so there's no need to worry about creating lots of branches.
 
 
 .. _Creating-the-Virtual-Environment:
@@ -156,10 +209,9 @@ which in this case is ``openmdao``.
 Creating the Virtual Environment
 ________________________________
 
-
-After you've created your branch, run ``python go-openmdao-dev.py`` from the top directory of your
-branch to set up your development environment. (The ``devenv`` directory that is created is not part
-of the source repository.) The script will check the version of Python you are running. **You must
+OpenMDAO operates inside of a virtual python environment. To create that environment, 
+run ``python go-openmdao-dev.py`` from the top directory of your
+repository. The script will check the version of Python you are running. **You must
 be running version 2.6.** (To find out which Python version you are
 running, you can type ``python --version``.)
 
@@ -172,16 +224,19 @@ running, you can type ``python --version``.)
    slightly different, i.e., replace "Express" with "Professional" or
    "Standard."
 
+
 ::
 
    python go-openmdao-dev.py
    
-Running ``go-openmdao-dev.py`` populates your virtual Python environment with all of the packages that
-OpenMDAO depends upon and installs the openmdao namespace packages in your virtual Python
-environment as "develop" eggs so that you can make changes to the source code and immediately
-see the results without having to rebuild any distributions.
+Running ``go-openmdao-dev.py`` creates a ``devenv`` directory at the top of
+your repository and populates it with all of the packages that OpenMDAO
+depends upon. It also installs the openmdao namespace packages in your virtual
+Python environment as "develop" eggs so that you can make changes to the
+source code and immediately see the results without having to rebuild any
+distributions.
 
-
+      
 .. _Activating-the-Virtual-Environment:
 
 Activating the Virtual Environment
@@ -233,7 +288,7 @@ After your virtual Python environment has been activated, you can add other
 distributions to the environment by using ``easy_install`` or :term:`pip` in
 the same manner that you would add packages to the system level Python.
 
-If you make doc changes and need to rebuild the docs, you can run ``openmdao_build_docs``.
+If you need to build the OpenMDAO docs, you can run ``openmdao_build_docs``.
 Running ``openmdao_docs`` will display the documents in HTML in the default browser.
 
 You can deactivate the environment by typing:
@@ -244,6 +299,13 @@ You can deactivate the environment by typing:
   deactivate
   
  
+  
+.. note:: Whenever you switch to a different branch within your repository,
+   you should deactivate your virtual environment and re-run
+   ``go-openmdao-dev.py``, unless you're certain that no OpenMDAO package
+   dependencies have changed.
+
+
 
 .. index:: source repository
 
