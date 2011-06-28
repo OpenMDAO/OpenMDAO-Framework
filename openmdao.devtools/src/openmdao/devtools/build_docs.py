@@ -30,14 +30,14 @@ logger = logging.getLogger()
 
 def get_revision():
     try:
-        p = Popen('bzr log --short -r-1', 
+        p = Popen('git log -1', 
                   stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
         out = p.communicate()[0]
         ret = p.returncode
     except:
-        return '<unknown_rev>'
+        return '<unknown_commit>'
     else:
-        return out.split()[0]
+        return out.split()[1]
 
 # set all of our global configuration parameters
 def _get_dirnames():
