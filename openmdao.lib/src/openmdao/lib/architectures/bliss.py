@@ -23,6 +23,7 @@ class BLISS(Architecture):
         local_dvs = self.parent.get_local_des_vars_by_comp()
         objective = self.parent.get_objective()
         constraints = self.parent.get_constraints()
+        coupling = self.parent.get_coupling_vars()
         
         self.parent.add('driver',FixedPointIterator())
         self.parent.driver.max_iteration = 50
