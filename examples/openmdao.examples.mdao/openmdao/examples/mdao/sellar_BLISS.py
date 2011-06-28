@@ -11,7 +11,8 @@
 from openmdao.examples.mdao.disciplines import SellarDiscipline1,\
                                                SellarDiscipline2
 from openmdao.main.api import Assembly
-from openmdao.lib.datatypes.api import Float
+from openmdao.lib.components.api import Mux
+from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator
@@ -24,6 +25,8 @@ class SellarBLISS(Assembly):
     
     z1_store = Float(0.0)
     z2_store = Float(0.0)
+    
+    z_store = Array(default=[.1,.1])
     x1_store = Float(0.0)
     
     def __init__(self):
@@ -34,6 +37,9 @@ class SellarBLISS(Assembly):
         Optimal Objective = 3.18339"""
                 
         super(SellarBLISS, self).__init__()
+        
+        self.z_store = [0,0]
+        
 
         # Disciplines
         self.add('dis1', SellarDiscipline1())
@@ -41,7 +47,7 @@ class SellarBLISS(Assembly):
         
         objective = '(dis1.x1)**2 + dis1.z2 + dis1.y1 + exp(-dis2.y2)'
         constraint1 = 'dis1.y1 > 3.16'
-        constraint2 = 'dis2.y2 < 24.0'
+        constraint2 = ' 24.0 > dis2.y2'
         
         # Top level is Fixed-Point Iteration
         self.add('driver', FixedPointIterator())
@@ -49,8 +55,8 @@ class SellarBLISS(Assembly):
         self.driver.add_parameter(['dis1.z1','dis2.z1'], low=-10.0, high=10.0)
         self.driver.add_parameter(['dis1.z2','dis2.z2'], low=  0.0, high=10.0)
         self.driver.add_constraint('x1_store = dis1.x1')
-        self.driver.add_constraint('z1_store = dis1.z1')
-        self.driver.add_constraint('z2_store = dis1.z2')
+        self.driver.add_constraint('z_store[0] = dis1.z1')
+        self.driver.add_constraint('z_store[1] = dis1.z2')
         self.driver.max_iteration = 50
         self.driver.tolerance = .001
         
@@ -107,11 +113,15 @@ class SellarBLISS(Assembly):
         
         # Global Optimization
         self.add('sysopt', CONMINdriver())
-        self.sysopt.add_parameter('z1_store', low=-10.0, high=10.0)
-        self.sysopt.add_parameter('z2_store', low=0.0, high=10.0)
-        self.sysopt.add_objective('ssa.F[0]+ ssa.dF[0][0]*(z1_store-dis1.z1) + ssa.dF[0][1]*(z2_store-dis1.z2)')
-        self.sysopt.add_constraint('ssa.G[0] + ssa.dG[0][0]*(z1_store-dis1.z1) + ssa.dG[0][1]*(z2_store-dis1.z2) < 0')
-        self.sysopt.add_constraint('ssa.G[1] + ssa.dG[1][0]*(z1_store-dis1.z1) + ssa.dG[1][1]*(z2_store-dis1.z2) < 0')
+        self.sysopt.add_parameter('z_store[0]', low=-10.0, high=10.0)
+        self.sysopt.add_parameter('z_store[1]', low=0.0, high=10.0)
+        self.sysopt.add_objective('ssa.F[0]+ ssa.dF[0][0]*(z_store[0]-dis1.z1) + ssa.dF[0][1]*(z_store[1]-dis1.z2)')
+        self.sysopt.add_constraint('ssa.G[0] + ssa.dG[0][0]*(z_store[0]-dis1.z1) + ssa.dG[0][1]*(z_store[1]-dis1.z2) < 0')
+        self.sysopt.add_constraint('ssa.G[1] + ssa.dG[1][0]*(z_store[0]-dis1.z1) + ssa.dG[1][1]*(z_store[1]-dis1.z2) < 0')
+        self.bbopt1.add_constraint('z_store[0]-dis1.z1<.5')
+        self.bbopt1.add_constraint('z_store[0]-dis1.z1>-.5')
+        self.bbopt1.add_constraint('z_store[1]-dis1.z2<.5')
+        self.bbopt1.add_constraint('z_store[1]-dis1.z2>-.5')
         self.sysopt.linobj = True
         self.sysopt.iprint = 0
         self.sysopt.force_execute = True
@@ -130,8 +140,8 @@ if __name__ == "__main__": # pragma: no cover
     prob.name = "top"
     set_as_top(prob)
             
-    prob.dis1.z1 = prob.dis2.z1 = prob.z1_store = 5.0
-    prob.dis1.z2 = prob.dis2.z2 = prob.z2_store = 2.0
+    prob.dis1.z1 = prob.dis2.z1 = prob.z_store[0] = 5.0
+    prob.dis1.z2 = prob.dis2.z2 = prob.z_store[1] = 2.0
     prob.dis1.x1 = prob.x1_store = 1.0
     
     
