@@ -55,10 +55,12 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.drivers.conmindriver.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
       openmdao.lib.drivers.doedriver.DOEdriver = openmdao.lib.drivers.doedriver:DOEdriver
       openmdao.lib.drivers.genetic.Genetic = openmdao.lib.drivers.genetic:Genetic
+      openmdao.lib.drivers.gradient.SensitivityDriver = openmdao.lib.drivers.sensitivity:SensitivityDriver
       openmdao.lib.drivers.iterate.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
       openmdao.lib.drivers.iterate.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil
       openmdao.lib.drivers.newsumtdriver.NEWSUMTdriver = openmdao.lib.drivers.newsumtdriver:NEWSUMTdriver
       openmdao.lib.drivers.simplecid.SimpleCaseIterDriver = openmdao.lib.drivers.simplecid:SimpleCaseIterDriver
+      openmdao.lib.drivers.sensitivity.SensitivityDriver = openmdao.lib.drivers.sensitivity:SensitivityDriver
 
       [openmdao.component]
       openmdao.lib.components.expected_improvement.ExpectedImprovement = openmdao.lib.components.expected_improvement:ExpectedImprovement

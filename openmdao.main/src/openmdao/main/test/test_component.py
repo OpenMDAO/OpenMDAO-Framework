@@ -22,7 +22,7 @@ class MyComponent(Component):
     def __init__(self, *args, **kwargs):
         super(MyComponent, self).__init__(*args, **kwargs)
         self.add('cont', Container())
-        self.cont.add_trait('dyntrait', Float(3.))
+        self.cont.add('dyntrait', Float(3.))
     
     def execute(self):
         self.xout = self.x * 2.

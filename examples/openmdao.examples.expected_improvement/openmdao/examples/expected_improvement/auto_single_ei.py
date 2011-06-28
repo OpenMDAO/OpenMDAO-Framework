@@ -18,7 +18,7 @@ class Analysis(ArchitectureAssembly):
         #Local Des Vars
         self.add_parameter('branin.x')        
         self.add_parameter('branin.y')
-        
+                
         #No Global Des Vars or Coupling Vars
         
         #Objective (single only)    
@@ -60,7 +60,6 @@ if __name__ == "__main__":
     analysis.architecture.sample_iterations = 20
     analysis.architecture.EI_PI = "PI"
     analysis.architecture.min_ei_pi = .01
-    analysis.configure()
     analysis.run()
     
     

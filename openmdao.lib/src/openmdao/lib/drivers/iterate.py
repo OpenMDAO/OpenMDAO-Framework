@@ -6,8 +6,9 @@ are used as termination criteria.
 
 # pylint: disable-msg=E0611,F0401
 from numpy import zeros
+from numpy.linalg import norm
 
-from openmdao.lib.datatypes.api import Float, Int, Bool
+from openmdao.lib.datatypes.api import Float, Int, Bool, Enum
 from openmdao.main.api import Driver
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
@@ -19,14 +20,19 @@ from openmdao.main.hasconstraints import HasEqConstraints
 class FixedPointIterator(Driver):
     """ A simple fixed point iteration driver, which runs a workflow and passes
     the value from the output to the input for the next iteration. Relative
-    change and number of iterations are used as termination criterea."""
+    change and number of iterations are used as termination criterea. This type
+    of iteration is also known as Gauss-Seidel."""
 
     # pylint: disable-msg=E1101
     max_iteration = Int(25, iotype='in', desc='Maximum number of '
                                          'iterations before termination.')
     
-    tolerance = Float(0.00001, iotype='in', desc='Absolute convergence '
+    tolerance = Float(1.0e-5, iotype='in', desc='Absolute convergence '
                                             'tolerance between iterations.')
+    
+    norm_order = Enum('Infinity', ['Infinity', 'Euclidean'], 
+                       desc = 'For multivariable iteration, type of norm'
+                                   'to use to test convergence.')
 
 
     def __init__(self):
@@ -40,17 +46,30 @@ class FixedPointIterator(Driver):
         
         self._check_config()
 
-        # perform our initial run
-        self.run_iteration()
+        nvar = len(self.get_parameters().values())
+        history = zeros([self.max_iteration, nvar])
+        delta = zeros(nvar)
         
+        # Get and save the intial value of the input parameters
+        val0 = zeros(nvar)
+        for i, val in enumerate(self.get_parameters().values()):
+            val0[i] = val.evaluate(self.parent)
+            
+        # perform an initial run
+        self.run_iteration()
         self.current_iteration = 0
-        history = zeros(self.max_iteration)
-        val = self.get_eq_constraints().values()[0]
-        term = val.evaluate(self.parent)
-        history[0] = term[0] - term[1]
-        val0 = 0
-        unconverged = True
+        
+        for i, val in enumerate(self.get_eq_constraints().values()):
+            
+            term = val.evaluate(self.parent)
+            history[0, i] = term[0] - term[1]
 
+        if self.norm_order == 'Infinity':
+            order = float('inf')
+        else:
+            order = 2
+
+        unconverged = True
         while unconverged:
 
             if self._stop:
@@ -58,44 +77,39 @@ class FixedPointIterator(Driver):
 
             # check max iteration
             if self.current_iteration >= self.max_iteration-1:
-                self.history = history[:self.current_iteration+1]
+                self.history = history[:self.current_iteration+1, :]
                 self.raise_exception('Max iterations exceeded without ' + \
                                      'convergence.', RuntimeError)
                 
             # Pass output to input
-            val0 += history[self.current_iteration]
-            self.set_parameters([val0])
+            val0 += history[self.current_iteration, :]
+            self.set_parameters(val0)
 
             # run the workflow
             self.run_iteration()
             self.current_iteration += 1
         
             # check convergence
-            #val = self.get_eq_constraints().itervalues().next()
-            term = val.evaluate(self.parent)
-            delta = term[0] - term[1]
+            for i, val in enumerate(self.get_eq_constraints().values()):
+            
+                term = val.evaluate(self.parent)
+                delta[i] = term[0] - term[1]
             
             history[self.current_iteration] = delta
             
-            if abs(delta) < self.tolerance:
+            if norm(delta, order) < self.tolerance:
                 break
             # relative tolerance -- problematic around 0
             #if abs( (val1-val0)/val0 ) < self.tolerance:
             #    break
             
-        self.history = history[:self.current_iteration+1]
+        self.history = history[:self.current_iteration+1, :]
             
     def _check_config(self):
-        """Make sure the problem is set up right. It's single input
-        single output."""
+        """Make sure the problem is set up right."""
         
         ncon = len(self.get_eq_constraints())
         
-        if ncon > 1:
-            msg = "FixedPointIterator can only take a single " + \
-                  "constraint equation."
-            self.raise_exception(msg, RuntimeError)            
-
         if ncon == 0:
             msg = "FixedPointIterator requires a constraint equation."
             self.raise_exception(msg, RuntimeError)
@@ -103,15 +117,14 @@ class FixedPointIterator(Driver):
         params = self.get_parameters().values()
         nparm = len(params)
         
-        if nparm > 1:
-            msg = "FixedPointIterator can only take a single " + \
-                  "input parameter."
-            self.raise_exception(msg, RuntimeError)            
-
         if nparm == 0:
             msg = "FixedPointIterator requires an input parameter."
             self.raise_exception(msg, RuntimeError)
             
+        if ncon != nparm:
+            msg = "The number of input parameters must equal the number of" + \
+                  " output constraint equations in FixedPointIterator."
+            self.raise_exception(msg, RuntimeError)
 
 @add_delegate(HasStopConditions)
 class IterateUntil(Driver):

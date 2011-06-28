@@ -46,6 +46,10 @@ class Driver(Component):
         if newwf is not None:
             newwf._parent = self
 
+    def get_expr_scope(self):
+        """Return the scope to be used to evaluate ExprEvaluators."""
+        return self.parent
+
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
         or if any of our variables is invalid.
@@ -63,20 +67,27 @@ class Driver(Component):
         """Verify that our workflow is able to resolve all of its components."""
         # workflow will raise an exception if it can't resolve a Component
         super(Driver, self).check_config()
-        # if workflow is not defined, try to use objectives and/or
-        # constraint expressions to determine the necessary workflow members
+        # if workflow is not defined, or if it contains only Drivers, try to
+        # use parameters, objectives and/or constraint expressions to
+        # determine the necessary workflow members
         try:
+            iterset = set(c.name for c in self.iteration_set())
+            alldrivers = all([isinstance(c, Driver) 
+                                for c in self.workflow.get_components()])
+            reqcomps = self._get_required_compnames()
             if len(self.workflow) == 0:
-                for compname in self._get_required_compnames():
-                    self.workflow.add(compname)
+                self.workflow.add(reqcomps)
+            elif alldrivers is True:
+                self.workflow.add([name for name in reqcomps 
+                                        if name not in iterset])
             else:
-                reqs = self._get_required_compnames()
-                iterset = set(c.name for c in self.iteration_set())
-                diff = reqs - iterset
+                diff = reqcomps - iterset
                 if len(diff) > 0:
                     raise RuntimeError("Expressions in this Driver require the following "
                                        "Components that are not part of the "
                                        "workflow: %s" % list(diff))
+            # calling get_components() here just makes sure that all of the
+            # components can be resolved
             comps = self.workflow.get_components()
         except Exception as err:
             self.raise_exception(str(err), type(err))
@@ -90,6 +101,9 @@ class Driver(Component):
         recursively in any workflow in any Driver in our workflow(s).
         """
         allcomps = set()
+        if len(self.workflow) == 0:
+            for compname in self._get_required_compnames():
+                self.workflow.add(compname)
         for child in self.workflow.get_components():
             allcomps.add(child)
             if has_interface(child, IDriver):

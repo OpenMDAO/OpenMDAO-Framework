@@ -1,3 +1,5 @@
+import weakref
+
 import ordereddict
 
 from openmdao.main.api import Interface, ExprEvaluator, Assembly, Slot
@@ -84,28 +86,53 @@ class HasCouplingVars(object):
 class ArchitectureAssembly(Assembly): 
     
     architecture = Slot(IArchitecture,
-                        desc="Slot for the use of automatic architecture configurations")
+                        desc="Slot for automatic architecture configurations")
     
-    def _architecture_changed(self): 
-        #TODO: When architecture is added, need to check to make sure it can
-        #support all the types of stuff in the assembly. (single vs. multiple
-        #objectives, constraints, all the variable types, etc.)
-        self.architecture.parent = self
+    def get_expr_scope(self):
+        """Return the scope to be used to evaluate ExprEvaluators."""
+        return self
+
+    def _architecture_changed(self, old, new): 
+        if old is None or not old.configured:
+            self.architecture.parent = self
+        else:
+            self._trait_change_notify(False)
+            try:
+                self.architecture = old  # put the old value back
+            finally:
+                self._trait_change_notify(True)
+            self.raise_exception("This Assembly was already configured with another "
+                                 "architecture.", RuntimeError)
     
     def configure(self): 
+        self.architecture.check_config()
         self.architecture.configure()
+        self.architecture.configured = True
     
-    # TODO: is this the proper naming convention?  Why are some local and
-    # some global when all of them are at the Assembly level?
+    def check_config(self):
+        super(ArchitectureAssembly, self).check_config()
+        if self.architecture is not None:
+            if self.architecture.configured:
+                self.architecture.check_config()
+            else:
+                self.configure()
+
     def get_local_des_vars(self):
-        """Return a list of single target Parameters."""
-        return [(k,v) for k,v in self.get_parameters().items() 
-                                        if isinstance(v, Parameter)]
+        """Return a dictionary of component names/list of parameters for 
+        all local parameters."""
+        comps = {}
+        for k,v in self.get_parameters().items():
+            if isinstance(v, Parameter): 
+                comp = v.get_referenced_compnames()
+                try: 
+                    comps[comp].append(v)
+                except AttributeError: 
+                    comps[comp] = [v]
+        
+        return comps
     
     def get_global_des_vars(self): 
         """Return a list of multi target Parameters."""
         return [(k,v) for k,v in self.get_parameters().items() 
                                         if isinstance(v, ParameterGroup)]
-        
-     
         

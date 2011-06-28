@@ -148,8 +148,8 @@ class SlotTestCase2(unittest.TestCase):
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.hobj = Container()
-        self.hobj.add_trait('iface_sock', Slot(MyIface))
-        self.hobj.add_trait('class_sock', Slot(MyClass))
+        self.hobj.add('iface_sock', Slot(MyIface))
+        self.hobj.add('class_sock', Slot(MyClass))
                        
     def test_set(self):
         mc = MyClass()

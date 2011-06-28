@@ -6,7 +6,7 @@
 # pylint: disable-msg=E0611,F0401
 from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                SellarDiscipline2
-from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver
 
 class SellarMDF(Assembly):
@@ -72,6 +72,7 @@ class SellarMDF(Assembly):
 if __name__ == "__main__": # pragma: no cover         
 
     import time
+    from openmdao.main.api import set_as_top
     
     prob = SellarMDF()
     set_as_top(prob)
