@@ -9,18 +9,18 @@ from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, ho
 from fabric.state import connections
 import paramiko.util
 from socket import gethostname
-#import urllib2
 
 paramiko.util.log_to_file('paramiko.log')
 
 
 def _testbranch(hostname):
-    """Builds and runs tests on a branch on a specified host platform.
-    You can run from anywhere in the branch, but recommend running from branchroot/scripts dir.
+    """Builds and runs tests on a branch on a specified host platform. You can
+    run from anywhere in the branch, but recommend running from
+    branchroot/scripts dir.
     """
     print('running tests on %s' % hostname)
     startdir=os.getcwd()
-    branchdir=local('bzr root').strip()    
+    branchdir=local('bzr root').strip()
     remotehost = hostname.split(".")[0]
     tarfilename=remotehost+"testbranch.tar.gz"
     #export the current branch to a tarfile
@@ -65,7 +65,7 @@ def _testbranch(hostname):
                     run('source activate && echo $PATH && echo environment activated, please wait while tests run && openmdao_test -xv')
                     print('Tests completed on %s' % hostname)
             res2=run('%s testbranch' % removeit) 
-	    res3=run('%s *testbranch.tar *testbranch.tar.gz' % removeit)
+            res3=run('%s *testbranch.tar *testbranch.tar.gz' % removeit)
          
         else:  #we're remoting into windows (storm)
             #remove any previous testbranches on remote host
