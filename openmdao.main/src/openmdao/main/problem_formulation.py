@@ -119,7 +119,7 @@ class ArchitectureAssembly(Assembly):
                 
     def get_local_des_vars_by_comp(self): 
         """Return a dictionary of component names/list of parameters for 
-        all singlt target parameters."""
+        all single target parameters."""
         comps = {}
         for k,v in self.get_parameters().items():
             if isinstance(v, Parameter): 

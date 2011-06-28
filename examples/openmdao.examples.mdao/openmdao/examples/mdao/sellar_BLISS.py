@@ -11,7 +11,6 @@
 from openmdao.examples.mdao.disciplines import SellarDiscipline1,\
                                                SellarDiscipline2
 from openmdao.main.api import Assembly
-from openmdao.lib.components.api import Mux
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
