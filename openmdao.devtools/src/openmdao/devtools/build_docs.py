@@ -172,10 +172,12 @@ def _write_src_docs(branchdir, docdir):
     moddir = os.path.join(docdir, 'srcdocs', 'modules')
     
     for name in os.listdir(pkgdir):
-        os.remove(os.path.join(pkgdir, name))
+        if name != '.gitignore':
+            os.remove(os.path.join(pkgdir, name))
     
     for name in os.listdir(moddir):
-        os.remove(os.path.join(moddir, name))
+        if name != '.gitignore':
+            os.remove(os.path.join(moddir, name))
     
     for pack in packages:
         print 'creating autodoc file for %s' % pack
