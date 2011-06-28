@@ -127,7 +127,7 @@ def _release(host, version=None, is_local=True, home='/OpenMDAO/dev/ckrenek/scri
 def _find_top_dir():
     path = os.getcwd()
     while path:
-        if '.bzr' in os.listdir(path):
+        if '.git' in os.listdir(path):
             return path
         path = os.path.dirname(path)
     raise RuntimeError("Can't find top dir of repository starting at %s" % os.getcwd())
