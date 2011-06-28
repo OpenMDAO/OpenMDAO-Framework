@@ -121,7 +121,7 @@ class SellarBLISS(Assembly):
         self.sysopt.iprint = 0
         self.sysopt.force_execute = True
             
-        self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt'])
+        self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt'])  
         
 
         
