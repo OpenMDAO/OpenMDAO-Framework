@@ -23,10 +23,7 @@ class SellarBLISS(Assembly):
     Disciplines coupled with FixedPointIterator.
     """
     
-    z1_store = Float(0.0)
-    z2_store = Float(0.0)
-    
-    z_store = Array(default=[.1,.1])
+    z_store = Array([0,0],dtype=Float)
     x1_store = Float(0.0)
     
     def __init__(self):
@@ -36,10 +33,7 @@ class SellarBLISS(Assembly):
         
         Optimal Objective = 3.18339"""
                 
-        super(SellarBLISS, self).__init__()
-        
-        self.z_store = [0,0]
-        
+        super(SellarBLISS, self).__init__()        
 
         # Disciplines
         self.add('dis1', SellarDiscipline1())
