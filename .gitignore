@@ -8,6 +8,7 @@ eggs/
 develop-eggs/
 .coverage
 openmdao_log.txt
+build.out
 
 ~*
 *~
