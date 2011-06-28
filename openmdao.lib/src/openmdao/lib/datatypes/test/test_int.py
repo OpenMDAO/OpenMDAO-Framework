@@ -11,9 +11,9 @@ class IntTestCase(unittest.TestCase):
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.hobj = Container()
-        self.hobj.add_trait('int1', Int(98, low=0, high=99, iotype='in'))
-        self.hobj.add_trait('int2', Int(13, iotype='out'))
-        self.hobj.add_trait('int3', Int(low=0, high=99, iotype='in'))
+        self.hobj.add('int1', Int(98, low=0, high=99, iotype='in'))
+        self.hobj.add('int2', Int(13, iotype='out'))
+        self.hobj.add('int3', Int(low=0, high=99, iotype='in'))
         
         self.hobj.int1 = 3
         self.hobj.int2 = 42
@@ -26,7 +26,7 @@ class IntTestCase(unittest.TestCase):
 
     def test_set_to_default(self):
         self.assertEqual(3, self.hobj.int1)
-        self.hobj.add_trait('int4', Int(iotype='in'))
+        self.hobj.add('int4', Int(iotype='in'))
         self.assertEqual(0, self.hobj.int4)
         self.hobj.int4 = 6
         self.assertEqual(6, self.hobj.int4)
@@ -39,7 +39,7 @@ class IntTestCase(unittest.TestCase):
     def test_attributes(self):
         
         try:
-            self.hobj.add_trait('inta', Int(98.0, low=0, high=99, iotype='in'))
+            self.hobj.add('inta', Int(98.0, low=0, high=99, iotype='in'))
         except ValueError, err:
             errstring = "Default value for an Int must be an integer."
             self.assertEqual(str(err), errstring)
@@ -47,7 +47,7 @@ class IntTestCase(unittest.TestCase):
             self.fail("Exception expected")
         
         try:
-            self.hobj.add_trait('inta', Int(98, low=0.01, high=99, iotype='in'))
+            self.hobj.add('inta', Int(98, low=0.01, high=99, iotype='in'))
         except ValueError, err:
             errstring = "Lower bound for an Int must be an integer."
             self.assertEqual(str(err), errstring)
@@ -55,7 +55,7 @@ class IntTestCase(unittest.TestCase):
             self.fail("Exception expected")
         
         try:
-            self.hobj.add_trait('inta', Int(98, low=0, high=99.9, iotype='in'))
+            self.hobj.add('inta', Int(98, low=0, high=99.9, iotype='in'))
         except ValueError, err:
             errstring = "Upper bound for an Int must be an integer."
             self.assertEqual(str(err), errstring)
@@ -63,7 +63,7 @@ class IntTestCase(unittest.TestCase):
             self.fail("Exception expected")
         
         try:
-            self.hobj.add_trait('badbounds', Int(98, low=100, high=0, iotype='in'))
+            self.hobj.add('badbounds', Int(98, low=100, high=0, iotype='in'))
         except ValueError, err:
             errstring = "Lower bound is greater than upper bound."
             self.assertEqual(str(err), errstring)
@@ -72,7 +72,7 @@ class IntTestCase(unittest.TestCase):
         
     def test_default_value(self):
         try:
-            self.hobj.add_trait('out_of_bounds',
+            self.hobj.add('out_of_bounds',
                                 Int(5, low=3, high=4))
         except ValueError, err:
             self.assertEqual(str(err), 
@@ -133,21 +133,21 @@ class IntTestCase(unittest.TestCase):
 
     def test_constructor_defaults(self):
         
-        self.hobj.add_trait('int_nodefault1',
+        self.hobj.add('int_nodefault1',
                             Int(low=3, high=4, iotype='in'))
         self.assertEqual(3, self.hobj.int_nodefault1)
         
-        self.hobj.add_trait('int_nodefault2',
+        self.hobj.add('int_nodefault2',
                             Int(high=4, iotype='in'))
         self.assertEqual(4, self.hobj.int_nodefault2)
         
-        self.hobj.add_trait('int_nodefault3',
+        self.hobj.add('int_nodefault3',
                             Int(iotype='in'))
         self.assertEqual(0, self.hobj.int_nodefault3)
             
     def test_exclusions(self):
         
-        self.hobj.add_trait('int4', Int(low=3, high=4, \
+        self.hobj.add('int4', Int(low=3, high=4, \
                                   exclude_low=True, exclude_high=True, \
                                   iotype='in'))
         try:

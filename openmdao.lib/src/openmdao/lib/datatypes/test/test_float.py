@@ -11,12 +11,12 @@ class FloatTestCase(unittest.TestCase):
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.hobj = Container()
-        self.hobj.add_trait('float1', 
+        self.hobj.add('float1', 
                             Float(98.9, low=0., high=99.0, desc="Stuff",
                                   iotype='in', units='ft'))
-        self.hobj.add_trait('float2', 
+        self.hobj.add('float2', 
                             Float(13.2, iotype='out', units='inch', low=-9999.))
-        self.hobj.add_trait('float3', 
+        self.hobj.add('float3', 
                             Float(low=0., high=99.,
                                        iotype='in', units='kg'))
         
@@ -31,7 +31,7 @@ class FloatTestCase(unittest.TestCase):
 
     def test_set_to_default(self):
         self.assertEqual(3.1415926, self.hobj.float1)
-        self.hobj.add_trait('float4',
+        self.hobj.add('float4',
                             Float(iotype='in', units='kg'))
         self.assertEqual(0., self.hobj.float4)
         self.hobj.float4 = 6.5
@@ -115,7 +115,7 @@ class FloatTestCase(unittest.TestCase):
 
     def test_attributes(self):
         try:
-            self.hobj.add_trait('badbounds', Float(98.0, low=100.0, high=0.0, iotype='in'))
+            self.hobj.add('badbounds', Float(98.0, low=100.0, high=0.0, iotype='in'))
         except Exception, err:
             errstring = "Lower bound is greater than upper bound."
             self.assertEqual(str(err), errstring)
@@ -135,26 +135,26 @@ class FloatTestCase(unittest.TestCase):
 
     def test_constructor_defaults(self):
         
-        self.hobj.add_trait('float_nodefault1',
+        self.hobj.add('float_nodefault1',
                             Float(low=3.0, high=4.0, iotype='in', units='kg'))
         self.assertEqual(3.0, self.hobj.float_nodefault1)
         
-        self.hobj.add_trait('float_nodefault2',
+        self.hobj.add('float_nodefault2',
                             Float(high=4.0, iotype='in', units='kg'))
         self.assertEqual(4.0, self.hobj.float_nodefault2)
         
-        self.hobj.add_trait('float_nodefault3',
+        self.hobj.add('float_nodefault3',
                             Float(iotype='in', units='kg'))
         self.assertEqual(0.0, self.hobj.float_nodefault3)
             
-        self.hobj.add_trait('float_nounits',
+        self.hobj.add('float_nounits',
                             Float(low=3.0, high=4.0, iotype='in'))
         if hasattr(self.hobj.float_nounits,'units'):
             self.fail("Unitless Float should not have units")
 
     def test_exclusions(self):
         
-        self.hobj.add_trait('float4', Float(low=3.0, high=4.0, \
+        self.hobj.add('float4', Float(low=3.0, high=4.0, \
                                   exclude_low=True, exclude_high=True, \
                                   iotype='in', units='kg'))
         try:
@@ -169,14 +169,14 @@ class FloatTestCase(unittest.TestCase):
         # Ensure limits that are ints don't cause something like this:
         #     Trait 'symmetry_angle' must be a float in the range (0, 180]
         #     but attempted value is 11.25
-        self.hobj.add_trait('symmetry_angle',
+        self.hobj.add('symmetry_angle',
                             Float(low=0, exclude_low=True, high=180))
         self.hobj.symmetry_angle = 11.25
         self.assertEqual(self.hobj.symmetry_angle, 11.25)
 
     def test_default_value_type(self):
         try:
-            self.hobj.add_trait('bad_default',
+            self.hobj.add('bad_default',
                                 Float('Bad Wolf'))
         except ValueError, err:
             self.assertEqual(str(err), 
@@ -186,7 +186,7 @@ class FloatTestCase(unittest.TestCase):
 
     def test_default_value(self):
         try:
-            self.hobj.add_trait('out_of_bounds',
+            self.hobj.add('out_of_bounds',
                                 Float(5.0, low=3, high=4))
         except ValueError, err:
             self.assertEqual(str(err), 

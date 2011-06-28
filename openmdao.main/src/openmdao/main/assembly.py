@@ -52,7 +52,8 @@ class Assembly (Component):
         self.add('driver', Driver())
         
     def add(self, name, obj):
-        """Add obj to the component graph and call base class *add*.
+        """Call the base class *add*.  Then,
+        if obj is a Component, add it to the component graph.
         
         Returns the added object.
         """

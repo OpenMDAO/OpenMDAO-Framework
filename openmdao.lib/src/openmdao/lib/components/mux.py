@@ -28,7 +28,7 @@ class Mux(Component):
         #build the inputs
         for i in xrange(new): 
             name = "input_%d"%(i+1)
-            self.add_trait(name, Any(iotype="in"))
+            self.add(name, Any(iotype="in"))
             self._inputs.append(name)
     def execute(self): 
         self.output = [getattr(self,inp) for inp in self._inputs]
@@ -59,7 +59,7 @@ class DeMux(Component):
         self._outputs = []
         for i in xrange(new): 
             name = "output_%d"%(i+1)
-            self.add_trait(name,Any(iotype="out"))
+            self.add(name, Any(iotype="out"))
             self._outputs.append(name)
             
     def execute(self):

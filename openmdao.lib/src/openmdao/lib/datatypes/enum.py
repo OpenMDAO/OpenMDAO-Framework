@@ -24,22 +24,19 @@ class Enum(Variable):
                 raise ValueError("Enum must contain at least one value.")
             else:
                 values = default_value
-                if isinstance(values, tuple) or \
-                   isinstance(values, list):
+                if isinstance(values, (tuple, list)):
                     default_value = values[0]
         else:
             if default_value is None:
                 default_value = values[0]
 
         # We need tuples or a list for the index
-        if not ( isinstance(values, tuple) or \
-                 isinstance(values, list) ):
+        if not isinstance(values, (tuple, list)):
             values = (values,)
                 
         if aliases:
             
-            if not ( isinstance(aliases, tuple) or \
-                     isinstance(aliases, list) ):
+            if not isinstance(aliases, (tuple, list)):
                 aliases = (aliases,)
                 
             if len(aliases) != len(values):

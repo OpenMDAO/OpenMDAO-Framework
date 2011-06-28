@@ -13,6 +13,12 @@ from openmdao.main.constants import SAVE_CPICKLE
 class IArchitecture(Interface):
     
     parent = Attribute("parent Assembly")
+    param_types = Attribute("list of types of allowed parameters.  "
+                            "Valid values are: ['continuous','discrete','enum']")
+    constraint_types = Attribute("list of types of allowed constraints. "
+                                 " Valid values are: ['eq', 'ineq']")
+    num_allowed_objectives = Attribute("number of objectives supported.")
+    has_coupling_vars = Attribute("True if coupling variables are required.")
     
     def configure(): 
         """sets up drivers,workflows, and data connections in 
@@ -30,16 +36,11 @@ class IContainer(Interface):
     parent = Attribute("parent of this Container (or None)")
     name = Attribute("name of this Container")
     
-    def add(name, obj, **kw_args):
+    def add(name, obj):
         """Add a Container object to this Container.
         Returns the added Container object.
         """
         
-    def add_trait(name, trait):
-        """Overrides HasTraits definition of *add_trait* in order to
-        keep track of dynamically added traits for serialization.
-        """
-
     def connect(srcpath, destpath):
         """Connects one source variable to one destination variable. 
         When a pathname begins with 'parent.', that indicates
@@ -57,14 +58,6 @@ class IContainer(Interface):
         name is contained in this Container. 
         """
     
-    def create_alias(path, alias, iotype=None, trait=None):
-        """Create a trait that maps to some internal variable designated by a
-        dotted path. If a trait is supplied as an argument, use that trait as
-        a validator for the aliased value. The resulting trait will have the
-        alias as its name and will be added to 
-        self.  An exception will be raised if the trait already exists.
-        """
-
     def disconnect(srcpath, destpath):
         """Removes the connection between one source variable and one 
         destination variable.
@@ -103,7 +96,7 @@ class IContainer(Interface):
         """
         
     def get_wrapped_attr(name):
-        """If the named trait can return an AttrWrapper, then this
+        """If the named Variable can return an AttrWrapper, then this
         function will return that, with the value set to the current value of
         the variable. Otherwise, it functions like *getattr*, just
         returning the value of the variable. Raises an exception if the
@@ -149,11 +142,6 @@ class IContainer(Interface):
         public trait objects that reference that child. Notify any
         observers."""
         
-    def remove_trait(name):
-        """Overrides HasTraits definition of remove_trait in order to
-        keep track of dynamically added traits for serialization.
-        """
-
     def revert_to_defaults(recurse=True):
         """Sets the values of all of the inputs to their default values."""
             
@@ -298,16 +286,15 @@ class IComponent(IContainer):
         """
     
     
-class IDriver(Interface):
-    """A marker interface for Drivers. To make a usable IDriver plug-in,
-    you must still inherit from Driver.
+class IDriver(IComponent):
+    """An interface for objects that manage the iteration of workflows. 
     """
     
     workflow = Attribute("object that knows how to run a single iteration over this Driver's iteration set")
     
     def iteration_set(self):
         """Return a set of names (not pathnames) containing all Components
-        in this Driver's workflow.
+        in this Driver's workflow or any of its sub-workflows.
         """
 
 class IFactory (Interface):
