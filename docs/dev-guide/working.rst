@@ -166,7 +166,7 @@ the ``git remote add`` command. It has the following form:
    
 As an example let's add a remote to our personal fork of OpenMDAO on Github.
 If you haven't created one yet, simply log into Github and go to
-http://github.com/OpenMDAO/OpenMDAO. There, near the top of the page you'll
+http://github.com/OpenMDAO/OpenMDAO-Framework. There, near the top of the page you'll
 see a *Fork* button. Press it and you're done.
 
 Now that you have a remote repository that you want to reference from your local
@@ -174,7 +174,7 @@ repository, you can add a remote for it, calling it *myfork*.
 
 ::
 
-   git remote add myfork git@github.com:userid/OpenMDAO.git
+   git remote add myfork git@github.com:userid/OpenMDAO-Framework.git
    
    
 where *userid* is your Github userid. Note that in this case the URL we've

@@ -157,7 +157,7 @@ Github using the following command:
 
 ::
 
-   git://github.com/OpenMDAO/OpenMDAO.git
+   git://github.com/OpenMDAO/OpenMDAO-Framework.git
    
    
 Note that the URL used above will give you only read permission to the
@@ -167,7 +167,7 @@ use an SSH style URL to specify the repository like this:
 
 ::
 
-   git clone git@github.com:OpenMDAO/OpenMDAO.git
+   git clone git@github.com:OpenMDAO/OpenMDAO-Framework.git
 
 
 Normally, you should only need to do this once on any given machine where you plan
