@@ -34,7 +34,7 @@ output would look like this:
             self.y = 3.0*self.x
 
 The example above shows the way the majority of users will create variables.
-An alternative way to declare them is to use the ``add_trait`` function that is part of the
+An alternative way to declare them is to use the ``add`` function that is part of the
 Component public interface. First, lets define the same class in the shell but without
 the variables *x* and *y*.
   
@@ -49,21 +49,23 @@ the variables *x* and *y*.
             """ y = 3*x """
             self.y = 3.0*self.x
 
-Next, the ``add_trait`` function is used to add the input *x* and the output *y* after
+Next, the ``add`` function is used to add the input *x* and the output *y* after
 an instance of ``Simple`` has been created:
 
 .. doctest:: creating_public_variables_2
 
     >>> equation = Simple()
-    >>> equation.add_trait('x',Float(1.0, iotype='in', desc='The input x'))
-    >>> equation.add_trait('y',Float(iotype='out', desc='The output y'))
+    >>> equation.add('x',Float(1.0, iotype='in', desc='The input x'))
+    <openmdao.lib.datatypes.float.Float object at ...>
+    >>> equation.add('y',Float(iotype='out', desc='The output y'))
+    <openmdao.lib.datatypes.float.Float object at ...>
     >>> equation.x=7
     >>> equation.run()
     >>> equation.y
     21.0
 
-The primary use of ``add_trait`` is to create a variable dynamically at some
-point after the component has been created (possibly during execution).
+Using ``add`` in this way allows you to create a variable dynamically at some
+point after the component has been created.
 
     >>> from openmdao.examples.simple.paraboloid import Paraboloid
     >>> from openmdao.lib.datatypes.api import Int
@@ -72,7 +74,8 @@ point after the component has been created (possibly during execution).
     Traceback (most recent call last):
     ...
     AttributeError: 'Paraboloid' object has no attribute 'z
-    >>> test.add_trait('z',Int(7777, iotype='out', desc='An Int'))
+    >>> test.add('z',Int(7777, iotype='out', desc='An Int'))
+    <openmdao.lib.datatypes.int.Int object at ...>
     >>> test.z
     7777
 
@@ -80,8 +83,8 @@ Some specialized components will make use of the ability to create
 variables on the fly, but most general components won't need this.
 
 The example above shows how to directly access a variable, but there is also an
-indirect access using a ``set`` and ``get`` method. ``Set`` and ``get`` are primarily used by the
-framework to pass data between variables. In some cases a
+indirect access using a ``set`` and ``get`` method.  The framework uses ``set`` and ``get`` 
+to pass data between variables. In some cases a
 model developer may need to use them -- but only for specific cases where
 some objects are executing on remote servers.
 

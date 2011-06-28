@@ -3,6 +3,8 @@ This object is used by Component to store derivative information and to
 perform calculations during a Fake Finite Difference.
 """
 
+#public symbols
+__all__ = ['Derivatives', 'derivative_name']
 
 def _check_var(comp, var_name, iotype):
     """ Checks a variable to make sure it's the proper type and iotype."""
@@ -27,6 +29,19 @@ def _check_var(comp, var_name, iotype):
         raise RuntimeError(msg)
 
     
+def derivative_name(input_name, output_name):
+    """ Assemble the name string for a derivative output based on its input
+    and output name. This name string is used in several places, and is 
+    considered part of the API."""
+    
+    # Sometimes a parameter is connected to multiple inputs.
+    if isinstance(input_name, tuple):
+        input_name = input_name[0]
+    
+    return "d__%s__%s" % (output_name.replace('.', '_'),
+                          input_name.replace('.', '_'))
+
+
 class Derivatives(object):
     """Class for storing derivatives between the inputs and outputs of a
     component at specified orders.

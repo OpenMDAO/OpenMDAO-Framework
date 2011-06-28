@@ -26,7 +26,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 import zope.interface
 
 from enthought.traits.api import HasTraits, Missing, Undefined, \
-                                 push_exception_handler, Python
+                                 push_exception_handler, TraitType
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
@@ -233,6 +233,7 @@ class Container(HasTraits):
         destpath: str
             Pathname of destination variable.
         """
+        cname = None
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
@@ -249,9 +250,13 @@ class Container(HasTraits):
                 self.raise_exception(
                     "'%s' is already connected to source '%s'" % 
                     (destpath, sname), RuntimeError)
-            cname, _, restofpath = destpath.partition('.')
+            cname2, _, restofpath = destpath.partition('.')
+            if cname == cname2 and cname is not None:
+                self.raise_exception("Can't connect '%s' to '%s'. Both variables are on the same component"%
+                                     (srcpath,destpath), RuntimeError)
+
             if restofpath:
-                child = getattr(self, cname)
+                child = getattr(self, cname2)
                 if is_instance(child, Container):
                     child.connect('parent.'+srcpath, restofpath)
                 
@@ -263,6 +268,7 @@ class Container(HasTraits):
         """Removes the connection between one source variable and one 
         destination variable.
         """
+        cname = cname2 = None
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
@@ -272,10 +278,15 @@ class Container(HasTraits):
         if not destpath.startswith('parent.'):
             if not self.contains(destpath):
                 self.raise_exception("Can't find '%s'" % destpath, AttributeError)
-            cname, _, restofpath = destpath.partition('.')
+            cname2, _, restofpath = destpath.partition('.')
             if restofpath:
-                getattr(self, cname).disconnect('parent.'+srcpath, restofpath)
+                getattr(self, cname2).disconnect('parent.'+srcpath, restofpath)
         
+        if cname == cname2 and cname is not None:
+            self.raise_exception("Can't disconnect '%s' from '%s'. "
+                                 "Both variables are on the same component" %
+                                 (srcpath,destpath), RuntimeError)
+
         self._depgraph.disconnect(srcpath, destpath)
 
     #TODO: get rid of any notion of valid/invalid from Containers.  If they have
@@ -476,9 +487,9 @@ class Container(HasTraits):
         
         return val
         
-    def add(self, name, obj, **kw_args):
-        """Add a Container object to this Container.
-        Returns the added Container object.
+    def add(self, name, obj):
+        """Add an object to this Container.
+        Returns the added object.
         """
         if '.' in name:
             self.raise_exception(
@@ -505,6 +516,8 @@ class Container(HasTraits):
             # children) that its scope tree back to the root is defined.
             if self._call_tree_rooted is False:
                 obj.tree_rooted()
+        elif is_instance(obj, TraitType):
+            self.add_trait(name, obj)
         else:
             self.raise_exception("'"+str(type(obj))+
                     "' object is not an instance of Container.",
@@ -567,7 +580,7 @@ class Container(HasTraits):
                 self.remove_trait(name)
             return obj
         else:
-            self.raise_exception("cannot remove container '%s': not found"%
+            self.raise_exception("cannot remove '%s': not found"%
                                  name, AttributeError)
 
     @rbac(('owner', 'user'))
@@ -1310,7 +1323,7 @@ def create_io_traits(cont, obj_info, iotype='in'):
     
     The newly created traits are added to the specified Container.
     """
-    if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
+    if isinstance(obj_info, (basestring, tuple)):
         it = [obj_info]
     else:
         it = obj_info

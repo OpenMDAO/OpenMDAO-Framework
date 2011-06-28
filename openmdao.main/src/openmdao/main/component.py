@@ -411,8 +411,10 @@ class Component (Container):
                 self.pop_dir()
  
     def add(self, name, obj):
-        """Override of base class version to force call to *check_config* after
-        any child containers are added.
+        """Override of base class version to force call to *check_config*
+        after any child containers are added. The base class version is still
+        called.
+        
         Returns the added Container object.
         """
         self.config_changed()

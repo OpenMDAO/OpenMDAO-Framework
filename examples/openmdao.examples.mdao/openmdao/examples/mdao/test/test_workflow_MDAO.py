@@ -9,6 +9,8 @@ from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                SellarDiscipline2
 from openmdao.examples.mdao.sellar_MDF import SellarMDF
 from openmdao.examples.mdao.sellar_IDF import SellarIDF
+from openmdao.examples.mdao.sellar_CO import SellarCO
+from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.drivers.api import CONMINdriver
@@ -80,7 +82,7 @@ class SellarDiscipline2c(Component):
 
 
 
-class SellarCO(Assembly):
+class SellarCO_Multi(Assembly):
     """Solution of the sellar analytical problem using CO.
     
     Sellar, R. S., Batill, S. M., and Renaud, J. E., Response Surface Based, Concur-
@@ -103,7 +105,7 @@ class SellarCO(Assembly):
         Optimal Objective = 3.18339"""
         
         # pylint: disable-msg=E1101
-        super(SellarCO, self).__init__()
+        super(SellarCO_Multi, self).__init__()
         
         # Global Optimization
         self.add('driver', CONMINdriver())
@@ -160,8 +162,6 @@ class SellarCO(Assembly):
                                     [-10.0, 0.0, 0.0, -10.0],
                                     [10.0, 10.0, 10.0, 24.0]):
             self.localopt1.add_parameter(param, low=low, high=high)
-        #self.localopt1.lower_bounds = [-10.0, 0.0, 0.0, -10.0]
-        #self.localopt1.upper_bounds = [10.0, 10.0, 10.0, 24.0]
         self.localopt1.iprint = 0
         self.localopt1.itmax = 100
         self.localopt1.fdch = .003
@@ -229,6 +229,35 @@ class TestCase(unittest.TestCase):
     
         # Set up initial conditions
     
+        prob.z1_t = 5.0
+        prob.dis1.z1 = 5.0
+        prob.dis2.z1 = 5.0
+    
+        prob.z2_t = 2.0
+        prob.dis1.z2 = 2.0
+        prob.dis2.z2 = 2.0
+    
+        prob.x1_t = 1.0
+        prob.dis1.x1 = 1.0
+        
+        prob.y1_t = 3.16
+        prob.dis2.y1 = 3.16
+        
+        prob.y2_t = 0.0
+        prob.dis1.y2 = 0.0
+        
+        prob.run()
+
+        assert_rel_error(self, prob.z1_t, 2.0, 0.1)
+        assert_rel_error(self, 1.0-prob.z2_t, 1.0, 0.01)
+        assert_rel_error(self, 1.0-prob.x1_t, 1.0, 0.1)
+
+    def test_CO_Multi(self):
+        prob = SellarCO_Multi()
+        set_as_top(prob)
+    
+        # Set up initial conditions
+    
         prob.z1 = 5.0
         prob.dis1.z1 = 5.0
         prob.dis2b.z1 = 5.0
@@ -252,7 +281,20 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0-prob.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.x1, 1.0, 0.1)
 
+    def test_BLISS(self):
+        prob = SellarBLISS()
+        set_as_top(prob)
+    
+        prob.dis1.z1 = prob.dis2.z1 = z1_store = 5.0
+        prob.dis1.z2 = prob.dis2.z2 = z2_store = 2.0
+        prob.dis1.x1 = x1_store = 1.0
+    
+        prob.run()
+        assert_rel_error(self, prob.dis1.z1, 1.977, 0.04)
+        assert_rel_error(self, 1.0-prob.dis1.z2, 1.0, 0.01)
+        assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
         
+
 if __name__ == '__main__':
     import nose
     import sys

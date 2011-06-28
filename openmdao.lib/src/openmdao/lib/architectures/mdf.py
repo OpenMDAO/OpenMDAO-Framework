@@ -1,16 +1,20 @@
-from openmdao.main.problem_formulation import IArchitecture
-
-from openmdao.main.api import Driver, Architecture, implements
+from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver
 
-#TODO: Only supports HasObjective,HasParameters - real/continuous,
-#HasConstraints, HasCouplingVars
-class MDF(Architecture): 
+class MDF(Architecture):
+    
+    def __init__(self, *args, **kwargs):
+        super(MDF, self).__init__(*args, **kwargs)
+        
+        # the following variables determine the behavior of check_config
+        self.param_types = ['continuous']
+        self.constraint_types = ['ineq']
+        self.num_allowed_objectives = 1
+        self.has_coupling_vars = True
     
     def configure(self): 
         """setup and MDF architecture inside this assembly.
         """
-                
         #create the top level optimizer
         self.parent.add("driver",CONMINdriver())
         self.parent.driver.cons_is_linear = [1]*len(self.parent.list_constraints())
@@ -29,14 +33,14 @@ class MDF(Architecture):
         #For MDF all disciplines get solved in the MDA, but other
         #architectures might need to identify disciplines on a more granular
         #level. This is all done via the parameter
-        disciplines = set()
+        #disciplines = set()
 
         for k,v in self.parent.get_global_des_vars(): 
             global_dvs.append(v)
-            disciplines.update(v.get_referenced_compnames())
+            #disciplines.update(v.get_referenced_compnames())
         for k,v in self.parent.get_local_des_vars(): 
             local_dvs.append(v)
-            disciplines.update(v.get_referenced_compnames())
+            #disciplines.update(v.get_referenced_compnames())
         
         #TODO: possibly add methods for passing parameters directly?
         #connect the broadcast outputs to the disciplines
@@ -73,13 +77,4 @@ class MDF(Architecture):
 
         #setup the workflows
         self.parent.driver.workflow.add(['solver'])
-        self.parent.solver.workflow.add(disciplines)
-        
-    #TODO: would like some kind of an automatic handling of this, but for now
-    #      I will just manually tear it all down. 
-    def clear(self): 
-        self.parent.add('driver', Driver()) 
-        self.parent.remove('solver')
-        
-        #no connections to break down
-        
+        #self.parent.solver.workflow.add(disciplines)

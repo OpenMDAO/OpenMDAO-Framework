@@ -92,10 +92,12 @@ def run_wing():
     env = os.environ
     if sys.platform != 'win32':
         libs = env.get('LD_LIBRARY_PATH','').split(os.pathsep)
-        bzrtop = find_up('.bzr')
-        if bzrtop:
-            bzrtop = os.path.dirname(bzrtop)
-            sodirs = set([os.path.dirname(x) for x in find_files(bzrtop,'*.so')])
+        rtop = find_up('.git')
+        if not rtop:
+            rtop = find_up('.bzr')
+        if rtop:
+            rtop = os.path.dirname(rtop)
+            sodirs = set([os.path.dirname(x) for x in find_files(rtop,'*.so')])
             libs.extend(sodirs)
             env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
     
