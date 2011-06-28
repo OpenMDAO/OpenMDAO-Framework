@@ -34,6 +34,7 @@ class SellarBLISS(Assembly):
         Optimal Objective = 3.18339"""
                 
         super(SellarBLISS, self).__init__()        
+        
 
         # Disciplines
         self.add('dis1', SellarDiscipline1())
@@ -41,7 +42,7 @@ class SellarBLISS(Assembly):
         
         objective = '(dis1.x1)**2 + dis1.z2 + dis1.y1 + exp(-dis2.y2)'
         constraint1 = 'dis1.y1 > 3.16'
-        constraint2 = ' 24.0 > dis2.y2'
+        constraint2 = 'dis2.y2 < 24.0'
         
         # Top level is Fixed-Point Iteration
         self.add('driver', FixedPointIterator())
