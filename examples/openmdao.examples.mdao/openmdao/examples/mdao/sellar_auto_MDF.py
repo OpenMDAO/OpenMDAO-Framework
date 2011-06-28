@@ -7,7 +7,7 @@ from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                SellarDiscipline2
 
 
-from openmdao.main.api import Assembly, set_as_top, Slot, implements, Component
+from openmdao.main.api import Assembly, Slot, implements, Component
 
 from openmdao.main.problem_formulation import ArchitectureAssembly
 
@@ -31,7 +31,6 @@ class SellarMDF(ArchitectureAssembly):
         #add the discipline components to the assembly
         self.add('dis1', SellarDiscipline1())
         self.add('dis2', SellarDiscipline2())
-        
         
         #START OF MDAO Problem Definition
         #Global Des Vars
@@ -58,10 +57,12 @@ class SellarMDF(ArchitectureAssembly):
 if __name__ == "__main__": # pragma: no cover
 
     import time
+    from openmdao.main.api import set_as_top
+    
+    solution = (1.9776, 0, 0)
     
     prob = SellarMDF()
     set_as_top(prob)
-    prob.configure()
         
     prob.dis1.z1 = prob.dis2.z1 = 5.0
     prob.dis1.z2 = prob.dis2.z2 = 2.0
@@ -76,6 +77,11 @@ if __name__ == "__main__": # pragma: no cover
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,
                                              prob.dis1.z2,
                                              prob.dis1.x1)
+    print "Minimum differs from expected by (%f, %f, %f)" % (prob.dis1.z1-solution[0],
+                                                             prob.dis1.z2-solution[1],
+                                                             prob.dis1.x1-solution[2])
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.driver.eval_objective()
-    print "Elapsed time: ", time.time()-tt, "seconds"        
+    print "Elapsed time: ", time.time()-tt, "seconds"
+    
+    

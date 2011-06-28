@@ -324,7 +324,7 @@ class DerivativesTestCase(unittest.TestCase):
         else:
             self.fail('RuntimeError expected')
 
-        self.comp.add_trait('zint', Int(7777, iotype='in'))
+        self.comp.add('zint', Int(7777, iotype='in'))
         
         try:
             self.comp.derivatives.declare_first_derivative(self.comp, 'f_xy', 'zint')
@@ -339,9 +339,9 @@ class DerivativesTestCase(unittest.TestCase):
 
     def test_forgot_to_declare_first_derivatives(self):
         
-        self.comp.add_trait('zx', Float(64.0, iotype='in'))
-        self.comp.add_trait('zy', Float(64.0, iotype='in'))
-        self.comp.add_trait('zz', Float(64.0, iotype='out'))
+        self.comp.add('zx', Float(64.0, iotype='in'))
+        self.comp.add('zy', Float(64.0, iotype='in'))
+        self.comp.add('zz', Float(64.0, iotype='out'))
         
         try:
             self.comp.derivatives.set_first_derivative('f_xy', 'zx', 33.4)
@@ -365,16 +365,16 @@ class DerivativesTestCase(unittest.TestCase):
 
     def test_forgot_to_declare_second_derivatives(self):
         
-        self.comp.add_trait('zx', Float(64.0, iotype='in'))
-        self.comp.add_trait('zy', Float(64.0, iotype='in'))
-        self.comp.add_trait('zz', Float(64.0, iotype='out'))
+        self.comp.add('zx', Float(64.0, iotype='in'))
+        self.comp.add('zy', Float(64.0, iotype='in'))
+        self.comp.add('zz', Float(64.0, iotype='out'))
         
         try:
             self.comp.derivatives.set_second_derivative('zz', 'zy', 'zy', 33.4)
         except KeyError, err:
             msg = "Derivative of zz " + \
                   "with repect to zy and zy " + \
-                  "must be declared before being set."            
+                  "must be declared before being set."
             self.assertEqual(err[0], msg)
         else:
             self.fail('KeyError expected')

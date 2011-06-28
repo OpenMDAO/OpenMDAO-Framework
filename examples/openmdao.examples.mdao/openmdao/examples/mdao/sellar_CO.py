@@ -5,7 +5,7 @@
 from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
                                                SellarDiscipline2
 from openmdao.lib.datatypes.api import Float
-from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import CONMINdriver
 
 
@@ -109,6 +109,7 @@ class SellarCO(Assembly):
 if __name__ == "__main__":        
 
     import time
+    from openmdao.main.api import set_as_top
     
     prob = SellarCO()
     set_as_top(prob)

@@ -9,4 +9,5 @@ from openmdao.lib.drivers.genetic import Genetic
 from openmdao.lib.drivers.iterate import FixedPointIterator, IterateUntil
 from openmdao.lib.drivers.broydensolver import BroydenSolver
 from openmdao.lib.drivers.doedriver import DOEdriver
+from openmdao.lib.drivers.sensitivity import SensitivityDriver
 

@@ -20,7 +20,7 @@ class IntTestCase(unittest.TestCase):
     def test_constructors(self):
         
         try:
-            self.hobj.add_trait('nothing',
+            self.hobj.add('nothing',
                             Enum(iotype='in'))
         except Exception, err:
             errstring = "Enum must contain at least one value."
@@ -28,24 +28,24 @@ class IntTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
-        self.hobj.add_trait('simplest',
+        self.hobj.add('simplest',
                             Enum(1, iotype='in'))
         self.assertEqual(1, self.hobj.simplest)
 
-        self.hobj.add_trait('strangest',
+        self.hobj.add('strangest',
                             Enum(1, 1, iotype='in'))
         self.assertEqual(1, self.hobj.strangest)
 
-        self.hobj.add_trait('simple_nodefault',
+        self.hobj.add('simple_nodefault',
                             Enum((1,2,3), iotype='in'))
         self.assertEqual(1, self.hobj.simple_nodefault)
 
-        self.hobj.add_trait('simple_default',
+        self.hobj.add('simple_default',
                             Enum(2,(1,2,3), iotype='in'))
         self.assertEqual(2, self.hobj.simple_default)
         
         try:
-            self.hobj.add_trait('out_of_bounds',
+            self.hobj.add('out_of_bounds',
                             Enum(4,(1,2,3), iotype='in'))
         except Exception, err:
             errstring = "Default value not in values."
@@ -54,7 +54,7 @@ class IntTestCase(unittest.TestCase):
             self.fail("Exception expected")
         
         try:
-            self.hobj.add_trait('bad_alias_size',
+            self.hobj.add('bad_alias_size',
                             Enum(3,(1,2,3), iotype='in',
                                  aliases=('a','b')))
         except Exception, err:
@@ -63,14 +63,14 @@ class IntTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
             
-        self.hobj.add_trait('good_alias_size',
+        self.hobj.add('good_alias_size',
                         Enum(3,(1,2,3), iotype='in',
                                 aliases=('a','b','c')))
         self.assertEqual(3, self.hobj.good_alias_size)
             
     def test_set_to_default(self):
         
-        self.hobj.add_trait('e1', Enum(2, (0,2,3), iotype='in'))
+        self.hobj.add('e1', Enum(2, (0,2,3), iotype='in'))
         self.assertEqual(2, self.hobj.e1)
         self.hobj.e1 = 3
         self.assertEqual(3, self.hobj.e1)
@@ -82,7 +82,7 @@ class IntTestCase(unittest.TestCase):
         
     def test_set_to_bad_value(self):
 
-        self.hobj.add_trait('e1', Enum("red", ("red","green","blue"), iotype='in'))
+        self.hobj.add('e1', Enum("red", ("red","green","blue"), iotype='in'))
         self.assertEqual('red', self.hobj.e1)
         try:
             self.hobj.e1 = "brown"

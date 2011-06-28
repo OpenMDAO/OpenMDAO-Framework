@@ -9,6 +9,8 @@ import ast
 import copy
 import __builtin__
 
+from openmdao.main.interfaces import IDriver
+
 # this dict will act as the local scope when we eval our expressions
 _expr_dict = {
     'math': math,
@@ -97,17 +99,12 @@ class ExprTransformer(ast.NodeTransformer):
             parts = name.split('.',1)
             names = ['scope']
             if scope.contains(parts[0]):
-                #if scope.name:
-                    #self.expreval.var_names.add('.'.join([scope.name,name]))
-                #else:
                 self.expreval.var_names.add(name)
                 if len(parts) == 1: # short name, so just do a simple attr lookup on scope
                     names.append(name)
                     return _get_attr_node(names)
             else:
                 self.expreval.var_names.add(name)
-                #if scope.parent is not None:
-                    #names.append('parent')
         else:
             raise RuntimeError("expression has no scope")
 
@@ -406,7 +403,8 @@ class ExprEvaluator(object):
         
     def get_metadata(self, metaname=None, scope=None):
         """Return the specified piece of metadata if metaname is provided. Otherwise
-        return the whole metadata dictionary.  
+        return the whole metadata dictionary.  If metaname is supplied but does not
+        exist for a given variable, None will be returned for the variable.
         
         Returns a list of tuples containing (varname, metadata) 
         corresponding to each variable referenced by this expression.
@@ -417,8 +415,6 @@ class ExprEvaluator(object):
         for name in varnames:
             if scope.contains(name):
                 lst.append((name, scope.get_metadata(name, metaname)))
-            #elif scope.parent and scope.parent.contains(name):
-                #lst.append((name, scope.parent.get_metadata(name, metaname)))
             else:
                 raise AttributeError("'%s' not found" % name)
         return lst
