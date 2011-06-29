@@ -14,6 +14,7 @@ class BLISS(Architecture):
                                "to use for the move limit. Value will be used to limit the optimization"
                                "of the linear models to + or - this percentage from the current value")    
     
+
     def __init__(self): 
         super(BLISS,self).__init__()
         
@@ -47,7 +48,6 @@ class BLISS(Architecture):
                 self.parent.driver.add_parameter(param.targets,low=param.low,high=param.high)
                 self.parent.driver.add_constraint('%s_local_des_vars[%d]=%s'%(comp,i,param.targets))
             
-        
         # Multidisciplinary Analysis
         self.parent.add('mda', BroydenSolver())
         self.parent.force_execute=True
@@ -124,9 +124,4 @@ class BLISS(Architecture):
             
             self.parent.driver.workflow.add('bbopt_%s'%comp)
         
-
-        
-        
-            
-            
             
