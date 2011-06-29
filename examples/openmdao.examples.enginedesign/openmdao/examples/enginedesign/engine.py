@@ -37,7 +37,7 @@ class Engine(Component):
     #P_exth = 152            # Exhaust gas pressure
     #P_amb = 101.325         # Ambient Pressure (kPa)
     #T_amb = 298             # Ambient Temperature (deg K)
-    #air_density = 1.2       # Air Density (1.2 kg/m**2)
+    #air_density = 1.2       # Air Density (1.2 kg/m**3)
     #mw_air = 28.97          # Molecular Weight of Air (g/mol)
     #mw_fuel = 114           # Molecular Weight of Gasoline (g/mol)
 
@@ -119,8 +119,8 @@ class Engine(Component):
         P_exth = 152           # Exhaust gas pressure
         P_amb = 101.325        # Ambient Pressure (kPa)
         T_amb = 298            # Ambient Temperature (deg K)
-        air_density = 1.2      # Air Density (1.2 kg/m**2)
-        fuel_density = 740.0   # Gasoline Density (740.0 kg/m**2)
+        air_density = 1.2      # Air Density (1.2 kg/m**3)
+        fuel_density = 740.0   # Gasoline Density (740.0 kg/m**3)
         mw_air = 28.97         # Molecular Weight of Air (g/mol)
         mw_fuel = 114          # Molecular Weight of Gasoline (g/mol)
 
