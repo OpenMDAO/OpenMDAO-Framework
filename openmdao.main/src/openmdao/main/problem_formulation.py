@@ -123,11 +123,11 @@ class ArchitectureAssembly(Assembly):
         comps = {}
         for k,v in self.get_parameters().items():
             if isinstance(v, Parameter): 
-                comps = v.get_referenced_compnames()
-                if len(comps) > 1: 
+                comp_names = v.get_referenced_compnames()
+                if len(comp_names) > 1: 
                     continue
                 
-                comp = comps.pop()
+                comp = comp_names.pop()
                 try: 
                     comps[comp].append(v)
                 except KeyError: 

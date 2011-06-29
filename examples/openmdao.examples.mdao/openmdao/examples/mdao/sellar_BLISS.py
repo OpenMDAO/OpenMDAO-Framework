@@ -11,13 +11,6 @@
 from openmdao.examples.mdao.disciplines import SellarDiscipline1,\
                                                SellarDiscipline2
 from openmdao.main.api import Assembly
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-from openmdao.lib.components.api import Mux
->>>>>>> origin/master
-=======
->>>>>>> ff55291538265de200aff158384f4caf0cae7b8c
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
@@ -28,19 +21,8 @@ class SellarBLISS(Assembly):
     """ Optimization of the Sellar problem using the BLISS algorithm
     Disciplines coupled with FixedPointIterator.
     """
-    
-<<<<<<< HEAD
-<<<<<<< HEAD
+
     z_store = Array([0,0],dtype=Float)
-=======
-    z1_store = Float(0.0)
-    z2_store = Float(0.0)
-    
-    z_store = Array(default=[.1,.1])
->>>>>>> origin/master
-=======
-    z_store = Array([0,0],dtype=Float)
->>>>>>> ff55291538265de200aff158384f4caf0cae7b8c
     x1_store = Float(0.0)
     
     def __init__(self):
@@ -50,18 +32,7 @@ class SellarBLISS(Assembly):
         
         Optimal Objective = 3.18339"""
                 
-<<<<<<< HEAD
-<<<<<<< HEAD
         super(SellarBLISS, self).__init__()        
-=======
-        super(SellarBLISS, self).__init__()
-        
-        self.z_store = [0,0]
->>>>>>> origin/master
-=======
-        super(SellarBLISS, self).__init__()        
->>>>>>> ff55291538265de200aff158384f4caf0cae7b8c
-        
 
         # Disciplines
         self.add('dis1', SellarDiscipline1())
@@ -138,8 +109,10 @@ class SellarBLISS(Assembly):
         self.sysopt.add_parameter('z_store[0]', low=-10.0, high=10.0)
         self.sysopt.add_parameter('z_store[1]', low=0.0, high=10.0)
         self.sysopt.add_objective('ssa.F[0]+ ssa.dF[0][0]*(z_store[0]-dis1.z1) + ssa.dF[0][1]*(z_store[1]-dis1.z2)')
+        
         self.sysopt.add_constraint('ssa.G[0] + ssa.dG[0][0]*(z_store[0]-dis1.z1) + ssa.dG[0][1]*(z_store[1]-dis1.z2) < 0')
         self.sysopt.add_constraint('ssa.G[1] + ssa.dG[1][0]*(z_store[0]-dis1.z1) + ssa.dG[1][1]*(z_store[1]-dis1.z2) < 0')
+        
         self.bbopt1.add_constraint('z_store[0]-dis1.z1<.5')
         self.bbopt1.add_constraint('z_store[0]-dis1.z1>-.5')
         self.bbopt1.add_constraint('z_store[1]-dis1.z2<.5')
@@ -148,8 +121,7 @@ class SellarBLISS(Assembly):
         self.sysopt.iprint = 0
         self.sysopt.force_execute = True
             
-        self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt'])  
-        
+        self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt']) 
 
         
 if __name__ == "__main__": # pragma: no cover         
