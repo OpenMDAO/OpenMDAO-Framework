@@ -99,8 +99,8 @@ class SellarBLISS(Assembly):
         #this one is technically unncessary
         self.bbopt1.add_constraint('sa_dis1.G[1] + sa_dis1.dG[1][0]*(x1_store-dis1.x1) < 0')
         
-        self.bbopt1.add_constraint('x1_store-dis1.x1<.5')
-        self.bbopt1.add_constraint('x1_store-dis1.x1>-.5')
+        self.bbopt1.add_constraint('(x1_store-dis1.x1)<.5')
+        self.bbopt1.add_constraint('(x1_store-dis1.x1)>-.5')
         self.bbopt1.linobj = True
         self.bbopt1.iprint = 0
         self.bbopt1.force_execute = True
