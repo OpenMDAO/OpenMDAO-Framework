@@ -299,7 +299,19 @@ earlier named *myfork*, use the ``git push`` command:
 
 
 Once that's done, *myfork/<branchname>* will have your changes and you can make a pull
-request to the OpenMDAO maintainers.  You can do this by going to the page for your
-OpenMDAO fork on Github and pushing the *Pull Request* button.  You will be prompted to
-fill in a description of your changes, then just hit the "Send Pull Request" button.
+request to the OpenMDAO maintainers.  To issue a pull request, follow these steps:
 
+1. Go to the page for your personal OpenMDAO fork on Github.
+
+2. Select the branch you wish to have *pulled* from the **Switch Branches** dropdown
+   near the top of the page.
+
+2. Push the *Pull Request* button.
+
+3. You will be prompted to fill in a description of your changes.  The message near 
+   the top of the page should read something like 
+   "You're asking OpenMDAO to pull 1 commit into OpenMDAO:dev from <userid>:<branchname>",
+   where <userid> is your github userid and <branchname> is the name of the branch to
+   be pulled.  If the source and destination branches are correct, push the 
+   "Send Pull Request" button.  Otherwise, click on *Change Commits* and modify the
+   branch names.
