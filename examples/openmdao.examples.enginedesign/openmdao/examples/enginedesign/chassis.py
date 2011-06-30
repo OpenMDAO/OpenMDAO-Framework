@@ -18,8 +18,8 @@ class Chassis(Component):
 
     Design parameters:
     mass_vehicle        # Vehicle Mass (kg)
-    Cf                  # Friction coef (proportional to V)
-    Cd                  # Drag coef (proportional to V**2)
+    Cf                  # Friction coef (multiplies W)
+    Cd                  # Drag coef (multiplies V**2)
     area                # Frontal area (for drag calc) (sq m)
     
     Simulation inputs:
@@ -39,9 +39,9 @@ class Chassis(Component):
     mass_vehicle = Float(1200.0, iotype='in', units='kg', 
                               desc='Vehicle Mass')
     Cf = Float(0.035, iotype='in', 
-                    desc='Friction Coefficient (proportional to W)')
+                    desc='Friction Coefficient (multiplies W)')
     Cd = Float(0.3, iotype='in', 
-               desc='Drag Coefficient (proportional to V**2)')
+               desc='Drag Coefficient (multiplies V**2)')
     area = Float(2.164, iotype='in', units='m**2', 
                       desc='Frontal area')
     engine_torque = Float(200.0, iotype='in', units='N*m', 

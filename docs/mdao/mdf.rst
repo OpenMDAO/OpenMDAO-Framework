@@ -316,7 +316,7 @@ output that resembles this:
         Elapsed time:  0.121051073074 seconds
 
         
-We chose initially chose to use *FixedPointIterator* for our solver, but you can replace that with a better one. Fixed point
+We initially chose to use *FixedPointIterator* for our solver, but you can replace that with a better one. Fixed point
 iteration works for some problems, including this one, but sometimes another type of solver might be preferred. 
 OpenMDAO also contains a Broyden solver called
 *BroydenSolver*. This solver is based on a quasi-Newton-Raphson algorithm found in 

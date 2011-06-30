@@ -5,16 +5,17 @@
 Working on Your Branch
 ======================
 
-Now that you have built and activated your virtual development environment, you are ready to use
-OpenMDAO. If you have not activated your environment, please do so before proceeding. See
-:ref:`Activating-the-Virtual-Environment`.
+Now that you have built and activated your virtual development environment,
+you are ready to use OpenMDAO. If you have not activated your environment,
+please do so before proceeding. See :ref:`Activating-the-Virtual-Environment`.
 
 The following sections provide information on how to carry out some basic
 actions in the development environment. You would perform these actions on a
-repository that you cloned from your fork of the OpenMDAO repository on Github.
+repository that you cloned from your fork of the OpenMDAO-Framework repository
+on Github.
 
-.. note::  In some cases the examples are written from the Linux perspective. Windows users
-   need to replace the ``/`` with a ``\``.
+.. note::  In some cases the examples are written from the Linux perspective. 
+   Windows users need to replace the ``/`` with a ``\``.
 
 .. index:: pair: source code; editing and debugging
 .. index:: pair: source files; adding
@@ -141,19 +142,20 @@ Working with Remote Repositories
 
 You won't be the only one making updates to the OpenMDAO source code, so from
 time to time you'll want to update your repository with the latest information
-from the master OpenMDAO repository. In order to do that, you need to first
+from the master OpenMDAO-Framework repository. In order to do that, you need to first
 understand about *remotes*, which are just short aliases for remote
 repositories that you need to interact with.
 
-When you first clone the OpenMDAO repository on Github, git will automatically
-add a remote to your local repository called *origin* that refers back to the
-OpenMDAO repository. In addition, git creates a branch in your repository with
-name of the form: ``origin/<branch_name>`` for each branch in your remote
-repository. In general, branches in remote repositories are referred to using
-names of the form ``<remote_name>/<branch_name>``. In the case of OpenMDAO,
-there will be two branches, named *origin/master* and *origin/dev*.  A local
-branch named *master* will also be created automatically when you first create
-your repository.
+When you first clone the OpenMDAO-Framework repository on Github, git will
+automatically add a remote to your local repository called *origin* that
+refers back to the OpenMDAO-Framework repository. In addition, git creates a
+branch in your repository with name of the form: ``origin/<branch_name>`` for
+each branch in your remote repository. In general, branches in remote
+repositories are referred to using names of the form
+``<remote_name>/<branch_name>``. In the case of OpenMDAO, there will be two
+branches, named *origin/master* and *origin/dev*. A local branch named
+*master* will also be created automatically when you first create your
+repository.
 
 There will be times when you want to reference other remote repositories
 beyond just *origin*. In order to add new remotes to your repository, you use
@@ -195,25 +197,27 @@ example, to get the latest updates from *origin*, you would enter:
    git fetch origin
    
    
-This just updates your repository database with new data from origin's remote branches, but
-in order to update your local branch, you'll have to merge the remote branch with yours. For
-example, say someone updated the *dev* branch in the official OpenMDAO repository and you 
-want to update your current branch with those changes.  Assuming you've already fetched
-the data from origin using ``git fetch origin``, you can merge it to your current branch
-using:
+This just updates your repository database with new data from origin's remote
+branches, but in order to update your local branch, you'll have to merge the
+remote branch with yours. For example, say someone updated the *dev* branch in
+the official OpenMDAO-Framework repository and you want to update your current branch
+with those changes. Assuming you've already fetched the data from origin using
+``git fetch origin``, you can merge it to your current branch using:
 
 ::
 
    git merge origin/dev
    
 
-When you merge another branch into yours, if there are any changes to the ``go-openmdao-dev.py``
-file or to any of the ``setup.py`` files in the source tree, it's a good idea to remove the old
-virtual environment and build a new one in order to ensure that the correct packages will be
-used based on the correct package dependencies for the current code snapshot.  To do this,
-first make sure your virtual environment is deactivated by typing ``deactivate``, then
-remove the ``devenv`` directory from the top level of the repository, then run
-``python go-openmdao-dev.py`` again.  Then reactivate your virtual environment.
+When you merge another branch into yours, if there are any changes to the
+``go-openmdao-dev.py`` file or to any of the ``setup.py`` files in the source
+tree, it's a good idea to remove the old virtual environment and build a new
+one in order to ensure that the correct packages will be used based on the
+correct package dependencies for the current code snapshot. To do this, first
+make sure your virtual environment is deactivated by typing ``deactivate``,
+then remove the ``devenv`` directory from the top level of the repository,
+then run ``python go-openmdao-dev.py`` again. Then reactivate your virtual
+environment.
 
 
 After a merge, it's good practice to confirm that all tests still pass by typing:

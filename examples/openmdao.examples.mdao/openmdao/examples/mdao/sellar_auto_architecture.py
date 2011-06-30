@@ -11,10 +11,10 @@ from openmdao.main.api import Assembly, Slot, implements, Component
 
 from openmdao.main.problem_formulation import ArchitectureAssembly
 
-from openmdao.lib.architectures.api import MDF
+from openmdao.lib.architectures.api import MDF, BLISS
         
 
-class SellarMDF(ArchitectureAssembly):
+class Sellar(ArchitectureAssembly):
     """ Optimization of the Sellar problem using MDF
     Disciplines coupled with BroydenSolver.
     """
@@ -26,7 +26,7 @@ class SellarMDF(ArchitectureAssembly):
         
         Optimal Objective = 3.18339"""
         
-        super(SellarMDF, self).__init__()
+        super(Sellar, self).__init__()
         
         #add the discipline components to the assembly
         self.add('dis1', SellarDiscipline1())
@@ -49,8 +49,11 @@ class SellarMDF(ArchitectureAssembly):
         self.add_constraint('dis2.y2 < 24.0')
         
         #END OF MDAO Problem Definition
-         
-        self.architecture = MDF()
+        
+        self.dis1.z1 = self.dis2.z1 = 5.0
+        self.dis1.z2 = self.dis2.z2 = 2.0
+        self.dis1.x1 = 1.0
+        self.dis1.y2 = 3.0
     
         
         
@@ -61,18 +64,14 @@ if __name__ == "__main__": # pragma: no cover
     
     solution = (1.9776, 0, 0)
     
-    prob = SellarMDF()
+    prob = Sellar()
     set_as_top(prob)
+    prob.architecture = MDF()
         
-    prob.dis1.z1 = prob.dis2.z1 = 5.0
-    prob.dis1.z2 = prob.dis2.z2 = 2.0
-    prob.dis1.x1 = 1.0
-    prob.dis1.y2 = 3.0
-
     tt = time.time()
     prob.run()
 
-    print "\n"
+    print "\n Usign MDF Architecture"
     print "CONMIN Iterations: ", prob.driver.iter_count
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,
                                              prob.dis1.z2,
@@ -83,5 +82,25 @@ if __name__ == "__main__": # pragma: no cover
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.driver.eval_objective()
     print "Elapsed time: ", time.time()-tt, "seconds"
+    print "\n"
+    
+    
+    prob = Sellar()
+    set_as_top(prob)
+    prob.architecture = BLISS() 
+    
+    tt = time.time()
+    prob.run()
+
+    print "\nUsing BLISS Architecture"
+    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,
+                                             prob.dis1.z2,
+                                             prob.dis1.x1)
+    print "Minimum differs from expected by (%f, %f, %f)" % (prob.dis1.z1-solution[0],
+                                                             prob.dis1.z2-solution[1],
+                                                             prob.dis1.x1-solution[2])
+    print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
+    print "Elapsed time: ", time.time()-tt, "seconds"
+    
     
     

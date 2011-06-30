@@ -102,9 +102,8 @@ class FixedPointIterator(Driver):
             # relative tolerance -- problematic around 0
             #if abs( (val1-val0)/val0 ) < self.tolerance:
             #    break
-            
         self.history = history[:self.current_iteration+1, :]
-            
+        
     def _check_config(self):
         """Make sure the problem is set up right."""
         

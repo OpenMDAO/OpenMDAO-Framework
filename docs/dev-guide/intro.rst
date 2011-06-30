@@ -152,17 +152,17 @@ Getting the Source Code
 +++++++++++++++++++++++
 
 Before you can do any development work on OpenMDAO, you'll need a local copy of the
-source code. To get this, you must *clone* the OpenMDAO repository on
+source code. To get this, you must *clone* the OpenMDAO-Framework repository on
 Github using the following command:
 
 ::
 
-   git://github.com/OpenMDAO/OpenMDAO-Framework.git
+   git clone git://github.com/OpenMDAO/OpenMDAO-Framework.git
    
    
 Note that the URL used above will give you only read permission to the
 repository on Github, i.e., you won't be able to push changes directly to it.
-If you happen to have write permission to the OpenMDAO repository, you should
+If you happen to have write permission to the OpenMDAO-Framework repository, you should
 use an SSH style URL to specify the repository like this:
 
 ::
@@ -170,9 +170,17 @@ use an SSH style URL to specify the repository like this:
    git clone git@github.com:OpenMDAO/OpenMDAO-Framework.git
 
 
-Normally, you should only need to do this once on any given machine where you plan
-to do your work.  Then, each time you start work on a new feature or a bug fix, you'll
-create a new branch in your local repository and switch to that branch.
+At this point you should also create your own personal fork of the OpenMDAO-Framework
+repository. Log into Github and go to
+http://github.com/OpenMDAO/OpenMDAO-Framework. There, near the top of the page you'll
+see a *Fork* button. Press it and you now have your own personal OpenMDAO-Framework
+fork.  You'll push branches to this later and issue pull requests to get your
+changes into the official repository.
+
+Normally, you should only need to clone a repository once on any given machine
+where you plan to do your work. Then, each time you start work on a new
+feature or a bug fix, you'll create a new branch in your local repository and
+switch to that branch.
 
 To create a branch, do the following:
 
@@ -320,7 +328,7 @@ The directory structure of your repository should look like this:
     be released separately from OpenMDAO. These distributions may or may not depend upon
     OpenMDAO. Distributions that have not yet been approved to be part of
     ``openmdao.lib`` can live here -- as long as their license is compatible with NOSA. No
-    proprietary code or GPL code should be placed in the OpenMDAO repository.
+    proprietary code or GPL code should be placed in the OpenMDAO-Framework repository.
 
 ``devenv``
     The directory containing the OpenMDAO virtual environment. Note that
