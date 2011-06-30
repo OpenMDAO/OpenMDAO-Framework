@@ -53,8 +53,8 @@ class Vehicle(Assembly):
             
         # Design parameters from Vehicle Dynamics
         mass_vehicle               # Vehicle Mass (kg)
-        Cf                         # Friction coef (proportional to V)
-        Cd                         # Drag coef (proportional to V**2)
+        Cf                         # Friction coef (multiplies W)
+        Cd                         # Drag coef (multiplies V**2)
         area                       # Frontal area (for drag calc) (sq m)
             
         # Simulation Inputs
