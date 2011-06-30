@@ -146,22 +146,74 @@ to a :term:`repository` on that machine.
 .. index:: pair: source code; location
 .. index:: pair: branch; creating
 
+
+
+
+
+.. accessing Github::
+
+Accessing OpenMDAO on Github -- SSH Keys
+++++++++++++++++++++++++++++++++++++++++
+
+The source repository for OpenMDAO is read-accessible to the public, so making
+a clone of it does not require that you have a :term:`Github`
+account. If you plan to contribute to the OpenMDAO project on Github, you will
+need to have a Github account and to register your public SSH key with that
+account. The following section describes how to register your SSH key with
+Github.
+
+These instructions assume that you already have a Github account. If you do
+not, please go to http://github.com and register for an account. Go ahead
+and log in to your Github account, since you will need to be logged in to
+register your key.
+
+If you're using git on Windows, in order to follow the instructions below
+you'll first need to create a bash terminal by running "Git --> Git Bash" from
+the Windows start menu.
+
+
+*Creating Your Key*
+~~~~~~~~~~~~~~~~~~~
+
+1. First, check to see if you already have an SSH key.  Look for a file called ``~/.ssh/id_rsa.pub``.
+   If the file is there, skip to the next section and learn how to register your key with Github.
+2. You should be in your home directory on your Linux machine. At the prompt, type: 
+   ``ssh-keygen -t rsa -C "your_email@youremail.com"``. 
+3. When prompted, press *Enter* to accept the default file name for your key. 
+4. Press *Enter* when prompted for a password and then press it again to
+   confirm that you are NOT entering a password. Your key pair is stored in ``~/.ssh/
+   as id_rsa.pub`` (public key) and ``id_rsa`` (private key).
+
+.. note::  In the unusual event that the ``ssh-keygen`` command fails, you may need to install
+   OpenSSH. To do this requires that you have admin privileges. On Ubuntu, you can install
+   OpenSSH by opening your terminal and typing: ``sudo apt-get install openssh-client``. 
+
+
+*Registering the Key with Github*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You need to register and upload the *public* portion of your SSH key to Github. 
+
+1. Open your public key in a text editor and copy its contents to your clipboard. The public key
+   file has the extension ``.pub``; for example:  ``id_rsa.pub`` 
+2. You must be logged into Github for this step. Go to *Account Settings --> SSH Public Keys*, 
+   then click on *Add another public key*.
+3. Enter a name into the *Title* text field to remind you which machine/account you're 
+   entering ssh information for.
+4. Paste your public key into the *Key* text box and then click the *Add Key* button (below the
+   text box) to continue. 
+
+
+
 .. _getting-the-source-code:
+
 
 Getting the Source Code
 +++++++++++++++++++++++
 
 The *official* OpenMDAO-Framework repository lives on Github at
-http://github.com/OpenMDAO/OpenMDAO-Framework. If you intend to make
-contributions to the project, you'll need to make your own personal fork of
-OpenMDAO-Framework on Github. Making your own fork is easy; just log into
-Github, go to the OpenMDAO-Framework repository page at the URL just
-mentioned, and click the *Fork* button near the top of the page. Later, when
-you finish working on a branch in your local repository, you'll push it up to
-your personal fork and issue a pull request to get your changes into the
-*dev* branch of the official repository.
-
-To create your local repository, you'll need to *clone* the OpenMDAO-Framework
+http://github.com/OpenMDAO/OpenMDAO-Framework. To create a local
+OpenMDAO-Framework repository, you need to *clone* the OpenMDAO-Framework
 repository on Github using the following command:
 
 ::
@@ -176,162 +228,21 @@ or, if the port that git:// uses is blocked by your firewall, try this:
    git clone http://github.com/OpenMDAO/OpenMDAO-Framework.git
 
 
-When you clone a repository in git, it automatically creates a *remote* for
-you named *origin* that points to the repository your clone is based on. In
-this particular case, origin will point to the official OpenMDAO-Framework
-repository.
-
-If you intend to contribute changes back to the project, you'll need to add
-a remote to point to your personal fork of OpenMDAO-Framework . The
-command below will create a remote called *myfork* in your local repository
-that points to your fork on github:
+.. _Making-a-Personal-Fork-of-OpenMDAO-Framework:
 
 
-::
+Making a Personal Fork of OpenMDAO-Framework
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+If you intend to make contributions to the project, you'll need to make your
+own personal fork of OpenMDAO-Framework on Github. Making your own fork is
+easy; just log into Github, go to the OpenMDAO-Framework repository page at
+http://github.com/OpenMDAO/OpenMDAO-Framework, and click the *Fork* button
+near the top of the page.
 
-   git remote add myfork git@github.com:<userid>/OpenMDAO-Framework.git
-
-
-where ``<userid>`` is your userid on github.
-
-The last steps before you actually start working on a new feature or bug fix
-are to create a new branch in your local repository and switch to that branch. You
-should never make changes directly to your *master* or *dev* branches but instead
-just use them to track the master and dev branches in the official repository.
-
-To create a branch, do the following:
-
-::
-
-   git branch <branch_name>
-   
-
-To switch to an existing branch, do:
-
-::
-
-   git checkout <branch_name>
-   
-
-A shorthand for creating a branch and then switching to it is:
-
-::
-
-   git checkout -b <branch_name>
-
-
-The name you give your branch should reflect the purpose of the branch to
-avoid confusion with other branches in your repository. And don't fix multiple
-bugs or add multiple features on the same branch. If you keep your branch
-changes small by targeting a specific bug or feature, the maintainers of the
-project will have a much easier time merging in your changes. And remember, in
-*git*, creating branches is cheap and quick, so there's no need to worry about
-creating lots of branches.
-
-
-.. _Creating-the-Virtual-Environment:
-
-
-Creating the Virtual Environment
-________________________________
-
-OpenMDAO operates inside of a virtual python environment. To create that environment, 
-run ``python go-openmdao-dev.py`` from the top directory of your
-repository. The script will check the version of Python you are running. **You must
-be running version 2.6.** (To find out which Python version you are
-running, you can type ``python --version``.)
-
-.. note:: If you're using Visual Studio on Windows, you need to run the installer from a 
-   command window that has the Visual Studio environment variables set. The
-   easiest way to do this is to select the *Visual Studio 2008 Command Prompt*
-   from the *Visual Studio Tools* menu under *Microsoft Visual C++ 2008
-   Express Edition* in the Start menu. If you're using something other than
-   the Express edition, then the name of the Start menu option will be
-   slightly different, i.e., replace "Express" with "Professional" or
-   "Standard."
-
-
-::
-
-   python go-openmdao-dev.py
-   
-Running ``go-openmdao-dev.py`` creates a ``devenv`` directory at the top of
-your repository and populates it with all of the packages that OpenMDAO
-depends upon. It also installs the openmdao namespace packages in your virtual
-Python environment as "develop" eggs so that you can make changes to the
-source code and immediately see the results without having to rebuild any
-distributions.
-
-      
-.. _Activating-the-Virtual-Environment:
-
-Activating the Virtual Environment
-__________________________________
-
-The next step is to activate your virtual Python environment. Change your directory to
-``devenv``. 
-
-On Linux or Mac OS X, you must be running the Bash shell. If you are in Bash, omit this step.
-
-  ::
-
-     bash
-   
- 
-  Next, type the following, making sure to include the "." in the command:
-
-  ::
-
-     . bin/activate
-
-
-
-Or, on Windows, type:
-
-  ::
-
-     Scripts\activate
-
-At this point, your ``devenv`` directory should contain the following subdirectories, unless you are
-on Windows. On Windows, the directory structure is slightly different, as noted below.
-
-``bin`` 
-    Contains Python and a number of other scripts that are associated with the Python
-    packages that are installed in the virtual environment. On **Windows,** this
-    directory is called ``Scripts``.
-
-``etc``
-    Contains miscellaneous files that don't fit in ``bin, lib,`` or ``include``.
-    
-``include``
-    Contains Python C header files. If you are on **Windows,** you will not have this directory.
-
-
-``lib``
-    Contains Python standard library and installed modules.
-
-After your virtual Python environment has been activated, you can add other 
-distributions to the environment by using ``easy_install`` or :term:`pip` in
-the same manner that you would add packages to the system level Python.
-
-If you need to build the OpenMDAO docs, you can run ``openmdao_build_docs``.
-Running ``openmdao_docs`` will display the documents in HTML in the default browser.
-
-You can deactivate the environment by typing:
-
-
-:: 
-
-  deactivate
-  
- 
-  
-.. note:: Whenever you switch to a different branch within your repository,
-   you should deactivate your virtual environment and re-run
-   ``go-openmdao-dev.py``, unless you're certain that no OpenMDAO package
-   dependencies have changed.
-
+Later, when you finish working on a branch in your local repository, you'll be
+able to push it up to your personal fork and issue a pull request to get your
+changes into the *dev* branch of the official repository.
 
 
 .. index:: source repository
@@ -353,7 +264,7 @@ The directory structure of your repository should look like this:
     The directory containing the OpenMDAO virtual environment. Note that
     this is not part of the source repository. You will build it by running
     the ``go-openmdao-dev.py`` script that sits at the top of the source
-    repository.
+    repository.  See :ref:`Creating-the-Virtual-Environment`.
     
 ``docs``  
     The directory containing all user documentation for OpenMDAO. The

@@ -5,14 +5,156 @@
 Working on Your Branch
 ======================
 
+Any changes you make in your repository should always be done on a branch other
+than *master* or *dev*.  You should keep those branches clean and just use them
+to track changes in the corresponding branches in the official OpenMDAO-Framework
+repository.
+
+To create a new branch to work in, do the following:
+
+::
+
+   git branch <branch_name>
+   
+
+To switch to an existing branch, do:
+
+::
+
+   git checkout <branch_name>
+   
+
+A shorthand for creating a branch and then switching to it is:
+
+::
+
+   git checkout -b <branch_name>
+
+
+The name you give your branch should reflect the purpose of the branch to
+avoid confusion with other branches in your repository. And don't fix multiple
+bugs or add multiple features on the same branch. If you keep your branch
+changes small by targeting a specific bug or feature, the maintainers of the
+project will have a much easier time merging in your changes. And remember, in
+*git*, creating branches is cheap and quick, so there's no need to worry about
+creating lots of branches.
+
+.. note:: Make sure to check which branch you're on whenever you create a new
+     branch.  Creating a branch off of the wrong branch can bring in unexpected
+     changes and generally cause confusion.
+   
+
+
+.. _Creating-the-Virtual-Environment:
+
+
+Creating the Virtual Environment
+--------------------------------
+
+OpenMDAO operates inside of a virtual python environment. To create that environment, 
+run ``python go-openmdao-dev.py`` from the top directory of your
+repository. The script will check the version of Python you are running. **You must
+be running version 2.6.** (To find out which Python version you are
+running, you can type ``python --version``.)
+
+.. note:: If you're using Visual Studio on Windows, you need to run the installer from a 
+   command window that has the Visual Studio environment variables set. The
+   easiest way to do this is to select the *Visual Studio 2008 Command Prompt*
+   from the *Visual Studio Tools* menu under *Microsoft Visual C++ 2008
+   Express Edition* in the Start menu. If you're using something other than
+   the Express edition, then the name of the Start menu option will be
+   slightly different, i.e., replace "Express" with "Professional" or
+   "Standard."
+
+
+::
+
+   python go-openmdao-dev.py
+   
+Running ``go-openmdao-dev.py`` creates a ``devenv`` directory at the top of
+your repository and populates it with all of the packages that OpenMDAO
+depends upon. It also installs the openmdao namespace packages in your virtual
+Python environment as "develop" eggs so that you can make changes to the
+source code and immediately see the results without having to rebuild any
+distributions.
+
+      
+.. _Activating-the-Virtual-Environment:
+
+Activating the Virtual Environment
+----------------------------------
+
+The next step is to activate your virtual Python environment. Change your directory to
+``devenv``. 
+
+On Linux or Mac OS X, you must be running the Bash shell. If you are in Bash, omit this step.
+
+  ::
+
+     bash
+   
+ 
+  Next, type the following, making sure to include the "." in the command:
+
+  ::
+
+     . bin/activate
+
+
+
+Or, on Windows, type:
+
+  ::
+
+     Scripts\activate
+
+At this point, your ``devenv`` directory should contain the following subdirectories, unless you are
+on Windows. On Windows, the directory structure is slightly different, as noted below.
+
+``bin`` 
+    Contains Python and a number of other scripts that are associated with the Python
+    packages that are installed in the virtual environment. On **Windows,** this
+    directory is called ``Scripts``.
+
+``etc``
+    Contains miscellaneous files that don't fit in ``bin, lib,`` or ``include``.
+    
+``include``
+    Contains Python C header files. If you are on **Windows,** you will not have this directory.
+
+
+``lib``
+    Contains Python standard library and installed modules.
+
+After your virtual Python environment has been activated, you can add other 
+distributions to the environment by using ``easy_install`` or :term:`pip` in
+the same manner that you would add packages to the system level Python.
+
+If you need to build the OpenMDAO docs, you can run ``openmdao_build_docs``.
+Running ``openmdao_docs`` will display the documents in HTML in the default browser.
+
+You can deactivate the environment by typing:
+
+
+:: 
+
+  deactivate
+  
+ 
+  
+.. note:: Whenever you switch to a different branch within your repository,
+   you should deactivate your virtual environment and re-run
+   ``go-openmdao-dev.py``, unless you're certain that no OpenMDAO package
+   dependencies have changed.
+
+
+
 Now that you have built and activated your virtual development environment,
-you are ready to use OpenMDAO. If you have not activated your environment,
-please do so before proceeding. See :ref:`Activating-the-Virtual-Environment`.
+you are ready to use OpenMDAO.
 
 The following sections provide information on how to carry out some basic
 actions in the development environment. You would perform these actions on a
-repository that you cloned from your fork of the OpenMDAO-Framework repository
-on Github.
+repository that you cloned from the OpenMDAO-Framework repository on Github.
 
 .. note::  In some cases the examples are written from the Linux perspective. 
    Windows users need to replace the ``/`` with a ``\``.
@@ -118,14 +260,15 @@ message on the command line (inside quotation marks), type:
 If you omit the ``m`` option and press *Enter,* a text editor will open a
 new file where you must enter the required commit message.  
 
-.. note: It's very important not to forget to add the ``-a`` option to ``git commit``,
+.. note:: It's very important to add the ``-a`` option to ``git commit``,
    because if you don't, only the *staged* files will be committed.  This can lead
    to very confusing behavior and should be avoided.
 
 One nice Github feature is that if you're working on a particular Github
-issue, you can include the text "closes GH-???", replacing the *???* with the
-number of the Github issue, and Github will automatically close that issue for
-you when your commit makes its way back to the original repository.
+issue, you can include the text "closes GH-???" in your commit comment,
+replacing the *???* with the number of the Github issue, and Github will
+automatically close that issue for you when your commit makes its way back to
+the original repository.
 
 
 Running Tests
@@ -142,15 +285,13 @@ Working with Remote Repositories
 
 You won't be the only one making updates to the OpenMDAO source code, so from
 time to time you'll want to update your repository with the latest information
-from the master OpenMDAO-Framework repository. In order to do that, you need to first
-understand about *remotes*, which are just short aliases for remote
+from the master OpenMDAO-Framework repository. In order to do that, you need
+to first understand about *remotes*, which are just short aliases for remote
 repositories that you need to interact with.
 
 When you first clone the OpenMDAO-Framework repository on Github, git will
 automatically add a remote to your local repository called *origin* that
-refers back to the OpenMDAO-Framework repository. In addition, git creates a
-branch in your repository with name of the form: ``origin/<branch_name>`` for
-each branch in your remote repository. In general, branches in remote
+refers back to the OpenMDAO-Framework repository. Branches in remote
 repositories are referred to using names of the form
 ``<remote_name>/<branch_name>``. In the case of OpenMDAO, there will be two
 branches, named *origin/master* and *origin/dev*. A local branch named
@@ -165,27 +306,22 @@ the ``git remote add`` command. It has the following form:
 
    git remote add <shortname> <url>
    
-   
-As an example let's add a remote to our personal fork of OpenMDAO on Github.
-If you haven't created one yet, simply log into Github and go to
-http://github.com/OpenMDAO/OpenMDAO-Framework. There, near the top of the page you'll
-see a *Fork* button. Press it and you're done.
 
-Now that you have a remote repository that you want to reference from your local
-repository, you can add a remote for it, calling it *myfork*.
+Assuming that you have created a personal fork of the OpenMDAO-Framework
+repository as discussed in
+:ref:`Making-a-Personal-Fork-of-OpenMDAO-Framework`, you can now add a remote
+for it called *myfork*.
+
 
 ::
 
    git remote add myfork git@github.com:userid/OpenMDAO-Framework.git
    
    
-where *userid* is your Github userid. Note that in this case the URL we've
-used is an SSH URL, because we want to be able to write to our OpenMDAO fork.
-For remote repositories that we only need read access to, we would use a URL
-of the form ``git://github.com/some_userid/some_repo_name.git``.
+where *userid* is your Github userid. 
 
 Using the ``git remote`` command with no arguments will give a list of
-the remotes that we currently reference in our repository.
+the remotes that you currently reference in your repository.
 
 
 In order to update references to remote branches in your local repository, you
@@ -207,6 +343,13 @@ with those changes. Assuming you've already fetched the data from origin using
 ::
 
    git merge origin/dev
+   
+
+Or you can also use the *pull* command, which combines a fetch and a merge:
+
+::
+
+   git pull origin dev
    
 
 When you merge another branch into yours, if there are any changes to the
@@ -306,9 +449,9 @@ request to the OpenMDAO maintainers.  To issue a pull request, follow these step
 2. Select the branch you wish to have *pulled* from the **Switch Branches** dropdown
    near the top of the page.
 
-2. Push the *Pull Request* button.
+3. Push the *Pull Request* button.
 
-3. You will be prompted to fill in a description of your changes.  The message near 
+4. You will be prompted to fill in a description of your changes.  The message near 
    the top of the page should read something like 
    "You're asking OpenMDAO to pull 1 commit into OpenMDAO:dev from <userid>:<branchname>",
    where <userid> is your github userid and <branchname> is the name of the branch to
