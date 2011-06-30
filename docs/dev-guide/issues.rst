@@ -73,9 +73,11 @@ encourages "social coding", and we hope you will make use of it!
        Viewing an existing issue.  
        
        
-When you are done with an issue, you will want to indicate that by putting "close GH-???", 
-replacing "???" with your issue number, into your commit message. Then issue a pull request 
-to the OpenMDAO team. When your pull request gets merged into the main repository, then the 
-issue will be marked as closed automatically. 
+When you are done with an issue, you will want to indicate that by putting
+"closes GH-???" or "closes #???", replacing "???" with your issue number, into
+your commit message. Then issue a pull request to the OpenMDAO team. When your
+pull request gets merged into the main repository, then the issue will be
+marked as closed automatically. If you just want your change to be associated
+with an issue without closing it, just leave off the "closes" part.
     
  

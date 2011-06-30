@@ -287,8 +287,8 @@ actually finished:
    fix them and rerun the tests until they all pass.
 
 Once you've done all of these things, you're ready to push your changes up to
-your personal OpenMDAO fork and ask the OpenMDAO maintainers to merge in your
-changes.
+your personal OpenMDAO fork and ask the OpenMDAO maintainers to merge your changes
+into the official *dev* branch.
 
 To push the changes from your *<branchname>* branch up to your fork which you
 earlier named *myfork*, use the ``git push`` command:

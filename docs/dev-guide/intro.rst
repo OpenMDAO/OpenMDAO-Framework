@@ -151,36 +151,54 @@ to a :term:`repository` on that machine.
 Getting the Source Code
 +++++++++++++++++++++++
 
-Before you can do any development work on OpenMDAO, you'll need a local copy of the
-source code. To get this, you must *clone* the OpenMDAO-Framework repository on
-Github using the following command:
+The *official* OpenMDAO-Framework repository lives on Github at
+http://github.com/OpenMDAO/OpenMDAO-Framework. If you intend to make
+contributions to the project, you'll need to make your own personal fork of
+OpenMDAO-Framework on Github. Making your own fork is easy; just log into
+Github, go to the OpenMDAO-Framework repository page at the URL just
+mentioned, and click the *Fork* button near the top of the page. Later, when
+you finish working on a branch in your local repository, you'll push it up to
+your personal fork and issue a pull request to get your changes into the
+*dev* branch of the official repository.
+
+To create your local repository, you'll need to *clone* the OpenMDAO-Framework
+repository on Github using the following command:
 
 ::
 
    git clone git://github.com/OpenMDAO/OpenMDAO-Framework.git
    
    
-Note that the URL used above will give you only read permission to the
-repository on Github, i.e., you won't be able to push changes directly to it.
-If you happen to have write permission to the OpenMDAO-Framework repository, you should
-use an SSH style URL to specify the repository like this:
+or, if the port that git:// uses is blocked by your firewall, try this:
 
 ::
 
-   git clone git@github.com:OpenMDAO/OpenMDAO-Framework.git
+   git clone http://github.com/OpenMDAO/OpenMDAO-Framework.git
 
 
-At this point you should also create your own personal fork of the OpenMDAO-Framework
-repository. Log into Github and go to
-http://github.com/OpenMDAO/OpenMDAO-Framework. There, near the top of the page you'll
-see a *Fork* button. Press it and you now have your own personal OpenMDAO-Framework
-fork.  You'll push branches to this later and issue pull requests to get your
-changes into the official repository.
+When you clone a repository in git, it automatically creates a *remote* for
+you named *origin* that points to the repository your clone is based on. In
+this particular case, origin will point to the official OpenMDAO-Framework
+repository.
 
-Normally, you should only need to clone a repository once on any given machine
-where you plan to do your work. Then, each time you start work on a new
-feature or a bug fix, you'll create a new branch in your local repository and
-switch to that branch.
+If you intend to contribute changes back to the project, you'll need to add
+a remote to point to your personal fork of OpenMDAO-Framework . The
+command below will create a remote called *myfork* in your local repository
+that points to your fork on github:
+
+
+::
+
+
+   git remote add myfork git@github.com:<userid>/OpenMDAO-Framework.git
+
+
+where ``<userid>`` is your userid on github.
+
+The last steps before you actually start working on a new feature or bug fix
+are to create a new branch in your local repository and switch to that branch. You
+should never make changes directly to your *master* or *dev* branches but instead
+just use them to track the master and dev branches in the official repository.
 
 To create a branch, do the following:
 
@@ -203,12 +221,13 @@ A shorthand for creating a branch and then switching to it is:
    git checkout -b <branch_name>
 
 
-The name you give your branch should reflect the purpose of the branch to avoid
-confusion with other branches in your repository. And don't fix multiple bugs or
-add multiple features on the same branch.  If you keep your branch changes small by
-targeting a specific bug or feature, the maintainers of the project will have a much
-easier time merging in your changes.  And remember, in *git*, creating branches is
-cheap and quick, so there's no need to worry about creating lots of branches.
+The name you give your branch should reflect the purpose of the branch to
+avoid confusion with other branches in your repository. And don't fix multiple
+bugs or add multiple features on the same branch. If you keep your branch
+changes small by targeting a specific bug or feature, the maintainers of the
+project will have a much easier time merging in your changes. And remember, in
+*git*, creating branches is cheap and quick, so there's no need to worry about
+creating lots of branches.
 
 
 .. _Creating-the-Virtual-Environment:
