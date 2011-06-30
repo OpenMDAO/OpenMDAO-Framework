@@ -14,7 +14,8 @@ for the project, but you can also create a new issue yourself.
 To create a GitHub issue, follow these steps:
 
 
-1.  First, log into GitHub and go to ``http://github.com/OpenMDAO/OpenMDAO-Framework/issues``. You must be logged in to create a new issue.
+1.  First, log into GitHub and go to http://github.com/OpenMDAO/OpenMDAO-Framework/issues. 
+    You must be logged in to create a new issue.
 
 2.  Select the the **New Issue** button in the upper right hand corner. 
     
@@ -30,7 +31,8 @@ To create a GitHub issue, follow these steps:
 3.  There are two sections: a title and a comments section. Try to make the title short, but descriptive. 
     "I found a bug", is not a good tittle. Instead try something like "Problem with XXX when doing Y". 
     In the comments section you should put as much detail as you can. The more information you give, 
-    the easier it will be for someone to write code to address the issue you are reporting. You may also 
+    the easier it will be for someone to write code to address the issue you are reporting.  If you
+    can supply a small snippet of code that reproduces that problem, that would be ideal. You may also 
     select a number of *lables* to attach to the issue. For instance if you are reporting a bug, you would 
     select the *bug* label. If you have found a mistake in the documentation, then you would also attach 
     the "docs" label. You can add as many labels as you feel are relevant to the issue.   
@@ -73,9 +75,11 @@ encourages "social coding", and we hope you will make use of it!
        Viewing an existing issue.  
        
        
-When you are done with an issue, you will want to indicate that by putting "close GH-???", 
-replacing "???" with your issue number, into your commit message. Then issue a pull request 
-to the OpenMDAO team. When your pull request gets merged into the main repository, then the 
-issue will be marked as closed automatically. 
+When you are done with an issue, you will want to indicate that by putting
+"closes GH-???" or "closes #???", replacing "???" with your issue number, into
+your commit message. Then issue a pull request to the OpenMDAO team. When your
+pull request gets merged into the main repository, then the issue will be
+marked as closed automatically. If you just want your change to be associated
+with an issue without closing it, just leave off the "closes" part.
     
  
