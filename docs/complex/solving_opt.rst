@@ -232,23 +232,23 @@ The code for this looks like this:
                 print '\n'
     
 
-                import time
-                from openmdao.main.api import set_as_top
+            import time
+            from openmdao.main.api import set_as_top
                 
-                opt_problem = EngineOptimization()
-                set_as_top(opt_problem)
+            opt_problem = EngineOptimization()
+            set_as_top(opt_problem)
                 
-                opt_problem.sim_acc.run()
-                opt_problem.sim_EPA_city.run()
-                opt_problem.sim_EPA_highway.run()
-                prz('Old Design')
+            opt_problem.sim_acc.run()
+            opt_problem.sim_EPA_city.run()
+            opt_problem.sim_EPA_highway.run()
+            prz('Old Design')
             
-                tt = time.time()
-                opt_problem.run()
-                prz('New Design')
-                print "CONMIN Iterations: ", opt_problem.optimizer.iter_count
-                print ""
-                print "Elapsed time: ", time.time()-tt
+            tt = time.time()
+            opt_problem.run()
+            prz('New Design')
+            print "CONMIN Iterations: ", opt_problem.optimizer.iter_count
+            print ""
+            print "Elapsed time: ", time.time()-tt
 
 The code for this example can also be found in the file ``engine_optimization_smarter.py``. You
 should notice that this runs considerably faster than ``engine_optimization.py``, which runs
