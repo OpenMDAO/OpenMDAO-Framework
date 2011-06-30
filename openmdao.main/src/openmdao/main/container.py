@@ -739,7 +739,7 @@ class Container(HasTraits):
             "object has no attribute '%s'" % path, 
             AttributeError)
         
-    @rbac(('owner', 'user'))
+    @rbac(('owner', 'user'), proxy_types=[FileRef])
     def get(self, path, index=None):
         """Return the object specified by the given path, which may 
         contain '.' characters.  *index*, if not None,

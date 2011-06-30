@@ -475,7 +475,7 @@ class ArrayWrapper(BaseWrapper):
 
     def __init__(self, container, name, ext_path):
         super(ArrayWrapper, self).__init__(container, name, ext_path)
-        value = getattr(self._container, self._name)
+        value = self._container.get(self._name)
         kind = value.dtype.kind
         try:
             self.typ = self._converters[kind]
@@ -493,7 +493,7 @@ class ArrayWrapper(BaseWrapper):
     @property
     def phx_type(self):
         """ Return AnalysisServer type string for value. """
-        value = getattr(self._container, self._name)
+        value = self._container.get(self._name)
         if self.typ == float:
             return 'double[%d]' % len(value)
         elif self.typ == int:
@@ -504,7 +504,7 @@ class ArrayWrapper(BaseWrapper):
     def get(self, attr, path):
         """ Return attribute corresponding to `attr`. """
         if attr == 'value':
-            value = getattr(self._container, self._name)
+            value = self._container.get(self._name)
             if self.typ == float:
                 fmt = '%.16g'
             elif self.typ == int:
@@ -515,14 +515,14 @@ class ArrayWrapper(BaseWrapper):
         elif attr == 'componentType':
             return 'long'
         elif attr == 'dimensions':
-            value = getattr(self._container, self._name)
+            value = self._container.get(self._name)
             return '"%d"' % len(value)
         elif attr == 'enumAliases':
             return ''
         elif attr == 'enumValues':
             return ''
         elif attr == 'first':
-            value = getattr(self._container, self._name)
+            value = self._container.get(self._name)
             if len(value):
                 return '%s' % value[0]
             else:
@@ -538,7 +538,7 @@ class ArrayWrapper(BaseWrapper):
         elif attr == 'lowerBound' and self._trait.dtype != str:
             return '0' if self._trait.low is None else str(self._trait.low)
         elif attr == 'length':
-            value = getattr(self._container, self._name)
+            value = self._container.get(self._name)
             return '%d' % len(value)
         elif attr == 'lockResize':
             return 'false'
@@ -563,8 +563,8 @@ class ArrayWrapper(BaseWrapper):
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr`. """
         if attr == 'value':
-            setattr(self._container, self._name,
-                    [self.typ(val) for val in valstr.split(',')])
+            self._container.set(self._name,
+                                [self.typ(val) for val in valstr.split(',')])
         elif attr in ('componentType', 'description', 'dimensions',
                       'enumAliases', 'enumValues', 'first', 'format',
                       'hasLowerBound', 'lowerBound',
@@ -617,7 +617,7 @@ class BoolWrapper(BaseWrapper):
     def get(self, attr, path):
         """ Return attribute corresponding to `attr`. """
         if attr == 'value' or attr == 'valueStr':
-            return 'true' if getattr(self._container, self._name) else 'false'
+            return 'true' if self._container.get(self._name) else 'false'
         else:
             return super(BoolWrapper, self).get(attr, path)
 
@@ -632,9 +632,9 @@ class BoolWrapper(BaseWrapper):
         """ Set attribute corresponding to `attr`. """
         if attr == 'value':
             if valstr == 'true':
-                setattr(self._container, self._name, True)
+                self._container.set(self._name, True)
             elif valstr == 'false':
-                setattr(self._container, self._name, False)
+                self._container.set(self._name, False)
             else:
                 raise WrapperError('invalid boolean value %r for <%s>'
                                    % (valstr, path))
@@ -688,9 +688,9 @@ class EnumWrapper(BaseWrapper):
         """ Return attribute corresponding to `attr`. """
         if attr == 'value' or attr == 'valueStr':
             if self._py_type == float:
-                return _float2str(getattr(self._container, self._name))
+                return _float2str(self._container.get(self._name))
             else:
-                return str(getattr(self._container, self._name))
+                return str(self._container.get(self._name))
         elif attr == 'enumAliases':
             if self._trait.aliases:
                 return ', '.join(['"%s"' % alias
@@ -752,9 +752,9 @@ class EnumWrapper(BaseWrapper):
             try:
                 i = self._trait.aliases.index(valstr)
             except (AttributeError, ValueError):
-                setattr(self._container, self._name, self._py_type(valstr))
+                self._container.set(self._name, self._py_type(valstr))
             else:
-                setattr(self._container, self._name, self._trait.values[i])
+                self._container.set(self._name, self._trait.values[i])
         elif attr in ('valueStr', 'description', 'enumAliases', 'enumValues'
                       'format', 'hasLowerBound', 'lowerBound', 'hasUpperBound',
                       'upperBound', 'units'):
@@ -813,7 +813,7 @@ class FileWrapper(BaseWrapper):
     def get(self, attr, path):
         """ Return attribute corresponding to `attr`. """
         if attr == 'value':
-            file_ref = getattr(self._container, self._name)
+            file_ref = self._container.get(self._name)
             if file_ref is None:
                 return ''
             try:
@@ -823,13 +823,13 @@ class FileWrapper(BaseWrapper):
                 logging.warning('get %s.value: %r', path, exc)
                 return ''
         elif attr == 'isBinary':
-            file_ref = getattr(self._container, self._name)
+            file_ref = self._container.get(self._name)
             if file_ref is None:
                 return 'false'
             else:
                 return 'true' if file_ref.binary else 'false'
         elif attr == 'mimeType':
-            file_ref = getattr(self._container, self._name)
+            file_ref = self._container.get(self._name)
             if file_ref is None:
                 return ''
             elif file_ref.binary:
@@ -871,7 +871,7 @@ class FileWrapper(BaseWrapper):
             finally:
                 out.close()
             file_ref = FileRef(path=filename, owner=self._owner)
-            setattr(self._container, self._name, file_ref)
+            self._container.set(self._name, file_ref)
         elif attr in ('description', 'isBinary', 'mimeType',
                       'name', 'nameCoded', 'url'):
             raise WrapperError('cannot set <%s>.' % path)
@@ -901,7 +901,7 @@ class FloatWrapper(BaseWrapper):
     def get(self, attr, path):
         """ Return attribute corresponding to `attr`. """
         if attr == 'value' or attr == 'valueStr':
-            return _float2str(getattr(self._container, self._name))
+            return _float2str(self._container.get(self._name))
         elif attr == 'enumAliases':
             return ''
         elif attr == 'enumValues':
@@ -936,7 +936,7 @@ class FloatWrapper(BaseWrapper):
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr`. """
         if attr == 'value':
-            setattr(self._container, self._name, float(valstr))
+            self._container.set(self._name, float(valstr))
         elif attr in ('valueStr', 'description', 'enumAliases', 'enumValues'
                       'format', 'hasLowerBound', 'lowerBound',
                       'hasUpperBound', 'upperBound', 'units'):
@@ -972,7 +972,7 @@ class IntWrapper(BaseWrapper):
     def get(self, attr, path):
         """ Return attribute corresponding to `attr`. """
         if attr == 'value' or attr == 'valueStr':
-            return str(getattr(self._container, self._name))
+            return str(self._container.get(self._name))
         elif attr == 'enumAliases':
             return ''
         elif attr == 'enumValues':
@@ -1000,7 +1000,7 @@ class IntWrapper(BaseWrapper):
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr`. """
         if attr == 'value':
-            setattr(self._container, self._name, int(valstr))
+            self._container.set(self._name, int(valstr))
         elif attr in ('valueStr', 'description', 'enumAliases', 'enumValues'
                       'hasLowerBound', 'lowerBound',
                       'hasUpperBound', 'upperBound', 'units'):
@@ -1035,7 +1035,7 @@ class StrWrapper(BaseWrapper):
     def get(self, attr, path):
         """ Return attribute corresponding to `attr`. """
         if attr == 'value' or attr == 'valueStr':
-            return getattr(self._container, self._name)
+            return self._container.get(self._name)
         elif attr == 'enumValues':
             return ''
         elif attr == 'enumAliases':
@@ -1053,7 +1053,7 @@ class StrWrapper(BaseWrapper):
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr`. """
         if attr == 'value':
-            setattr(self._container, self._name, valstr)
+            self._container.set(self._name, valstr)
         elif attr in ('valueStr', 'description', 'enumAliases', 'enumValues'):
             raise WrapperError('cannot set <%s>.' % path)
         else:

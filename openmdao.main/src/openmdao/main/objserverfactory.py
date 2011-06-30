@@ -22,11 +22,12 @@ from openmdao.main.component import SimulationRoot
 from openmdao.main.container import Container
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
+from openmdao.main.filevar import RemoteFile
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, register
 from openmdao.main.mp_util import keytype, read_allowed_hosts, \
                                   write_server_config
 from openmdao.main.rbac import get_credentials, set_credentials, \
-                               rbac, rbac_decorate, RoleError
+                               rbac, RoleError
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
 from openmdao.util.publickey import make_private, read_authorized_keys, \
@@ -272,64 +273,6 @@ class _FactoryManager(OpenMDAO_Manager):
 register(ObjServerFactory, _FactoryManager, 'openmdao.main.objserverfactory')
 
     
-class RemoteFile(object):
-    """
-    Wraps a :class:`file` with remote-access annotations such that only role
-    'owner' may access the file.
-    """
-
-    def __init__(self, fileobj):
-        self.fileobj = fileobj
-
-    @property
-    def closed(self):
-        """ True if file is not open. """
-        return self.fileobj.closed
-
-    # Decorated below since we need to proxy ourselves.
-    def __enter__(self):
-        """ Enter context. """
-        self.fileobj.__enter__()
-        return self
-
-    @rbac('owner')
-    def __exit__(self, exc_type, exc_value, traceback):
-        """ Exit context. """
-        return self.fileobj.__exit__(exc_type, exc_value, traceback)
-
-    @rbac('owner')
-    def close(self):
-        """ Close the file. """
-        return self.fileobj.close()
-
-    @rbac('owner')
-    def flush(self):
-        """ Flush any buffered output. """
-        return self.fileobj.flush()
-
-    @rbac('owner')
-    def read(self, size=-1):
-        """ Read up to `size` bytes. """
-        return self.fileobj.read(size)
-
-    @rbac('owner')
-    def readline(self, size=-1):
-        """ Read one line. """
-        return self.fileobj.readline(size)
-
-    @rbac('owner')
-    def readlines(self, sizehint=-1):
-        """ Read until EOF. """
-        return self.fileobj.readlines(sizehint)
-
-    @rbac('owner')
-    def write(self, data):
-        """ Write `data` to the file. """
-        return self.fileobj.write(data)
-
-rbac_decorate(RemoteFile.__enter__, 'owner', proxy_types=(RemoteFile,))
-
-
 class ObjServer(object):
     """
     An object which knows how to create other objects, load a model, etc.
