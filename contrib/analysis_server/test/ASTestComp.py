@@ -25,6 +25,8 @@ class TestComponent(Component):
         self.add('sub_group', SubGroup())
 
     def execute(self):
+        if self.x < 0:
+            raise RuntimeError('x %s is < 0' % self.x)
         self.z = self.x * self.y
         self.exe_count += 1
         with self.in_file.open() as inp:

@@ -1,7 +1,9 @@
 import getpass
+import glob
 import os.path
 import pkg_resources
 import platform
+import shutil
 import socket
 import sys
 import time
@@ -9,6 +11,7 @@ import unittest
 import nose
 
 from openmdao.util.testutil import assert_raises
+
 import analysis_server
 
 ORIG_DIR = os.getcwd()
@@ -23,8 +26,8 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test. """
         os.chdir(TestCase.directory)
-        self.server, port = analysis_server.start_server(port=0, ignore=True)
-        self.client = analysis_server.Client(socket.gethostname(), port)
+        self.server, self.port = analysis_server.start_server(port=0)
+        self.client = analysis_server.Client(port=self.port)
 
     def tearDown(self):
         """ Called after each test. """
@@ -42,7 +45,7 @@ class TestCase(unittest.TestCase):
 
     def test_describe(self):
         expected = {
-            'Version': '0.1',
+            'Version': '0.2',
             'Author': 'anonymous',
             'hasIcon': 'false',
             'Description': 'Component for testing AnalysisServer functionality.',
@@ -51,10 +54,11 @@ class TestCase(unittest.TestCase):
             'Driver': 'false',
             'Time Stamp': '',
             'Requirements': '',
-            'HasVersionInfo': 'false',
+            'HasVersionInfo': 'true',
             'Checksum': '0',
         }
-        expected['Time Stamp'] = time.ctime(os.path.getmtime('ASTestComp.cfg'))
+        expected['Time Stamp'] = \
+            time.ctime(os.path.getmtime('ASTestComp-0.2.cfg'))
         result = self.client.describe('ASTestComp')
         self.assertEqual(result, expected)
 
@@ -101,7 +105,7 @@ class TestCase(unittest.TestCase):
             'version': '5.01',
             'build': '331',
             'num clients': '1',
-            'num components': '2',
+            'num components': '3',
             'os name': platform.system(),
             'os arch': platform.processor(),
             'os version': platform.release(),
@@ -151,7 +155,7 @@ version: 5.01, build: 331"""
             'listMethods,lm <object> [full]',
             'addProxyClients <clientHost1>,<clientHost2>',
             'monitor start <object.property>, monitor stop <id>',
-            'versions,v category/component (NOT IMPLEMENTED)',
+            'versions,v category/component',
             'ps <object> (NOT IMPLEMENTED)',
             'listMonitors,lo <objectName>',
             'heartbeat,hb [start|stop]',
@@ -214,10 +218,8 @@ version: 5.01, build: 331"""
         self.client.start('ASTestComp', 'comp')
         result = self.client.list_monitors('comp')
         expected = [
-            'ASTestComp.pickle',
             'ASTestComp.py',
             'ASTestComp_loader.py',
-            'ASTestComp_loader.pyc',
             '__init__.py',
             'test_client.py',
             'test_proxy.py',
@@ -247,9 +249,11 @@ version: 5.01, build: 331"""
         result, monitor_id = self.client.start_monitor('comp.test_client.py')
         expected = """\
 import getpass
+import glob
 import os.path
 import pkg_resources
 import platform
+import shutil
 import socket
 import sys
 import time
@@ -257,6 +261,7 @@ import unittest
 import nose
 
 from openmdao.util.testutil import assert_raises
+
 import analysis_server
 
 ORIG_DIR = os.getcwd()
@@ -284,6 +289,53 @@ ORIG_DIR = os.getcwd()
         process_info = self.client.ps('comp')
         self.assertEqual(process_info, expected)
 
+    def test_publish(self):
+        result = self.client.list_components('/')
+        self.assertFalse('Published' in result)
+        try:
+            analysis_server.publish_class('Published', '1', 'Publishing test',
+                                          'ASTestComp.py', 'TestComponent',
+                                          port=self.port)
+            result = self.client.list_components('/')
+            self.assertTrue('Published' in result)
+            self.client.start('Published', 'comp')
+#            self.client.set('comp.in_file', 'Hello world!')
+#            self.client.execute('comp')
+        finally:
+            for path in glob.glob('Published*'):
+                if os.path.isdir(path):
+                    shutil.rmtree(path)
+                else:
+                    os.remove(path)
+
+        code = "analysis_server.publish_class('Published', '1'," \
+                                            " 'Publishing test'," \
+                                            " 'NoComp.py', 'TestComponent'," \
+                                            " port=self.port)"
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Can't import 'NoComp': ")
+
+        code = "analysis_server.publish_class('Published', '1'," \
+                                            " 'Publishing test'," \
+                                            " 'ASTestComp.py', 'NoClass'," \
+                                            " port=self.port)"
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Can't get class 'NoClass' in 'ASTestComp': ")
+
+        code = "analysis_server.publish_class('Published', '1'," \
+                                            " 'Publishing test'," \
+                                            " 'ASTestComp.py', 'Bogus'," \
+                                            " port=self.port)"
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Can't instantiate ASTestComp.Bogus: ")
+
+        code = "analysis_server.publish_class('Published', '1'," \
+                                            " 'Publishing test'," \
+                                            " 'ASTestComp.py', 'TestComponent'," \
+                                            " host='NoSuchHost', port=self.port)"
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Can't connect to NoSuchHost:%d: " % self.port)
+
     def test_quit(self):
         self.client.quit()
 
@@ -307,9 +359,8 @@ ORIG_DIR = os.getcwd()
         self.client.start('ASTestComp', 'comp')
 
     def test_versions(self):
-        code = "self.client.versions('ASTestComp')"
-        assert_raises(self, code, globals(), locals(), RuntimeError,
-                      "Exception: NotImplementedError('versions',)")
+        result = self.client.versions('ASTestComp')
+        self.assertEqual(result, ['0.1', '0.2'])
 
 
 if __name__ == '__main__':

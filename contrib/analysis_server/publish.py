@@ -8,10 +8,11 @@ import client
 import server
 
 
-def publish_model(path, version, filename, classname,
+def publish_class(path, version, comment, filename, classname,
                   host='localhost', port=server.DEFAULT_PORT):
     """
-    Publish egg under `path` and `version` given `filename` and `classname`.
+    Publish egg under `path` and `version` with `comment`
+    given `filename` and `classname`.
     """
     cwd = os.getcwd()
     dirname = os.path.dirname(filename)
@@ -21,7 +22,7 @@ def publish_model(path, version, filename, classname,
         dirname = cwd
     if not dirname in sys.path:
         sys.path.insert(0, dirname)
-    modname = os.path.basename(filename)[:-3]  # drop '.py'
+    modname = os.path.basename(filename)[:-3]  # Drop '.py'
     try:
         __import__(modname)
     except ImportError as exc:
@@ -39,74 +40,86 @@ def publish_model(path, version, filename, classname,
         raise RuntimeError("Can't instantiate %s.%s: %r" 
                            % (modname, classname, exc))
     set_as_top(obj)
-    publish_object(path, version, obj, host, port)
+    publish_object(path, version, comment, obj, host, port)
 
 
-def publish_object(path, version, obj,
+def publish_object(path, version, comment, obj,
                    host='localhost', port=server.DEFAULT_PORT):
-    """ Publish egg under `path` and `version` given `obj`. """
+    """ Publish egg under `path` and `version` with `comment` given `obj`. """
     category, slash, name = path.rpartition('/')
     egg_info = obj.save_to_egg(name, version)
     eggfile = egg_info[0]
     try:
-        publish_egg(path, version, eggfile, host,  port)
+        publish_egg(path, version, comment, eggfile, host, port)
     finally:
         os.remove(eggfile)
 
 
-def publish_egg(path, version, eggfile,
+def publish_egg(path, version, comment, eggfile,
                 host='localhost', port=server.DEFAULT_PORT):
-    """ Publish egg under `path` and `version` given `eggfile`. """
+    """
+    Publish egg under `path` and `version` with `comment` given `eggfile`.
+    """
     try:
         _client = client.Client(host, port)
     except Exception as exc:
         raise RuntimeError("Can't connect to %s:%d: %s" % (host, port, exc))
 
-    _client.publish_egg(path, version, eggfile)
+    _client.publish_egg(path, version, comment, eggfile)
 
 
 def main():  # pragma no cover
     """
-    Starts up an interactive session, useful for testing.
+    Publish a component.
 
-    Usage: python publish.py --path=path --version=ver {--egg=filename | --file=filename [--classname=classname]}[--host=address][--port=number]
+    Usage: python publish.py --path=path --version=ver [--comment=text]{--egg=filename | --file=filename [--classname=classname]}[--host=address][--port=number][--list]
 
     --path: string
-        Path to publish under
+        Path to publish under.
 
     --version: string
-        Version to publish under
+        Version to publish under.
+
+    --comment: string
+        Version comment.
 
     --egg: string
-        Egg file containing model to publish
+        Egg file containing component to publish.
 
     --file: string
-        Python file containing model to publish.
+        Python file containing component to publish.
 
     --classname: string
-        Name of model class
+        Name of component class.
 
     --host: string
         IPv4 address or hostname. Default is 'localhost'.
 
     --port: int
         Server port (default 1835).
+
+    --list:
+        List existing versions for "path", do not publish.
     """
     parser = optparse.OptionParser()
     parser.add_option('--path', action='store', type='string',
                       help='path to publish under')
     parser.add_option('--version', action='store', type='string',
                       help='version to publish under')
+    parser.add_option('--comment', action='store', type='string',
+                      help='version description')
     parser.add_option('--egg', action='store', type='string',
-                      help='egg file to publish')
+                      help='egg file containing component to publish')
     parser.add_option('--file', action='store', type='string',
-                      help='python file containing model to publish')
+                      help='python file containing component to publish')
     parser.add_option('--classname', action='store', type='string',
-                      help='name of model class')
+                      help='name of component class')
     parser.add_option('--host', action='store', type='string',
                       default='localhost', help='host to connect to')
     parser.add_option('--port', action='store', type='int',
                       default=server.DEFAULT_PORT, help='port to connect to')
+    parser.add_option('--list', action='store_true',
+                      help='list existing versions for "path", do not publish')
 
     options, arguments = parser.parse_args()
     if arguments:
@@ -117,6 +130,17 @@ def main():  # pragma no cover
         print '--path is required'
         sys.exit(1)
 
+    if options.list:
+        try:
+            _client = client.Client(options.host, options.port)
+        except Exception as exc:
+            print "Can't connect to %s:%d: %s" \
+                  % (options.host, options.port, exc)
+            sys.exit(1)
+        for version in _client.versions(options.path):
+            print version
+        sys.exit(0)
+
     if not options.version:
         print '--version is required'
         sys.exit(1)
@@ -126,14 +150,14 @@ def main():  # pragma no cover
             print 'Egg file %r does not exist' % options.egg
             sys.exit(1)
         try:
-            publish_egg(options.path, options.version, options.egg,
-                        options.host, options.port)
+            publish_egg(options.path, options.version, options.comment,
+                        options.egg, options.host, options.port)
         except Exception as exc:
             print exc
             sys.exit(1)
     else:
         if not options.file:
-            print '--file is required is --egg is not used'
+            print '--file is required if --egg is not used'
             sys.exit(1)
 
         if not os.path.exists(options.file):
@@ -145,8 +169,9 @@ def main():  # pragma no cover
             sys.exit(1)
 
         try:
-            publish_model(options.path, options.version, options.file,
-                          options.classname, options.host, options.port)
+            publish_class(options.path, options.version, options.comment,
+                          options.file, options.classname,
+                          options.host, options.port)
         except Exception as exc:
             print exc
             sys.exit(1)

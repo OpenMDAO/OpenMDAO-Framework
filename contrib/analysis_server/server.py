@@ -11,6 +11,8 @@ by :class:`ConfigParser.SafeConfigParser`, for example:
     [Description]
     # Metadata describing the component.
     version: 0.1
+    comment: Initial version.
+    author: anonymous
     description: Component for testing AnalysisServer functionality.
     help_url: unknown
     keywords:
@@ -57,7 +59,6 @@ import re
 import signal
 import SocketServer
 import socket
-import string
 import sys
 import threading
 import time
@@ -65,6 +66,8 @@ import traceback
 
 if sys.platform != 'win32':
     import pwd
+
+from distutils.version import LooseVersion
 
 from openmdao.main.api import Component, Container, set_as_top
 from openmdao.main.mp_util import read_allowed_hosts
@@ -91,6 +94,8 @@ _COMMANDS = {}  # Maps from command string to command handler.
 
 _DISABLE_HEARTBEAT = False  # If True, no heartbeat replies are sent.
 
+_LOGGER = logging.getLogger('aserver')
+
 
 class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     """
@@ -111,6 +116,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self._eggs = {}        # Maps from cls to egg-info.
         self.handlers = {}     # Maps from client address to handler.
         self._credentials = get_credentials()  # For PublicKey servers.
+        self._root = os.getcwd()
         self._config_errors = 0
         self._read_configuration()
 
@@ -149,18 +155,17 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     try:
                         self._read_config(path)
                     except Exception as exc:
-                        logging.error(str(exc))
+                        _LOGGER.error(str(exc))
                         self._config_errors += 1
 
     def _read_config(self, path):
         """ Read component configuration file. """
-        logging.info('Reading config file %r', path)
+        _LOGGER.info('Reading config file %r', path)
         config = ConfigParser.SafeConfigParser()
         config.optionxform = str  # Preserve case.
-        try:
-            config.read(path)
-        except Exception as exc:
-            raise RuntimeError("Can't read %r: %r" % (path, exc))
+        files = config.read(path)
+        if not files:
+            raise RuntimeError("Can't read %r" % path)
 
         orig = os.getcwd()
         directory = os.path.dirname(path)
@@ -177,13 +182,32 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             if not config.has_section(sect):
                 raise RuntimeError("No %s section in %r" % (sect, path))
 
+        cwd = os.getcwd()
         if config.has_option('Python', 'egg'):
             # Create temporary instance from egg.
             egg = config.get('Python', 'egg')
             obj = Container.load_from_eggfile(egg)
+            cls = obj.__class__
+            classname = cls.__name__
+            modname = cls.__module__
+            for filename in glob.glob('*'):
+                if not os.path.exists(os.path.join(filename, 'EGG-INFO')):
+                    continue
+                req_path = os.path.join(filename, 'EGG-INFO', 'requires.txt')
+                with open(req_path, 'rU') as inp:
+                    requirements = [pkg_resources.Requirement.parse(line)
+                                    for line in inp.readlines()]
+                orphan_path = os.path.join(filename, 'EGG-INFO',
+                                           'openmdao_orphans.txt')
+                with open(orphan_path, 'rU') as inp:
+                    orphans = [line.strip() for line in inp.readlines()]
+                self._eggs[cls] = [os.path.join(cwd, egg),
+                                   requirements, orphans]
+                break
+            else:
+                raise RuntimeError("Can't find EGG-INFO for %r" % egg)
         else:
             # Get Python class and create temporary instance.
-            cwd = os.getcwd()
             filename = config.get('Python', 'filename')
             classname = config.get('Python', 'classname')
             dirname = os.path.dirname(filename)
@@ -192,7 +216,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             else:
                 dirname = cwd
             if not dirname in sys.path:
-                logging.debug('    prepending %r to sys.path', dirname)
+                _LOGGER.debug('    prepending %r to sys.path', dirname)
                 sys.path.insert(0, dirname)
             modname = os.path.basename(filename)[:-3]  # drop '.py'
             try:
@@ -204,13 +228,13 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             try:
                 cls = getattr(module, classname)
             except AttributeError as exc:
-                raise RuntimeError("Can't get class %r in %r: %r" \
+                raise RuntimeError("Can't get class %r in %r: %r"
                                    % (classname, modname, exc))
             try:
                 obj = cls()
             except Exception as exc:
-                logging.error(traceback.format_exc())
-                raise RuntimeError("Can't instantiate %s.%s: %r" \
+                _LOGGER.error(traceback.format_exc())
+                raise RuntimeError("Can't instantiate %s.%s: %r"
                                    % (modname, classname, exc))
 
         # Create wrapper configuration object.
@@ -219,14 +243,14 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             cfg = _WrapperConfig(config, obj,
                                  os.path.join(cwd, os.path.basename(path)))
         except Exception as exc:
+            _LOGGER.error(traceback.format_exc())
             raise RuntimeError("Bad configuration in %r: %s" % (path, exc))
 
         # Register under path normalized to category/component form.
-        path = path[:-4]  # Drop '.cfg'
+        path = cfg.cfg_path[len(self._root)+1:-4]  # Drop prefix & '.cfg'
         path = path.replace('\\', '/')  # Always use '/'.
-        logging.debug('    registering %s: %s.%s', path, modname, classname)
+        _LOGGER.debug('    registering %s: %s.%s', path, modname, classname)
         self._components[path] = (cls, cfg)
-
         obj.pre_delete()
         del obj
 
@@ -242,7 +266,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             elif host == pattern:
                 return True
 
-        logging.warning('Rejecting connection from %s:%s', host, port)
+        _LOGGER.warning('Rejecting connection from %s:%s', host, port)
         return False
 
     # This will be exercised by client side tests.
@@ -252,17 +276,17 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         upon client disconnect.
         """
         host, port = client_address
-        logging.info('Connection from %s:%s', host, port)
+        _LOGGER.info('Connection from %s:%s', host, port)
         self._num_clients += 1
         try:
             SocketServer.TCPServer.finish_request(self, request, client_address)
         finally:
-            logging.info('Disconnect %s:%s', host, port)
+            _LOGGER.info('Disconnect %s:%s', host, port)
             self._num_clients -= 1
             try:  # It seems handler.finish() isn't called on disconnect...
                 self.handlers[client_address].cleanup()
             except Exception, exc:
-                logging.warning('Exception during handler cleanup: %r', exc)
+                _LOGGER.warning('Exception during handler cleanup: %r', exc)
 
 
 class _Handler(SocketServer.BaseRequestHandler):
@@ -277,7 +301,7 @@ class _Handler(SocketServer.BaseRequestHandler):
         self._req = None
         self._req_id = None
         self._background = False
-        self._heartbeat = None
+        self._hb = None
         self._monitors = {}      # Maps from req_id to name.
         self._instance_map = {}  # Maps from name to (wrapper, worker).
         self._servers = {}       # Maps from wrapper to server.
@@ -297,18 +321,24 @@ version: 0.1""")
             while self._req != 'quit':
                 try:
                     if self._raw:
-                        logging.debug('Waiting for raw-mode request...')
+                        _LOGGER.debug('Waiting for raw-mode request...')
                         req, req_id, background = self._stream.recv_request()
-                        logging.debug('Request from %s: %r (id %s bg %s)',
-                                      self.client_address, req,
-                                      req_id, background)
+                        text, zero, rest = req.partition('\x00')
+                        if zero:
+                            _LOGGER.debug('Request from %s: %r <+binary...> (id %s bg %s)',
+                                          self.client_address, text[:1000],
+                                          req_id, background)
+                        else:
+                            _LOGGER.debug('Request from %s: %r (id %s bg %s)',
+                                          self.client_address, req[:1000],
+                                          req_id, background)
                         self._req_id = req_id
                         self._background = background
                     else:
-                        logging.debug('Waiting for request...')
+                        _LOGGER.debug('Waiting for request...')
                         req = self._stream.recv_request()
-                        logging.debug('Request from %s: %r',
-                                      self.client_address, req)
+                        _LOGGER.debug('Request from %s: %r',
+                                      self.client_address, req[:1000])
                         self._req_id = None
                         self._background = False
 
@@ -337,22 +367,39 @@ version: 0.1""")
 
     def cleanup(self):
         """ 'end' all existing objects. """
-        if self._heartbeat is not None:
-            self._heartbeat.stop()
+        if self._hb is not None:
+            self._hb.stop()
         for name in self._instance_map.keys():
             self.__end(name)
 
     def _get_component(self, typ):
         """ Return '(cls, cfg)' for `typ`. """
         typ = typ.strip('"').lstrip('/')
-        try:
-            return self.server.components[typ]
-        except KeyError:
-            if not '/' in typ:  # Just to match real AnalysisServer.
-                typ = '/'+typ
-            self._send_error('component <%s> does not match a known component'
-                             % typ)
-            return (None, None)
+        name, qmark, version = typ.partition('?')
+        if version:
+            name = '%s-%s' % (name, version)
+            try:
+                return self.server.components[name]
+            except KeyError:
+                pass
+        else:
+            prefix = '%s-' % name
+            latest = None
+            for key in self.server.components:
+                if key.startswith(prefix):
+                    key_version = LooseVersion(key)
+                    if latest is None or key_version > latest_version:
+                        latest = key
+                        latest_version = key_version
+                        
+            if latest is not None:
+                return self.server.components[latest]
+
+        if not '/' in typ:  # Just to match real AnalysisServer.
+            typ = '/'+typ
+        self._send_error('component <%s> does not match a known component'
+                         % typ)
+        return (None, None)
 
     def _get_wrapper(self, name, background=False):
         """
@@ -381,9 +428,13 @@ version: 0.1""")
         """ Send reply to client, with optional logging. """
         if self._raw:
             req_id = req_id or self._req_id
-            logging.debug('(req_id %s)\n%s', req_id, reply)
+            text, zero, rest = reply.partition('\x00')
+            if zero:
+                _LOGGER.debug('(req_id %s)\n%s\n<+binary...>', req_id, text[:1000])
+            else:
+                _LOGGER.debug('(req_id %s)\n%s', req_id, reply[:1000])
         else:
-            logging.debug('    %s', reply)
+            _LOGGER.debug('    %s', reply[:1000])
         with self._lock:
             self._stream.send_reply(reply, req_id)
 
@@ -391,9 +442,9 @@ version: 0.1""")
         """ Send error reply to client, with optional logging. """
         if self._raw:
             req_id = req_id or self._req_id
-            logging.error('%s (id %s)', reply, req_id)
+            _LOGGER.error('%s (req_id %s)', reply, req_id)
         else:
-            logging.error('%s', reply)
+            _LOGGER.error('%s', reply)
         reply = ERROR_PREFIX+reply
         with self._lock:
             self._stream.send_reply(reply, req_id, 'error')
@@ -401,7 +452,7 @@ version: 0.1""")
     def _send_exc(self, exc, req_id=None):
         """ Send exception reply to client, with optional logging. """
         self._send_error('Exception: %r' % exc, req_id)
-        logging.error(traceback.format_exc())
+        _LOGGER.error(traceback.format_exc())
 
 
     def _add_proxy_clients(self, args):
@@ -428,8 +479,36 @@ version: 0.1""")
                              'describe,d <category/component> [-xml]')
             return
 
-        cls, cfg = self._get_component(args[0])
-        if cfg is None:
+        # Check for version info.
+        typ = args[0].strip('"').lstrip('/')
+        name, qmark, version = typ.partition('?')
+        has_version_info = None
+        if version:
+            name = '%s-%s' % (name, version)
+            if name in self.server.components:
+                has_version_info = 'false'  # Single version.
+                cls, cfg = self.server.components[name]
+        else:
+            prefix = '%s-' % name
+            latest = None
+            for key in self.server.components:
+                if key.startswith(prefix):
+                    if has_version_info is None:
+                        has_version_info = 'false'  # One match so far.
+                    else:
+                        has_version_info = 'true'   # At least two.
+                    key_version = LooseVersion(key)
+                    if latest is None or key_version > latest_version:
+                        latest = key
+                        latest_version = key_version
+            if latest is not None:
+                cls, cfg = self.server.components[latest]
+
+        if has_version_info is None:
+            if not '/' in typ:  # Just to match real AnalysisServer.
+                typ = '/'+typ
+            self._send_error('component <%s> does not match a known component'
+                             % typ)
             return
 
         if len(args) > 1 and args[1] == '-xml':
@@ -449,7 +528,7 @@ version: 0.1""")
 </Description>""" % (cfg.version, cfg.author, cfg.description, cfg.help_url,
                      ' '.join(cfg.keywords), cfg.timestamp, cfg.checksum,
                      ' '.join(cfg.requirements), str(cfg.has_icon).lower(),
-                     str(cfg.has_version_info).lower()))
+                     has_version_info))
         else:
             self._send_reply("""\
 Version: %s
@@ -465,7 +544,7 @@ HasVersionInfo: %s
 Checksum: %s""" % (cfg.version, cfg.author, str(cfg.has_icon).lower(),
                    cfg.description, cfg.help_url, ' '.join(cfg.keywords),
                    cfg.timestamp, ' '.join(cfg.requirements),
-                   str(cfg.has_version_info).lower(), cfg.checksum))
+                   has_version_info, cfg.checksum))
 
     _COMMANDS['describe'] = _describe
     _COMMANDS['d'] = _describe
@@ -675,14 +754,14 @@ version: 5.01, build: 331""")
 
         if args[0] == 'start':
             if not _DISABLE_HEARTBEAT:
-                if self._heartbeat is not None:  # Ensure only one.
-                    self._heartbeat.stop()
-                self._heartbeat = Heartbeat(self._req_id, self._send_reply)
-                self._heartbeat.start()
+                if self._hb is not None:  # Ensure only one.
+                    self._hb.stop()
+                self._hb = Heartbeat(self._req_id, self._send_reply)
+                self._hb.start()
             self._send_reply('Heartbeating started')
         else:
-            if self._heartbeat is not None:
-                self._heartbeat.stop()
+            if self._hb is not None:
+                self._hb.stop()
             self._send_reply('Heartbeating stopped')
 
     _COMMANDS['heartbeat'] = _heartbeat
@@ -723,7 +802,7 @@ Available Commands:
    listMethods,lm <object> [full]
    addProxyClients <clientHost1>,<clientHost2>
    monitor start <object.property>, monitor stop <id>
-   versions,v category/component (NOT IMPLEMENTED)
+   versions,v category/component
    ps <object> (NOT IMPLEMENTED)
    listMonitors,lo <objectName>
    heartbeat,hb [start|stop]
@@ -819,13 +898,15 @@ Available Commands:
         else:
             category = ''
 
-        lines = ['']
-        for name in sorted(self.server.components.keys()):
+        comps = set()
+        for name in self.server.components:
             if name.startswith(category):
                 name = name[len(category):]
                 if '/' not in name:
-                    lines.append(name)
-        lines[0] = '%d components found:' % (len(lines)-1)
+                    name, dash, version = name.partition('-')
+                    comps.add(name)
+        lines = ['%d components found:' % len(comps)]
+        lines.extend(sorted(comps))
         self._send_reply('\n'.join(lines))
 
     _COMMANDS['listComponents'] = _list_components
@@ -1010,25 +1091,28 @@ Available Commands:
         Receive an egg file and publish it.
         This is an extension to the AnalysisServer protocol.
         """
-        if len(args) < 4:
+        if len(args) < 5:
             self._send_error('invalid syntax. Proper syntax:\n'
-                             'publishEgg <path> <version> <author> <eggdata>')
+                             'publishEgg <path> <version> <comment> <author> <eggdata>')
             return
 
-        logging.critical('publish_egg')
-        path, space, rest = self._req.partition(' ')
+        cmd, space, rest = self._req.partition(' ')
+        path, space, rest = rest.partition(' ')
         version, space, rest = rest.partition(' ')
+        comment, space, rest = rest.partition(' ')
         author, space, eggdata = rest.partition(' ')
-        logging.critical('    %r %r %r', path, version, author)
 
-        # Create directory.
+        comment = comment.strip('"')
+        author = author.strip('"')
+
+        # Create directory (category).
         path = path.strip('/')
         directory, slash, name = path.rpartition('/')
         if directory and not os.path.exists(directory):
             os.makedirs(directory)
 
         # Write egg file.
-        egg_filename = '%s.%s.egg' % (name, version)
+        egg_filename = '%s-%s.egg' % (name, version)
         egg_path = os.path.join(directory, egg_filename)
         if os.path.exists(egg_path):
             self._send_error('Egg %r already exists' % egg_path)
@@ -1051,6 +1135,7 @@ Available Commands:
             out.write("""\
 [Description]
 version: %s
+comment: %s
 author: %s
 description: %s
 
@@ -1065,13 +1150,13 @@ egg: %s
 
 [Methods]
 *: *
-""" % (version, author, description))
+""" % (version, comment, author, description, egg_filename))
 
         component.pre_delete()
         try:
-            self._read_config(cfg_path)
+            self.server._read_config(cfg_path)
         except Exception as exc:
-            logging.error("Can't publishEgg: %r", exc)
+            _LOGGER.error("Can't publishEgg: %r", exc)
             self._send_error(str(exc))
 #            os.remove(egg_path)
 #            os.remove(cfg_path)
@@ -1154,13 +1239,18 @@ egg: %s
                     need_reqs = True
                     break
 
-            table = string.maketrans('/-. ', '____')
-            egg_name = args[0].strip('"').translate(table)
+            directory, sep, comp_name = cfg.cfg_path.rpartition(os.sep)
+            egg_name, dash, version = comp_name.partition('-')
             obj = set_as_top(cls())
-            py_dir = os.path.dirname(cfg.cfg_path)
-            egg_info = obj.save_to_egg(egg_name, 'AS', py_dir=py_dir,
-                                       need_requirements=need_reqs)
-            self.server.eggs[cls] = egg_info
+            orig = os.getcwd()
+            os.chdir(directory)
+            try:
+                egg_info = obj.save_to_egg(egg_name, cfg.version or 'AS',
+                                           need_requirements=need_reqs)
+            finally:
+                os.chdir(orig)
+            self.server.eggs[cls] = (os.path.join(directory, egg_info[0]),
+                                     egg_info[1], egg_info[2])
             obj.pre_delete()
             del obj
 
@@ -1179,11 +1269,15 @@ egg: %s
                 raise RuntimeError('Server allocation failed :-(')
 
             # Transfer egg to it and load.
-            filexfer(None, egg_file, server, egg_file, 'b')
-            obj = server.load_model(egg_file)
+            egg_name = os.path.basename(egg_file)
+            filexfer(None, egg_file, server, egg_name, 'b')
+            obj = server.load_model(egg_name)
         else:
             server = None
-            obj = set_as_top(cls())
+            if hasattr(cfg, 'egg'):
+                obj = Container.load_from_eggfile(egg_file)
+            else:
+                obj = set_as_top(cls())
         obj.name = name
 
         wrapper = ComponentWrapper(name, obj, cfg, server,
@@ -1202,11 +1296,31 @@ egg: %s
                              'versions,v category/component')
             return
 
-        cls, cfg = self._get_component(args[0])
-        if cfg is None:
-            return
+        typ = args[0].strip('"').lstrip('/')
+        prefix = '%s-' % typ
+        versions = []
+        for key in self.server.components:
+            if key.startswith(prefix):
+                versions.append(key)
 
-        raise NotImplementedError('versions')
+        if versions:
+            xml = ["<Branch name='HEAD'>"]
+            for version in sorted(versions, key=lambda ver: LooseVersion(ver)):
+                category, slash, component = version.rpartition('/')
+                name, dash, ver = version.partition('-')
+                cls, cfg = self.server.components[version]
+                xml.append(" <Version name='%s'>" % ver)
+                xml.append("  <author>%s</author>" % cfg.author)
+                xml.append("  <date>%s</date>" % cfg.timestamp)
+                xml.append("  <description>%s</description>" % cfg.comment)
+                xml.append(" </Version>")
+            xml.append("</Branch>")
+            self._send_reply('\n'.join(xml))
+        else:
+            if not '/' in typ:  # Just to match real AnalysisServer.
+                typ = '/'+typ
+            self._send_error('component <%s> does not match a known component' \
+                             % typ)
 
     _COMMANDS['versions'] = _versions
     _COMMANDS['v'] = _versions
@@ -1221,15 +1335,14 @@ class _WrapperConfig(object):
     """
 
     def __init__(self, config, instance, cfg_path):
-        self.cfg_path = cfg_path
-
         if not _IGNORE_ATTR:
             for attr in dir(Component()):
                 _IGNORE_ATTR.add(attr)
 
-        # Get description.
+        # Get description info.
         defaults = {
             'version': '',
+            'comment': '',
             'author': '',
             'description': '',
             'help_url': '',
@@ -1241,16 +1354,36 @@ class _WrapperConfig(object):
                 config.set('Description', option, defaults[option])
             setattr(self, option, config.get('Description', option))
 
+        # Normalize name of config file to <component_name>-<version>.cfg.
+        cfg_name = os.path.basename(cfg_path)
+        name, dash, version = cfg_name.partition('-')
+        if not version:
+            name = name[:-4]  # Drop '.cfg'
+        else:
+            version = version[:-4]  # Drop '.cfg'
+            if not self.version:
+                self.version = version
+        if version != self.version:
+            cfg_dir = os.path.dirname(cfg_path)
+            new_path = os.path.join(cfg_dir, '%s-%s.cfg' % (name, self.version))
+            _LOGGER.warning('Renaming %r', cfg_path)
+            _LOGGER.warning('      to %r', new_path)
+            os.rename(cfg_path, new_path)
+            cfg_path = new_path
+        self.cfg_path = cfg_path
+
+        # Timestamp from config file timestamp.
         stat_info = os.stat(cfg_path)
         self.timestamp = time.ctime(stat_info.st_mtime)
         self.checksum = 0
         self.has_icon = False
-        self.has_version_info = False
 
+        # Default description from instance.__doc__.
         if not self.description:
             if instance.__doc__ is not None:
                 self.description = instance.__doc__
 
+        # Default author from file owner.
         if not self.author and sys.platform != 'win32':
             self.author = pwd.getpwuid(stat_info.st_uid).pw_name
 
@@ -1275,13 +1408,13 @@ class _WrapperConfig(object):
                     if attr in _IGNORE_ATTR or attr.startswith('_'):
                         continue
                     if self._valid_method(instance, attr):
-                        logging.debug('    register %s()', attr)
+                        _LOGGER.debug('    register %s()', attr)
                         self.methods[attr] = attr
             else:
                 if int_name == '*':
                     int_name = ext_name
                 if self._valid_method(instance, int_name):
-                    logging.debug('    register %r => %s()', ext_name, int_name)
+                    _LOGGER.debug('    register %r => %s()', ext_name, int_name)
                     self.methods[ext_name] = int_name
                 else:
                     raise ValueError('%r is not a valid method' % int_name)
@@ -1309,13 +1442,13 @@ class _WrapperConfig(object):
                                 path = name
                             else:
                                 path = '%s.%s' % (container.get_pathname(), name)
-                            logging.debug('    register %r %r', path, iotype)
+                            _LOGGER.debug('    register %r %r', path, iotype)
                             mapping[path] = path
             else:
                 if int_path == '*':
                     int_path = ext_path
                 if self._valid_path(instance, int_path, iotype):
-                    logging.debug('    register %r => %r %r',
+                    _LOGGER.debug('    register %r => %r %r',
                                   ext_path, int_path, iotype)
                     mapping[ext_path] = int_path
                 else:
@@ -1342,12 +1475,11 @@ class _WrapperConfig(object):
         return len(args) == 1  # Just 'self'.
 
 
-def start_server(port=DEFAULT_PORT, allowed_hosts=None, ignore=False):
+def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None):
     """
-    Start server process at `port` (use zero for a system-selected port).
-    If `allowed_hosts` is None then ``['127.0.0.1', socket.gethostname()]``
-    is used. If `ignore` is True, then the ``--ignore-config-errors`` option
-    is used. Returns ``(proc, port)``.
+    Start server process at `address` and `port` (use zero for a
+    system-selected port). If `allowed_hosts` is None then
+    ``['127.0.0.1', socket.gethostname()]`` is used. Returns ``(proc, port)``.
     """
     if allowed_hosts is None:
         allowed_hosts = ['127.0.0.1', socket.gethostname()]
@@ -1365,9 +1497,8 @@ def start_server(port=DEFAULT_PORT, allowed_hosts=None, ignore=False):
     if os.path.exists(server_up):
         os.remove(server_up)
 
-    args = ['python', server_path, '--port', '%d' % port, '--up', server_up]
-    if ignore:
-        args.append('--ignore-config-errors')
+    args = ['python', server_path,
+            '--address', address, '--port', '%d' % port, '--up', server_up]
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
 
     # Wait for valid server_up file.
@@ -1423,9 +1554,6 @@ def main():  # pragma no cover
         Server port (default 1835).
         Note that ports below 1024 typically require special privileges.
 
-    --ignore-config-errors:
-        Used to ignore component configuration errors. Helpful during testing.
-
     --no-heartbeat:
         Do not send heartbeat replies. Simplifies debugging.
 
@@ -1440,8 +1568,6 @@ def main():  # pragma no cover
                       help='network address to serve.')
     parser.add_option('--port', action='store', type='int',
                       default=DEFAULT_PORT, help='port to listen on')
-    parser.add_option('--ignore-config-errors', action='store_true',
-                      help='Ignore component configuration errors')
     parser.add_option('--no-heartbeat', action='store_true',
                       help='Do not send heartbeat replies')
     parser.add_option('--up', action='store', default='',
@@ -1453,7 +1579,9 @@ def main():  # pragma no cover
         sys.exit(1)
 
     logging.getLogger().setLevel(logging.DEBUG)
+    _LOGGER.setLevel(logging.DEBUG)
 
+    global _DISABLE_HEARTBEAT
     _DISABLE_HEARTBEAT = options.no_heartbeat
 
     # Get allowed_hosts.
@@ -1473,7 +1601,7 @@ def main():  # pragma no cover
     # Create server.
     host = options.address or socket.gethostname()
     server = Server(host, options.port, allowed_hosts)
-    if server.config_errors and not options.ignore_config_errors:
+    if server.config_errors:
         print '%d component configuration errors detected.' \
               % server.config_errors
         sys.exit(1)
@@ -1483,7 +1611,7 @@ def main():  # pragma no cover
     pid = os.getpid()
     msg = 'Server started on %s:%d, pid %d.' % (host, port, pid)
     print msg
-    logging.info(msg)
+    _LOGGER.info(msg)
     if options.up:
         with open(options.up, 'w') as out:
             out.write('%s\n' % host)
@@ -1503,7 +1631,7 @@ def main():  # pragma no cover
 
 def _sigterm_handler(signum, frame):  #pragma no cover
     """ Try to go down gracefully. """
-    logging.getLogger().info('sigterm_handler invoked')
+    _LOGGER.info('sigterm_handler invoked')
     print 'sigterm_handler invoked'
     sys.stdout.flush()
     _cleanup()

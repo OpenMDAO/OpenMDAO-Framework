@@ -3,6 +3,7 @@ Proxies for AnalysisServer components and variables.
 """
 
 import os.path
+import socket
 
 from enthought.traits.api import TraitError
 
@@ -154,7 +155,7 @@ class ComponentProxy(Component):
         if self._client is not None:
             try:
                 self._client.end(self._objname)
-            except EOFError:  # pragma no cover
+            except (EOFError, socket.error):  # pragma no cover
                 pass
             self._client = None
 

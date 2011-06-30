@@ -17,6 +17,7 @@ import nose
 from openmdao.util.testutil import assert_raises
 
 from analysis_server.server import Server, _Handler
+from analysis_server.monitor import BaseMonitor
 
 ORIG_DIR = os.getcwd()
 
@@ -85,7 +86,7 @@ class TestCase(unittest.TestCase):
         del self.handler
         del self.server
         del self.client
-        for egg_name in glob.glob('*-AS.*.egg'):
+        for egg_name in glob.glob('*.egg'):
             os.remove(egg_name)
         for filename in ('in_file.dat', 'inFile.dat', 'outFile.dat'):
             if os.path.exists(filename):
@@ -117,7 +118,7 @@ class TestCase(unittest.TestCase):
             expected_line = expected_lines[i]
             if reply_line != expected_line:
                 self.fail('Line %d: %r vs. %r'
-                           % (i, reply_line, expected_line))
+                           % (i+1, reply_line, expected_line))
         if len(reply_lines) != len(expected_lines):
             self.fail('%d reply lines, %d expected lines'
                       % (len(reply_lines), len(expected_lines)))
@@ -141,9 +142,17 @@ class TestCase(unittest.TestCase):
         self.assertEqual(replies[-1],
                          'ERROR: no such object: <froboz>\r\n>')
 
-        self.assertEqual(self.server.config_errors, 6)
+        self.assertEqual(self.server.config_errors, 0)
+
+        code = "self.server._read_config('no-such-file.cfg')"
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Can't read 'no-such-file.cfg'")
 
         config = ConfigParser.SafeConfigParser()
+        code = "self.server._process_config(config, 'test_invalid.cfg')"
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "No Python section in 'test_invalid.cfg'")
+
         config.add_section('Description')
         config.add_section('Python')
         config.add_section('Inputs')
@@ -151,7 +160,6 @@ class TestCase(unittest.TestCase):
         config.add_section('Methods')
         config.set('Python', 'filename', 'no-such-dir/no-such-file.py')
         config.set('Python', 'classname', 'no-such-class')
-        code = "self.server._process_config(config, 'test_invalid.cfg')"
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Can't import 'no-such-file'")
 
@@ -165,16 +173,25 @@ class TestCase(unittest.TestCase):
 
         config.set('Python', 'classname', 'TestComponent')
         config.set('Methods', 'ext_name', 'no_such_method')
-#        self.server._process_config(config, 'test_invalid.cfg')
+        code = "self.server._process_config(config, 'ASTestComp-0.1.cfg')"
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Bad configuration in 'ASTestComp-0.1.cfg':"
+                      " 'no_such_method' is not a valid method")
 
         config.set('Methods', '*', 'float_method')
-#        self.server._process_config(config, 'test_invalid.cfg')
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Bad configuration in 'ASTestComp-0.1.cfg':"
+                      " internal name must be '*' if the external name is '*'")
 
         config.set('Inputs', '*', 'x')
-#        self.server._process_config(config, 'test_invalid.cfg')
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Bad configuration in 'ASTestComp-0.1.cfg':"
+                      " internal path must be '*' if the external path is '*'")
 
         config.set('Inputs', 'ext_path', 'z')
-#        self.server._process_config(config, 'test_invalid.cfg')
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Bad configuration in 'ASTestComp-0.1.cfg':"
+                      " 'z' is not a valid 'in' variable")
 
     def test_add_proxy_clients(self):
         replies = self.send_recv('addProxyClients clientHost1, clientHost2')
@@ -186,9 +203,9 @@ class TestCase(unittest.TestCase):
                          'addProxyClients <clientHost1>, ...\r\n>')
 
     def test_describe(self):
-        timestamp = time.ctime(os.path.getmtime('ASTestComp.cfg'))
+        timestamp = time.ctime(os.path.getmtime('ASTestComp-0.2.cfg'))
         expected = """\
-Version: 0.1
+Version: 0.2
 Author: anonymous
 hasIcon: false
 Description: Component for testing AnalysisServer functionality.
@@ -197,7 +214,7 @@ Keywords:
 Driver: false
 Time Stamp: %s
 Requirements: 
-HasVersionInfo: false
+HasVersionInfo: true
 Checksum: 0""" % timestamp
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv('describe ASTestComp')
@@ -207,7 +224,7 @@ Checksum: 0""" % timestamp
 
         expected = """\
 <Description>
- <Version>0.1</Version>
+ <Version>0.2</Version>
  <Author>anonymous</Author>
  <Description>Component for testing AnalysisServer functionality.</Description>
  <HelpURL></HelpURL>
@@ -216,7 +233,7 @@ Checksum: 0""" % timestamp
  <Checksum>0</Checksum>
  <Requirements></Requirements>
  <hasIcon>false</hasIcon>
- <HasVersionInfo>false</HasVersionInfo>
+ <HasVersionInfo>true</HasVersionInfo>
 </Description>""" % timestamp
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv('describe ASTestComp -xml')
@@ -269,6 +286,13 @@ Checksum: 0""" % timestamp
         self.assertEqual(replies[-1],
                          'ERROR: invalid syntax. Proper syntax:\r\n'
                          'execute,x <objectName>[&]\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'set comp.in_file = "Hello world!"',
+                                  'set comp.x = -1',
+                                  'execute comp'], count=5)
+        self.assertEqual(replies[-1],
+                        "ERROR: Exception: WrapperError('x -1.0 is < 0',)\r\n>")
 
     def test_get(self):
         replies = self.send_recv(['start ASTestComp comp',
@@ -369,7 +393,7 @@ Checksum: 0""" % timestamp
 version: 5.01
 build: 331
 num clients: 0
-num components: 2
+num components: 3
 os name: %s
 os arch: %s
 os version: %s
@@ -444,7 +468,7 @@ Available Commands:
    listMethods,lm <object> [full]
    addProxyClients <clientHost1>,<clientHost2>
    monitor start <object.property>, monitor stop <id>
-   versions,v category/component (NOT IMPLEMENTED)
+   versions,v category/component
    ps <object> (NOT IMPLEMENTED)
    listMonitors,lo <objectName>
    heartbeat,hb [start|stop]
@@ -586,26 +610,16 @@ str_method() fullName="str_method"\
 
     def test_list_monitors(self):
         expected = """\
-19 monitors:
-ASTestComp.cfg
+9 monitors:
+ASTestComp-0.1.cfg
+ASTestComp-0.2.cfg
 ASTestComp.py
-ASTestComp.pyc
-ASTestComp2.cfg
-BadFormat.cfg
-NoDesc.cfg
-NoInputs.cfg
-NoMethods.cfg
-NoOutputs.cfg
-NoPython.cfg
+ASTestComp2-0.1.cfg
 __init__.py
-__init__.pyc
 openmdao_log.txt
 test_client.py
-test_client.pyc
 test_proxy.py
-test_proxy.pyc
-test_server.py
-test_server.pyc"""
+test_server.py"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
 
         replies = self.send_recv(['start ASTestComp comp',
@@ -763,21 +777,23 @@ valueStr (type=java.lang.String) (access=g)  vLen=1  val=0""" \
 
     def test_monitor(self):
         expected = """\
-[Python]
-# Information for creating an instance.
-filename: ASTestComp.py
-classname: TestComponent
+[Description]
+# Metadata describing the component.
+version: 0.1
+comment: Initial version.
+author: anonymous
+description: Component for testing AnalysisServer functionality.
 
 """
-        expected = expected.replace('\n', '\r\n') + '\r\n>'
+        expected = expected.replace('\n', '\r\n')
 
         replies = self.send_recv(['start ASTestComp comp',
-                                  'monitor start comp.NoDesc.cfg',
+                                  'monitor start comp.ASTestComp-0.1.cfg',
                                   'monitor stop None'], count=4)
         if replies[-2] == '>':  # Threading can alter order.
-            self.assertEqual(replies[-1], expected)
+            self.assertEqual(replies[-1][:len(expected)], expected)
         else:
-            self.assertEqual(replies[-2], expected)
+            self.assertEqual(replies[-2][:len(expected)], expected)
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'monitor start comp.no-such-file'], count=3)
@@ -798,15 +814,26 @@ classname: TestComponent
         replies = self.send_recv('monitor start oops')
         self.assertEqual(replies[-1], 'ERROR: no such object: <oops>\r\n>')
 
+        monitor = BaseMonitor('test', 10, '42', sys.stdout.write, False)
+        monitor.start()
+        assert_raises(self, 'monitor.start()', globals(), locals(), 
+                      RuntimeError, 'start() may only be called once.')
+        monitor.stop()
+
+        assert_raises(self, 'monitor.poll()', globals(), locals(),
+                      NotImplementedError, 'BaseMonitor.poll()')
+
     def test_move(self):
+        expected = "ERROR: Exception: NotImplementedError('move',)\r\n>"
+
         replies = self.send_recv('move from to')
-        self.assertEqual(replies[-1], "ERROR: Exception: NotImplementedError('move',)\r\n>")
+        self.assertEqual(replies[-1], expected)
         replies = self.send_recv('mv from to')
-        self.assertEqual(replies[-1], "ERROR: Exception: NotImplementedError('move',)\r\n>")
+        self.assertEqual(replies[-1], expected)
         replies = self.send_recv('rename from to')
-        self.assertEqual(replies[-1], "ERROR: Exception: NotImplementedError('move',)\r\n>")
+        self.assertEqual(replies[-1], expected)
         replies = self.send_recv('rn from to')
-        self.assertEqual(replies[-1], "ERROR: Exception: NotImplementedError('move',)\r\n>")
+        self.assertEqual(replies[-1], expected)
 
         replies = self.send_recv('move')
         self.assertEqual(replies[-1],
@@ -836,6 +863,12 @@ classname: TestComponent
         self.assertEqual(replies[-1],
                          'ERROR: invalid syntax. Proper syntax:\r\n'
                          'ps <object>\r\n>')
+
+    def test_publish_egg(self):
+        replies = self.send_recv('publishEgg')
+        self.assertEqual(replies[-1],
+                         'ERROR: invalid syntax. Proper syntax:\r\n'
+                         'publishEgg <path> <version> <comment> <author> <eggdata>\r\n>')
 
     def test_quit(self):
         replies = self.send_recv('quit')
@@ -926,10 +959,27 @@ ASTestComp2"""
         self.assertEqual(replies[-1], 'ERROR: Name already in use: "comp"\r\n>')
 
     def test_versions(self):
+        tstamp1 = time.ctime(os.path.getmtime('ASTestComp-0.1.cfg'))
+        tstamp2 = time.ctime(os.path.getmtime('ASTestComp-0.2.cfg'))
+        expected = """\
+<Branch name='HEAD'>
+ <Version name='0.1'>
+  <author>anonymous</author>
+  <date>%s</date>
+  <description>Initial version.</description>
+ </Version>
+ <Version name='0.2'>
+  <author>anonymous</author>
+  <date>%s</date>
+  <description>Added in_file explicitly.</description>
+ </Version>
+</Branch>""" % (tstamp1, tstamp2)
+        expected = expected.replace('\n', '\r\n') + '\r\n>'
+
         replies = self.send_recv('versions ASTestComp')
-        self.assertEqual(replies[-1], "ERROR: Exception: NotImplementedError('versions',)\r\n>")
+        self.assertEqual(replies[-1], expected)
         replies = self.send_recv('v ASTestComp')
-        self.assertEqual(replies[-1], "ERROR: Exception: NotImplementedError('versions',)\r\n>")
+        self.assertEqual(replies[-1], expected)
 
         replies = self.send_recv('versions')
         self.assertEqual(replies[-1],

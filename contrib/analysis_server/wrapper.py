@@ -1,13 +1,12 @@
 import os
 import sys
-import threading
 import time
 import logging
 import xml.etree.cElementTree as ElementTree
 
 try:
     import resource
-except ImportError:
+except ImportError:  # pragma no cover
     pass  # Not available on Windows.
 
 from openmdao.main.api import Container, FileRef
@@ -212,13 +211,27 @@ class ComponentWrapper(object):
                 paths = os.listdir(root)
                 paths = [path for path in paths
                               if not os.path.isdir(os.path.join(root, path))]
-                paths = [path for path in paths if not path.endswith('.egg')]
-            else:
+            else:  # pragma no cover
                 paths = self._server.listdir(root)
                 paths = [path for path in paths
                               if not self._server.isdir(os.path.join(root, path))]
-            lines = ['%d monitors:' % len(paths)]
-            lines.extend(sorted(paths))
+            paths = [path for path in paths if not path.startswith('.')]
+            text_files = []
+            for path in paths:  # List only text files.
+                if path.startswith('.'):
+                    continue
+                if self._server is None:  # Used when testing.
+                    inp = open(os.path.join(root, path), 'rb')
+                else:  # pragma no cover
+                    inp = self._server.open(os.path.join(root, path), 'rb')
+                try:
+                    data = inp.read(1 << 12)  # 4KB
+                    if '\x00' not in data:
+                        text_files.append(path)
+                finally:
+                    inp.close()
+            lines = ['%d monitors:' % len(text_files)]
+            lines.extend(sorted(text_files))
             self._send_reply('\n'.join(lines), req_id)
         except Exception as exc:
             self._send_exc(exc, req_id)
@@ -851,7 +864,7 @@ class FileWrapper(BaseWrapper):
             mode = 'wb'
             if self._server is None:  # Used during testing.
                 out = open(filename, mode)
-            else:
+            else:  # pragma no cover
                 out = self._server.open(filename, mode)
             try:
                 out.write(valstr)

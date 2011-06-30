@@ -28,7 +28,7 @@ class Client(object):
         a higher level.
     """
 
-    def __init__(self, host, port=server.DEFAULT_PORT, debug=False):
+    def __init__(self, host='localhost', port=server.DEFAULT_PORT, debug=False):
         self._conn = telnetlib.Telnet(host, port)
         self._stream = stream.Stream(self._conn.sock, debug)
         self._lock = threading.Lock()
@@ -299,15 +299,16 @@ class Client(object):
             processes.append(proc)
         return processes
 
-    def publish_egg(self, path, version, eggfile):
+    def publish_egg(self, path, version, comment, eggfile):
         """
-        Publish `eggfile` under `path`.
+        Publish `eggfile` under `path` and `version` with `comment`.
         This is an extension to the AnalysisServer protocol.
         """
         if not self._raw:
             self.set_mode_raw()
         author = getpass.getuser()
-        request = 'publishEgg %s %s %s ' % (path, version, author)
+        request = 'publishEgg %s %s "%s" "%s" ' \
+                  % (path, version, comment, author)
         with open(eggfile, 'rb') as inp:
             request += inp.read()
         self._send_recv(request)
@@ -332,9 +333,13 @@ class Client(object):
         self._send_recv('start %s %s' % (path, name))
 
     def versions(self, path):
-        """ Lists the version history of component type `path` as XML. """
+        """ Returns a list of versions for `path`. """
         reply = self._send_recv('versions %s' % path)
-        return reply
+        root = ElementTree.fromstring(reply)
+        versions = []
+        for version in root.findall('Version'):
+            versions.append(version.attrib['name'])
+        return versions
 
 
 def main():  # pragma no cover

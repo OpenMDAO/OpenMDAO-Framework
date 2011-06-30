@@ -7,8 +7,10 @@ import nose
 
 from openmdao.main.api import Assembly, Component, FileRef, set_as_top
 from openmdao.lib.datatypes.api import File, Float, Str
+from openmdao.util.testutil import assert_raises
 
 import analysis_server
+from analysis_server.proxy import EnumProxy
 
 ORIG_DIR = os.getcwd()
 
@@ -62,8 +64,8 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test. """
         os.chdir(TestCase.directory)
-        self.server, port = analysis_server.start_server(port=0, ignore=True)
-        self.factory = analysis_server.ASFactory(socket.gethostname(), port)
+        self.server, port = analysis_server.start_server(port=0)
+        self.factory = analysis_server.ASFactory(port=port)
 
     def tearDown(self):
         """ Called after each test. """
@@ -89,7 +91,9 @@ class TestCase(unittest.TestCase):
 
     def test_factory(self):
         self.assertEqual(self.factory.get_available_types(),
-                         [('ASTestComp', '0.1'), ('ASTestComp2', '0.1')])
+                         [('ASTestComp', '0.1'),
+                          ('ASTestComp', '0.2'),
+                          ('ASTestComp2', '0.1')])
         self.assertEqual(self.factory.get_available_types('no-such-group'), [])
         self.assertEqual(self.factory.create('no-such-type'), None)
 
@@ -180,6 +184,10 @@ class TestCase(unittest.TestCase):
         trait = comp.sub_group.get_trait('se')
         self.assertEqual(trait.desc, 'Str enum')
         self.assertEqual(trait.values, ['cold', 'hot', 'nice'])
+
+        code = "enum = EnumProxy('in', comp._client, 'the_obj.x', 'PHXNone', '')"
+        assert_raises(self, code, globals(), locals(), NotImplementedError,
+                      "EnumProxy for 'PHXNone'", use_exec=True)
 
         comp.pre_delete()
 

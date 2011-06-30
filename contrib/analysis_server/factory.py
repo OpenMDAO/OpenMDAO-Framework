@@ -19,7 +19,7 @@ class ASFactory(Factory):
         Port number of the AnalysisServer to connect to.
     """
 
-    def __init__(self, host, port=server.DEFAULT_PORT):
+    def __init__(self, host='localhost', port=server.DEFAULT_PORT):
         super(ASFactory, self).__init__()
         self._host = host
         self._port = port
@@ -71,8 +71,9 @@ class ASFactory(Factory):
         if self._types is None:
             self._types = []
             for comp in self._client.list_components():
-                info = self._client.describe(comp)
-                self._types.append((comp, info['Version']))
+                versions = self._client.versions(comp)
+                for version in versions:
+                    self._types.append((comp, version))
         return self._types
 
 

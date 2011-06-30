@@ -1,5 +1,6 @@
 import re
 import socket
+import sys
 
 
 class Stream(object):
@@ -50,8 +51,13 @@ class Stream(object):
         """
         if self._raw:
             if self._debug:  # pragma no cover
-                print '\nREQUEST to %s: id=%d, bg=%s, request=%r' \
-                      % (self._peer, request_id, background, request)
+                text, zero, rest = request.partition('\x00')
+                if zero is not None:
+                    print '\nREQUEST to %s: id=%d, bg=%s, req=%r <+binary...>' \
+                          % (self._peer, request_id, background, text)
+                else:
+                    print '\nREQUEST to %s: id=%d, bg=%s, request=%r' \
+                          % (self._peer, request_id, background, request)
             req = ['setID %s\n' % request_id]
             if background:
                 req.append('bg\n')
@@ -94,7 +100,11 @@ class Stream(object):
 
             request = self._recv(length)
             if self._debug:  # pragma no cover
-                print '    request %r' % request
+                text, zero, rest = request.partition('\x00')
+                if zero is not None:
+                    print '    req %r <+binary...>' % text
+                else:
+                    print '    request %r' % request
             return (request, request_id, background)
         else:
             info = self._expect(self._cooked_request)
@@ -110,8 +120,13 @@ class Stream(object):
         """
         if self._raw:
             if self._debug:  # pragma no cover
-                print '\nREPLY to %s: id=%d, format=%s, reply=%r' \
-                      % (self._peer, reply_id, format, reply)
+                text, zero, rest = reply.partition('\x00')
+                if zero is not None:
+                    print '\nREPLY to %s: id=%d, format=%s, reply=%r <+binary...>' \
+                          % (self._peer, reply_id, format, text)
+                else:
+                    print '\nREPLY to %s: id=%d, format=%s, reply=%r' \
+                          % (self._peer, reply_id, format, reply)
             length = len(reply)
             msg = '%d\r\nformat: %s\r\n%d\r\n' % (reply_id, format, length)
             if length <= 32:  # The value 32 is not critical here.
@@ -155,7 +170,11 @@ class Stream(object):
 
             reply = self._recv(length)
             if self._debug:  # pragma no cover
-                print '    reply %r' % reply
+                text, zero, rest = reply.partition('\x00')
+                if zero is not None:
+                    print '    reply %r <+binary...>' % text
+                else:
+                    print '    reply %r' % reply
             return (reply, reply_id, format)
         else:
             info = self._expect(self._cooked_reply)
@@ -167,17 +186,23 @@ class Stream(object):
 
     def _send(self, data):
         """ Send `data`. """
-        if self._debug:  # pragma no cover
-            print '    send %s %r' % (self._peer, data)
-        self._sock.sendall(data)
+#        if self._debug:  # pragma no cover
+#            print '    send %s %r' % (self._peer, data)
+        length = len(data)
+        start = 0
+        chunk = 1 << 17  # 128KB, chunking allows for send/recv overlap.
+        while start < length:
+            end = start + chunk
+            self._sock.sendall(data[start:end])
+            start = end
 
     def _expect(self, patterns):
         """
         Wait for one or more patterns to match.
         Return (index, match_obj, data).
         """
-        if self._debug:  # pragma no cover
-            print '    _expect: _recv_buffer %r' % self._recv_buffer
+#        if self._debug:  # pragma no cover
+#            print '    _expect: _recv_buffer %r' % self._recv_buffer
         indices = range(len(patterns))
         for i in indices:
             if not hasattr(patterns[i], 'search'):
@@ -196,9 +221,9 @@ class Stream(object):
 
     def _recv(self, length):
         """ Return next `length` bytes. """
-        if self._debug:  # pragma no cover
-            print '    recv: %d _recv_buffer %r (%d)' \
-                  % (length, self._recv_buffer, len(self._recv_buffer))
+#        if self._debug:  # pragma no cover
+#            print '    recv: %d _recv_buffer %r (%d)' \
+#                  % (length, self._recv_buffer, len(self._recv_buffer))
         while len(self._recv_buffer) < length:
             self._receive()
         data = self._recv_buffer[:length]
@@ -207,17 +232,18 @@ class Stream(object):
 
     def _receive(self):
         """ Receive more data. """
-        if self._debug:  # pragma no cover
-            print '    _receive'
+#        if self._debug:  # pragma no cover
+#            print '    _receive'
         try:
             data = self._sock.recv(4096)
-        except socket.error as exc:
-            if exc.errno == 10053 or exc.errno == 10054:  # Windows.
-                raise EOFError('Connection to %s closed' % self._peer)
+        except socket.error as exc:  # pragma no cover
+            if sys.platform == 'win32':
+                if exc.errno == 10053 or exc.errno == 10054:
+                    raise EOFError('Connection to %s closed' % self._peer)
             raise
         if data:
-            if self._debug:  # pragma no cover
-                print '       %r' % data
+#            if self._debug:  # pragma no cover
+#                print '       %r' % data
             self._recv_buffer += data
         else:
             raise EOFError('Connection to %s closed' % self._peer)
