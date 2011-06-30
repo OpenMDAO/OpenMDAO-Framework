@@ -126,23 +126,6 @@ to a commit history within the repository. This makes git branches cheap to crea
 means that you should not hesitate to make a new branch when working on something. This
 will be discussed a little more below in the :ref:`getting-the-source-code` section. 
 
-The following figure gives an overall view of the version control process while 
-using git and Github.
-
-.. figure:: version_control.png
-   :align: center
-
-   Version Control Process
-
-From the OpenMDAO repository on Github, you create a personal "fork" of the 
-project, so there is now a repository that you can write to.  In addition to
-creating a fork, you must also create a clone of the OpenMDAO repository on 
-your machine.  This is the repository that you will be working directly off 
-of, via the creation of branches.  Once you are satisfied with a branch's 
-development, you can push this branch back up to your personal fork.  From here,
-if you would like to contribute this work back to the OpenMDAO repository, you 
-must issue a pull request to have your modifications merged in.
-
 
 *Git User Setup*
 ++++++++++++++++
@@ -193,6 +176,23 @@ http://github.com/OpenMDAO/OpenMDAO-Framework. There, near the top of the page y
 see a *Fork* button. Press it and you now have your own personal OpenMDAO-Framework
 fork.  You'll push branches to this later and issue pull requests to get your
 changes into the official repository.
+
+The following figure gives an overall view of the version control process while 
+using git and Github.
+
+.. figure:: version_control.png
+   :align: center
+
+   Version Control Process
+
+From the OpenMDAO repository on Github, you create a personal "fork" of the 
+project, so there is now a repository that you can write to.  In addition to
+creating a fork, you must also create a clone of the OpenMDAO repository on 
+your machine.  This is the repository that you will be working directly off 
+of, via the creation of branches.  Once you are satisfied with a branch's 
+development, you can push this branch back up to your personal fork.  From here,
+if you would like to contribute this work back to the OpenMDAO repository, you 
+must issue a pull request to have your modifications merged in.
 
 Normally, you should only need to clone a repository once on any given machine
 where you plan to do your work. Then, each time you start work on a new
