@@ -127,6 +127,24 @@ means that you should not hesitate to make a new branch when working on somethin
 will be discussed a little more below in the :ref:`getting-the-source-code` section. 
 
 
+The following figure gives an overall view of the version control process while 
+using git and Github.
+
+.. figure:: version_control.png
+   :align: center
+
+   Version Control Process
+
+From the OpenMDAO repository on Github, you create a personal "fork" of the 
+project, so there is now a repository that you can write to.  In addition to
+creating a fork, you must also create a clone of the OpenMDAO repository on 
+your machine.  This is the repository that you will be working directly off 
+of, via the creation of branches.  Once you are satisfied with a branch's 
+development, you can push this branch back up to your personal fork.  From here,
+if you would like to contribute this work back to the OpenMDAO repository, you 
+must issue a pull request to have your modifications merged in.
+
+
 *Git User Setup*
 ++++++++++++++++
 
@@ -212,7 +230,12 @@ Getting the Source Code
 +++++++++++++++++++++++
 
 The *official* OpenMDAO-Framework repository lives on Github at
-http://github.com/OpenMDAO/OpenMDAO-Framework. To create a local
+http://github.com/OpenMDAO/OpenMDAO-Framework. 
+
+
+
+
+To create a local
 OpenMDAO-Framework repository, you need to *clone* the OpenMDAO-Framework
 repository on Github using the following command:
 
