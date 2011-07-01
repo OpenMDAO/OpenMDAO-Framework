@@ -1,6 +1,0 @@
-Insert into these subdirectories image files for use in the corresponding documents
-that are NOT generated from .dia files.  These files will then be version controlled here.
-The files in this directory which are actually referred to in various docs will be copied 
-over to the _build/html/_images folder at make html time,
-where they will be intermingled with dia-generated pngs.
-

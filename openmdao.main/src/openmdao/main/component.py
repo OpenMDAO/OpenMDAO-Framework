@@ -15,18 +15,17 @@ import weakref
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
-from enthought.traits.api import Bool, List, Str, Int, Instance, Property, implements, TraitError
+from enthought.traits.api import Bool, List, Str, Int, Property
 
 from openmdao.main.container import Container
-from openmdao.main.derivatives import Derivatives
-from openmdao.main.interfaces import IComponent, ICaseIterator
+from openmdao.main.interfaces import implements, IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
-from openmdao.main.configinfo import ConfigInfo
+from openmdao.main.slot import Slot
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -98,7 +97,6 @@ class Component (Container):
     """
 
     implements(IComponent)
-    
   
     directory = Str('', desc='If non-blank, the directory to execute in.', 
                     iotype='in')
@@ -154,8 +152,6 @@ class Component (Container):
         self._dir_stack = []
         self._dir_context = None
         
-        # Maybe we should have the user create this in the component's __init__
-        self.derivatives = Derivatives()
         self.ffd_order = 0
 
 
@@ -193,9 +189,9 @@ class Component (Container):
         version.
         """
         for name, value in self.traits(required=True).items():
-            if value.is_trait_type(Instance) and getattr(self, name) is None:
+            if value.is_trait_type(Slot) and getattr(self, name) is None:
                 self.raise_exception("required plugin '%s' is not present" %
-                                     name, TraitError)
+                                     name, RuntimeError)
     
     @rbac(('owner', 'user'))
     def tree_rooted(self):
@@ -310,20 +306,21 @@ class Component (Container):
         This method approximates the output using a Taylor series expansion
         about the saved baseline point.
         
+        This function is overridden by ComponentWithDerivatives
+        
         ffd_order: int
-            Order of the derivatives to be used (typically 1 or 2).
+            Order of the derivatives to be used (1 or 2).
         """
         
-        for name in self.derivatives.out_names:
-            setattr(self, name,
-                     self.derivatives.calculate_output(self, name, ffd_order))
+        pass
     
     def calc_derivatives(self, first=False, second=False):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline. The user
-        must supply calculate_derivatives() in the component.
+        must supply calculate_first_derivatives() and/or
+        calculate_second_derivatives() in the component.
         
-        This function should not be overriden.
+        This function is overridden by ComponentWithDerivatives
         
         first: Bool
             Set to True to calculate first derivatives.
@@ -332,31 +329,17 @@ class Component (Container):
             Set to True to calculate second derivatives.
         """
         
-        if hasattr(self, 'calculate_derivatives'):
-            
-            # Calculate derivatives in user-defined function
-            self.calculate_derivatives(first, second)
-            
-            # Save baseline state
-            self.derivatives.save_baseline(self)
+        pass
     
     def check_derivatives(self, order, driver_inputs, driver_outputs):
-        """Calls the validate method of the derivatives object, in order to
-        warn the user about all missing derivatives."""
+        """ComponentsWithDerivatives overloads this function to check for
+        missing derivatives.
         
-        local_inputs = []
-        for item in driver_inputs:
-            paths = item.split('.',1)
-            if paths[0] == self.name:
-                local_inputs.append(paths[1])
+        This function is overridden by ComponentWithDerivatives
+        """
         
-        local_outputs = []
-        for item in driver_outputs:
-            paths = item.split('.',1)
-            if paths[0] == self.name:
-                local_outputs.append(paths[1])
+        pass
         
-        self.derivatives.validate(self, order, local_inputs, local_outputs)
     
     def _post_execute (self):
         """Update output variables and anything else needed after execution. 
@@ -374,8 +357,8 @@ class Component (Container):
         self._call_execute = False
         
     @rbac('*', 'owner')
-    def run (self, force=False, ffd_order=0):
-        """Run this object. This should include fetching input variables,
+    def run (self, force=False, ffd_order=0, case_id=''):
+        """Run this object. This should include fetching input variables if necessary,
         executing, and updating output variables. Do not override this function.
 
         force: bool
@@ -386,6 +369,9 @@ class Component (Container):
             Order of the derivatives to be used during Fake
             Finite Difference (typically 1 or 2). During regular execution,
             ffd_order should be 0. (Default is 0)
+            
+        case_id: str
+            Identifier for the Case that is associated with this run. (Default is '')
         """
         if self.directory:
             self.push_dir()
@@ -395,15 +381,24 @@ class Component (Container):
 
         self._stop = False
         self.ffd_order = ffd_order
+        self._case_id = case_id
         try:
             self._pre_execute(force)
             if self._call_execute or force:
                 #print 'execute: %s' % self.get_pathname()
                 
-                if ffd_order and hasattr(self, 'calculate_derivatives'):
+                if ffd_order == 1 and \
+                   hasattr(self, 'calculate_first_derivatives'):
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
-                    self._execute_ffd(ffd_order)
+                    self._execute_ffd(1)
+                    
+                elif ffd_order == 2 and \
+                   hasattr(self, 'calculate_second_derivatives'):
+                    # During Fake Finite Difference, the available derivatives
+                    # are used to approximate the outputs.
+                    self._execute_ffd(2)
+                    
                 else:
                     # Component executes as normal
                     self.execute()
@@ -416,8 +411,10 @@ class Component (Container):
                 self.pop_dir()
  
     def add(self, name, obj):
-        """Override of base class version to force call to *check_config* after
-        any child containers are added.
+        """Override of base class version to force call to *check_config*
+        after any child containers are added. The base class version is still
+        called.
+        
         Returns the added Container object.
         """
         self.config_changed()

@@ -25,7 +25,7 @@ Glossary
 
       
       **branch**
-        Bazaar term for an ordered series of revisions (see :term:`revision`
+        Git term for an ordered series of revisions (see :term:`revision`
         below) that describes the history of a set of files. 
 
 
@@ -70,7 +70,7 @@ Glossary
 
 
       **commit**
-        Bazaar command that records a change. A change is committed to a developer's local
+        Git command that records a change. A change is committed to a developer's local
         repository.
 
       
@@ -84,8 +84,7 @@ Glossary
 
       **CONMIN**   
         Stands for "CONstraint MINimization." CONMIN is a gradient descent
-        optimization algorithm developed by NASA. The simple tutorial in the *User
-        Guide* contains information on using CONMIN for an both an :ref:`unconstrained
+        optimization algorithm developed by NASA. The simple tutorial contains information on using CONMIN for an both an :ref:`unconstrained
         <using-CONMIN>` optimization and a :ref:`constrained
         <constrained-optimization>` optimization.
 
@@ -108,11 +107,11 @@ Glossary
       **DLL**
         Dynamically Loadable Library 
 
-	
+
       **docstring**
-      	A string that describes a module, function, class, or method definition. The docstring is a
-	special attribute of an object. Docstrings are used to document OpenMDAO code as well as
-	many packages written Python.
+        A string that describes a module, function, class, or method definition. The docstring is a
+        special attribute of an object. Docstrings are used to document OpenMDAO code as well as
+        many packages written Python.
 
       
       **docutils**
@@ -159,12 +158,12 @@ Glossary
 
       
       **Fake Finite Difference**
-        The Fake Finite Difference (FFD) method was developed to support an efficient way to calculate
-	gradients for mixed models, that is, models  that contain both components that can provide
-	derivatives and components that cannot. When a component has a set of specified derivatives,
-	they are used to replace the component's output with the first-order Taylor series expansion
-	whenever the optimizer initiates a finite difference estimation of the gradient. This is
-	called Fake Finite Difference.
+        The Fake Finite Difference (FFD) method was developed to efficiently calculate
+        gradients for mixed models, that is, models that contain components that can provide
+        derivatives and components that cannot. When a component has a set of specified derivatives,
+        they are used to replace the component's output with the first-order Taylor series expansion
+        whenever the optimizer initiates a finite difference estimation of the gradient. This is
+        called Fake Finite Difference.
 
            
       **FEM**
@@ -174,25 +173,29 @@ Glossary
         complex structure to a discrete model of a finite number of degrees of freedom.
 
 
-      **GA**
-        Genetic algorithm
-
       **Float**
         A variable type which represents a floating point number. It
         also also allows for the specification of units and specification of
         upper and lower bounds.
      
-      
+      **GA**
+        Genetic algorithm
+
       **Genetic**  
         OpenMDAO genetic algorithm optimizer based on the Pyevolve genetic algorithm,
         which is a complete genetic algorithm framework written in Python. (PyEvolve
         was developed and is actively maintained by Christian S. Perone.) 
 
+      **Git**
+        A version control system.
+
+      **Github**
+        A web community where projects using the *git* version control system are
+        located.
 
       **GUI**
         Graphical User Interface. A computer operating system that is based upon icons
         and visual relationships rather than text.
-    
     
       **IGeomQueryObject**
         An interface to an object having physical dimensions and shape, with
@@ -238,11 +241,6 @@ Glossary
         close proximity to each other, such as within a building. 
 
       
-      **Launchpad**
-        Free open-source project hosting. The repository is based on the Bazaar version control
-        system.
-
-
       **MDAO**  
         Multi-disciplinary Analysis & Optimization
 
@@ -275,8 +273,8 @@ Glossary
 
       **NEWSUMT** 
         A Fortran subroutine for solving linear and nonlinear constrained or
-	unconstrained function minimization problems.
-	
+        unconstrained function minimization problems.
+
 
       **NOSA**
         NASA Open Source Agreement. A software license approved by the Open
@@ -396,7 +394,7 @@ Glossary
 
 
       **repository**
-        Bazaar term for a store of revisions. See :term:`revision`.
+        Git term for a store of revisions. See :term:`revision`.
 
 
       **ResourceAllocator**
@@ -425,7 +423,7 @@ Glossary
 
      
       **revision**
-        Bazaar term for a snapshot of the state of files and directories, including their
+        Git term for a snapshot of the state of files and directories, including their
         content. A revision also has some metadata associated with it, including
         who committed it, when it was committed, a commit message, and the
         parent revisions from which it was derived.
@@ -468,16 +466,16 @@ Glossary
         Database Abstraction Library
 
 
-      **Socket**
+      **Slot**
         A placeholder for a plugin within a :term:`Component`.
 
       
-      **SocketList**
+      **SlotList**
         A list that holds only objects that provide a particular interface.
 
 
-      **Sockets**
-        See :term:`Socket`.
+      **Slots**
+        See :term:`Slot`.
 
 
       **SWIG**
@@ -487,11 +485,8 @@ Glossary
 
 
       **Tag**
-        A Bazaar nickname for a particular revision. A tag is typically used to mark
-        a release of the software so you can easily refer to it later. Tags are stored in the
-        branch and are propagated when the branch is pushed, pulled or merged. If your branch is
-        associated with a Trac ticket, the SCM will apply a tag (corresponding to your ticket
-        number) when she merges your branch.
+        A git nickname for a particular revision. A tag is typically used to mark
+        a release of the software so you can easily refer to it later. 
    
    
       **Tempita**
@@ -521,11 +516,6 @@ Glossary
         attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
 
 
-      **trunk**
-        A Bazaar term that refers to the main development branch (in this case,
-        the openmdao trunk) from which working branches are pulled.
-
-
       **tuple**
         A tuple is an immutable list. It is defined in the same way as a list, except that the whole set of  
         elements is enclosed in parentheses instead of square brackets. The elements of a tuple have a defined
@@ -548,9 +538,7 @@ Glossary
         passed between framework components. It has a value, a default value,
         and may contain additional attributes like upper and lower bounds and units.
         Variables can also perform their own validation when being
-        assigned to another variable. OpenMDAO's variables are
-        implemented using Traits, an open source extension to Python authored
-        by Enthought, Inc.
+        assigned to another variable. 
 
 
       **virtualenv**  

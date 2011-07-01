@@ -200,13 +200,13 @@ class InputFileGenerator(object):
         """Marks the location of a landmark, which lets you describe data by
         relative position. Note that a forward search begins at the old anchor 
         location. If you want to restart the search for the anchor at the file
-        beginning, then call reset_anchor() before mark_anchor. 
+        beginning, then call ``reset_anchor()`` before ``mark_anchor``. 
         
         anchor: str
             The text you want to search for.
         
         occurrence: integer
-            find nth instance of text; default is 1 (first). Use -1 to
+            Find nth instance of text; default is 1 (first). Use -1 to
             find last occurrence. Reverse searches always start at the end
             of the file no matter the state of any previous anchor."""
         
@@ -412,12 +412,14 @@ class InputFileGenerator(object):
 class FileParser(object):
     """Utility to locate and read data from a file."""
     
-    def __init__(self):
+    def __init__(self, end_of_line_comment_char=None, full_line_comment_char=None):
         
         self.filename = []
         self.data = []
         
         self.delimiter = " \t"
+        self.end_of_line_comment_char = end_of_line_comment_char
+        self.full_line_comment_char = full_line_comment_char
         
         self.current_row = 0
         self.anchored = False
@@ -431,7 +433,13 @@ class FileParser(object):
         self.filename = filename
         
         inputfile = open(filename, 'r')
-        self.data = inputfile.readlines()
+        if not self.end_of_line_comment_char and not self.full_line_comment_char:
+            self.data = inputfile.readlines()
+        else:
+            self.data = []
+            for line in inputfile :
+                if line[0] == self.full_line_comment_char : continue
+                self.data.append( line.split( self.end_of_line_comment_char )[0] )
         inputfile.close()
 
     def set_delimiters(self, delimiter):
@@ -441,7 +449,7 @@ class FileParser(object):
         delimiter: str
             A string containing characters to be used as delimiters. The
             default value is ' \t'. which means that spaces and tabs are not
-            taken as data, but instead mark the boundaries. Note that the
+            taken as data but instead mark the boundaries. Note that the
             parser is smart enough to recognize characters within quotes as
             non-delimiters."""
         
@@ -453,7 +461,7 @@ class FileParser(object):
         """Marks the location of a landmark, which lets you describe data by
         relative position. Note that a forward search begins at the old anchor 
         location. If you want to restart the search for the anchor at the file
-        beginning, then call reset_anchor() before mark_anchor. 
+        beginning, then call ``reset_anchor()`` before ``mark_anchor``. 
         
         anchor: str
             The text you want to search for.
@@ -593,7 +601,7 @@ class FileParser(object):
             Optional row offset from the occurrence of key. This can
             also be negative.
         
-        You can do the same thing with a call to mark_anchor and transfer_var.
+        You can do the same thing with a call to ``mark_anchor`` and ``transfer_var``.
         This function just combines them for convenience."""
 
         if not isinstance(occurrence, int) or occurrence==0:
@@ -646,7 +654,7 @@ class FileParser(object):
         a newline. When the delimiter is set to columns, the paramters
         (rowstart, fieldstart, rowend, fieldend) demark a box, and all
         values in that box are retrieved. Note that standard whitespace
-        is the secondary delmiter in this case.
+        is the secondary delimiter in this case.
         """
         
         j1 = self.current_row + rowstart

@@ -1,14 +1,12 @@
 """
-    conmindriver.py - Driver for the CONMIN optimizer.
-    
-    See the Standard Library Reference for additional information on the :ref:`CONMINDriver`.
+    ``conmindriver.py`` - Driver for the CONMIN optimizer.
     
     The CONMIN driver can be a good example of how to wrap another Driver for
     OpenMDAO. However, there are some things to keep in mind.
     
     1. This implementation of the CONMIN Fortran driver is interruptable, in
     that control is returned every time an objective or constraint evaluation
-    is needed. Most external optimizers just expect a functions to be passed
+    is needed. Most external optimizers just expect a function to be passed
     for these, so they require a slightly different driver implementation than
     this.
     
@@ -17,7 +15,7 @@
     that you might not need for a pure Python optimizer.
     
     Ultimately, if you are wrapping a new optimizer for OpenMDAO, you should
-    endeavour to understand the purpose for each statement, so that your
+    endeavour to understand the purpose for each statement so that your
     implementation doesn't do any unneccessary or redundant calculation.
 """
 
@@ -29,11 +27,10 @@ __all__ = ['CONMINdriver']
 # pylint: disable-msg=E0611,F0401
 from numpy import zeros, ones
 from numpy import int as numpy_int
-from numpy.linalg import norm
 
 import conmin.conmin as conmin
 
-from openmdao.main.api import Case, Driver
+from openmdao.main.api import Case, Driver, ExprEvaluator
 from openmdao.main.exceptions import RunStopped
 from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
 from openmdao.main.hasparameters import HasParameters
@@ -178,10 +175,15 @@ class CONMINdriver(Driver):
         
     Note on self.cnmn1.igoto, which reports CONMIN's operation state:
         0: Initial and final state
+	
         1: Initial evaluation of objective and constraint values
+	
         2: Evalute gradients of objective and constraints (internal only)
+	
         3: Evalute gradients of objective and constraints
+	
         4: One-dimensional search on unconstrained function
+	
         5: Solve 1D search problem for unconstrained function
             
     """
@@ -224,7 +226,7 @@ class CONMINdriver(Driver):
     phi = Float(5.0, iotype='in', desc='Participation coefficient - penalty '
                       'parameter that pushes designs towards the feasible '
                       'region.')
-    delfun = Float(0.001, iotype='in', low=0.0001, 
+    delfun = Float(0.001, iotype='in', low=0.0, 
                    desc='Relative convergence tolerance.')
     dabfun = Float(0.001, iotype='in', low=1.0e-10, 
                    desc='Absolute convergence tolerance.')
@@ -287,21 +289,19 @@ class CONMINdriver(Driver):
         # get the initial values of the parameters
         # check if any min/max constraints are violated by initial values
         for i, val in enumerate(self.get_parameters().values()):
-            self.design_vals[i] = dval = val.expreval.evaluate()
+            self.design_vals[i] = dval = val.evaluate(self.parent)
             
             if dval > val.high:
                 if (dval - val.high) < self.ctlmin:
                     self.design_vals[i] = val.high
                 else:
-                    self.raise_exception('maximum exceeded for initial value'
-                                         ' of: %s' % val.expreval.text,
+                    self.raise_exception('initial value of: %s is greater than maximum' % val.target,
                                          ValueError)
             if dval < val.low:
                 if (val.low - dval) < self.ctlmin:
                     self.design_vals[i] = val.low
                 else:
-                    self.raise_exception('minimum exceeded for initial value'
-                                         ' of: %s' % val.expreval.text,
+                    self.raise_exception('initial value of: %s is less than minimum' % val.target,
                                          ValueError)
 
         
@@ -362,7 +362,7 @@ class CONMINdriver(Driver):
             if self.cnmn1.igoto == 3:
                 # Save baseline states and calculate derivatives
                 if self.baseline_point:
-                    super(CONMINdriver, self).calc_derivatives(first=True)
+                    self.calc_derivatives(first=True)
                 self.baseline_point = False
                 
                 # update the parameters in the model
@@ -387,7 +387,7 @@ class CONMINdriver(Driver):
 
             # update constraint value array
             for i, v in enumerate(self.get_ineq_constraints().values()):
-                val = v.evaluate()
+                val = v.evaluate(self.parent)
                 if '>' in val[2]:
                     self.constraint_vals[i] = val[1]-val[0]
                 else:
@@ -400,23 +400,22 @@ class CONMINdriver(Driver):
         # only return gradients of active/violated constraints.
         elif self.cnmn1.info == 2 and self.cnmn1.nfdg == 1:
             
-            super(CONMINdriver, self).calc_derivatives(first=True)
+            self.calc_derivatives(first=True)
             self.ffd_order = 1
             self.differentiator.calc_gradient()
             self.ffd_order = 0
                 
-            self.d_obj[:-2] = self.differentiator.gradient_obj
+            self.d_obj[:-2] = self.differentiator.get_gradient(self.get_objectives().keys()[0])
             
             for i in range(len(self.cons_active_or_violated)):
                 self.cons_active_or_violated[i] = 0
                 
-            ncon = self.differentiator.n_ineqconst
             self.cnmn1.nac = 0
-            for i in range(ncon):
+            for i, name in enumerate(self.get_ineq_constraints().keys()):
                 if self.constraint_vals[i] >= self.cnmn1.ct:
                     self.cons_active_or_violated[self.cnmn1.nac] = i+1
                     self.d_const[:-2, self.cnmn1.nac] = \
-                        self.differentiator.gradient_ineq_const[:, i]
+                        self.differentiator.get_gradient(name)
                     self.cnmn1.nac += 1
                     
         else:
@@ -442,22 +441,28 @@ class CONMINdriver(Driver):
                 
                 case_input = []
                 for var, val in zip(self.get_parameters().keys(), dvals):
-                    case_input.append([var, None, val])
-                    
-                case_output = []
-                for var in self.printvars:
-                    case_output.append([var, None, self.get(var)])
-                case_output.append(["objective", None, self.cnmn1.obj])
+                    case_input.append([var, val])
+                
+                if self.printvars:
+                    case_output = [(name,
+                                    ExprEvaluator(name, scope=self.parent).evaluate())
+                                           for name in self.printvars]
+                else:
+                    case_output = []
+                case_output.append(["objective", self.cnmn1.obj])
             
                 for i, val in enumerate(self.constraint_vals):
-                    case_output.append(["Constraint%d" % i, None, val])
+                    case_output.append(["Constraint%d" % i, val])
                 
-                self.recorder.record(Case(case_input, case_output, 
-                                          'case%s' % self.iter_count))
+                case = Case(case_input, case_output,
+                            desc='case%s' % self.iter_count,
+                            parent_uuid=self._case_id)
+                
+                self.recorder.record(case)
         
 
     def _config_conmin(self):
-        """Set up arrays for the FORTRAN conmin routine and perform some
+        """Set up arrays for the Fortran conmin routine, perform some
         validation, and make sure that array sizes are consistent.
         """
         

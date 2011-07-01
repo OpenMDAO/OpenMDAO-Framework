@@ -284,9 +284,9 @@ script that can interact with objects in the framework.
 
 Neither approach to graphical interface development is ideal. Early prototyping
 using the wxPython approach has revealed some platform differences between the
-Windows and linux versions that were not anticipated. Also, packaging and
+Windows and Linux versions that were not anticipated. Also, packaging and
 distribution is difficult due to dependence on underlying libraries like, for
-example, *GTK* on linux.  The current version of the Qt library has a license
+example, *GTK* on Linux.  The current version of the Qt library has a license
 that is not compatible with OpenMDAO, although the next version will have an
 LGPL license, which is compatible. It is assumed that PyQt, the Python wrapper
 for Qt will have a similar license to Qt, but this is not certain. 
@@ -295,7 +295,7 @@ If a web-based interface is used, questions arise about the richness of the
 interface relative to a traditional GUI. A number of javascript
 libraries, like jquery_ and dojo_, for example, are still relatively immature,
 but they offer the promise of a browser-based application with interactivity
-that approaches that of a desktop application. Projects like dojo are being
+that approaches that of a desktop application. Projects like Dojo are being
 actively developed, so they may reach the necessary level of maturity in the
 near future.  
 
@@ -336,7 +336,7 @@ as shown below.
 
 .. _`N squared`:
 
-.. figure:: ../generated_images/NSquaredView.png
+.. figure:: NSquaredView.png
    :align: center
    :alt: Refer to the caption
 
@@ -348,7 +348,7 @@ as shown below.
 
 .. _`free form`:
 
-.. figure:: ../generated_images/DataFlowView.png
+.. figure:: DataFlowView.png
    :align: center
    :alt:  Refer to the caption
 
@@ -379,7 +379,7 @@ branching.
 
 .. _`control flow`:
 
-.. figure:: ../generated_images/ControlFlow.png
+.. figure:: ControlFlow.png
    :align: center
    :alt: Diagram shows 3 drivers and 4 components as part of an Assembly's Workflow
 
@@ -412,7 +412,7 @@ components repeatedly until some condition is satisfied.
 
 .. _formulation:
 
-.. figure:: ../images/arch-doc/DataDrivenPic.png
+.. figure:: DataDrivenPic.png
    :align: center
    :alt: Refer to adjacent text
 
@@ -428,7 +428,7 @@ problem formulation view.
 
 .. _`N-squared`:
 
-.. figure:: ../generated_images/NSquaredViewDD.png
+.. figure:: NSquaredViewDD.png
    :align: center
    :alt: Refer to caption
 
@@ -436,34 +436,34 @@ problem formulation view.
 
 
 .. index:: pair: plugin; view
-.. index:: Sockets
+.. index:: Slots
 
 
 *Plugin View*
 ______________
 
-The figure below shows an example of a `plugin view`_, which shows any Sockets
-existing in a particular Component. :term:`Sockets` are just placeholders
+The figure below shows an example of a `plugin view`_, which shows any Slots
+existing in a particular Component. :term:`Slots` are just placeholders
 for an object within a Component that has a name and  provides a
 particular  interface. In other words, it is a location for a plugin within a
-Component. Because any object placed in a Socket must have the interface specified
-by the Socket, the enclosing Component will know how to interact with that object.
-Adding Sockets to a Component class gives the component developer
+Component. Because any object placed in a Slot must have the interface specified
+by the Slot, the enclosing Component will know how to interact with that object.
+Adding Slots to a Component class gives the component developer
 a way to allow a user to easily customize the behavior of a Component at
 runtime simply by dragging and dropping objects onto the Component.
 
 .. _`plugin view`:
 
-.. figure:: ../generated_images/PluginView.png
+.. figure:: PluginView.png
    :align: center
    :alt: Diagram shows different socket types for a Component
 
    Plugin View of a Component
 
 
-Sockets for optional plugin objects will be visually distinct from Sockets for 
+Slots for optional plugin objects will be visually distinct from Slots for 
 mandatory plugins. For example, optional plugins could be displayed as boxes
-drawn with dotted lines, and  Sockets for mandatory plugins as dashed boxes.
+drawn with dotted lines, and  Slots for mandatory plugins as dashed boxes.
 There are  also sockets allowing lists of plugins that share a common 
 interface.
 

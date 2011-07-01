@@ -11,8 +11,9 @@ Developer Guide
    intro
    accessing
    working
+   issues
    testing
-   bazaar
+   git
    todo
    
 

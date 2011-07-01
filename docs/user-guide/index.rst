@@ -1,17 +1,16 @@
+===========
+User Guide
+===========
 
-============ 
-User Guide 
-============ 
 
 .. toctree::
    :maxdepth: 2
-   
-   overview.rst
-   install.rst
-   simple_example.rst
-   example.rst
-   example_mdao.rst
-   userguide_script.rst
-   units.rst
 
-
+   fundamentals
+   creating_comps
+   variables
+   simulation
+   drivers
+   derivatives
+   running_openmdao
+   workflow

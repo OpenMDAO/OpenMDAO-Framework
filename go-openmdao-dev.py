@@ -1164,7 +1164,8 @@ def _single_install(cmds, req, bin_dir, dodeps=False):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['numpy', 'scipy', 'networkx==1.3', 'rdflib==3.1.0', 'selenium==2.0b4dev', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'paramiko==1.7.6', 'nose==0.11.3', 'Pyevolve==0.6', 'PyYAML==3.09', 'Jinja2==2.4', 'Sphinx==1.0.6', 'Django==1.3', 'decorator==3.2.0', 'docutils==0.6', 'jsonpickle==0.3.1', 'newsumt==1.1.0', 'ordereddict==1.1', 'Traits==3.3.0', 'web.py==0.34', 'virtualenv==1.4.6', 'Fabric==0.9.3', 'conmin==1.0.1', 'pycrypto==2.3']
+    reqs = ['numpy', 'scipy', 'docutils==0.6', 'Pyevolve==0.6', 'Pygments==1.3.1', 'ordereddict==1.1', 'Traits==3.3.0', 'pycrypto==2.3', 'PyYAML==3.09', 'Jinja2==2.4', 'decorator==3.2.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'paramiko==1.7.6', 'virtualenv==1.4.6', 'newsumt==1.1.0', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'nose==0.11.3', 'rdflib==3.1.0', 'selenium==2.0b4dev', 'Django==1.3', 'web.py==0.34', 'jsonpickle==0.3.1', 'zope.interface']
+
     url = 'http://openmdao.org/dists'
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
@@ -1235,39 +1236,6 @@ def after_install(options, home_dir):
             for path, dirlist, filelist in os.walk(startdir):
                 for name in fnmatch.filter(filelist, pat):
                     yield os.path.join(path, name)
-
-       # in order to find all of our shared libraries, modify the activate
-       # script to put their directories in LD_LIBRARY_PATH
-        pkgdir = os.path.join(lib_dir, 'site-packages')
-        sofiles = [os.path.abspath(x) for x in _find_files(pkgdir,'*.so')]
-                      
-        final = set()
-        for f in sofiles:
-            pyf = os.path.splitext(f)[0]+'.py'
-            if not os.path.exists(pyf):
-                final.add(os.path.dirname(f))
-                
-        subdict = { 'libpath': 'LD_LIBRARY_PATH',
-                    'add_on': os.pathsep.join(final)
-                    }
-                    
-        if len(final) > 0:
-            activate_template = '\n'.join([
-            'export VIRTUAL_ENV',
-            '',
-            'if [ -z "$%(libpath)s" ] ; then',
-            '   %(libpath)s=""',
-            'fi',
-            '',
-            '%(libpath)s=$%(libpath)s:%(add_on)s',
-            'export %(libpath)s',
-            ])
-            f = open(os.path.join(absbin, 'activate'), 'r')
-            content = f.read()
-            f.close()
-            f = open(os.path.join(absbin, 'activate'), 'w')
-            f.write(content.replace('export VIRTUAL_ENV', activate_template % subdict, 1))
-            f.close()
 
     abshome = os.path.abspath(home_dir)
     

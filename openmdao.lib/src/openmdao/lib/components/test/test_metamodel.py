@@ -4,13 +4,13 @@ import unittest
 
 from enthought.traits.api import HasTraits
 
-from openmdao.lib.datatypes.api import Float, TraitError, implements
+from openmdao.lib.datatypes.api import Float
 from openmdao.main.api import Assembly, Component, set_as_top, Case
-from openmdao.main.interfaces import ICaseRecorder
+from openmdao.main.interfaces import implements, ICaseRecorder
 
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
 from openmdao.lib.surrogatemodels.logistic_regression import LogisticRegression
@@ -143,16 +143,16 @@ class MetaModelTestCase(unittest.TestCase):
         metamodel.b = 2.
         metamodel.train_next = True
         metamodel.run()
-        inputs = [('meta2.a',None,metamodel.a),('meta2.b',None,metamodel.b)]
-        outputs = [('meta2.c',None,metamodel.c.mu),('meta2.d',None,metamodel.d.mu)]
+        inputs = [('meta2.a',metamodel.a),('meta2.b',metamodel.b)]
+        outputs = [('meta2.c',metamodel.c.mu),('meta2.d',metamodel.d.mu)]
         cases.append(Case(inputs=inputs,outputs=outputs))
         
         metamodel.a = 3.
         metamodel.b = 5.
         metamodel.train_next = True
         metamodel.run()
-        inputs = [('meta2.a',None,metamodel.a),('meta2.b',None,metamodel.b)]
-        outputs = [('meta2.c',None,metamodel.c.mu),('meta2.d',None,metamodel.d.mu)]
+        inputs = [('meta2.a',metamodel.a),('meta2.b',metamodel.b)]
+        outputs = [('meta2.c',metamodel.c.mu),('meta2.d',metamodel.d.mu)]
         cases.append(Case(inputs=inputs,outputs=outputs))
         
         case_iter = ListCaseIterator(cases)

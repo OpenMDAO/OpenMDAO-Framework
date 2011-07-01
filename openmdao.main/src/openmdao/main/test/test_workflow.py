@@ -71,7 +71,7 @@ class TestCase(unittest.TestCase):
             self.model.run()
         except AttributeError as err:
             self.assertEqual(str(err), 
-                "driver: Component in workflow failed to resolve: 'Model' object has no attribute 'foobar'")
+                "driver: 'Model' object has no attribute 'foobar'")
 
     def test_simple(self):
         self.assertEqual(self.model.comp_a.total_executions, 0)

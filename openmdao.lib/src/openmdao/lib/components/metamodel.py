@@ -1,13 +1,13 @@
-""" Metamodel provides basic Meta Modeling capability"""
+""" Metamodel provides basic Meta Modeling capability."""
 
 # pylint: disable-msg=E0611,F0401
 from numpy import array
-from openmdao.lib.datatypes.api import Instance, ListStr, Event, \
-     List, Str, Dict
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
-from openmdao.main.api import Component, Case
+from openmdao.main.api import Component, Case, Slot
+from openmdao.lib.datatypes.api import Slot, ListStr, Event, \
+     List, Str, Dict
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
      ICaseIterator
 from openmdao.main.uncertain_distributions import UncertainDistribution, \
@@ -16,29 +16,26 @@ from openmdao.main.mp_support import has_interface
 
 
 class MetaModel(Component):
-    """ A component that provides general Meta Modeling capability.
-    
-    See the Standard Library Reference for additional information on the :ref:`MetaModel` component."""
     
     # pylint: disable-msg=E1101
-    model = Instance(Component, allow_none=True,
-                     desc='Socket for the Component or Assembly being '
-                          'encapsulated.')
+    model = Slot(IComponent, allow_none=True,
+                   desc='Slot for the Component or Assembly being '
+                   'encapsulated.')
     includes = ListStr(iotype='in', 
-                           desc='A list of names of variables to be included '
+                       desc='A list of names of variables to be included '
                                 'in the public interface.')
     excludes = ListStr(iotype='in',
-                           desc='A list of names of variables to be excluded '
-                                'from the public interface.')
+                       desc='A list of names of variables to be excluded '
+                       'from the public interface.')
     
-    warm_start_data = Instance(ICaseIterator,iotype="in",
+    warm_start_data = Slot(ICaseIterator,iotype="in",
                               desc="CaseIterator containing cases to use as "
                               "initial training data. When this is set, all "
                               "previous training data is cleared, and replaced "
                               "with data from this CaseIterator")
     
     surrogate = Dict(key_train=Str,
-                     value_trait=ISurrogate,
+                     value_trait=Slot(ISurrogate),
                      allow_none=True,
                      desc='An dictionary provides a mapping between variables and '
                           'surrogate models for each output. The "default" '
@@ -48,7 +45,7 @@ class MetaModel(Component):
                     )
                        
     
-    recorder = Instance(ICaseRecorder,
+    recorder = Slot(ICaseRecorder,
                         desc = 'Records training cases')
 
     # when fired, the next execution will train the metamodel
@@ -85,17 +82,13 @@ class MetaModel(Component):
         
         #build list of inputs         
         inputs = []
-        for case in newval.get_iter():
+        for case in newval:
             self.recorder.record(case)
             inputs = []
             for inp_name in self._surrogate_input_names:
                 inp_val = None
-                #TODO: Fix case object, so it has a get_input method to clean up this loop
                 var_name = "%s.%s"%(self.name,inp_name)
-                for inp in case.inputs: 
-                    if inp[0] == var_name:
-                        inp_val = inp[2]
-                        break
+                inp_val = case[var_name]
                 if inp_val is not None: 
                     inputs.append(inp_val)
                 else: 
@@ -109,9 +102,9 @@ class MetaModel(Component):
                 #grab value from case data
                 output_val = None
                 var_name = "%s.%s"%(self.name,output_name)
-                for output in case.outputs: 
-                    if output[0]==var_name: 
-                        output_val = output[2]
+                for name,val in case.items(iotype='out'): 
+                    if name==var_name: 
+                        output_val = val
                         break
                 if output_val is not None: 
                     # save to training output history
@@ -146,10 +139,10 @@ class MetaModel(Component):
                     
                     for name, tup in self._surrogate_info.items():
                         surrogate, output_history = tup
-                        case_outputs.append(('.'.join([self.name,name]), None, output_history[-1]))
+                        case_outputs.append(('.'.join([self.name,name]), output_history[-1]))
                     # save the case, making sure to add out name to the local input name since
                     # this Case is scoped to our parent Assembly
-                    case_inputs = [('.'.join([self.name,name]),None,val) for name,val in zip(self._surrogate_input_names, inputs)]
+                    case_inputs = [('.'.join([self.name,name]),val) for name,val in zip(self._surrogate_input_names, inputs)]
                     self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
                     
             else:
@@ -236,8 +229,7 @@ class MetaModel(Component):
                             " specified. Either specify a default, or specify a "
                             "surrogate model for all outputs",ValueError)
                     trait_type = surrogate.get_uncertain_value(1.0).__class__()
-                    self.add_trait(name, 
-                                   Instance(trait_type, iotype='out', desc=trait.desc))
+                    self.add(name, Slot(trait_type, iotype='out', desc=trait.desc))
                     self._surrogate_info[name] = (surrogate.__class__(), []) # (surrogate,output_history)
                     new_model_traitnames.add(name)
                     setattr(self, name, surrogate.get_uncertain_value(getattr(newmodel,name)))

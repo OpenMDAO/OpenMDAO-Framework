@@ -10,16 +10,17 @@ import platform
 import sys
 import unittest
 
-from openmdao.lib.datatypes.api import TraitError, Event
+from openmdao.lib.datatypes.api import Event
 
 from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.datatypes.api import Float, Bool, Array
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.doedriver import DOEdriver
-from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
+from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
+from openmdao.lib.doegenerators.full_factorial import FullFactorial
 from openmdao.main.eggchecker import check_save_load
 from openmdao.util.testutil import find_python
 
@@ -38,12 +39,11 @@ def rosen_suzuki(x0,x1,x2,x3):
     return x0**2 - 5.*x0 + x1**2 - 5.*x1 + \
            2.*x2**2 - 21.*x2 + x3**2 + 7.*x3 + 50
 
-
-
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 
     x0 = Float(1., iotype='in')
+    y0 = Float(1., iotype='in') #used just to get ParameterGroup
     x1 = Float(1., iotype='in')
     x2 = Float(1., iotype='in')
     x3 = Float(1., iotype='in', low=-11., high=11.)
@@ -66,8 +66,6 @@ class DrivenComponent(Component):
         if self.stop_exec:
             self.parent.driver.stop()  # Only valid if sequential!
 
-
-
 class MyModel(Assembly):
     """ Use DOEdriver with DrivenComponent. """
 
@@ -78,8 +76,11 @@ class MyModel(Assembly):
         self.driver.workflow.add('driven')
         self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
         self.driver.case_outputs = ['driven.rosen_suzuki']
-        for name in ['x0', 'x1','x2', 'x3']:
-            self.driver.add_parameter("driven.%s"%name,low=-10.,high=10.)
+        self.driver.add_parameter(('driven.x0','driven.y0'),low=-10.,high=10.,
+                                      scaler=20., adder=10.)
+        for name in ['x1','x2', 'x3']:
+            self.driver.add_parameter("driven.%s"%name,low=-10.,high=10.,
+                                      scaler=20., adder=10.)
                                     
 
 
@@ -112,6 +113,9 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_sequential_errors')
         self.model.driver._call_execute = True
+        self.run_cases(sequential=True, forced_errors=True, retry=True)
+        
+    def test_sequential_errors_abort(self):
         self.run_cases(sequential=True, forced_errors=True)
         
     def test_no_parameter(self):
@@ -146,9 +150,8 @@ class TestCase(unittest.TestCase):
     def test_param_already_added(self):
         try:
             self.model.driver.add_parameter('driven.x3')
-        except AttributeError as err:
-            self.assertEqual(str(err), "driver: Trying to add parameter 'driven.x3' to driver, "
-                             "but it's already there")
+        except ValueError as err:
+            self.assertEqual(str(err), "driver: 'driven.x3' is already a Parameter target")
         else:
             self.fail("expected AttributeError")
     
@@ -161,11 +164,11 @@ class TestCase(unittest.TestCase):
         self.assertEqual(lst, [])
         
     def test_param_removal(self):
-        lst = self.model.driver.list_parameters()
-        self.assertEqual(lst, ['driven.x0','driven.x1','driven.x2','driven.x3'])
+        lst = self.model.driver.list_param_targets()
+        self.assertEqual(lst, ['driven.x0', 'driven.y0', 'driven.x1', 'driven.x2', 'driven.x3'])
         self.model.driver.remove_parameter('driven.x1')
-        lst = self.model.driver.list_parameters()
-        self.assertEqual(lst, ['driven.x0','driven.x2','driven.x3'])
+        lst = self.model.driver.list_param_targets()
+        self.assertEqual(lst, ['driven.x0', 'driven.y0', 'driven.x2', 'driven.x3'])
 
     def test_no_event(self):
         logging.debug('')
@@ -189,7 +192,7 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), self.model.driver.DOEgenerator.num_sample_points)
-        msg = "driver: Exception getting 'driven.sum_z': " \
+        msg = "driver: Exception getting case outputs: " \
             "driven: object has no attribute 'sum_z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)
@@ -203,11 +206,11 @@ class TestCase(unittest.TestCase):
         self.model.driver.DOEgenerator = None
         try:
             self.model.run()
-        except TraitError as exc:
+        except Exception as exc:
             msg = "driver: required plugin 'DOEgenerator' is not present"
             self.assertEqual(str(exc), msg)
         else:
-            self.fail('TraitError expected')
+            self.fail('Exception expected')
 
     def test_norecorder(self):
         logging.debug('')
@@ -216,20 +219,31 @@ class TestCase(unittest.TestCase):
         self.model.driver.recorder = None
         self.model.run()
 
-    def run_cases(self, sequential, forced_errors=False):
+    def run_cases(self, sequential, forced_errors=False, retry=True):
         # Evaluate cases, either sequentially or across  multiple servers.
         
         self.model.driver.sequential = sequential
         results = ListCaseRecorder()
         self.model.driver.recorder = results
+        self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
         if forced_errors:
             self.model.driver.add_event('driven.err_event')
 
-        self.model.run()
+        if retry:
+            self.model.run()
+            self.assertEqual(len(results), 10)
+            self.verify_results(forced_errors)
+        else:
+            assert_raises(self, 'self.model.run()', globals(), locals(),
+                          RuntimeError,
+                          "driver: Run aborted: RuntimeError('driven: Forced error',)")
 
-        self.assertEqual(len(results), 10)
-        self.verify_results(forced_errors)
-
+    def test_scaling(self):
+        self.model.driver.DOEgenerator = ff = FullFactorial(num_levels=3)
+        ff.num_parameters = 4
+        for case in self.model.driver._get_cases():
+            print case
+        
     def verify_results(self, forced_errors=False):
         # Verify recorded results match expectations.
         
@@ -238,8 +252,10 @@ class TestCase(unittest.TestCase):
                 self.assertEqual(case.msg, 'driven: Forced error')
             else:
                 self.assertEqual(case.msg, None)
-                self.assertEqual(case.outputs[0][2],
-                                 rosen_suzuki(*[x[2] for x in case.inputs[:4]]))
+                self.assertEqual(case['driven.rosen_suzuki'],
+                                 rosen_suzuki(*[case['driven.x%s'%i] for i in range(4)]))
+
+        
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,30 +2,30 @@
 import unittest
 
 from openmdao.main.api import Container, Component, Assembly, set_as_top
-from openmdao.lib.datatypes.api import Float, Instance
+from openmdao.lib.datatypes.api import Float, Slot
 
 class DumbContainer2(Container):
     def __init__(self, *args, **kwargs):
         super(DumbContainer2, self).__init__(*args, **kwargs)
         iotype = kwargs.get('iotype', None)
-        self.add_trait('x', Float(1., iotype=iotype))
-        self.add_trait('y', Float(2., iotype=iotype))
-        self.add_trait('z', Float(3., iotype=iotype))
+        self.add('x', Float(1., iotype=iotype))
+        self.add('y', Float(2., iotype=iotype))
+        self.add('z', Float(3., iotype=iotype))
     
 class DumbContainer(Container):
     def __init__(self, *args, **kwargs):
         super(DumbContainer, self).__init__(*args, **kwargs)
         iotype = kwargs.get('iotype', None)
         self.add('cont', DumbContainer2(iotype=iotype))
-        self.add_trait('v1', Float(1., iotype=iotype))
-        self.add_trait('v2', Float(2., iotype=iotype))
-        self.add_trait('v3', Float(3., iotype=iotype))
+        self.add('v1', Float(1., iotype=iotype))
+        self.add('v2', Float(2., iotype=iotype))
+        self.add('v3', Float(3., iotype=iotype))
     
     
 
 class SimpleComp(Component):
-    cont_in = Instance(DumbContainer, iotype='in')
-    cont_out = Instance(DumbContainer, iotype='out')
+    cont_in = Slot(DumbContainer, iotype='in')
+    cont_out = Slot(DumbContainer, iotype='out')
     mult = Float(1., iotype='in')
     
     def __init__(self, *args, **kwargs):

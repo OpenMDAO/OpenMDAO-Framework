@@ -7,13 +7,15 @@ __all__ = ['Assembly']
 import cStringIO
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Instance, TraitError, Missing
+from enthought.traits.api import Missing
 
+from openmdao.main.interfaces import implements, IDriver
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
+from openmdao.main.slot import Slot
 from openmdao.main.driver import Driver
-from openmdao.main.tvalwrapper import TraitValWrapper
+from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 
@@ -39,9 +41,9 @@ class Assembly (Component):
     Driver called 'driver'.
     """
     
-    driver = Instance(Driver, allow_none=True,
-                      desc="The top level Driver that manages execution of "
-                           "this Assembly.")
+    driver = Slot(IDriver, allow_none=True,
+                    desc="The top level Driver that manages execution of "
+                    "this Assembly.")
     
     def __init__(self, doc=None, directory=''):
         super(Assembly, self).__init__(doc=doc, directory=directory)
@@ -50,7 +52,8 @@ class Assembly (Component):
         self.add('driver', Driver())
         
     def add(self, name, obj):
-        """Add obj to the component graph and call base class *add*.
+        """Call the base class *add*.  Then,
+        if obj is a Component, add it to the component graph.
         
         Returns the added object.
         """
@@ -85,7 +88,7 @@ class Assembly (Component):
 
         if newname in self.__dict__:
             self.raise_exception("'%s' already exists" %
-                                 newname, TraitError)
+                                 newname, KeyError)
         parts = pathname.split('.', 1)
         if len(parts) < 2:
             self.raise_exception('destination of passthrough must be a dotted path',
@@ -103,7 +106,7 @@ class Assembly (Component):
         else:
             if not self.contains(pathname):
                 self.raise_exception("the variable named '%s' can't be found" %
-                                     pathname, TraitError)
+                                     pathname, KeyError)
             iotype = self.get_metadata(pathname, 'iotype')
             
         metadata = self.get_metadata(pathname)
@@ -177,9 +180,9 @@ class Assembly (Component):
                     pass  # no validate function on destination trait. Most likely
                           # it's a property trait.  No way to validate without
                           # unknown side effects.
-            except TraitError, err:
+            except Exception as err:
                 self.raise_exception("can't connect '%s' to '%s': %s" %
-                                     (srcpath, destpath, str(err)), TraitError)
+                                     (srcpath, destpath, str(err)), RuntimeError)
                     
         super(Assembly, self).connect(srcpath, destpath)
         
@@ -224,7 +227,7 @@ class Assembly (Component):
         
     def execute (self):
         """Runs driver and updates our boundary variables."""
-        self.driver.run(ffd_order=self.ffd_order)
+        self.driver.run(ffd_order=self.ffd_order, case_id=self._case_id)
         
         # now update boundary outputs
         valids = self._valid_dict
@@ -332,7 +335,7 @@ class Assembly (Component):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
         """
-        simple, compmap = _partition_names_by_comp(outnames)
+        simple, compmap = partition_names_by_comp(outnames)
         if simple:  # boundary outputs
             self.update_inputs('@bout', simple)
         for cname, vnames in compmap.items():  # auto passthroughs to internal variables
@@ -344,15 +347,22 @@ class Assembly (Component):
         variables are valid (True) or invalid (False). Entries in names may
         specify either direct traits of self or those of children.
         """
-        sup = super(Assembly,self)
-        ret = []
-        for name in names:
-            cname, _, vname = name.partition('.')
-            if vname:
-                comp = getattr(self, cname)
-                ret.extend(comp.get_valid(vname))
-            else:
-                ret.extend(sup.get_valid(name))
+
+        ret = [None]*len(names)
+        posdict = dict([(name,i) for i,name in enumerate(names)])
+        
+        simple,compmap = partition_names_by_comp(names)
+        if simple:
+            vals = super(Assembly, self).get_valid(simple)
+            for i,val in enumerate(vals):
+                ret[posdict[simple[i]]] = val
+
+        if compmap:
+            for compname, varnames in compmap.items():
+                vals = getattr(self, compname).get_valid(varnames)
+                for i,val in enumerate(vals):
+                    full = '.'.join([compname,varnames[i]])
+                    ret[posdict[full]] = val
         return ret
 
     def _input_updated(self, name):
@@ -473,10 +483,10 @@ def dump_iteration_tree(obj):
     return f.getvalue()
 
 
-def _partition_names_by_comp(names):
-    """Take an iterator of names and return a tuple of the form (namelist, compmap)
-    where namelist is a list of simple names (no dots) and compmap is a dict with component names
-    keyed to lists of variable names.  
+def partition_names_by_comp(names):
+    """Take an iterator of names and return a tuple of the form (namelist,
+    compmap) where namelist is a list of simple names (no dots) and compmap is
+    a dict with component names keyed to lists of variable names.
     """
     simple = []
     compmap = {}

@@ -7,7 +7,7 @@ import StringIO
 import nose
 import copy
 
-from enthought.traits.api import TraitError, HasTraits
+from enthought.traits.api import HasTraits
 
 import openmdao.util.eggsaver as constants
 from openmdao.main.container import Container, get_default_name, \
@@ -15,7 +15,7 @@ from openmdao.main.container import Container, get_default_name, \
                                     find_trait_and_value, _get_entry_group, \
                                     create_io_traits
 from openmdao.main.variable import Variable
-from openmdao.lib.datatypes.api import Float, Int, Bool, List, Dict, TraitError
+from openmdao.lib.datatypes.api import Float, Int, Bool, List, Dict
 from openmdao.util.testutil import make_protected_dir
 
 # Various Pickle issues arise only when this test runs as the main module.
@@ -32,7 +32,7 @@ class DumbTrait(Variable):
 class MyContainer(Container):
     def __init__(self, *args, **kwargs):
         super(MyContainer, self).__init__(*args, **kwargs)
-        self.add_trait('dyntrait', Float(9., desc='some desc'))
+        self.add('dyntrait', Float(9., desc='some desc'))
 
 
 class MyBuilderContainer(Container):
@@ -75,7 +75,7 @@ class ContainerTestCase(unittest.TestCase):
         self.root.c2.add('c21', Container())
         self.root.c2.add('c22', Container())
         self.root.c2.c22.add('c221', Container())
-        self.root.c2.c22.c221.add_trait('number', Float(3.14, iotype='in'))
+        self.root.c2.c22.c221.add('number', Float(3.14, iotype='in'))
 
     def tearDown(self):
         """this teardown function will be called after each test"""
@@ -128,7 +128,7 @@ class ContainerTestCase(unittest.TestCase):
         obj.a = 1
         obj.sub.b = 2
         obj.sub.sub.c = 3
-        obj.sub.csub.add_trait('d',Float(4, iotype='in'))
+        obj.sub.csub.add('d',Float(4, iotype='in'))
         result = find_trait_and_value(obj, 'sub.sub.c')
         self.assertEqual(result[0].type, 'python')
         self.assertEqual(result[1], 3)
@@ -213,8 +213,8 @@ class ContainerTestCase(unittest.TestCase):
 
     def test_add_trait_w_subtrait(self):
         obj = Container()
-        obj.add_trait('lst', List([1,2,3], iotype='in'))
-        obj.add_trait('dct', Dict({}, iotype='in'))
+        obj.add('lst', List([1,2,3], iotype='in'))
+        obj.add('dct', Dict({}, iotype='in'))
 
     def test_get_attribute(self):
         self.assertEqual(self.root.get('c2.c22.c221').get_trait('number').iotype, 

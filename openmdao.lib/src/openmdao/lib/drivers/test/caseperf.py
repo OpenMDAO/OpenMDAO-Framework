@@ -22,15 +22,13 @@ import time
 logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger('mp_distributing').setLevel(logging.DEBUG)
 
-from enthought.traits.api import HasTraits
-
 from openmdao.main.api import Assembly, Case, Component, set_as_top
-from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
+from openmdao.main.interfaces import implements, ICaseIterator, ICaseRecorder
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
-from openmdao.lib.caseiterators.api import ListCaseIterator
-from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
-from openmdao.lib.datatypes.api import Float, implements
+from openmdao.lib.casehandlers.api import ListCaseIterator
+from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
+from openmdao.lib.datatypes.api import Float
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.lib.drivers.api import CaseIteratorDriver
 
@@ -39,7 +37,7 @@ from openmdao.test.cluster import init_cluster
 MAX_TRIALS = 1000
 
 
-class Iterator(HasTraits):
+class Iterator(object):
     """ Just keeps returning `case` until told to stop. """
 
     implements(ICaseIterator)
@@ -49,7 +47,7 @@ class Iterator(HasTraits):
         self.case = case
         self.stop = False
 
-    def get_iter(self):
+    def __iter__(self):
         return self._next_case()
 
     def _next_case(self):
@@ -59,7 +57,7 @@ class Iterator(HasTraits):
         raise StopIteration
 
 
-class Recorder(HasTraits):
+class Recorder(object):
     """ Consumes cases until elapsed time is < #cases * delay. """
 
     implements(ICaseRecorder)

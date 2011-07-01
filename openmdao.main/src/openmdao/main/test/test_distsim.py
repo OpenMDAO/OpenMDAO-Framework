@@ -19,8 +19,6 @@ import nose
 
 from Crypto.Random import get_random_bytes
 
-from enthought.traits.api import TraitError
-
 from openmdao.main.api import Assembly, Case, Component, Container, Driver, \
                               set_as_top
 from openmdao.main.container import get_closest_proxy
@@ -34,7 +32,7 @@ from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
 
 from openmdao.lib.datatypes.api import Float, Int
-from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
+from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
 
 from openmdao.test.execcomp import ExecComp
 
@@ -63,7 +61,7 @@ class Box(ExecComp):
         self.pid = os.getpid()
         # For get_closest_proxy().
         sub = self.add('subcontainer', Container())
-        sub.add_trait('subvar', Int())
+        sub.add('subvar', Int())
 
     def execute(self):
         print 'Box.execute(), %f %f %f on %s:%d' \
@@ -160,7 +158,7 @@ class BoxSource(ExecComp):
                                          'depth_out  = depth_in'])
         # For get_closest_proxy().
         sub = self.add('subcontainer', Container())
-        sub.add_trait('subvar', Int())
+        sub.add('subvar', Int())
 
 class BoxSink(ExecComp):
     """ Just a pass-through for :class:`BoxDriver` result values. """
@@ -390,9 +388,9 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, obj.get('solid_volume'), 2.5766295747, 0.000001)
         assert_rel_error(self, obj.get('surface_area'), 50.265482457, 0.000001)
 
-        msg = ": Trait 'radius' must be a float in the range (0.0, "
+        msg = ": Variable 'radius' must be a float in the range (0.0, "
         assert_raises(self, "obj.set('radius', -1)", globals(), locals(),
-                      TraitError, msg)
+                      ValueError, msg)
 
         # Now a Box, accessed via attribute methods.
         obj = factory.create(_MODULE+'.Box')

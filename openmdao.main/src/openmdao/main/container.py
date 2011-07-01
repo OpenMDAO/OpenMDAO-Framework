@@ -23,9 +23,10 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint apparently doesn't understand namespace packages...
 # pylint: disable-msg=E0611,F0401
 
-from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
-                                 push_exception_handler, Python, \
-                                 Interface, Instance
+import zope.interface
+
+from enthought.traits.api import HasTraits, Missing, Undefined, \
+                                 push_exception_handler, TraitType
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
@@ -34,6 +35,7 @@ from multiprocessing import connection
 
 from openmdao.main.variable import Variable
 from openmdao.main.filevar import FileRef
+from openmdao.main.slot import Slot
 
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
@@ -232,6 +234,7 @@ class Container(HasTraits):
         destpath: str
             Pathname of destination variable.
         """
+        cname = None
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
@@ -248,9 +251,13 @@ class Container(HasTraits):
                 self.raise_exception(
                     "'%s' is already connected to source '%s'" % 
                     (destpath, sname), RuntimeError)
-            cname, _, restofpath = destpath.partition('.')
+            cname2, _, restofpath = destpath.partition('.')
+            if cname == cname2 and cname is not None:
+                self.raise_exception("Can't connect '%s' to '%s'. Both variables are on the same component"%
+                                     (srcpath,destpath), RuntimeError)
+
             if restofpath:
-                child = getattr(self, cname)
+                child = getattr(self, cname2)
                 if is_instance(child, Container):
                     child.connect('parent.'+srcpath, restofpath)
                 
@@ -262,6 +269,7 @@ class Container(HasTraits):
         """Removes the connection between one source variable and one 
         destination variable.
         """
+        cname = cname2 = None
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
@@ -271,10 +279,15 @@ class Container(HasTraits):
         if not destpath.startswith('parent.'):
             if not self.contains(destpath):
                 self.raise_exception("Can't find '%s'" % destpath, AttributeError)
-            cname, _, restofpath = destpath.partition('.')
+            cname2, _, restofpath = destpath.partition('.')
             if restofpath:
-                getattr(self, cname).disconnect('parent.'+srcpath, restofpath)
+                getattr(self, cname2).disconnect('parent.'+srcpath, restofpath)
         
+        if cname == cname2 and cname is not None:
+            self.raise_exception("Can't disconnect '%s' from '%s'. "
+                                 "Both variables are on the same component" %
+                                 (srcpath,destpath), RuntimeError)
+
         self._depgraph.disconnect(srcpath, destpath)
 
     #TODO: get rid of any notion of valid/invalid from Containers.  If they have
@@ -421,7 +434,7 @@ class Container(HasTraits):
             self.raise_exception(
                 "'%s' is already connected to source '%s' and "
                 "cannot be directly set"%
-                (name, self._depgraph.get_source(name)), TraitError)
+                (name, self._depgraph.get_source(name)), RuntimeError)
             
     def _input_nocheck(self, name, old):
         """This method is substituted for _input_check to avoid source
@@ -437,11 +450,11 @@ class Container(HasTraits):
 
     @rbac(('owner', 'user'))
     def get_wrapped_attr(self, name):
-        """If the named trait can return a TraitValWrapper, then this
+        """If the variable can return an AttrWrapper, then this
         function will return that, with the value set to the current value of
-        the named variable. Otherwise, it functions like *getattr*, just
-        returning the value of the named variable. Raises an exception if the
-        named trait cannot be found. The value will be copied if the trait has
+        the variable. Otherwise, it functions like *getattr*, just
+        returning the value of the variable. Raises an exception if the
+        variable cannot be found. The value will be copied if the variable has
         a 'copy' metadata attribute that is not None. Possible values for
         'copy' are 'shallow' and 'deep'.
         """
@@ -475,9 +488,9 @@ class Container(HasTraits):
         
         return val
         
-    def add(self, name, obj, **kw_args):
-        """Add a Container object to this Container.
-        Returns the added Container object.
+    def add(self, name, obj):
+        """Add an object to this Container.
+        Returns the added object.
         """
         if '.' in name:
             self.raise_exception(
@@ -504,6 +517,8 @@ class Container(HasTraits):
             # children) that its scope tree back to the root is defined.
             if self._call_tree_rooted is False:
                 obj.tree_rooted()
+        elif is_instance(obj, TraitType):
+            self.add_trait(name, obj)
         else:
             self.raise_exception("'"+str(type(obj))+
                     "' object is not an instance of Container.",
@@ -551,22 +566,22 @@ class Container(HasTraits):
                                  name, NameError)
         trait = self.get_trait(name)
         if trait is not None:
-            # for Instance traits, set their value to None but don't remove
+            # for Slot traits, set their value to None but don't remove
             # the trait
             obj = getattr(self, name)
             if obj is not None and not is_instance(obj, Container):
                 self.raise_exception('attribute %s is not a Container' % name,
                                      RuntimeError)
-            if trait.is_trait_type(Instance):
+            if trait.is_trait_type(Slot):
                 try:
                     setattr(self, name, None)
-                except TraitError as err:
+                except TypeError as err:
                     self.raise_exception(str(err), RuntimeError)
             else:
                 self.remove_trait(name)
             return obj
         else:
-            self.raise_exception("cannot remove container '%s': not found"%
+            self.raise_exception("cannot remove '%s': not found"%
                                  name, AttributeError)
 
     @rbac(('owner', 'user'))
@@ -701,11 +716,21 @@ class Container(HasTraits):
         t = self.get_trait(traitpath)
         if not t:
             return self._get_metadata_failed(traitpath, metaname)
+        t = t.trait_type
         if metaname is None:
-            return t.trait_type._metadata.copy()
+            mdict = t._metadata.copy()
+            mdict.setdefault('vartypename', t.__class__.__name__)
+            return mdict
         else:
-            return getattr(t, metaname)
-        
+            val = t._metadata.get(metaname, None)
+            # vartypename isn't present in the metadata of traits
+            # that don't inherit from Variable, so fake it out here
+            # so we'll be consistent across all traits
+            if val is None:
+                if metaname == 'vartypename':
+                    return t.__class__.__name__
+            return val
+
     def _get_failed(self, path, index=None):
         """If get() cannot locate the variable specified by the given
         path, raise an exception.  Inherited classes can override this
@@ -717,8 +742,33 @@ class Container(HasTraits):
         
     @rbac(('owner', 'user'))
     def get(self, path, index=None):
-        """Return the object specified by the given 
-        path, which may contain '.' characters.  
+        """Return the object specified by the given path, which may 
+        contain '.' characters.  *index*, if not None,
+        should be either a list of non-tuple hashable objects, at most one 
+        for each array dimension of the target value, or a list of tuples of 
+        the form (operation_id, stuff).
+              
+        The forms of the various tuples are:
+        
+        ::
+        
+            INDEX:   (0, idx)  
+                where idx is some hashable value
+            ATTR:    (1, name) 
+                where name is the attribute name
+            CALL:    (2, args, kwargs) 
+                where args is a list of values and kwargs is a list of 
+                tuples of the form (keyword,value).
+                kwargs can be left out if empty.  args can be left out 
+                if empty as long as kwargs are also empty, for example, 
+                (2,) and (2,[],[('foo',1)]) are valid but (2,[('foo',1)]) is not.
+            SLICE:   (3, lower, upper, step) 
+                All members must be present and should have a value 
+                of None if not set.
+
+        If you want to use a tuple as a key into a dict, you'll have to
+        nest your key tuple inside of an INDEX tuple to avoid ambiguity, 
+        for example, (0, my_tuple)
         """
         childname, _, restofpath = path.partition('.')
         if restofpath:
@@ -743,7 +793,7 @@ class Container(HasTraits):
         and set its value.
         """
         self.raise_exception("object has no attribute '%s'" % path, 
-                             TraitError)
+                             AttributeError)
         
     def _check_source(self, path, src):
         """Raise an exception if the given source variable is not the one
@@ -754,15 +804,38 @@ class Container(HasTraits):
             self.raise_exception(
                 "'%s' is connected to source '%s' and cannot be "
                 "set by source '%s'" %
-                (path,source,src), TraitError)
+                (path,source,src), RuntimeError)
 
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
         value, subject to validation and constraints. *index*, if not None,
-        should be a list of ints, at most one for each array dimension of the
-        target value.
+        should be either a list of non-tuple hashable objects, at most one 
+        for each array dimension of the target value, or a list of tuples of 
+        the form (operation_id, stuff).
+              
+        The forms of the various tuples are:
+        
+        ::
+        
+            INDEX:   (0, idx)  
+                where idx is some hashable value
+            ATTR:    (1, name) 
+                where name is the attribute name
+            CALL:    (2, args, kwargs) 
+                where args is a list of values and kwargs is a list of 
+                tuples of the form (keyword,value).
+                kwargs can be left out if empty.  args can be left out 
+                if empty as long as kwargs are also empty, for example, 
+                (2,) and (2,[],[('foo',1)]) are valid but (2,[('foo',1)]) is not.
+            SLICE:   (3, lower, upper, step) 
+                All members must be present and should have a value 
+                of None if not set.
+
+        If you want to use a tuple as a key into a dict, you'll have to
+        nest your key tuple inside of an INDEX tuple to avoid ambiguity, 
+        for example, (0, my_tuple)
         """ 
         childname, _, restofpath = path.partition('.')
         if restofpath:
@@ -1130,7 +1203,7 @@ class Container(HasTraits):
     
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
-        full_msg = '%s: %s' % (self.get_pathname(), msg)
+        full_msg = "%s: " % self.get_pathname() + msg
         self._logger.error(msg)
         raise exception_class(full_msg)
     
@@ -1161,8 +1234,8 @@ def _get_entry_group(obj):
         ]
 
     for cls, group in _get_entry_group.group_map:
-        if issubclass(cls, Interface):
-            if obj_has_interface(obj, cls):
+        if issubclass(cls, zope.interface.Interface):
+            if cls.providedBy(obj):
                 return group
         else:
             if isinstance(obj, cls):
@@ -1262,7 +1335,7 @@ def create_io_traits(cont, obj_info, iotype='in'):
     
     The newly created traits are added to the specified Container.
     """
-    if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
+    if isinstance(obj_info, (basestring, tuple)):
         it = [obj_info]
     else:
         it = obj_info
@@ -1284,5 +1357,5 @@ def create_io_traits(cont, obj_info, iotype='in'):
                 pass
         else:
             cont.raise_exception('create_io_traits cannot add trait %s' % entry,
-                                 TraitError)
+                                 RuntimeError)
         cont.add_trait(name, cont.build_trait(ref_name, iostat, trait))

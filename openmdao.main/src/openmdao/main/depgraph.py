@@ -46,11 +46,15 @@ class DependencyGraph(object):
     """
     A dependency graph for Components.  Each edge contains a _Link object, which 
     maps all connected inputs and outputs between the two Components.  Graph
-    nodes starting with '@' are abstract nodes that represent boundary connections.
+    nodes starting with '@' are abstract nodes that represent boundary 
+    connections.
     
     @xin is external to our input boundary
+
     @bin is our input boundary
+
     @bout is our output boundary
+
     @xout is external to our output boundary
     """
 
@@ -129,9 +133,7 @@ class DependencyGraph(object):
             the dependency chain was already invalid.
         """
         graph = self._graph
-        stack = []
-        for cname, varset in zip(cnames, varsets):
-            stack.append((cname, varset))
+        stack = zip(cnames, varsets)
         outset = set()  # set of changed boundary outputs
         while(stack):
             src, varset = stack.pop()
@@ -400,7 +402,34 @@ class DependencyGraph(object):
             for src,dests in data['link']._srcs.items():
                 stream.write('   %s : %s\n' % (src, dests))
 
-            
+    def find_all_connecting(self, start, end):
+        """Return the set of all nodes along all paths between 
+        start and end.  The start and end nodes are included
+        in the set if they're connected.
+        """
+        if start == end:
+            return set()
+        graph = self._graph
+        fwdset = set()
+        backset = set()
+        tmpset = set([end])
+        while tmpset:
+            node = tmpset.pop()
+            if node in backset:
+                continue
+            backset.add(node)
+            tmpset.update(graph.predecessors(node))
+        
+        tmpset = set([start])
+        while tmpset:
+            node = tmpset.pop()
+            if node in fwdset:
+                continue
+            fwdset.add(node)
+            tmpset.update(graph.successors(node))
+        
+        return fwdset.intersection(backset)
+
 class _Link(object):
     """A Class for keeping track of all connections between two Components."""
     def __init__(self, srccomp, destcomp):

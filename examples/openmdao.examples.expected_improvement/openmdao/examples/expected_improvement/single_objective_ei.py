@@ -3,23 +3,17 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
-from openmdao.main.api import Assembly, Component, Driver, \
+from openmdao.main.api import Assembly, Driver, \
      SequentialWorkflow, Case
-from openmdao.main.interfaces import ICaseIterator
-from openmdao.main.expreval import ExprEvaluator
 
 from openmdao.lib.components.api import MetaModel, ExpectedImprovement, ParetoFilter
 from openmdao.lib.surrogatemodels.api import KrigingSurrogate
-from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
+from openmdao.lib.drivers.api import DOEdriver, Genetic, IterateUntil
 
-from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
-from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder
+from openmdao.lib.doegenerators.api import OptLatinHypercube
+from openmdao.lib.casehandlers.api import DBCaseRecorder
 
-from openmdao.lib.caseiterators.api import DBCaseIterator
-from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
 from openmdao.examples.expected_improvement.branin_component import BraninComponent
-from openmdao.util.decorators import add_delegate
-from openmdao.main.hasstopcond import HasStopConditions
         
     
 class MyDriver(Driver): 
@@ -33,9 +27,8 @@ class MyDriver(Driver):
         self.set_events()
         self.run_iteration()
         
-        inputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.ins]
-        outputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.outs]
-        
+        inputs = [(name,self.parent.get(name)) for name in self.ins]
+        outputs = [(name,self.parent.get(name)) for name in self.outs]
         case = Case(inputs = inputs,
                     outputs = outputs)
         self.recorder.record(case)
@@ -53,7 +46,7 @@ class Analysis(Assembly):
         self.branin_meta_model.surrogate = {'default':KrigingSurrogate()}
         self.branin_meta_model.model = BraninComponent()
         self.branin_meta_model.recorder = DBCaseRecorder(':memory:')
-        self.branin_meta_model.force_execute = True        
+        self.branin_meta_model.force_execute = True
         
         
         self.add("EI",ExpectedImprovement())
@@ -70,10 +63,10 @@ class Analysis(Assembly):
         #self.DOE_trainer.DOEgenerator = FullFactorial(num_levels=5)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
+
         self.DOE_trainer.add_event("branin_meta_model.train_next")
         self.DOE_trainer.case_outputs = ["branin_meta_model.f_xy"]
         self.DOE_trainer.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
-
         
         self.add("EI_opt",Genetic())
         self.EI_opt.opt_type = "maximize"
@@ -82,6 +75,7 @@ class Analysis(Assembly):
         self.EI_opt.selection_method = "tournament"
         self.EI_opt.add_parameter("branin_meta_model.x")
         self.EI_opt.add_parameter("branin_meta_model.y")
+        
         self.EI_opt.add_objective("EI.EI")
         self.EI_opt.force_execute = True
         
@@ -116,7 +110,7 @@ class Analysis(Assembly):
 if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
-    from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
+    from openmdao.lib.casehandlers.db import case_db_to_dict
     
     seed = None
     backend = None
@@ -135,9 +129,8 @@ if __name__ == "__main__": #pragma: no cover
         matplotlib.use(backend)
     elif sys.platform == 'win32':
         matplotlib.use('WxAgg')
-    from matplotlib import pyplot as plt, cm 
+    from matplotlib import pyplot as plt
     from matplotlib.pylab import get_cmap
-    from mpl_toolkits.mplot3d import Axes3D
     from numpy import meshgrid,array, pi,arange,cos
     
     analysis = Analysis()
@@ -145,9 +138,7 @@ if __name__ == "__main__": #pragma: no cover
     set_as_top(analysis)
     
     analysis.run()
-    
-    print "for damon: " , analysis.iter.iteration
-    
+        
     points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
     for x,y,z in points: 
         print "x: ", x, "; y: ", y

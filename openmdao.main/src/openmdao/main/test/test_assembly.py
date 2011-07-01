@@ -3,9 +3,8 @@
 import unittest
 import sys
 
-from enthought.traits.api import TraitError
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Float, Str, Instance, List
+from openmdao.lib.datatypes.api import Float, Str, Slot, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
 
@@ -55,9 +54,9 @@ class DummyComp(Component):
     sout = Str(iotype='out')
     slistout = List(Str, iotype='out')
     
-    dummy_in = Instance(Component, iotype='in')
-    dummy_out = Instance(Component, iotype='out')
-    dummy_out_no_copy = Instance(Component, iotype='out', copy=None)
+    dummy_in = Slot(Component, iotype='in')
+    dummy_out = Slot(Component, iotype='out')
+    dummy_out_no_copy = Slot(Component, iotype='out', copy=None)
     
     def __init__(self):
         super(DummyComp, self).__init__()
@@ -147,11 +146,11 @@ class AssemblyTestCase(unittest.TestCase):
         oldval = self.asm.comp2.r
         try:
             self.asm.comp2.r = 44
-        except TraitError, err:
+        except Exception, err:
             self.assertEqual(str(err), "comp2: 'r' is already connected to source 'parent.comp1.rout'"+
                                        " and cannot be directly set")
         else:
-            self.fail("Expected a TraitError when setting a connected input")
+            self.fail("Expected an Exception when setting a connected input")
         
         # verify that old value of connected input hasn't changed
         self.assertEqual(oldval, self.asm.comp2.r)
@@ -184,11 +183,11 @@ class AssemblyTestCase(unittest.TestCase):
         oldval = self.asm.comp2.r
         try:
             self.asm.comp2.r = 44
-        except TraitError, err:
+        except Exception, err:
             self.assertEqual(str(err), "comp2: 'r' is already connected to source 'parent.comp1.rout'"+
                                        " and cannot be directly set")
         else:
-            self.fail("Expected a TraitError when setting a connected input")
+            self.fail("Expected an Exception when setting a connected input")
         
         # verify that old value of connected input hasn't changed
         self.assertEqual(oldval, self.asm.comp2.r)
@@ -230,10 +229,12 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.create_passthrough('comp3.rout')
         try:
             self.asm.create_passthrough('comp3.rout')
-        except TraitError as err:
-            self.assertEqual(str(err), ": 'rout' already exists")
+        except Exception, err:
+            # for some reason, KeyError turns 'rout' into \'rout\', so
+            # test against str(KeyError(msg)) instead of just msg  :(
+            self.assertEqual(str(err), str(KeyError(": 'rout' already exists")))
         else:
-            self.fail('expected TraitError')
+            self.fail('expected Exception')
         
     def test_autopassthrough_nested(self):
         self.asm.set('comp1.r', 8.)
@@ -315,7 +316,10 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(units, 'ft')
         
         meta = self.asm.comp1.get_metadata('rout')
-        self.assertEqual(set(meta.keys()), set(['units','high','iotype','type','low']))
+        self.assertEqual(set(meta.keys()), 
+                         set(['vartypename','units','high','iotype','type','low']))
+        self.assertEqual(meta['vartypename'], 'Float')
+        self.assertEqual(self.asm.comp1.get_metadata('slistout','vartypename'), 'List')
         
     def test_missing_metadata(self):
         foo = self.asm.comp1.get_metadata('rout', 'foo')
@@ -377,6 +381,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(asm.nested.comp1.a, 4.)
         self.assertEqual(asm.nested.comp2.b, 5.)
         self.assertEqual(asm.nested.comp2.get_valid(['b']), [False])
+        self.assertEqual(asm.nested.get_valid(['comp2.b']), [False])
         asm.run()
         self.assertEqual(asm.nested.comp1.a, 0.5)
         self.assertEqual(asm.nested.comp2.b, 0.5)

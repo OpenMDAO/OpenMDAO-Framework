@@ -429,7 +429,7 @@ class TestCase(unittest.TestCase):
     def test_unsupported_traits(self):
         
         my_comp = VarComponent()
-        my_comp.add_trait('unsupported', File(iotype='in'))
+        my_comp.add('unsupported', File(iotype='in'))
         sb = Namelist(my_comp)
         
         sb.set_filename(self.filename)

@@ -9,7 +9,7 @@ from math import pi, sin, cos, exp
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float, Int
+from openmdao.lib.datatypes.api import Float, Int, Bool
 
 
 class Engine(Component):
@@ -37,7 +37,7 @@ class Engine(Component):
     #P_exth = 152            # Exhaust gas pressure
     #P_amb = 101.325         # Ambient Pressure (kPa)
     #T_amb = 298             # Ambient Temperature (deg K)
-    #air_density = 1.2       # Air Density (1.2 kg/m**2)
+    #air_density = 1.2       # Air Density (1.2 kg/m**3)
     #mw_air = 28.97          # Molecular Weight of Air (g/mol)
     #mw_fuel = 114           # Molecular Weight of Gasoline (g/mol)
 
@@ -72,8 +72,7 @@ class Engine(Component):
     D_v = Float(41.2, iotype='in', units='mm',
                      desc='Inlet Valve Diameter')
 
-    RPM = Float(1000.0, low=1000., high=6000., iotype='in', 
-                     units='rpm',  desc='Engine RPM')
+    RPM = Float(1000.0, iotype='in', units='rpm',  desc='Engine RPM')
     throttle = Float(1.0, low=0.01, high=1.0, iotype='in', 
                      desc='Throttle position (from low idle to wide open)')
 
@@ -85,13 +84,29 @@ class Engine(Component):
                            desc='Fuel Burn Rate')
     engine_weight = Float(0.0, iotype='out', units='kg', 
                                desc='Engine weight estimation')
+    overspeed = Bool(False, iotype='out', desc='True if the engine RPM '
+                            'exceeds its maximum allowable RPM.')
+    underspeed = Bool(False, iotype='out', desc='True if the engine RPM '
+                            'exceeds its minimum allowable RPM.')
         
 
     def execute(self):
         """ Simulates the Otto cycle for an internal combustion engine.
         Power and Torque are returned at the engine output.
         """
+        
+        # Check engine speed to see if it goes beyond our bounds:
+        
+        if self.RPM > 6000:
+            self.overspeed = True
+        else:
+            self.overspeed = False
 
+        if self.RPM < 1000:
+            self.underspeed = True
+        else:
+            self.underspeed = False
+            
         # These Constants are all hard-coded for Gasoline.
         # Eventually, we'll move them to the input so that they can be tweaked.
         # (Possibly by just selecting a fuel-type)
@@ -104,8 +119,8 @@ class Engine(Component):
         P_exth = 152           # Exhaust gas pressure
         P_amb = 101.325        # Ambient Pressure (kPa)
         T_amb = 298            # Ambient Temperature (deg K)
-        air_density = 1.2      # Air Density (1.2 kg/m**2)
-        fuel_density = 740.0   # Gasoline Density (740.0 kg/m**2)
+        air_density = 1.2      # Air Density (1.2 kg/m**3)
+        fuel_density = 740.0   # Gasoline Density (740.0 kg/m**3)
         mw_air = 28.97         # Molecular Weight of Air (g/mol)
         mw_fuel = 114          # Molecular Weight of Gasoline (g/mol)
 

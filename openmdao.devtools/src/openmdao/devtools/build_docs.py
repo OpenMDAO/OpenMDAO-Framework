@@ -1,4 +1,3 @@
-
 import os
 import os.path
 import sys
@@ -10,7 +9,6 @@ import re
 from subprocess import Popen, PIPE, STDOUT
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
 import tarfile
-
 import sphinx
 
 from openmdao.util.dumpdistmeta import get_dist_metadata
@@ -33,14 +31,14 @@ logger = logging.getLogger()
 
 def get_revision():
     try:
-        p = Popen('bzr log --short -r-1', 
+        p = Popen('git log -1', 
                   stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
         out = p.communicate()[0]
         ret = p.returncode
     except:
-        return '<unknown_rev>'
+        return '<unknown_commit>'
     else:
-        return out.split()[0]
+        return out.split()[1]
 
 # set all of our global configuration parameters
 def _get_dirnames():
@@ -61,6 +59,11 @@ def _mod_sphinx_info(mod, outfile, show_undoc=False):
     outfile.write('.. _%s.py:\n\n' % short)
     outfile.write('%s.py\n' % modbase)
     outfile.write('+'*(3+len(short.split('.').pop()))+'\n\n')
+    
+    rstfile = _get_rst_path(name)
+    if(rstfile):
+        outfile.write('.. include:: %s\n' % rstfile)
+    
     outfile.write('.. automodule:: %s\n' % short)
     outfile.write('   :members:\n')
     if show_undoc:
@@ -170,16 +173,17 @@ def _write_src_docs(branchdir, docdir):
     moddir = os.path.join(docdir, 'srcdocs', 'modules')
     
     for name in os.listdir(pkgdir):
-        os.remove(os.path.join(pkgdir, name))
+        if name != '.gitignore':
+            os.remove(os.path.join(pkgdir, name))
     
     for name in os.listdir(moddir):
-        os.remove(os.path.join(moddir, name))
+        if name != '.gitignore':
+            os.remove(os.path.join(moddir, name))
     
     for pack in packages:
         print 'creating autodoc file for %s' % pack
         with open(os.path.join(pkgdir, pack+'.rst'), 'w') as f:
-            _pkg_sphinx_info(branchdir, pack, f, 
-                             show_undoc=True, underline='-')
+            _pkg_sphinx_info(branchdir, pack, f, show_undoc=True, underline='-')
     
     for src in srcmods:
         with open(os.path.join(docdir, 'srcdocs', 'modules',
@@ -263,7 +267,9 @@ def test_docs():
                       os.path.join(docdir, '_build', 'doctrees'), 
                       docdir, os.path.join(docdir, '_build', 'html')])
 
-    
+# make nose ignore this function
+test_docs.__test__ = False
+
 def _get_border_line(numcols, colwidths, char):
     parts = []
     for i in range(numcols):
@@ -351,8 +357,42 @@ def _compare_traits_path(x, y):
         return -1
     else:
         return 0
-    
 
+def _get_rst_path(obj):
+    """
+    Finds accompanying documentation that exists for some .py files.
+    """
+    bindir = os.path.dirname(sys.executable)
+    branchdir = os.path.dirname(os.path.dirname(bindir))
+    writedir = os.path.join(branchdir, 'docs', 'srcdocs', 'packages')
+    #grab the rightmost bit of the dotted filename and add .py & .rst to it
+    if(obj):
+        fname = obj.rsplit(".")
+        pyfile = fname[-1] + ".py"
+        rstfile = fname[-1] + ".rst"
+    else:
+        return
+    #then we'll walk down through the dirs until we find the py file
+    found = 0
+    for root, dirs, files in os.walk(branchdir):
+        #if we're in the directory that has
+        #the py file, record the root, and stop walking
+        if pyfile in files:
+            containing_dir = root
+            found = 1
+            break
+    if found:
+        docs_dir = os.path.join(containing_dir,"docs")
+        if os.path.isdir(docs_dir):
+            textfilepath = os.path.join(docs_dir, rstfile)
+            if os.path.isfile(textfilepath):
+                #The sphinx include directive needs a relative path
+                #to the text file, rel to the docs dir 
+                relpath= os.path.relpath(textfilepath, writedir)
+                if (relpath):
+                    return relpath
+    else:
+        return
 if __name__ == "__main__": #pragma: no cover
     build_docs()
 

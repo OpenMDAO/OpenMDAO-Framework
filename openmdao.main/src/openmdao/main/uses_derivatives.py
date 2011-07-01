@@ -10,7 +10,7 @@
 """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Instance
+from openmdao.main.slot import Slot
 from openmdao.main.interfaces import IDifferentiator
 
 
@@ -20,9 +20,9 @@ class UsesDerivatives_Base(object):
     def __init__(self, parent):
         self._parent = parent
         
-        parent.add_trait("differentiator", \
-                         Instance(IDifferentiator, iotype='in', \
-                                  desc = "Socket for a differentiator"))
+        parent.add("differentiator", 
+                   Slot(IDifferentiator, iotype='in',
+                        desc = "Slot for a differentiator"))
                                                          
 
     def _list_driver_connections(self):
@@ -39,33 +39,16 @@ class UsesDerivatives_Base(object):
         #    checked regardless (through fake finite difference or alternative
         #    means)
         # -- if they are not connected, their derivative is always 0
-        if hasattr(self._parent, '_hasobjective'):
-            obj = getattr(self._parent, '_hasobjective')
-            if obj._objective:
-                varset.update(obj._objective.get_referenced_varpaths())
-                
-        if hasattr(self._parent, '_hasobjectives'):
-            obj = getattr(self._parent, '_hasobjectives')
-            for item in obj._objectives.values():
-                varset.update(item.get_referenced_varpaths())
+        for delegate in ['_hasobjective', '_hasobjectives']:
+            if hasattr(self._parent, delegate):
+                obj = getattr(self._parent, delegate)
+                varset.update(obj.get_referenced_varpaths())
                 
         # Constraints can also introduce additional connections.
-        for delegate in ['_hasineqconstraints', '_haseqconstraints']:
+        for delegate in ['_hasineqconstraints', '_haseqconstraints', '_hasconstraints']:
             if hasattr(self._parent, delegate):
                 constraints = getattr(self._parent, delegate)
-                for item in constraints._constraints.values():
-                    varset.update(item.lhs.get_referenced_varpaths())
-                    varset.update(item.rhs.get_referenced_varpaths())
-                            
-        if hasattr(self._parent, '_hasconstraints'):
-            constraints = getattr(self._parent, '_hasconstraints')
-            for item in constraints._ineq._constraints.values():
-                varset.update(item.lhs.get_referenced_varpaths())
-                varset.update(item.rhs.get_referenced_varpaths())
-                        
-            for item in constraints._eq._constraints.values():
-                varset.update(item.lhs.get_referenced_varpaths())
-                varset.update(item.rhs.get_referenced_varpaths())
+                varset.update(constraints.get_referenced_varpaths())
 
         get_metadata = self._parent.parent.get_metadata
         

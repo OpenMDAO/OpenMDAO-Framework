@@ -1,4 +1,5 @@
-from itertools import chain
+
+from openmdao.main.case import Case
 
 
 def caseiter_to_dict(caseiter, varnames, include_errors=False):
@@ -23,26 +24,19 @@ def caseiter_to_dict(caseiter, varnames, include_errors=False):
         
     """
     
-    varnames = set(varnames)
-    
     vardict = dict([(name,[]) for name in varnames])
 
-    for case in caseiter.get_iter():
-        casedict = {}
+    for case in caseiter:
         if include_errors is False and case.msg:
             continue  # case reported an error or warning message
-
-        for vname,idx,value in chain(case.inputs, case.outputs):
-            if idx:
-                vname = "%s%s" % (vname, idx)
-            if vname in varnames:
-                casedict[vname] = value
-        
-        if len(casedict) != len(varnames):
-            continue   # case doesn't contain a complete set of specified vars, so skip it to avoid data mismatches
-        
-        for name, value in casedict.items():
-            vardict[name].append(value)
-            
+        try:
+            casevals = [case[name] for name in vardict]
+            idx = 0
+            for name, lst in vardict.items():
+                lst.append(casevals[idx])
+                idx += 1
+        except KeyError:
+            continue # case doesn't contain a complete set of specified vars, 
+                     # so skip it to avoid data mismatches
     return vardict
     

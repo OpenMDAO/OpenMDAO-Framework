@@ -1,6 +1,6 @@
 
 import unittest
-from inspect import getmembers, ismethod
+from inspect import getmembers, ismethod, isfunction
 
 from enthought.traits.api import HasTraits, Float
 
@@ -32,7 +32,7 @@ class BadDelegate1(object):
         return sum(a,b,c,self.inst_y)
     
     def cls_x(self):
-        pass
+        return 9
     
     def _priv_method(self):
         pass
@@ -79,60 +79,56 @@ class decoratorTestCase(unittest.TestCase):
         self.assertEqual(f.inherited_amethod(1,2,0), 6)
 
     def test_add_delegate_bad1(self):
-        try:
-            @add_delegate(BadDelegate1)
-            class Foo(object):
-                cls_x = 1
-                def __init__(self):
-                    self.inst_x = 9
-                def amethod(self, a, b, c='foo'): pass
-                def genmethod(self, *args, **kwargs): pass
-                def _priv_method(self): pass
-        except NameError as err:
-            self.assertEqual(str(err), 
-                             "'cls_x' is already present so we can't add it to class Foo from delegate 'baddelegate1'")
+        @add_delegate(BadDelegate1)
+        class Foo(object):
+            cls_x = 1234    # BadDelegate1 defines this as a method
+            def __init__(self):
+                self.inst_x = 9
+            def amethod(self, a, b, c='foo'): pass
+            def genmethod(self, *args, **kwargs): pass
+            def _priv_method(self): pass
+            
+        f = Foo()
+        self.assertEqual(f.cls_x, 1234)
     
     def test_add_delegate_bad2(self):
-        try:
-            @add_delegate(BadDelegate2)
-            class Foo(object):
-                cls_x = 1
-                def __init__(self):
-                    self.inst_x = 9
-                def amethod(self, a, b, c='foo'): pass
-                def genmethod(self, *args, **kwargs): pass
-                def _priv_method(self): pass
-        except NameError as err:
-            self.assertEqual(str(err), 
-                             "'amethod' is already present so we can't add it to class Foo from delegate 'baddelegate2'")
+        @add_delegate(BadDelegate2)
+        class Foo2(object):
+            cls_x = 4567
+            def __init__(self):
+                self.inst_x = 9
+            def amethod(self, a, b, c='foo'): return 87  #BadDelegate2 defines this
+            def genmethod(self, *args, **kwargs): pass
+            def _priv_method(self): pass
+            
+        f = Foo2()
+        self.assertEqual(f.amethod(1,2), 87)
 
     def test_add_delegate_bad1_hastraits(self):
-        try:
-            @add_delegate(BadDelegate1)
-            class Foo(HasTraits):
-                cls_x = Float(3.,iotype='in')
-                def __init__(self):
-                    self.inst_x = 9
-                def amethod(self, a, b, c='foo'): pass
-                def genmethod(self, *args, **kwargs): pass
-                def _priv_method(self): pass
-        except NameError as err:
-            self.assertEqual(str(err), 
-                             "'cls_x' is already present so we can't add it to class Foo from delegate 'baddelegate1'")
+        @add_delegate(BadDelegate1)
+        class Foo3(HasTraits):
+            cls_x = Float(3.456,iotype='in')
+            def __init__(self):
+                self.inst_x = 9
+            def amethod(self, a, b, c='foo'): pass
+            def genmethod(self, *args, **kwargs): pass
+            def _priv_method(self): pass
+    
+        f = Foo3()
+        self.assertEqual(f.cls_x, 3.456)
     
     def test_add_delegate_bad2_hastraits(self):
-        try:
-            @add_delegate(BadDelegate2)
-            class Foo(HasTraits):
-                cls_x = 1
-                def __init__(self):
-                    self.inst_x = 9
-                def amethod(self, a, b, c='foo'): pass
-                def genmethod(self, *args, **kwargs): pass
-                def _priv_method(self): pass
-        except NameError as err:
-            self.assertEqual(str(err), 
-                             "'amethod' is already present so we can't add it to class Foo from delegate 'baddelegate2'")
+        @add_delegate(BadDelegate2)
+        class Foo4(HasTraits):
+            cls_x = 1
+            def __init__(self):
+                self.inst_x = 9
+            def amethod(self, a, b, c='foo'): return -54.3
+            def genmethod(self, *args, **kwargs): pass
+            def _priv_method(self): pass
+
+        f = Foo4()
+        self.assertEqual(f.amethod(1,2), -54.3)
 
 
 if __name__ == '__main__':

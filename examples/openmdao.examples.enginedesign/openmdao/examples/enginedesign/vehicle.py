@@ -9,9 +9,9 @@
 
 # pylint: disable-msg=E0611,F0401
 
-from openmdao.lib.datatypes.api import Interface, Float
+from openmdao.lib.datatypes.api import Float
 
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, Interface
 
 from openmdao.examples.enginedesign.transmission import Transmission
 from openmdao.examples.enginedesign.chassis import Chassis
@@ -53,8 +53,8 @@ class Vehicle(Assembly):
             
         # Design parameters from Vehicle Dynamics
         mass_vehicle               # Vehicle Mass (kg)
-        Cf                         # Friction coef (proportional to V)
-        Cd                         # Drag coef (proportional to V**2)
+        Cf                         # Friction coef (multiplies W)
+        Cd                         # Drag coef (multiplies V**2)
         area                       # Frontal area (for drag calc) (sq m)
             
         # Simulation Inputs
@@ -100,6 +100,8 @@ class Vehicle(Assembly):
         self.create_passthrough('engine.power')
         self.create_passthrough('engine.torque')
         self.create_passthrough('engine.fuel_burn')
+        self.create_passthrough('engine.overspeed')
+        self.create_passthrough('engine.underspeed')
 
         # Promoted From Transmission
         self.create_passthrough('transmission.ratio1')
@@ -115,12 +117,13 @@ class Vehicle(Assembly):
         self.create_passthrough('chassis.Cf')
         self.create_passthrough('chassis.Cd')
         self.create_passthrough('chassis.area')
+        self.create_passthrough('chassis.acceleration')
         
+        # These vars have unit conversions
         self.connect('velocity', 'chassis.velocity')
         self.connect('velocity', 'transmission.velocity')
         self.connect('tire_circumference', 'chassis.tire_circ')
         self.connect('tire_circumference', 'transmission.tire_circ')
-        self.create_passthrough('chassis.acceleration')
 
         # Hook it all up
         self.connect('transmission.RPM','engine.RPM')

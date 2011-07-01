@@ -5,20 +5,19 @@ import shutil
 
 from numpy import sin, cos
 
-from openmdao.lib.datatypes.api import Instance, Str, Array, Float, Int
+from openmdao.lib.datatypes.api import Str, Array, Float, Int
 
 from openmdao.main.api import Assembly, Component, Driver, \
      SequentialWorkflow, Case
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.hasstopcond import HasStopConditions
 
 from openmdao.lib.components.api import MetaModel, MultiObjExpectedImprovement,\
      ParetoFilter, Mux
 from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
-from openmdao.lib.caseiterators.api import DBCaseIterator
-from openmdao.lib.caserecorders.api import DBCaseRecorder, DumpCaseRecorder
+from openmdao.lib.casehandlers.api import DBCaseIterator
+from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
 
 from openmdao.lib.surrogatemodels.api import KrigingSurrogate
 
@@ -43,11 +42,11 @@ class MyDriver(Driver):
         self.set_events()
         self.run_iteration()
         
-        inputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.ins]
-        outputs = [(name,None,ExprEvaluator(name,self.parent).evaluate()) for name in self.outs]
-        
+        inputs = [(name, self.parent.get(name)) for name in self.ins]
+        outputs = [(name, self.parent.get(name)) for name in self.outs]
         case = Case(inputs = inputs,
                     outputs = outputs)
+        
         self.recorder.record(case)
         
 class Analysis(Assembly):
@@ -89,7 +88,7 @@ class Analysis(Assembly):
         self.MOEI_opt.selection_method = "tournament"
         self.MOEI_opt.add_parameter("spiral_meta_model.x")
         self.MOEI_opt.add_parameter("spiral_meta_model.y")
-        self.MOEI_opt.add_objective("MOEI.EI")
+        self.MOEI_opt.add_objective("MOEI.PI")
         self.MOEI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
@@ -127,7 +126,7 @@ class Analysis(Assembly):
 if __name__ == "__main__": #pragma: no cover
     import sys
     from openmdao.main.api import set_as_top
-    from openmdao.lib.caserecorders.dbcaserecorder import case_db_to_dict
+    from openmdao.lib.casehandlers.db import case_db_to_dict
     
     seed = None
     backend = None

@@ -155,7 +155,6 @@ class PkgResFactoryTestCase(unittest.TestCase):
                         'openmdao.lib.drivers.simplecid.SimpleCaseIterDriver',
                         'openmdao.lib.components.pareto_filter.ParetoFilter',
                         'openmdao.lib.drivers.newsumtdriver.NEWSUMTdriver',
-                        'openmdao.lib.components.prob_intersect.ProbIntersect',
                         'openmdao.lib.components.nastran.nastran.NastranComponent',
                         'openmdao.lib.components.mux.Mux',
                         'openmdao.lib.components.expected_improvement.ExpectedImprovement',

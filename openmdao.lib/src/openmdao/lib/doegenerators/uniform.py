@@ -4,9 +4,9 @@ into the DOEgenerator socket on a DOEdriver."""
 # pylint: disable-msg=E0611,F0401
 from numpy import linspace,random
 from enthought.traits.api import HasTraits
-from openmdao.lib.datatypes.api import implements, Int
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
-from openmdao.main.interfaces import IDOEgenerator
+from openmdao.lib.datatypes.api import Int
+from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
+from openmdao.main.interfaces import implements, IDOEgenerator
 
 class Uniform(HasTraits):
     """ DOEgenerator that performs a space-filling Design of Experiments with uniform

@@ -22,18 +22,18 @@ class EngineOptimizationTestCase(unittest.TestCase):
         # We are just testing the mechanics of the EngineOptimization component, so
         # set the design variables at the global minimum.
         
-        self.model.driving_sim.bore = 95
-        self.model.driving_sim.spark_angle = -35.368341874
+        self.model.vehicle.bore = 95
+        self.model.vehicle.spark_angle = -35.368341874
 
         self.model.driver.itmax = 1
         
         self.model.run()
         
-        self.assertAlmostEqual(self.model.driving_sim.accel_time, 
+        self.assertAlmostEqual(self.model.sim_acc.accel_time, 
                                5.5999999999999961, places=6)
-        self.assertAlmostEqual(self.model.driving_sim.EPA_city, 
+        self.assertAlmostEqual(self.model.sim_EPA_city.fuel_economy, 
                                25.203, places=3)
-        self.assertAlmostEqual(self.model.driving_sim.EPA_highway, 
+        self.assertAlmostEqual(self.model.sim_EPA_highway.fuel_economy, 
                                32.8139, places=4)
 
 if __name__ == "__main__":

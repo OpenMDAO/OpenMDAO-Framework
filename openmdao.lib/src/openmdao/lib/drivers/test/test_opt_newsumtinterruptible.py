@@ -43,7 +43,7 @@ import numpy
 #     really can import
 # pylint: disable-msg=F0401,E0611
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, ComponentWithDerivatives
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import NEWSUMTdriver
@@ -234,12 +234,10 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
         
         self.top.driver.add_objective('comp.result')
 
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', -100.0, 100.0),
-            ('comp.x[1]', -100.0, 100.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', -100.0, 100.0)
+        self.top.driver.add_parameter('comp.x[1]', -100.0, 100.0)
         
-        map(self.top.driver.add_constraint,[ ])    
+        map(self.top.driver.add_constraint,[ ])
         self.top.run()
         self.assertAlmostEqual(self.top.comp.opt_objective, 
                                self.top.driver.eval_objective(), places=2)
@@ -252,10 +250,8 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
         
         self.top.driver.add_objective('comp.result')
 
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', float( '-inf' ), float( 'inf' ) ),
-            ('comp.x[1]', float( '-inf' ), float( 'inf' ) ),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', float( '-inf' ), float( 'inf' ) )
+        self.top.driver.add_parameter('comp.x[1]', float( '-inf' ), float( 'inf' ) )
         
         map(self.top.driver.add_constraint,[ ])    
         self.top.run()
@@ -291,10 +287,8 @@ class NEWSUMTdriverParaboloidWithLinearConstraintTestCase(unittest.TestCase):
 
         self.top.driver.add_objective( 'comp.result' )
         
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', -100.0, 100.0),
-            ('comp.x[1]', -100.0, 100.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', -100.0, 100.0)
+        self.top.driver.add_parameter('comp.x[1]', -100.0, 100.0)
 
         map(self.top.driver.add_constraint,[ 'comp.x[0] - 4.0 > 0.0' ] )
         self.top.run()
@@ -327,10 +321,8 @@ class NEWSUMTdriverParaboloidWithNonLinearConstraintTestCase(unittest.TestCase):
 
         self.top.driver.add_objective( 'comp.result' )
 
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', -100.0, 100.0),
-            ('comp.x[1]', -100.0, 100.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', -100.0, 100.0)
+        self.top.driver.add_parameter('comp.x[1]', -100.0, 100.0)
 
         map(self.top.driver.add_constraint,[ '- comp.x[0]**2 - ( comp.x[1] - 3.0 )**2 + 1.0 > 0.0' ] )
         self.top.run()
@@ -367,10 +359,8 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
 
         self.top.driver.add_objective( 'comp.result' )
 
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', 2.0, 50.0),
-            ('comp.x[1]', -50.0, 50.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', 2.0, 50.0)
+        self.top.driver.add_parameter('comp.x[1]', -50.0, 50.0)
         
         map(self.top.driver.add_constraint,[ '-10.0 + 10.0 * comp.x[0] - comp.x[1] > 0.0' ] )
         self.top.driver.ilin = [1]
@@ -390,10 +380,8 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
 
         self.top.driver.add_objective( 'comp.result' )
 
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', 2.0, 50.0),
-            ('comp.x[1]', -50.0, 50.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', 2.0, 50.0)
+        self.top.driver.add_parameter('comp.x[1]', -50.0, 50.0)
         
         map(self.top.driver.add_constraint,[ '-10.0 + 10.0 * comp.x[0] - comp.x[1] > 0.0' ] )
         self.top.driver.ilin = [1]
@@ -432,12 +420,10 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
 
         self.top.driver.add_objective('comp.result')
 
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', -10.0, 99.0),
-            ('comp.x[1]', -10.0, 99.0),
-            ('comp.x[2]', -10.0, 99.0),
-            ('comp.x[3]', -10.0, 99.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', -10.0, 99.0)
+        self.top.driver.add_parameter('comp.x[1]', -10.0, 99.0)
+        self.top.driver.add_parameter('comp.x[2]', -10.0, 99.0)
+        self.top.driver.add_parameter('comp.x[3]', -10.0, 99.0)
 
         map(self.top.driver.add_constraint,[
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
@@ -485,10 +471,8 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
 
         self.top.driver.add_objective('comp.result')
         
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', 0.0, 100.0),
-            ('comp.x[1]', 0.0, 100.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', 0.0, 100.0)
+        self.top.driver.add_parameter('comp.x[1]', 0.0, 100.0)
 
         map(self.top.driver.add_constraint,[
             '2.0 * comp.x[0] - comp.x[1] - 1.0 > 0.0',
@@ -509,10 +493,8 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         
         self.top.driver.add_objective('comp.result')
         
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', 0.0, 100.0),
-            ('comp.x[1]', 0.0, 100.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', 0.0, 100.0)
+        self.top.driver.add_parameter('comp.x[1]', 0.0, 100.0)
 
         map(self.top.driver.add_constraint,[
             '2.0 * comp.x[0] - comp.x[1] - 1.0 > 0.0',
@@ -547,7 +529,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
     def test_get_objective(self):
         # test getting the objective function
         self.top.driver.add_objective( 'comp.result' )
-        self.assertEqual('comp.result', self.top.driver.list_objective())
+        self.assertEqual(['comp.result'], self.top.driver.get_objectives().keys())
     
     def test_update_objective(self):
 
@@ -581,10 +563,8 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
 
 
         try:
-            self.top.driver.add_parameters( [
-                ('comp.x[0]', -10.0, 99.0),
-                ('comp.x[1]',  99.0, -10.0),
-                ] )
+            self.top.driver.add_parameter('comp.x[0]', -10.0, 99.0)
+            self.top.driver.add_parameter('comp.x[1]',  99.0, -10.0)
         except ValueError, err:
             self.assertEqual(str(err),
                              "driver: Parameter 'comp.x[1]' " + \
@@ -599,10 +579,8 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
 
         self.top.driver.add_objective('comp.result' )
         
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', -10.0, 99.0),
-            ('comp.x[1]', -10.0, 99.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', -10.0, 99.0)
+        self.top.driver.add_parameter('comp.x[1]', -10.0, 99.0)
 
         map(self.top.driver.add_constraint,[
             '2.0 * comp.x[0] - comp.x[1] - 1.0 > 0.0',
@@ -614,7 +592,6 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         
         self.top.run()
         
-
         self.assertEqual(self.top.driver.iter_count,2)
         
     def test_gradient_step_size_large(self):
@@ -622,10 +599,8 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         
         self.top.driver.add_objective( 'comp.result' )
         
-        self.top.driver.add_parameters( [
-            ('comp.x[0]', 0.0, 100.0),
-            ('comp.x[1]', 0.0, 100.0),
-            ] )
+        self.top.driver.add_parameter('comp.x[0]', 0.0, 100.0)
+        self.top.driver.add_parameter('comp.x[1]', 0.0, 100.0)
 
         map(self.top.driver.add_constraint,[
             '2.0 * comp.x[0] - comp.x[1] - 1.0 > 0.0',
@@ -647,7 +622,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             self.fail("Coarsening CONMIN gradient step size did not make the objective worse.")
 
             
-class OptRosenSuzukiComponent_Deriv(Component):
+class OptRosenSuzukiComponent_Deriv(ComponentWithDerivatives):
     """ From the NEWSUMT User's Manual:
     EXAMPLE 2 - CONSTRAINED ROSEN-SUZUKI FUNCTION. NO GRADIENT INFORMATION.
     
@@ -710,32 +685,31 @@ class OptRosenSuzukiComponent_Deriv(Component):
                        2.*self.x3**2 - 21.*self.x3 + 
                        self.x4**2 + 7.*self.x4 + 50)
 
-    def calculate_derivatives(self, first, second):
-        """Analytical derivatives"""
+    def calculate_first_derivatives(self):
+        """Analytical first derivatives"""        
         
-        if first:
+        df_dx1 = 2.0*self.x1 - 5.0
+        df_dx2 = 2.0*self.x2 - 5.0
+        df_dx3 = 4.0*self.x3 - 21.0
+        df_dx4 = 2.0*self.x4 + 7.0
+    
+        self.derivatives.set_first_derivative('result', 'x1', df_dx1)
+        self.derivatives.set_first_derivative('result', 'x2', df_dx2)
+        self.derivatives.set_first_derivative('result', 'x3', df_dx3)
+        self.derivatives.set_first_derivative('result', 'x4', df_dx4)
         
-            df_dx1 = 2.0*self.x1 - 5.0
-            df_dx2 = 2.0*self.x2 - 5.0
-            df_dx3 = 4.0*self.x3 - 21.0
-            df_dx4 = 2.0*self.x4 + 7.0
+    def calculate_second_derivatives(self):
+        """Analytical second derivatives"""        
         
-            self.derivatives.set_first_derivative('result', 'x1', df_dx1)
-            self.derivatives.set_first_derivative('result', 'x2', df_dx2)
-            self.derivatives.set_first_derivative('result', 'x3', df_dx3)
-            self.derivatives.set_first_derivative('result', 'x4', df_dx4)
+        df_dx1dx1 = 2.0
+        df_dx2dx2 = 2.0
+        df_dx3dx3 = 4.0
+        df_dx4dx4 = 2.0
         
-        if second:
-        
-            df_dx1dx1 = 2.0
-            df_dx2dx2 = 2.0
-            df_dx3dx3 = 4.0
-            df_dx4dx4 = 2.0
-            
-            self.derivatives.set_second_derivative('result', 'x1', 'x1', df_dx1dx1)
-            self.derivatives.set_second_derivative('result', 'x2', 'x2', df_dx2dx2)
-            self.derivatives.set_second_derivative('result', 'x3', 'x3', df_dx3dx3)
-            self.derivatives.set_second_derivative('result', 'x4', 'x4', df_dx4dx4)
+        self.derivatives.set_second_derivative('result', 'x1', 'x1', df_dx1dx1)
+        self.derivatives.set_second_derivative('result', 'x2', 'x2', df_dx2dx2)
+        self.derivatives.set_second_derivative('result', 'x3', 'x3', df_dx3dx3)
+        self.derivatives.set_second_derivative('result', 'x4', 'x4', df_dx4dx4)
 
 class NEWSUMTdriverRosenSuzukiTestCaseDeriv(unittest.TestCase):
     """test NEWSUMT optimizer component using the Rosen Suzuki problem"""

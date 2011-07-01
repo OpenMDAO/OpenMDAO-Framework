@@ -22,7 +22,7 @@ class HasStopConditions(object):
     
     def add_stop_condition(self, exprstr):
         ident = _remove_spaces(exprstr)
-        expr = ExprEvaluator(exprstr, scope=self._parent)
+        expr = ExprEvaluator(exprstr, scope=self._parent.parent)
         _check_expr(expr, self._parent)
         self._stop_conditions[ident] = expr
         
@@ -48,5 +48,6 @@ class HasStopConditions(object):
     def should_stop(self):
         """Return True if any of the stopping conditions evaluate to True."""
         for cond in self._stop_conditions.values():
-            if cond.evaluate():
+            if cond.evaluate() and cond.refs_valid():
                 return True
+        return False

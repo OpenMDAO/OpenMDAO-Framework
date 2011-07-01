@@ -1,7 +1,6 @@
 """
-    newsumtdriver.py - Driver for the NEWSUMT optimizer.
+    ``newsumtdriver.py`` - Driver for the NEWSUMT optimizer.
     
-    (See the Standard Library Reference for additional information on the :ref:`NEWSUMTDriver`.)    
 """
 
 # disable complaints about Module 'numpy' has no 'array' member
@@ -38,7 +37,6 @@ from openmdao.main.hasobjective import HasObjective
 from openmdao.main.uses_derivatives import UsesGradients, UsesHessians
 from openmdao.util.decorators import add_delegate
 from openmdao.lib.datatypes.api import Float, Int, Enum
-from openmdao.util.testutil import assert_rel_error
 
 import newsumt.newsumtinterruptible as newsumtinterruptible
 
@@ -117,7 +115,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             
             # Save baseline states and calculate derivatives
             if driver.baseline_point:
-                super(NEWSUMTdriver, driver).calc_derivatives(first=True)
+                driver.calc_derivatives(first=True)
             driver.baseline_point = False
             
             # update the parameters in the model
@@ -141,7 +139,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         # evaluate constraint functions
         if info == 2:
             for i, v in enumerate(driver.get_ineq_constraints().values()):
-                val = v.evaluate()
+                val = v.evaluate(driver.parent)
                 if '>' in val[2]:
                     g[i] = val[0]-val[1]
                 else:
@@ -155,22 +153,23 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         if not driver.differentiator:
             return obj, dobj, ddobj, g, dg
         
-        super(NEWSUMTdriver, driver).calc_derivatives(first=True)
+        driver.calc_derivatives(first=True)
         driver.ffd_order = 1
         driver.differentiator.calc_gradient()
         
-        super(NEWSUMTdriver, driver).calc_derivatives(second=True)
+        driver.calc_derivatives(second=True)
         driver.ffd_order = 2
         driver.differentiator.calc_hessian(reuse_first=True)
         
         driver.ffd_order = 0
 
-        dobj = driver.differentiator.gradient_obj
+        obj_name = driver.get_objectives().keys()[0]
+        dobj = driver.differentiator.get_gradient(obj_name)
         
         i_current = 0
-        for ii in range(0, driver.differentiator.n_param):
-            for jj in range(0, ii+1):
-                ddobj[i_current] = driver.differentiator.hessian_obj[ii, jj]
+        for row, name1 in enumerate(driver.get_parameters().keys()):
+            for name2 in driver.get_parameters().keys()[0:row+1]:
+                ddobj[i_current] = driver.differentiator.get_2nd_derivative(obj_name, wrt=(name1, name2))
                 i_current += 1
 
     elif info in [4,5]:
@@ -184,17 +183,16 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             if not driver.differentiator:
                 return obj, dobj, ddobj, g, dg
 
-            super(NEWSUMTdriver, driver).calc_derivatives(first=True)
+            driver.calc_derivatives(first=True)
             driver.ffd_order = 1
             driver.differentiator.calc_gradient()
             driver.ffd_order = 0
         
-        nparam = driver.differentiator.n_param
-        ncon = driver.differentiator.n_ineqconst
-        
-        for ii in range(0, nparam):
-            dg[(ii*ncon):(ncon+ii*ncon)] = \
-              -driver.differentiator.gradient_ineq_const[ii, :]
+        i_current = 0
+        for param_name in driver.get_parameters().keys():
+            for con_name in driver.get_ineq_constraints().keys():
+                dg[i_current] = -driver.differentiator.get_derivative(con_name, wrt=param_name)
+                i_current += 1 
             
     return obj, dobj, ddobj, g, dg
 # pylint: enable-msg=W0613
@@ -382,25 +380,11 @@ class NEWSUMTdriver(Driver):
         # check if any min/max constraints are violated by initial values
         for i, val in enumerate(self.get_parameters().values()):
             
-            value = val.expreval.evaluate()
+            value = val.evaluate(self.parent)
             self.design_vals[i] = value
             # next line is specific to NEWSUMT
             self.__design_vals_tmp[i] = value
             
-#             if dval > val.high:
-#                 if (dval - val.high) < self.ctlmin:
-#                     self.design_vals[i] = val.high
-#                 else:
-#                     self.raise_exception('maximum exceeded for initial value'
-#                                          ' of: %s' % str(val.expreval),
-#                                          ValueError)
-#             if dval < val.low:
-#                 if (val.low - dval) < self.ctlmin:
-#                     self.design_vals[i] = val.low
-#                 else:
-#                     self.raise_exception('minimum exceeded for initial value'
-#                                          ' of: %s' % str(val.expreval),
-#                                          ValueError)
 
 
         # Call the interruptible version of SUMT in a loop that we manage
