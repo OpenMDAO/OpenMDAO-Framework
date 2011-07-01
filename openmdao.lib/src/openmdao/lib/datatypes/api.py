@@ -11,5 +11,5 @@ from openmdao.main.slot import Slot
 
 # Traits from Enthought
 from enthought.traits.api import Bool, List, Str, Instance, \
-     Complex, CBool, Dict, ListStr, Any, on_trait_change,\
-     Python, Event, Dict
+     Complex, CBool, Dict, ListStr, Any, TraitError, on_trait_change,\
+     implements, Interface, Python, Event, Dict
