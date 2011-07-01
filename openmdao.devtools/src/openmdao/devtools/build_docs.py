@@ -30,14 +30,14 @@ logger = logging.getLogger()
 
 def get_revision():
     try:
-        p = Popen('git log -1', 
+        p = Popen('git describe --always --tags', 
                   stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
         out = p.communicate()[0]
         ret = p.returncode
     except:
         return '<unknown_commit>'
     else:
-        return out.split()[1]
+        return out.strip()
 
 # set all of our global configuration parameters
 def _get_dirnames():

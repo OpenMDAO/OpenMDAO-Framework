@@ -26,16 +26,15 @@ class _VersionError(RuntimeError):
 
         
 def _check_version(version, home):
-    #with settings(host_string=host):
-    #with hide('running', 'stdout'):
-    #    result = run('ls %s/downloads' % home)
-    #lst = [x.strip() for x in result.split('\n')]
-    #if version in lst:
-    #    raise _VersionError('Version %s already exists. Please specify a different version' % version)
+    with settings(hide('running', 'stdout'), host_string=host):
+        result = run('ls %s/downloads' % home)
+    lst = [x.strip() for x in result.split('\n')]
+    if version in lst:
+        raise _VersionError('Version %s already exists. Please specify a different version' % version)
     return version
 
 
-def _release(host, version=None, is_local=True, home='/OpenMDAO/dev/ckrenek/scripts2', url=TEST_URL):
+def _release(host, version=None, is_local=True, home=None, url=TEST_URL):
     """Creates source distributions, docs, binary eggs, and install script for 
     the current openmdao namespace packages and puts them on a local test server.  After
     tests have passed, uploads them to <home>/dists, and updates the index.html file there.
@@ -50,7 +49,6 @@ def _release(host, version=None, is_local=True, home='/OpenMDAO/dev/ckrenek/scri
        
     if version is None:
         version = prompt('Enter version id:', validate=lambda ver: _check_version(ver,home))
-#        version = prompt('Enter version id:', validate=lambda)
 
     dist_dir = os.path.dirname(os.path.dirname(__file__))
     scripts_dir = os.path.join(dist_dir, 'scripts')
@@ -109,7 +107,7 @@ def _release(host, version=None, is_local=True, home='/OpenMDAO/dev/ckrenek/scri
         
             # update the index.html for the version download directory on the test server
             with cd('%s/downloads/%s' % (home, version)):
-                 run('python2.6 mkdlversionindex.py %s' % url)
+                run('python2.6 mkdlversionindex.py %s' % url)
             # update the index.html for the dists directory on the test server
             with cd('%s/dists' % home):
                 run('python2.6 mkegglistindex.py %s' % url)
@@ -132,7 +130,7 @@ def _find_top_dir():
         path = os.path.dirname(path)
     raise RuntimeError("Can't find top dir of repository starting at %s" % os.getcwd())
 
-#build release and put on webfaction - will no longer be used in this form                
+#build release and put on webfaction - will no longer be used in this form
 @hosts('openmdao@web103.webfaction.com')
 def release(version=None):
     if sys.platform != 'win32':
@@ -164,7 +162,15 @@ def localrelease(version=None):
             connections[key].close()
             del connections[key]
 
-def main(argv=None):
+if __name__ == '__main__':
+    parser = OptionParser()
+    parser.add_option("--host", action='append', dest='host', 
+                      default='openmdao@web103.webfaction.com',
+                      metavar='HOST',
+                      help="set the host URL")
+
+    (options, args) = parser.parse_args(sys.argv[1:])
+    
     #if sys.platform != 'win32':
     #    raise RuntimeError("OpenMDAO releases should be built on Windows so Windows binary distributions can be built")
     hosts=["torpedo.grc.nasa.gov"]
@@ -183,53 +189,3 @@ def main(argv=None):
         for key in connections.keys():
             connections[key].close()
             del connections[key]
-
-
-
-
-
-"""Keith's function to update the dev docs - not on trunk yet? - this is under build_docs.py - not needed here
-def _update_dev_docs():
-    startdir = os.getcwd()
-    try:
-        # tar up the docs so we can upload them to the server
-	topdir = _find_top_dir()
-        devtools_dir = os.path.join(topdir,'openmdao.devtools',
-                                    'src','openmdao','devtools')
-        check_call([sys.executable, os.path.join(devtools_dir,'build_docs.py')])        
-
-        try:
-            archive = tarfile.open(os.path.join(topdir,'docs','docs.tar.gz'), 'w:gz')
-	    os.chdir(os.path.join(topdir, 'docs', '_build'))	
-            archive.add('html')
-            archive.close()
-        finally:
-            os.chdir(startdir)
-
-        # put the docs on the server and untar them
-        put(os.path.join(topdir,'docs', 'docs.tar.gz'), '~/downloads/dev_docs/docs.tar.gz') 
-        with cd('~/downloads/dev_docs'):
-            run('tar xzf docs.tar.gz')
-            run('mv html/* ~/downloads/dev_docs')
-	    run('rm -rf html')
-            run('rm -f docs.tar.gz')
- 
-    finally:
-        cmd="rm -rf " + os.path.join(topdir,'docs','docs.tar.gz')
-        local(cmd)
-   
-@hosts('openmdao@web103.webfaction.com')
-def update_dev_docs():
-    _update_dev_docs()
-""" 
-
-
-
-
-
-
-
-
-
-
-

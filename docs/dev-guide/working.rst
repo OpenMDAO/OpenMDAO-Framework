@@ -39,10 +39,18 @@ project will have a much easier time merging in your changes. And remember, in
 *git*, creating branches is cheap and quick, so there's no need to worry about
 creating lots of branches.
 
-.. note:: Make sure to check which branch you're on whenever you create a new
-     branch.  Creating a branch off of the wrong branch can bring in unexpected
-     changes and generally cause confusion.
-   
+Make sure to check which branch you're on whenever you create a new branch.
+Branching from the wrong starting branch can bring in unexpected changes and
+generally cause confusion. Also, if the branch you're branching from is
+mirroring a remote branch, make sure to bring it up to date with the remote
+branch *before* you create your new branch. In most cases you should
+from *dev*.  In that case you would do the following:
+
+::
+
+   git checkout dev
+   git pull origin dev
+   git checkout -b <my_new_branch>
 
 
 .. _Creating-the-Virtual-Environment:
