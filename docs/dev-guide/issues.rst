@@ -24,7 +24,7 @@ To create a GitHub issue, follow these steps:
     .. figure:: create_issue.png
        :align: center
  
-       Creating a Issue on Github
+       Creating a Issue on GitHub
     
 |
     

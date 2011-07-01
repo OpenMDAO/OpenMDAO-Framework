@@ -187,9 +187,9 @@ Glossary
         was developed and is actively maintained by Christian S. Perone.) 
 
       **Git**
-        A version control system.
+        An open source distributed version control system.
 
-      **Github**
+      **GitHub**
         A web community where projects using the *git* version control system are
         located.
 

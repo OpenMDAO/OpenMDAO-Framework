@@ -20,11 +20,11 @@ the :ref:`System-Requirements` section under *Getting Started.*  These requireme
 below.
 
 
-**git**
-  We use git for version control.  You'll need it to access the OpenMDAO
-  source repository.  Github, where our source repository is stored, has
-  excellent documentation describing how to install git and how to get
-  familiar with git and github.  You can find it `here`__.
+**Git**
+  We use Git for version control.  You'll need it to access the OpenMDAO
+  source repository.  GitHub, where our source repository is stored, has
+  excellent documentation describing how to install Git and how to get
+  familiar with Git and GitHub.  You can find it `here`__.
     
 .. __: http://help.github.com
 
@@ -97,45 +97,45 @@ System Configuration
 Some steps of the development process, e.g., downloading a branch of the source repository and
 downloading Python distributions, require network access.  If you're using Linux or Mac OS X and
 are behind an http proxy, you may have to set the ``http_proxy`` environment variable on
-your system for git and :term:`virtualenv` to function properly. If you're using Windows 7,
+your system for Git and :term:`virtualenv` to function properly. If you're using Windows 7,
 please follow this 
 `link <http://answers.oreilly.com/topic/675-how-to-configure-proxy-settings-in-windows-7/>`_
 for information on configuring proxy settings.
 
 
-*Using Git and Github*
+*Using Git and GitHub*
 ++++++++++++++++++++++
 
 The source repository for the OpenMDAO project is available on
-:term:`Github`.  There is a wealth of good documentation available online 
-about :term:`git` and Github itself. The 
-`Github help page <http://help.github.com/>`_ is a good place to start.  
+:term:`GitHub`.  There is a wealth of good documentation available online 
+about :term:`Git` and GitHub. The 
+`GitHub help page <http://help.github.com/>`_ is a good place to start.  
 The `Pro Git book <http://progit.org/book/>`_ is also excellent.  It's very
-important to take a look at these, because git differs from other version
+important to take a look at these, because Git differs from other version
 control systems in some significant ways. 
 
-The first major difference is that git has a *staging area* that files must be
+The first major difference is that Git has a *staging area* that files must be
 placed in before they're committed.  Luckily the ``git commit`` command has 
 an option, ``-a``, that will eliminate this odd behavior and commit all of the
 modified files in the repository without having to stage them first. See the 
 :ref:`Commiting-changes` section for further explanation of ``git commit``.
 
-The other major difference is how branches are handled.  In git, creating a branch
+The other major difference is how branches are handled.  In Git, creating a branch
 does not create a separate copy of the repository, but instead is basically a pointer
-to a commit history within the repository. This makes git branches cheap to create. This
+to a commit history within the repository. This makes Git branches cheap to create. This
 means that you should not hesitate to make a new branch when working on something. This
 will be discussed a little more below in the :ref:`getting-the-source-code` section. 
 
 
 The following figure gives an overall view of the version control process while 
-using git and Github.
+using Git and GitHub.
 
 .. figure:: version_control.png
    :align: center
 
    Version Control Process
 
-From the OpenMDAO repository on Github, you create a personal "fork" of the 
+From the OpenMDAO repository on GitHub, you create a personal "fork" of the 
 project, so there is now a repository that you can write to.  In addition to
 creating a fork, you must also create a clone of the OpenMDAO repository on 
 your machine.  This is the repository that you will be working directly off 
@@ -148,8 +148,8 @@ must issue a pull request to have your modifications merged in.
 *Git User Setup*
 ++++++++++++++++
 
-If you have not previously used git on a particular machine where you intend
-to work with git repositories, you should follow the instructions `here`__ to
+If you have not previously used Git on a particular machine where you intend
+to work with Git repositories, you should follow the instructions `here`__ to
 set your username, email, and API token.
 
 
@@ -168,24 +168,24 @@ to a :term:`repository` on that machine.
 
 
 
-.. accessing Github::
+.. accessing GitHub::
 
-Accessing OpenMDAO on Github -- SSH Keys
+Accessing OpenMDAO on GitHub -- SSH Keys
 ++++++++++++++++++++++++++++++++++++++++
 
 The source repository for OpenMDAO is read-accessible to the public, so making
-a clone of it does not require that you have a :term:`Github`
-account. If you plan to contribute to the OpenMDAO project on Github, you will
-need to have a Github account and to register your public SSH key with that
+a clone of it does not require that you have a :term:`GitHub`
+account. If you plan to contribute to the OpenMDAO project on GitHub, you will
+need to have a GitHub account and to register your public SSH key with that
 account. The following section describes how to register your SSH key with
-Github.
+GitHub.
 
-These instructions assume that you already have a Github account. If you do
+These instructions assume that you already have a GitHub account. If you do
 not, please go to http://github.com and register for an account. Go ahead
-and log in to your Github account, since you will need to be logged in to
+and log in to your GitHub account, since you will need to be logged in to
 register your key.
 
-If you're using git on Windows, in order to follow the instructions below
+If you're using Git on Windows, to follow the instructions below
 you'll first need to create a bash terminal by running "Git --> Git Bash" from
 the Windows start menu.
 
@@ -207,14 +207,14 @@ the Windows start menu.
    OpenSSH by opening your terminal and typing: ``sudo apt-get install openssh-client``. 
 
 
-*Registering the Key with Github*
+*Registering the Key with GitHub*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You need to register and upload the *public* portion of your SSH key to Github. 
+You need to register and upload the *public* portion of your SSH key to GitHub. 
 
 1. Open your public key in a text editor and copy its contents to your clipboard. The public key
    file has the extension ``.pub``; for example:  ``id_rsa.pub`` 
-2. You must be logged into Github for this step. Go to *Account Settings --> SSH Public Keys*, 
+2. You must be logged into GitHub for this step. Go to *Account Settings --> SSH Public Keys*, 
    then click on *Add another public key*.
 3. Enter a name into the *Title* text field to remind you which machine/account you're 
    entering ssh information for.
@@ -229,7 +229,7 @@ You need to register and upload the *public* portion of your SSH key to Github.
 Getting the Source Code
 +++++++++++++++++++++++
 
-The *official* OpenMDAO-Framework repository lives on Github at
+The *official* OpenMDAO-Framework repository lives on GitHub at
 http://github.com/OpenMDAO/OpenMDAO-Framework. 
 
 
@@ -237,7 +237,7 @@ http://github.com/OpenMDAO/OpenMDAO-Framework.
 
 To create a local
 OpenMDAO-Framework repository, you need to *clone* the OpenMDAO-Framework
-repository on Github using the following command:
+repository on GitHub using the following command:
 
 ::
 
@@ -258,8 +258,8 @@ Making a Personal Fork of OpenMDAO-Framework
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you intend to make contributions to the project, you'll need to make your
-own personal fork of OpenMDAO-Framework on Github. Making your own fork is
-easy; just log into Github, go to the OpenMDAO-Framework repository page at
+own personal fork of OpenMDAO-Framework on GitHub. Making your own fork is
+easy; just log into GitHub, go to the OpenMDAO-Framework repository page at
 http://github.com/OpenMDAO/OpenMDAO-Framework, and click the *Fork* button
 near the top of the page.
 
