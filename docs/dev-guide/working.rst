@@ -204,7 +204,7 @@ the working tree in addition to being removed from the staging area.
 
 .. index:: Committing changes
 
-.. _Commiting-changes:
+.. _Committing-changes:
 
 Committing Changes 
 ------------------
@@ -415,7 +415,7 @@ merge:
 Contributing Your Changes
 -------------------------
 
-At some point you'll finish adding your new feature or implemeting your bug
+At some point you'll finish adding your new feature or implementing your bug
 fix and you'll want to get your changes into the official version of OpenMDAO.
 Here's a little checklist to go through to make sure that your update is
 actually finished:

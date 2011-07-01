@@ -82,7 +82,7 @@ below.
     - *Visual C++ 2008 (Optional)*
       
       You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it, mingw32 will work fine,
-      but if you prefer Visual C++ 2008, you're welecome to use it instead. The Express version will work, 
+      but if you prefer Visual C++ 2008, you're welcome to use it instead. The Express version will work, 
       but others (Professional, Standard) should work too. To get this software,
       go to the `downloads page <http://www.microsoft.com/express/downloads/#2008-Visual-CPP>`_.     
          
@@ -118,7 +118,7 @@ The first major difference is that Git has a *staging area* that files must be
 placed in before they're committed.  Luckily the ``git commit`` command has 
 an option, ``-a``, that will eliminate this odd behavior and commit all of the
 modified files in the repository without having to stage them first. See the 
-:ref:`Commiting-changes` section for further explanation of ``git commit``.
+:ref:`Committing-changes` section for further explanation of ``git commit``.
 
 The other major difference is how branches are handled.  In Git, creating a branch
 does not create a separate copy of the repository, but instead is basically a pointer
@@ -194,7 +194,7 @@ the Windows start menu.
 ~~~~~~~~~~~~~~~~~~~
 
 1. First, check to see if you already have an SSH key.  Look for a file called ``~/.ssh/id_rsa.pub``.
-   If the file is there, skip to the next section and learn how to register your key with Github.
+   If the file is there, skip to the next section and learn how to register your key with GitHub.
 2. You should be in your home directory on your Linux machine. At the prompt, type: 
    ``ssh-keygen -t rsa -C "your_email@youremail.com"``. 
 3. When prompted, press *Enter* to accept the default file name for your key. 
