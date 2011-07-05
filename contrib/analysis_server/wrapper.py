@@ -3,6 +3,7 @@ import sys
 import time
 import logging
 import xml.etree.cElementTree as ElementTree
+from xml.sax.saxutils import escape, quoteattr
 
 try:
     import resource
@@ -367,7 +368,7 @@ class ComponentWrapper(object):
   <WallTime>0</WallTime>
   <Command>%s</Command>
  </Process>
-</Processes>""" % command
+</Processes>""" % escape(command)
 
             else:
                 now = time.time()
@@ -384,7 +385,7 @@ class ComponentWrapper(object):
   <WallTime>%.1f</WallTime>
   <Command>%s</Command>
  </Process>
-</Processes>""" % (pid, walltime, command)
+</Processes>""" % (pid, walltime, escape(command))
 
                 else:
                     rusage = resource.getrusage(resource.RUSAGE_SELF)
@@ -407,7 +408,7 @@ class ComponentWrapper(object):
   <Command>%s</Command>
  </Process>
 </Processes>""" % (pid, os.getppid(), percent_cpu, memory, cputime, walltime,
-                   command)
+                   escape(command))
 
             self._send_reply(reply, req_id)
         except Exception as exc:
@@ -555,8 +556,9 @@ class ArrayWrapper(BaseWrapper):
     def get_as_xml(self):
         """ Return info in XML form. """
         return '<Variable name="%s" type="%s[]" io="%s" format=""' \
-               ' description="%s" units="%s">%s</Variable>' \
-               % (self._ext_name, self._typstr, self._io, self._trait.desc,
+               ' description=%s units="%s">%s</Variable>' \
+               % (self._ext_name, self._typstr, self._io,
+                  quoteattr(self._trait.desc),
                   self.get('units', self._ext_path),
                   self.get('value', self._ext_path))
 
@@ -624,8 +626,8 @@ class BoolWrapper(BaseWrapper):
     def get_as_xml(self):
         """ Return info in XML form. """
         return '<Variable name="%s" type="boolean" io="%s" format=""' \
-               ' description="%s">%s</Variable>' \
-               % (self._ext_name, self._io, self._trait.desc,
+               ' description=%s>%s</Variable>' \
+               % (self._ext_name, self._io, quoteattr(self._trait.desc),
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr):
@@ -741,10 +743,10 @@ class EnumWrapper(BaseWrapper):
         else:
             typstr = 'string'
         return '<Variable name="%s" type="%s" io="%s" format=""' \
-               ' description="%s" units="%s">%s</Variable>' \
-               % (self._ext_name, typstr, self._io, self._trait.desc,
+               ' description=%s units="%s">%s</Variable>' \
+               % (self._ext_name, typstr, self._io, quoteattr(self._trait.desc),
                   self.get('units', self._ext_path),
-                  self.get('value', self._ext_path))
+                  escape(self.get('value', self._ext_path)))
 
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr`. """
@@ -847,11 +849,11 @@ class FileWrapper(BaseWrapper):
 
     def get_as_xml(self):
         """ Return info in XML form. """
-        return '<Variable name="%s" type="file" io="%s" description="%s"'\
+        return '<Variable name="%s" type="file" io="%s" description=%s' \
                ' isBinary="%s" fileName="">%s</Variable>' \
-               % (self._ext_name, self._io, self._trait.desc,
+               % (self._ext_name, self._io, quoteattr(self._trait.desc),
                   self.get('isBinary', self._ext_path),
-                  self.get('value', self._ext_path))
+                  escape(self.get('value', self._ext_path)))
 
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr`. """
@@ -928,8 +930,8 @@ class FloatWrapper(BaseWrapper):
     def get_as_xml(self):
         """ Return info in XML form. """
         return '<Variable name="%s" type="double" io="%s" format=""' \
-               ' description="%s" units="%s">%s</Variable>' \
-               % (self._ext_name, self._io, self._trait.desc,
+               ' description=%s units="%s">%s</Variable>' \
+               % (self._ext_name, self._io, quoteattr(self._trait.desc),
                   self.get('units', self._ext_path),
                   self.get('value', self._ext_path))
 
@@ -993,8 +995,8 @@ class IntWrapper(BaseWrapper):
     def get_as_xml(self):
         """ Return info in XML form. """
         return '<Variable name="%s" type="long" io="%s" format=""' \
-               ' description="%s">%s</Variable>' \
-               % (self._ext_name, self._io, self._trait.desc,
+               ' description=%s>%s</Variable>' \
+               % (self._ext_name, self._io, quoteattr(self._trait.desc),
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr):
@@ -1046,9 +1048,9 @@ class StrWrapper(BaseWrapper):
     def get_as_xml(self):
         """ Return info in XML form. """
         return '<Variable name="%s" type="string" io="%s" format=""' \
-               ' description="%s">%s</Variable>' \
-               % (self._ext_name, self._io, self._trait.desc,
-                  self.get('value', self._ext_path))
+               ' description=%s>%s</Variable>' \
+               % (self._ext_name, self._io, quoteattr(self._trait.desc),
+                  escape(self.get('value', self._ext_path)))
 
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr`. """

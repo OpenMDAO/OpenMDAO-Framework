@@ -68,6 +68,7 @@ if sys.platform != 'win32':
     import pwd
 
 from distutils.version import LooseVersion
+from xml.sax.saxutils import escape
 
 from openmdao.main.api import Component, Container, set_as_top
 from openmdao.main.mp_util import read_allowed_hosts
@@ -183,7 +184,8 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                 raise RuntimeError("No %s section in %r" % (sect, path))
 
         cwd = os.getcwd()
-        if config.has_option('Python', 'egg'):
+        # This will be exercised by test_client.py:test_publish().
+        if config.has_option('Python', 'egg'):  # pragma no cover
             # Create temporary instance from egg.
             egg = config.get('Python', 'egg')
             obj = Container.load_from_eggfile(egg)
@@ -372,34 +374,34 @@ version: 0.1""")
         for name in self._instance_map.keys():
             self.__end(name)
 
-    def _get_component(self, typ):
-        """ Return '(cls, cfg)' for `typ`. """
+    def _get_component(self, typ, ascending=False):
+        """
+        Return list of '(cls, cfg)' for `typ`.
+        If `ascending`, sort in ascending version order, else descending.
+        """
         typ = typ.strip('"').lstrip('/')
         name, qmark, version = typ.partition('?')
         if version:
             name = '%s-%s' % (name, version)
             try:
-                return self.server.components[name]
+                return [self.server.components[name]]
             except KeyError:
                 pass
         else:
             prefix = '%s-' % name
-            latest = None
-            for key in self.server.components:
-                if key.startswith(prefix):
-                    key_version = LooseVersion(key)
-                    if latest is None or key_version > latest_version:
-                        latest = key
-                        latest_version = key_version
-                        
-            if latest is not None:
-                return self.server.components[latest]
+            keys = [key for key in self.server.components
+                                if key.startswith(prefix)]
+            if keys:
+                reverse = not ascending
+                keys = sorted(keys, key=lambda key: LooseVersion(key),
+                              reverse=reverse)
+                return [self.server.components[key] for key in keys]
 
         if not '/' in typ:  # Just to match real AnalysisServer.
             typ = '/'+typ
         self._send_error('component <%s> does not match a known component'
                          % typ)
-        return (None, None)
+        return []
 
     def _get_wrapper(self, name, background=False):
         """
@@ -479,40 +481,14 @@ version: 0.1""")
                              'describe,d <category/component> [-xml]')
             return
 
-        # Check for version info.
-        typ = args[0].strip('"').lstrip('/')
-        name, qmark, version = typ.partition('?')
-        has_version_info = None
-        if version:
-            name = '%s-%s' % (name, version)
-            if name in self.server.components:
-                has_version_info = 'false'  # Single version.
-                cls, cfg = self.server.components[name]
-        else:
-            prefix = '%s-' % name
-            latest = None
-            for key in self.server.components:
-                if key.startswith(prefix):
-                    if has_version_info is None:
-                        has_version_info = 'false'  # One match so far.
-                    else:
-                        has_version_info = 'true'   # At least two.
-                    key_version = LooseVersion(key)
-                    if latest is None or key_version > latest_version:
-                        latest = key
-                        latest_version = key_version
-            if latest is not None:
-                cls, cfg = self.server.components[latest]
-
-        if has_version_info is None:
-            if not '/' in typ:  # Just to match real AnalysisServer.
-                typ = '/'+typ
-            self._send_error('component <%s> does not match a known component'
-                             % typ)
+        lst = self._get_component(args[0])
+        if not lst:
             return
 
+        cls, cfg = lst[0]
+        has_version_info = 'true' if len(lst) > 1 else 'false'
+
         if len(args) > 1 and args[1] == '-xml':
-# FIXME: arbitrary strings could invalidate XML.
             self._send_reply("""\
 <Description>
  <Version>%s</Version>
@@ -525,10 +501,10 @@ version: 0.1""")
  <Requirements>%s</Requirements>
  <hasIcon>%s</hasIcon>
  <HasVersionInfo>%s</HasVersionInfo>
-</Description>""" % (cfg.version, cfg.author, cfg.description, cfg.help_url,
-                     ' '.join(cfg.keywords), cfg.timestamp, cfg.checksum,
-                     ' '.join(cfg.requirements), str(cfg.has_icon).lower(),
-                     has_version_info))
+</Description>""" % (cfg.version, escape(cfg.author), escape(cfg.description),
+                     cfg.help_url, ' '.join(cfg.keywords), cfg.timestamp,
+                     cfg.checksum, escape(' '.join(cfg.requirements)),
+                     str(cfg.has_icon).lower(), has_version_info))
         else:
             self._send_reply("""\
 Version: %s
@@ -663,8 +639,8 @@ Object %s ended.""" % (name, name))
                              'getIcon <analysisComponent>')
             return
 
-        cls, cfg = self._get_component(args[0])
-        if cfg is None:
+        lst = self._get_component(args[0])
+        if not lst:
             return
 
         raise NotImplementedError('getIcon')
@@ -1086,7 +1062,8 @@ Available Commands:
     _COMMANDS['ps'] = _ps
 
 
-    def _publish_egg(self, args):
+    # This will be exercised by test_client.py:test_publish().
+    def _publish_egg(self, args):  # pragma no cover
         """
         Receive an egg file and publish it.
         This is an extension to the AnalysisServer protocol.
@@ -1220,9 +1197,10 @@ egg: %s
                              'start <category/component> <instanceName>')
             return
 
-        cls, cfg = self._get_component(args[0])
-        if cls is None:
+        lst = self._get_component(args[0])
+        if not lst:
             return
+        cls, cfg = lst[0]
 
         name = args[1]
         if name in self._instance_map:
@@ -1296,31 +1274,19 @@ egg: %s
                              'versions,v category/component')
             return
 
-        typ = args[0].strip('"').lstrip('/')
-        prefix = '%s-' % typ
-        versions = []
-        for key in self.server.components:
-            if key.startswith(prefix):
-                versions.append(key)
+        lst = self._get_component(args[0], ascending=True)
+        if not lst:
+            return
 
-        if versions:
-            xml = ["<Branch name='HEAD'>"]
-            for version in sorted(versions, key=lambda ver: LooseVersion(ver)):
-                category, slash, component = version.rpartition('/')
-                name, dash, ver = version.partition('-')
-                cls, cfg = self.server.components[version]
-                xml.append(" <Version name='%s'>" % ver)
-                xml.append("  <author>%s</author>" % cfg.author)
-                xml.append("  <date>%s</date>" % cfg.timestamp)
-                xml.append("  <description>%s</description>" % cfg.comment)
-                xml.append(" </Version>")
-            xml.append("</Branch>")
-            self._send_reply('\n'.join(xml))
-        else:
-            if not '/' in typ:  # Just to match real AnalysisServer.
-                typ = '/'+typ
-            self._send_error('component <%s> does not match a known component' \
-                             % typ)
+        xml = ["<Branch name='HEAD'>"]
+        for cls, cfg in lst:
+            xml.append(" <Version name='%s'>" % cfg.version)
+            xml.append("  <author>%s</author>" % escape(cfg.author))
+            xml.append("  <date>%s</date>" % cfg.timestamp)
+            xml.append("  <description>%s</description>" % escape(cfg.comment))
+            xml.append(" </Version>")
+        xml.append("</Branch>")
+        self._send_reply('\n'.join(xml))
 
     _COMMANDS['versions'] = _versions
     _COMMANDS['v'] = _versions

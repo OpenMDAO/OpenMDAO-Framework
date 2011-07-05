@@ -74,7 +74,7 @@ class TestCase(unittest.TestCase):
         """ Called before each test. """
         os.chdir(TestCase.directory)
         self.client = DummySocket()
-        self.server = Server()
+        self.server = Server(port=0)
         self.handler = _Handler(self.client, self.client.getpeername(),
                                 self.server)
         self.handler.setup()
@@ -136,6 +136,10 @@ class TestCase(unittest.TestCase):
         replies = self.send_recv('describe NoSuchComp')
         self.assertEqual(replies[-1],
                          'ERROR: component </NoSuchComp>'
+                         ' does not match a known component\r\n>')
+        replies = self.send_recv('describe NoSuchComp?1')
+        self.assertEqual(replies[-1],
+                         'ERROR: component </NoSuchComp?1>'
                          ' does not match a known component\r\n>')
 
         replies = self.send_recv('execute froboz')
@@ -204,41 +208,55 @@ class TestCase(unittest.TestCase):
 
     def test_describe(self):
         timestamp = time.ctime(os.path.getmtime('ASTestComp-0.2.cfg'))
-        expected = """\
+        reply = """\
 Version: 0.2
-Author: anonymous
+Author: anonymous  ( & < > )
 hasIcon: false
 Description: Component for testing AnalysisServer functionality.
+An additional description line.  ( & < > )
 Help URL: 
 Keywords: 
 Driver: false
 Time Stamp: %s
 Requirements: 
-HasVersionInfo: true
-Checksum: 0""" % timestamp
-        expected = expected.replace('\n', '\r\n') + '\r\n>'
+HasVersionInfo: %s
+Checksum: 0"""
+        reply = reply.replace('\n', '\r\n') + '\r\n>'
+
+        expected = reply % (timestamp, 'true')
         replies = self.send_recv('describe ASTestComp')
         self.compare(replies[-1], expected)
         replies = self.send_recv('d ASTestComp')
         self.compare(replies[-1], expected)
 
-        expected = """\
+        expected = reply % (timestamp, 'false')
+        replies = self.send_recv('describe ASTestComp?0.2')
+        self.compare(replies[-1], expected)
+
+        reply = """\
 <Description>
  <Version>0.2</Version>
- <Author>anonymous</Author>
- <Description>Component for testing AnalysisServer functionality.</Description>
+ <Author>anonymous  ( &amp; &lt; &gt; )</Author>
+ <Description>Component for testing AnalysisServer functionality.
+An additional description line.  ( &amp; &lt; &gt; )</Description>
  <HelpURL></HelpURL>
  <Keywords></Keywords>
  <TimeStamp>%s</TimeStamp>
  <Checksum>0</Checksum>
  <Requirements></Requirements>
  <hasIcon>false</hasIcon>
- <HasVersionInfo>true</HasVersionInfo>
-</Description>""" % timestamp
-        expected = expected.replace('\n', '\r\n') + '\r\n>'
+ <HasVersionInfo>%s</HasVersionInfo>
+</Description>"""
+        reply = reply.replace('\n', '\r\n') + '\r\n>'
+
+        expected = reply % (timestamp, 'true')
         replies = self.send_recv('describe ASTestComp -xml')
         self.compare(replies[-1], expected)
         replies = self.send_recv('d ASTestComp -xml')
+        self.compare(replies[-1], expected)
+
+        expected = reply % (timestamp, 'false')
+        replies = self.send_recv('describe ASTestComp?0.2 -xml')
         self.compare(replies[-1], expected)
 
         replies = self.send_recv('describe')
@@ -337,7 +355,7 @@ Checksum: 0""" % timestamp
 <Variable name="i" type="long" io="input" format="" description="An int">7</Variable>
 <Variable name="i1d" type="long[]" io="input" format="" description="1D int array" units="">1, 2, 3, 4, 5, 6, 7, 8, 9</Variable>
 <Variable name="ie" type="long" io="input" format="" description="Int enum" units="">9</Variable>
-<Variable name="s" type="string" io="input" format="" description="A string">Hello World!</Variable>
+<Variable name="s" type="string" io="input" format="" description="A string">Hello World!  ( &amp; &lt; &gt; )</Variable>
 <Variable name="se" type="string" io="input" format="" description="Str enum" units="">cold</Variable>
 </Group>
 <Variable name="x" type="double" io="input" format="" description="X input" units="">2</Variable>
@@ -969,9 +987,9 @@ ASTestComp2"""
   <description>Initial version.</description>
  </Version>
  <Version name='0.2'>
-  <author>anonymous</author>
+  <author>anonymous  ( &amp; &lt; &gt; )</author>
   <date>%s</date>
-  <description>Added in_file explicitly.</description>
+  <description>Added in_file explicitly.  ( &amp; &lt; &gt; )</description>
  </Version>
 </Branch>""" % (tstamp1, tstamp2)
         expected = expected.replace('\n', '\r\n') + '\r\n>'
@@ -1399,7 +1417,7 @@ valueStr (type=java.lang.String) (access=g)"""
     def test_str(self):
         replies = self.send_recv(['start ASTestComp comp',
                                   'get comp.sub_group.s'], count=3)
-        self.assertEqual(replies[-1], 'Hello World!\r\n>')
+        self.assertEqual(replies[-1], 'Hello World!  ( & < > )\r\n>')
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'set comp.sub_group.s = xyzzy',

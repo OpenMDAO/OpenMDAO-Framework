@@ -64,7 +64,8 @@ class SubGroup(Container):
     b = Bool(iotype='in', default_value=True, desc='A boolean')
     f = Float(iotype='in', default_value=0.5, desc='A float')
     i = Int(iotype='in', default_value=7, desc='An int')
-    s = Str(iotype='in', default_value='Hello World!', desc='A string')
+    s = Str(iotype='in', default_value='Hello World!  ( & < > )',
+            desc='A string')
 
     fe = Enum(iotype='in', values=(2.781828, 3.14159),
                            aliases=('e', 'pi'), desc='Float enum', units='m')

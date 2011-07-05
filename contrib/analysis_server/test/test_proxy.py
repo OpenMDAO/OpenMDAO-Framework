@@ -249,7 +249,7 @@ class TestCase(unittest.TestCase):
 
     def test_str(self):
         comp = self.factory.create('ASTestComp')
-        self.assertEqual(comp.get('sub_group.s'), 'Hello World!')
+        self.assertEqual(comp.get('sub_group.s'), 'Hello World!  ( & < > )')
         comp.set('sub_group.s', 'xyzzy')
         self.assertEqual(comp.sub_group.s, 'xyzzy')
         comp.sub_group.s = 'froboz'

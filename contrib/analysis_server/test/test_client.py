@@ -46,9 +46,9 @@ class TestCase(unittest.TestCase):
     def test_describe(self):
         expected = {
             'Version': '0.2',
-            'Author': 'anonymous',
+            'Author': 'anonymous  ( & < > )',
             'hasIcon': 'false',
-            'Description': 'Component for testing AnalysisServer functionality.',
+            'Description': 'Component for testing AnalysisServer functionality.\nAn additional description line.  ( & < > )',
             'Help URL': '',
             'Keywords': '',
             'Driver': 'false',

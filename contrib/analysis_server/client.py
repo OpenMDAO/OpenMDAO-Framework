@@ -84,9 +84,16 @@ class Client(object):
         """
         reply = self._send_recv('describe %s' % path)
         dct = {}
-        for line in reply.split('\n'):
+        lines = reply.split('\n')
+        prev = None
+        while lines:
+            line = lines.pop(0)
             name, colon, value = line.partition(':')
-            dct[name.strip()] = value.strip()
+            if colon:
+                prev = name.strip()
+                dct[prev] = value.strip()
+            else:  # Additional line for previous entry.
+                dct[prev] += '\n%s' % name.strip()
         return dct
 
     def end(self, name):
