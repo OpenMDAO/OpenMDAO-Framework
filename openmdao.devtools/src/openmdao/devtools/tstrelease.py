@@ -13,10 +13,19 @@ import paramiko.util
 
 paramiko.util.log_to_file('paramiko.log')
 
-#----------------------------------------------------------------------------------
-# Part of script needed to test releases
-# This will only be run from storm, since the release script is always run from storm
-# Run this from the scripts directory
+def check_openmdao_version(version, home='~', host='openmdao@web103.webfaction.com'):
+    """Checks to see if the specified version of openmdao already exists on
+    the specified server.
+    """
+    # TODO: make this smarter.  maybe have it grab the latest version via pkg_resources
+    # or packaging and see if it's the same or newer then the specified version
+    with settings(hide('running', 'stdout'), host_string=host):
+        result = run('ls %s/downloads' % home)
+    lst = [x.strip() for x in result.split('\n')]
+    if version in lst:
+        raise _VersionError('Version %s already exists. Please specify a different version' % version)
+    return version
+
 def _getrelease(site_url, version):
     """Grabs the specified openmdao release installer script from the specified 
     website, so it can be tested on our dev platforms. The script will be placed in
@@ -27,19 +36,12 @@ def _getrelease(site_url, version):
     try:  
         resp = urllib2.urlopen(script_url)
     except IOError, e:
-        if hasattr(e, 'reason'):
-            print 'We failed to reach the server'
-            print 'Reason: ', e.reason
-        if hasattr(e, 'code'):
-            print 'We failed to reach a server'
-            print 'Error code: ', e.code
+        print str(e)
         sys.exit()
     else:
         gofile = open('go-openmdao.py', 'wb')
         shutil.copyfileobj(resp.fp, gofile)
         gofile.close()
-        #print resp.code
-        #print resp.headers["content-type"]
 
 
 def _testrelease(site_url, version, host):

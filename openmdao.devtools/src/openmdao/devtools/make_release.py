@@ -34,6 +34,132 @@ def _check_version(version, home):
     return version
 
 
+def tar_dir(dirpath, archive_name, destdir):
+    """Tar up the given directory and put in in the specified destination
+    directory.
+    """
+    startdir = os.getcwd()
+    os.chdir(os.path.dirname(dirpath))
+    try:
+        archive = tarfile.open(os.path.join(destdir,'%s.tar.gz' % archive_name), 'w:gz')
+        archive.add(os.path.basename(dirpath))
+        archive.close()
+    finally:
+        os.chdir(startdir)
+
+def get_platform():
+    """Returns the platform string of the current active host."""
+    with hide('running', 'stdout'):
+        return run('python -c "import sys; print sys.platform"')
+
+def check_setuptools(py):
+    """Return True if setuptools is installed on the remote host"""
+    try:
+        with hide('everything'):
+            return run('%s -c "import setuptools"' % py)
+    except:
+        return False
+    return True
+
+def host_call(host, func, *args, **kwargs):
+    """Calls the given function inside of a 'with' block that
+    sets the host.
+    """
+    with settings(host_string=host):
+        func(*args, **kwargs)
+        
+def py_cmd(cmds):
+    for cmd in cmds:
+        if '"' in cmd:
+            raise ValueError("use single quotes for strings in commands")
+    return 'python -c "' + ';'.join(cmds) + '"'
+
+def remote_untar(tarfile):
+    """Use internal python tar package to untar a file in the current remote
+    directory instead of assuming that tar exists on the remote machine.
+    """
+    cmds = [ "import tarfile",
+             "tar = tarfile.open('%s')" % tarfile,
+             "tar.extractall()",
+             "tar.close()",
+             ]
+    run(py_cmd(cmds))
+    
+def get_plat_spec_cmds():
+    plat = get_platform()
+    if plat.startswith('win'):
+        mover = 'move'
+        remover = 'del'
+        lister = 'dir /B'
+    else:
+        mover = 'mv'
+        remover = 'rm -f'
+        lister = 'ls -1'
+    return mover, remover, lister
+        
+def put_untar(local_path, remote_dir=None, renames=()):
+    """Put the given tarfile on the current active host and untar it in the
+    specified place. If remote_dir is not specified, a temp directory will 
+    be created and used. If renames is not empty, it should contain tuples
+    of the form (oldname, newname), and each file or dir named oldname will
+    be renamed to newname.  oldname and newname should be relative to the
+    top of the untarred archive.
+    
+    Returns the remote directory where the file was untarred.
+    """
+    tarname = os.path.basename(local_path)
+    mover, remover, lister = get_plat_spec_cmds()
+    
+    if remote_dir is None:
+        remote_dir = run('python -c "import tempfile; print tempfile.mkdtemp()"').strip()
+
+    print os.path.isfile(local_path)
+    
+    abstarname = os.path.join(remote_dir, tarname)
+    put(local_path, abstarname)
+    with cd(remote_dir):
+        remote_untar(tarname)
+        for oldname, newname in renames:
+            run('%s %s %s' % (mover, oldname.strip(['/','\\']), 
+                              newname.strip(['/','\\'])))
+    run('%s %s' % (remover, abstarname))
+    return remote_dir
+
+
+def put_dir(dirpath, archive_name=None, remote_tmp=None):
+    """Tar the specified directory, upload it to the current active
+    host, untar it, and perform renaming if necessary.
+    
+    Returns the remote directory where the directory was untarred.
+    """
+    if archive_name is None:
+        archive_name = os.path.basename(dirpath)
+    tmpdir = tempfile.mkdtemp()
+    tar_dir(dirpath, archive_name, tmpdir)
+    tarpath = os.path.join(tmpdir, "%s.tar.gz" % archive_name)
+    remotedir = put_untar(tarpath)
+    shutil.rmtree(tmpdir)
+    return remotedir
+    
+    
+def remote_build(distdir, destdir, build_type='bdist_egg',
+                 pyversion=None):
+    """Take the python distribution in the given directory, tar it up,
+    ship it over to host, build it, and bring it back, placing it
+    in the specified destination directory.
+    """
+    distdir = os.path.abspath(distdir)
+    if pyversion is None:
+        pyversion = sys.version_info[:2]
+    remotedir = put_dir(distdir)
+    whichpy = 'python%d.%d' % pyversion
+    pkgname = os.path.basename(distdir)
+    if check_setuptools(whichpy) == False:
+        print "remote host has no setuptools"
+        return
+    with cd(os.path.join(remotedir, pkgname)):
+        run("%s setup.py %s" % (whichpy, build_type))
+    
 def _release(host, version=None, is_local=True, home=None, url=TEST_URL):
     """Creates source distributions, docs, binary eggs, and install script for 
     the current openmdao namespace packages and puts them on a local test server.  After
@@ -52,8 +178,6 @@ def _release(host, version=None, is_local=True, home=None, url=TEST_URL):
 
     dist_dir = os.path.dirname(os.path.dirname(__file__))
     scripts_dir = os.path.join(dist_dir, 'scripts')
-    doc_dir = os.path.join(dist_dir, 'docs')
-    util_dir = os.path.join(dist_dir,'openmdao.util','src','openmdao','util')
     tmpdir = tempfile.mkdtemp()
     startdir = os.getcwd()
     with settings(host_string=host):    
@@ -67,13 +191,7 @@ def _release(host, version=None, is_local=True, home=None, url=TEST_URL):
                   ' --version=%s %s -d %s' % (version, teststr, tmpdir), capture=False)
         
             # tar up the docs so we can upload them to the test server
-            os.chdir(os.path.join(tmpdir, '_build'))
-            try:
-                archive = tarfile.open(os.path.join(tmpdir,'docs.tar.gz'), 'w:gz')
-                archive.add('html')
-                archive.close()
-            finally:
-                os.chdir(startdir)
+            tar_dir(os.path.join(tmpdir, '_build','html'), 'docs', tmpdir)
         
             run('mkdir %s/downloads/%s' % (home, version))
             run('chmod 755 %s/downloads/%s' % (home, version))
@@ -95,12 +213,9 @@ def _release(host, version=None, is_local=True, home=None, url=TEST_URL):
                 '%s/downloads/%s/go-openmdao.py' % (home, version),
                 mode=0755)
 
-            # put the docs on the test server and untar them
-            put(os.path.join(tmpdir,'docs.tar.gz'), '%s/downloads/%s/docs.tar.gz' % (home, version)) 
-            with cd('%s/downloads/%s' % (home, version)):
-                run('tar xzf docs.tar.gz')
-                run('mv html docs')
-                run('rm -f docs.tar.gz')
+            ## put the docs on the test server and untar them
+            #put_tar(os.path.join(tmpdir,'docs.tar.gz'), 
+                    #'%s/downloads/%s' % (home, version), renames=['html','docs'])
 
             put(os.path.join(scripts_dir,'mkdlversionindex.py'), 
                 '%s/downloads/%s/mkdlversionindex.py' % (home, version))

@@ -217,9 +217,6 @@ def main():
             if pkgtype == 'bdist_egg':
                 _build_bdist_egg(pdir, destdir)
             
-        #print 'building openmdao'
-        #_create_pseudo_egg(options.version, destdir)
-        
         print 'exporting archive of repository to %s' % tarname
         check_call(['git', 'archive', '-o', tarname, 'HEAD'])
     

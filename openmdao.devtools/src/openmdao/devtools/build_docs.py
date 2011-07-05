@@ -32,14 +32,10 @@ def get_revision():
     try:
         p = Popen('git describe --always --tags', 
                   stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
-        out = p.communicate()[0]
-        ret = p.returncode
+        return p.communicate()[0].strip()
     except:
         return '<unknown_commit>'
-    else:
-        return out.strip()
 
-# set all of our global configuration parameters
 def _get_dirnames():
     bindir = os.path.dirname(sys.executable)
     branchdir = os.path.dirname(os.path.dirname(bindir))
