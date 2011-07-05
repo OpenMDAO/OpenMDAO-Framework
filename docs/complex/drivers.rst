@@ -20,7 +20,7 @@ called CONMINdriver was used to optimize the Paraboloid problem. Similarly, the 
 that perform these tests have been implemented as OpenMDAO drivers that can be found
 in ``driving_sim.py``. These drivers contain OpenMDAO variables where you can specify
 the connections to the vehicle component that we developed in the previous section.
-Specifically, in order to drive the Vehicle assembly, the simulation driver needs to
+Specifically, to drive the Vehicle assembly, the simulation driver needs to
 be able to set the velocity, throttle, and gear positions. Likewise, it also needs to
 be able to read variables from the vehicle component. For the acceleration test, the
 vehicle's instantaneous acceleration is needed, and for the economy test, both the 
