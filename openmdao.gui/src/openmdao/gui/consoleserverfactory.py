@@ -267,33 +267,31 @@ class ConsoleServer(cmd.Cmd):
         else:
             return {}
             
-    def _get_workflow(self,asm):
+    def _get_workflow(self,drvr):
         """ get the driver info and the list of components that make up the
             driver's workflow, recurse on nested drivers
         """
         ret = {}
-        ret['pathname'] = asm.get_pathname()
-        ret['type'] = type(asm).__module__+'.'+type(asm).__name__ 
-        
-        if asm.driver:
-            ret['driver'] = { 
-                'pathname': asm.driver.get_pathname(),
-                'type':     type(asm.driver).__module__+'.'+type(asm.driver).__name__,
-            }
-            ret['workflow'] = []
-            for comp in asm.driver.iteration_set():
-                if isinstance(comp,Assembly) and comp.driver:
-                    ret['workflow'].append(self._get_workflow(comp))
-                else:
-                    ret['workflow'].append({ 
-                        'pathname': comp.get_pathname(),
-                        'type':     type(comp).__module__+'.'+type(comp).__name__,
-                    })
+        ret['pathname'] = drvr.get_pathname()
+        ret['type'] = type(drvr).__module__+'.'+type(drvr).__name__ 
+        ret['workflow'] = []
+        for comp in drvr.iteration_set():
+            if isinstance(comp,Assembly) and comp.driver:
+                ret['workflow'].append({ 
+                    'pathname': comp.get_pathname(),
+                    'type':     type(comp).__module__+'.'+type(comp).__name__,
+                    'driver':   self._get_workflow(comp.driver)
+                })
+            else:
+                ret['workflow'].append({ 
+                    'pathname': comp.get_pathname(),
+                    'type':     type(comp).__module__+'.'+type(comp).__name__,
+                })
         return ret
 
     def get_workflow(self):
         if self.top:
-            return self._get_workflow(self.top)
+            return self._get_workflow(self.top.driver)
         else:
             return {}
 
