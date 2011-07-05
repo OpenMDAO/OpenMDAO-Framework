@@ -20,8 +20,12 @@ openmdao.ComponentFigure=function(myModel,pathname,type){
     this.originalHeight=-1;
     
     var tok = pathname.split('.')
-    if (tok.length > 1)
-        this.name = tok[tok.length-1]
+    if (tok.length > 1) {
+        this.name = tok[tok.length-1];
+        if (this.name === 'driver') {
+            this.name = tok[tok.length-2] + '.' + this.name
+        }
+    }
     else
         this.name = pathname
     this.setTitle(this.name)

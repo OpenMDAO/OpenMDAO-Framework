@@ -1,5 +1,4 @@
 openmdao.WorkflowFigure=function(myModel,pathname,type){
-    debug.info('WorkflowFigure',pathname,type)
     this.myModel = myModel;
     this.pathname = pathname;
     this.type = type;
