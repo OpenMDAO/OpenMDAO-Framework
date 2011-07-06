@@ -315,7 +315,7 @@ for it called *myfork*.
 
 ::
 
-   git remote add myfork https://userid@github.com/userid/OpenMDAO-Framework.git
+   git remote add myfork http://userid@github.com/userid/OpenMDAO-Framework.git
    
 where *userid* is your Github userid.
 
