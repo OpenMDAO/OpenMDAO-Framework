@@ -315,10 +315,10 @@ for it called *myfork*.
 
 ::
 
-   git remote add myfork git@github.com:userid/OpenMDAO-Framework.git
+   git remote add myfork http://userid@github.com/userid/OpenMDAO-Framework.git
    
-   
-where *userid* is your GitHub userid. 
+where *userid* is your Github userid.
+
 
 Using the ``git remote`` command with no arguments will give a list of
 the remotes that you currently reference in your repository.
