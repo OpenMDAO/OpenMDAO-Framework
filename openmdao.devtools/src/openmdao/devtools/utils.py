@@ -24,6 +24,7 @@ def check_openmdao_version(version, home='~'):
         raise _VersionError('Version %s already exists. Please specify a different version' % version)
     return version
 
+
 def tar_dir(dirpath, archive_name, destdir):
     """Tar up the given directory and put in in the specified destination
     directory.

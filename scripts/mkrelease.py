@@ -41,6 +41,14 @@ def get_git_log_info(fmt):
     else:
         return out.strip()
 
+def get_branch():
+    p = Popen('git branch', 
+              stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+    brlist = [b.strip() for b in p.communicate()[0].split('\n')]
+    for b in brlist:
+        if b.startswith('*'):
+            return b[2:]
+    return ''
 
 def get_releaseinfo_str(version):
     """Creates the content of the releaseinfo.py files"""
@@ -158,7 +166,7 @@ def main():
     parser = OptionParser()
     parser.add_option("-d", "--destination", action="store", type="string", dest="destdir",
                       help="directory where distributions will be placed")
-    parser.add_option("--url", action="store", type='string', dest="url",
+    parser.add_option("--disturl", action="store", type='string', dest="disturl",
                       default=PRODUCTION_DISTS_URL,
                       help="if not equal to the url for openmdao production distributions "
                            "(%s), "
@@ -174,13 +182,31 @@ def main():
         parser.print_help()
         sys.exit(-1)
         
-    if options.url == PRODUCTION_DISTS_URL:
-        if _has_checkouts():
-            answer = raw_input('There are uncommitted changes. Do you want to continue with the release? (Y/N) ')
-            answer = answer.lower().strip()
-            if not answer in ['y', 'yes']:
-                sys.exit(-1)
+    orig_branch = get_branch()
+    if not orig_branch:
+        print "no git branch found. aborting"
+        sys.exit(-1)
+    answer = raw_input('Your current branch is %s.  Is this correct? (Y/N) ' % orig_branch)
+    answer = answer.lower().strip()
+    if not answer in ['y', 'yes']:
+        sys.exit(-1)
+    
+    has_checkouts = _has_checkouts()
+    if has_checkouts:
+        answer = raw_input('There are uncommitted changes. Do you want to continue with the release? (Y/N) ')
+        answer = answer.lower().strip()
+        if not answer in ['y', 'yes']:
+            sys.exit(-1)
+        print "stashing current state"
+        os.system("git stash")
         
+    relbranch = "release_%s" % options.version
+    print "creating release branch"
+    os.system("git branch %s" % relbranch)
+    if has_checkouts:
+        print "applying stash to release branch"
+        os.system("git stash apply")
+    
     destdir = os.path.realpath(options.destdir)
     if not os.path.exists(destdir):
         os.makedirs(destdir)
@@ -208,7 +234,7 @@ def main():
                     '-v', options.version])
         shutil.move(os.path.join(topdir,'docs','_build'), 
                     os.path.join(destdir,'_build'))
-        if options.url == PRODUCTION_DISTS_URL:
+        if options.disturl == PRODUCTION_DISTS_URL:
             check_call(['git', 'commit', '-a', '-m', 
                         '"updating release info and sphinx config files for release %s"' % 
                         options.version])
@@ -230,17 +256,17 @@ def main():
         print 'creating bootstrapping installer script go-openmdao.py'
         installer = os.path.join(topdir, 'scripts','mkinstaller.py')
         
-        if options.url != PRODUCTION_DISTS_URL:
-            check_call([sys.executable, installer, '-t', options.url,
+        if options.disturl != PRODUCTION_DISTS_URL:
+            check_call([sys.executable, installer, '--disturl', options.disturl,
                         '--dest=%s'%destdir])
-            # roll back changes to releaseinfo.py files
-            for project_name, pdir, pkgtype in openmdao_packages:
-                pdir = os.path.join(topdir, pdir, project_name)
-                if 'src' in os.listdir(pdir):
-                    os.chdir(os.path.join(pdir, 'src'))
-                else:
-                    os.chdir(pdir)
-                rollback_releaseinfo_file(project_name, releaseinfo_str)
+            ## roll back changes to releaseinfo.py files
+            #for project_name, pdir, pkgtype in openmdao_packages:
+                #pdir = os.path.join(topdir, pdir, project_name)
+                #if 'src' in os.listdir(pdir):
+                    #os.chdir(os.path.join(pdir, 'src'))
+                #else:
+                    #os.chdir(pdir)
+                #rollback_releaseinfo_file(project_name, releaseinfo_str)
         else:
             check_call([sys.executable, installer, '--dest=%s'%destdir])
             if options.comment:
@@ -252,6 +278,8 @@ def main():
             print "tagging release with '%s'" % options.version
             check_call(['git', 'tag', '-a', options.version, '-m', comment])
     finally:
+        if has_checkouts:
+            ???
         os.chdir(startdir)
     
 if __name__ == '__main__':

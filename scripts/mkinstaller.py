@@ -40,6 +40,10 @@ openmdao_packages = [('openmdao.util', '', 'sdist'),
                      ('openmdao.examples.expected_improvement', 'examples', 'sdist'),
                     ]
 
+# if it's a dev installer, these packages will be included
+openmdao_dev_packages = [('openmdao.devtools', '', 'sdist'),
+                         ]
+
 def get_adjust_options(options, version):
     """Return a string containing the definition of the adjust_options function
     that will be included in the generated virtualenv bootstrapping script.
@@ -72,7 +76,7 @@ def adjust_options(options, args):
 def main(options):
     
     if options.dev:
-        openmdao_packages.append(('openmdao.devtools', '', 'sdist'))
+        openmdao_packages.extend(openmdao_dev_packages)
         sout = StringIO.StringIO()
         pprint.pprint(openmdao_packages, sout)
         pkgstr = sout.getvalue()
@@ -102,12 +106,6 @@ def main(options):
     else:
         make_dev_eggs = ''
         wing = ''
-
-    if options.testurl:
-        #url = 'http://torpedo.grc.nasa.gov:31004/dists'
-        url = options.testurl
-    else:
-        url = 'http://openmdao.org/dists'
 
     script_str = """
 
@@ -206,7 +204,7 @@ def after_install(options, home_dir):
     optdict = { 
         'reqs': reqs, 
         'version': version, 
-        'url': url ,
+        'url': options.disturl ,
         'make_dev_eggs': make_dev_eggs,
         'wing': wing,
         'adjust_options': get_adjust_options(options, version),
@@ -230,7 +228,8 @@ if __name__ == '__main__':
                       help="if present, a development script will be generated instead of a release script")
     parser.add_option("--dest", action="store", type="string", dest='dest', 
                       help="specify destination directory", default='.')
-    parser.add_option("-t", "--testurl", action="store", type="string", dest="testurl",
+    parser.add_option("--disturl", action="store", type="string", dest="disturl",
+                      default='http://openmdao.org/dists',
                       help="URL of a test server or a file system release area")
     
     (options, args) = parser.parse_args()
