@@ -14,7 +14,8 @@ for the project, but you can also create a new issue yourself.
 To create a GitHub issue, follow these steps:
 
 
-1.  First, log into GitHub and go to ``http://github.com/OpenMDAO/OpenMDAO-Framework/issues``. You must be logged in to create a new issue.
+1.  First, log into GitHub and go to http://github.com/OpenMDAO/OpenMDAO-Framework/issues. 
+    You must be logged in to create a new issue.
 
 2.  Select the the **New Issue** button in the upper right hand corner. 
     
@@ -23,15 +24,16 @@ To create a GitHub issue, follow these steps:
     .. figure:: create_issue.png
        :align: center
  
-       Creating a Issue on Github
+       Creating a Issue on GitHub
     
 |
     
 3.  There are two sections: a title and a comments section. Try to make the title short, but descriptive. 
     "I found a bug", is not a good tittle. Instead try something like "Problem with XXX when doing Y". 
     In the comments section you should put as much detail as you can. The more information you give, 
-    the easier it will be for someone to write code to address the issue you are reporting. You may also 
-    select a number of *lables* to attach to the issue. For instance if you are reporting a bug, you would 
+    the easier it will be for someone to write code to address the issue you are reporting.  If you
+    can supply a small snippet of code that reproduces that problem, that would be ideal. You may also 
+    select a number of *labels* to attach to the issue. For instance if you are reporting a bug, you would 
     select the *bug* label. If you have found a mistake in the documentation, then you would also attach 
     the "docs" label. You can add as many labels as you feel are relevant to the issue.   
     
@@ -49,7 +51,7 @@ issues.
     
 Start off by making a new branch for each issue you want to work. Git provides
 very light weight branches, and it's very easy to switch between them, so make
-as many as you like! Once you have th branch and write a little code, you will
+as many as you like! Once you have the branch and write a little code, you will
 want to commit it. In your commit message you should reference the number of
 the issue you're working on. To do that just put "GH-???" into your commit
 message, where the "???" is replaced by the issue number. When you do this,
@@ -59,7 +61,7 @@ and have some related code.
 
 If you have any information you want to add to the issue, you can always go
 back to GitHub and view the issue. On that page there is a place for you to
-put additional comments. Comments show up underneath the originial ticket
+put additional comments. Comments show up underneath the original ticket
 info. So scrolling down the page gives you a time history of information on
 the issue. Multiple people may comment on this issue as well, so a
 conversation might develop around the issue. These kinds of conversations are
@@ -73,9 +75,11 @@ encourages "social coding", and we hope you will make use of it!
        Viewing an existing issue.  
        
        
-When you are done with an issue, you will want to indicate that by putting "close GH-???", 
-replacing "???" with your issue number, into your commit message. Then issue a pull request 
-to the OpenMDAO team. When your pull request gets merged into the main repository, then the 
-issue will be marked as closed automatically. 
+When you are done with an issue, you will want to indicate that by putting
+"closes GH-???" or "closes #???", replacing "???" with your issue number, into
+your commit message. Then issue a pull request to the OpenMDAO team. When your
+pull request gets merged into the main repository, then the issue will be
+marked as closed automatically. If you just want your change to be associated
+with an issue without closing it, just leave off the "closes" part.
     
  
