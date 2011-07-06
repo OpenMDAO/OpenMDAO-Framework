@@ -1,7 +1,6 @@
-openmdao.WorkflowFigure=function(myModel,pathname,type){
+openmdao.WorkflowFigure=function(myModel,pathname){
     this.myModel = myModel;
     this.pathname = pathname;
-    this.type = type;
     var tok = pathname.split('.')    
     if (tok.length > 1)
         this.name = tok[tok.length-1];

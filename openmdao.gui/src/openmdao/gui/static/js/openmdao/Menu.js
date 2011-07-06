@@ -48,7 +48,7 @@ openmdao.Menu = function(id) {
                 { text: "Workflow",      onclick: "jQuery('#workflow_tab').click();" },
                 { text: "--------",      },
                 { text: "Refresh",       onclick: "model.updateListeners();" },
-                { text: "RefreshX1000",  onclick: "openmdao.Util.refreshX(1000);" }
+                //{ text: "RefreshX1000",  onclick: "openmdao.Util.refreshX(1000);" }
               ]
             },
             { text: "Tools", 
