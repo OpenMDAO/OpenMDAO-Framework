@@ -103,8 +103,9 @@ def main(options):
         make_dev_eggs = ''
         wing = ''
 
-    if options.test:
-        url = 'http://torpedo.grc.nasa.gov:31004/dists'
+    if options.testurl:
+        #url = 'http://torpedo.grc.nasa.gov:31004/dists'
+        url = options.testurl
     else:
         url = 'http://openmdao.org/dists'
 
@@ -229,8 +230,8 @@ if __name__ == '__main__':
                       help="if present, a development script will be generated instead of a release script")
     parser.add_option("--dest", action="store", type="string", dest='dest', 
                       help="specify destination directory", default='.')
-    parser.add_option("-t", "--test", action="store_true", dest="test",
-                      help="if present, generated installer will point to /OpenMDAO/release_test/dists")
+    parser.add_option("-t", "--testurl", action="store", type="string", dest="testurl",
+                      help="URL of a test server or a file system release area")
     
     (options, args) = parser.parse_args()
     
