@@ -67,6 +67,7 @@ import traceback
 if sys.platform != 'win32':
     import pwd
 
+from contextlib import contextmanager
 from distutils.version import LooseVersion
 from xml.sax.saxutils import escape
 
@@ -97,6 +98,23 @@ _DISABLE_HEARTBEAT = False  # If True, no heartbeat replies are sent.
 
 _LOGGER = logging.getLogger('aserver')
 
+_DBG_LEN = 1000  # Max length of debug log message.
+
+
+class _DictContextMgr(object):
+    """ Share `dct` among multiple threads via the 'with' statement. """
+
+    def __init__(self, dct):
+        self._dct = dct
+        self._lock = threading.Lock()
+
+    def __enter__(self):
+        self._lock.acquire()
+        return self._dct
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._lock.release()
+
 
 class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     """
@@ -114,7 +132,9 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self._allowed_hosts = allowed_hosts or ['127.0.0.1']
         self._num_clients = 0
         self._components = {}  # Maps from category/component to (cls, config)
+        self._comp_ctx = _DictContextMgr(self._components)
         self._eggs = {}        # Maps from cls to egg-info.
+        self._egg_ctx = _DictContextMgr(self._eggs)
         self.handlers = {}     # Maps from client address to handler.
         self._credentials = get_credentials()  # For PublicKey servers.
         self._root = os.getcwd()
@@ -128,8 +148,8 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
     @property
     def components(self):
-        """ Return component map. """
-        return self._components
+        """ Return component map context manager. """
+        return self._comp_ctx
 
     @property
     def credentials(self):
@@ -138,8 +158,8 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
     @property
     def eggs(self):
-        """ Return egg map. """
-        return self._eggs
+        """ Return egg map context manager. """
+        return self._egg_ctx
 
     @property
     def config_errors(self):
@@ -203,8 +223,8 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                                            'openmdao_orphans.txt')
                 with open(orphan_path, 'rU') as inp:
                     orphans = [line.strip() for line in inp.readlines()]
-                self._eggs[cls] = [os.path.join(cwd, egg),
-                                   requirements, orphans]
+                with self.eggs as eggs:
+                    eggs[cls] = [os.path.join(cwd, egg), requirements, orphans]
                 break
             else:
                 raise RuntimeError("Can't find EGG-INFO for %r" % egg)
@@ -252,7 +272,8 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         path = cfg.cfg_path[len(self._root)+1:-4]  # Drop prefix & '.cfg'
         path = path.replace('\\', '/')  # Always use '/'.
         _LOGGER.debug('    registering %s: %s.%s', path, modname, classname)
-        self._components[path] = (cls, cfg)
+        with self.components as comps:
+            comps[path] = (cls, cfg)
         obj.pre_delete()
         del obj
 
@@ -328,11 +349,11 @@ version: 0.1""")
                         text, zero, rest = req.partition('\x00')
                         if zero:
                             _LOGGER.debug('Request from %s: %r <+binary...> (id %s bg %s)',
-                                          self.client_address, text[:1000],
+                                          self.client_address, text[:_DBG_LEN],
                                           req_id, background)
                         else:
                             _LOGGER.debug('Request from %s: %r (id %s bg %s)',
-                                          self.client_address, req[:1000],
+                                          self.client_address, req[:_DBG_LEN],
                                           req_id, background)
                         self._req_id = req_id
                         self._background = background
@@ -340,7 +361,7 @@ version: 0.1""")
                         _LOGGER.debug('Waiting for request...')
                         req = self._stream.recv_request()
                         _LOGGER.debug('Request from %s: %r',
-                                      self.client_address, req[:1000])
+                                      self.client_address, req[:_DBG_LEN])
                         self._req_id = None
                         self._background = False
 
@@ -384,18 +405,19 @@ version: 0.1""")
         if version:
             name = '%s-%s' % (name, version)
             try:
-                return [self.server.components[name]]
+                with self.server.components as comps:
+                    return [comps[name]]
             except KeyError:
                 pass
         else:
             prefix = '%s-' % name
-            keys = [key for key in self.server.components
-                                if key.startswith(prefix)]
-            if keys:
-                reverse = not ascending
-                keys = sorted(keys, key=lambda key: LooseVersion(key),
-                              reverse=reverse)
-                return [self.server.components[key] for key in keys]
+            with self.server.components as comps:
+                keys = [key for key in comps if key.startswith(prefix)]
+                if keys:
+                    reverse = not ascending
+                    keys = sorted(keys, key=lambda key: LooseVersion(key),
+                                  reverse=reverse)
+                    return [comps[key] for key in keys]
 
         if not '/' in typ:  # Just to match real AnalysisServer.
             typ = '/'+typ
@@ -432,11 +454,11 @@ version: 0.1""")
             req_id = req_id or self._req_id
             text, zero, rest = reply.partition('\x00')
             if zero:
-                _LOGGER.debug('(req_id %s)\n%s\n<+binary...>', req_id, text[:1000])
+                _LOGGER.debug('(req_id %s)\n%s\n<+binary...>', req_id, text[:_DBG_LEN])
             else:
-                _LOGGER.debug('(req_id %s)\n%s', req_id, reply[:1000])
+                _LOGGER.debug('(req_id %s)\n%s', req_id, reply[:_DBG_LEN])
         else:
-            _LOGGER.debug('    %s', reply[:1000])
+            _LOGGER.debug('    %s', reply[:_DBG_LEN])
         with self._lock:
             self._stream.send_reply(reply, req_id)
 
@@ -684,6 +706,9 @@ Object %s ended.""" % (name, name))
                              'getSysInfo')
             return
 
+        with self.server.components as comps:
+            num_comps = len(comps)
+
         self._send_reply("""\
 version: 5.01
 build: 331
@@ -694,7 +719,7 @@ os arch: %s
 os version: %s
 python version: %s
 user name: %s"""
-             % (self.server.num_clients, len(self.server.components),
+             % (self.server.num_clients, num_comps,
                 platform.system(), platform.processor(),
                 platform.release(), platform.python_version(),
                 getpass.getuser()))
@@ -845,14 +870,15 @@ Available Commands:
             category = ''
 
         lines = ['']
-        for name in sorted(self.server.components.keys()):
-            if name.startswith(category):
-                name = name[len(category):]
-                slash = name.find('/')
-                if slash > 0:
-                    name = name[:slash]
-                    if name not in lines:
-                        lines.append(name)
+        with self.server.components as comps:
+            for name in sorted(comps.keys()):
+                if name.startswith(category):
+                    name = name[len(category):]
+                    slash = name.find('/')
+                    if slash > 0:
+                        name = name[:slash]
+                        if name not in lines:
+                            lines.append(name)
         lines[0] = '%d categories found:' % (len(lines)-1)
         self._send_reply('\n'.join(lines))
 
@@ -874,15 +900,16 @@ Available Commands:
         else:
             category = ''
 
-        comps = set()
-        for name in self.server.components:
-            if name.startswith(category):
-                name = name[len(category):]
-                if '/' not in name:
-                    name, dash, version = name.partition('-')
-                    comps.add(name)
-        lines = ['%d components found:' % len(comps)]
-        lines.extend(sorted(comps))
+        components = set()
+        with self.server.components as comps:
+            for name in comps:
+                if name.startswith(category):
+                    name = name[len(category):]
+                    if '/' not in name:
+                        name, dash, version = name.partition('-')
+                        components.add(name)
+        lines = ['%d components found:' % len(components)]
+        lines.extend(sorted(components))
         self._send_reply('\n'.join(lines))
 
     _COMMANDS['listComponents'] = _list_components
@@ -1207,32 +1234,34 @@ egg: %s
             self._send_error('Name already in use: "%s"' % name)
             return
 
-        if cls not in self.server.eggs:
-            # If only local host will be used, we can skip determining
-            # distributions required by the egg.
-            allocators = RAM.list_allocators()
-            need_reqs = False
-            for allocator in allocators:
-                if not isinstance(allocator, LocalAllocator):
-                    need_reqs = True
-                    break
+        with self.server.eggs as eggs:
+            if cls not in eggs:
+                # If only local host will be used, we can skip determining
+                # distributions required by the egg.
+                allocators = RAM.list_allocators()
+                need_reqs = False
+                for allocator in allocators:
+                    if not isinstance(allocator, LocalAllocator):
+                        need_reqs = True
+                        break
 
-            directory, sep, comp_name = cfg.cfg_path.rpartition(os.sep)
-            egg_name, dash, version = comp_name.partition('-')
-            obj = set_as_top(cls())
-            orig = os.getcwd()
-            os.chdir(directory)
-            try:
-                egg_info = obj.save_to_egg(egg_name, cfg.version or 'AS',
-                                           need_requirements=need_reqs)
-            finally:
-                os.chdir(orig)
-            self.server.eggs[cls] = (os.path.join(directory, egg_info[0]),
-                                     egg_info[1], egg_info[2])
-            obj.pre_delete()
-            del obj
+                directory, sep, comp_name = cfg.cfg_path.rpartition(os.sep)
+                egg_name, dash, version = comp_name.partition('-')
+                orig = os.getcwd()
+                os.chdir(directory)
+                try:
+                    obj = set_as_top(cls())
+                    egg_info = obj.save_to_egg(egg_name, cfg.version or 'AS',
+                                               need_requirements=need_reqs)
+                finally:
+                    os.chdir(orig)
+                eggs[cls] = (os.path.join(directory, egg_info[0]),
+                             egg_info[1], egg_info[2])
+                obj.pre_delete()
+                del obj
 
-        egg_info = self.server.eggs[cls]
+            egg_info = eggs[cls]
+
         egg_file = egg_info[0]
         resource_desc = {
             'required_distributions': egg_info[1],

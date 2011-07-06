@@ -240,6 +240,8 @@ class Stream(object):
             if sys.platform == 'win32':
                 if exc.errno == 10053 or exc.errno == 10054:
                     raise EOFError('Connection to %s closed' % self._peer)
+            elif 'Connection reset by peer' in str(exc):
+                raise EOFError('Connection to %s closed' % self._peer)
             raise
         if data:
 #            if self._debug:  # pragma no cover
