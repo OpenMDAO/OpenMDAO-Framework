@@ -109,7 +109,9 @@ for information on configuring proxy settings.
 The source repository for the OpenMDAO project is available on
 :term:`Github`.  There is a wealth of good documentation available online 
 about :term:`git` and Github itself. The 
-`Github help page <http://help.github.com/>`_ is a good place to start.  
+`Github help page <http://help.github.com/>`_ is a good place to start. If you're a 
+windows user, make sure to read the details about using Git Bash on the `windows 
+specific installation instructions <http://help.github.com/win-set-up-git/>`_. 
 The `Pro Git book <http://progit.org/book/>`_ is also excellent.  It's very
 important to take a look at these, because git differs from other version
 control systems in some significant ways. 
