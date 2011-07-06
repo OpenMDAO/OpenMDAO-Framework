@@ -159,17 +159,12 @@ Github using the following command:
 
 ::
 
-   git clone git://github.com/OpenMDAO/OpenMDAO-Framework.git
+   git clone https://github.com/OpenMDAO/OpenMDAO-Framework.git
    
    
 Note that the URL used above will give you only read permission to the
-repository on Github, i.e., you won't be able to push changes directly to it.
-If you happen to have write permission to the OpenMDAO-Framework repository, you should
-use an SSH style URL to specify the repository like this:
-
-::
-
-   git clone git@github.com:OpenMDAO/OpenMDAO-Framework.git
+repository on Github, i.e., you won't be able to push changes directly to it
+unless you happen to have been granted permission to do so. 
 
 
 At this point you should also create your own personal fork of the OpenMDAO-Framework
