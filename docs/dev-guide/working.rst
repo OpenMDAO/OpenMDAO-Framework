@@ -176,13 +176,10 @@ repository, you can add a remote for it, calling it *myfork*.
 
 ::
 
-   git remote add myfork git@github.com:userid/OpenMDAO-Framework.git
+   git remote add myfork https://userid@github.com/userid/OpenMDAO-Framework.git
    
    
-where *userid* is your Github userid. Note that in this case the URL we've
-used is an SSH URL, because we want to be able to write to our OpenMDAO fork.
-For remote repositories that we only need read access to, we would use a URL
-of the form ``git://github.com/some_userid/some_repo_name.git``.
+where *userid* is your Github userid.
 
 Using the ``git remote`` command with no arguments will give a list of
 the remotes that we currently reference in our repository.

@@ -43,7 +43,8 @@ Windows Users
 -------------
 
 If you use Windows, you must use *Git --> Git Bash* to start up a bash terminal, but after
-that the instructions are the same as for linux.
+that the instructions are the same as for linux. The details can be found on the `Windows specific
+instruction from GitHub <http://help.github.com/win-set-up-git/>`_. 
    
 
 *Registering the Key with Github*
