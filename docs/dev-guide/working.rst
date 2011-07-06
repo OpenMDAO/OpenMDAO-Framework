@@ -39,10 +39,11 @@ project will have a much easier time merging in your changes. And remember, in
 *Git*, creating branches is cheap and quick, so there's no need to worry about
 creating lots of branches.
 
-.. note:: Make sure to check which branch you're on whenever you create a new
-     branch.  Creating a branch off of the wrong branch can bring in unexpected
-     changes and generally cause confusion.
-   
+.. note:: Make sure to check which branch you're on whenever you create a new branch. 
+     Creating a branch off of the wrong branch can bring in unexpected changes and
+     generally cause confusion. When you type ``git branch``, you should see the
+     ``dev`` branch listed as well as any working branches you have created. An *
+     will appear in front of the branch you are on (i.e., the one checked out).
 
 
 .. _Creating-the-Virtual-Environment:
@@ -56,6 +57,7 @@ run ``python go-openmdao-dev.py`` from the top directory of your
 repository. The script will check the version of Python you are running. **You must
 be running version 2.6.** (To find out which Python version you are
 running, you can type ``python --version``.)
+
 
 .. note:: If you're using Visual Studio on Windows, you need to run the installer from a 
    command window that has the Visual Studio environment variables set. The
@@ -265,8 +267,8 @@ new file where you must enter the required commit message.
    to very confusing behavior and should be avoided.
 
 One nice GitHub feature is that if you're working on a particular GitHub
-issue, you can include the text "closes GH-???" in your commit comment,
-replacing the *???* with the number of the GitHub issue, and GitHub will
+issue, you can include the text ``closes GH-???`` in your commit comment,
+replacing the ``???`` with the number of the GitHub issue, and GitHub will
 automatically close that issue for you when your commit makes its way back to
 the original repository.
 
