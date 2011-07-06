@@ -1,6 +1,7 @@
 
 import sys
 import os
+import StringIO
 import shutil
 import urllib2
 import subprocess
@@ -54,12 +55,8 @@ def get_platform():
 
 def check_setuptools(py):
     """Return True if setuptools is installed on the remote host"""
-    try:
-        with hide('everything'):
-            return run('%s -c "import setuptools"' % py)
-    except:
-        return False
-    return True
+    with settings(hide('everything'), warn_only=True):
+        return run('%s -c "import setuptools; print setuptools.__version__"' % py)
 
 def host_call(host, func, *args, **kwargs):
     """Calls the given function inside of a 'with' block that
@@ -85,6 +82,17 @@ def remote_untar(tarfile):
              ]
     run(py_cmd(cmds))
     
+def remote_cat(f1, f2, out):
+    """Use python to concatenate two files remotely."""
+    cmds = [ "f1=open('%s', 'rb')" % f1,
+             "f2=open('%s', 'rb')" % f2,
+             "out=open('%s', 'wb')" % out,
+             "out.write(f1.read())",
+             "out.write(f2.read())",
+             "out.close()"
+        ]
+    run(py_cmd(cmds))
+    
 def get_plat_spec_cmds():
     plat = get_platform()
     if plat.startswith('win'):
@@ -96,7 +104,18 @@ def get_plat_spec_cmds():
         remover = 'rm -f'
         lister = 'ls -1'
     return mover, remover, lister
-        
+
+def remote_tmpdir():
+    """Create a temporary directory at the remote location."""
+    return run('python -c "import tempfile; print tempfile.mkdtemp()"').strip()
+
+def rm_remote_tree(pathname):
+    """Delete the directory at the remote location."""
+    run("""python -c "import shutil; shutil.rmtree('%s')" """ % pathname)
+    
+def list_remote_dir(dirname):
+    return run("""python -c "import os; print os.listdir('%s')" """ % dirname)
+            
 def put_untar(local_path, remote_dir=None, renames=()):
     """Put the given tarfile on the current active host and untar it in the
     specified place. If remote_dir is not specified, a temp directory will 
@@ -111,7 +130,7 @@ def put_untar(local_path, remote_dir=None, renames=()):
     mover, remover, lister = get_plat_spec_cmds()
     
     if remote_dir is None:
-        remote_dir = run('python -c "import tempfile; print tempfile.mkdtemp()"').strip()
+        remote_dir = remote_tmpdir()
 
     print os.path.isfile(local_path)
     
@@ -142,24 +161,61 @@ def put_dir(dirpath, archive_name=None, remote_tmp=None):
     return remotedir
     
     
-def remote_build(distdir, destdir, build_type='bdist_egg',
+def remote_build(distdir, destdir, build_type='build -f bdist_egg',
                  pyversion=None):
     """Take the python distribution in the given directory, tar it up,
     ship it over to host, build it, and bring it back, placing it
     in the specified destination directory.
     """
+    locals_to_remove = []
     distdir = os.path.abspath(distdir)
     if pyversion is None:
         pyversion = sys.version_info[:2]
     remotedir = put_dir(distdir)
     whichpy = 'python%d.%d' % pyversion
     pkgname = os.path.basename(distdir)
-    if check_setuptools(whichpy) == False:
-        print "remote host has no setuptools"
-        return
-    with cd(os.path.join(remotedir, pkgname)):
-        run("%s setup.py %s" % (whichpy, build_type))
+    if check_setuptools(whichpy):
+        has_setuptools = True
+    else:
+        has_setuptools = False
+        print "Remote host has no setuptools."
+        if not os.path.isfile('ez_setup.py'):
+            print "Attempting to download ez_setup.py and bootstrap setuptools at the remote location"
+            resp = urllib2.urlopen('http://peak.telecommunity.com/dist/ez_setup.py')
+            with open('ez_setup.py', 'wb') as easyf:
+                shutil.copyfileobj(resp.fp, easyf)
+            locals_to_remove.append('ez_setup.py')
     
+    pkgdir = os.path.join(remotedir, pkgname)
+    if not has_setuptools:
+        put('ez_setup.py', os.path.join(pkgdir, 'ez_setup.py'))
+        with open('_catfile', 'wb') as catf:
+            catf.write("from ez_setup import use_setuptools\n")
+            catf.write("use_setuptools(download_delay=0)\n\n")
+        locals_to_remove.append('_catfile')
+        put('_catfile', os.path.join(pkgdir, '_catfile'))
+        remote_cat(os.path.join(pkgdir, '_catfile'), 
+                   os.path.join(pkgdir, 'setup.py'), 
+                   os.path.join(pkgdir, '_newsetup.py'))
+
+    with cd(pkgdir):
+        remtmp = remote_tmpdir()
+        if not has_setuptools:
+            run("%s _newsetup.py %s -d %s" % (whichpy, build_type, remtmp))
+        else:
+            run("%s setup.py %s -d %s" % (whichpy, build_type, remtmp))
+            
+    pkg = list_remote_dir(remtmp).strip()  # should only have one file in directory
+    pkg = pkg[2:len(pkg)-2]
+    
+    get(os.path.join(remtmp, pkg), pkg)
+    
+    for name in locals_to_remove:
+        os.remove(name)
+
+    rm_remote_tree(remtmp)
+    rm_remote_tree(remotedir)
+
 def _release(host, version=None, is_local=True, home=None, url=TEST_URL):
     """Creates source distributions, docs, binary eggs, and install script for 
     the current openmdao namespace packages and puts them on a local test server.  After
