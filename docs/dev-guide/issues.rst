@@ -8,7 +8,7 @@ Creating a Issue
 ----------------
 Whenever you're going to do development on the OpenMDAO code base, there should be an issue related
 to that work. The issue could be related to a software requirement, or a bug that was found, or an 
-enhancement that has been requested. There are a number of issues which have already been created
+enhancement that has been requested. A number of issues have already been created
 for the project, but you can also create a new issue yourself.
 
 To create a GitHub issue, follow these steps:
