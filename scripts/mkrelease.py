@@ -65,7 +65,7 @@ def create_releaseinfo_file(projname, relinfo_str):
     """Creates a releaseinfo.py file in the current directory"""
     dirs = projname.split('.')
     os.chdir(os.path.join(*dirs))
-    print 'creating releaseinfo.py for %s' % projname
+    print 'updating releaseinfo.py for %s' % projname
     with open('releaseinfo.py', 'w') as f:
         f.write(relinfo_str)
         
@@ -168,14 +168,14 @@ def main():
                       help="directory where distributions will be placed")
     parser.add_option("--disturl", action="store", type='string', dest="disturl",
                       default=PRODUCTION_DISTS_URL,
-                      help="if not equal to the url for openmdao production distributions "
-                           "(%s), "
-                           "release will be a test release (no repo tag, commit not required)" % 
+                      help="The location of the new release that will be assumed by the go-openmdao.py script" % 
                            PRODUCTION_DISTS_URL)
     parser.add_option("--version", action="store", type="string", dest="version",
                       help="version string applied to all openmdao distributions")
     parser.add_option("-m", action="store", type="string", dest="comment",
                       help="optional comment for version tag")
+    parser.add_option("-b", "--basebranch", action="store", type="string", dest="base",
+                      default='master', help="base branch for release")
     (options, args) = parser.parse_args(sys.argv[1:])
     
     if not options.version or not options.destdir:
@@ -184,28 +184,22 @@ def main():
         
     orig_branch = get_branch()
     if not orig_branch:
-        print "no git branch found. aborting"
+        print "You must run mkrelease from within a git repository. aborting"
         sys.exit(-1)
-    answer = raw_input('Your current branch is %s.  Is this correct? (Y/N) ' % orig_branch)
-    answer = answer.lower().strip()
-    if not answer in ['y', 'yes']:
+
+    if orig_branch != options.base:
+        print "Your current branch '%s', is not the specified base branch '%s'" % (orig_branch, options.base)
         sys.exit(-1)
     
-    has_checkouts = _has_checkouts()
-    if has_checkouts:
-        answer = raw_input('There are uncommitted changes. Do you want to continue with the release? (Y/N) ')
-        answer = answer.lower().strip()
-        if not answer in ['y', 'yes']:
-            sys.exit(-1)
-        print "stashing current state"
-        os.system("git stash")
+    if _has_checkouts():
+        print "There are uncommitted changes. You must run mkrelease.py from a clean branch"
+        sys.exit(-1)
         
     relbranch = "release_%s" % options.version
-    print "creating release branch"
-    os.system("git branch %s" % relbranch)
-    if has_checkouts:
-        print "applying stash to release branch"
-        os.system("git stash apply")
+    print "creating release branch '%s' from base branch '%s'" % (relbranch, orig_branch)
+    check_call(['git', 'branch', relbranch])
+    print "checking out branch '%s'" % relbranch
+    check_call(['git', 'checkout', relbranch])
     
     destdir = os.path.realpath(options.destdir)
     if not os.path.exists(destdir):
@@ -234,10 +228,12 @@ def main():
                     '-v', options.version])
         shutil.move(os.path.join(topdir,'docs','_build'), 
                     os.path.join(destdir,'_build'))
-        if options.disturl == PRODUCTION_DISTS_URL:
-            check_call(['git', 'commit', '-a', '-m', 
-                        '"updating release info and sphinx config files for release %s"' % 
-                        options.version])
+
+        # commit the changes to the release branch
+        print "committing all changes to branch '%s'" % relbranch
+        check_call(['git', 'commit', '-a', '-m', 
+                    '"updating releaseinfo files for release %s"' % 
+                    options.version])
 
         for project_name, pdir, pkgtype in openmdao_packages:
             pdir = os.path.join(topdir, pdir, project_name)
@@ -256,30 +252,24 @@ def main():
         print 'creating bootstrapping installer script go-openmdao.py'
         installer = os.path.join(topdir, 'scripts','mkinstaller.py')
         
-        if options.disturl != PRODUCTION_DISTS_URL:
-            check_call([sys.executable, installer, '--disturl', options.disturl,
-                        '--dest=%s'%destdir])
-            ## roll back changes to releaseinfo.py files
-            #for project_name, pdir, pkgtype in openmdao_packages:
-                #pdir = os.path.join(topdir, pdir, project_name)
-                #if 'src' in os.listdir(pdir):
-                    #os.chdir(os.path.join(pdir, 'src'))
-                #else:
-                    #os.chdir(pdir)
-                #rollback_releaseinfo_file(project_name, releaseinfo_str)
+        check_call([sys.executable, installer, '--dest=%s'%destdir,
+                    '--disturl=%s'%options.disturl])
+
+        if options.comment:
+            comment = options.comment
         else:
-            check_call([sys.executable, installer, '--dest=%s'%destdir])
-            if options.comment:
-                comment = options.comment
-            else:
-                comment = 'creating release %s' % options.version
-            
-            # tag the current revision with the release version id
-            print "tagging release with '%s'" % options.version
-            check_call(['git', 'tag', '-a', options.version, '-m', comment])
+            comment = 'creating release %s' % options.version
+        
+        # tag the current revision with the release version id
+        print "tagging release with '%s'" % options.version
+        check_call(['git', 'tag', '-a', options.version, '-m', comment])
+        
+        print "returning to original branch '%s'" % orig_branch
+        check_call(['git', 'checkout', orig_branch])
+        
+        print "push '%s' up to the master branch if this release is official" % relbranch
+        
     finally:
-        if has_checkouts:
-            ???
         os.chdir(startdir)
     
 if __name__ == '__main__':
