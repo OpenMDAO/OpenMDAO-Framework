@@ -168,8 +168,7 @@ def main():
                       help="directory where distributions will be placed")
     parser.add_option("--disturl", action="store", type='string', dest="disturl",
                       default=PRODUCTION_DISTS_URL,
-                      help="The location of the new release that will be assumed by the go-openmdao.py script" % 
-                           PRODUCTION_DISTS_URL)
+                      help="The location of the new release that will be assumed by the go-openmdao.py script")
     parser.add_option("--version", action="store", type="string", dest="version",
                       help="version string applied to all openmdao distributions")
     parser.add_option("-m", action="store", type="string", dest="comment",
