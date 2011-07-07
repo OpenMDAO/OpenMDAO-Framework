@@ -17,21 +17,16 @@ from fabric.state import connections
 
 def _get_release_script(site_url, version):
     """Grabs the specified openmdao release installer script from the specified 
-    website, so it can be tested on our dev platforms. The script will be placed in
+    url, so it can be tested on our dev platforms. The script will be placed in
     the current directory.
     """
     script_url =  '%s/downloads/%s/go-openmdao.py' % (site_url, version)
 
     if script_url.startswith('http'):
-        try:  
-            resp = urllib2.urlopen(script_url)
-        except IOError, e:
-            print str(e)
-            sys.exit()
-        else:
-            gofile = open('go-openmdao.py', 'wb')
-            shutil.copyfileobj(resp.fp, gofile)
-            gofile.close()
+        resp = urllib2.urlopen(script_url)
+        gofile = open('go-openmdao.py', 'wb')
+        shutil.copyfileobj(resp.fp, gofile)
+        gofile.close()
     else: # release in local file system
         shutil.copy(script_url, 'go-openmdao.py')
 
@@ -43,8 +38,6 @@ def _testlocally(site_url, version, pyversion='python', keep=False):
     If keep is True, the temporary directory where the release is built will
     not be deleted. 
     """
-    print 'getting go-openmdao.py file...'
-
     testdir = tempfile.mkdtemp()
     startdir = os.getcwd()
     os.chdir(testdir)
@@ -57,7 +50,9 @@ def _testlocally(site_url, version, pyversion='python', keep=False):
         devbindir = 'bin'
         activate = ['source', 'activate']
         
+    print 'getting go-openmdao.py file...'
     _get_release_script(site_url, version)
+    
     try:
         subprocess.check_call([pyversion, 'go-openmdao.py'])
         dirs = os.listdir(testdir)
@@ -68,9 +63,9 @@ def _testlocally(site_url, version, pyversion='python', keep=False):
         os.chdir(os.path.join(testdir, releasedir, devbindir))
         print("Please wait while the environment is activated and the tests are run")
         env = os.environ.copy()
-        if 'VIRTUAL_ENV' in env: del env['VIRTUAL_ENV']
-        if '_OLD_VIRTUAL_PATH' in env: del env['_OLD_VIRTUAL_PATH']
-        if '_OLD_VIRTUAL_PROMPT' in env: del env['_OLD_VIRTUAL_PROMPT']
+        for name in ['VIRTUAL_ENV','_OLD_VIRTUAL_PATH','_OLD_VIRTUAL_PROMPT']:
+            if name in env: 
+                del env[name]
         subprocess.check_call(activate + ['&&',
                                'echo',
                                'environment activated, please wait while tests run',

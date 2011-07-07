@@ -29,12 +29,12 @@ def _release(host, version=None, is_local=True, home=None, url=TEST_URL):
     tests have passed, uploads them to <home>/dists, and updates the index.html file there.
     """
     print("host is %s" % host)
-    #if version is not None:
-#        try:
-#            version = check_openmdao_version(version, home)
-#        except _VersionError, err:
-#            print str(err),'\n'
-#            version = None
+    if version is not None:
+        try:
+            version = check_openmdao_version(version, home)
+        except _VersionError, err:
+            print str(err),'\n'
+            version = None
        
     if version is None:
         version = prompt('Enter version id:', 

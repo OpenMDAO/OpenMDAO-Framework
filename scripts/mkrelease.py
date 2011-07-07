@@ -157,8 +157,8 @@ def main():
           
     In order to run this, you must be in a git repository with no uncommitted
     changes. A release branch will be created from the specified base branch, 
-    and in the process of running, a number of
-    releaseinfo.py files will be updated with new version information and committed.
+    and in the process of running, a number of releaseinfo.py files will be 
+    updated with new version information and committed.
         
     """
     parser = OptionParser()
