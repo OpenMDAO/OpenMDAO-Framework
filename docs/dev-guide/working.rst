@@ -39,10 +39,11 @@ project will have a much easier time merging in your changes. And remember, in
 *Git*, creating branches is cheap and quick, so there's no need to worry about
 creating lots of branches.
 
-.. note:: Make sure to check which branch you're on whenever you create a new
-     branch.  Creating a branch off of the wrong branch can bring in unexpected
-     changes and generally cause confusion.
-   
+.. note:: Make sure to check which branch you're on whenever you create a new branch. 
+     Creating a branch off of the wrong branch can bring in unexpected changes and
+     generally cause confusion. When you type ``git branch``, you should see the
+     ``dev`` branch listed as well as any working branches you have created. An *
+     will appear in front of the branch you are on (i.e., the one checked out).
 
 
 .. _Creating-the-Virtual-Environment:
@@ -56,6 +57,7 @@ run ``python go-openmdao-dev.py`` from the top directory of your
 repository. The script will check the version of Python you are running. **You must
 be running version 2.6.** (To find out which Python version you are
 running, you can type ``python --version``.)
+
 
 .. note:: If you're using Visual Studio on Windows, you need to run the installer from a 
    command window that has the Visual Studio environment variables set. The
@@ -265,8 +267,8 @@ new file where you must enter the required commit message.
    to very confusing behavior and should be avoided.
 
 One nice GitHub feature is that if you're working on a particular GitHub
-issue, you can include the text "closes GH-???" in your commit comment,
-replacing the *???* with the number of the GitHub issue, and GitHub will
+issue, you can include the text ``closes GH-???`` in your commit comment,
+replacing the ``???`` with the number of the GitHub issue, and GitHub will
 automatically close that issue for you when your commit makes its way back to
 the original repository.
 
@@ -416,7 +418,7 @@ Contributing Your Changes
 -------------------------
 
 At some point you'll finish adding your new feature or implementing your bug
-fix and you'll want to get your changes into the official version of OpenMDAO.
+fix, and you'll want to get your changes into the official version of OpenMDAO.
 Here's a little checklist to go through to make sure that your update is
 actually finished:
 
@@ -433,7 +435,7 @@ Once you've done all of these things, you're ready to push your changes up to
 your personal OpenMDAO fork and ask the OpenMDAO maintainers to merge your changes
 into the official *dev* branch.
 
-To push the changes from your *<branchname>* branch up to your fork which you
+To push the changes from your ``<branchname>`` branch up to your fork, which you
 earlier named *myfork*, use the ``git push`` command:
 
 ::
@@ -441,20 +443,57 @@ earlier named *myfork*, use the ``git push`` command:
    git push myfork <branchname>
 
 
-Once that's done, *myfork/<branchname>* will have your changes and you can make a pull
+Once that's done, ``myfork/<branchname>`` will have your changes and you can make a pull
 request to the OpenMDAO maintainers.  To issue a pull request, follow these steps:
 
-1. Go to the page for your personal OpenMDAO fork on GitHub.
+1. Go to the page for your personal OpenMDAO fork on GitHub. (You must be logged in to GitHub.)
 
-2. Select the branch you wish to have *pulled* from the **Switch Branches** dropdown
-   near the top of the page.
+   To get there from your user page, select the branch that you pushed up to GitHub. For example, in the figure below
+   under **Public Activity** you see a ``play_branch`` that pziegfeld created from her personal ``OpenMDAO-Framework`` fork
+   (circled in red). 
 
-3. Push the *Pull Request* button.
+.. figure:: user_page1.png
+   :align: center
+   
+   User Page Showing the OpenMDAO-Framework Fork (left side of page) and the Branch to be Pulled (circled)
+   
+|    
+   
+   In this example, selecting ``play_branch`` will take you to a personal OpenMDAO fork, as shown in
+   the next figure, and you will be on ``play_branch``. However, alternatively, you could select
+   ``OpenMDAO-Framework``, the fork under **Repositories** (circled in green). If you do that, when
+   you go to the personal OpenMDAO fork page you will be on the ``master`` branch and will have to
+   switch branches. 
 
-4. You will be prompted to fill in a description of your changes.  The message near 
-   the top of the page should read something like 
-   "You're asking OpenMDAO to pull 1 commit into OpenMDAO:dev from <userid>:<branchname>",
-   where <userid> is your GitHub userid and <branchname> is the name of the branch to
-   be pulled.  If the source and destination branches are correct, push the 
-   "Send Pull Request" button.  Otherwise, click on *Change Commits* and modify the
-   branch names.
+ |   
+   
+.. figure:: personal_fork1.png
+   :align: center
+   
+   Example Page for a Personal OpenMDAO Fork 
+  
+   
+2. If you wish to confirm that you are on the correct branch on your personal OpenMDAO fork, you can go to
+   the *Switch Branches* dropdown in the upper left part of the page (circled in green). You'll see a list of
+   branches in alphabetical order; a check mark appears after the branch you're on. If you elected to click
+   on the OpenMDAO Framework fork instead of a specific branch, the check mark will appear after ``master``,
+   and you'll have to select the branch you want *pulled*. If you clicked a specific branch (e.g.,
+   ``play_branch``) to get to your personal OpenMDAO page, the check mark should be after that branch's name.
+
+
+3. Once you're on the correct branch, push the *Pull Request* button located in the upper right of the page. 
+
+   (It's circled in red in the above figure.)
+
+4. You will be prompted to fill in a description of your changes. The message near the top of the page should read something like:
+
+   :: 
+   
+     You're asking OpenMDAO to pull 1 commit into OpenMDAO:dev from <userid>:<branchname>",
+     where <userid> is your GitHub userid and <branchname> is the name of the branch to
+     be pulled.  If the source and destination branches are correct, push the 
+     "Send Pull Request" button.  Otherwise, click on "Change Commits and modify the
+     branch names.
+
+After you have submitted your pull request, one of the maintainers will review the changes on your branch
+and decide whether to approve it.
