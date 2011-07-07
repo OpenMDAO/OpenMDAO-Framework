@@ -28,13 +28,15 @@ packages = [
 
 logger = logging.getLogger()
 
-def get_revision():
+def get_rev_info():
     try:
-        p = Popen('git describe --always --tags', 
+        p = Popen('git describe --tags', 
                   stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
-        return p.communicate()[0].strip()
+        out = p.communicate()[0].strip()
+        tag, ncommits, commit = out.rsplit('-', 2)
     except:
-        return '<unknown_commit>'
+        return ('?','?','?')
+    return tag, ncommits, commit
 
 def _get_dirnames():
     bindir = os.path.dirname(sys.executable)
@@ -197,9 +199,9 @@ def build_docs(argv=None):
         version = argv[idx+1]
         shtitle = 'OpenMDAO Documentation v%s' % version
     else:
-        #version = openmdao.util.releaseinfo.__version__
-        version = 'rev %s' % get_revision()
-        shtitle = 'OpenMDAO Documentation (%s)' % version
+        tag, ncommits, commit = get_rev_info()
+        version = "%s-%s-%s" % (tag, ncommits, commit)
+        shtitle = 'OpenMDAO Documentation (%s commits after tag %s)' % (ncommits,tag)
     
     branchdir, docdir, bindir =_get_dirnames()
 

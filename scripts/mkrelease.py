@@ -148,19 +148,17 @@ def main():
     """Create an OpenMDAO release, placing the following files in the 
     specified destination directory:
     
-        - a tar file of the repository
         - source distribs of all of the openmdao subpackages
-        - binary eggs for openmdao subpackages with compiled code
+        - binary eggs for openmdao subpackages with compiled code (windows only)
         - an installer script for the released version of openmdao that will
           create a virtualenv and populate it with all of the necessary
           dependencies needed to use openmdao
-        
-    The sphinx docs will also be built.
+        - Sphinx documentation
           
-    In order to run this, you must be in a git repository that has not changed
-    since the last commit, and in the process of running, a number of
-    releaseinfo.py files will be updated with new version information and will
-    be commited with the comment 'updated revision info and conf.py files'.
+    In order to run this, you must be in a git repository with no uncommitted
+    changes. A release branch will be created from the specified base branch, 
+    and in the process of running, a number of
+    releaseinfo.py files will be updated with new version information and committed.
         
     """
     parser = OptionParser()
