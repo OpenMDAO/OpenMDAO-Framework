@@ -95,20 +95,6 @@ class ComponentProxy(Component):
             else:
                 raise NotImplementedError('%r type %r' % (prop, typ))
 
-# FIXME: for Arrays, the proxy exists in _added_traits but get() doesn't see it.
-        print container.get_pathname(), '_added_traits:'
-        for name in sorted(container._added_traits.keys()):
-            print '    %s: %r' % (name, container._added_traits[name])
-        print container.get_pathname(), 'get():'
-        for name in sorted(container._added_traits.keys()):
-            if isinstance(container._added_traits[name], FileProxy):
-                continue
-            try:
-                val = container.get(name)
-            except AttributeError:
-                val = '<<AttributeError>> : %r' % container._added_traits[name]
-            print '    %s: %r' % (name, val)
-
     def __getstate__(self):
         """ Return dict representing this component's local state. """
         state = super(ComponentProxy, self).__getstate__()
@@ -208,6 +194,7 @@ class ArrayProxy(ProxyMixin, Array):
 
     def __init__(self, iotype, client, rpath, typ):
         ProxyMixin.__init__(self, client, rpath)
+        self._type = typ
 
         default = [typ(val.strip(' "')) for val in self._valstr.split(',')]
         desc = client.get(rpath+'.description')
@@ -242,16 +229,15 @@ class ArrayProxy(ProxyMixin, Array):
 
     def get(self, obj, name):
         """ Get remote value. """
-        return [self._trait.dtype(val.strip(' "'))
-                for val in ProxyMixin.rget(self).split(',')]
+        return [self._type(val.strip(' "')) for val in self.rget().split(',')]
 
     def set(self, obj, name, value):
         """ Set remote value. """
-        if self._trait.dtype == float:
+        if self._type == float:
             valstr = ', '.join([_float2str(val) for val in value])
         else:
             valstr = ', '.join([str(val) for val in value])
-        ProxyMixin.rset(self, valstr)
+        self.rset(valstr)
 
 
 class BoolProxy(ProxyMixin, Bool):
@@ -267,11 +253,11 @@ class BoolProxy(ProxyMixin, Bool):
 
     def get(self, obj, name):
         """ Get remote value. """
-        return ProxyMixin.rget(self) == 'true'
+        return self.rget() == 'true'
 
     def set(self, obj, name, value):
         """ Set remote value. """
-        ProxyMixin.rset(self, 'true' if value else 'false')
+        self.rset('true' if value else 'false')
 
 
 class EnumProxy(ProxyMixin, Enum):
@@ -322,11 +308,11 @@ class EnumProxy(ProxyMixin, Enum):
 
     def get(self, obj, name):
         """ Get remote value. """
-        return self._from_string(ProxyMixin.rget(self))
+        return self._from_string(self.rget())
 
     def set(self, obj, name, value):
         """ Set remote value. """
-        ProxyMixin.rset(self, self._to_string(value))
+        self.rset(self._to_string(value))
 
     def _null(self, val):
         """ Just returns `val` unmodified. """
@@ -355,7 +341,7 @@ class FileProxy(ProxyMixin, File):
             return None  # Not initialized.
 
         binary = self._client.get(self._rpath+'.isBinary') == 'true'
-        valstr = ProxyMixin.rget(self)
+        valstr = self.rget()
         mode = 'wb' if binary else 'w'
         with self._component.dir_context:
             with open(self._path, mode) as out:
@@ -369,7 +355,7 @@ class FileProxy(ProxyMixin, File):
             valstr = inp.read()
         binary = 'true' if value.binary else 'false'
 #        self._client.set(self._rpath+'.isBinary', binary)
-        ProxyMixin.rset(self, valstr)
+        self.rset(valstr)
 
 
 class FloatProxy(ProxyMixin, Float):
@@ -399,11 +385,11 @@ class FloatProxy(ProxyMixin, Float):
 
     def get(self, obj, name):
         """ Get remote value. """
-        return float(ProxyMixin.rget(self))
+        return float(self.rget())
 
     def set(self, obj, name, value):
         """ Set remote value. """
-        ProxyMixin.rset(self, _float2str(value))
+        self.rset(_float2str(value))
 
 
 class IntProxy(ProxyMixin, Int):
@@ -428,11 +414,11 @@ class IntProxy(ProxyMixin, Int):
 
     def get(self, obj, name):
         """ Get remote value. """
-        return int(ProxyMixin.rget(self))
+        return int(self.rget())
 
     def set(self, obj, name, value):
         """ Set remote value. """
-        ProxyMixin.rset(self, str(value))
+        self.rset(str(value))
 
 
 class StrProxy(ProxyMixin, Str):
@@ -448,9 +434,9 @@ class StrProxy(ProxyMixin, Str):
 
     def get(self, obj, name):
         """ Get remote value. """
-        return ProxyMixin.rget(self)
+        return self.rget()
 
     def set(self, obj, name, value):
         """ Set remote value. """
-        ProxyMixin.rset(self, value)
+        self.rset(value)
 

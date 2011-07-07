@@ -374,7 +374,7 @@ class ComponentWrapper(object):
                 now = time.time()
                 walltime = now - self._start
 
-                if sys.platform == 'win32':
+                if sys.platform == 'win32':  # pragma no cover
                     reply = """\
 <Processes length='1'>
  <Process pid='%d'>
@@ -514,7 +514,7 @@ class ArrayWrapper(BaseWrapper):
                 fmt = '"%s"'
             return ', '.join([fmt % val for val in value])
         elif attr == 'componentType':
-            return 'long'
+            return self._typstr
         elif attr == 'dimensions':
             value = self._container.get(self._name)
             return '"%d"' % len(value)

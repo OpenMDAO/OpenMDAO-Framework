@@ -1009,6 +1009,117 @@ ASTestComp2"""
                          'ERROR: component </NoSuchComp>'
                          ' does not match a known component\r\n>')
 
+    def test_array(self):
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.componentType'], count=3)
+        self.assertEqual(replies[-1], 'double\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.dimensions'], count=3)
+        self.assertEqual(replies[-1], '"9"\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.enumAliases'], count=3)
+        self.assertEqual(replies[-1], '>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.enumValues'], count=3)
+        self.assertEqual(replies[-1], '>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.first'], count=3)
+        self.assertEqual(replies[-1], '1.5\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.format'], count=3)
+        self.assertEqual(replies[-1], 'null\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.hasUpperBound'], count=3)
+        self.assertEqual(replies[-1], 'true\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.upperBound'], count=3)
+        self.assertEqual(replies[-1], '10\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.hasLowerBound'], count=3)
+        self.assertEqual(replies[-1], 'true\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.lowerBound'], count=3)
+        self.assertEqual(replies[-1], '0\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.length'], count=3)
+        self.assertEqual(replies[-1], '9\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.lockResize'], count=3)
+        self.assertEqual(replies[-1], 'false\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.numDimensions'], count=3)
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'set comp.sub_group.f1d.description = xyzzy'], count=3)
+        self.assertEqual(replies[-1],
+            "ERROR: Exception: WrapperError('cannot set <sub_group.f1d.description>.',)\r\n>")
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.f1d.xyzzy'], count=3)
+        self.assertEqual(replies[-1],
+            "ERROR: Exception: WrapperError('no such property <sub_group.f1d.xyzzy>.',)\r\n>")
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'set comp.sub_group.f1d.xyzzy = froboz'], count=3)
+        self.assertEqual(replies[-1],
+            "ERROR: Exception: WrapperError('no such property <sub_group.f1d.xyzzy>.',)\r\n>")
+
+        expected = """\
+15 properties found:
+componentType (type=java.lang.Class) (access=g)
+description (type=java.lang.String) (access=sg)
+dimensions (type=int[1]) (access=sg)
+enumAliases (type=java.lang.String[0]) (access=sg)
+enumValues (type=double[0]) (access=sg)
+first (type=java.lang.Object) (access=sg)
+format (type=java.lang.String) (access=g)
+hasLowerBound (type=boolean) (access=sg)
+hasUpperBound (type=boolean) (access=sg)
+length (type=int) (access=sg)
+lockResize (type=boolean) (access=sg)
+lowerBound (type=double) (access=sg)
+numDimensions (type=int) (access=g)
+units (type=java.lang.String) (access=sg)
+upperBound (type=double) (access=sg)"""
+        expected = expected.replace('\n', '\r\n') + '\r\n>'
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'listProperties comp.sub_group.f1d'], count=3)
+        self.compare(replies[-1], expected)
+
+        expected = """\
+15 properties found:
+componentType (type=java.lang.Class) (access=g)
+description (type=java.lang.String) (access=sg)
+dimensions (type=int[1]) (access=sg)
+enumAliases (type=java.lang.String[0]) (access=sg)
+enumValues (type=long[0]) (access=sg)
+first (type=java.lang.Object) (access=sg)
+format (type=java.lang.String) (access=g)
+hasLowerBound (type=boolean) (access=sg)
+hasUpperBound (type=boolean) (access=sg)
+length (type=int) (access=sg)
+lockResize (type=boolean) (access=sg)
+lowerBound (type=long) (access=sg)
+numDimensions (type=int) (access=g)
+units (type=java.lang.String) (access=sg)
+upperBound (type=long) (access=sg)"""
+        expected = expected.replace('\n', '\r\n') + '\r\n>'
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'listProperties comp.sub_group.i1d'], count=3)
+        self.compare(replies[-1], expected)
+
     def test_bool(self):
         replies = self.send_recv(['start ASTestComp comp',
                                   'get comp.sub_group.b'], count=3)
@@ -1266,6 +1377,21 @@ valueStr (type=java.lang.String) (access=g)"""
                                   'get comp.in_file'], count=4)
         self.assertEqual(replies[-2:], ['value set for <in_file>\r\n>',
                                         'Hello world!\r\n>'])
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'set comp.in_file.description = xyzzy'], count=3)
+        self.assertEqual(replies[-1],
+            "ERROR: Exception: WrapperError('cannot set <in_file.description>.',)\r\n>")
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.in_file.xyzzy'], count=3)
+        self.assertEqual(replies[-1],
+            "ERROR: Exception: WrapperError('no such property <in_file.xyzzy>.',)\r\n>")
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'set comp.in_file.xyzzy = froboz'], count=3)
+        self.assertEqual(replies[-1],
+            "ERROR: Exception: WrapperError('no such property <in_file.xyzzy>.',)\r\n>")
 
     def test_float(self):
         replies = self.send_recv(['start ASTestComp comp',

@@ -211,7 +211,6 @@ class TestCase(unittest.TestCase):
         comp.pre_delete()
 
     def test_float1D(self):
-        raise nose.SkipTest('add_trait(ArrayProxy) has issues...')
         comp = self.factory.create('ASTestComp')
         self.assertEqual(comp.get('sub_group.f'), 0.5)
         self.assertEqual(comp.get('sub_group.f1d'),
@@ -236,7 +235,6 @@ class TestCase(unittest.TestCase):
         comp.pre_delete()
 
     def test_int1D(self):
-        raise nose.SkipTest('add_trait(ArrayProxy) has issues...')
         comp = self.factory.create('ASTestComp')
         self.assertEqual(comp.get('sub_group.i1d'), [1, 2, 3, 4, 5, 6, 7, 8, 9])
         comp.set('sub_group.i1d', [4, 3, 2, 1])

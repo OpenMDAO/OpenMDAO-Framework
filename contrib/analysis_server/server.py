@@ -67,7 +67,6 @@ import traceback
 if sys.platform != 'win32':
     import pwd
 
-from contextlib import contextmanager
 from distutils.version import LooseVersion
 from xml.sax.saxutils import escape
 
