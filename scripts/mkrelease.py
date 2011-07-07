@@ -263,10 +263,9 @@ def main():
         print "tagging release with '%s'" % options.version
         check_call(['git', 'tag', '-a', options.version, '-m', comment])
         
-        print "returning to original branch '%s'" % orig_branch
         check_call(['git', 'checkout', orig_branch])
         
-        print "push '%s' up to the master branch if this release is official" % relbranch
+        print "\n*REMEMBER* to push '%s' up to the master branch if this release is official" % relbranch
         
     finally:
         os.chdir(startdir)
