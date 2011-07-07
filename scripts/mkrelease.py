@@ -172,7 +172,7 @@ def main():
     parser.add_option("-m", action="store", type="string", dest="comment",
                       help="optional comment for version tag")
     parser.add_option("-b", "--basebranch", action="store", type="string", dest="base",
-                      default='master', help="base branch for release")
+                      default='master', help="base branch for release. defaults to master")
     (options, args) = parser.parse_args(sys.argv[1:])
     
     if not options.version or not options.destdir:
@@ -204,8 +204,6 @@ def main():
 
     releaseinfo_str = get_releaseinfo_str(options.version)
     startdir = os.getcwd()
-    tarname = os.path.join(destdir,
-                           'openmdao_src-%s.tar.gz' % options.version)
     
     topdir = _find_top_dir()
     
@@ -243,9 +241,6 @@ def main():
             if pkgtype == 'bdist_egg':
                 _build_bdist_egg(pdir, destdir)
             
-        print 'exporting archive of repository to %s' % tarname
-        check_call(['git', 'archive', '-o', tarname, 'HEAD'])
-    
         print 'creating bootstrapping installer script go-openmdao.py'
         installer = os.path.join(topdir, 'scripts','mkinstaller.py')
         

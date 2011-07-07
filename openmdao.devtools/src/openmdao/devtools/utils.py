@@ -24,6 +24,17 @@ def check_openmdao_version(version, home='~'):
         raise _VersionError('Version %s already exists. Please specify a different version' % version)
     return version
 
+def push_and_run(fpath, remotepath=None, runner=None, args=()):
+    """Puts the given file onto the current active host and executes it there"""
+    if not os.path.isfile(fpath):
+        raise IOError("can't find file %s" % fpath)
+    if remotepath is None:
+        remotepath = fpath
+    put(fpath, remotepath)
+    if runner is None and fpath.endswith('.py'):
+        runner = 'python'
+    run("%s %s %s" % (runner, remotepath, ' '.join(args)))
+    
 
 def tar_dir(dirpath, archive_name, destdir):
     """Tar up the given directory and put in in the specified destination

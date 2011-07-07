@@ -22,8 +22,13 @@ TEST_URL = 'http://torpedo.grc.nasa.gov:31004'
 class _VersionError(RuntimeError):
     pass
 
+def push_release(release_dir, server_url):
+    """Take a directory containing release files (openmdao package distributions,
+    install scripts, etc., and push it up to the specified server.
+    """
+    pass
 
-def _release(host, version=None, is_local=True, home=None, url=TEST_URL):
+def _release(host, version=None, home=None, url=TEST_URL):
     """Creates source distributions, docs, binary eggs, and install script for 
     the current openmdao namespace packages and puts them on a local test server.  After
     tests have passed, uploads them to <home>/dists, and updates the index.html file there.

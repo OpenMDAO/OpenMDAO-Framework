@@ -40,11 +40,11 @@ openmdao_packages = [('openmdao.util', '', 'sdist'),
                      ('openmdao.examples.expected_improvement', 'examples', 'sdist'),
                     ]
 
-# if it's a dev installer, these packages will be included
+# if it's a dev installer, these packages will also be included
 openmdao_dev_packages = [('openmdao.devtools', '', 'sdist'),
                          ]
 
-def get_adjust_options(options, version):
+def _get_adjust_options(options, version):
     """Return a string containing the definition of the adjust_options function
     that will be included in the generated virtualenv bootstrapping script.
     """
@@ -207,7 +207,7 @@ def after_install(options, home_dir):
         'url': options.disturl ,
         'make_dev_eggs': make_dev_eggs,
         'wing': wing,
-        'adjust_options': get_adjust_options(options, version),
+        'adjust_options': _get_adjust_options(options, version),
         'openmdao_prereqs': openmdao_prereqs,
     }
     
@@ -230,7 +230,7 @@ if __name__ == '__main__':
                       help="specify destination directory", default='.')
     parser.add_option("--disturl", action="store", type="string", dest="disturl",
                       default='http://openmdao.org/dists',
-                      help="URL of a test server or a file system release area")
+                      help="OpenMDAO distribution URL")
     
     (options, args) = parser.parse_args()
     

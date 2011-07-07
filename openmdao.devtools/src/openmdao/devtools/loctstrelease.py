@@ -23,6 +23,7 @@ def get_release_script(site_url, version):
     else: # release in local file system
         shutil.copy(script_url, 'go-openmdao.py')
 
+
 def build_release(site_url, version, pyversion):
     """
     Buids an OpenMDAO release in the current directory.
@@ -60,23 +61,22 @@ def build_release(site_url, version, pyversion):
     return releasedir
     
 
-def validate_release(releasedir):
+def activate_and_test(envdir, testargs=()):
     """"
-    Runs the test suite on an OpenMDAO release environment located
+    Runs the test suite on an OpenMDAO virtual environment located
     in the specified directory.
     
-    Returns a tuple of the form (retcode, output), the 
-    return code and output of the process that runs the test suite.
+    Returns the return code of the process that runs the test suite.
     """
     if sys.platform.startswith('win'):
         devbindir = 'Scripts'
-        command = 'activate.bat && openmdao_test -x'
+        command = 'activate.bat && openmdao_test %s' % ' '.join(testargs)
     else:
         devbindir = 'bin'
-        command = '. ./activate && openmdao_test -x'
+        command = '. ./activate && openmdao_test %s' % ' '.join(testargs)
         
     # activate the environment and run tests
-    devbinpath = os.path.join(releasedir, devbindir)
+    devbinpath = os.path.join(envdir, devbindir)
     os.chdir(devbinpath)
     print("running tests from %s" % devbinpath)
     env = os.environ.copy()
@@ -84,13 +84,11 @@ def validate_release(releasedir):
         if name in env: 
             del env[name]
     proc = subprocess.Popen(command,
-                            stdout = subprocess.PIPE,
                             shell = True,
                             cwd = os.getcwd(),
                             env=env)
-    out = proc.communicate()[0]
     proc.wait()
-    return (proc.returncode, out)
+    return proc.returncode
     
 
 if __name__ == '__main__':
@@ -112,13 +110,14 @@ if __name__ == '__main__':
     tmpdir = tempfile.mkdtemp()
     os.chdir(tmpdir)
     
+    retcode = -1
     try:
         reldir = build_release(options.site, options.version, 
                                pyversion="python%s"%options.pyversion)
-        retcode, out = validate_release(os.path.join(tmpdir,reldir))
-        print out
+        retcode = activate_and_test(os.path.join(tmpdir,reldir),
+                                    testargs=args)
         print 'return code from test was %s' % retcode
-        
+
     finally:
         os.chdir(startdir)
         if options.keep:
@@ -127,4 +126,5 @@ if __name__ == '__main__':
             print "removing temp dir %s" % tmpdir
             shutil.rmtree(tmpdir)
 
+    sys.exit(retcode)
     
