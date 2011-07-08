@@ -20,11 +20,11 @@ the :ref:`System-Requirements` section under *Getting Started.*  These requireme
 below.
 
 
-**git**
-  We use git for version control.  You'll need it to access the OpenMDAO
-  source repository.  Github, where our source repository is stored, has
-  excellent documentation describing how to install git and how to get
-  familiar with git and github.  You can find it `here`__.
+**Git**
+  We use Git for version control.  You'll need it to access the OpenMDAO
+  source repository.  GitHub, where our source repository is stored, has
+  excellent documentation describing how to install Git and how to get
+  familiar with Git and GitHub.  You can find it `here`__.
     
 .. __: http://help.github.com
 
@@ -82,7 +82,7 @@ below.
     - *Visual C++ 2008 (Optional)*
       
       You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it, mingw32 will work fine,
-      but if you prefer Visual C++ 2008, you're welecome to use it instead. The Express version will work, 
+      but if you prefer Visual C++ 2008, you're welcome to use it instead. The Express version will work, 
       but others (Professional, Standard) should work too. To get this software,
       go to the `downloads page <http://www.microsoft.com/express/downloads/#2008-Visual-CPP>`_.     
          
@@ -97,41 +97,61 @@ System Configuration
 Some steps of the development process, e.g., downloading a branch of the source repository and
 downloading Python distributions, require network access.  If you're using Linux or Mac OS X and
 are behind an http proxy, you may have to set the ``http_proxy`` environment variable on
-your system for git and :term:`virtualenv` to function properly. If you're using Windows 7,
+your system for Git and :term:`virtualenv` to function properly. If you're using Windows 7,
 please follow this 
 `link <http://answers.oreilly.com/topic/675-how-to-configure-proxy-settings-in-windows-7/>`_
 for information on configuring proxy settings.
 
 
-*Using Git and Github*
+*Using Git and GitHub*
 ++++++++++++++++++++++
 
 The source repository for the OpenMDAO project is available on
-:term:`Github`.  There is a wealth of good documentation available online 
+:term:`GitHub`.  There is a wealth of good documentation available online 
 about :term:`git` and Github itself. The 
-`Github help page <http://help.github.com/>`_ is a good place to start.  
+`GitHub help page <http://help.github.com/>`_ is a good place to start. If you're a 
+Windows user, make sure to read the details about using Git Bash on the `Windows 
+specific installation instructions <http://help.github.com/win-set-up-git/>`_. 
 The `Pro Git book <http://progit.org/book/>`_ is also excellent.  It's very
-important to take a look at these, because git differs from other version
+important to take a look at these, because Git differs from other version
 control systems in some significant ways. 
 
-The first major difference is that git has a *staging area* that files must be
+The first major difference is that Git has a *staging area* that files must be
 placed in before they're committed.  Luckily the ``git commit`` command has 
 an option, ``-a``, that will eliminate this odd behavior and commit all of the
 modified files in the repository without having to stage them first. See the 
-:ref:`Commiting-changes` section for further explanation of ``git commit``.
+:ref:`Committing-changes` section for further explanation of ``git commit``.
 
-The other major difference is how branches are handled.  In git, creating a branch
+The other major difference is how branches are handled.  In Git, creating a branch
 does not create a separate copy of the repository, but instead is basically a pointer
-to a commit history within the repository. This makes git branches cheap to create. This
+to a commit history within the repository. This makes Git branches cheap to create. This
 means that you should not hesitate to make a new branch when working on something. This
 will be discussed a little more below in the :ref:`getting-the-source-code` section. 
+
+
+The following figure gives an overall view of the version control process while 
+using Git and GitHub.
+
+.. figure:: version_control.png
+   :align: center
+
+   Version Control Process
+
+From the OpenMDAO repository on GitHub, you create a personal "fork" of the 
+project, so there is now a repository that you can write to.  In addition to
+creating a fork, you must also create a clone of the OpenMDAO repository on 
+your machine.  This is the repository that you will be working directly off 
+of, via the creation of branches.  Once you are satisfied with a branch's 
+development, you can push this branch back up to your personal fork.  From here,
+if you would like to contribute this work back to the OpenMDAO repository, you 
+must issue a pull request to have your modifications merged in.
 
 
 *Git User Setup*
 ++++++++++++++++
 
-If you have not previously used git on a particular machine where you intend
-to work with git repositories, you should follow the instructions `here`__ to
+If you have not previously used Git on a particular machine where you intend
+to work with Git repositories, you should follow the instructions `here`__ to
 set your username, email, and API token.
 
 
@@ -146,173 +166,108 @@ to a :term:`repository` on that machine.
 .. index:: pair: source code; location
 .. index:: pair: branch; creating
 
+
+
+
+
+.. accessing GitHub::
+
+Accessing OpenMDAO on GitHub -- SSH Keys
+++++++++++++++++++++++++++++++++++++++++
+
+The source repository for OpenMDAO is read-accessible to the public, so making
+a clone of it does not require that you have a :term:`GitHub`
+account. If you plan to contribute to the OpenMDAO project on GitHub, you will
+need to have a GitHub account and to register your public SSH key with that
+account. The following section describes how to register your SSH key with
+GitHub.
+
+These instructions assume that you already have a GitHub account. If you do
+not, please go to http://github.com and register for an account. Go ahead
+and log in to your GitHub account, since you will need to be logged in to
+register your key.
+
+If you're using Git on Windows, to follow the instructions below
+you'll first need to create a bash terminal by running "Git --> Git Bash" from
+the Windows start menu.
+
+
+*Creating Your Key*
+~~~~~~~~~~~~~~~~~~~
+
+1. First, check to see if you already have an SSH key.  Look for a file called ``~/.ssh/id_rsa.pub``.
+   If the file is there, skip to the next section and learn how to register your key with GitHub.
+2. You should be in your home directory on your Linux machine. At the prompt, type: 
+   ``ssh-keygen -t rsa -C "your_email@youremail.com"``. 
+3. When prompted, press *Enter* to accept the default file name for your key. 
+4. Press *Enter* when prompted for a password and then press it again to
+   confirm that you are NOT entering a password. Your key pair is stored in ``~/.ssh/
+   as id_rsa.pub`` (public key) and ``id_rsa`` (private key).
+
+.. note::  In the unusual event that the ``ssh-keygen`` command fails, you may need to install
+   OpenSSH. To do this requires that you have admin privileges. On Ubuntu, you can install
+   OpenSSH by opening your terminal and typing: ``sudo apt-get install openssh-client``. 
+
+
+*Registering the Key with GitHub*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You need to register and upload the *public* portion of your SSH key to GitHub. 
+
+1. Open your public key in a text editor and copy its contents to your clipboard. The public key
+   file has the extension ``.pub``; for example:  ``id_rsa.pub`` 
+2. You must be logged into GitHub for this step. Go to *Account Settings --> SSH Public Keys*, 
+   then click on *Add another public key*.
+3. Enter a name into the *Title* text field to remind you which machine/account you're 
+   entering ssh information for.
+4. Paste your public key into the *Key* text box and then click the *Add Key* button (below the
+   text box) to continue. 
+
+
+
 .. _getting-the-source-code:
+
 
 Getting the Source Code
 +++++++++++++++++++++++
 
-Before you can do any development work on OpenMDAO, you'll need a local copy of the
-source code. To get this, you must *clone* the OpenMDAO-Framework repository on
-Github using the following command:
+The *official* OpenMDAO-Framework repository lives on GitHub at
+http://github.com/OpenMDAO/OpenMDAO-Framework. 
+
+
+
+
+To create a local
+OpenMDAO-Framework repository, you need to *clone* the OpenMDAO-Framework
+repository on GitHub using the following command:
 
 ::
 
    git clone git://github.com/OpenMDAO/OpenMDAO-Framework.git
    
    
-Note that the URL used above will give you only read permission to the
-repository on Github, i.e., you won't be able to push changes directly to it.
-If you happen to have write permission to the OpenMDAO-Framework repository, you should
-use an SSH style URL to specify the repository like this:
+or, if the port that git:// uses is blocked by your firewall, try this:
 
 ::
 
-   git clone git@github.com:OpenMDAO/OpenMDAO-Framework.git
+   git clone http://github.com/OpenMDAO/OpenMDAO-Framework.git
 
 
-At this point you should also create your own personal fork of the OpenMDAO-Framework
-repository. Log into Github and go to
-http://github.com/OpenMDAO/OpenMDAO-Framework. There, near the top of the page you'll
-see a *Fork* button. Press it and you now have your own personal OpenMDAO-Framework
-fork.  You'll push branches to this later and issue pull requests to get your
-changes into the official repository.
-
-Normally, you should only need to clone a repository once on any given machine
-where you plan to do your work. Then, each time you start work on a new
-feature or a bug fix, you'll create a new branch in your local repository and
-switch to that branch.
-
-To create a branch, do the following:
-
-::
-
-   git branch <branch_name>
-   
-
-To switch to an existing branch, do:
-
-::
-
-   git checkout <branch_name>
-   
-
-A shorthand for creating a branch and then switching to it is:
-
-::
-
-   git checkout -b <branch_name>
+.. _Making-a-Personal-Fork-of-OpenMDAO-Framework:
 
 
-The name you give your branch should reflect the purpose of the branch to avoid
-confusion with other branches in your repository. And don't fix multiple bugs or
-add multiple features on the same branch.  If you keep your branch changes small by
-targeting a specific bug or feature, the maintainers of the project will have a much
-easier time merging in your changes.  And remember, in *git*, creating branches is
-cheap and quick, so there's no need to worry about creating lots of branches.
+Making a Personal Fork of OpenMDAO-Framework
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+If you intend to make contributions to the project, you'll need to make your
+own personal fork of OpenMDAO-Framework on GitHub. Making your own fork is
+easy; just log into GitHub, go to the OpenMDAO-Framework repository page at
+http://github.com/OpenMDAO/OpenMDAO-Framework, and click the *Fork* button
+near the top of the page.
 
-.. _Creating-the-Virtual-Environment:
-
-
-Creating the Virtual Environment
-________________________________
-
-OpenMDAO operates inside of a virtual python environment. To create that environment, 
-run ``python go-openmdao-dev.py`` from the top directory of your
-repository. The script will check the version of Python you are running. **You must
-be running version 2.6.** (To find out which Python version you are
-running, you can type ``python --version``.)
-
-.. note:: If you're using Visual Studio on Windows, you need to run the installer from a 
-   command window that has the Visual Studio environment variables set. The
-   easiest way to do this is to select the *Visual Studio 2008 Command Prompt*
-   from the *Visual Studio Tools* menu under *Microsoft Visual C++ 2008
-   Express Edition* in the Start menu. If you're using something other than
-   the Express edition, then the name of the Start menu option will be
-   slightly different, i.e., replace "Express" with "Professional" or
-   "Standard."
-
-
-::
-
-   python go-openmdao-dev.py
-   
-Running ``go-openmdao-dev.py`` creates a ``devenv`` directory at the top of
-your repository and populates it with all of the packages that OpenMDAO
-depends upon. It also installs the openmdao namespace packages in your virtual
-Python environment as "develop" eggs so that you can make changes to the
-source code and immediately see the results without having to rebuild any
-distributions.
-
-      
-.. _Activating-the-Virtual-Environment:
-
-Activating the Virtual Environment
-__________________________________
-
-The next step is to activate your virtual Python environment. Change your directory to
-``devenv``. 
-
-On Linux or Mac OS X, you must be running the Bash shell. If you are in Bash, omit this step.
-
-  ::
-
-     bash
-   
- 
-  Next, type the following, making sure to include the "." in the command:
-
-  ::
-
-     . bin/activate
-
-
-
-Or, on Windows, type:
-
-  ::
-
-     Scripts\activate
-
-At this point, your ``devenv`` directory should contain the following subdirectories, unless you are
-on Windows. On Windows, the directory structure is slightly different, as noted below.
-
-``bin`` 
-    Contains Python and a number of other scripts that are associated with the Python
-    packages that are installed in the virtual environment. On **Windows,** this
-    directory is called ``Scripts``.
-
-``etc``
-    Contains miscellaneous files that don't fit in ``bin, lib,`` or ``include``.
-    
-``include``
-    Contains Python C header files. If you are on **Windows,** you will not have this directory.
-
-
-``lib``
-    Contains Python standard library and installed modules.
-
-After your virtual Python environment has been activated, you can add other 
-distributions to the environment by using ``easy_install`` or :term:`pip` in
-the same manner that you would add packages to the system level Python.
-
-If you need to build the OpenMDAO docs, you can run ``openmdao_build_docs``.
-Running ``openmdao_docs`` will display the documents in HTML in the default browser.
-
-You can deactivate the environment by typing:
-
-
-:: 
-
-  deactivate
-  
- 
-  
-.. note:: Whenever you switch to a different branch within your repository,
-   you should deactivate your virtual environment and re-run
-   ``go-openmdao-dev.py``, unless you're certain that no OpenMDAO package
-   dependencies have changed.
-
+Later, when you finish working on a branch in your local repository, you'll be
+able to push it up to your personal fork and issue a pull request to get your
+changes into the *dev* branch of the official repository.
 
 
 .. index:: source repository
@@ -334,7 +289,7 @@ The directory structure of your repository should look like this:
     The directory containing the OpenMDAO virtual environment. Note that
     this is not part of the source repository. You will build it by running
     the ``go-openmdao-dev.py`` script that sits at the top of the source
-    repository.
+    repository.  See :ref:`Creating-the-Virtual-Environment`.
     
 ``docs``  
     The directory containing all user documentation for OpenMDAO. The

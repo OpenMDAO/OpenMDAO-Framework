@@ -116,20 +116,29 @@ class ArchitectureAssembly(Assembly):
                 self.architecture.check_config()
             else:
                 self.configure()
-
-    def get_local_des_vars(self):
+                
+    def get_local_des_vars_by_comp(self): 
         """Return a dictionary of component names/list of parameters for 
-        all local parameters."""
+        all single target parameters."""
         comps = {}
         for k,v in self.get_parameters().items():
             if isinstance(v, Parameter): 
-                comp = v.get_referenced_compnames()
+                comp_names = v.get_referenced_compnames()
+                if len(comp_names) > 1: 
+                    continue
+                
+                comp = comp_names.pop()
                 try: 
                     comps[comp].append(v)
-                except AttributeError: 
+                except KeyError: 
                     comps[comp] = [v]
         
         return comps
+        
+    def get_local_des_vars(self):
+        """Return a list of single target Parameters."""
+        return [(k,v) for k,v in self.get_parameters().items() 
+                                        if isinstance(v, Parameter)]
     
     def get_global_des_vars(self): 
         """Return a list of multi target Parameters."""

@@ -94,7 +94,7 @@ def run_wing():
         libs = env.get('LD_LIBRARY_PATH','').split(os.pathsep)
         rtop = find_up('.git')
         if not rtop:
-            rtop = find_up('.bzr')
+            rtop = find_up('.git')
         if rtop:
             rtop = os.path.dirname(rtop)
             sodirs = set([os.path.dirname(x) for x in find_files(rtop,'*.so')])
