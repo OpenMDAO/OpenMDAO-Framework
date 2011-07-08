@@ -118,11 +118,11 @@ def repo_top():
     return p.communicate()[0].strip()
 
 
-def update_releaseinfo_files():
+def update_releaseinfo_files(version):
     startdir = os.getcwd()
     topdir = repo_top()
     
-    releaseinfo_str = get_releaseinfo_str(options.version)
+    releaseinfo_str = get_releaseinfo_str(version)
     
     try:
         for project_name, pdir, pkgtype in openmdao_packages:
@@ -215,7 +215,7 @@ def main():
     topdir = repo_top()
     
     try:
-        update_releaseinfo_files()
+        update_releaseinfo_files(options.version)
         
         # build the docs
         devtools_dir = os.path.join(topdir,'openmdao.devtools',
