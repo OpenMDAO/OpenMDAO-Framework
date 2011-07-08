@@ -24,7 +24,6 @@ class ASFactory(Factory):
         self._host = host
         self._port = port
         self._client = client.Client(host, port)
-        self._types = None
 
     def create(self, typname, version=None, server=None,
                res_desc=None, **ctor_args):
@@ -46,10 +45,7 @@ class ASFactory(Factory):
         ctor_args: dict
             Other constructor arguments.  Not used.
         """
-        if self._types is None:
-            self.get_available_types()
-
-        for typ, ver in self._types:
+        for typ, ver in self.get_available_types():
             if typ == typname:
                 if version is None or ver == version:
                     return proxy.ComponentProxy(typname, self._host, self._port)
@@ -62,19 +58,18 @@ class ASFactory(Factory):
 
         groups: list[string]
             OpenMDAO entry point groups.
-            Only 'openmdao.component' is suppoerted.
+            Only 'openmdao.component' is supported.
         """
 
         if groups is not None and 'openmdao.component' not in groups:
             return []
 
-        if self._types is None:
-            self._types = []
-            for comp in self._client.list_components():
-                versions = self._client.versions(comp)
-                for version in versions:
-                    self._types.append((comp, version))
-        return self._types
+        types = []
+        for comp in self._client.list_components():
+            versions = self._client.versions(comp)
+            for version in versions:
+                types.append((comp, version))
+        return types
 
 
 def main():  # pragma no cover

@@ -3,6 +3,11 @@ Server providing a ModelCenter AnalysisServer interface, based on the
 protocol described in:
 http://www.phoenix-int.com/~AnalysisServer/commands/index.html
 
+Each client is serviced by a separate thread. Each client's components are
+maintained in a separate namespace. Components are hosted by individual server
+processes, each serviced by a separate wrapper thread. Servers are allocated
+from configured resources based on component requirements.
+
 Component types to be supported are described by ``<name>.cfg`` files parsed
 by :class:`ConfigParser.SafeConfigParser`, for example:
 
@@ -121,7 +126,8 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     of the host to connect to and `port` is the port to use. `allowed_hosts`
     is a list of allowed host or domain addresses (domain addresses must end
     in '.'). If None, '127.0.0.1' is used (only the local host is allowed
-    access).
+    access). Reads all component configuration files found in the current
+    directory and subdirectories.
     """
 
     allow_reuse_address = True
@@ -232,10 +238,11 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             filename = config.get('Python', 'filename')
             classname = config.get('Python', 'classname')
             dirname = os.path.dirname(filename)
-            if dirname:
-                dirname = os.path.join(cwd, dirname)
-            else:
-                dirname = cwd
+            if not os.path.isabs(dirname):
+                if dirname:
+                    dirname = os.path.join(cwd, dirname)
+                else:
+                    dirname = cwd
             if not dirname in sys.path:
                 _LOGGER.debug('    prepending %r to sys.path', dirname)
                 sys.path.insert(0, dirname)
@@ -342,6 +349,7 @@ version: 0.1""")
         try:
             while self._req != 'quit':
                 try:
+                    # Get next request.
                     if self._raw:
                         _LOGGER.debug('Waiting for raw-mode request...')
                         req, req_id, background = self._stream.recv_request()
@@ -368,6 +376,7 @@ version: 0.1""")
                     if not req:  # pragma no cover
                         continue
 
+                    # Lookup request handler.
                     args = req.split()
                     self._req = req
                     try:
@@ -377,6 +386,7 @@ version: 0.1""")
                                          % req.strip())
                         continue
 
+                    # Process request.
                     try:
                         cmd(self, args[1:])
                     except Exception as exc:
@@ -401,14 +411,14 @@ version: 0.1""")
         """
         typ = typ.strip('"').lstrip('/')
         name, qmark, version = typ.partition('?')
-        if version:
+        if version:  # Return specific version.
             name = '%s-%s' % (name, version)
             try:
                 with self.server.components as comps:
                     return [comps[name]]
             except KeyError:
                 pass
-        else:
+        else:  # Return all versions.
             prefix = '%s-' % name
             with self.server.components as comps:
                 keys = [key for key in comps if key.startswith(prefix)]
@@ -453,7 +463,8 @@ version: 0.1""")
             req_id = req_id or self._req_id
             text, zero, rest = reply.partition('\x00')
             if zero:
-                _LOGGER.debug('(req_id %s)\n%s\n<+binary...>', req_id, text[:_DBG_LEN])
+                _LOGGER.debug('(req_id %s)\n%s\n<+binary...>',
+                              req_id, text[:_DBG_LEN])
             else:
                 _LOGGER.debug('(req_id %s)\n%s', req_id, reply[:_DBG_LEN])
         else:
@@ -803,7 +814,7 @@ Available Commands:
    addProxyClients <clientHost1>,<clientHost2>
    monitor start <object.property>, monitor stop <id>
    versions,v category/component
-   ps <object> (NOT IMPLEMENTED)
+   ps <object>
    listMonitors,lo <objectName>
    heartbeat,hb [start|stop]
    listValuesURL,lvu <object>
@@ -971,12 +982,12 @@ Available Commands:
                              'listProperties,list,ls,l [object]')
             return
 
-        if len(args) == 0:
+        if len(args) == 0:  # List started components.
             names = sorted(self._instance_map.keys())
             lines = ['%d objects started:' % len(names)]
             lines.extend(names)
             self._send_reply('\n'.join(lines))
-        else:
+        else:  # List component properties.
             name, dot, path = args[0].partition('.')
             wrapper, worker = self._get_wrapper(name)
             if wrapper is not None:
@@ -1161,8 +1172,8 @@ egg: %s
         except Exception as exc:
             _LOGGER.error("Can't publishEgg: %r", exc)
             self._send_error(str(exc))
-#            os.remove(egg_path)
-#            os.remove(cfg_path)
+            os.remove(egg_path)
+            os.remove(cfg_path)
         else:
             self._send_reply('Egg published.')
 
@@ -1233,6 +1244,7 @@ egg: %s
             self._send_error('Name already in use: "%s"' % name)
             return
 
+        # Get egg information.
         with self.server.eggs as eggs:
             if cls not in eggs:
                 # If only local host will be used, we can skip determining
@@ -1244,6 +1256,7 @@ egg: %s
                         need_reqs = True
                         break
 
+                # Create temporary instance and save as egg.
                 directory, sep, comp_name = cfg.cfg_path.rpartition(os.sep)
                 egg_name, dash, version = comp_name.partition('-')
                 orig = os.getcwd()
@@ -1268,6 +1281,7 @@ egg: %s
             'python_version': sys.version[:3]
         }
 
+        # Create component instance.
         if self._server_per_obj:  # pragma no cover
             # Allocate a server.
             server, server_info = RAM.allocate(resource_desc)
@@ -1278,7 +1292,7 @@ egg: %s
             egg_name = os.path.basename(egg_file)
             filexfer(None, egg_file, server, egg_name, 'b')
             obj = server.load_model(egg_name)
-        else:
+        else:  # Used for testing.
             server = None
             if hasattr(cfg, 'egg'):
                 obj = Container.load_from_eggfile(egg_file)
@@ -1286,6 +1300,7 @@ egg: %s
                 obj = set_as_top(cls())
         obj.name = name
 
+        # Create wrapper for component.
         wrapper = ComponentWrapper(name, obj, cfg, server,
                                    self._send_reply, self._send_exc)
         self._instance_map[name] = (wrapper, WorkerPool.get())
@@ -1491,6 +1506,7 @@ def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None):
     if os.path.exists(server_up):
         os.remove(server_up)
 
+    # Start process.
     args = ['python', server_path,
             '--address', address, '--port', '%d' % port, '--up', server_up]
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
@@ -1512,6 +1528,7 @@ def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None):
             proc.terminate(timeout)
             raise RuntimeError('Server startup timeout')
 
+    # Read server information.
     with open(server_up, 'r') as inp:
         host = inp.readline().strip()
         port = int(inp.readline().strip())

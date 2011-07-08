@@ -26,12 +26,16 @@ class Client(object):
     .. note::
         Instances are not pickleable. Save/restore must be handled at
         a higher level.
+
+    .. note::
+        Multi-thread accesses are allowed, but synchronized in a primitive
+        fashion such that one thread will block others.
     """
 
     def __init__(self, host='localhost', port=server.DEFAULT_PORT, debug=False):
         self._conn = telnetlib.Telnet(host, port)
-        self._stream = stream.Stream(self._conn.sock, debug)
-        self._lock = threading.Lock()
+        self._stream = stream.Stream(self._conn.sock, debug, debug)
+        self._lock = threading.Lock()  # Controls stream access.
         self._raw = False
         self._curr_id = 0
         self._welcome = self._stream.recv_reply()
@@ -55,8 +59,11 @@ class Client(object):
                 self._stream.raw = True
             else:
                 if self._raw:
+                    while True:
+                        info = self._stream.recv_reply()
+                        if info[1] == self._curr_id:
+                            break
 # FIXME: handle heartbeats, monitors, etc.
-                    info = self._stream.recv_reply()
                     reply = info[0]
                 else:
                     reply = self._stream.recv_reply()
@@ -125,10 +132,10 @@ class Client(object):
         reply = self._send_recv('getDirectTransfer')
         return reply == 'true'
 
-# TODO: getIcon
     def get_icon(self, path):
         """ Gets the icon data for published component `path`. """
-        raise NotImplementedError()
+# TODO: getIcon
+        raise NotImplementedError('Client.get_icon()')
 
     def get_license(self):
         """ Retrieves the server's license agreement. """
@@ -267,8 +274,8 @@ class Client(object):
             return lines[1:]
 
     def start_monitor(self, path):
-        """ Starts monitor `path`, returning its id. """
-# TODO: callback argument
+        """ Starts monitor `path`. Returns ``(initial_value, monitor_id)``. """
+# TODO: callback argument to handle updates.
         reply = self._send_recv('monitor start %s' % path)
         monitor_id = self._curr_id if self._raw else None
         return (reply, monitor_id)
@@ -289,7 +296,7 @@ class Client(object):
         """
         Lists all running processes for component instance `name`.
         Note that not all information may be valid, based on host
-        operating system. Returns a list of dictionaries.
+        operating system. Returns a list of dictionaries, one per process.
         """
         reply = self._send_recv('ps %s' % name)
         root = ElementTree.fromstring(reply)

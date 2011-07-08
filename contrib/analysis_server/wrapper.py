@@ -1,3 +1,7 @@
+"""
+Wrappers for OpenMDAO components and variables.
+"""
+
 import os
 import sys
 import time
@@ -35,6 +39,9 @@ class ComponentWrapper(object):
     Component wrapper providing a ModelCenter AnalysisServer interface,
     based on the protocol described in:
     http://www.phoenix-int.com/~AnalysisServer/commands/index.html
+
+    Wraps component `comp`, named `name`, with configuraton `cfg` on `server`.
+    `send_reply` and `send_exc` are used to communicate back to the client.
     """
 
     def __init__(self, name, comp, cfg, server, send_reply, send_exc):
@@ -44,9 +51,9 @@ class ComponentWrapper(object):
         self._server = server
         self._send_reply = send_reply
         self._send_exc = send_exc
-        self._monitors = {}  # Maps from req_id to monitor.
-        self._wrappers = {}  # Maps from var path to wrapper.
-        self._path_map = {}  # Maps from path to (wrapper, attr).
+        self._monitors = {}  # Maps from monitor_id to monitor.
+        self._wrappers = {}  # Maps from internal var path to var wrapper.
+        self._path_map = {}  # Maps from external path to (var wrapper, attr).
         self._start = None
         self._rusage = None  # For ps() on UNIX.
 
@@ -287,6 +294,7 @@ class ComponentWrapper(object):
         Lists all available variables and their sub-properties on a component
         instance or sub-variable.
         """
+# TODO: this is different than listValuesURL for file variables and DFT.
         self.list_values_url(path, req_id)
 
     def list_values_url(self, path, req_id):
@@ -294,12 +302,15 @@ class ComponentWrapper(object):
         Lists all available variables and their sub-properties on a component
         instance or sub-variable.
         """
+# TODO: this is different than listValues for file variables and DFT.
         try:
             lines = []
+            # Get list of properties.
             props = self._list_properties(path).split('\n')
             lines.append(props[0])
             if path:
                 path += '.'
+            # Collect detailed property information.
             for line in props[1:]:
                 name, typ, access = line.split()
                 if typ == '(type=com.phoenix_int.aserver.PHXGroup)':
@@ -336,7 +347,7 @@ class ComponentWrapper(object):
             monitor = FileMonitor(self._server, path, 'r',
                                   req_id, self._send_reply)
             monitor.start()
-            self._monitors[str(req_id)] = monitor
+            self._monitors[str(req_id)] = monitor  # Monitor id is request id.
         except Exception as exc:
             self._send_exc(exc, req_id)
 
@@ -356,7 +367,7 @@ class ComponentWrapper(object):
             pid = os.getpid()
             command = os.path.basename(sys.executable)
 
-            if self._start is None:
+            if self._start is None:  # Component not running.
                 # Forcing PID to zero helps with testing.
                 reply = """\
 <Processes length='1'>
@@ -415,7 +426,7 @@ class ComponentWrapper(object):
             self._send_exc(exc, req_id)
 
     def set(self, path, valstr, req_id):
-        """ Sets the value of a variable. """
+        """ Sets the value of `path` to `valstr`. """
         try:
             self._set(path, valstr)
             self._send_reply('value set for <%s>' % path, req_id)
@@ -423,17 +434,18 @@ class ComponentWrapper(object):
             self._send_exc(exc, req_id)
 
     def _set(self, path, valstr):
-        """ Sets the value of a variable. """
+        """ Sets the value of `path` to `valstr`. """
         wrapper, attr = self._get_var_wrapper(path)
-        wrapper.set(attr, path, valstr.strip('"'))
+        wrapper.set(attr, path, valstr)
 
     def set_hierarchy(self, xml, req_id):
-        """ Set hiearchy of variable values. """
+        """ Set hiearchy of variable values from `xml`. """
         try:
             header, newline, xml = xml.partition('\n')
             root = ElementTree.fromstring(xml)
             for var in root.findall('Variable'):
                 valstr = '' if var.text is None else var.text
+                valstr = valstr.decode('string_escape')
                 self._set(var.attrib['name'], valstr)
             self._send_reply('values set', req_id)
         except Exception as exc:
@@ -563,10 +575,11 @@ class ArrayWrapper(BaseWrapper):
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr):
-        """ Set attribute corresponding to `attr`. """
+        """ Set attribute corresponding to `attr` to `valstr`. """
         if attr == 'value':
             self._container.set(self._name,
-                                [self.typ(val) for val in valstr.split(',')])
+                                [self.typ(val.strip(' "'))
+                                 for val in valstr.split(',')])
         elif attr in ('componentType', 'description', 'dimensions',
                       'enumAliases', 'enumValues', 'first', 'format',
                       'hasLowerBound', 'lowerBound',
@@ -631,7 +644,8 @@ class BoolWrapper(BaseWrapper):
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr):
-        """ Set attribute corresponding to `attr`. """
+        """ Set attribute corresponding to `attr` to `valstr`. """
+        valstr = valstr.strip('"')
         if attr == 'value':
             if valstr == 'true':
                 self._container.set(self._name, True)
@@ -726,11 +740,11 @@ class EnumWrapper(BaseWrapper):
         elif attr == 'upperBound':
             return ''
         elif attr == 'units':
-            try:
+            if self._py_type == float:
                 units = self._trait.units
-            except AttributeError:
+                return '' if units is None else units
+            else:
                 return ''
-            return '' if units is None else units
         else:
             return super(EnumWrapper, self).get(attr, path)
 
@@ -749,7 +763,8 @@ class EnumWrapper(BaseWrapper):
                   escape(self.get('value', self._ext_path)))
 
     def set(self, attr, path, valstr):
-        """ Set attribute corresponding to `attr`. """
+        """ Set attribute corresponding to `attr` to `valstr`. """
+        valstr = valstr.strip('"')
         if attr == 'value':
             try:
                 i = self._trait.aliases.index(valstr)
@@ -802,7 +817,7 @@ class FileWrapper(BaseWrapper):
         return 'com.phoenix_int.aserver.types.PHXRawFile'
 
     def set_server(self, server):
-        """ Set container's server for file operations. """
+        """ Set container's server to `server` for file operations. """
         self._server = server
         owner = self._container
         while owner is not None:
@@ -856,7 +871,8 @@ class FileWrapper(BaseWrapper):
                   escape(self.get('value', self._ext_path)))
 
     def set(self, attr, path, valstr):
-        """ Set attribute corresponding to `attr`. """
+        """ Set attribute corresponding to `attr` to `valstr`. """
+        valstr = valstr.strip('"')
         if attr == 'value':
             if self._trait.iotype != 'in':
                 raise WrapperError('cannot set output <%s>.' % path)
@@ -936,7 +952,8 @@ class FloatWrapper(BaseWrapper):
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr):
-        """ Set attribute corresponding to `attr`. """
+        """ Set attribute corresponding to `attr` to `valstr`. """
+        valstr = valstr.strip('"')
         if attr == 'value':
             self._container.set(self._name, float(valstr))
         elif attr in ('valueStr', 'description', 'enumAliases', 'enumValues'
@@ -1000,7 +1017,8 @@ class IntWrapper(BaseWrapper):
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr):
-        """ Set attribute corresponding to `attr`. """
+        """ Set attribute corresponding to `attr` to `valstr`. """
+        valstr = valstr.strip('"')
         if attr == 'value':
             self._container.set(self._name, int(valstr))
         elif attr in ('valueStr', 'description', 'enumAliases', 'enumValues'
@@ -1053,7 +1071,8 @@ class StrWrapper(BaseWrapper):
                   escape(self.get('value', self._ext_path)))
 
     def set(self, attr, path, valstr):
-        """ Set attribute corresponding to `attr`. """
+        """ Set attribute corresponding to `attr` to `valstr`. """
+        valstr = valstr.strip('"')
         if attr == 'value':
             self._container.set(self._name, valstr)
         elif attr in ('valueStr', 'description', 'enumAliases', 'enumValues'):

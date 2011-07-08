@@ -7,18 +7,19 @@ class Stream(object):
     """
     Stream abstraction on top of socket, supporting AnalysisServer protocol.
     Inspired by telnetlib, but drops 'cooking' of data.
-    `sock` is the socket to wrap. If `debug` is True then message data is
-    shown on stdout.
+    `sock` is the socket to wrap. If `dbg_send` is True then sent message
+    data is shown on stdout. Similarly for `dbg_recv`.
     """
 
-    def __init__(self, sock, debug=False):
-        if debug:  # pragma no cover
+    def __init__(self, sock, dbg_send=False, dbg_recv=False):
+        if dbg_send or dbg_recv:  # pragma no cover
             print 'Stream', sock.getsockname(), sock.getpeername()
         self._sock = sock
         self._peer = '%s:%s' % sock.getpeername()
         self._recv_buffer = ''
         self._raw = False
-        self._debug = debug
+        self._dbg_send = dbg_send
+        self._dbg_recv = dbg_recv
 
         # _expect() patterns, compiled and retained as needed.
         self._request_id = ['^setID [0-9]*\n']
@@ -50,11 +51,11 @@ class Stream(object):
         If in 'raw' mode use `request_id` and `background`.
         """
         if self._raw:
-            if self._debug:  # pragma no cover
-                text, zero, rest = request.partition('\x00')
-                if zero is not None:
+            if self._dbg_send:  # pragma no cover
+                zero = request.find('\x00')
+                if zero >= 0:
                     print '\nREQUEST to %s: id=%d, bg=%s, req=%r <+binary...>' \
-                          % (self._peer, request_id, background, text)
+                          % (self._peer, request_id, background, request[:zero])
                 else:
                     print '\nREQUEST to %s: id=%d, bg=%s, request=%r' \
                           % (self._peer, request_id, background, request)
@@ -70,46 +71,46 @@ class Stream(object):
                 self._send(''.join(req))
                 self._send(request)
         else:
-            if self._debug:  # pragma no cover
+            if self._dbg_send:  # pragma no cover
                 print '\nREQUEST to %s: request=%r' % (self._peer, request)
             self._send('%s\r\n' % request)
 
     def recv_request(self):
         """ Receive request from client. """
-        if self._debug:  # pragma no cover
+        if self._dbg_recv:  # pragma no cover
             print '\nREQUEST from %s:' % self._peer
         if self._raw:
             info = self._expect(self._request_id)
             args = info[2].split()
             request_id = int(args[1])
-            if self._debug:  # pragma no cover
+            if self._dbg_recv:  # pragma no cover
                 print '    request_id', request_id
 
             info = self._expect(self._request_len)
             if info[2].strip() == 'bg':
                 background = True
-                if self._debug:  # pragma no cover
+                if self._dbg_recv:  # pragma no cover
                     print '    background'
                 info = self._expect(self._request_len)
             else:
                 background = False
             args = info[2].split('=')
             length = int(args[1])
-            if self._debug:  # pragma no cover
+            if self._dbg_recv:  # pragma no cover
                 print '    length', length
 
             request = self._recv(length)
-            if self._debug:  # pragma no cover
-                text, zero, rest = request.partition('\x00')
-                if zero is not None:
-                    print '    req %r <+binary...>' % text
+            if self._dbg_recv:  # pragma no cover
+                zero = request.find('\x00')
+                if zero >= 0:
+                    print '    req %r <+binary...>' % request[:zero]
                 else:
                     print '    request %r' % request
             return (request, request_id, background)
         else:
             info = self._expect(self._cooked_request)
             request = info[2].strip()
-            if self._debug:  # pragma no cover
+            if self._dbg_recv:  # pragma no cover
                 print '    request %r' % request
             return request
 
@@ -119,11 +120,11 @@ class Stream(object):
         If in 'raw' mode use `reply_id` and `format`.
         """
         if self._raw:
-            if self._debug:  # pragma no cover
-                text, zero, rest = reply.partition('\x00')
-                if zero is not None:
+            if self._dbg_send:  # pragma no cover
+                zero = reply.find('\x00')
+                if zero >= 0:
                     print '\nREPLY to %s: id=%d, format=%s, reply=%r <+binary...>' \
-                          % (self._peer, reply_id, format, text)
+                          % (self._peer, reply_id, format, reply[:zero])
                 else:
                     print '\nREPLY to %s: id=%d, format=%s, reply=%r' \
                           % (self._peer, reply_id, format, reply)
@@ -136,7 +137,7 @@ class Stream(object):
                 self._send(msg)
                 self._send(reply)
         else:
-            if self._debug:  # pragma no cover
+            if self._dbg_send:  # pragma no cover
                 print '\nREPLY to %s: reply=%r' % (self._peer, reply)
             if reply:
                 reply = reply.replace('\n', '\r\n')
@@ -149,30 +150,30 @@ class Stream(object):
 
     def recv_reply(self):
         """ Receive reply from server. """
-        if self._debug:  # pragma no cover
+        if self._dbg_recv:  # pragma no cover
             print '\nREPLY from %s:' % self._peer
         if self._raw:
             info = self._expect(self._reply_id)
             reply_id = int(info[2])
-            if self._debug:  # pragma no cover
+            if self._dbg_recv:  # pragma no cover
                 print '    reply_id', reply_id
 
             info = self._expect(self._formats)
             args = info[2].split()
             format = args[1].strip()
-            if self._debug:  # pragma no cover
+            if self._dbg_recv:  # pragma no cover
                 print '    format %r' % format
 
             info = self._expect(self._reply_len)
             length = int(info[2])
-            if self._debug:  # pragma no cover
+            if self._dbg_recv:  # pragma no cover
                 print '    length', length
 
             reply = self._recv(length)
-            if self._debug:  # pragma no cover
-                text, zero, rest = reply.partition('\x00')
-                if zero is not None:
-                    print '    reply %r <+binary...>' % text
+            if self._dbg_recv:  # pragma no cover
+                zero = reply.find('\x00')
+                if zero >= 0:
+                    print '    reply %r <+binary...>' % reply[:zero]
                 else:
                     print '    reply %r' % reply
             return (reply, reply_id, format)
@@ -180,13 +181,13 @@ class Stream(object):
             info = self._expect(self._cooked_reply)
             reply = info[2]
             reply = reply.replace('\r\n', '\n')
-            if self._debug:  # pragma no cover
+            if self._dbg_recv:  # pragma no cover
                 print '    reply %r' % reply
             return reply
 
     def _send(self, data):
         """ Send `data`. """
-#        if self._debug:  # pragma no cover
+#        if self._dbg_send:  # pragma no cover
 #            print '    send %s %r' % (self._peer, data)
         length = len(data)
         start = 0
@@ -201,7 +202,7 @@ class Stream(object):
         Wait for one or more patterns to match.
         Return (index, match_obj, data).
         """
-#        if self._debug:  # pragma no cover
+#        if self._dbg_recv:  # pragma no cover
 #            print '    _expect: _recv_buffer %r' % self._recv_buffer
         indices = range(len(patterns))
         for i in indices:
@@ -221,7 +222,7 @@ class Stream(object):
 
     def _recv(self, length):
         """ Return next `length` bytes. """
-#        if self._debug:  # pragma no cover
+#        if self._dbg_recv:  # pragma no cover
 #            print '    recv: %d _recv_buffer %r (%d)' \
 #                  % (length, self._recv_buffer, len(self._recv_buffer))
         while len(self._recv_buffer) < length:
@@ -232,7 +233,7 @@ class Stream(object):
 
     def _receive(self):
         """ Receive more data. """
-#        if self._debug:  # pragma no cover
+#        if self._dbg_recv:  # pragma no cover
 #            print '    _receive'
         try:
             data = self._sock.recv(4096)
@@ -244,7 +245,7 @@ class Stream(object):
                 raise EOFError('Connection to %s closed' % self._peer)
             raise
         if data:
-#            if self._debug:  # pragma no cover
+#            if self._dbg_recv:  # pragma no cover
 #                print '       %r' % data
             self._recv_buffer += data
         else:

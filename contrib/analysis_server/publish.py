@@ -1,3 +1,8 @@
+"""
+Support for remote publishing of components.
+All inputs, outputs, and no-argument methods will be accessible.
+"""
+
 import optparse
 import os.path
 import sys
@@ -11,16 +16,17 @@ import server
 def publish_class(path, version, comment, filename, classname,
                   host='localhost', port=server.DEFAULT_PORT):
     """
-    Publish egg under `path` and `version` with `comment`
-    given `filename` and `classname`.
+    Publish egg on server at `host`:`port` under `path` and `version` with
+    `comment` given `filename` and `classname`.
     """
-    cwd = os.getcwd()
     dirname = os.path.dirname(filename)
-    if dirname:
-        dirname = os.path.join(cwd, dirname)
-    else:
-        dirname = cwd
-    if not dirname in sys.path:
+    if not os.path.isabs(dirname):
+        cwd = os.getcwd()
+        if dirname:
+            dirname = os.path.join(cwd, dirname)
+        else:
+            dirname = cwd
+    if not dirname in sys.path:  # Ensure importable.
         sys.path.insert(0, dirname)
     modname = os.path.basename(filename)[:-3]  # Drop '.py'
     try:
@@ -45,7 +51,10 @@ def publish_class(path, version, comment, filename, classname,
 
 def publish_object(path, version, comment, obj,
                    host='localhost', port=server.DEFAULT_PORT):
-    """ Publish egg under `path` and `version` with `comment` given `obj`. """
+    """
+    Publish egg on server at `host`:`port` under `path` and `version` with
+    `comment` given component `obj`.
+    """
     category, slash, name = path.rpartition('/')
     egg_info = obj.save_to_egg(name, version)
     eggfile = egg_info[0]
@@ -58,7 +67,8 @@ def publish_object(path, version, comment, obj,
 def publish_egg(path, version, comment, eggfile,
                 host='localhost', port=server.DEFAULT_PORT):
     """
-    Publish egg under `path` and `version` with `comment` given `eggfile`.
+    Publish egg on server at `host`:`port` under `path` and `version` with
+    `comment` given `eggfile`.
     """
     try:
         _client = client.Client(host, port)

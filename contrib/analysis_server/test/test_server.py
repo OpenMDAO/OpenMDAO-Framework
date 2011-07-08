@@ -487,7 +487,7 @@ Available Commands:
    addProxyClients <clientHost1>,<clientHost2>
    monitor start <object.property>, monitor stop <id>
    versions,v category/component
-   ps <object> (NOT IMPLEMENTED)
+   ps <object>
    listMonitors,lo <objectName>
    heartbeat,hb [start|stop]
    listValuesURL,lvu <object>

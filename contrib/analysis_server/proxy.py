@@ -29,7 +29,6 @@ class ComponentProxy(Component):
     by the remote component, in an identical hierarchy.
 
     .. note::
-
         While variable attributes like 'units' are read from the remote
         component, attempts to set attributes other than 'value' from the local
         side will have no effect on the remote side.
@@ -158,7 +157,7 @@ class ProxyMixin(object):
     def __init__(self, client, rpath):
         self._client = client
         self._rpath = rpath
-        self._valstr = client.get(rpath)
+        self._valstr = client.get(rpath)  # Needed for later restore.
 
     def __getstate__(self):
         """ Return dict representing this proxy's state. """
@@ -353,7 +352,7 @@ class FileProxy(ProxyMixin, File):
         # `value` is a FileRef.
         with value.open() as inp:
             valstr = inp.read()
-        binary = 'true' if value.binary else 'false'
+#        binary = 'true' if value.binary else 'false'
 #        self._client.set(self._rpath+'.isBinary', binary)
         self.rset(valstr)
 

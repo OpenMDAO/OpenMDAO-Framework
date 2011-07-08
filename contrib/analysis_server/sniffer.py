@@ -10,11 +10,14 @@ import socket
 import sys
 import telnetlib
 
+import server
 import stream
 
 
 class _Sniffer(SocketServer.TCPServer):
     """ Display traffic between client & server. """
+
+    allow_reuse_address = True
 
     def __init__(self, client_host, client_port, server_host, server_port):
         SocketServer.TCPServer.__init__(self, (client_host, client_port),
@@ -36,13 +39,13 @@ class _Handler(SocketServer.BaseRequestHandler):
     """ Handles requests from a single client. """
 
     def handle(self):
-        """ Get request, forward, receive reply, forward. """
-        client_stream = stream.Stream(self.request, debug=True)
+        """ Get request, display, forward; receive reply, display, forward. """
+        client_stream = stream.Stream(self.request, dbg_recv=True)
         raw = False
 
         server_conn = telnetlib.Telnet(self.server.server_host,
                                        self.server.server_port)
-        server_stream = stream.Stream(server_conn.sock, debug=True)
+        server_stream = stream.Stream(server_conn.sock, dbg_recv=True)
 
         reply = server_stream.recv_reply()
         client_stream.send_reply(reply)
@@ -115,6 +118,7 @@ def main():
     print 'Sniffing between %s:%d and %s:%d' \
           % (options.client_host, options.client_port,
              options.server_host, options.server_port)
+
     sniffer = _Sniffer(options.client_host, options.client_port,
                        options.server_host, options.server_port)
     try:
