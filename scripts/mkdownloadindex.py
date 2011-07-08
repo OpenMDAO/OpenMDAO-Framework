@@ -60,7 +60,8 @@ def make_download_index(url):
     if len(files): out.write('  <ul>\n')
     for f in files:
         base_f = os.path.basename(f)
-        linkpath = os.path.join(url,'downloads','misc', base_f)
+        #linkpath = os.path.join(url,'downloads','misc', base_f)
+        linkpath = os.path.join('misc', base_f)
         statspath = os.path.join(miscdir, f)
         stats=os.stat(statspath)
         create_date = time.localtime(stats[9])
@@ -73,7 +74,7 @@ def make_download_index(url):
         #print "\n 1.  " + dir_date
         #print "\n 2.  " + dir_date1
         #print "\n 3.  " + dir_date2
-        out.write('     <li><a href="%s">%s</a>&nbsp&nbsp&nbsp&nbsp %s(CST)\n'%(base_f, base_f, dir_date))
+        out.write('     <li><a href="%s">%s</a>&nbsp&nbsp&nbsp&nbsp %s(CST)\n'%(linkpath, base_f, dir_date))
     if len(dirs): out.write('  </ul>\n')
     #END MISC SECTION
 
