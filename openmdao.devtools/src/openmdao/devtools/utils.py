@@ -3,6 +3,7 @@ import os
 import shutil
 import urllib2
 from optparse import OptionParser
+from subprocess import Popen, STDOUT, PIPE, check_call
 
 from fabric.api import run, env, local, put, cd, prompt, hide, hosts, get, settings
 from fabric.state import connections
