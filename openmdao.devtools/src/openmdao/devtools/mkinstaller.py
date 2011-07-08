@@ -136,6 +136,8 @@ openmdao_prereqs = %(openmdao_prereqs)s
 def extend_parser(parser):
     parser.add_option("-r","--req", action="append", type="string", dest='reqs', 
                       help="specify additional required distributions", default=[])
+    parser.add_option("--disturl", action="store", type="string", dest='disturl', 
+                      help="specify url where openmdao distribs are located")
 
 %(adjust_options)s
 
@@ -155,7 +157,10 @@ def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
     reqs = %(reqs)s
-    url = '%(url)s'
+    if options.disturl:
+        url = options.disturl
+    else:
+        url = '%(url)s'
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
         lib_dir = join(home_dir, 'Lib')
@@ -226,7 +231,7 @@ def after_install(options, home_dir):
     optdict = { 
         'reqs': reqs, 
         'version': version, 
-        'url': options.disturl ,
+        'url': options.disturl,
         'make_dev_eggs': make_dev_eggs,
         'wing': wing,
         'adjust_options': _get_adjust_options(options, version),

@@ -51,7 +51,10 @@ def install_release(site_url, version, pyversion):
     
     try:
         print "building openmdao environment"
-        subprocess.check_call([pyversion, 'go-openmdao.py'])
+        command = [pyversion, 'go-openmdao.py']
+        if os.path.isdir(site_url): # it's a local directory
+            command.append('--disturl=%s' % os.path.join(site_url,'dists'))
+        subprocess.check_call(command)
         newfiles = set(os.listdir('.')) - dirfiles
         if len(newfiles) != 1:
             raise RuntimeError("didn't expect %s in build directory" % 

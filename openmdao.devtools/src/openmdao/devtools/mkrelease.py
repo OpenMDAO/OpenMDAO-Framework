@@ -150,9 +150,6 @@ def main():
     parser = OptionParser()
     parser.add_option("-d", "--destination", action="store", type="string", dest="destdir",
                       help="directory where distributions will be placed")
-    parser.add_option("--disturl", action="store", type='string', dest="disturl",
-                      default=PRODUCTION_DISTS_URL,
-                      help="The location of the new release that will be assumed by the go-openmdao.py script")
     parser.add_option("--version", action="store", type="string", dest="version",
                       help="version string applied to all openmdao distributions")
     parser.add_option("-m", action="store", type="string", dest="comment",
@@ -240,8 +237,7 @@ def main():
         print 'creating bootstrapping installer script go-openmdao.py'
         installer = os.path.join(os.path.dirname(__file__),'mkinstaller.py')
         
-        check_call([sys.executable, installer, '--dest=%s'%destdir,
-                    '--disturl=%s'%options.disturl])
+        check_call([sys.executable, installer, '--dest=%s'%destdir])
 
         if options.comment:
             comment = options.comment
