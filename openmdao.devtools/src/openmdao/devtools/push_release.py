@@ -3,134 +3,131 @@ import sys
 import os
 import shutil
 import urllib2
+import fnmatch
+import tempfile
+import tarfile
 from optparse import OptionParser
 
 from fabric.api import run, env, local, put, cd, prompt, hide, hosts, get, settings
 from fabric.state import connections
 
-import tempfile
-import tarfile
-
-from openmdao.devtools.utils import get_openmdao_version, put_dir, VersionError
+from openmdao.devtools.utils import get_openmdao_version, put_dir, tar_dir, \
+                                    repo_top, PRODUCTION_HOST
 
 #import paramiko.util
 #paramiko.util.log_to_file('paramiko.log')
 
-PRODUCTION_URL = 'openmdao@web103.webfaction.com'
-#REAL_URL = 'http://openmdao.org'
-#TEST_URL = 'http://torpedo.grc.nasa.gov:31004'
-
-def push_release(release_dir, server_url):
+def _push_release(release_dir, destination, url, obj):
     """Take a directory containing release files (openmdao package distributions,
-    install scripts, etc., and push it up to the specified server.
+    install scripts, etc., and place the files in the proper locations on the
+    server.
+    
+    release_dir: str
+        where the release file are located
+        
+    destination: str
+        the location where the release files are to be placed. It can be a URL
+        or a local directory
+        
+    url: str
+        URL of the OpenMDAO web server where the release will be pushed
+        
+    obj: _CommObj
+        an object to wrap the behaviors of run, put, etc. so calls are the same for
+        local or remote release areas
     """
+    files = os.listdir(release_dir)
+    f = fnmatch.filter(files, 'go-openmdao-*.py')
+    if len(f) < 1:
+        raise RuntimeError("can't find go-openmdao-*.py file in release directory")
+    elif len(f) > 1:
+        raise RuntimeError("more than one file in release dir matches 'go-openmdao-*.py'")
+    script = f[0]
+    
+    # determine version from form of the go-openmdao-?.?.py file
+    version = os.path.splitext(script)[0].split('-', 2)[2]
+    
+    # the following will barf if the version already exists on the server
+    obj.run('mkdir %s/downloads/%s' % (destination, version))
+    obj.run('chmod 755 %s/downloads/%s' % (destination, version))
+
+    # push new distribs to the server
+    for f in os.listdir(release_dir):
+        if (f.endswith('.tar.gz') and f != 'docs.tar.gz') or f.endswith('.egg'):
+            obj.put(os.path.join(release_dir,f), '%s/dists/%s' % (destination, f))
+            obj.run('chmod 644 %s/dists/%s' % (destination, f))
+    
+    # for now, put the go-openmdao script up without the version
+    # id in the name
+    obj.put(os.path.join(release_dir, 'go-openmdao-%s.py' % version), 
+        '%s/downloads/%s/go-openmdao.py' % (destination, version))
+    obj.run('chmod 755 %s/downloads/%s/go-openmdao.py' % (destination, version))
+
+    # put the docs on the server
+    obj.put_dir(os.path.join(release_dir, 'html'), 
+                '%s/downloads/%s/html' % (destination, version))
+
+    obj.put(os.path.join(repo_top(),'scripts','mkdlversionindex.py'), 
+            '%s/downloads/%s/mkdlversionindex.py' % (destination, version))
+    
+    # update the index.html for the version download directory on the server
+    with cd('%s/downloads/%s' % (destination, version)):
+        obj.run('python2.6 mkdlversionindex.py %s' % url)
+
+    # update the index.html for the dists directory on the server
+    with cd('%s/dists' % destination):
+        obj.run('python2.6 mkegglistindex.py %s' % url)
+
+    # update the 'latest' link
+    obj.run('rm -f %s/downloads/latest' % destination)
+    obj.run('ln -s %s/downloads/%s %s/downloads/latest' % (destination, version, destination))
+        
+    # update the index.html for the downloads directory on the server
+    with cd('%s/downloads' % destination):
+        obj.run('python2.6 mkdownloadindex.py %s' % url)
+
+class _CommObj(object):
     pass
-
-def _release(host, version=None, home=None, url=TEST_URL):
-    """Creates source distributions, docs, binary eggs, and install script for 
-    the current openmdao namespace packages and puts them on a local test server.  After
-    tests have passed, uploads them to <home>/dists, and updates the index.html file there.
-    """
-    print("host is %s" % host)
-    version = get_openmdao_version(home, version)
-
-    dist_dir = os.path.dirname(os.path.dirname(__file__))
-    scripts_dir = os.path.join(dist_dir, 'scripts')
-    tmpdir = tempfile.mkdtemp()
-    startdir = os.getcwd()
-    with settings(host_string=host):    
-        try:
-            # build the release distrib (docs are built as part of this)
-            if is_local:
-                teststr = '--test'
-            else:
-                teststr = ''
-            local(sys.executable+' '+ os.path.join(scripts_dir,'mkrelease.py')+
-                  ' --version=%s %s -d %s' % (version, teststr, tmpdir), capture=False)
-        
-            # tar up the docs so we can upload them to the test server
-            tar_dir(os.path.join(tmpdir, '_build','html'), 'docs', tmpdir)
-        
-            run('mkdir %s/downloads/%s' % (home, version))
-            run('chmod 755 %s/downloads/%s' % (home, version))
-        
-            # push new distribs up to the testserver
-            for f in os.listdir(tmpdir):
-                if f.startswith('openmdao_src'): 
-                    # upload the repo source tar
-                    put(os.path.join(tmpdir,f), '%s/downloads/%s/%s' % (home, version, f), 
-                        mode=0644)
-                elif f.endswith('.tar.gz') and f != 'docs.tar.gz':
-                    put(os.path.join(tmpdir,f), '%s/dists/%s' % (home, f), mode=0644)
-                elif f.endswith('.egg'):
-                    put(os.path.join(tmpdir,f), '%s/dists/%s' % (home, f), mode=0644)
-        
-            # for now, put the go-openmdao script up to the test server without the version
-            # id in the name
-            put(os.path.join(tmpdir, 'go-openmdao-%s.py' % version), 
-                '%s/downloads/%s/go-openmdao.py' % (home, version),
-                mode=0755)
-
-            ## put the docs on the test server and untar them
-            #put_tar(os.path.join(tmpdir,'docs.tar.gz'), 
-                    #'%s/downloads/%s' % (home, version), renames=['html','docs'])
-
-            put(os.path.join(scripts_dir,'mkdlversionindex.py'), 
-                '%s/downloads/%s/mkdlversionindex.py' % (home, version))
-        
-            # update the index.html for the version download directory on the test server
-            with cd('%s/downloads/%s' % (home, version)):
-                run('python2.6 mkdlversionindex.py %s' % url)
-            # update the index.html for the dists directory on the test server
-            with cd('%s/dists' % home):
-                run('python2.6 mkegglistindex.py %s' % url)
-
-            run('rm -f %s/downloads/latest' % home)
-            run('ln -s %s/downloads/%s %s/downloads/latest' % (home, version, home))
-            
-            # update the index.html for the downloads directory on the test server
-            with cd('%s/downloads' % home):
-                run('python2.6 mkdownloadindex.py %s' % url)
-           
-        finally:
-            shutil.rmtree(tmpdir)
-
-
-def create_mirror(destdir, url=PRODUCTION_URL):
-    """Create a local mirror in the specified destination directory of the
-    downloads and dists directories on the specified web site.
-    """
-    os.system('rsync -arvzt --delete %s:downloads %s' % (PRODUCTION_URL, destdir))
-    os.system('rsync -arvzt --delete %s:dists %s' % (PRODUCTION_URL, destdir))
-
 
 def main():
     parser = OptionParser()
-    parser.add_option("--host", action='append', dest='host', 
-                      default='openmdao@web103.webfaction.com',
+    parser.add_option("--host", action='store', dest='host', 
                       metavar='HOST',
-                      help="set the host URL")
+                      help="set the host where the release will be pushed")
+    parser.add_option("--url", action='store', dest='url', 
+                      metavar='URL',
+                      help="set the url of the web server that will serve the release files")
+    parser.add_option("-r", "--releasedir", action="store", type="string", 
+                      dest="releasedir",
+                      help="local directory where relese files are located")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
-    #if sys.platform != 'win32':
-    #    raise RuntimeError("OpenMDAO releases should be built on Windows so Windows binary distributions can be built")
-    hosts=["torpedo.grc.nasa.gov"]
-###NEED TO CHANGE OpenMDAO/release_test TO SOMETHING ELSE FOR TESTING PURPOSES - MAYBE ADD A TEST SWITCH!!!!!
-    try:
-        for host in hosts:
-            # first, make sure we're in sync with the webfaction server - don't need to do any more probably
-            #print 'syncing downloads dir...'
-            #run('rsync -arvzt --delete openmdao@web103.webfaction.com:downloads /OpenMDAO/release_test')
-            #print 'syncing dists dir...'
-            #run('rsync -arvzt --delete openmdao@web103.webfaction.com:dists /OpenMDAO/release_test')
-            print 'creating release...'
-            #READ ONE_release(version=None, is_local=True, home='/OpenMDAO/dev/ckrenek/scripts2', url=TEST_URL)
-            _release(hosts, version=None, is_local=True, home='/OpenMDAO/dev/ckrenek/scripts2', url=TEST_URL)
-    finally:
-        for key in connections.keys():
-            connections[key].close()
-            del connections[key]
+    comm_obj = _CommObj()
+    
+    if os.path.isdir(options.host):  # it's a local release test area
+        if not options.url:
+            print 'you must supply a URL for a local web server'
+            sys.exit(-1)
+        comm_obj.put = shutil.copy
+        comm_obj.put_dir = shutil.copytree
+        comm_obj.run = local
+        
+        _push_release(options.releasedir, options.host, options.url, comm_obj)
+    else: # assume options.host is a remote host
+        if not options.url:
+            options.url = 'http://openmdao.org'
+        comm_obj.put = put
+        comm_obj.put_dir = put_dir
+        comm_obj.run = run
+        
+        try:
+            with settings(host_string=options.host):
+                _push_release(options.releasedir, '~', options.url, comm_obj)
+        finally:
+            for key in connections.keys():
+                connections[key].close()
+                del connections[key]
 
 if __name__ == '__main__':
     main()

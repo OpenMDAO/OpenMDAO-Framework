@@ -5,12 +5,12 @@ import urllib2
 from optparse import OptionParser
 from subprocess import Popen, STDOUT, PIPE, check_call
 
-from fabric.api import run, env, local, put, cd, prompt, hide, hosts, get, settings
-from fabric.state import connections
-
 import tempfile
 import tarfile
 
+from fabric.api import run, env, put, cd, prompt, hide, get, settings
+
+PRODUCTION_HOST ='openmdao@web103.webfaction.com'
 
 class VersionError(RuntimeError):
     pass
@@ -61,12 +61,14 @@ def tar_dir(dirpath, archive_name, destdir):
     """
     startdir = os.getcwd()
     os.chdir(os.path.dirname(dirpath))
+    tarpath = os.path.join(destdir,'%s.tar.gz' % archive_name)
     try:
-        archive = tarfile.open(os.path.join(destdir,'%s.tar.gz' % archive_name), 'w:gz')
+        archive = tarfile.open(tarpath, 'w:gz')
         archive.add(os.path.basename(dirpath))
         archive.close()
     finally:
         os.chdir(startdir)
+    return tarpath
 
 def get_platform():
     """Returns the platform string of the current active host."""
@@ -164,8 +166,6 @@ def put_untar(local_path, remote_dir=None, renames=()):
     if remote_dir is None:
         remote_dir = remote_tmpdir()
 
-    print os.path.isfile(local_path)
-    
     abstarname = os.path.join(remote_dir, tarname)
     put(local_path, abstarname)
     with cd(remote_dir):
@@ -177,18 +177,18 @@ def put_untar(local_path, remote_dir=None, renames=()):
     return remote_dir
 
 
-def put_dir(dirpath, archive_name=None):
+def put_dir(src, dest=None, renames=()):
     """Tar the specified directory, upload it to the current active
     host, untar it, and perform renaming if necessary.
     
     Returns the remote directory where the directory was untarred.
     """
-    if archive_name is None:
-        archive_name = os.path.basename(dirpath)
     tmpdir = tempfile.mkdtemp()
-    tar_dir(dirpath, archive_name, tmpdir)
-    tarpath = os.path.join(tmpdir, "%s.tar.gz" % archive_name)
-    remotedir = put_untar(tarpath)
+    tarpath = tar_dir(src, os.path.basename(src), tmpdir)
+    remote_dir = dest
+    if dest is not None:
+        remote_dir = os.path.dirname(dest)
+    remotedir = put_untar(tarpath, remote_dir=remote_dir, renames=renames)
     shutil.rmtree(tmpdir)
     return remotedir
     
@@ -248,6 +248,12 @@ def remote_build(distdir, destdir, build_type='build -f bdist_egg',
     rm_remote_tree(remtmp)
     rm_remote_tree(remotedir)
 
+def repo_top():
+    """Return the top level directory in the current git repository"""
+    p = Popen('git rev-parse --show-toplevel', 
+              stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+    return p.communicate()[0].strip()
+
     
 def get_git_log_info(fmt):
     try:
@@ -273,4 +279,12 @@ def get_git_branches():
     p = Popen('git branch', 
               stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
     return [b.strip(' *') for b in p.communicate()[0].split('\n')]
+
+
+def create_openmdao_mirror(destdir, host=PRODUCTION_HOST):
+    """Create a local mirror in the specified destination directory of the
+    downloads and dists directories on the specified openmdao host.
+    """
+    os.system('rsync -arvzt --delete %s:downloads %s' % (host, destdir))
+    os.system('rsync -arvzt --delete %s:dists %s' % (host, destdir))
 
