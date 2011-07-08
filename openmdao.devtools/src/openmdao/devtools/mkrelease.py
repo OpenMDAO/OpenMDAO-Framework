@@ -244,7 +244,7 @@ def main():
                 _build_bdist_egg(pdir, destdir)
             
         print 'creating bootstrapping installer script go-openmdao.py'
-        installer = os.path.join(topdir, 'scripts','mkinstaller.py')
+        installer = os.path.join(os.path.dirname(__file__),'mkinstaller.py')
         
         check_call([sys.executable, installer, '--dest=%s'%destdir,
                     '--disturl=%s'%options.disturl])

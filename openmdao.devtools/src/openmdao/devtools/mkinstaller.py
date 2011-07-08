@@ -15,6 +15,7 @@ import virtualenv
 import pprint
 import StringIO
 from pkg_resources import working_set, Requirement
+from optparse import OptionParser
 
 #
 #      EDIT THE FOLLOWING TWO LISTS TO CONTROL THE PACKAGES THAT WILL BE
@@ -76,8 +77,26 @@ def adjust_options(options, args):
 
 """ % code
 
-def main(options):
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
+
+    parser = OptionParser()
+    parser.add_option("--dev", action="store_true", dest='dev', 
+                      help="if present, a development script will be generated instead of a release script")
+    parser.add_option("--dest", action="store", type="string", dest='dest', 
+                      help="specify destination directory", default='.')
+    parser.add_option("--disturl", action="store", type="string", dest="disturl",
+                      default='http://openmdao.org/dists',
+                      help="OpenMDAO distribution URL")
     
+    (options, args) = parser.parse_args(args)
+    
+    if len(args) > 0:
+        print 'unrecognized args: %s' % args
+        parser.print_help()
+        sys.exit(-1)
+
     if options.dev:
         openmdao_packages.extend(openmdao_dev_packages)
         sout = StringIO.StringIO()
@@ -223,23 +242,5 @@ def after_install(options, home_dir):
         f.write(virtualenv.create_bootstrap_script(script_str % optdict))
     os.chmod(scriptname, 0755)
     
-
 if __name__ == '__main__':
-    from optparse import OptionParser
-    parser = OptionParser()
-    parser.add_option("--dev", action="store_true", dest='dev', 
-                      help="if present, a development script will be generated instead of a release script")
-    parser.add_option("--dest", action="store", type="string", dest='dest', 
-                      help="specify destination directory", default='.')
-    parser.add_option("--disturl", action="store", type="string", dest="disturl",
-                      default='http://openmdao.org/dists',
-                      help="OpenMDAO distribution URL")
-    
-    (options, args) = parser.parse_args()
-    
-    if len(args) > 0:
-        print 'unrecognized args: %s' % args
-        parser.print_help()
-        sys.exit(-1)
-
-    main(options)
+    main()
