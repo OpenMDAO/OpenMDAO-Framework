@@ -11,16 +11,14 @@ from fabric.state import connections
 import tempfile
 import tarfile
 
-from openmdao.devtools.utils import check_openmdao_version
+from openmdao.devtools.utils import get_openmdao_version, put_dir, VersionError
 
 #import paramiko.util
 #paramiko.util.log_to_file('paramiko.log')
 
-REAL_URL = 'http://openmdao.org'
-TEST_URL = 'http://torpedo.grc.nasa.gov:31004'
-
-class _VersionError(RuntimeError):
-    pass
+PRODUCTION_URL = 'openmdao@web103.webfaction.com'
+#REAL_URL = 'http://openmdao.org'
+#TEST_URL = 'http://torpedo.grc.nasa.gov:31004'
 
 def push_release(release_dir, server_url):
     """Take a directory containing release files (openmdao package distributions,
@@ -34,16 +32,7 @@ def _release(host, version=None, home=None, url=TEST_URL):
     tests have passed, uploads them to <home>/dists, and updates the index.html file there.
     """
     print("host is %s" % host)
-    if version is not None:
-        try:
-            version = check_openmdao_version(version, home)
-        except _VersionError, err:
-            print str(err),'\n'
-            version = None
-       
-    if version is None:
-        version = prompt('Enter version id:', 
-                         validate=lambda ver: check_openmdao_version(ver,home))
+    version = get_openmdao_version(home, version)
 
     dist_dir = os.path.dirname(os.path.dirname(__file__))
     scripts_dir = os.path.join(dist_dir, 'scripts')
@@ -106,45 +95,14 @@ def _release(host, version=None, home=None, url=TEST_URL):
         finally:
             shutil.rmtree(tmpdir)
 
-def _find_top_dir():
-    path = os.getcwd()
-    while path:
-        if '.git' in os.listdir(path):
-            return path
-        path = os.path.dirname(path)
-    raise RuntimeError("Can't find top dir of repository starting at %s" % os.getcwd())
 
-#build release and put on webfaction - will no longer be used in this form
-@hosts('openmdao@web103.webfaction.com')
-def release(version=None):
-    if sys.platform != 'win32':
-        raise RuntimeError("OpenMDAO releases should be built on Windows so Windows binary distributions can be built")
-    try:
-        for host in hosts:
-            _release(version, is_local=False, home='~')
-    finally:
-        for key in connections.keys():
-            connections[key].close()
-            del connections[key]
- 
-@hosts('torpedo.grc.nasa.gov')
-def localrelease(version=None):
-    if sys.platform != 'win32':
-        raise RuntimeError("OpenMDAO releases should be built on Windows so Windows binary distributions can be built")
-    try:
-        for host in hosts:
-            # first, make sure we're in sync with the webfaction server - don't need to do any more probably
-            #print 'syncing downloads dir...'
-            #run('rsync -arvzt --delete openmdao@web103.webfaction.com:downloads /OpenMDAO/release_test')
-            #print 'syncing dists dir...'
-            #run('rsync -arvzt --delete openmdao@web103.webfaction.com:dists /OpenMDAO/release_test')
-            print 'creating release...'
-            # REAL ONE _release(version, is_local=True, home='/OpenMDAO/release_test', url=TEST_URL)
-            _release(version, is_local=True, home='/OpenMDAO/release_test', url=TEST_URL)
-    finally:
-        for key in connections.keys():
-            connections[key].close()
-            del connections[key]
+def create_mirror(destdir, url=PRODUCTION_URL):
+    """Create a local mirror in the specified destination directory of the
+    downloads and dists directories on the specified web site.
+    """
+    os.system('rsync -arvzt --delete %s:downloads %s' % (PRODUCTION_URL, destdir))
+    os.system('rsync -arvzt --delete %s:dists %s' % (PRODUCTION_URL, destdir))
+
 
 if __name__ == '__main__':
     parser = OptionParser()

@@ -117,15 +117,6 @@ def _release(version, is_local, home, url=REAL_URL):
     finally:
         shutil.rmtree(tmpdir)
 
-def _find_top_dir():
-    path = os.getcwd()
-    while path:
-        if '.git' in os.listdir(path):
-            return path
-        path = os.path.dirname(path)
-    raise RuntimeError("Can't find top dir of repository starting at %s" % os.getcwd())
-
-                
 @hosts('openmdao@web103.webfaction.com')
 def release(version=None):
     if sys.platform != 'win32':

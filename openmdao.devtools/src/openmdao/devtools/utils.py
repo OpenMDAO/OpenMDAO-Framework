@@ -11,18 +11,36 @@ import tempfile
 import tarfile
 
 
-def check_openmdao_version(version, home='~'):
+class VersionError(RuntimeError):
+    pass
+
+def check_openmdao_version(release_dir, version):
     """Checks to see if the specified version of openmdao already exists on
     the current active host.
     """
     # TODO: make this smarter.  maybe have it grab the latest version via pkg_resources
     # or packaging and see if it's the same or newer then the specified version
-    with settings(hide('running', 'stdout'), host_string=host):
-        result = run('ls %s/downloads' % home)
+    with settings(hide('running', 'stdout')):
+        result = run('ls %s/downloads' % release_dir)
     lst = [x.strip() for x in result.split('\n')]
     if version in lst:
-        raise _VersionError('Version %s already exists. Please specify a different version' % version)
+        raise VersionError('Version %s already exists. Please specify a different version' % version)
     return version
+
+
+def get_openmdao_version(release_dir, version=None):
+    if version is not None:
+        try:
+            version = check_openmdao_version(release_dir, version)
+        except VersionError, err:
+            print str(err),'\n'
+            version = None
+       
+    if version is None:
+        version = prompt('Enter version id:', 
+                         validate=lambda ver: check_openmdao_version(release_dir, ver))
+    return version
+
 
 def push_and_run(fpath, remotepath=None, runner=None, args=()):
     """Puts the given file onto the current active host and executes it there"""
@@ -158,7 +176,7 @@ def put_untar(local_path, remote_dir=None, renames=()):
     return remote_dir
 
 
-def put_dir(dirpath, archive_name=None, remote_tmp=None):
+def put_dir(dirpath, archive_name=None):
     """Tar the specified directory, upload it to the current active
     host, untar it, and perform renaming if necessary.
     
@@ -228,3 +246,30 @@ def remote_build(distdir, destdir, build_type='build -f bdist_egg',
 
     rm_remote_tree(remtmp)
     rm_remote_tree(remotedir)
+
+    
+def get_git_log_info(fmt):
+    try:
+        p = Popen('git log -1 --format=format:"%s"' % fmt, 
+                  stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+        out = p.communicate()[0]
+        ret = p.returncode
+    except:
+        return ''
+    else:
+        return out.strip()
+
+def get_git_branch():
+    p = Popen('git branch', 
+              stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+    brlist = [b.strip() for b in p.communicate()[0].split('\n')]
+    for b in brlist:
+        if b.startswith('*'):
+            return b[2:]
+    return ''
+
+def get_git_branches():
+    p = Popen('git branch', 
+              stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+    return [b.strip(' *') for b in p.communicate()[0].split('\n')]
+

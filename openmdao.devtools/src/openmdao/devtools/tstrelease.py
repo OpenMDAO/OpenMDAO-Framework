@@ -10,7 +10,6 @@ from optparse import OptionParser
 from fabric.api import run, env, local, put, cd, get, settings
 from fabric.state import connections
 
-from openmdao.devtools.loctstrelease import get_release_script
 from openmdao.devtools.utils import push_and_run
 
 

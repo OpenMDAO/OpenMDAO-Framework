@@ -5,6 +5,9 @@ virtualenv with 'develop' versions of all of the openmdao packages. Both
 scripts bootstrap a virtualenv environment.
 
 Use the --dev option to generate a go-openmdao-dev.py script.
+
+This script should be run from within an activated OpenMDAO virtual environment
+in order to capture all of the required dependencies correctly.
 """
 
 import sys, os

@@ -1,3 +1,7 @@
+"""
+This module contains everything necessary to install, activate, and test
+an OpenMDAO release environment.
+"""
 
 import sys
 import os
@@ -8,25 +12,23 @@ import tempfile
 from optparse import OptionParser
 
 
-def get_release_script(site_url, version):
-    """Grabs the specified openmdao release installer script from the specified 
-    url, so it can be tested on our dev platforms. The script will be placed in
-    the current directory.
+def get_file(url):
+    """Makes a copy of the specified file in the current directory.
+    The file may be available via a local filename or a URL.
     """
-    script_url =  '%s/downloads/%s/go-openmdao.py' % (site_url, version)
-
+    fname = os.path.basename(url)
     if script_url.startswith('http'):
         resp = urllib2.urlopen(script_url)
-        gofile = open('go-openmdao.py', 'wb')
+        gofile = open(fname, 'wb')
         shutil.copyfileobj(resp.fp, gofile)
         gofile.close()
     else: # release in local file system
-        shutil.copy(script_url, 'go-openmdao.py')
+        shutil.copy(url, fname)
 
 
-def build_release(site_url, version, pyversion):
+def install_release(site_url, version, pyversion):
     """
-    Buids an OpenMDAO release in the current directory.
+    Installs an OpenMDAO release in the current directory.
     
     site_url: str
         The go-openmdao.py file will be copied from here. This
@@ -43,7 +45,7 @@ def build_release(site_url, version, pyversion):
     
     Returns the relative name of the newly built release directory.
     """
-    get_release_script(site_url, version)
+    get_file('%s/downloads/%s/go-openmdao.py' % (site_url, version))
     
     dirfiles = set(os.listdir('.'))
     
@@ -83,16 +85,13 @@ def activate_and_test(envdir, testargs=()):
     for name in ['VIRTUAL_ENV','_OLD_VIRTUAL_PATH','_OLD_VIRTUAL_PROMPT']:
         if name in env: 
             del env[name]
-    proc = subprocess.Popen(command,
-                            shell = True,
-                            cwd = os.getcwd(),
-                            env=env)
+    proc = subprocess.Popen(command, shell = True, cwd = os.getcwd(), env=env)
     proc.wait()
     return proc.returncode
     
 
 if __name__ == '__main__':
-    parser = OptionParser()
+    parser = OptionParser(usage="%prog [OPTIONS] testargs")
     parser.add_option("-s", "--site", type="string", dest='site', 
                       default='http://openmdao.org',
                       help="URL where release files are located. "
@@ -112,7 +111,7 @@ if __name__ == '__main__':
     
     retcode = -1
     try:
-        reldir = build_release(options.site, options.version, 
+        reldir = install_release(options.site, options.version, 
                                pyversion="python%s"%options.pyversion)
         retcode = activate_and_test(os.path.join(tmpdir,reldir),
                                     testargs=args)

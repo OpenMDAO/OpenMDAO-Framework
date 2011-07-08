@@ -11,8 +11,8 @@ from pkg_resources import Environment, WorkingSet, Requirement, working_set
 import tarfile
 import sphinx
 
-from openmdao.util.dumpdistmeta import get_dist_metadata
-import openmdao.util.releaseinfo
+from openmdao.devtools.dumpdistmeta import get_dist_metadata
+#import openmdao.util.releaseinfo
 
 # Specify modules and packages to be included in the OpenMDAO documentation here
 srcmods = [
