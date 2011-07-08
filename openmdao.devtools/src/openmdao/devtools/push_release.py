@@ -73,6 +73,9 @@ def _push_release(release_dir, destination, url, obj):
     obj.put(os.path.join(repo_top(),'scripts','mkegglistindex.py'), 
             '%s/dists/mkegglistindex.py' % destination)
     
+    obj.put(os.path.join(repo_top(),'scripts','mkdownloadindex.py'), 
+            '%s/downloads/mkdownloadindex.py' % destination)
+    
     # update the index.html for the version download directory on the server
     with cd('%s/downloads/%s' % (destination, version)):
         obj.run('python2.6 mkdlversionindex.py %s' % url)
