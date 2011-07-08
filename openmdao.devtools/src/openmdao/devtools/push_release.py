@@ -85,6 +85,8 @@ def _push_release(release_dir, destination, url, obj):
     # update the index.html for the downloads directory on the server
     with cd('%s/downloads' % destination):
         obj.run('python2.6 mkdownloadindex.py %s' % url)
+        
+
 
 class _CommObj(object):
     pass
@@ -93,17 +95,23 @@ def main():
     parser = OptionParser()
     parser.add_option("--host", action='store', dest='host', 
                       metavar='HOST',
-                      help="set the host where the release will be pushed")
+                      help="set the host where the release will be pushed (required)")
     parser.add_option("--url", action='store', dest='url', 
                       metavar='URL',
                       help="set the url of the web server that will serve the release files")
     parser.add_option("-r", "--releasedir", action="store", type="string", 
                       dest="releasedir",
-                      help="local directory where relese files are located")
+                      help="local directory where relese files are located (required)")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
     comm_obj = _CommObj()
+    
+    if not options.host or not options.releasedir:
+        parser.print_help()
+        
+    if not os.path.isdir(options.releasedir):
+        print "release directory %s not found" % options.releasedir
     
     if os.path.isdir(options.host):  # it's a local release test area
         if not options.url:

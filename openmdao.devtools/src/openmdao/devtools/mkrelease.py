@@ -246,7 +246,7 @@ def main():
         
         # tag the current revision with the release version id
         print "tagging release with '%s'" % options.version
-        check_call(['git', 'tag', '-a', options.version, '-m', comment])
+        check_call(['git', 'tag', '-f', '-a', options.version, '-m', comment])
         
         check_call(['git', 'checkout', orig_branch])
         
