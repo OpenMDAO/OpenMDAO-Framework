@@ -64,8 +64,8 @@ def _push_release(release_dir, destination, url, obj):
     obj.run('chmod 755 %s/downloads/%s/go-openmdao.py' % (destination, version))
 
     # put the docs on the server
-    obj.put_dir(os.path.join(release_dir, 'html'), 
-                '%s/downloads/%s/html' % (destination, version))
+    obj.put_dir(os.path.join(release_dir, 'docs'), 
+                '%s/downloads/%s/docs' % (destination, version))
 
     obj.put(os.path.join(repo_top(),'scripts','mkdlversionindex.py'), 
             '%s/downloads/%s/mkdlversionindex.py' % (destination, version))

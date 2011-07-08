@@ -214,7 +214,7 @@ def main():
         check_call([sys.executable, os.path.join(devtools_dir,'build_docs.py'),
                     '-v', options.version])
         shutil.move(os.path.join(topdir,'docs','_build', 'html'), 
-                    os.path.join(destdir,'_build','docs'))
+                    os.path.join(destdir,'docs'))
 
         # commit the changes to the release branch
         print "committing all changes to branch '%s'" % relbranch
