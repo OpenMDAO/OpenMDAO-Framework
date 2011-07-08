@@ -8,7 +8,6 @@ from openmdao.lib.casehandlers.api import CaseSet
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.case import Case
 
-
 class ExpectedImprovementTests(unittest.TestCase):
     
     def test_ei(self):
@@ -39,29 +38,6 @@ class ExpectedImprovementTests(unittest.TestCase):
         ei.execute()
         self.assertEqual(0,ei.EI)
         self.assertEqual(0,ei.PI)
-
-    """
-    def test_2d_filter1(self):
-        pf = ParetoFilter()
-        x = [1,1,1,2,2,2,3,3,3]
-        y = [1,2,3,1,2,3,1,2,3]
-        cases = []
-        for x_0,y_0 in zip(x,y):
-            cases.append(Case(outputs=[("x",x_0),("y",y_0)]))
-        
-        pf.case_sets = [ListCaseIterator(cases),]
-        pf.criteria = ['x','y']
-        pf.execute()
-
-        x_p,y_p = zip(*[(case['x'],case['y']) for case in pf.pareto_set])
-        x_dom,y_dom = zip(*[(case['x'],case['y']) for case in pf.dominated_set])
-        
-        self.assertEqual((1,),x_p)
-        self.assertEqual((1,),y_p)
-        self.assertEqual((1, 1, 2, 2, 2, 3, 3, 3),x_dom)
-        self.assertEqual((2, 3, 1, 2, 3, 1, 2, 3),y_dom)
-    """
-
         
 if __name__ == "__main__":
     unittest.main()
