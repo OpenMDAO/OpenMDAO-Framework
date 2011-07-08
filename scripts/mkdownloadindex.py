@@ -44,7 +44,6 @@ def make_download_index(url):
     if len(dirs): out.write('  <ul>\n')
     for d in dirs:
         base_d = os.path.basename(d)
-        linkpath = os.path.join(url, 'downloads', base_d)
         #following lines get the date of each directory's creation.
         stats=os.stat(d)
         create_date = time.localtime(stats[stat.ST_MTIME])
@@ -60,7 +59,6 @@ def make_download_index(url):
     if len(files): out.write('  <ul>\n')
     for f in files:
         base_f = os.path.basename(f)
-        #linkpath = os.path.join(url,'downloads','misc', base_f)
         linkpath = os.path.join('misc', base_f)
         statspath = os.path.join(miscdir, f)
         stats=os.stat(statspath)

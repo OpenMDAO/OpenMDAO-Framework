@@ -37,7 +37,7 @@ def file_md5(fpath):
         f.close()
 
 
-def make_egglist_index(url):
+def make_egglist_index():
     startdir = os.path.abspath(os.path.dirname(__file__))
     out = open('index.html', 'w')
     out.write('<html>\n<body>\n')
@@ -45,7 +45,6 @@ def make_egglist_index(url):
     for f in find_files(startdir, ["*.egg", "*.tar.gz", "*.zip"]):
         checksum = file_md5(f)
         basef = os.path.basename(f)
-        #lpath = os.path.join(url, 'dists', basef)
         text.append('<li><a href="%s#md5=%s">%s</a>\n' % (basef, checksum, basef))
     text.sort()
     out.writelines(text)
@@ -54,7 +53,4 @@ def make_egglist_index(url):
     
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        make_egglist_index(sys.argv[1])
-    else:
-        make_egglist_index('http://openmdao.org')
+    make_egglist_index()

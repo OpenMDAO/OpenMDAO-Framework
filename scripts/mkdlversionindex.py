@@ -66,7 +66,3 @@ def make_index():
 
 if __name__ == '__main__':
     make_index()
-    #if len(sys.argv) > 1:
-        #make_index(url=sys.argv[1])
-    #else:
-        #make_index(url='http://openmdao.org')

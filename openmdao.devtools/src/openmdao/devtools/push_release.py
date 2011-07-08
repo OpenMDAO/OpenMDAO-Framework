@@ -17,7 +17,7 @@ from openmdao.devtools.utils import get_openmdao_version, put_dir, tar_dir, \
 #import paramiko.util
 #paramiko.util.log_to_file('paramiko.log')
 
-def _push_release(release_dir, destination, url, obj):
+def _push_release(release_dir, destination, obj):
     """Take a directory containing release files (openmdao package distributions,
     install scripts, etc., and place the files in the proper locations on the
     server.
@@ -28,9 +28,6 @@ def _push_release(release_dir, destination, url, obj):
     destination: str
         the location where the release files are to be placed. It can be a URL
         or a local directory
-        
-    url: str
-        URL of the OpenMDAO web server where the release will be pushed
         
     obj: _CommObj
         an object to wrap the behaviors of run, put, etc. so calls are the same for
@@ -78,11 +75,11 @@ def _push_release(release_dir, destination, url, obj):
     
     # update the index.html for the version download directory on the server
     with cd('%s/downloads/%s' % (destination, version)):
-        obj.run('python2.6 mkdlversionindex.py %s' % url)
+        obj.run('python2.6 mkdlversionindex.py')
 
     # update the index.html for the dists directory on the server
     with cd('%s/dists' % destination):
-        obj.run('python2.6 mkegglistindex.py %s' % url)
+        obj.run('python2.6 mkegglistindex.py')
 
     # update the 'latest' link
     obj.run('rm -f %s/downloads/latest' % destination)
@@ -90,7 +87,7 @@ def _push_release(release_dir, destination, url, obj):
         
     # update the index.html for the downloads directory on the server
     with cd('%s/downloads' % destination):
-        obj.run('python2.6 mkdownloadindex.py %s' % url)
+        obj.run('python2.6 mkdownloadindex.py')
         
 
 
@@ -102,9 +99,6 @@ def main():
     parser.add_option("--host", action='store', dest='host', 
                       metavar='HOST',
                       help="set the host where the release will be pushed (required)")
-    parser.add_option("--url", action='store', dest='url', 
-                      metavar='URL',
-                      help="set the url of the web server that will serve the release files")
     parser.add_option("-r", "--releasedir", action="store", type="string", 
                       dest="releasedir",
                       help="local directory where relese files are located (required)")
@@ -122,24 +116,19 @@ def main():
         sys.exit(-1)
     
     if os.path.isdir(options.host):  # it's a local release test area
-        if not options.url:
-            print 'you must supply a URL for a local web server'
-            sys.exit(-1)
         comm_obj.put = shutil.copy
         comm_obj.put_dir = shutil.copytree
         comm_obj.run = local
         
-        _push_release(options.releasedir, options.host, options.url, comm_obj)
+        _push_release(options.releasedir, options.host, comm_obj)
     else: # assume options.host is a remote host
-        if not options.url:
-            options.url = 'http://openmdao.org'
         comm_obj.put = put
         comm_obj.put_dir = put_dir
         comm_obj.run = run
         
         try:
             with settings(host_string=options.host):
-                _push_release(options.releasedir, '~', options.url, comm_obj)
+                _push_release(options.releasedir, '~', comm_obj)
         finally:
             for key in connections.keys():
                 connections[key].close()
@@ -147,3 +136,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+    
+    
