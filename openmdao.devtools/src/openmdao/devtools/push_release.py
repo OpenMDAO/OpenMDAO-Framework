@@ -104,7 +104,7 @@ def create_mirror(destdir, url=PRODUCTION_URL):
     os.system('rsync -arvzt --delete %s:dists %s' % (PRODUCTION_URL, destdir))
 
 
-if __name__ == '__main__':
+def main():
     parser = OptionParser()
     parser.add_option("--host", action='append', dest='host', 
                       default='openmdao@web103.webfaction.com',
@@ -131,3 +131,6 @@ if __name__ == '__main__':
         for key in connections.keys():
             connections[key].close()
             del connections[key]
+
+if __name__ == '__main__':
+    main()
