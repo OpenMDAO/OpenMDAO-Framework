@@ -109,9 +109,11 @@ def main():
     
     if not options.host or not options.releasedir:
         parser.print_help()
+        sys.exit(-1)
         
     if not os.path.isdir(options.releasedir):
         print "release directory %s not found" % options.releasedir
+        sys.exit(-1)
     
     if os.path.isdir(options.host):  # it's a local release test area
         if not options.url:
