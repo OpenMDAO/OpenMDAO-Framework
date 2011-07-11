@@ -9,8 +9,8 @@ from enthought.traits.api import TraitError
 
 from openmdao.main.api import Component, Container, FileRef
 from openmdao.main.mp_support import is_instance
-from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, Str
-
+from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
+                                       List, Str
 from client import Client
 from units  import get_translation
 
@@ -50,6 +50,7 @@ class ComponentProxy(Component):
 # TODO: local/remote name collision detection/resolution?
         info = self._client.list_properties(path)
         for prop, typ, iotype in info:
+            print '_populate %r %r %r' % (prop, typ, iotype)
             rpath = '.'.join([path, prop])
             if typ == 'PHXDouble' or typ == 'PHXLong' or typ == 'PHXString':
                 enum_valstrs = self._client.get(rpath+'.enumValues')
@@ -89,8 +90,8 @@ class ComponentProxy(Component):
                                                int))
             elif typ.startswith('java.lang.String['):
                 container.add_trait(prop,
-                                    ArrayProxy(iotype, self._client, rpath,
-                                               str))
+                                    ListProxy(iotype, self._client, rpath,
+                                              str))
             else:
                 raise NotImplementedError('%r type %r' % (prop, typ))
 
@@ -189,7 +190,7 @@ class ProxyMixin(object):
 
 
 class ArrayProxy(ProxyMixin, Array):
-    """ Proxy for a remote double, long, or String array. """
+    """ Array-style proxy for a remote double, long, or String array. """
 
     def __init__(self, iotype, client, rpath, typ):
         ProxyMixin.__init__(self, client, rpath)
@@ -223,8 +224,61 @@ class ArrayProxy(ProxyMixin, Array):
             Array.__init__(self, dtype=typ, iotype=iotype, desc=desc,
                            default_value=default, low=low, high=high)
         else:
+# FIXME: This will pickle, but not unpickle.
+#        Probabably don't want fixed max-length string storage anyway.
             Array.__init__(self, dtype=typ, iotype=iotype, desc=desc,
                            default_value=default)
+
+    def get(self, obj, name):
+        """ Get remote value. """
+        return [self._type(val.strip(' "')) for val in self.rget().split(',')]
+
+    def set(self, obj, name, value):
+        """ Set remote value. """
+        if self._type == float:
+            valstr = ', '.join([_float2str(val) for val in value])
+        else:
+            valstr = ', '.join([str(val) for val in value])
+        self.rset(valstr)
+
+
+class ListProxy(ProxyMixin, List):
+    """ List-style proxy for a remote 1D double, long, or String array. """
+
+    def __init__(self, iotype, client, rpath, typ):
+        ProxyMixin.__init__(self, client, rpath)
+        self._type = typ
+
+        default = [typ(val.strip(' "')) for val in self._valstr.split(',')]
+        desc = client.get(rpath+'.description')
+
+        if typ == float:
+            as_units = client.get(rpath+'.units')
+            if as_units:
+                om_units = get_translation(as_units)
+            else:
+                om_units = None
+
+        if typ != str:
+            if client.get(rpath+'.hasUpperBound') == 'true':
+                high = typ(client.get(rpath+'.upperBound'))
+            else:
+                high = None
+            if client.get(rpath+'.hasLowerBound') == 'true':
+                low = typ(client.get(rpath+'.lowerBound'))
+            else:
+                low = None
+
+        if typ == float:
+            List.__init__(self, trait=Float, iotype=iotype, desc=desc,
+                           value=default, low=low, high=high,
+                           units=om_units)
+        elif typ == int:
+            List.__init__(self, trait=Int, iotype=iotype, desc=desc,
+                           value=default, low=low, high=high)
+        else:
+            List.__init__(self, trait=Str, iotype=iotype, desc=desc,
+                          value=default)
 
     def get(self, obj, name):
         """ Get remote value. """

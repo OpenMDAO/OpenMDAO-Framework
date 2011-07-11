@@ -79,8 +79,8 @@ class SubGroup(Container):
                 default_value=[1, 2, 3, 4, 5, 6, 7, 8, 9])
 #    s1d = Array(dtype=str, iotype='in', desc='1D string array',
 #                default_value=['Hello', 'from', 'TestComponent.SubGroup'])
-#    s1d = List(Str, iotype='in', desc='1D string array',
-#               value=['Hello', 'from', 'TestComponent.SubGroup'])
+    s1d = List(Str, iotype='in', desc='1D string array',
+               value=['Hello', 'from', 'TestComponent.SubGroup'])
 
 
 class Bogus(object):

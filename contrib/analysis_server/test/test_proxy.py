@@ -257,8 +257,8 @@ class TestCase(unittest.TestCase):
         comp.pre_delete()
 
     def test_str1D(self):
-        raise nose.SkipTest('1D strings not supported yet.')
-        comp = self.factory.create('ASTestComp', 'comp')
+#        raise nose.SkipTest('1D strings not supported yet.')
+        comp = self.factory.create('ASTestComp')
         self.assertEqual(comp.get('sub_group.s1d'),
                          ['Hello', 'from', 'TestComponent.SubGroup'])
         comp.set('sub_group.s1d', ['froboz', 'xyzzy'])

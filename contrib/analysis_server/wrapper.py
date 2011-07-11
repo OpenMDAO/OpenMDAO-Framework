@@ -18,8 +18,8 @@ from openmdao.main.api import Container, FileRef
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.mp_support import is_instance
 
-from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, Str
-
+from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
+                                       List, Str
 from monitor import FileMonitor
 
 class WrapperError(Exception):
@@ -478,29 +478,19 @@ class BaseWrapper(object):
             raise WrapperError('no such property <%s>.' % path)
 
 
-class ArrayWrapper(BaseWrapper):
+class ArrayBase(BaseWrapper):
     """
-    Wrapper for `Array` providing double[], long[], or String[] interface.
+    Base for wrappers providing double[], long[], or String[] interface.
     """
 
-    # Map from numpy dtype.kind to scalar converter.
-    _converters = {'f':float, 'i':int, 'S':str}
-
-    def __init__(self, container, name, ext_path):
-        super(ArrayWrapper, self).__init__(container, name, ext_path)
-        value = self._container.get(self._name)
-        kind = value.dtype.kind
-        try:
-            self.typ = self._converters[kind]
-        except KeyError:
-            raise WrapperError('Unsupported dtype for %s.%s: %r (%r)'
-                               % (container.get_pathname(), name,
-                                  value.dtype, kind))
-        if self.typ == float:
+    def __init__(self, container, name, ext_path, typ):
+        super(ArrayBase, self).__init__(container, name, ext_path)
+        self.typ = typ
+        if typ is float:
             self._typstr = 'double'
-        elif self.typ == int:
+        elif typ is int:
             self._typstr = 'long'
-        else:
+        elif typ is str:
             self._typstr = 'string'
 
     @property
@@ -563,7 +553,7 @@ class ArrayWrapper(BaseWrapper):
             else:
                 return ''
         else:
-            return super(ArrayWrapper, self).get(attr, path)
+            return super(ArrayBase, self).get(attr, path)
 
     def get_as_xml(self):
         """ Return info in XML form. """
@@ -618,7 +608,42 @@ class ArrayWrapper(BaseWrapper):
 
         return sorted(lines)
 
+
+class ArrayWrapper(ArrayBase):
+    """
+    Wrapper for `Array` providing double[], long[], or String[] interface.
+    """
+
+    # Map from numpy dtype.kind to scalar converter.
+    _converters = {'f':float, 'i':int, 'S':str}
+
+    def __init__(self, container, name, ext_path):
+        value = container.get(name)
+        kind = value.dtype.kind
+        try:
+            typ = self._converters[kind]
+        except KeyError:
+            raise WrapperError('Unsupported dtype for %s.%s: %r (%r)'
+                               % (container.get_pathname(), name,
+                                  value.dtype, kind))
+
+        super(ArrayWrapper, self).__init__(container, name, ext_path, typ)
+
 TYPE_MAP[Array] = ArrayWrapper
+
+
+class ListWrapper(ArrayBase):
+    """
+    Wrapper for `List` providing double[], long[], or String[] interface.
+    """
+
+    def __init__(self, container, name, ext_path):
+        value = container.get(name)
+# HACK!
+        typ = str
+        super(ListWrapper, self).__init__(container, name, ext_path, typ)
+
+TYPE_MAP[List] = ListWrapper
 
 
 class BoolWrapper(BaseWrapper):

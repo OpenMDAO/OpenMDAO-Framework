@@ -356,6 +356,7 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
 <Variable name="i1d" type="long[]" io="input" format="" description="1D int array" units="">1, 2, 3, 4, 5, 6, 7, 8, 9</Variable>
 <Variable name="ie" type="long" io="input" format="" description="Int enum" units="">9</Variable>
 <Variable name="s" type="string" io="input" format="" description="A string">Hello World!  ( &amp; &lt; &gt; )</Variable>
+<Variable name="s1d" type="string[]" io="input" format="" description="1D string array" units="">"Hello", "from", "TestComponent.SubGroup"</Variable>
 <Variable name="se" type="string" io="input" format="" description="Str enum" units="">cold</Variable>
 </Group>
 <Variable name="x" type="double" io="input" format="" description="X input" units="">2</Variable>
@@ -671,7 +672,7 @@ z (type=com.phoenix_int.aserver.types.PHXDouble) (access=g)"""
         self.compare(replies[-1], expected)
 
         expected = """\
-9 properties found:
+10 properties found:
 b (type=com.phoenix_int.aserver.types.PHXBoolean) (access=sg)
 f (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)
 f1d (type=double[9]) (access=sg)
@@ -680,6 +681,7 @@ i (type=com.phoenix_int.aserver.types.PHXLong) (access=sg)
 i1d (type=long[9]) (access=sg)
 ie (type=com.phoenix_int.aserver.types.PHXLong) (access=sg)
 s (type=com.phoenix_int.aserver.types.PHXString) (access=sg)
+s1d (type=java.lang.String[3]) (access=sg)
 se (type=com.phoenix_int.aserver.types.PHXString) (access=sg)"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv(['start ASTestComp comp',
