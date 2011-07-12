@@ -76,6 +76,7 @@ from distutils.version import LooseVersion
 from xml.sax.saxutils import escape
 
 from openmdao.main.api import Component, Container, set_as_top
+from openmdao.main.assembly import PassthroughTrait
 from openmdao.main.mp_util import read_allowed_hosts
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -1436,7 +1437,7 @@ class _WrapperConfig(object):
                 if int_path != '*':
                     raise ValueError("internal path must be '*'"
                                      " if the external path is '*'")
-                # Register all valid top-level non-vanilla paths in this component.
+                # Register all valid top-level non-vanilla paths.
                 containers = [instance]
                 containers.extend([val for name, val in instance.items()
                                        if isinstance(val, Container) and not
@@ -1447,6 +1448,14 @@ class _WrapperConfig(object):
                             continue
                         trait = container.get_trait(name)
                         typ = None if trait is None else trait.trait_type
+                        if isinstance(typ, PassthroughTrait):
+                            connections = container._depgraph.connections_to(name)
+                            if iotype == 'in':
+                                real_name = connections[0][1]
+                            else:
+                                real_name = connections[0][0]
+                            trait = container.get_trait(real_name)
+                            typ = trait.trait_type
                         if type(typ) in TYPE_MAP:
                             if container is instance:
                                 path = name
