@@ -16,6 +16,7 @@ except ImportError:  # pragma no cover
 
 from openmdao.main.api import Container, FileRef
 from openmdao.main.assembly import PassthroughTrait
+from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.mp_support import is_instance
 
@@ -952,7 +953,10 @@ class FloatWrapper(BaseWrapper):
     def get(self, attr, path):
         """ Return attribute corresponding to `attr`. """
         if attr == 'value' or attr == 'valueStr':
-            return _float2str(self._container.get(self._name))
+            val = self._container.get(self._name)
+            if isinstance(val, AttrWrapper):
+                val = val.value
+            return _float2str(val)
         elif attr == 'enumAliases':
             return ''
         elif attr == 'enumValues':
