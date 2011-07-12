@@ -1450,12 +1450,7 @@ class _WrapperConfig(object):
                         trait = container.get_dyn_trait(name)
                         typ = None if trait is None else trait.trait_type
                         if isinstance(typ, PassthroughTrait):
-                            connections = container._depgraph.connections_to(name)
-                            if iotype == 'in':
-                                real_name = connections[0][1]
-                            else:
-                                real_name = connections[0][0]
-                            typ = container.get_dyn_trait(real_name)
+                            typ = container.get_dyn_trait(typ.target)
                         if type(typ) not in TYPE_MAP:
                             for base in type(typ).__bases__:
                                 if base in TYPE_MAP:

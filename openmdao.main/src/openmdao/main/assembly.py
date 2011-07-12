@@ -110,6 +110,7 @@ class Assembly (Component):
             iotype = self.get_metadata(pathname, 'iotype')
             
         metadata = self.get_metadata(pathname)
+        metadata['target'] = pathname
         if "validation_trait" in metadata: 
             newtrait = PassthroughTrait(**metadata)
         else: 

@@ -96,12 +96,7 @@ class ComponentWrapper(object):
                 # Determine variable type.
                 typ = trait.trait_type or trait.trait
                 if isinstance(typ, PassthroughTrait):
-                    connections = container._depgraph.connections_to(name)
-                    if iotype == 'in':
-                        real_name = connections[0][1]
-                    else:
-                        real_name = connections[0][0]
-                    typ = container.get_dyn_trait(real_name)
+                    typ = container.get_dyn_trait(typ.target)
                 key = type(typ)
                 if key not in TYPE_MAP:
                     for base in key.__bases__:
