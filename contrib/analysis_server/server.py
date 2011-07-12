@@ -1446,7 +1446,8 @@ class _WrapperConfig(object):
                     for name, val in container.items(iotype=iotype):
                         if name in _IGNORE_ATTR or name.startswith('_'):
                             continue
-                        trait = container.get_trait(name)
+                        # Only register if it's a supported type.
+                        trait = container.get_dyn_trait(name)
                         typ = None if trait is None else trait.trait_type
                         if isinstance(typ, PassthroughTrait):
                             connections = container._depgraph.connections_to(name)
@@ -1454,15 +1455,19 @@ class _WrapperConfig(object):
                                 real_name = connections[0][1]
                             else:
                                 real_name = connections[0][0]
-                            trait = container.get_trait(real_name)
-                            typ = trait.trait_type
-                        if type(typ) in TYPE_MAP:
-                            if container is instance:
-                                path = name
+                            typ = container.get_dyn_trait(real_name)
+                        if type(typ) not in TYPE_MAP:
+                            for base in type(typ).__bases__:
+                                if base in TYPE_MAP:
+                                    break
                             else:
-                                path = '%s.%s' % (container.get_pathname(), name)
-                            _LOGGER.debug('    register %r %r', path, iotype)
-                            mapping[path] = path
+                                continue  # No a supported type.
+                        if container is instance:
+                            path = name
+                        else:
+                            path = '%s.%s' % (container.get_pathname(), name)
+                        _LOGGER.debug('    register %r %r', path, iotype)
+                        mapping[path] = path
             else:
                 if int_path == '*':
                     int_path = ext_path
