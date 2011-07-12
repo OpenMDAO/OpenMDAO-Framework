@@ -15,6 +15,7 @@ except ImportError:  # pragma no cover
     pass  # Not available on Windows.
 
 from openmdao.main.api import Container, FileRef
+from openmdao.main.assembly import PassthroughTrait
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.mp_support import is_instance
 
@@ -92,14 +93,26 @@ class ComponentWrapper(object):
                 if trait is None:
                     raise WrapperError('no such trait %r %r.'
                                        % (container.get_pathname(), rpath))
-                # Wrap it.
+                # Determine variable type.
                 typ = trait.trait_type or trait.trait
+                if isinstance(typ, PassthroughTrait):
+                    connections = container._depgraph.connections_to(name)
+                    if iotype == 'in':
+                        real_name = connections[0][1]
+                    else:
+                        real_name = connections[0][0]
+                    typ = container.get_dyn_trait(real_name)
                 key = type(typ)
-                try:
-                    wrapper_class = TYPE_MAP[key]
-                except KeyError:
-                    raise WrapperError('%s: unsupported variable type %r.'
-                                       % (ext_path, key))
+                if key not in TYPE_MAP:
+                    for base in key.__bases__:
+                        if base in TYPE_MAP:
+                            key = base
+                            break
+                    else:
+                        raise WrapperError('%s: unsupported variable type %r.'
+                                           % (ext_path, key))
+                # Wrap it.
+                wrapper_class = TYPE_MAP[key]
                 wrapper = wrapper_class(container, rpath, epath)
                 if wrapper_class is FileWrapper:
                     wrapper.set_server(self._server)
