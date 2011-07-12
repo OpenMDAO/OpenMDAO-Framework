@@ -257,7 +257,6 @@ class TestCase(unittest.TestCase):
         comp.pre_delete()
 
     def test_str1D(self):
-#        raise nose.SkipTest('1D strings not supported yet.')
         comp = self.factory.create('ASTestComp')
         self.assertEqual(comp.get('sub_group.s1d'),
                          ['Hello', 'from', 'TestComponent.SubGroup'])
@@ -267,6 +266,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(comp.get('sub_group.s1d'), ['lkjhlk', '654', '#$%^'])
         trait = comp.sub_group.get_trait('s1d')
         self.assertEqual(trait.desc, '1D string array')
+        comp.pre_delete()
 
     def test_units(self):
         self.assertFalse(analysis_server.have_translation('FroBoz'))

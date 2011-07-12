@@ -476,7 +476,7 @@ version: 0.1""")
         """ Send error reply to client, with optional logging. """
         if self._raw:
             req_id = req_id or self._req_id
-            _LOGGER.error('%s (req_id %s)', reply, req_id)
+            _LOGGER.error('(req_id %s)\n%s', req_id, reply)
         else:
             _LOGGER.error('%s', reply)
         reply = ERROR_PREFIX+reply
@@ -1436,10 +1436,11 @@ class _WrapperConfig(object):
                 if int_path != '*':
                     raise ValueError("internal path must be '*'"
                                      " if the external path is '*'")
-                # Register all valid non-vanilla paths in this component.
+                # Register all valid top-level non-vanilla paths in this component.
                 containers = [instance]
                 containers.extend([val for name, val in instance.items()
-                                       if isinstance(val, Container)])
+                                       if isinstance(val, Container) and not
+                                          isinstance(val, Component)])
                 for container in containers:
                     for name, val in container.items(iotype=iotype):
                         if name in _IGNORE_ATTR or name.startswith('_'):
