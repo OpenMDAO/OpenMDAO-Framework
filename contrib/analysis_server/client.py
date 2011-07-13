@@ -132,6 +132,12 @@ class Client(object):
         reply = self._send_recv('getDirectTransfer')
         return reply == 'true'
 
+    def get_hierarchy(self, path):
+        """ Return all interface variable information for `path` as XML. """
+        reply = self._send_recv('getHierarchy %s' % path)
+# TODO: Pythonic return value.
+        return reply
+
     def get_icon(self, path):
         """ Gets the icon data for published component `path`. """
 # TODO: getIcon
@@ -337,6 +343,10 @@ class Client(object):
     def set(self, path, valstr):
         """ Sets the value of variable `path` from `valstr`. """
         self._send_recv('set %s = %s' % (path, valstr))
+
+    def set_hierarchy(self, path, xml):
+        """ Set multiple variable values from `xml` data. """
+        self._send_recv('setHierarchy %s %s' % (path, xml))
 
     def set_mode_raw(self):
         """ Sets the connection into 'raw' mode. """

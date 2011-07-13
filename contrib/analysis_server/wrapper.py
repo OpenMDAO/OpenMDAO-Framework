@@ -2,10 +2,12 @@
 Wrappers for OpenMDAO components and variables.
 """
 
+import logging
+import numpy
 import os
 import sys
 import time
-import logging
+import traceback
 import xml.etree.cElementTree as ElementTree
 from xml.sax.saxutils import escape, quoteattr
 
@@ -135,6 +137,7 @@ class ComponentWrapper(object):
             try:
                 self._comp.run()
             except Exception as exc:
+                logging.exception('run() failed:')
                 raise WrapperError('%s' % exc)
             else:
                 self._send_reply('%s completed.' % self._name, req_id)
@@ -576,9 +579,9 @@ class ArrayBase(BaseWrapper):
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr` to `valstr`. """
         if attr == 'value':
-            self._container.set(self._name,
-                                [self.typ(val.strip(' "'))
-                                 for val in valstr.split(',')])
+            arr = numpy.array([self.typ(val.strip(' "'))
+                               for val in valstr.split(',')])
+            self._container.set(self._name, arr)
         elif attr in ('componentType', 'description', 'dimensions',
                       'enumAliases', 'enumValues', 'first', 'format',
                       'hasLowerBound', 'lowerBound',
@@ -651,6 +654,15 @@ class ListWrapper(ArrayBase):
 # HACK!
         typ = str
         super(ListWrapper, self).__init__(container, name, ext_path, typ)
+
+    def set(self, attr, path, valstr):
+        """ Set attribute corresponding to `attr` to `valstr`. """
+        if attr == 'value':
+            self._container.set(self._name,
+                                [self.typ(val.strip(' "'))
+                                 for val in valstr.split(',')])
+        else:
+            super(ListWrapper, self).set(attr, path, valstr)
 
 TYPE_MAP[List] = ListWrapper
 

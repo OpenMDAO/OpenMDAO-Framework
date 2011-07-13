@@ -2,6 +2,7 @@
 Proxies for AnalysisServer components and variables.
 """
 
+import numpy
 import os.path
 import socket
 
@@ -50,7 +51,6 @@ class ComponentProxy(Component):
 # TODO: local/remote name collision detection/resolution?
         info = self._client.list_properties(path)
         for prop, typ, iotype in info:
-            print '_populate %r %r %r' % (prop, typ, iotype)
             rpath = '.'.join([path, prop])
             if typ == 'PHXDouble' or typ == 'PHXLong' or typ == 'PHXString':
                 enum_valstrs = self._client.get(rpath+'.enumValues')
@@ -196,7 +196,8 @@ class ArrayProxy(ProxyMixin, Array):
         ProxyMixin.__init__(self, client, rpath)
         self._type = typ
 
-        default = [typ(val.strip(' "')) for val in self._valstr.split(',')]
+        default = numpy.array([typ(val.strip(' "'))
+                               for val in self._valstr.split(',')])
         desc = client.get(rpath+'.description')
 
         if typ == float:
@@ -231,7 +232,8 @@ class ArrayProxy(ProxyMixin, Array):
 
     def get(self, obj, name):
         """ Get remote value. """
-        return [self._type(val.strip(' "')) for val in self.rget().split(',')]
+        return numpy.array([self._type(val.strip(' "'))
+                            for val in self.rget().split(',')])
 
     def set(self, obj, name, value):
         """ Set remote value. """

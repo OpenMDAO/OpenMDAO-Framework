@@ -1,9 +1,11 @@
-import sys
+import nose
 import os.path
 import pkg_resources
 import socket
+import sys
 import unittest
-import nose
+
+from numpy.testing import assert_array_equal
 
 from openmdao.main.api import Assembly, Component, FileRef, set_as_top
 from openmdao.lib.datatypes.api import File, Float, Str
@@ -213,12 +215,12 @@ class TestCase(unittest.TestCase):
     def test_float1D(self):
         comp = self.factory.create('ASTestComp')
         self.assertEqual(comp.get('sub_group.f'), 0.5)
-        self.assertEqual(comp.get('sub_group.f1d'),
-                         [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5])
+        assert_array_equal(comp.get('sub_group.f1d'),
+                           [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5])
         comp.set('sub_group.f1d', [4.5, 3.5, 2.5, 1.5])
-        self.assertEqual(comp.sub_group.f1d, [4.5, 3.5, 2.5, 1.5])
+        assert_array_equal(comp.sub_group.f1d, [4.5, 3.5, 2.5, 1.5])
         comp.sub_group.f1d = [-5.5, -6.5, -7.5]
-        self.assertEqual(comp.get('sub_group.f1d'), [-5.5, -6.5, -7.5])
+        assert_array_equal(comp.get('sub_group.f1d'), [-5.5, -6.5, -7.5])
         trait = comp.sub_group.get_trait('f1d')
         self.assertEqual(trait.desc, '1D float array')
         comp.pre_delete()
@@ -236,11 +238,12 @@ class TestCase(unittest.TestCase):
 
     def test_int1D(self):
         comp = self.factory.create('ASTestComp')
-        self.assertEqual(comp.get('sub_group.i1d'), [1, 2, 3, 4, 5, 6, 7, 8, 9])
+        assert_array_equal(comp.get('sub_group.i1d'),
+                           [1, 2, 3, 4, 5, 6, 7, 8, 9])
         comp.set('sub_group.i1d', [4, 3, 2, 1])
-        self.assertEqual(comp.sub_group.i1d, [4, 3, 2, 1])
+        assert_array_equal(comp.sub_group.i1d, [4, 3, 2, 1])
         comp.sub_group.i1d = [-5, -6, -7]
-        self.assertEqual(comp.get('sub_group.i1d'), [-5, -6, -7])
+        assert_array_equal(comp.get('sub_group.i1d'), [-5, -6, -7])
         trait = comp.sub_group.get_trait('i1d')
         self.assertEqual(trait.desc, '1D int array')
         comp.pre_delete()
