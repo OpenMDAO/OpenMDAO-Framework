@@ -82,7 +82,7 @@ def _push_release(release_dir, destination, obj):
 
     # update the 'latest' link
     obj.run('rm -f %s/downloads/latest' % destination)
-    obj.run('ln -s %s/downloads/%s %s/downloads/latest' % (destination, version, destination))
+    obj.run('ln -s -f %s %s/downloads/latest' % (version, destination))
         
     # update the index.html for the downloads directory on the server
     with cd('%s/downloads' % destination):
@@ -94,40 +94,39 @@ class _CommObj(object):
     pass
 
 def main():
-    parser = OptionParser()
-    parser.add_option("--host", action='store', dest='host', 
-                      metavar='HOST',
-                      help="set the host where the release will be pushed (required)")
-    parser.add_option("-r", "--releasedir", action="store", type="string", 
-                      dest="releasedir",
-                      help="local directory where relese files are located (required)")
-
+    parser = OptionParser(usage="%prog RELEASE_DIR DESTINATION")
     (options, args) = parser.parse_args(sys.argv[1:])
     
     comm_obj = _CommObj()
     
-    if not options.host or not options.releasedir:
+    if len(args) != 2:
         parser.print_help()
         sys.exit(-1)
         
-    if not os.path.isdir(options.releasedir):
-        print "release directory %s not found" % options.releasedir
+    if not os.path.isdir(args[0]):
+        print "release directory %s not found" % args[0]
         sys.exit(-1)
     
-    if os.path.isdir(options.host):  # it's a local release test area
+    destparts = args[1].split(':', 1)
+    if len(destparts)==1 and os.path.isdir(args[1]):  # it's a local release test area
         comm_obj.put = shutil.copy
         comm_obj.put_dir = shutil.copytree
         comm_obj.run = local
         
-        _push_release(options.releasedir, options.host, comm_obj)
-    else: # assume options.host is a remote host
+        _push_release(args[0], args[1], comm_obj)
+    else: # assume args[1] is a remote host:destdir
         comm_obj.put = put
         comm_obj.put_dir = put_dir
         comm_obj.run = run
         
+        if len(destparts) > 1:
+            home = destparts[1]
+        else:
+            home = '~'
+
         try:
-            with settings(host_string=options.host):
-                _push_release(options.releasedir, '~', comm_obj)
+            with settings(host_string=destparts[0]):
+                _push_release(args[0], home, comm_obj)
         finally:
             for key in connections.keys():
                 connections[key].close()

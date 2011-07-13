@@ -7,10 +7,10 @@ import subprocess
 from optparse import OptionParser
 from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, hosts
 from fabric.state import connections
-import paramiko.util
 from socket import gethostname
 
-paramiko.util.log_to_file('paramiko.log')
+#import paramiko.util
+#paramiko.util.log_to_file('paramiko.log')
 
 def _make_archive(tarfilename):
     #branchdir=local('git rev-parse --show-toplevel').strip()

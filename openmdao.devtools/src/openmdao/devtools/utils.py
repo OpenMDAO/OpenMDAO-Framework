@@ -72,7 +72,7 @@ def tar_dir(dirpath, archive_name, destdir):
 
 def get_platform():
     """Returns the platform string of the current active host."""
-    with hide('running', 'stdout'):
+    with settings(hide('running', 'stderr'), warn_only=True):
         return run('python -c "import sys; print sys.platform"')
 
 def check_setuptools(py):
