@@ -139,16 +139,6 @@ def list_remote_dir(dirname):
     return run("""python -c "import os; print os.listdir('%s')" """ % dirname)
             
 
-def setup_files_area(dest, dirs=('downloads','dists'),
-                     production_host='openmdao@web103.webfaction.com'):
-    """Set up the specified directory as an OpenMDAO release area.
-    This requires ssh access without a password to the host.
-    """
-    # first, make sure we're in sync with the webfaction server
-    for dname in dirs:
-        print 'syncing %s dir with production server (%s)...' % (dname,production_host)
-        run('rsync -arvzt --delete %s:%s %s' % (production_host, dname, dest))
-
 
 def put_untar(local_path, remote_dir=None, renames=()):
     """Put the given tarfile on the current active host and untar it in the
@@ -281,10 +271,13 @@ def get_git_branches():
     return [b.strip(' *') for b in p.communicate()[0].split('\n')]
 
 
-def create_openmdao_mirror(destdir, host=PRODUCTION_HOST):
-    """Create a local mirror in the specified destination directory of the
-    downloads and dists directories on the specified openmdao host.
+def rsync_dirs(dest, host, dirs=('downloads','dists'),
+               doit=os.system):
+    """Use rsync to sync the specified directories on the specified host
+    with the corresponding directories in the specified destination directory.
+    
+    This requires ssh access without a password to the host.
     """
-    os.system('rsync -arvzt --delete %s:downloads %s' % (host, destdir))
-    os.system('rsync -arvzt --delete %s:dists %s' % (host, destdir))
+    for dname in dirs:
+        doit('rsync -arvzt --delete %s:%s %s' % (host, dname, dest))
 

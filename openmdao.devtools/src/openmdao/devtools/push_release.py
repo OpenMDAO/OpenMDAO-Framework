@@ -11,8 +11,7 @@ from optparse import OptionParser
 from fabric.api import run, env, local, put, cd, prompt, hide, hosts, get, settings
 from fabric.state import connections
 
-from openmdao.devtools.utils import get_openmdao_version, put_dir, tar_dir, \
-                                    repo_top, PRODUCTION_HOST
+from openmdao.devtools.utils import get_openmdao_version, put_dir, tar_dir, repo_top
 
 #import paramiko.util
 #paramiko.util.log_to_file('paramiko.log')
