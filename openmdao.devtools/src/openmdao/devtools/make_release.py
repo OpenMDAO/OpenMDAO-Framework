@@ -18,7 +18,6 @@ import tarfile
 
 paramiko.util.log_to_file('paramiko.log')
 
-REAL_URL = 'http://openmdao.org'
 TEST_URL = 'http://torpedo.grc.nasa.gov:31004'
 
 class _VersionError(RuntimeError):
@@ -109,7 +108,7 @@ def _release(host, version=None, is_local=True, home='/OpenMDAO/dev/ckrenek/scri
         
             # update the index.html for the version download directory on the test server
             with cd('%s/downloads/%s' % (home, version)):
-                 run('python2.6 mkdlversionindex.py %s' % url)
+                run('python2.6 mkdlversionindex.py %s' % url)
             # update the index.html for the dists directory on the test server
             with cd('%s/dists' % home):
                 run('python2.6 mkegglistindex.py %s' % url)
