@@ -8,16 +8,29 @@ from fabric.api import run, env, local, put, cd, get, settings
 from fabric.state import connections
 
 from openmdao.devtools.build_docs import build_docs
+from openmdao.devtools.utils import put_dir
 
 
-def push_docs(host):
+def push_docs(argv=None):
     """A script (push_docs) points to this. By default it pushes the current
     copy of the docs up to the development doc area on openmdao.org.
     """
+    if argv is None:
+        argv = sys.argv[1:]
+
+    if len(argv) < 1 or len(argv) > 2:
+        print "usage: push_docs host [remote_dir]"
+        sys.exit(-1)
+
+    host = argv[0]
+    if len(argv) > 1:
+        remote_dir = argv[1]
+
     startdir = os.getcwd()
     branchdir = dirname(dirname(dirname(sys.executable)))
     docdir = join(branchdir, 'docs')
     idxpath = join(docdir, '_build', 'html', 'index.html')
+    
     if not os.path.isfile(idxpath):
         build_docs()
 
@@ -48,14 +61,6 @@ def push_docs(host):
 
 
 if __name__ == "__main__": #pragma: no cover
-    parser = OptionParser()
-    parser.add_option("--host", action='append', dest='host', 
-                      default='openmdao@web103.webfaction.com',
-                      metavar='HOST',
-                      help="set the host URL")
-
-    (options, args) = parser.parse_args(sys.argv[1:])
-    
-    push_docs(options.host)
+    push_docs(sys.argv[1:])
 
 

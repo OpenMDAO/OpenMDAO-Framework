@@ -156,6 +156,8 @@ def main():
                       help="optional comment for version tag")
     parser.add_option("-b", "--basebranch", action="store", type="string", dest="base",
                       default='master', help="base branch for release. defaults to master")
+    parser.add_option("-t", "--test", action="store_true", dest="test",
+                      help="used for testing. A release branch will not be created")
     (options, args) = parser.parse_args(sys.argv[1:])
     
     if not options.version or not options.destdir:
@@ -167,36 +169,37 @@ def main():
         print "You must run mkrelease from within a git repository. aborting"
         sys.exit(-1)
 
-    if orig_branch != options.base:
-        print "Your current branch '%s', is not the specified base branch '%s'" % (orig_branch, options.base)
-        sys.exit(-1)
+    if not options.test:
+        if orig_branch != options.base:
+            print "Your current branch '%s', is not the specified base branch '%s'" % (orig_branch, options.base)
+            sys.exit(-1)
     
-    if _has_checkouts():
-        print "There are uncommitted changes. You must run mkrelease.py from a clean branch"
-        sys.exit(-1)
-        
-    if orig_branch == 'master':
-        print "pulling master"
-        os.system("git pull origin master")
         if _has_checkouts():
-            print "something went wrong.  aborting"
-            sys.exit(-1)
-    else:
-        print "WARNING: base branch is not 'master' so it has not been"
-        print "automatically brought up-to-date."
-        answer = raw_input("Proceed? (Y/N) ")
-        if answer.lower() not in ["y", "yes"]:
+            print "There are uncommitted changes. You must run mkrelease.py from a clean branch"
             sys.exit(-1)
         
-    relbranch = "release_%s" % options.version
-    if relbranch in get_git_branches():
-        print "release branch %s already exists in this repo" % relbranch
-        sys.exit(-1)
+        if orig_branch == 'master':
+            print "pulling master"
+            os.system("git pull origin master")
+            if _has_checkouts():
+                print "something went wrong.  aborting"
+                sys.exit(-1)
+        else:
+            print "WARNING: base branch is not 'master' so it has not been"
+            print "automatically brought up-to-date."
+            answer = raw_input("Proceed? (Y/N) ")
+            if answer.lower() not in ["y", "yes"]:
+                sys.exit(-1)
+        
+        relbranch = "release_%s" % options.version
+        if relbranch in get_git_branches():
+            print "release branch %s already exists in this repo" % relbranch
+            sys.exit(-1)
 
-    print "creating release branch '%s' from base branch '%s'" % (relbranch, orig_branch)
-    check_call(['git', 'branch', relbranch])
-    print "checking out branch '%s'" % relbranch
-    check_call(['git', 'checkout', relbranch])
+        print "creating release branch '%s' from base branch '%s'" % (relbranch, orig_branch)
+        check_call(['git', 'branch', relbranch])
+        print "checking out branch '%s'" % relbranch
+        check_call(['git', 'checkout', relbranch])
     
     destdir = os.path.realpath(options.destdir)
     if not os.path.exists(destdir):
@@ -206,7 +209,8 @@ def main():
     topdir = repo_top()
     
     try:
-        update_releaseinfo_files(options.version)
+        if not options.test:
+            update_releaseinfo_files(options.version)
         
         # build the docs
         devtools_dir = os.path.join(topdir,'openmdao.devtools',
@@ -216,11 +220,12 @@ def main():
         shutil.move(os.path.join(topdir,'docs','_build', 'html'), 
                     os.path.join(destdir,'docs'))
 
-        # commit the changes to the release branch
-        print "committing all changes to branch '%s'" % relbranch
-        check_call(['git', 'commit', '-a', '-m', 
-                    '"updating releaseinfo files for release %s"' % 
-                    options.version])
+        if not options.test:
+            # commit the changes to the release branch
+            print "committing all changes to branch '%s'" % relbranch
+            check_call(['git', 'commit', '-a', '-m', 
+                        '"updating releaseinfo files for release %s"' % 
+                        options.version])
 
         # build openmdao package distributions
         for project_name, pdir, pkgtype in openmdao_packages:
@@ -244,11 +249,12 @@ def main():
         else:
             comment = 'creating release %s' % options.version
         
-        # tag the current revision with the release version id
-        print "tagging release with '%s'" % options.version
-        check_call(['git', 'tag', '-f', '-a', options.version, '-m', comment])
-        
-        check_call(['git', 'checkout', orig_branch])
+        if not options.test:
+            # tag the current revision with the release version id
+            print "tagging release with '%s'" % options.version
+            check_call(['git', 'tag', '-f', '-a', options.version, '-m', comment])
+            
+            check_call(['git', 'checkout', orig_branch])
         
         print "new release files have been placed in %s" % destdir
         print "\n*REMEMBER* to push '%s' up to the master branch if this release is official" % relbranch
