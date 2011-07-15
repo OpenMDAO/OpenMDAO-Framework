@@ -23,8 +23,8 @@ def push_docs(argv=None):
     parser.add_option("-d", "--destination", action="store", type="string", 
                       dest="docdir", default='downloads',
                       help="directory where dev_docs directory will be placed")
-    parser.add_option("-f", "--force", action="store_true", dest="force",
-                      help="forces docs to be rebuilt")
+    parser.add_option("-n", "--nodocbuild", action="store_true", dest="nodocbuild",
+                      help="used for testing. The docs will not be rebuilt if they already exist")
     (options, args) = parser.parse_args(argv)
     
     if len(args) != 1:
@@ -38,7 +38,7 @@ def push_docs(argv=None):
     docdir = join(branchdir, 'docs')
     idxpath = join(docdir, '_build', 'html', 'index.html')
     
-    if options.force or not os.path.isfile(idxpath):
+    if not os.path.isfile(idxpath) or not options.nodocbuild:
         build_docs()
 
     try:

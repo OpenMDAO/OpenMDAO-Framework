@@ -394,6 +394,8 @@ def _get_rst_path(obj):
                     return relpath
     else:
         return
+    
+    
 if __name__ == "__main__": #pragma: no cover
     build_docs()
 

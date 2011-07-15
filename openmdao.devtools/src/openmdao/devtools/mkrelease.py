@@ -16,6 +16,7 @@ import zipfile
 
 # get the list of openmdao subpackages from mkinstaller.py
 from openmdao.devtools.mkinstaller import openmdao_packages
+from openmdao.devtools.build_docs import build_docs
 from openmdao.devtools.utils import get_git_branch, get_git_branches, get_git_log_info, repo_top
 
 relfile_template = """
@@ -180,6 +181,8 @@ def main():
                       default='master', help="base branch for release. defaults to master")
     parser.add_option("-t", "--test", action="store_true", dest="test",
                       help="used for testing. A release branch will not be created")
+    parser.add_option("-n", "--nodocbuild", action="store_true", dest="nodocbuild",
+                      help="used for testing. The docs will not be rebuilt if they already exist")
     (options, args) = parser.parse_args(sys.argv[1:])
     
     if not options.version or not options.destdir:
@@ -234,11 +237,12 @@ def main():
         update_releaseinfo_files(options.version)
         
         # build the docs
-        devtools_dir = os.path.join(topdir,'openmdao.devtools',
-                                    'src','openmdao','devtools')
-        check_call([sys.executable, os.path.join(devtools_dir,'build_docs.py'),
-                    '-v', options.version])
-        shutil.move(os.path.join(topdir,'docs','_build', 'html'), 
+        docdir = os.path.join(topdir, 'docs')
+        idxpath = os.path.join(docdir, '_build', 'html', 'index.html')
+        
+        if not os.path.isfile(idxpath) or not options.nodocbuild:
+            build_docs(argv=['-v', options.version])
+        shutil.copytree(os.path.join(topdir,'docs','_build', 'html'), 
                     os.path.join(destdir,'docs'))
 
         if not options.test:
