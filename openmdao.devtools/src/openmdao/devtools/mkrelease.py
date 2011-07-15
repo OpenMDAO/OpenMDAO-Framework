@@ -150,7 +150,7 @@ def main():
     parser = OptionParser()
     parser.add_option("-d", "--destination", action="store", type="string", dest="destdir",
                       help="directory where distributions will be placed")
-    parser.add_option("--version", action="store", type="string", dest="version",
+    parser.add_option("-v", "--version", action="store", type="string", dest="version",
                       help="version string applied to all openmdao distributions")
     parser.add_option("-m", action="store", type="string", dest="comment",
                       help="optional comment for version tag")
@@ -255,9 +255,9 @@ def main():
             check_call(['git', 'tag', '-f', '-a', options.version, '-m', comment])
             
             check_call(['git', 'checkout', orig_branch])
+            print "\n*REMEMBER* to push '%s' up to the master branch if this release is official" % relbranch
         
         print "new release files have been placed in %s" % destdir
-        print "\n*REMEMBER* to push '%s' up to the master branch if this release is official" % relbranch
         
     finally:
         os.chdir(startdir)

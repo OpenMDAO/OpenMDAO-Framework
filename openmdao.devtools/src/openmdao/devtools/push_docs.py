@@ -3,12 +3,13 @@ import os
 from os.path import dirname, join, exists
 import sys
 import tarfile
+from optparse import OptionParser
 
 from fabric.api import run, env, local, put, cd, get, settings
 from fabric.state import connections
 
 from openmdao.devtools.build_docs import build_docs
-from openmdao.devtools.utils import put_dir
+from openmdao.devtools.utils import tar_dir
 
 
 def push_docs(argv=None):
@@ -18,42 +19,42 @@ def push_docs(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
-    if len(argv) < 1 or len(argv) > 2:
-        print "usage: push_docs host [remote_dir]"
+    parser = OptionParser(usage='%prog [OPTIONS] host')
+    parser.add_option("-d", "--destination", action="store", type="string", 
+                      dest="docdir", default='downloads',
+                      help="directory where dev_docs directory will be placed")
+    parser.add_option("-f", "--force", action="store_true", dest="force",
+                      help="forces docs to be rebuilt")
+    (options, args) = parser.parse_args(argv)
+    
+    if len(args) != 1:
+        parser.print_help()
         sys.exit(-1)
 
-    host = argv[0]
-    if len(argv) > 1:
-        remote_dir = argv[1]
+    host = args[0]
 
     startdir = os.getcwd()
     branchdir = dirname(dirname(dirname(sys.executable)))
     docdir = join(branchdir, 'docs')
     idxpath = join(docdir, '_build', 'html', 'index.html')
     
-    if not os.path.isfile(idxpath):
+    if options.force or not os.path.isfile(idxpath):
         build_docs()
 
     try:
         os.chdir(join(docdir, '_build'))
-        try:
-            if exists('docs.tar.gz'):
-                os.remove('docs.tar.gz')
-            archive = tarfile.open('docs.tar.gz', 'w:gz')
-            archive.add('html')
-            archive.close()
-        finally:
-            os.chdir(startdir)
+        tarpath = tar_dir('html', 'docs', '.')
+        tarname = os.path.basename(tarpath)
         
         with settings(host_string=host):
             # tar up the docs so we can upload them to the server
             # put the docs on the server and untar them
-            put(join(docdir,'_build','docs.tar.gz'), 'downloads/docs.tar.gz')
-            with cd('downloads'):
-                run('tar xzf docs.tar.gz')
+            put(tarpath, '%s/%s' % (options.docdir, tarname))
+            with cd(options.docdir):
+                run('tar xzf %s' % tarname)
                 run('rm -rf dev_docs')
                 run('mv html dev_docs')
-                run('rm -f docs.tar.gz')
+                run('rm -f %s' % tarname)
     finally:
         for key in connections.keys():
             connections[key].close()

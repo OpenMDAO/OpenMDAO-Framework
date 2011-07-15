@@ -59,9 +59,11 @@ def tar_dir(dirpath, archive_name, destdir):
     """Tar up the given directory and put in in the specified destination
     directory.
     """
+    dirpath = os.path.abspath(dirpath)
+    destdir = os.path.abspath(destdir)
     startdir = os.getcwd()
     os.chdir(os.path.dirname(dirpath))
-    tarpath = os.path.join(destdir,'%s.tar.gz' % archive_name)
+    tarpath = os.path.abspath(os.path.join(destdir,'%s.tar.gz' % archive_name))
     try:
         archive = tarfile.open(tarpath, 'w:gz')
         archive.add(os.path.basename(dirpath))

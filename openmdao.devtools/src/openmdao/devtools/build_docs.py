@@ -199,9 +199,13 @@ def build_docs(argv=None):
         version = argv[idx+1]
         shtitle = 'OpenMDAO Documentation v%s' % version
     else:
-        tag, ncommits, commit = get_rev_info()
-        version = "%s-%s-%s" % (tag, ncommits, commit)
-        shtitle = 'OpenMDAO Documentation (%s commits after tag %s)' % (ncommits,tag)
+        try:
+            tag, ncommits, commit = get_rev_info()
+            version = "%s-%s-%s" % (tag, ncommits, commit)
+            shtitle = 'OpenMDAO Documentation (%s commits after tag %s)' % (ncommits,tag)
+        except:
+            version = "?-?-?"
+            shtitle = "OpenMDAO Documentation (unknown revision)"
     
     branchdir, docdir, bindir =_get_dirnames()
 
