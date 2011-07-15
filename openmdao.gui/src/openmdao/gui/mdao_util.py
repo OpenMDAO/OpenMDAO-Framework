@@ -52,9 +52,10 @@ def makenode(doc,path):
 
 def filedict(path,key='pathname',root=''):
     ''' create a nested dictionary for a file structure
-        the key may be:
-            filename    the name of the file
-            pathname    the full pathname of the file (default)
+        the key may be one of:
+        
+            'filename'    the name of the file
+            'pathname'    the full pathname of the file (default)
     '''
     dict = {}
     for filename in os.listdir(path):

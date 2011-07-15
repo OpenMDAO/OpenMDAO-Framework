@@ -12,12 +12,12 @@ from django import forms
 import sys, os, traceback
 import zipfile, jsonpickle
 
-from mdao_util import *
+from openmdao.gui.mdao_util import *
 
 # TODO:
 prefix = '<<<'+str(os.getpid())+'>>> '
 print prefix+'workspace.views() -------------------------------------'
-from consoleserverfactory import ConsoleServerFactory
+from openmdao.gui.consoleserverfactory import ConsoleServerFactory
 server_mgr = ConsoleServerFactory()
 
 class AddonForm(forms.Form):

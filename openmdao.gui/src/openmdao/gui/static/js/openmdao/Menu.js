@@ -59,10 +59,10 @@ openmdao.Menu = function(id) {
             },
             { text: "Help", 
               items: [
-                { text: "Documentation", onclick: "openmdao.Util.popupWindow('http://openmdao.org/docs');"}
+                { text: "Documentation", onclick: "openmdao.Util.popupWindow('http://openmdao.org/docs',800,600);"}
               ]
             },
-            { text: "About",             onclick: "openmdao.Util.popupWindow('http://openmdao.org/');"}
+            { text: "About",             onclick: "openmdao.Util.popupWindow('http://openmdao.org/',800,600);"}
         ]
 
     /** recursively build HTML for JSON nested menu structure */

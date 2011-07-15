@@ -7,7 +7,7 @@ from django import forms
 from django.core.files.base import ContentFile
 
 from openmdao.gui.settings import MEDIA_ROOT
-from projdb.models import Project
+from openmdao.gui.projdb.models import Project
 
 from time import strftime
 

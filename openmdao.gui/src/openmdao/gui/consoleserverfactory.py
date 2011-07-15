@@ -28,7 +28,7 @@ from openmdao.main.mp_support import is_instance
 from mdao_util import *
 
 class ConsoleServerFactory(Factory):
-    ''' creates and keeps track of :class:`ConsoleServer`s
+    ''' creates and keeps track of :class:`ConsoleServer`
     '''
 
     def __init__(self):
@@ -42,7 +42,8 @@ class ConsoleServerFactory(Factory):
         #self.cleanup()
 
     def create(self, name, **ctor_args):
-        """ Create a :class:`ConsoleServer` and return a proxy for it. """
+        ''' Create a :class:`ConsoleServer` and return a proxy for it. 
+        '''
         manager = BaseManager()
         manager.register('ConsoleServer', ConsoleServer)
         manager.start()
@@ -87,11 +88,10 @@ class ConsoleServerFactory(Factory):
                 rmtree(f)
                 
 class ConsoleServer(cmd.Cmd):
-    """
-    Object which knows how to load a model.
+    ''' Object which knows how to load a model.
     Executes in a subdirectory of the startup directory.
     All remote file accesses must be within the tree rooted there.
-    """
+    '''
 
     def __init__(self, name='', host=''):
         cmd.Cmd.__init__(self)
@@ -140,10 +140,10 @@ class ConsoleServer(cmd.Cmd):
         sys.path[0] = dirname
 
     def precmd(self, line):
-        """ This method is called after the line has been input but before
+        ''' This method is called after the line has been input but before
             it has been interpreted. If you want to modifdy the input line
             before execution (for example, variable substitution) do it here.
-        """
+        '''
         self._hist += [ line.strip() ]
         return line
 
@@ -160,9 +160,9 @@ class ConsoleServer(cmd.Cmd):
         pass
 
     def default(self, line):       
-        """Called on an input line when the command prefix is not recognized.
-           In that case we execute the line as Python code.
-        """
+        ''' Called on an input line when the command prefix is not recognized.
+            In that case we execute the line as Python code.
+        '''
         isStatement = False
         try:
             code = compile(line, '<string>', 'eval')
@@ -183,7 +183,8 @@ class ConsoleServer(cmd.Cmd):
                 print str(e.__class__.__name__), ":", e
 
     def run(self):
-        """ run the model (i.e. the top assembly) """
+        ''' run the model (i.e. the top assembly)
+        '''
         if self.top:
             print "Executing..."
             self.top.run()
@@ -192,31 +193,37 @@ class ConsoleServer(cmd.Cmd):
             print "Execution failed: No top level assembly was found."
         
     def execfile(self, file):
-        """ execfile in server's globals. """        
+        ''' execfile in server's globals. 
+        '''
         # set name so any "if __name__ == __main__" code will be executed
         self._globals['__name__'] = '__main__'
         execfile(file,self._globals)
 
     def get_output(self):
-        """ get any pending output and clear the outputput buffer """
+        ''' get any pending output and clear the outputput buffer
+        '''
         output = self.cout.getvalue()     
         self.cout.truncate(0)
         return output
         
     def get_pid(self):
-        """ Return this server's :attr:`pid`. """
+        ''' Return this server's :attr:`pid`. 
+        '''
         return self.pid
         
     def get_project(self):
-        """ Return the current model as a project archive. """
+        ''' Return the current model as a project archive.
+        '''
         return self.proj
 
     def get_history(self):
-        """ Return this server's :attr:`_hist`. """
+        ''' Return this server's :attr:`_hist`. 
+        '''
         return self._hist
 
     def get_JSON(self):
-        """ return current state as JSON """
+        ''' return current state as JSON 
+        '''
         return jsonpickle.encode(self._globals)
         
     def _get_components(self,cont):
@@ -230,16 +237,17 @@ class ConsoleServer(cmd.Cmd):
         return comps
         
     def get_components(self):
-        """ get hierarchical dictionary of openmdao objects """
+        ''' get hierarchical dictionary of openmdao objects 
+        '''
         comps = {}
         if self.top:
             comps = self._get_components(self.top)
         return comps
 
     def _get_dataflow(self,asm):
-        """ get the list of components and connections between them
+        ''' get the list of components and connections between them
             that make up the workflow for the top level driver 
-        """
+        '''
         components = []
         connections = []
         if isinstance(asm,Assembly):
@@ -268,9 +276,9 @@ class ConsoleServer(cmd.Cmd):
             return {}
             
     def _get_workflow(self,drvr):
-        """ get the driver info and the list of components that make up the
+        ''' get the driver info and the list of components that make up the
             driver's workflow, recurse on nested drivers
-        """
+        '''
         ret = {}
         ret['pathname'] = drvr.get_pathname()
         ret['type'] = type(drvr).__module__+'.'+type(drvr).__name__ 
@@ -296,7 +304,8 @@ class ConsoleServer(cmd.Cmd):
             return {}
 
     def _get_attributes(self,comp):
-        """ get attributes of object """
+        ''' get attributes of object 
+        '''
         inputs = []
         for vname in comp.list_inputs():
             v = comp.get(vname)
@@ -334,7 +343,8 @@ class ConsoleServer(cmd.Cmd):
         return get_available_types()
         
     def get_workingtypes(self):
-        """ Return this server's user defined types. """
+        ''' Return this server's user defined types. 
+        '''
         types = []
         g = self._globals.items()
         for k,v in g:
@@ -353,8 +363,8 @@ class ConsoleServer(cmd.Cmd):
         self._globals['top'] = self.top
         
     def save_project(self):
-        """ save the cuurent project state & export it whence it came
-        """
+        ''' save the cuurent project state & export it whence it came
+        '''
         if self.proj:
             try:
                 self.proj.save()
@@ -372,7 +382,8 @@ class ConsoleServer(cmd.Cmd):
             print 'No Project to save'
 
     def add_component(self,name,classname):
-        """ add a new component of the given type to the top assembly. """
+        ''' add a new component of the given type to the top assembly. 
+        '''
         try:
             if classname in self._globals:
                 print 'adding',classname,'from globals.'
@@ -384,7 +395,8 @@ class ConsoleServer(cmd.Cmd):
             print "Add component failed:", str(err)
             
     def create(self,typname,name):
-        """ create a new object of the given type. """
+        ''' create a new object of the given type. 
+        '''
         try:
             if (typname.find('.') < 0):
                 self.default(name+'='+typname+'()')
@@ -396,7 +408,8 @@ class ConsoleServer(cmd.Cmd):
         return self._globals
 
     def cleanup(self):
-        """ Cleanup this server's directory. """
+        ''' Cleanup this server's directory. 
+        '''
         self.stdout = self.sysout
         self.stderr = self.syserr
         logging.shutdown()

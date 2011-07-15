@@ -28,7 +28,7 @@ OpenMDAO graphical user interface""",
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
-          'setuptools', 'jsonpickle', 'selenium', 'web.py', 'django'
+          'setuptools', 'jsonpickle', 'web.py', 'django'
       ],
       entry_points="""
       # -*- Entry points: -*-
