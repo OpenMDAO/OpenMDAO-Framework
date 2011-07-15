@@ -48,6 +48,13 @@ def create_releaseinfo_file(projname, relinfo_str):
     with open('releaseinfo.py', 'w') as f:
         f.write(relinfo_str)
         
+def rollback_releaseinfo_file(projname):
+    """Creates a releaseinfo.py file in the current directory"""
+    dirs = projname.split('.')
+    os.chdir(os.path.join(*dirs))
+    print 'rolling back releaseinfo.py for %s' % projname
+    os.system('git checkout -- releaseinfo.py')
+        
 def _has_checkouts():
     cmd = 'git status -s'
     p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
@@ -126,6 +133,21 @@ def update_releaseinfo_files(version):
             else:
                 os.chdir(pdir)
             create_releaseinfo_file(project_name, releaseinfo_str)
+    finally:
+        os.chdir(startdir)
+    
+def rollback_releaseinfo_files():
+    startdir = os.getcwd()
+    topdir = repo_top()
+    
+    try:
+        for project_name, pdir, pkgtype in openmdao_packages:
+            pdir = os.path.join(topdir, pdir, project_name)
+            if 'src' in os.listdir(pdir):
+                os.chdir(os.path.join(pdir, 'src'))
+            else:
+                os.chdir(pdir)
+            rollback_releaseinfo_file(project_name)
     finally:
         os.chdir(startdir)
     
@@ -209,8 +231,7 @@ def main():
     topdir = repo_top()
     
     try:
-        if not options.test:
-            update_releaseinfo_files(options.version)
+        update_releaseinfo_files(options.version)
         
         # build the docs
         devtools_dir = os.path.join(topdir,'openmdao.devtools',
@@ -249,7 +270,9 @@ def main():
         else:
             comment = 'creating release %s' % options.version
         
-        if not options.test:
+        if options.test:
+            rollback_releaseinfo_files()
+        else:
             # tag the current revision with the release version id
             print "tagging release with '%s'" % options.version
             check_call(['git', 'tag', '-f', '-a', options.version, '-m', comment])
