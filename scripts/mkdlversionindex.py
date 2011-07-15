@@ -39,7 +39,7 @@ def make_index():
     out.write('    OpenMDAO Version %s Downloads\n' % version)
     out.write('  </h1>\n')
     out.write('  <ul>\n')
-    out.write('    <li><a href="downloads">..</a>\n')
+    out.write('    <li><a href="..">..</a>\n')
 
     files = []
     dirs = []
