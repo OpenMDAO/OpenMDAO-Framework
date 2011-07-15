@@ -237,6 +237,7 @@ class ArrayProxy(ProxyMixin, Array):
 
     def set(self, obj, name, value):
         """ Set remote value. """
+        value = self.validate(obj, name, value)
         if self._type == float:
             valstr = ', '.join([_float2str(val) for val in value])
         else:
@@ -288,6 +289,7 @@ class ListProxy(ProxyMixin, List):
 
     def set(self, obj, name, value):
         """ Set remote value. """
+        value = self.validate(obj, name, value)
         if self._type == float:
             valstr = ', '.join([_float2str(val) for val in value])
         else:
@@ -312,7 +314,7 @@ class BoolProxy(ProxyMixin, Bool):
 
     def set(self, obj, name, value):
         """ Set remote value. """
-        self.rset('true' if value else 'false')
+        self.rset('true' if self.validate(obj, name, value) else 'false')
 
 
 class EnumProxy(ProxyMixin, Enum):
@@ -367,7 +369,7 @@ class EnumProxy(ProxyMixin, Enum):
 
     def set(self, obj, name, value):
         """ Set remote value. """
-        self.rset(self._to_string(value))
+        self.rset(self._to_string(self.validate(obj, name, value)))
 
     def _null(self, val):
         """ Just returns `val` unmodified. """
@@ -405,12 +407,13 @@ class FileProxy(ProxyMixin, File):
 
     def set(self, obj, name, value):
         """ Set remote value. """
+        value = self.validate(obj, name, value)
         # `value` is a FileRef.
         with value.open() as inp:
             valstr = inp.read()
 #        binary = 'true' if value.binary else 'false'
 #        self._client.set(self._rpath+'.isBinary', binary)
-        self.rset(valstr)
+        self.rset('"%s"' % valstr.encode('string_escape'))
 
 
 class FloatProxy(ProxyMixin, Float):
@@ -444,7 +447,7 @@ class FloatProxy(ProxyMixin, Float):
 
     def set(self, obj, name, value):
         """ Set remote value. """
-        self.rset(_float2str(value))
+        self.rset(_float2str(self.validate(obj, name, value)))
 
 
 class IntProxy(ProxyMixin, Int):
@@ -473,7 +476,7 @@ class IntProxy(ProxyMixin, Int):
 
     def set(self, obj, name, value):
         """ Set remote value. """
-        self.rset(str(value))
+        self.rset(str(self.validate(obj, name, value)))
 
 
 class StrProxy(ProxyMixin, Str):
@@ -493,5 +496,5 @@ class StrProxy(ProxyMixin, Str):
 
     def set(self, obj, name, value):
         """ Set remote value. """
-        self.rset(value)
+        self.rset('"%s"' % self.validate(obj, name, value).encode('string_escape'))
 

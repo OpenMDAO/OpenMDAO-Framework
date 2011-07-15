@@ -16,6 +16,8 @@ try:
 except ImportError:  # pragma no cover
     pass  # Not available on Windows.
 
+from enthought.traits.traits import CTrait
+
 from openmdao.main.api import Container, FileRef
 from openmdao.main.assembly import PassthroughTrait
 from openmdao.main.attrwrapper import AttrWrapper
@@ -100,6 +102,8 @@ class ComponentWrapper(object):
                 typ = trait.trait_type or trait.trait
                 if isinstance(typ, PassthroughTrait):
                     typ = container.get_dyn_trait(typ.target)
+                    if isinstance(typ, CTrait):
+                        typ = typ.trait_type
                 key = type(typ)
                 if key not in TYPE_MAP:
                     for base in key.__bases__:
@@ -451,7 +455,7 @@ class ComponentWrapper(object):
         wrapper.set(attr, path, valstr)
 
     def set_hierarchy(self, xml, req_id):
-        """ Set hiearchy of variable values from `xml`. """
+        """ Set hierarchy of variable values from `xml`. """
         try:
             header, newline, xml = xml.partition('\n')
             root = ElementTree.fromstring(xml)
@@ -485,7 +489,7 @@ class BaseWrapper(object):
     def get(self, attr, path):
         """ Return attribute corresponding to `attr`. """
         if attr == 'description':
-            return self._trait.desc
+            return self._trait.desc or ''
         else:
             raise WrapperError('no such property <%s>.' % path)
 
@@ -918,13 +922,18 @@ class FileWrapper(BaseWrapper):
 
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr` to `valstr`. """
-        valstr = valstr.strip('"')
+        valstr = valstr.strip('"').decode('string_escape')
         if attr == 'value':
             if self._trait.iotype != 'in':
                 raise WrapperError('cannot set output <%s>.' % path)
-            left, dot, name = self._ext_path.rpartition('.')
-            filename = os.path.join(self._owner.get_abs_directory(),
-                                    '%s.dat' % name)
+            if self._trait.local_path:
+                filename = self._trait.local_path
+            else:
+                left, dot, name = self._ext_path.rpartition('.')
+                filename = '%s.dat' % name
+            if not os.path.isabs(filename):
+                filename = os.path.join(self._owner.get_abs_directory(),
+                                        filename)
             mode = 'wb'
             if self._server is None:  # Used during testing.
                 out = open(filename, mode)
@@ -1121,7 +1130,7 @@ class StrWrapper(BaseWrapper):
 
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr` to `valstr`. """
-        valstr = valstr.strip('"')
+        valstr = valstr.strip('"').decode('string_escape')
         if attr == 'value':
             self._container.set(self._name, valstr)
         elif attr in ('valueStr', 'description', 'enumAliases', 'enumValues'):

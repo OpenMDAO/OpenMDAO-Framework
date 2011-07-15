@@ -157,9 +157,8 @@ class FileRef(FileMetadata):
         ref.owner = owner
         return ref
 
-    @rbac('owner', proxy_types=[RemoteFile])
-    def open(self):
-        """ Open file for reading. """
+    def abspath(self):
+        """ Return absolute path to file. """
         path = self.path
         if os.path.isabs(path):
             try:
@@ -182,8 +181,13 @@ class FileRef(FileMetadata):
                 self.owner = owner
                 directory = self.owner.get_abs_directory()
             path = os.path.join(directory, path)
+        return path
+
+    @rbac('owner', proxy_types=[RemoteFile])
+    def open(self):
+        """ Open file for reading. """
         mode = 'rb' if self.binary else 'rU'
-        return RemoteFile(open(path, mode))
+        return RemoteFile(open(self.abspath(), mode))
 
 def _get_valid_owner(owner):
     """ Try to find an owner that supports the required functionality. """
@@ -197,4 +201,3 @@ def _get_valid_owner(owner):
             return None
     return None
 
-    

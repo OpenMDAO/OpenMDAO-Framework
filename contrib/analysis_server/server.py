@@ -75,6 +75,8 @@ if sys.platform != 'win32':
 from distutils.version import LooseVersion
 from xml.sax.saxutils import escape
 
+from enthought.traits.traits import CTrait
+
 from openmdao.main.api import Component, Container, set_as_top
 from openmdao.main.assembly import PassthroughTrait
 from openmdao.main.mp_util import read_allowed_hosts
@@ -1451,12 +1453,16 @@ class _WrapperConfig(object):
                         typ = None if trait is None else trait.trait_type
                         if isinstance(typ, PassthroughTrait):
                             typ = container.get_dyn_trait(typ.target)
+                            if isinstance(typ, CTrait):
+                                typ = typ.trait_type
                         if type(typ) not in TYPE_MAP:
                             for base in type(typ).__bases__:
                                 if base in TYPE_MAP:
                                     break
                             else:
-                                continue  # No a supported type.
+                                _LOGGER.warning('%r not a supported type: %r',
+                                                name, typ)
+                                continue
                         if container is instance:
                             path = name
                         else:
