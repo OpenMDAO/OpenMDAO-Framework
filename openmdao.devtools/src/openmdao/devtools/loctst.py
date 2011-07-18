@@ -114,10 +114,14 @@ def install_dev_env(url, pyversion, branch=None):
         print "cloning git repo at %s" % url
         subprocess.check_call(cmd)
         
-        treedir = os.path.splitext(os.path.basename(url))[0]
+        base = os.path.basename(url)
+        if base == '.git':
+            treedir = os.path.dirname(url)
+        else:
+            treedir = os.path.splitext()[0]
         os.chdir(treedir)
         try:
-            subprocess.check_call(['git','branch',options.branch])
+            subprocess.check_call(['git','checkout',options.branch])
         finally:
             os.chdir(startdir)
     elif url.endswith('.tar.gz') or url.endswith('.tar'):
@@ -182,6 +186,9 @@ if __name__ == '__main__':
                       help="python version to use, e.g., 'python2.6'")
     parser.add_option("-k","--keep", action="store_true", dest='keep',
                       help="don't delete temporary build directory")
+    parser.add_option("-b","--branch", action="store", type='string', 
+                      dest='branch',
+                      help="if file_url is a git repo, supply branch name here")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
@@ -218,7 +225,8 @@ if __name__ == '__main__':
         if test_type == 'release':
             envdir = install_release(fname, pyversion=options.pyversion)
         else: # dev test
-            envdir = install_dev_env(fname, pyversion=options.pyversion)
+            envdir = install_dev_env(fname, pyversion=options.pyversion,
+                                     branch=options.branch)
             
         retcode = activate_and_test(os.path.join(tmpdir, envdir),
                                     testargs=args[1:])
