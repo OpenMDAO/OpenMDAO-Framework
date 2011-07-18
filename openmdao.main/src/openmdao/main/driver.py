@@ -96,7 +96,7 @@ class Driver(Component):
         if hasattr(self, 'check_hessians'):
             self.check_hessians()
 
-    def iteration_set(self):
+    def iteration_set(self,recurse=True):
         """Return a set of all Components in our workflow(s), and 
         recursively in any workflow in any Driver in our workflow(s).
         """
@@ -106,7 +106,7 @@ class Driver(Component):
                 self.workflow.add(compname)
         for child in self.workflow.get_components():
             allcomps.add(child)
-            if has_interface(child, IDriver):
+            if recurse and has_interface(child, IDriver):
                 allcomps.update(child.iteration_set())
         return allcomps
         

@@ -32,9 +32,9 @@ openmdao.ComponentFigure=function(myModel,pathname,type){
     
     var tok = type.split('.')
     if (tok.length > 1)
-        this.setContent('<center>(('+tok[tok.length-1]+'))'+'</center>')
+        this.setContent('<center><i>'+tok[tok.length-1]+'</i></center>')
     else
-        this.setContent('<center>(('+type+'))'+'</center>')
+        this.setContent('<center><i>'+type+''+'</i></center>')
 };
 
 openmdao.ComponentFigure.prototype=new draw2d.Node();

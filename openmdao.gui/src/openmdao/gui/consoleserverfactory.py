@@ -18,6 +18,7 @@ from multiprocessing.managers import BaseManager
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create
 from openmdao.main.component import Component
+from openmdao.main.driver import Driver
 from openmdao.main.factorymanager import get_available_types
 
 from openmdao.lib.releaseinfo import __version__, __date__
@@ -283,13 +284,15 @@ class ConsoleServer(cmd.Cmd):
         ret['pathname'] = drvr.get_pathname()
         ret['type'] = type(drvr).__module__+'.'+type(drvr).__name__ 
         ret['workflow'] = []
-        for comp in drvr.iteration_set():
+        for comp in drvr.iteration_set(recurse=False):
             if isinstance(comp,Assembly) and comp.driver:
                 ret['workflow'].append({ 
                     'pathname': comp.get_pathname(),
                     'type':     type(comp).__module__+'.'+type(comp).__name__,
                     'driver':   self._get_workflow(comp.driver)
                 })
+            elif isinstance(comp,Driver):
+                ret['workflow'].append(self._get_workflow(comp))            
             else:
                 ret['workflow'].append({ 
                     'pathname': comp.get_pathname(),
