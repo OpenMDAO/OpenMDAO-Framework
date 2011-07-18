@@ -55,7 +55,8 @@ def rollback_releaseinfo_file(projname):
     os.chdir(os.path.join(*dirs))
     print 'rolling back releaseinfo.py for %s' % projname
     os.system('git checkout -- releaseinfo.py')
-        
+
+
 def _has_checkouts():
     cmd = 'git status -s'
     p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
@@ -71,6 +72,7 @@ def _has_checkouts():
         if len(line)>1 and not line.startswith('?'):
             return True
     return False
+
 
 def _build_dist(build_type, destdir):
     cmd = '%s setup.py %s -d %s' % (sys.executable, build_type, destdir)

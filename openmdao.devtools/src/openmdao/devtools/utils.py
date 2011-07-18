@@ -133,7 +133,9 @@ def get_plat_spec_cmds():
     return mover, remover, lister
 
 def remote_tmpdir():
-    """Create a temporary directory at the remote location."""
+    """Create and return the name of a temporary directory at the remote
+    location.
+    """
     return run('python -c "import tempfile; print tempfile.mkdtemp()"').strip()
 
 def rm_remote_tree(pathname):

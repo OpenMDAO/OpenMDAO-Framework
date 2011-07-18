@@ -118,7 +118,7 @@ def install_dev_env(url, pyversion, branch=None):
         if base == '.git':
             treedir = os.path.dirname(url)
         else:
-            treedir = os.path.splitext()[0]
+            treedir = os.path.splitext(os.path.basename(url))[0]
         os.chdir(treedir)
         try:
             subprocess.check_call(['git','checkout',options.branch])
@@ -179,7 +179,7 @@ def activate_and_test(envdir, testargs=()):
     
 
 if __name__ == '__main__':
-    parser = OptionParser(usage="%prog [OPTIONS] file_url testargs")
+    parser = OptionParser(usage="%prog [OPTIONS] -- testargs")
     parser.add_option("--pyversion", action="store", type='string', 
                       dest='pyversion',
                       default="python", 
@@ -189,6 +189,9 @@ if __name__ == '__main__':
     parser.add_option("-b","--branch", action="store", type='string', 
                       dest='branch',
                       help="if file_url is a git repo, supply branch name here")
+    parser.add_option("-f","--file", action="store", type='string', 
+                      dest='fname',
+                      help="pathname or URL of a git repo, tar file, or go-openmdao.py file")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
@@ -198,12 +201,12 @@ if __name__ == '__main__':
     
     retcode = -1
     
-    if len(args) == 0:
+    if options.fname is None:
         parser.print_help()
-        print "\nYou must supply a tarfile name or a python file name"
+        print "\nYou must supply the URL or pathname of a tarfile, git repo, or a go-openmdao.py file"
         sys.exit(retcode)
         
-    fname = args[0]
+    fname = options.fname
     
     if fname.endswith('.tar.gz') or fname.endswith('.tar') or fname.endswith('.git'):
         test_type = 'dev'
@@ -211,7 +214,7 @@ if __name__ == '__main__':
         test_type = 'release'
     else:
         parser.print_help()
-        print "\nFirst arg must be either a tar.gz file or a python file"
+        print "\nfilename must end in '.tar.gz', '.tar', or '.git'"
         sys.exit(retcode)
         
     if '.' in options.pyversion:
@@ -229,7 +232,7 @@ if __name__ == '__main__':
                                      branch=options.branch)
             
         retcode = activate_and_test(os.path.join(tmpdir, envdir),
-                                    testargs=args[1:])
+                                    testargs=args)
         print 'return code from test was %s' % retcode
 
     finally:
