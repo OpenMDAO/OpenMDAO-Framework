@@ -14,7 +14,7 @@ from openmdao.devtools.utils import push_and_run
 
 
 def _testremote(site_url, version, args):
-    loctstfile = os.path.join(os.path.dirname(__file__), 'loctstrelease.py')
+    loctstfile = os.path.join(os.path.dirname(__file__), 'loctst.py')
     push_and_run(loctstfile, 
                  remotepath=os.path.basename(loctstfile),
                  args=['--site=%s'%site_url, '--version=%s'%version]+args)
@@ -38,7 +38,9 @@ if __name__ == '__main__':
     if options.hosts:
         hosts = options.hosts
     else:
-        hosts = ['storm.grc.nasa.gov', 'torpedo.grc.nasa.gov', 'viper.grc.nasa.gov']
+        hosts = ['storm.grc.nasa.gov', 
+                 'torpedo.grc.nasa.gov', 
+                 'viper.grc.nasa.gov']
         
     try:
         # TODO: run these concurrently
@@ -52,3 +54,4 @@ if __name__ == '__main__':
         for key in connections.keys():
             connections[key].close()
             del connections[key]
+            

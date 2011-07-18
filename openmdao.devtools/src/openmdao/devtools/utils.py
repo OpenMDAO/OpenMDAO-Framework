@@ -50,8 +50,11 @@ def push_and_run(fpath, remotepath=None, runner=None, args=()):
     if remotepath is None:
         remotepath = fpath
     put(fpath, remotepath)
-    if runner is None and fpath.endswith('.py'):
-        runner = 'python'
+    if not runner:
+        if fpath.endswith('.py'):
+            runner = 'python'
+        else:
+            runner = ''
     run("%s %s %s" % (runner, remotepath, ' '.join(args)))
     
 

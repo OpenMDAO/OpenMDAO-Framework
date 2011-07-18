@@ -9,19 +9,17 @@ from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, ho
 from fabric.state import connections
 from socket import gethostname
 
+from openmdao.devtools.utils import get_git_branch
+
 #import paramiko.util
 #paramiko.util.log_to_file('paramiko.log')
 
 def _make_archive(tarfilename):
-    #branchdir=local('git rev-parse --show-toplevel').strip()
     #export the current branch to a tarfile
     local("git archive -o %s --prefix=testbranch/ HEAD" % tarfilename)
-    
 
 def _testbranch(hostname, tarfilename):
-    """Builds and runs tests on a branch on a specified host platform. You can
-    run from anywhere in the branch, but recommend running from
-    branchroot/scripts dir.
+    """Builds and runs tests on a branch on a specified host platform.
     """
     print('running tests on %s' % hostname)
     remotehost = hostname.split(".")[0]
@@ -97,18 +95,14 @@ def _testbranch(hostname, tarfilename):
             run('call winteststeps.bat')
             print('Tests completed on %s' % hostname)
 
-def waitForLine(fname, linePattern, grepArgs=''):
-    run("tail -F '%s' | grep -m 1 %s '%s'" % (fname, grepArgs, linePattern))
-
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
-    #Figure out what branch we're in
     startdir=os.getcwd()
     branchdir=subprocess.Popen(['git rev-parse --show-toplevel'], 
                                stdout=subprocess.PIPE, shell=True).communicate()[0]
-    print("Testing repo %s" % branchdir)
+    print("Testing branch %s" % get_git_branch())
 
     #parse through any command line options
     parser = OptionParser()
