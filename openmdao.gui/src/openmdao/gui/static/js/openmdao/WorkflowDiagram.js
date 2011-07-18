@@ -5,6 +5,16 @@ LICENSE: NASA Open Source License
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
+// this is for older browsers (e.g. ffox 3.x) that don't implement ECMAScript5 Object.keys()
+// @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Object/keys
+if(!Object.keys) Object.keys = function(o){
+    if (o !== Object(o))
+        throw new TypeError('Object.keys called on non-object');
+    var ret=[],p;
+    for(p in o) if(Object.prototype.hasOwnProperty.call(o,p)) ret.push(p);
+    return ret;
+}
+
 /**
  * 
  * @version 0.0.0
@@ -128,8 +138,6 @@ openmdao.WorkflowDiagram = function(id,model) {
             asm  = getParentPath(path),
             fig, coords
         
-        debug.info('=====>',flow_name,asm,json,path,type,drvr,flow)
-            
         if (flow) {
             // add driver figure
             fig = new openmdao.ComponentFigure(model,path,type)
