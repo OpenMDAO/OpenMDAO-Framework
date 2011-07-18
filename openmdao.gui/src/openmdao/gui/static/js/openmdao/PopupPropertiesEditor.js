@@ -14,7 +14,9 @@ openmdao.PopupPropertiesEditor = function(model,path) {
     /***********************************************************************
      *  private
      ***********************************************************************/
-    var tableID = 'PE-'+path.replace(/\./g,'-'),
+    var tableID = 'PopupPropertiesEditor-'+path.replace(/\./g,'-'),
+        table = jQuery('#'+tableID)
+    if (table.length === 0)
         table = jQuery('<div><table id='+tableID+'></table></div>')
     table.dialog({
         'modal': false,

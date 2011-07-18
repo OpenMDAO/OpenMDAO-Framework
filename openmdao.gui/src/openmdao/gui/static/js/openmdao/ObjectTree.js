@@ -10,7 +10,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @version 0.0.0
  * @constructor
  */
-openmdao.ObjectTree = function(id,model,edit_function) {
+openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
     /***********************************************************************
      *  private
      ***********************************************************************/
@@ -128,11 +128,18 @@ openmdao.ObjectTree = function(id,model,edit_function) {
             contextmenu : { "items":  contextMenu }
         })
         .bind("select_node.jstree", function(e,data) {
-            if (typeof edit_function == 'function') {
+            if (typeof select_fn == 'function') {
                 var pathname = data.rslt.obj.attr("path")
-                edit_function(pathname)
+                select_fn(pathname)
             }
-        }); 
+        })
+        .bind("dblclick.jstree", function (e,data) {
+            if (typeof dblclick_fn == 'function') {
+                var node = jQuery(e.target).closest("li")
+                var pathname = node.attr("path")
+                dblclick_fn(model,pathname)
+            }
+        });
     }
 
     /** get a context menu for the specified node */

@@ -10,11 +10,10 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @version 0.0.0
  * @constructor
  */
-openmdao.DataFlow = function(id,model) {
+openmdao.WorkflowDiagram = function(id,model) {
     /***********************************************************************
      *  private
      ***********************************************************************/
-    // FIXME: really workflow, but there was a naming conflict with draw2d
     var self = this,
         elm = jQuery("#"+id).width(screen.width).height(screen.height),
         workflow  = new draw2d.Workflow(id),

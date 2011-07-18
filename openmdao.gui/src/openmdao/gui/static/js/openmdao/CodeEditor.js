@@ -34,10 +34,6 @@ openmdao.CodeEditor = function(id,model) {
         model.setFile(filepath,editor.getCode()) 
     }
     
-    debug.info('CodeEditor elm')
-    debug.info(elm)
-    debug.info(elm.parent())
-    
     // make the parent element (tabbed pane) a drop target for file objects
     elm.parent().droppable ({
         accept: '.file',

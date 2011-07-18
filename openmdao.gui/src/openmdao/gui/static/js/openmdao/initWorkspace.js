@@ -26,11 +26,12 @@ jQuery(document).ready(function() {
 
     // add gui functionality to designated DOM nodes
     new openmdao.ObjectTree("otree",model,
-        new openmdao.PropertiesEditor("propertieseditor",model).editObject)
+        new openmdao.PropertiesEditor("propertieseditor",model).editObject,
+        openmdao.PopupPropertiesEditor)
     new openmdao.FileTree("ftree",model,
         new openmdao.CodeEditor("texteditor",model).editFile)
     new openmdao.Palette("palette",model)
-    new openmdao.DataFlow("workflow",model)
+    new openmdao.WorkflowDiagram("workflow",model)
     new openmdao.Console("cmdform","command","history",model);
 
     // experimental
