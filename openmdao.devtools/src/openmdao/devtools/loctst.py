@@ -18,8 +18,8 @@ def get_file(url):
     file is remote.  Otherwise, just returns the path that it's given.
     """
     fname = os.path.basename(url)
-    if script_url.startswith('http'):
-        resp = urllib2.urlopen(script_url)
+    if url.startswith('http'):
+        resp = urllib2.urlopen(url)
         gofile = open(fname, 'wb')
         shutil.copyfileobj(resp.fp, gofile)
         gofile.close()

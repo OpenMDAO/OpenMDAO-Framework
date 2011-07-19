@@ -116,10 +116,7 @@ def main(argv=None):
             
         # TODO: run these concurrently
         for host in options.hosts:
-            ??? need a separate file to run as subprocess, or use multiprocessing
-            to get concurrent tests. need to separate outputs...
             if host in vminfo:
-                
                 env.key_filename = [options.identity]
                 env.user = 'ubuntu'
             else:
