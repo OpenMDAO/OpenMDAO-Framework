@@ -181,9 +181,10 @@ more detailed example can be found in the ``single_objective_ei`` example under 
     from openmdao.main.api import Assembly
     from openmdao.lib.drivers.api import DOEdriver
     from openmdao.lib.components.api import MetaModel
+    from openmdao.lib.surrogatemodels.api import KrigingSurrogate
     from openmdao.examples.expected_improvement.branin_component import BraninComponent
 
-    class Analysis(Assembly): 
+    class Simulation(Assembly): 
         def __init__(self,doc=None): 
             super(Analysis,self).__init__()
 
