@@ -1,9 +1,5 @@
-""" Decorator for drivers that need to take derivatives (either gradients or
-    Hessians) of their workflow. The following delegates are available:
-    
-    UsesGradients - if you need first derivatives
-    
-    UsesHessians  - if you need second derivatives
+""" A driver with derivatives. Derived from Driver. Inherit from this
+    if your driver requires gradients or Hessians.
     
     From a driver's perspective, derivatives are needed from its parameters
     to its objective(s) and constraints.
@@ -12,19 +8,31 @@
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.slot import Slot
 from openmdao.main.interfaces import IDifferentiator
+from openmdao.main.driver import Driver
 
-
-class UsesDerivatives_Base(object): 
+class DriverUsesDerivatives(Driver): 
     """This class provides an implementation of the derivatives delegates."""
 
-    def __init__(self, parent):
-        self._parent = parent
+    def __init__(self, *args, **kwargs):
         
-        parent.add("differentiator", 
+        super(DriverUsesDerivatives, self).__init__(*args, **kwargs)
+        
+        self.add("differentiator", 
                    Slot(IDifferentiator, iotype='in',
                         desc = "Slot for a differentiator"))
+        
+        # These flags tell whether to check for missing derivatives during
+        # check_config. Default as stated.
+        self.uses_gradients = True
+        self.uses_Hessians = False
+        
                                                          
-
+    def _differentiator_changed(self, old, new):
+        """When a new differentiator is slotted, give it a handle to the
+        parent."""
+        
+        self.differentiator._parent = self
+        
     def _list_driver_connections(self):
         """Return a list of inputs and a list of outputs that are referenced by
         any existing driver Expreval."""
@@ -40,20 +48,20 @@ class UsesDerivatives_Base(object):
         #    means)
         # -- if they are not connected, their derivative is always 0
         for delegate in ['_hasobjective', '_hasobjectives']:
-            if hasattr(self._parent, delegate):
-                obj = getattr(self._parent, delegate)
+            if hasattr(self, delegate):
+                obj = getattr(self, delegate)
                 varset.update(obj.get_referenced_varpaths())
                 
         # Constraints can also introduce additional connections.
         for delegate in ['_hasineqconstraints', '_haseqconstraints', '_hasconstraints']:
-            if hasattr(self._parent, delegate):
-                constraints = getattr(self._parent, delegate)
+            if hasattr(self, delegate):
+                constraints = getattr(self, delegate)
                 varset.update(constraints.get_referenced_varpaths())
 
-        get_metadata = self._parent.parent.get_metadata
+        get_metadata = self.parent.get_metadata
         
         # Parameters are all inputs.
-        driver_inputs = self._parent.get_parameters().keys()
+        driver_inputs = self.get_parameters().keys()
         
         driver_outputs = [vname for vname in varset 
                           if get_metadata(vname, 'iotype')=='out']
@@ -61,23 +69,27 @@ class UsesDerivatives_Base(object):
         return driver_inputs, list(driver_outputs)
     
         
-class UsesGradients(UsesDerivatives_Base): 
-    """This class provides an implementation of the UsesGradients interface."""
-
+    def check_config (self):
+        """Verify that our workflow is able to resolve all of its components."""
+        
+        super(DriverUsesDerivatives, self).check_config()
+        
+        if self.uses_gradients:
+            self.check_gradients()
+        if self.uses_Hessians:
+            self.check_hessians()
+        
     def check_gradients(self):
         """Run check_derivatives on our workflow."""
-        
+    
         driver_inputs, driver_outputs = self._list_driver_connections()
-        self._parent.workflow.check_derivatives(1, driver_inputs, driver_outputs)     
+        self.workflow.check_derivatives(1, driver_inputs, driver_outputs)     
         
         
-class UsesHessians(UsesDerivatives_Base): 
-    """This class provides an implementation of the UsesHessians interface."""
-
     def check_hessians(self):
         """Run check_derivatives on our workflow."""
         
         driver_inputs, driver_outputs = self._list_driver_connections()
-        self._parent.workflow.check_derivatives(2, driver_inputs, driver_outputs)  
+        self.workflow.check_derivatives(2, driver_inputs, driver_outputs)  
         
         

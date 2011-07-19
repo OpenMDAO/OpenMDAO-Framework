@@ -111,7 +111,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])  
         
-        self.top.driver.differentiator = FiniteDifference(self.top.driver)
+        self.top.driver.differentiator = FiniteDifference()
         self.top.run()
         
         # pylint: disable-msg=E1101
