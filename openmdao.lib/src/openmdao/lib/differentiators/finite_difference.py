@@ -48,9 +48,10 @@ class FiniteDifference(HasTraits):
     default_stepsize = Float(1.0e-6, iotype='in', desc='Default finite ' + \
                              'difference step size.')
     
-    def __init__(self, parent=None):
+    def __init__(self):
         
-        self._parent = parent
+        # This gets set in the callback
+        _parent = None
         
         self.param_names = []
         self.objective_names = []
