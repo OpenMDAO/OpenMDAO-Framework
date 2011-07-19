@@ -361,6 +361,7 @@ class NEWSUMTdriver(DriverUsesDerivatives):
 
         self.isdone = False
         self.resume = False
+        self.uses_Hessians = False
         
     def start_iteration(self):
         """Perform the optimization."""
