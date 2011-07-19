@@ -177,7 +177,7 @@ the input file and parse the output file. This example includes a placeholder
 comment for each of these tasks. More detail about what goes there can be
 found in the sections that follow.
 
-In order to run, this component still needs one more piece of information --
+To run, this component still needs one more piece of information --
 the command string that runs the external code. The ExternalCode object has an
 attribute named `command` which takes the command string. So, if you want to
 execute a code that you normally run by typing
@@ -612,7 +612,7 @@ proceeding.
 In the ``execute`` method, a Namelist object is instantiated. This object
 allows you to sequentially build up a namelist input file. The only argument
 is `self`, which is passed because the Namelist object needs to access your
-component's OpenMDAO variables in order to automatically determine the data
+component's OpenMDAO variables to automatically determine the data
 type. The ``set_filename`` method is used to set the name of the input file that
 will be written. Here, you just pass it the variable ``self.stdin``, which is part
 of the ExternalCode API.

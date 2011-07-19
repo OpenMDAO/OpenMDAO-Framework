@@ -60,7 +60,7 @@ environment, giving you access to everything in OpenMDAO.
 
 Navigate into the folder that was just created by your install script.
 
-If you are on **Linux or Mac OS X,** you must be running bash in order to
+If you are on **Linux or Mac OS X,** you must be running bash to
 activate the virtual environment. If you are not running bash, start it up
 by typing:
 

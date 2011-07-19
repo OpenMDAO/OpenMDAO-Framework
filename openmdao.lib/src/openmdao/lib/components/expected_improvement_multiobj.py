@@ -1,16 +1,16 @@
 """Expected Improvement calculation for one or more objectives.""" 
 
-from numpy import exp, abs, pi, array,isnan
+from numpy import exp, abs, pi, array,isnan, diag
 from scipy.special import erf
+from scipy import random
 
 from openmdao.lib.datatypes.api import Slot, Str, ListStr, Enum, \
-     Float, Array,Event
+     Float, Array,Event, Int
 
 from openmdao.main.component import Component
 
 from openmdao.lib.casehandlers.api import CaseSet
 from openmdao.main.uncertain_distributions import NormalDistribution
-
 
 class MultiObjExpectedImprovement(Component):
     best_cases = Slot(CaseSet, iotype="in",
@@ -24,6 +24,12 @@ class MultiObjExpectedImprovement(Component):
     predicted_values = Array(iotype="in",dtype=NormalDistribution,
                         desc="CaseIterator which contains NormalDistributions for each \
                         response at a location where you wish to calculate EI.")
+    
+    n = Int(1000,iotype="in",desc="number of Monte Carlo Samples with \
+                        which to calculate probability of improvement")
+    
+    calc_switch = Enum("PI",["PI","EI"],iotype="in",desc="switch to use either \
+                        probability (PI) or expected (EI) improvement")
     
     PI = Float(0.0, iotype="out", desc="The probability of improvement of the next_case")
     
@@ -43,12 +49,9 @@ class MultiObjExpectedImprovement(Component):
         
         flat_crit= self.criteria.ravel()
 
-        #y_star is a 2D list of pareto points
-
-        
-        y_star = zip(*[self.best_cases[crit] for crit in self.criteria])
-
-        if not y_star: #empty y_star set means no cases met the criteria!
+        try:
+            y_star = zip(*[self.best_cases[crit] for crit in self.criteria])
+        except KeyError:
             self.raise_exception('no cases in the provided case_set had output '
                  'matching the provided criteria, %s'%self.criteria, ValueError)
         
@@ -56,13 +59,13 @@ class MultiObjExpectedImprovement(Component):
         y_star = array(y_star)[array([i[0] for i in y_star]).argsort()]
         return y_star
         
-    def _multiPI(self,mu,sigma):
+    def _2obj_PI(self,mu,sigma):
         """Calculates the multi-objective probability of improvement
         for a new point with two responses. Takes as input a 
         pareto frontier, mean and sigma of new point."""
         
         y_star = self.y_star
-        
+
         PI1 = (0.5+0.5*erf((1/(2**0.5))*((y_star[0][0]-mu[0])/sigma[0])))
         PI3 = (1-(0.5+0.5*erf((1/(2**0.5))*((y_star[-1][0]-mu[0])/sigma[0]))))\
         *(0.5+0.5*erf((1/(2**0.5))*((y_star[-1][1]-mu[1])/sigma[1])))
@@ -76,13 +79,12 @@ class MultiObjExpectedImprovement(Component):
         mcpi = PI1+PI2+PI3
         return mcpi
     
-    def _multiEI(self,mu,sigma):
+    def _2obj_EI(self,mu,sigma):
         """Calculates the multi-criteria expected improvement
         for a new point with two responses. Takes as input a 
         pareto frontier, mean and sigma of new point."""
         
         y_star = self.y_star
-        self.PI = self._multiPI(mu,sigma)
         ybar11 = mu[0]*(0.5+0.5*erf((1/(2**0.5))*((y_star[0][0]-mu[0])/sigma[0])))\
         -sigma[0]*(1/((2*pi)**0.5))*exp(-0.5*((y_star[0][0]-mu[0])**2/sigma[0]**2))
         ybar13 = (mu[0]*(0.5+0.5*erf((1/(2**0.5))*((y_star[-1][0]-mu[0])/sigma[0])))\
@@ -121,20 +123,53 @@ class MultiObjExpectedImprovement(Component):
         if isnan(mcei):
             mcei = 0
         return mcei
+ 
+    def _dom(self,a,b):
+        """determines if a completely dominates b
+       returns True is if does
+    """
+        comp = [c1<c2 for c1,c2 in zip(a,b)]
+        if sum(comp)==len(self.criteria):
+            return True        
+        return False
+    
+    def _nobj_PI(self,mu,sigma):
+        cov = diag(array(sigma)**2)
+        rands = random.multivariate_normal(mu,cov,self.n)
+        num = 0 #number of cases that dominate the current Pareto set
 
+        for random_sample in rands:
+            for par_point in self.y_star:
+                #par_point = [p[2] for p in par_point.outputs]
+                if self._dom(par_point,random_sample):
+                    num = num+1
+                    break
+        pi = (self.n-num)/float(self.n)
+        return pi
+        
     def execute(self): 
-        """ Calculates the expected improvement of
-        the model at a given point.
+        """ Calculates the expected improvement or 
+        probability of improvement of a candidate 
+        point given by a normal distribution.
         """
-        #print 'exec'
         mu = [objective.mu for objective in self.predicted_values]
         sig = [objective.sigma for objective in self.predicted_values]
         
         if self.y_star == None:
             self.y_star = self.get_y_star()
-            
-        self.EI = self._multiEI(mu,sig)
 
-        #print "ei: ", self.EI
-        
-        
+        n_objs = len(self.criteria)
+
+        if n_objs==2:
+            """biobjective optimization"""
+            self.PI = self._2obj_PI(mu,sig)
+            if self.calc_switch == 'EI':
+                """execute EI calculations"""
+                self.EI = self._2obj_EI(mu,sig)
+        if n_objs>2: 
+            """n objective optimization"""
+            self.PI = self._nobj_PI(mu,sig)
+            if self.calc_switch == 'EI':
+                """execute EI calculations"""
+                self.raise_exception("EI calculations not supported"
+                                        " for more than 2 objectives", ValueError)
