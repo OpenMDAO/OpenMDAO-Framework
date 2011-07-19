@@ -186,7 +186,7 @@ more detailed example can be found in the ``single_objective_ei`` example under 
 
     class Simulation(Assembly): 
         def __init__(self,doc=None): 
-            super(Analysis,self).__init__()
+            super(Simulation,self).__init__()
 
             self.add('meta_model',MetaModel())
             self.meta_model.surrogate = {'default':KrigingSurrogate()}
