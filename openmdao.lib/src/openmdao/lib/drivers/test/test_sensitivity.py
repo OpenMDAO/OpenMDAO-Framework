@@ -48,7 +48,7 @@ class Assy(Assembly):
         self.driver.add_objective('comp.y')
         self.driver.add_objective('comp.v')
         
-        self.driver.differentiator = FiniteDifference(self.driver)
+        self.driver.differentiator = FiniteDifference()
         
         
 class SensitivityDriverTestCase(unittest.TestCase):
