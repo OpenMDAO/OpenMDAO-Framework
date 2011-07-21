@@ -86,9 +86,9 @@ def main(argv=None):
                       dest='branch',
                       help="if file_url is a git repo, supply branch name here")
     parser.add_option("-i","--identity", action="store", type='string', 
-                      dest='identity', default='~/.ssh/lovejoy.pem',
+                      dest='identity', default='~/.ssh/lovejoykey.pem',
                       help="pathname of identity file needed for testing on EC2. "
-                           "default is '~/.ssh/lovejoy.pem'")
+                           "default is '~/.ssh/lovejoykey.pem'")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
@@ -99,6 +99,8 @@ def main(argv=None):
     if options.hosts is None:
         print "you must supply host(s) to test the branch on"
         sys.exit(-1)
+        
+    options.identity = os.path.expanduser(options.identity)
             
     # make sure fabric connections are all closed when we exit
     atexit.register(fabric_cleanup, True)
@@ -142,9 +144,7 @@ def main(argv=None):
                          testargs=args)
         
     for host in ec2_hosts:
-        print 'would test on %s' % host
-        if False:
-            run_on_ec2_host(host, conn, options.identity, key_name,
+        run_on_ec2_host(host, conn, options.identity, key_name,
                         test_on_remote_host, fname, pyversion=options.pyversion,
                         keep=options.keep, branch=options.branch,
                         testargs=args)

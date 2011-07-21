@@ -74,16 +74,27 @@ def start_instance(conn, name, key_name='lovejoykey',
     instancedict[inst.public_dns_name] = (inst, name)
     return (img, inst, inst.public_dns_name)
 
-
+def inst_from_dns(conn, dns_name):
+    for reservation in conn.get_all_instances():
+        for inst in reservation.instances:
+            if inst.public_dns_name == dns_name:
+                return inst
+    return None
+    
 def run_on_ec2_host(host, conn, identity, key_name,
                     funct, *args, **kwargs):
     settings_args = {}
     
     if host.startswith('ec2-'): # it's a dns name of an existing image
         hoststring = host
-        shortname = instancedict[host][1]
-        settings_args['user'] = imagedict[shortname].username
-        instance_platform = imagedict[shortname].platform
+        inst = inst_from_dns(conn, host)
+        if inst is None:
+            raise RuntimeError("Can't find instance for address '%s'" % host)
+        for shortname, imginfo in imagedict.items():
+            if imginfo.ami_id == inst.image_id:
+                settings_args['user'] = imagedict[shortname].username
+                instance_platform = imagedict[shortname].platform
+                break
     else:
         image_id = imagedict[host].ami_id
         instance_type = imagedict[host].instance_type
