@@ -4,13 +4,16 @@ import sys
 import os
 import shutil
 import subprocess
+import atexit
 from optparse import OptionParser
 from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, hosts
 from fabric.state import connections
 from socket import gethostname
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
-                                    push_and_run, rm_remote_tree
+                                    push_and_run, rm_remote_tree, make_git_archive,\
+                                    fabric_cleanup
+from openmdao.devtools.tst_ec2 import run_on_ec2_host, imagedict
 
 #import paramiko.util
 #paramiko.util.log_to_file('paramiko.log')
@@ -24,17 +27,8 @@ vminfo = {
     }
 
 
-def _make_archive(tarfilename):
-    #export the current branch to a tarfile
-    startdir = os.getcwd()
-    os.chdir(repo_top())
-    try:
-        local("git archive -o %s --prefix=testbranch/ HEAD" % tarfilename)
-    finally:
-        os.chdir(startdir)
-        
-def _test_remote(fname, pyversion='python', keep=False, 
-                 branch=None, args=()):
+def test_on_remote_host(fname, pyversion='python', keep=False, 
+                        branch=None, testargs=()):
     loctstfile = os.path.join(os.path.dirname(__file__), 'loctst.py')
     
     remtmp = remote_tmpdir()
@@ -51,7 +45,9 @@ def _test_remote(fname, pyversion='python', keep=False,
         remoteargs.append('--keep')
     if branch:
         remoteargs.append('--branch=%s' % branch)
-    remoteargs.extend(args)
+    if len(testargs) > 0:
+        remoteargs.append('--')
+        remoteargs.extend(testargs)
     try:
         push_and_run(loctstfile, 
                      remotepath=os.path.basename(loctstfile),
@@ -60,6 +56,15 @@ def _test_remote(fname, pyversion='python', keep=False,
         if remtmp is not None and not keep:
             rm_remote_tree(remtmp)
 
+def run_on_host(host, funct, settings_args=None, *args, **kwargs):
+    if settings_args is None:
+        settings_args = {}
+    
+    settings_args['host_string'] = host
+        
+    with settings(**settings_args):
+        funct(*args, **kwargs)
+            
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
@@ -74,15 +79,16 @@ def main(argv=None):
                       help="python version to use, e.g., 'python2.6'")
     parser.add_option("-k","--keep", action="store_true", dest='keep',
                       help="don't delete temporary build directory")
-    parser.add_option("-b","--branch", action="store", type='string', 
-                      dest='branch',
-                      help="if file_url is a git repo, supply branch name here")
     parser.add_option("-f","--file", action="store", type='string', 
                       dest='fname',
                       help="pathname of a tarfile or URL of a git repo")
+    parser.add_option("-b","--branch", action="store", type='string', 
+                      dest='branch',
+                      help="if file_url is a git repo, supply branch name here")
     parser.add_option("-i","--identity", action="store", type='string', 
                       dest='identity', default='~/.ssh/lovejoy.pem',
-                      help="pathname of identity file")
+                      help="pathname of identity file needed for testing on EC2. "
+                           "default is '~/.ssh/lovejoy.pem'")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
@@ -94,49 +100,54 @@ def main(argv=None):
         print "you must supply host(s) to test the branch on"
         sys.exit(-1)
             
-    try:
-        if options.fname is None: # assume testing current repo
-            options.fname = os.path.join(os.getcwd(), 'testbranch.tar')
-            _make_archive(options.fname)
-            subprocess.check_call(['gzip', options.fname])
-            options.fname = options.fname+'.gz'
-            
-        fname = options.fname
+    # make sure fabric connections are all closed when we exit
+    atexit.register(fabric_cleanup, True)
+    
+    if options.fname is None: # assume we're testing the current repo
+        options.fname = os.path.join(os.getcwd(), 'testbranch.tar')
+        make_git_archive(options.fname)
+        subprocess.check_call(['gzip', options.fname])
+        options.fname = options.fname+'.gz'
         
-        if fname.endswith('.tar.gz') or fname.endswith('.tar'):
-            if not os.path.isfile(fname):
-                print "can't find tar file '%s'" % fname
-                sys.exit(-1)
-        elif fname.endswith('.git'):
-            pass
+    fname = options.fname
+    
+    if fname.endswith('.tar.gz') or fname.endswith('.tar'):
+        if not os.path.isfile(fname):
+            print "can't find tar file '%s'" % fname
+            sys.exit(-1)
+    elif fname.endswith('.git'):
+        pass
+    else:
+        parser.print_help()
+        print "\nfilename must end in '.tar.gz', '.tar', or '.git'"
+        sys.exit(retcode)
+        
+    # first, find out which hosts are ec2 hosts, if any
+    ec2_hosts = []
+    hosts = []
+    for host in options.hosts:
+        if host in imagedict or host.startswith('ec2-'):
+            ec2_hosts.append(host)
         else:
-            parser.print_help()
-            print "\nfilename must end in '.tar.gz', '.tar', or '.git'"
-            sys.exit(retcode)
-            
-        # TODO: run these concurrently
-        for host in options.hosts:
-            ??? need a separate file to run as subprocess, or use multiprocessing
-            to get concurrent tests. need to separate outputs...
-            if host in vminfo:
-                
-                env.key_filename = [options.identity]
-                env.user = 'ubuntu'
-            else:
-                env.key_filename = None
-                env.user = None
-                
-            with settings(host_string=host):
-                print "testing %s on host %s" % (fname, host)
-                _test_remote(fname, pyversion=options.pyversion,
-                             keep=options.keep, branch=options.branch,
-                             args=args)
-    finally:
-        # ensure that all network connections are closed
-        # TODO: once we move to Fabric 0.9.4, just use disconnect_all() function
-        for key in connections.keys():
-            connections[key].close()
-            del connections[key]
+            hosts.append(host)
+    
+    if len(ec2_hosts) > 0:
+        from boto.ec2.connection import EC2Connection
+        conn = EC2Connection()
+        key_name = os.path.splitext(os.path.basename(options.identity))[0]
+
+    for host in hosts:
+        run_on_host(host, test_on_remote_host, None, fname, pyversion=options.pyversion,
+                         keep=options.keep, branch=options.branch,
+                         testargs=args)
+        
+    for host in ec2_hosts:
+        print 'would test on %s' % host
+        if False:
+            run_on_ec2_host(host, conn, options.identity, key_name,
+                        test_on_remote_host, fname, pyversion=options.pyversion,
+                        keep=options.keep, branch=options.branch,
+                        testargs=args)
             
 if __name__ == '__main__': #pragma: no cover
     main()

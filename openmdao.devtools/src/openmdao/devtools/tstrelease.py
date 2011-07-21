@@ -5,6 +5,7 @@ import shutil
 import urllib2
 import subprocess
 import tempfile
+import atexit
 from optparse import OptionParser
 
 from fabric.api import run, env, local, put, cd, get, settings
@@ -50,17 +51,13 @@ if __name__ == '__main__':
         print "you must supply host(s) to test the release on"
         sys.exit(-1)
         
-    try:
-        # TODO: run these concurrently
-        for host in hosts:
-            with settings(host_string=host):
-                print "testing on host %s" % host
-                _test_remote(options.fname, pyversion=options.pyversion,
-                             keep=options.keep, args=args)
-    finally:
-        # ensure that all network connections are closed
-        # TODO: once we move to Fabric 0.9.4, just use disconnect_all() function
-        for key in connections.keys():
-            connections[key].close()
-            del connections[key]
+    # make sure fabric connections are all closed when we exit
+    atexit.register(fabric_cleanup, True)
+    
+    # TODO: run these concurrently
+    for host in hosts:
+        with settings(host_string=host):
+            print "testing on host %s" % host
+            _test_remote(options.fname, pyversion=options.pyversion,
+                         keep=options.keep, args=args)
             

@@ -8,12 +8,19 @@ from subprocess import Popen, STDOUT, PIPE, check_call
 import tempfile
 import tarfile
 
-from fabric.api import run, env, put, cd, prompt, hide, get, settings
-
-PRODUCTION_HOST ='openmdao@web103.webfaction.com'
+from fabric.api import run, local, env, put, cd, prompt, hide, get, settings
+from fabric.state import connections
 
 class VersionError(RuntimeError):
     pass
+
+def fabric_cleanup(debug=False):
+    """close all active fabric connections"""
+    for key in connections.keys():
+        if debug:
+            print 'closing connection %s' % key
+        connections[key].close()
+        del connections[key]
 
 def check_openmdao_version(release_dir, version):
     """Checks to see if the specified version of openmdao already exists on
@@ -85,12 +92,16 @@ def check_setuptools(py):
     with settings(hide('everything'), warn_only=True):
         return run('%s -c "import setuptools; print setuptools.__version__"' % py)
 
-def host_call(host, func, *args, **kwargs):
-    """Calls the given function inside of a 'with' block that
+def host_call(host, func, settings_args=None, *args, **kwargs):
+    """Calls the given function inside of a 'with settings' block that
     sets the host.
     """
-    with settings(host_string=host):
-        func(*args, **kwargs)
+    if settings_args is None:
+        settings_args = {}
+    settings_args['host_string'] = host
+    
+    with settings(**settings_args):
+        return func(*args, **kwargs)
         
 def py_cmd(cmds):
     for cmd in cmds:
@@ -244,6 +255,21 @@ def remote_build(distdir, destdir, build_type='build -f bdist_egg',
 
     rm_remote_tree(remtmp)
     rm_remote_tree(remotedir)
+    
+def rsync_dirs(dest, host, dirs=('downloads','dists'),
+               doit=os.system):
+    """Use rsync to sync the specified directories on the specified host
+    with the corresponding directories in the specified destination directory.
+    
+    This requires ssh access without a password to the host.
+    """
+    for dname in dirs:
+        doit('rsync -arvzt --delete %s:%s %s' % (host, dname, dest))
+
+
+#
+# Git related utilities
+#
 
 def repo_top():
     """Return the top level directory in the current git repository"""
@@ -278,13 +304,13 @@ def get_git_branches():
     return [b.strip(' *') for b in p.communicate()[0].split('\n')]
 
 
-def rsync_dirs(dest, host, dirs=('downloads','dists'),
-               doit=os.system):
-    """Use rsync to sync the specified directories on the specified host
-    with the corresponding directories in the specified destination directory.
-    
-    This requires ssh access without a password to the host.
-    """
-    for dname in dirs:
-        doit('rsync -arvzt --delete %s:%s %s' % (host, dname, dest))
+def make_git_archive(tarfilename, prefix='testbranch/'):
+    """Make a tar file of the entire current repository."""
+    startdir = os.getcwd()
+    os.chdir(repo_top())
+    try:
+        check_call(['git', 'archive', '-o',
+                    tarfilename, '--prefix=%s' % prefix, 'HEAD'])
+    finally:
+        os.chdir(startdir)
 
