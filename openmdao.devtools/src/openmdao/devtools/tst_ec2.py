@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 import atexit
+import time
 from optparse import OptionParser
 from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, hosts
 from fabric.state import connections
@@ -50,21 +51,24 @@ def check_image_state(imgname, inst, start_state, sleeptime=10,
         time.sleep(sleeptime)
    
 def start_instance(conn, name, key_name='lovejoykey',
-                   security_groups=('default'),
+                   security_groups=None,
                    instance_type=None,
-                   debug=False):
+                   debug=False,
+                   sleep=10):
     """Starts up an EC2 instance having the specified 'short' name and
     returns the image, the instance, and the public dns name.
     """
     img = conn.get_image(imagedict[name].ami_id)
     if instance_type is None:
         instance_type = imagedict[name].instance_type
+    if security_groups is None:
+        security_groups = ['default']
     if debug:
         print "%s image = %s" % (name, img)
         print "%s location = %s" % (name, img.location)
         print 'running %s' % name
     reservation = img.run(key_name=key_name, 
-                          security_groups=list(security_groups),
+                          security_groups=security_groups,
                           instance_type=instance_type)
     inst = reservation.instances[0]
     check_image_state(name, inst, u'pending', debug=debug)
@@ -72,6 +76,10 @@ def start_instance(conn, name, key_name='lovejoykey',
         raise RuntimeError("instance of '%s' failed to run (went from state 'pending' to state '%s')" %
                            (name, inst.state))
     instancedict[inst.public_dns_name] = (inst, name)
+    if debug:
+        print "started instance at address '%s'" % inst.public_dns_name
+    if sleep > 0:
+        time.sleep(sleep)
     return (img, inst, inst.public_dns_name)
 
 def inst_from_dns(conn, dns_name):
@@ -95,8 +103,9 @@ def run_on_ec2_host(host, conn, identity, key_name,
                 settings_args['user'] = imagedict[shortname].username
                 instance_platform = imagedict[shortname].platform
                 break
+        else:
+            raise RuntimeError("Can't find image that created instance at '%s'" % host)
     else:
-        image_id = imagedict[host].ami_id
         instance_type = imagedict[host].instance_type
         instance_platform = imagedict[host].platform
         settings_args['user'] = imagedict[host].username
@@ -104,12 +113,14 @@ def run_on_ec2_host(host, conn, identity, key_name,
         # stand up an instance of the specified image
         img, inst, hoststring = start_instance(conn, 
                             host, key_name=key_name,
-                            security_groups=('default'),
-                            instance_type=None,
+                            security_groups=['default'],
+                            instance_type=instance_type,
                             debug=False)
         
     settings_args['host_string'] = hoststring
-    settings_args['key_filename'] = [identity] 
+    settings_args['key_filename'] = identity 
+    
+    print 'settings_args = ',str(settings_args)
         
     with settings(**settings_args):
         funct(*args, **kwargs)

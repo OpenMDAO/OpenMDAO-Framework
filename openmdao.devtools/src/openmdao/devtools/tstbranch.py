@@ -107,6 +107,9 @@ def main(argv=None):
     
     if options.fname is None: # assume we're testing the current repo
         options.fname = os.path.join(os.getcwd(), 'testbranch.tar')
+        ziptarname = options.fname+'.gz'
+        if os.path.isfile(ziptarname):
+            os.remove(ziptarname)
         make_git_archive(options.fname)
         subprocess.check_call(['gzip', options.fname])
         options.fname = options.fname+'.gz'
@@ -137,6 +140,7 @@ def main(argv=None):
         from boto.ec2.connection import EC2Connection
         conn = EC2Connection()
         key_name = os.path.splitext(os.path.basename(options.identity))[0]
+        print 'key_name = ',key_name
 
     for host in hosts:
         run_on_host(host, test_on_remote_host, None, fname, pyversion=options.pyversion,
