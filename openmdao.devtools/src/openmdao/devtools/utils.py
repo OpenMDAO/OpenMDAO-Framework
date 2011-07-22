@@ -4,6 +4,8 @@ import shutil
 import urllib2
 from optparse import OptionParser
 from subprocess import Popen, STDOUT, PIPE, check_call
+import socket
+import paramiko
 
 import tempfile
 import tarfile
@@ -82,11 +84,20 @@ def tar_dir(dirpath, archive_name, destdir):
         os.chdir(startdir)
     return tarpath
 
-def connection_good():
-    with settings(hide('running', 'stderr'), warn_only=True):
-        result = run("echo hello")
-        return result.return_code == 0
-            
+def ssh_test(host, port=22, timeout=3):
+    """Returns true if we can connect to the host via ssh."""
+    # Set the timeout
+    original_timeout = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(timeout)
+    try:
+        transport = paramiko.Transport((host, port))
+        return True
+    except:
+        pass
+    finally:
+        socket.setdefaulttimeout(original_timeout)
+    return False
+
 def get_platform():
     """Returns the platform string of the current active host."""
     with settings(hide('running', 'stderr'), warn_only=True):

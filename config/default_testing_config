@@ -24,4 +24,9 @@ platform: linux2
 addr: ec2-50-16-15-109.compute-1.amazonaws.com
 user: ubuntu
 
+[local_macbook_pro]
+platform: darwin
+addr: 192.168.1.12
+user: bret
+
 

@@ -15,6 +15,7 @@ from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
                                     fabric_cleanup
 from openmdao.devtools.tst_ec2 import run_on_ec2_host
+from openmdao.util.debug import print_fuct_call
 
 #import paramiko.util
 #paramiko.util.log_to_file('paramiko.log')
@@ -57,12 +58,16 @@ def test_on_remote_host(fname, pyversion='python', keep=False,
         if remtmp is not None and not keep:
             rm_remote_tree(remtmp)
 
-def run_on_host(host, funct, settings_args=None, *args, **kwargs):
+def run_on_host(host, config, funct, settings_args=None, *args, **kwargs):
     if settings_args is None:
         settings_args = {}
     
-    settings_args['host_string'] = host
+    debug = config.get(host, 'debug')
+    settings_args['host_string'] = config.get(host, 'addr')
         
+    if debug:
+        print "settings_args = ", str(settings_args)
+        print "calling %s" % print_fuct_call(funct, *args, **kwargs)
     with settings(**settings_args):
         funct(*args, **kwargs)
             
@@ -151,7 +156,7 @@ def main(argv=None):
         conn = EC2Connection()
 
     for host in hosts:
-        run_on_host(host, test_on_remote_host, None, fname,
+        run_on_host(host, config, test_on_remote_host, None, fname,
                          keep=options.keep, branch=options.branch,
                          testargs=args)
         

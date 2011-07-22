@@ -14,7 +14,7 @@ from inspect import getargvalues, formatargvalues, currentframe
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive, \
-                                    connection_good
+                                    ssh_test
 
 from openmdao.util.debug import print_fuct_call
 
@@ -47,12 +47,12 @@ def check_image_state(imgname, inst, start_state, sleeptime=10,
     the state changes from start_state.
     """
     while True:
+        time.sleep(sleeptime)
         inst.update()
         if debug:
             print '%s state = %s' % (imgname, inst.state)
         if inst.state != start_state:
             break
-        time.sleep(sleeptime)
    
 def start_instance(conn, config, name, sleep=6, max_tries=10):
     """Starts up an EC2 instance having the specified 'short' name and
@@ -80,14 +80,16 @@ def start_instance(conn, config, name, sleep=6, max_tries=10):
                            (name, inst.state))
     
     if debug:
-        print "started instance at address '%s'" % inst.public_dns_name
+        print "instance at address '%s' is running" % inst.public_dns_name
     for i in range(max_tries):
-        if debug: print "testing connection (%d)" % i
-        if connection_good():
-            break
         time.sleep(sleep)
+        if debug: print "testing connection (try #%d)" % (i+1)
+        # even though the instance is running, it takes a while before
+        # sshd is running, so we have to wait a bit longer
+        if ssh_test(inst.public_dns_name):
+            break
     else:
-        raise RuntimeError("instance of '%s' ran but connection attempts failed" % name)
+        raise RuntimeError("instance of '%s' ran but ssh connection attempts failed" % name)
     return inst.public_dns_name
 
 def inst_from_dns(conn, dns_name):
