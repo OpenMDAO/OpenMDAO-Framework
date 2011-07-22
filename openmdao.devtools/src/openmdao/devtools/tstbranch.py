@@ -9,11 +9,12 @@ from optparse import OptionParser
 from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, hosts
 from fabric.state import connections
 from socket import gethostname
+import ConfigParser
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
                                     fabric_cleanup
-from openmdao.devtools.tst_ec2 import run_on_ec2_host, imagedict
+from openmdao.devtools.tst_ec2 import run_on_ec2_host
 
 #import paramiko.util
 #paramiko.util.log_to_file('paramiko.log')
@@ -70,13 +71,14 @@ def main(argv=None):
         argv = sys.argv[1:]
         
     parser = OptionParser()
-    parser.add_option("--host", action='append', dest='hosts', default=[],
-                      metavar='HOST',
-                      help="add a host to test the current branch on")
-    parser.add_option("--pyversion", action="store", type='string', 
-                      dest='pyversion',
-                      default="python", 
-                      help="python version to use, e.g., 'python2.6'")
+    parser.add_option("-c", "--config", action='store', dest='cfg', 
+                      default='~/.openmdao_testing',
+                      metavar='CONFIG',
+                      help="specify config file containing info for hosts to be tested on")
+    parser.add_option("--host", action='append', dest='hosts', 
+                      default=[], metavar='HOST',
+                      help="select host from config file to run tests on. If not supplied, "
+                           "tests will run on all hosts in config file.")
     parser.add_option("-k","--keep", action="store_true", dest='keep',
                       help="don't delete temporary build directory")
     parser.add_option("-f","--file", action="store", type='string', 
@@ -85,30 +87,35 @@ def main(argv=None):
     parser.add_option("-b","--branch", action="store", type='string', 
                       dest='branch',
                       help="if file_url is a git repo, supply branch name here")
-    parser.add_option("-i","--identity", action="store", type='string', 
-                      dest='identity', default='~/.ssh/lovejoykey.pem',
-                      help="pathname of identity file needed for testing on EC2. "
-                           "default is '~/.ssh/lovejoykey.pem'")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
-    if options.hosts is None:
-        options.hosts = [h.strip() for h in 
-                           os.environ.get('OPENMDAO_TEST_HOSTS','').split(':')]
-        
-    if options.hosts is None:
-        print "you must supply host(s) to test the branch on"
+    config = ConfigParser.ConfigParser()
+    config.readfp(open(options.cfg))
+    
+    hostlist = config.sections()
+    if options.hosts:
+        hosts = []
+        for host in options.hosts:
+            if host in hostlist:
+                hosts.append(host)
+            else:
+                raise RuntimeError("host '%s' is not in config file %s" % 
+                                   (host, options.cfg))
+    else:
+        hosts = hostlist
+
+    if not hosts:
+        print "no hosts were found in config file %s" % options.cfg
         sys.exit(-1)
         
-    options.identity = os.path.expanduser(options.identity)
-            
     # make sure fabric connections are all closed when we exit
     atexit.register(fabric_cleanup, True)
     
     if options.fname is None: # assume we're testing the current repo
         options.fname = os.path.join(os.getcwd(), 'testbranch.tar')
         ziptarname = options.fname+'.gz'
-        if os.path.isfile(ziptarname):
+        if os.path.isfile(ziptarname): # clean up the old tar file
             os.remove(ziptarname)
         make_git_archive(options.fname)
         subprocess.check_call(['gzip', options.fname])
@@ -128,29 +135,30 @@ def main(argv=None):
         sys.exit(retcode)
         
     # first, find out which hosts are ec2 hosts, if any
-    ec2_hosts = []
-    hosts = []
-    for host in options.hosts:
-        if host in imagedict or host.startswith('ec2-'):
-            ec2_hosts.append(host)
-        else:
-            hosts.append(host)
+    ec2_hosts = set()
+    for host in hosts:
+        if config.has_option(host, 'addr'):
+            addr = config.get(host, 'addr')
+            if addr.startswith('ec2-') or '@ec2-' in addr:
+                ec2_hosts.add(host)
+        if config.has_option(host, 'image_id'):
+            if host not in ec2_hosts:
+                ec2_hosts.add(host)
+                
+    hosts = set(hosts) - ec2_hosts
     
     if len(ec2_hosts) > 0:
         from boto.ec2.connection import EC2Connection
         conn = EC2Connection()
-        key_name = os.path.splitext(os.path.basename(options.identity))[0]
-        print 'key_name = ',key_name
 
     for host in hosts:
-        run_on_host(host, test_on_remote_host, None, fname, pyversion=options.pyversion,
+        run_on_host(host, test_on_remote_host, None, fname,
                          keep=options.keep, branch=options.branch,
                          testargs=args)
         
     for host in ec2_hosts:
-        run_on_ec2_host(host, conn, options.identity, key_name,
-                        test_on_remote_host, fname, pyversion=options.pyversion,
-                        keep=options.keep, branch=options.branch,
+        run_on_ec2_host(host, config, conn, test_on_remote_host, 
+                        fname, keep=options.keep, branch=options.branch,
                         testargs=args)
             
 if __name__ == '__main__': #pragma: no cover

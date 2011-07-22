@@ -82,6 +82,11 @@ def tar_dir(dirpath, archive_name, destdir):
         os.chdir(startdir)
     return tarpath
 
+def connection_good():
+    with settings(hide('running', 'stderr'), warn_only=True):
+        result = run("echo hello")
+        return result.return_code == 0
+            
 def get_platform():
     """Returns the platform string of the current active host."""
     with settings(hide('running', 'stderr'), warn_only=True):
@@ -266,6 +271,7 @@ def rsync_dirs(dest, host, dirs=('downloads','dists'),
     for dname in dirs:
         doit('rsync -arvzt --delete %s:%s %s' % (host, dname, dest))
 
+        
 
 #
 # Git related utilities
