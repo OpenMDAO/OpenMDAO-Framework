@@ -142,8 +142,7 @@ def main(argv=None):
             if addr.startswith('ec2-') or '@ec2-' in addr:
                 ec2_hosts.add(host)
         if config.has_option(host, 'image_id'):
-            if host not in ec2_hosts:
-                ec2_hosts.add(host)
+            ec2_hosts.add(host)
                 
     hosts = set(hosts) - ec2_hosts
     

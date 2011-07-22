@@ -61,7 +61,7 @@ def start_instance(conn, config, name, sleep=6, max_tries=10):
     debug = config.getboolean(name, 'debug')
     img = conn.get_image(config.get(name, 'image_id'))
     instance_type = config.get(name, 'instance_type')
-    identity = os.path.expanduser(config.get(name, 'identity'))
+    identity = config.get(name, 'identity')
     key_name = os.path.splitext(os.path.basename(identity))[0]
     security_groups = [s.strip() for s in config.get(name, 'security_groups').split()
                        if len(s.strip())>0]
@@ -104,25 +104,20 @@ def run_on_ec2_host(host, config, conn, funct, *args, **kwargs):
     """
     settings_args = {}
     
-    dryrun = config.getboolean(host, 'dryrun')
-    
-    settings_args['key_filename'] = config.get(host, 'identity')
+    settings_args['key_filename'] = os.path.expanduser(
+               os.path.expandvars(config.get(host, 'identity').strip()))
     settings_args['user'] = config.get(host, 'user')
+    debug = config.get(host, 'debug')
     
     if config.has_option(host, 'addr'): # it's a running instance
         settings_args['host_string'] = config.get(host, 'addr')
     else:
         # stand up an instance of the specified image
-        if dryrun:
-            print "would start instance %s" % host
-        else:
-            settings_args['host_string'] = start_instance(conn, config,
-                                                          host)
+        settings_args['host_string'] = start_instance(conn, config, host)
 
     with settings(**settings_args):
-        if dryrun:
-            print "dry run: would run %s here" % print_fuct_call(funct, *args, **kwargs)
-        else:
-            funct(*args, **kwargs)
+        if debug:
+            print "calling %s" % print_fuct_call(funct, *args, **kwargs)
+        funct(*args, **kwargs)
 
         

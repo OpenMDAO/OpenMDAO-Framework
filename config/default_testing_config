@@ -5,7 +5,6 @@ identity: ~/.ssh/lovejoykey.pem
 py_versions: python2.6
 security_groups: default
 debug: false
-dryrun: true
 
 [lovejoy]
 image_id: ami-2638c34f
