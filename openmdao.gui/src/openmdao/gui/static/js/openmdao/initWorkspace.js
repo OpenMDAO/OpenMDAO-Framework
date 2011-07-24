@@ -36,7 +36,7 @@ jQuery(document).ready(function() {
 
     // experimental
     new openmdao.Plotter("plotter",model)
-    new openmdao.ThreeDStuff("threed",model)
+    new openmdao.O3DViewer("threed",model)
     
     // initialize views
     model.updateListeners();
