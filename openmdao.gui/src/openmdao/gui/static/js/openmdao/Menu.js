@@ -11,60 +11,41 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @version 0.0.0
  * @constructor
  */
-openmdao.Menu = function(id) {
+openmdao.Menu = function(id, url) {
     /***********************************************************************
      *  private
      ***********************************************************************/
-     
     var self = this,
-        elm = jQuery("#"+id),
-        menus = [
-            { text: "Project", 
-              items: [
-                { text: "Save",          onclick: "model.saveProject();" },
-                { text: "Run",           onclick: "model.runModel();" },
-                //{ text: "New",           onclick: "model.newModel()"   },
-                { text: "New",           url: "/workspace/exit" },
-                { text: "Logout",        url: "/workspace/logout" },
-                //{ text: "Exit",          onclick: "model.exit();openmdao.Util.closeWindow()"}
-              ]
-            },
-            { text: "File", 
-              items: [
-                { text: "New File",      onclick: "model.newFile();" },
-                { text: "New Folder",    onclick: "model.newFolder();" },
-                { text: "Add File",      onclick: "model.uploadFile();" },
-              ]
-            },
-            { text: "View", 
-              items: [
-                { text: "Code Editor",   onclick: "jQuery('#editor_tab').click();" },
-                { text: "Command Line",  onclick: "openmdao.Util.toggle_visibility('cmdform');" },
-                { text: "Console",      onclick: "layout.open('south');" },
-                { text: "Files",         onclick: "layout.open('west'); jQuery('#ftree_tab').click();" },
-                { text: "Libraries",     onclick: "layout.open('east'); jQuery('#palette_tab').click();" },
-                { text: "Objects",       onclick: "layout.open('west'); jQuery('#otree_tab').click();" },
-                { text: "Properties",    onclick: "layout.open('east'); jQuery('#properties_tab').click();" },
-                { text: "Workflow",      onclick: "jQuery('#workflow_tab').click();" },
-                { text: "--------",      },
-                { text: "Refresh",       onclick: "model.updateListeners();" },
-                //{ text: "RefreshX1000",  onclick: "openmdao.Util.refreshX(1000);" }
-              ]
-            },
-            { text: "Tools", 
-              items: [
-                { text: "Addons", onclick: "openmdao.Util.popupWindow('addons','Addons',575,540)"},
-                { text: "3DTin", onclick: "openmdao.Util.popupWindow('http://www.3dtin.com','3DTin',768,1024)"}
-              ]
-            },
-            { text: "Help", 
-              items: [
-                { text: "Documentation", onclick: "openmdao.Util.popupWindow('http://openmdao.org/docs',800,600);"}
-              ]
-            },
-            { text: "About",             onclick: "openmdao.Util.popupWindow('http://openmdao.org/',800,600);"}
-        ]
+        elm = jQuery("#"+id)
+        
+    /** build menus from JSON data structure */
+    function buildMenus(menus) {
+        // generate HTML for the menus
+        var html = "<ul>"
+        for (var i = 0; i < menus.length; i++) {
+            html += getMenuHTML(menus[i])
+        }
+        html += "</ul>"
+        elm.html(html);
 
+        // add indicators and hovers to submenu parents
+        elm.find("li").each(function() {
+            if (jQuery(this).find("ul").length > 0) {
+                jQuery("<span>").text("^").appendTo(jQuery(this).children(":first"));
+
+                // show subnav on hover
+                jQuery(this).mouseenter(function() {
+                  jQuery(this).find("ul").stop(true, true).slideDown();
+                });
+
+                // hide submenus on exit
+                jQuery(this).mouseleave(function() {
+                  jQuery(this).find("ul").stop(true, true).slideUp();
+                });
+            }
+        });
+    }
+    
     /** recursively build HTML for JSON nested menu structure */
     function getMenuHTML(menu) {
         var menuHTML = '<li><a '
@@ -88,29 +69,12 @@ openmdao.Menu = function(id) {
         return menuHTML;
     }
     
-    // generate HTML for the menus
-    var html = "<ul>"
-    for (var i = 0; i < menus.length; i++) {
-        html += getMenuHTML(menus[i])
-    }
-    html += "</ul>"
-    elm.html(html);
-
-    // add indicators and hovers to submenu parents
-    elm.find("li").each(function() {
-        if (jQuery(this).find("ul").length > 0) {
-            jQuery("<span>").text("^").appendTo(jQuery(this).children(":first"));
-
-            // show subnav on hover
-            jQuery(this).mouseenter(function() {
-              jQuery(this).find("ul").stop(true, true).slideDown();
-            });
-
-            // hide submenus on exit
-            jQuery(this).mouseleave(function() {
-              jQuery(this).find("ul").stop(true, true).slideUp();
-            });
-        }
+    // get the JSON menu data and build menus
+    jQuery.ajax({
+        type: 'GET',
+        url: url,
+        dataType: 'json',
+        success: buildMenus,
+        error: function(x,y,z) { debug.info("Error getting Menu data:",x,y,z) }
     });
-    
 }
