@@ -44,6 +44,15 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.add("D4",Dummy()) 
         self.asm.add("D5",Dummy()) 
         self.asm.add("D6",Dummy()) 
+        
+    def test_get_global_des_vars_by_comp(self): 
+        self.asm.add_parameter(('D1.a','D2.a','D2.b'),0,1e99)
+        
+        data = self.asm.get_global_des_vars_by_comp()
+        
+        self.assertEqual(set(data.keys()),set(['D1','D2']))
+        self.assertEqual(set([param.target for param in data['D1']]),set(['D1.a']))  
+        self.assertEqual(set([param.target for param in data['D2']]),set(['D2.a','D2.b']))  
          
         
     def test_coupling_vars(self): 

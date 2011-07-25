@@ -11,11 +11,25 @@ from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.main.hasobjective import HasObjectives
 
 
-class CouplingVar(object): 
 
-    def __init__(self,indep, dep): 
-        self.indep = indep
-        self.dep = dep
+
+class CouplingVar(ExprEvaluator): 
+    
+    @property
+    def target(self): 
+        return self.text
+    
+    @property
+    def targets(self): 
+        return [self.text]
+    
+    @property
+    def low(self): 
+        return self.get_metadata('low')[0][1]
+    
+    @property
+    def high(self):
+        return self.get_metadata('high')[0][1]
 
 class HasCouplingVars(object):
     """This class provides an implementation of the IHasCouplingVar interface 
@@ -38,13 +52,13 @@ class HasCouplingVars(object):
             name of the dependent variable, or the variable that 
             needs to be forced to be consistent with the independent    
         """
-        expr_indep = ExprEvaluator(indep,self._parent)
+        expr_indep = CouplingVar(indep,self._parent)
         if not expr_indep.check_resolve() or not expr_indep.is_valid_assignee():
                 self._parent.raise_exception("Cant add coupling variable with indep '%s' "
                                              "because is not a valid variable"%indep,
                                              ValueError)
                 
-        expr_dep = ExprEvaluator(dep,self._parent)
+        expr_dep = CouplingVar(dep,self._parent)
         if not expr_indep.check_resolve() or not expr_indep.is_valid_assignee():
                 self._parent.raise_exception("Cant add coupling variable with dep '%s' "
                                              "because is not a valid variable"%dep,
@@ -58,7 +72,7 @@ class HasCouplingVars(object):
                 self._parent.raise_exception("Coupling variable with dep '%s' already "
                                              "exists in assembly"%dep,ValueError)
                 
-        self._couples.append((indep,dep))    
+        self._couples.append((expr_indep,expr_dep))    
     
             
     def remove_coupling_var(self,couple):
@@ -73,8 +87,8 @@ class HasCouplingVars(object):
             self._parent.raise_exception("No coupling variable of ('%s','%s') exists "
                                          "in assembly"%couple,ValueError)
         
-    def list_coupling_vars(self): 
-        """returns a ordered list of names of the coupling vars in the assembly"""
+    def get_coupling_vars(self): 
+        """returns a ordered list of (indep,dep) pairs of CouplingVar instances in the assembly"""
         return self._couples
     
     def clear_coupling_vars(self): 
@@ -140,8 +154,75 @@ class ArchitectureAssembly(Assembly):
         return [(k,v) for k,v in self.get_parameters().items() 
                                         if isinstance(v, Parameter)]
     
+    def get_global_des_vars_by_comp(self): 
+        """Return a dictionary of component names/list of parameters for 
+        all multi target parameters."""
+        result = {}
+        for k,v in self.get_parameters().items():
+            if isinstance(v, ParameterGroup): 
+                data = v.get_referenced_vars_by_compname()
+                for name,vars in data.iteritems(): 
+                    try: 
+                        result[name].extend(vars)
+                    except KeyError: 
+                        result[name] = list(vars)
+        
+        return result    
+    
     def get_global_des_vars(self): 
         """Return a list of multi target Parameters."""
         return [(k,v) for k,v in self.get_parameters().items() 
                                         if isinstance(v, ParameterGroup)]
+    
+    
+    def get_des_vars_by_comp(self): 
+        """Return a dictionary of component names/ list of parameters fo all 
+        parameters (global and local)""" 
         
+        result = self.get_local_des_vars_by_comp()
+        for k,v in self.get_global_des_vars_by_comp().iteritems(): 
+            try: 
+                result[k].extend(v)
+            except KeyError: 
+                result[k] = v
+                
+        return result
+    
+    def get_coupling_indeps_by_comp(self): 
+        """Returns a dictionary of coupling var independents 
+        keyed to the component they are part of""" 
+        
+        result = {}
+        for indep,dep in self.get_coupling_vars(): 
+            comp = indep.get_referenced_compnames().pop()
+            try: 
+                result[comp].append(indep)
+            except KeyError: 
+                result[comp] = [indep]
+                
+        return result        
+                
+    def get_coupling_deps_by_comp(self): 
+        """Returns a dictionary of coupling var independents 
+        keyed to the component they are part of""" 
+        
+        result = {}
+        for indep,dep in self.get_coupling_vars(): 
+            comp = dep.get_referenced_compnames().pop()
+            try: 
+                result[comp].append(dep)
+            except KeyError: 
+                result[comp] = [dep]            
+        
+        return result
+    
+    def get_constraints_by_comp(self):
+        result = {}
+        for text,const in self.get_constraints().iteritems(): 
+            comps = const.get_referenced_compnames()
+            for comp in comps: 
+                try: 
+                    result[comp].append(const)
+                except: 
+                    result[comp] = [const,]
+        return result            

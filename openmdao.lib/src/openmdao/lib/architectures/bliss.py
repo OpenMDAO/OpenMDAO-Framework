@@ -30,13 +30,13 @@ class BLISS(Architecture):
         local_dvs = self.parent.get_local_des_vars_by_comp()
         objective = self.parent.get_objectives().keys()[0]
         constraints = self.parent.list_constraints()
-        coupling = self.parent.list_coupling_vars()
+        coupling = self.parent.get_coupling_vars()
         
         self.parent.add('driver',FixedPointIterator())
         self.parent.driver.max_iteration = 50
         self.parent.driver.tolerance = .001
         
-        initial_conditions = [self.parent.get(param.targets[0]) for comp,param in global_dvs]
+        initial_conditions = [self.parent.get(param.target) for comp,param in global_dvs]
         self.parent.add_trait('global_des_vars',Array(initial_conditions))
         for i,(comps,param) in enumerate(global_dvs): 
             targets = comps
@@ -54,8 +54,8 @@ class BLISS(Architecture):
         mda = self.parent.add('mda', BroydenSolver())
         self.parent.force_execute=True
         for indep,dep in coupling: 
-            mda.add_parameter(indep,low=-9.e99, high=9.e99)
-            mda.add_constraint("%s=%s"%(indep,dep))
+            mda.add_parameter(indep.target,low=-9.e99, high=9.e99)
+            mda.add_constraint("%s=%s"%(indep.target,dep.target))
                 
         #Global Sensitivity Analysis
         #TODO: Need to solve GSE here instead of FD on MDA
