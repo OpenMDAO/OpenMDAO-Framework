@@ -535,7 +535,10 @@ class OpenMDAO_Server(Server):
                 access_controller = self._access_controller
             # Only happens on remote protected object.
             else:  #pragma no cover
-                access_controller = get_access_controller()
+                if get_access_controller is None:
+                    access_controller = self._access_controller
+                else:
+                    access_controller = get_access_controller()
             self._id_to_controller[ident] = access_controller
 
         # Get role based on credentials.

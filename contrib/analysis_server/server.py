@@ -78,7 +78,7 @@ from xml.sax.saxutils import escape
 from enthought.traits.traits import CTrait
 
 from openmdao.main.api import Component, Container, set_as_top
-from openmdao.main.assembly import PassthroughTrait
+from openmdao.main.assembly import PassthroughTrait, PassthroughProperty
 from openmdao.main.mp_util import read_allowed_hosts
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -1371,6 +1371,10 @@ class _WrapperConfig(object):
         name, dash, version = cfg_name.partition('-')
         if not version:
             name = name[:-4]  # Drop '.cfg'
+            if self.version:
+                version = self.version
+            else:
+                raise ValueError('No version in .cfg file or .cfg filename')
         else:
             version = version[:-4]  # Drop '.cfg'
             if not self.version:
@@ -1451,7 +1455,7 @@ class _WrapperConfig(object):
                         # Only register if it's a supported type.
                         trait = container.get_dyn_trait(name)
                         typ = None if trait is None else trait.trait_type
-                        if isinstance(typ, PassthroughTrait):
+                        if isinstance(typ, (PassthroughTrait, PassthroughProperty)):
                             typ = container.get_dyn_trait(typ.target)
                             if isinstance(typ, CTrait):
                                 typ = typ.trait_type

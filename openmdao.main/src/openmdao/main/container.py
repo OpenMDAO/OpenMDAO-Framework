@@ -26,7 +26,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 import zope.interface
 
 from enthought.traits.api import HasTraits, Missing, Undefined, \
-                                 push_exception_handler, TraitType
+                                 push_exception_handler, TraitType, CTrait
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
@@ -348,7 +348,7 @@ class Container(HasTraits):
         """Restore this component's state."""
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
-        
+
         # restore dynamically added traits, since they don't seem
         # to get restored automatically
         self._cached_traits_ = None
@@ -356,7 +356,21 @@ class Container(HasTraits):
         for name, trait in self._added_traits.items():
             if name not in traits:
                 self.add_trait(name, trait)
-        
+
+        # Fix property traits that were not just added above.
+        # For some reason they lost 'get()', but not 'set()' capability.
+        for name, trait in traits.items():
+            try:
+                get = trait.trait_type.get
+            except AttributeError:
+                continue
+            if get is not None:
+                if name not in self._added_traits:
+                    val = getattr(self, name)
+                    self.remove_trait(name)
+                    self.add_trait(name, trait)
+                    setattr(self, name, val)
+
         # make sure all input callbacks are in place.  If callback is
         # already there, this will have no effect. 
         for name, trait in self._alltraits().items():
@@ -1148,7 +1162,7 @@ class Container(HasTraits):
         for name in self.list_containers():
             getattr(self, name).pre_delete()
             
-    @rbac(('owner', 'user'))
+    @rbac(('owner', 'user'), proxy_types=[CTrait])
     def get_dyn_trait(self, pathname, iotype=None, trait=None):
         """Returns a trait if a trait with the given pathname exists, possibly
         creating it "on-the-fly" and adding its Container. If an attribute exists
@@ -1186,7 +1200,7 @@ class Container(HasTraits):
                 return trait
             elif trait is None and self.contains(cname):
                 return None
-            
+
         self.raise_exception("Cannot locate variable named '%s'" %
                              pathname, AttributeError)
 

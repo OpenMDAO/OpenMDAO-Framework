@@ -19,7 +19,7 @@ except ImportError:  # pragma no cover
 from enthought.traits.traits import CTrait
 
 from openmdao.main.api import Container, FileRef
-from openmdao.main.assembly import PassthroughTrait
+from openmdao.main.assembly import PassthroughTrait, PassthroughProperty
 from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.mp_support import is_instance
@@ -99,11 +99,31 @@ class ComponentWrapper(object):
                     raise WrapperError('no such trait %r %r.'
                                        % (container.get_pathname(), rpath))
                 # Determine variable type.
-                typ = trait.trait_type or trait.trait
-                if isinstance(typ, PassthroughTrait):
+                logging.critical('trait %r %r', rpath, trait)
+                try:
+                    ttype = trait.trait_type
+                except Exception as exc:
+                    ttype = None
+                    logging.critical('      no trait.trait_type: %r', exc)
+                else:
+                    logging.critical('      %r', trait.trait_type)
+                try:
+                    ttrait = trait.trait
+                except Exception as exc:
+                    ttrait = None
+                    logging.critical('      no trait.trait: %r', exc)
+                else:
+                    logging.critical('      %r', trait.trait)
+                typ = ttype or ttrait or trait
+                if isinstance(typ, (PassthroughTrait, PassthroughProperty)):
                     typ = container.get_dyn_trait(typ.target)
-                    if isinstance(typ, CTrait):
-                        typ = typ.trait_type
+                    try:
+                        ttype = typ.trait_type  # CTrait
+                    except AttributeError:
+                        pass
+                    else:
+                        if ttype is not None:
+                            typ = ttype
                 key = type(typ)
                 if key not in TYPE_MAP:
                     for base in key.__bases__:

@@ -35,6 +35,24 @@ class PassthroughTrait(Variable):
         return value
 
 
+class PassthroughProperty(Variable):
+    """Replacement for PassthroughTrait when the target is a proxy/property
+    trait. PassthroughTrait would get a core dump while pickling.
+    """
+    def __init__(self, target_trait, **metadata):
+        self._trait = target_trait
+        self._vals = {}
+        super(PassthroughProperty, self).__init__(**metadata)
+
+    def get(self, obj, name):
+        return self._vals.get(obj, {}).get(name, self._trait.default_value)
+
+    def set(self, obj, name, value):
+        if obj not in self._vals:
+            self._vals[obj] = {}
+        self._vals[obj][name] = self._trait.validate(obj, name, value)
+
+
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
     and outputs between its children.  When executed, it runs the top level
@@ -111,10 +129,18 @@ class Assembly (Component):
             
         metadata = self.get_metadata(pathname)
         metadata['target'] = pathname
+        # PassthroughTrait to a trait with get/set methods causes a core dump
+        # in Traits (at least through 3.6) while pickling.
         if "validation_trait" in metadata: 
-            newtrait = PassthroughTrait(**metadata)
+            if metadata['validation_trait'].get is None:
+                newtrait = PassthroughTrait(**metadata)
+            else:
+                newtrait = PassthroughProperty(metadata['validation_trait'],
+                                               **metadata)
+        elif trait and ttype.get: 
+            newtrait = PassthroughProperty(ttype, **metadata)
         else: 
-            newtrait = PassthroughTrait(validation_trait=trait,**metadata)
+            newtrait = PassthroughTrait(validation_trait=trait, **metadata)
         self.add_trait(newname, newtrait)
         setattr(self, newname, self.get(pathname))
 
@@ -237,6 +263,15 @@ class Assembly (Component):
             for dest,src in link._dests.items():
                 if valids[dest] is False:
                     setattr(self, dest, srccomp.get_wrapped_attr(src))
+                else:
+                    # PassthroughProperty always valid for some reason.
+                    try:
+                        dst_type = self.get_trait(dest).trait_type
+                    except AttributeError:
+                        pass
+                    else:
+                        if isinstance(dst_type, PassthroughProperty):
+                            setattr(self, dest, srccomp.get_wrapped_attr(src))
     
     def step(self):
         """Execute a single child component and return."""
