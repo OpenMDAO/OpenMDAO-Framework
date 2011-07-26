@@ -32,8 +32,22 @@ class WrapperError(Exception):
     """ Denotes wrapper-specific errors. """
     pass
 
+
 # Mapping from OpenMDAO variable type to wrapper type.
-TYPE_MAP = {}
+_TYPE_MAP = {}
+
+def _register(typ, wrapper):
+    """ Register `wrapper` for `typ`. """
+    typename = '%s.%s' % (typ.__module__, typ.__name__)
+    _TYPE_MAP[typename] = wrapper
+
+def lookup(typnames):
+    """ Return wrapper for `typenames`. """
+    for name in typnames:
+        if name in _TYPE_MAP:
+            return _TYPE_MAP[name]
+    return None
+
 
 def _float2str(val):
     """ Return accurate string value for float. """
@@ -94,47 +108,16 @@ class ComponentWrapper(object):
                     except Exception:
                         break  # Unserializable => not Container.
                 iotype = 'in' if epath in self._cfg.inputs else 'out'
-                trait = container.get_dyn_trait(rpath, iotype=iotype)
-                if trait is None:
+                # Determine variable type.
+                typenames = container.get_trait_typenames(rpath, iotype)
+                if not typenames:
                     raise WrapperError('no such trait %r %r.'
                                        % (container.get_pathname(), rpath))
-                # Determine variable type.
-                logging.critical('trait %r %r', rpath, trait)
-                try:
-                    ttype = trait.trait_type
-                except Exception as exc:
-                    ttype = None
-                    logging.critical('      no trait.trait_type: %r', exc)
-                else:
-                    logging.critical('      %r', trait.trait_type)
-                try:
-                    ttrait = trait.trait
-                except Exception as exc:
-                    ttrait = None
-                    logging.critical('      no trait.trait: %r', exc)
-                else:
-                    logging.critical('      %r', trait.trait)
-                typ = ttype or ttrait or trait
-                if isinstance(typ, (PassthroughTrait, PassthroughProperty)):
-                    typ = container.get_dyn_trait(typ.target)
-                    try:
-                        ttype = typ.trait_type  # CTrait
-                    except AttributeError:
-                        pass
-                    else:
-                        if ttype is not None:
-                            typ = ttype
-                key = type(typ)
-                if key not in TYPE_MAP:
-                    for base in key.__bases__:
-                        if base in TYPE_MAP:
-                            key = base
-                            break
-                    else:
-                        raise WrapperError('%s: unsupported variable type %r.'
-                                           % (ext_path, key))
+                wrapper_class = lookup(typenames)
+                if wrapper_class is None:
+                     raise WrapperError('%s: unsupported variable type %r.'
+                                        % (ext_path, typenames[0]))
                 # Wrap it.
-                wrapper_class = TYPE_MAP[key]
                 wrapper = wrapper_class(container, rpath, epath)
                 if wrapper_class is FileWrapper:
                     wrapper.set_server(self._server)
@@ -665,7 +648,7 @@ class ArrayWrapper(ArrayBase):
 
         super(ArrayWrapper, self).__init__(container, name, ext_path, typ)
 
-TYPE_MAP[Array] = ArrayWrapper
+_register(Array, ArrayWrapper)
 
 
 class ListWrapper(ArrayBase):
@@ -688,7 +671,7 @@ class ListWrapper(ArrayBase):
         else:
             super(ListWrapper, self).set(attr, path, valstr)
 
-TYPE_MAP[List] = ListWrapper
+_register(List, ListWrapper)
 
 
 class BoolWrapper(BaseWrapper):
@@ -735,7 +718,7 @@ class BoolWrapper(BaseWrapper):
                 'value (type=boolean) (access=%s)' % self._access,
                 'valueStr (type=boolean) (access=g)']
 
-TYPE_MAP[Bool] = BoolWrapper
+_register(Bool, BoolWrapper)
 
 
 class EnumWrapper(BaseWrapper):
@@ -870,7 +853,7 @@ class EnumWrapper(BaseWrapper):
                       'valueStr (type=java.lang.String) (access=g)'])
         return lines
 
-TYPE_MAP[Enum] = EnumWrapper
+_register(Enum, EnumWrapper)
 
 
 class FileWrapper(BaseWrapper):
@@ -980,7 +963,7 @@ class FileWrapper(BaseWrapper):
                 'nameCoded (type=java.lang.String) (access=g)',
                 'url (type=java.lang.String) (access=g)']
 
-TYPE_MAP[File] = FileWrapper
+_register(File, FileWrapper)
 
 
 class FloatWrapper(BaseWrapper):
@@ -1055,7 +1038,7 @@ class FloatWrapper(BaseWrapper):
                 'value (type=double) (access=%s)' % self._access,
                 'valueStr (type=java.lang.String) (access=g)']
 
-TYPE_MAP[Float] = FloatWrapper
+_register(Float, FloatWrapper)
 
 
 class IntWrapper(BaseWrapper):
@@ -1119,7 +1102,7 @@ class IntWrapper(BaseWrapper):
                 'value (type=long) (access=%s)' % self._access,
                 'valueStr (type=java.lang.String) (access=g)']
 
-TYPE_MAP[Int] = IntWrapper
+_register(Int, IntWrapper)
 
 
 class StrWrapper(BaseWrapper):
@@ -1166,5 +1149,5 @@ class StrWrapper(BaseWrapper):
                 'value (type=java.lang.String) (access=%s)' % self._access,
                 'valueStr (type=java.lang.String) (access=g)']
 
-TYPE_MAP[Str] = StrWrapper
+_register(Str, StrWrapper)
 

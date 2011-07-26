@@ -516,6 +516,17 @@ class AssemblyTestCase(unittest.TestCase):
     def test_wrapper(self):
         # Test that wrapping via passthroughs to proxy traits works.
         top = set_as_top(Wrapper())
+
+        expected = [
+            '%s.FloatProxy' % __name__,
+            'openmdao.lib.datatypes.float.Float',
+            'openmdao.main.variable.Variable',
+            'enthought.traits.trait_handlers.TraitType',
+            'enthought.traits.trait_handlers.BaseTraitHandler',
+            '__builtin__.object'
+        ]
+        self.assertEqual(top.get_trait_typenames('x'), expected)
+
         for varname in ('x', 'comp.x', 'y', 'comp.y', 'z', 'comp.z'):
             self.assertEqual(top.get(varname), 0.)
 

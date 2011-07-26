@@ -1204,6 +1204,43 @@ class Container(HasTraits):
         self.raise_exception("Cannot locate variable named '%s'" %
                              pathname, AttributeError)
 
+    @rbac(('owner', 'user'))
+    def get_trait_typenames(self, pathname, iotype=None):
+        """Return names of the 'final' type (bypassing passthrough traits)
+        for `pathname` using :meth:`get_dyn_trait`. Used by dynamic wrappers
+        to determine the type of variable to wrap. The returned list is a
+        depth-first traversal of the class hierarchy.
+
+        pathname: str
+            Pathname of the desired trait. May contain dots.
+            
+        iotype: str (optional)
+            Expected iotype of the trait.
+        """
+        trait = self.get_dyn_trait(pathname, iotype=iotype)
+        if trait is None:
+            return []
+
+        trait = trait.trait_type or trait.trait or trait
+        if trait.target:  # PassthroughTrait, PassthroughProperty
+            trait = self.get_dyn_trait(trait.target)
+            try:
+                ttype = trait.trait_type
+            except AttributeError:
+                pass
+            else:
+                if ttype is not None:
+                    trait = ttype
+
+        def _bases(cls, names):
+            names.append('%s.%s' % (cls.__module__, cls.__name__))
+            for base in cls.__bases__:
+                _bases(base, names)
+        
+        names = []
+        _bases(type(trait), names)
+        return names
+
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         full_msg = "%s: " % self.get_pathname() + msg

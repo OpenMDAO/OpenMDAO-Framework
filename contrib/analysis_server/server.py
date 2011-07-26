@@ -78,7 +78,6 @@ from xml.sax.saxutils import escape
 from enthought.traits.traits import CTrait
 
 from openmdao.main.api import Component, Container, set_as_top
-from openmdao.main.assembly import PassthroughTrait, PassthroughProperty
 from openmdao.main.mp_util import read_allowed_hosts
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -91,7 +90,7 @@ from openmdao.util.wrkpool import WorkerPool
 
 from monitor import Heartbeat
 from stream  import Stream
-from wrapper import ComponentWrapper, TYPE_MAP
+from wrapper import ComponentWrapper, lookup
 
 DEFAULT_PORT = 1835
 ERROR_PREFIX = 'ERROR: '
@@ -1453,20 +1452,12 @@ class _WrapperConfig(object):
                         if name in _IGNORE_ATTR or name.startswith('_'):
                             continue
                         # Only register if it's a supported type.
-                        trait = container.get_dyn_trait(name)
-                        typ = None if trait is None else trait.trait_type
-                        if isinstance(typ, (PassthroughTrait, PassthroughProperty)):
-                            typ = container.get_dyn_trait(typ.target)
-                            if isinstance(typ, CTrait):
-                                typ = typ.trait_type
-                        if type(typ) not in TYPE_MAP:
-                            for base in type(typ).__bases__:
-                                if base in TYPE_MAP:
-                                    break
-                            else:
-                                _LOGGER.warning('%r not a supported type: %r',
-                                                name, typ)
-                                continue
+                        typenames = container.get_trait_typenames(name)
+                        wrapper_class = lookup(typenames)
+                        if wrapper_class is None:
+                             _LOGGER.warning('%r not a supported type: %r',
+                                             name, typenames[0])
+                             continue
                         if container is instance:
                             path = name
                         else:
