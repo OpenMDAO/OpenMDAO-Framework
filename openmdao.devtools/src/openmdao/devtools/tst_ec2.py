@@ -8,7 +8,8 @@ import subprocess
 import atexit
 import time
 from optparse import OptionParser
-from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, hosts
+from fabric.api import run, env, local, put, cd, get, settings, prompt, \
+                       hide, show, hosts
 from fabric.state import connections
 from socket import gethostname
 from inspect import getargvalues, formatargvalues, currentframe
@@ -23,7 +24,7 @@ from openmdao.util.debug import print_fuct_call
 #paramiko.util.log_to_file('paramiko.log')
 
 
-def check_image_state(imgname, inst, start_state, sleeptime=10,
+def check_image_state(inst, start_state, imgname='', sleeptime=10,
                       debug=False):
     """Keeps querying the 'state' attribute of the instance until
     the state changes from start_state.
@@ -39,7 +40,7 @@ def check_image_state(imgname, inst, start_state, sleeptime=10,
    
 def start_instance(conn, config, name, sleep=6, max_tries=10):
     """Starts up an EC2 instance having the specified 'short' name and
-    returns the image, the instance, and the public dns name.
+    returns the instance.
     """
     platform = config.get(name, 'platform')
     debug = config.getboolean(name, 'debug')
@@ -49,71 +50,91 @@ def start_instance(conn, config, name, sleep=6, max_tries=10):
     key_name = os.path.splitext(os.path.basename(identity))[0]
     security_groups = [s.strip() for s in config.get(name, 'security_groups').split()
                        if len(s.strip())>0]
-    if debug:
-        print "%s image = %s" % (name, img)
-        print "%s location = %s" % (name, img.location)
-        print "%s platform = %s" % (name, platform)
-        print 'running %s' % name
+    
+    print 'starting instance of image %s' % name
+    print "   image: %s" % img
+    print "   location: %s" % img.location
+    print "   platform: %s" % platform
+    print "   identity: %s" % identity
+    print "   key name: %s" % key_name
+    print "   security_groups: %s" % security_groups
         
-    #user_data = user_datas.get(platform, None)
-
     reservation = img.run(key_name=key_name, 
                           security_groups=security_groups,
                           instance_type=instance_type)
+    
     inst = reservation.instances[0]
-    check_image_state(name, inst, u'pending', debug=debug)
+    check_image_state(inst, u'pending', imgname=name, debug=debug)
     if inst.state != u'running':
         raise RuntimeError("instance of '%s' failed to run (went from state 'pending' to state '%s')" %
                            (name, inst.state))
     
     if debug:
         print "instance at address '%s' is running" % inst.public_dns_name
-    #subprocess.check_call(['python',
-                           #os.path.join(os.path.dirname(__file__),
-                                        #'ssh_tester.py'),
-                           #'--host=%s'%inst.public_dns_name])
+        
     for i in range(max_tries):
         time.sleep(sleep)
-        if debug: print "testing connection (try #%d)" % (i+1)
+        if debug: 
+            print "testing ssh connection (try #%d)" % (i+1)
         # even though the instance is running, it takes a while before
         # sshd is running, so we have to wait a bit longer
         if ssh_test(inst.public_dns_name):
-            ## even though ssh works now, we're still not guaranteed
-            ## that the instance has finished booting up, so wait a bit longer
-            #time.sleep(120)
             break
     else:
-        raise RuntimeError("instance of '%s' ran but ssh connection attempts failed" % name)
-    return inst.public_dns_name
+        raise RuntimeError("instance of '%s' ran but ssh connection attempts failed (%d attempts)" % (name,max_tries))
 
-def inst_from_dns(conn, dns_name):
-    for reservation in conn.get_all_instances():
-        for inst in reservation.instances:
-            if inst.public_dns_name == dns_name:
-                return inst
-    return None
+    time.sleep(20)
     
+    return inst
+
 
 def run_on_ec2_host(host, config, conn, funct, *args, **kwargs):
     """Runs the given function on the specified EC2 instance.  If host is an
     image, then an instance will be started using that image.
     """
     settings_kwargs = {}
+    settings_args = []
     
     settings_kwargs['key_filename'] = os.path.expanduser(
                os.path.expandvars(config.get(host, 'identity').strip()))
     settings_kwargs['user'] = config.get(host, 'user')
-    debug = config.get(host, 'debug')
+    debug = config.getboolean(host, 'debug')
     
     if config.has_option(host, 'addr'): # it's a running instance
         settings_kwargs['host_string'] = config.get(host, 'addr')
+        inst = None
     else:
         # stand up an instance of the specified image
-        settings_kwargs['host_string'] = start_instance(conn, config, host)
+        inst = start_instance(conn, config, host)
+        settings_kwargs['host_string'] = inst.public_dns_name
+
+    if debug:
+        settings_args.append(show('debug'))
+    else:
+        settings_args.append(hide('running'))
 
     with settings(**settings_kwargs):
         if debug:
             print "calling %s" % print_fuct_call(funct, *args, **kwargs)
-        funct(*args, **kwargs)
-
+        retval = funct(*args, **kwargs)
         
+    keep = kwargs.get('keep', False)
+    if inst is not None:
+        if retval == 0 or not keep:
+            print "terminating %s" % host
+            inst.terminate()
+            check_image_state(inst, u'shutting-down', imgname=host, debug=debug)
+            if inst.state == u'terminated':
+                print 'instance of %s is terminated' % host
+            else:
+                print 'instance of %s failed to terminate!' % host
+        else:
+            print "stopping %s" % host
+            inst.stop()
+            check_image_state(inst, u'stopping', imgname=host, debug=debug)
+            if inst.state == u'stopped':
+                print 'instance of %s is stopped' % host
+            else:
+                print 'instance of %s failed to stop!' % host
+            
+    return retval

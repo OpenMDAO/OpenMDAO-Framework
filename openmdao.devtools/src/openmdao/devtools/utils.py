@@ -64,8 +64,10 @@ def push_and_run(fpath, remotepath=None, runner=None, args=()):
             runner = 'python'
         else:
             runner = ''
-    run("%s %s %s" % (runner, remotepath, ' '.join(args)))
+            
+    retval = run("%s %s %s" % (runner, remotepath, ' '.join(args)))
     
+    return retval.return_code
 
 def tar_dir(dirpath, archive_name, destdir):
     """Tar up the given directory and put in in the specified destination
@@ -157,7 +159,7 @@ def remote_tmpdir():
     location.
     """
     with settings(show('stdout')):
-        return run('python -c "import tempfile; print tempfile.mkdtemp()"').strip()
+        return run('python -c "import tempfile; print tempfile.mkdtemp()"')
 
 def rm_remote_tree(pathname):
     """Delete the directory at the remote location."""

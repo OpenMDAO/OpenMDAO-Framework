@@ -144,14 +144,16 @@ def install_dev_env(url, pyversion, branch=None):
     print "building openmdao development environment in %s" % treedir
     
     os.chdir(treedir)
+    
+    # fabric barfs when running this remotely due to some unicode
+    # output that it can't handle, so we just save the output to 
+    # a file instead
     f = open('_build.out', 'wb')
     
     try:
         p = subprocess.Popen('%s go-openmdao-dev.py' % pyversion, 
                              stdout=f, stderr=subprocess.STDOUT, 
                              env=os.environ, shell=True)
-        #out = p.communicate()[0]
-        #print out.encode('ascii', 'replace')
         p.wait()
         if p.returncode != 0:
             raise RuntimeError("problem during build of environment")
@@ -233,7 +235,7 @@ if __name__ == '__main__':
         if len(parts) > 2:
             print "For python version, use only major.minor version numbers, e.g., ",
             print "'python2.6' not 'python2.6.5'"
-            sys.exit(-1)
+            sys.exit(retcode)
 
     try:
         if test_type == 'release':
@@ -245,7 +247,6 @@ if __name__ == '__main__':
         retcode = activate_and_test(os.path.join(tmpdir, envdir),
                                     testargs=args)
         print 'return code from test was %s' % retcode
-
     finally:
         os.chdir(startdir)
         if options.keep:

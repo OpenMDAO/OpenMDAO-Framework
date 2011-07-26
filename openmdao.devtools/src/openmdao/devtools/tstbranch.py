@@ -21,10 +21,18 @@ from openmdao.util.debug import print_fuct_call
 #paramiko.util.log_to_file('paramiko.log')
 
 def test_on_remote_host(fname, pyversion='python', keep=False, 
-                        branch=None, testargs=()):
+                        branch=None, testargs=(), hostname=''):
     loctstfile = os.path.join(os.path.dirname(__file__), 'loctst.py')
     
-    remtmp = remote_tmpdir()
+    try:
+        remtmp = remote_tmpdir()
+    except Exception as err:
+        print str(err)
+        sys.exit(-1)
+    if remtmp.failed:
+        print "creation of remote temp dir failed"
+        sys.exit(-1)
+    print "remote temp dir = ", remtmp
     remote_script_name = os.path.join(remtmp, os.path.basename(loctstfile))
     if os.path.isfile(fname):
         remotefname = os.path.join(remtmp, os.path.basename(fname))
@@ -42,25 +50,32 @@ def test_on_remote_host(fname, pyversion='python', keep=False,
         remoteargs.append('--')
         remoteargs.extend(testargs)
     try:
-        push_and_run(loctstfile, 
-                     remotepath=os.path.basename(loctstfile),
-                     args=remoteargs)
+        retcode = push_and_run(loctstfile, 
+                               remotepath=os.path.basename(loctstfile),
+                               args=remoteargs)
+        if retcode != 0:
+            print 'retrieving build file from failed host %s' % hostname
+            get('_build.out', '%s_build.out' % hostname)
     finally:
-        if remtmp is not None and not keep:
+        if remtmp is not None and (retcode==0 or not keep):
             rm_remote_tree(remtmp)
 
-def run_on_host(host, config, funct, settings_args=None, *args, **kwargs):
-    if settings_args is None:
-        settings_args = {}
+def run_on_host(host, config, funct, settings_kwargs=None, *args, **kwargs):
+    if settings_kwargs is None:
+        settings_kwargs = {}
+    settings_args = []
     
-    debug = config.get(host, 'debug')
-    settings_args['host_string'] = config.get(host, 'addr')
+    debug = config.getboolean(host, 'debug')
+    settings_kwargs['host_string'] = config.get(host, 'addr')
         
     if debug:
-        print "settings_args = ", str(settings_args)
+        print "settings_kwargs = ", str(settings_kwargs)
         print "calling %s" % print_fuct_call(funct, *args, **kwargs)
-    with settings(**settings_args):
-        funct(*args, **kwargs)
+    else:
+        settings_args.append(hide('running'))
+
+    with settings(*settings_args, **settings_kwargs):
+        return funct(*args, **kwargs)
             
         
 def main(argv=None):
@@ -109,9 +124,6 @@ def main(argv=None):
         print "no hosts were found in config file %s" % options.cfg
         sys.exit(-1)
         
-    # make sure fabric connections are all closed when we exit
-    atexit.register(fabric_cleanup, True)
-    
     if options.fname is None: # assume we're testing the current repo
         options.fname = os.path.join(os.getcwd(), 'testbranch.tar')
         ziptarname = options.fname+'.gz'
@@ -152,13 +164,14 @@ def main(argv=None):
 
     for host in hosts:
         run_on_host(host, config, test_on_remote_host, None, fname,
-                         keep=options.keep, branch=options.branch,
-                         testargs=args)
+                    keep=options.keep, branch=options.branch,
+                    testargs=args, hostname=host)
         
     for host in ec2_hosts:
         run_on_ec2_host(host, config, conn, test_on_remote_host, 
                         fname, keep=options.keep, branch=options.branch,
-                        testargs=args)
+                        testargs=args, hostname=host)
             
 if __name__ == '__main__': #pragma: no cover
+    atexit.register(fabric_cleanup, True)
     main()

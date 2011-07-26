@@ -4,7 +4,7 @@
 identity: ~/.ssh/lovejoykey.pem
 py_versions: python2.6
 security_groups: default
-debug: true
+debug: false
 linux_user: ubuntu
 win_user: Administrator
 
