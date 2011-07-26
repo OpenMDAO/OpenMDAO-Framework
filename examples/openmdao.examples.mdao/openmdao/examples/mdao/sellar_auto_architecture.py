@@ -3,8 +3,8 @@
     Problem forumulation is specified, and MDF is automatically
     set up for you. 
 """
-from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
-                                               SellarDiscipline2
+from openmdao.examples.mdao.disciplines import SellarDiscipline1_WithDerivatives as SellarDiscipline1, \
+                                               SellarDiscipline2_WithDerivatives as SellarDiscipline2
 
 
 from openmdao.main.api import Assembly, Slot, implements, Component
@@ -112,13 +112,11 @@ if __name__ == "__main__": # pragma: no cover
     prob.driver.recorder = DBCaseRecorder()
     prob.driver.printvars = ['ssa.F[0]+ssa.dF[0][0]*(global_des_vars[0]-dis1.z1)+ssa.dF[0][1]*(global_des_vars[1]-dis1.z2)']
     
-    
     tt = time.time()
     prob.run()
 
     bliss_objective = [(i,case['ssa.F[0]+ssa.dF[0][0]*(global_des_vars[0]-dis1.z1)+ssa.dF[0][1]*(global_des_vars[1]-dis1.z2)']) for i,case in enumerate(prob.driver.recorder.get_iterator())]
     bliss_objective = zip(*bliss_objective)    
-    
 
 
     print "\nUsing BLISS Architecture"
@@ -153,7 +151,7 @@ if __name__ == "__main__": # pragma: no cover
     
     
     
-    p.show()
+    #p.show()
     
     """
     prob = Sellar()

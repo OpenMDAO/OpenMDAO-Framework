@@ -106,8 +106,6 @@ class FixedPointIterator(Driver):
                 else:
                     case_output = []
                 
-                    
-                print case_input
                 case = Case(case_input, case_output,parent_uuid=self._case_id)
                 
                 self.recorder.record(case)

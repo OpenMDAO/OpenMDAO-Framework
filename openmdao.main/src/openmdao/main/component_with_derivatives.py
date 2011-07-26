@@ -70,8 +70,10 @@ class ComponentWithDerivatives (Component):
         warn the user about all missing derivatives."""
         
         local_inputs = []
+        
+       
         for item in driver_inputs:
-            paths = item.split('.',1)
+            paths = item[0].split('.',1)
             if paths[0] == self.name:
                 local_inputs.append(paths[1])
         
