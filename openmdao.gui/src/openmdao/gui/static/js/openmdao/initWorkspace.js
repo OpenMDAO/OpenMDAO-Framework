@@ -31,14 +31,14 @@ jQuery(document).ready(function() {
         new openmdao.PropertiesEditor("propertieseditor",model).editObject,
         openmdao.PopupPropertiesEditor)
     new openmdao.FileTree("ftree",model,
-        new openmdao.CodeEditor("texteditor",model).editFile)
+        new openmdao.CodeEditor("texteditor",model).editFile,
+        new openmdao.O3DViewer("threed",model).load)
     new openmdao.Palette("palette",model)
     new openmdao.WorkflowDiagram("workflow",model)
     new openmdao.Console("cmdform","command","history",model);
 
     // experimental
     new openmdao.Plotter("plotter",model)
-    new openmdao.O3DViewer("threed",model)
     
     // initialize views
     model.updateListeners();

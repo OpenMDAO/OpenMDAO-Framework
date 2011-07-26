@@ -79,6 +79,59 @@ nav ul ul a {
   padding: 5px 10px;
 }
 
+
+/* secondary menus */
+nav2 {
+  display:block;
+  background-color:#6a6a6a; 
+  margin:0 auto;
+  position:relative;
+  z-index: 100000;
+}
+nav2 ul {
+  padding: 0;
+  margin: 0;
+}
+nav2 ul:after {
+  content: ".";
+  display: block;
+  background-color:#6a6a6a; 
+  height: 0;
+  clear: both;
+  visibility: hidden;
+}
+nav2 li {
+  position: relative;
+  float: left;
+  list-style-type: none;
+  z-index: 100000;
+}
+nav2 li a {
+  display: block;
+  background-color:#6a6a6a; 
+  padding: 10px 20px;
+}
+nav2 a span {
+  display: block;
+  background-color:#6a6a6a; 
+  float: right;
+  margin-left: 5px;
+}
+nav2 ul ul {
+  display: none;
+  width: 100%;
+  position: absolute;
+  left: 0;
+  z-index: 100000;
+}
+nav2 ul ul li {
+  float: none;
+}
+nav2 ul ul a {
+  padding: 5px 10px;
+}
+
+
 .context-menu {
   visibility: hidden; /* No, you cannot use display:none; */
   position: absolute;

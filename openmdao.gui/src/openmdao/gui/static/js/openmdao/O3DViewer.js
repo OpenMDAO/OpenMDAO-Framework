@@ -30,15 +30,15 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @version 0.0.0
  * @constructor
  */
-openmdao.O3DViewer = function(id,model) {    
+openmdao.O3DViewer = function(id,model) {
     /***********************************************************************
      *  private
      ***********************************************************************/
      
     var self = this,
         elm = jQuery("#"+id).width(screen.width).height(screen.height),
-        menuDiv = jQuery("<nav id='"+id+"-menu'>"),
-        loadingDiv = jQuery("<div id='loading'>"),
+        menuDiv = jQuery("<nav2 id='"+id+"-menu'>"),
+        g_loadingElement = jQuery("<div id='loading'>"),
         o3dDiv =jQuery('<div id="o3d" style="width: 100%; height: 400px;">'),
         helpHTML = "<div>"+
             "Drag the mouse, or use the W, A, S, and D keys to rotate<br/>"+
@@ -49,13 +49,7 @@ openmdao.O3DViewer = function(id,model) {
             "</div>"
     
     var  menus = [
-        { text: "Geometry", 
-          items: [
-            { text: "Load",  onclick: "alert('Sorry Not implemented :(')" },
-            { text: "Save",  onclick: "alert('Sorry Not implemented :(')" }
-          ]
-        },
-        { text: "Help",      onclick: "jQuery('"+helpHTML+"').dialog({'title':'Geometry Viewer','width':400,'height':150})" }
+        { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'Geometry Viewer','width':400,'height':150})" }
     ]
         
     var modelTransform;
@@ -72,7 +66,7 @@ openmdao.O3DViewer = function(id,model) {
     var g_mainPack;
     var g_viewInfo;
     var g_lightPosParam;
-    var g_loadingElement;
+    //var g_loadingElement;
     var g_o3dWidth = -1;
     var g_o3dHeight = -1;
     var g_o3dElement;
@@ -113,12 +107,14 @@ openmdao.O3DViewer = function(id,model) {
             //set the loading message
             if (exception) {
                 alert("Could not load: " + path + "\n" + exception);
-                g_loadingElement.innerHTML = "loading failed.";
-                g_loadingElement.style.fontSize = "30px";
+                g_loadingElement.html("Loading failed.");
+                g_loadingElement.css({"color":"red"});
+                g_loadingElement.dialog({'title':'Geometry Viewer','width':400,'height':150})
             } 
             else {
-                g_loadingElement.innerHTML = "loading finished.";
-                g_loadingElement.style.color = "green";
+                g_loadingElement.html("Loading finished.");
+                g_loadingElement.css({"color":"green"});
+                g_loadingElement.dialog({'title':'Geometry Viewer','width':400,'height':150})
 
                 // Generate draw elements and setup material draw lists.
                 o3djs.pack.preparePack(pack, g_viewInfo);
@@ -191,22 +187,24 @@ openmdao.O3DViewer = function(id,model) {
         modelTransform = parent;
         parent.parent = g_client.root;
         if (path != null) { //more output for the loading information text
-            g_loadingElement.innerHTML = "Processing file: " + path + "<br/>(this may take a minute, please be patient)";
-            g_loadingElement.style.color = "red";
+            g_loadingElement.html("Processing file: " + path + "<br/>(this may take a minute, please be patient)");
+            g_loadingElement.css({"color":"white"});
+            g_loadingElement.dialog({'title':'Geometry Viewer','width':400,'height':150})
             try {
                 //counter, if any json files happen to have anamation, this counter will govern the anamation speed
                 var secondCounter = g_pack.createObject('SecondCounter');
                 secondCounter.countMode = o3d.Counter.CYCLE;
                 secondCounter.start = 0;
                 secondCounter.end = 1;
-
                 
                 o3djs.scene.loadScene( g_client, g_pack, parent, path, callback,
                 {opt_async: false});
 
             } 
             catch (e) {
-                g_loadingElement.innerHTML = "loading failed : " + e;
+                g_loadingElement.html("Loading failed: " + e);
+                g_loadingElement.css({"color":"red"});
+                g_loadingElement.dialog({'title':'Geometry Viewer','width':400,'height':150})
             }
         }
         return parent;
@@ -260,11 +258,11 @@ openmdao.O3DViewer = function(id,model) {
         // var index = path.lastIndexOf('/');
 
         // path = path.substring(0, index+1) + '3Dresources/models/' + model;
-        path = '/static/js/3Dresources/models/Blended_Wing.json';
+        // path = '/static/js/3Dresources/models/Blended_Wing.json';
 
-        var url = g_url = path;
+        // var url = g_url = path;
         
-        g_loadingElement = document.getElementById('loading');
+        //g_loadingElement = document.getElementById('loading');
 
         g_o3dElement = clientElements[0];
         g_o3d = g_o3dElement.o3d;
@@ -329,7 +327,9 @@ openmdao.O3DViewer = function(id,model) {
             g_pack = null;
         }
         //var url = document.getElementById('url').value;
-        g_root = loadFile(g_viewInfo.drawContext, g_url);
+        if (g_url !== 'undefined') {
+            g_root = loadFile(g_viewInfo.drawContext, g_url);
+        }
     }
 
     function setCamera() {
@@ -339,7 +339,26 @@ openmdao.O3DViewer = function(id,model) {
     elm.html("")
     elm.append(menuDiv);
     new openmdao.Menu(menuDiv.attr('id'),model,menus)    
-    elm.append(loadingDiv);
     elm.append(o3dDiv);
     init()
+    
+    /***********************************************************************
+     *  privileged
+     ***********************************************************************/
+    
+    this.load = function(url) {
+        if (g_root) {
+            g_root.parent = null;
+            g_root = null;
+        }
+        if (g_pack) {
+            g_pack.destroy();
+            g_pack = null;
+        }
+        //var url = document.getElementById('url').value;
+        if (url !== 'undefined') {
+            g_root = loadFile(g_viewInfo.drawContext, url);
+        }
+    }
+    
 }

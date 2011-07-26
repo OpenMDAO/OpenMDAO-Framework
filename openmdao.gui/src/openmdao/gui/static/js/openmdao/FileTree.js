@@ -10,7 +10,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @version 0.0.0
  * @constructor
  */
-openmdao.FileTree = function(id,model,edit_function) {
+openmdao.FileTree = function(id,model,edit_function,view_function) {
     /***********************************************************************
      *  private
      ***********************************************************************/
@@ -48,6 +48,14 @@ openmdao.FileTree = function(id,model,edit_function) {
             edit_function(pathname)
         else
             alert("Edit function is not defined")
+    }
+
+    /** if we have an view function, then call it on the specified file */
+    function viewFile(pathname) {
+        if (typeof view_function == 'function')
+            view_function(pathname)
+        else
+            alert("View function is not defined")
     }
 
     /** get a context menu for the specified node */
@@ -133,6 +141,13 @@ openmdao.FileTree = function(id,model,edit_function) {
                 menu.execfile = {
                     "label"  : 'Execute File',
                     "action" : function(node) { model.execFile(path) }
+                }            
+            }
+            // if it's a json file, assume for now it's geometry and let them load it into viewer
+            if (/.json$/.test(path)) {
+                menu.viewGeometry = {
+                    "label"  : 'View Geometry',
+                    "action" : function(node) { viewFile('file'+path) }
                 }            
             }
         }
