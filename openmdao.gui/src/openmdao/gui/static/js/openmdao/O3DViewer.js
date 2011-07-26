@@ -111,7 +111,7 @@ openmdao.O3DViewer = function(id,model) {
         function callback(pack, parent, exception) {
             //set the loading message
             if (exception) {
-                showMessage("Could not load: " + path + "\n" + exception,"red");
+                showMessage("Could not load " + path + "\n" + exception,"red");
             } 
             else {
                 showMessage("Loading finished.","green");

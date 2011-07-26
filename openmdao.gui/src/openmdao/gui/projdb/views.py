@@ -40,9 +40,9 @@ def detail(request, project_id):
     if request.POST:
         form = ProjectForm(request.POST)
         if form.is_valid():
-            p.projectname   = form.cleaned_data['projectname']
-            p.description   = form.cleaned_data['description']
-            p.version       = form.cleaned_data['version']
+            p.projectname   = form.cleaned_data['projectname'].strip()
+            p.description   = form.cleaned_data['description'].strip()
+            p.version       = form.cleaned_data['version'].strip()
             p.shared        = form.cleaned_data['shared']
             
             # if there's no proj file yet, create en empty one

@@ -288,7 +288,11 @@ openmdao.Model=function() {
         openmdao.Util.promptForName(function(name) {
             if (folderpath)
                 name = folderpath+'/'+name
-            var contents = '"""\n   '+name+'\n"""\n\n'
+            var contents = ''
+            if (/.py$/.test(name))
+                contents = '"""\n   '+name+'\n"""\n\n'
+            if (/.json$/.test(name))
+                contents = '[]'                
             self.setFile(name,contents)
         })
     }
