@@ -43,6 +43,7 @@ setup(name='openmdao.devtools',
           'Fabric>=0.9.3',
           'virtualenv',
           'openmdao.util',
+          'boto',
       ],
       entry_points = {
           "console_scripts": [

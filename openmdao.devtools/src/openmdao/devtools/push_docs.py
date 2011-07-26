@@ -3,13 +3,14 @@ import os
 from os.path import dirname, join, exists
 import sys
 import tarfile
+import atexit
 from optparse import OptionParser
 
 from fabric.api import run, env, local, put, cd, get, settings
 from fabric.state import connections
 
 from openmdao.devtools.build_docs import build_docs
-from openmdao.devtools.utils import tar_dir
+from openmdao.devtools.utils import tar_dir, fabric_cleanup
 
 
 def push_docs(argv=None):
@@ -41,27 +42,22 @@ def push_docs(argv=None):
     if not os.path.isfile(idxpath) or not options.nodocbuild:
         build_docs()
 
-    try:
-        os.chdir(join(docdir, '_build'))
-        tarpath = tar_dir('html', 'docs', '.')
-        tarname = os.path.basename(tarpath)
-        
-        with settings(host_string=host):
-            # tar up the docs so we can upload them to the server
-            # put the docs on the server and untar them
-            put(tarpath, '%s/%s' % (options.docdir, tarname))
-            with cd(options.docdir):
-                run('tar xzf %s' % tarname)
-                run('rm -rf dev_docs')
-                run('mv html dev_docs')
-                run('rm -f %s' % tarname)
-    finally:
-        for key in connections.keys():
-            connections[key].close()
-            del connections[key]
-
+    os.chdir(join(docdir, '_build'))
+    tarpath = tar_dir('html', 'docs', '.')
+    tarname = os.path.basename(tarpath)
+    
+    with settings(host_string=host):
+        # tar up the docs so we can upload them to the server
+        # put the docs on the server and untar them
+        put(tarpath, '%s/%s' % (options.docdir, tarname))
+        with cd(options.docdir):
+            run('tar xzf %s' % tarname)
+            run('rm -rf dev_docs')
+            run('mv html dev_docs')
+            run('rm -f %s' % tarname)
 
 if __name__ == "__main__": #pragma: no cover
+    atexit.register(fabric_cleanup, True)
     push_docs(sys.argv[1:])
 
 

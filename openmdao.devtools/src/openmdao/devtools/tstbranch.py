@@ -20,15 +20,6 @@ from openmdao.util.debug import print_fuct_call
 #import paramiko.util
 #paramiko.util.log_to_file('paramiko.log')
 
-# machine name: (image id, platform)
-vminfo = {
-    'lovejoy': ('ami-2638c34f', 'c1.medium', 'linux2'),
-    'sideshowbob': ('ami-1cf20975', 'c1.medium', 'win32'),
-    'discostu': ('ami-3038c359', 'm1.large', 'linux2'),
-    'smithers': ('ami-72e3181b', 'm1.large', 'win32'),
-    }
-
-
 def test_on_remote_host(fname, pyversion='python', keep=False, 
                         branch=None, testargs=()):
     loctstfile = os.path.join(os.path.dirname(__file__), 'loctst.py')
@@ -71,23 +62,27 @@ def run_on_host(host, config, funct, settings_args=None, *args, **kwargs):
     with settings(**settings_args):
         funct(*args, **kwargs)
             
+        
 def main(argv=None):
+    
     if argv is None:
         argv = sys.argv[1:]
         
     parser = OptionParser()
-    parser.add_option("-c", "--config", action='store', dest='cfg', 
-                      default='~/.openmdao_testing',
-                      metavar='CONFIG',
-                      help="specify config file containing info for hosts to be tested on")
-    parser.add_option("--host", action='append', dest='hosts', 
-                      default=[], metavar='HOST',
-                      help="select host from config file to run tests on. If not supplied, "
-                           "tests will run on all hosts in config file.")
+    parser.add_option("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
+                      default='~/.openmdao/testing.cfg',
+                      help="path of config file where info for test hosts is located")
+    parser.add_option("--host", action='append', dest='hosts', metavar='HOST',
+                      default=[],
+                      help="select host from config file to run tests on. "
+                           "If not supplied, tests will run on all hosts in "
+                           "config file. To test on a subset of the hosts in "
+                           "the config file, use multiple --host args")
     parser.add_option("-k","--keep", action="store_true", dest='keep',
-                      help="don't delete temporary build directory")
-    parser.add_option("-f","--file", action="store", type='string', 
-                      dest='fname',
+                      help="if there are test/build failures, don't delete "
+                           "the temporary build directory "
+                           "or terminate the remote instance if testing on EC2.")
+    parser.add_option("-f","--file", action="store", type='string', dest='fname',
                       help="pathname of a tarfile or URL of a git repo")
     parser.add_option("-b","--branch", action="store", type='string', 
                       dest='branch',

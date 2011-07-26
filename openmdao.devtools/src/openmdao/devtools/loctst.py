@@ -10,6 +10,7 @@ import urllib2
 import subprocess
 import tempfile
 import tarfile
+import codecs
 from optparse import OptionParser
 
 
@@ -119,6 +120,7 @@ def install_dev_env(url, pyversion, branch=None):
             treedir = os.path.dirname(url)
         else:
             treedir = os.path.splitext(os.path.basename(url))[0]
+        treedir = os.path.abspath(treedir)
         os.chdir(treedir)
         try:
             subprocess.check_call(['git','checkout',options.branch])
@@ -142,12 +144,21 @@ def install_dev_env(url, pyversion, branch=None):
     print "building openmdao development environment in %s" % treedir
     
     os.chdir(treedir)
+    f = open('_build.out', 'wb')
     
     try:
-        subprocess.check_call([pyversion, 'go-openmdao-dev.py'])
+        p = subprocess.Popen('%s go-openmdao-dev.py' % pyversion, 
+                             stdout=f, stderr=subprocess.STDOUT, 
+                             env=os.environ, shell=True)
+        #out = p.communicate()[0]
+        #print out.encode('ascii', 'replace')
+        p.wait()
+        if p.returncode != 0:
+            raise RuntimeError("problem during build of environment")
     finally:
+        f.close()
         os.chdir(startdir)
-
+        
     return os.path.join(treedir, 'devenv')
     
 

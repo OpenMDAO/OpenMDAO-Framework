@@ -6,12 +6,14 @@ import urllib2
 import fnmatch
 import tempfile
 import tarfile
+import atexit
 from optparse import OptionParser
 
 from fabric.api import run, env, local, put, cd, prompt, hide, hosts, get, settings
 from fabric.state import connections
 
-from openmdao.devtools.utils import get_openmdao_version, put_dir, tar_dir, repo_top
+from openmdao.devtools.utils import get_openmdao_version, put_dir, tar_dir, \
+                                    repo_top, fabric_cleanup
 
 #import paramiko.util
 #paramiko.util.log_to_file('paramiko.log')
@@ -124,15 +126,11 @@ def main():
         else:
             home = '~'
 
-        try:
-            with settings(host_string=destparts[0]):
-                _push_release(args[0], home, comm_obj)
-        finally:
-            for key in connections.keys():
-                connections[key].close()
-                del connections[key]
+        with settings(host_string=destparts[0]):
+            _push_release(args[0], home, comm_obj)
 
 if __name__ == '__main__':
+    atexit.register(fabric_cleanup, True)
     main()
     
     

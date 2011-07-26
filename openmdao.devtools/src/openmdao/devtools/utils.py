@@ -10,7 +10,7 @@ import paramiko
 import tempfile
 import tarfile
 
-from fabric.api import run, local, env, put, cd, prompt, hide, get, settings
+from fabric.api import run, local, env, put, cd, prompt, hide, show, get, settings
 from fabric.state import connections
 
 class VersionError(RuntimeError):
@@ -91,6 +91,7 @@ def ssh_test(host, port=22, timeout=3):
     socket.setdefaulttimeout(timeout)
     try:
         transport = paramiko.Transport((host, port))
+        transport.close()
         return True
     except:
         pass
@@ -107,19 +108,11 @@ def check_setuptools(py):
     """Return True if setuptools is installed on the remote host"""
     with settings(hide('everything'), warn_only=True):
         return run('%s -c "import setuptools; print setuptools.__version__"' % py)
-
-def host_call(host, func, settings_args=None, *args, **kwargs):
-    """Calls the given function inside of a 'with settings' block that
-    sets the host.
-    """
-    if settings_args is None:
-        settings_args = {}
-    settings_args['host_string'] = host
-    
-    with settings(**settings_args):
-        return func(*args, **kwargs)
         
 def py_cmd(cmds):
+    """Given a list of python statements, returns a string containing
+    the 'python -c' command that will execute those statements. 
+    """
     for cmd in cmds:
         if '"' in cmd:
             raise ValueError("use single quotes for strings in commands")
@@ -163,7 +156,8 @@ def remote_tmpdir():
     """Create and return the name of a temporary directory at the remote
     location.
     """
-    return run('python -c "import tempfile; print tempfile.mkdtemp()"').strip()
+    with settings(show('stdout')):
+        return run('python -c "import tempfile; print tempfile.mkdtemp()"').strip()
 
 def rm_remote_tree(pathname):
     """Delete the directory at the remote location."""

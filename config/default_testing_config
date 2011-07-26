@@ -4,29 +4,29 @@
 identity: ~/.ssh/lovejoykey.pem
 py_versions: python2.6
 security_groups: default
-debug: false
+debug: true
+linux_user: ubuntu
+win_user: Administrator
 
 [lovejoy]
 image_id: ami-2638c34f
 instance_type: c1.medium
 platform: linux2
-user: ubuntu
-debug: true
+user: %(linux_user)s
 
 [discostu]
 image_id: ami-3038c359
 instance_type: m1.large
 platform: linux2
-user: ubuntu
+user: %(linux_user)s
 
-[lovejoy_static]
-platform: linux2
-addr: ec2-50-16-15-109.compute-1.amazonaws.com
-user: ubuntu
-
-[local_macbook_pro]
+[local_mac]
 platform: darwin
 addr: 192.168.1.12
 user: bret
 
+[lovejoy_static]
+platform: linux2
+addr: ec2-50-19-186-212.compute-1.amazonaws.com
+user: %(linux_user)s
 

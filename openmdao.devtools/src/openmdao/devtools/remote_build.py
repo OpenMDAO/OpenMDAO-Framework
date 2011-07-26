@@ -2,6 +2,7 @@ import sys
 import os
 import shutil
 import urllib2
+import atexit
 from optparse import OptionParser
 
 import tempfile
@@ -14,7 +15,7 @@ import paramiko.util
 paramiko.util.log_to_file('paramiko.log')
 
 from openmdao.devtools.utils import put_dir, check_setuptools, remote_tmpdir, \
-                                    list_remote_dir, rm_remote_tree
+                                    list_remote_dir, rm_remote_tree, fabric_cleanup
 
 def remote_build(distdir, destdir, build_type='build -f bdist_egg',
                  pyversion=None):
@@ -103,21 +104,17 @@ def main(argv=None):
     if not options.dest:
         options.dest = os.getcwd()
 
-    try:
-        for host in options.hosts:
-            with settings(host_string=host):
-                remote_build(options.src, options.dest, build_type=options.btype,
-                             pyversion=options.pyversion)
-        for host in options.winhosts:
-            with settings(host_string=host, shell='cmd /C'):
-                remote_build(options.src, options.dest, build_type=options.btype,
-                             pyversion=options.pyversion)
-    finally:
-        for key in connections.keys():
-            connections[key].close()
-            del connections[key]
+    for host in options.hosts:
+        with settings(host_string=host):
+            remote_build(options.src, options.dest, build_type=options.btype,
+                         pyversion=options.pyversion)
+    for host in options.winhosts:
+        with settings(host_string=host, shell='cmd /C'):
+            remote_build(options.src, options.dest, build_type=options.btype,
+                         pyversion=options.pyversion)
     
 if __name__ == '__main__':
+    atexit.register(fabric_cleanup, True)
     main()
 
     
