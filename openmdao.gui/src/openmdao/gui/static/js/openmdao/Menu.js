@@ -11,7 +11,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @version 0.0.0
  * @constructor
  */
-openmdao.Menu = function(id, url) {
+openmdao.Menu = function(id, model, json) {
     /***********************************************************************
      *  private
      ***********************************************************************/
@@ -68,13 +68,26 @@ openmdao.Menu = function(id, url) {
         menuHTML += '</li>'
         return menuHTML;
     }
+
+    /***********************************************************************
+     *  privileged
+     ***********************************************************************/
     
-    // get the JSON menu data and build menus
-    jQuery.ajax({
-        type: 'GET',
-        url: url,
-        dataType: 'json',
-        success: buildMenus,
-        error: function(x,y,z) { debug.info("Error getting Menu data:",x,y,z) }
-    });
+    /** rebuild menus from given JSON data */
+    this.updateFromJSON = function(json) {
+        buildMenus(json)
+    }
+    
+    /** rebuild menus from JSON at given url */
+    this.updateFromURL = function(url) {
+        jQuery.ajax({
+            type: 'GET',
+            url: url,
+            dataType: 'json',
+            success: buildMenus,
+            error: function(x,y,z) { debug.info("Error getting Menu data:",x,y,z) }
+        })
+    }
+    
+    buildMenus(json)
 }

@@ -17,7 +17,9 @@ jQuery(document).ready(function() {
     });
         
     // add main menu
-    new openmdao.Menu("menu","/static/js/openmdao/MainMenu.json")
+    jQuery.getJSON("/static/js/openmdao/MainMenu.json",
+        function(json) { new openmdao.Menu("menu",model,json) }
+    )
     
     // add tabbed pane functionality
     new openmdao.TabbedPane("leftcol_tabs");
