@@ -38,8 +38,8 @@ openmdao.O3DViewer = function(id,model) {
     var self = this,
         elm = jQuery("#"+id).width(screen.width).height(screen.height),
         menuDiv = jQuery("<nav2 id='"+id+"-menu'>"),
-        g_loadingElement = jQuery("<div id='loading'>"),
-        o3dDiv =jQuery('<div id="o3d" style="width: 100%; height: 400px;">'),
+        o3dDiv =jQuery('<div id="o3d" style="width: 100%; height: 100%;">'),
+        messageDiv = jQuery("<div>"),
         helpHTML = "<div>"+
             "Drag the mouse, or use the W, A, S, and D keys to rotate<br/>"+
             "Right-click and drag, or use the I, J, K, and L keys to pan<br/>"+
@@ -66,7 +66,6 @@ openmdao.O3DViewer = function(id,model) {
     var g_mainPack;
     var g_viewInfo;
     var g_lightPosParam;
-    //var g_loadingElement;
     var g_o3dWidth = -1;
     var g_o3dHeight = -1;
     var g_o3dElement;
@@ -74,6 +73,12 @@ openmdao.O3DViewer = function(id,model) {
 
     var g_camera;
 
+    function showMessage(msg,color) {
+        messageDiv.html(msg);
+        messageDiv.css({"color":color});
+        messageDiv.dialog({'title':'Geometry Viewer'})
+    }
+    
     function startDragging(e) { //mousedown
         g_camera.click(e);
     }
@@ -98,23 +103,18 @@ openmdao.O3DViewer = function(id,model) {
     function updateProjection() {
         // Create a perspective projection matrix.
         g_viewInfo.drawContext.projection = g_math.matrix4.perspective(
-        g_math.degToRad(45), g_o3dWidth / g_o3dHeight, g_camera.nearPlane,
-        g_camera.farPlane);
+            g_math.degToRad(45), g_o3dWidth / g_o3dHeight, g_camera.nearPlane,
+            g_camera.farPlane);
     }
 
     function loadFile(context, path) {
         function callback(pack, parent, exception) {
             //set the loading message
             if (exception) {
-                alert("Could not load: " + path + "\n" + exception);
-                g_loadingElement.html("Loading failed.");
-                g_loadingElement.css({"color":"red"});
-                g_loadingElement.dialog({'title':'Geometry Viewer','width':400,'height':150})
+                showMessage("Could not load: " + path + "\n" + exception,"red");
             } 
             else {
-                g_loadingElement.html("Loading finished.");
-                g_loadingElement.css({"color":"green"});
-                g_loadingElement.dialog({'title':'Geometry Viewer','width':400,'height':150})
+                showMessage("Loading finished.","green");
 
                 // Generate draw elements and setup material draw lists.
                 o3djs.pack.preparePack(pack, g_viewInfo);
@@ -187,9 +187,7 @@ openmdao.O3DViewer = function(id,model) {
         modelTransform = parent;
         parent.parent = g_client.root;
         if (path != null) { //more output for the loading information text
-            g_loadingElement.html("Processing file: " + path + "<br/>(this may take a minute, please be patient)");
-            g_loadingElement.css({"color":"white"});
-            g_loadingElement.dialog({'title':'Geometry Viewer','width':400,'height':150})
+            showMessage("Processing " + path + "<br/>(this may take a minute, please be patient)","white");
             try {
                 //counter, if any json files happen to have anamation, this counter will govern the anamation speed
                 var secondCounter = g_pack.createObject('SecondCounter');
@@ -202,9 +200,7 @@ openmdao.O3DViewer = function(id,model) {
 
             } 
             catch (e) {
-                g_loadingElement.html("Loading failed: " + e);
-                g_loadingElement.css({"color":"red"});
-                g_loadingElement.dialog({'title':'Geometry Viewer','width':400,'height':150})
+                showMessage("Loading failed: " + e,"red");
             }
         }
         return parent;
@@ -250,20 +246,6 @@ openmdao.O3DViewer = function(id,model) {
     * @param {Array} clientElements Array of o3d object elements.
     */
     function initStep2(clientElements) {
-        // var path = window.location.href;
-
-        // var index = path.lastIndexOf('=');
-        // var model = path.substring(index + 1) + '.json';
-
-        // var index = path.lastIndexOf('/');
-
-        // path = path.substring(0, index+1) + '3Dresources/models/' + model;
-        // path = '/static/js/3Dresources/models/Blended_Wing.json';
-
-        // var url = g_url = path;
-        
-        //g_loadingElement = document.getElementById('loading');
-
         g_o3dElement = clientElements[0];
         g_o3d = g_o3dElement.o3d;
         g_math = o3djs.math;
