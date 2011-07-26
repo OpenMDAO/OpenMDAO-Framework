@@ -5,11 +5,13 @@ import os
 import shutil
 import subprocess
 import atexit
+import time
 from optparse import OptionParser
 from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, hosts
 from fabric.state import connections
 from socket import gethostname
 import ConfigParser
+from multiprocessing import Process
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
@@ -17,8 +19,10 @@ from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
 from openmdao.devtools.tst_ec2 import run_on_ec2_host
 from openmdao.util.debug import print_fuct_call
 
-#import paramiko.util
-#paramiko.util.log_to_file('paramiko.log')
+import paramiko.util
+paramiko.util.log_to_file('paramiko.log')
+
+atexit.register(fabric_cleanup, True)
 
 def test_on_remote_host(fname, pyversion='python', keep=False, 
                         branch=None, testargs=(), hostname=''):
@@ -60,9 +64,8 @@ def test_on_remote_host(fname, pyversion='python', keep=False,
         if remtmp is not None and (retcode==0 or not keep):
             rm_remote_tree(remtmp)
 
-def run_on_host(host, config, funct, settings_kwargs=None, *args, **kwargs):
-    if settings_kwargs is None:
-        settings_kwargs = {}
+def run_on_host(host, config, funct, *args, **kwargs):
+    settings_kwargs = {}
     settings_args = []
     
     debug = config.getboolean(host, 'debug')
@@ -79,6 +82,7 @@ def run_on_host(host, config, funct, settings_kwargs=None, *args, **kwargs):
             
         
 def main(argv=None):
+    t1 = time.time()
     
     if argv is None:
         argv = sys.argv[1:]
@@ -102,6 +106,10 @@ def main(argv=None):
     parser.add_option("-b","--branch", action="store", type='string', 
                       dest='branch',
                       help="if file_url is a git repo, supply branch name here")
+    parser.add_option("-o","--outdir", action="store", type='string', 
+                      dest='outdir', default='./test_results',
+                      help="output directory for test results "
+                           "(has a subdirectory for each host tested)")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
@@ -124,6 +132,8 @@ def main(argv=None):
         print "no hosts were found in config file %s" % options.cfg
         sys.exit(-1)
         
+    startdir = os.getcwd()
+    
     if options.fname is None: # assume we're testing the current repo
         options.fname = os.path.join(os.getcwd(), 'testbranch.tar')
         ziptarname = options.fname+'.gz'
@@ -156,22 +166,82 @@ def main(argv=None):
         if config.has_option(host, 'image_id'):
             ec2_hosts.add(host)
                 
-    hosts = set(hosts) - ec2_hosts
-    
     if len(ec2_hosts) > 0:
         from boto.ec2.connection import EC2Connection
         conn = EC2Connection()
 
-    for host in hosts:
-        run_on_host(host, config, test_on_remote_host, None, fname,
-                    keep=options.keep, branch=options.branch,
-                    testargs=args, hostname=host)
+    orig_stdout = sys.stdout
+    orig_stderr = sys.stderr
+    
+    options.outdir = os.path.abspath(os.path.expanduser(
+                                     os.path.expandvars(options.outdir)))
+    processes = []
+    files = []
+    try:
         
-    for host in ec2_hosts:
-        run_on_ec2_host(host, config, conn, test_on_remote_host, 
-                        fname, keep=options.keep, branch=options.branch,
-                        testargs=args, hostname=host)
+        for host in hosts:
+            hostdir = os.path.join(options.outdir, host)
+            if not os.path.isdir(hostdir):
+                os.makedirs(hostdir)
+            os.chdir(hostdir)
+            sys.stdout = sys.stderr = f = open('test.out', 'wb', 40)
+            files.append(f)
+            if host in ec2_hosts:
+                proc_args = [host, config, conn, test_on_remote_host,
+                             fname]
+                target = run_on_ec2_host
+            else:
+                proc_args = [host,config, test_on_remote_host, fname]
+                target = run_on_host
+            p = Process(target=target,
+                        name=host,
+                        args=proc_args,
+                        kwargs={ 'keep': options.keep,
+                                 'branch': options.branch,
+                                 'testargs': args,
+                                 'hostname': host })
+            processes.append(p)
+            orig_stdout.write("starting %s\n" % p.name)
+            p.start()
+            #run_on_host(host, config, test_on_remote_host, None, fname,
+                        #keep=options.keep, branch=options.branch,
+                        #testargs=args, hostname=host)
             
+        #for host in ec2_hosts:
+            #os.chdir(os.path.join(options.outdir, host))
+            #run_on_ec2_host(host, config, conn, test_on_remote_host, 
+                            #fname, keep=options.keep, branch=options.branch,
+                            #testargs=args, hostname=host)
+            
+        sys.stdout = orig_stdout
+        sys.stderr = orig_stderr
+        
+        while len(processes) > 0:
+            time.sleep(1)
+            for i,p in enumerate(processes):
+                if p.exitcode is not None:
+                    break
+            else:
+                continue
+            p = processes[i]
+            processes.remove(p)
+            if len(processes) > 0:
+                remaining = '(%d hosts remaining)' % len(processes)
+            else:
+                remaining = ''
+            orig_stdout.write('%s finished. exit code=%d %s\n' % 
+                              (p.name, p.exitcode, remaining))
+            
+    finally:
+        sys.stdout = orig_stdout
+        sys.stderr = orig_stderr
+        for f in files:
+            f.close()
+        os.chdir(startdir)
+        
+        t2 = time.time()
+        orig_stdout.write('\nElapsed time: %10.3f s\n' % (t2-t1))
+
+
 if __name__ == '__main__': #pragma: no cover
-    atexit.register(fabric_cleanup, True)
     main()
