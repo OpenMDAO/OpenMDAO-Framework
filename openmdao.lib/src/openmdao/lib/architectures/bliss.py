@@ -61,7 +61,7 @@ class BLISS(Architecture):
         #TODO: Need to solve GSE here instead of FD on MDA
         ssa = self.parent.add("ssa",SensitivityDriver())
         ssa.workflow.add("mda")
-        ssa.differentiator = FiniteDifference(ssa)
+        ssa.differentiator = FiniteDifference()
         ssa.default_stepsize = 1.0e-6
         ssa.force_execute = True
         ssa.add_objective(objective)
@@ -83,7 +83,7 @@ class BLISS(Architecture):
             for constraint in constraints:
                 sa.add_constraint(constraint)
             sa.add_objective(objective)
-            sa.differentiator = FiniteDifference(sa)  #TODO: Fix FinitDifference so you don't need to explicitly pass scope
+            sa.differentiator = FiniteDifference()
 
         
         

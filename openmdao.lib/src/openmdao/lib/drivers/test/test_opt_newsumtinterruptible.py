@@ -386,7 +386,7 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
         map(self.top.driver.add_constraint,[ '-10.0 + 10.0 * comp.x[0] - comp.x[1] > 0.0' ] )
         self.top.driver.ilin = [1]
 
-        self.top.driver.differentiator = FiniteDifference(self.top.driver)
+        self.top.driver.differentiator = FiniteDifference()
         
         self.top.run()
         
@@ -742,7 +742,7 @@ class NEWSUMTdriverRosenSuzukiTestCaseDeriv(unittest.TestCase):
             'comp.x1**2-comp.x1+2*comp.x2**2+comp.x3**2+2*comp.x4**2-comp.x4 < 10',
             '2*comp.x1**2+2*comp.x1+comp.x2**2-comp.x2+comp.x3**2-comp.x4 < 5'])
         
-        self.top.driver.differentiator = FiniteDifference(self.top.driver)
+        self.top.driver.differentiator = FiniteDifference()
         self.top.run()
 
         self.assertAlmostEqual(self.top.comp.opt_objective, 

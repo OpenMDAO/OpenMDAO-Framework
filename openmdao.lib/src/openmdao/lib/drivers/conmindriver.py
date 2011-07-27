@@ -30,13 +30,13 @@ from numpy import int as numpy_int
 
 import conmin.conmin as conmin
 
-from openmdao.main.api import Case, Driver, ExprEvaluator
+from openmdao.main.api import Case, ExprEvaluator
+from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.exceptions import RunStopped
 from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
-from openmdao.main.uses_derivatives import UsesGradients
 from openmdao.util.decorators import add_delegate
 
 
@@ -169,8 +169,8 @@ class _consav(object):
         self.ispace = [0, 0]
         # pylint: enable-msg=W0201
 
-@add_delegate(HasParameters, HasIneqConstraints, HasObjective, UsesGradients)
-class CONMINdriver(Driver):
+@add_delegate(HasParameters, HasIneqConstraints, HasObjective)
+class CONMINdriver(DriverUsesDerivatives):
     """ Driver wrapper of Fortran version of CONMIN. 
         
     Note on self.cnmn1.igoto, which reports CONMIN's operation state:
@@ -239,8 +239,8 @@ class CONMINdriver(Driver):
     printvars = List(Str, iotype='in', desc='List of extra variables to '
                                'output in the recorder.')
     
-    def __init__(self, doc=None):
-        super(CONMINdriver, self).__init__( doc)
+    def __init__(self, *args, **kwargs):
+        super(CONMINdriver, self).__init__(*args, **kwargs)
         
         # Save data from common blocks into our CONMINdriver object
         self.cnmn1 = _cnmn1()

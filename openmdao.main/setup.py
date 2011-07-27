@@ -65,7 +65,8 @@ setup(name='openmdao.main',
       
       [openmdao.component]
       openmdao.main.assembly.Assembly = openmdao.main.assembly:Assembly
-      openmdao.main.assembly.ComponentWithDerivatives = openmdao.main.assembly:ComponentWithDerivatives
+      openmdao.main.component_with_derivatives.ComponentWithDerivatives = openmdao.main.component_with_derivatives:ComponentWithDerivatives
+      openmdao.main.driver_uses_derivatives.DriverUsesDerivatives = openmdao.main.driver_uses_derivatives:DriverUsesDerivatives
       openmdao.main.problem_formulation.ArchitectureAssembly = openmdao.main.problem_formulation:ArchitectureAssembly
       
       [openmdao.variable]

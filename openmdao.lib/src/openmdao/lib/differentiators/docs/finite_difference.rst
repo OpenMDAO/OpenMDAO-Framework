@@ -4,9 +4,8 @@
 A `differentiator` is a special object that can be used by a driver to calculate
 the first or second derivatives of a workflow. The derivatives are calculated
 from the parameter inputs to the objective and constraint outputs. Any driver
-that has been decorated with the ``add_delegate`` decorator containing the
-UsesGradients or UsesHessians delegates contains a socket (i.e., Instance trait)
-called `Differentiator`. This socket can take a Differentiator object.
+that has been derived from the DriverUsesDerivatives base class contains a slot (i.e., Instance trait)
+called `Differentiator`. This slot can take a Differentiator object.
 
 .. _FiniteDifference:
 
@@ -47,7 +46,7 @@ optimizer by plugging it into the differentiator socket.
             self.driver.workflow.add('paraboloid')
                 
             # Differentiator
-            self.driver.differentiator = FiniteDifference(self.driver)
+            self.driver.differentiator = FiniteDifference()
             self.driver.differentiator.form = 'central'
             self.driver.differentiator.default_stepsize = .0001
                 
