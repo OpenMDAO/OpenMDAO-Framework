@@ -31,7 +31,7 @@ jQuery(document).ready(function() {
         new openmdao.PropertiesEditor("propertieseditor",model).editObject,
         openmdao.PopupPropertiesEditor)
     new openmdao.FileTree("ftree",model,
-        new openmdao.CodeEditor("texteditor",model).editFile,
+        new openmdao.CodeEditor("code",model).editFile,
         new openmdao.O3DViewer("geometry",model).load)
     new openmdao.Palette("palette",model)
     new openmdao.WorkflowDiagram("workflow",model)
