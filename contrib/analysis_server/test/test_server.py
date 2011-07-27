@@ -9,6 +9,7 @@ import glob
 import os.path
 import pkg_resources
 import platform
+import shutil
 import sys
 import time
 import unittest
@@ -91,6 +92,8 @@ class TestCase(unittest.TestCase):
         for filename in ('in_file.dat', 'inFile.dat', 'outFile.dat'):
             if os.path.exists(filename):
                 os.remove(filename)
+        if os.path.exists('ASTestComp'):
+            shutil.rmtree('ASTestComp')
         os.chdir(ORIG_DIR)
 
     def send_recv(self, cmd, raw=False, count=None):
@@ -629,13 +632,10 @@ str_method() fullName="str_method"\
 
     def test_list_monitors(self):
         expected = """\
-9 monitors:
-ASTestComp-0.1.cfg
-ASTestComp-0.2.cfg
+6 monitors:
 ASTestComp.py
-ASTestComp2-0.1.cfg
+ASTestComp_loader.py
 __init__.py
-openmdao_log.txt
 test_client.py
 test_proxy.py
 test_server.py"""
@@ -797,18 +797,36 @@ valueStr (type=java.lang.String) (access=g)  vLen=1  val=0""" \
 
     def test_monitor(self):
         expected = """\
-[Description]
-# Metadata describing the component.
-version: 0.1
-comment: Initial version.
-author: anonymous
-description: Component for testing AnalysisServer functionality.
+import os
+import sys
+if not '.' in sys.path:
+    sys.path.append('.')
 
+try:
+    from openmdao.main.api import Component, SAVE_CPICKLE
+except ImportError:
+    print 'No OpenMDAO distribution available.'
+    if __name__ != '__main__':
+        print 'You can unzip the egg to access the enclosed files.'
+        print 'To get OpenMDAO, please visit openmdao.org'
+    sys.exit(1)
+
+def load(**kwargs):
+    '''Create object(s) from state file.'''
+    return Component.load('ASTestComp.pickle', SAVE_CPICKLE, **kwargs)
+
+def main():
+    '''Load state and run.'''
+    model = load()
+    model.run()
+
+if __name__ == '__main__':
+    main()
 """
         expected = expected.replace('\n', '\r\n')
 
         replies = self.send_recv(['start ASTestComp comp',
-                                  'monitor start comp.ASTestComp-0.1.cfg',
+                                  'monitor start comp.ASTestComp_loader.py',
                                   'monitor stop None'], count=4)
         if replies[-2] == '>':  # Threading can alter order.
             self.assertEqual(replies[-1][:len(expected)], expected)

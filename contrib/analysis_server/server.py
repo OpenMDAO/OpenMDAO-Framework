@@ -1296,10 +1296,7 @@ egg: %s
             obj = server.load_model(egg_name)
         else:  # Used for testing.
             server = None
-            if hasattr(cfg, 'egg'):
-                obj = Container.load_from_eggfile(egg_file)
-            else:
-                obj = set_as_top(cls())
+            obj = Container.load_from_eggfile(egg_file)
         obj.name = name
 
         # Create wrapper for component.

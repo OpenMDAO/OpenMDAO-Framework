@@ -314,17 +314,12 @@ class ObjServer(object):
         SimulationRoot.chroot(self._root_dir)
         self.tlo = None
 
-        # Ridiculous hack to fix Traits 3.3.0, at least on Windows.
-        # Problem found running analysis_server with an NPSScomponent
-        # where ArrayProxy validation would fail because
-        # trait_numeric.ndarray was None.
-        if sys.platform == 'win32':  #pragma no cover
-            import enthought.traits.trait_numeric as numeric
-            if hasattr(numeric, 'ndarray') and numeric.ndarray is None:
-                import numpy
-                self._logger.critical('Patching trait_numeric')
-                numeric.ndarray = numpy.ndarray
-                numeric.asarray = numpy.asarray
+        # Ensure Traits Array support is initialized. The code contains
+        # globals for numpy symbols that are initialized within
+        # AbstractArray.__init__() which won't be executed if we simply
+        # load up egg state (or don't do a real fork, like Windows).
+        from enthought.traits.trait_numeric import AbstractArray
+        dummy = AbstractArray()
 
     # We only reset logging on the remote side.
     def _reset_logging(self, filename='server.out'):  #pragma no cover

@@ -382,7 +382,7 @@ class FileProxy(ProxyMixin, File):
     def __init__(self, iotype, client, rpath, component):
         ProxyMixin.__init__(self, client, rpath)
         self._component = component
-        self._path = 'AS-%s.dat' % rpath
+        self._path = 'AS-%s.dat' % rpath  # Local filename for remote data.
 
         desc = client.get(rpath+'.description')
         metadata = {}
