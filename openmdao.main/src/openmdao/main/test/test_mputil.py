@@ -35,6 +35,7 @@ class TestCase(unittest.TestCase):
         host_ipv4 = socket.gethostbyname(hostname)
         dot = host_ipv4.rfind('.')
         domain_ipv4 = host_ipv4[:dot+1]
+        gibberish = '$^&*'
 
         with open('hosts.allow', 'w') as out:
             out.write("""
@@ -48,8 +49,8 @@ class TestCase(unittest.TestCase):
 %s
 
 # Gibberish.
-$^&*
-""" % (host_ipv4, domain_ipv4, hostname))
+%s
+""" % (host_ipv4, domain_ipv4, hostname, gibberish))
 
         try:
             allowed_hosts = read_allowed_hosts('hosts.allow')
@@ -57,7 +58,15 @@ $^&*
             os.remove('hosts.allow')
 
         # Check read data.
-        self.assertEqual(len(allowed_hosts), 3)
+        expected = 3
+        try:
+            # This actally resolves in some environments.
+            socket.gethostbyname(gibberish)
+        except socket.gaierror:
+            pass
+        else:
+            expected += 1
+        self.assertEqual(len(allowed_hosts), expected)
         self.assertEqual(allowed_hosts[0], host_ipv4)
         self.assertEqual(allowed_hosts[1], domain_ipv4)
         self.assertEqual(allowed_hosts[2], host_ipv4)
