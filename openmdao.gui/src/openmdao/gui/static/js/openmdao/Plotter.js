@@ -14,13 +14,50 @@ openmdao.Plotter = function(id,model) {    // requires flot.js
     /***********************************************************************
      *  private
      ***********************************************************************/
-    var elm = jQuery("#"+id)
+    var self = this,
+        elm = jQuery("#"+id),
+        options = {
+            series: { shadowSize: 0 }, // drawing is faster without shadows
+            yaxis: { min: 0, max: 100 },
+            xaxis: { show: false }
+        },
+        data = [],
+        interval = 30,
+        timer
     
-    /** example using inline data source, data should be fetched from a server */
-    var data = [], 
-    totalPoints = 300;
+    // if the elm doesn't exist, create a popup 
+    if (elm.length === 0) {
+        elm = jQuery('<div id='+id+'></div>')        
+        elm.dialog({
+            'modal': false,
+            'title': 'Plot: '+id,
+            'close': function(ev, ui) { clearInterval(timer); elm.remove(); },
+            width: 600, 
+            height: 350 
+        })
+    }
+    else {
+        elm.html("")
+    }
+
+    // create plot in a div inside the element
+    plot = jQuery.plot(jQuery('<div style="padding:5px; height:100%">').appendTo(elm), [ getRandomData() ], options)
     
+    // continuously update
+    setRefresh(interval)
+
+    /** set the plot to continuously update after specified ms */
+    function setRefresh(interval) {
+        self.interval = interval
+        if (timer != 'undefined')
+            clearInterval(timer)
+        timer = setInterval(update,interval)    
+    }
+    
+    /** return [x,y] data set, randomly updated with each call */
     function getRandomData() {
+        var totalPoints = 300;
+        
         if (data.length > 0)
             data = data.slice(1);
 
@@ -42,40 +79,13 @@ openmdao.Plotter = function(id,model) {    // requires flot.js
         return res;
     }
 
-    var updateInterval = 30;
-    
-    /** setup control widget * /
-    jQuery("#updateInterval").val(updateInterval).change(function () {
-        var v = jQuery(this).val();
-        if (v && !isNaN(+v)) {
-            updateInterval = +v;
-            if (updateInterval < 1)
-                updateInterval = 1;
-            if (updateInterval > 2000)
-                updateInterval = 2000;
-            jQuery(this).val("" + updateInterval);
-        }
-    });
-    /**/
-
-    // setup plot
-    var options = {
-        series: { shadowSize: 0 }, // drawing is faster without shadows
-        yaxis: { min: 0, max: 100 },
-        xaxis: { show: false }
-    };
-    var plot = jQuery.plot(elm, [ getRandomData() ], options);
-
+    /** update the plot with random data */
     function update() {
-        plot.setData([ getRandomData() ]);
-        // since the axes don't change, we don't need to call plot.setupGrid()
-        plot.draw();
-        
-        setTimeout(update, updateInterval);
+        plot.setData([ getRandomData() ])
+        plot.resize() // in case the popup was resized
+        plot.setupGrid()
+        plot.draw()
     }
-
-    update();
-    
     
     /** websocket example * /
     var url = "ws://localhost:9877/",

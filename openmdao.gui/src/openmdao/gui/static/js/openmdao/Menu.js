@@ -11,7 +11,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @version 0.0.0
  * @constructor
  */
-openmdao.Menu = function(id, model, json) {
+openmdao.Menu = function(id, json) {
     /***********************************************************************
      *  private
      ***********************************************************************/

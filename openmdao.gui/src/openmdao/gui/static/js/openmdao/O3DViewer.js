@@ -16,13 +16,6 @@ o3djs.require('o3djs.loader');
 o3djs.require('o3djs.targetCamera');
 o3djs.require('o3djs.canvas');
 
-
-
-/* 
-Copyright (c) 2010. All rights reserved.
-LICENSE: NASA Open Source License
-*/
-
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
 /**
@@ -36,7 +29,7 @@ openmdao.O3DViewer = function(id,model) {
      ***********************************************************************/
      
     var self = this,
-        elm = jQuery("#"+id).width(screen.width).height(screen.height),
+        elm = jQuery("#"+id).width(screen.width).height(screen.height).bind("contextmenu", function(e) { return false; }),
         menuDiv = jQuery("<nav2 id='"+id+"-menu'>"),
         o3dDiv =jQuery('<div id="o3d" style="width: 100%; height: 100%;">'),
         messageDiv = jQuery("<div>"),
@@ -46,11 +39,10 @@ openmdao.O3DViewer = function(id,model) {
             "Middle-Button and drag, scrollwheel, or + and -  keys to zoom<br/>"+
             "When using keyboard, hold SHIFT to move model faster<br/>"+
             "Press R to reset the view"+
-            "</div>"
-    
-    var  menus = [
-        { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'Geometry Viewer','width':400,'height':150})" }
-    ]
+            "</div>",
+        menu = [
+            { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'Geometry Viewer','width':400,'height':150})" }
+        ]
         
     var modelTransform;
     var g_simple;
@@ -320,7 +312,7 @@ openmdao.O3DViewer = function(id,model) {
     
     elm.html("")
     elm.append(menuDiv);
-    new openmdao.Menu(menuDiv.attr('id'),model,menus)    
+    new openmdao.Menu(menuDiv.attr('id'),menu)    
     elm.append(o3dDiv);
     init()
     

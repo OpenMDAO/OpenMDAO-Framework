@@ -18,7 +18,7 @@ jQuery(document).ready(function() {
         
     // add main menu
     jQuery.getJSON("/static/js/openmdao/MainMenu.json",
-        function(json) { new openmdao.Menu("menu",model,json) }
+        function(json) { new openmdao.Menu("menu",json) }
     )
     
     // add tabbed pane functionality
@@ -32,14 +32,11 @@ jQuery(document).ready(function() {
         openmdao.PopupPropertiesEditor)
     new openmdao.FileTree("ftree",model,
         new openmdao.CodeEditor("texteditor",model).editFile,
-        new openmdao.O3DViewer("threed",model).load)
+        new openmdao.O3DViewer("geometry",model).load)
     new openmdao.Palette("palette",model)
     new openmdao.WorkflowDiagram("workflow",model)
     new openmdao.Console("cmdform","command","history",model);
 
-    // experimental
-    new openmdao.Plotter("plotter",model)
-    
     // initialize views
     model.updateListeners();
 });
