@@ -165,6 +165,10 @@ class TestCase(unittest.TestCase):
         config.add_section('Inputs')
         config.add_section('Outputs')
         config.add_section('Methods')
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "No version in .cfg file or .cfg filename")
+
+        config.set('Description', 'version', '0.1')
         config.set('Python', 'filename', 'no-such-dir/no-such-file.py')
         config.set('Python', 'classname', 'no-such-class')
         assert_raises(self, code, globals(), locals(), RuntimeError,
@@ -632,13 +636,10 @@ str_method() fullName="str_method"\
 
     def test_list_monitors(self):
         expected = """\
-6 monitors:
+3 monitors:
 ASTestComp.py
 ASTestComp_loader.py
-__init__.py
-test_client.py
-test_proxy.py
-test_server.py"""
+__init__.py"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
 
         replies = self.send_recv(['start ASTestComp comp',
