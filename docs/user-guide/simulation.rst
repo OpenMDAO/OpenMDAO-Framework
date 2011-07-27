@@ -158,7 +158,7 @@ Interacting with Files and Directories
 
 Many components will need to read from and write to files during
 model execution. For example, a component might need to generate input files
-for and parse output files from an external application. In order to write
+for and parse output files from an external application. When writing 
 components such as these, it is important to understand how objects in OpenMDAO
 interact with the file system.
 

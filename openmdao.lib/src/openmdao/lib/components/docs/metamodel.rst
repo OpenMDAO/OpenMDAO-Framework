@@ -181,19 +181,22 @@ more detailed example can be found in the ``single_objective_ei`` example under 
     from openmdao.main.api import Assembly
     from openmdao.lib.drivers.api import DOEdriver
     from openmdao.lib.components.api import MetaModel
+    from openmdao.lib.surrogatemodels.api import KrigingSurrogate
     from openmdao.examples.expected_improvement.branin_component import BraninComponent
 
-    class Analysis(Assembly): 
+    class Simulation(Assembly): 
         def __init__(self,doc=None): 
-            super(Analysis,self).__init__()
+            super(Simulation,self).__init__()
 
-            self.add('branin_meta_model',MetaModel())
-            self.branin_meta_model.surrogate = KrigingSurrogate()
-            self.branin_meta_model.model = BraninComponent()
+            self.add('meta_model',MetaModel())
+            self.meta_model.surrogate = {'default':KrigingSurrogate()}
+
+            #component has two inputs: x,y
+            self.meta_model.model = BraninComponent()
 
             self.add('driver',DOEdriver())
-            self.driver.workflow.add('branin_meta_model')
-            self.driver.add_event('branin_meta_model.train_next')
+            self.driver.workflow.add('meta_model')
+            self.driver.add_event('meta_model.train_next')
 
 When the ``train_next`` event is not set, MetaModel automatically runs in predict mode. 
 When in predict mode, the outputs provided are the result of predicted outputs from the 

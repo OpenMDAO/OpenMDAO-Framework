@@ -34,7 +34,7 @@ To use these commands, type ``git <command_name>``, for example ``git add``.
 ===================  =================================================================================
 Command Name         Description
 ===================  =================================================================================
-``add``              Adds files/directories to a git repository.
+``add``              Adds files/directories to a Git repository.
 -------------------  ---------------------------------------------------------------------------------
 ``branch``           Creates a new branch that points to the current HEAD when the command is run.
 -------------------  ---------------------------------------------------------------------------------
@@ -65,17 +65,17 @@ This section discusses some of the commands used to manage your files.
 *Adding a File or Directory*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To add a file or directory to your git repository, type:
+To add a file or directory to your Git repository, type:
 
 ::
 
   git add
   
 You can provide an argument with this command (i.e., a specific file name). If you add a
-file whose parent directory is not versioned, git will automatically add the parent
+file whose parent directory is not versioned, Git will automatically add the parent
 directory and so on up to the root. 
 
-If you use this command without an argument, git will add everything under the current
+If you use this command without an argument, Git will add everything under the current
 directory that has not yet been added to the repository. It is wise to use this command in the
 directory where you want to add files, so you don't add temporary files you do not want.
 
@@ -161,7 +161,7 @@ Information will be provided about each revision, including:
 *Custom Configuration*
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The ``git config`` command can be used to customize your git experience by 
+The ``git config`` command can be used to customize your Git experience by 
 setting a number of preferences, for example:
 
 To set the editor used for commit messages:
@@ -180,7 +180,7 @@ To set the graphical merge tool:
     git config --global merge.tool <tool_name>
 
 
-To create a git command alias:
+To create a Git command alias:
 
 ::
 

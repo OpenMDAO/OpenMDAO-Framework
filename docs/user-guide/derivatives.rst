@@ -82,7 +82,7 @@ called *differentiator*, into which a FiniteDifference instance can be placed:
             self.driver.add_parameter('vehicle.bore', low=65. , high=100.)
 
             # Use OpenMDAO to calculate gradients
-            self.driver.differentiator = FiniteDifference(self.driver)
+            self.driver.differentiator = FiniteDifference()
             self.driver.differentiator.form = 'central'
             self.driver.differentiator.default_stepsize = 1.0e-6
 

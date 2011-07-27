@@ -14,17 +14,16 @@ __all__ = ['SensitivityDriver']
 # pylint: disable-msg=E0611,F0401
 from numpy import zeros
 
-from openmdao.lib.datatypes.api import Array, Float, List
-from openmdao.main.api import Driver
+from openmdao.lib.datatypes.api import Array, List
+from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjectives
-from openmdao.main.uses_derivatives import UsesGradients
 from openmdao.util.decorators import add_delegate
 
 
-@add_delegate(HasParameters, HasObjectives, HasConstraints, UsesGradients)
-class SensitivityDriver(Driver):
+@add_delegate(HasParameters, HasObjectives, HasConstraints)
+class SensitivityDriver(DriverUsesDerivatives):
     """Driver to calculate the gradient of a workflow, and return
     it as a driver output. The gradient is calculated from all
     inputs (Parameters) to all outputs (Objectives and Constraints).
@@ -33,17 +32,17 @@ class SensitivityDriver(Driver):
     method can be plugged. Fake finite difference is supported.
     """
     
-    dF = Array(zeros((0,0),'d'), iotype='out', desc='Sensitivity of the '
+    dF = Array(zeros((0, 0),'d'), iotype='out', desc='Sensitivity of the '
                'objectives withrespect to the parameters. Index 1 is the '
                'objective output, while index 2 is the parameter input')
-    dG = Array(zeros((0,0),'d'), iotype='out', desc='Sensitivity of the '
+    dG = Array(zeros((0, 0),'d'), iotype='out', desc='Sensitivity of the '
                'constraints withrespect to the parameters. Index 1 is the '
                'constraint output, while index 2 is the parameter input')
     
-    F = Array(zeros((0,0),'d'), iotype='out', desc='Values of the objectives which '
-               'sensitivities are taken around.')
-    G = Array(zeros((0,0),'d'), iotype='out', desc='Values of the constraints which '
-               'sensitivities are taken around.')
+    F = Array(zeros((0, 0),'d'), iotype='out', desc='Values of the objectives '
+               'which sensitivities are taken around.')
+    G = Array(zeros((0, 0),'d'), iotype='out', desc='Values of the constraints '
+               'which sensitivities are taken around.')
     
     dF_names = List([], iotype='out', desc='Objective names that'
                      'correspond to our array indices')
