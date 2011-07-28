@@ -13,6 +13,8 @@ import tarfile
 from fabric.api import run, local, env, put, cd, prompt, hide, show, get, settings
 from fabric.state import connections
 
+from openmdao.util.fileutil import find_up
+
 class VersionError(RuntimeError):
     pass
 
@@ -286,11 +288,16 @@ def rsync_dirs(dest, host, dirs=('downloads','dists'),
 
 def repo_top():
     """Return the top level directory in the current git repository"""
-    p = Popen('git rev-parse --show-toplevel', 
-              stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
-    return p.communicate()[0].strip()
-
+    # apparently --show-toplevel doesn't work until git 1.7 :(
+    #p = Popen('git rev-parse --show-toplevel', 
+              #stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+    #return p.communicate()[0].strip()
+    d = find_up('.git')
+    if d is None:
+        return d
+    return os.path.dirname(d)
     
+
 def get_git_log_info(fmt):
     try:
         p = Popen('git log -1 --format=format:"%s"' % fmt, 
