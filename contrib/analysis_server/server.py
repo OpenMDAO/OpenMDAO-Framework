@@ -78,7 +78,7 @@ from xml.sax.saxutils import escape
 
 from enthought.traits.traits import CTrait
 
-from openmdao.main.api import Component, Container, set_as_top
+from openmdao.main.api import Component, Container, SimulationRoot, set_as_top
 from openmdao.main.mp_util import read_allowed_hosts
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -301,8 +301,6 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         path = cfg.cfg_path[len(self._root)+1:-4]  # Drop prefix & '.cfg'
         path = path.replace('\\', '/')  # Always use '/'.
         _LOGGER.debug('    registering %s: %s', path, egg_info[0])
-        _LOGGER.debug('                    %r', egg_info[1])
-        _LOGGER.debug('                    %r', egg_info[2])
         with self.components as comps:
             comps[path] = (cfg, egg_info)
         obj.pre_delete()
@@ -1628,6 +1626,9 @@ def main():  # pragma no cover
     else:
         print 'Allowed hosts file %r does not exist.' % options.hosts
         sys.exit(1)
+
+    # Set root directory.
+    SimulationRoot.get_root()
 
     # Create server.
     host = options.address or socket.gethostname()
