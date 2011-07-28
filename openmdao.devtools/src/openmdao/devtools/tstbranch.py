@@ -7,6 +7,7 @@ import subprocess
 import atexit
 import time
 import getpass
+import fnmatch
 from optparse import OptionParser
 from fabric.api import run, env, local, put, cd, get, settings, prompt, \
                        hide, show, hosts
@@ -17,7 +18,7 @@ from multiprocessing import Process
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
-                                    fabric_cleanup
+                                    fabric_cleanup, remote_listdir
 from openmdao.devtools.tst_ec2 import run_on_ec2_host
 from openmdao.util.debug import print_fuct_call
 
@@ -41,31 +42,51 @@ def test_on_remote_host(fname, shell, pyversion='python', keep=False,
     else:
         remoteargs = ['-f', fname]
         
+    remoteargs.append('-d', remtmp)
     remoteargs.append('--pyversion=%s' % pyversion)
     if branch:
         remoteargs.append('--branch=%s' % branch)
-    if len(testargs) > 0:
-        remoteargs.append('--')
-        remoteargs.extend(testargs)
         
+    dirfiles = set(remote_listdir(remtmp))
+    
     result = push_and_run(locbldfile, 
-                          remotepath=os.path.basename(loctstfile),
+                          remotepath=os.path.basename(locbldfile),
                           args=remoteargs)
     print result
     if result.return_code != 0:
         raise RuntimeError("problem with remote build (return code = %s" % 
                            result.return_code)
 
+    newfiles = set(remote_listdir(remtmp)) - dirfiles
+    if 'devenv' in newfiles:
+        envdir = os.path.join(remtmp, 'devenv')
+    else:
+        matches = fnmatch.filter(newfiles, 'openmdao-?.*')
+        
+    if len(matches) > 1:
+        raise RuntimeError("can't uniquely determine openmdao env directory from %s" % matches)
+    elif len(matches) == 0:
+        raise RuntimeError("can't find an openmdao environment directory to test in")
+    
+    envdir = os.path.join(remtmp, matches[0])
+    
+    remoteargs = ['-d', envdir]
+    remoteargs.append('--pyversion=%s' % pyversion)
     if keep:
         remoteargs.append('--keep')
+    if len(testargs) > 0:
+        remoteargs.append('--')
+        remoteargs.extend(testargs)
     result = push_and_run(loctstfile, 
                           remotepath=os.path.basename(loctstfile),
                           args=remoteargs)
-    if result.return_code != 0:
-        print result
+    print result
         
     if remtmp is not None and (result.return_code==0 or not keep):
         rm_remote_tree(remtmp)
+        
+    return result.return_code
+
 
 def run_on_host(host, config, funct, *args, **kwargs):
     settings_kwargs = {}

@@ -8,9 +8,7 @@ import os
 import shutil
 import urllib2
 import subprocess
-import tempfile
 import tarfile
-import codecs
 from optparse import OptionParser
 
 

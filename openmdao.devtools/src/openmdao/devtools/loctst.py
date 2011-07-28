@@ -6,161 +6,9 @@ an OpenMDAO release or development environment.
 import sys
 import os
 import shutil
-import urllib2
 import subprocess
-import tempfile
-import tarfile
-import codecs
 from optparse import OptionParser
 
-
-def get_file(url):
-    """Copies the specified file into the current directory if the
-    file is remote.  Otherwise, just returns the path that it's given.
-    """
-    fname = os.path.basename(url)
-    if url.startswith('http'):
-        resp = urllib2.urlopen(url)
-        gofile = open(fname, 'wb')
-        shutil.copyfileobj(resp.fp, gofile)
-        gofile.close()
-        return fname
-    else: # file is in local file system
-        if not os.path.isfile(url):
-            print "Can't find file '%s'" % url
-            sys.exit(-1)
-        return url
-
-
-def install_release(url, pyversion):
-    """
-    Installs an OpenMDAO release in the current directory.
-    
-    url: str
-        The url of the go-openmdao.py file.
-        
-    pyversion: str
-        The version of python, e.g., 'python2.6' or 'python2.7', to be
-        used to create the OpenMDAO virtual environment. Only
-        major version numbers should be used, i.e., use 'python2.6'
-        rather than 'python2.6.5'.
-    
-    Returns the relative name of the newly built release directory.
-    """
-    gofile = get_file(url)
-    
-    if os.path.basename(gofile) != 'go-openmdao.py':
-        print "Name of OpenMDAO bootstrapping script must be 'go-openmdao.py',",
-        print " not '%s'" % os.path.basename(gofile)
-        sys.exit(-1)
-    
-    dirfiles = set(os.listdir('.'))
-    
-    try:
-        # parse pathname to find dists dir
-        parts = os.path.split(url)
-        version = parts[-2]
-        parts = parts[:-3] + ['dists']
-        command = [pyversion, gofile, 
-                   '--disturl=%s' % os.path.join(parts)]
-        
-        print "building openmdao version %s environment [%s]" % (version, 
-                                                                 ' '.join(command))
-        subprocess.check_call(command)
-        
-        newfiles = set(os.listdir('.')) - dirfiles
-        if len(newfiles) != 1:
-            raise RuntimeError("didn't expect %s in build directory" % 
-                               list(newfiles))
-        releasedir = newfiles.pop()
-    finally:
-        os.chdir(startdir)
-
-    return releasedir
-    
-
-def install_dev_env(url, pyversion, branch=None):
-    """
-    Installs an OpenMDAO dev environment given an OpenMDAO source
-    tree.
-    
-    url: str
-        URL of tarfile or git repo containing an OpenMDAO source tree.  May be
-        a local file path or an actual URL.
-
-    pyversion: str
-        The version of python, e.g., 'python2.6' or 'python2.7', to be
-        used to create the OpenMDAO virtual environment. Only
-        major version numbers should be used, i.e., use 'python2.6'
-        rather than 'python2.6.5'.
-
-    branch: str
-        For git repos, branch name must be supplied.
-    """
-    startdir = os.getcwd()
-    
-    # make sure we don't clobber an existing repo
-    if os.path.exists('OpenMDAO-Framework'):
-        print "Directory OpenMDAO-Framework already exists"
-        sys.exit(-1)
-
-    dirfiles = set(os.listdir('.'))
-    
-    if url.endswith('.git'): # clone the git repo
-        if branch is None:
-            print "You must supply a branch name for a git repo"
-            sys.exit(-1)
-
-        cmd = ["git", "clone", url]
-        print "cloning git repo at %s" % url
-        subprocess.check_call(cmd)
-        
-        base = os.path.basename(url)
-        if base == '.git':
-            treedir = os.path.dirname(url)
-        else:
-            treedir = os.path.splitext(os.path.basename(url))[0]
-        treedir = os.path.abspath(treedir)
-        os.chdir(treedir)
-        try:
-            subprocess.check_call(['git','checkout',options.branch])
-        finally:
-            os.chdir(startdir)
-    elif url.endswith('.tar.gz') or url.endswith('.tar'):
-        tarpath = get_file(url)
-        tar = tarfile.open(tarpath)
-        tar.extractall()
-        tar.close()
-    else:
-        print "url '%s' does not end in '.git' or '.tar.gz' or '.tar'" % url
-        sys.exit(-1)
-    
-    newfiles = set(os.listdir('.')) - dirfiles
-    if len(newfiles) != 1:
-        raise RuntimeError("didn't expect %s in build directory" % 
-                           list(newfiles))
-    treedir = newfiles.pop()
-        
-    print "building openmdao development environment in %s" % treedir
-    
-    os.chdir(treedir)
-    
-    # fabric barfs when running this remotely due to some unicode
-    # output that it can't handle, so we just save the output to 
-    # a file instead
-    f = open('build.out', 'wb')
-    
-    try:
-        p = subprocess.Popen('%s go-openmdao-dev.py' % pyversion, 
-                             stdout=f, stderr=subprocess.STDOUT, 
-                             env=os.environ, shell=True)
-        p.wait()
-    finally:
-        f.close()
-        os.chdir(startdir)
-        
-    return (os.path.join(treedir, 'devenv'), p.returncode)
-    
 
 def activate_and_test(envdir, testargs=()):
     """"
@@ -195,39 +43,18 @@ if __name__ == '__main__':
                       dest='pyversion',
                       default="python", 
                       help="python version to use, e.g., 'python2.6'")
-    parser.add_option("-k","--keep", action="store_true", dest='keep',
-                      help="don't delete temporary build directory")
-    parser.add_option("-b","--branch", action="store", type='string', 
-                      dest='branch',
-                      help="if file_url is a git repo, supply branch name here")
-    parser.add_option("-f","--file", action="store", type='string', 
-                      dest='fname',
-                      help="pathname or URL of a git repo, tar file, or go-openmdao.py file")
+    parser.add_option("-d","--dir", action="store", type='string', 
+                      dest='directory', 
+                      help="virtual environment directory")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
     startdir = os.getcwd()
-    tmpdir = tempfile.mkdtemp()
-    os.chdir(tmpdir)
+    envdir = options.directory
+    os.chdir(envdir)
     
     retcode = -1
-    
-    if options.fname is None:
-        parser.print_help()
-        print "\nYou must supply the URL or pathname of a tarfile, git repo, or a go-openmdao.py file"
-        sys.exit(retcode)
-        
-    fname = options.fname
-    
-    if fname.endswith('.tar.gz') or fname.endswith('.tar') or fname.endswith('.git'):
-        test_type = 'dev'
-    elif fname.endswith('.py'):
-        test_type = 'release'
-    else:
-        parser.print_help()
-        print "\nfilename must end in '.tar.gz', '.tar', or '.git'"
-        sys.exit(retcode)
-        
+            
     if '.' in options.pyversion:
         parts = options.pyversion.split('.')
         if len(parts) > 2:
@@ -236,25 +63,10 @@ if __name__ == '__main__':
             sys.exit(retcode)
 
     try:
-        if test_type == 'release':
-            envdir = install_release(fname, pyversion=options.pyversion)
-        else: # dev test
-            envdir, buildret = install_dev_env(fname, pyversion=options.pyversion,
-                                              branch=options.branch)
-            if buildret != 0:
-                print "problem during build of dev environment (return code = %s)" % buildret
-                sys.exit(buildret)
-            
-        retcode = activate_and_test(os.path.join(tmpdir, envdir),
-                                    testargs=args)
+        retcode = activate_and_test(envdir, testargs=args)
         print 'return code from test was %s' % retcode
     finally:
         os.chdir(startdir)
-        if options.keep:
-            print "keeping temp dir %s" % tmpdir
-        else:
-            print "removing temp dir %s" % tmpdir
-            shutil.rmtree(tmpdir)
 
     sys.exit(retcode)
     

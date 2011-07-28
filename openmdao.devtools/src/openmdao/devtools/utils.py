@@ -163,6 +163,16 @@ def remote_tmpdir():
     with settings(show('stdout')):
         return run('python -c "import tempfile; print tempfile.mkdtemp()"')
 
+def remote_listdir(path):
+    """Return a list of files found in the given remote directory."""
+    with settings(show('stdout')):
+        s = run("""python -c "import os; print os.listdir('%s')" """ % path)
+    s = s.strip()[1:-1]
+    lst = []
+    for part in s.split(', '):
+        lst.append(part.strip("'"))
+    return lst
+
 def rm_remote_tree(pathname):
     """Delete the directory at the remote location."""
     run("""python -c "import shutil; shutil.rmtree('%s')" """ % pathname)
