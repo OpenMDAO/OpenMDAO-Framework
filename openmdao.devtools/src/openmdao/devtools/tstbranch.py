@@ -25,7 +25,7 @@ paramiko.util.log_to_file('paramiko.log')
 
 atexit.register(fabric_cleanup, True)
 
-def test_on_remote_host(fname, pyversion='python', keep=False, 
+def test_on_remote_host(fname, shell, pyversion='python', keep=False, 
                         branch=None, testargs=(), hostname=''):
     loctstfile = os.path.join(os.path.dirname(__file__), 'loctst.py')
     
@@ -37,6 +37,10 @@ def test_on_remote_host(fname, pyversion='python', keep=False,
     if remtmp.failed:
         print "creation of remote temp dir failed"
         sys.exit(-1)
+    
+    if ':' in remtmp:
+        remtmp = remtmp.replace('\\', '/')
+    
     print "remote temp dir = ", remtmp
     remote_script_name = os.path.join(remtmp, os.path.basename(loctstfile))
     if os.path.isfile(fname):
@@ -54,23 +58,22 @@ def test_on_remote_host(fname, pyversion='python', keep=False,
     if len(testargs) > 0:
         remoteargs.append('--')
         remoteargs.extend(testargs)
-    try:
-        retcode = push_and_run(loctstfile, 
-                               remotepath=os.path.basename(loctstfile),
-                               args=remoteargs)
-        if retcode != 0:
-            print 'retrieving build file from failed host %s' % hostname
-            get('_build.out', '%s_build.out' % hostname)
-    finally:
-        if remtmp is not None and (retcode==0 or not keep):
-            rm_remote_tree(remtmp)
+        
+    retcode = push_and_run(loctstfile, 
+                           remotepath=os.path.basename(loctstfile),
+                           args=remoteargs)
+    if retcode != 0:
+        print 'retrieving build file from failed host %s' % hostname
+        get('build.out', '%s_build.out' % hostname)
+        
+    if remtmp is not None and (retcode==0 or not keep):
+        rm_remote_tree(remtmp)
 
 def run_on_host(host, config, funct, *args, **kwargs):
     settings_kwargs = {}
     settings_args = []
     
     debug = config.getboolean(host, 'debug')
-    platform = config.get(host, 'platform')
     settings_kwargs['host_string'] = config.get(host, 'addr')
         
     if debug:
@@ -79,9 +82,8 @@ def run_on_host(host, config, funct, *args, **kwargs):
     else:
         settings_args.append(hide('running'))
         
-    if platform.startswith('win'):
-        settings_kwargs['shell'] = "cmd /C"
-
+    settings_kwargs['shell'] = config.get(host, 'shell')
+    
     with settings(*settings_args, **settings_kwargs):
         return funct(*args, **kwargs)
             
@@ -186,6 +188,7 @@ def main(argv=None):
     try:
         
         for host in hosts:
+            shell = config.get(host, 'shell')
             hostdir = os.path.join(options.outdir, host)
             if not os.path.isdir(hostdir):
                 os.makedirs(hostdir)
@@ -194,10 +197,11 @@ def main(argv=None):
             files.append(f)
             if host in ec2_hosts:
                 proc_args = [host, config, conn, test_on_remote_host,
-                             fname]
+                             fname, shell]
                 target = run_on_ec2_host
             else:
-                proc_args = [host,config, test_on_remote_host, fname]
+                proc_args = [host, config, test_on_remote_host, fname,
+                             shell]
                 target = run_on_host
             p = Process(target=target,
                         name=host,

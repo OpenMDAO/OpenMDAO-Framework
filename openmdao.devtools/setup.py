@@ -44,6 +44,7 @@ setup(name='openmdao.devtools',
           'virtualenv',
           'openmdao.util',
           'boto',
+          'paramiko>=1.7.7',
       ],
       entry_points = {
           "console_scripts": [

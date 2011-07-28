@@ -148,20 +148,18 @@ def install_dev_env(url, pyversion, branch=None):
     # fabric barfs when running this remotely due to some unicode
     # output that it can't handle, so we just save the output to 
     # a file instead
-    f = open('_build.out', 'wb')
+    f = open('build.out', 'wb')
     
     try:
         p = subprocess.Popen('%s go-openmdao-dev.py' % pyversion, 
                              stdout=f, stderr=subprocess.STDOUT, 
                              env=os.environ, shell=True)
         p.wait()
-        if p.returncode != 0:
-            raise RuntimeError("problem during build of environment")
     finally:
         f.close()
         os.chdir(startdir)
         
-    return os.path.join(treedir, 'devenv')
+    return (os.path.join(treedir, 'devenv'), p.returncode)
     
 
 def activate_and_test(envdir, testargs=()):
@@ -241,8 +239,11 @@ if __name__ == '__main__':
         if test_type == 'release':
             envdir = install_release(fname, pyversion=options.pyversion)
         else: # dev test
-            envdir = install_dev_env(fname, pyversion=options.pyversion,
-                                     branch=options.branch)
+            envdir, buildret = install_dev_env(fname, pyversion=options.pyversion,
+                                              branch=options.branch)
+            if buildret != 0:
+                print "problem during build of dev environment (return code = %s)" % buildret
+                sys.exit(buildret)
             
         retcode = activate_and_test(os.path.join(tmpdir, envdir),
                                     testargs=args)

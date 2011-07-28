@@ -42,10 +42,10 @@ def start_instance(conn, config, name, sleep=6, max_tries=10):
     """Starts up an EC2 instance having the specified 'short' name and
     returns the instance.
     """
-    platform = config.get(name, 'platform')
     debug = config.getboolean(name, 'debug')
     img = conn.get_image(config.get(name, 'image_id'))
     instance_type = config.get(name, 'instance_type')
+    shell = config.get(name, 'shell')
     identity = config.get(name, 'identity')
     key_name = os.path.splitext(os.path.basename(identity))[0]
     security_groups = [s.strip() for s in config.get(name, 'security_groups').split()
@@ -54,7 +54,7 @@ def start_instance(conn, config, name, sleep=6, max_tries=10):
     print 'starting instance of image %s' % name
     print "   image: %s" % img
     print "   location: %s" % img.location
-    print "   platform: %s" % platform
+    print "   shell: %s" % shell
     print "   identity: %s" % identity
     print "   key name: %s" % key_name
     print "   security_groups: %s" % security_groups
@@ -99,7 +99,6 @@ def run_on_ec2_host(host, config, conn, funct, *args, **kwargs):
                os.path.expandvars(config.get(host, 'identity').strip()))
     settings_kwargs['user'] = config.get(host, 'user')
     debug = config.getboolean(host, 'debug')
-    platform = config.get(host, 'platform')
     
     if config.has_option(host, 'addr'): # it's a running instance
         settings_kwargs['host_string'] = config.get(host, 'addr')
@@ -114,8 +113,7 @@ def run_on_ec2_host(host, config, conn, funct, *args, **kwargs):
     else:
         settings_args.append(hide('running'))
 
-    if platform.startswith('win'):
-        settings_kwargs['shell'] = "cmd /C"
+    settings_kwargs['shell'] = config.get(host, 'shell')
 
     with settings(**settings_kwargs):
         if debug:
