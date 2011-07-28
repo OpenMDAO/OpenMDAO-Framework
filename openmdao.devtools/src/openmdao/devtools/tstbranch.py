@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import atexit
 import time
+import getpass
 from optparse import OptionParser
 from fabric.api import run, env, local, put, cd, get, settings, prompt, \
                        hide, show, hosts
@@ -27,22 +28,12 @@ atexit.register(fabric_cleanup, True)
 
 def test_on_remote_host(fname, shell, pyversion='python', keep=False, 
                         branch=None, testargs=(), hostname=''):
+    uname = getpass.getuser()
+    remtmp = 'test_%s' % uname
+    
+    locbldfile = os.path.join(os.path.dirname(__file__), 'locbuild.py')
     loctstfile = os.path.join(os.path.dirname(__file__), 'loctst.py')
     
-    try:
-        remtmp = remote_tmpdir()
-    except Exception as err:
-        print str(err)
-        sys.exit(-1)
-    if remtmp.failed:
-        print "creation of remote temp dir failed"
-        sys.exit(-1)
-    
-    if ':' in remtmp:
-        remtmp = remtmp.replace('\\', '/')
-    
-    print "remote temp dir = ", remtmp
-    remote_script_name = os.path.join(remtmp, os.path.basename(loctstfile))
     if os.path.isfile(fname):
         remotefname = os.path.join(remtmp, os.path.basename(fname))
         put(fname, remotefname) # copy file to remote host
@@ -51,22 +42,29 @@ def test_on_remote_host(fname, shell, pyversion='python', keep=False,
         remoteargs = ['-f', fname]
         
     remoteargs.append('--pyversion=%s' % pyversion)
-    if keep:
-        remoteargs.append('--keep')
     if branch:
         remoteargs.append('--branch=%s' % branch)
     if len(testargs) > 0:
         remoteargs.append('--')
         remoteargs.extend(testargs)
         
-    retcode = push_and_run(loctstfile, 
-                           remotepath=os.path.basename(loctstfile),
-                           args=remoteargs)
-    if retcode != 0:
-        print 'retrieving build file from failed host %s' % hostname
-        get('build.out', '%s_build.out' % hostname)
+    result = push_and_run(locbldfile, 
+                          remotepath=os.path.basename(loctstfile),
+                          args=remoteargs)
+    print result
+    if result.return_code != 0:
+        raise RuntimeError("problem with remote build (return code = %s" % 
+                           result.return_code)
+
+    if keep:
+        remoteargs.append('--keep')
+    result = push_and_run(loctstfile, 
+                          remotepath=os.path.basename(loctstfile),
+                          args=remoteargs)
+    if result.return_code != 0:
+        print result
         
-    if remtmp is not None and (retcode==0 or not keep):
+    if remtmp is not None and (result.return_code==0 or not keep):
         rm_remote_tree(remtmp)
 
 def run_on_host(host, config, funct, *args, **kwargs):
@@ -213,15 +211,6 @@ def main(argv=None):
             processes.append(p)
             orig_stdout.write("starting %s\n" % p.name)
             p.start()
-            #run_on_host(host, config, test_on_remote_host, None, fname,
-                        #keep=options.keep, branch=options.branch,
-                        #testargs=args, hostname=host)
-            
-        #for host in ec2_hosts:
-            #os.chdir(os.path.join(options.outdir, host))
-            #run_on_ec2_host(host, config, conn, test_on_remote_host, 
-                            #fname, keep=options.keep, branch=options.branch,
-                            #testargs=args, hostname=host)
             
         sys.stdout = orig_stdout
         sys.stderr = orig_stderr

@@ -21,9 +21,9 @@ def _test_remote(fname, pyversion='python', keep=False,
     if keep:
         remoteargs.append('--keep')
     remoteargs.extend(args)
-    push_and_run(loctstfile, 
-                 remotepath=os.path.basename(loctstfile),
-                 args=remoteargs)
+    return push_and_run(loctstfile, 
+                        remotepath=os.path.basename(loctstfile),
+                        args=remoteargs)
 
 
 if __name__ == '__main__':

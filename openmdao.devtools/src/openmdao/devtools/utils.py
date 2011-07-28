@@ -55,7 +55,9 @@ def get_openmdao_version(release_dir, version=None):
 
 
 def push_and_run(fpath, remotepath=None, runner=None, args=()):
-    """Puts the given file onto the current active host and executes it there"""
+    """Puts the given file onto the current active host and 
+    executes it there.
+    """
     if not os.path.isfile(fpath):
         raise IOError("can't find file %s" % fpath)
     if remotepath is None:
@@ -67,9 +69,7 @@ def push_and_run(fpath, remotepath=None, runner=None, args=()):
         else:
             runner = ''
             
-    retval = run("%s %s %s" % (runner, remotepath, ' '.join(args)))
-    
-    return retval.return_code
+    return run("%s %s %s" % (runner, remotepath, ' '.join(args)))
 
 def tar_dir(dirpath, archive_name, destdir):
     """Tar up the given directory and put in in the specified destination
