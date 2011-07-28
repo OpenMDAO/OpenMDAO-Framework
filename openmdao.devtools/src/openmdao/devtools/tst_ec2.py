@@ -99,6 +99,7 @@ def run_on_ec2_host(host, config, conn, funct, *args, **kwargs):
                os.path.expandvars(config.get(host, 'identity').strip()))
     settings_kwargs['user'] = config.get(host, 'user')
     debug = config.getboolean(host, 'debug')
+    platform = config.get(host, 'platform')
     
     if config.has_option(host, 'addr'): # it's a running instance
         settings_kwargs['host_string'] = config.get(host, 'addr')
@@ -112,6 +113,9 @@ def run_on_ec2_host(host, config, conn, funct, *args, **kwargs):
         settings_args.append(show('debug'))
     else:
         settings_args.append(hide('running'))
+
+    if platform.startswith('win'):
+        settings_kwargs['shell'] = "cmd /C"
 
     with settings(**settings_kwargs):
         if debug:

@@ -7,7 +7,8 @@ import subprocess
 import atexit
 import time
 from optparse import OptionParser
-from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, hosts
+from fabric.api import run, env, local, put, cd, get, settings, prompt, \
+                       hide, show, hosts
 from fabric.state import connections
 from socket import gethostname
 import ConfigParser
@@ -69,13 +70,17 @@ def run_on_host(host, config, funct, *args, **kwargs):
     settings_args = []
     
     debug = config.getboolean(host, 'debug')
+    platform = config.get(host, 'platform')
     settings_kwargs['host_string'] = config.get(host, 'addr')
         
     if debug:
-        print "settings_kwargs = ", str(settings_kwargs)
+        settings_args.append(show('debug'))
         print "calling %s" % print_fuct_call(funct, *args, **kwargs)
     else:
         settings_args.append(hide('running'))
+        
+    if platform.startswith('win'):
+        settings_kwargs['shell'] = "cmd /C"
 
     with settings(*settings_args, **settings_kwargs):
         return funct(*args, **kwargs)
@@ -135,6 +140,7 @@ def main(argv=None):
     startdir = os.getcwd()
     
     if options.fname is None: # assume we're testing the current repo
+        print 'creating tar file of current branch'
         options.fname = os.path.join(os.getcwd(), 'testbranch.tar')
         ziptarname = options.fname+'.gz'
         if os.path.isfile(ziptarname): # clean up the old tar file
