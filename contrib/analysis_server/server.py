@@ -61,6 +61,7 @@ import os.path
 import pkg_resources
 import platform
 import re
+import shutil
 import signal
 import SocketServer
 import socket
@@ -77,7 +78,7 @@ from xml.sax.saxutils import escape
 
 from enthought.traits.traits import CTrait
 
-from openmdao.main.api import Component, Container, set_as_top
+from openmdao.main.api import Component, Container, SimulationRoot, set_as_top
 from openmdao.main.mp_util import read_allowed_hosts
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -138,10 +139,8 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         SocketServer.TCPServer.__init__(self, (host, port), _Handler)
         self._allowed_hosts = allowed_hosts or ['127.0.0.1']
         self._num_clients = 0
-        self._components = {}  # Maps from category/component to (cls, config)
+        self._components = {}  # Maps from category/component to (cfg, egg_info)
         self._comp_ctx = _DictContextMgr(self._components)
-        self._eggs = {}        # Maps from cls to egg-info.
-        self._egg_ctx = _DictContextMgr(self._eggs)
         self.handlers = {}     # Maps from client address to handler.
         self._credentials = get_credentials()  # For PublicKey servers.
         self._root = os.getcwd()
@@ -162,11 +161,6 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     def credentials(self):
         """ Return credentials. """
         return self._credentials
-
-    @property
-    def eggs(self):
-        """ Return egg map context manager. """
-        return self._egg_ctx
 
     @property
     def config_errors(self):
@@ -210,65 +204,92 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             if not config.has_section(sect):
                 raise RuntimeError("No %s section in %r" % (sect, path))
 
+        # Normalize name of config file to <component_name>-<version>.cfg.
+        if config.has_option('Description', 'version'):
+            cfg_version = config.get('Description', 'version')
+        else:
+            cfg_version = ''
+
+        cfg_name = os.path.basename(path)
+        name, dash, version = cfg_name.partition('-')
+        if not version:
+            name = name[:-4]  # Drop '.cfg'
+            if cfg_version:
+                version = cfg_version
+            else:
+                raise ValueError('No version in .cfg file or .cfg filename')
+        else:
+            version = version[:-4]  # Drop '.cfg'
+            if not cfg_version:
+                cfg_version = version
+                config.set('Description', 'version', version)
+
+        if version != cfg_version:
+            cfg_dir = os.path.dirname(path)
+            new_path = os.path.join(cfg_dir, '%s-%s.cfg' % (name, cfg_version))
+            _LOGGER.warning('Renaming %r', path)
+            _LOGGER.warning('      to %r', new_path)
+            os.rename(path, new_path)
+            path = new_path
+
         cwd = os.getcwd()
+        cleanup = False
+
         # This will be exercised by test_client.py:test_publish().
         if config.has_option('Python', 'egg'):  # pragma no cover
             # Create temporary instance from egg.
             egg = config.get('Python', 'egg')
             obj = Container.load_from_eggfile(egg)
-            cls = obj.__class__
-            classname = cls.__name__
-            modname = cls.__module__
-            for filename in glob.glob('*'):
-                if not os.path.exists(os.path.join(filename, 'EGG-INFO')):
-                    continue
-                req_path = os.path.join(filename, 'EGG-INFO', 'requires.txt')
-                with open(req_path, 'rU') as inp:
-                    requirements = [pkg_resources.Requirement.parse(line)
-                                    for line in inp.readlines()]
-                orphan_path = os.path.join(filename, 'EGG-INFO',
-                                           'openmdao_orphans.txt')
-                with open(orphan_path, 'rU') as inp:
-                    orphans = [line.strip() for line in inp.readlines()]
-                with self.eggs as eggs:
-                    eggs[cls] = [os.path.join(cwd, egg), requirements, orphans]
-                break
-            else:
-                raise RuntimeError("Can't find EGG-INFO for %r" % egg)
+            egg_info = self._get_egg_info(egg)
+            cleanup = True
         else:
-            # Get Python class and create temporary instance.
-            filename = config.get('Python', 'filename')
-            classname = config.get('Python', 'classname')
-            dirname = os.path.dirname(filename)
-            if not os.path.isabs(dirname):
-                if dirname:
-                    dirname = os.path.join(cwd, dirname)
+            for egg in glob.glob('%s-%s.*.egg' % (name, version)):
+                if os.path.getmtime(egg) > os.path.getmtime(path):
+                    # Create temporary instance from egg.
+                    obj = Container.load_from_eggfile(egg)
+                    egg_info = self._get_egg_info(egg)
+                    cleanup = True
+                    break
                 else:
-                    dirname = cwd
-            if not dirname in sys.path:
-                _LOGGER.debug('    prepending %r to sys.path', dirname)
-                sys.path.insert(0, dirname)
-            modname = os.path.basename(filename)[:-3]  # drop '.py'
-            try:
-                __import__(modname)
-            except ImportError as exc:
-                raise RuntimeError("Can't import %r: %r" % (modname, exc))
+                    _LOGGER.warning('Removing stale egg %r', egg)
+                    os.remove(egg)
+            else:
+                # Get Python class and create temporary instance.
+                filename = config.get('Python', 'filename')
+                classname = config.get('Python', 'classname')
+                dirname = os.path.dirname(filename)
+                if not os.path.isabs(dirname):
+                    if dirname:
+                        dirname = os.path.join(cwd, dirname)
+                    else:
+                        dirname = cwd
+                if not dirname in sys.path:
+                    _LOGGER.debug('    prepending %r to sys.path', dirname)
+                    sys.path.insert(0, dirname)
+                modname = os.path.basename(filename)[:-3]  # drop '.py'
+                try:
+                    __import__(modname)
+                except ImportError as exc:
+                    raise RuntimeError("Can't import %r: %r" % (modname, exc))
 
-            module = sys.modules[modname]
-            try:
-                cls = getattr(module, classname)
-            except AttributeError as exc:
-                raise RuntimeError("Can't get class %r in %r: %r"
-                                   % (classname, modname, exc))
-            try:
-                obj = cls()
-            except Exception as exc:
-                _LOGGER.error(traceback.format_exc())
-                raise RuntimeError("Can't instantiate %s.%s: %r"
-                                   % (modname, classname, exc))
+                module = sys.modules[modname]
+                try:
+                    cls = getattr(module, classname)
+                except AttributeError as exc:
+                    raise RuntimeError("Can't get class %r in %r: %r"
+                                       % (classname, modname, exc))
+                try:
+                    obj = set_as_top(cls())
+                except Exception as exc:
+                    _LOGGER.error(traceback.format_exc())
+                    raise RuntimeError("Can't instantiate %s.%s: %r"
+                                       % (modname, classname, exc))
+                # Save to egg.
+                egg_info = obj.save_to_egg(name, version)
+                egg_info = (os.path.join(cwd, egg_info[0]), egg_info[1],
+                            [name for name, pth in egg_info[2]])
 
         # Create wrapper configuration object.
-        set_as_top(obj)
         try:
             cfg = _WrapperConfig(config, obj,
                                  os.path.join(cwd, os.path.basename(path)))
@@ -279,11 +300,31 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         # Register under path normalized to category/component form.
         path = cfg.cfg_path[len(self._root)+1:-4]  # Drop prefix & '.cfg'
         path = path.replace('\\', '/')  # Always use '/'.
-        _LOGGER.debug('    registering %s: %s.%s', path, modname, classname)
+        _LOGGER.debug('    registering %s: %s', path, egg_info[0])
         with self.components as comps:
-            comps[path] = (cls, cfg)
+            comps[path] = (cfg, egg_info)
         obj.pre_delete()
         del obj
+        if cleanup:
+            shutil.rmtree(name)
+
+    def _get_egg_info(self, egg):
+        """ Return egg_info tuple from egg file. """
+        for filename in glob.glob('*'):
+            if not os.path.exists(os.path.join(filename, 'EGG-INFO')):
+                continue
+
+            req_path = os.path.join(filename, 'EGG-INFO', 'requires.txt')
+            with open(req_path, 'rU') as inp:
+                requirements = [pkg_resources.Requirement.parse(line)
+                                for line in inp.readlines()]
+            orphan_path = os.path.join(filename, 'EGG-INFO',
+                                       'openmdao_orphans.txt')
+            with open(orphan_path, 'rU') as inp:
+                orphans = [line.strip() for line in inp.readlines()]
+            return (os.path.join(os.getcwd(), egg), requirements, orphans)
+
+        raise RuntimeError("Can't find EGG-INFO for %r" % egg)
 
     def verify_request(self, request, client_address):
         """
@@ -519,7 +560,7 @@ version: 0.1""")
         if not lst:
             return
 
-        cls, cfg = lst[0]
+        cfg, egg_info = lst[0]
         has_version_info = 'true' if len(lst) > 1 else 'false'
 
         if len(args) > 1 and args[1] == '-xml':
@@ -1239,42 +1280,12 @@ egg: %s
         lst = self._get_component(args[0])
         if not lst:
             return
-        cls, cfg = lst[0]
+        cfg, egg_info = lst[0]
 
         name = args[1]
         if name in self._instance_map:
             self._send_error('Name already in use: "%s"' % name)
             return
-
-        # Get egg information.
-        with self.server.eggs as eggs:
-            if cls not in eggs:
-                # If only local host will be used, we can skip determining
-                # distributions required by the egg.
-                allocators = RAM.list_allocators()
-                need_reqs = False
-                for allocator in allocators:
-                    if not isinstance(allocator, LocalAllocator):
-                        need_reqs = True
-                        break
-
-                # Create temporary instance and save as egg.
-                directory, sep, comp_name = cfg.cfg_path.rpartition(os.sep)
-                egg_name, dash, version = comp_name.partition('-')
-                orig = os.getcwd()
-                os.chdir(directory)
-                try:
-                    obj = set_as_top(cls())
-                    egg_info = obj.save_to_egg(egg_name, cfg.version or 'AS',
-                                               need_requirements=need_reqs)
-                finally:
-                    os.chdir(orig)
-                eggs[cls] = (os.path.join(directory, egg_info[0]),
-                             egg_info[1], egg_info[2])
-                obj.pre_delete()
-                del obj
-
-            egg_info = eggs[cls]
 
         egg_file = egg_info[0]
         resource_desc = {
@@ -1289,7 +1300,6 @@ egg: %s
             server, server_info = RAM.allocate(resource_desc)
             if server is None:
                 raise RuntimeError('Server allocation failed :-(')
-
             # Transfer egg to it and load.
             egg_name = os.path.basename(egg_file)
             filexfer(None, egg_file, server, egg_name, 'b')
@@ -1321,7 +1331,7 @@ egg: %s
             return
 
         xml = ["<Branch name='HEAD'>"]
-        for cls, cfg in lst:
+        for cfg, egg_info in lst:
             xml.append(" <Version name='%s'>" % cfg.version)
             xml.append("  <author>%s</author>" % escape(cfg.author))
             xml.append("  <date>%s</date>" % cfg.timestamp)
@@ -1617,6 +1627,9 @@ def main():  # pragma no cover
         print 'Allowed hosts file %r does not exist.' % options.hosts
         sys.exit(1)
 
+    # Set root directory.
+    SimulationRoot.get_root()
+
     # Create server.
     host = options.address or socket.gethostname()
     server = Server(host, options.port, allowed_hosts)
@@ -1644,7 +1657,6 @@ def main():  # pragma no cover
         server.serve_forever()
     except KeyboardInterrupt:
         pass
-    _cleanup()
     sys.exit(0)
 
 
@@ -1653,14 +1665,7 @@ def _sigterm_handler(signum, frame):  #pragma no cover
     _LOGGER.info('sigterm_handler invoked')
     print 'sigterm_handler invoked'
     sys.stdout.flush()
-    _cleanup()
     sys.exit(1)
-
-
-def _cleanup():  #pragma no cover
-    """ Clean up any generated egg files. """
-    for path in glob.glob('*-AS.*.egg'):
-        os.remove(path)
 
 
 if __name__ == '__main__':  # pragma no cover

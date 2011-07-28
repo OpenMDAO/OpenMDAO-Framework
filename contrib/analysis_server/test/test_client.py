@@ -34,6 +34,11 @@ class TestCase(unittest.TestCase):
         self.client.quit()
         analysis_server.stop_server(self.server)
         os.remove('hosts.allow')
+        for egg_name in glob.glob('*.egg'):
+            os.remove(egg_name)
+        for path in ('ASTestComp', 'ASTestComp2'):
+            if os.path.exists(path):
+                shutil.rmtree(path)
         try:
             os.remove('as-0.out')
         except WindowsError:
@@ -221,9 +226,6 @@ version: 5.01, build: 331"""
             'ASTestComp.py',
             'ASTestComp_loader.py',
             '__init__.py',
-            'test_client.py',
-            'test_proxy.py',
-            'test_server.py',
         ]
         self.assertEqual(result, expected)
 
@@ -246,25 +248,33 @@ version: 5.01, build: 331"""
 
     def test_monitor(self):
         self.client.start('ASTestComp', 'comp')
-        result, monitor_id = self.client.start_monitor('comp.test_client.py')
+        result, monitor_id = self.client.start_monitor('comp.ASTestComp_loader.py')
         expected = """\
-import getpass
-import glob
-import os.path
-import pkg_resources
-import platform
-import shutil
-import socket
+import os
 import sys
-import time
-import unittest
-import nose
+if not '.' in sys.path:
+    sys.path.append('.')
 
-from openmdao.util.testutil import assert_raises
+try:
+    from openmdao.main.api import Component, SAVE_CPICKLE
+except ImportError:
+    print 'No OpenMDAO distribution available.'
+    if __name__ != '__main__':
+        print 'You can unzip the egg to access the enclosed files.'
+        print 'To get OpenMDAO, please visit openmdao.org'
+    sys.exit(1)
 
-import analysis_server
+def load(**kwargs):
+    '''Create object(s) from state file.'''
+    return Component.load('ASTestComp.pickle', SAVE_CPICKLE, **kwargs)
 
-ORIG_DIR = os.getcwd()
+def main():
+    '''Load state and run.'''
+    model = load()
+    model.run()
+
+if __name__ == '__main__':
+    main()
 """
         self.assertEqual(result[:len(expected)], expected)
 

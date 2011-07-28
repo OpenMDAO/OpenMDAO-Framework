@@ -1,6 +1,8 @@
+import glob
 import nose
 import os.path
 import pkg_resources
+import shutil
 import socket
 import sys
 import unittest
@@ -73,6 +75,11 @@ class TestCase(unittest.TestCase):
         """ Called after each test. """
         analysis_server.stop_server(self.server)
         os.remove('hosts.allow')
+        for egg_name in glob.glob('*.egg'):
+            os.remove(egg_name)
+        for path in ('ASTestComp', 'ASTestComp2'):
+            if os.path.exists(path):
+                shutil.rmtree(path)
         try:
             os.remove('as-0.out')
         except WindowsError:
