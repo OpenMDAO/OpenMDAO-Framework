@@ -29,14 +29,21 @@ jQuery(document).ready(function() {
     // add gui functionality to designated DOM nodes
     new openmdao.ObjectTree("otree",model,
         new openmdao.PropertiesEditor("propertieseditor",model).editObject,
-        openmdao.PopupPropertiesEditor)
+        openmdao.PopupPropertiesEditor
+    )
     new openmdao.FileTree("ftree",model,
         new openmdao.CodeEditor("code",model).editFile,
-        new openmdao.O3DViewer("geometry",model).load)
+        function(path) { new openmdao.O3DViewer("geometry",model,path) }  // create when needed
+    )
     new openmdao.Palette("palette",model)
     new openmdao.WorkflowDiagram("workflow",model)
     new openmdao.Console("cmdform","command","history",model);
 
     // initialize views
     model.updateListeners();
+    
+    // start with objects, workflow & libraries visible
+    jQuery('#otree_tab').click();
+    jQuery('#workflow_tab').click();
+    jQuery('#palette_tab').click();
 });

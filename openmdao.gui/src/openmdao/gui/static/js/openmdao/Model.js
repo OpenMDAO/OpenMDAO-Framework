@@ -326,7 +326,8 @@ openmdao.Model=function() {
     /** import the contents of the specified file into the model */
     this.importFile = function(filepath) {
         // change path to package notation and import
-        var path = filepath.replace(/.py/g,'').
+        var path = filepath.replace(/^./,'').
+                            replace(/.py/g,'').
                             replace(/\\/g,'.').
                             replace(/\//g,'.')
         self.issueCommand("from "+path+" import *")

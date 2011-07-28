@@ -266,3 +266,11 @@ def Workspace(request):
     '''
     return render_to_response('workspace.html',
                               context_instance=RequestContext(request))
+
+@never_cache
+@login_required()
+def Test(request):
+    ''' initialize the server manager &  render the workspace
+    '''
+    return render_to_response('test.html',
+                              context_instance=RequestContext(request))

@@ -23,13 +23,14 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @version 0.0.0
  * @constructor
  */
-openmdao.O3DViewer = function(id,model) {
+openmdao.O3DViewer = function(id,model,g_url) {
     /***********************************************************************
      *  private
      ***********************************************************************/
      
     var self = this,
-        elm = jQuery("#"+id).width(screen.width).height(screen.height).bind("contextmenu", function(e) { return false; }),
+        elm = jQuery("#"+id),
+        title = 'Geometry Viewer',
         menuDiv = jQuery("<nav2 id='"+id+"-menu'>"),
         o3dDiv =jQuery('<div id="o3d" style="width: 100%; height: 100%;">'),
         messageDiv = jQuery("<div>"),
@@ -41,12 +42,27 @@ openmdao.O3DViewer = function(id,model) {
             "Press R to reset the view"+
             "</div>",
         menu = [
-            { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'Geometry Viewer','width':400,'height':150})" }
+            { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'"+title+"','width':400,'height':150})" }
         ]
-        
+
+    //if the elm doesn't exist, create a popup 
+    if (elm.length === 0) {
+        elm = jQuery('<div id='+id+'></div>')
+        elm.dialog({
+            'modal': false,
+            'title': title+': '+id,
+            'close': function(ev, ui) { elm.remove(); },
+            width: 640, 
+            height: 480 
+        })
+    }
+    else {
+        elm.html("")
+    }
+    
     var modelTransform;
     var g_simple;
-    var g_url;
+    // var g_url;
     var g_debugCount = 0;
 
     var g_root;
@@ -281,7 +297,6 @@ openmdao.O3DViewer = function(id,model) {
         o3dDiv.width(screen.width).height(screen.height)
     }
 
-
     /**
     * Removes any callbacks so they don't get called after the page has unloaded.'
     */
@@ -311,6 +326,8 @@ openmdao.O3DViewer = function(id,model) {
     }
     
     elm.html("")
+    elm.width(screen.width).height(screen.height)
+    elm.bind("contextmenu", function(e) { return false; })
     elm.append(menuDiv);
     new openmdao.Menu(menuDiv.attr('id'),menu)    
     elm.append(o3dDiv);

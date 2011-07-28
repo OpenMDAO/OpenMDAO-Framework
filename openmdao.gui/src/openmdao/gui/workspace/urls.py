@@ -22,4 +22,7 @@ urlpatterns = patterns('workspace.views',
     (r'^types',           'Types'),
     (r'^upload',          'Upload'),
     (r'^workflow',        'Workflow'),
+    
+    # a test view
+    (r'^test',            'Test'),
 )
