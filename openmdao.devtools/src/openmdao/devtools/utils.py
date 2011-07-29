@@ -68,7 +68,7 @@ def push_and_run(fpath, remotepath=None, runner=None, args=()):
             runner = 'python'
         else:
             runner = ''
-            
+
     return run("%s %s %s" % (runner, remotepath, ' '.join(args)))
 
 def tar_dir(dirpath, archive_name, destdir):
@@ -163,6 +163,12 @@ def remote_tmpdir():
     with settings(show('stdout')):
         return run('python -c "import tempfile; print tempfile.mkdtemp()"')
 
+def remote_mkdir(path):
+    """Create a remote directory with the given name. If it already exists,
+    just return with no error.
+    """
+    run("""python -c "import os; x=0 if os.path.exists('%s') else os.makedirs('%s')" """ % (path,path))
+    
 def remote_listdir(path):
     """Return a list of files found in the given remote directory."""
     with settings(show('stdout')):

@@ -18,8 +18,9 @@ from multiprocessing import Process
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
-                                    fabric_cleanup, remote_listdir
-from openmdao.devtools.tst_ec2 import run_on_ec2_host
+                                    fabric_cleanup, remote_listdir, remote_mkdir,\
+                                    ssh_test
+from openmdao.devtools.tst_ec2 import run_on_ec2_image
 from openmdao.util.debug import print_fuct_call
 
 import paramiko.util
@@ -28,24 +29,35 @@ paramiko.util.log_to_file('paramiko.log')
 atexit.register(fabric_cleanup, True)
 
 def test_on_remote_host(fname, shell, pyversion='python', keep=False, 
-                        branch=None, testargs=(), hostname=''):
+                        branch=None, testargs=(), hostname='',
+                        force=False):
     uname = getpass.getuser()
     remtmp = 'test_%s' % uname
+    
+    remote_mkdir(remtmp)
     
     locbldfile = os.path.join(os.path.dirname(__file__), 'locbuild.py')
     loctstfile = os.path.join(os.path.dirname(__file__), 'loctst.py')
     
+    if fname.endswith('.py'):
+        build_type = 'release'
+    else:
+        build_type = 'dev'
+        
     if os.path.isfile(fname):
         remotefname = os.path.join(remtmp, os.path.basename(fname))
+        print 'putting %s on remote host' % fname
         put(fname, remotefname) # copy file to remote host
-        remoteargs = ['-f', remotefname]
+        remoteargs = ['-f', os.path.basename(fname)]
     else:
         remoteargs = ['-f', fname]
         
-    remoteargs.append('-d', remtmp)
+    remoteargs.extend(['-d', remtmp])
     remoteargs.append('--pyversion=%s' % pyversion)
     if branch:
         remoteargs.append('--branch=%s' % branch)
+    if force:
+        remoteargs.append('--force')
         
     dirfiles = set(remote_listdir(remtmp))
     
@@ -53,10 +65,9 @@ def test_on_remote_host(fname, shell, pyversion='python', keep=False,
                           remotepath=os.path.basename(locbldfile),
                           args=remoteargs)
     print result
-    if result.return_code != 0:
-        raise RuntimeError("problem with remote build (return code = %s" % 
-                           result.return_code)
-
+    # retrieve build output file
+    get(os.path.join(remtmp, 'build.out'))
+    
     newfiles = set(remote_listdir(remtmp)) - dirfiles
     if 'devenv' in newfiles:
         envdir = os.path.join(remtmp, 'devenv')
@@ -70,6 +81,10 @@ def test_on_remote_host(fname, shell, pyversion='python', keep=False,
     
     envdir = os.path.join(remtmp, matches[0])
     
+    if result.return_code != 0:
+        raise RuntimeError("problem with remote build (return code = %s)" % 
+                           result.return_code)
+
     remoteargs = ['-d', envdir]
     remoteargs.append('--pyversion=%s' % pyversion)
     if keep:
@@ -94,6 +109,13 @@ def run_on_host(host, config, funct, *args, **kwargs):
     
     debug = config.getboolean(host, 'debug')
     settings_kwargs['host_string'] = config.get(host, 'addr')
+    ident = config.get(host, 'identity', None)
+    if ident:
+        settings_kwargs['key_filename'] = os.path.expanduser(
+            os.path.expandvars(ident))
+    usr = config.get(host, 'user', None)
+    if usr:
+        settings_kwargs['user'] = usr
         
     if debug:
         settings_args.append(show('debug'))
@@ -133,9 +155,11 @@ def main(argv=None):
                       dest='branch',
                       help="if file_url is a git repo, supply branch name here")
     parser.add_option("-o","--outdir", action="store", type='string', 
-                      dest='outdir', default='./test_results',
+                      dest='outdir', default='test_results',
                       help="output directory for test results "
                            "(has a subdirectory for each host tested)")
+    parser.add_option("--force", action="store_true", dest='force',
+                      help="delete build directory if it already exists")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
@@ -158,17 +182,29 @@ def main(argv=None):
         print "no hosts were found in config file %s" % options.cfg
         sys.exit(-1)
         
+    # find out which hosts are ec2 images, if any
+    ec2_hosts = set()
+    for host in hosts:
+        if config.has_option(host, 'image_id'):
+            ec2_hosts.add(host)
+                
+    if ec2_hosts:
+        from boto.ec2.connection import EC2Connection
+        print 'connecting to EC2'
+        conn = EC2Connection()
+
     startdir = os.getcwd()
     
     if options.fname is None: # assume we're testing the current repo
-        print 'creating tar file of current branch'
+        print 'creating tar file of current branch: ',
         options.fname = os.path.join(os.getcwd(), 'testbranch.tar')
         ziptarname = options.fname+'.gz'
         if os.path.isfile(ziptarname): # clean up the old tar file
             os.remove(ziptarname)
         make_git_archive(options.fname)
         subprocess.check_call(['gzip', options.fname])
-        options.fname = options.fname+'.gz'
+        options.fname = os.path.abspath(options.fname+'.gz')
+        print options.fname
         
     fname = options.fname
     
@@ -183,20 +219,6 @@ def main(argv=None):
         print "\nfilename must end in '.tar.gz', '.tar', or '.git'"
         sys.exit(retcode)
         
-    # first, find out which hosts are ec2 hosts, if any
-    ec2_hosts = set()
-    for host in hosts:
-        if config.has_option(host, 'addr'):
-            addr = config.get(host, 'addr')
-            if addr.startswith('ec2-') or '@ec2-' in addr:
-                ec2_hosts.add(host)
-        if config.has_option(host, 'image_id'):
-            ec2_hosts.add(host)
-                
-    if len(ec2_hosts) > 0:
-        from boto.ec2.connection import EC2Connection
-        conn = EC2Connection()
-
     orig_stdout = sys.stdout
     orig_stderr = sys.stderr
     
@@ -205,36 +227,36 @@ def main(argv=None):
     processes = []
     files = []
     try:
-        
         for host in hosts:
             shell = config.get(host, 'shell')
+            if host in ec2_hosts:
+                proc_args = [host, config, conn, test_on_remote_host,
+                             fname, shell]
+                target = run_on_ec2_image
+            else:
+                proc_args = [host, config, test_on_remote_host, fname,
+                             shell]
+                target = run_on_host
             hostdir = os.path.join(options.outdir, host)
             if not os.path.isdir(hostdir):
                 os.makedirs(hostdir)
             os.chdir(hostdir)
             sys.stdout = sys.stderr = f = open('test.out', 'wb', 40)
             files.append(f)
-            if host in ec2_hosts:
-                proc_args = [host, config, conn, test_on_remote_host,
-                             fname, shell]
-                target = run_on_ec2_host
-            else:
-                proc_args = [host, config, test_on_remote_host, fname,
-                             shell]
-                target = run_on_host
             p = Process(target=target,
                         name=host,
                         args=proc_args,
                         kwargs={ 'keep': options.keep,
                                  'branch': options.branch,
                                  'testargs': args,
-                                 'hostname': host })
+                                 'hostname': host,
+                                 'force': options.force })
             processes.append(p)
-            orig_stdout.write("starting %s\n" % p.name)
+            orig_stdout.write("starting testing process for %s\n" % p.name)
             p.start()
             
-        sys.stdout = orig_stdout
-        sys.stderr = orig_stderr
+            sys.stdout = orig_stdout
+            sys.stderr = orig_stderr
         
         while len(processes) > 0:
             time.sleep(1)

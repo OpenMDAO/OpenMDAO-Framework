@@ -146,12 +146,12 @@ def install_dev_env(url, pyversion, branch=None):
         
     print "building openmdao development environment in %s" % treedir
     
-    os.chdir(treedir)
-    
-    # fabric barfs when running this remotely due to some unicode
+    # FIXME: fabric barfs when running this remotely due to some unicode
     # output that it can't handle, so we just save the output to 
-    # a file instead
+    # a file instead 
     f = open('build.out', 'wb')
+    
+    os.chdir(treedir)
     
     try:
         p = subprocess.Popen('%s go-openmdao-dev.py' % pyversion, 
@@ -180,6 +180,8 @@ if __name__ == '__main__':
     parser.add_option("-d","--dir", action="store", type='string', 
                       dest='directory', default='test_build_dir',
                       help="name of a directory the build will be created")
+    parser.add_option("--force", action="store_true", dest='force',
+                      help="delete build directory if it already exists")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
@@ -192,7 +194,10 @@ if __name__ == '__main__':
     startdir = os.getcwd()
     tmpdir = options.directory
     if os.path.exists(tmpdir):
-        raise RuntimeError("directory '%s' already exists" % tmpdir)
+        if options.force:
+            shutil.rmtree(tmpdir)
+        else:
+            raise RuntimeError("directory '%s' already exists" % tmpdir)
     os.mkdir(tmpdir)
     os.chdir(tmpdir)
     

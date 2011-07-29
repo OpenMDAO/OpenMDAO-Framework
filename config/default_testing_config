@@ -4,7 +4,7 @@
 identity: ~/.ssh/lovejoykey.pem
 py_versions: python2.6
 security_groups: default
-debug: false
+debug: true
 linux_user: ubuntu
 win_user: Administrator
 shell = /bin/bash -l -c
@@ -23,16 +23,16 @@ user: %(linux_user)s
 addr: 192.168.1.12
 user: bret
 
-[lovejoy_static]
-addr: ec2-50-19-186-212.compute-1.amazonaws.com
-user: %(linux_user)s
-
 [storm]
 addr: storm.grc.nasa.gov
 shell: cmd /C
 
 [bret_2008_win32]
-addr: ec2-67-202-33-154.compute-1.amazonaws.com
+addr: ec2-204-236-248-178.compute-1.amazonaws.com
 user: %(win_user)s
+
+[lovejoy_bret]
+addr: ec2-50-16-183-87.compute-1.amazonaws.com
+user: %(linux_user)s
 
 

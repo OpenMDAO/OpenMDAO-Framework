@@ -88,9 +88,11 @@ def start_instance(conn, config, name, sleep=6, max_tries=10):
     return inst
 
 
-def run_on_ec2_host(host, config, conn, funct, *args, **kwargs):
-    """Runs the given function on the specified EC2 instance.  If host is an
-    image, then an instance will be started using that image.
+def run_on_ec2_image(host, config, conn, funct, *args, **kwargs):
+    """Runs the given function on an instance of the specified EC2 image. The
+    instance will be started, the function will run, and the instance will be
+    terminated, unless there is an error or keep==True, which will result in
+    the image being stopped but not terminated.
     """
     settings_kwargs = {}
     settings_args = []
@@ -100,20 +102,16 @@ def run_on_ec2_host(host, config, conn, funct, *args, **kwargs):
     settings_kwargs['user'] = config.get(host, 'user')
     debug = config.getboolean(host, 'debug')
     
-    if config.has_option(host, 'addr'): # it's a running instance
-        settings_kwargs['host_string'] = config.get(host, 'addr')
-        inst = None
-    else:
-        # stand up an instance of the specified image
-        inst = start_instance(conn, config, host)
-        settings_kwargs['host_string'] = inst.public_dns_name
+    # stand up an instance of the specified image
+    inst = start_instance(conn, config, host)
+    settings_kwargs['host_string'] = inst.public_dns_name
 
     if debug:
         settings_args.append(show('debug'))
     else:
         settings_args.append(hide('running'))
 
-    settings_kwargs['shell'] = config.get(host, 'shell')
+    settings_kwargs['shell'] = config.get(host, 'shell', None)
 
     with settings(**settings_kwargs):
         if debug:
@@ -121,22 +119,21 @@ def run_on_ec2_host(host, config, conn, funct, *args, **kwargs):
         retval = funct(*args, **kwargs)
         
     keep = kwargs.get('keep', False)
-    if inst is not None:
-        if retval == 0 or not keep:
-            print "terminating %s" % host
-            inst.terminate()
-            check_image_state(inst, u'shutting-down', imgname=host, debug=debug)
-            if inst.state == u'terminated':
-                print 'instance of %s is terminated' % host
-            else:
-                print 'instance of %s failed to terminate!' % host
+    if retval == 0 or not keep:
+        print "terminating %s" % host
+        inst.terminate()
+        check_image_state(inst, u'shutting-down', imgname=host, debug=debug)
+        if inst.state == u'terminated':
+            print 'instance of %s is terminated' % host
         else:
-            print "stopping %s" % host
-            inst.stop()
-            check_image_state(inst, u'stopping', imgname=host, debug=debug)
-            if inst.state == u'stopped':
-                print 'instance of %s is stopped' % host
-            else:
-                print 'instance of %s failed to stop!' % host
+            print 'instance of %s failed to terminate!' % host
+    else:
+        print "stopping %s" % host
+        inst.stop()
+        check_image_state(inst, u'stopping', imgname=host, debug=debug)
+        if inst.state == u'stopped':
+            print 'instance of %s is stopped' % host
+        else:
+            print 'instance of %s failed to stop!' % host
             
     return retval
