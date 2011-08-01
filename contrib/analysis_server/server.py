@@ -243,8 +243,10 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             egg_info = self._get_egg_info(egg)
             cleanup = True
         else:
+            filename = config.get('Python', 'filename')
             for egg in glob.glob('%s-%s.*.egg' % (name, version)):
-                if os.path.getmtime(egg) > os.path.getmtime(path):
+                if os.path.getmtime(egg) > os.path.getmtime(path) and \
+                   os.path.getmtime(egg) > os.path.getmtime(filename):
                     # Create temporary instance from egg.
                     obj = Container.load_from_eggfile(egg)
                     egg_info = self._get_egg_info(egg)
@@ -255,7 +257,6 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     os.remove(egg)
             else:
                 # Get Python class and create temporary instance.
-                filename = config.get('Python', 'filename')
                 classname = config.get('Python', 'classname')
                 dirname = os.path.dirname(filename)
                 if not os.path.isabs(dirname):

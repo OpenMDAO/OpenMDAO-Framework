@@ -19,6 +19,7 @@ from openmdao.util.testutil import assert_raises
 
 from analysis_server.server import Server, _Handler
 from analysis_server.monitor import BaseMonitor
+from analysis_server.wrapper import lookup
 
 ORIG_DIR = os.getcwd()
 
@@ -132,6 +133,8 @@ class TestCase(unittest.TestCase):
         self.assertFalse(self.server.verify_request(self.client,
                                                     ('192.168.1.1', 1234)))
     def test_invalid(self):
+        self.assertEqual(lookup(['no-such-type']), None)
+
         replies = self.send_recv('no-such-command')
         self.assertEqual(replies[-1],
                          'ERROR: command <no-such-command> not recognized\r\n>')
@@ -357,13 +360,15 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
 <Group name="sub_group">
 <Variable name="b" type="boolean" io="input" format="" description="A boolean">true</Variable>
 <Variable name="f" type="double" io="input" format="" description="A float" units="">0.5</Variable>
-<Variable name="f1d" type="double[]" io="input" format="" description="1D float array" units="cm">1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5</Variable>
+<Variable name="f1d" type="double[9]" io="input" format="" description="1D float array" units="cm">1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5</Variable>
+<Variable name="f2d" type="double[2][4]" io="input" format="" description="2D float array" units="mm">bounds[2, 4] {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5}</Variable>
+<Variable name="f3d" type="double[2][3][3]" io="input" format="" description="3D float array" units="">bounds[2, 3, 3] {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 20.5, 30.5, 40.5, 50.5, 60.5, 70.5, 80.5, 90.5}</Variable>
 <Variable name="fe" type="double" io="input" format="" description="Float enum" units="m">2.781828</Variable>
 <Variable name="i" type="long" io="input" format="" description="An int">7</Variable>
-<Variable name="i1d" type="long[]" io="input" format="" description="1D int array" units="">1, 2, 3, 4, 5, 6, 7, 8, 9</Variable>
+<Variable name="i1d" type="long[9]" io="input" format="" description="1D int array" units="">1, 2, 3, 4, 5, 6, 7, 8, 9</Variable>
 <Variable name="ie" type="long" io="input" format="" description="Int enum" units="">9</Variable>
 <Variable name="s" type="string" io="input" format="" description="A string">Hello World!  ( &amp; &lt; &gt; )</Variable>
-<Variable name="s1d" type="string[]" io="input" format="" description="1D string array" units="">"Hello", "from", "TestComponent.SubGroup"</Variable>
+<Variable name="s1d" type="string[3]" io="input" format="" description="1D string array" units="">"Hello", "from", "TestComponent.SubGroup"</Variable>
 <Variable name="se" type="string" io="input" format="" description="Str enum" units="">cold</Variable>
 </Group>
 <Variable name="x" type="double" io="input" format="" description="X input" units="">2</Variable>
@@ -673,10 +678,12 @@ z (type=com.phoenix_int.aserver.types.PHXDouble) (access=g)"""
         self.compare(replies[-1], expected)
 
         expected = """\
-10 properties found:
+12 properties found:
 b (type=com.phoenix_int.aserver.types.PHXBoolean) (access=sg)
 f (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)
 f1d (type=double[9]) (access=sg)
+f2d (type=double[2][4]) (access=sg)
+f3d (type=double[2][3][3]) (access=sg)
 fe (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)
 i (type=com.phoenix_int.aserver.types.PHXLong) (access=sg)
 i1d (type=long[9]) (access=sg)
@@ -926,6 +933,8 @@ if __name__ == '__main__':
 <Variable name="sub_group.b">false</Variable>
 <Variable name="sub_group.f">-0.5</Variable>
 <Variable name="sub_group.f1d">5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9</Variable>
+<Variable name="sub_group.f2d">bounds[2, 4] {.1, .2, .3, .4, .5, .6, .7, .8}</Variable>
+<Variable name="sub_group.f3d">bounds[2, 3, 3] {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9</Variable>
 <Variable name="sub_group.fe">3.14159</Variable>
 <Variable name="sub_group.i">-7</Variable>
 <Variable name="sub_group.i1d">-1, -2, -3, -4, -5, -6, -7, -8, -9</Variable>
@@ -1048,7 +1057,7 @@ ASTestComp2"""
         self.assertEqual(replies[-1], '>')
 
         replies = self.send_recv(['start ASTestComp comp',
-                                  'get comp.sub_group.f1d.first'], count=3)
+                                  'get comp.sub_group.f2d.first'], count=3)
         self.assertEqual(replies[-1], '1.5\r\n>')
 
         replies = self.send_recv(['start ASTestComp comp',
@@ -1081,6 +1090,7 @@ ASTestComp2"""
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'get comp.sub_group.f1d.numDimensions'], count=3)
+        self.assertEqual(replies[-1], '1\r\n>')
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'set comp.sub_group.f1d.description = xyzzy'], count=3)
@@ -1139,6 +1149,44 @@ upperBound (type=long) (access=sg)"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv(['start ASTestComp comp',
                                   'listProperties comp.sub_group.i1d'], count=3)
+        self.compare(replies[-1], expected)
+
+    def test_list(self):
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.s1d.dimensions'], count=3)
+        self.assertEqual(replies[-1], '"3"\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.s1d.first'], count=3)
+        self.assertEqual(replies[-1], 'Hello\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.s1d.length'], count=3)
+        self.assertEqual(replies[-1], '3\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.s1d.numDimensions'], count=3)
+        self.assertEqual(replies[-1], '1\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'set comp.sub_group.s1d = "some", "new", "values"'], count=3)
+        self.assertEqual(replies[-1], 'value set for <sub_group.s1d>\r\n>')
+
+        expected = """\
+10 properties found:
+componentType (type=java.lang.Class) (access=g)
+description (type=java.lang.String) (access=sg)
+dimensions (type=int[1]) (access=sg)
+enumAliases (type=java.lang.String[0]) (access=sg)
+enumValues (type=java.lang.String[0]) (access=sg)
+first (type=java.lang.Object) (access=sg)
+length (type=int) (access=sg)
+lockResize (type=boolean) (access=sg)
+numDimensions (type=int) (access=g)
+units (type=java.lang.String) (access=sg)"""
+        expected = expected.replace('\n', '\r\n') + '\r\n>'
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'listProperties comp.sub_group.s1d'], count=3)
         self.compare(replies[-1], expected)
 
     def test_bool(self):

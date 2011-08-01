@@ -196,8 +196,7 @@ class ArrayProxy(ProxyMixin, Array):
         ProxyMixin.__init__(self, client, rpath)
         self._type = typ
 
-        default = numpy.array([typ(val.strip(' "'))
-                               for val in self._valstr.split(',')])
+        default = self._parse(self._valstr)
         desc = client.get(rpath+'.description')
 
         if typ == float:
@@ -232,16 +231,31 @@ class ArrayProxy(ProxyMixin, Array):
 
     def get(self, obj, name):
         """ Get remote value. """
-        return numpy.array([self._type(val.strip(' "'))
-                            for val in self.rget().split(',')])
+        return self._parse(self.rget())
+
+    def _parse(self, valstr):
+        """ Return parsed `valstr` as :class:`numpy.ndarray`. """
+        if valstr.startswith('bounds['):
+            dims, rbrack, rest = valstr[7:].partition(']')
+            dims = [int(val.strip(' "')) for val in dims.split(',')]
+            junk, lbrace, rest = rest.partition('{')
+            data, rbrace, rest = rest.partition('}')
+            return numpy.array([self._type(val.strip(' "'))
+                                for val in data.split(',')]).reshape(dims)
+        else:
+            return numpy.array([self._type(val.strip(' "'))
+                                for val in valstr.split(',')])
 
     def set(self, obj, name, value):
         """ Set remote value. """
         value = self.validate(obj, name, value)
         if self._type == float:
-            valstr = ', '.join([_float2str(val) for val in value])
+            valstr = ', '.join([_float2str(val) for val in value.flat])
         else:
-            valstr = ', '.join([str(val) for val in value])
+            valstr = ', '.join([str(val) for val in value.flat])
+        if len(value.shape) > 1:
+            valstr = 'bounds[%s] {%s}' \
+                     % (', '.join(['%d' % dim for dim in value.shape]), valstr)
         self.rset(valstr)
 
 

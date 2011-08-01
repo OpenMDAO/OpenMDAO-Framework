@@ -219,9 +219,10 @@ class TestCase(unittest.TestCase):
 
         comp.pre_delete()
 
-    def test_float1D(self):
+    def test_floatND(self):
         comp = self.factory.create('ASTestComp')
         self.assertEqual(comp.get('sub_group.f'), 0.5)
+
         assert_array_equal(comp.get('sub_group.f1d'),
                            [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5])
         comp.set('sub_group.f1d', [4.5, 3.5, 2.5, 1.5])
@@ -230,6 +231,26 @@ class TestCase(unittest.TestCase):
         assert_array_equal(comp.get('sub_group.f1d'), [-5.5, -6.5, -7.5])
         trait = comp.sub_group.get_trait('f1d')
         self.assertEqual(trait.desc, '1D float array')
+
+        assert_array_equal(comp.get('sub_group.f2d'),
+                           [ [1.5, 2.5, 3.5, 4.5], [5.5, 6.5, 7.5, 8.5] ])
+        comp.set('sub_group.f2d', [ [4.5, 3.5], [2.5, 1.5] ])
+        assert_array_equal(comp.sub_group.f2d, [ [4.5, 3.5], [2.5, 1.5] ])
+        comp.sub_group.f2d = [ [-5.5, -6.5], [-7.5, -8.5] ]
+        assert_array_equal(comp.get('sub_group.f2d'), [ [-5.5, -6.5], [-7.5, -8.5] ])
+        trait = comp.sub_group.get_trait('f2d')
+        self.assertEqual(trait.desc, '2D float array')
+
+        assert_array_equal(comp.get('sub_group.f3d'),
+            [ [ [1.5, 2.5, 3.5], [4.5, 5.5, 6.5], [7.5, 8.5, 9.5] ],
+              [ [10.5, 20.5, 30.5], [40.5, 50.5, 60.5], [70.5, 80.5, 90.5] ] ])
+        comp.set('sub_group.f3d', [ [ [4.5, 3.5], [2.5, 1.5] ] ])
+        assert_array_equal(comp.sub_group.f3d, [ [ [4.5, 3.5], [2.5, 1.5] ] ])
+        comp.sub_group.f3d = [ [ [-5.5, -6.5, -7.5] ] ]
+        assert_array_equal(comp.get('sub_group.f3d'), [ [ [-5.5, -6.5, -7.5] ] ])
+        trait = comp.sub_group.get_trait('f3d')
+        self.assertEqual(trait.desc, '3D float array')
+
         comp.pre_delete()
 
     def test_int(self):

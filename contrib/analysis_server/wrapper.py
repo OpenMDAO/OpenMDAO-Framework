@@ -313,15 +313,6 @@ class ComponentWrapper(object):
         Lists all available variables and their sub-properties on a component
         instance or sub-variable.
         """
-# TODO: this is different than listValuesURL for file variables and DFT.
-        self.list_values_url(path, req_id)
-
-    def list_values_url(self, path, req_id):
-        """
-        Lists all available variables and their sub-properties on a component
-        instance or sub-variable.
-        """
-# TODO: this is different than listValues for file variables and DFT.
         try:
             lines = []
             # Get list of properties.
@@ -342,6 +333,9 @@ class ComponentWrapper(object):
                     val = wrapper.get('value', ext_path)
                     lines.append('%s %s %s  vLen=%d  val=%s'
                                  % (name, typ, access, len(val), val))
+                    if path:
+                        continue  # No sub_props.
+
                     sub_props = self._list_properties(ext_path).split('\n')
                     sub_props = sub_props[1:]
                     lines.append('   %d SubProps found:' % len(sub_props))
@@ -358,6 +352,16 @@ class ComponentWrapper(object):
             self._send_reply('\n'.join(lines), req_id)
         except Exception as exc:
             self._send_exc(exc, req_id)
+
+    def list_values_url(self, path, req_id):
+        """
+        Lists all available variables and their sub-properties on a component
+        instance or sub-variable.
+        """
+# TODO: this is different than listValues for file variables and DFT.
+#       When DirectFileTransfer is enabled, this should return a URL
+#       suitable for retrieving a file variable value rather than the data.
+        self.list_values(path, req_id)
 
     def start_monitor(self, path, req_id):
         """ Starts a monitor on a raw output file or available monitor. """
@@ -502,7 +506,7 @@ class ArrayBase(BaseWrapper):
     Base for wrappers providing double[], long[], or String[] interface.
     """
 
-    def __init__(self, container, name, ext_path, typ):
+    def __init__(self, container, name, ext_path, typ, is_array):
         super(ArrayBase, self).__init__(container, name, ext_path)
         self.typ = typ
         if typ is float:
@@ -511,42 +515,69 @@ class ArrayBase(BaseWrapper):
             self._typstr = 'long'
         elif typ is str:
             self._typstr = 'string'
+        self._is_array = is_array
 
     @property
     def phx_type(self):
         """ Return AnalysisServer type string for value. """
         value = self._container.get(self._name)
-        if self.typ == float:
-            return 'double[%d]' % len(value)
-        elif self.typ == int:
-            return 'long[%d]' % len(value)
+        if self._is_array:
+            dims = '[%s]' % ']['.join(['%d' % dim for dim in value.shape])
+            if self.typ == float:
+                return 'double%s' % dims
+            elif self.typ == int:
+                return 'long%s' % dims
+            else:
+                return 'java.lang.String%s' % dims
         else:
-            return 'java.lang.String[%d]' % len(value)
+            if self.typ == float:
+                return 'double[%d]' % len(value)
+            elif self.typ == int:
+                return 'long[%d]' % len(value)
+            else:
+                return 'java.lang.String[%d]' % len(value)
 
-    def get(self, attr, path):
-        """ Return attribute corresponding to `attr`. """
+    def get(self, attr, path, value=None):
+        """
+        Return attribute corresponding to `attr`.
+        `value` may be supplied to avoid repeated 'get()' calls.
+        """
         if attr == 'value':
-            value = self._container.get(self._name)
+            if value is None:
+                value = self._container.get(self._name)
             if self.typ == float:
                 fmt = '%.16g'
             elif self.typ == int:
                 fmt = '%d'
             else:
                 fmt = '"%s"'
-            return ', '.join([fmt % val for val in value])
+            if self._is_array and len(value.shape) > 1:
+                return 'bounds[%s] {%s}' % (
+                       ', '.join(['%d' % dim for dim in value.shape]),
+                       ', '.join([fmt % val for val in value.flat]))
+            else:
+                return ', '.join([fmt % val for val in value])
         elif attr == 'componentType':
             return self._typstr
         elif attr == 'dimensions':
-            value = self._container.get(self._name)
-            return '"%d"' % len(value)
+            if value is None:
+                value = self._container.get(self._name)
+            if self._is_array:
+                return ', '.join(['"%d"' % dim for dim in value.shape])
+            else:
+                return '"%d"' % len(value)
         elif attr == 'enumAliases':
             return ''
         elif attr == 'enumValues':
             return ''
         elif attr == 'first':
-            value = self._container.get(self._name)
+            if value is None:
+                value = self._container.get(self._name)
             if len(value):
-                return '%s' % value[0]
+                if self._is_array and len(value.shape) > 1:
+                    return '%s' % value.flat[0]
+                else:
+                    return '%s' % value[0]
             else:
                 return ''
         elif attr == 'format':
@@ -560,12 +591,21 @@ class ArrayBase(BaseWrapper):
         elif attr == 'lowerBound' and self._trait.dtype != str:
             return '0' if self._trait.low is None else str(self._trait.low)
         elif attr == 'length':
-            value = self._container.get(self._name)
-            return '%d' % len(value)
+            if value is None:
+                value = self._container.get(self._name)
+            if self._is_array:
+                return '%d' % value.shape[0]
+            else:
+                return '%d' % len(value)
         elif attr == 'lockResize':
             return 'false'
         elif attr == 'numDimensions':
-            return '1'
+            if self._is_array:
+                if value is None:
+                    value = self._container.get(self._name)
+                return '%d' % len(value.shape)
+            else:
+                return '1'
         elif attr == 'units':
             if self.typ == float:
                 return '' if self._trait.units is None else self._trait.units
@@ -576,19 +616,35 @@ class ArrayBase(BaseWrapper):
 
     def get_as_xml(self):
         """ Return info in XML form. """
-        return '<Variable name="%s" type="%s[]" io="%s" format=""' \
+        value = self._container.get(self._name)
+        if isinstance(value, numpy.ndarray):
+            dims = '[%s]' % ']['.join(['%d' % dim for dim in value.shape])
+        else:
+            dims = '[%d]' % len(value)
+        return '<Variable name="%s" type="%s%s" io="%s" format=""' \
                ' description=%s units="%s">%s</Variable>' \
-               % (self._ext_name, self._typstr, self._io,
+               % (self._ext_name, self._typstr, dims, self._io,
                   quoteattr(self._trait.desc),
                   self.get('units', self._ext_path),
-                  self.get('value', self._ext_path))
+                  self.get('value', self._ext_path, value))
 
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr` to `valstr`. """
         if attr == 'value':
-            arr = numpy.array([self.typ(val.strip(' "'))
-                               for val in valstr.split(',')])
-            self._container.set(self._name, arr)
+            if self._is_array:
+                if valstr.startswith('bounds['):
+                    dims, rbrack, rest = valstr[7:].partition(']')
+                    dims = [int(val.strip(' "')) for val in dims.split(',')]
+                    junk, lbrace, rest = rest.partition('{')
+                    data, rbrace, rest = rest.partition('}')
+                    value = numpy.array([self.typ(val.strip(' "'))
+                                         for val in data.split(',')]).reshape(dims)
+                else:
+                    value = numpy.array([self.typ(val.strip(' "'))
+                                         for val in valstr.split(',')])
+            else:
+                value = [self.typ(val.strip(' "')) for val in valstr.split(',')]
+            self._container.set(self._name, value)
         elif attr in ('componentType', 'description', 'dimensions',
                       'enumAliases', 'enumValues', 'first', 'format',
                       'hasLowerBound', 'lowerBound',
@@ -646,7 +702,8 @@ class ArrayWrapper(ArrayBase):
                                % (container.get_pathname(), name,
                                   value.dtype, kind))
 
-        super(ArrayWrapper, self).__init__(container, name, ext_path, typ)
+        super(ArrayWrapper, self).__init__(container, name, ext_path, typ,
+                                           is_array=True)
 
 _register(Array, ArrayWrapper)
 
@@ -660,16 +717,8 @@ class ListWrapper(ArrayBase):
         value = container.get(name)
 # HACK!
         typ = str
-        super(ListWrapper, self).__init__(container, name, ext_path, typ)
-
-    def set(self, attr, path, valstr):
-        """ Set attribute corresponding to `attr` to `valstr`. """
-        if attr == 'value':
-            self._container.set(self._name,
-                                [self.typ(val.strip(' "'))
-                                 for val in valstr.split(',')])
-        else:
-            super(ListWrapper, self).set(attr, path, valstr)
+        super(ListWrapper, self).__init__(container, name, ext_path, typ,
+                                          is_array=False)
 
 _register(List, ListWrapper)
 
