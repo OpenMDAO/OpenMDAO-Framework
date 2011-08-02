@@ -11,7 +11,7 @@ class ComponentWithDerivatives (Component):
     def __init__(self, *args, **kwargs):
         """ Only one thing to do: create Derivatives object."""
         
-        self.derivatives = Derivatives()
+        self.derivatives = Derivatives(self)
         super(ComponentWithDerivatives, self).__init__(*args, **kwargs)
         
         
@@ -30,7 +30,7 @@ class ComponentWithDerivatives (Component):
         
         for name in self.derivatives.out_names:
             setattr(self, name,
-                     self.derivatives.calculate_output(self, name, ffd_order))
+                     self.derivatives.calculate_output(name, ffd_order))
 
             
     def calc_derivatives(self, first=False, second=False):
@@ -71,14 +71,26 @@ class ComponentWithDerivatives (Component):
         
         local_inputs = []
         for item in driver_inputs:
-            paths = item.split('.',1)
-            if paths[0] == self.name:
-                local_inputs.append(paths[1])
+            if isinstance(item, tuple):
+                for linked_item in item:
+                    paths = linked_item.split('.',1)
+                    if paths[0] == self.name:
+                        local_inputs.append(paths[1])
+            else:
+                paths = item.split('.',1)
+                if paths[0] == self.name:
+                    local_inputs.append(paths[1])
         
         local_outputs = []
         for item in driver_outputs:
-            paths = item.split('.',1)
-            if paths[0] == self.name:
-                local_outputs.append(paths[1])
+            if isinstance(item, tuple):
+                for linked_item in item:
+                    paths = linked_item.split('.',1)
+                    if paths[0] == self.name:
+                        local_outputs.append(paths[1])
+            else:
+                paths = item.split('.',1)
+                if paths[0] == self.name:
+                    local_outputs.append(paths[1])
         
-        self.derivatives.validate(self, order, local_inputs, local_outputs)
+        self.derivatives.validate(order, local_inputs, local_outputs)

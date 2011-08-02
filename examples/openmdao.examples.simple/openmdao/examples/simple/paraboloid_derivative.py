@@ -3,10 +3,10 @@
 """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Component
+from openmdao.main.api import ComponentWithDerivatives
 from openmdao.lib.datatypes.api import Float
 
-class ParaboloidDerivative(Component):
+class ParaboloidDerivative(ComponentWithDerivatives):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
     # set up interface to the framework  
@@ -22,11 +22,11 @@ class ParaboloidDerivative(Component):
         
         super(ParaboloidDerivative, self).__init__()
 
-        self.derivatives.declare_first_derivative(self, 'f_xy', 'x')
-        self.derivatives.declare_first_derivative(self, 'f_xy', 'y')
-        self.derivatives.declare_second_derivative(self, 'f_xy', 'x', 'x')
-        self.derivatives.declare_second_derivative(self, 'f_xy', 'x', 'y')
-        self.derivatives.declare_second_derivative(self, 'f_xy', 'y', 'y')
+        self.derivatives.declare_first_derivative('f_xy', 'x')
+        self.derivatives.declare_first_derivative('f_xy', 'y')
+        self.derivatives.declare_second_derivative('f_xy', 'x', 'x')
+        self.derivatives.declare_second_derivative('f_xy', 'x', 'y')
+        self.derivatives.declare_second_derivative('f_xy', 'y', 'y')
 
         
     def execute(self):
