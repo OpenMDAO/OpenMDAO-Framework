@@ -234,84 +234,80 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             path = new_path
 
         cwd = os.getcwd()
-
-        # This will be exercised by test_client.py:test_publish().
-        if config.has_option('Python', 'egg'):  # pragma no cover
-            # Create temporary instance from egg.
-            egg = config.get('Python', 'egg')
-            try:
+        try:
+            # This will be exercised by test_client.py:test_publish().
+            if config.has_option('Python', 'egg'):  # pragma no cover
+                # Create temporary instance from egg.
+                egg = config.get('Python', 'egg')
                 obj = Container.load_from_eggfile(egg)
                 egg_info = self._get_egg_info(egg)
-            finally:
-                if os.path.exists(name):
-                    shutil.rmtree(name)
-        else:
-            filename = config.get('Python', 'filename')
-            for egg in glob.glob('%s-%s.*.egg' % (name, version)):
-                if os.path.getmtime(egg) > os.path.getmtime(path) and \
-                   os.path.getmtime(egg) > os.path.getmtime(filename):
-                    # Create temporary instance from egg.
-                    try:
+            else:
+                filename = config.get('Python', 'filename')
+                for egg in glob.glob('%s-%s.*.egg' % (name, version)):
+                    if os.path.getmtime(egg) > os.path.getmtime(path) and \
+                       os.path.getmtime(egg) > os.path.getmtime(filename):
+                        # Create temporary instance from egg.
                         obj = Container.load_from_eggfile(egg)
                         egg_info = self._get_egg_info(egg)
-                    finally:
-                        if os.path.exists(name):
-                            shutil.rmtree(name)
-                    break
-                else:
-                    _LOGGER.warning('Removing stale egg %r', egg)
-                    os.remove(egg)
-            else:
-                # Get Python class and create temporary instance.
-                classname = config.get('Python', 'classname')
-                dirname = os.path.dirname(filename)
-                if not os.path.isabs(dirname):
-                    if dirname:
-                        dirname = os.path.join(cwd, dirname)
+                        break
                     else:
-                        dirname = cwd
-                if not dirname in sys.path:
-                    _LOGGER.debug('    prepending %r to sys.path', dirname)
-                    sys.path.insert(0, dirname)
-                modname = os.path.basename(filename)[:-3]  # drop '.py'
-                try:
-                    __import__(modname)
-                except ImportError as exc:
-                    raise RuntimeError("Can't import %r: %r" % (modname, exc))
+                        _LOGGER.warning('Removing stale egg %r', egg)
+                        os.remove(egg)
+                else:
+                    # Get Python class and create temporary instance.
+                    classname = config.get('Python', 'classname')
+                    dirname = os.path.dirname(filename)
+                    if not os.path.isabs(dirname):
+                        if dirname:
+                            dirname = os.path.join(cwd, dirname)
+                        else:
+                            dirname = cwd
+                    if not dirname in sys.path:
+                        _LOGGER.debug('    prepending %r to sys.path', dirname)
+                        sys.path.insert(0, dirname)
+                    modname = os.path.basename(filename)[:-3]  # drop '.py'
+                    try:
+                        __import__(modname)
+                    except ImportError as exc:
+                        raise RuntimeError("Can't import %r: %r" % (modname, exc))
 
-                module = sys.modules[modname]
-                try:
-                    cls = getattr(module, classname)
-                except AttributeError as exc:
-                    raise RuntimeError("Can't get class %r in %r: %r"
-                                       % (classname, modname, exc))
-                try:
-                    obj = set_as_top(cls())
-                except Exception as exc:
-                    _LOGGER.error(traceback.format_exc())
-                    raise RuntimeError("Can't instantiate %s.%s: %r"
-                                       % (modname, classname, exc))
-                # Save to egg.
-                egg_info = obj.save_to_egg(name, version)
-                egg_info = (os.path.join(cwd, egg_info[0]), egg_info[1],
-                            [name for name, pth in egg_info[2]])
+                    module = sys.modules[modname]
+                    try:
+                        cls = getattr(module, classname)
+                    except AttributeError as exc:
+                        raise RuntimeError("Can't get class %r in %r: %r"
+                                           % (classname, modname, exc))
+                    try:
+                        obj = set_as_top(cls())
+                    except Exception as exc:
+                        _LOGGER.error(traceback.format_exc())
+                        raise RuntimeError("Can't instantiate %s.%s: %r"
+                                           % (modname, classname, exc))
+                    # Save to egg.
+                    egg_info = obj.save_to_egg(name, version)
+                    egg_info = (os.path.join(cwd, egg_info[0]), egg_info[1],
+                                [name for name, pth in egg_info[2]])
 
-        # Create wrapper configuration object.
-        try:
-            cfg = _WrapperConfig(config, obj,
-                                 os.path.join(cwd, os.path.basename(path)))
-        except Exception as exc:
-            _LOGGER.error(traceback.format_exc())
-            raise RuntimeError("Bad configuration in %r: %s" % (path, exc))
+            # Create wrapper configuration object.
+            try:
+                cfg = _WrapperConfig(config, obj,
+                                     os.path.join(cwd, os.path.basename(path)))
+            except Exception as exc:
+                _LOGGER.error(traceback.format_exc())
+                raise RuntimeError("Bad configuration in %r: %s" % (path, exc))
 
-        # Register under path normalized to category/component form.
-        path = cfg.cfg_path[len(self._root)+1:-4]  # Drop prefix & '.cfg'
-        path = path.replace('\\', '/')  # Always use '/'.
-        _LOGGER.debug('    registering %s: %s', path, egg_info[0])
-        with self.components as comps:
-            comps[path] = (cfg, egg_info)
-        obj.pre_delete()
-        del obj
+            # Register under path normalized to category/component form.
+            path = cfg.cfg_path[len(self._root)+1:-4]  # Drop prefix & '.cfg'
+            path = path.replace('\\', '/')  # Always use '/'.
+            _LOGGER.debug('    registering %s: %s', path, egg_info[0])
+            with self.components as comps:
+                comps[path] = (cfg, egg_info)
+            obj.pre_delete()
+            del obj
+
+        finally:
+            if os.path.exists(name):
+                shutil.rmtree(name)
 
     def _get_egg_info(self, egg):
         """ Return egg_info tuple from egg file. """
