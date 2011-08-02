@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import atexit
 import time
+import datetime
 import getpass
 import fnmatch
 from optparse import OptionParser
@@ -28,13 +29,9 @@ paramiko.util.log_to_file('paramiko.log')
 
 atexit.register(fabric_cleanup, True)
 
-def test_on_remote_host(fname, shell, pyversion='python', keep=False, 
-                        branch=None, testargs=(), hostname='',
-                        force=False):
-    uname = getpass.getuser()
-    remtmp = 'test_%s' % uname
-    
-    remote_mkdir(remtmp)
+def test_on_remote_host(fname, shell, remotedir, pyversion='python', keep=False, 
+                        branch=None, testargs=(), hostname=''):
+    remote_mkdir(remotedir)
     
     locbldfile = os.path.join(os.path.dirname(__file__), 'locbuild.py')
     loctstfile = os.path.join(os.path.dirname(__file__), 'loctst.py')
@@ -45,45 +42,52 @@ def test_on_remote_host(fname, shell, pyversion='python', keep=False,
         build_type = 'dev'
         
     if os.path.isfile(fname):
-        remotefname = os.path.join(remtmp, os.path.basename(fname))
+        remotefname = os.path.join(remotedir, os.path.basename(fname))
         print 'putting %s on remote host' % fname
         put(fname, remotefname) # copy file to remote host
         remoteargs = ['-f', os.path.basename(fname)]
     else:
         remoteargs = ['-f', fname]
         
-    remoteargs.extend(['-d', remtmp])
+    #remoteargs.extend(['-d', remotedir])
     remoteargs.append('--pyversion=%s' % pyversion)
     if branch:
         remoteargs.append('--branch=%s' % branch)
-    if force:
-        remoteargs.append('--force')
         
-    dirfiles = set(remote_listdir(remtmp))
+    expectedfiles = set(['locbuild.py','build.out'])
+    dirfiles = set(remote_listdir(remotedir))
     
-    result = push_and_run(locbldfile, 
-                          remotepath=os.path.basename(locbldfile),
-                          args=remoteargs)
+    print 'building...'
+    with settings(warn_only=True):
+        result = push_and_run(locbldfile, 
+                              remotepath=os.path.join(remotedir,
+                                                      os.path.basename(locbldfile)),
+                              args=remoteargs)
     print result
     # retrieve build output file
-    get(os.path.join(remtmp, 'build.out'))
-    
-    newfiles = set(remote_listdir(remtmp)) - dirfiles
-    if 'devenv' in newfiles:
-        envdir = os.path.join(remtmp, 'devenv')
-    else:
-        matches = fnmatch.filter(newfiles, 'openmdao-?.*')
-        
-    if len(matches) > 1:
-        raise RuntimeError("can't uniquely determine openmdao env directory from %s" % matches)
-    elif len(matches) == 0:
-        raise RuntimeError("can't find an openmdao environment directory to test in")
-    
-    envdir = os.path.join(remtmp, matches[0])
+    get(os.path.join(remotedir, 'build.out'), 'build.out')
     
     if result.return_code != 0:
         raise RuntimeError("problem with remote build (return code = %s)" % 
                            result.return_code)
+    
+    print 'build successful\ntesting...'
+    newfiles = set(remote_listdir(remotedir)) - dirfiles - expectedfiles
+    
+    if build_type == 'dev':
+        if len(newfiles) != 1:
+            raise RuntimeError("expected a single new file in %s after building but got %s" %
+                               (remotedir, list(newfiles)))
+        
+        builddir = newfiles.pop()
+        envdir = os.path.join(builddir, 'devenv')
+    else:
+        matches = fnmatch.filter(newfiles, 'openmdao-?.*')
+        if len(matches) > 1:
+            raise RuntimeError("can't uniquely determine openmdao env directory from %s" % matches)
+        elif len(matches) == 0:
+            raise RuntimeError("can't find an openmdao environment directory to test in")
+        envdir = matches[0]
 
     remoteargs = ['-d', envdir]
     remoteargs.append('--pyversion=%s' % pyversion)
@@ -92,13 +96,15 @@ def test_on_remote_host(fname, shell, pyversion='python', keep=False,
     if len(testargs) > 0:
         remoteargs.append('--')
         remoteargs.extend(testargs)
+        
     result = push_and_run(loctstfile, 
-                          remotepath=os.path.basename(loctstfile),
+                          remotepath=os.path.join(remotedir,
+                                                  os.path.basename(loctstfile)),
                           args=remoteargs)
     print result
         
-    if remtmp is not None and (result.return_code==0 or not keep):
-        rm_remote_tree(remtmp)
+    if remotedir is not None and (result.return_code==0 or not keep):
+        rm_remote_tree(remotedir)
         
     return result.return_code
 
@@ -158,8 +164,9 @@ def main(argv=None):
                       dest='outdir', default='test_results',
                       help="output directory for test results "
                            "(has a subdirectory for each host tested)")
-    parser.add_option("--force", action="store_true", dest='force',
-                      help="delete build directory if it already exists")
+    parser.add_option("-r","--remotedir", action="store", type='string', 
+                      dest='remotedir',
+                      help="remote directory used for building/testing")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
@@ -226,16 +233,24 @@ def main(argv=None):
                                      os.path.expandvars(options.outdir)))
     processes = []
     files = []
+    
+    if options.remotedir is None:
+        uname = getpass.getuser()
+        options.remotedir = 'test_%s_%s' % (uname, datetime.datetime.now())
+        options.remotedir = options.remotedir.replace(' ','_')
+        # if you try to set up a virtualenv in any directory with ':'
+        # in the name, you'll get errors ('no module named os', etc.) 
+        options.remotedir = options.remotedir.replace(':','.')
     try:
         for host in hosts:
             shell = config.get(host, 'shell')
             if host in ec2_hosts:
                 proc_args = [host, config, conn, test_on_remote_host,
-                             fname, shell]
+                             fname, shell, options.remotedir]
                 target = run_on_ec2_image
             else:
                 proc_args = [host, config, test_on_remote_host, fname,
-                             shell]
+                             shell, options.remotedir]
                 target = run_on_host
             hostdir = os.path.join(options.outdir, host)
             if not os.path.isdir(hostdir):
@@ -250,9 +265,9 @@ def main(argv=None):
                                  'branch': options.branch,
                                  'testargs': args,
                                  'hostname': host,
-                                 'force': options.force })
+                                 })
             processes.append(p)
-            orig_stdout.write("starting testing process for %s\n" % p.name)
+            orig_stdout.write("starting build/test process for %s\n" % p.name)
             p.start()
             
             sys.stdout = orig_stdout

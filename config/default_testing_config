@@ -20,7 +20,7 @@ instance_type: m1.large
 user: %(linux_user)s
 
 [local_mac]
-addr: 192.168.1.12
+addr: 192.168.1.14
 user: bret
 
 [storm]
@@ -28,11 +28,15 @@ addr: storm.grc.nasa.gov
 shell: cmd /C
 
 [bret_2008_win32]
-addr: ec2-204-236-248-178.compute-1.amazonaws.com
+addr: ec2-72-44-50-51.compute-1.amazonaws.com
+user: %(win_user)s
+
+[smithers_static]
+addr: ec2-107-20-52-80.compute-1.amazonaws.com
 user: %(win_user)s
 
 [lovejoy_bret]
-addr: ec2-50-16-183-87.compute-1.amazonaws.com
+addr: ec2-50-17-155-128.compute-1.amazonaws.com
 user: %(linux_user)s
 
 

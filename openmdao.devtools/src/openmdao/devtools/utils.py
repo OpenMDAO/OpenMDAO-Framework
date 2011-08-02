@@ -61,7 +61,7 @@ def push_and_run(fpath, remotepath=None, runner=None, args=()):
     if not os.path.isfile(fpath):
         raise IOError("can't find file %s" % fpath)
     if remotepath is None:
-        remotepath = fpath
+        remotepath = os.path.basename(fpath)
     put(fpath, remotepath)
     if not runner:
         if fpath.endswith('.py'):
@@ -69,7 +69,12 @@ def push_and_run(fpath, remotepath=None, runner=None, args=()):
         else:
             runner = ''
 
-    return run("%s %s %s" % (runner, remotepath, ' '.join(args)))
+    print 'cd-ing to %s' % os.path.dirname(remotepath)
+    with cd(os.path.dirname(remotepath)):
+        cmd = "%s %s %s" % (runner, os.path.basename(remotepath), 
+                            ' '.join(args))
+        print 'running %s' % cmd
+        return run(cmd)
 
 def tar_dir(dirpath, archive_name, destdir):
     """Tar up the given directory and put in in the specified destination

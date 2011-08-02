@@ -68,7 +68,7 @@ def install_release(url, pyversion):
     try:
         p = subprocess.Popen(command, 
                              stdout=f, stderr=subprocess.STDOUT, 
-                             env=os.environ, shell=True)
+                             env=os.environ)
         p.wait()
     finally:
         f.close()
@@ -154,15 +154,18 @@ def install_dev_env(url, pyversion, branch=None):
     os.chdir(treedir)
     
     try:
-        p = subprocess.Popen('%s go-openmdao-dev.py' % pyversion, 
-                             stdout=f, stderr=subprocess.STDOUT, 
-                             env=os.environ, shell=True)
+        p = subprocess.Popen('%s ./go-openmdao-dev.py' % pyversion, 
+                             stdout=f, stderr=subprocess.STDOUT,
+                             shell=True)
         p.wait()
     finally:
         f.close()
         os.chdir(startdir)
         
-    return (os.path.join(treedir, 'devenv'), p.returncode)
+    envdir = os.path.join(treedir, 'devenv')
+    print 'new openmdao environment built in %s' % envdir
+    
+    return (envdir, p.returncode)
     
 
 if __name__ == '__main__':
@@ -178,10 +181,8 @@ if __name__ == '__main__':
                       dest='fname',
                       help="pathname or URL of a git repo, tar file, or go-openmdao.py file")
     parser.add_option("-d","--dir", action="store", type='string', 
-                      dest='directory', default='test_build_dir',
+                      dest='directory', default='.',
                       help="name of a directory the build will be created")
-    parser.add_option("--force", action="store_true", dest='force',
-                      help="delete build directory if it already exists")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
@@ -192,13 +193,9 @@ if __name__ == '__main__':
         sys.exit(retcode)
         
     startdir = os.getcwd()
-    tmpdir = options.directory
-    if os.path.exists(tmpdir):
-        if options.force:
-            shutil.rmtree(tmpdir)
-        else:
-            raise RuntimeError("directory '%s' already exists" % tmpdir)
-    os.mkdir(tmpdir)
+    tmpdir = os.path.abspath(os.path.expanduser(options.directory))
+    if not os.path.exists(tmpdir):
+        os.mkdir(tmpdir)
     os.chdir(tmpdir)
     
     fname = options.fname
