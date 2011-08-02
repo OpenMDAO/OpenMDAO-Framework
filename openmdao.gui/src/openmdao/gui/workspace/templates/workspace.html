@@ -67,6 +67,7 @@
     <!-- openmdao specific imports -->
 	<script src="/static/js/openmdao/Util.js"></script>
 	<script src="/static/js/openmdao/Model.js"></script>
+	<script src="/static/js/openmdao/BasePane.js"></script>
 	<script src="/static/js/openmdao/ObjectTree.js"></script>
 	<script src="/static/js/openmdao/FileTree.js"></script>
 	<script src="/static/js/openmdao/Palette.js"></script>
@@ -128,14 +129,14 @@
 
     <div id="rightcol" class="ui-layout-east">
         <dl id="rightcol_tabs">
-            <dt id="palette_tab" target="palette_pane">Libraries</dt>
-            <dd id="palette_pane">
-                <div id="palette" ></div>
-            </dd>            
             <dt id="properties_tab" target="properties_pane">Properties</dt>
             <dd id="properties_pane">
                 <div id="propertieseditor"></div>
             </dd>
+            <dt id="palette_tab" target="palette_pane">Libraries</dt>
+            <dd id="palette_pane">
+                <div id="palette" ></div>
+            </dd>            
         </dl>
     </div>
 

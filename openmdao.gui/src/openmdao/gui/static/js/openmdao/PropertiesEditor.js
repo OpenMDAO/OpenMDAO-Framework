@@ -11,24 +11,17 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @constructor
  */
 openmdao.PropertiesEditor = function(id,model) {
+    this.prototype = new openmdao.BasePane()
+    
     /***********************************************************************
      *  private
      ***********************************************************************/
-     
     var self = this,
-        elm = jQuery("#"+id),
-        pathname = '',
-        nameHeader = jQuery("<h3>"),
-        inputsHeader = jQuery("<h3>Inputs</h3>"),
-        outputsHeader = jQuery("<h3>Outputs</h3>"),
-        inputsDiv = jQuery("<div id='inputs'>"),
-        outputsDiv = jQuery("<div id='outputs'>"),
-        requiredFieldValidator = function(value) {
-            if (value == null || value == undefined || !value.length)
-                return {valid:false, msg:"This is a required field"};
-            else
-                return {valid:true, msg:null};
-        }
+        elm ,
+        pathname,
+        nameHeader,
+        inputs,
+        outputs,
         columns = [
             {id:"name",  name:"Name",  field:"name"},
             {id:"value", name:"Value", field:"value", editor:TextCellEditor},
@@ -49,70 +42,61 @@ openmdao.PropertiesEditor = function(id,model) {
             autoEdit: false,
         }
         
-    elm.html("")
-    elm.append(nameHeader);
-    elm.append('<p>')
-    elm.append(inputsHeader)
-    elm.append(inputsDiv)
-    elm.append('<p>')
-    elm.append(outputsHeader)
-    elm.append(outputsDiv)
-
-    var inputs = new Slick.Grid(inputsDiv, [], columns, inputs_options)
-    inputsHeader.click(function () {
-        inputsDiv.toggle("normal")
-        return false;
-    });
-    inputs.onCellChange.subscribe(function(e,args) {
-        // TODO: better way to do this (e.g. model.setProperty(path,name,value)
-        cmd = 'top.'+self.pathname+'.'+args.item.name+'='+args.item.value
-        model.issueCommand(cmd)
-    })
+    init()
     
-    var outputs = new Slick.Grid(outputsDiv, [], columns, outputs_options)       
-    outputsHeader.click(function () {
-        outputsDiv.toggle("normal")
-        return false;
-    });
+    function init() {
+        elm = jQuery("#"+id)
+        nameHeader = jQuery("<h3>")
+
+        var inputsHeader = jQuery("<h3>Inputs</h3>"),
+            outputsHeader = jQuery("<h3>Outputs</h3>"),
+            inputsDiv = jQuery("<div id='inputs'>"),
+            outputsDiv = jQuery("<div id='outputs'>")
+
+        elm.append(nameHeader);
+        elm.append('<p>')
+        elm.append(inputsHeader)
+        elm.append(inputsDiv)
+        elm.append('<p>')
+        elm.append(outputsHeader)
+        elm.append(outputsDiv)
+
+        inputs = new Slick.Grid(inputsDiv, [], columns, inputs_options)
+        inputsHeader.click(function () {
+            inputsDiv.toggle("normal")
+            return false;
+        });
+        inputs.onCellChange.subscribe(function(e,args) {
+            // TODO: better way to do this (e.g. model.setProperty(path,name,value)
+            cmd = 'top.'+self.pathname+'.'+args.item.name+'='+args.item.value
+            model.issueCommand(cmd)
+        })
         
-    // grid.onAddNewRow.subscribe(function(e, args) {
-        // var item = args.item,
-            // column = args.column;
-        // debug.info("Added item:")
-        // debug.info(item)
-        // debug.info(column)
-        // grid.invalidateRow(data.length);
-        // data.push(item);
-        // grid.updateRowCount();
-        // grid.render();
-    // });
+        outputs = new Slick.Grid(outputsDiv, [], columns, outputs_options)       
+        outputsHeader.click(function () {
+            outputsDiv.toggle("normal")
+            return false;
+        });
         
-    /** make the parent element (tabbed pane) a drop target for obj objects * /
-    elm.parent().droppable ({
-        accept: '.obj',
-        drop: function(ev,ui) { 
-            var droppedObject = jQuery(ui.draggable).clone();
-            self.editObject(droppedObject.attr("path"));
-        }
-    });
-    /**/
-  
+        model.addListener(update)
+    }
+          
     /** load the table with the given properties */
     function loadTables(properties) {
         if (properties['type']) {
-            nameHeader.html(properties['type']+': '+self.pathname)
+            nameHeader.html(properties['type']+': '+pathname)
             inputs.setData(properties['inputs'])
             outputs.setData(properties['outputs'])
         }
         else {
-            nameHeader.html(self.pathname)
+            nameHeader.html(pathname)
             inputs.setData([])
             outputs.setData([])
-            alert('Error getting properties for '+self.pathname)
+            alert('Error getting properties for '+pathname)
         }
-        inputs.updateRowCount()      
+        inputs.updateRowCount()
         inputs.render()
-        outputs.updateRowCount()      
+        outputs.updateRowCount()
         outputs.render()
     }
     
@@ -121,9 +105,6 @@ openmdao.PropertiesEditor = function(id,model) {
         if (self.pathname && self.pathname.length>0)
             self.editObject(self.pathname)
     }
-    
-    /** ask model for an update whenever something changes */
-    model.addListener(update)
     
     /***********************************************************************
      *  privileged

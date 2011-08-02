@@ -41,7 +41,7 @@ openmdao.Plotter = function(id,model) {    // requires flot.js
     }
 
     // create plot in a div inside the element
-    plot = jQuery.plot(jQuery('<div style="padding:5px; height:100%">').appendTo(elm), [ getRandomData() ], options)
+    var plot = jQuery.plot(jQuery('<div style="padding:5px; height:100%">').appendTo(elm), [ getRandomData() ], options)
     
     // continuously update
     setRefresh(interval)

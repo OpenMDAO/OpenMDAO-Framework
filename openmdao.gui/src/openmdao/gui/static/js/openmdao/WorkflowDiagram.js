@@ -5,16 +5,6 @@ LICENSE: NASA Open Source License
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-// this is for older browsers (e.g. ffox 3.x) that don't implement ECMAScript5 Object.keys()
-// @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Object/keys
-if(!Object.keys) Object.keys = function(o){
-    if (o !== Object(o))
-        throw new TypeError('Object.keys called on non-object');
-    var ret=[],p;
-    for(p in o) if(Object.prototype.hasOwnProperty.call(o,p)) ret.push(p);
-    return ret;
-}
-
 /**
  * 
  * @version 0.0.0
@@ -29,11 +19,12 @@ openmdao.WorkflowDiagram = function(id,model) {
         workflow  = new draw2d.Workflow(id),
         comp_figs = {},
         flow_figs = {}
-        
+
+            
     // set background image
     workflow.setBackgroundImage( "/static/images/grid_10.png", true)
     
-    /** / context menu
+    // context menu
     workflow.getContextMenu=function(){
         var menu=new draw2d.Menu();
         menu.appendMenuItem(new draw2d.MenuItem("Show Grid",null,function(x,y){
@@ -43,14 +34,14 @@ openmdao.WorkflowDiagram = function(id,model) {
         menu.appendMenuItem(new draw2d.MenuItem("Hide Grid",null,function(x,y){
             workflow.setBackgroundImage(null,false);
         }));
-        menu.appendMenuItem(new draw2d.MenuItem("Add Note",null,function(x,y){
-            var annotation = new draw2d.Annotation("NOTE: ");
-            annotation.setDimension(250,70);
-            var off = elm.parent().offset()
-            x = Math.round(x - off.left)
-            y = Math.round(y - off.top)
-            workflow.addFigure(annotation,x,y);
-        }));
+        // menu.appendMenuItem(new draw2d.MenuItem("Add Note",null,function(x,y){
+            // var annotation = new draw2d.Annotation("NOTE: ");
+            // annotation.setDimension(250,70);
+            // var off = elm.parent().offset()
+            // x = Math.round(x - off.left)
+            // y = Math.round(y - off.top)
+            // workflow.addFigure(annotation,x,y);
+        // }));
         
         return menu;
     };

@@ -14,6 +14,9 @@ import zipfile, jsonpickle
 
 from openmdao.gui.mdao_util import *
 
+class HttpResponseSeeOther(HttpResponseRedirect):
+    status_code = 303
+
 # TODO:
 prefix = '<<<'+str(os.getpid())+'>>> '
 print prefix+'workspace.views() -------------------------------------'
@@ -222,7 +225,7 @@ def Project(request):
         server_mgr.delete_server(request.session.session_key) # delete old server
         cserver = server_mgr.console_server(request.session.session_key)        
         cserver.load_project(MEDIA_ROOT+'/'+request.GET['filename'])
-        return HttpResponseRedirect(reverse('workspace.views.Workspace'))
+        return HttpResponseSeeOther(reverse('workspace.views.Workspace'))
     
 @never_cache
 @login_required()
@@ -262,7 +265,7 @@ def Workflow(request):
 @never_cache
 @login_required()
 def Workspace(request):
-    ''' initialize the server manager &  render the workspace
+    ''' render the workspace
     '''
     return render_to_response('workspace.html',
                               context_instance=RequestContext(request))

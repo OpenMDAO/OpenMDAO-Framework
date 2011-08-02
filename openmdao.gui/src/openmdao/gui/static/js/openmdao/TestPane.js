@@ -10,47 +10,39 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @version 0.0.0
  * @constructor
  */
+
 openmdao.TestPane = function(id,model) {
+    this.prototype = new openmdao.BasePane()
+    
     /***********************************************************************
      *  private
      ***********************************************************************/
-     
+        
     var self = this,
-        elm = jQuery("#"+id),
-        title = "Test Pane"
-        menuDiv = jQuery("<nav2 id='"+id+"-menu'>"),
+        title    = "Test Pane",
         helpHTML = "<div>"+
-            "This is just a test of a basic pane which can be built upon... <br/>"+
-            "</div>",
-        menu = [
-            { "text": "Menu", 
-              "items": [
-                { "text": "Test",          "onclick": "alert('Test complete!');" },
-              ]
-            },
-            { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'"+title+"','width':400,'height':150})" }
-        ]
+                   "This is just a test of a basic pane which can be built upon... <br/>"+
+                   "</div>",
+        menu     = [
+                     { "text": "Menu", 
+                       "items": [
+                         { "text": "Test",  "onclick": "alert('Test complete!');" },
+                       ]
+                     },
+                     { "text": "Help",      "onclick": "jQuery('"+helpHTML+"').dialog({'title':'"+title+"','width':400,'height':150})" }
+                   ]
 
-    // if the elm doesn't exist, create a popup 
-    if (elm.length === 0) {
-        elm = jQuery('<div id='+id+'></div>')        
-        elm.dialog({
-            'modal': false,
-            'title': title+': '+id,
-            'close': function(ev, ui) { elm.remove(); },
-            width: 640, 
-            height: 480 
-        })
-    }
-    else {
-        elm.html("")
+    function init(id,model) {
+        self.prototype.init(id,title,menu)
+        // build your ui, access openmdao via model
+        // ...
     }
     
-    elm.html("").bind("contextmenu", function(e) { return false; })
-    elm.append(menuDiv);
-    new openmdao.Menu(menuDiv.attr('id'),menu)
+    if (arguments.length > 0) {
+        init(id,model)
+    }
 
-    // build your ui, access openmdao via model
-    // ...
 }
+
+
 

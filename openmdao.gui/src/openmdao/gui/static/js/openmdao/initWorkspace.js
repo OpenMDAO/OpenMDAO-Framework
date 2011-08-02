@@ -42,8 +42,8 @@ jQuery(document).ready(function() {
     // initialize views
     model.updateListeners();
     
-    // start with objects, workflow & libraries visible
+    // start with objects, workflow & properties visible
     jQuery('#otree_tab').click();
     jQuery('#workflow_tab').click();
-    jQuery('#palette_tab').click();
+    jQuery('#properties_tab').click();
 });

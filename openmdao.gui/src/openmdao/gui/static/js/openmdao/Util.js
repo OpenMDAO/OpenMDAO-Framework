@@ -6,8 +6,32 @@ LICENSE: NASA Open Source License
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
 /**
- * utility functions used in the openmdao gui
+ * this is for older browsers (e.g. ffox 3.x) that don't implement ECMAScript5 create()
+ * @see http://javascript.crockford.com/prototypal.html
  */
+ if (typeof Object.create !== 'function') {
+    Object.create = function (o) {
+        function F() {}
+        F.prototype = o;
+        return new F();
+    };
+}
+
+/** 
+ * this is for older browsers (e.g. ffox 3.x) that don't implement ECMAScript5 Object.keys()
+ * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Object/keys
+ */
+if(!Object.keys) Object.keys = function(o){
+    if (o !== Object(o))
+        throw new TypeError('Object.keys called on non-object');
+    var ret=[],p;
+    for(p in o) if(Object.prototype.hasOwnProperty.call(o,p)) ret.push(p);
+    return ret;
+}
+
+/**
+ * utility functions used in the openmdao gui
+ */ 
 openmdao.Util = {
 
     /**
