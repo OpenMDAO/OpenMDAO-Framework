@@ -2,7 +2,6 @@
 Wrappers for OpenMDAO components and variables.
 """
 
-import logging
 import numpy
 import os
 import sys
@@ -64,13 +63,14 @@ class ComponentWrapper(object):
     `send_reply` and `send_exc` are used to communicate back to the client.
     """
 
-    def __init__(self, name, comp, cfg, server, send_reply, send_exc):
+    def __init__(self, name, comp, cfg, server, send_reply, send_exc, logger):
         self._name = name
         self._comp = comp
         self._cfg = cfg
         self._server = server
         self._send_reply = send_reply
         self._send_exc = send_exc
+        self._logger = logger
         self._monitors = {}  # Maps from monitor_id to monitor.
         self._wrappers = {}  # Maps from internal var path to var wrapper.
         self._path_map = {}  # Maps from external path to (var wrapper, attr).
@@ -118,7 +118,7 @@ class ComponentWrapper(object):
                      raise WrapperError('%s: unsupported variable type %r.'
                                         % (ext_path, typenames[0]))
                 # Wrap it.
-                wrapper = wrapper_class(container, rpath, epath)
+                wrapper = wrapper_class(container, rpath, epath, self._logger)
                 if wrapper_class is FileWrapper:
                     wrapper.set_server(self._server)
                 self._wrappers[int_path] = wrapper
@@ -144,7 +144,7 @@ class ComponentWrapper(object):
             try:
                 self._comp.run()
             except Exception as exc:
-                logging.exception('run() failed:')
+                self._logger.exception('run() failed:')
                 raise WrapperError('%s' % exc)
             else:
                 self._send_reply('%s completed.' % self._name, req_id)
@@ -478,11 +478,12 @@ class ComponentWrapper(object):
 class BaseWrapper(object):
     """ Base class for variable wrappers. """
 
-    def __init__(self, container, name, ext_path):
+    def __init__(self, container, name, ext_path, logger):
         self._container = container
         self._name = name
         self._ext_path = ext_path
         self._ext_name = ext_path.rpartition('.')[2]
+        self._logger = logger
         trait = container.get_dyn_trait(name)
         self._trait = trait
         self._access = 'sg' if trait.iotype == 'in' else 'g'
@@ -506,8 +507,8 @@ class ArrayBase(BaseWrapper):
     Base for wrappers providing double[], long[], or String[] interface.
     """
 
-    def __init__(self, container, name, ext_path, typ, is_array):
-        super(ArrayBase, self).__init__(container, name, ext_path)
+    def __init__(self, container, name, ext_path, logger, typ, is_array):
+        super(ArrayBase, self).__init__(container, name, ext_path, logger)
         self.typ = typ
         if typ is float:
             self._typstr = 'double'
@@ -692,7 +693,7 @@ class ArrayWrapper(ArrayBase):
     # Map from numpy dtype.kind to scalar converter.
     _converters = {'f':float, 'i':int, 'S':str}
 
-    def __init__(self, container, name, ext_path):
+    def __init__(self, container, name, ext_path, logger):
         value = container.get(name)
         kind = value.dtype.kind
         try:
@@ -702,8 +703,8 @@ class ArrayWrapper(ArrayBase):
                                % (container.get_pathname(), name,
                                   value.dtype, kind))
 
-        super(ArrayWrapper, self).__init__(container, name, ext_path, typ,
-                                           is_array=True)
+        super(ArrayWrapper, self).__init__(container, name, ext_path, logger,
+                                           typ, is_array=True)
 
 _register(Array, ArrayWrapper)
 
@@ -713,12 +714,12 @@ class ListWrapper(ArrayBase):
     Wrapper for `List` providing double[], long[], or String[] interface.
     """
 
-    def __init__(self, container, name, ext_path):
+    def __init__(self, container, name, ext_path, logger):
         value = container.get(name)
 # HACK!
         typ = str
-        super(ListWrapper, self).__init__(container, name, ext_path, typ,
-                                          is_array=False)
+        super(ListWrapper, self).__init__(container, name, ext_path, logger,
+                                          typ, is_array=False)
 
 _register(List, ListWrapper)
 
@@ -776,8 +777,8 @@ class EnumWrapper(BaseWrapper):
     interface.
     """
 
-    def __init__(self, container, name, ext_path):
-        super(EnumWrapper, self).__init__(container, name, ext_path)
+    def __init__(self, container, name, ext_path, logger):
+        super(EnumWrapper, self).__init__(container, name, ext_path, logger)
         typ = type(self._trait.values[0])
         for val in self._trait.values:
             if type(val) != typ:
@@ -908,8 +909,8 @@ _register(Enum, EnumWrapper)
 class FileWrapper(BaseWrapper):
     """ Wrapper for `File` providing ``PHXRawFile`` interface. """
 
-    def __init__(self, container, name, ext_path):
-        super(FileWrapper, self).__init__(container, name, ext_path)
+    def __init__(self, container, name, ext_path, logger):
+        super(FileWrapper, self).__init__(container, name, ext_path, logger)
         self._server = None
         self._owner = None
 
@@ -939,7 +940,7 @@ class FileWrapper(BaseWrapper):
                 with file_ref.open() as inp:
                     return inp.read()
             except IOError as exc:
-                logging.warning('get %s.value: %r', path, exc)
+                self._logger.warning('get %s.value: %r', path, exc)
                 return ''
         elif attr == 'isBinary':
             file_ref = self._container.get(self._name)

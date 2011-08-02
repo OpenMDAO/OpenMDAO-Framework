@@ -175,15 +175,16 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                 if name.endswith('.cfg'):
                     path = os.path.join(dirpath, name)
                     path = path.lstrip('.').lstrip(os.sep)
+                    print 'Reading config file %r' % path
                     try:
-                        self._read_config(path)
+                        self._read_config(path, _LOGGER)
                     except Exception as exc:
                         _LOGGER.error(str(exc))
                         self._config_errors += 1
 
-    def _read_config(self, path):
+    def _read_config(self, path, logger):
         """ Read component configuration file. """
-        _LOGGER.info('Reading config file %r', path)
+        logger.info('Reading config file %r', path)
         config = ConfigParser.SafeConfigParser()
         config.optionxform = str  # Preserve case.
         files = config.read(path)
@@ -195,11 +196,11 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         if directory:
             os.chdir(directory)
         try:
-            self._process_config(config, path)
+            self._process_config(config, path, logger)
         finally:
             os.chdir(orig)
 
-    def _process_config(self, config, path):
+    def _process_config(self, config, path, logger):
         """ Process data read into `config` from `path`. """
         for sect in ('Python', 'Description', 'Inputs', 'Outputs', 'Methods'):
             if not config.has_section(sect):
@@ -228,8 +229,8 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         if version != cfg_version:
             cfg_dir = os.path.dirname(path)
             new_path = os.path.join(cfg_dir, '%s-%s.cfg' % (name, cfg_version))
-            _LOGGER.warning('Renaming %r', path)
-            _LOGGER.warning('      to %r', new_path)
+            logger.warning('Renaming %r', path)
+            logger.warning('      to %r', new_path)
             os.rename(path, new_path)
             path = new_path
 
@@ -251,7 +252,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                         egg_info = self._get_egg_info(egg)
                         break
                     else:
-                        _LOGGER.warning('Removing stale egg %r', egg)
+                        logger.warning('Removing stale egg %r', egg)
                         os.remove(egg)
                 else:
                     # Get Python class and create temporary instance.
@@ -263,7 +264,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                         else:
                             dirname = cwd
                     if not dirname in sys.path:
-                        _LOGGER.debug('    prepending %r to sys.path', dirname)
+                        logger.debug('    prepending %r to sys.path', dirname)
                         sys.path.insert(0, dirname)
                     modname = os.path.basename(filename)[:-3]  # drop '.py'
                     try:
@@ -280,7 +281,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     try:
                         obj = set_as_top(cls())
                     except Exception as exc:
-                        _LOGGER.error(traceback.format_exc())
+                        logger.error(traceback.format_exc())
                         raise RuntimeError("Can't instantiate %s.%s: %r"
                                            % (modname, classname, exc))
                     # Save to egg.
@@ -293,13 +294,13 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                 cfg = _WrapperConfig(config, obj,
                                      os.path.join(cwd, os.path.basename(path)))
             except Exception as exc:
-                _LOGGER.error(traceback.format_exc())
+                logger.error(traceback.format_exc())
                 raise RuntimeError("Bad configuration in %r: %s" % (path, exc))
 
             # Register under path normalized to category/component form.
             path = cfg.cfg_path[len(self._root)+1:-4]  # Drop prefix & '.cfg'
             path = path.replace('\\', '/')  # Always use '/'.
-            _LOGGER.debug('    registering %s: %s', path, egg_info[0])
+            logger.debug('    registering %s: %s', path, egg_info[0])
             with self.components as comps:
                 comps[path] = (cfg, egg_info)
             obj.pre_delete()
@@ -384,10 +385,11 @@ class _Handler(SocketServer.BaseRequestHandler):
 
         self._count += 1
         self._logger = logging.getLogger('handler_%d' % self._count)
+        self._logger.setLevel(_LOGGER.getEffectiveLevel())
         self._logger.propagate = False
         formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s',
                                       '%b %d %H:%M:%S')
-        filename = os.path.join('logs', '%s:%s' % self.client_address)
+        filename = os.path.join('logs', '%s_%s.txt' % self.client_address)
         handler = logging.FileHandler(filename, mode='w')
         handler.setFormatter(formatter)
         self._logger.addHandler(handler)
@@ -1217,7 +1219,7 @@ egg: %s
 
         component.pre_delete()
         try:
-            self.server._read_config(cfg_path)
+            self.server._read_config(cfg_path, self._logger)
         except Exception as exc:
             self._logger.error("Can't publishEgg: %r", exc)
             self._send_error(str(exc))
@@ -1302,6 +1304,9 @@ egg: %s
 
         # Create component instance.
         if self._server_per_obj:  # pragma no cover
+            # Flush loggers (helps on Windows).
+            logging.getLogger().handlers[0].flush()
+            self._logger.handlers[0].flush()
             # Allocate a server.
             server, server_info = RAM.allocate(resource_desc)
             if server is None:
@@ -1316,8 +1321,8 @@ egg: %s
         obj.name = name
 
         # Create wrapper for component.
-        wrapper = ComponentWrapper(name, obj, cfg, server,
-                                   self._send_reply, self._send_exc)
+        wrapper = ComponentWrapper(name, obj, cfg, server, self._send_reply,
+                                   self._send_exc, self._logger)
         self._instance_map[name] = (wrapper, WorkerPool.get())
         self._servers[wrapper] = server
         self._send_reply('Object %s started.' % name)

@@ -157,12 +157,14 @@ class TestCase(unittest.TestCase):
 
         self.assertEqual(self.server.config_errors, 0)
 
-        code = "self.server._read_config('no-such-file.cfg')"
+        code = "self.server._read_config('no-such-file.cfg'," \
+                                       " self.handler._logger)"
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Can't read 'no-such-file.cfg'")
 
         config = ConfigParser.SafeConfigParser()
-        code = "self.server._process_config(config, 'test_invalid.cfg')"
+        code = "self.server._process_config(config, 'test_invalid.cfg'," \
+                                          " self.handler._logger)"
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "No Python section in 'test_invalid.cfg'")
 
@@ -190,7 +192,8 @@ class TestCase(unittest.TestCase):
 
         config.set('Python', 'classname', 'TestComponent')
         config.set('Methods', 'ext_name', 'no_such_method')
-        code = "self.server._process_config(config, 'ASTestComp-0.1.cfg')"
+        code = "self.server._process_config(config, 'ASTestComp-0.1.cfg'," \
+                                          " self.handler._logger)"
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Bad configuration in 'ASTestComp-0.1.cfg':"
                       " 'no_such_method' is not a valid method")
