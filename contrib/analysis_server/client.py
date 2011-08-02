@@ -1,5 +1,6 @@
 import getpass
 import optparse
+import socket
 import sys
 import telnetlib
 import threading
@@ -326,7 +327,7 @@ class Client(object):
         """
         if not self._raw:
             self.set_mode_raw()
-        author = getpass.getuser()
+        author = '%s@%s' % (getpass.getuser(), socket.gethostname())
         request = 'publishEgg %s %s "%s" "%s"\0' \
                   % (path, version, comment, author)
         with open(eggfile, 'rb') as inp:

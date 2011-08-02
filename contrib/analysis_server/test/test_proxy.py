@@ -75,11 +75,11 @@ class TestCase(unittest.TestCase):
         """ Called after each test. """
         analysis_server.stop_server(self.server)
         os.remove('hosts.allow')
-        for egg_name in glob.glob('*.egg'):
-            os.remove(egg_name)
-        for path in ('ASTestComp', 'ASTestComp2'):
-            if os.path.exists(path):
-                shutil.rmtree(path)
+        for egg in glob.glob('*.egg'):
+            os.remove(egg)
+        for dirname in ('ASTestComp', 'ASTestComp2', 'logs'):
+            if os.path.exists(dirname):
+                shutil.rmtree(dirname)
         try:
             os.remove('as-0.out')
         except WindowsError:

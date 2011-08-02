@@ -75,6 +75,8 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test. """
         os.chdir(TestCase.directory)
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
         self.client = DummySocket()
         self.server = Server(port=0)
         self.handler = _Handler(self.client, self.client.getpeername(),
@@ -88,13 +90,14 @@ class TestCase(unittest.TestCase):
         del self.handler
         del self.server
         del self.client
-        for egg_name in glob.glob('*.egg'):
-            os.remove(egg_name)
+        for egg in glob.glob('*.egg'):
+            os.remove(egg)
         for filename in ('in_file.dat', 'inFile.dat', 'outFile.dat'):
             if os.path.exists(filename):
                 os.remove(filename)
-        if os.path.exists('ASTestComp'):
-            shutil.rmtree('ASTestComp')
+        for dirname in ('ASTestComp', 'logs'):
+            if os.path.exists(dirname):
+                shutil.rmtree(dirname)
         os.chdir(ORIG_DIR)
 
     def send_recv(self, cmd, raw=False, count=None):

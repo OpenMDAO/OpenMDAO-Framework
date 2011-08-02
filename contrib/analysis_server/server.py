@@ -365,6 +365,8 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 class _Handler(SocketServer.BaseRequestHandler):
     """ Handles requests from a single client. """
 
+    _count = 0
+
     def setup(self):
         """ Initialize before :meth:`handle` is invoked. """
         self.server.handlers[self.client_address] = self
@@ -379,6 +381,16 @@ class _Handler(SocketServer.BaseRequestHandler):
         self._instance_map = {}  # Maps from name to (wrapper, worker).
         self._servers = {}       # Maps from wrapper to server.
         set_credentials(self.server.credentials)
+
+        self._count += 1
+        self._logger = logging.getLogger('handler_%d' % self._count)
+        self._logger.propagate = False
+        formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s',
+                                      '%b %d %H:%M:%S')
+        filename = os.path.join('logs', '%s:%s' % self.client_address)
+        handler = logging.FileHandler(filename, mode='w')
+        handler.setFormatter(formatter)
+        self._logger.addHandler(handler)
 
         # Set False during some testing for coverage check.
         # Also avoids odd problems under nose suite test.
@@ -395,24 +407,23 @@ version: 0.1""")
                 try:
                     # Get next request.
                     if self._raw:
-                        _LOGGER.debug('Waiting for raw-mode request...')
+                        self._logger.debug('Waiting for raw-mode request...')
                         req, req_id, background = self._stream.recv_request()
                         text, zero, rest = req.partition('\x00')
                         if zero:
-                            _LOGGER.debug('Request from %s: %r <+binary...> (id %s bg %s)',
-                                          self.client_address, text[:_DBG_LEN],
-                                          req_id, background)
+                            self._logger.debug('Request: %r <+binary...> (id %s bg %s)',
+                                               text[:_DBG_LEN],
+                                               req_id, background)
                         else:
-                            _LOGGER.debug('Request from %s: %r (id %s bg %s)',
-                                          self.client_address, req[:_DBG_LEN],
-                                          req_id, background)
+                            self._logger.debug('Request: %r (id %s bg %s)',
+                                               req[:_DBG_LEN],
+                                               req_id, background)
                         self._req_id = req_id
                         self._background = background
                     else:
-                        _LOGGER.debug('Waiting for request...')
+                        self._logger.debug('Waiting for request...')
                         req = self._stream.recv_request()
-                        _LOGGER.debug('Request from %s: %r',
-                                      self.client_address, req[:_DBG_LEN])
+                        self._logger.debug('Request: %r', req[:_DBG_LEN])
                         self._req_id = None
                         self._background = False
 
@@ -507,12 +518,12 @@ version: 0.1""")
             req_id = req_id or self._req_id
             text, zero, rest = reply.partition('\x00')
             if zero:
-                _LOGGER.debug('(req_id %s)\n%s\n<+binary...>',
-                              req_id, text[:_DBG_LEN])
+                self._logger.debug('(req_id %s)\n%s\n<+binary...>',
+                                   req_id, text[:_DBG_LEN])
             else:
-                _LOGGER.debug('(req_id %s)\n%s', req_id, reply[:_DBG_LEN])
+                self._logger.debug('(req_id %s)\n%s', req_id, reply[:_DBG_LEN])
         else:
-            _LOGGER.debug('    %s', reply[:_DBG_LEN])
+            self._logger.debug('    %s', reply[:_DBG_LEN])
         with self._lock:
             self._stream.send_reply(reply, req_id)
 
@@ -520,9 +531,9 @@ version: 0.1""")
         """ Send error reply to client, with optional logging. """
         if self._raw:
             req_id = req_id or self._req_id
-            _LOGGER.error('(req_id %s)\n%s', req_id, reply)
+            self._logger.error('(req_id %s)\n%s', req_id, reply)
         else:
-            _LOGGER.error('%s', reply)
+            self._logger.error('%s', reply)
         reply = ERROR_PREFIX+reply
         with self._lock:
             self._stream.send_reply(reply, req_id, 'error')
@@ -530,7 +541,7 @@ version: 0.1""")
     def _send_exc(self, exc, req_id=None):
         """ Send exception reply to client, with optional logging. """
         self._send_error('Exception: %r' % exc, req_id)
-        _LOGGER.error(traceback.format_exc())
+        self._logger.error(traceback.format_exc())
 
 
     def _add_proxy_clients(self, args):
@@ -1208,7 +1219,7 @@ egg: %s
         try:
             self.server._read_config(cfg_path)
         except Exception as exc:
-            _LOGGER.error("Can't publishEgg: %r", exc)
+            self._logger.error("Can't publishEgg: %r", exc)
             self._send_error(str(exc))
             os.remove(egg_path)
             os.remove(cfg_path)
@@ -1624,8 +1635,10 @@ def main():  # pragma no cover
         print 'Allowed hosts file %r does not exist.' % options.hosts
         sys.exit(1)
 
-    # Set root directory.
+    # Set root directory, create 'logs' directory if not there.
     SimulationRoot.get_root()
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
 
     # Create server.
     host = options.address or socket.gethostname()
