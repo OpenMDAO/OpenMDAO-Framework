@@ -61,6 +61,7 @@ import os.path
 import pkg_resources
 import platform
 import re
+import shlex
 import shutil
 import signal
 import SocketServer
@@ -233,24 +234,29 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             path = new_path
 
         cwd = os.getcwd()
-        cleanup = False
 
         # This will be exercised by test_client.py:test_publish().
         if config.has_option('Python', 'egg'):  # pragma no cover
             # Create temporary instance from egg.
             egg = config.get('Python', 'egg')
-            obj = Container.load_from_eggfile(egg)
-            egg_info = self._get_egg_info(egg)
-            cleanup = True
+            try:
+                obj = Container.load_from_eggfile(egg)
+                egg_info = self._get_egg_info(egg)
+            finally:
+                if os.path.exists(name):
+                    shutil.rmtree(name)
         else:
             filename = config.get('Python', 'filename')
             for egg in glob.glob('%s-%s.*.egg' % (name, version)):
                 if os.path.getmtime(egg) > os.path.getmtime(path) and \
                    os.path.getmtime(egg) > os.path.getmtime(filename):
                     # Create temporary instance from egg.
-                    obj = Container.load_from_eggfile(egg)
-                    egg_info = self._get_egg_info(egg)
-                    cleanup = True
+                    try:
+                        obj = Container.load_from_eggfile(egg)
+                        egg_info = self._get_egg_info(egg)
+                    finally:
+                        if os.path.exists(name):
+                            shutil.rmtree(name)
                     break
                 else:
                     _LOGGER.warning('Removing stale egg %r', egg)
@@ -306,8 +312,6 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             comps[path] = (cfg, egg_info)
         obj.pre_delete()
         del obj
-        if cleanup:
-            shutil.rmtree(name)
 
     def _get_egg_info(self, egg):
         """ Return egg_info tuple from egg file. """
@@ -1151,17 +1155,11 @@ Available Commands:
         """
         if len(args) < 5:
             self._send_error('invalid syntax. Proper syntax:\n'
-                             'publishEgg <path> <version> <comment> <author> <eggdata>')
+                             'publishEgg <path> <version> <comment> <author> ZEROBYTE <eggdata>')
             return
 
-        cmd, space, rest = self._req.partition(' ')
-        path, space, rest = rest.partition(' ')
-        version, space, rest = rest.partition(' ')
-        comment, space, rest = rest.partition(' ')
-        author, space, eggdata = rest.partition(' ')
-
-        comment = comment.strip('"')
-        author = author.strip('"')
+        args, zero, eggdata = self._req.partition('\0')
+        cmd, path, version, comment, author = shlex.split(args)
 
         # Create directory (category).
         path = path.strip('/')
@@ -1421,13 +1419,14 @@ class _WrapperConfig(object):
 
         # Get methods.
         self.methods = {}
-        for ext_name, int_name in config.items('Methods'):
+        for ext_name, int_name in sorted(config.items('Methods'),
+                                         key=lambda item: item[0]):
             if ext_name == '*':
                 if int_name != '*':
                     raise ValueError("internal name must be '*'"
                                      " if the external name is '*'")
                 # Register all valid non-vanilla methods.
-                for attr in dir(instance):
+                for attr in sorted(dir(instance)):
                     if attr in _IGNORE_ATTR or attr.startswith('_'):
                         continue
                     if self._valid_method(instance, attr):
@@ -1445,7 +1444,7 @@ class _WrapperConfig(object):
     def _setup_mapping(self, instance, paths, iotype):
         """ Return dictionary mapping external paths to internal paths. """
         mapping = {}
-        for ext_path, int_path in paths:
+        for ext_path, int_path in sorted(paths, key=lambda item: item[0]):
             if ext_path == '*':
                 if int_path != '*':
                     raise ValueError("internal path must be '*'"
@@ -1456,7 +1455,8 @@ class _WrapperConfig(object):
                                        if isinstance(val, Container) and not
                                           isinstance(val, Component)])
                 for container in containers:
-                    for name, val in container.items(iotype=iotype):
+                    for name, val in sorted(container.items(iotype=iotype),
+                                            key=lambda item: item[0]):
                         if name in _IGNORE_ATTR or name.startswith('_'):
                             continue
                         # Only register if it's a supported type.

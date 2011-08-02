@@ -197,15 +197,15 @@ class TestCase(unittest.TestCase):
                       "Bad configuration in 'ASTestComp-0.1.cfg':"
                       " internal name must be '*' if the external name is '*'")
 
-        config.set('Inputs', '*', 'x')
-        assert_raises(self, code, globals(), locals(), RuntimeError,
-                      "Bad configuration in 'ASTestComp-0.1.cfg':"
-                      " internal path must be '*' if the external path is '*'")
-
         config.set('Inputs', 'ext_path', 'z')
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Bad configuration in 'ASTestComp-0.1.cfg':"
                       " 'z' is not a valid 'in' variable")
+
+        config.set('Inputs', '*', 'x')
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Bad configuration in 'ASTestComp-0.1.cfg':"
+                      " internal path must be '*' if the external path is '*'")
 
     def test_add_proxy_clients(self):
         replies = self.send_recv('addProxyClients clientHost1, clientHost2')
@@ -914,7 +914,7 @@ if __name__ == '__main__':
         replies = self.send_recv('publishEgg')
         self.assertEqual(replies[-1],
                          'ERROR: invalid syntax. Proper syntax:\r\n'
-                         'publishEgg <path> <version> <comment> <author> <eggdata>\r\n>')
+                         'publishEgg <path> <version> <comment> <author> ZEROBYTE <eggdata>\r\n>')
 
     def test_quit(self):
         replies = self.send_recv('quit')
