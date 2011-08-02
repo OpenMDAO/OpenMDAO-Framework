@@ -663,20 +663,20 @@ class OptRosenSuzukiComponent_Deriv(ComponentWithDerivatives):
         self.opt_objective = 6.
         self.opt_design_vars = [0., 1., 2., -1.]
 
-        self.derivatives.declare_first_derivative(self, 'result', 'x1')
-        self.derivatives.declare_first_derivative(self, 'result', 'x2')
-        self.derivatives.declare_first_derivative(self, 'result', 'x3')
-        self.derivatives.declare_first_derivative(self, 'result', 'x4')
-        self.derivatives.declare_second_derivative(self, 'result', 'x1', 'x1')
-        self.derivatives.declare_second_derivative(self, 'result', 'x1', 'x2')
-        self.derivatives.declare_second_derivative(self, 'result', 'x1', 'x3')
-        self.derivatives.declare_second_derivative(self, 'result', 'x1', 'x4')
-        self.derivatives.declare_second_derivative(self, 'result', 'x2', 'x2')
-        self.derivatives.declare_second_derivative(self, 'result', 'x2', 'x3')
-        self.derivatives.declare_second_derivative(self, 'result', 'x2', 'x4')
-        self.derivatives.declare_second_derivative(self, 'result', 'x3', 'x3')
-        self.derivatives.declare_second_derivative(self, 'result', 'x3', 'x4')
-        self.derivatives.declare_second_derivative(self, 'result', 'x4', 'x4')
+        self.derivatives.declare_first_derivative('result', 'x1')
+        self.derivatives.declare_first_derivative('result', 'x2')
+        self.derivatives.declare_first_derivative('result', 'x3')
+        self.derivatives.declare_first_derivative('result', 'x4')
+        self.derivatives.declare_second_derivative('result', 'x1', 'x1')
+        self.derivatives.declare_second_derivative('result', 'x1', 'x2')
+        self.derivatives.declare_second_derivative('result', 'x1', 'x3')
+        self.derivatives.declare_second_derivative('result', 'x1', 'x4')
+        self.derivatives.declare_second_derivative('result', 'x2', 'x2')
+        self.derivatives.declare_second_derivative('result', 'x2', 'x3')
+        self.derivatives.declare_second_derivative('result', 'x2', 'x4')
+        self.derivatives.declare_second_derivative('result', 'x3', 'x3')
+        self.derivatives.declare_second_derivative('result', 'x3', 'x4')
+        self.derivatives.declare_second_derivative('result', 'x4', 'x4')
 
     def execute(self):
         """calculate the new objective value"""
