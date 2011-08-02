@@ -25,7 +25,6 @@ from openmdao.devtools.tst_ec2 import run_on_ec2_image
 from openmdao.util.debug import print_fuct_call
 
 import paramiko.util
-paramiko.util.log_to_file('paramiko.log')
 
 atexit.register(fabric_cleanup, True)
 
@@ -155,6 +154,8 @@ def main(argv=None):
                       help="if there are test/build failures, don't delete "
                            "the temporary build directory "
                            "or terminate the remote instance if testing on EC2.")
+    parser.add_option("-l","--log", action="store_true", dest='log',
+                      help="create a paramiko.log file")
     parser.add_option("-f","--file", action="store", type='string', dest='fname',
                       help="pathname of a tarfile or URL of a git repo")
     parser.add_option("-b","--branch", action="store", type='string', 
@@ -169,6 +170,9 @@ def main(argv=None):
                       help="remote directory used for building/testing")
 
     (options, args) = parser.parse_args(sys.argv[1:])
+    
+    if options.log:
+        paramiko.util.log_to_file('paramiko.log')
     
     config = ConfigParser.ConfigParser()
     config.readfp(open(options.cfg))
