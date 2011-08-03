@@ -1074,7 +1074,7 @@ class Container(HasTraits):
             self.parent = parent
 
     @staticmethod
-    def load_from_eggfile(filename, observer=None):
+    def load_from_eggfile(filename, observer=None, log=None):
         """Extract files in egg to a subdirectory matching the saved object
         name and then load object graph state.
 
@@ -1084,13 +1084,17 @@ class Container(HasTraits):
         observer: callable
             Will be called via an :class:`EggObserver`.
 
+        log: :class:`logging.Logger`
+            Used for logging progress, default is root logger.
+
         Returns the root object.
         """
         # Load from file gets everything.
         entry_group = 'openmdao.top'
         entry_name = 'top'
+        log = log or logger
         return eggloader.load_from_eggfile(filename, entry_group, entry_name,
-                                           logger, observer)
+                                           log, observer)
 
     @staticmethod
     def load_from_eggpkg(package, entry_name=None, instance_name=None,

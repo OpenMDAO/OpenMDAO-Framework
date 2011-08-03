@@ -240,7 +240,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             if config.has_option('Python', 'egg'):  # pragma no cover
                 # Create temporary instance from egg.
                 egg = config.get('Python', 'egg')
-                obj = Container.load_from_eggfile(egg)
+                obj = Container.load_from_eggfile(egg, log=logger)
                 egg_info = self._get_egg_info(egg)
             else:
                 filename = config.get('Python', 'filename')
@@ -248,7 +248,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     if os.path.getmtime(egg) > os.path.getmtime(path) and \
                        os.path.getmtime(egg) > os.path.getmtime(filename):
                         # Create temporary instance from egg.
-                        obj = Container.load_from_eggfile(egg)
+                        obj = Container.load_from_eggfile(egg, log=logger)
                         egg_info = self._get_egg_info(egg)
                         break
                     else:
@@ -290,9 +290,9 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                                 [name for name, pth in egg_info[2]])
 
             # Create wrapper configuration object.
+            cfg_path = os.path.join(cwd, os.path.basename(path))
             try:
-                cfg = _WrapperConfig(config, obj,
-                                     os.path.join(cwd, os.path.basename(path)))
+                cfg = _WrapperConfig(config, obj, cfg_path, logger)
             except Exception as exc:
                 logger.error(traceback.format_exc())
                 raise RuntimeError("Bad configuration in %r: %s" % (path, exc))
@@ -1363,7 +1363,7 @@ class _WrapperConfig(object):
     and `cfg_path` is the path to the configuration file.
     """
 
-    def __init__(self, config, instance, cfg_path):
+    def __init__(self, config, instance, cfg_path, logger):
         if not _IGNORE_ATTR:
             for attr in dir(Component()):
                 _IGNORE_ATTR.add(attr)
@@ -1399,8 +1399,8 @@ class _WrapperConfig(object):
         if version != self.version:
             cfg_dir = os.path.dirname(cfg_path)
             new_path = os.path.join(cfg_dir, '%s-%s.cfg' % (name, self.version))
-            _LOGGER.warning('Renaming %r', cfg_path)
-            _LOGGER.warning('      to %r', new_path)
+            logger.warning('Renaming %r', cfg_path)
+            logger.warning('      to %r', new_path)
             os.rename(cfg_path, new_path)
             cfg_path = new_path
         self.cfg_path = cfg_path
@@ -1421,10 +1421,10 @@ class _WrapperConfig(object):
             self.author = pwd.getpwuid(stat_info.st_uid).pw_name
 
         # Get properties.
-        self.inputs = self._setup_mapping(instance,
-                                          config.items('Inputs'), 'in')
-        self.outputs = self._setup_mapping(instance,
-                                           config.items('Outputs'), 'out')
+        self.inputs = self._setup_mapping(instance, config.items('Inputs'),
+                                          'in', logger)
+        self.outputs = self._setup_mapping(instance, config.items('Outputs'),
+                                           'out', logger)
         self.properties = {}
         self.properties.update(self.inputs)
         self.properties.update(self.outputs)
@@ -1442,18 +1442,18 @@ class _WrapperConfig(object):
                     if attr in _IGNORE_ATTR or attr.startswith('_'):
                         continue
                     if self._valid_method(instance, attr):
-                        _LOGGER.debug('    register %s()', attr)
+                        logger.debug('    register %s()', attr)
                         self.methods[attr] = attr
             else:
                 if int_name == '*':
                     int_name = ext_name
                 if self._valid_method(instance, int_name):
-                    _LOGGER.debug('    register %r => %s()', ext_name, int_name)
+                    logger.debug('    register %r => %s()', ext_name, int_name)
                     self.methods[ext_name] = int_name
                 else:
                     raise ValueError('%r is not a valid method' % int_name)
 
-    def _setup_mapping(self, instance, paths, iotype):
+    def _setup_mapping(self, instance, paths, iotype, logger):
         """ Return dictionary mapping external paths to internal paths. """
         mapping = {}
         for ext_path, int_path in sorted(paths, key=lambda item: item[0]):
@@ -1475,21 +1475,21 @@ class _WrapperConfig(object):
                         typenames = container.get_trait_typenames(name)
                         wrapper_class = lookup(typenames)
                         if wrapper_class is None:
-                             _LOGGER.warning('%r not a supported type: %r',
-                                             name, typenames[0])
+                             logger.warning('%r not a supported type: %r',
+                                            name, typenames[0])
                              continue
                         if container is instance:
                             path = name
                         else:
                             path = '%s.%s' % (container.get_pathname(), name)
-                        _LOGGER.debug('    register %r %r', path, iotype)
+                        logger.debug('    register %r %r', path, iotype)
                         mapping[path] = path
             else:
                 if int_path == '*':
                     int_path = ext_path
                 if self._valid_path(instance, int_path, iotype):
-                    _LOGGER.debug('    register %r => %r %r',
-                                  ext_path, int_path, iotype)
+                    logger.debug('    register %r => %r %r',
+                                 ext_path, int_path, iotype)
                     mapping[ext_path] = int_path
                 else:
                     raise ValueError('%r is not a valid %r variable'
