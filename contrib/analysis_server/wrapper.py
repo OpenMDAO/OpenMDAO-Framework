@@ -538,14 +538,10 @@ class ArrayBase(BaseWrapper):
             else:
                 return 'java.lang.String[%d]' % len(value)
 
-    def get(self, attr, path, value=None):
-        """
-        Return attribute corresponding to `attr`.
-        `value` may be supplied to avoid repeated 'get()' calls.
-        """
+    def get(self, attr, path):
+        """ Return attribute corresponding to `attr`. """
         if attr == 'value':
-            if value is None:
-                value = self._container.get(self._name)
+            value = self._container.get(self._name)
             if self.typ == float:
                 fmt = '%.16g'
             elif self.typ == int:
@@ -561,8 +557,7 @@ class ArrayBase(BaseWrapper):
         elif attr == 'componentType':
             return self._typstr
         elif attr == 'dimensions':
-            if value is None:
-                value = self._container.get(self._name)
+            value = self._container.get(self._name)
             if self._is_array:
                 return ', '.join(['"%d"' % dim for dim in value.shape])
             else:
@@ -572,8 +567,7 @@ class ArrayBase(BaseWrapper):
         elif attr == 'enumValues':
             return ''
         elif attr == 'first':
-            if value is None:
-                value = self._container.get(self._name)
+            value = self._container.get(self._name)
             if len(value):
                 if self._is_array and len(value.shape) > 1:
                     return '%s' % value.flat[0]
@@ -592,8 +586,7 @@ class ArrayBase(BaseWrapper):
         elif attr == 'lowerBound' and self._trait.dtype != str:
             return '0' if self._trait.low is None else str(self._trait.low)
         elif attr == 'length':
-            if value is None:
-                value = self._container.get(self._name)
+            value = self._container.get(self._name)
             if self._is_array:
                 return '%d' % value.shape[0]
             else:
@@ -602,8 +595,7 @@ class ArrayBase(BaseWrapper):
             return 'false'
         elif attr == 'numDimensions':
             if self._is_array:
-                if value is None:
-                    value = self._container.get(self._name)
+                value = self._container.get(self._name)
                 return '%d' % len(value.shape)
             else:
                 return '1'
@@ -617,17 +609,12 @@ class ArrayBase(BaseWrapper):
 
     def get_as_xml(self):
         """ Return info in XML form. """
-        value = self._container.get(self._name)
-        if isinstance(value, numpy.ndarray):
-            dims = '[%s]' % ']['.join(['%d' % dim for dim in value.shape])
-        else:
-            dims = '[%d]' % len(value)
-        return '<Variable name="%s" type="%s%s" io="%s" format=""' \
+        return '<Variable name="%s" type="%s[]" io="%s" format=""' \
                ' description=%s units="%s">%s</Variable>' \
-               % (self._ext_name, self._typstr, dims, self._io,
+               % (self._ext_name, self._typstr, self._io,
                   quoteattr(self._trait.desc),
                   self.get('units', self._ext_path),
-                  self.get('value', self._ext_path, value))
+                  self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr` to `valstr`. """

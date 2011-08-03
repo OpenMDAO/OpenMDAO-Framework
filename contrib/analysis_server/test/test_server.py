@@ -366,15 +366,15 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
 <Group name="sub_group">
 <Variable name="b" type="boolean" io="input" format="" description="A boolean">true</Variable>
 <Variable name="f" type="double" io="input" format="" description="A float" units="">0.5</Variable>
-<Variable name="f1d" type="double[9]" io="input" format="" description="1D float array" units="cm">1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5</Variable>
-<Variable name="f2d" type="double[2][4]" io="input" format="" description="2D float array" units="mm">bounds[2, 4] {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5}</Variable>
-<Variable name="f3d" type="double[2][3][3]" io="input" format="" description="3D float array" units="">bounds[2, 3, 3] {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 20.5, 30.5, 40.5, 50.5, 60.5, 70.5, 80.5, 90.5}</Variable>
+<Variable name="f1d" type="double[]" io="input" format="" description="1D float array" units="cm">1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5</Variable>
+<Variable name="f2d" type="double[]" io="input" format="" description="2D float array" units="mm">bounds[2, 4] {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5}</Variable>
+<Variable name="f3d" type="double[]" io="input" format="" description="3D float array" units="">bounds[2, 3, 3] {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 20.5, 30.5, 40.5, 50.5, 60.5, 70.5, 80.5, 90.5}</Variable>
 <Variable name="fe" type="double" io="input" format="" description="Float enum" units="m">2.781828</Variable>
 <Variable name="i" type="long" io="input" format="" description="An int">7</Variable>
-<Variable name="i1d" type="long[9]" io="input" format="" description="1D int array" units="">1, 2, 3, 4, 5, 6, 7, 8, 9</Variable>
+<Variable name="i1d" type="long[]" io="input" format="" description="1D int array" units="">1, 2, 3, 4, 5, 6, 7, 8, 9</Variable>
 <Variable name="ie" type="long" io="input" format="" description="Int enum" units="">9</Variable>
 <Variable name="s" type="string" io="input" format="" description="A string">Hello World!  ( &amp; &lt; &gt; )</Variable>
-<Variable name="s1d" type="string[3]" io="input" format="" description="1D string array" units="">"Hello", "from", "TestComponent.SubGroup"</Variable>
+<Variable name="s1d" type="string[]" io="input" format="" description="1D string array" units="">"Hello", "from", "TestComponent.SubGroup"</Variable>
 <Variable name="se" type="string" io="input" format="" description="Str enum" units="">cold</Variable>
 </Group>
 <Variable name="x" type="double" io="input" format="" description="X input" units="">2</Variable>

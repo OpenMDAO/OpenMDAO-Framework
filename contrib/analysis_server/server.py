@@ -366,8 +366,6 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 class _Handler(SocketServer.BaseRequestHandler):
     """ Handles requests from a single client. """
 
-    _count = 0
-
     def setup(self):
         """ Initialize before :meth:`handle` is invoked. """
         self.server.handlers[self.client_address] = self
@@ -383,8 +381,8 @@ class _Handler(SocketServer.BaseRequestHandler):
         self._servers = {}       # Maps from wrapper to server.
         set_credentials(self.server.credentials)
 
-        self._count += 1
-        self._logger = logging.getLogger('handler_%d' % self._count)
+        # Set up separate logger for each client.
+        self._logger = logging.getLogger('%s:%s' % self.client_address)
         self._logger.setLevel(_LOGGER.getEffectiveLevel())
         self._logger.propagate = False
         formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s',
@@ -417,15 +415,18 @@ version: 0.1""")
                                                text[:_DBG_LEN],
                                                req_id, background)
                         else:
-                            self._logger.debug('Request: %r (id %s bg %s)',
-                                               req[:_DBG_LEN],
+                            trunc = 'truncated ' if len(req) > _DBG_LEN else ''
+                            self._logger.debug('Request: %r (%sid %s bg %s)',
+                                               trunc, req[:_DBG_LEN],
                                                req_id, background)
                         self._req_id = req_id
                         self._background = background
                     else:
                         self._logger.debug('Waiting for request...')
                         req = self._stream.recv_request()
-                        self._logger.debug('Request: %r', req[:_DBG_LEN])
+                        trunc = ' (truncated)' if len(req) > _DBG_LEN else ''
+                        self._logger.debug('Request: %r%s',
+                                           req[:_DBG_LEN], trunc)
                         self._req_id = None
                         self._background = False
 
@@ -523,9 +524,12 @@ version: 0.1""")
                 self._logger.debug('(req_id %s)\n%s\n<+binary...>',
                                    req_id, text[:_DBG_LEN])
             else:
-                self._logger.debug('(req_id %s)\n%s', req_id, reply[:_DBG_LEN])
+                trunc = ' truncated' if len(reply) > _DBG_LEN else ''
+                self._logger.debug('(req_id %s%s)\n%s',
+                                   req_id, trunc, reply[:_DBG_LEN])
         else:
-            self._logger.debug('    %s', reply[:_DBG_LEN])
+            trunc = ' (truncated)' if len(reply) > _DBG_LEN else ''
+            self._logger.debug('    %s%s', reply[:_DBG_LEN], trunc)
         with self._lock:
             self._stream.send_reply(reply, req_id)
 
@@ -1304,9 +1308,6 @@ egg: %s
 
         # Create component instance.
         if self._server_per_obj:  # pragma no cover
-            # Flush loggers (helps on Windows).
-            logging.getLogger().handlers[0].flush()
-            self._logger.handlers[0].flush()
             # Allocate a server.
             server, server_info = RAM.allocate(resource_desc)
             if server is None:
