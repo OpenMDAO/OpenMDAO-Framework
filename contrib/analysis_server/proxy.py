@@ -2,6 +2,8 @@
 Proxies for AnalysisServer components and variables.
 """
 
+from __future__ import absolute_import
+
 import numpy
 import os.path
 import socket
@@ -12,8 +14,9 @@ from openmdao.main.api import Component, Container, FileRef
 from openmdao.main.mp_support import is_instance
 from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
                                        List, Str
-from client import Client
-from units  import get_translation
+
+from analysis_server.client import Client
+from analysis_server.units  import get_translation
 
 def _float2str(val):
     """ Return accurate string value for float. """

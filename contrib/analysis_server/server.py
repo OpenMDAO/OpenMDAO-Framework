@@ -51,6 +51,8 @@ by :class:`ConfigParser.SafeConfigParser`, for example:
 
 """
 
+from __future__ import absolute_import
+
 import ConfigParser
 import getpass
 import glob
@@ -90,9 +92,9 @@ from openmdao.util.publickey import make_private, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT
 from openmdao.util.wrkpool import WorkerPool
 
-from monitor import Heartbeat
-from stream  import Stream
-from wrapper import ComponentWrapper, lookup
+from analysis_server.monitor import Heartbeat
+from analysis_server.stream  import Stream
+from analysis_server.wrapper import ComponentWrapper, lookup
 
 DEFAULT_PORT = 1835
 ERROR_PREFIX = 'ERROR: '
@@ -417,7 +419,7 @@ version: 0.1""")
                         else:
                             trunc = 'truncated ' if len(req) > _DBG_LEN else ''
                             self._logger.debug('Request: %r (%sid %s bg %s)',
-                                               trunc, req[:_DBG_LEN],
+                                               req[:_DBG_LEN], trunc,
                                                req_id, background)
                         self._req_id = req_id
                         self._background = background

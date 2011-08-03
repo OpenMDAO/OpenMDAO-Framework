@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import getpass
 import optparse
 import socket
@@ -6,8 +8,7 @@ import telnetlib
 import threading
 import xml.etree.cElementTree as ElementTree
 
-import server
-import stream
+from analysis_server import server, stream
 
 # These are used to shorten list_properties() output.
 _ASERVER_PREFIX = 'com.phoenix_int.aserver.'

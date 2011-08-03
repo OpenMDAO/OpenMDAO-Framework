@@ -2,6 +2,8 @@
 Wrappers for OpenMDAO components and variables.
 """
 
+from __future__ import absolute_import
+
 import numpy
 import os
 import sys
@@ -25,7 +27,8 @@ from openmdao.main.mp_support import is_instance
 
 from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
                                        List, Str
-from monitor import FileMonitor
+
+from analysis_server.monitor import FileMonitor
 
 class WrapperError(Exception):
     """ Denotes wrapper-specific errors. """

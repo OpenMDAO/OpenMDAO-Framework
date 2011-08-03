@@ -1,11 +1,11 @@
+from __future__ import absolute_import
+
 import optparse
 import sys
 
 from openmdao.main.factory import Factory
 
-import client
-import proxy
-import server
+from analysis_server import client, proxy, server
 
 
 class ASFactory(Factory):

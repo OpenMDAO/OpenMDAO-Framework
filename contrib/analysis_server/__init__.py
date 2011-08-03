@@ -8,11 +8,13 @@ An extension to the protocol allows 'eggs' to pe 'published': the egg is sent
 to the server and made part of the server's set of supported components.
 """
 
-from client  import Client
-from factory import ASFactory
-from server  import Server, start_server, stop_server, DEFAULT_PORT
-from stream  import Stream
-from units   import have_translation, get_translation, set_translation
+from __future__ import absolute_import
 
-from publish import publish_class, publish_object, publish_egg
+from .client  import Client
+from .factory import ASFactory
+from .server  import Server, start_server, stop_server, DEFAULT_PORT
+from .stream  import Stream
+from .units   import have_translation, get_translation, set_translation
+
+from .publish import publish_class, publish_object, publish_egg
 

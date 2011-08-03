@@ -3,14 +3,15 @@ Support for remote publishing of components.
 All inputs, outputs, and no-argument methods will be accessible.
 """
 
+from __future__ import absolute_import
+
 import optparse
 import os.path
 import sys
 
 from openmdao.main.api import set_as_top
 
-import client
-import server
+from analysis_server import client, server
 
 
 def publish_class(path, version, comment, filename, classname,

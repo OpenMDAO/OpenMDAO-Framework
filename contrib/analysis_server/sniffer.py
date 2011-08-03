@@ -4,14 +4,15 @@ protocol described in:
 http://www.phoenix-int.com/~AnalysisServer/commands/index.html
 """
 
+from __future__ import absolute_import
+
 import optparse
 import SocketServer
 import socket
 import sys
 import telnetlib
 
-import server
-import stream
+from analysis_server import server, stream
 
 
 class _Sniffer(SocketServer.TCPServer):
