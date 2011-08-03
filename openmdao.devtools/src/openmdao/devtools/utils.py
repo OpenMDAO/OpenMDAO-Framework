@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 import shutil
 import urllib2
 from optparse import OptionParser
@@ -12,6 +13,7 @@ import tarfile
 
 from fabric.api import run, local, env, put, cd, prompt, hide, show, get, settings
 from fabric.state import connections
+from fabric.network import connect
 
 from openmdao.util.fileutil import find_up
 
@@ -107,6 +109,75 @@ def ssh_test(host, port=22, timeout=3):
     finally:
         socket.setdefaulttimeout(original_timeout)
     return False
+
+def connection_test(user, host, port=22, max_tries=10, debug=False):
+    tries = 0
+    while True:
+        try:
+            connection = connect(user, host, port)
+        except SystemExit as err:
+            if 'Timed out' in str(err):
+                if debug:
+                    print 'connection to %s timed out. trying again...' % host
+                tries += 1
+                if tries > max_tries:
+                    raise RuntimeError("failed to connect to %s@%s after %d tries" %
+                                       (user, host, tries))
+            else:
+                raise
+    return connection
+
+
+# this is a modified version of fabric.network.connect
+def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
+    """
+    Create and return a new SSHClient instance connected to given host.
+    """
+    client = paramiko.SSHClient()
+
+    # Load known host keys (e.g. ~/.ssh/known_hosts) unless user says not to.
+    if not env.disable_known_hosts:
+        client.load_system_host_keys()
+    # Unless user specified not to, accept/add new, unknown host keys
+    if not env.reject_unknown_hosts:
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    password = env.password
+    tries = 0
+
+    # Loop until successful connect (keep prompting for new password)
+    while tries < max_tries:
+        
+        # Attempt connection
+        try:
+            client.connect(
+                hostname=host,
+                port=int(port),
+                username=user,
+                password=password,
+                key_filename=env.key_filename,
+                timeout=10,
+                allow_agent=not env.no_agent,
+                look_for_keys=not env.no_keys
+            )
+            return client
+        except paramiko.SSHException as e:
+            if 'No existing session' in str(e):
+                tries += 1
+                if debug:
+                    print "connection attempt %d for host %s failed: %s" % (tries, host, str(e))
+            else:
+                raise
+        # Handle timeouts
+        except socket.timeout as e:
+            tries += 1
+            if debug:
+                print "connection attempt %d for host %s failed: %s" % (tries, host, str(e))
+
+        time.sleep(sleep)
+        
+    raise RuntimeError("failed to connect to host %s after %d tries" %
+                       (host, tries))
 
 def get_platform():
     """Returns the platform string of the current active host."""

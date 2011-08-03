@@ -16,7 +16,7 @@ from inspect import getargvalues, formatargvalues, currentframe
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     rm_remote_tree, make_git_archive, \
-                                    fabric_cleanup, ssh_test
+                                    fabric_cleanup, ssh_test, fab_connect
 
 from openmdao.util.debug import print_fuct_call
 
@@ -38,7 +38,7 @@ def check_image_state(inst, start_state, imgname='', sleeptime=10,
             break
     return inst.state
    
-def start_instance(conn, config, name, sleep=6, max_tries=10):
+def start_instance(conn, config, name, sleep=10, max_tries=50):
     """Starts up an EC2 instance having the specified 'short' name and
     returns the instance.
     """
@@ -84,7 +84,7 @@ def start_instance(conn, config, name, sleep=6, max_tries=10):
         raise RuntimeError("instance of '%s' ran but ssh connection attempts failed (%d attempts)" % (name,max_tries))
 
     time.sleep(20)
-    
+        
     return inst
 
 
@@ -105,6 +105,7 @@ def run_on_ec2_image(host, config, conn, funct, *args, **kwargs):
     # stand up an instance of the specified image
     inst = start_instance(conn, config, host)
     settings_kwargs['host_string'] = inst.public_dns_name
+    settings_kwargs['disable_known_hosts'] = True
 
     if debug:
         settings_args.append(show('debug'))
@@ -114,6 +115,11 @@ def run_on_ec2_image(host, config, conn, funct, *args, **kwargs):
     settings_kwargs['shell'] = config.get(host, 'shell', None)
 
     with settings(**settings_kwargs):
+        # first, make sure that the connection is really working...
+        # on EC2 even if ssh connects there can be timeouts during authentication,
+        # so try to connect multiple times if there's a timeout
+        fab_connect(settings_kwargs['user'],
+                    settings_kwargs['host_string'], debug=debug)
         if debug:
             print "calling %s" % print_fuct_call(funct, *args, **kwargs)
         retval = funct(*args, **kwargs)

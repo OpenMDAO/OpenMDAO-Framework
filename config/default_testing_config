@@ -16,8 +16,20 @@ user: %(linux_user)s
 
 [discostu]
 image_id: ami-3038c359
-instance_type: m1.large
+instance_type: c1.medium
 user: %(linux_user)s
+
+[nayls]
+image_id: ami-ad38fec4
+instance_type: c1.medium
+user: %(win_user)s
+security_groups: windows
+
+[smithers]
+image_id: ami-d94680b0
+instance_type: m1.large
+user: %(win_user)s
+security_groups: windows
 
 [storm]
 addr: storm.grc.nasa.gov
@@ -39,4 +51,7 @@ user: %(linux_user)s
 addr: 192.168.1.14
 user: bret
 
+[junk]
+instance_id: i-75da4814
+user: %(win_user)s
 

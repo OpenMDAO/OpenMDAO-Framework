@@ -9,6 +9,7 @@ import time
 import datetime
 import getpass
 import fnmatch
+import socket
 from optparse import OptionParser
 from fabric.api import run, env, local, put, cd, get, settings, prompt, \
                        hide, show, hosts
@@ -136,6 +137,7 @@ def run_on_host(host, config, funct, *args, **kwargs):
             
         
 def main(argv=None):
+    socket.setdefaulttimeout(30)
     t1 = time.time()
     
     if argv is None:
@@ -155,8 +157,8 @@ def main(argv=None):
                       help="if there are test/build failures, don't delete "
                            "the temporary build directory "
                            "or terminate the remote instance if testing on EC2.")
-    parser.add_option("-l","--log", action="store_true", dest='log',
-                      help="create a paramiko.log file")
+    #parser.add_option("-l","--log", action="store_true", dest='log',
+                      #help="create a paramiko.log file")
     parser.add_option("-f","--file", action="store", type='string', dest='fname',
                       help="pathname of a tarfile or URL of a git repo")
     parser.add_option("-b","--branch", action="store", type='string', 
@@ -172,8 +174,7 @@ def main(argv=None):
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
-    if options.log:
-        paramiko.util.log_to_file('paramiko.log')
+    paramiko.util.log_to_file('paramiko.log')
     
     config = ConfigParser.ConfigParser()
     config.readfp(open(options.cfg))
