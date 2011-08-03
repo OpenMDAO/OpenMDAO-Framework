@@ -26,7 +26,6 @@ def activate_and_test(envdir, testargs=()):
         
     # activate the environment and run tests
     devbinpath = os.path.join(envdir, devbindir)
-    print '*** current dir is',os.getcwd()
     os.chdir(devbinpath)
     print("running tests from %s" % devbinpath)
     env = os.environ.copy()

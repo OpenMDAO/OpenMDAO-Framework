@@ -116,7 +116,7 @@ def get_platform():
 def check_setuptools(py):
     """Return True if setuptools is installed on the remote host"""
     with settings(hide('everything'), warn_only=True):
-        return run('%s -c "import setuptools; print setuptools.__version__"' % py)
+        return run('%s -c "import setuptools; print setuptools.__version__"' % py).succeeded
         
 def py_cmd(cmds):
     """Given a list of python statements, returns a string containing

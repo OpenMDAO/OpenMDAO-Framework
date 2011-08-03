@@ -19,24 +19,24 @@ image_id: ami-3038c359
 instance_type: m1.large
 user: %(linux_user)s
 
-[local_mac]
-addr: 192.168.1.14
-user: bret
-
 [storm]
 addr: storm.grc.nasa.gov
 shell: cmd /C
 
 [bret_2008_win32]
-addr: ec2-72-44-50-51.compute-1.amazonaws.com
+instance_id: i-d7fe4fb6
 user: %(win_user)s
 
 [smithers_static]
-addr: ec2-107-20-52-80.compute-1.amazonaws.com
+instance_id: i-0310516d
 user: %(win_user)s
 
 [lovejoy_bret]
-addr: ec2-50-17-155-128.compute-1.amazonaws.com
+instance_id: i-27ba1746
 user: %(linux_user)s
+
+[local_mac]
+addr: 192.168.1.14
+user: bret
 
 

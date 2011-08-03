@@ -113,7 +113,8 @@ def run_on_host(host, config, funct, *args, **kwargs):
     settings_args = []
     
     debug = config.getboolean(host, 'debug')
-    settings_kwargs['host_string'] = config.get(host, 'addr')
+    settings_kwargs['host_string'] = config.get(host, 'addr', None)
+        
     ident = config.get(host, 'identity', None)
     if ident:
         settings_kwargs['key_filename'] = os.path.expanduser(
@@ -194,16 +195,32 @@ def main(argv=None):
         sys.exit(-1)
         
     # find out which hosts are ec2 images, if any
-    ec2_hosts = set()
+    image_hosts = set()
+    ec2_needed = False
     for host in hosts:
         if config.has_option(host, 'image_id'):
-            ec2_hosts.add(host)
-                
-    if ec2_hosts:
+            image_hosts.add(host)
+            ec2_needed = True
+        elif config.has_option(host, 'instance_id'):
+            ec2_needed = True
+
+    if ec2_needed:
         from boto.ec2.connection import EC2Connection
         print 'connecting to EC2'
         conn = EC2Connection()
 
+    for host in hosts:
+        if host not in image_hosts and not config.has_option(host, 'addr'):
+            if not config.has_option(host, 'instance_id'):
+                raise RuntimeError("can't determine address for host %s" % host)
+            instance_id = config.get(host, 'instance_id')
+            reslist = conn.get_all_instances([instance_id])
+            if len(reslist) > 0:
+                inst = reslist[0].instances[0]
+            else:
+                raise RuntimeError("can't find a running instance of host %s" % host)
+            config.set(host, 'addr', inst.public_dns_name)
+            
     startdir = os.getcwd()
     
     if options.fname is None: # assume we're testing the current repo
@@ -248,7 +265,7 @@ def main(argv=None):
     try:
         for host in hosts:
             shell = config.get(host, 'shell')
-            if host in ec2_hosts:
+            if host in image_hosts:
                 proc_args = [host, config, conn, test_on_remote_host,
                              fname, shell, options.remotedir]
                 target = run_on_ec2_image
