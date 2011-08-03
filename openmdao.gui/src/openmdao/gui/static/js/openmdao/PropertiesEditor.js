@@ -42,7 +42,8 @@ openmdao.PropertiesEditor = function(id,model) {
             autoEdit: false,
         }
         
-    init()
+    if (arguments.length > 0)
+        init()
     
     function init() {
         elm = jQuery("#"+id)

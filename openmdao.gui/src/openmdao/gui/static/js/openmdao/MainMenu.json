@@ -7,13 +7,6 @@
         { "text": "Logout",        "url": "/workspace/logout" }
       ]
     },
-    { "text": "File", 
-      "items": [
-        { "text": "New File",      "onclick": "model.newFile();" },
-        { "text": "New Folder",    "onclick": "model.newFolder();" },
-        { "text": "Add File",      "onclick": "model.uploadFile();" }
-      ]
-    },
     { "text": "View", 
       "items": [
         { "text": "Code Editor",   "onclick": "jQuery('#editor_tab').click();" },

@@ -11,12 +11,31 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @constructor
  */
 openmdao.FileTree = function(id,model,edit_function,view_function) {
+    this.prototype = new openmdao.BasePane()
     /***********************************************************************
      *  private
      ***********************************************************************/
      
     var self = this,
-        elm = jQuery("#"+id)
+        elm
+
+    if (arguments.length > 0)
+        init()
+    
+    function init() {
+        var menu =  [
+                        {   "text": "File", 
+                            "items": [
+                                { "text": "New File",      "onclick": "model.newFile();" },
+                                { "text": "New Folder",    "onclick": "model.newFolder();" },
+                                { "text": "Add File",      "onclick": "model.uploadFile();" }
+                            ]
+                        }
+                    ]
+        self.prototype.init(id,'File manager', menu)
+        elm = jQuery('<div style="height:100%; background:white">').appendTo("#"+id)
+        elm = jQuery('<div>').appendTo(elm)        
+    }
         
     /** recursively build an HTML representation of a JSON file structure */
     function getFileHTML(path,val) {
@@ -193,7 +212,7 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
         // convert to a jstree
         jQuery.jstree._themes = "/static/css/jstree/";
         elm.jstree({
-            "plugins" :     [ "html_data", "sort", "themes", "types", "cookies", "contextmenu" ],
+            "plugins" :     [ "html_data", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
             "themes" :      { "theme":  "classic" },
             "cookies" :     { "prefix": "filetree", opts : { path : '/' } },
             "contextmenu" : { "items":  contextMenu }

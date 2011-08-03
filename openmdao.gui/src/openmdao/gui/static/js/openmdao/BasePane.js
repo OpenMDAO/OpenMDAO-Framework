@@ -11,10 +11,8 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @constructor
  */
 openmdao.BasePane = function() {
-    this.elm = null,
-    
     this.init = function (id,title,menu) {
-        elm = jQuery("#"+id)
+        var elm = jQuery("#"+id)
 
         // if the elm doesn't exist, create it as a popup 
         if (elm.length === 0) {

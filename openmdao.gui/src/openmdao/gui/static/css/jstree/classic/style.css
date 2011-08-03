@@ -4,6 +4,9 @@
  * Supported plugins: ui (hovered, clicked), checkbox, contextmenu, search
  */
 
+ /* override fg color for dark bg (white is too bright, so use silver) */
+.jstree a { color:silver; }
+ 
 .jstree-classic li, 
 .jstree-classic ins { background-image:url("d.png"); background-repeat:no-repeat; background-color:transparent; }
 .jstree-classic li { background-position:-90px 0; background-repeat:repeat-y;  }
@@ -18,7 +21,7 @@
 .jstree-classic .jstree-open > a .jstree-icon { background-position:-56px -36px; }
 .jstree-classic a.jstree-loading .jstree-icon { background:url("throbber.gif") center center no-repeat !important; }
 
-.jstree-classic.jstree-focused { background:white; }
+.jstree-classic.jstree-focused { background:transparent}
 
 .jstree-classic .jstree-no-dots li, 
 .jstree-classic .jstree-no-dots .jstree-leaf > ins { background:transparent; }
@@ -52,7 +55,7 @@
 #vakata-contextmenu.jstree-classic-context a:hover, 
 #vakata-contextmenu.jstree-classic-context .vakata-hover > a { padding:0 5px; background:#e8eff7; border:1px solid #aecff7; color:black; -moz-border-radius:2px; -webkit-border-radius:2px; border-radius:2px; }
 #vakata-contextmenu.jstree-classic-context li.jstree-contextmenu-disabled a, 
-#vakata-contextmenu.jstree-classic-context li.jstree-contextmenu-disabled a:hover { color:silver; background:transparent; border:0; padding:1px 4px; }
+#vakata-contextmenu.jstree-classic-context li.jstree-contextmenu-disabled a:hover { color:black; background:transparent; border:0; padding:1px 4px; }
 #vakata-contextmenu.jstree-classic-context li.vakata-separator { background:white; border-top:1px solid #e0e0e0; margin:0; }
 #vakata-contextmenu.jstree-classic-context li ul { margin-left:-4px; }
 

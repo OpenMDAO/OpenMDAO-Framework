@@ -122,7 +122,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
         elm.empty()        
         elm.jstree({
             plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
-            json_data   : { "data": convertJSON(json,''), "progressive_render": true },
+            json_data   : { "data": convertJSON(json,'') },
             themes      : { "theme":  "classic" },
             cookies     : { "prefix": "objtree", opts : { path : '/' } },
             contextmenu : { "items":  contextMenu }
