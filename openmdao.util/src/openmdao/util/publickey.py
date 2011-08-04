@@ -134,9 +134,7 @@ def get_key_pair(user_host, logger=None,
                     if sys.platform == 'win32' and not HAVE_PYWIN32: #pragma no cover
                         logger.debug('No pywin32, not saving keyfile')
                     else:
-                        # FIXME: temporarily removing the following line
-                        # to see if it fixes a permission problem on windows/cygwin
-                        #make_private(key_dir)  # Private while writing keyfile.
+                        make_private(key_dir)  # Private while writing keyfile.
                         with open(key_file, 'wb') as out:
                             cPickle.dump(key_pair, out,
                                          cPickle.HIGHEST_PROTOCOL)
