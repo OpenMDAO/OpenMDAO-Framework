@@ -118,8 +118,8 @@ def run_on_ec2_image(host, config, conn, funct, *args, **kwargs):
         # first, make sure that the connection is really working...
         # on EC2 even if ssh connects there can be timeouts during authentication,
         # so try to connect multiple times if there's a timeout
-        fab_connect(settings_kwargs['user'],
-                    settings_kwargs['host_string'], debug=debug)
+        client = fab_connect(settings_kwargs['user'],
+                             settings_kwargs['host_string'], debug=debug)
         if debug:
             print "calling %s" % print_fuct_call(funct, *args, **kwargs)
         retval = funct(*args, **kwargs)

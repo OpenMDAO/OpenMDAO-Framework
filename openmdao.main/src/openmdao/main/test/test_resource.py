@@ -88,7 +88,7 @@ class TestCase(unittest.TestCase):
         n_servers = self.cluster.max_servers({'python_version':sys.version[:3]})
         try:
             n_cpus = multiprocessing.cpu_count()
-        except AttributeError:
+        except (AttributeError, NotImplementedError):  # pragma no cover
             n_cpus = 1
         if self.node.startswith('gxterm'):
             # GX front-end n_cpus doesn't imply node n_cpus.
@@ -106,7 +106,7 @@ class TestCase(unittest.TestCase):
         n_servers = self.local.max_servers({'python_version':sys.version[:3]})
         try:
             n_cpus = multiprocessing.cpu_count()
-        except AttributeError:
+        except (AttributeError, NotImplementedError):
             n_cpus = 1
         self.assertEqual(n_servers, self.local.max_load * n_cpus)
 

@@ -128,7 +128,9 @@ def connection_test(user, host, port=22, max_tries=10, debug=False):
     return connection
 
 
-# this is a modified version of fabric.network.connect
+# this is a modified version of fabric.network.connect that will
+# retry a number of times in the case of timeouts or 'no session'
+# errors
 def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
     """
     Create and return a new SSHClient instance connected to given host.

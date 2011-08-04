@@ -319,7 +319,14 @@ def main(argv=None):
         os.chdir(startdir)
         
         t2 = time.time()
-        orig_stdout.write('\nElapsed time: %10.3f s\n' % (t2-t1))
+        secs = t2-t1
+        print 'secs = ',secs
+        hours = int(secs)/3600
+        mins = int(secs-hours*3600.0)/60
+        secs = secs-(hours*3600.)-(mins*60.)
+        
+        orig_stdout.write('\nElapsed time (h, m, s): (%d, %d, %5.2f)\n' % 
+                          (hours,mins,secs))
 
 
 if __name__ == '__main__': #pragma: no cover
