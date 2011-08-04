@@ -27,9 +27,13 @@ ORIG_DIR = os.getcwd()
 class DummySocket(object):
     """ Something to provide requests and accept replies. """
 
+    count = 0
+
     def __init__(self):
         self.request_data = []
         self.replies = []
+        DummySocket.count += 1
+        self.port = DummySocket.count
 
     def set_command(self, cmd, raw=False):
         """ Set command to be 'sent' to the server. """
@@ -48,7 +52,7 @@ class DummySocket(object):
 
     def getpeername(self):
         """ Return name of 'socket' peer. """
-        return ('ClientHost', 12345)
+        return ('ClientHost', self.port)
 
     def getsockname(self):
         """ Return name of 'socket'. """
@@ -79,6 +83,7 @@ class TestCase(unittest.TestCase):
             os.mkdir('logs')
         self.client = DummySocket()
         self.server = Server(port=0)
+        self.server.per_client_loggers = False  # Avoid cleanup issues.
         self.handler = _Handler(self.client, self.client.getpeername(),
                                 self.server)
         self.handler.setup()

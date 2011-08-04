@@ -145,6 +145,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self._components = {}  # Maps from category/component to (cfg, egg_info)
         self._comp_ctx = _DictContextMgr(self._components)
         self.handlers = {}     # Maps from client address to handler.
+        self.per_client_loggers = True  # Set False in test_server.py
         self._credentials = get_credentials()  # For PublicKey servers.
         self._root = os.getcwd()
         self._config_errors = 0
@@ -384,15 +385,18 @@ class _Handler(SocketServer.BaseRequestHandler):
         set_credentials(self.server.credentials)
 
         # Set up separate logger for each client.
-        self._logger = logging.getLogger('%s:%s' % self.client_address)
-        self._logger.setLevel(_LOGGER.getEffectiveLevel())
-        self._logger.propagate = False
-        formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s',
-                                      '%b %d %H:%M:%S')
-        filename = os.path.join('logs', '%s_%s.txt' % self.client_address)
-        handler = logging.FileHandler(filename, mode='w')
-        handler.setFormatter(formatter)
-        self._logger.addHandler(handler)
+        if self.server.per_client_loggers:
+            self._logger = logging.getLogger('%s:%s' % self.client_address)
+            self._logger.setLevel(_LOGGER.getEffectiveLevel())
+            self._logger.propagate = False
+            formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s',
+                                          '%b %d %H:%M:%S')
+            filename = os.path.join('logs', '%s_%s.txt' % self.client_address)
+            handler = logging.FileHandler(filename, mode='w')
+            handler.setFormatter(formatter)
+            self._logger.addHandler(handler)
+        else:
+            self._logger = _LOGGER
 
         # Set False during some testing for coverage check.
         # Also avoids odd problems under nose suite test.

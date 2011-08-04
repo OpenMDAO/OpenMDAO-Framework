@@ -107,7 +107,7 @@ class Bogus(object):
 if __name__ == '__main__':
     top = set_as_top(Assembly())
     comp = top.add('comp', TestComponent())
-    comp.in_file = FileRef(path='NoDesc.cfg', owner=top)
+    comp.in_file = FileRef(path='ASTestComp-0.1.cfg', owner=top)
     comp.run()
     for path in ('x', 'y', 'z', 'exe_count',
                  'sub_group.b', 'sub_group.f', 'sub_group.i', 'sub_group.s',
