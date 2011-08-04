@@ -44,7 +44,8 @@ def system_info_dump(f):
     callit(f, get_system_env)
     callit(f, get_aliases)
     callit(f, get_compiler_info)
-    callit(f, get_pkg_info)
+    # get_pkg_info has problems...
+    #callit(f, get_pkg_info)
 
 
 def get_dump_time(f):
