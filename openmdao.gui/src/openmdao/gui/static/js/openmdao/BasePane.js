@@ -11,39 +11,66 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @constructor
  */
 openmdao.BasePane = function() {
+    this.elm = null,
+    this.par = null,
+    
     this.init = function (id,title,menu) {
-        var elm = jQuery("#"+id)
+        
+        this.elm = jQuery("#"+id)
+        
+        console.log("BasePane init",this.elm,"par=",this.par)
 
         // if the elm doesn't exist, create it as a popup 
-        if (elm.length === 0) {
-            elm = jQuery('<div id='+id+'></div>')        
-            elm.dialog({
-                'modal': false,
-                'title': title+': '+id,
-                'close': function(ev, ui) { elm.remove(); },
-                width: 600, 
-                height: 400
-            })
+        if (this.elm.length === 0) {
+            this.elm = jQuery('<div id='+id+'></div>')
+            this.popup(title+': '+id)
+            console.log("BasePane created",this.elm,"par=",this.par)
         }
         else {
-            elm.html("")
+            this.par = this.elm.parent()
+            this.elm.html("")
+            console.log("BasePane erased",this.elm,"par=",this.par)
         }
 
         // set the title
         if (title)
-            elm.attr('title',title)
+            this.elm.attr('title',title)
             
         // delete any existing content and prevent browser context menu
-        elm.html("").bind("contextmenu", function(e) { return false; })
+        this.elm.html("").bind("contextmenu", function(e) { return false; })
         
-        // add menu
-        if (menu) {
+        
+        var menuBar = this.elm.append("<nav2>")
+        if (menu) {        
             var menuID = id+"-menu"
-            elm.append("<nav2 id='"+menuID+"'>")
+            menuDiv = menuBar.append("<nav2 id='"+menuID+"'>")
             new openmdao.Menu(menuID,menu)
-        }
+        }        
         
-        debug.info("BasePane.init",this)
+        var popButton = jQuery("<span title='Pop Out' style='float:right;color:grey'>*</span>").click(function() {this.popup(title) }.bind(this))          
+        menuBar.append(popButton)
+        
+    },
+    
+    this.popup = function(title) {
+        var elm = this.elm,
+            par = this.par
+        this.elm.dialog({
+            'modal': false,
+            'title': title,
+            'close': function(ev, ui) { 
+                if (par) {
+                    console.log("trying to put",elm,"back on",par)
+                    elm.dialog('destroy')
+                    elm.appendTo(par)
+                    elm.show()
+                }
+                else {
+                    console.log("removing",elm,"par=",par)
+                    elm.remove(); 
+                }
+            },
+        })
     }
 }
 

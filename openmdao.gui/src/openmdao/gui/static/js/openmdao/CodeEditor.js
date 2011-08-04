@@ -11,14 +11,37 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @constructor
  */
 openmdao.CodeEditor = function(id,model) {
+    this.prototype = new openmdao.BasePane()
+    
     /***********************************************************************
      *  private
      ***********************************************************************/
      
     var self = this,
-        elm = jQuery("#"+id).width(screen.width).height(screen.height),
+        elm  = null,
+        filepath = null,
+        editor = null
+        
+    if (arguments.length > 0)
+        init()
+    
+    function init() {
+        var menu =  [
+                        {   "text": "File", 
+                            "items": [
+                                { "text": "New File",      "onclick": "model.newFile();" },
+                            ]
+                        },
+                    ]        
+        debug.info('CodeEditor.init',id,'Code Editor',menu)
+        self.prototype.init(id,'CodeEditor', menu)
+        //elm = jQuery("#"+id).width(screen.width).height(screen.height),
+        var editorID = id+'-content'
+        elm = jQuery('<textarea id="'+editorID+'">').appendTo("#"+id).width(screen.width).height(screen.height)
+        
         filepath = "",
-        editor = CodeMirror.fromTextArea(id, {
+        
+        editor = CodeMirror.fromTextArea(editorID, {
             parserfile: ["../contrib/python/js/parsepython.js"],
             stylesheet: "/static/codemirror/contrib/python/css/pythoncolors.css",
             path:       "/static/codemirror/js/",
@@ -29,20 +52,21 @@ openmdao.CodeEditor = function(id,model) {
             saveFunction: function() { saveFile() }
         })
 
+        // make the parent element (tabbed pane) a drop target for file objects
+        elm.droppable ({
+            accept: '.file',
+            drop: function(ev,ui) { 
+                var droppedObject = jQuery(ui.draggable).clone();
+                debug.info('CodeEditor drop')
+                editFile(droppedObject.attr("path"));
+            }
+        });
+    }
+
     /** tell the model to save the current contents to current filepath */
     function saveFile() {
         model.setFile(filepath,editor.getCode()) 
     }
-    
-    // make the parent element (tabbed pane) a drop target for file objects
-    elm.parent().droppable ({
-        accept: '.file',
-        drop: function(ev,ui) { 
-            var droppedObject = jQuery(ui.draggable).clone();
-            debug.info('CodeEditor drop')
-            editFile(droppedObject.attr("path"));
-        }
-    });
     
     /***********************************************************************
      *  privileged

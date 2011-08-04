@@ -12,6 +12,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  */
 openmdao.FileTree = function(id,model,edit_function,view_function) {
     this.prototype = new openmdao.BasePane()
+    
     /***********************************************************************
      *  private
      ***********************************************************************/
@@ -30,10 +31,10 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
                                 { "text": "New Folder",    "onclick": "model.newFolder();" },
                                 { "text": "Add File",      "onclick": "model.uploadFile();" }
                             ]
-                        }
+                        },
                     ]
-        self.prototype.init(id,'File manager', menu)
-        elm = jQuery('<div style="height:100%; background:white">').appendTo("#"+id)
+        self.prototype.init(id,'File Manager', menu)
+        elm = jQuery('<div style="height:100%">').appendTo("#"+id)
         elm = jQuery('<div>').appendTo(elm)        
     }
         
