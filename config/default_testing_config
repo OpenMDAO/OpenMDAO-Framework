@@ -39,9 +39,9 @@ security_groups: windows
 instance_id: i-d7fe4fb6
 user: %(win_user)s
 
-#[smithers_static]
-#instance_id: i-0310516d
-#user: %(win_user)s
+[smithers_static]
+instance_id: i-0310516d
+user: %(win_user)s
 
 [lovejoy_bret]
 instance_id: i-27ba1746
