@@ -26,6 +26,7 @@ from openmdao.devtools.tst_ec2 import run_on_ec2_image
 from openmdao.util.debug import print_fuct_call
 
 import paramiko.util
+paramiko.util.log_to_file('paramiko.log')
 
 atexit.register(fabric_cleanup, True)
 
@@ -157,8 +158,6 @@ def main(argv=None):
                       help="if there are test/build failures, don't delete "
                            "the temporary build directory "
                            "or terminate the remote instance if testing on EC2.")
-    #parser.add_option("-l","--log", action="store_true", dest='log',
-                      #help="create a paramiko.log file")
     parser.add_option("-f","--file", action="store", type='string', dest='fname',
                       help="pathname of a tarfile or URL of a git repo")
     parser.add_option("-b","--branch", action="store", type='string', 
@@ -173,8 +172,6 @@ def main(argv=None):
                       help="remote directory used for building/testing")
 
     (options, args) = parser.parse_args(sys.argv[1:])
-    
-    paramiko.util.log_to_file('paramiko.log')
     
     config = ConfigParser.ConfigParser()
     config.readfp(open(options.cfg))
@@ -297,26 +294,23 @@ def main(argv=None):
         
         while len(processes) > 0:
             time.sleep(1)
-            for i,p in enumerate(processes):
+            for p in processes:
                 if p.exitcode is not None:
+                    processes.remove(p)
+                    if len(processes) > 0:
+                        remaining = '(%d hosts remaining)' % len(processes)
+                    else:
+                        remaining = ''
+                    orig_stdout.write('%s finished. exit code=%d %s\n' % 
+                                      (p.name, p.exitcode, remaining))
                     break
-            else:
-                continue
-            p = processes[i]
-            processes.remove(p)
-            if len(processes) > 0:
-                remaining = '(%d hosts remaining)' % len(processes)
-            else:
-                remaining = ''
-            orig_stdout.write('%s finished. exit code=%d %s\n' % 
-                              (p.name, p.exitcode, remaining))
             
     finally:
+        os.chdir(startdir)
         sys.stdout = orig_stdout
         sys.stderr = orig_stderr
         for f in files:
             f.close()
-        os.chdir(startdir)
         
         t2 = time.time()
         secs = t2-t1

@@ -181,18 +181,26 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
     raise RuntimeError("failed to connect to host %s after %d tries" %
                        (host, tries))
 
-def get_platform():
+def remote_get_platform():
     """Returns the platform string of the current active host."""
     with settings(hide('running', 'stderr'), warn_only=True):
         return remote_py_cmd(["import sys", "print sys.platform"])
 
-def check_setuptools(py):
+def remote_check_setuptools(py):
     """Return True if setuptools is installed on the remote host"""
     with settings(hide('everything'), warn_only=True):
         return remote_py_cmd(["import setuptools", 
                               "print setuptools.__version__"],
                              py).succeeded
-        
+    
+def remote_check_pywin32(py):
+    """Return True if pywin32 is installed on the remote host"""
+    with settings(hide('everything'), warn_only=True):
+        return remote_py_cmd(["import win32api",
+                              "import win32security"
+                              "import ntsecuritycon"],
+                             py).succeeded
+
 def remote_py_cmd(cmds, py='python', remote_dir=''):
     """Given a list of python statements, creates a _cmd.py file, pushes
     it to the remote host, and runs it, returning the result of 'run'.
@@ -215,19 +223,9 @@ def remote_untar(tarfile):
              ]
     return remote_py_cmd(cmds)
     
-def remote_cat(f1, f2, out):
-    """Use python to concatenate two files remotely."""
-    cmds = [ "f1=open('%s', 'rb')" % f1,
-             "f2=open('%s', 'rb')" % f2,
-             "out=open('%s', 'wb')" % out,
-             "out.write(f1.read())",
-             "out.write(f2.read())",
-             "out.close()"
-        ]
-    return remote_py_cmd(cmds)
     
 def get_plat_spec_cmds():
-    plat = get_platform()
+    plat = remote_get_platform()
     if plat.startswith('win'):
         mover = 'move'
         remover = 'del'
@@ -320,11 +318,11 @@ def remote_build(distdir, destdir, build_type='build -f bdist_egg',
     locals_to_remove = []
     distdir = os.path.abspath(distdir)
     if pyversion is None:
-        pyversion = sys.version_info[:2]
+        pyversion = "%d.%d" % (sys.version_info[0], sys.version_info[1])
     remotedir = put_dir(distdir)
-    whichpy = 'python%d.%d' % pyversion
+    whichpy = 'python%s' % pyversion
     pkgname = os.path.basename(distdir)
-    if check_setuptools(whichpy):
+    if remote_check_setuptools(whichpy):
         has_setuptools = True
     else:
         has_setuptools = False
@@ -339,31 +337,32 @@ def remote_build(distdir, destdir, build_type='build -f bdist_egg',
     pkgdir = os.path.join(remotedir, pkgname)
     if not has_setuptools:
         put('ez_setup.py', os.path.join(pkgdir, 'ez_setup.py'))
+        setupf = open(os.path.join(distdir, 'setup.py'), 'r')
+        setup_contents = setupf.read()
+        setupf.close()
         with open('_catfile', 'wb') as catf:
             catf.write("from ez_setup import use_setuptools\n")
             catf.write("use_setuptools(download_delay=0)\n\n")
+            catf.write(setup_contents)
         locals_to_remove.append('_catfile')
-        put('_catfile', os.path.join(pkgdir, '_catfile'))
-        remote_cat(os.path.join(pkgdir, '_catfile'), 
-                   os.path.join(pkgdir, 'setup.py'), 
-                   os.path.join(pkgdir, '_newsetup.py'))
+        put('_catfile', os.path.join(pkgdir, 'setup.py'))
 
     with cd(pkgdir):
         remtmp = remote_tmpdir()
-        if not has_setuptools:
-            run("%s _newsetup.py %s -d %s" % (whichpy, build_type, remtmp))
-        else:
-            run("%s setup.py %s -d %s" % (whichpy, build_type, remtmp))
+        run("%s setup.py %s -d %s" % (whichpy, build_type, remtmp))
             
     pkg = remote_listdir(remtmp)[0]  # should only have one file in directory
+    pkgpath = os.path.join(destdir, pkg)
     
-    get(os.path.join(remtmp, pkg), pkg)
+    get(os.path.join(remtmp, pkg), pkgpath)
     
     for name in locals_to_remove:
         os.remove(name)
 
     rm_remote_tree(remtmp)
     rm_remote_tree(remotedir)
+    
+    return pkgpath
     
 def rsync_dirs(dest, host, dirs=('downloads','dists'),
                doit=os.system):
