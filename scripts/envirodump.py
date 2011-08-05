@@ -215,6 +215,19 @@ def _is_py_file(path):
     """Return True if path ends in .py, .pyc, .pyo, or .pyd"""
     return os.path.splitext(path)[1] in ['.py','.pyc','.pyo','.pyd']
 
+def _get_real_pkg_name(path):
+    initpath = os.path.join(path, '__init__.py')
+    if os.path.isfile(initpath):
+        f = open(initpath, 'r')
+        contents = f.read()
+        if 'declare_namespace(__name__)' in contents or 'pkgutil.extend_path' in contents:
+            pdirs = [f for f in os.listdir(path) 
+                         if os.path.isdir(os.path.join(path,f)) and 
+                         os.path.isfile(os.path.join(path,f,'__init__.py'))]
+            if len(pdirs) == 1:
+                return _get_real_pkg_name(os.path.join(path, pdirs[0]))
+    return path
+
 def _is_py_pkg(path):
     return os.path.isdir(path) and (
         os.path.isfile(os.path.join(path,'__init__.py')) or 
@@ -225,28 +238,37 @@ def _add_egg(entry, pkgs):
     if os.path.isfile(entry):
         pkgs.append(entry)
     else:
-        contents = os.listdir(entry)
+        toplevel = os.path.join(entry,'EGG-INFO','top_level.txt')
+        if os.path.isfile(toplevel):
+            f = open(toplevel, 'r')
+            for line in f:
+                tl = line.strip()
+                pkgs.append(_get_real_pkg_name(os.path.join(entry,tl)))
+        else:
+            pkgs.append(entry)
 
 def _add_egg_link(entry, pkgs):
-    f = open(entry, 'r')
-    lines = [line.strip() for line in f]
-    assert(len(lines)==2)
-    path = os.path.join(lines[0],lines[1])
-    abspath = os.path.abspath(path)
-    pkgs.append(abspath)
+    #f = open(entry, 'r')
+    #lines = [line.strip() for line in f]
+    #assert(len(lines)==2)
+    #path = os.path.join(lines[0],lines[1])
+    #abspath = os.path.abspath(path)
+    #pkgs.append(abspath)
+    pass
 
 def _add_dir(entry, pkgs):
-    files = os.listdir(entry)
-    modset = set()
-    for f in files:
-        if _is_py_file(f):
-            modset.add(os.path.splitext(f)[0])
-        elif f.endswith('.egg-link'):
-            _add_egg_link(os.path.join(entry,f), pkgs)
-        elif _is_py_pkg(os.path.join(entry,f)):
-            pkgs.append(os.path.join(entry, f))
-    for mod in modset:
-        pkgs.append(os.path.join(entry, mod))
+    if _is_py_pkg(entry):
+        pkgs.append(_get_real_pkg_name(entry))
+    else:
+        files = os.listdir(entry)
+        for f in files:
+            path = os.path.join(entry,f)
+            if _is_py_file(f):
+                pass
+            elif f.endswith('.egg-link'):
+                _add_egg_link(path, pkgs)
+            elif _is_py_pkg(path):
+                pkgs.append(_get_real_pkg_name(path))
 
 def _add_from_path_entry(entry, pkgs):
     """
@@ -254,209 +276,36 @@ def _add_from_path_entry(entry, pkgs):
         If it's a directory, find the modules/packages in it.
     """
     if os.path.isfile(entry) and _is_py_file(entry):
-        pkgs.append(entry)
+        pass
     elif entry.endswith('.egg'):
         _add_egg(entry, pkgs)
     elif entry.endswith('.egg-link'):
         _add_egg_link(entry, pkgs)
     elif os.path.isdir(entry):
-        if _is_py_pkg(entry):
-            pkgs.append(entry)
-        else:
-            _add_dir(entry, pkgs)
+        _add_dir(entry, pkgs)
     
 def get_pkg_info(f):
     """
-        This function will list python packages and versions.
+        This function will list python packages found on sys.path
     """
 
     f.write('\n\n================PYTHON PACKAGES================\n')
 
     # loop over each entry in sys.path and return the names of all
     # packages in the order that they're found
-    pkgs = []
+    paths = {}
     for entry in sys.path:
+        pkgs = []
         _add_from_path_entry(entry, pkgs)
-    for p in pkgs:
-        f.write(p+'\n')
-    
-    ##swallow all the junk output that is spit out during this part.
-    #deadout = sys.stdout
-    #deaderr = sys.stderr
-    #if  platform.system() is not "Windows":
-        #fsock = open('/dev/null', 'w')
-    #else:
-        #fsock = open('nul', 'w')
-    #sys.stdout = fsock
-    #sys.stderr = fsock
-    #u = PkgUtil()
-    #u.list_packages(f)
-    #sys.stdout = deadout
-    #sys.stderr = deaderr
-
-
-#class PkgUtil(object):
-    #""" Utility class for querying information about
-    #installed packages and modules """
-
-    #def __init__(self, paths=None):
-        #self.paths = sys.path
-        #if paths:
-            #self.paths = paths + self.paths
-
-    #def find_standard_package(self, pkgname):
-        #"""Search in standard paths for a package/module """
-        #try:
-            #result = find_module(pkgname)
-            #return result
-        #except ImportError, e:
-            #return ()
-
-    #def get_package_init_path(self, pkgname, pkgdir):
-        #""" Return the init file path for the package.
-        #This has to be called only for directory packages """
-
-        #pkgdir = os.path.abspath(pkgdir)
-
-        ## Try __init__.py
-        #pkginitfile = os.path.join(pkgdir, '__init__.py')
-        ## If it does not exist, try <pkgname>.py
-        #if not os.path.isfile(pkginitfile):
-            #pkginitfile = os.path.join(pkgdir,pkgname + '.py')
-
-        #if os.path.isfile(pkginitfile):
-            #return pkginitfile
-        #else:
-            ## Everything failed, return pkgdir itself!
-            #return pkgdir
-
-
-    #def find_package(self, pkgname):
-        ## Query for package/module and return a dictionary
-        ## with the following fields
-        ## 'name': Package/module name,
-        ## 'path' : Full path of the package/module,
-        ## 'type' : What kind of a package/module is it
-        ##          This has the following values
-        ## 'doc'  : Package documentation
-
-        #d = {}
-        #packages = pkgname.split('.')
-        #top_level = packages[0]
-
-        #try:
-            ## First look for built-in modules
-            #result = self.find_standard_package(pkgname)
-            #if not result and self.paths:
-                #result = find_module(pkgname, self.paths)
-            #if result:
-                #of, pathname, desc = result
-                ## Last or only component of package
-                #if len(packages)==1:
-                    ## Load module
-                    #try:
-                        #M = load_module(pkgname, of, pathname, desc)
-                    #except Exception, e:
-                        #return d
-
-                    #d['name'] = pkgname
-                    #d['type'] = desc[2]
-                    #d['doc']=''
-
-                    #if os.path.dirname(pathname):
-                        #d['path'] = self.get_package_init_path(pkgname, pathname)
-                    #else:
-                        ## For built-in modules
-                        #d['path']=pathname
-                    #if M:
-                        #if M.__doc__:
-                            ## Set doc string
-                            #d['doc'] = M.__doc__
-                        #else:
-                            #pkgfile = ''
-                            ## Load comments from the package file
-                            #if d['type'] == PY_SOURCE:
-                                #pkgfile = d['path']
-                            #elif d['type'] == PKG_DIRECTORY:
-                                #if os.path.isfile(d['path']):
-                                    #pkgfile = d['path']
-
-                            ##if pkgfile:
-                                ##d['doc'] = self.load_comments(pkgfile)
-
-                    #return d
-
-
-        #except ImportError, e:
-            #if len(packages)>1:
-                #try:
-                    #result = find_module(top_level, self.paths)
-                    #if result:
-                        #of, pathname, desc = result
-                        #try:
-                            #M = load_module(top_level, of, pathname, desc)
-                            ## Remove the top_level package from the name
-                            #pkgname = reduce(lambda x,y: x+'.'+y, packages[1:])
-                            ## Call this recursively
-                            #if hasattr(M, '__path__'):
-                                #return self.find_package(pkgname, M.__path__)
-                        #except ImportError, e:
-                            #pass
-                        #except Exception, e:
-                            #pass
-                #except ImportError, e:
-                    #pass
-            #else:
-                #pass
-        #return d
-
-
-    #def list_packages(self, f):
-        #""" An ambitious function which attempts to list all Python packages
-        #in your system, according to the configuration """
-
-        ## First extract loaded module names from sys.modules
-        #sys_modules = sys.modules.keys()
-
-        #packages = {}
-
-        ## Loop through all directories in sys.path and check for modules
-        ## Dont iterate through <prefix>/lib directory
-        #libdir = os.path.join(sys.prefix, 'lib')
-        #walked = []
-        #for top_level in self.paths:
-            #if not os.path.isdir(top_level):
-                #continue
-
-            ## Dont iterate through libdir
-            #if os.path.abspath(top_level) == os.path.abspath(libdir):
-                #continue
-
-            #walked.append(top_level)
-            #for item in os.listdir(top_level):
-
-                #fullpath = os.path.join(top_level, item)
-                #if fullpath in walked: continue
-
-                #walked.append(fullpath)
-                ## Remove the extension
-                #idx = item.find('.')
-                #if idx != -1: item = item[:idx]
-                #d = self.find_package(item)
-                #if not d: continue
-                #try:
-                    #pkginfo = packages[d['type']]
-                    #if d['type'] == 5:
-                        #pkginfo[d['name']] = d['path']
-                #except Exception, e:
-                    #if d['type'] == 5:
-                        #packages[d['type']] = { d['name'] : d['path'] }
-
-        #for key,item in packages.items():
-            #listofitems = item.keys()
-            #listofitems.sort()
-            #for key2 in listofitems:
-                #f.write(key2+': '+item[key2]+'\n')
+        if pkgs:
+            if entry.rstrip('/').rstrip('\\') == pkgs[0].rstrip('/').rstrip('\\'):
+                f.write("\nfrom %s:\n" % os.path.dirname(entry))
+                f.write("    %s\n" % os.path.basename(entry))
+            else:
+                f.write("\nfrom %s:\n" % entry)
+                for p in pkgs:
+                    f.write("    %s\n" % 
+                            p[len(entry)+1:].replace('/','.').replace('\\','.'))
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
