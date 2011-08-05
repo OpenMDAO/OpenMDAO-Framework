@@ -36,14 +36,14 @@ avoid confusion with other branches in your repository. And don't fix multiple
 bugs or add multiple features on the same branch. If you keep your branch
 changes small by targeting a specific bug or feature, the maintainers of the
 project will have a much easier time merging in your changes. And remember, in
-*git*, creating branches is cheap and quick, so there's no need to worry about
+*Git*, creating branches is cheap and quick, so there's no need to worry about
 creating lots of branches.
 
 Make sure to check which branch you're on whenever you create a new branch.
 Branching from the wrong starting branch can bring in unexpected changes and
 generally cause confusion. Also, if the branch you're branching from is
 mirroring a remote branch, make sure to bring it up to date with the remote
-branch *before* you create your new branch. In most cases you should
+branch *before* you create your new branch. In most cases you should branch
 from *dev*.  In that case you would do the following:
 
 ::
@@ -51,6 +51,11 @@ from *dev*.  In that case you would do the following:
    git checkout dev
    git pull origin dev
    git checkout -b <my_new_branch>
+   
+   
+.. note:: To find out what branch you're on, type ``git branch``. You should see 
+      a list of all of the branches you've created, with a ``*`` next to the one
+      that is checked out.
 
 
 .. _Creating-the-Virtual-Environment:
@@ -64,6 +69,7 @@ run ``python go-openmdao-dev.py`` from the top directory of your
 repository. The script will check the version of Python you are running. **You must
 be running version 2.6.** (To find out which Python version you are
 running, you can type ``python --version``.)
+
 
 .. note:: If you're using Visual Studio on Windows, you need to run the installer from a 
    command window that has the Visual Studio environment variables set. The
@@ -162,7 +168,7 @@ you are ready to use OpenMDAO.
 
 The following sections provide information on how to carry out some basic
 actions in the development environment. You would perform these actions on a
-repository that you cloned from the OpenMDAO-Framework repository on Github.
+repository that you cloned from the OpenMDAO-Framework repository on GitHub.
 
 .. note::  In some cases the examples are written from the Linux perspective. 
    Windows users need to replace the ``/`` with a ``\``.
@@ -194,7 +200,7 @@ must add them to your repository by running the command:
 If ``<filename>`` is a directory, all files and subdirectories (and their
 files) within the directory will also be added to the repository, unless they
 match any of the patterns in the ``.gitignore`` file(s) located above it in
-the repository directory tree. To add a new pattern for git to ignore, edit the
+the repository directory tree. To add a new pattern for Git to ignore, edit the
 appropriate ``.gitignore`` file.  Directories to be ignored should end with a 
 forward slash (/), and glob patterns are allowed.
 
@@ -212,7 +218,7 @@ the working tree in addition to being removed from the staging area.
 
 .. index:: Committing changes
 
-.. _Commiting-changes:
+.. _Committing-changes:
 
 Committing Changes 
 ------------------
@@ -243,7 +249,7 @@ to be part of the repository, you should ``git add`` them.
 The files on lines beginning with ``M`` have been modified. If you omit the ``-s`` argument,
 you'll get a more verbose output that can be helpful if you're not sure what to do.
 For a full discussion of all options and output formats for the *status* command,
-use git's built-in help:
+use Git's built-in help:
 
 ::
 
@@ -251,7 +257,7 @@ use git's built-in help:
    
 
 You can use the ``git help`` command to get detailed help information about
-any git command.  The help command has the form:
+any Git command.  The help command has the form:
 
 ::
 
@@ -272,9 +278,9 @@ new file where you must enter the required commit message.
    because if you don't, only the *staged* files will be committed.  This can lead
    to very confusing behavior and should be avoided.
 
-One nice Github feature is that if you're working on a particular Github
-issue, you can include the text "closes GH-???" in your commit comment,
-replacing the *???* with the number of the Github issue, and Github will
+One nice GitHub feature is that if you're working on a particular GitHub
+issue, you can include the text ``closes GH-???`` in your commit comment,
+replacing the ``???`` with the number of the GitHub issue, and GitHub will
 automatically close that issue for you when your commit makes its way back to
 the original repository.
 
@@ -293,11 +299,11 @@ Working with Remote Repositories
 
 You won't be the only one making updates to the OpenMDAO source code, so from
 time to time you'll want to update your repository with the latest information
-from the master OpenMDAO-Framework repository. In order to do that, you need
+from the master OpenMDAO-Framework repository. To do that, you need
 to first understand about *remotes*, which are just short aliases for remote
 repositories that you need to interact with.
 
-When you first clone the OpenMDAO-Framework repository on Github, git will
+When you first clone the OpenMDAO-Framework repository on GitHub, Git will
 automatically add a remote to your local repository called *origin* that
 refers back to the OpenMDAO-Framework repository. Branches in remote
 repositories are referred to using names of the form
@@ -307,7 +313,7 @@ branches, named *origin/master* and *origin/dev*. A local branch named
 repository.
 
 There will be times when you want to reference other remote repositories
-beyond just *origin*. In order to add new remotes to your repository, you use
+beyond just *origin*.  To add new remotes to your repository, you use
 the ``git remote add`` command. It has the following form:
 
 ::
@@ -323,16 +329,16 @@ for it called *myfork*.
 
 ::
 
-   git remote add myfork git@github.com:userid/OpenMDAO-Framework.git
+   git remote add myfork http://userid@github.com/userid/OpenMDAO-Framework.git
    
-   
-where *userid* is your Github userid. 
+where *userid* is your Github userid.
+
 
 Using the ``git remote`` command with no arguments will give a list of
 the remotes that you currently reference in your repository.
 
 
-In order to update references to remote branches in your local repository, you
+To update references to remote branches in your local repository, you
 need to *fetch* their data from the remote repository they live in. For
 example, to get the latest updates from *origin*, you would enter:
 
@@ -342,7 +348,7 @@ example, to get the latest updates from *origin*, you would enter:
    
    
 This just updates your repository database with new data from origin's remote
-branches, but in order to update your local branch, you'll have to merge the
+branches, but to update your local branch, you'll have to merge the
 remote branch with yours. For example, say someone updated the *dev* branch in
 the official OpenMDAO-Framework repository and you want to update your current branch
 with those changes. Assuming you've already fetched the data from origin using
@@ -363,7 +369,7 @@ Or you can also use the *pull* command, which combines a fetch and a merge:
 When you merge another branch into yours, if there are any changes to the
 ``go-openmdao-dev.py`` file or to any of the ``setup.py`` files in the source
 tree, it's a good idea to remove the old virtual environment and build a new
-one in order to ensure that the correct packages will be used based on the
+one to ensure that the correct packages will be used based on the
 correct package dependencies for the current code snapshot. To do this, first
 make sure your virtual environment is deactivated by typing ``deactivate``,
 then remove the ``devenv`` directory from the top level of the repository,
@@ -404,10 +410,10 @@ to just fire up your favorite editor and update the conflicts in each file.  It'
 easier though if you use the ``git mergetool`` command, which will bring up a graphical
 three way diff tool that should make it a lot easier to see what's going on.  The
 particular diff tool that is used depends on the platform where you run the command.
-You can edit your personal git configuration to make it use whatever your favorite
+You can edit your personal Git configuration to make it use whatever your favorite
 graphical diff tool may be.
 
-Once you've updated the conflicted files, you tell git that the conflicts are resolved
+Once you've updated the conflicted files, you tell Git that the conflicts are resolved
 by running ``git add`` on each file. After resolving all conflicts, run ``openmdao_test``
 to verify that everything is in working order, then commit the changes from the
 merge:
@@ -418,13 +424,13 @@ merge:
    git commit -am "<commit comment>"
 
 
-.. index:: branch; pushing to Github
+.. index:: branch; pushing to GitHub
 
 Contributing Your Changes
 -------------------------
 
-At some point you'll finish adding your new feature or implemeting your bug
-fix and you'll want to get your changes into the official version of OpenMDAO.
+At some point you'll finish adding your new feature or implementing your bug
+fix, and you'll want to get your changes into the official version of OpenMDAO.
 Here's a little checklist to go through to make sure that your update is
 actually finished:
 
@@ -441,7 +447,7 @@ Once you've done all of these things, you're ready to push your changes up to
 your personal OpenMDAO fork and ask the OpenMDAO maintainers to merge your changes
 into the official *dev* branch.
 
-To push the changes from your *<branchname>* branch up to your fork which you
+To push the changes from your ``<branchname>`` branch up to your fork, which you
 earlier named *myfork*, use the ``git push`` command:
 
 ::
@@ -449,20 +455,57 @@ earlier named *myfork*, use the ``git push`` command:
    git push myfork <branchname>
 
 
-Once that's done, *myfork/<branchname>* will have your changes and you can make a pull
+Once that's done, ``myfork/<branchname>`` will have your changes and you can make a pull
 request to the OpenMDAO maintainers.  To issue a pull request, follow these steps:
 
-1. Go to the page for your personal OpenMDAO fork on Github.
+1. Go to the page for your personal OpenMDAO fork on GitHub. (You must be logged in to GitHub.)
 
-2. Select the branch you wish to have *pulled* from the **Switch Branches** dropdown
-   near the top of the page.
+   To get there from your user page, select the branch that you pushed up to GitHub. For example, in the figure below
+   under **Public Activity** you see a ``play_branch`` that pziegfeld created from her personal ``OpenMDAO-Framework`` fork
+   (circled in red). 
 
-3. Push the *Pull Request* button.
+.. figure:: user_page1.png
+   :align: center
+   
+   User Page Showing the OpenMDAO-Framework Fork (left side of page) and the Branch to be Pulled (circled)
+   
+|    
+   
+   In this example, selecting ``play_branch`` will take you to a personal OpenMDAO fork, as shown in
+   the next figure, and you will be on ``play_branch``. However, alternatively, you could select
+   ``OpenMDAO-Framework``, the fork under **Repositories** (circled in green). If you do that, when
+   you go to the personal OpenMDAO fork page you will be on the ``master`` branch and will have to
+   switch branches. 
 
-4. You will be prompted to fill in a description of your changes.  The message near 
-   the top of the page should read something like 
-   "You're asking OpenMDAO to pull 1 commit into OpenMDAO:dev from <userid>:<branchname>",
-   where <userid> is your github userid and <branchname> is the name of the branch to
-   be pulled.  If the source and destination branches are correct, push the 
-   "Send Pull Request" button.  Otherwise, click on *Change Commits* and modify the
-   branch names.
+ |   
+   
+.. figure:: personal_fork1.png
+   :align: center
+   
+   Example Page for a Personal OpenMDAO Fork 
+  
+   
+2. If you wish to confirm that you are on the correct branch on your personal OpenMDAO fork, you can go to
+   the *Switch Branches* dropdown in the upper left part of the page (circled in green). You'll see a list of
+   branches in alphabetical order; a check mark appears after the branch you're on. If you elected to click
+   on the OpenMDAO Framework fork instead of a specific branch, the check mark will appear after ``master``,
+   and you'll have to select the branch you want *pulled*. If you clicked a specific branch (e.g.,
+   ``play_branch``) to get to your personal OpenMDAO page, the check mark should be after that branch's name.
+
+
+3. Once you're on the correct branch, push the *Pull Request* button located in the upper right of the page. 
+
+   (It's circled in red in the above figure.)
+
+4. You will be prompted to fill in a description of your changes. The message near the top of the page should read something like:
+
+   :: 
+   
+     You're asking OpenMDAO to pull 1 commit into OpenMDAO:dev from <userid>:<branchname>",
+     where <userid> is your GitHub userid and <branchname> is the name of the branch to
+     be pulled.  If the source and destination branches are correct, push the 
+     "Send Pull Request" button.  Otherwise, click on "Change Commits and modify the
+     branch names.
+
+After you have submitted your pull request, one of the maintainers will review the changes on your branch
+and decide whether to approve it.

@@ -24,19 +24,17 @@ __all__ = ['NEWSUMTdriver']
 
 
 from numpy import zeros, ones
-from numpy import float as numpy_float
 from numpy import int as numpy_int
 
 from enthought.traits.api import Array
                                  
-from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
-from openmdao.main.uses_derivatives import UsesGradients, UsesHessians
+from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.util.decorators import add_delegate
-from openmdao.lib.datatypes.api import Float, Int, Enum
+from openmdao.lib.datatypes.api import Float, Int
 
 import newsumt.newsumtinterruptible as newsumtinterruptible
 
@@ -172,7 +170,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
                 ddobj[i_current] = driver.differentiator.get_2nd_derivative(obj_name, wrt=(name1, name2))
                 i_current += 1
 
-    elif info in [4,5]:
+    elif info in [4, 5]:
         # evaluate gradient of nonlinear or linear constraints.
         
         # Linear gradients are only called once, at startup
@@ -261,9 +259,8 @@ class _countr(object):
 
         
 # pylint: disable-msg=R0913,R0902
-@add_delegate(HasParameters, HasIneqConstraints, HasObjective, UsesGradients, \
-              UsesHessians)
-class NEWSUMTdriver(Driver):
+@add_delegate(HasParameters, HasIneqConstraints, HasObjective)
+class NEWSUMTdriver(DriverUsesDerivatives):
     """ Driver wrapper of Fortran version of NEWSUMT. 
         
     
@@ -318,8 +315,8 @@ class NEWSUMTdriver(Driver):
                      If 0, initial value computed by NEWSUMT. \
                      If 1, initial value set by ra.')
     
-    def __init__(self, doc=None):
-        super(NEWSUMTdriver, self).__init__( doc)
+    def __init__(self, *args, **kwargs):
+        super(NEWSUMTdriver, self).__init__(*args, **kwargs)
         
         self.iter_count = 0
 
@@ -364,6 +361,7 @@ class NEWSUMTdriver(Driver):
 
         self.isdone = False
         self.resume = False
+        self.uses_Hessians = False
         
     def start_iteration(self):
         """Perform the optimization."""

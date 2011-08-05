@@ -226,7 +226,7 @@ def after_install(options, home_dir):
             else:
                 reqs.add('%s' % dist.as_requirement())
 
-    reqs = openmdao_prereqs + list(reqs)
+    reqs = list(reqs)
     
     optdict = { 
         'reqs': reqs, 
