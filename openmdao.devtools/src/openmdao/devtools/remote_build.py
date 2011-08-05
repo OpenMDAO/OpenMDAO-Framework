@@ -15,7 +15,7 @@ import paramiko.util
 paramiko.util.log_to_file('paramiko.log')
 
 from openmdao.devtools.utils import put_dir, check_setuptools, remote_tmpdir, \
-                                    list_remote_dir, rm_remote_tree, fabric_cleanup
+                                    remote_listdir, rm_remote_tree, fabric_cleanup
 
 def remote_build(distdir, destdir, build_type='build -f bdist_egg',
                  pyversion=None):
@@ -61,8 +61,7 @@ def remote_build(distdir, destdir, build_type='build -f bdist_egg',
         else:
             run("%s setup.py %s -d %s" % (whichpy, build_type, remtmp))
             
-    pkg = list_remote_dir(remtmp).strip()  # should only have one file in directory
-    pkg = pkg[2:len(pkg)-2]
+    pkg = remote_listdir(remtmp)[0]  # should only have one file in directory
     
     get(os.path.join(remtmp, pkg), pkg)
     

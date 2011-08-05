@@ -184,21 +184,25 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
 def get_platform():
     """Returns the platform string of the current active host."""
     with settings(hide('running', 'stderr'), warn_only=True):
-        return run('python -c "import sys; print sys.platform"')
+        return remote_py_cmd(["import sys", "print sys.platform"])
 
 def check_setuptools(py):
     """Return True if setuptools is installed on the remote host"""
     with settings(hide('everything'), warn_only=True):
-        return run('%s -c "import setuptools; print setuptools.__version__"' % py).succeeded
+        return remote_py_cmd(["import setuptools", 
+                              "print setuptools.__version__"],
+                             py).succeeded
         
-def py_cmd(cmds):
-    """Given a list of python statements, returns a string containing
-    the 'python -c' command that will execute those statements. 
+def remote_py_cmd(cmds, py='python', remote_dir=''):
+    """Given a list of python statements, creates a _cmd.py file, pushes
+    it to the remote host, and runs it, returning the result of 'run'.
     """
+    f = open('_cmd.py', 'w')
     for cmd in cmds:
-        if '"' in cmd:
-            raise ValueError("use single quotes for strings in commands")
-    return 'python -c "' + ';'.join(cmds) + '"'
+        f.write("%s\n" % cmd)
+    f.close()
+    put('_cmd.py', os.path.join(remote_dir, '_cmd.py'))
+    return run('%s _cmd.py' % py)
 
 def remote_untar(tarfile):
     """Use internal python tar package to untar a file in the current remote
@@ -209,7 +213,7 @@ def remote_untar(tarfile):
              "tar.extractall()",
              "tar.close()",
              ]
-    run(py_cmd(cmds))
+    return remote_py_cmd(cmds)
     
 def remote_cat(f1, f2, out):
     """Use python to concatenate two files remotely."""
@@ -220,7 +224,7 @@ def remote_cat(f1, f2, out):
              "out.write(f2.read())",
              "out.close()"
         ]
-    run(py_cmd(cmds))
+    return remote_py_cmd(cmds)
     
 def get_plat_spec_cmds():
     plat = get_platform()
@@ -239,32 +243,30 @@ def remote_tmpdir():
     location.
     """
     with settings(show('stdout')):
-        return run('python -c "import tempfile; print tempfile.mkdtemp()"')
+        return remote_py_cmd(["import tempfile", 
+                              "print tempfile.mkdtemp()"])
 
 def remote_mkdir(path):
     """Create a remote directory with the given name. If it already exists,
     just return with no error.
     """
-    run("""python -c "import os; x=0 if os.path.exists('%s') else os.makedirs('%s')" """ % (path,path))
+    return remote_py_cmd(["import os",
+                          "if not os.path.exists('%s'):" % path,
+                          "    os.makedirs('%s')" % path])
     
 def remote_listdir(path):
     """Return a list of files found in the given remote directory."""
     with settings(show('stdout')):
-        s = run("""python -c "import os; print os.listdir('%s')" """ % path)
+        s = remote_py_cmd(["import os",
+                           "print os.listdir('%s')" % path])
     s = s.strip()[1:-1]
-    lst = []
-    for part in s.split(', '):
-        lst.append(part.strip("'"))
-    return lst
+    return [part.strip("'") for part in s.split(', ')]
 
 def rm_remote_tree(pathname):
     """Delete the directory at the remote location."""
-    run("""python -c "import shutil; shutil.rmtree('%s')" """ % pathname)
+    return remote_py_cmd(["import shutil",
+                          "shutil.rmtree('%s')" % pathname])
     
-def list_remote_dir(dirname):
-    return run("""python -c "import os; print os.listdir('%s')" """ % dirname)
-            
-
 
 def put_untar(local_path, remote_dir=None, renames=()):
     """Put the given tarfile on the current active host and untar it in the
@@ -353,8 +355,7 @@ def remote_build(distdir, destdir, build_type='build -f bdist_egg',
         else:
             run("%s setup.py %s -d %s" % (whichpy, build_type, remtmp))
             
-    pkg = list_remote_dir(remtmp).strip()  # should only have one file in directory
-    pkg = pkg[2:len(pkg)-2]
+    pkg = remote_listdir(remtmp)[0]  # should only have one file in directory
     
     get(os.path.join(remtmp, pkg), pkg)
     
