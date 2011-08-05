@@ -2,13 +2,10 @@
 Wrappers for OpenMDAO components and variables.
 """
 
-from __future__ import absolute_import
-
 import numpy
 import os
 import sys
 import time
-import traceback
 import xml.etree.cElementTree as ElementTree
 from xml.sax.saxutils import escape, quoteattr
 
@@ -17,12 +14,8 @@ try:
 except ImportError:  # pragma no cover
     pass  # Not available on Windows.
 
-from enthought.traits.traits import CTrait
-
 from openmdao.main.api import Container, FileRef
-from openmdao.main.assembly import PassthroughTrait, PassthroughProperty
 from openmdao.main.attrwrapper import AttrWrapper
-from openmdao.main.container import find_trait_and_value
 from openmdao.main.mp_support import is_instance
 
 from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
@@ -43,9 +36,9 @@ def _register(typ, wrapper):
     typename = '%s.%s' % (typ.__module__, typ.__name__)
     _TYPE_MAP[typename] = wrapper
 
-def lookup(typnames):
+def lookup(typenames):
     """ Return wrapper for `typenames`. """
-    for name in typnames:
+    for name in typenames:
         if name in _TYPE_MAP:
             return _TYPE_MAP[name]
     return None
@@ -118,8 +111,8 @@ class ComponentWrapper(object):
                                        % (container.get_pathname(), rpath))
                 wrapper_class = lookup(typenames)
                 if wrapper_class is None:
-                     raise WrapperError('%s: unsupported variable type %r.'
-                                        % (ext_path, typenames[0]))
+                    raise WrapperError('%s: unsupported variable type %r.'
+                                       % (ext_path, typenames[0]))
                 # Wrap it.
                 wrapper = wrapper_class(container, rpath, epath, self._logger)
                 if wrapper_class is FileWrapper:
@@ -244,12 +237,10 @@ class ComponentWrapper(object):
             else:  # pragma no cover
                 paths = self._server.listdir(root)
                 paths = [path for path in paths
-                              if not self._server.isdir(os.path.join(root, path))]
+                            if not self._server.isdir(os.path.join(root, path))]
             paths = [path for path in paths if not path.startswith('.')]
             text_files = []
             for path in paths:  # List only text files.
-                if path.startswith('.'):
-                    continue
                 if self._server is None:  # Used when testing.
                     inp = open(os.path.join(root, path), 'rb')
                 else:  # pragma no cover
@@ -500,7 +491,8 @@ class BaseWrapper(object):
     def get(self, attr, path):
         """ Return attribute corresponding to `attr`. """
         if attr == 'description':
-            return self._trait.desc or ''
+            valstr = self._trait.desc or ''
+            return valstr.encode('string_escape')
         else:
             raise WrapperError('no such property <%s>.' % path)
 
@@ -552,11 +544,14 @@ class ArrayBase(BaseWrapper):
             else:
                 fmt = '"%s"'
             if self._is_array and len(value.shape) > 1:
-                return 'bounds[%s] {%s}' % (
-                       ', '.join(['%d' % dim for dim in value.shape]),
-                       ', '.join([fmt % val for val in value.flat]))
+                valstr = 'bounds[%s] {%s}' % (
+                         ', '.join(['%d' % dim for dim in value.shape]),
+                         ', '.join([fmt % val for val in value.flat]))
             else:
-                return ', '.join([fmt % val for val in value])
+                valstr = ', '.join([fmt % val for val in value])
+            if self.typ == str:
+                valstr = valstr.encode('string_escape')
+            return valstr
         elif attr == 'componentType':
             return self._typstr
         elif attr == 'dimensions':
@@ -615,13 +610,15 @@ class ArrayBase(BaseWrapper):
         return '<Variable name="%s" type="%s[]" io="%s" format=""' \
                ' description=%s units="%s">%s</Variable>' \
                % (self._ext_name, self._typstr, self._io,
-                  quoteattr(self._trait.desc),
+                  quoteattr(self.get('description', self._ext_path)),
                   self.get('units', self._ext_path),
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr` to `valstr`. """
         if attr == 'value':
+            if self.typ == str:
+                valstr = valstr.decode('string_escape')
             if self._is_array:
                 if valstr.startswith('bounds['):
                     dims, rbrack, rest = valstr[7:].partition(']')
@@ -733,7 +730,8 @@ class BoolWrapper(BaseWrapper):
         """ Return info in XML form. """
         return '<Variable name="%s" type="boolean" io="%s" format=""' \
                ' description=%s>%s</Variable>' \
-               % (self._ext_name, self._io, quoteattr(self._trait.desc),
+               % (self._ext_name, self._io,
+                  quoteattr(self.get('description', self._ext_path)),
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr):
@@ -754,9 +752,9 @@ class BoolWrapper(BaseWrapper):
 
     def list_properties(self):
         """ Return lines listing properties. """
-        return ['description (type=java.lang.String) (access=g)',
+        return ('description (type=java.lang.String) (access=g)',
                 'value (type=boolean) (access=%s)' % self._access,
-                'valueStr (type=boolean) (access=g)']
+                'valueStr (type=boolean) (access=g)')
 
 _register(Bool, BoolWrapper)
 
@@ -811,11 +809,14 @@ class EnumWrapper(BaseWrapper):
             return self._trait.aliases[i]
         elif attr == 'enumValues':
             if self._py_type == float:
-                return ', '.join([_float2str(value) for value in self._trait.values])
+                return ', '.join([_float2str(value)
+                                  for value in self._trait.values])
             elif self._py_type == int:
-                return ', '.join(['%s' % value for value in self._trait.values])
+                return ', '.join(['%s' % value
+                                  for value in self._trait.values])
             else:
-                return ', '.join(['"%s"' % value for value in self._trait.values])
+                return ', '.join(['"%s"' % value
+                                  for value in self._trait.values])
         elif attr.startswith('enumValues['):
             i = int(attr[11:-1])
             if self._py_type == float:
@@ -834,8 +835,7 @@ class EnumWrapper(BaseWrapper):
             return ''
         elif attr == 'units':
             if self._py_type == float:
-                units = self._trait.units
-                return '' if units is None else units
+                return self._trait.units or ''
             else:
                 return ''
         else:
@@ -851,7 +851,8 @@ class EnumWrapper(BaseWrapper):
             typstr = 'string'
         return '<Variable name="%s" type="%s" io="%s" format=""' \
                ' description=%s units="%s">%s</Variable>' \
-               % (self._ext_name, typstr, self._io, quoteattr(self._trait.desc),
+               % (self._ext_name, typstr, self._io,
+                  quoteattr(self.get('description', self._ext_path)),
                   self.get('units', self._ext_path),
                   escape(self.get('value', self._ext_path)))
 
@@ -928,10 +929,12 @@ class FileWrapper(BaseWrapper):
                 return ''
             try:
                 with file_ref.open() as inp:
-                    return inp.read()
+                    data = inp.read()
             except IOError as exc:
                 self._logger.warning('get %s.value: %r', path, exc)
                 return ''
+            else:
+                return data.encode('string_escape')
         elif attr == 'isBinary':
             file_ref = self._container.get(self._name)
             if file_ref is None:
@@ -959,7 +962,8 @@ class FileWrapper(BaseWrapper):
         """ Return info in XML form. """
         return '<Variable name="%s" type="file" io="%s" description=%s' \
                ' isBinary="%s" fileName="">%s</Variable>' \
-               % (self._ext_name, self._io, quoteattr(self._trait.desc),
+               % (self._ext_name, self._io,
+                  quoteattr(self.get('description', self._ext_path)),
                   self.get('isBinary', self._ext_path),
                   escape(self.get('value', self._ext_path)))
 
@@ -979,13 +983,11 @@ class FileWrapper(BaseWrapper):
                                         filename)
             mode = 'wb'
             if self._server is None:  # Used during testing.
-                out = open(filename, mode)
+                with open(filename, mode) as out:
+                    out.write(valstr)
             else:  # pragma no cover
-                out = self._server.open(filename, mode)
-            try:
-                out.write(valstr)
-            finally:
-                out.close()
+                with self._server.open(filename, mode) as out:
+                    out.write(valstr)
             file_ref = FileRef(path=filename, owner=self._owner)
             self._container.set(self._name, file_ref)
         elif attr in ('description', 'isBinary', 'mimeType',
@@ -996,12 +998,12 @@ class FileWrapper(BaseWrapper):
 
     def list_properties(self):
         """ Return lines listing properties. """
-        return ['description (type=java.lang.String) (access=g)',
+        return ('description (type=java.lang.String) (access=g)',
                 'isBinary (type=boolean) (access=g)',
                 'mimeType (type=java.lang.String) (access=g)',
                 'name (type=java.lang.String) (access=g)',
                 'nameCoded (type=java.lang.String) (access=g)',
-                'url (type=java.lang.String) (access=g)']
+                'url (type=java.lang.String) (access=g)')
 
 _register(File, FileWrapper)
 
@@ -1037,10 +1039,9 @@ class FloatWrapper(BaseWrapper):
             return '0.0' if self._trait.high is None else str(self._trait.high)
         elif attr == 'units':
             try:
-                units = self._trait.units
+                return self._trait.units or ''
             except AttributeError:
                 return ''
-            return '' if units is None else units
         else:
             return super(FloatWrapper, self).get(attr, path)
 
@@ -1048,7 +1049,8 @@ class FloatWrapper(BaseWrapper):
         """ Return info in XML form. """
         return '<Variable name="%s" type="double" io="%s" format=""' \
                ' description=%s units="%s">%s</Variable>' \
-               % (self._ext_name, self._io, quoteattr(self._trait.desc),
+               % (self._ext_name, self._io,
+                  quoteattr(self.get('description', self._ext_path)),
                   self.get('units', self._ext_path),
                   self.get('value', self._ext_path))
 
@@ -1066,7 +1068,7 @@ class FloatWrapper(BaseWrapper):
 
     def list_properties(self):
         """ Return lines listing properties. """
-        return ['description (type=java.lang.String) (access=g)',
+        return ('description (type=java.lang.String) (access=g)',
                 'enumAliases (type=java.lang.String[0]) (access=g)',
                 'enumValues (type=double[0]) (access=g)',
                 'format (type=java.lang.String) (access=g)',
@@ -1076,7 +1078,7 @@ class FloatWrapper(BaseWrapper):
                 'units (type=java.lang.String) (access=g)',
                 'upperBound (type=double) (access=g)',
                 'value (type=double) (access=%s)' % self._access,
-                'valueStr (type=java.lang.String) (access=g)']
+                'valueStr (type=java.lang.String) (access=g)')
 
 _register(Float, FloatWrapper)
 
@@ -1114,7 +1116,8 @@ class IntWrapper(BaseWrapper):
         """ Return info in XML form. """
         return '<Variable name="%s" type="long" io="%s" format=""' \
                ' description=%s>%s</Variable>' \
-               % (self._ext_name, self._io, quoteattr(self._trait.desc),
+               % (self._ext_name, self._io,
+                  quoteattr(self.get('description', self._ext_path)),
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr):
@@ -1131,7 +1134,7 @@ class IntWrapper(BaseWrapper):
 
     def list_properties(self):
         """ Return lines listing properties. """
-        return ['description (type=java.lang.String) (access=g)',
+        return ('description (type=java.lang.String) (access=g)',
                 'enumAliases (type=java.lang.String[0]) (access=g)',
                 'enumValues (type=long[0]) (access=g)',
                 'hasLowerBound (type=boolean) (access=g)',
@@ -1140,7 +1143,7 @@ class IntWrapper(BaseWrapper):
                 'units (type=java.lang.String) (access=g)',
                 'upperBound (type=long) (access=g)',
                 'value (type=long) (access=%s)' % self._access,
-                'valueStr (type=java.lang.String) (access=g)']
+                'valueStr (type=java.lang.String) (access=g)')
 
 _register(Int, IntWrapper)
 
@@ -1156,7 +1159,7 @@ class StrWrapper(BaseWrapper):
     def get(self, attr, path):
         """ Return attribute corresponding to `attr`. """
         if attr == 'value' or attr == 'valueStr':
-            return self._container.get(self._name)
+            return self._container.get(self._name).encode('string_escape')
         elif attr == 'enumValues':
             return ''
         elif attr == 'enumAliases':
@@ -1168,14 +1171,15 @@ class StrWrapper(BaseWrapper):
         """ Return info in XML form. """
         return '<Variable name="%s" type="string" io="%s" format=""' \
                ' description=%s>%s</Variable>' \
-               % (self._ext_name, self._io, quoteattr(self._trait.desc),
+               % (self._ext_name, self._io,
+                  quoteattr(self.get('description', self._ext_path)),
                   escape(self.get('value', self._ext_path)))
 
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr` to `valstr`. """
-        valstr = valstr.strip('"').decode('string_escape')
+        valstr = valstr.strip('"')
         if attr == 'value':
-            self._container.set(self._name, valstr)
+            self._container.set(self._name, valstr.decode('string_escape'))
         elif attr in ('valueStr', 'description', 'enumAliases', 'enumValues'):
             raise WrapperError('cannot set <%s>.' % path)
         else:
@@ -1183,11 +1187,11 @@ class StrWrapper(BaseWrapper):
 
     def list_properties(self):
         """ Return lines listing properties. """
-        return ['description (type=java.lang.String) (access=g)',
+        return ('description (type=java.lang.String) (access=g)',
                 'enumAliases (type=java.lang.String[0]) (access=g)',
                 'enumValues (type=java.lang.String[0]) (access=g)',
                 'value (type=java.lang.String) (access=%s)' % self._access,
-                'valueStr (type=java.lang.String) (access=g)']
+                'valueStr (type=java.lang.String) (access=g)')
 
 _register(Str, StrWrapper)
 

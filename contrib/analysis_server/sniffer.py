@@ -4,8 +4,6 @@ protocol described in:
 http://www.phoenix-int.com/~AnalysisServer/commands/index.html
 """
 
-from __future__ import absolute_import
-
 import optparse
 import SocketServer
 import socket

@@ -187,8 +187,6 @@ class Stream(object):
 
     def _send(self, data):
         """ Send `data`. """
-#        if self._dbg_send:  # pragma no cover
-#            print '    send %s %r' % (self._peer, data)
         length = len(data)
         start = 0
         chunk = 1 << 17  # 128KB, chunking allows for send/recv overlap.
@@ -202,8 +200,6 @@ class Stream(object):
         Wait for one or more patterns to match.
         Return (index, match_obj, data).
         """
-#        if self._dbg_recv:  # pragma no cover
-#            print '    _expect: _recv_buffer %r' % self._recv_buffer
         indices = range(len(patterns))
         for i in indices:
             if not hasattr(patterns[i], 'search'):
@@ -222,9 +218,6 @@ class Stream(object):
 
     def _recv(self, length):
         """ Return next `length` bytes. """
-#        if self._dbg_recv:  # pragma no cover
-#            print '    recv: %d _recv_buffer %r (%d)' \
-#                  % (length, self._recv_buffer, len(self._recv_buffer))
         while len(self._recv_buffer) < length:
             self._receive()
         data = self._recv_buffer[:length]
@@ -233,8 +226,6 @@ class Stream(object):
 
     def _receive(self):
         """ Receive more data. """
-#        if self._dbg_recv:  # pragma no cover
-#            print '    _receive'
         try:
             data = self._sock.recv(4096)
         except socket.error as exc:  # pragma no cover
@@ -245,8 +236,6 @@ class Stream(object):
                 raise EOFError('Connection to %s closed' % self._peer)
             raise
         if data:
-#            if self._dbg_recv:  # pragma no cover
-#                print '       %r' % data
             self._recv_buffer += data
         else:
             raise EOFError('Connection to %s closed' % self._peer)

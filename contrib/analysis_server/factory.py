@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import optparse
 import sys
 
@@ -70,42 +68,4 @@ class ASFactory(Factory):
             for version in versions:
                 types.append((comp, version))
         return types
-
-
-def main():  # pragma no cover
-    """
-    Used for testing. Connects to server, lists available types, creates
-    a proxy component for the first type listed, and runs that component.
-
-    Usage: python factory.py [--host=address][--port=number]
-
-    --host: string
-        IPv4 address or hostname. Default is 'localhost'.
-
-    --port: int
-        Server port (default 1835).
-    """
-    parser = optparse.OptionParser()
-    parser.add_option('--host', action='store', type='string',
-                      default='localhost', help='host to connect to')
-    parser.add_option('--port', action='store', type='int',
-                      default=server.DEFAULT_PORT, help='port to connect to')
-
-    options, arguments = parser.parse_args()
-    if arguments:
-        parser.print_help()
-        sys.exit(1)
-
-    factory = ASFactory(options.host, options.port)
-    types = factory.get_available_types()
-    print 'Available types:'
-    for typ, ver in types:
-        print '   ', typ, ver
-
-    comp = factory.create(types[0][0])
-    comp.run()
-
-
-if __name__ == '__main__':  # pragma no cover
-    main()
 

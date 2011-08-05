@@ -661,6 +661,7 @@ __init__.py"""
         replies = self.send_recv(['start ASTestComp comp',
                                   'listMonitors comp'], count=3)
         self.compare(replies[-1], expected)
+
         replies = self.send_recv(['start ASTestComp comp',
                                   'lo comp'], count=3)
         self.compare(replies[-1], expected)

@@ -8,6 +8,13 @@ maintained in a separate namespace. Components are hosted by individual server
 processes, each serviced by a separate wrapper thread. Servers are allocated
 from configured resources based on component requirements.
 
+Separate log files for each client connection are written to the ``logs``
+directory. Log files are named ``hostIP_port.txt``.
+
+Component types may be added remotely via the `publish.py` tool. Multiple
+versions of the same component name are allowed. You cannot modify or remove
+component types remotely.
+
 Component types to be supported are described by ``<name>.cfg`` files parsed
 by :class:`ConfigParser.SafeConfigParser`, for example:
 
@@ -51,8 +58,6 @@ by :class:`ConfigParser.SafeConfigParser`, for example:
 
 """
 
-from __future__ import absolute_import
-
 import ConfigParser
 import getpass
 import glob
@@ -62,7 +67,6 @@ import optparse
 import os.path
 import pkg_resources
 import platform
-import re
 import shlex
 import shutil
 import signal
@@ -79,13 +83,10 @@ if sys.platform != 'win32':
 from distutils.version import LooseVersion
 from xml.sax.saxutils import escape
 
-from enthought.traits.traits import CTrait
-
 from openmdao.main.api import Component, Container, SimulationRoot, set_as_top
 from openmdao.main.mp_util import read_allowed_hosts
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
-from openmdao.main.resource import LocalAllocator
 
 from openmdao.util.filexfer import filexfer
 from openmdao.util.publickey import make_private, HAVE_PYWIN32
@@ -145,11 +146,14 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self._components = {}  # Maps from category/component to (cfg, egg_info)
         self._comp_ctx = _DictContextMgr(self._components)
         self.handlers = {}     # Maps from client address to handler.
-        self.per_client_loggers = True  # Set False in test_server.py
         self._credentials = get_credentials()  # For PublicKey servers.
         self._root = os.getcwd()
         self._config_errors = 0
         self._read_configuration()
+
+        # Set False in test_server.py to avoid issues trying to clean up
+        # the 'logs' directory under Windows.
+        self.per_client_loggers = True
 
     @property
     def num_clients(self):
@@ -273,7 +277,8 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     try:
                         __import__(modname)
                     except ImportError as exc:
-                        raise RuntimeError("Can't import %r: %r" % (modname, exc))
+                        raise RuntimeError("Can't import %r: %r" \
+                                           % (modname, exc))
 
                     module = sys.modules[modname]
                     try:
@@ -313,7 +318,8 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             if os.path.exists(name):
                 shutil.rmtree(name)
 
-    def _get_egg_info(self, egg):
+    @staticmethod
+    def _get_egg_info(egg):
         """ Return egg_info tuple from egg file. """
         for filename in glob.glob('*'):
             if not os.path.exists(os.path.join(filename, 'EGG-INFO')):
@@ -389,7 +395,7 @@ class _Handler(SocketServer.BaseRequestHandler):
             self._logger = logging.getLogger('%s:%s' % self.client_address)
             self._logger.setLevel(_LOGGER.getEffectiveLevel())
             self._logger.propagate = False
-            formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s',
+            formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s',
                                           '%b %d %H:%M:%S')
             filename = os.path.join('logs', '%s_%s.txt' % self.client_address)
             handler = logging.FileHandler(filename, mode='w')
@@ -423,8 +429,8 @@ version: 0.1""")
                         else:
                             trunc = 'truncated ' if len(req) > _DBG_LEN else ''
                             self._logger.debug('Request: %r (%sid %s bg %s)',
-                                               req[:_DBG_LEN], trunc,
-                                               req_id, background)
+                                               req[:_DBG_LEN],
+                                               trunc, req_id, background)
                         self._req_id = req_id
                         self._background = background
                     else:
@@ -1196,7 +1202,7 @@ Available Commands:
             out.write(eggdata)
 
         # Load egg to verify.
-        component = Container.load_from_eggfile(egg_path)
+        component = Container.load_from_eggfile(egg_path, log=self._logger)
         description = component.__doc__
 
         # Write config file.
@@ -1318,13 +1324,14 @@ egg: %s
             server, server_info = RAM.allocate(resource_desc)
             if server is None:
                 raise RuntimeError('Server allocation failed :-(')
+
             # Transfer egg to it and load.
             egg_name = os.path.basename(egg_file)
             filexfer(None, egg_file, server, egg_name, 'b')
             obj = server.load_model(egg_name)
         else:  # Used for testing.
             server = None
-            obj = Container.load_from_eggfile(egg_file)
+            obj = Container.load_from_eggfile(egg_file, log=self._logger)
         obj.name = name
 
         # Create wrapper for component.
@@ -1470,9 +1477,11 @@ class _WrapperConfig(object):
                                      " if the external path is '*'")
                 # Register all valid top-level non-vanilla paths.
                 containers = [instance]
-                containers.extend([val for name, val in instance.items()
-                                       if isinstance(val, Container) and not
-                                          isinstance(val, Component)])
+                subs = [obj for name, obj in sorted(instance.items(recurse=True),
+                                                    key=lambda item: item[0])]
+                containers.extend([sub for sub in subs
+                                       if isinstance(sub, Container) and not
+                                          isinstance(sub, Component)])
                 for container in containers:
                     for name, val in sorted(container.items(iotype=iotype),
                                             key=lambda item: item[0]):
@@ -1482,9 +1491,9 @@ class _WrapperConfig(object):
                         typenames = container.get_trait_typenames(name)
                         wrapper_class = lookup(typenames)
                         if wrapper_class is None:
-                             logger.warning('%r not a supported type: %r',
-                                            name, typenames[0])
-                             continue
+                            logger.warning('%r not a supported type: %r',
+                                           name, typenames[0])
+                            continue
                         if container is instance:
                             path = name
                         else:
@@ -1500,7 +1509,7 @@ class _WrapperConfig(object):
                     mapping[ext_path] = int_path
                 else:
                     raise ValueError('%r is not a valid %r variable'
-                                      % (int_path, iotype))
+                                     % (int_path, iotype))
         return mapping
 
     @staticmethod

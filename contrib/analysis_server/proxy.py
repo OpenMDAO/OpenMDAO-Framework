@@ -2,10 +2,7 @@
 Proxies for AnalysisServer components and variables.
 """
 
-from __future__ import absolute_import
-
 import numpy
-import os.path
 import socket
 
 from enthought.traits.api import TraitError
@@ -254,8 +251,11 @@ class ArrayProxy(ProxyMixin, Array):
         value = self.validate(obj, name, value)
         if self._type == float:
             valstr = ', '.join([_float2str(val) for val in value.flat])
-        else:
+        elif self._type == int:
             valstr = ', '.join([str(val) for val in value.flat])
+        else:
+            valstr = ', '.join(['"%s"' % val.encode('string_escape')
+                                for val in value.flat])
         if len(value.shape) > 1:
             valstr = 'bounds[%s] {%s}' \
                      % (', '.join(['%d' % dim for dim in value.shape]), valstr)
@@ -309,8 +309,11 @@ class ListProxy(ProxyMixin, List):
         value = self.validate(obj, name, value)
         if self._type == float:
             valstr = ', '.join([_float2str(val) for val in value])
-        else:
+        elif self._type == int:
             valstr = ', '.join([str(val) for val in value])
+        else:
+            valstr = ', '.join(['"%s"' % val.encode('string_escape')
+                                for val in value])
         self.rset(valstr)
 
 
