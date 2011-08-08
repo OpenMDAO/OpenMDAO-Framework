@@ -394,7 +394,7 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
         replies = self.send_recv('getHierarchy')
         self.assertEqual(replies[-1],
                          'ERROR: invalid syntax. Proper syntax:\r\n'
-                         'getHierarchy <object>\r\n>')
+                         'getHierarchy <object> [gzipData]\r\n>')
 
     def test_get_icon(self):
         replies = self.send_recv('getIcon ASTestComp')

@@ -725,14 +725,24 @@ Object %s ended.""" % (name, name))
 
     def _get_hierarchy(self, args):
         """ Get hierarchy of values in component. """
-        if len(args) != 1:
+        if len(args) < 1 or len(args) > 2:
             self._send_error('invalid syntax. Proper syntax:\n'
-                             'getHierarchy <object>')
+                             'getHierarchy <object> [gzipData]')
             return
+
+        if len(args) == 2:
+            if  args[1] == 'gzipData':
+                gzip = True
+            else:
+                self._send_error('invalid syntax. Proper syntax:\n'
+                                 'getHierarchy <object> [gzipData]')
+                return
+        else:
+            gzip = False
 
         wrapper, worker = self._get_wrapper(args[0])
         if wrapper is not None:
-            worker.put((wrapper.get_hierarchy, (self._req_id,), {}, None))
+            worker.put((wrapper.get_hierarchy, (self._req_id, gzip), {}, None))
 
     _COMMANDS['getHierarchy'] = _get_hierarchy
 
@@ -792,7 +802,7 @@ Object %s ended.""" % (name, name))
         if not lst:
             return
 
-        raise NotImplementedError('getQueues')
+        self._send_reply('')
 
     _COMMANDS['getQueues'] = _get_queues
 

@@ -2,6 +2,9 @@
 Wrappers for OpenMDAO components and variables.
 """
 
+import base64
+import cStringIO
+import gzip
 import numpy
 import os
 import sys
@@ -157,7 +160,7 @@ class ComponentWrapper(object):
         except Exception as exc:
             self._send_exc(exc, req_id)
 
-    def get_hierarchy(self, req_id):
+    def get_hierarchy(self, req_id, gzipped):
         """ Return all inputs & outputs as XML. """
         try:
             group = ''
@@ -178,7 +181,7 @@ class ComponentWrapper(object):
                         name, dot, rest = rest.partition('.')
                         lines.append('<Group name="%s">' % name)
                     group = path
-                lines.append(wrapper.get_as_xml())
+                lines.append(wrapper.get_as_xml(gzipped))
             lines.append('</Group>')
             self._send_reply('\n'.join(lines), req_id)
         except Exception as exc:
@@ -605,7 +608,7 @@ class ArrayBase(BaseWrapper):
         else:
             return super(ArrayBase, self).get(attr, path)
 
-    def get_as_xml(self):
+    def get_as_xml(self, gzipped):
         """ Return info in XML form. """
         return '<Variable name="%s" type="%s[]" io="%s" format=""' \
                ' description=%s units="%s">%s</Variable>' \
@@ -726,7 +729,7 @@ class BoolWrapper(BaseWrapper):
         else:
             return super(BoolWrapper, self).get(attr, path)
 
-    def get_as_xml(self):
+    def get_as_xml(self, gzipped):
         """ Return info in XML form. """
         return '<Variable name="%s" type="boolean" io="%s" format=""' \
                ' description=%s>%s</Variable>' \
@@ -841,7 +844,7 @@ class EnumWrapper(BaseWrapper):
         else:
             return super(EnumWrapper, self).get(attr, path)
 
-    def get_as_xml(self):
+    def get_as_xml(self, gzipped):
         """ Return info in XML form. """
         if self._py_type == float:
             typstr = 'double'
@@ -958,14 +961,32 @@ class FileWrapper(BaseWrapper):
         else:
             return super(FileWrapper, self).get(attr, path)
 
-    def get_as_xml(self):
+    def get_as_xml(self, gzipped):
         """ Return info in XML form. """
+        if gzipped:
+            file_ref = self._container.get(self._name)
+            if file_ref is None:
+                data = ''
+            else:
+                data = cStringIO.StringIO()
+                try:
+                    with file_ref.open() as inp:
+                        gz_file = gzip.GzipFile(mode='wb', fileobj=data)
+                        gz_file.writelines(inp)
+                except IOError as exc:
+                    self._logger.warning('get %s.value: %r', path, exc)
+                    data = ''
+                else:
+                    data = base64.b64encode(data.getvalue())
+        else:
+            data = escape(self.get('value', self._ext_path))
+
         return '<Variable name="%s" type="file" io="%s" description=%s' \
                ' isBinary="%s" fileName="">%s</Variable>' \
                % (self._ext_name, self._io,
                   quoteattr(self.get('description', self._ext_path)),
                   self.get('isBinary', self._ext_path),
-                  escape(self.get('value', self._ext_path)))
+                  data)
 
     def set(self, attr, path, valstr):
         """ Set attribute corresponding to `attr` to `valstr`. """
@@ -1045,7 +1066,7 @@ class FloatWrapper(BaseWrapper):
         else:
             return super(FloatWrapper, self).get(attr, path)
 
-    def get_as_xml(self):
+    def get_as_xml(self, gzipped):
         """ Return info in XML form. """
         return '<Variable name="%s" type="double" io="%s" format=""' \
                ' description=%s units="%s">%s</Variable>' \
@@ -1112,7 +1133,7 @@ class IntWrapper(BaseWrapper):
         else:
             return super(IntWrapper, self).get(attr, path)
 
-    def get_as_xml(self):
+    def get_as_xml(self, gzipped):
         """ Return info in XML form. """
         return '<Variable name="%s" type="long" io="%s" format=""' \
                ' description=%s>%s</Variable>' \
@@ -1167,7 +1188,7 @@ class StrWrapper(BaseWrapper):
         else:
             return super(StrWrapper, self).get(attr, path)
 
-    def get_as_xml(self):
+    def get_as_xml(self, gzipped):
         """ Return info in XML form. """
         return '<Variable name="%s" type="string" io="%s" format=""' \
                ' description=%s>%s</Variable>' \
