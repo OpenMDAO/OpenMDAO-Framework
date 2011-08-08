@@ -24,42 +24,17 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @constructor
  */
 openmdao.O3DViewer = function(id,model,g_url) {
+    this.prototype = new openmdao.BasePane()
+    
     /***********************************************************************
      *  private
      ***********************************************************************/
      
     var self = this,
-        elm = jQuery("#"+id),
-        title = 'Geometry Viewer',
-        menuDiv = jQuery("<nav2 id='"+id+"-menu'>"),
-        o3dDiv =jQuery('<div id="o3d" style="width: 100%; height: 100%;">'),
-        messageDiv = jQuery("<div>"),
-        helpHTML = "<div>"+
-            "Drag the mouse, or use the W, A, S, and D keys to rotate<br/>"+
-            "Right-click and drag, or use the I, J, K, and L keys to pan<br/>"+
-            "Middle-Button and drag, scrollwheel, or + and -  keys to zoom<br/>"+
-            "When using keyboard, hold SHIFT to move model faster<br/>"+
-            "Press R to reset the view"+
-            "</div>",
-        menu = [
-            { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'"+title+"','width':400,'height':150})" }
-        ]
-
-    //if the elm doesn't exist, create a popup 
-    if (elm.length === 0) {
-        elm = jQuery('<div id='+id+'></div>')
-        elm.dialog({
-            'modal': false,
-            'title': title+': '+id,
-            'close': function(ev, ui) { elm.remove(); },
-            width: 640, 
-            height: 480 
-        })
-    }
-    else {
-        elm.html("")
-    }
-    
+        elm,
+        o3dDiv,
+        messageDiv
+        
     var modelTransform;
     var g_simple;
     // var g_url;
@@ -80,6 +55,38 @@ openmdao.O3DViewer = function(id,model,g_url) {
     var g_finished = false;  // for selenium
 
     var g_camera;
+
+    if (arguments.length > 0)
+        init()
+    
+    function init() {
+        var title = "Geometry Viewer",
+            helpHTML = "<div>"+
+                "Drag the mouse, or use the W, A, S, and D keys to rotate<br/>"+
+                "Right-click and drag, or use the I, J, K, and L keys to pan<br/>"+
+                "Middle-Button and drag, scrollwheel, or + and -  keys to zoom<br/>"+
+                "When using keyboard, hold SHIFT to move model faster<br/>"+
+                "Press R to reset the view"+
+                "</div>",
+            menu = [
+                { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'"+title+"','width':400,'height':150})" }
+            ]
+            
+        elm = jQuery("#"+id).width(screen.width).height(screen.height)
+        
+        self.prototype.init(id,title,menu)
+        
+        o3dDiv = jQuery('<div id="o3d" style="width: 100%; height: 100%;">')
+        jQuery('<div style="height:100%">').appendTo(elm).append(o3dDiv)
+            
+        messageDiv = jQuery("<div>")
+        
+        // create the client area.
+        o3djs.webgl.makeClients(initStep2);
+        // The following call enables a debug WebGL context, which makes debugging much easier.
+        // o3djs.webgl.makeClients(initStep2, undefined, undefined, undefined, undefined, undefined, true);
+        
+    }
 
     function showMessage(msg,color) {
         messageDiv.html(msg);
@@ -240,16 +247,6 @@ openmdao.O3DViewer = function(id,model,g_url) {
     }
 
     /**
-    * Creates the client area.
-    */
-    function init() {
-        o3djs.webgl.makeClients(initStep2);
-        // The following call enables a debug WebGL context, which makes
-        // debugging much easier.
-        // o3djs.webgl.makeClients(initStep2, undefined, undefined, undefined, undefined, undefined, true);
-    }
-
-    /**
     * Initializes O3D and loads the scene into the transform graph.
     * @param {Array} clientElements Array of o3d object elements.
     */
@@ -324,15 +321,7 @@ openmdao.O3DViewer = function(id,model,g_url) {
     function setCamera() {
         g_camera.set();
     }
-    
-    elm.html("")
-    elm.width(screen.width).height(screen.height)
-    elm.bind("contextmenu", function(e) { return false; })
-    elm.append(menuDiv);
-    new openmdao.Menu(menuDiv.attr('id'),menu)    
-    elm.append(o3dDiv);
-    init()
-    
+        
     /***********************************************************************
      *  privileged
      ***********************************************************************/

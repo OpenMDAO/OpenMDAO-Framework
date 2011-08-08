@@ -247,11 +247,13 @@ def Upload(request):
     '''
     if request.method=='POST':
         cserver = server_mgr.console_server(request.session.session_key)
-        file = request.FILES['myfile']
-        filename = file.name
-        contents = file.read()
-        cserver.add_file(filename,contents)
-        return render_to_response('closewindow.html')
+        if 'myfile' in request.FILES:
+            file = request.FILES['myfile']
+            filename = file.name
+            if len(filename) > 0:
+                contents = file.read()
+                cserver.add_file(filename,contents)
+                return render_to_response('closewindow.html')
 
     return render_to_response('upload.html', 
                               context_instance=RequestContext(request))

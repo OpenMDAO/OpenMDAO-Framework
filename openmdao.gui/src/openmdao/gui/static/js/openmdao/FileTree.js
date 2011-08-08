@@ -35,7 +35,7 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
                     ]
         self.prototype.init(id,'File Manager', menu)
         elm = jQuery('<div style="height:100%">').appendTo("#"+id)
-        elm = jQuery('<div>').appendTo(elm)        
+        elm = jQuery('<div>').appendTo(elm)
     }
         
     /** recursively build an HTML representation of a JSON file structure */
@@ -167,7 +167,7 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
             if (/.json$/.test(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
-                    "action" : function(node) { viewFile('file'+path) }
+                    "action" : function(node) { viewFile('file'+path.replace(/\\/g,'/')) }
                 }            
             }
         }

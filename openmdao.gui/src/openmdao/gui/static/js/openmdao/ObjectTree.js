@@ -168,6 +168,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
         menu.add_to_workflow = {
             "label"  : 'Add to Workflow',
             "action" :  function(node) { 
+                            // TODO: need to show list of workflows and allow user to pick one
                             model.issueCommand('top.driver.workflow.add("'+path+'")')
                         }
         }

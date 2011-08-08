@@ -37,7 +37,7 @@ nav {
   display:block;
   margin:0 auto 20px;
   position:relative;
-  z-index: 100000;
+  z-index: 1000;
 }
 nav ul {
   padding: 0;
@@ -54,7 +54,7 @@ nav li {
   position: relative;
   float: left;
   list-style-type: none;
-  z-index: 100000;
+  z-index: 1000;
 }
 nav li a {
   display: block;
@@ -70,7 +70,7 @@ nav ul ul {
   width: 100%;
   position: absolute;
   left: 0;
-  z-index: 100000;
+  z-index: 1000;
 }
 nav ul ul li {
   float: none;
@@ -82,11 +82,12 @@ nav ul ul a {
 
 /* secondary menus */
 nav2 {
+  width: 100%;
   display:block;
   background-color:#6a6a6a; 
   margin:0 auto;
   position:relative;
-  z-index: 100000;
+  z-index: 1000;
 }
 nav2 ul {
   padding: 0;

@@ -46,6 +46,8 @@ openmdao.PropertiesEditor = function(id,model) {
         init()
     
     function init() {
+        self.prototype.init(id,"Properties Editor")
+        
         elm = jQuery("#"+id)
         nameHeader = jQuery("<h3>")
 

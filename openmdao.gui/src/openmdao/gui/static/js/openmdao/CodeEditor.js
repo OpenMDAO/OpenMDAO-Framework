@@ -26,15 +26,7 @@ openmdao.CodeEditor = function(id,model) {
         init()
     
     function init() {
-        var menu =  [
-                        {   "text": "File", 
-                            "items": [
-                                { "text": "New File",      "onclick": "model.newFile();" },
-                            ]
-                        },
-                    ]        
-        debug.info('CodeEditor.init',id,'Code Editor',menu)
-        self.prototype.init(id,'CodeEditor', menu)
+        self.prototype.init(id,'CodeEditor')
         //elm = jQuery("#"+id).width(screen.width).height(screen.height),
         var editorID = id+'-content'
         elm = jQuery('<textarea id="'+editorID+'">').appendTo("#"+id).width(screen.width).height(screen.height)
