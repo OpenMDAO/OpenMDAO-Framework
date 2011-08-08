@@ -189,8 +189,7 @@ def remote_get_platform():
 def remote_check_setuptools(py):
     """Return True if setuptools is installed on the remote host"""
     with settings(hide('everything'), warn_only=True):
-        return remote_py_cmd(["import setuptools", 
-                              "print setuptools.__version__"],
+        return remote_py_cmd(["import setuptools"],
                              py).succeeded
     
 def remote_check_pywin32(py):
@@ -308,61 +307,6 @@ def put_dir(src, dest=None, renames=()):
     shutil.rmtree(tmpdir)
     return remotedir
     
-    
-def remote_build(distdir, destdir, build_type='build -f bdist_egg',
-                 pyversion=None):
-    """Take the python distribution in the given directory, tar it up,
-    ship it over to host, build it, and bring it back, placing it
-    in the specified destination directory.
-    """
-    locals_to_remove = []
-    distdir = os.path.abspath(distdir)
-    if pyversion is None:
-        pyversion = "%d.%d" % (sys.version_info[0], sys.version_info[1])
-    remotedir = put_dir(distdir)
-    whichpy = 'python%s' % pyversion
-    pkgname = os.path.basename(distdir)
-    if remote_check_setuptools(whichpy):
-        has_setuptools = True
-    else:
-        has_setuptools = False
-        print "Remote host has no setuptools."
-        if not os.path.isfile('ez_setup.py'):
-            print "Attempting to download ez_setup.py and bootstrap setuptools at the remote location"
-            resp = urllib2.urlopen('http://peak.telecommunity.com/dist/ez_setup.py')
-            with open('ez_setup.py', 'wb') as easyf:
-                shutil.copyfileobj(resp.fp, easyf)
-            locals_to_remove.append('ez_setup.py')
-    
-    pkgdir = os.path.join(remotedir, pkgname)
-    if not has_setuptools:
-        put('ez_setup.py', os.path.join(pkgdir, 'ez_setup.py'))
-        setupf = open(os.path.join(distdir, 'setup.py'), 'r')
-        setup_contents = setupf.read()
-        setupf.close()
-        with open('_catfile', 'wb') as catf:
-            catf.write("from ez_setup import use_setuptools\n")
-            catf.write("use_setuptools(download_delay=0)\n\n")
-            catf.write(setup_contents)
-        locals_to_remove.append('_catfile')
-        put('_catfile', os.path.join(pkgdir, 'setup.py'))
-
-    with cd(pkgdir):
-        remtmp = remote_tmpdir()
-        run("%s setup.py %s -d %s" % (whichpy, build_type, remtmp))
-            
-    pkg = remote_listdir(remtmp)[0]  # should only have one file in directory
-    pkgpath = os.path.join(destdir, pkg)
-    
-    get(os.path.join(remtmp, pkg), pkgpath)
-    
-    for name in locals_to_remove:
-        os.remove(name)
-
-    rm_remote_tree(remtmp)
-    rm_remote_tree(remotedir)
-    
-    return pkgpath
     
 def rsync_dirs(dest, host, dirs=('downloads','dists'),
                doit=os.system):

@@ -174,7 +174,7 @@ if __name__ == '__main__':
                       dest='pyversion',
                       default="python", 
                       help="python version to use, e.g., 'python2.6'")
-    parser.add_option("-b","--branch", action="store", type='string', 
+    parser.add_option("--branch", action="store", type='string', 
                       dest='branch',
                       help="if file_url is a git repo, supply branch name here")
     parser.add_option("-f","--file", action="store", type='string', 

@@ -2,8 +2,8 @@
 #USAGE:  "python envirodump.py", text file generated in that spot
 """
 TO DO:
-*Fix Mac errors
 *get package VERSIONS
+    attempt to use pip freeze if available
 *fix aliases problem
 *do a WHICH on compilers?
 *deal with sys.exit on bad Python version?
