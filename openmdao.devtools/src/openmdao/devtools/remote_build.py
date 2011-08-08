@@ -11,41 +11,42 @@ from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, ho
 from fabric.state import connections
 
 import paramiko.util
-paramiko.util.log_to_file('paramiko.log')
 
 from openmdao.devtools.utils import put_dir, remote_check_setuptools, \
                                     remote_tmpdir, \
                                     remote_listdir, rm_remote_tree, fabric_cleanup
 
-from openmdao.devtools.remote_cfg import CfgOptionParser, process_options
+from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
+                                         run_host_processes
     
-def remote_build(srcdir, destdir, build_type='build -f bdist_egg',
-                 pyversion=None):
+def remote_build(srcdir=None, destdir=None, build_type='build -f bdist_egg',
+                 py=None, **kwargs):
     """Take the python distribution in the given directory, tar it up,
     ship it over to host, build it, and bring it back, placing it
     in the specified destination directory.
     """
-    locals_to_remove = []
-    srcdir = os.path.abspath(srcdir)
-    if pyversion is None:
-        pyversion = "%d.%d" % (sys.version_info[0], sys.version_info[1])
+    if py is None:
+        py = "python%d.%d" % (sys.version_info[0], sys.version_info[1])
     remotedir = put_dir(srcdir)
-    whichpy = 'python%s' % pyversion
     pkgname = os.path.basename(srcdir)
     pkgdir = os.path.join(remotedir, pkgname)
 
-    with cd(pkgdir):
-        remtmp = remote_tmpdir()
-        run("%s setup.py %s -d %s" % (whichpy, build_type, remtmp))
+    locdistbld = os.path.join(os.path.dirname(__file__), 'locdistbld.py')
+    remotebuilder = os.path.join(pkgdir, 'locdistbld.py')
+    put(locdistbld, remotebuilder)
+    remtmp = remote_tmpdir()
+    
+    run('%s %s -s %s -d %s -b "%s"' % (py, 
+                                       remotebuilder,
+                                       pkgdir,
+                                       remtmp,
+                                       build_type))
             
     pkg = remote_listdir(remtmp)[0]  # should only have one file in directory
     pkgpath = os.path.join(destdir, pkg)
     
     get(os.path.join(remtmp, pkg), pkgpath)
     
-    for name in locals_to_remove:
-        os.remove(name)
-
     rm_remote_tree(remtmp)
     rm_remote_tree(remotedir)
     
@@ -58,7 +59,8 @@ def main(argv=None):
     startdir=os.getcwd()
     
     parser = CfgOptionParser()
-    parser.add_option("-d", "--dest", action="store", type='string', dest="dest",
+    parser.add_option("-d", "--dest", action="store", type='string', 
+                      dest="dest", default='.',
                       help="destination directory where built package will go")
     parser.add_option("-s", "--src", action="store", type='string', dest="src",
                       help="source directory where package is located")  
@@ -66,8 +68,12 @@ def main(argv=None):
                       dest="btype", default='build -f bdist_egg',
                       help="type of distribution to build")
     parser.add_option("--py", action="store", type='string', 
-                      dest="whichpy", default='python',
+                      dest="py", 
                       help="which python to use (default='python'")
+    parser.add_option("-k","--keep", action="store_true", dest='keep',
+                      help="if there are build failures, don't delete "
+                           "the temporary build directory "
+                           "or terminate the remote instance if testing on EC2.")
 
     (options, args) = parser.parse_args(argv)
     
@@ -78,16 +84,19 @@ def main(argv=None):
         parser.print_help()
         sys.exit(-1)
 
-    if not options.dest:
-        options.dest = os.getcwd()
-
-    for host in options.hosts:
-        with settings(host_string=host):
-            remote_build(options.src, options.dest, build_type=options.btype,
-                         pyversion=options.whichpy)
+    funct_kwargs = { 'keep': options.keep,
+                     'srcdir': os.path.abspath(os.path.expanduser(options.src)),
+                     'destdir': os.path.abspath(os.path.expanduser(options.dest)), 
+                     'build_type': 'build -f bdist_egg',
+                     'py': options.py,
+                     }
+    run_host_processes(config, conn, image_hosts, options, 
+                       funct=remote_build, funct_kwargs=funct_kwargs)
+    
     
 if __name__ == '__main__':
     atexit.register(fabric_cleanup, True)
+    paramiko.util.log_to_file('paramiko.log')
     main()
 
     

@@ -26,9 +26,6 @@ from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
 from openmdao.devtools.tst_ec2 import run_on_ec2_image
 
 import paramiko.util
-paramiko.util.log_to_file('paramiko.log')
-
-atexit.register(fabric_cleanup, True)
 
 def test_on_remote_host(remotedir=None, fname=None, 
                         pyversion='python', keep=False, 
@@ -227,4 +224,6 @@ def main(argv=None):
 
 
 if __name__ == '__main__': #pragma: no cover
+    atexit.register(fabric_cleanup, True)
+    paramiko.util.log_to_file('paramiko.log')
     main()

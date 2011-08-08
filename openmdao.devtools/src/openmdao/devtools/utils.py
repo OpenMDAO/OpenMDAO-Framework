@@ -181,6 +181,19 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
     raise RuntimeError("failed to connect to host %s after %d tries" %
                        (host, tries))
 
+def remote_py_cmd(cmds, remote_dir='.', py='python'):
+    """Given a list of python statements, creates a _cmd_.py file, pushes
+    it to the remote host, and runs it, returning the result of 'run'.
+    """
+    cmdname = '_cmd_.py'
+    f = open(cmdname, 'w')
+    for cmd in cmds:
+        f.write("%s\n" % cmd)
+    f.close()
+    remote_cmd = os.path.join(remote_dir, cmdname)
+    put(cmdname, remote_cmd)
+    return run('%s %s' % (py, remote_cmd))
+
 def remote_get_platform():
     """Returns the platform string of the current active host."""
     with settings(hide('running', 'stderr'), warn_only=True):
@@ -198,22 +211,9 @@ def remote_check_pywin32(py):
         return remote_py_cmd(["import win32api",
                               "import win32security"
                               "import ntsecuritycon"],
-                             py).succeeded
+                             py=py).succeeded
 
-def remote_py_cmd(cmds, py='python', remote_dir=''):
-    """Given a list of python statements, creates a _cmd_.py file, pushes
-    it to the remote host, and runs it, returning the result of 'run'.
-    """
-    cmdname = '_cmd_.py'
-    f = open(cmdname, 'w')
-    for cmd in cmds:
-        f.write("%s\n" % cmd)
-    f.close()
-    remote_cmd = os.path.join(remote_dir, cmdname)
-    put(cmdname, remote_cmd)
-    return run('%s %s' % (py, remote_cmd))
-
-def remote_untar(tarfile):
+def remote_untar(tarfile, remote_dir=''):
     """Use internal python tar package to untar a file in the current remote
     directory instead of assuming that tar exists on the remote machine.
     """
@@ -222,8 +222,7 @@ def remote_untar(tarfile):
              "tar.extractall()",
              "tar.close()",
              ]
-    return remote_py_cmd(cmds)
-    
+    return remote_py_cmd(cmds, remote_dir=remote_dir)
     
 def get_plat_spec_cmds():
     plat = remote_get_platform()
@@ -286,7 +285,7 @@ def put_untar(local_path, remote_dir=None, renames=()):
     abstarname = os.path.join(remote_dir, tarname)
     put(local_path, abstarname)
     with cd(remote_dir):
-        remote_untar(tarname)
+        remote_untar(tarname, remote_dir=remote_dir)
         for oldname, newname in renames:
             run('%s %s %s' % (mover, oldname.strip(['/','\\']), 
                               newname.strip(['/','\\'])))

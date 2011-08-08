@@ -59,8 +59,7 @@ def make_new_setupfile(setupfile):
     return newsetupfile
 
 
-def build_dist(srcdir, destdir='.', pyversion='python', 
-               build_type='build -f bdist_egg'):
+def build_dist(srcdir, destdir='.', build_type='build -f bdist_egg'):
     """
     Builds a distribution using the specified source directory and places
     it in the specified destination directory.
@@ -70,12 +69,6 @@ def build_dist(srcdir, destdir='.', pyversion='python',
         
     destdir: str
         directory where the built distribution file will be placed
-
-    pyversion: str
-        The version of python, e.g., 'python2.6' or 'python2.7', to be
-        used to create the distribution. Only
-        major version numbers should be used, i.e., use 'python2.6'
-        rather than 'python2.6.5'.
 
     build_type: str
         The type of distribution to be built.  Default is 'build -f bdist_egg'.
@@ -97,15 +90,18 @@ def build_dist(srcdir, destdir='.', pyversion='python',
     # a file instead 
     out = open('build.out', 'wb')
     
-    cmd = [pyversion,
+    cmd = [sys.executable,
            os.path.basename(setupname),
+           '-d',
+           destdir,
         ]
     cmd.extend(build_type.split(' '))
 
     os.chdir(srcdir)
     
+    print 'running command: %s' % ' '.join(cmd)
     try:
-        p = subprocess.Popen(cmd, 
+        p = subprocess.Popen(' '.join(cmd), 
                              stdout=out, stderr=subprocess.STDOUT,
                              shell=True)
         p.wait()
@@ -133,10 +129,6 @@ if __name__ == '__main__':
     parser.add_option("-d","--dest", action="store", type='string', 
                       dest='destdir', default='.',
                       help="name of directory where the build distrib will be placed")
-    parser.add_option("--pyversion", action="store", type='string', 
-                      dest='pyversion',
-                      default="python", 
-                      help="python version to use, e.g., 'python2.6'")
     parser.add_option("-b","--bldtype", action="store", type='string', 
                       dest='buildtype', default='build -f bdist_egg',
                       help="setup.py build command. Default is 'build -f bdist_egg'")
@@ -159,16 +151,8 @@ if __name__ == '__main__':
         print "source directory %s not found" % srcdir
         sys.exit(retcode)
         
-    if '.' in options.pyversion:
-        parts = options.pyversion.split('.')
-        if len(parts) > 2:
-            print "For python version, use only major.minor version numbers, ",
-            print "e.g., 'python2.6' not 'python2.6.5'"
-            sys.exit(retcode)
-
     try:
-        distfile = build_dist(srcdir, destdir, options.pyversion, 
-                              options.buildtype)
+        distfile = build_dist(srcdir, destdir, options.buildtype)
     finally:
         os.chdir(startdir)
 
