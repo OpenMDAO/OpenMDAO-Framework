@@ -201,15 +201,17 @@ def remote_check_pywin32(py):
                              py).succeeded
 
 def remote_py_cmd(cmds, py='python', remote_dir=''):
-    """Given a list of python statements, creates a _cmd.py file, pushes
+    """Given a list of python statements, creates a _cmd_.py file, pushes
     it to the remote host, and runs it, returning the result of 'run'.
     """
-    f = open('_cmd.py', 'w')
+    cmdname = '_cmd_.py'
+    f = open(cmdname, 'w')
     for cmd in cmds:
         f.write("%s\n" % cmd)
     f.close()
-    put('_cmd.py', os.path.join(remote_dir, '_cmd.py'))
-    return run('%s _cmd.py' % py)
+    remote_cmd = os.path.join(remote_dir, cmdname)
+    put(cmdname, remote_cmd)
+    return run('%s %s' % (py, remote_cmd))
 
 def remote_untar(tarfile):
     """Use internal python tar package to untar a file in the current remote

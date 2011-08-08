@@ -86,5 +86,8 @@ def process_options(options):
         # in the name, you'll get errors ('no module named os', etc.) 
         options.remotedir = options.remotedir.replace(':','.')
 
+    options.outdir = os.path.abspath(os.path.expanduser(
+                                     os.path.expandvars(options.outdir)))
+
     return (config, conn, image_hosts)
 

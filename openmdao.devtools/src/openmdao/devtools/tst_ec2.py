@@ -88,12 +88,18 @@ def start_instance(conn, config, name, sleep=10, max_tries=50):
     return inst
 
 
-def run_on_ec2_image(host, config, conn, funct, *args, **kwargs):
+def run_on_ec2_image(host, config, conn, funct, outdir, *args, **kwargs):
     """Runs the given function on an instance of the specified EC2 image. The
     instance will be started, the function will run, and the instance will be
     terminated, unless there is an error or keep==True, which will result in
     the image being stopped but not terminated.
     """
+    hostdir = os.path.join(outdir, host)
+    if not os.path.isdir(hostdir):
+        os.makedirs(hostdir)
+    os.chdir(hostdir)
+    sys.stdout = sys.stderr = open('run.out', 'wb', 40)
+    
     settings_kwargs = {}
     settings_args = []
     

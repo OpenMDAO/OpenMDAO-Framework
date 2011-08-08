@@ -3,7 +3,6 @@ import os
 import shutil
 import urllib2
 import atexit
-from optparse import OptionParser
 
 import tempfile
 import tarfile
@@ -18,6 +17,7 @@ from openmdao.devtools.utils import put_dir, remote_check_setuptools, \
                                     remote_tmpdir, \
                                     remote_listdir, rm_remote_tree, fabric_cleanup
 
+from openmdao.devtools.remote_cfg import CfgOptionParser, process_options
     
 def remote_build(srcdir, destdir, build_type='build -f bdist_egg',
                  pyversion=None):
@@ -57,9 +57,7 @@ def main(argv=None):
 
     startdir=os.getcwd()
     
-    parser = OptionParser()
-    parser.add_option("--host", action="append", dest="hosts", default=[],
-                      help="add url of a non-Windows host to build the package on")
+    parser = CfgOptionParser()
     parser.add_option("-d", "--dest", action="store", type='string', dest="dest",
                       help="destination directory where built package will go")
     parser.add_option("-s", "--src", action="store", type='string', dest="src",
@@ -70,13 +68,16 @@ def main(argv=None):
     parser.add_option("--py", action="store", type='string', 
                       dest="whichpy", default='python',
                       help="which python to use (default='python'")
-    
+
     (options, args) = parser.parse_args(argv)
+    
+    config, conn, image_hosts = process_options(options)
     
     if not options.src:
         print "You must define a source directory"
         parser.print_help()
         sys.exit(-1)
+
     if not options.dest:
         options.dest = os.getcwd()
 

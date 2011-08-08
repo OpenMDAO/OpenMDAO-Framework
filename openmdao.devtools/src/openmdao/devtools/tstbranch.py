@@ -111,7 +111,13 @@ def test_on_remote_host(fname, shell, remotedir, pyversion='python', keep=False,
     return result.return_code
 
 
-def run_on_host(host, config, funct, *args, **kwargs):
+def run_on_host(host, config, funct, outdir, *args, **kwargs):
+    hostdir = os.path.join(outdir, host)
+    if not os.path.isdir(hostdir):
+        os.makedirs(hostdir)
+    os.chdir(hostdir)
+    sys.stdout = sys.stderr = open('run.out', 'wb', 40)
+    
     settings_kwargs = {}
     settings_args = []
     
@@ -186,31 +192,20 @@ def main(argv=None):
         print "\nfilename must end in '.tar.gz', '.tar', or '.git'"
         sys.exit(retcode)
         
-    orig_stdout = sys.stdout
-    orig_stderr = sys.stderr
-    
-    options.outdir = os.path.abspath(os.path.expanduser(
-                                     os.path.expandvars(options.outdir)))
     processes = []
-    files = []
     
     try:
         for host in options.hosts:
             shell = config.get(host, 'shell')
             if host in image_hosts:
                 proc_args = [host, config, conn, test_on_remote_host,
-                             fname, shell, options.remotedir]
+                             options.outdir, fname, shell, options.remotedir]
                 target = run_on_ec2_image
             else:
-                proc_args = [host, config, test_on_remote_host, fname,
+                proc_args = [host, config, test_on_remote_host, 
+                             options.outdir, fname,
                              shell, options.remotedir]
                 target = run_on_host
-            hostdir = os.path.join(options.outdir, host)
-            if not os.path.isdir(hostdir):
-                os.makedirs(hostdir)
-            os.chdir(hostdir)
-            sys.stdout = sys.stderr = f = open('test.out', 'wb', 40)
-            files.append(f)
             p = Process(target=target,
                         name=host,
                         args=proc_args,
@@ -220,11 +215,8 @@ def main(argv=None):
                                  'hostname': host,
                                  })
             processes.append(p)
-            orig_stdout.write("starting build/test process for %s\n" % p.name)
+            print "starting build/test process for %s" % p.name
             p.start()
-            
-            sys.stdout = orig_stdout
-            sys.stderr = orig_stderr
         
         while len(processes) > 0:
             time.sleep(1)
@@ -235,16 +227,13 @@ def main(argv=None):
                         remaining = '(%d hosts remaining)' % len(processes)
                     else:
                         remaining = ''
-                    orig_stdout.write('%s finished. exit code=%d %s\n' % 
-                                      (p.name, p.exitcode, remaining))
+                    print '%s finished. exit code=%d %s\n' % (p.name, 
+                                                              p.exitcode, 
+                                                              remaining)
                     break
             
     finally:
         os.chdir(startdir)
-        sys.stdout = orig_stdout
-        sys.stderr = orig_stderr
-        for f in files:
-            f.close()
         
         t2 = time.time()
         secs = t2-t1
@@ -253,12 +242,12 @@ def main(argv=None):
         mins = int(secs-hours*3600.0)/60
         secs = secs-(hours*3600.)-(mins*60.)
         
-        orig_stdout.write('\nElapsed time:')
+        print '\nElapsed time:',
         if hours > 0:
-            orig_stdout.write(' %d hours' % hours)
+            print ' %d hours' % hours,
         if mins > 0:
-            orig_stdout.write(' %d minutes' % mins)
-        orig_stdout.write(' %5.2f seconds\n\n' % secs)
+            print ' %d minutes' % mins,
+        print ' %5.2f seconds\n\n' % secs
 
 
 if __name__ == '__main__': #pragma: no cover
