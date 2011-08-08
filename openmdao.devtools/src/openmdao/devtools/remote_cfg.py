@@ -8,6 +8,7 @@ import ConfigParser
 
 class CfgOptionParser(OptionParser):
     def __init__(self):
+        OptionParser.__init__(self)
         self.add_option("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
                           default='~/.openmdao/testing.cfg',
                           help="path of config file where info for test hosts is located")
