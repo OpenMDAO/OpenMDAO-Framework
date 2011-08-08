@@ -5,7 +5,8 @@
 """
 from openmdao.examples.mdao.disciplines import SellarDiscipline1_WithDerivatives as SellarDiscipline1, \
                                                SellarDiscipline2_WithDerivatives as SellarDiscipline2
-
+#from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
+#                                               SellarDiscipline2_WithDerivatives as SellarDiscipline2
 
 from openmdao.main.api import Assembly, Slot, implements, Component
 

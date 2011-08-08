@@ -8,8 +8,13 @@ From Sellar's analytic problem.
     January 1996.
 """
 
+import time
+
+SLEEP_TIME = 1
+
 from openmdao.main.api import Component, ComponentWithDerivatives
 from openmdao.lib.datatypes.api import Float
+
 
 
 class SellarDiscipline1(Component):
@@ -27,6 +32,8 @@ class SellarDiscipline1(Component):
     def execute(self):
         """Evaluates the equation  
         y1 = z1**2 + z2 + x1 - 0.2*y2"""
+        
+        time.sleep(SLEEP_TIME)
         
         z1 = self.z1
         z2 = self.z2
@@ -69,6 +76,8 @@ class SellarDiscipline1_WithDerivatives(ComponentWithDerivatives):
         """Evaluates the equation  
         y1 = z1**2 + z2 + x1 - 0.2*y2"""
         
+        time.sleep(SLEEP_TIME)
+        
         z1 = self.z1
         z2 = self.z2
         x1 = self.x1
@@ -93,6 +102,8 @@ class SellarDiscipline2(Component):
     def execute(self):
         """Evaluates the equation  
         y2 = y1**(.5) + z1 + z2"""
+        
+        time.sleep(SLEEP_TIME)
         
         z1 = self.z1
         z2 = self.z2
@@ -133,6 +144,8 @@ class SellarDiscipline2_WithDerivatives(ComponentWithDerivatives):
     def execute(self):
         """Evaluates the equation  
         y2 = y1**(.5) + z1 + z2"""
+        
+        time.sleep(SLEEP_TIME)
         
         z1 = self.z1
         z2 = self.z2
