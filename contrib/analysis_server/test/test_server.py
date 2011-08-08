@@ -432,8 +432,8 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
 
     def test_get_sys_info(self):
         expected = """\
-version: 5.01
-build: 331
+version: 7.0
+build: 42968
 num clients: 0
 num components: 3
 os name: %s
@@ -457,7 +457,7 @@ user name: %s""" % (platform.system(), platform.processor(),
 OpenMDAO Analysis Server 0.1
 Use at your own risk!
 Attempting to support Phoenix Integration, Inc.
-version: 5.01, build: 331"""
+version: 7.0, build: 42968"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv('getVersion')
         self.compare(replies[-1], expected)
@@ -489,7 +489,8 @@ Available Commands:
    listComponents,lc [category]
    listCategories,la [category]
    describe,d <category/component> [-xml]
-   start <category/component> <instanceName>
+   setServerAuthInfo <serverURL> <username> <password> (NOT IMPLEMENTED)
+   start <category/component> <instanceName> [connector] [queue]
    end <object>
    execute,x <objectName>
    listProperties,list,ls,l [object]
@@ -500,6 +501,7 @@ Available Commands:
    set <object.property> = <value>
    move,rename,mv,rn <from> <to> (NOT IMPLEMENTED)
    getIcon <analysisComponent> (NOT IMPLEMENTED)
+   getIcon2 <analysisComponent> (NOT IMPLEMENTED)
    getVersion
    getLicense
    getStatus
@@ -522,7 +524,9 @@ Available Commands:
    getHierarchy <object.property>
    setHierarchy <object.property> <xml>
    deleteRunShare <key> (NOT IMPLEMENTED)
-   getBranchesAndTags"""
+   getBranchesAndTags (NOT IMPLEMENTED)
+   getQueues <category/component> [full] (NOT IMPLEMENTED)
+   setRunQueue <object> <connector> <queue> (NOT IMPLEMENTED)"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv('help')
         self.compare(replies[-1], expected)
@@ -1007,7 +1011,7 @@ ASTestComp2"""
         replies = self.send_recv('start')
         self.assertEqual(replies[-1],
                          'ERROR: invalid syntax. Proper syntax:\r\n'
-                         'start <category/component> <instanceName>\r\n>')
+                         'start <category/component> <instanceName> [connector] [queue]\r\n>')
 
         replies = self.send_recv('start NoSuchComp xyzzy')
         self.assertEqual(replies[-1],

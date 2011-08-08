@@ -107,8 +107,8 @@ class TestCase(unittest.TestCase):
 
     def test_get_sys_info(self):
         expected = {
-            'version': '5.01',
-            'build': '331',
+            'version': '7.0',
+            'build': '42968',
             'num clients': '1',
             'num components': '3',
             'os name': platform.system(),
@@ -125,7 +125,7 @@ class TestCase(unittest.TestCase):
 OpenMDAO Analysis Server 0.1
 Use at your own risk!
 Attempting to support Phoenix Integration, Inc.
-version: 5.01, build: 331"""
+version: 7.0, build: 42968"""
         result = self.client.get_version()
         self.assertEqual(result, expected)
 
@@ -139,7 +139,8 @@ version: 5.01, build: 331"""
             'listComponents,lc [category]',
             'listCategories,la [category]',
             'describe,d <category/component> [-xml]',
-            'start <category/component> <instanceName>',
+            'setServerAuthInfo <serverURL> <username> <password> (NOT IMPLEMENTED)',
+            'start <category/component> <instanceName> [connector] [queue]',
             'end <object>',
             'execute,x <objectName>',
             'listProperties,list,ls,l [object]',
@@ -150,6 +151,7 @@ version: 5.01, build: 331"""
             'set <object.property> = <value>',
             'move,rename,mv,rn <from> <to> (NOT IMPLEMENTED)',
             'getIcon <analysisComponent> (NOT IMPLEMENTED)',
+            'getIcon2 <analysisComponent> (NOT IMPLEMENTED)',
             'getVersion',
             'getLicense',
             'getStatus',
@@ -172,7 +174,9 @@ version: 5.01, build: 331"""
             'getHierarchy <object.property>',
             'setHierarchy <object.property> <xml>',
             'deleteRunShare <key> (NOT IMPLEMENTED)',
-            'getBranchesAndTags',
+            'getBranchesAndTags (NOT IMPLEMENTED)',
+            'getQueues <category/component> [full] (NOT IMPLEMENTED)',
+            'setRunQueue <object> <connector> <queue> (NOT IMPLEMENTED)',
         ]
         result = self.client.help()
         self.assertEqual(result, expected)

@@ -15,7 +15,7 @@ class Stream(object):
         if dbg_send or dbg_recv:  # pragma no cover
             print 'Stream', sock.getsockname(), sock.getpeername()
         self._sock = sock
-        self._peer = '%s:%s' % sock.getpeername()
+        self._peer = '%s:%s' % sock.getpeername()[:2]
         self._recv_buffer = ''
         self._raw = False
         self._dbg_send = dbg_send

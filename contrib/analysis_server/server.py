@@ -753,6 +753,22 @@ Object %s ended.""" % (name, name))
     _COMMANDS['getIcon'] = _get_icon
 
 
+    def _get_icon2(self, args):
+        """ Gets the icon data for the published component. """
+        if len(args) != 1:
+            self._send_error('invalid syntax. Proper syntax:\n'
+                             'getIcon2 <analysisComponent>')
+            return
+
+        lst = self._get_component(args[0])
+        if not lst:
+            return
+
+        raise NotImplementedError('getIcon2')
+
+    _COMMANDS['getIcon2'] = _get_icon2
+
+
     def _get_license(self, args):
         """ Retrieves Analysis Server's license agreement. """
         if len(args) != 0:
@@ -763,6 +779,22 @@ Object %s ended.""" % (name, name))
         self._send_reply('Use at your own risk!')
 
     _COMMANDS['getLicense'] = _get_license
+
+
+    def _get_queues(self, args):
+        """ Gets queues for the published component. """
+        if len(args) < 1 or len(args) > 2:
+            self._send_error('invalid syntax. Proper syntax:\n'
+                             'getQueues <category/component> [full]')
+            return
+
+        lst = self._get_component(args[0])
+        if not lst:
+            return
+
+        raise NotImplementedError('getQueues')
+
+    _COMMANDS['getQueues'] = _get_queues
 
 
     def _get_status(self, args):
@@ -793,8 +825,8 @@ Object %s ended.""" % (name, name))
             num_comps = len(comps)
 
         self._send_reply("""\
-version: 5.01
-build: 331
+version: 7.0
+build: 42968
 num clients: %d
 num components: %d
 os name: %s
@@ -821,7 +853,7 @@ user name: %s"""
 OpenMDAO Analysis Server 0.1
 Use at your own risk!
 Attempting to support Phoenix Integration, Inc.
-version: 5.01, build: 331""")
+version: 7.0, build: 42968""")
 
     _COMMANDS['getVersion'] = _get_version
 
@@ -859,13 +891,14 @@ version: 5.01, build: 331""")
                              'help,h')
             return
 
-        # As listed by Analysis Server version: 5.01, build: 331.
+        # As listed by Analysis Server version: 7.0, build: 42968.
         self._send_reply("""\
 Available Commands:
    listComponents,lc [category]
    listCategories,la [category]
    describe,d <category/component> [-xml]
-   start <category/component> <instanceName>
+   setServerAuthInfo <serverURL> <username> <password> (NOT IMPLEMENTED)
+   start <category/component> <instanceName> [connector] [queue]
    end <object>
    execute,x <objectName>
    listProperties,list,ls,l [object]
@@ -876,6 +909,7 @@ Available Commands:
    set <object.property> = <value>
    move,rename,mv,rn <from> <to> (NOT IMPLEMENTED)
    getIcon <analysisComponent> (NOT IMPLEMENTED)
+   getIcon2 <analysisComponent> (NOT IMPLEMENTED)
    getVersion
    getLicense
    getStatus
@@ -898,7 +932,9 @@ Available Commands:
    getHierarchy <object.property>
    setHierarchy <object.property> <xml>
    deleteRunShare <key> (NOT IMPLEMENTED)
-   getBranchesAndTags""")
+   getBranchesAndTags (NOT IMPLEMENTED)
+   getQueues <category/component> [full] (NOT IMPLEMENTED)
+   setRunQueue <object> <connector> <queue> (NOT IMPLEMENTED)""")
 
     _COMMANDS['help'] = _help
     _COMMANDS['h'] = _help
@@ -1294,12 +1330,42 @@ egg: %s
     _COMMANDS['setMode'] = _set_mode
 
 
+    def _set_auth_info(self, args):
+        """ Set server authorization information. """
+        if len(args) != 3 or args[0] != 'raw':
+            self._send_error('invalid syntax. Proper syntax:\n'
+                             'setServerAuthInfo <serverURL> <username> <password>')
+            return
+
+        raise NotImplementedError('setServerAuthInfo')
+
+    _COMMANDS['setServerAuthInfo'] = _set_auth_info
+
+
+    def _set_run_queue(self, args):
+        """ Set run queue for a component instance. """
+        if len(args) != 3:
+            self._send_error('invalid syntax. Proper syntax:\n'
+                             'setRunQueue <object> <connector> <queue>')
+            return
+
+        name = args[0].strip('"')
+        wrapper, worker = self._get_wrapper(name)
+
+        raise NotImplementedError('setRunQueue')
+
+    _COMMANDS['setRunQueue'] = _set_run_queue
+
+
     def _start(self, args):
         """ Creates a new component instance. """
         if len(args) != 2:
             self._send_error('invalid syntax. Proper syntax:\n'
-                             'start <category/component> <instanceName>')
+                             'start <category/component> <instanceName> [connector] [queue]')
             return
+
+        if len(args) > 2:
+            raise NotImplementedError('start, args > 2')
 
         lst = self._get_component(args[0])
         if not lst:
