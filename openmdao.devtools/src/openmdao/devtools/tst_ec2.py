@@ -88,7 +88,7 @@ def start_instance(conn, config, name, sleep=10, max_tries=50):
     return inst
 
 
-def run_on_ec2_image(host, config, conn, funct, outdir, *args, **kwargs):
+def run_on_ec2_image(host, config, conn, funct, outdir, **kwargs):
     """Runs the given function on an instance of the specified EC2 image. The
     instance will be started, the function will run, and the instance will be
     terminated, unless there is an error or keep==True, which will result in
@@ -127,8 +127,8 @@ def run_on_ec2_image(host, config, conn, funct, outdir, *args, **kwargs):
         client = fab_connect(settings_kwargs['user'],
                              settings_kwargs['host_string'], debug=debug)
         if debug:
-            print "calling %s" % print_fuct_call(funct, *args, **kwargs)
-        retval = funct(*args, **kwargs)
+            print "calling %s" % print_fuct_call(funct, **kwargs)
+        retval = funct(**kwargs)
         
     keep = kwargs.get('keep', False)
     if retval == 0 or not keep:

@@ -15,24 +15,29 @@ from fabric.api import run, env, local, put, cd, get, settings, prompt, \
 from fabric.state import connections
 from socket import gethostname
 import ConfigParser
-from multiprocessing import Process
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
                                     fabric_cleanup, remote_listdir, remote_mkdir,\
                                     ssh_test
-from openmdao.devtools.remote_cfg import CfgOptionParser, process_options
+from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
+                                         run_host_processes
 
 from openmdao.devtools.tst_ec2 import run_on_ec2_image
-from openmdao.util.debug import print_fuct_call
 
 import paramiko.util
 paramiko.util.log_to_file('paramiko.log')
 
 atexit.register(fabric_cleanup, True)
 
-def test_on_remote_host(fname, shell, remotedir, pyversion='python', keep=False, 
+def test_on_remote_host(remotedir=None, fname=None, 
+                        pyversion='python', keep=False, 
                         branch=None, testargs=(), hostname=''):
+    if remotedir is None:
+        raise RuntimeError("test_on_remote_host: missing arg 'remotedir'")
+    if fname is None:
+        raise RuntimeError("test_on_remote_host: missing arg 'fname'")
+    
     remote_mkdir(remotedir)
     
     locbldfile = os.path.join(os.path.dirname(__file__), 'locbuild.py')
@@ -51,7 +56,6 @@ def test_on_remote_host(fname, shell, remotedir, pyversion='python', keep=False,
     else:
         remoteargs = ['-f', fname]
         
-    #remoteargs.extend(['-d', remotedir])
     remoteargs.append('--pyversion=%s' % pyversion)
     if branch:
         remoteargs.append('--branch=%s' % branch)
@@ -109,40 +113,6 @@ def test_on_remote_host(fname, shell, remotedir, pyversion='python', keep=False,
         rm_remote_tree(remotedir)
         
     return result.return_code
-
-
-def run_on_host(host, config, funct, outdir, *args, **kwargs):
-    hostdir = os.path.join(outdir, host)
-    if not os.path.isdir(hostdir):
-        os.makedirs(hostdir)
-    os.chdir(hostdir)
-    sys.stdout = sys.stderr = open('run.out', 'wb', 40)
-    
-    settings_kwargs = {}
-    settings_args = []
-    
-    debug = config.getboolean(host, 'debug')
-    settings_kwargs['host_string'] = config.get(host, 'addr', None)
-        
-    ident = config.get(host, 'identity', None)
-    if ident:
-        settings_kwargs['key_filename'] = os.path.expanduser(
-            os.path.expandvars(ident))
-    usr = config.get(host, 'user', None)
-    if usr:
-        settings_kwargs['user'] = usr
-        
-    if debug:
-        settings_args.append(show('debug'))
-        print "calling %s" % print_fuct_call(funct, *args, **kwargs)
-    else:
-        settings_args.append(hide('running'))
-        
-    settings_kwargs['shell'] = config.get(host, 'shell')
-    
-    with settings(*settings_args, **settings_kwargs):
-        return funct(*args, **kwargs)
-            
         
 def main(argv=None):
     socket.setdefaulttimeout(30)
@@ -192,62 +162,68 @@ def main(argv=None):
         print "\nfilename must end in '.tar.gz', '.tar', or '.git'"
         sys.exit(retcode)
         
-    processes = []
+    funct_kwargs = { 'keep': options.keep,
+                     'branch': options.branch,
+                     'testargs': args,
+                     'fname': fname,
+                     'remotedir': options.remotedir,
+                     }
+    run_host_processes(config, conn, image_hosts, options, 
+                       funct=test_on_remote_host, funct_kwargs=funct_kwargs)
     
-    try:
-        for host in options.hosts:
-            shell = config.get(host, 'shell')
-            if host in image_hosts:
-                proc_args = [host, config, conn, test_on_remote_host,
-                             options.outdir, fname, shell, options.remotedir]
-                target = run_on_ec2_image
-            else:
-                proc_args = [host, config, test_on_remote_host, 
-                             options.outdir, fname,
-                             shell, options.remotedir]
-                target = run_on_host
-            p = Process(target=target,
-                        name=host,
-                        args=proc_args,
-                        kwargs={ 'keep': options.keep,
-                                 'branch': options.branch,
-                                 'testargs': args,
-                                 'hostname': host,
-                                 })
-            processes.append(p)
-            print "starting build/test process for %s" % p.name
-            p.start()
+    #processes = []
+    
+    #try:
+        #for host in options.hosts:
+            #shell = config.get(host, 'shell')
+            #if host in image_hosts:
+                #runner = run_on_ec2_image
+            #else:
+                #runner = run_on_host
+            #proc_args = [host, config, conn, test_on_remote_host,
+                         #options.outdir, fname, shell, options.remotedir]
+            #p = Process(target=runner,
+                        #name=host,
+                        #args=proc_args,
+                        #kwargs={ 'keep': options.keep,
+                                 #'branch': options.branch,
+                                 #'testargs': args,
+                                 #'hostname': host,
+                                 #})
+            #processes.append(p)
+            #print "starting build/test process for %s" % p.name
+            #p.start()
         
-        while len(processes) > 0:
-            time.sleep(1)
-            for p in processes:
-                if p.exitcode is not None:
-                    processes.remove(p)
-                    if len(processes) > 0:
-                        remaining = '(%d hosts remaining)' % len(processes)
-                    else:
-                        remaining = ''
-                    print '%s finished. exit code=%d %s\n' % (p.name, 
-                                                              p.exitcode, 
-                                                              remaining)
-                    break
+        #while len(processes) > 0:
+            #time.sleep(1)
+            #for p in processes:
+                #if p.exitcode is not None:
+                    #processes.remove(p)
+                    #if len(processes) > 0:
+                        #remaining = '(%d hosts remaining)' % len(processes)
+                    #else:
+                        #remaining = ''
+                    #print '%s finished. exit code=%d %s\n' % (p.name, 
+                                                              #p.exitcode, 
+                                                              #remaining)
+                    #break
             
-    finally:
-        os.chdir(startdir)
+    #finally:
+        #os.chdir(startdir)
         
-        t2 = time.time()
-        secs = t2-t1
+        #t2 = time.time()
+        #secs = t2-t1
         
-        hours = int(secs)/3600
-        mins = int(secs-hours*3600.0)/60
-        secs = secs-(hours*3600.)-(mins*60.)
+        #hours = int(secs)/3600
+        #mins = int(secs-hours*3600.0)/60
+        #secs = secs-(hours*3600.)-(mins*60.)
         
-        print '\nElapsed time:',
-        if hours > 0:
-            print ' %d hours' % hours,
-        if mins > 0:
-            print ' %d minutes' % mins,
-        print ' %5.2f seconds\n\n' % secs
+        #print '\nElapsed time:',
+        #if hours > 0:
+            #print ' %d hours' % hours,
+        #if mins > 0:
+            #print ' %d minutes' % mins,
+        #print ' %5.2f seconds\n\n' % secs
 
 
 if __name__ == '__main__': #pragma: no cover

@@ -2,9 +2,50 @@ import sys
 import os
 import getpass
 import datetime
+import time
+import socket
 
 from optparse import OptionParser
 import ConfigParser
+from multiprocessing import Process
+
+from fabric.api import settings, show, hide
+
+from openmdao.devtools.tst_ec2 import run_on_ec2_image
+from openmdao.util.debug import print_fuct_call
+
+def run_on_host(host, config, conn, funct, outdir, **kwargs):
+    hostdir = os.path.join(outdir, host)
+    if not os.path.isdir(hostdir):
+        os.makedirs(hostdir)
+    os.chdir(hostdir)
+    sys.stdout = sys.stderr = open('run.out', 'wb', 40)
+    
+    settings_kwargs = {}
+    settings_args = []
+    
+    debug = config.getboolean(host, 'debug')
+    settings_kwargs['host_string'] = config.get(host, 'addr', None)
+        
+    ident = config.get(host, 'identity', None)
+    if ident:
+        settings_kwargs['key_filename'] = os.path.expanduser(
+            os.path.expandvars(ident))
+    usr = config.get(host, 'user', None)
+    if usr:
+        settings_kwargs['user'] = usr
+        
+    if debug:
+        settings_args.append(show('debug'))
+        print "calling %s" % print_fuct_call(funct, **kwargs)
+    else:
+        settings_args.append(hide('running'))
+        
+    settings_kwargs['shell'] = config.get(host, 'shell')
+    
+    with settings(*settings_args, **settings_kwargs):
+        return funct(**kwargs)
+            
 
 class CfgOptionParser(OptionParser):
     def __init__(self):
@@ -91,3 +132,60 @@ def process_options(options):
 
     return (config, conn, image_hosts)
 
+
+def run_host_processes(config, conn, image_hosts, options, funct, funct_kwargs):
+    t1 = time.time()
+    socket.setdefaulttimeout(30)
+    
+    startdir = os.getcwd()
+    
+    processes = []
+    
+    try:
+        for host in options.hosts:
+            shell = config.get(host, 'shell')
+            if host in image_hosts:
+                runner = run_on_ec2_image
+            else:
+                runner = run_on_host
+            proc_args = [host, config, conn, funct, options.outdir]
+            kw_args = funct_kwargs.copy()
+            kw_args['hostname'] = host
+            p = Process(target=runner,
+                        name=host,
+                        args=proc_args,
+                        kwargs=kw_args)
+            processes.append(p)
+            print "starting build/test process for %s" % p.name
+            p.start()
+        
+        while len(processes) > 0:
+            time.sleep(1)
+            for p in processes:
+                if p.exitcode is not None:
+                    processes.remove(p)
+                    if len(processes) > 0:
+                        remaining = '(%d hosts remaining)' % len(processes)
+                    else:
+                        remaining = ''
+                    print '%s finished. exit code=%d %s\n' % (p.name, 
+                                                              p.exitcode, 
+                                                              remaining)
+                    break
+            
+    finally:
+        os.chdir(startdir)
+        
+        t2 = time.time()
+        secs = t2-t1
+        
+        hours = int(secs)/3600
+        mins = int(secs-hours*3600.0)/60
+        secs = secs-(hours*3600.)-(mins*60.)
+        
+        print '\nElapsed time:',
+        if hours > 0:
+            print ' %d hours' % hours,
+        if mins > 0:
+            print ' %d minutes' % mins,
+        print ' %5.2f seconds\n\n' % secs
