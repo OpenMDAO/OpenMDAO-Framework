@@ -5,16 +5,9 @@ import os
 import shutil
 import subprocess
 import atexit
-import time
-import datetime
-import getpass
 import fnmatch
-import socket
 from fabric.api import run, env, local, put, cd, get, settings, prompt, \
                        hide, show
-from fabric.state import connections
-from socket import gethostname
-import ConfigParser
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
@@ -110,9 +103,6 @@ def test_on_remote_host(remotedir=None, fname=None,
     return result.return_code
         
 def main(argv=None):
-    socket.setdefaulttimeout(30)
-    t1 = time.time()
-    
     if argv is None:
         argv = sys.argv[1:]
         

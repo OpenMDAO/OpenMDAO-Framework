@@ -147,6 +147,7 @@ def run_host_processes(config, conn, image_hosts, options, funct, funct_kwargs):
     try:
         for host in options.hosts:
             shell = config.get(host, 'shell')
+            debug = config.getboolean(host, 'debug')
             if host in image_hosts:
                 runner = run_on_ec2_image
             else:
@@ -154,6 +155,7 @@ def run_host_processes(config, conn, image_hosts, options, funct, funct_kwargs):
             proc_args = [host, config, conn, funct, options.outdir]
             kw_args = funct_kwargs.copy()
             kw_args['hostname'] = host
+            kw_args['debug'] = debug
             p = Process(target=runner,
                         name=host,
                         args=proc_args,

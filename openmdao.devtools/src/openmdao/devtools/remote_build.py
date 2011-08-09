@@ -20,14 +20,15 @@ from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
                                          run_host_processes
     
 def remote_build(srcdir=None, destdir=None, build_type='build -f bdist_egg',
-                 py=None, **kwargs):
+                 py=None, remote_dir=None, debug=False, **kwargs):
     """Take the python distribution in the given directory, tar it up,
     ship it over to host, build it, and bring it back, placing it
     in the specified destination directory.
     """
     if py is None:
         py = "python%d.%d" % (sys.version_info[0], sys.version_info[1])
-    remotedir = put_dir(srcdir)
+    remotedir = put_dir(srcdir, dest=os.path.join(remote_dir,
+                                                  os.path.basename(srcdir)))
     pkgname = os.path.basename(srcdir)
     pkgdir = os.path.join(remotedir, pkgname)
 
@@ -45,9 +46,14 @@ def remote_build(srcdir=None, destdir=None, build_type='build -f bdist_egg',
     pkg = remote_listdir(remtmp)[0]  # should only have one file in directory
     pkgpath = os.path.join(destdir, pkg)
     
+    print 'retrieving built distribution %s' % pkgpath
     get(os.path.join(remtmp, pkg), pkgpath)
     
+    if debug:
+        print 'removing %s' % remtmp
     rm_remote_tree(remtmp)
+    if debug:
+        print 'removing %s' % remotedir
     rm_remote_tree(remotedir)
     
     return pkgpath
@@ -89,6 +95,7 @@ def main(argv=None):
                      'destdir': os.path.abspath(os.path.expanduser(options.dest)), 
                      'build_type': 'build -f bdist_egg',
                      'py': options.py,
+                     'remote_dir': options.remotedir,
                      }
     run_host_processes(config, conn, image_hosts, options, 
                        funct=remote_build, funct_kwargs=funct_kwargs)

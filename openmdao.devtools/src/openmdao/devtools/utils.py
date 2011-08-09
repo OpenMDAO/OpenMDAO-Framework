@@ -181,18 +181,26 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
     raise RuntimeError("failed to connect to host %s after %d tries" %
                        (host, tries))
 
-def remote_py_cmd(cmds, remote_dir='.', py='python'):
-    """Given a list of python statements, creates a _cmd_.py file, pushes
-    it to the remote host, and runs it, returning the result of 'run'.
+def remote_py_cmd(cmds, py='python', remote_dir=None):
+    """Given a list of python statements, creates a self-deleting _cmd_.py
+    file, pushes it to the remote host, and runs it, returning the result of
+    'run'.
     """
     cmdname = '_cmd_.py'
     f = open(cmdname, 'w')
+    f.write("import os\n")
     for cmd in cmds:
         f.write("%s\n" % cmd)
+    f.write("os.remove(__file__)\n") # make file delete itself when it runs
     f.close()
-    remote_cmd = os.path.join(remote_dir, cmdname)
-    put(cmdname, remote_cmd)
-    return run('%s %s' % (py, remote_cmd))
+    if remote_dir is not None:
+        remotecmd = os.path.join(remote_dir, cmdname)
+    else:
+        remotecmd = cmdname
+    # apparently put/get ignore the cd() context manager, but run doesn't  :(
+    put(cmdname, remotecmd)
+    os.remove(cmdname) # remove local version
+    return run('%s %s' % (py, cmdname))
 
 def remote_get_platform():
     """Returns the platform string of the current active host."""
@@ -213,7 +221,7 @@ def remote_check_pywin32(py):
                               "import ntsecuritycon"],
                              py=py).succeeded
 
-def remote_untar(tarfile, remote_dir=''):
+def remote_untar(tarfile, remote_dir=None):
     """Use internal python tar package to untar a file in the current remote
     directory instead of assuming that tar exists on the remote machine.
     """
@@ -241,8 +249,7 @@ def remote_tmpdir():
     location.
     """
     with settings(show('stdout')):
-        return remote_py_cmd(["import tempfile", 
-                              "print tempfile.mkdtemp()"])
+        return run('python -c "import tempfile; print tempfile.mkdtemp()"')
 
 def remote_mkdir(path):
     """Create a remote directory with the given name. If it already exists,
@@ -281,11 +288,13 @@ def put_untar(local_path, remote_dir=None, renames=()):
     
     if remote_dir is None:
         remote_dir = remote_tmpdir()
+    else:
+        remote_mkdir(remote_dir)
 
     abstarname = os.path.join(remote_dir, tarname)
     put(local_path, abstarname)
     with cd(remote_dir):
-        remote_untar(tarname, remote_dir=remote_dir)
+        remote_untar(tarname, remote_dir)
         for oldname, newname in renames:
             run('%s %s %s' % (mover, oldname.strip(['/','\\']), 
                               newname.strip(['/','\\'])))
@@ -293,17 +302,26 @@ def put_untar(local_path, remote_dir=None, renames=()):
     return remote_dir
 
 
-def put_dir(src, dest=None, renames=()):
-    """Tar the specified directory, upload it to the current active
+def put_dir(src, dest, renames=()):
+    """Tar the src directory, upload it to the current active
     host, untar it, and perform renaming if necessary.
+    
+    src: str
+        directory to be copied to remote host
+        
+    dest: str
+        pathname of directory on remote host
+        
+    renames: iter of (str,str)
+        provides (oldname, newname) tuples for any necessary renames
+        on remote host
     
     Returns the remote directory where the directory was untarred.
     """
     tmpdir = tempfile.mkdtemp()
     tarpath = tar_dir(src, os.path.basename(src), tmpdir)
     remote_dir = dest
-    if dest is not None:
-        remote_dir = os.path.dirname(dest)
+    remote_dir = os.path.dirname(dest)
     remotedir = put_untar(tarpath, remote_dir=remote_dir, renames=renames)
     shutil.rmtree(tmpdir)
     return remotedir
