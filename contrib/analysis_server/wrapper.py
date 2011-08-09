@@ -4,13 +4,17 @@ Wrappers for OpenMDAO components and variables.
 
 import base64
 import cStringIO
-import gzip
 import numpy
 import os
 import sys
 import time
 import xml.etree.cElementTree as ElementTree
 from xml.sax.saxutils import escape, quoteattr
+
+if float(sys.version[:3]) < 2.7:
+    import gzip27 as gzip  # 2.6 & earlier don't handle zero padding.
+else:
+    import gzip
 
 try:
     import resource
