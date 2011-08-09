@@ -19,14 +19,12 @@ from openmdao.devtools.utils import put_dir, remote_check_setuptools, \
 from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
                                          run_host_processes
     
-def remote_build(srcdir=None, destdir=None, build_type='build -f bdist_egg',
+def remote_build(srcdir=None, destdir=None, build_type='bdist_egg',
                  py=None, remote_dir=None, debug=False, **kwargs):
     """Take the python distribution in the given directory, tar it up,
     ship it over to host, build it, and bring it back, placing it
     in the specified destination directory.
     """
-    if py is None:
-        py = "python%d.%d" % (sys.version_info[0], sys.version_info[1])
     remotedir = put_dir(srcdir, dest=os.path.join(remote_dir,
                                                   os.path.basename(srcdir)))
     pkgname = os.path.basename(srcdir)
@@ -71,10 +69,10 @@ def main(argv=None):
     parser.add_option("-s", "--src", action="store", type='string', dest="src",
                       help="source directory where package is located")  
     parser.add_option("-b", "--buildtype", action="store", type='string', 
-                      dest="btype", default='build -f bdist_egg',
+                      dest="btype", default='bdist_egg',
                       help="type of distribution to build")
     parser.add_option("--py", action="store", type='string', 
-                      dest="py", 
+                      dest="py", default='python',
                       help="which python to use (default='python'")
     parser.add_option("-k","--keep", action="store_true", dest='keep',
                       help="if there are build failures, don't delete "
@@ -93,7 +91,7 @@ def main(argv=None):
     funct_kwargs = { 'keep': options.keep,
                      'srcdir': os.path.abspath(os.path.expanduser(options.src)),
                      'destdir': os.path.abspath(os.path.expanduser(options.dest)), 
-                     'build_type': 'build -f bdist_egg',
+                     'build_type': options.btype,
                      'py': options.py,
                      'remote_dir': options.remotedir,
                      }

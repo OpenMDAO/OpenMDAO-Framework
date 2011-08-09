@@ -60,7 +60,7 @@ def make_new_setupfile(setupfile):
     return newsetupfile
 
 
-def build_dist(srcdir, destdir='.', build_type='build -f bdist_egg'):
+def build_dist(srcdir, destdir='.', build_type='bdist_egg'):
     """
     Builds a distribution using the specified source directory and places
     it in the specified destination directory.
@@ -72,11 +72,11 @@ def build_dist(srcdir, destdir='.', build_type='build -f bdist_egg'):
         directory where the built distribution file will be placed
 
     build_type: str
-        The type of distribution to be built.  Default is 'build -f bdist_egg'.
+        The type of distribution to be built.  Default is 'bdist_egg'.
     """
     startdir = os.getcwd()
-    destdir = os.path.abspath(os.path.expanduser(destdir))
-    srcdir = os.path.abspath(os.path.expanduser(srcdir))
+    destdir = os.path.abspath(os.path.expanduser(destdir)).replace('\\','/')
+    srcdir = os.path.abspath(os.path.expanduser(srcdir)).replace('\\','/')
     
     setupname = os.path.join(srcdir, 'setup.py')
     if not has_setuptools():
@@ -86,7 +86,7 @@ def build_dist(srcdir, destdir='.', build_type='build -f bdist_egg'):
     
     print "building distribution in %s" % srcdir
     
-    cmd = [sys.executable,
+    cmd = [sys.executable.replace('\\','/'),
            os.path.basename(setupname),
         ]
     cmd.extend(build_type.split(' '))
@@ -133,8 +133,8 @@ if __name__ == '__main__':
                       dest='destdir', default='.',
                       help="name of directory where the build distrib will be placed")
     parser.add_option("-b","--bldtype", action="store", type='string', 
-                      dest='buildtype', default='build -f bdist_egg',
-                      help="setup.py build command. Default is 'build -f bdist_egg'")
+                      dest='buildtype', default='bdist_egg',
+                      help="setup.py build command. Default is 'bdist_egg'")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     

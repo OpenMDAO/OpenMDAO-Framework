@@ -22,7 +22,7 @@ import paramiko.util
 
 def test_on_remote_host(remotedir=None, fname=None, 
                         pyversion='python', keep=False, 
-                        branch=None, testargs=(), hostname=''):
+                        branch=None, testargs=(), hostname='', **kwargs):
     if remotedir is None:
         raise RuntimeError("test_on_remote_host: missing arg 'remotedir'")
     if fname is None:

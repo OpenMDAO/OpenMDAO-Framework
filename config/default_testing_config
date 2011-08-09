@@ -9,44 +9,57 @@ linux_user: ubuntu
 win_user: Administrator
 shell = /bin/bash -l -c
 
-[lovejoy]
-image_id: ami-2638c34f
+[meerkat32]
+image_id: ami-ddb574b4
 instance_type: c1.medium
 user: %(linux_user)s
 
-[discostu]
-image_id: ami-3038c359
+[meerkat64]
+image_id: ami-d7b574be
 instance_type: m1.large
 user: %(linux_user)s
 
-[nayls]
+[win2008_32]
 image_id: ami-ad38fec4
 instance_type: c1.medium
 user: %(win_user)s
 security_groups: windows
 
-[smithers]
+[win2008_64]
 image_id: ami-d94680b0
 instance_type: m1.large
 user: %(win_user)s
 security_groups: windows
 
+#[nayls]
+#image_id: ami-ad38fec4
+#instance_type: c1.medium
+#user: %(win_user)s
+#security_groups: windows
+
+#[smithers]
+#image_id: ami-d94680b0
+#instance_type: m1.large
+#user: %(win_user)s
+#security_groups: windows
+
 #[storm]
 #addr: storm.grc.nasa.gov
 #shell: cmd /C
 
-[bret_2008_win32]
+[bret_win2008_32]
 instance_id: i-d7fe4fb6
-user: %(win_user)s
-
-[smithers_static]
-instance_id: i-0310516d
 user: %(win_user)s
 shell: cmd /C
 
-[lovejoy_bret]
-instance_id: i-27ba1746
-user: %(linux_user)s
+#[smithers_static]
+#instance_id: i-0310516d
+#user: %(win_user)s
+#shell: cmd /C
+
+#[lovejoy_bret]
+#instance_id: i-27ba1746
+#user: %(linux_user)s
 
 [local_mac]
 addr: 192.168.1.14

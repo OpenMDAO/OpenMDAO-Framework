@@ -110,23 +110,6 @@ def ssh_test(host, port=22, timeout=3):
         socket.setdefaulttimeout(original_timeout)
     return False
 
-def connection_test(user, host, port=22, max_tries=10, debug=False):
-    tries = 0
-    while True:
-        try:
-            connection = connect(user, host, port)
-        except SystemExit as err:
-            if 'Timed out' in str(err):
-                if debug:
-                    print 'connection to %s timed out. trying again...' % host
-                tries += 1
-                if tries > max_tries:
-                    raise RuntimeError("failed to connect to %s@%s after %d tries" %
-                                       (user, host, tries))
-            else:
-                raise
-    return connection
-
 
 # this is a modified version of fabric.network.connect that will
 # retry a number of times in the case of timeouts or 'no session'
@@ -147,7 +130,7 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
     password = env.password
     tries = 0
 
-    # Loop until successful connect (keep prompting for new password)
+    # Loop until successful connect
     while tries < max_tries:
         
         # Attempt connection
@@ -187,14 +170,13 @@ def remote_py_cmd(cmds, py='python', remote_dir=None):
     'run'.
     """
     cmdname = '_cmd_.py'
-    f = open(cmdname, 'w')
-    f.write("import os\n")
-    for cmd in cmds:
-        f.write("%s\n" % cmd)
-    f.write("os.remove(__file__)\n") # make file delete itself when it runs
-    f.close()
+    with open(cmdname, 'w') as f:
+        f.write("import os\n")
+        for cmd in cmds:
+            f.write("%s\n" % cmd)
+        f.write("os.remove(__file__)\n") # make file delete itself when it runs
     if remote_dir is not None:
-        remotecmd = os.path.join(remote_dir, cmdname)
+        remotecmd = os.path.join(remote_dir, cmdname).replace('\\','/')
     else:
         remotecmd = cmdname
     # apparently put/get ignore the cd() context manager, but run doesn't  :(
@@ -221,70 +203,71 @@ def remote_check_pywin32(py):
                               "import ntsecuritycon"],
                              py=py).succeeded
 
-def remote_untar(tarfile, remote_dir=None):
+def remote_untar(tarfile, remote_dir=None, delete=True):
     """Use internal python tar package to untar a file in the current remote
     directory instead of assuming that tar exists on the remote machine.
     """
+    tarfile = tarfile.replace('\\','/')
     cmds = [ "import tarfile",
              "tar = tarfile.open('%s')" % tarfile,
              "tar.extractall()",
              "tar.close()",
              ]
+    if delete:
+        cmds.extend(['import os', 'os.remove("%s")' % tarfile])
     return remote_py_cmd(cmds, remote_dir=remote_dir)
     
-def get_plat_spec_cmds():
-    plat = remote_get_platform()
-    if plat.startswith('win'):
-        mover = 'move'
-        remover = 'del'
-        lister = 'dir /B'
-    else:
-        mover = 'mv'
-        remover = 'rm -f'
-        lister = 'ls -1'
-    return mover, remover, lister
+
+#def get_plat_spec_cmds():
+    #plat = remote_get_platform()
+    #if plat.startswith('win'):
+        #mover = 'move'
+        #remover = 'del'
+        #lister = 'dir /B'
+    #else:
+        #mover = 'mv'
+        #remover = 'rm -f'
+        #lister = 'ls -1'
+    #return mover, remover, lister
 
 def remote_tmpdir():
     """Create and return the name of a temporary directory at the remote
     location.
     """
     with settings(show('stdout')):
-        return run('python -c "import tempfile; print tempfile.mkdtemp()"')
+        return remote_py_cmd(['import tempfile',
+                              'print tempfile.mkdtemp()'])
 
 def remote_mkdir(path):
     """Create a remote directory with the given name. If it already exists,
     just return with no error.
     """
     return remote_py_cmd(["import os",
-                          "if not os.path.exists('%s'):" % path,
-                          "    os.makedirs('%s')" % path])
+                          "if not os.path.exists('%s'):" % path.replace('\\','/'),
+                          "    os.makedirs('%s')" % path.replace('\\','/')])
     
 def remote_listdir(path):
     """Return a list of files found in the given remote directory."""
     with settings(show('stdout')):
         s = remote_py_cmd(["import os",
-                           "print os.listdir('%s')" % path])
+                           "print os.listdir('%s')" % path.replace('\\','/')])
     s = s.strip()[1:-1]
     return [part.strip("'") for part in s.split(', ')]
 
 def rm_remote_tree(pathname):
     """Delete the directory at the remote location."""
     return remote_py_cmd(["import shutil",
-                          "shutil.rmtree('%s')" % pathname])
+                          "shutil.rmtree('%s')" % pathname.replace('\\','/')])
     
 
-def put_untar(local_path, remote_dir=None, renames=()):
+def put_untar(local_path, remote_dir=None):
     """Put the given tarfile on the current active host and untar it in the
     specified place. If remote_dir is not specified, a temp directory will 
-    be created and used. If renames is not empty, it should contain tuples
-    of the form (oldname, newname), and each file or dir named oldname will
-    be renamed to newname.  oldname and newname should be relative to the
-    top of the untarred archive.
+    be created and used. 
     
     Returns the remote directory where the file was untarred.
     """
     tarname = os.path.basename(local_path)
-    mover, remover, lister = get_plat_spec_cmds()
     
     if remote_dir is None:
         remote_dir = remote_tmpdir()
@@ -295,14 +278,10 @@ def put_untar(local_path, remote_dir=None, renames=()):
     put(local_path, abstarname)
     with cd(remote_dir):
         remote_untar(tarname, remote_dir)
-        for oldname, newname in renames:
-            run('%s %s %s' % (mover, oldname.strip(['/','\\']), 
-                              newname.strip(['/','\\'])))
-    run('%s %s' % (remover, abstarname))
     return remote_dir
 
 
-def put_dir(src, dest, renames=()):
+def put_dir(src, dest):
     """Tar the src directory, upload it to the current active
     host, untar it, and perform renaming if necessary.
     
@@ -311,10 +290,6 @@ def put_dir(src, dest, renames=()):
         
     dest: str
         pathname of directory on remote host
-        
-    renames: iter of (str,str)
-        provides (oldname, newname) tuples for any necessary renames
-        on remote host
     
     Returns the remote directory where the directory was untarred.
     """
@@ -322,7 +297,7 @@ def put_dir(src, dest, renames=()):
     tarpath = tar_dir(src, os.path.basename(src), tmpdir)
     remote_dir = dest
     remote_dir = os.path.dirname(dest)
-    remotedir = put_untar(tarpath, remote_dir=remote_dir, renames=renames)
+    remotedir = put_untar(tarpath, remote_dir=remote_dir)
     shutil.rmtree(tmpdir)
     return remotedir
     

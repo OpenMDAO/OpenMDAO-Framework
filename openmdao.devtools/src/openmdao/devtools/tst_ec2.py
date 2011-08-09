@@ -113,7 +113,9 @@ def run_on_ec2_image(host, config, conn, funct, outdir, **kwargs):
     
     # stand up an instance of the specified image
     orig_stdout.write("starting instance %s\n" % host)
+    
     inst = start_instance(conn, config, host)
+    
     settings_kwargs['host_string'] = inst.public_dns_name
     settings_kwargs['disable_known_hosts'] = True
     orig_stdout.write("instance %s was started successfully. dns=%s\n" % 
@@ -126,17 +128,19 @@ def run_on_ec2_image(host, config, conn, funct, outdir, **kwargs):
 
     settings_kwargs['shell'] = config.get(host, 'shell', None)
 
-    with settings(**settings_kwargs):
-        # first, make sure that the connection is really working...
-        # on EC2 even if ssh connects there can be timeouts during authentication,
-        # so try to connect multiple times if there's a timeout
-        client = fab_connect(settings_kwargs['user'],
-                             settings_kwargs['host_string'], debug=debug)
-        if debug:
-            orig_stdout.write("<%s>: calling %s\n" % 
-                              (host, print_fuct_call(funct, **kwargs)))
-        retval = funct(**kwargs)
-        
+    try:
+        with settings(**settings_kwargs):
+            # first, make sure that the connection is really working...
+            # on EC2 even if ssh connects there can be timeouts during authentication,
+            # so try to connect multiple times if there's a timeout
+            client = fab_connect(settings_kwargs['user'],
+                                 settings_kwargs['host_string'], debug=debug)
+            if debug:
+                orig_stdout.write("<%s>: calling %s\n" % 
+                                  (host, print_fuct_call(funct, **kwargs)))
+            retval = funct(**kwargs)
+    except (SystemExit, Exception):
+        retval = -1
     keep = kwargs.get('keep', False)
     if retval == 0 or not keep:
         orig_stdout.write("terminating %s\n" % host)
