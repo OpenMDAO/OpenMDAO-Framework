@@ -7,6 +7,7 @@ import os
 import shutil
 import urllib2
 import subprocess
+import codecs
 from optparse import OptionParser
 
 
@@ -85,19 +86,19 @@ def build_dist(srcdir, destdir='.', build_type='build -f bdist_egg'):
     
     print "building distribution in %s" % srcdir
     
-    # FIXME: fabric barfs when running this remotely due to some unicode
-    # output that it can't handle, so we just save the output to 
-    # a file instead 
-    out = open('build.out', 'wb')
-    
     cmd = [sys.executable,
            os.path.basename(setupname),
-           '-d',
-           destdir,
         ]
     cmd.extend(build_type.split(' '))
+    cmd.extend(['-d', destdir])
 
     os.chdir(srcdir)
+    
+    # FIXME: fabric barfs when running this remotely due to some unicode
+    # output that it can't handle, so we first save the output to 
+    # a file with unicode stripped out 
+    out = codecs.open('_build_.out', 'wb', 
+                      encoding='ascii', errors='replace')
     
     print 'running command: %s' % ' '.join(cmd)
     try:
@@ -107,11 +108,13 @@ def build_dist(srcdir, destdir='.', build_type='build -f bdist_egg'):
         p.wait()
     finally:
         out.close()
+        with open('_build_.out', 'r') as f:
+            print f.read()
         os.chdir(startdir)
         
     newfiles = set(os.listdir(destdir)) - dirfiles
     if len(newfiles) != 1:
-        raise RuntimeError("found multiple new files %s in destination directory" % 
+        raise RuntimeError("expected one new file in in destination directory but found %s" % 
                            list(newfiles))
     if p.returncode != 0:
         raise RuntimeError("problem building distribution in %s. (return code = %s)" %

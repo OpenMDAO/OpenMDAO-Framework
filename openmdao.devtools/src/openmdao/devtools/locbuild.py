@@ -9,6 +9,7 @@ import shutil
 import urllib2
 import subprocess
 import tarfile
+import codecs
 from optparse import OptionParser
 
 
@@ -61,8 +62,8 @@ def install_release(url, pyversion):
     
     print "building openmdao version %s environment [%s]" % (version, 
                                                              ' '.join(command))
-    #subprocess.check_call(command)
-    f = open('build.out', 'wb')
+    f = codecs.open('build.out', 'wb', 
+                    encoding='ascii', errors='replace')
     dirfiles = set(os.listdir('.'))
     
     try:
@@ -72,6 +73,8 @@ def install_release(url, pyversion):
         p.wait()
     finally:
         f.close()
+        with open('build.out', 'r') as f:
+            print f.read()
     
     newfiles = set(os.listdir('.')) - dirfiles
     if len(newfiles) != 1:
@@ -146,12 +149,12 @@ def install_dev_env(url, pyversion, branch=None):
         
     print "building openmdao development environment in %s" % treedir
     
-    # FIXME: fabric barfs when running this remotely due to some unicode
-    # output that it can't handle, so we just save the output to 
-    # a file instead 
-    f = open('build.out', 'wb')
-    
     os.chdir(treedir)
+    
+    # fabric has trouble getting unicode back, so strip out unicode
+    # by writing to a file
+    f = codecs.open('build.out', 'wb', 
+                    encoding='ascii', errors='replace')
     
     try:
         p = subprocess.Popen('%s ./go-openmdao-dev.py' % pyversion, 
@@ -160,6 +163,8 @@ def install_dev_env(url, pyversion, branch=None):
         p.wait()
     finally:
         f.close()
+        with open('build.out', 'r') as f:
+            print f.read()
         os.chdir(startdir)
         
     envdir = os.path.join(treedir, 'devenv')

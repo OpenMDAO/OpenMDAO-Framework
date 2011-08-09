@@ -67,8 +67,6 @@ def test_on_remote_host(remotedir=None, fname=None,
                                                       os.path.basename(locbldfile)),
                               args=remoteargs)
     print result
-    # retrieve build output file
-    get(os.path.join(remotedir, 'build.out'), 'build.out')
     
     if result.return_code != 0:
         raise RuntimeError("problem with remote build (return code = %s)" % 
@@ -168,61 +166,6 @@ def main(argv=None):
     run_host_processes(config, conn, image_hosts, options, 
                        funct=test_on_remote_host, funct_kwargs=funct_kwargs)
     
-    #processes = []
-    
-    #try:
-        #for host in options.hosts:
-            #shell = config.get(host, 'shell')
-            #if host in image_hosts:
-                #runner = run_on_ec2_image
-            #else:
-                #runner = run_on_host
-            #proc_args = [host, config, conn, test_on_remote_host,
-                         #options.outdir, fname, shell, options.remotedir]
-            #p = Process(target=runner,
-                        #name=host,
-                        #args=proc_args,
-                        #kwargs={ 'keep': options.keep,
-                                 #'branch': options.branch,
-                                 #'testargs': args,
-                                 #'hostname': host,
-                                 #})
-            #processes.append(p)
-            #print "starting build/test process for %s" % p.name
-            #p.start()
-        
-        #while len(processes) > 0:
-            #time.sleep(1)
-            #for p in processes:
-                #if p.exitcode is not None:
-                    #processes.remove(p)
-                    #if len(processes) > 0:
-                        #remaining = '(%d hosts remaining)' % len(processes)
-                    #else:
-                        #remaining = ''
-                    #print '%s finished. exit code=%d %s\n' % (p.name, 
-                                                              #p.exitcode, 
-                                                              #remaining)
-                    #break
-            
-    #finally:
-        #os.chdir(startdir)
-        
-        #t2 = time.time()
-        #secs = t2-t1
-        
-        #hours = int(secs)/3600
-        #mins = int(secs-hours*3600.0)/60
-        #secs = secs-(hours*3600.)-(mins*60.)
-        
-        #print '\nElapsed time:',
-        #if hours > 0:
-            #print ' %d hours' % hours,
-        #if mins > 0:
-            #print ' %d minutes' % mins,
-        #print ' %5.2f seconds\n\n' % secs
-
-
 if __name__ == '__main__': #pragma: no cover
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')

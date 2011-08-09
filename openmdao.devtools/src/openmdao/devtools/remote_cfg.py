@@ -19,7 +19,9 @@ def run_on_host(host, config, conn, funct, outdir, **kwargs):
     if not os.path.isdir(hostdir):
         os.makedirs(hostdir)
     os.chdir(hostdir)
-    sys.stdout = sys.stderr = open('run.out', 'wb', 40)
+    orig_stdout = sys.stdout
+    orig_stderr = sys.stderr
+    sys.stdout = sys.stderr = open('run.out', 'wb')
     
     settings_kwargs = {}
     settings_args = []
@@ -35,14 +37,15 @@ def run_on_host(host, config, conn, funct, outdir, **kwargs):
     if usr:
         settings_kwargs['user'] = usr
         
+    settings_kwargs['shell'] = config.get(host, 'shell')
+    
     if debug:
         settings_args.append(show('debug'))
-        print "calling %s" % print_fuct_call(funct, **kwargs)
+        orig_stdout.write("<%s>: calling %s" % 
+                          (host, print_fuct_call(funct, **kwargs)))
     else:
         settings_args.append(hide('running'))
         
-    settings_kwargs['shell'] = config.get(host, 'shell')
-    
     with settings(*settings_args, **settings_kwargs):
         return funct(**kwargs)
             

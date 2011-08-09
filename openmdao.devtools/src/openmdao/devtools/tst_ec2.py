@@ -25,7 +25,7 @@ from openmdao.util.debug import print_fuct_call
 
 
 def check_image_state(inst, start_state, imgname='', sleeptime=10,
-                      debug=False):
+                      debug=False, stream=sys.stdout):
     """Keeps querying the 'state' attribute of the instance until
     the state changes from start_state.
     """
@@ -33,7 +33,7 @@ def check_image_state(inst, start_state, imgname='', sleeptime=10,
         time.sleep(sleeptime)
         inst.update()
         if debug:
-            print '%s state = %s' % (imgname, inst.state)
+            stream.write("%s state = %s\n" % (imgname, inst.state))
         if inst.state != start_state:
             break
     return inst.state
@@ -98,7 +98,10 @@ def run_on_ec2_image(host, config, conn, funct, outdir, **kwargs):
     if not os.path.isdir(hostdir):
         os.makedirs(hostdir)
     os.chdir(hostdir)
-    sys.stdout = sys.stderr = open('run.out', 'wb', 40)
+    
+    orig_stdout = sys.stdout
+    orig_stderr = sys.stderr
+    sys.stdout = sys.stderr = open('run.out', 'wb')
     
     settings_kwargs = {}
     settings_args = []
@@ -109,9 +112,12 @@ def run_on_ec2_image(host, config, conn, funct, outdir, **kwargs):
     debug = config.getboolean(host, 'debug')
     
     # stand up an instance of the specified image
+    orig_stdout.write("starting instance %s\n" % host)
     inst = start_instance(conn, config, host)
     settings_kwargs['host_string'] = inst.public_dns_name
     settings_kwargs['disable_known_hosts'] = True
+    orig_stdout.write("instance %s was started successfully. dns=%s\n" % 
+                      (host, inst.public_dns_name))
 
     if debug:
         settings_args.append(show('debug'))
@@ -127,25 +133,29 @@ def run_on_ec2_image(host, config, conn, funct, outdir, **kwargs):
         client = fab_connect(settings_kwargs['user'],
                              settings_kwargs['host_string'], debug=debug)
         if debug:
-            print "calling %s" % print_fuct_call(funct, **kwargs)
+            orig_stdout.write("<%s>: calling %s\n" % 
+                              (host, print_fuct_call(funct, **kwargs)))
         retval = funct(**kwargs)
         
     keep = kwargs.get('keep', False)
     if retval == 0 or not keep:
-        print "terminating %s" % host
+        orig_stdout.write("terminating %s\n" % host)
         inst.terminate()
-        check_image_state(inst, u'shutting-down', imgname=host, debug=debug)
+        check_image_state(inst, u'shutting-down', imgname=host, debug=debug,
+                          stream=orig_stdout)
         if inst.state == u'terminated':
-            print 'instance of %s is terminated' % host
+            orig_stdout.write("instance of %s is terminated.\n" % host)
         else:
-            print 'instance of %s failed to terminate!' % host
+            orig_stdout.write("instance of %s failed to terminate!\n" % host)
     else:
-        print "stopping %s" % host
+        orig_stdout.write("run failed, so stopping %s instead of terminating it.\n" % host)
+        orig_stdout.write("%s will have to be terminated manually.\n" % host)
         inst.stop()
-        check_image_state(inst, u'stopping', imgname=host, debug=debug)
+        check_image_state(inst, u'stopping', imgname=host, debug=debug,
+                          stream=orig_stdout)
         if inst.state == u'stopped':
-            print 'instance of %s is stopped' % host
+            orig_stdout.write("instance of %s has stopped\n" % host)
         else:
-            print 'instance of %s failed to stop!' % host
-            
+            orig_stdout.write("instance of %s failed to stop! (state=%s)\n" % 
+                              (host, inst.state))
     return retval
