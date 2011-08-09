@@ -111,11 +111,16 @@ def _build_sdist(projdir, destdir, version):
     finally:
         os.chdir(startdir)
 
-def _build_bdist_egg(projdir, destdir):
+def _build_bdist_egg(projdir, destdir, hosts, configfile):
     startdir = os.getcwd()
     try:
-        os.chdir(projdir)
-        _build_dist('bdist_egg', destdir)
+        #os.chdir(projdir)
+        #_build_dist('bdist_egg', destdir)
+        cmd = ['remote_build', '-s', projdir,
+               '-d', destdir, '-c', configfile]
+        for host in hosts:
+            cmd.append('--host=%s' % host)
+        check_call(cmd)
     finally:
         os.chdir(startdir)
 
@@ -184,6 +189,13 @@ def main():
                       help="used for testing. A release branch will not be created")
     parser.add_option("-n", "--nodocbuild", action="store_true", dest="nodocbuild",
                       help="used for testing. The docs will not be rebuilt if they already exist")
+    parser.add_option("--host", action='append', dest='hosts', metavar='HOST',
+                      default=[],
+                      help="host from config file to build bdist_eggs on. "
+                           "Multiple --host args are allowed.")
+    parser.add_option("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
+                      default='~/.openmdao/testing.cfg',
+                      help="path of config file where info for hosts is located")
     (options, args) = parser.parse_args(sys.argv[1:])
     
     if not options.version or not options.destdir:
@@ -227,9 +239,10 @@ def main():
         print "checking out branch '%s'" % relbranch
         check_call(['git', 'checkout', relbranch])
     
-    destdir = os.path.realpath(options.destdir)
+    destdir = os.path.abspath(options.destdir)
     if not os.path.exists(destdir):
         os.makedirs(destdir)
+    cfgpath = os.path.abspath(options.cfg)
 
     startdir = os.getcwd()
     topdir = repo_top()
@@ -263,7 +276,7 @@ def main():
             print 'building %s' % project_name
             _build_sdist(pdir, destdir, options.version)
             if pkgtype == 'bdist_egg':
-                _build_bdist_egg(pdir, destdir)
+                _build_bdist_egg(pdir, destdir, options.hosts, cfgpath)
             
         print 'creating bootstrapping installer script go-openmdao.py'
         installer = os.path.join(os.path.dirname(__file__),'mkinstaller.py')

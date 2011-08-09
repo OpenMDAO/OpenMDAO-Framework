@@ -55,12 +55,12 @@ class CfgOptionParser(OptionParser):
         OptionParser.__init__(self)
         self.add_option("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
                           default='~/.openmdao/testing.cfg',
-                          help="path of config file where info for test hosts is located")
+                          help="path of config file where info for hosts is located")
         self.add_option("--host", action='append', dest='hosts', metavar='HOST',
                           default=[],
-                          help="select host from config file to run tests on. "
-                               "If not supplied, tests will run on all hosts in "
-                               "config file. To test on a subset of the hosts in "
+                          help="select host from config file to run on. "
+                               "If not supplied, runs will occur on all hosts in "
+                               "config file. To run on a subset of the hosts in "
                                "the config file, use multiple --host args")
         self.add_option("-o","--outdir", action="store", type='string', 
                           dest='outdir', default='host_results',
