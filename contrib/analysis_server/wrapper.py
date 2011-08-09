@@ -453,10 +453,10 @@ class ComponentWrapper(object):
         except Exception as exc:
             self._send_exc(exc, req_id)
 
-    def _set(self, path, valstr):
+    def _set(self, path, valstr, gzipped=False):
         """ Sets the value of `path` to `valstr`. """
         wrapper, attr = self._get_var_wrapper(path)
-        wrapper.set(attr, path, valstr)
+        wrapper.set(attr, path, valstr, gzipped)
 
     def set_hierarchy(self, xml, req_id):
         """ Set hierarchy of variable values from `xml`. """
@@ -464,9 +464,12 @@ class ComponentWrapper(object):
             header, newline, xml = xml.partition('\n')
             root = ElementTree.fromstring(xml)
             for var in root.findall('Variable'):
-                valstr = '' if var.text is None else var.text
-                valstr = valstr.decode('string_escape')
-                self._set(var.attrib['name'], valstr)
+                valstr = var.text or ''
+                if var.get('gzipped', 'false') == 'true':
+                    gzipped = True
+                else:
+                    gzipped = False
+                self._set(var.attrib['name'], valstr, gzipped)
             self._send_reply('values set', req_id)
         except Exception as exc:
             self._send_exc(exc, req_id)
@@ -617,7 +620,7 @@ class ArrayBase(BaseWrapper):
                   self.get('units', self._ext_path),
                   self.get('value', self._ext_path))
 
-    def set(self, attr, path, valstr):
+    def set(self, attr, path, valstr, gzipped):
         """ Set attribute corresponding to `attr` to `valstr`. """
         if attr == 'value':
             if self.typ == str:
@@ -737,7 +740,7 @@ class BoolWrapper(BaseWrapper):
                   quoteattr(self.get('description', self._ext_path)),
                   self.get('value', self._ext_path))
 
-    def set(self, attr, path, valstr):
+    def set(self, attr, path, valstr, gzipped):
         """ Set attribute corresponding to `attr` to `valstr`. """
         valstr = valstr.strip('"')
         if attr == 'value':
@@ -859,7 +862,7 @@ class EnumWrapper(BaseWrapper):
                   self.get('units', self._ext_path),
                   escape(self.get('value', self._ext_path)))
 
-    def set(self, attr, path, valstr):
+    def set(self, attr, path, valstr, gzipped):
         """ Set attribute corresponding to `attr` to `valstr`. """
         valstr = valstr.strip('"')
         if attr == 'value':
@@ -988,9 +991,8 @@ class FileWrapper(BaseWrapper):
                   self.get('isBinary', self._ext_path),
                   data)
 
-    def set(self, attr, path, valstr):
+    def set(self, attr, path, valstr, gzipped):
         """ Set attribute corresponding to `attr` to `valstr`. """
-        valstr = valstr.strip('"').decode('string_escape')
         if attr == 'value':
             if self._trait.iotype != 'in':
                 raise WrapperError('cannot set output <%s>.' % path)
@@ -1002,6 +1004,13 @@ class FileWrapper(BaseWrapper):
             if not os.path.isabs(filename):
                 filename = os.path.join(self._owner.get_abs_directory(),
                                         filename)
+            if gzipped:
+                data = cStringIO.StringIO(base64.b64decode(valstr))
+                gz_file = gzip.GzipFile(mode='rb', fileobj=data)
+                valstr = gz_file.read()
+            else:
+                valstr = valstr.strip('"').decode('string_escape')
+
             mode = 'wb'
             if self._server is None:  # Used during testing.
                 with open(filename, mode) as out:
@@ -1075,7 +1084,7 @@ class FloatWrapper(BaseWrapper):
                   self.get('units', self._ext_path),
                   self.get('value', self._ext_path))
 
-    def set(self, attr, path, valstr):
+    def set(self, attr, path, valstr, gzipped):
         """ Set attribute corresponding to `attr` to `valstr`. """
         valstr = valstr.strip('"')
         if attr == 'value':
@@ -1141,7 +1150,7 @@ class IntWrapper(BaseWrapper):
                   quoteattr(self.get('description', self._ext_path)),
                   self.get('value', self._ext_path))
 
-    def set(self, attr, path, valstr):
+    def set(self, attr, path, valstr, gzipped):
         """ Set attribute corresponding to `attr` to `valstr`. """
         valstr = valstr.strip('"')
         if attr == 'value':
@@ -1196,7 +1205,7 @@ class StrWrapper(BaseWrapper):
                   quoteattr(self.get('description', self._ext_path)),
                   escape(self.get('value', self._ext_path)))
 
-    def set(self, attr, path, valstr):
+    def set(self, attr, path, valstr, gzipped):
         """ Set attribute corresponding to `attr` to `valstr`. """
         valstr = valstr.strip('"')
         if attr == 'value':

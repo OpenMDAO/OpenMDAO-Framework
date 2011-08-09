@@ -110,6 +110,17 @@ class RemoteFile(object):
         return self.fileobj.flush()
 
     @rbac('owner')
+    def __iter__(self):
+        """ Return iterator. """
+        self.fileobj.__iter__()
+        return self
+    
+    @rbac('owner')
+    def next(self):
+        """ Return next input line or raise StopIteration. """
+        return self.fileobj.next()
+
+    @rbac('owner')
     def read(self, size=-1):
         """ Read up to `size` bytes. """
         return self.fileobj.read(size)
@@ -130,6 +141,7 @@ class RemoteFile(object):
         return self.fileobj.write(data)
 
 rbac_decorate(RemoteFile.__enter__, 'owner', proxy_types=(RemoteFile,))
+rbac_decorate(RemoteFile.__iter__,  'owner', proxy_types=(RemoteFile,))
 
 
 class FileRef(FileMetadata):
