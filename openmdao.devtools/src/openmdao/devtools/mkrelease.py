@@ -1,7 +1,6 @@
 
 #
-# For each openmdao subpackage, this script creates a releaseinfo.py file and 
-# builds a source distribution.
+# Build OpenMDAO package distributions.
 #
 import sys, os
 import shutil
@@ -28,7 +27,6 @@ __date__ = '%(date)s'
 __commit__ = '%(commit)s'
 """
 
-PRODUCTION_DISTS_URL = 'http://openmdao.org/dists'
 
 def get_releaseinfo_str(version):
     """Creates the content of the releaseinfo.py files"""
@@ -160,7 +158,7 @@ def main():
     specified destination directory:
     
         - source distribs of all of the openmdao subpackages
-        - binary eggs for openmdao subpackages with compiled code (windows only)
+        - binary eggs for openmdao subpackages with compiled code
         - an installer script for the released version of openmdao that will
           create a virtualenv and populate it with all of the necessary
           dependencies needed to use openmdao
@@ -173,7 +171,8 @@ def main():
         
     """
     parser = OptionParser()
-    parser.add_option("-d", "--destination", action="store", type="string", dest="destdir",
+    parser.add_option("-d", "--destination", action="store", type="string", 
+                      dest="destdir",
                       help="directory where distributions will be placed")
     parser.add_option("-v", "--version", action="store", type="string", dest="version",
                       help="version string applied to all openmdao distributions")
@@ -209,7 +208,7 @@ def main():
             print "pulling master"
             os.system("git pull origin master")
             if _has_checkouts():
-                print "something went wrong.  aborting"
+                print "something went wrong during pull.  aborting"
                 sys.exit(-1)
         else:
             print "WARNING: base branch is not 'master' so it has not been"
