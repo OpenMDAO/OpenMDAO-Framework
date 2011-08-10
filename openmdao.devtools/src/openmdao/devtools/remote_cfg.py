@@ -71,6 +71,8 @@ class CfgOptionParser(OptionParser):
                           help="remote directory where execution will take place")
 
 def process_options(options):
+    options.cfg = os.path.expanduser(options.cfg)
+    
     config = ConfigParser.ConfigParser()
     config.readfp(open(options.cfg))
     
