@@ -121,6 +121,7 @@ class MetaModel(Component):
         """If the training flag is set, train the metamodel. Otherwise, 
         predict outputs.
         """
+        
         if self._train:
             if self.model:
                 try:
