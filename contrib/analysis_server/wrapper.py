@@ -4,17 +4,13 @@ Wrappers for OpenMDAO components and variables.
 
 import base64
 import cStringIO
+import gzip
 import numpy
 import os
 import sys
 import time
 import xml.etree.cElementTree as ElementTree
 from xml.sax.saxutils import escape, quoteattr
-
-if float(sys.version[:3]) < 2.7:
-    import gzip27 as gzip  # 2.6 & earlier don't handle zero padding.
-else:
-    import gzip
 
 try:
     import resource
@@ -33,6 +29,23 @@ from analysis_server.monitor import FileMonitor
 class WrapperError(Exception):
     """ Denotes wrapper-specific errors. """
     pass
+
+
+class _GzipFile(gzip.GzipFile):
+    """ Class to patch _read_eof() for Python prior to 2.7. """
+
+    def _read_eof(self):
+        """ Handle zero padding at end of file for Python prior to 2.7. """
+        gzip.GzipFile._read_eof(self)
+        if float(sys.version[:3]) < 2.7:
+            # Gzip files can be padded with zeroes and still have archives.
+            # Consume all zero bytes and set the file position to the first
+            # non-zero byte. See http://www.gzip.org/#faq8
+            c = "\x00"
+            while c == "\x00":
+                c = self.fileobj.read(1)
+            if c:
+                self.fileobj.seek(-1, 1)
 
 
 # Mapping from OpenMDAO variable type to wrapper type.
@@ -978,7 +991,7 @@ class FileWrapper(BaseWrapper):
                 data = cStringIO.StringIO()
                 try:
                     with file_ref.open() as inp:
-                        gz_file = gzip.GzipFile(mode='wb', fileobj=data)
+                        gz_file = _GzipFile(mode='wb', fileobj=data)
                         gz_file.writelines(inp)
                 except IOError as exc:
                     self._logger.warning('get %s.value: %r', path, exc)
@@ -1010,7 +1023,7 @@ class FileWrapper(BaseWrapper):
                                         filename)
             if gzipped:
                 data = cStringIO.StringIO(base64.b64decode(valstr))
-                gz_file = gzip.GzipFile(mode='rb', fileobj=data)
+                gz_file = _GzipFile(mode='rb', fileobj=data)
                 valstr = gz_file.read()
             else:
                 valstr = valstr.strip('"').decode('string_escape')
