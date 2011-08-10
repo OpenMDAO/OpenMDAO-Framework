@@ -488,15 +488,7 @@ class ConsoleServer(cmd.Cmd):
             return True
         else:
             return False
-            
-    def ensure_dir(self,dirname):
-        ''' create directory in working directory
-            (does nothing if directory already exists)
-        '''
-        dirpath = os.getcwd()+'/'+str(dirname)
-        if not os.path.isdir(dirpath):
-            os.makedirs(dirpath)
-            
+                        
     def install_addon(self,url,distribution):
         print "Installing",distribution,"from",url
         easy_install.main( ["-U","-f",url,distribution] )
