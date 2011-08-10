@@ -22,14 +22,29 @@ class NeuralNet(object):
         n_inputs = len(X[0])
         # 1 Output node because Surrogate Model has only 1 output
         self._nn_surr = buildNetwork(n_inputs, self.n_hidden_nodes, 1)
+                
+        #Scaling of exponents down to between .1 and .9
+        x_min = np.amin(X, axis=0)
+        x_max = np.amax(X, axis=0)
+        y_min = np.amin(Y, axis=0)
+        y_max = np.amax(Y, axis=0)
         
+        m_x = .8/(x_max-x_min)
+        m_y = .8/(y_max-y_min)
+        b_x = .1-(.8*x_min)/(x_max-x_min)
+        b_y = .1-(.8*y_min)/(y_max-y_min)
+        
+        x_scaled = m_x*X+b_x
+        y_scaled = m_y*Y+b_y
+        
+        # Creating the Dataset
         ds = SupervisedDataSet(n_inputs,1)
-        
-        for inp,target in zip(X,Y):
+        for inp,target in zip(x_scaled,y_scaled):
             ds.addSample(inp,(target,))
-               
+            
+        # Set the type of trainer
         trainer = BackpropTrainer(self._nn_surr, ds, momentum = .1)
-        
+        # Start the training
         trainer.trainUntilConvergence()
         
     def predict(self, x):
