@@ -83,7 +83,8 @@ class MetaModel(Component):
         #build list of inputs         
         inputs = []
         for case in newval:
-            self.recorder.record(case)
+            if self.recorder: 
+                self.recorder.record(case)
             inputs = []
             for inp_name in self._surrogate_input_names:
                 inp_val = None
@@ -143,7 +144,8 @@ class MetaModel(Component):
                     # save the case, making sure to add out name to the local input name since
                     # this Case is scoped to our parent Assembly
                     case_inputs = [('.'.join([self.name,name]),val) for name,val in zip(self._surrogate_input_names, inputs)]
-                    self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
+                    if self.recorder: 
+                        self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
                     
             else:
                 self.raise_exception("MetaModel object must have a model!",
