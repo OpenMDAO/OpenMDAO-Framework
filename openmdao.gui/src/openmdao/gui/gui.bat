@@ -1,1 +1,1 @@
-python omg.py
+python omg.py %*

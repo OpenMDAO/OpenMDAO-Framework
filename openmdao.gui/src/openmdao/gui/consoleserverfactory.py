@@ -189,7 +189,7 @@ class ConsoleServer(cmd.Cmd):
         if self.top:
             print "Executing..."
             self.top.run()
-            print "Executiion complete."
+            print "Execution complete."
         else:
             print "Execution failed: No top level assembly was found."
         
