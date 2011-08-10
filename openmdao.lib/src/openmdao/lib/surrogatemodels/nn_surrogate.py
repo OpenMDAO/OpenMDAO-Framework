@@ -18,24 +18,27 @@ class NeuralNet(object):
     def get_uncertain_value(self, value):
         return value
     
-    def train(self, X, Y):
-        n_inputs = len(X[0])
+    def train(self, x, y):
+        n_inputs = len(x[0])
         # 1 Output node because Surrogate Model has only 1 output
         self._nn_surr = buildNetwork(n_inputs, self.n_hidden_nodes, 1)
                 
         #Scaling of exponents down to between .1 and .9
-        x_min = np.amin(X, axis=0)
-        x_max = np.amax(X, axis=0)
-        y_min = np.amin(Y, axis=0)
-        y_max = np.amax(Y, axis=0)
+        """x_min = np.amin(x, axis=0)
+        x_max = np.amax(x, axis=0)
+        y_min = np.amin(y, axis=0)
+        y_max = np.amax(y, axis=0)
         
         m_x = .8/(x_max-x_min)
         m_y = .8/(y_max-y_min)
         b_x = .1-(.8*x_min)/(x_max-x_min)
         b_y = .1-(.8*y_min)/(y_max-y_min)
         
-        x_scaled = m_x*X+b_x
-        y_scaled = m_y*Y+b_y
+        x_scaled = m_x*x+b_x
+        y_scaled = m_y*y+b_y
+        """
+        x_scaled = x
+        y_scaled = y
         
         # Creating the Dataset
         ds = SupervisedDataSet(n_inputs,1)
@@ -53,7 +56,7 @@ class NeuralNet(object):
     
 if __name__ =="__main__":     
     import numpy as np    
-    x = np.linspace(0, 1, 25)
+    x = np.linspace(1, 10, 25)
     y = np.sin(x) * 0.5
     
     size = len(x)
@@ -65,7 +68,7 @@ if __name__ =="__main__":
     
     nn.train(inp,y)
     
-    for x,tar in zip(inp,y):
+    for x,tar in zip(inp,y):    
         print nn.predict(x),tar
         
     
