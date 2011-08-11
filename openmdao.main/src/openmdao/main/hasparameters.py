@@ -21,7 +21,7 @@ class Parameter(object):
             else:
                 try:
                     scaler = float(scaler)
-                except ValueError:
+                except (TypeError, ValueError):
                     msg = "Bad value given for parameter's 'scaler' attribute"
                     parent.raise_exception(msg, ValueError)
             if adder is None:
@@ -29,7 +29,7 @@ class Parameter(object):
             else:
                 try:
                     adder = float(adder)
-                except ValueError:
+                except (TypeError, ValueError):
                     msg = "Bad value given for parameter's 'adder' attribute"
                     parent.raise_exception(msg, ValueError)
         
