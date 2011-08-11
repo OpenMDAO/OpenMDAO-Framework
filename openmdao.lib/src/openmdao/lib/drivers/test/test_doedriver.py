@@ -46,7 +46,7 @@ class DrivenComponent(Component):
     y0 = Float(1., iotype='in') #used just to get ParameterGroup
     x1 = Float(1., iotype='in')
     x2 = Float(1., iotype='in')
-    x3 = Float(1., iotype='in', low=-11., high=11.)
+    x3 = Float(1., iotype='in')
     err_event = Event()
     stop_exec = Bool(False, iotype='in')
     rosen_suzuki = Float(0., iotype='out')
@@ -127,34 +127,6 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(err), 
                              "driver: Can't add parameter 'foobar.blah' because it doesn't exist.")
             
-    def test_param_high_low_errs(self):
-        self.model.driver.clear_parameters()
-        try:
-            self.model.driver.add_parameter('driven.x3', low=-20.)
-        except ValueError as err:
-            self.assertEqual(str(err), "driver: Trying to add parameter 'driven.x3', "
-                             "but the lower limit supplied (-20.0) exceeds the built-in "
-                             "lower limit (-11.0).")
-        else:
-            self.fail("expected ValueError")
-
-        try:
-            self.model.driver.add_parameter('driven.x3', high=20.)
-        except ValueError as err:
-            self.assertEqual(str(err), "driver: Trying to add parameter 'driven.x3', "
-                             "but the upper limit supplied (20.0) exceeds the built-in "
-                             "upper limit (11.0).")
-        else:
-            self.fail("expected ValueError")
-
-    def test_param_already_added(self):
-        try:
-            self.model.driver.add_parameter('driven.x3')
-        except ValueError as err:
-            self.assertEqual(str(err), "driver: 'driven.x3' is already a Parameter target")
-        else:
-            self.fail("expected AttributeError")
-    
     def test_event_removal(self):
         self.model.driver.add_event('driven.err_event')
         lst = self.model.driver.get_events()
