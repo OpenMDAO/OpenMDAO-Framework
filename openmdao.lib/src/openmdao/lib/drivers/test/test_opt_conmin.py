@@ -283,7 +283,46 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.driver.ctlmin = .001
         self.top.run()
 
+    def test_scaled_var_with_initial_violation(self):
+        
+        self.top.comp.add_trait('svar', Float(0.0, low=-10.0, high=10.0, iotype='in'))
+        self.top.driver.add_objective('comp.result')
+        
+        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        self.top.driver.ctlmin = 1.0
+        self.top.comp.svar = 1.5
+        self.top.driver.start_iteration()
 
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        self.top.driver.ctlmin = 1.0
+        self.top.comp.svar = 2.5
+        try:
+            self.top.driver.start_iteration()
+        except ValueError, err:
+            msg = 'driver: initial value of: comp.svar is greater than maximum'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('ValueError expected')
+
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        self.top.driver.ctlmin = 1.0
+        self.top.comp.svar = -0.5
+        self.top.driver.start_iteration()
+
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        self.top.driver.ctlmin = 1.0
+        self.top.comp.svar = -2.5
+        try:
+            self.top.driver.start_iteration()
+        except ValueError, err:
+            msg = 'driver: initial value of: comp.svar is less than minimum'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('ValueError expected')
+            
 if __name__ == "__main__":
     unittest.main()
 

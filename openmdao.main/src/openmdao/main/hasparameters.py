@@ -21,15 +21,17 @@ class Parameter(object):
             else:
                 try:
                     scaler = float(scaler)
-                except TypeError:
-                    parent.raise_exception("bad scaler", TypeError)
+                except ValueError:
+                    msg = "Bad value given for parameter's 'scaler' attribute"
+                    parent.raise_exception(msg, ValueError)
             if adder is None:
                 adder = 0.0
             else:
                 try:
                     adder = float(adder)
-                except TypeError:
-                    parent.raise_exception("bad adder", TypeError)
+                except ValueError:
+                    msg = "Bad value given for parameter's 'adder' attribute"
+                    parent.raise_exception(msg, ValueError)
         
         self.low = low
         self.high = high
@@ -57,59 +59,58 @@ class Parameter(object):
             parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % target,
                                    AttributeError)
         try:
+            # So, our traits might not have a vartypename?
             self.vartypename = metadata['vartypename']
         except KeyError:
             self.vartypename = None
+            
         try:
             val = expreval.evaluate()
         except Exception as err:
             parent.raise_exception("Can't add parameter because I can't evaluate '%s'." % target, 
                                    ValueError)
-        if self.vartypename != 'Enum' and not isinstance(val,(float,float32,float64,int,int32,int64)):
+            
+        self.valtypename = type(val).__name__
+
+        if self.vartypename == 'Enum':
+            return    # it's an Enum, so no need to set high or low
+        
+        if not isinstance(val,(float,float32,float64,int,int32,int64)):
             parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
                                    (target,type(val).__name__), ValueError)
         
-        self.valtypename = type(val).__name__
-
         meta_low = metadata.get('low') # this will be None if 'low' isn't there
-        if low is None:
-            self.low = meta_low
-        else:
-            if meta_low is not None and low < self._transform(meta_low):
+        if meta_low is not None:
+            if low is None:
+                self.low = self._untransform(meta_low)
+            elif low < self._untransform(meta_low):
                 parent.raise_exception("Trying to add parameter '%s', " 
                                        "but the lower limit supplied (%s) exceeds the " 
                                        "built-in lower limit (%s)." % 
                                        (target, low, meta_low), ValueError)
-            self.low = low
+        else:
+            if low is None:
+                parent.raise_exception("Trying to add parameter '%s', "
+                                   "but no lower limit was found and no " 
+                                   "'low' argument was given. One or the "
+                                   "other must be specified." % target,ValueError)
 
-        meta_high = metadata.get('high') # this will be None if 'high' isn't there
-        if high is None:
-            self.high = meta_high
-        else:  # high is not None
-            if meta_high is not None and high > self._transform(meta_high):
+        meta_high = metadata.get('high') # this will be None if 'low' isn't there
+        if meta_high is not None:
+            if high is None:
+                self.high = self._untransform(meta_high)
+            elif high > self._untransform(meta_high):
                 parent.raise_exception("Trying to add parameter '%s', " 
                                        "but the upper limit supplied (%s) exceeds the " 
                                        "built-in upper limit (%s)." % 
                                        (target, high, meta_high), ValueError)
-            self.high = high
-            
-        if self.vartypename == 'Enum':
-            return    # it's an Enum, so no need to set high or low
         else:
-            if self.low is None:
+            if high is None:
                 parent.raise_exception("Trying to add parameter '%s', "
-                                       "but no lower limit was found and no " 
-                                       "'low' argument was given. One or the "
-                                       "other must be specified." % target,ValueError)
-            if self.high is None: 
-                parent.raise_exception("Trying to add parameter '%s', "
-                                       "but no upper limit was found and no " 
-                                       "'high' argument was given. One or the "
-                                       "other must be specified." % target,ValueError)
-        if low is None:
-            self.low = self._transform(self.low)
-        if high is None:
-            self.high = self._transform(self.high)
+                                   "but no upper limit was found and no " 
+                                   "'high' argument was given. One or the "
+                                   "other must be specified." % target,ValueError)
+
 
         if self.low > self.high:
             parent.raise_exception("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
@@ -123,9 +124,11 @@ class Parameter(object):
                (self.target, self.low, self.high, self.fd_step, self.scaler, self.adder)
     
     def _transform(self, val):
+        """ Unscales the variable (parameter space -> var space). """
         return (val+self.adder)*self.scaler
     
     def _untransform(self, val):
+        """ Scales the variable (var space -> parameter space). """
         return val/self.scaler - self.adder
     
     def _do_nothing(self, val):

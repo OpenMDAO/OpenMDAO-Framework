@@ -289,16 +289,6 @@ class CONMINdriver(DriverUsesDerivatives):
             vlow = val.low
             vhigh = val.high
             
-            # Note: high and low are scaled, so gotta unscale to compare
-            
-            if val.scaler:
-                vlow = vlow/val.scaler
-                vhigh = vhigh/val.scaler
-                
-            if val.adder:
-                vlow = vlow - val.adder
-                vhigh = vhigh - val.adder
-            
             if dval > vhigh:
                 if (dval - vhigh) < self.ctlmin:
                     self.design_vals[i] = vhigh
