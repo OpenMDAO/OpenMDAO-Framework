@@ -24,6 +24,7 @@ openmdao.WorkflowDiagram = function(id,model) {
     // set background image
     workflow.setBackgroundImage( "/static/images/grid_10.png", true)
     
+    /** FIXME: workflow context menu conflict with figure context menu ** /
     // context menu
     workflow.getContextMenu=function(){
         var menu=new draw2d.Menu();
@@ -54,18 +55,24 @@ openmdao.WorkflowDiagram = function(id,model) {
     
     // make the workflow pane droppable
     elm.droppable ({
-        accept: '.objtype',
+        accept: '.obj, .objtype',
         drop: function(ev,ui) { 
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
-                typename = droppedObject.text(),
-                typepath = droppedObject.attr("path"),
+                droppedName = droppedObject.text(),
+                droppedPath = droppedObject.attr("path"),
                 off = elm.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
                 y = Math.round(ui.offset.top - off.top)
-            openmdao.Util.promptForName(function(name) { 
-                model.addComponent(typepath,name,x,y)
-            })
+            debug.info("dropped:",droppedObject)
+            if (droppedObject.hasClass('objtype')) {
+                openmdao.Util.promptForName(function(name) { 
+                    model.addComponent(droppedPath,name,x,y)
+                })
+            }
+            else if (droppedObject.hasClass('obj')) {
+                model.issueCommand('top.driver.workflow.add("'+droppedPath+'")')
+            }
         }
     });
 

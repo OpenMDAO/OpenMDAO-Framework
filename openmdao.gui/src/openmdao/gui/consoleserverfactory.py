@@ -24,7 +24,9 @@ from openmdao.main.factorymanager import get_available_types
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.main.project import *
-from openmdao.main.mp_support import is_instance
+
+from openmdao.main.mp_support import has_interface, is_instance
+from openmdao.main.interfaces import *
 
 from mdao_util import *
 
@@ -309,6 +311,8 @@ class ConsoleServer(cmd.Cmd):
     def _get_attributes(self,comp):
         ''' get attributes of object 
         '''
+        attrs = {}
+        
         inputs = []
         for vname in comp.list_inputs():
             v = comp.get(vname)
@@ -318,6 +322,7 @@ class ConsoleServer(cmd.Cmd):
                 attr['type'] = type(v).__name__
                 attr['value'] = v
             inputs.append(attr)
+        attrs['inputs'] = inputs
             
         outputs = []
         for vname in comp.list_outputs():
@@ -328,10 +333,34 @@ class ConsoleServer(cmd.Cmd):
                 attr['type'] = type(v).__name__
                 attr['value'] = v
             outputs.append(attr)
-            
-        attrs = {}
-        attrs['inputs'] = inputs
         attrs['outputs'] = outputs
+
+        if has_interface(comp,IHasObjectives):
+            objectives = []
+            objs = comp.get_objectives()
+            for key in objs.keys():
+                attr = {}
+                attr['name'] = key
+                attr['expr'] = objs[key].text
+                attr['scope'] = objs[key].scope.name
+                objectives.append(attr)
+            attrs['objectives'] = objectives
+            
+        if has_interface(comp, IHasParameters):
+            parameters = []
+            parms = comp.get_parameters()
+            for key,parm in parms.iteritems():
+                attr = {}
+                attr['name']    = key
+                attr['target']  = parm.target
+                attr['low']     = parm.low
+                attr['high']    = parm.high
+                attr['scaler']  = parm.scaler
+                attr['adder']   = parm.adder
+                attr['fd_step'] = parm.fd_step
+                parameters.append(attr)
+            attrs['parameters'] = parameters
+        
         return attrs
         
     def get_attributes(self,name):

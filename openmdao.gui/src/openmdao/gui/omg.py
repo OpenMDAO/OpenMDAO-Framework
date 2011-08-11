@@ -44,9 +44,9 @@ if __name__ == '__main__':
         options.port = PickUnusedPort()    
 
     if not options.serveronly:
-        # NOTE: with dev server on windows, you are going to get two browsers
-        #       this is due to forking, which Windows doesn't do very well
-        #       not sure what can be done about this
+        # NOTE: with dev server, you are going to get two browsers
+        #       this is due to forking I suppose
+        #       not sure what can be done about it
         launch_browser(options.port, options.browser)
 
     if (options.devserver):

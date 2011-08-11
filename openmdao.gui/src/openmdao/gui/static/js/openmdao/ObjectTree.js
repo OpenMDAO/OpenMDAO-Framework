@@ -38,84 +38,97 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
     function convertJSON(json, path) {
         var data = []
         jQuery.each(json, function(name,item) {
+            //debug.info(name,item)
             var showObj = filterChars.indexOf(name[0])<0 
                         && name.indexOf('py/')<0 
-                        && !(item && item['py/type'])
-                        && !(item && item['py/repr'])
             if (showObj) {
                 var pathname = path.length>0 ? path+'.'+name : name,
-                    node = { 'data': name },
-                    itemType = typeof item
-                    
-                if (itemType !== "undefined") {
-                    if (item == null) {
-                        node['attr'] = { 
-                             'class' : 'null',
-                             'path'  : pathname,
-                             'title' : 'null' 
-                        }
-                        node['value'] = null
+                    node = { 'data': name }
+                    node['attr'] = { 
+                         'class' : 'obj',
+                         'path'  : pathname,
+                         'title' : name
                     }
-                    else if (itemType=='number' || itemType=='string' || itemType=='boolean' ) {
-                        node['attr'] = { 
-                             'class' : 'var',
-                             'path'  : pathname,
-                             'title' : itemType+': '+item
-                        }
-                        node['value'] = item
-                    }
-                    else if (item instanceof Array) {
-                        node['attr'] = { 
-                             'class' : 'array', 
-                             'path'  : pathname,
-                             'title' : 'array: '+item.join("")
-                        }
-                        node['value'] = item
-                    }
-                    else if (item['py/object']) {
-                        var tokens = item['py/object'].split('.'),
-                            typename = tokens[tokens.length-1]
-                        node['attr'] = { 
-                             'class' : 'obj',
-                             'path'  : pathname,
-                             'title' : typename
-                        }
-                        node['objtype'] = item['py/object']
-                        // TODO: may want to do something special with traits in general
-                        if (item['py/seq']) // array/list object (traits)
-                            node['value'] = item['py/seq']
-                        else if (item['py/state'])
-                            node['children'] = convertJSON(item['py/state'],pathname)
-                        else {
-                            debug.warn('ObjectTree.convertJSON: '+name+' is a py/object with no py/state..')
-                            // TODO? what's the diff between this and a py/object with a py/state?
-                            node['children'] = convertJSON(item,pathname)
-                        }
-                    }
-                    else if (item['py/ref']) {
-                        node['attr'] = { 
-                             'class' : 'ref',
-                             'path'  : pathname,
-                             'title' : 'link to: '+item['py/ref']
-                        }
-                        node['value'] = item['py/ref']
-                        //node['data'] = node['data'] + ' --> ' + node['ref']
-                    }
-                    else {  // just a plain old container I guess
-                        node['attr'] = { 
-                             'class' : 'obj',
-                             'path'  : pathname,
-                             'title' : 'object'
-                        }
-                        node['children'] = convertJSON(item,pathname)
-                    }
-                }
+                    node['children'] = convertJSON(item,pathname)
+                //debug.info(node)
                 data.push(node)
             }
         })
         return data
     }
 
+    /** set node attributes (based on full jsonpickle dump, which is not currently used) * /
+    function setNodeAttributes(node,item) {
+        if !item || item['py/type'] || !(item && item['py/repr'])
+            return
+        
+        itemType = typeof item
+            
+        if (itemType !== "undefined")  {
+            if (item == null) {
+                node['attr'] = { 
+                     'class' : 'null',
+                     'path'  : pathname,
+                     'title' : 'null' 
+                }
+                node['value'] = null
+            }
+            else if (itemType=='number' || itemType=='string' || itemType=='boolean' ) {
+                node['attr'] = { 
+                     'class' : 'var',
+                     'path'  : pathname,
+                     'title' : itemType+': '+item
+                }
+                node['value'] = item
+            }
+            else if (item instanceof Array) {
+                node['attr'] = { 
+                     'class' : 'array', 
+                     'path'  : pathname,
+                     'title' : 'array: '+item.join("")
+                }
+                node['value'] = item
+            }
+            else if (item['py/object']) {
+                var tokens = item['py/object'].split('.'),
+                    typename = tokens[tokens.length-1]
+                node['attr'] = { 
+                     'class' : 'obj',
+                     'path'  : pathname,
+                     'title' : typename
+                }
+                node['objtype'] = item['py/object']
+                // TODO: may want to do something special with traits in general
+                if (item['py/seq']) // array/list object (traits)
+                    node['value'] = item['py/seq']
+                else if (item['py/state'])
+                    node['children'] = convertJSON(item['py/state'],pathname)
+                else {
+                    debug.warn('ObjectTree.convertJSON: '+name+' is a py/object with no py/state..')
+                    // TODO? what's the diff between this and a py/object with a py/state?
+                    node['children'] = convertJSON(item,pathname)
+                }
+            }
+            else if (item['py/ref']) {
+                node['attr'] = { 
+                     'class' : 'ref',
+                     'path'  : pathname,
+                     'title' : 'link to: '+item['py/ref']
+                }
+                node['value'] = item['py/ref']
+                //node['data'] = node['data'] + ' --> ' + node['ref']
+            }
+            else { // just a plain old container I guess
+                node['attr'] = { 
+                     'class' : 'obj',
+                     'path'  : pathname,
+                     'title' : 'object'
+                }
+            }
+        }
+    }
+    
+    
     /** update the tree with JSON model data  */
     function updateTree(json) {
         jQuery.jstree._themes = "/static/css/jstree/";
@@ -125,7 +138,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
             json_data   : { "data": convertJSON(json,'') },
             themes      : { "theme":  "classic" },
             cookies     : { "prefix": "objtree", opts : { path : '/' } },
-            contextmenu : { "items":  contextMenu }
+            contextmenu : { "items":  contextMenu },
         })
         .bind("select_node.jstree", function(e,data) {
             if (typeof select_fn == 'function') {
@@ -139,7 +152,12 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
                 var pathname = node.attr("path")
                 dblclick_fn(model,pathname)
             }
-        });
+        })
+        .bind("loaded.jstree", function (e, data) {
+            var selector = '#'+id+' .obj'
+            jQuery(selector).draggable({ helper: 'clone', appendTo: 'body' })
+        })
+        
     }
 
     /** get a context menu for the specified node */
