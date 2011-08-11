@@ -194,7 +194,7 @@ def main():
                       help="host from config file to build bdist_eggs on. "
                            "Multiple --host args are allowed.")
     parser.add_option("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
-                      default='~/.openmdao/testing.cfg',
+                      default='~/.openmdao/testhosts.cfg',
                       help="path of config file where info for hosts is located")
     (options, args) = parser.parse_args(sys.argv[1:])
     

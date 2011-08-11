@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 ## WARNING: This file is generated
+#!/usr/bin/env python
 """Create a "virtual" Python installation
 """
 
+# If you change the version here, change it in setup.py 
+# and docs/conf.py as well.
 virtualenv_version = "1.6.4"
 
 import base64
@@ -1540,6 +1543,8 @@ openmdao_prereqs = ['numpy', 'scipy']
 def extend_parser(parser):
     parser.add_option("-r","--req", action="append", type="string", dest='reqs', 
                       help="specify additional required distributions", default=[])
+    parser.add_option("--disturl", action="store", type="string", dest='disturl', 
+                      help="specify url where openmdao distribs are located")
 
 
 def adjust_options(options, args):
@@ -1572,9 +1577,11 @@ def _single_install(cmds, req, bin_dir, dodeps=False):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['docutils==0.6', 'Pyevolve==0.6', 'newsumt==1.1.0', 'Pygments==1.3.1', 'ordereddict==1.1', 'Traits==3.3.0', 'pycrypto==2.3', 'PyYAML==3.09', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'Jinja2==2.4', 'virtualenv==1.6.4', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'nose==0.11.3']
-
-    url = 'http://openmdao.org/dists'
+    reqs = ['docutils==0.6', 'Pyevolve==0.6', 'newsumt==1.1.0', 'Pygments==1.3.1', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'PyYAML==3.09', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Traits==3.3.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'Jinja2==2.4', 'nose==0.11.3', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'virtualenv==1.6.4']
+    if options.disturl:
+        url = options.disturl
+    else:
+        url = 'http://openmdao.org/dists'
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
         lib_dir = join(home_dir, 'Lib')

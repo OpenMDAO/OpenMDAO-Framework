@@ -1,5 +1,20 @@
-# Config file for setup of OpenMDAO branch and release testing and remote building
+# Config file for setup of OpenMDAO branch/release testing and remote building.
+# Each section (other than DEFAULT) represents a host.  The section name is
+# used by various OpenMDAO remote testing/building scripts (via the --host=  option)
+# to specify the host to run on.  
+# The 'user' field must be supplied if the remote username is different from 
+# the current username.
+#
+# Sections with an 'image_id' field specify an EC2 image. For these you must
+#    also specify 'instance_type', e.g., 'c1.medium', 'm1.large', etc.
+# Sections with an 'instance_id' field specify an EC2 instance that must
+#    already be running.
+# Sections with an 'addr' field specify any host where 'addr' is the IP address
+#
+#
+# The default location for this file is ~/.openmdao/testhosts.cfg
 
+# default settings used by each section if not overridden in the section
 [DEFAULT]
 identity: ~/.ssh/lovejoykey.pem
 py_versions: python2.6
@@ -9,43 +24,44 @@ linux_user: ubuntu
 win_user: Administrator
 shell = /bin/bash -l -c
 
+# a linux 32 bit EC2 image
 [meerkat32]
 image_id: ami-ddb574b4
 instance_type: c1.medium
 user: %(linux_user)s
 
+# a linux 64 bit EC2 image
 [meerkat64]
 image_id: ami-d7b574be
 instance_type: m1.large
 user: %(linux_user)s
 
+# a windows 2008 server 32 bit EC2 image
 [win2008_32]
 image_id: ami-ad38fec4
 instance_type: c1.medium
 user: %(win_user)s
 security_groups: windows
 
+# a windows 2008 server 64 bit EC2 image
 [win2008_64]
 image_id: ami-d94680b0
 instance_type: m1.large
 user: %(win_user)s
 security_groups: windows
 
-#[storm]
-#addr: storm.grc.nasa.gov
-#shell: cmd /C
-
-#[bret_win2008_32]
-#instance_id: i-d7fe4fb6
-#user: %(win_user)s
-#shell: cmd /C
-
-#[smithers_static]
+# a windows 2008 server 64 bit EC2 instance
+#[win2008_64_instance]
 #instance_id: i-0310516d
 #user: %(win_user)s
 #shell: cmd /C
 
-#[lovejoy_bret]
+# a linux 32 bit EC2 instance
+#[meerkat32_instance]
 #instance_id: i-27ba1746
 #user: %(linux_user)s
 
+# an example of a non-EC2 host. 'addr' is the IP address
+#[local_mac]
+#addr: 192.168.1.14
+#user: foo

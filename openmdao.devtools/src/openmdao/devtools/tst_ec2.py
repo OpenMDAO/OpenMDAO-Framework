@@ -26,8 +26,8 @@ from openmdao.util.debug import print_fuct_call
 
 def check_image_state(inst, start_state, imgname='', sleeptime=10,
                       debug=False, stream=sys.stdout):
-    """Keeps querying the 'state' attribute of the instance until
-    the state changes from start_state.
+    """Keeps querying the 'state' attribute of the instance every 'sleeptime'
+    seconds until the state changes from start_state.
     """
     while True:
         time.sleep(sleeptime)

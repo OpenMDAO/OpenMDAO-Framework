@@ -40,8 +40,7 @@ def activate_and_test(envdir, testargs=()):
 if __name__ == '__main__':
     parser = OptionParser(usage="%prog [OPTIONS] -- testargs")
     parser.add_option("--pyversion", action="store", type='string', 
-                      dest='pyversion',
-                      default="python", 
+                      dest='pyversion', default="python", 
                       help="python version to use, e.g., 'python2.6'")
     parser.add_option("-d","--dir", action="store", type='string', 
                       dest='directory', 

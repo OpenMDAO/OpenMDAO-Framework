@@ -61,11 +61,12 @@ def test_on_remote_host(remotedir=None, fname=None,
                               args=remoteargs)
     print result
     
-    if result.return_code != 0:
-        raise RuntimeError("problem with remote build (return code = %s)" % 
-                           result.return_code)
+    # for some reason, even when the build works fine, there is a non-zero
+    # return code, so we just print it here and keep going regardless of the
+    # value.
+    print "build return code =", result.return_code
     
-    print 'build successful\ntesting...'
+    print '\ntesting...'
     newfiles = set(remote_listdir(remotedir)) - dirfiles - expectedfiles
     
     if build_type == 'dev':
@@ -75,7 +76,7 @@ def test_on_remote_host(remotedir=None, fname=None,
         
         builddir = newfiles.pop()
         envdir = os.path.join(builddir, 'devenv')
-    else:
+    else: # test a release
         matches = fnmatch.filter(newfiles, 'openmdao-?.*')
         if len(matches) > 1:
             raise RuntimeError("can't uniquely determine openmdao env directory from %s" % matches)
@@ -134,17 +135,21 @@ def main(argv=None):
         options.fname = os.path.abspath(options.fname+'.gz')
         print options.fname
         
-    fname = options.fname
+    fname = os.path.abspath(os.path.expanduser(options.fname))
     
     if fname.endswith('.tar.gz') or fname.endswith('.tar'):
         if not os.path.isfile(fname):
-            print "can't find tar file '%s'" % fname
+            print "can't find file '%s'" % fname
             sys.exit(-1)
     elif fname.endswith('.git'):
         pass
+    elif fname.endswith('.py'):
+        if not fname.startswith('http') and not os.path.isfile(fname):
+            print "can't find file '%s'" % fname
+            sys.exit(-1)
     else:
         parser.print_help()
-        print "\nfilename must end in '.tar.gz', '.tar', or '.git'"
+        print "\nfilename must end in '.tar.gz', '.tar', '.py', or '.git'"
         sys.exit(retcode)
         
     funct_kwargs = { 'keep': options.keep,

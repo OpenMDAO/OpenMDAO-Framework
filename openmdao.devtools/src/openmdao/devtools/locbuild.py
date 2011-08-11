@@ -1,8 +1,3 @@
-"""
-This module contains everything necessary to install, activate, and test
-an OpenMDAO release or development environment.
-"""
-
 import sys
 import os
 import shutil
@@ -30,7 +25,6 @@ def get_file(url):
             sys.exit(-1)
         return url
 
-
 def install_release(url, pyversion):
     """
     Installs an OpenMDAO release in the current directory.
@@ -44,7 +38,7 @@ def install_release(url, pyversion):
         major version numbers should be used, i.e., use 'python2.6'
         rather than 'python2.6.5'.
     
-    Returns the relative name of the newly built release directory.
+    Returns the name of the newly built release directory.
     """
     gofile = get_file(url)
     
@@ -54,36 +48,46 @@ def install_release(url, pyversion):
         sys.exit(-1)
     
     # parse pathname to find dists dir
-    parts = os.path.split(url)
-    version = parts[-2]
+    parts = list(os.path.split(url))
     parts = parts[:-3] + ['dists']
-    command = [pyversion, gofile, 
-               '--disturl=%s' % os.path.join(parts)]
+    dpath = os.path.join(parts)
+    command = [pyversion, gofile]
+    if os.path.isdir(dpath): 
+        command.append('--disturl=%s' % os.path.join(parts))
     
-    print "building openmdao version %s environment [%s]" % (version, 
-                                                             ' '.join(command))
-    f = codecs.open('build.out', 'wb', 
-                    encoding='ascii', errors='replace')
-    dirfiles = set(os.listdir('.'))
+    print "building openmdao environment [%s]" % ' '.join(command)
     
-    try:
-        p = subprocess.Popen(command, 
-                             stdout=f, stderr=subprocess.STDOUT, 
-                             env=os.environ)
-        p.wait()
-    finally:
-        f.close()
-        with open('build.out', 'r') as f:
-            print f.read()
+    startdir = os.getcwd()
+    _run_gofile(startdir, os.path.join(startdir, gofile), pyversion)
     
     newfiles = set(os.listdir('.')) - dirfiles
     if len(newfiles) != 1:
         raise RuntimeError("didn't expect %s in build directory" % 
                            list(newfiles))
-    releasedir = newfiles.pop()
+    releasedir = os.path.join(startdir, newfiles.pop())
 
     return (releasedir, p.returncode)
     
+def _run_gofile(stardir, gopath, pyversion):
+    godir, gofile = os.path.split(gopath)
+    os.chdir(godir)
+    
+    # in some cases there are some unicode characters in the
+    # build output which cause fabric to barf, so strip out unicode
+    # by writing to a file, replacing unicode chars with '?'
+    f = codecs.open('build.out', 'wb', 
+                    encoding='ascii', errors='replace')
+    
+    try:
+        p = subprocess.Popen('%s %s' % (pyversion, gofile), 
+                             stdout=f, stderr=subprocess.STDOUT,
+                             shell=True)
+        p.wait()
+    finally:
+        f.close()
+        with open('build.out', 'r') as f:
+            print f.read()
+        os.chdir(startdir)
 
 def install_dev_env(url, pyversion, branch=None):
     """
@@ -149,24 +153,10 @@ def install_dev_env(url, pyversion, branch=None):
         
     print "building openmdao development environment in %s" % treedir
     
-    os.chdir(treedir)
+    gopath = os.path.join(treedir, 'go-openmdao-dev.py')
     
-    # fabric has trouble getting unicode back, so strip out unicode
-    # by writing to a file
-    f = codecs.open('build.out', 'wb', 
-                    encoding='ascii', errors='replace')
-    
-    try:
-        p = subprocess.Popen('%s ./go-openmdao-dev.py' % pyversion, 
-                             stdout=f, stderr=subprocess.STDOUT,
-                             shell=True)
-        p.wait()
-    finally:
-        f.close()
-        with open('build.out', 'r') as f:
-            print f.read()
-        os.chdir(startdir)
-        
+    _run_gofile(startdir, gopath, pyversion)
+            
     envdir = os.path.join(treedir, 'devenv')
     print 'new openmdao environment built in %s' % envdir
     

@@ -15,6 +15,7 @@ from openmdao.devtools.tst_ec2 import run_on_ec2_image
 from openmdao.util.debug import print_fuct_call
 
 def run_on_host(host, config, conn, funct, outdir, **kwargs):
+    """Runs the given funct on the specified host."""
     hostdir = os.path.join(outdir, host)
     if not os.path.isdir(hostdir):
         os.makedirs(hostdir)
@@ -29,10 +30,9 @@ def run_on_host(host, config, conn, funct, outdir, **kwargs):
     debug = config.getboolean(host, 'debug')
     settings_kwargs['host_string'] = config.get(host, 'addr', None)
         
-    ident = config.get(host, 'identity', None)
-    if ident:
+    if config.has_option(host, 'identity'):
         settings_kwargs['key_filename'] = os.path.expanduser(
-            os.path.expandvars(ident))
+            os.path.expandvars(config.get(host, 'identity')))
         
     if config.has_option(host, 'user'):
         settings_kwargs['user'] = config.get(host, 'user')
@@ -54,7 +54,7 @@ class CfgOptionParser(OptionParser):
     def __init__(self):
         OptionParser.__init__(self)
         self.add_option("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
-                          default='~/.openmdao/testing.cfg',
+                          default='~/.openmdao/testhosts.cfg',
                           help="path of config file where info for hosts is located")
         self.add_option("--host", action='append', dest='hosts', metavar='HOST',
                           default=[],
@@ -71,6 +71,9 @@ class CfgOptionParser(OptionParser):
                           help="remote directory where execution will take place")
 
 def process_options(options):
+    """Handles some options found in CfgOptionParser so that the code
+    doesn't have to be duplicated when inheriting from CfgOptionParser.
+    """
     options.cfg = os.path.expanduser(options.cfg)
     
     config = ConfigParser.ConfigParser()
@@ -139,6 +142,11 @@ def process_options(options):
 
 
 def run_host_processes(config, conn, image_hosts, options, funct, funct_kwargs):
+    """Start up a different process for each host in options.hosts. Hosts can
+    be either EC2 images, EC2 instances, or any other kind of host as long
+    as the caller has ssh access to it.  This routine returns after funct
+    has been run on all hosts. Displays total elapsed time when finished.
+    """
     t1 = time.time()
     socket.setdefaulttimeout(30)
     
