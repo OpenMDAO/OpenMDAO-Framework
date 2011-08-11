@@ -50,7 +50,7 @@ def install_release(url, pyversion):
     # parse pathname to find dists dir
     parts = list(os.path.split(url))
     parts = parts[:-3] + ['dists']
-    dpath = os.path.join(parts)
+    dpath = os.path.join(*parts)
     command = [pyversion, gofile]
     if os.path.isdir(dpath): 
         command.append('--disturl=%s' % os.path.join(parts))

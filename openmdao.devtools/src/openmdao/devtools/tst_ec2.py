@@ -1,10 +1,7 @@
-#testbranch script (formerly in fabfile.py)
-
 import sys
 import os
 import shutil
 import subprocess
-#import multiprocessing
 import atexit
 import time
 from optparse import OptionParser
@@ -19,9 +16,6 @@ from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     fabric_cleanup, ssh_test, fab_connect
 
 from openmdao.util.debug import print_fuct_call
-
-#import paramiko.util
-#paramiko.util.log_to_file('paramiko.log')
 
 
 def check_image_state(inst, start_state, imgname='', sleeptime=10,

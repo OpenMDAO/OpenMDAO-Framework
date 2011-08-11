@@ -1,5 +1,3 @@
-#testbranch script (formerly in fabfile.py)
-
 import sys
 import os
 import shutil
@@ -103,7 +101,11 @@ def test_on_remote_host(remotedir=None, fname=None,
         
     return result.return_code
         
-def main(argv=None):
+
+def test_branch(argv=None):
+    atexit.register(fabric_cleanup, True)
+    paramiko.util.log_to_file('paramiko.log')
+    
     if argv is None:
         argv = sys.argv[1:]
         
@@ -118,7 +120,7 @@ def main(argv=None):
                       dest='branch',
                       help="if file_url is a git repo, supply branch name here")
 
-    (options, args) = parser.parse_args(sys.argv[1:])
+    (options, args) = parser.parse_args(argv)
     
     config, conn, image_hosts = process_options(options)
     
@@ -143,25 +145,68 @@ def main(argv=None):
             sys.exit(-1)
     elif fname.endswith('.git'):
         pass
-    elif fname.endswith('.py'):
+    else:
+        parser.print_help()
+        print "\nfilename must end in '.tar.gz', '.tar', or '.git'"
+        sys.exit(-1)
+        
+    funct_kwargs = { 'keep': options.keep,
+                     'testargs': args,
+                     'fname': fname,
+                     'remotedir': options.remotedir,
+                     'branch': options.branch,
+                     }
+        
+    run_host_processes(config, conn, image_hosts, options, 
+                       funct=test_on_remote_host, funct_kwargs=funct_kwargs)
+    
+
+def test_release(argv=None):
+    atexit.register(fabric_cleanup, True)
+    paramiko.util.log_to_file('paramiko.log')
+    
+    if argv is None:
+        argv = sys.argv[1:]
+        
+    parser = CfgOptionParser()
+    parser.add_option("-k","--keep", action="store_true", dest='keep',
+                      help="if there are test/build failures, don't delete "
+                           "the temporary build directory "
+                           "or terminate the remote instance if testing on EC2.")
+    parser.add_option("-f","--file", action="store", type='string', dest='fname',
+                      help="pathname or URL of a go-openmdao.py file")
+
+    (options, args) = parser.parse_args(argv)
+    
+    config, conn, image_hosts = process_options(options)
+    
+    startdir = os.getcwd()
+    
+    if options.fname is None:
+        print 'you must supply the pathname or URL of a go-openmdao.py file'
+        sys.exit(-1)
+        
+    fname = os.path.abspath(os.path.expanduser(options.fname))
+    
+    if fname.endswith('.py'):
         if not fname.startswith('http') and not os.path.isfile(fname):
             print "can't find file '%s'" % fname
             sys.exit(-1)
     else:
         parser.print_help()
-        print "\nfilename must end in '.tar.gz', '.tar', '.py', or '.git'"
-        sys.exit(retcode)
+        print "\nfilename must be a pathname or URL of a go-openmdao.py file"
+        sys.exit(-1)
         
     funct_kwargs = { 'keep': options.keep,
-                     'branch': options.branch,
                      'testargs': args,
                      'fname': fname,
                      'remotedir': options.remotedir,
                      }
+        
     run_host_processes(config, conn, image_hosts, options, 
                        funct=test_on_remote_host, funct_kwargs=funct_kwargs)
-    
-if __name__ == '__main__': #pragma: no cover
-    atexit.register(fabric_cleanup, True)
-    paramiko.util.log_to_file('paramiko.log')
-    main()
+
+# make nose ignore these functions
+test_release.__test__ = False
+test_branch.__test__ = False
+
