@@ -33,9 +33,9 @@ def run_on_host(host, config, conn, funct, outdir, **kwargs):
     if ident:
         settings_kwargs['key_filename'] = os.path.expanduser(
             os.path.expandvars(ident))
-    usr = config.get(host, 'user', None)
-    if usr:
-        settings_kwargs['user'] = usr
+        
+    if config.has_option(host, 'user'):
+        settings_kwargs['user'] = config.get(host, 'user')
         
     settings_kwargs['shell'] = config.get(host, 'shell')
     
