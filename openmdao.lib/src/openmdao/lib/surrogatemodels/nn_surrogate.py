@@ -24,19 +24,19 @@ class NeuralNet(object):
         self._nn_surr = buildNetwork(n_inputs, self.n_hidden_nodes, 1)
                 
         #Scaling of exponents down to between .1 and .9
-        """x_min = np.amin(x, axis=0)
+        x_min = np.amin(x, axis=0)
         x_max = np.amax(x, axis=0)
         y_min = np.amin(y, axis=0)
         y_max = np.amax(y, axis=0)
         
         m_x = .8/(x_max-x_min)
         m_y = .8/(y_max-y_min)
-        b_x = .1-(.8*x_min)/(x_max-x_min)
-        b_y = .1-(.8*y_min)/(y_max-y_min)
+        b_x = .1-(.8/x_max-x_min)*x_min
+        b_y = .1-(.8/y_max-y_min)*y_min
         
         x_scaled = m_x*x+b_x
         y_scaled = m_y*y+b_y
-        """
+        
         x_scaled = x
         y_scaled = y
         
@@ -51,12 +51,20 @@ class NeuralNet(object):
         trainer.trainUntilConvergence()
         
     def predict(self, x):
-        return self._nn_surr.activate(x)[0]
-    
+        
+        out_min = self._nn_surr.activate(x)
+        out_max = self._nn_surr.activate(x)
+        m_out = 1.8/(out_max-out_min)
+        b_out = -.9 - (1.8/out_max-out_min)*out_min
+        
+        
+        return m_out*self._nn_surr.activate(x)+b_out
+        
+        
     
 if __name__ =="__main__":     
     import numpy as np    
-    x = np.linspace(1, 10, 25)
+    x = np.linspace(0, 1, 25)
     y = np.sin(x) * 0.5
     
     size = len(x)
