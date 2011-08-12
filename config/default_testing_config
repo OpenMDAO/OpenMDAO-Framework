@@ -5,12 +5,26 @@
 # The 'user' field must be supplied if the remote username is different from 
 # the current username.
 #
-# Sections with an 'image_id' field specify an EC2 image. For these you must
-#    also specify 'instance_type', e.g., 'c1.medium', 'm1.large', etc.
-# Sections with an 'instance_id' field specify an EC2 instance that must
-#    already be running.
-# Sections with an 'addr' field specify any host where 'addr' is the IP address
+# Section type: EC2 image
+# Required fields:
+#    image_id:        Amazon image id
+#    instance_type:   indicates size of the instance (c1.medium, m1.large, etc.)
+#    security_groups: usually either default or windows
+#    platform:        see below
 #
+# Section type: EC2 instance
+# Required fields:
+#    instance_id: Amazon image id (instance must already be running)
+#    platform:        see below
+#
+# Section type: host with a known IP address
+# Required fields:
+#    addr: IP address of the host
+#    platform:        see below
+#
+# All sections require the following fields:
+#    user:     remote username (required only if different from current user)
+#    platform: specifies the OS type (linux, windows, osx)
 #
 # The default location for this file is ~/.openmdao/testhosts.cfg
 
@@ -18,23 +32,25 @@
 [DEFAULT]
 identity: ~/.ssh/lovejoykey.pem
 py_versions: python2.6
-security_groups: default
 debug: true
 linux_user: ubuntu
 win_user: Administrator
-shell = /bin/bash -l -c
 
 # a linux 32 bit EC2 image
 [meerkat32]
 image_id: ami-ddb574b4
 instance_type: c1.medium
 user: %(linux_user)s
+security_groups: default
+platform: linux
 
 # a linux 64 bit EC2 image
 [meerkat64]
 image_id: ami-d7b574be
 instance_type: m1.large
 user: %(linux_user)s
+security_groups: default
+platform: linux
 
 # a windows 2008 server 32 bit EC2 image
 [win2008_32]
@@ -42,6 +58,7 @@ image_id: ami-ad38fec4
 instance_type: c1.medium
 user: %(win_user)s
 security_groups: windows
+platform: windows
 
 # a windows 2008 server 64 bit EC2 image
 [win2008_64]
@@ -49,19 +66,24 @@ image_id: ami-d94680b0
 instance_type: m1.large
 user: %(win_user)s
 security_groups: windows
+platform: windows
 
 # a windows 2008 server 64 bit EC2 instance
 #[win2008_64_instance]
 #instance_id: i-0310516d
 #user: %(win_user)s
-#shell: cmd /C
+platform: windows
 
 # a linux 32 bit EC2 instance
 #[meerkat32_instance]
 #instance_id: i-27ba1746
 #user: %(linux_user)s
+platform: linux
 
 # an example of a non-EC2 host. 'addr' is the IP address
 #[local_mac]
 #addr: 192.168.1.14
 #user: foo
+#platform: osx
+
+

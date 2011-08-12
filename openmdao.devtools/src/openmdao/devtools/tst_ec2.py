@@ -39,7 +39,7 @@ def start_instance(conn, config, name, sleep=10, max_tries=50):
     debug = config.getboolean(name, 'debug')
     img = conn.get_image(config.get(name, 'image_id'))
     instance_type = config.get(name, 'instance_type')
-    shell = config.get(name, 'shell')
+    platform = config.get(name, 'platform')
     identity = config.get(name, 'identity')
     key_name = os.path.splitext(os.path.basename(identity))[0]
     security_groups = [s.strip() for s in config.get(name, 'security_groups').split()
@@ -48,7 +48,7 @@ def start_instance(conn, config, name, sleep=10, max_tries=50):
     print 'starting instance of image %s' % name
     print "   image: %s" % img
     print "   location: %s" % img.location
-    print "   shell: %s" % shell
+    print "   platform: %s" % platform
     print "   identity: %s" % identity
     print "   key name: %s" % key_name
     print "   security_groups: %s" % security_groups
@@ -120,7 +120,11 @@ def run_on_ec2_image(host, config, conn, funct, outdir, **kwargs):
     else:
         settings_args.append(hide('running'))
 
-    settings_kwargs['shell'] = config.get(host, 'shell', None)
+    platform = config.get(host, 'platform')
+    if platform == 'windows':
+        settings_kwargs['shell'] = 'cmd /C'
+    else:
+        settings_kwargs['shell'] = '/bin/bash -l -c'
 
     try:
         with settings(**settings_kwargs):

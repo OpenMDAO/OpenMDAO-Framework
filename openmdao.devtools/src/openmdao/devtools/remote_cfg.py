@@ -37,7 +37,11 @@ def run_on_host(host, config, conn, funct, outdir, **kwargs):
     if config.has_option(host, 'user'):
         settings_kwargs['user'] = config.get(host, 'user')
         
-    settings_kwargs['shell'] = config.get(host, 'shell')
+    platform = config.get(host, 'platform')
+    if platform == 'windows':
+        settings_kwargs['shell'] = 'cmd /C'
+    else:
+        settings_kwargs['shell'] = '/bin/bash -l -c'
     
     if debug:
         settings_args.append(show('debug'))
@@ -156,7 +160,6 @@ def run_host_processes(config, conn, image_hosts, options, funct, funct_kwargs):
     
     try:
         for host in options.hosts:
-            shell = config.get(host, 'shell')
             debug = config.getboolean(host, 'debug')
             if host in image_hosts:
                 runner = run_on_ec2_image

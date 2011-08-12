@@ -211,6 +211,12 @@ def main():
         parser.print_help()
         sys.exit(-1)
         
+    if len(options.hosts) == 0:
+        print "no windows host was specified, so can't build binary eggs for windows"
+        parser.print_help()
+        sys.exit(-1)
+    elif len(options.hosts) == 1 and options.hosts[0]=='localhost' and 
+        
     orig_branch = get_git_branch()
     if not orig_branch:
         print "You must run mkrelease from within a git repository. aborting"
@@ -289,7 +295,8 @@ def main():
                 _build_bdist_egg(pdir, destdir, options.hosts, cfgpath)
             
         print 'creating bootstrapping installer script go-openmdao.py'
-        installer = os.path.join(os.path.dirname(__file__),'mkinstaller.py')
+        installer = os.path.join(os.path.dirname(__file__),
+                                 'mkinstaller.py')
         
         check_call([sys.executable, installer, '--dest=%s'%destdir])
 
