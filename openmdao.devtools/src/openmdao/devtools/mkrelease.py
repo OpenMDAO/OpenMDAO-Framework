@@ -112,7 +112,7 @@ def _build_sdist(projdir, destdir, version):
     finally:
         os.chdir(startdir)
 
-def _build_bdist_egg(projdir, destdir, hosts, configfile):
+def _build_bdist_eggs(projdirs, destdir, hosts, configfile):
     """Builds binary eggs on the specified hosts and places them in destdir.
     If 'localhost' is an entry in hosts, then it builds a binary egg on the
     current host as well.
@@ -122,12 +122,16 @@ def _build_bdist_egg(projdir, destdir, hosts, configfile):
     try:
         if 'localhost' in hostlist:
             hostlist.remove('localhost')
-            os.chdir(projdir)
-            _build_dist('bdist_egg', destdir)
+            for pdir in projdirs:
+                os.chdir(pdir)
+                _build_dist('bdist_egg', destdir)
             
+        os.chdir(startdir)
         if hostlist:
-            cmd = ['remote_build', '-s', projdir,
+            cmd = ['remote_build', 
                    '-d', destdir, '-c', configfile]
+            for pdir in projdirs:
+                cmd.extend(['-s', pdir])
             for host in hostlist:
                 cmd.append('--host=%s' % host)
                 check_call(cmd)
@@ -219,13 +223,11 @@ def main():
     
     haswin = False
     for host in options.hosts:
-        print 'host = ',host
         if host == 'localhost':
             if sys.platform.startswith('win'):
                 haswin = True
         elif config.has_section(host):
             platform = config.get(host, 'platform')
-            print 'platform =',platform
             if platform == 'windows':
                 haswin = True
     if not haswin:
@@ -298,6 +300,7 @@ def main():
                         options.version])
 
         # build openmdao package distributions
+        proj_dirs = []
         for project_name, pdir, pkgtype in openmdao_packages:
             pdir = os.path.join(topdir, pdir, project_name)
             if 'src' in os.listdir(pdir):
@@ -307,7 +310,10 @@ def main():
             print 'building %s' % project_name
             _build_sdist(pdir, destdir, options.version)
             if pkgtype == 'bdist_egg':
-                _build_bdist_egg(pdir, destdir, options.hosts, cfgpath)
+                proj_dirs.append(pdir)
+                
+        os.chdir(startdir)
+        _build_bdist_eggs(proj_dirs, destdir, options.hosts, cfgpath)
             
         print 'creating bootstrapping installer script go-openmdao.py'
         installer = os.path.join(os.path.dirname(__file__),

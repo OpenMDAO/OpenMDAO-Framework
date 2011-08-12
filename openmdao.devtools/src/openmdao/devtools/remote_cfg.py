@@ -22,6 +22,8 @@ def run_on_host(host, config, conn, funct, outdir, **kwargs):
     os.chdir(hostdir)
     orig_stdout = sys.stdout
     orig_stderr = sys.stderr
+    print '<%s>: writing stdout/stderr to %s' % (host,
+                       os.path.join(os.getcwd(), 'run.out'))
     sys.stdout = sys.stderr = open('run.out', 'wb')
     
     settings_kwargs = {}
@@ -103,6 +105,14 @@ def read_config(options):
     
     return (hosts, config)
 
+def get_tmp_user_dir():
+    """Generate a directory name based on username and the current
+    date and time.
+    """
+    udir = '%s_%s' % (getpass.getuser(), datetime.datetime.now())
+    # if you try to set up a virtualenv in any directory with ':'
+    # in the name, you'll get errors ('no module named os', etc.) 
+    return udir.replace(' ','_').replace(':','.')
     
 def process_options(options):
     """Handles some options found in CfgOptionParser so that the code
@@ -143,13 +153,13 @@ def process_options(options):
             
     options.hosts = hosts
     
-    if options.remotedir is None:
-        uname = getpass.getuser()
-        options.remotedir = '%s_%s' % (uname, datetime.datetime.now())
-        options.remotedir = options.remotedir.replace(' ','_')
-        # if you try to set up a virtualenv in any directory with ':'
-        # in the name, you'll get errors ('no module named os', etc.) 
-        options.remotedir = options.remotedir.replace(':','.')
+    #if options.remotedir is None:
+        #uname = getpass.getuser()
+        #options.remotedir = '%s_%s' % (uname, datetime.datetime.now())
+        #options.remotedir = options.remotedir.replace(' ','_')
+        ## if you try to set up a virtualenv in any directory with ':'
+        ## in the name, you'll get errors ('no module named os', etc.) 
+        #options.remotedir = options.remotedir.replace(':','.')
 
     options.outdir = os.path.abspath(os.path.expanduser(
                                      os.path.expandvars(options.outdir)))

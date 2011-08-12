@@ -295,7 +295,6 @@ def put_dir(src, dest):
     """
     tmpdir = tempfile.mkdtemp()
     tarpath = tar_dir(src, os.path.basename(src), tmpdir)
-    remote_dir = dest
     remote_dir = os.path.dirname(dest)
     remotedir = put_untar(tarpath, remote_dir=remote_dir)
     shutil.rmtree(tmpdir)
