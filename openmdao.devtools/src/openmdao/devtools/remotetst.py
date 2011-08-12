@@ -135,8 +135,11 @@ def test_branch(argv=None):
             os.remove(ziptarname)
         make_git_archive(options.fname)
         subprocess.check_call(['gzip', options.fname])
-        options.fname = os.path.abspath(options.fname+'.gz')
+        options.fname = os.path.abspath(ziptarname)
         print options.fname
+        cleanup_tar = True
+    else:
+        cleanup_tar = False
         
     fname = os.path.abspath(os.path.expanduser(options.fname))
     
@@ -158,9 +161,18 @@ def test_branch(argv=None):
                      'branch': options.branch,
                      }
         
-    run_host_processes(config, conn, image_hosts, options, 
-                       funct=test_on_remote_host, funct_kwargs=funct_kwargs)
+    retcode = run_host_processes(config, conn, image_hosts, options, 
+                                 funct=test_on_remote_host, 
+                                 funct_kwargs=funct_kwargs)
     
+    if cleanup_tar:
+        if os.path.isfile(ziptarname):
+            os.remove(ziptarname)
+    
+    if retcode == 0 and os.path.isfile('paramiko.log'):
+        os.remove('paramiko.log')
+        
+    return retcode
 
 def test_release(argv=None):
     atexit.register(fabric_cleanup, True)
@@ -207,8 +219,9 @@ def test_release(argv=None):
                      'remotedir': options.remotedir,
                      }
         
-    run_host_processes(config, conn, image_hosts, options, 
-                       funct=test_on_remote_host, funct_kwargs=funct_kwargs)
+    return run_host_processes(config, conn, image_hosts, options, 
+                              funct=test_on_remote_host, 
+                              funct_kwargs=funct_kwargs)
 
 # make nose ignore these functions
 test_release.__test__ = False

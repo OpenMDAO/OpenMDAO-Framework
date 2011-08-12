@@ -74,9 +74,12 @@ class CfgOptionParser(OptionParser):
                           dest='remotedir',
                           help="remote directory where execution will take place")
 
-def process_options(options):
-    """Handles some options found in CfgOptionParser so that the code
-    doesn't have to be duplicated when inheriting from CfgOptionParser.
+def read_config(options):
+    """Reads the config file specified in options.cfg and looks for sections
+    in the config file that match the host names specified in options.hosts.
+    
+    Returns a tuple of the form (hosts, config), where hosts is the list of
+    host names and config is the ConfigParser object for the config file.
     """
     options.cfg = os.path.expanduser(options.cfg)
     
@@ -97,6 +100,15 @@ def process_options(options):
 
     if not hosts:
         raise RuntimeError("no hosts were found in config file %s" % options.cfg)
+    
+    return (hosts, config)
+
+    
+def process_options(options):
+    """Handles some options found in CfgOptionParser so that the code
+    doesn't have to be duplicated when inheriting from CfgOptionParser.
+    """
+    hosts, config = read_config(options)
         
     # find out which hosts are ec2 images, if any
     image_hosts = set()
@@ -158,17 +170,19 @@ def run_host_processes(config, conn, image_hosts, options, funct, funct_kwargs):
     
     processes = []
     
+    retcode = 0
+    
     try:
         for host in options.hosts:
-            debug = config.getboolean(host, 'debug')
             if host in image_hosts:
                 runner = run_on_ec2_image
             else:
                 runner = run_on_host
             proc_args = [host, config, conn, funct, options.outdir]
             kw_args = funct_kwargs.copy()
-            kw_args['hostname'] = host
+            debug = config.getboolean(host, 'debug')
             kw_args['debug'] = debug
+            kw_args['hostname'] = host
             p = Process(target=runner,
                         name=host,
                         args=proc_args,
@@ -189,8 +203,9 @@ def run_host_processes(config, conn, image_hosts, options, funct, funct_kwargs):
                     print '%s finished. exit code=%d %s\n' % (p.name, 
                                                               p.exitcode, 
                                                               remaining)
+                    if p.exitcode != 0:
+                        retcode = p.exitcode
                     break
-            
     finally:
         os.chdir(startdir)
         
@@ -207,3 +222,5 @@ def run_host_processes(config, conn, image_hosts, options, funct, funct_kwargs):
         if mins > 0:
             print ' %d minutes' % mins,
         print ' %5.2f seconds\n\n' % secs
+        
+    return retcode

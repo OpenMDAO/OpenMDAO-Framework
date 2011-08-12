@@ -8,6 +8,7 @@ import logging
 from subprocess import Popen, STDOUT, PIPE, check_call
 from datetime import date
 from optparse import OptionParser
+import ConfigParser
 import tempfile
 import StringIO
 import tarfile
@@ -211,11 +212,25 @@ def main():
         parser.print_help()
         sys.exit(-1)
         
-    if len(options.hosts) == 0:
+    options.cfg = os.path.expanduser(options.cfg)
+    
+    config = ConfigParser.ConfigParser()
+    config.readfp(open(options.cfg))
+    
+    haswin = False
+    for host in options.hosts:
+        print 'host = ',host
+        if host == 'localhost':
+            if sys.platform.startswith('win'):
+                haswin = True
+        elif config.has_section(host):
+            platform = config.get(host, 'platform')
+            print 'platform =',platform
+            if platform == 'windows':
+                haswin = True
+    if not haswin:
         print "no windows host was specified, so can't build binary eggs for windows"
-        parser.print_help()
         sys.exit(-1)
-    elif len(options.hosts) == 1 and options.hosts[0]=='localhost' and 
         
     orig_branch = get_git_branch()
     if not orig_branch:
