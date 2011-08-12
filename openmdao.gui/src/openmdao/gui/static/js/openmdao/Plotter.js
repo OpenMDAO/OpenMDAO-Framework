@@ -35,7 +35,6 @@ openmdao.Plotter = function(id,model) {    // requires flot.js
         // create plot in a div inside the element
         plot = jQuery('<div>').appendTo('#'+id)
         plot.css({"padding":"5px","height":"350px","width":"600px"})
-        debug.info("plot panel",plot)
         plot = jQuery.plot(plot, [ getRandomData() ], options)
     
         // continuously update

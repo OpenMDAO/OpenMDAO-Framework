@@ -41,6 +41,8 @@ openmdao.PropertiesEditor = function(id,model) {
                 autoHeight: true,
                 autoEdit: false,
             }
+            self = this,
+            elm = null
         // build it
         init()
     
@@ -59,14 +61,16 @@ openmdao.PropertiesEditor = function(id,model) {
             inputsDiv = jQuery("<div id='inputs'>"),
             outputsDiv = jQuery("<div id='outputs'>")
 
-        // FIXME:  shouldn't have to specify this.prototype
-        this.prototype.elm.append(nameHeader);
-        this.prototype.elm.append('<p>')
-        this.prototype.elm.append(inputsHeader)
-        this.prototype.elm.append(inputsDiv)
-        this.prototype.elm.append('<p>')
-        this.prototype.elm.append(outputsHeader)
-        this.prototype.elm.append(outputsDiv)
+        // FIXME:  shouldn't have to do this
+        elm = this.prototype.elm
+        
+        elm.append(nameHeader);
+        elm.append('<p>')
+        elm.append(inputsHeader)
+        elm.append(inputsDiv)
+        elm.append('<p>')
+        elm.append(outputsHeader)
+        elm.append(outputsDiv)
 
         inputs = new Slick.Grid(inputsDiv, [], columns, inputs_options)
         inputsHeader.click(function () {

@@ -223,7 +223,12 @@ openmdao.ComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
     menu.appendMenuItem(new draw2d.MenuItem("Remove from Workflow",null,function(){
-        oThis.myModel.issueCommand("top.driver.workflow.remove('"+oThis.name+"')");
+        if (/.driver$/.test(oThis.name)) {
+            oThis.myModel.issueCommand("top.driver.workflow.remove('"+oThis.name.replace(/.driver/g,'')+"')");
+        }
+        else {
+            oThis.myModel.issueCommand("top.driver.workflow.remove('"+oThis.name+"')");
+        }
     }));
     return menu;
 };
