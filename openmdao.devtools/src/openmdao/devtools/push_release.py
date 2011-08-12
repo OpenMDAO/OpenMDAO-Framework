@@ -15,8 +15,6 @@ from fabric.state import connections
 from openmdao.devtools.utils import get_openmdao_version, put_dir, tar_dir, \
                                     repo_top, fabric_cleanup
 
-#import paramiko.util
-#paramiko.util.log_to_file('paramiko.log')
 
 def _push_release(release_dir, destination, obj):
     """Take a directory containing release files (openmdao package distributions,
@@ -42,7 +40,7 @@ def _push_release(release_dir, destination, obj):
         raise RuntimeError("more than one file in release dir matches 'go-openmdao-*.py'")
     script = f[0]
     
-    # determine version from form of the go-openmdao-?.?.py file
+    # determine version from the form of the go-openmdao-?.?.py file
     version = os.path.splitext(script)[0].split('-', 2)[2]
     
     # the following will barf if the version already exists on the server
@@ -74,28 +72,42 @@ def _push_release(release_dir, destination, obj):
     obj.put(os.path.join(repo_top(),'scripts','mkdownloadindex.py'), 
             '%s/downloads/mkdownloadindex.py' % destination)
     
+    cdir = os.getcwd()
+    
     # update the index.html for the version download directory on the server
-    with cd('%s/downloads/%s' % (destination, version)):
-        obj.run('python2.6 mkdlversionindex.py')
+    dpath = '%s/downloads/%s' % (destination, version)
+    obj.run('cd %s && python2.6 mkdlversionindex.py' % dpath)
 
+    os.chdir(cdir)
+    
     # update the index.html for the dists directory on the server
-    with cd('%s/dists' % destination):
-        obj.run('python2.6 mkegglistindex.py')
+    dpath = '%s/dists' % destination
+    obj.run('cd %s && python2.6 mkegglistindex.py' % dpath)
 
     # update the 'latest' link
     obj.run('rm -f %s/downloads/latest' % destination)
     obj.run('ln -s -f %s %s/downloads/latest' % (version, destination))
         
+    os.chdir(cdir)
+    
     # update the index.html for the downloads directory on the server
-    with cd('%s/downloads' % destination):
-        obj.run('python2.6 mkdownloadindex.py')
+    dpath = '%s/downloads' % destination
+    obj.run('cd %s && python2.6 mkdownloadindex.py' % dpath)
         
 
+def _setup_local_release_dir(dpath):
+    dn = os.path.dirname
+    topdir = dn(dn(dn(sys.executable)))
+    os.makedirs(os.path.join(dpath, 'downloads', 'misc'))
+    os.makedirs(os.path.join(dpath, 'dists'))
+    shutil.copy(os.path.join(topdir,'scripts','mkdownloadindex.py'),
+                dpath)
 
 class _CommObj(object):
     pass
 
 def main():
+    atexit.register(fabric_cleanup, True)
     parser = OptionParser(usage="%prog RELEASE_DIR DESTINATION")
     (options, args) = parser.parse_args(sys.argv[1:])
     
@@ -110,7 +122,9 @@ def main():
         sys.exit(-1)
     
     destparts = args[1].split(':', 1)
-    if len(destparts)==1 and os.path.isdir(args[1]):  # it's a local release test area
+    if len(destparts)==1: # it's a local release test area
+        if not os.path.isdir(args[1]):
+            _setup_local_release_dir(args[1])
         comm_obj.put = shutil.copy
         comm_obj.put_dir = shutil.copytree
         comm_obj.run = local
@@ -130,7 +144,6 @@ def main():
             _push_release(args[0], home, comm_obj)
 
 if __name__ == '__main__':
-    atexit.register(fabric_cleanup, True)
     main()
     
     

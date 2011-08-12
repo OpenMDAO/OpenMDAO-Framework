@@ -4,10 +4,21 @@ make the index page for all OpenMDAO downloads, per version.
 """
 import sys
 import os
-from alphanum import alphanumeric_key
 import time
 import stat
+import re
 
+_digit_rgx = re.compile('([0-9]+)')
+
+def _keyfunct(val):
+    def cvtdigits(val):
+        if val.isdigit():
+            return int(val)
+        return val
+
+    parts = [s for s in re.split(_digit_rgx, val) if s]
+    return tuple(map(cvtdigits, parts))
+    
 """make a list of versioned directories within downloads"""
 def list_dirs(startdir):
     results = os.listdir(startdir)
@@ -16,7 +27,7 @@ def list_dirs(startdir):
         if os.path.isdir(os.path.join(startdir, name)) and  (name not in ["misc", "dev_docs", "user_guides"]):
             dir_results.append(name)
 
-    return sorted(dir_results, key=alphanumeric_key(), reverse=True)
+    return sorted(dir_results, key=_keyfunct, reverse=True)
    
 
 def make_download_index(url):
@@ -50,9 +61,8 @@ def make_download_index(url):
         dir_date = time.strftime("%m/%d/%y %H:%M:%S", create_date)
         out.write('     <li><a href="%s">%s</a>&nbsp&nbsp&nbsp&nbsp %s(CST)\n'%(base_d, base_d, dir_date))
     if len(dirs): out.write('  </ul>\n')
-   
 
-    #This section is meant to delve out everything in the misc folder up to this level. 
+    # This section is meant to display everything in the misc folder at this level. 
     miscdir=os.path.join(startdir,'misc')
     out.write('\n<h1>Miscellaneous Downloads</h1>\n')
     files = os.listdir(miscdir)
@@ -75,7 +85,6 @@ def make_download_index(url):
         out.write('     <li><a href="%s">%s</a>&nbsp&nbsp&nbsp&nbsp %s(CST)\n'%(linkpath, base_f, dir_date))
     if len(dirs): out.write('  </ul>\n')
     #END MISC SECTION
-
 
     out.write('</body>\n')
     out.write('\n</html>')

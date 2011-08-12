@@ -75,6 +75,7 @@ def test_on_remote_host(remotedir=None, fname=None,
         builddir = newfiles.pop()
         envdir = os.path.join(builddir, 'devenv')
     else: # test a release
+        print 'newfiles = ',newfiles
         matches = fnmatch.filter(newfiles, 'openmdao-?.*')
         if len(matches) > 1:
             raise RuntimeError("can't uniquely determine openmdao env directory from %s" % matches)
@@ -186,12 +187,15 @@ def test_release(argv=None):
         print 'you must supply the pathname or URL of a go-openmdao.py file'
         sys.exit(-1)
         
-    fname = os.path.abspath(os.path.expanduser(options.fname))
+    fname = options.fname
+    if not fname.startswith('http'):
+        fname = os.path.abspath(os.path.expanduser(fname))
     
     if fname.endswith('.py'):
-        if not fname.startswith('http') and not os.path.isfile(fname):
-            print "can't find file '%s'" % fname
-            sys.exit(-1)
+        if not fname.startswith('http'):
+            if not os.path.isfile(fname):
+                print "can't find file '%s'" % fname
+                sys.exit(-1)
     else:
         parser.print_help()
         print "\nfilename must be a pathname or URL of a go-openmdao.py file"
