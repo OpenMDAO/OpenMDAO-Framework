@@ -84,7 +84,7 @@ def _build_dist(build_type, destdir):
               % (build_type, os.getcwd(), ret, out))
 
 def _build_sdist(projdir, destdir, version):
-    """Build an sdist out of a develop egg."""
+    """Build an sdist out of a develop egg and place it in destdir."""
     startdir = os.getcwd()
     try:
         os.chdir(projdir)
@@ -112,15 +112,24 @@ def _build_sdist(projdir, destdir, version):
         os.chdir(startdir)
 
 def _build_bdist_egg(projdir, destdir, hosts, configfile):
+    """Builds binary eggs on the specified hosts and places them in destdir.
+    If 'localhost' is an entry in hosts, then it builds a binary egg on the
+    current host as well.
+    """
     startdir = os.getcwd()
+    hostlist = hosts[:]
     try:
-        #os.chdir(projdir)
-        #_build_dist('bdist_egg', destdir)
-        cmd = ['remote_build', '-s', projdir,
-               '-d', destdir, '-c', configfile]
-        for host in hosts:
-            cmd.append('--host=%s' % host)
-        check_call(cmd)
+        if 'localhost' in hostlist:
+            hostlist.remove('localhost')
+            os.chdir(projdir)
+            _build_dist('bdist_egg', destdir)
+            
+        if hostlist:
+            cmd = ['remote_build', '-s', projdir,
+                   '-d', destdir, '-c', configfile]
+            for host in hostlist:
+                cmd.append('--host=%s' % host)
+                check_call(cmd)
     finally:
         os.chdir(startdir)
 
@@ -242,10 +251,11 @@ def main():
     destdir = os.path.abspath(options.destdir)
     if not os.path.exists(destdir):
         os.makedirs(destdir)
-    cfgpath = os.path.abspath(options.cfg)
 
     startdir = os.getcwd()
     topdir = repo_top()
+    
+    cfgpath = os.path.expanduser(options.cfg)
     
     try:
         update_releaseinfo_files(options.version)

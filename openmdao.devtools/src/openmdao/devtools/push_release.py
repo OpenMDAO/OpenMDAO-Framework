@@ -31,8 +31,8 @@ def _push_release(release_dir, destination, obj):
         or a local directory
         
     obj: _CommObj
-        an object to wrap the behaviors of run, put, etc. so calls are the same for
-        local or remote release areas
+        an object to wrap the behaviors of run, put, etc. so calls are the 
+        same for local or remote release areas
     """
     files = os.listdir(release_dir)
     f = fnmatch.filter(files, 'go-openmdao-*.py')
