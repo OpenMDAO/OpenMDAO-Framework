@@ -11,28 +11,51 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @constructor
  */
 openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
+    
     /***********************************************************************
      *  private
      ***********************************************************************/
      
-    var self = this,
-        elm = jQuery('#'+id),
+    if (arguments.length > 0)
+        // initialize private variables
+        var tree = null,
+            filterChars = '_'
+        // build it
+        init()
+
+    function init() {
+        this.prototype = Object.create(openmdao.BasePane)
+        var menu =  [
+                        {   "text": "Component", 
+                            "items": [
+                                { "text": "Add Component", "onclick": "alert('Sorry, not implemented yet :(');" },
+                            ]
+                        },
+                    ]
+        this.prototype.init(id,'Object Manager', menu)
+        tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id)
+
         filterChars = '_' // filter objects with names that start with these chars
+            
+        /** make the tree pane droppable */
+        tree.parent().droppable({
+            accept: '.objtype',
+            drop: function(ev,ui) { 
+                // get the object that was dropped
+                var droppedObject = jQuery(ui.draggable).clone();
+                debug.info('ObjectTree drop',droppedObj)
+                // get the type name and path
+                var typename = droppedObject.text();
+                var typepath = droppedObject.attr("path");
+                openmdao.Util.promptForName(function(name) { 
+                    model.addComponent(typepath,name);
+                })
+            }
+        })
         
-    /** make the tree pane droppable */
-    elm.parent().droppable({
-        accept: '.objtype',
-        drop: function(ev,ui) { 
-            // get the object that was dropped
-            var droppedObject = jQuery(ui.draggable).clone();
-            // get the type name and path
-            var typename = droppedObject.text();
-            var typepath = droppedObject.attr("path");
-            openmdao.Util.promptForName(function(name) { 
-                model.addComponent(typepath,name);
-            })
-        }
-    })
+        // ask model for an update whenever something changes
+        model.addListener(update)
+    }
     
     /** convert model.json to structure required for jstree */
     function convertJSON(json, path) {
@@ -132,8 +155,8 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
     /** update the tree with JSON model data  */
     function updateTree(json) {
         jQuery.jstree._themes = "/static/css/jstree/";
-        elm.empty()        
-        elm.jstree({
+        tree.empty()        
+        tree.jstree({
             plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
             json_data   : { "data": convertJSON(json,'') },
             themes      : { "theme":  "classic" },
@@ -154,8 +177,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
             }
         })
         .bind("loaded.jstree", function (e, data) {
-            var selector = '#'+id+' .obj'
-            jQuery(selector).draggable({ helper: 'clone', appendTo: 'body' })
+            jQuery('#'+id+' .obj').draggable({ helper: 'clone', appendTo: 'body' })
         })
         
     }
@@ -208,9 +230,6 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
     function update() {
         model.getComponents(updateTree)
     }
-    
-    // ask model for an update whenever something changes
-    model.addListener(update)
     
     /***********************************************************************
      *  privileged

@@ -14,37 +14,33 @@ openmdao.Plotter = function(id,model) {    // requires flot.js
     /***********************************************************************
      *  private
      ***********************************************************************/
-    var self = this,
-        elm = jQuery("#"+id),
-        options = {
-            series: { shadowSize: 0 }, // drawing is faster without shadows
-            yaxis: { min: 0, max: 100 },
-            xaxis: { show: false }
-        },
-        data = [],
-        interval = 30,
-        timer
-    
-    // if the elm doesn't exist, create a popup 
-    if (elm.length === 0) {
-        elm = jQuery('<div id='+id+'></div>')        
-        elm.dialog({
-            'modal': false,
-            'title': 'Plot: '+id,
-            'close': function(ev, ui) { clearInterval(timer); elm.remove(); },
-            width: 600, 
-            height: 350 
-        })
-    }
-    else {
-        elm.html("")
-    }
+    if (arguments.length > 0)
+        // initialize private variables
+        var plot = null,
+            options = {
+                series: { shadowSize: 0 }, // drawing is faster without shadows
+                yaxis: { min: 0, max: 100 },
+                xaxis: { show: false }
+            },
+            data = [],
+            interval = 30,
+            timer
+        // build it
+        init()
 
-    // create plot in a div inside the element
-    var plot = jQuery.plot(jQuery('<div style="padding:5px; height:100%">').appendTo(elm), [ getRandomData() ], options)
+    function init() {
+        this.prototype = Object.create(openmdao.BasePane)
+        this.prototype.init(id,'Plotter')
+
+        // create plot in a div inside the element
+        plot = jQuery('<div>').appendTo('#'+id)
+        plot.css({"padding":"5px","height":"350px","width":"600px"})
+        debug.info("plot panel",plot)
+        plot = jQuery.plot(plot, [ getRandomData() ], options)
     
-    // continuously update
-    setRefresh(interval)
+        // continuously update
+        setRefresh(interval)
+    }
 
     /** set the plot to continuously update after specified ms */
     function setRefresh(interval) {

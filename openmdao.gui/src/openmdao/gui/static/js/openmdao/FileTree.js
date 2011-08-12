@@ -11,19 +11,18 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @constructor
  */
 openmdao.FileTree = function(id,model,edit_function,view_function) {
-    this.prototype = new openmdao.BasePane()
-    
     /***********************************************************************
      *  private
      ***********************************************************************/
      
-    var self = this,
-        elm
-
     if (arguments.length > 0)
+        // initialize private variables
+        var tree = null
+        // build it
         init()
     
     function init() {
+        this.prototype = Object.create(openmdao.BasePane)
         var menu =  [
                         {   "text": "File", 
                             "items": [
@@ -33,9 +32,11 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
                             ]
                         },
                     ]
-        self.prototype.init(id,'File Manager', menu)
-        elm = jQuery('<div style="height:100%">').appendTo("#"+id)
-        elm = jQuery('<div>').appendTo(elm)
+        this.prototype.init(id,'File Manager', menu)
+        tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id)
+        
+        // ask model for an update whenever something changes
+        model.addListener(update)
     }
         
     /** recursively build an HTML representation of a JSON file structure */
@@ -70,7 +71,7 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
             alert("Edit function is not defined")
     }
 
-    /** if we have an view function, then call it on the specified file */
+    /** if we have a view function, then call it on the specified file */
     function viewFile(pathname) {
         if (typeof view_function == 'function')
             view_function(pathname)
@@ -207,32 +208,27 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
         html += "</ul>"
         
         // replace old html
-        elm.empty()
-        elm.html(html)
+        tree.html(html)
         
         // convert to a jstree
         jQuery.jstree._themes = "/static/css/jstree/";
-        elm.jstree({
+        tree.jstree({
             "plugins" :     [ "html_data", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
             "themes" :      { "theme":  "classic" },
             "cookies" :     { "prefix": "filetree", opts : { path : '/' } },
             "contextmenu" : { "items":  contextMenu }
         })
-        
-        // make the file elements draggable
-        jQuery('.file').draggable({ helper: 'clone', appendTo: 'body' })
+        .bind("loaded.jstree", function (e, data) {
+            jQuery('#'+id+' .file').draggable({ helper: 'clone', appendTo: 'body' })
+        })
     }
 
     /** update the display, with data from the model */
     function update() {
-        elm.empty()
-        elm.html("<div>Updating...</div>")
-        elm.effect('highlight',{color:'#ffd'},1000)
+        tree.html("<div>Updating...</div>")
+                 .effect('highlight',{color:'#ffd'},1000)
         model.getFiles(updateFiles)
     }
-    
-    // ask model for an update whenever something changes
-    model.addListener(update)
     
     /***********************************************************************
      *  privileged

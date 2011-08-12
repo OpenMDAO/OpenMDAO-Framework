@@ -27,6 +27,15 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     historyBox.append(menuhtml)
     ContextMenu.set(historyID+"-menu", historyBox.attr('id'));
 
+    /** DEBUG: make the history pane droppable */
+    historyBox.droppable({
+        accept: '.ui-draggable',
+        drop: function(ev,ui) { 
+            var droppedObject = jQuery(ui.draggable).clone();
+            debug.info('Console drop',droppedObject)
+        }
+    })    
+    
     // submit a command
     jQuery('#'+formID).submit(function() {
         model.issueCommand(command.val(),

@@ -11,44 +11,47 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @constructor
  */
 openmdao.PropertiesEditor = function(id,model) {
-    this.prototype = new openmdao.BasePane()
     
     /***********************************************************************
      *  private
      ***********************************************************************/
-    var self = this,
-        elm ,
-        pathname,
-        nameHeader,
-        inputs,
-        outputs,
-        columns = [
-            {id:"name",  name:"Name",  field:"name"},
-            {id:"value", name:"Value", field:"value", editor:TextCellEditor},
-        ],
-        inputs_options = {
-            editable: true,
-            asyncEditorLoading: false,
-            editOnDoubleClick: true,
-            multiSelect: false,
-            autoHeight: true,
-            autoEdit: false,
-            //enableAddRow: true,
-        },
-        outputs_options = {
-            asyncEditorLoading: false,
-            multiSelect: false,
-            autoHeight: true,
-            autoEdit: false,
-        }
-        
+     
     if (arguments.length > 0)
+        // initialize private variables
+        var pathname,
+            nameHeader,
+            inputs,
+            outputs,
+            columns = [
+                {id:"name",  name:"Name",  field:"name"},
+                {id:"value", name:"Value", field:"value", editor:TextCellEditor},
+            ],
+            inputs_options = {
+                editable: true,
+                asyncEditorLoading: false,
+                editOnDoubleClick: true,
+                multiSelect: false,
+                autoHeight: true,
+                autoEdit: false,
+                //enableAddRow: true,
+            },
+            outputs_options = {
+                asyncEditorLoading: false,
+                multiSelect: false,
+                autoHeight: true,
+                autoEdit: false,
+            }
+        // build it
         init()
     
+    
     function init() {
-        self.prototype.init(id,"Properties Editor")
+        this.prototype = Object.create(openmdao.BasePane)
+        this.prototype.init(id,"Properties Editor")
         
-        elm = jQuery("#"+id)
+        debug.log(this.prototype)
+        debug.log(this)
+        
         nameHeader = jQuery("<h3>")
 
         var inputsHeader = jQuery("<h3>Inputs</h3>"),
@@ -56,13 +59,14 @@ openmdao.PropertiesEditor = function(id,model) {
             inputsDiv = jQuery("<div id='inputs'>"),
             outputsDiv = jQuery("<div id='outputs'>")
 
-        elm.append(nameHeader);
-        elm.append('<p>')
-        elm.append(inputsHeader)
-        elm.append(inputsDiv)
-        elm.append('<p>')
-        elm.append(outputsHeader)
-        elm.append(outputsDiv)
+        // FIXME:  shouldn't have to specify this.prototype
+        this.prototype.elm.append(nameHeader);
+        this.prototype.elm.append('<p>')
+        this.prototype.elm.append(inputsHeader)
+        this.prototype.elm.append(inputsDiv)
+        this.prototype.elm.append('<p>')
+        this.prototype.elm.append(outputsHeader)
+        this.prototype.elm.append(outputsDiv)
 
         inputs = new Slick.Grid(inputsDiv, [], columns, inputs_options)
         inputsHeader.click(function () {

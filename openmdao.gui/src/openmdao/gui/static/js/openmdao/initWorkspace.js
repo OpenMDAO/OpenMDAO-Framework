@@ -7,7 +7,7 @@
 var model = new openmdao.Model();
 var layout
     
-jQuery(document).ready(function() {
+jQuery(function() {
     // set the layout
     layout = jQuery('body').layout({
         north__size: 40,

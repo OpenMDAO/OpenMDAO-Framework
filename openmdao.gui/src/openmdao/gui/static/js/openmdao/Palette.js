@@ -15,24 +15,39 @@ openmdao.Palette = function(id,model) {
      *  private
      ***********************************************************************/
      
-    var self = this,
-        elm = jQuery("#"+id)
+    if (arguments.length > 0)
+        // initialize private variables
+        var libs = null
+        // build it
+        init()
 
-    // dropping a filename onto the palette pane means import *
-    elm.parent().droppable ({
-        //accept: '.file .ui-draggable',
-        drop: function(ev,ui) { 
-            var droppedObject = jQuery(ui.draggable).clone()            
-            var path = droppedObject.attr("path")
-            debug.info('Palette drop: '+path)
-            if (/.py$/.test(path)) {
-                model.importFile(path)
+    function init() {
+        this.prototype = Object.create(openmdao.BasePane)
+        this.prototype.init(id,'Libraries',[])
+        
+        libs = jQuery('<div>').appendTo("#"+id)
+        
+        // dropping a filename onto the palette pane means import *
+        libs.droppable ({
+            accept: '.file',
+            drop: function(ev,ui) { 
+                debug.info('Palette drop: ',ev,ui)
+                var droppedObject = jQuery(ui.draggable).clone()            
+                debug.info('Palette drop: ',droppedObject)
+                var path = droppedObject.attr("path")
+                debug.info('Palette drop: '+path)
+                if (/.py$/.test(path)) {
+                    model.importFile(path)
+                }
+                else {
+                    alert("Not a python file:\n"+path)
+                }
             }
-            else {
-                alert("Not a python file:\n"+path)
-            }
-        }
-    })
+        })
+    
+        // ask model for an update whenever something changes
+        model.addListener(update)
+    }
 
     /** rebuild the Palette from an XML library list */
     function updatePalette(packages) {
@@ -47,8 +62,7 @@ openmdao.Palette = function(id,model) {
         html+="</div>"
         
         // replace old html        
-        elm.empty()
-        elm.html(html)
+        libs.html(html)
         
         // make everything draggable
         jQuery('.objtype').draggable({ helper: 'clone', appendTo: 'body' })
@@ -87,15 +101,11 @@ openmdao.Palette = function(id,model) {
 
     /** update the display, with data from the model */
     function update() {
-        elm.empty()
-        elm.html("<div>Updating...</div>")
-        elm.effect('highlight',{color:'#ffd'},1000)
+        libs.html("<div>Updating...</div>")
+            .effect('highlight',{color:'#ffd'},1000)
         model.getTypes(updatePalette)
     }
-    
-    // ask model for an update whenever something changes
-    model.addListener(update)
-    
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/

@@ -24,7 +24,7 @@ openmdao.WorkflowDiagram = function(id,model) {
     // set background image
     workflow.setBackgroundImage( "/static/images/grid_10.png", true)
     
-    /** FIXME: workflow context menu conflict with figure context menu ** /
+    /** FIXME: workflow context menu conflicts with figure context menu ** /
     // context menu
     workflow.getContextMenu=function(){
         var menu=new draw2d.Menu();
@@ -55,8 +55,9 @@ openmdao.WorkflowDiagram = function(id,model) {
     
     // make the workflow pane droppable
     elm.droppable ({
-        accept: '.obj, .objtype',
+        accept: '.obj, .objtype .file ',
         drop: function(ev,ui) { 
+            debug.info("Workflow drop:",ev,ui)
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),

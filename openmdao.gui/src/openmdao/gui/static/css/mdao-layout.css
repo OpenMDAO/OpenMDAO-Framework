@@ -136,6 +136,11 @@ nav2 ul ul a {
   position: absolute;
 }
 
+
+.ui-draggable-dragging {
+  z-index: 9999;
+}
+
 /* desktop tabbed panes (left, center & right) */
 dd {
   margin: 0;

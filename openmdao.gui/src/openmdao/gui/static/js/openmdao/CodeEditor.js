@@ -11,28 +11,24 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @constructor
  */
 openmdao.CodeEditor = function(id,model) {
-    this.prototype = new openmdao.BasePane()
-    
     /***********************************************************************
      *  private
      ***********************************************************************/
      
-    var self = this,
-        elm  = null,
-        filepath = null,
-        editor = null
-        
     if (arguments.length > 0)
+        // initialize private variables
+        var filepath = "",
+            editor = null
+        // build it
         init()
     
+    
     function init() {
-        self.prototype.init(id,'CodeEditor')
-        //elm = jQuery("#"+id).width(screen.width).height(screen.height),
-        var editorID = id+'-content'
-        elm = jQuery('<textarea id="'+editorID+'">').appendTo("#"+id).width(screen.width).height(screen.height)
+        this.prototype = Object.create(openmdao.BasePane)
+        this.prototype.init(id,'CodeEditor')
         
-        filepath = "",
-        
+        var editorID = id+'-content',
+            editorArea = jQuery('<textarea id="'+editorID+'">').appendTo("#"+id).width(screen.width).height(screen.height)
         editor = CodeMirror.fromTextArea(editorID, {
             parserfile: ["../contrib/python/js/parsepython.js"],
             stylesheet: "/static/codemirror/contrib/python/css/pythoncolors.css",
@@ -43,14 +39,16 @@ openmdao.CodeEditor = function(id,model) {
             parserConfig: {'pythonVersion': 2, 'strictErrors': true},
             saveFunction: function() { saveFile() }
         })
-
+        
         // make the parent element (tabbed pane) a drop target for file objects
-        elm.droppable ({
-            accept: '.file',
+        editorArea.parent().droppable ({
+            accept: '.file .obj',
             drop: function(ev,ui) { 
                 var droppedObject = jQuery(ui.draggable).clone();
-                debug.info('CodeEditor drop')
-                editFile(droppedObject.attr("path"));
+                debug.info('CodeEditor drop',droppedObj)
+                if (droppedObject.hasClass('file')) {
+                    editFile(droppedObject.attr("path"));
+                }
             }
         });
     }
