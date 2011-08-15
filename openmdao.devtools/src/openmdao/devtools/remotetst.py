@@ -52,7 +52,7 @@ def test_on_remote_host(fname=None,
     
     print 'building...'
     with settings(warn_only=True):
-        result = push_and_run(locbldfile, 
+        result = push_and_run([locbldfile], 
                               remotepath=os.path.join(remotedir,
                                                       os.path.basename(locbldfile)),
                               args=remoteargs)
@@ -90,7 +90,7 @@ def test_on_remote_host(fname=None,
         remoteargs.append('--')
         remoteargs.extend(testargs)
         
-    result = push_and_run(loctstfile, 
+    result = push_and_run([loctstfile], 
                           remotepath=os.path.join(remotedir,
                                                   os.path.basename(loctstfile)),
                           args=remoteargs)

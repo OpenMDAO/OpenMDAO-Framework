@@ -88,7 +88,7 @@ def main(args=None):
                       help="specify destination directory", default='.')
     parser.add_option("--disturl", action="store", type="string", dest="disturl",
                       default='http://openmdao.org/dists',
-                      help="OpenMDAO distribution URL")
+                      help="OpenMDAO distribution URL (used for testing)")
     
     (options, args) = parser.parse_args(args)
     
@@ -157,10 +157,19 @@ def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
     reqs = %(reqs)s
+    url = '%(url)s'
+    # for testing we allow one to specify a url where the openmdao
+    # package dists are located that may be different from the main
+    # url where the dependencies are located. We do this because
+    # setuptools only allows us to specify a single -f parameter,
+    # which would force us to mirror the entire openmdao distribution
+    # directory in order to test our releases because setuptools will
+    # barf if it can't find everything in the same location (or on PyPI).
+    # TODO: get rid of this after we quit using setuptools.
     if options.disturl:
-        url = options.disturl
+        openmdao_url = options.disturl
     else:
-        url = '%(url)s'
+        openmdao_url = '%(url)s'
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
         lib_dir = join(home_dir, 'Lib')
@@ -184,9 +193,13 @@ def after_install(options, home_dir):
         sys.exit(-1)
     
     cmds = ['-f', url]
+    openmdao_cmds = ['-f', openmdao_url]
     try:
         for req in reqs:
-            _single_install(cmds, req, bin_dir)
+            if req.startswith('openmdao.'):
+                _single_install(openmdao_cmds, req, bin_dir)
+            else:
+                _single_install(cmds, req, bin_dir)
         
 %(make_dev_eggs)s
 
