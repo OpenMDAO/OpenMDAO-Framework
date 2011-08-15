@@ -12,20 +12,19 @@ from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     fabric_cleanup, remote_listdir, remote_mkdir,\
                                     ssh_test
 from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
-                                         run_host_processes
+                                         run_host_processes, get_tmp_user_dir
 
 from openmdao.devtools.tst_ec2 import run_on_ec2_image
 
 import paramiko.util
 
-def test_on_remote_host(remotedir=None, fname=None, 
+def test_on_remote_host(fname=None, 
                         pyversion='python', keep=False, 
                         branch=None, testargs=(), hostname='', **kwargs):
-    if remotedir is None:
-        raise RuntimeError("test_on_remote_host: missing arg 'remotedir'")
     if fname is None:
         raise RuntimeError("test_on_remote_host: missing arg 'fname'")
     
+    remotedir = get_tmp_user_dir()
     remote_mkdir(remotedir)
     
     locbldfile = os.path.join(os.path.dirname(__file__), 'locbuild.py')
@@ -97,7 +96,7 @@ def test_on_remote_host(remotedir=None, fname=None,
                           args=remoteargs)
     print result
         
-    if remotedir is not None and (result.return_code==0 or not keep):
+    if result.return_code==0 or not keep:
         rm_remote_tree(remotedir)
         
     return result.return_code
@@ -112,18 +111,18 @@ def test_branch(argv=None):
         
     parser = CfgOptionParser()
     parser.add_option("-k","--keep", action="store_true", dest='keep',
-                      help="if there are test/build failures, don't delete "
+                      help="If there are test/build failures, don't delete "
                            "the temporary build directory "
                            "or terminate the remote instance if testing on EC2.")
     parser.add_option("-f","--file", action="store", type='string', dest='fname',
-                      help="pathname of a tarfile or URL of a git repo")
+                      help="Pathname of a tarfile or URL of a git repo")
     parser.add_option("-b","--branch", action="store", type='string', 
                       dest='branch',
-                      help="if file_url is a git repo, supply branch name here")
+                      help="If file is a git repo, supply branch name here")
 
     (options, args) = parser.parse_args(argv)
     
-    config, conn, image_hosts = process_options(options)
+    config, conn, image_hosts = process_options(options, parser)
     
     startdir = os.getcwd()
     
@@ -157,7 +156,7 @@ def test_branch(argv=None):
     funct_kwargs = { 'keep': options.keep,
                      'testargs': args,
                      'fname': fname,
-                     'remotedir': options.remotedir,
+                     'remotedir': get_tmp_user_dir(),
                      'branch': options.branch,
                      }
         
@@ -183,22 +182,23 @@ def test_release(argv=None):
         
     parser = CfgOptionParser()
     parser.add_option("-k","--keep", action="store_true", dest='keep',
-                      help="if there are test/build failures, don't delete "
+                      help="If there are test/build failures, don't delete "
                            "the temporary build directory "
                            "or terminate the remote instance if testing on EC2.")
     parser.add_option("-f","--file", action="store", type='string', dest='fname',
-                      help="pathname or URL of a go-openmdao.py file")
+                      help="Pathname or URL of a go-openmdao.py file")
 
     (options, args) = parser.parse_args(argv)
     
-    config, conn, image_hosts = process_options(options)
+    if options.fname is None:
+        print 'you must supply the pathname or URL of a go-openmdao.py file'
+        parser.print_help()
+        sys.exit(-1)
+        
+    config, conn, image_hosts = process_options(options, parser)
     
     startdir = os.getcwd()
     
-    if options.fname is None:
-        print 'you must supply the pathname or URL of a go-openmdao.py file'
-        sys.exit(-1)
-        
     fname = options.fname
     if not fname.startswith('http'):
         fname = os.path.abspath(os.path.expanduser(fname))

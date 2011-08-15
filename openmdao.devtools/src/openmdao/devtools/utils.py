@@ -169,20 +169,20 @@ def remote_py_cmd(cmds, py='python', remote_dir=None):
     file, pushes it to the remote host, and runs it, returning the result of
     'run'.
     """
-    cmdname = '_cmd_.py'
-    with open(cmdname, 'w') as f:
+    cmdfname = '_cmd_.py'
+    with open(cmdfname, 'w') as f:
         f.write("import os\n")
         for cmd in cmds:
             f.write("%s\n" % cmd)
         f.write("os.remove(__file__)\n") # make file delete itself when it runs
     if remote_dir is not None:
-        remotecmd = os.path.join(remote_dir, cmdname).replace('\\','/')
+        remotecmd = os.path.join(remote_dir, cmdfname).replace('\\','/')
     else:
-        remotecmd = cmdname
+        remotecmd = cmdfname
     # apparently put/get ignore the cd() context manager, but run doesn't  :(
-    put(cmdname, remotecmd)
-    os.remove(cmdname) # remove local version
-    return run('%s %s' % (py, cmdname))
+    put(cmdfname, remotecmd)
+    os.remove(cmdfname) # remove local version
+    return run('%s %s' % (py, cmdfname))
 
 def remote_get_platform():
     """Returns the platform string of the current active host."""
@@ -217,19 +217,6 @@ def remote_untar(tarfile, remote_dir=None, delete=True):
         cmds.extend(['import os', 'os.remove("%s")' % tarfile])
     return remote_py_cmd(cmds, remote_dir=remote_dir)
     
-
-#def get_plat_spec_cmds():
-    #plat = remote_get_platform()
-    #if plat.startswith('win'):
-        #mover = 'move'
-        #remover = 'del'
-        #lister = 'dir /B'
-    #else:
-        #mover = 'mv'
-        #remover = 'rm -f'
-        #lister = 'ls -1'
-    #return mover, remover, lister
-
 def remote_tmpdir():
     """Create and return the name of a temporary directory at the remote
     location.
@@ -260,25 +247,19 @@ def rm_remote_tree(pathname):
                           "shutil.rmtree('%s')" % pathname.replace('\\','/')])
     
 
-def put_untar(local_path, remote_dir=None):
+def put_untar(local_path, remote_dir):
     """Put the given tarfile on the current active host and untar it in the
-    specified place. If remote_dir is not specified, a temp directory will 
-    be created and used. 
-    
-    Returns the remote directory where the file was untarred.
+    specified place.
     """
     tarname = os.path.basename(local_path)
     
-    if remote_dir is None:
-        remote_dir = remote_tmpdir()
-    else:
-        remote_mkdir(remote_dir)
+    remote_mkdir(remote_dir)
 
     abstarname = os.path.join(remote_dir, tarname)
     put(local_path, abstarname)
+    
     with cd(remote_dir):
-        remote_untar(tarname, remote_dir)
-    return remote_dir
+        remote_untar(tarname, remote_dir, delete=True)
 
 
 def put_dir(src, dest):
@@ -290,15 +271,12 @@ def put_dir(src, dest):
         
     dest: str
         pathname of directory on remote host
-    
-    Returns the remote directory where the directory was untarred.
     """
     tmpdir = tempfile.mkdtemp()
     tarpath = tar_dir(src, os.path.basename(src), tmpdir)
     remote_dir = os.path.dirname(dest)
-    remotedir = put_untar(tarpath, remote_dir=remote_dir)
+    put_untar(tarpath, remote_dir)
     shutil.rmtree(tmpdir)
-    return remotedir
     
     
 def rsync_dirs(dest, host, dirs=('downloads','dists'),

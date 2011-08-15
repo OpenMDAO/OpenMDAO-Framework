@@ -34,8 +34,8 @@ def remote_build(srcdirs=(), destdir=None, build_type='bdist_egg',
         clean_remotedir = False
 
     for srcdir in srcdirs:
-        remote_dir = put_dir(srcdir, dest=os.path.join(remote_dir,
-                                                       os.path.basename(srcdir)))
+        put_dir(srcdir, os.path.join(remote_dir,
+                                     os.path.basename(srcdir)))
         pkgname = os.path.basename(srcdir)
         pkgdir = os.path.join(remote_dir, pkgname)
         remotebuilder = os.path.join(pkgdir, 'locdistbld.py')
@@ -61,6 +61,7 @@ def remote_build(srcdirs=(), destdir=None, build_type='bdist_egg',
         if debug:
             print 'removing %s' % remtmp
         rm_remote_tree(remtmp)
+        
     if clean_remotedir:
         if debug:
             print 'removing %s' % remote_dir
@@ -96,7 +97,7 @@ def main(argv=None):
 
     (options, args) = parser.parse_args(argv)
     
-    config, conn, image_hosts = process_options(options)
+    config, conn, image_hosts = process_options(options, parser)
     
     if not options.srcs:
         print "You must specify one or more source directories"
@@ -110,7 +111,6 @@ def main(argv=None):
                      'destdir': os.path.abspath(os.path.expanduser(options.dest)), 
                      'build_type': options.btype,
                      'py': options.py,
-                     'remote_dir': options.remotedir,
                      }
     
     sys.exit(run_host_processes(config, conn, image_hosts, options, 

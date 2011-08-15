@@ -172,7 +172,7 @@ def rollback_releaseinfo_files():
         os.chdir(startdir)
     
     
-def main():
+def make_release():
     """Create an OpenMDAO release, placing the following files in the 
     specified destination directory:
     
@@ -181,34 +181,37 @@ def main():
         - an installer script for the released version of openmdao that will
           create a virtualenv and populate it with all of the necessary
           dependencies needed to use openmdao
-        - Sphinx documentation
+        - Sphinx documentation in html
           
     In order to run this, you must be in a git repository with no uncommitted
-    changes. A release branch will be created from the specified base branch, 
-    and in the process of running, a number of releaseinfo.py files will be 
-    updated with new version information and committed.
-        
+    changes. If not running with the --test option, a release branch will be
+    created from the specified base branch, and in the process of running, a
+    number of releaseinfo.py files will be updated with new version
+    information and committed.
     """
     parser = OptionParser()
     parser.add_option("-d", "--destination", action="store", type="string", 
                       dest="destdir",
-                      help="directory where distributions will be placed")
-    parser.add_option("-v", "--version", action="store", type="string", dest="version",
+                      help="directory where distributions and docs will be placed")
+    parser.add_option("-v", "--version", action="store", type="string", 
+                      dest="version",
                       help="version string applied to all openmdao distributions")
     parser.add_option("-m", action="store", type="string", dest="comment",
                       help="optional comment for version tag")
-    parser.add_option("-b", "--basebranch", action="store", type="string", dest="base",
-                      default='master', help="base branch for release. defaults to master")
+    parser.add_option("-b", "--basebranch", action="store", type="string", 
+                      dest="base", default='master', 
+                      help="base branch for release. defaults to master")
     parser.add_option("-t", "--test", action="store_true", dest="test",
                       help="used for testing. A release branch will not be created")
-    parser.add_option("-n", "--nodocbuild", action="store_true", dest="nodocbuild",
+    parser.add_option("-n", "--nodocbuild", action="store_true", 
+                      dest="nodocbuild",
                       help="used for testing. The docs will not be rebuilt if they already exist")
     parser.add_option("--host", action='append', dest='hosts', metavar='HOST',
                       default=[],
                       help="host from config file to build bdist_eggs on. "
                            "Multiple --host args are allowed.")
-    parser.add_option("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
-                      default='~/.openmdao/testhosts.cfg',
+    parser.add_option("-c", "--config", action='store', dest='cfg', 
+                      metavar='CONFIG', default='~/.openmdao/testhosts.cfg',
                       help="path of config file where info for hosts is located")
     (options, args) = parser.parse_args(sys.argv[1:])
     
@@ -342,4 +345,4 @@ def main():
         os.chdir(startdir)
     
 if __name__ == '__main__':
-    main()
+    make_release()

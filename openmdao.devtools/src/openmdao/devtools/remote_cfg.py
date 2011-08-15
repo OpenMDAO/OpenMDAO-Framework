@@ -61,22 +61,21 @@ class CfgOptionParser(OptionParser):
         OptionParser.__init__(self)
         self.add_option("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
                           default='~/.openmdao/testhosts.cfg',
-                          help="path of config file where info for hosts is located")
+                          help="Path of config file where info for hosts is located")
         self.add_option("--host", action='append', dest='hosts', metavar='HOST',
                           default=[],
-                          help="select host from config file to run on. "
+                          help="Select host from config file to run on. "
                                "If not supplied, runs will occur on all hosts in "
                                "config file. To run on a subset of the hosts in "
                                "the config file, use multiple --host args")
+        self.add_option("--all", action="store_true", dest='allhosts',
+                        help="If True, run on all hosts in config file.")
         self.add_option("-o","--outdir", action="store", type='string', 
                           dest='outdir', default='host_results',
-                          help="output directory for results "
-                               "(has a subdirectory for each host)")
-        self.add_option("-r","--remotedir", action="store", type='string', 
-                          dest='remotedir',
-                          help="remote directory where execution will take place")
+                          help="Output directory for results "
+                               "(defaults to ./host_results)")
 
-def read_config(options):
+def read_config(options, parser):
     """Reads the config file specified in options.cfg and looks for sections
     in the config file that match the host names specified in options.hosts.
     
@@ -89,7 +88,9 @@ def read_config(options):
     config.readfp(open(options.cfg))
     
     hostlist = config.sections()
-    if options.hosts:
+    if options.allhosts:
+        hosts = hostlist
+    elif options.hosts:
         hosts = []
         for host in options.hosts:
             if host in hostlist:
@@ -97,12 +98,14 @@ def read_config(options):
             else:
                 raise RuntimeError("host '%s' is not in config file %s" % 
                                    (host, options.cfg))
-    else:
-        hosts = hostlist
 
-    if not hosts:
-        raise RuntimeError("no hosts were found in config file %s" % options.cfg)
-    
+        if not hosts:
+            raise RuntimeError("no hosts were found in config file %s" % options.cfg)
+    else:
+        parser.print_help()
+        print "no hosts were specified"
+        sys.exit(-1)
+
     return (hosts, config)
 
 def get_tmp_user_dir():
@@ -114,11 +117,11 @@ def get_tmp_user_dir():
     # in the name, you'll get errors ('no module named os', etc.) 
     return udir.replace(' ','_').replace(':','.')
     
-def process_options(options):
+def process_options(options, parser):
     """Handles some options found in CfgOptionParser so that the code
     doesn't have to be duplicated when inheriting from CfgOptionParser.
     """
-    hosts, config = read_config(options)
+    hosts, config = read_config(options, parser)
         
     # find out which hosts are ec2 images, if any
     image_hosts = set()
@@ -153,14 +156,6 @@ def process_options(options):
             
     options.hosts = hosts
     
-    #if options.remotedir is None:
-        #uname = getpass.getuser()
-        #options.remotedir = '%s_%s' % (uname, datetime.datetime.now())
-        #options.remotedir = options.remotedir.replace(' ','_')
-        ## if you try to set up a virtualenv in any directory with ':'
-        ## in the name, you'll get errors ('no module named os', etc.) 
-        #options.remotedir = options.remotedir.replace(':','.')
-
     options.outdir = os.path.abspath(os.path.expanduser(
                                      os.path.expandvars(options.outdir)))
 
