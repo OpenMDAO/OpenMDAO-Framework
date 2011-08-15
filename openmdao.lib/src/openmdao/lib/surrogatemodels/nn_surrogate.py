@@ -20,6 +20,8 @@ class NeuralNet(object):
         return value
     
     def train(self, X, Y):
+        X = array(X)
+        Y = array(Y)
         n_inputs = len(X[0])
         # 1 Output node because Surrogate Model has only 1 output
         self._nn_surr = buildNetwork(n_inputs, self.n_hidden_nodes, 1)
@@ -58,8 +60,7 @@ class NeuralNet(object):
             S_in_p.append(m*row+b)
         
         out=self._nn_surr.activate(S_in_p)
-        
-        return (out-self.b_out)/self.m_out
+        return ((out-self.b_out)/self.m_out)[0]
   
 if __name__ =="__main__":     
     import numpy as np    
