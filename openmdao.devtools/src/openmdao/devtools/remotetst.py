@@ -191,8 +191,8 @@ def test_release(argv=None):
     (options, args) = parser.parse_args(argv)
     
     if options.fname is None:
-        print 'you must supply the pathname or URL of a go-openmdao.py file'
         parser.print_help()
+        print '\nyou must supply the pathname or URL of a go-openmdao.py file'
         sys.exit(-1)
         
     config, conn, image_hosts = process_options(options, parser)
@@ -203,6 +203,9 @@ def test_release(argv=None):
     if not fname.startswith('http'):
         fname = os.path.abspath(os.path.expanduser(fname))
     
+    # if they cut & paste from the openmdao website, the fname
+    # will be followed by #md5=..., so get rid of that part
+    fname = fname.split('#')[0]
     if fname.endswith('.py'):
         if not fname.startswith('http'):
             if not os.path.isfile(fname):
@@ -216,7 +219,6 @@ def test_release(argv=None):
     funct_kwargs = { 'keep': options.keep,
                      'testargs': args,
                      'fname': fname,
-                     'remotedir': options.remotedir,
                      }
         
     return run_host_processes(config, conn, image_hosts, options, 
