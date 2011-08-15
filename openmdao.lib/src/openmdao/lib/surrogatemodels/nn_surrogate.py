@@ -1,3 +1,5 @@
+import numpy as np
+from numpy import append,array
 from pybrain.tools.shortcuts import buildNetwork
 from pybrain.supervised.trainers import BackpropTrainer
 from pybrain.datasets import SupervisedDataSet
@@ -14,7 +16,6 @@ class NeuralNet(object):
                 number of hidden nodes
         """
         self.n_hidden_nodes = n_hidden_nodes
-    
     def get_uncertain_value(self, value):
         return value
     
@@ -24,28 +25,22 @@ class NeuralNet(object):
         self._nn_surr = buildNetwork(n_inputs, self.n_hidden_nodes, 1)
                 
         #Scaling of inputs down to between .1 and .9, and outputs between -.9 and .9
-        self.M_in=[]
-        self.B_in=[]
-        s_in=[]
-        for row in X.T:
+        S_in=X.copy()
+        self.M_in = []
+        self.B_in = []
+        for i,row in enumerate(X.T):
             in_min = np.min(row)
             in_max = np.max(row)
-            m_in = .8/(in_max-in_min)
-            b_in = .1-.8/(in_max-in_min)*in_min
-            self.M_in.append(m_in)
-            self.B_in.append(b_in)
-        for m,b,row in zip(self.M_in,self.B_in,X.T):
-            s_row = m*row+b
-            s_in.append(s_row)
-            
-        S_in = s_in.T
-            
-        self.out_min = np.min(Y)
-        self.out_max = np.max(Y)
-        self.m_out = 1.8/(self.out_max-self.out_min)
-        self.b_out = -.9-(1.8/(self.out_max-self.out_min))*self.out_min
+            self.M_in.append(.8/(in_max-in_min))
+            self.B_in.append(.1-.8/(in_max-in_min)*in_min)
+            S_in[:,i] = self.M_in[-1]*row+self.B_in[-1]
+                
+        out_min = np.min(Y)
+        out_max = np.max(Y)
+        self.m_out = 1.8/(out_max-out_min)
+        self.b_out = -.9-(1.8/(out_max-out_min))*out_min
         S_out = self.m_out*Y+self.b_out
-        
+                        
         # Creating the Dataset
         ds = SupervisedDataSet(n_inputs,1)
         for inp,target in zip(S_in,S_out):
@@ -55,22 +50,21 @@ class NeuralNet(object):
         trainer = BackpropTrainer(self._nn_surr, ds, momentum = .1)
         # Start the training
         trainer.trainUntilConvergence()
-        
-    def predict(self, x):
+                
+    def predict(self, X):
         
         S_in_p=[]
         for m,b,row in zip(self.M_in,self.B_in,X.T):
-            s_row = m*row+b
-            self.S_in_p.append(s_row)
-                        
+            S_in_p.append(m*row+b)
+        
         out=self._nn_surr.activate(S_in_p)
         
-        return self.m_out*out+self.b_out
-    
+        return (out-self.b_out)/self.m_out
+  
 if __name__ =="__main__":     
     import numpy as np    
-    x = np.linspace(1, 2, 25)
-    y = np.sin(x) * 0.5
+    x = np.linspace(3, 5, 25)
+    y = np.sin(x) * 4
     
     size = len(x)
     
