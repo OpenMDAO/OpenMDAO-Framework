@@ -9,6 +9,8 @@ from analysis_server import client, proxy, server
 class ASFactory(Factory):
     """
     Factory for components running under an AnalysisServer.
+    An instance would typically be passed to
+    :meth:`openmdao.main.factorymanager.register_class_factory`.
 
     host: string
         Host name or IP address of the AnalysisServer to connect to.

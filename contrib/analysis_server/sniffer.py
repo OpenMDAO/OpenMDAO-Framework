@@ -14,7 +14,21 @@ from analysis_server import server, stream
 
 
 class _Sniffer(SocketServer.TCPServer):
-    """ Display traffic between client & server. """
+    """
+    Display traffic between client & server.
+
+    client_host: string
+        Host address for client connection.
+
+    client_port: int
+        Port for client connection.
+
+    server_host: string
+        Host address for server connection.
+
+    server_port: int
+        Port for server connection.
+    """
 
     allow_reuse_address = True
 
@@ -25,7 +39,15 @@ class _Sniffer(SocketServer.TCPServer):
         self.server_port = server_port
 
     def finish_request(self, request, client_address):
-        """ Override to track active clients. """
+        """
+        Override to track active clients.
+
+        request: string
+            Client request message.
+
+        client_address: ``(host, port)``
+            Client source location.
+        """
         host, port = client_address
         print 'Connection from %s:%s' % (host, port)
         try:
@@ -79,18 +101,20 @@ class _Handler(SocketServer.BaseRequestHandler):
 
 def main():
     """
-    Display requests from client_port and replies from server_port.
+    Display requests from client and replies from server.
 
     Usage: python sniffer.py [--client-host=address][--client-port=number][--server-host=address][--server-port=number]
 
     --client-host: string
-        IPv4 address or hostname. Default is ``socket.gethostname()``.
+        IPv4 address or hostname for client to connect to.
+        Default is ``socket.gethostname()``.
 
     --client-port: int
         Client port (default 1834).
 
     --server-host: string
-        IPv4 address or hostname. Default is ``socket.gethostname()``.
+        IPv4 address or hostname of server to connect to.
+        Default is ``socket.gethostname()``.
 
     --server-port: int
         Server port (default 1835).

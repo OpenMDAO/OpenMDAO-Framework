@@ -9,7 +9,7 @@ processes, each serviced by a separate wrapper thread. Servers are allocated
 from configured resources based on component requirements.
 
 Separate log files for each client connection are written to the ``logs``
-directory. Log files are named ``hostIP_port.txt``.
+directory. Log files are named ``<hostIP>_<port>.txt``.
 
 Component types may be added remotely via the `publish.py` tool. Multiple
 versions of the same component name are allowed. You cannot modify or remove
@@ -100,6 +100,10 @@ from analysis_server.wrapper import ComponentWrapper, lookup
 DEFAULT_PORT = 1835
 ERROR_PREFIX = 'ERROR: '
 
+# The implementation level we approximate.
+_VERSION = '7.0'
+_BUILD = '42968'
+
 # Attributes to be ignored (everything in a 'vanilla' component).
 _IGNORE_ATTR = set()
 
@@ -129,12 +133,18 @@ class _DictContextMgr(object):
 
 class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     """
-    Server to process client requests. `host` is the host name or IP address
-    of the host to connect to and `port` is the port to use. `allowed_hosts`
-    is a list of allowed host or domain addresses (domain addresses must end
-    in '.'). If None, '127.0.0.1' is used (only the local host is allowed
-    access). Reads all component configuration files found in the current
-    directory and subdirectories.
+    Server to process client requests. Reads all component configuration files
+    found in the current directory and subdirectories.
+
+    host: string
+        Host name or IP address to use.
+
+    port: int
+        The port to use
+
+    allowed_hosts: list[string]
+        Allowed host or domain addresses (domain addresses must end in '.').
+        If None, '127.0.0.1' is used (only the local host is allowed access).
     """
 
     allow_reuse_address = True
@@ -157,22 +167,22 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
     @property
     def num_clients(self):
-        """ Return number of clients. """
+        """ Number of clients. """
         return self._num_clients
 
     @property
     def components(self):
-        """ Return component map context manager. """
+        """ Component map context manager. """
         return self._comp_ctx
 
     @property
     def credentials(self):
-        """ Return credentials. """
+        """ Security credentials. """
         return self._credentials
 
     @property
     def config_errors(self):
-        """ Return number of configuration errors detected. """
+        """ Number of configuration errors detected. """
         return self._config_errors
 
     def _read_configuration(self):
@@ -190,7 +200,15 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                         self._config_errors += 1
 
     def _read_config(self, path, logger):
-        """ Read component configuration file. """
+        """
+        Read component configuration file.
+
+        path: string
+            Path to config file.
+
+        logger: :class:`logging.Logger`
+            Used to log progress, errors, etc.
+        """
         logger.info('Reading config file %r', path)
         config = ConfigParser.SafeConfigParser()
         config.optionxform = str  # Preserve case.
@@ -208,7 +226,18 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             os.chdir(orig)
 
     def _process_config(self, config, path, logger):
-        """ Process data read into `config` from `path`. """
+        """
+        Process data read into `config` from `path`.
+
+        config: :class:`ConfigParser.ConfigParser`
+            Configuration data.
+
+        path: string
+            Path to config file.
+
+        logger: :class:`logging.Logger`
+            Used to log progress, errors, etc.
+        """
         for sect in ('Python', 'Description', 'Inputs', 'Outputs', 'Methods'):
             if not config.has_section(sect):
                 raise RuntimeError("No %s section in %r" % (sect, path))
@@ -320,7 +349,12 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
     @staticmethod
     def _get_egg_info(egg):
-        """ Return egg_info tuple from egg file. """
+        """
+        Return egg_info tuple from already-loaded egg file.
+
+        egg: string
+            Egg filename.
+        """
         for filename in glob.glob('*'):
             if not os.path.exists(os.path.join(filename, 'EGG-INFO')):
                 continue
@@ -340,6 +374,12 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     def verify_request(self, request, client_address):
         """
         Returns True if the client at `client_address` is on a legal host.
+
+        request: string
+            Request message.
+
+        client_address: ``(host, port)``
+            Source of client request.
         """
         host, port = client_address
         for pattern in self._allowed_hosts:
@@ -357,6 +397,12 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         """
         Overrides superclass to track active clients and cleanup
         upon client disconnect.
+
+        request: string
+            Request message.
+
+        client_address: ``(host, port)``
+            Source of client request.
         """
         host, port = client_address
         _LOGGER.info('Connection from %s:%s', host, port)
@@ -478,6 +524,12 @@ version: 0.1""")
         """
         Return list of '(cls, cfg)' for `typ`.
         If `ascending`, sort in ascending version order, else descending.
+
+        typ: string
+            Component path.
+
+        ascending: bool
+            Sort order.
         """
         typ = typ.strip('"').lstrip('/')
         name, qmark, version = typ.partition('?')
@@ -511,6 +563,12 @@ version: 0.1""")
         the normal worker to complete before returning the background
         worker. This currently only occurs in the rare case of
         ``execute comp &``.
+
+        name: string
+            Name of instance.
+
+        background: bool
+            Special background processing flag.
         """
         try:
             wrapper, sync_worker = self._instance_map[name]
@@ -528,7 +586,15 @@ version: 0.1""")
         return (wrapper, worker)
 
     def _send_reply(self, reply, req_id=None):
-        """ Send reply to client, with optional logging. """
+        """
+        Send reply to client, with optional logging.
+
+        reply: string
+            Reply message.
+
+        req_id: string
+            Request ID, if requested in 'raw' mode.
+        """
         if self._raw:
             req_id = req_id or self._req_id
             text, zero, rest = reply.partition('\x00')
@@ -546,7 +612,15 @@ version: 0.1""")
             self._stream.send_reply(reply, req_id)
 
     def _send_error(self, reply, req_id=None):
-        """ Send error reply to client, with optional logging. """
+        """
+        Send error reply to client, with optional logging.
+
+        reply: string
+            Reply message.
+
+        req_id: string
+            Request ID, if requested in 'raw' mode.
+        """
         if self._raw:
             req_id = req_id or self._req_id
             self._logger.error('(req_id %s)\n%s', req_id, reply)
@@ -557,7 +631,15 @@ version: 0.1""")
             self._stream.send_reply(reply, req_id, 'error')
 
     def _send_exc(self, exc, req_id=None):
-        """ Send exception reply to client, with optional logging. """
+        """
+        Send exception reply to client, with optional logging.
+
+        exc: Exception
+            Exception data.
+
+        req_id: string
+            Request ID, if requested in 'raw' mode.
+        """
         self._send_error('Exception: %r' % exc, req_id)
         self._logger.error(traceback.format_exc())
 
@@ -567,6 +649,9 @@ version: 0.1""")
         Adds one or more host IDs to the list of client hosts in the proxy
         chain between client and server. This supports access restrictions
         based on all hosts between client and server.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) < 1:
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -580,7 +665,12 @@ version: 0.1""")
 
 
     def _describe(self, args):
-        """ Describes a published component. """
+        """
+        Describes a published component.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) < 1 or len(args) > 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'describe,d <category/component> [-xml]')
@@ -632,7 +722,12 @@ Checksum: %s""" % (cfg.version, cfg.author, str(cfg.has_icon).lower(),
 
 
     def _end(self, args):
-        """ Unloads a component instance. """
+        """
+        Unloads a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'end <object>')
@@ -649,7 +744,12 @@ Checksum: %s""" % (cfg.version, cfg.author, str(cfg.has_icon).lower(),
 Object %s ended.""" % (name, name))
 
     def __end(self, name):
-        """ Delete component instance `name`. """
+        """
+        Delete component instance `name`.
+
+        name: string
+            Instance to be deleted.
+        """
         wrapper, worker = self._instance_map.pop(name)
         wrapper.pre_delete()
         WorkerPool.release(worker)
@@ -661,7 +761,12 @@ Object %s ended.""" % (name, name))
 
 
     def _execute(self, args):
-        """ Runs a component instance. """
+        """
+        Runs a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) < 1 or len(args) > 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'execute,x <objectName>[&]')
@@ -685,7 +790,12 @@ Object %s ended.""" % (name, name))
 
 
     def _get(self, args):
-        """ Gets the value of a variable. """
+        """
+        Gets the value of a variable.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'get <object.property>')
@@ -700,7 +810,12 @@ Object %s ended.""" % (name, name))
 
 
     def _get_branches(self, args):
-        """ Handler for ``getBranchesAndTags``. """
+        """
+        Handler for ``getBranchesAndTags``.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getBranchesAndTags')
@@ -712,7 +827,12 @@ Object %s ended.""" % (name, name))
 
 
     def _get_direct_transfer(self, args):
-        """ Return 'true' if we support direct file transfers. """
+        """
+        Return 'true' if we support direct file transfers.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getDirectTransfer')
@@ -724,7 +844,12 @@ Object %s ended.""" % (name, name))
 
 
     def _get_hierarchy(self, args):
-        """ Get hierarchy of values in component. """
+        """
+        Get hierarchy of values in component.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) < 1 or len(args) > 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getHierarchy <object> [gzipData]')
@@ -748,7 +873,12 @@ Object %s ended.""" % (name, name))
 
 
     def _get_icon(self, args):
-        """ Gets the icon data for the published component. """
+        """
+        Gets the icon data for the published component.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getIcon <analysisComponent>')
@@ -764,7 +894,12 @@ Object %s ended.""" % (name, name))
 
 
     def _get_icon2(self, args):
-        """ Gets the icon data for the published component. """
+        """
+        Gets the icon data for the published component.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getIcon2 <analysisComponent>')
@@ -780,7 +915,12 @@ Object %s ended.""" % (name, name))
 
 
     def _get_license(self, args):
-        """ Retrieves Analysis Server's license agreement. """
+        """
+        Retrieves Analysis Server's license agreement.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getLicense')
@@ -792,7 +932,12 @@ Object %s ended.""" % (name, name))
 
 
     def _get_queues(self, args):
-        """ Gets queues for the published component. """
+        """
+        Gets queues for the published component.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) < 1 or len(args) > 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getQueues <category/component> [full]')
@@ -808,7 +953,12 @@ Object %s ended.""" % (name, name))
 
 
     def _get_status(self, args):
-        """ Lists the run status of all component instances. """
+        """
+        Lists the run status of all component instances.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getStatus')
@@ -825,6 +975,9 @@ Object %s ended.""" % (name, name))
     def _get_sys_info(self, args):
         """
         Retrieves information about the server and the system it is on.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -835,8 +988,8 @@ Object %s ended.""" % (name, name))
             num_comps = len(comps)
 
         self._send_reply("""\
-version: 7.0
-build: 42968
+version: %s
+build: %s
 num clients: %d
 num components: %d
 os name: %s
@@ -844,7 +997,7 @@ os arch: %s
 os version: %s
 python version: %s
 user name: %s"""
-             % (self.server.num_clients, num_comps,
+             % (_VERSION, _BUILD, self.server.num_clients, num_comps,
                 platform.system(), platform.processor(),
                 platform.release(), platform.python_version(),
                 getpass.getuser()))
@@ -853,7 +1006,12 @@ user name: %s"""
 
 
     def _get_version(self, args):
-        """ Gets the version and build number for Analysis Server. """
+        """
+        Gets the version and build number for Analysis Server.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getVersion')
@@ -863,7 +1021,7 @@ user name: %s"""
 OpenMDAO Analysis Server 0.1
 Use at your own risk!
 Attempting to support Phoenix Integration, Inc.
-version: 7.0, build: 42968""")
+version: %s, build: %s""" % (_VERSION, _BUILD))
 
     _COMMANDS['getVersion'] = _get_version
 
@@ -872,6 +1030,9 @@ version: 7.0, build: 42968""")
         """
         Starts up socket heartbeating in order to keep sockets alive through
         firewalls with timeouts.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) != 1 or args[0] not in ('start', 'stop'):
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -895,7 +1056,12 @@ version: 7.0, build: 42968""")
 
 
     def _help(self, args):
-        """ Help on Analysis Server commands. """
+        """
+        Help on Analysis Server commands.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'help,h')
@@ -951,7 +1117,12 @@ Available Commands:
 
 
     def _invoke(self, args):
-        """ Invokes a method on a component instance. """
+        """
+        Invokes a method on a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) < 1 or len(args) > 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'invoke <object.method()> [full]')
@@ -968,7 +1139,12 @@ Available Commands:
 
 
     def _list_array_values(self, args):
-        """ Lists all the values of an array variable. """
+        """
+        Lists all the values of an array variable.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'listArrayValues,lav <object>')
@@ -985,7 +1161,12 @@ Available Commands:
 
 
     def _list_categories(self, args):
-        """ Lists all the sub-categories available in a category. """
+        """
+        Lists all the sub-categories available in a category.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) > 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'listCategories,la [category]')
@@ -1016,7 +1197,12 @@ Available Commands:
 
 
     def _list_components(self, args):
-        """ Lists all the components available in a category. """
+        """
+        Lists all the components available in a category.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) > 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'listComponents,lc [category]')
@@ -1046,7 +1232,12 @@ Available Commands:
 
 
     def _list_globals(self, args):
-        """ Lists all component instances in the global namespace. """
+        """
+        Lists all component instances in the global namespace.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'listGlobals,lg')
@@ -1059,7 +1250,12 @@ Available Commands:
 
 
     def _list_methods(self, args):
-        """ Lists all methods available on a component instance. """
+        """
+        Lists all methods available on a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) < 1 or len(args) > 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'listMethods,lm <object> [full]')
@@ -1076,7 +1272,12 @@ Available Commands:
 
 
     def _list_monitors(self, args):
-        """ Lists all available monitorable items on a component instance. """
+        """
+        Lists all available monitorable items on a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'listMonitors,lo <objectName>')
@@ -1095,6 +1296,9 @@ Available Commands:
         """
         Lists all available variables and their sub-properties on a component
         instance or sub-variable.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) > 1:
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -1123,6 +1327,9 @@ Available Commands:
         """
         Lists all available variables and their sub-properties on a component
         instance or sub-variable.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) > 1:
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -1142,6 +1349,9 @@ Available Commands:
         """
         Lists all available variables and their sub-properties on a component
         instance or sub-variable.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) > 1:
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -1161,6 +1371,9 @@ Available Commands:
     def _monitor(self, args):
         """
         Starts/stops a monitor on a raw output file or available monitor.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) != 2 or args[0] not in ('start', 'stop'):
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -1189,7 +1402,12 @@ Available Commands:
 
 
     def _move(self, args):
-        """ Moves or renames a component instance. """
+        """
+        Moves or renames a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'move,rename,mv,rn <from> <to>')
@@ -1204,7 +1422,12 @@ Available Commands:
 
 
     def _ps(self, args):
-        """ Lists all running processes for a component instance. """
+        """
+        Lists all running processes for a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'ps <object>')
@@ -1223,6 +1446,9 @@ Available Commands:
         """
         Receive an egg file and publish it.
         This is an extension to the AnalysisServer protocol.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) < 5:
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -1294,7 +1520,12 @@ egg: %s
 
 
     def _quit(self, args):
-        """ Close the connection. """
+        """
+        Close the connection.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'quit')
@@ -1304,7 +1535,12 @@ egg: %s
 
 
     def _set(self, args):
-        """ Sets the value of a variable. """
+        """
+        Sets the value of a variable.
+
+        args: list[string]
+            Arguments for the command.
+        """
         cmd, space, assignment = self._req.partition(' ')
         lhs, eqsign, rhs = assignment.partition('=')
         name, dot, path = lhs.strip().partition('.')
@@ -1317,7 +1553,12 @@ egg: %s
 
 
     def _set_hierarchy(self, args):
-        """ Set hierarchy of variable values in component. """
+        """
+        Set hierarchy of variable values in component.
+
+        args: list[string]
+            Arguments for the command.
+        """
         cmd, space, rest = self._req.partition(' ')
         name, space, xml = rest.partition(' ')
         wrapper, worker = self._get_wrapper(name)
@@ -1328,7 +1569,12 @@ egg: %s
 
 
     def _set_mode(self, args):
-        """ Sets the connection into 'raw' mode. """
+        """
+        Sets the connection into 'raw' mode.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1 or args[0] != 'raw':
             self._send_error('invalid syntax. Proper syntax:\n'
                              'setMode raw')
@@ -1341,7 +1587,12 @@ egg: %s
 
 
     def _set_auth_info(self, args):
-        """ Set server authorization information. """
+        """
+        Set server authorization information.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 3 or args[0] != 'raw':
             self._send_error('invalid syntax. Proper syntax:\n'
                              'setServerAuthInfo <serverURL> <username> <password>')
@@ -1353,7 +1604,12 @@ egg: %s
 
 
     def _set_run_queue(self, args):
-        """ Set run queue for a component instance. """
+        """
+        Set run queue for a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 3:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'setRunQueue <object> <connector> <queue>')
@@ -1368,7 +1624,12 @@ egg: %s
 
 
     def _start(self, args):
-        """ Creates a new component instance. """
+        """
+        Creates a new component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'start <category/component> <instanceName> [connector] [queue]')
@@ -1421,7 +1682,12 @@ egg: %s
 
 
     def _versions(self, args):
-        """ Lists the version history of a component. """
+        """
+        Lists the version history of a component.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'versions,v category/component')
@@ -1448,9 +1714,18 @@ egg: %s
 class _WrapperConfig(object):
     """
     Retains configuration data for a wrapped component class.
-    `config` is a :class:`ConfigParser.SafeConfigParser` instance,
-    `instance` is a temporary wrapped instance to interrogate,
-    and `cfg_path` is the path to the configuration file.
+
+    config: :class:`ConfigParser.ConfigParser`
+        Configuration data.
+
+    instance: Component
+        Temporary wrapped instance to interrogate.
+
+    cfg_path: string
+        Path to the configuration file.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
     """
 
     def __init__(self, config, instance, cfg_path, logger):
@@ -1544,7 +1819,21 @@ class _WrapperConfig(object):
                     raise ValueError('%r is not a valid method' % int_name)
 
     def _setup_mapping(self, instance, paths, iotype, logger):
-        """ Return dictionary mapping external paths to internal paths. """
+        """
+        Return dictionary mapping external paths to internal paths.
+
+        instance: Component
+            Temporary wrapped instance to interrogate.
+
+        paths: list[(external, internal)]
+            List of tuples pairing external and internal references.
+
+        iotype: string
+            'in' or 'out'.
+
+        logger: :class:`logging.Logger`
+            Used for progress, errors, etc.
+        """
         mapping = {}
         for ext_path, int_path in sorted(paths, key=lambda item: item[0]):
             if ext_path == '*':
@@ -1590,13 +1879,32 @@ class _WrapperConfig(object):
 
     @staticmethod
     def _valid_path(instance, path, iotype):
-        """ Return True if `path` refers to an `io_type` variable. """
+        """
+        Return True if `path` refers to an `iotype` variable.
+
+        instance: Component
+            Temporary wrapped instance to interrogate.
+
+        path: string
+            Internal variable reference.
+
+        iotype: string
+            'in' or 'out'.
+        """
         meta = instance.get_metadata(path, 'iotype')
         return meta == iotype
 
     @staticmethod
     def _valid_method(instance, attr):
-        """ Return True if `attr` is a valid method for `instance`. """
+        """
+        Return True if `attr` is a valid method for `instance`.
+
+        instance: Component
+            Temporary wrapped instance to interrogate.
+
+        attr: string
+            Internal method reference.
+        """
         try:
             obj = getattr(instance, attr)
         except AttributeError:
@@ -1612,6 +1920,15 @@ def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None):
     Start server process at `address` and `port` (use zero for a
     system-selected port). If `allowed_hosts` is None then
     ``['127.0.0.1', socket.gethostname()]`` is used. Returns ``(proc, port)``.
+
+    address: string
+        Server address to be used.
+
+    port: int
+        Server port to be used.
+
+    allowed_hosts: list[string]
+        Hosts to allow access.
     """
     if allowed_hosts is None:
         allowed_hosts = ['127.0.0.1', socket.gethostname()]
@@ -1663,7 +1980,12 @@ def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None):
 
 
 def stop_server(proc):
-    """ Stop server process. """
+    """
+    Stop server process.
+
+    proc: ShellProc
+        Process of server to stop.
+    """
     proc.terminate(timeout=10)
 
 
@@ -1682,11 +2004,15 @@ def main():  # pragma no cover
         start of a comment which continues to the end of the line.
 
     --address: string
-        IPv4 address or hostname. Default is the host's default IPv4 address.
+        IPv4 address or hostname for server.
+        Default is the host's default IPv4 address.
 
     --port: int
         Server port (default 1835).
         Note that ports below 1024 typically require special privileges.
+
+    --debug:
+        Set logging level to ``DEBUG``, default is ``INFO``.
 
     --no-heartbeat:
         Do not send heartbeat replies. Simplifies debugging.
@@ -1702,6 +2028,8 @@ def main():  # pragma no cover
                       help='network address to serve.')
     parser.add_option('--port', action='store', type='int',
                       default=DEFAULT_PORT, help='port to listen on')
+    parser.add_option('--debug', action='store_true',
+                      help='Set logging level to DEBUG')
     parser.add_option('--no-heartbeat', action='store_true',
                       help='Do not send heartbeat replies')
     parser.add_option('--up', action='store', default='',
@@ -1712,8 +2040,9 @@ def main():  # pragma no cover
         parser.print_help()
         sys.exit(1)
 
-    logging.getLogger().setLevel(logging.DEBUG)
-    _LOGGER.setLevel(logging.DEBUG)
+    level = logging.DEBUG if options.debug else logging.INFO
+    logging.getLogger().setLevel(level)
+    _LOGGER.setLevel(level)
 
     global _DISABLE_HEARTBEAT
     _DISABLE_HEARTBEAT = options.no_heartbeat
@@ -1768,7 +2097,15 @@ def main():  # pragma no cover
 
 
 def _sigterm_handler(signum, frame):  #pragma no cover
-    """ Try to go down gracefully. """
+    """
+    Try to go down gracefully.
+
+    signum: int
+        Signal received.
+
+    frame: stack frame
+        Where signal was received.
+    """
     _LOGGER.info('sigterm_handler invoked')
     print 'sigterm_handler invoked'
     sys.stdout.flush()

@@ -7,8 +7,15 @@ class Stream(object):
     """
     Stream abstraction on top of socket, supporting AnalysisServer protocol.
     Inspired by telnetlib, but drops 'cooking' of data.
-    `sock` is the socket to wrap. If `dbg_send` is True then sent message
-    data is shown on stdout. Similarly for `dbg_recv`.
+
+    sock: socket
+        Socket to wrap.
+
+    dbg_send: bool
+        If True then sent message data is shown on stdout.
+
+    dbg_recv: bool
+        If True then received message data is shown on stdout.
     """
 
     def __init__(self, sock, dbg_send=False, dbg_recv=False):
@@ -49,6 +56,15 @@ class Stream(object):
         """
         Send `request` to server.
         If in 'raw' mode use `request_id` and `background`.
+
+        request: string
+            Message to send.
+
+        request_id: string
+            Request identifier, used in 'raw' mode.
+
+        background: bool
+            'Raw' mode background processing flag.
         """
         if self._raw:
             if self._dbg_send:  # pragma no cover
@@ -118,6 +134,15 @@ class Stream(object):
         """
         Send `reply` to client.
         If in 'raw' mode use `reply_id` and `format`.
+
+        reply: string
+            Message to be sent.
+
+        reply_id: string
+            Reply identifier, used in 'raw' mode.
+         
+        format: string
+            Reply message format: 'string', 'error', or 'PHXIcon'.
         """
         if self._raw:
             if self._dbg_send:  # pragma no cover
@@ -186,7 +211,12 @@ class Stream(object):
             return reply
 
     def _send(self, data):
-        """ Send `data`. """
+        """
+        Send `data`.
+
+        data: string
+            Data to send.
+        """
         length = len(data)
         start = 0
         chunk = 1 << 17  # 128KB, chunking allows for send/recv overlap.
@@ -199,6 +229,9 @@ class Stream(object):
         """
         Wait for one or more patterns to match.
         Return (index, match_obj, data).
+
+        patterns: list[string]
+            List of regex patterns, compiled in-place.
         """
         indices = range(len(patterns))
         for i in indices:
@@ -217,7 +250,12 @@ class Stream(object):
             self._receive()
 
     def _recv(self, length):
-        """ Return next `length` bytes. """
+        """
+        Return next `length` bytes.
+
+        length: int
+            Number of bytes to be received.
+        """
         while len(self._recv_buffer) < length:
             self._receive()
         data = self._recv_buffer[:length]

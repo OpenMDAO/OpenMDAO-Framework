@@ -1,5 +1,9 @@
 """
 Wrappers for OpenMDAO components and variables.
+Component wrappers are created by the ``start`` command after the associated
+component's server has been started.
+Variable wrappers are created on demand when a wrapped component's variable
+is referenced.
 """
 
 import base64
@@ -52,12 +56,25 @@ class _GzipFile(gzip.GzipFile):
 _TYPE_MAP = {}
 
 def _register(typ, wrapper):
-    """ Register `wrapper` for `typ`. """
+    """
+    Register `wrapper` for `typ`.
+
+    typ: Python type
+        Type to be registered.
+
+    wrapper: Python type
+        Wrapper class to associate with `typ`.
+    """
     typename = '%s.%s' % (typ.__module__, typ.__name__)
     _TYPE_MAP[typename] = wrapper
 
 def lookup(typenames):
-    """ Return wrapper for `typenames`. """
+    """
+    Return wrapper for first supported type in `typenames`.
+
+    typenames: list[string]
+        Python type names to be checked.
+    """
     for name in typenames:
         if name in _TYPE_MAP:
             return _TYPE_MAP[name]
@@ -65,7 +82,12 @@ def lookup(typenames):
 
 
 def _float2str(val):
-    """ Return accurate string value for float. """
+    """
+    Return accurate string value for float.
+
+    val: float
+        Value to format.
+    """
     return '%.16g' % val
 
 
@@ -77,6 +99,27 @@ class ComponentWrapper(object):
 
     Wraps component `comp`, named `name`, with configuraton `cfg` on `server`.
     `send_reply` and `send_exc` are used to communicate back to the client.
+
+    name: string
+        Instance name.
+
+    comp: proxy
+        Proxy to remote component.
+
+    cfg: :class:`server._WrapperConfig`
+        Component configuration data.
+
+    server: proxy
+        Proxy to remote server hosting remote component.
+
+    send_reply: callable
+        Used to send a reply message back to client.
+
+    send_exc: callable
+        Used to send an exception message back to client.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
     """
 
     def __init__(self, name, comp, cfg, server, send_reply, send_exc, logger):
@@ -94,7 +137,12 @@ class ComponentWrapper(object):
         self._rusage = None  # For ps() on UNIX.
 
     def _get_var_wrapper(self, ext_path):
-        """ Return '(wrapper, attr)' for `ext_path`. """
+        """
+        Return '(wrapper, attr)' for `ext_path`.
+
+        ext_path: string
+            External reference for variable.
+        """
         try:
             return self._path_map[ext_path]
         except KeyError:
@@ -151,7 +199,12 @@ class ComponentWrapper(object):
         self._comp.pre_delete()
 
     def execute(self, req_id):
-        """ Runs a component instance. """
+        """
+        Runs a component instance.
+
+        req_id: string
+            'Raw' mode request identifier.
+        """
         try:
             if sys.platform != 'win32':
                 self._rusage = resource.getrusage(resource.RUSAGE_SELF)
@@ -170,7 +223,15 @@ class ComponentWrapper(object):
             self._send_exc(exc, req_id)
 
     def get(self, path, req_id):
-        """ Returns the value of a variable. """
+        """
+        Returns the value of a variable.
+
+        path: string
+            External variable reference.
+
+        req_id: string
+            'Raw' mode request identifier.
+        """
         try:
             wrapper, attr = self._get_var_wrapper(path)
             self._send_reply(wrapper.get(attr, path), req_id)
@@ -178,7 +239,15 @@ class ComponentWrapper(object):
             self._send_exc(exc, req_id)
 
     def get_hierarchy(self, req_id, gzipped):
-        """ Return all inputs & outputs as XML. """
+        """
+        Return all inputs & outputs as XML.
+
+        req_id: string
+            'Raw' mode request identifier.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         try:
             group = ''
             lines = []
@@ -208,7 +277,15 @@ class ComponentWrapper(object):
             self._send_exc(exc, req_id)
 
     def invoke(self, method, req_id):
-        """ Invokes a method on a component instance. """
+        """
+        Invokes a method on a component instance.
+
+        method: string
+            External method reference.
+
+        req_id: string
+            'Raw' mode request identifier.
+        """
         try:
             try:
                 attr = self._cfg.methods[method]
@@ -228,14 +305,30 @@ class ComponentWrapper(object):
             self._send_exc(exc, req_id)
 
     def list_array_values(self, path, req_id):
-        """ Lists all the values of an array variable. """
+        """
+        Lists all the values of an array variable.
+
+        path: string
+            External reference to array.
+
+        req_id: string
+            'Raw' mode request identifier.
+        """
         try:
             raise NotImplementedError('listArrayValues')
         except Exception as exc:
             self._send_exc(exc, req_id)
 
     def list_methods(self, full, req_id):
-        """ Lists all methods available on a component instance. """
+        """
+        Lists all methods available on a component instance.
+
+        full: bool
+            If True, include 'full/long' name.
+
+        req_id: string
+            'Raw' mode request identifier.
+        """
         try:
             lines = ['']
             for name in sorted(self._cfg.methods.keys()):
@@ -250,7 +343,12 @@ class ComponentWrapper(object):
             self._send_exc(exc, req_id)
 
     def list_monitors(self, req_id):
-        """ Lists all available monitorable items on a component instance. """
+        """
+        Lists all available monitorable items on a component instance.
+
+        req_id: string
+            'Raw' mode request identifier.
+        """
         try:
             root = self._comp.get_abs_directory()
             if self._server is None:  # Used when testing.
@@ -284,6 +382,12 @@ class ComponentWrapper(object):
         """
         Lists all available variables and their sub-properties on a component
         instance or sub-variable.
+
+        path: string
+            External reference.
+
+        req_id: string
+            'Raw' mode request identifier.
         """
         try:
             self._send_reply(self._list_properties(path), req_id)
@@ -294,6 +398,9 @@ class ComponentWrapper(object):
         """
         Lists all available variables and their sub-properties on a component
         instance or sub-variable.
+
+        path: string
+            External reference.
         """
         lines = ['']
         try:
@@ -329,6 +436,12 @@ class ComponentWrapper(object):
         """
         Lists all available variables and their sub-properties on a component
         instance or sub-variable.
+
+        path: string
+            External reference.
+
+        req_id: string
+            'Raw' mode request identifier.
         """
         try:
             lines = []
@@ -374,6 +487,12 @@ class ComponentWrapper(object):
         """
         Lists all available variables and their sub-properties on a component
         instance or sub-variable.
+
+        path: string
+            External reference.
+
+        req_id: string
+            'Raw' mode request identifier.
         """
 # TODO: this is different than listValues for file variables and DFT.
 #       When DirectFileTransfer is enabled, this should return a URL
@@ -381,7 +500,15 @@ class ComponentWrapper(object):
         self.list_values(path, req_id)
 
     def start_monitor(self, path, req_id):
-        """ Starts a monitor on a raw output file or available monitor. """
+        """
+        Starts a monitor on a raw output file or available monitor.
+
+        path: string
+            Monitor reference.
+
+        req_id: string
+            'Raw' mode request identifier.
+        """
         try:
             path = os.path.join(self._comp.get_abs_directory(), path)
             monitor = FileMonitor(self._server, path, 'r',
@@ -392,7 +519,15 @@ class ComponentWrapper(object):
             self._send_exc(exc, req_id)
 
     def stop_monitor(self, monitor_id, req_id):
-        """ Stops a monitor on a raw output file or available monitor. """
+        """
+        Stops a monitor on a raw output file or available monitor.
+
+        monitor_id: string
+            Monitor identifier.
+
+        req_id: string
+            'Raw' mode request identifier.
+        """
         try:
             monitor = self._monitors.pop(monitor_id)
         except KeyError:
@@ -402,7 +537,12 @@ class ComponentWrapper(object):
             self._send_reply('', req_id)
 
     def ps(self, req_id):
-        """ Lists all running processes for a component instance. """
+        """
+        Lists all running processes for a component instance.
+
+        req_id: string
+            'Raw' mode request identifier.
+        """
         try:
             pid = os.getpid()
             command = os.path.basename(sys.executable)
@@ -466,7 +606,18 @@ class ComponentWrapper(object):
             self._send_exc(exc, req_id)
 
     def set(self, path, valstr, req_id):
-        """ Sets the value of `path` to `valstr`. """
+        """
+        Sets the value of `path` to `valstr`.
+
+        path: string
+            External reference to variable.
+
+        valstr: string
+            Value to set.
+
+        req_id: string
+            'Raw' mode request identifier.
+        """
         try:
             self._set(path, valstr)
             self._send_reply('value set for <%s>' % path, req_id)
@@ -474,12 +625,31 @@ class ComponentWrapper(object):
             self._send_exc(exc, req_id)
 
     def _set(self, path, valstr, gzipped=False):
-        """ Sets the value of `path` to `valstr`. """
+        """
+        Sets the value of `path` to `valstr`.
+
+        path: string
+            External reference to variable.
+
+        valstr: string
+            Value to set.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         wrapper, attr = self._get_var_wrapper(path)
         wrapper.set(attr, path, valstr, gzipped)
 
     def set_hierarchy(self, xml, req_id):
-        """ Set hierarchy of variable values from `xml`. """
+        """
+        Set hierarchy of variable values from `xml`.
+
+        xml: string
+            XML describing values to be set.
+
+        req_id: string
+            'Raw' mode request identifier.
+        """
         try:
             header, newline, xml = xml.partition('\n')
             root = ElementTree.fromstring(xml)
@@ -500,7 +670,21 @@ class ComponentWrapper(object):
 
 
 class BaseWrapper(object):
-    """ Base class for variable wrappers. """
+    """
+    Base class for variable wrappers.
+
+    container: proxy
+        Proxy to remote parent container.
+
+    name: string
+        Name of variable.
+
+    ext_path: string
+        External reference to variable.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
+    """
 
     def __init__(self, container, name, ext_path, logger):
         self._container = container
@@ -515,11 +699,19 @@ class BaseWrapper(object):
 
     @property
     def phx_access(self):
-        """ Return AnalysisServer access string. """
+        """ AnalysisServer access string. """
         return self._access
 
     def get(self, attr, path):
-        """ Return attribute corresponding to `attr`. """
+        """
+        Return attribute corresponding to `attr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+        """
         if attr == 'description':
             valstr = self._trait.desc or ''
             return valstr.encode('string_escape')
@@ -530,6 +722,24 @@ class BaseWrapper(object):
 class ArrayBase(BaseWrapper):
     """
     Base for wrappers providing double[], long[], or String[] interface.
+
+    container: proxy
+        Proxy to remote parent container.
+
+    name: string
+        Name of variable.
+
+    ext_path: string
+        External reference to variable.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
+
+    typ: Python type
+        Element type.
+
+    is_array: bool
+        If True, numpy ndarray, else List.
     """
 
     def __init__(self, container, name, ext_path, logger, typ, is_array):
@@ -545,7 +755,7 @@ class ArrayBase(BaseWrapper):
 
     @property
     def phx_type(self):
-        """ Return AnalysisServer type string for value. """
+        """ AnalysisServer type string for value. """
         value = self._container.get(self._name)
         if self._is_array:
             dims = '[%s]' % ']['.join(['%d' % dim for dim in value.shape])
@@ -564,7 +774,15 @@ class ArrayBase(BaseWrapper):
                 return 'java.lang.String[%d]' % len(value)
 
     def get(self, attr, path):
-        """ Return attribute corresponding to `attr`. """
+        """
+        Return attribute corresponding to `attr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+        """
         if attr == 'value':
             value = self._container.get(self._name)
             if self.typ == float:
@@ -636,7 +854,12 @@ class ArrayBase(BaseWrapper):
             return super(ArrayBase, self).get(attr, path)
 
     def get_as_xml(self, gzipped):
-        """ Return info in XML form. """
+        """
+        Return info in XML form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         return '<Variable name="%s" type="%s[]" io="%s" format=""' \
                ' description=%s units="%s">%s</Variable>' \
                % (self._ext_name, self._typstr, self._io,
@@ -645,7 +868,21 @@ class ArrayBase(BaseWrapper):
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr, gzipped):
-        """ Set attribute corresponding to `attr` to `valstr`. """
+        """
+        Set attribute corresponding to `attr` to `valstr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+
+        valstr: string
+            Value to be set, in string form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         if attr == 'value':
             if self.typ == str:
                 valstr = valstr.decode('string_escape')
@@ -705,6 +942,18 @@ class ArrayBase(BaseWrapper):
 class ArrayWrapper(ArrayBase):
     """
     Wrapper for `Array` providing double[], long[], or String[] interface.
+
+    container: proxy
+        Proxy to remote parent container.
+
+    name: string
+        Name of variable.
+
+    ext_path: string
+        External reference to variable.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
     """
 
     # Map from numpy dtype.kind to scalar converter.
@@ -729,6 +978,18 @@ _register(Array, ArrayWrapper)
 class ListWrapper(ArrayBase):
     """
     Wrapper for `List` providing double[], long[], or String[] interface.
+
+    container: proxy
+        Proxy to remote parent container.
+
+    name: string
+        Name of variable.
+
+    ext_path: string
+        External reference to variable.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
     """
 
     def __init__(self, container, name, ext_path, logger):
@@ -742,22 +1003,49 @@ _register(List, ListWrapper)
 
 
 class BoolWrapper(BaseWrapper):
-    """ Wrapper for `Bool` providing ``PHXBoolean`` interface. """
+    """
+    Wrapper for `Bool` providing ``PHXBoolean`` interface.
+
+    container: proxy
+        Proxy to remote parent container.
+
+    name: string
+        Name of variable.
+
+    ext_path: string
+        External reference to variable.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
+    """
 
     @property
     def phx_type(self):
-        """ Return AnalysisServer type string for value. """
+        """ AnalysisServer type string for value. """
         return 'com.phoenix_int.aserver.types.PHXBoolean'
 
     def get(self, attr, path):
-        """ Return attribute corresponding to `attr`. """
+        """
+        Return attribute corresponding to `attr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+        """
         if attr == 'value' or attr == 'valueStr':
             return 'true' if self._container.get(self._name) else 'false'
         else:
             return super(BoolWrapper, self).get(attr, path)
 
     def get_as_xml(self, gzipped):
-        """ Return info in XML form. """
+        """
+        Return info in XML form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         return '<Variable name="%s" type="boolean" io="%s" format=""' \
                ' description=%s>%s</Variable>' \
                % (self._ext_name, self._io,
@@ -765,7 +1053,21 @@ class BoolWrapper(BaseWrapper):
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr, gzipped):
-        """ Set attribute corresponding to `attr` to `valstr`. """
+        """
+        Set attribute corresponding to `attr` to `valstr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+
+        valstr: string
+            Value to be set, in string form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         valstr = valstr.strip('"')
         if attr == 'value':
             if valstr == 'true':
@@ -793,6 +1095,18 @@ class EnumWrapper(BaseWrapper):
     """
     Wrapper for `Enum` providing ``PHXDouble``, ``PHXLong``, or ``PHXString``
     interface.
+
+    container: proxy
+        Proxy to remote parent container.
+
+    name: string
+        Name of variable.
+
+    ext_path: string
+        External reference to variable.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
     """
 
     def __init__(self, container, name, ext_path, logger):
@@ -818,11 +1132,19 @@ class EnumWrapper(BaseWrapper):
 
     @property
     def phx_type(self):
-        """ Return AnalysisServer type string for value. """
+        """ AnalysisServer type string for value. """
         return self._phx_type
 
     def get(self, attr, path):
-        """ Return attribute corresponding to `attr`. """
+        """
+        Return attribute corresponding to `attr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+        """
         if attr == 'value' or attr == 'valueStr':
             if self._py_type == float:
                 return _float2str(self._container.get(self._name))
@@ -872,7 +1194,12 @@ class EnumWrapper(BaseWrapper):
             return super(EnumWrapper, self).get(attr, path)
 
     def get_as_xml(self, gzipped):
-        """ Return info in XML form. """
+        """
+        Return info in XML form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         if self._py_type == float:
             typstr = 'double'
         elif self._py_type == int:
@@ -887,7 +1214,21 @@ class EnumWrapper(BaseWrapper):
                   escape(self.get('value', self._ext_path)))
 
     def set(self, attr, path, valstr, gzipped):
-        """ Set attribute corresponding to `attr` to `valstr`. """
+        """
+        Set attribute corresponding to `attr` to `valstr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+
+        valstr: string
+            Value to be set, in string form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         valstr = valstr.strip('"')
         if attr == 'value':
             try:
@@ -928,7 +1269,21 @@ _register(Enum, EnumWrapper)
 
 
 class FileWrapper(BaseWrapper):
-    """ Wrapper for `File` providing ``PHXRawFile`` interface. """
+    """
+    Wrapper for `File` providing ``PHXRawFile`` interface.
+
+    container: proxy
+        Proxy to remote parent container.
+
+    name: string
+        Name of variable.
+
+    ext_path: string
+        External reference to variable.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
+    """
 
     def __init__(self, container, name, ext_path, logger):
         super(FileWrapper, self).__init__(container, name, ext_path, logger)
@@ -937,11 +1292,16 @@ class FileWrapper(BaseWrapper):
 
     @property
     def phx_type(self):
-        """ Return AnalysisServer type string for value. """
+        """ AnalysisServer type string for value. """
         return 'com.phoenix_int.aserver.types.PHXRawFile'
 
     def set_server(self, server):
-        """ Set container's server to `server` for file operations. """
+        """
+        Set container's server to `server` for file operations.
+
+        server: proxy
+            Proxy to the server hosting this file.
+        """
         self._server = server
         owner = self._container
         while owner is not None:
@@ -952,7 +1312,15 @@ class FileWrapper(BaseWrapper):
                 owner = owner.parent
 
     def get(self, attr, path):
-        """ Return attribute corresponding to `attr`. """
+        """
+        Return attribute corresponding to `attr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+        """
         if attr == 'value':
             file_ref = self._container.get(self._name)
             if file_ref is None:
@@ -989,7 +1357,12 @@ class FileWrapper(BaseWrapper):
             return super(FileWrapper, self).get(attr, path)
 
     def get_as_xml(self, gzipped):
-        """ Return info in XML form. """
+        """
+        Return info in XML form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         if gzipped:
             file_ref = self._container.get(self._name)
             if file_ref is None:
@@ -1019,7 +1392,21 @@ class FileWrapper(BaseWrapper):
                   zipped, data)
 
     def set(self, attr, path, valstr, gzipped):
-        """ Set attribute corresponding to `attr` to `valstr`. """
+        """
+        Set attribute corresponding to `attr` to `valstr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+
+        valstr: string
+            Value to be set, in string form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         if attr == 'value':
             if self._trait.iotype != 'in':
                 raise WrapperError('cannot set output <%s>.' % path)
@@ -1059,6 +1446,9 @@ class FileWrapper(BaseWrapper):
         At times we receive data with incorrect padding. This code will
         keep truncating the data until it decodes. We hope the (un)gzip
         process will catch any erroneous result.
+
+        data: string
+            Data to be decoded.
         """
         while data:
             try:
@@ -1082,15 +1472,37 @@ _register(File, FileWrapper)
 
 
 class FloatWrapper(BaseWrapper):
-    """ Wrapper for `Float` providing ``PHXDouble`` interface. """
+    """
+    Wrapper for `Float` providing ``PHXDouble`` interface.
+
+    container: proxy
+        Proxy to remote parent container.
+
+    name: string
+        Name of variable.
+
+    ext_path: string
+        External reference to variable.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
+    """
 
     @property
     def phx_type(self):
-        """ Return AnalysisServer type string for value. """
+        """ AnalysisServer type string for value. """
         return 'com.phoenix_int.aserver.types.PHXDouble'
 
     def get(self, attr, path):
-        """ Return attribute corresponding to `attr`. """
+        """
+        Return attribute corresponding to `attr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+        """
         if attr == 'value' or attr == 'valueStr':
             val = self._container.get(self._name)
             if isinstance(val, AttrWrapper):
@@ -1119,7 +1531,12 @@ class FloatWrapper(BaseWrapper):
             return super(FloatWrapper, self).get(attr, path)
 
     def get_as_xml(self, gzipped):
-        """ Return info in XML form. """
+        """
+        Return info in XML form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         return '<Variable name="%s" type="double" io="%s" format=""' \
                ' description=%s units="%s">%s</Variable>' \
                % (self._ext_name, self._io,
@@ -1128,7 +1545,21 @@ class FloatWrapper(BaseWrapper):
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr, gzipped):
-        """ Set attribute corresponding to `attr` to `valstr`. """
+        """
+        Set attribute corresponding to `attr` to `valstr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+
+        valstr: string
+            Value to be set, in string form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         valstr = valstr.strip('"')
         if attr == 'value':
             self._container.set(self._name, float(valstr))
@@ -1157,15 +1588,37 @@ _register(Float, FloatWrapper)
 
 
 class IntWrapper(BaseWrapper):
-    """ Wrapper for `Int` providing ``PHXLong`` interface. """
+    """
+    Wrapper for `Int` providing ``PHXLong`` interface.
+
+    container: proxy
+        Proxy to remote parent container.
+
+    name: string
+        Name of variable.
+
+    ext_path: string
+        External reference to variable.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
+    """
 
     @property
     def phx_type(self):
-        """ Return AnalysisServer type string for value. """
+        """ AnalysisServer type string for value. """
         return 'com.phoenix_int.aserver.types.PHXLong'
 
     def get(self, attr, path):
-        """ Return attribute corresponding to `attr`. """
+        """
+        Return attribute corresponding to `attr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+        """
         if attr == 'value' or attr == 'valueStr':
             return str(self._container.get(self._name))
         elif attr == 'enumAliases':
@@ -1186,7 +1639,12 @@ class IntWrapper(BaseWrapper):
             return super(IntWrapper, self).get(attr, path)
 
     def get_as_xml(self, gzipped):
-        """ Return info in XML form. """
+        """
+        Return info in XML form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         return '<Variable name="%s" type="long" io="%s" format=""' \
                ' description=%s>%s</Variable>' \
                % (self._ext_name, self._io,
@@ -1194,7 +1652,21 @@ class IntWrapper(BaseWrapper):
                   self.get('value', self._ext_path))
 
     def set(self, attr, path, valstr, gzipped):
-        """ Set attribute corresponding to `attr` to `valstr`. """
+        """
+        Set attribute corresponding to `attr` to `valstr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+
+        valstr: string
+            Value to be set, in string form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         valstr = valstr.strip('"')
         if attr == 'value':
             self._container.set(self._name, int(valstr))
@@ -1222,15 +1694,37 @@ _register(Int, IntWrapper)
 
 
 class StrWrapper(BaseWrapper):
-    """ Wrapper for `Str` providing ``PHXString`` interface. """
+    """
+    Wrapper for `Str` providing ``PHXString`` interface.
+
+    container: proxy
+        Proxy to remote parent container.
+
+    name: string
+        Name of variable.
+
+    ext_path: string
+        External reference to variable.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
+    """
 
     @property
     def phx_type(self):
-        """ Return AnalysisServer type string for value. """
+        """ AnalysisServer type string for value. """
         return 'com.phoenix_int.aserver.types.PHXString'
 
     def get(self, attr, path):
-        """ Return attribute corresponding to `attr`. """
+        """
+        Return attribute corresponding to `attr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+        """
         if attr == 'value' or attr == 'valueStr':
             return self._container.get(self._name).encode('string_escape')
         elif attr == 'enumValues':
@@ -1241,7 +1735,12 @@ class StrWrapper(BaseWrapper):
             return super(StrWrapper, self).get(attr, path)
 
     def get_as_xml(self, gzipped):
-        """ Return info in XML form. """
+        """
+        Return info in XML form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         return '<Variable name="%s" type="string" io="%s" format=""' \
                ' description=%s>%s</Variable>' \
                % (self._ext_name, self._io,
@@ -1249,7 +1748,21 @@ class StrWrapper(BaseWrapper):
                   escape(self.get('value', self._ext_path)))
 
     def set(self, attr, path, valstr, gzipped):
-        """ Set attribute corresponding to `attr` to `valstr`. """
+        """
+        Set attribute corresponding to `attr` to `valstr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+
+        valstr: string
+            Value to be set, in string form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
         if attr == 'value':
             self._container.set(self._name,
                                 valstr.decode('string_escape').strip('"'))

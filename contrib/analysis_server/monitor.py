@@ -1,5 +1,5 @@
 """
-Support for heartbeat and file monitoring.
+Support for heartbeat and file monitoring in wrappers.
 """
 
 import os
@@ -8,11 +8,22 @@ import threading
 
 class BaseMonitor(object):
     """
-    Base class for monitors. `name` is the name for the monitor thread,
-    `delay` is the delay in seconds between calls to :meth:`poll`.
-    Updates are sent by :meth:`send` via `send_reply` using `monitor_id`.
-    If `immediate` is True, then :meth:`poll` will be called before the
-    first delay.
+    Base class for monitors.
+
+    name: string
+        Name for the monitor thread,
+
+    delay: float
+        The delay in seconds between calls to :meth:`poll`.
+
+    monitor_id: string
+        Identifier for this monitor.
+
+    send_reply: callable
+        Used to send updates by :meth:`send`.
+
+    immediate: bool
+        If True, then :meth:`poll` will be called before the first delay.
     """
 
     def __init__(self, name, delay, monitor_id, send_reply, immediate=True):
@@ -66,7 +77,12 @@ class BaseMonitor(object):
         pass
 
     def send(self, msg):
-        """ Send `msg` reply. """
+        """
+        Send `msg` reply.
+
+        msg: string
+            Reply message to be sent.
+        """
         try:
             self._send_reply(msg, self._monitor_id)
         except Exception:  # pragma no cover
@@ -76,6 +92,12 @@ class BaseMonitor(object):
 class Heartbeat(BaseMonitor):
     """
     Sends an 'HB' reply every 60 seconds using `monitor_id` and `send_reply`.
+
+    monitor_id: string
+        Identifier for this monitor.
+
+    send_reply: callable
+        Used to send updates by :meth:`send`.
     """
 
     def __init__(self, monitor_id, send_reply):
@@ -91,6 +113,21 @@ class FileMonitor(BaseMonitor):
     Sends file updates at most once per second. The file is accessed using
     `server`, `path`, and `mode`. Replies are sent using `monitor_id`
     and `send_reply`.
+
+    server: proxy
+        Proxy for component server.
+
+    path: string
+        Path to file on `server`.
+
+    mode: string
+        File mode to use when opening.
+
+    monitor_id: string
+        Identifier for this monitor.
+
+    send_reply: callable
+        Used to send updates by :meth:`send`.
     """
 
     def __init__(self, server, path, mode, monitor_id, send_reply):
