@@ -186,19 +186,22 @@ class ComponentWrapper(object):
             lines.append('<Group>')
             for path in sorted(self._cfg.properties.keys()):
                 wrapper, attr = self._get_var_wrapper(path)
-                path, dot, name = path.rpartition('.')
-                if path != group:
-                    while not path.startswith(group):  # Exit subgroups.
+                prefix, dot, name = path.rpartition('.')
+                if prefix != group:
+                    while not prefix.startswith(group):  # Exit subgroups.
                         lines.append('</Group>')
                         group, dot, name = group.rpartition('.')
-                    name, dot, rest = path.partition('.')
+                    name, dot, rest = prefix.partition('.')
                     if name:
                         lines.append('<Group name="%s">' % name)
                     while rest:  # Enter subgroups.
                         name, dot, rest = rest.partition('.')
                         lines.append('<Group name="%s">' % name)
-                    group = path
-                lines.append(wrapper.get_as_xml(gzipped))
+                    group = prefix
+                try:
+                    lines.append(wrapper.get_as_xml(gzipped))
+                except Exception as exc:
+                    raise type(exc)("Can't get %r: %s" % (path, exc))
             lines.append('</Group>')
             self._send_reply('\n'.join(lines), req_id)
         except Exception as exc:
@@ -486,7 +489,11 @@ class ComponentWrapper(object):
                     gzipped = True
                 else:
                     gzipped = False
-                self._set(var.attrib['name'], valstr, gzipped)
+                try:
+                    self._set(var.attrib['name'], valstr, gzipped)
+                except Exception as exc:
+                    raise type(exc)("Can't set %r from %r: %s" 
+                                    % (var.attrib['name'], valstr, exc))
             self._send_reply('values set', req_id)
         except Exception as exc:
             self._send_exc(exc, req_id)
@@ -993,20 +1000,23 @@ class FileWrapper(BaseWrapper):
                     with file_ref.open() as inp:
                         gz_file = _GzipFile(mode='wb', fileobj=data)
                         gz_file.writelines(inp)
+                        gz_file.close()
                 except IOError as exc:
                     self._logger.warning('get %s.value: %r', path, exc)
                     data = ''
                 else:
                     data = base64.b64encode(data.getvalue())
+            zipped=' gzipped="true"'
         else:
             data = escape(self.get('value', self._ext_path))
+            zipped=''
 
         return '<Variable name="%s" type="file" io="%s" description=%s' \
-               ' isBinary="%s" fileName="">%s</Variable>' \
+               ' isBinary="%s" fileName=""%s>%s</Variable>' \
                % (self._ext_name, self._io,
                   quoteattr(self.get('description', self._ext_path)),
                   self.get('isBinary', self._ext_path),
-                  data)
+                  zipped, data)
 
     def set(self, attr, path, valstr, gzipped):
         """ Set attribute corresponding to `attr` to `valstr`. """
@@ -1022,7 +1032,7 @@ class FileWrapper(BaseWrapper):
                 filename = os.path.join(self._owner.get_abs_directory(),
                                         filename)
             if gzipped:
-                data = cStringIO.StringIO(base64.b64decode(valstr))
+                data = cStringIO.StringIO(self._decode(valstr))
                 gz_file = _GzipFile(mode='rb', fileobj=data)
                 valstr = gz_file.read()
             else:
@@ -1042,6 +1052,22 @@ class FileWrapper(BaseWrapper):
             raise WrapperError('cannot set <%s>.' % path)
         else:
             raise WrapperError('no such property <%s>.' % path)
+
+    @staticmethod
+    def _decode(data):
+        """
+        At times we receive data with incorrect padding. This code will
+        keep truncating the data until it decodes. We hope the (un)gzip
+        process will catch any erroneous result.
+        """
+        while data:
+            try:
+                data = base64.b64decode(data)
+            except TypeError:
+                data = data[:-1]
+            else:
+                break
+        return data
 
     def list_properties(self):
         """ Return lines listing properties. """
@@ -1224,9 +1250,9 @@ class StrWrapper(BaseWrapper):
 
     def set(self, attr, path, valstr, gzipped):
         """ Set attribute corresponding to `attr` to `valstr`. """
-        valstr = valstr.strip('"')
         if attr == 'value':
-            self._container.set(self._name, valstr.decode('string_escape'))
+            self._container.set(self._name,
+                                valstr.decode('string_escape').strip('"'))
         elif attr in ('valueStr', 'description', 'enumAliases', 'enumValues'):
             raise WrapperError('cannot set <%s>.' % path)
         else:
