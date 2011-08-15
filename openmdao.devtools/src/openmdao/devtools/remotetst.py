@@ -195,6 +195,12 @@ def test_release(argv=None):
         print '\nyou must supply the pathname or URL of a go-openmdao.py file'
         sys.exit(-1)
         
+    if 'localhost' in options.hosts:
+        options.hosts.remote('localhost')
+        local = True
+    else:
+        local = False
+
     config, conn, image_hosts = process_options(options, parser)
     
     startdir = os.getcwd()
@@ -219,11 +225,15 @@ def test_release(argv=None):
     funct_kwargs = { 'keep': options.keep,
                      'testargs': args,
                      'fname': fname,
-                     }
-        
-    return run_host_processes(config, conn, image_hosts, options, 
-                              funct=test_on_remote_host, 
-                              funct_kwargs=funct_kwargs)
+                   }
+    
+    if local:
+        pass
+    
+    if len(options.hosts) > 0:
+        return run_host_processes(config, conn, image_hosts, options, 
+                                  funct=test_on_remote_host, 
+                                  funct_kwargs=funct_kwargs)
 
 # make nose ignore these functions
 test_release.__test__ = False

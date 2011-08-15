@@ -56,24 +56,24 @@ def get_openmdao_version(release_dir, version=None):
     return version
 
 
-def push_and_run(fpath, remotepath=None, runner=None, args=()):
-    """Puts the given file onto the current active host and 
-    executes it there.
+def push_and_run(fpaths, remotedir, runner=None, args=()):
+    """Puts the given files onto the current active host in the specified
+    remote directory and executes the first file specified.
     """
     if not os.path.isfile(fpath):
         raise IOError("can't find file %s" % fpath)
-    if remotepath is None:
-        remotepath = os.path.basename(fpath)
-    put(fpath, remotepath)
+    for fpath in fpaths:
+        put(fpath, os.path.join(remotedir, os.path.basename(fpath)))
+        
     if not runner:
-        if fpath.endswith('.py'):
+        if fpaths[0].endswith('.py'):
             runner = 'python'
         else:
             runner = ''
 
-    print 'cd-ing to %s' % os.path.dirname(remotepath)
-    with cd(os.path.dirname(remotepath)):
-        cmd = "%s %s %s" % (runner, os.path.basename(remotepath), 
+    print 'cd-ing to %s' % remotedir
+    with cd(remotedir):
+        cmd = "%s %s %s" % (runner, os.path.basename(os.path.basename(fpath[0])), 
                             ' '.join(args))
         print 'running %s' % cmd
         return run(cmd)

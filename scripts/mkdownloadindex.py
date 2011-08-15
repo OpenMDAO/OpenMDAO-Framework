@@ -23,8 +23,9 @@ def _keyfunct(val):
 def list_dirs(startdir):
     results = os.listdir(startdir)
     dir_results = []
+    excludes = ["misc", "dev_docs", "user_guides"]
     for name in results:
-        if os.path.isdir(os.path.join(startdir, name)) and  (name not in ["misc", "dev_docs", "user_guides"]):
+        if os.path.isdir(os.path.join(startdir, name)) and  (name not in excludes):
             dir_results.append(name)
 
     return sorted(dir_results, key=_keyfunct, reverse=True)

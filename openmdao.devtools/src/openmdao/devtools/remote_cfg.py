@@ -9,7 +9,7 @@ from optparse import OptionParser
 import ConfigParser
 from multiprocessing import Process
 
-from fabric.api import settings, show, hide
+from fabric.api import settings, show, hide, run, local, put, get
 
 from openmdao.devtools.tst_ec2 import run_on_ec2_image
 from openmdao.util.debug import print_fuct_call
@@ -102,9 +102,7 @@ def read_config(options, parser):
         if not hosts:
             raise RuntimeError("no hosts were found in config file %s" % options.cfg)
     else:
-        parser.print_help()
-        print "no hosts were specified"
-        sys.exit(-1)
+        hosts = []
 
     return (hosts, config)
 

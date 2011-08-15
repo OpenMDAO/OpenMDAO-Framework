@@ -17,9 +17,9 @@ from openmdao.devtools.utils import get_openmdao_version, put_dir, tar_dir, \
 
 
 def _push_release(release_dir, destination, obj):
-    """Take a directory containing release files (openmdao package distributions,
-    install scripts, etc., and place the files in the proper locations on the
-    server.
+    """Take a directory containing release files (openmdao package 
+    distributions, install scripts, etc., and place the files in the 
+    proper locations on the server.
     
     release_dir: str
         where the release file are located
@@ -84,6 +84,8 @@ def _push_release(release_dir, destination, obj):
     dpath = '%s/dists' % destination
     obj.run('cd %s && python2.6 mkegglistindex.py' % dpath)
 
+    os.chdir(cdir)
+    
     # update the 'latest' link
     obj.run('rm -f %s/downloads/latest' % destination)
     obj.run('ln -s -f %s %s/downloads/latest' % (version, destination))
@@ -92,8 +94,8 @@ def _push_release(release_dir, destination, obj):
     
     # update the index.html for the downloads directory on the server
     dpath = '%s/downloads' % destination
-    obj.run('cd %s && python2.6 mkdownloadindex.py' % dpath)
-        
+    obj.run('cd %s && python mkdownloadindex.py' % dpath)
+
 
 def _setup_local_release_dir(dpath):
     dn = os.path.dirname
@@ -135,10 +137,7 @@ def main():
         comm_obj.put_dir = put_dir
         comm_obj.run = run
         
-        if len(destparts) > 1:
-            home = destparts[1]
-        else:
-            home = '~'
+        home = destparts[1]
 
         with settings(host_string=destparts[0]):
             _push_release(args[0], home, comm_obj)

@@ -18,12 +18,36 @@ def get_file(url):
         gofile = open(fname, 'wb')
         shutil.copyfileobj(resp.fp, gofile)
         gofile.close()
-        return fname
     else: # file is in local file system
         if not os.path.isfile(url):
             print "Can't find file '%s'" % url
             sys.exit(-1)
-        return url
+        shutil.copy(url, fname)
+    return fname
+
+def _run_gofile(stardir, gopath, pyversion, args=()):
+    godir, gofile = os.path.split(gopath)
+    os.chdir(godir)
+    
+    # in some cases there are some unicode characters in the
+    # build output which cause fabric to barf, so strip out unicode
+    # by writing to a file, replacing unicode chars with '?'
+    f = codecs.open('build.out', 'wb', 
+                    encoding='ascii', errors='replace')
+    
+    try:
+        p = subprocess.Popen('%s %s %s' % (pyversion, gofile, 
+                                           ' '.join(args)), 
+                             stdout=f, stderr=subprocess.STDOUT,
+                             shell=True)
+        p.wait()
+    finally:
+        f.close()
+        with open('build.out', 'r') as f:
+            print f.read()
+        os.chdir(startdir)
+    return p.returncode
+
 
 def install_release(url, pyversion):
     """
@@ -48,17 +72,23 @@ def install_release(url, pyversion):
         sys.exit(-1)
     
     # parse pathname to find dists dir
-    parts = list(os.path.split(url))
+    parts = url.split(os.sep)
     parts = parts[:-3] + ['dists']
     dpath = os.path.join(*parts)
-    command = [pyversion, gofile]
+    if url.startswith(os.sep):
+        dpath = os.sep+dpath
+    args = []
     if os.path.isdir(dpath): 
-        command.append('--disturl=%s' % os.path.join(parts))
+        args.append('--disturl=%s' % dpath)
     
-    print "building openmdao environment [%s]" % ' '.join(command)
+    print "building openmdao environment [%s]" % ' '.join(args)
     
     startdir = os.getcwd()
-    _run_gofile(startdir, os.path.join(startdir, gofile), pyversion)
+    
+    dirfiles = set(os.listdir('.'))
+    
+    retcode = _run_gofile(startdir, os.path.join(startdir, gofile), 
+                          pyversion, args)
     
     newfiles = set(os.listdir('.')) - dirfiles
     if len(newfiles) != 1:
@@ -66,28 +96,8 @@ def install_release(url, pyversion):
                            list(newfiles))
     releasedir = os.path.join(startdir, newfiles.pop())
 
-    return (releasedir, p.returncode)
+    return (releasedir, retcode)
     
-def _run_gofile(stardir, gopath, pyversion):
-    godir, gofile = os.path.split(gopath)
-    os.chdir(godir)
-    
-    # in some cases there are some unicode characters in the
-    # build output which cause fabric to barf, so strip out unicode
-    # by writing to a file, replacing unicode chars with '?'
-    f = codecs.open('build.out', 'wb', 
-                    encoding='ascii', errors='replace')
-    
-    try:
-        p = subprocess.Popen('%s %s' % (pyversion, gofile), 
-                             stdout=f, stderr=subprocess.STDOUT,
-                             shell=True)
-        p.wait()
-    finally:
-        f.close()
-        with open('build.out', 'r') as f:
-            print f.read()
-        os.chdir(startdir)
 
 def install_dev_env(url, pyversion, branch=None):
     """
