@@ -12,7 +12,7 @@ from openmdao.lib.surrogatemodels.api import NeuralNet
 
 class Sin(Component): 
     
-    x = Float(0,iotype="in",units="rad",low=0,high=6.3)
+    x = Float(0,iotype="in",units="rad",low=0,high=20)
     
     f_x = Float(0.0,iotype="out")
     
@@ -26,16 +26,16 @@ class Simulation(Assembly):
         super(Simulation,self).__init__()
     
         #Components
-        self.add("sin_meta_model",MetaModel())
-        self.sin_meta_model.surrogate = {"default":NeuralNet()}    
-        self.sin_meta_model.surrogate.n_hidden_nodes = 3
-        self.sin_meta_model.model = Sin()
-        self.sin_meta_model.recorder = DBCaseRecorder()        
+        self.add("sin_meta_model",MetaModel())      
+        self.sin_meta_model.surrogate = {"default":NeuralNet()}  
+        self.sin_meta_model.surrogate_args = {"default":{'n_hidden_nodes':5}}
+        self.sin_meta_model.model = Sin()        
+        self.sin_meta_model.recorder = DBCaseRecorder()
         
         #Training the MetaModel
         self.add("DOE_Trainer",DOEdriver())
         self.DOE_Trainer.DOEgenerator = FullFactorial()
-        self.DOE_Trainer.DOEgenerator.num_levels = 16
+        self.DOE_Trainer.DOEgenerator.num_levels = 100
         self.DOE_Trainer.add_parameter("sin_meta_model.x")
         self.DOE_Trainer.add_event("sin_meta_model.train_next")
         self.DOE_Trainer.case_outputs = ["sin_meta_model.f_x"]
@@ -66,13 +66,16 @@ if __name__ == "__main__":
     
     sim = Simulation()
     sim.run()
-    
-    data = sim.DOE_Validate.recorder.get_iterator()
         
-    
-    indeps = [case['sin_calc.x'] for case in data]    
-    actual = [case['sin_calc.f_x'] for case in data]  
-    predicted = [case['sin_meta_model.f_x'] for case in data]
+    train_data = sim.DOE_Trainer.recorder.get_iterator()
+    validate_data = sim.DOE_Validate.recorder.get_iterator()
+        
+    train_indeps = [case['sin_meta_model.x'] for case in train_data]
+    train_actual = [case['sin_meta_model.f_x'] for case in train_data]
+    indeps = [case['sin_calc.x'] for case in validate_data]    
+    actual = [case['sin_calc.f_x'] for case in validate_data]  
+    predicted = [case['sin_meta_model.f_x'] for case in validate_data]
+
 
     for a,p in zip(actual,predicted): 
         print "%1.3f, %1.3f"%(a,p)
