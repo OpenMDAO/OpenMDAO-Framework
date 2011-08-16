@@ -35,10 +35,10 @@ class Simulation(Assembly):
         #Training the MetaModel
         self.add("DOE_Trainer",DOEdriver())
         self.DOE_Trainer.DOEgenerator = FullFactorial()
-        self.DOE_Trainer.DOEgenerator.num_levels = 100
+        self.DOE_Trainer.DOEgenerator.num_levels = 50
         self.DOE_Trainer.add_parameter("sin_meta_model.x")
-        self.DOE_Trainer.add_event("sin_meta_model.train_next")
         self.DOE_Trainer.case_outputs = ["sin_meta_model.f_x"]
+        self.DOE_Trainer.add_event("sin_meta_model.train_next")
         self.DOE_Trainer.recorder = DBCaseRecorder()
         self.DOE_Trainer.force_execute = True
         
@@ -69,10 +69,11 @@ if __name__ == "__main__":
         
     train_data = sim.DOE_Trainer.recorder.get_iterator()
     validate_data = sim.DOE_Validate.recorder.get_iterator()
-        
-    train_indeps = [case['sin_meta_model.x'] for case in train_data]
+    
+    #This is how you can access any of the data
+    train_inputs = [case['sin_meta_model.x'] for case in train_data]
     train_actual = [case['sin_meta_model.f_x'] for case in train_data]
-    indeps = [case['sin_calc.x'] for case in validate_data]    
+    inputs = [case['sin_calc.x'] for case in validate_data]    
     actual = [case['sin_calc.f_x'] for case in validate_data]  
     predicted = [case['sin_meta_model.f_x'] for case in validate_data]
 
