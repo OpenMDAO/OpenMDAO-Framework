@@ -25,7 +25,7 @@ def get_file(url):
         if not os.path.isfile(url):
             print "Can't find file '%s'" % url
             sys.exit(-1)
-        if url != fname:
+        if os.path.dirname(url) != os.getcwd():
             shutil.copy(url, fname)
     return fname
 
@@ -286,7 +286,7 @@ if __name__ == '__main__':
                       dest='fname',
                       help="pathname or URL of a git repo, tar file, or go-openmdao.py file")
     parser.add_option("-d","--dir", action="store", type='string', 
-                      dest='directory',
+                      dest='directory', default='.',
                       help="name of a directory the build will be created")
 
     (options, args) = parser.parse_args(sys.argv[1:])
