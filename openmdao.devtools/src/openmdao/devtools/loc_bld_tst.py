@@ -66,6 +66,7 @@ def _run_sub(outname, cmd, env=None):
             print f.read()
     return p.returncode
         
+
 def build_and_test(fname=None, workdir='.', pyversion='python', keep=False, 
                    branch=None, testargs=()):
     """Builds OpenMDAO, either a dev build or a release build, and runs
@@ -74,7 +75,8 @@ def build_and_test(fname=None, workdir='.', pyversion='python', keep=False,
     if fname is None:
         raise RuntimeError("build_and_test: missing arg 'fname'")
 
-    fname = os.path.abspath(fname)
+    if not fname.startswith('http'):
+        fname = os.path.abspath(fname)
     
     workdir = os.path.abspath(workdir)
     startdir = os.getcwd()
@@ -160,7 +162,7 @@ def install_release(url, pyversion):
     retcode = _run_gofile(startdir, os.path.join(startdir, gofile), 
                           pyversion, args)
     
-    newfiles = set(os.listdir('.')) - dirfiles
+    newfiles = set(os.listdir('.')) - dirfiles - set(['build.out'])
     if len(newfiles) != 1:
         raise RuntimeError("didn't expect %s in build directory" % 
                            list(newfiles))
