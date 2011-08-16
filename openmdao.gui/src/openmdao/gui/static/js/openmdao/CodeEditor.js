@@ -17,15 +17,20 @@ openmdao.CodeEditor = function(id,model) {
      
     if (arguments.length > 0)
         // initialize private variables
-        var filepath = "",
+        var self = this,
+            filepath = "",
             editor = null
         // build it
         init()
     
     
     function init() {
-        this.prototype = Object.create(openmdao.BasePane)
-        this.prototype.init(id,'CodeEditor')
+        // initialize the base pane
+        self.prototype = Object.create(openmdao.BasePane, {
+            id:             { value: id },
+            title:          { value: "Code Editor" },
+        })
+        self.prototype.init()
         
         var editorID = id+'-content',
             editorArea = jQuery('<textarea id="'+editorID+'">').appendTo("#"+id).width(screen.width).height(screen.height)

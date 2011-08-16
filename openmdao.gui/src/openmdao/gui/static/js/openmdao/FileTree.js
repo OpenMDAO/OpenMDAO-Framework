@@ -15,24 +15,34 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
      *  private
      ***********************************************************************/
      
-    if (arguments.length > 0)
+    if (arguments.length > 0) {
         // initialize private variables
-        var tree = null
+        var self = this,
+            tree = null
         // build it
         init()
+    }
     
     function init() {
-        this.prototype = Object.create(openmdao.BasePane)
-        var menu =  [
-                        {   "text": "File", 
-                            "items": [
-                                { "text": "New File",      "onclick": "model.newFile();" },
-                                { "text": "New Folder",    "onclick": "model.newFolder();" },
-                                { "text": "Add File",      "onclick": "model.uploadFile();" }
-                            ]
-                        },
-                    ]
-        this.prototype.init(id,'File Manager', menu)
+        // initialize the base pane
+        self.prototype = Object.create(openmdao.BasePane, {
+            id:     { value: id },
+            title:  { value: "Files" },
+            menu:   { value: 
+                        [  
+                            {   "text": "File",
+                                "items": [
+                                    { "text": "New File",      "onclick": "model.newFile();" },
+                                    { "text": "New Folder",    "onclick": "model.newFolder();" },
+                                    { "text": "Add File",      "onclick": "model.uploadFile();" }
+                                ]
+                            }
+                        ]
+                    }
+        })
+        self.prototype.init()
+
+        // add a div for the tree
         tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id)
         
         // ask model for an update whenever something changes
@@ -54,7 +64,7 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
             html += "<ul>"
             jQuery.each(val,function(path,val) {
                 html += getFileHTML(path,val)
-            }.bind(this))
+            })
             html += "</ul>"
         }
         else
@@ -204,7 +214,7 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
         var html = "<ul>"
         jQuery.each(files,function(path,val) {
             html += getFileHTML(path,val)
-        }.bind(this))
+        })
         html += "</ul>"
         
         // replace old html

@@ -16,9 +16,10 @@ openmdao.PropertiesEditor = function(id,model) {
      *  private
      ***********************************************************************/
      
-    if (arguments.length > 0)
+    if (arguments.length > 0) {
         // initialize private variables
-        var pathname,
+        var self = this,
+            pathname,
             nameHeader,
             inputs,
             outputs,
@@ -41,18 +42,17 @@ openmdao.PropertiesEditor = function(id,model) {
                 autoHeight: true,
                 autoEdit: false,
             }
-            self = this,
-            elm = null
         // build it
         init()
-    
+    }
     
     function init() {
-        this.prototype = Object.create(openmdao.BasePane)
-        this.prototype.init(id,"Properties Editor")
-        
-        debug.log(this.prototype)
-        debug.log(this)
+        // initialize the base pane
+        self.prototype = Object.create(openmdao.BasePane, {
+            id:     { value: id },
+            title:  { value: "Properties" },
+        })        
+        self.prototype.init()
         
         nameHeader = jQuery("<h3>")
 
@@ -61,9 +61,7 @@ openmdao.PropertiesEditor = function(id,model) {
             inputsDiv = jQuery("<div id='inputs'>"),
             outputsDiv = jQuery("<div id='outputs'>")
 
-        // FIXME:  shouldn't have to do this
-        elm = this.prototype.elm
-        
+        elm = jQuery('#'+id)    // should get this from prototype?        
         elm.append(nameHeader);
         elm.append('<p>')
         elm.append(inputsHeader)

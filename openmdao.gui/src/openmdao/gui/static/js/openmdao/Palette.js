@@ -15,16 +15,22 @@ openmdao.Palette = function(id,model) {
      *  private
      ***********************************************************************/
      
-    if (arguments.length > 0)
+    if (arguments.length > 0) {
         // initialize private variables
-        var libs = null
+        var self = this,
+            libs = null
         // build it
         init()
+    }
 
     function init() {
-        this.prototype = Object.create(openmdao.BasePane)
-        this.prototype.init(id,'Libraries',[])
-        
+        // initialize the base pane
+        self.prototype = Object.create(openmdao.BasePane, {
+            id:     { value: id },
+            title:  { value: "Libraries" },
+        })        
+        self.prototype.init()
+    
         libs = jQuery('<div>').appendTo("#"+id)
         
         // dropping a filename onto the palette pane means import *
