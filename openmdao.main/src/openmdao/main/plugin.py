@@ -386,14 +386,25 @@ Source Documentation
         """ % name
         ]
     
-    for mod in srcmods:
+    for mod in sorted(srcmods):
+        pkgfile = '%s.py' % mod
+        pkg, dot, name = mod.rpartition('.')
+        pyfile = '%s.py' % name
+        underline = '-'*len(pyfile)
         contents.append("""
+.. index:: %s
+
+.. _%s:
+
+%s
+%s
+
 .. automodule:: %s
    :members:
    :undoc-members:
    :show-inheritance:
     
-        """ % mod)
+        """ % (pyfile, pkgfile, pyfile, underline, mod))
 
     return ''.join(contents)
 
