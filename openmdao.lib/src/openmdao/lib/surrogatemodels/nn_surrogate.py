@@ -1,3 +1,6 @@
+"""Surrogate Model based on an artificial neural network.
+"""
+
 import numpy as np
 from numpy import append,array
 from pybrain.tools.shortcuts import buildNetwork
@@ -20,9 +23,12 @@ class NeuralNet(object):
         """
         self.n_hidden_nodes = n_hidden_nodes
     def get_uncertain_value(self, value):
+        """Returns the value iself. Neural network can provide its own uncertainty. """
         return value
     
     def train(self, X, Y):
+        """ Trains the nerual network based on the given set of inputs
+        and outputs. """
 
         inp = array(X)
         targ = array(Y)
@@ -35,6 +41,9 @@ class NeuralNet(object):
         self._nn_surr.train_tnc(inp, targ,maxfun=5000)
                 
     def predict(self, X):
+        """ Calculates a predicted value of the response based on the weights
+         determined by the current neural network. """
+        
         output = self._nn_surr(X)
         return output[0]
   
