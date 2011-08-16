@@ -7,8 +7,50 @@ import subprocess
 import fnmatch
 import getpass
 import datetime
+import urllib2
+import tarfile
 
-def _run_sub(outname, cmd):
+
+def get_file(url):
+    """Copies the specified file into the current directory if the
+    file is remote.  Otherwise, just returns the path that it's given.
+    """
+    fname = os.path.basename(url)
+    if url.startswith('http'):
+        resp = urllib2.urlopen(url)
+        gofile = open(fname, 'wb')
+        shutil.copyfileobj(resp.fp, gofile)
+        gofile.close()
+    else: # file is in local file system
+        if not os.path.isfile(url):
+            print "Can't find file '%s'" % url
+            sys.exit(-1)
+        if url != fname:
+            shutil.copy(url, fname)
+    return fname
+
+def _run_gofile(startdir, gopath, pyversion, args=()):
+    retcode = -1
+    godir, gofile = os.path.split(gopath)
+    os.chdir(godir)
+    
+    outname = 'build.out'
+    f = codecs.open(outname, 'wb', encoding='ascii', errors='replace')
+    try:
+        p = subprocess.Popen('%s %s %s' % (pyversion, gofile, 
+                                           ' '.join(args)), 
+                             stdout=f, stderr=subprocess.STDOUT,
+                             shell=True)
+        p.wait()
+        retcode = p.returncode
+    finally:
+        f.close()
+        #with open(outname, 'r') as f:
+        #    print f.read()
+        os.chdir(startdir)
+    return retcode
+
+def _run_sub(outname, cmd, env=None):
     # in some cases there are some unicode characters in the
     # build output which cause fabric to barf, so strip out unicode
     # by writing to a file, replacing unicode chars with '?'
@@ -16,7 +58,7 @@ def _run_sub(outname, cmd):
     
     try:
         p = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT,
-                             shell=True)
+                             shell=True, env=env)
         p.wait()
     finally:
         f.close()
@@ -66,60 +108,183 @@ def build_and_test(fname=None, workdir=None, pyversion='python', keep=False,
     expectedfiles = set(['build.out', os.path.basename(fname)])
     
     os.chdir(workdir)
-    dirfiles = set(os.listdir('.'))
     
     print 'building...'
     
-    cmd = '%s %s %s' % (pyversion, locbldfile, ' '.join(args))
     try:
-        retcode = _run_sub('build.out', cmd)
+        if build_type == 'release':
+            envdir, retcode = install_release(fname, pyversion=options.pyversion)
+        else: # dev test
+            envdir, retcode = install_dev_env(fname, pyversion=options.pyversion,
+                                              branch=options.branch)
     finally:
-        os.chdir(startdir)
+        os.chdir(workdir)
 
     print "build return code =", retcode
     if retcode != 0:
         sys.exit(retcode)
     
     print '\ntesting...'
-    os.chdir(workdir)
-    
-    newfiles = set(os.listdir('.')) - dirfiles - expectedfiles
-    print 'newfiles = ',newfiles
-    if build_type == 'dev':
-        if len(newfiles) != 1:
-            print "expected a single new dir in %s after building but got %s" % (remotedir, list(newfiles))
-            sys.exit(-1)
-        builddir = newfiles.pop()
-        envdir = os.path.join(builddir, 'devenv')
-    else: # test a release
-        matches = fnmatch.filter(newfiles, 'openmdao-?.*')
-        if len(matches) > 1:
-            print "can't uniquely determine openmdao env directory from %s" % matches
-            sys.exit(-1)
-        elif len(matches) == 0:
-            print "can't find an openmdao environment directory to test in"
-            sys.exit(-1)
-        envdir = matches[0]
 
-    args = ['-d', envdir]
-    args.append('--pyversion=%s' % pyversion)
-    if keep:
-        args.append('--keep')
-    if len(testargs) > 0:
-        args.append('--')
-        args.extend(testargs)
-        
-    os.chdir(workdir)
-    cmd = '%s %s %s' % (pyversion, loctstfile, ' '.join(args))
     try:
-        retcode = _run_sub('test.out', cmd)
-        
-        if retcode == 0 and cleanup:
-            shutil.rmtree(workdir)
+        retcode = activate_and_test(envdir, testargs)
     finally:
         os.chdir(startdir)
+    
+    if cleanup:
+        shutil.rmtree(workdir)
 
     return retcode
+
+
+def install_release(url, pyversion):
+    """
+    Installs an OpenMDAO release in the current directory.
+    
+    url: str
+        The url of the go-openmdao.py file.
+        
+    pyversion: str
+        The version of python, e.g., 'python2.6' or 'python2.7', to be
+        used to create the OpenMDAO virtual environment. Only
+        major version numbers should be used, i.e., use 'python2.6'
+        rather than 'python2.6.5'.
+    
+    Returns the name of the newly built release directory.
+    """
+    gofile = get_file(url)
+    
+    if os.path.basename(gofile) != 'go-openmdao.py':
+        print "Name of OpenMDAO bootstrapping script must be 'go-openmdao.py',",
+        print " not '%s'" % os.path.basename(gofile)
+        sys.exit(-1)
+    
+    # parse pathname to find dists dir
+    parts = url.split(os.sep)
+    parts = parts[:-3] + ['dists']
+    dpath = os.path.join(*parts)
+    if url.startswith(os.sep):
+        dpath = os.sep+dpath
+    args = []
+    if os.path.isdir(dpath): 
+        args.append('--disturl=%s' % dpath)
+    
+    print "building openmdao environment [%s]" % ' '.join(args)
+    
+    startdir = os.getcwd()
+    
+    dirfiles = set(os.listdir('.'))
+    
+    retcode = _run_gofile(startdir, os.path.join(startdir, gofile), 
+                          pyversion, args)
+    
+    newfiles = set(os.listdir('.')) - dirfiles
+    if len(newfiles) != 1:
+        raise RuntimeError("didn't expect %s in build directory" % 
+                           list(newfiles))
+    releasedir = os.path.join(startdir, newfiles.pop())
+
+    return (releasedir, retcode)
+    
+
+def install_dev_env(url, pyversion, branch=None):
+    """
+    Installs an OpenMDAO dev environment given an OpenMDAO source
+    tree.
+    
+    url: str
+        URL of tarfile or git repo containing an OpenMDAO source tree.  May be
+        a local file path or an actual URL.
+
+    pyversion: str
+        The version of python, e.g., 'python2.6' or 'python2.7', to be
+        used to create the OpenMDAO virtual environment. Only
+        major version numbers should be used, i.e., use 'python2.6'
+        rather than 'python2.6.5'.
+
+    branch: str
+        For git repos, branch name must be supplied.
+    """
+    startdir = os.getcwd()
+    
+    # make sure we don't clobber an existing repo
+    if os.path.exists('OpenMDAO-Framework'):
+        print "Directory OpenMDAO-Framework already exists"
+        sys.exit(-1)
+
+    if url.endswith('.git'): # clone the git repo
+        if branch is None:
+            print "You must supply a branch name for a git repo"
+            sys.exit(-1)
+
+        dirfiles = set(os.listdir('.'))
+    
+        print "cloning git repo at %s" % url
+        subprocess.check_call(["git", "clone", url])
+        
+        base = os.path.basename(url)
+        if base == '.git':
+            treedir = os.path.dirname(url)
+        else:
+            treedir = os.path.splitext(os.path.basename(url))[0]
+        treedir = os.path.abspath(treedir)
+        os.chdir(treedir)
+        try:
+            subprocess.check_call(['git','checkout',options.branch])
+        finally:
+            os.chdir(startdir)
+    elif url.endswith('.tar.gz') or url.endswith('.tar'):
+        tarpath = get_file(url)
+        dirfiles = set(os.listdir('.'))
+        tar = tarfile.open(tarpath)
+        tar.extractall()
+        tar.close()
+    else:
+        print "url '%s' does not end in '.git' or '.tar.gz' or '.tar'" % url
+        sys.exit(-1)
+    
+    newfiles = set(os.listdir('.')) - dirfiles
+    if len(newfiles) != 1:
+        raise RuntimeError("didn't expect %s in build directory" % 
+                           list(newfiles))
+    treedir = newfiles.pop()
+        
+    print "building openmdao development environment in %s" % treedir
+    
+    gopath = os.path.join(treedir, 'go-openmdao-dev.py')
+    
+    retcode = _run_gofile(startdir, gopath, pyversion)
+            
+    envdir = os.path.join(treedir, 'devenv')
+    print 'new openmdao environment built in %s' % envdir
+    
+    return (envdir, retcode)
+    
+
+def activate_and_test(envdir, testargs=()):
+    """"
+    Runs the test suite on an OpenMDAO virtual environment located
+    in the specified directory.
+    
+    Returns the return code of the process that runs the test suite.
+    """
+    if sys.platform.startswith('win'):
+        devbindir = 'Scripts'
+        command = 'activate.bat && openmdao_test %s' % ' '.join(testargs)
+    else:
+        devbindir = 'bin'
+        command = '. ./activate && openmdao_test %s' % ' '.join(testargs)
+        
+    # activate the environment and run tests
+    devbinpath = os.path.join(envdir, devbindir)
+    os.chdir(devbinpath)
+    print("running tests from %s" % devbinpath)
+    env = os.environ.copy()
+    for name in ['VIRTUAL_ENV','_OLD_VIRTUAL_PATH','_OLD_VIRTUAL_PROMPT']:
+        if name in env: 
+            del env[name]
+    return _run_sub('test.out', command, env=env)
+    
 
 if __name__ == '__main__':
     from optparse import OptionParser

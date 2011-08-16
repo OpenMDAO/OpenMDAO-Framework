@@ -27,10 +27,10 @@ def remote_build_and_test(fname=None, pyversion='python', keep=False,
     remote_mkdir(remotedir)
     
     locbldtstfile = os.path.join(os.path.dirname(__file__), 'loc_bld_tst.py')
-    locbldfile = os.path.join(os.path.dirname(__file__), 'locbuild.py')
-    loctstfile = os.path.join(os.path.dirname(__file__), 'loctst.py')
+    #locbldfile = os.path.join(os.path.dirname(__file__), 'locbuild.py')
+    #loctstfile = os.path.join(os.path.dirname(__file__), 'loctst.py')
     
-    pushfiles = [locbldtstfile, locbldfile, loctstfile]
+    pushfiles = [locbldtstfile]#, locbldfile, loctstfile]
     
     build_type = 'release' if fname.endswith('.py') else 'dev'
         

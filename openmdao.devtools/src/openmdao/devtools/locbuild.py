@@ -27,6 +27,7 @@ def get_file(url):
     return fname
 
 def _run_gofile(stardir, gopath, pyversion, args=()):
+    retcode = -1
     godir, gofile = os.path.split(gopath)
     os.chdir(godir)
     
@@ -38,12 +39,13 @@ def _run_gofile(stardir, gopath, pyversion, args=()):
                              stdout=f, stderr=subprocess.STDOUT,
                              shell=True)
         p.wait()
+        retcode = p.returncode
     finally:
         f.close()
         with open(outname, 'r') as f:
             print f.read()
         os.chdir(startdir)
-    return p.returncode
+    return retcode
 
 
 def install_release(url, pyversion):
