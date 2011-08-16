@@ -76,10 +76,6 @@ def build_and_test(fname=None, workdir='.', pyversion='python', keep=False,
 
     fname = os.path.abspath(fname)
     
-    locbldfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-                              'locbuild.py')
-    loctstfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-                              'loctst.py')
     workdir = os.path.abspath(workdir)
     startdir = os.getcwd()
     
