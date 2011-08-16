@@ -30,12 +30,8 @@ def _run_gofile(stardir, gopath, pyversion, args=()):
     godir, gofile = os.path.split(gopath)
     os.chdir(godir)
     
-    # in some cases there are some unicode characters in the
-    # build output which cause fabric to barf, so strip out unicode
-    # by writing to a file, replacing unicode chars with '?'
-    f = codecs.open('build.out', 'wb', 
-                    encoding='ascii', errors='replace')
-    
+    outname = 'build.out'
+    f = codecs.open(outname, 'wb', encoding='ascii', errors='replace')
     try:
         p = subprocess.Popen('%s %s %s' % (pyversion, gofile, 
                                            ' '.join(args)), 
@@ -44,7 +40,7 @@ def _run_gofile(stardir, gopath, pyversion, args=()):
         p.wait()
     finally:
         f.close()
-        with open('build.out', 'r') as f:
+        with open(outname, 'r') as f:
             print f.read()
         os.chdir(startdir)
     return p.returncode
@@ -125,16 +121,15 @@ def install_dev_env(url, pyversion, branch=None):
         print "Directory OpenMDAO-Framework already exists"
         sys.exit(-1)
 
-    dirfiles = set(os.listdir('.'))
-    
     if url.endswith('.git'): # clone the git repo
         if branch is None:
             print "You must supply a branch name for a git repo"
             sys.exit(-1)
 
-        cmd = ["git", "clone", url]
+        dirfiles = set(os.listdir('.'))
+    
         print "cloning git repo at %s" % url
-        subprocess.check_call(cmd)
+        subprocess.check_call(["git", "clone", url])
         
         base = os.path.basename(url)
         if base == '.git':
@@ -149,6 +144,7 @@ def install_dev_env(url, pyversion, branch=None):
             os.chdir(startdir)
     elif url.endswith('.tar.gz') or url.endswith('.tar'):
         tarpath = get_file(url)
+        dirfiles = set(os.listdir('.'))
         tar = tarfile.open(tarpath)
         tar.extractall()
         tar.close()
@@ -166,12 +162,12 @@ def install_dev_env(url, pyversion, branch=None):
     
     gopath = os.path.join(treedir, 'go-openmdao-dev.py')
     
-    _run_gofile(startdir, gopath, pyversion)
+    retcode = _run_gofile(startdir, gopath, pyversion)
             
     envdir = os.path.join(treedir, 'devenv')
     print 'new openmdao environment built in %s' % envdir
     
-    return (envdir, p.returncode)
+    return (envdir, retcode)
     
 
 if __name__ == '__main__':

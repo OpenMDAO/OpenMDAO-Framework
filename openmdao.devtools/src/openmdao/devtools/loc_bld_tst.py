@@ -63,7 +63,7 @@ def build_and_test(fname=None, workdir=None, pyversion='python', keep=False,
     if branch:
         args.append('--branch=%s' % branch)
         
-    expectedfiles = set(['build.out'])
+    expectedfiles = set(['build.out', os.path.basename(fname)])
     
     os.chdir(workdir)
     dirfiles = set(os.listdir('.'))
@@ -82,21 +82,23 @@ def build_and_test(fname=None, workdir=None, pyversion='python', keep=False,
     
     print '\ntesting...'
     os.chdir(workdir)
-    newfiles = set(os.listdir('.')) - dirfiles - expectedfiles
     
+    newfiles = set(os.listdir('.')) - dirfiles - expectedfiles
+    print 'newfiles = ',newfiles
     if build_type == 'dev':
         if len(newfiles) != 1:
-            raise RuntimeError("expected a single new file in %s after building but got %s" %
-                               (remotedir, list(newfiles)))
-        
+            print "expected a single new dir in %s after building but got %s" % (remotedir, list(newfiles))
+            sys.exit(-1)
         builddir = newfiles.pop()
         envdir = os.path.join(builddir, 'devenv')
     else: # test a release
         matches = fnmatch.filter(newfiles, 'openmdao-?.*')
         if len(matches) > 1:
-            raise RuntimeError("can't uniquely determine openmdao env directory from %s" % matches)
+            print "can't uniquely determine openmdao env directory from %s" % matches
+            sys.exit(-1)
         elif len(matches) == 0:
-            raise RuntimeError("can't find an openmdao environment directory to test in")
+            print "can't find an openmdao environment directory to test in"
+            sys.exit(-1)
         envdir = matches[0]
 
     args = ['-d', envdir]

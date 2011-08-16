@@ -18,23 +18,21 @@ from openmdao.devtools.tst_ec2 import run_on_ec2_image
 
 import paramiko.util
 
-def test_on_remote_host(fname=None, pyversion='python', keep=False, 
-                        branch=None, testargs=(), hostname='', **kwargs):
+def remote_build_and_test(fname=None, pyversion='python', keep=False, 
+                          branch=None, testargs=(), hostname='', **kwargs):
     if fname is None:
-        raise RuntimeError("test_on_remote_host: missing arg 'fname'")
+        raise RuntimeError("remote_build_and_test: missing arg 'fname'")
     
     remotedir = get_tmp_user_dir()
     remote_mkdir(remotedir)
     
+    locbldtstfile = os.path.join(os.path.dirname(__file__), 'loc_bld_tst.py')
     locbldfile = os.path.join(os.path.dirname(__file__), 'locbuild.py')
     loctstfile = os.path.join(os.path.dirname(__file__), 'loctst.py')
     
-    pushfiles = [locbldfile]
+    pushfiles = [locbldtstfile, locbldfile, loctstfile]
     
-    if fname.endswith('.py'):
-        build_type = 'release'
-    else:
-        build_type = 'dev'
+    build_type = 'release' if fname.endswith('.py') else 'dev'
         
     if os.path.isfile(fname):
         pushfiles.append(fname)
@@ -46,52 +44,13 @@ def test_on_remote_host(fname=None, pyversion='python', keep=False,
     if branch:
         remoteargs.append('--branch=%s' % branch)
         
-    expectedfiles = set([os.path.basename(locbldfile), 'build.out',
-                         os.path.basename(fname)])
-    dirfiles = set(remote_listdir(remotedir))
-    
-    print 'building...'
-    with settings(warn_only=True):
-        result = push_and_run(pushfiles, remotedir=remotedir,
-                              args=remoteargs)
-    print result
-    
-    # for some reason, even when the build works fine, there is a non-zero
-    # return code, so we just print it here and keep going regardless of the
-    # value.
-    print "build return code =", result.return_code
-    
-    print '\ntesting...'
-    newfiles = set(remote_listdir(remotedir)) - dirfiles - expectedfiles
-    
-    if build_type == 'dev':
-        if len(newfiles) != 1:
-            raise RuntimeError("expected a single new file in %s after building but got %s" %
-                               (remotedir, list(newfiles)))
-        
-        builddir = newfiles.pop()
-        envdir = os.path.join(builddir, 'devenv')
-    else: # test a release
-        print 'newfiles = ',newfiles
-        matches = fnmatch.filter(newfiles, 'openmdao-?.*')
-        if len(matches) > 1:
-            raise RuntimeError("can't uniquely determine openmdao env directory from %s" % matches)
-        elif len(matches) == 0:
-            raise RuntimeError("can't find an openmdao environment directory to test in")
-        envdir = matches[0]
-
-    remoteargs = ['-d', envdir]
-    remoteargs.append('--pyversion=%s' % pyversion)
-    if keep:
-        remoteargs.append('--keep')
     if len(testargs) > 0:
         remoteargs.append('--')
         remoteargs.extend(testargs)
         
-    result = push_and_run([loctstfile], remotedir=remotedir,
-                          args=remoteargs)
+    result = push_and_run(pushfiles, remotedir=remotedir, args=remoteargs)
     print result
-        
+
     if result.return_code==0 or not keep:
         rm_remote_tree(remotedir)
         
@@ -161,7 +120,7 @@ def test_branch(argv=None):
                      }
         
     retcode = run_host_processes(config, conn, image_hosts, options, 
-                                 funct=test_on_remote_host, 
+                                 funct=remote_build_and_test, 
                                  funct_kwargs=funct_kwargs)
     
     if cleanup_tar:
@@ -232,10 +191,10 @@ def test_release(argv=None):
     
     if len(options.hosts) > 0:
         return run_host_processes(config, conn, image_hosts, options, 
-                                  funct=test_on_remote_host, 
+                                  funct=remote_build_and_test, 
                                   funct_kwargs=funct_kwargs)
 
 # make nose ignore these functions
 test_release.__test__ = False
 test_branch.__test__ = False
-
+remote_build_and_test.__test__ = False

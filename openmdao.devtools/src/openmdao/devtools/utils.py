@@ -61,7 +61,6 @@ def push_and_run(fpaths, remotedir, runner=None, args=()):
     remote directory and executes the first file specified.
     """
     for fpath in fpaths:
-        print 'pushing %s to %s on remote host' % (fpath, remotedir)
         put(fpath, os.path.join(remotedir, os.path.basename(fpath)))
         
     if runner is None:
@@ -70,7 +69,6 @@ def push_and_run(fpaths, remotedir, runner=None, args=()):
     print 'cd-ing to %s' % remotedir
     cmd = "%s %s %s" % (runner, os.path.basename(fpaths[0]), 
                         ' '.join(args))
-    print 'running %s' % cmd
     with cd(remotedir):
         return run(cmd)
 
