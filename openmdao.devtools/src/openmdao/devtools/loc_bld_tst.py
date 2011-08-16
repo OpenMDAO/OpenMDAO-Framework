@@ -66,7 +66,7 @@ def _run_sub(outname, cmd, env=None):
             print f.read()
     return p.returncode
         
-def build_and_test(fname=None, workdir=None, pyversion='python', keep=False, 
+def build_and_test(fname=None, workdir='.', pyversion='python', keep=False, 
                    branch=None, testargs=()):
     """Builds OpenMDAO, either a dev build or a release build, and runs
     the test suite on it.
@@ -80,18 +80,7 @@ def build_and_test(fname=None, workdir=None, pyversion='python', keep=False,
                               'locbuild.py')
     loctstfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
                               'loctst.py')
-    if workdir is None:
-        workdir = '%s_%s' % (getpass.getuser(),datetime.datetime.now())
-        workdir = workdir.replace(' ','_').replace(':','.')
-    
     workdir = os.path.abspath(workdir)
-    
-    if os.path.exists(workdir):
-        cleanup = False
-    else:
-        os.mkdir(workdir)
-        cleanup = True
-    
     startdir = os.getcwd()
     
     if fname.endswith('.py'):
@@ -131,9 +120,6 @@ def build_and_test(fname=None, workdir=None, pyversion='python', keep=False,
     finally:
         os.chdir(startdir)
     
-    if cleanup:
-        shutil.rmtree(workdir)
-
     return retcode
 
 
