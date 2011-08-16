@@ -100,9 +100,12 @@ from analysis_server.wrapper import ComponentWrapper, lookup
 DEFAULT_PORT = 1835
 ERROR_PREFIX = 'ERROR: '
 
+# Our version.
+_VERSION = '0.1'
+
 # The implementation level we approximate.
-_VERSION = '7.0'
-_BUILD = '42968'
+_AS_VERSION = '7.0'
+_AS_BUILD = '42968'
 
 # Attributes to be ignored (everything in a 'vanilla' component).
 _IGNORE_ATTR = set()
@@ -155,9 +158,11 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self._num_clients = 0
         self._components = {}  # Maps from category/component to (cfg, egg_info)
         self._comp_ctx = _DictContextMgr(self._components)
-        self.handlers = {}     # Maps from client address to handler.
+        self._handlers = {}    # Maps from client address to handler.
+        self._hdlr_ctx = _DictContextMgr(self._handlers)
         self._credentials = get_credentials()  # For PublicKey servers.
         self._root = os.getcwd()
+        self._dir_lock = threading.RLock()
         self._config_errors = 0
         self._read_configuration()
 
@@ -166,9 +171,19 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self.per_client_loggers = True
 
     @property
+    def dir_lock(self):
+        """ Lock for synchronizing file operations. """
+        return self._dir_lock
+
+    @property
     def num_clients(self):
         """ Number of clients. """
         return self._num_clients
+
+    @property
+    def handlers(self):
+        """ Handler map context manager. """
+        return self._hdlr_ctx
 
     @property
     def components(self):
@@ -194,12 +209,12 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     path = path.lstrip('.').lstrip(os.sep)
                     print 'Reading config file %r' % path
                     try:
-                        self._read_config(path, _LOGGER)
+                        self.read_config(path, _LOGGER)
                     except Exception as exc:
                         _LOGGER.error(str(exc))
                         self._config_errors += 1
 
-    def _read_config(self, path, logger):
+    def read_config(self, path, logger):
         """
         Read component configuration file.
 
@@ -216,14 +231,15 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         if not files:
             raise RuntimeError("Can't read %r" % path)
 
-        orig = os.getcwd()
         directory = os.path.dirname(path)
-        if directory:
-            os.chdir(directory)
-        try:
-            self._process_config(config, path, logger)
-        finally:
-            os.chdir(orig)
+        with self.dir_lock:
+            orig = os.getcwd()
+            if directory:
+                os.chdir(directory)
+            try:
+                self._process_config(config, path, logger)
+            finally:
+                os.chdir(orig)
 
     def _process_config(self, config, path, logger):
         """
@@ -412,10 +428,11 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         finally:
             _LOGGER.info('Disconnect %s:%s', host, port)
             self._num_clients -= 1
-            try:  # It seems handler.finish() isn't called on disconnect...
-                self.handlers[client_address].cleanup()
-            except Exception, exc:
-                _LOGGER.warning('Exception during handler cleanup: %r', exc)
+            with self.handlers as handlers:
+                try:  # It seems handler.finish() isn't called on disconnect...
+                    handlers[client_address].cleanup()
+                except Exception, exc:
+                    _LOGGER.warning('Exception during handler cleanup: %r', exc)
 
 
 class _Handler(SocketServer.BaseRequestHandler):
@@ -423,7 +440,8 @@ class _Handler(SocketServer.BaseRequestHandler):
 
     def setup(self):
         """ Initialize before :meth:`handle` is invoked. """
-        self.server.handlers[self.client_address] = self
+        with self.server.handlers as handlers:
+            handlers[self.client_address] = self
         self._stream = Stream(self.request)
         self._lock = threading.Lock()  # Synchronize access to reply stream.
         self._raw = False
@@ -437,7 +455,7 @@ class _Handler(SocketServer.BaseRequestHandler):
         set_credentials(self.server.credentials)
 
         # Set up separate logger for each client.
-        if self.server.per_client_loggers:
+        if self.server.per_client_loggers:  # pragma no cover
             self._logger = logging.getLogger('%s:%s' % self.client_address)
             self._logger.setLevel(_LOGGER.getEffectiveLevel())
             self._logger.propagate = False
@@ -458,7 +476,7 @@ class _Handler(SocketServer.BaseRequestHandler):
         """ Process any received requests. """
         self._send_reply("""\
 Welcome to the OpenMDAO Analysis Server.
-version: 0.1""")
+version: %s""" % _VERSION)
 
         try:
             while self._req != 'quit':
@@ -821,7 +839,7 @@ Object %s ended.""" % (name, name))
                              'getBranchesAndTags')
             return
 
-        self._send_reply('')
+        self._send_reply('')  # Not supported.
 
     _COMMANDS['getBranchesAndTags'] = _get_branches
 
@@ -856,7 +874,7 @@ Object %s ended.""" % (name, name))
             return
 
         if len(args) == 2:
-            if  args[1] == 'gzipData':
+            if args[1] == 'gzipData':
                 gzip = True
             else:
                 self._send_error('invalid syntax. Proper syntax:\n'
@@ -896,6 +914,7 @@ Object %s ended.""" % (name, name))
     def _get_icon2(self, args):
         """
         Gets the icon data for the published component.
+        This version returns the data in base64 format.
 
         args: list[string]
             Arguments for the command.
@@ -947,7 +966,7 @@ Object %s ended.""" % (name, name))
         if not lst:
             return
 
-        self._send_reply('')
+        self._send_reply('')  # Queues are a CenterLink thing.
 
     _COMMANDS['getQueues'] = _get_queues
 
@@ -997,7 +1016,7 @@ os arch: %s
 os version: %s
 python version: %s
 user name: %s"""
-             % (_VERSION, _BUILD, self.server.num_clients, num_comps,
+             % (_AS_VERSION, _AS_BUILD, self.server.num_clients, num_comps,
                 platform.system(), platform.processor(),
                 platform.release(), platform.python_version(),
                 getpass.getuser()))
@@ -1018,10 +1037,10 @@ user name: %s"""
             return
 
         self._send_reply("""\
-OpenMDAO Analysis Server 0.1
+OpenMDAO Analysis Server %s
 Use at your own risk!
 Attempting to support Phoenix Integration, Inc.
-version: %s, build: %s""" % (_VERSION, _BUILD))
+version: %s, build: %s""" % (_VERSION, _AS_VERSION, _AS_BUILD))
 
     _COMMANDS['getVersion'] = _get_version
 
@@ -1243,7 +1262,7 @@ Available Commands:
                              'listGlobals,lg')
             return
 
-        self._send_reply('0 global objects started:')
+        self._send_reply('0 global objects started:')  # Not supported.
 
     _COMMANDS['listGlobals'] = _list_globals
     _COMMANDS['lg'] = _list_globals
@@ -1348,7 +1367,8 @@ Available Commands:
     def _list_values_url(self, args):
         """
         Lists all available variables and their sub-properties on a component
-        instance or sub-variable.
+        instance or sub-variable. This version supplies a URL for file data
+        if DirectFileTransfer is supported.
 
         args: list[string]
             Arguments for the command.
@@ -1458,34 +1478,35 @@ Available Commands:
         args, zero, eggdata = self._req.partition('\0')
         cmd, path, version, comment, author = shlex.split(args)
 
-        # Create directory (category).
-        path = path.strip('/')
-        directory, slash, name = path.rpartition('/')
-        if directory and not os.path.exists(directory):
-            os.makedirs(directory)
+        with self.server.dir_lock:
+            # Create directory (category).
+            path = path.strip('/')
+            directory, slash, name = path.rpartition('/')
+            if directory and not os.path.exists(directory):
+                os.makedirs(directory)
 
-        # Write egg file.
-        egg_filename = '%s-%s.egg' % (name, version)
-        egg_path = os.path.join(directory, egg_filename)
-        if os.path.exists(egg_path):
-            self._send_error('Egg %r already exists' % egg_path)
-            return
-        with open(egg_path, 'wb') as out:
-            out.write(eggdata)
+            # Write egg file.
+            egg_filename = '%s-%s.egg' % (name, version)
+            egg_path = os.path.join(directory, egg_filename)
+            if os.path.exists(egg_path):
+                self._send_error('Egg %r already exists' % egg_path)
+                return
+            with open(egg_path, 'wb') as out:
+                out.write(eggdata)
 
-        # Load egg to verify.
-        component = Container.load_from_eggfile(egg_path, log=self._logger)
-        description = component.__doc__
+            # Load egg to verify.
+            component = Container.load_from_eggfile(egg_path, log=self._logger)
+            description = component.__doc__
 
-        # Write config file.
-        cfg_filename = '%s-%s.cfg' % (name, version)
-        cfg_path = os.path.join(directory, cfg_filename)
-        if os.path.exists(cfg_path):
-            self._send_error('Config file %r already exists' % cfg_path)
-            os.remove(egg_path)
-            return
-        with open(cfg_path, 'w') as out:
-            out.write("""\
+            # Write config file.
+            cfg_filename = '%s-%s.cfg' % (name, version)
+            cfg_path = os.path.join(directory, cfg_filename)
+            if os.path.exists(cfg_path):
+                self._send_error('Config file %r already exists' % cfg_path)
+                os.remove(egg_path)
+                return
+            with open(cfg_path, 'w') as out:
+                out.write("""\
 [Description]
 version: %s
 comment: %s
@@ -1505,16 +1526,16 @@ egg: %s
 *: *
 """ % (version, comment, author, description, egg_filename))
 
-        component.pre_delete()
-        try:
-            self.server._read_config(cfg_path, self._logger)
-        except Exception as exc:
-            self._logger.error("Can't publishEgg: %r", exc)
-            self._send_error(str(exc))
-            os.remove(egg_path)
-            os.remove(cfg_path)
-        else:
-            self._send_reply('Egg published.')
+            component.pre_delete()
+            try:
+                self.server.read_config(cfg_path, self._logger)
+            except Exception as exc:
+                self._logger.error("Can't publishEgg: %r", exc)
+                self._send_error(str(exc))
+                os.remove(egg_path)
+                os.remove(cfg_path)
+            else:
+                self._send_reply('Egg published.')
 
     _COMMANDS['publishEgg'] = _publish_egg
 
@@ -1593,7 +1614,7 @@ egg: %s
         args: list[string]
             Arguments for the command.
         """
-        if len(args) != 3 or args[0] != 'raw':
+        if len(args) != 3:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'setServerAuthInfo <serverURL> <username> <password>')
             return
@@ -1630,7 +1651,7 @@ egg: %s
         args: list[string]
             Arguments for the command.
         """
-        if len(args) != 2:
+        if len(args) < 2 or len(args) > 4:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'start <category/component> <instanceName> [connector] [queue]')
             return
@@ -1656,19 +1677,20 @@ egg: %s
         }
 
         # Create component instance.
-        if self._server_per_obj:  # pragma no cover
-            # Allocate a server.
-            server, server_info = RAM.allocate(resource_desc)
-            if server is None:
-                raise RuntimeError('Server allocation failed :-(')
+        with self.server.dir_lock:
+            if self._server_per_obj:  # pragma no cover
+                # Allocate a server.
+                server, server_info = RAM.allocate(resource_desc)
+                if server is None:
+                    raise RuntimeError('Server allocation failed :-(')
 
-            # Transfer egg to it and load.
-            egg_name = os.path.basename(egg_file)
-            filexfer(None, egg_file, server, egg_name, 'b')
-            obj = server.load_model(egg_name)
-        else:  # Used for testing.
-            server = None
-            obj = Container.load_from_eggfile(egg_file, log=self._logger)
+                # Transfer egg to it and load.
+                egg_name = os.path.basename(egg_file)
+                filexfer(None, egg_file, server, egg_name, 'b')
+                obj = server.load_model(egg_name)
+            else:  # Used for testing.
+                server = None
+                obj = Container.load_from_eggfile(egg_file, log=self._logger)
         obj.name = name
 
         # Create wrapper for component.

@@ -486,7 +486,8 @@ class ComponentWrapper(object):
     def list_values_url(self, path, req_id):
         """
         Lists all available variables and their sub-properties on a component
-        instance or sub-variable.
+        instance or sub-variable. This version supplies a URL for file data
+        if DirectFileTransfer is supported.
 
         path: string
             External reference.
@@ -494,9 +495,6 @@ class ComponentWrapper(object):
         req_id: string
             'Raw' mode request identifier.
         """
-# TODO: this is different than listValues for file variables and DFT.
-#       When DirectFileTransfer is enabled, this should return a URL
-#       suitable for retrieving a file variable value rather than the data.
         self.list_values(path, req_id)
 
     def start_monitor(self, path, req_id):
@@ -919,22 +917,22 @@ class ArrayBase(BaseWrapper):
             typstr = 'java.lang.String'
 
         lines = ['componentType (type=java.lang.Class) (access=g)',
-                 'description (type=java.lang.String) (access=sg)',
-                 'dimensions (type=int[1]) (access=sg)',
-                 'enumAliases (type=java.lang.String[0]) (access=sg)',
-                 'enumValues (type=%s[0]) (access=sg)' % typstr,
-                 'first (type=java.lang.Object) (access=sg)',
-                 'length (type=int) (access=sg)',
-                 'lockResize (type=boolean) (access=sg)',
+                 'description (type=java.lang.String) (access=g)',
+                 'dimensions (type=int[1]) (access=g)',
+                 'enumAliases (type=java.lang.String[0]) (access=g)',
+                 'enumValues (type=%s[0]) (access=g)' % typstr,
+                 'first (type=java.lang.Object) (access=g)',
+                 'length (type=int) (access=g)',
+                 'lockResize (type=boolean) (access=g)',
                  'numDimensions (type=int) (access=g)',
-                 'units (type=java.lang.String) (access=sg)']
+                 'units (type=java.lang.String) (access=g)']
 
         if self.typ != str:
             lines.extend(['format (type=java.lang.String) (access=g)',
-                          'hasLowerBound (type=boolean) (access=sg)',
-                          'hasUpperBound (type=boolean) (access=sg)',
-                          'lowerBound (type=%s) (access=sg)' % typstr,
-                          'upperBound (type=%s) (access=sg)' % typstr])
+                          'hasLowerBound (type=boolean) (access=g)',
+                          'hasUpperBound (type=boolean) (access=g)',
+                          'lowerBound (type=%s) (access=g)' % typstr,
+                          'upperBound (type=%s) (access=g)' % typstr])
 
         return sorted(lines)
 

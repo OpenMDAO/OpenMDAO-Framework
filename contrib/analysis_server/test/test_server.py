@@ -162,8 +162,8 @@ class TestCase(unittest.TestCase):
 
         self.assertEqual(self.server.config_errors, 0)
 
-        code = "self.server._read_config('no-such-file.cfg'," \
-                                       " self.handler._logger)"
+        code = "self.server.read_config('no-such-file.cfg'," \
+                                      " self.handler._logger)"
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Can't read 'no-such-file.cfg'")
 
@@ -411,6 +411,20 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
                          'ERROR: component </NoSuchComp>'
                          ' does not match a known component\r\n>')
 
+        replies = self.send_recv('getIcon2 ASTestComp')
+        self.assertEqual(replies[-1],
+                         "ERROR: Exception: NotImplementedError('getIcon2',)\r\n>")
+
+        replies = self.send_recv('getIcon2')
+        self.assertEqual(replies[-1],
+                         'ERROR: invalid syntax. Proper syntax:\r\n'
+                         'getIcon2 <analysisComponent>\r\n>')
+
+        replies = self.send_recv('getIcon2 NoSuchComp')
+        self.assertEqual(replies[-1],
+                         'ERROR: component </NoSuchComp>'
+                         ' does not match a known component\r\n>')
+
     def test_get_license(self):
         replies = self.send_recv('getLicense')
         self.assertEqual(replies[-1], 'Use at your own risk!\r\n>')
@@ -419,6 +433,15 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
         self.assertEqual(replies[-1],
                          'ERROR: invalid syntax. Proper syntax:\r\n'
                          'getLicense\r\n>')
+
+    def test_get_queues(self):
+        replies = self.send_recv('getQueues ASTestComp')
+        self.assertEqual(replies[-1], '>')
+
+        replies = self.send_recv('getQueues')
+        self.assertEqual(replies[-1],
+                         'ERROR: invalid syntax. Proper syntax:\r\n'
+                         'getQueues <category/component> [full]\r\n>')
 
     def test_get_status(self):
         replies = self.send_recv(['start ASTestComp comp',
@@ -941,6 +964,16 @@ if __name__ == '__main__':
                                   'set comp.x = 42'], count=3)
         self.assertEqual(replies[-1], 'value set for <x>\r\n>')
 
+    def test_set_authinfo(self):
+        replies = self.send_recv('setServerAuthInfo url user passwd')
+        self.assertEqual(replies[-1],
+                         "ERROR: Exception: NotImplementedError('setServerAuthInfo',)\r\n>")
+
+        replies = self.send_recv('setServerAuthInfo')
+        self.assertEqual(replies[-1],
+                         'ERROR: invalid syntax. Proper syntax:\r\n'
+                         'setServerAuthInfo <serverURL> <username> <password>\r\n>')
+
     def test_set_hierarchy(self):
         xml = """\
 <?xml version='1.0' encoding='utf-8'?>
@@ -1004,6 +1037,17 @@ ASTestComp2"""
                                  ['1\r\nformat: %s\r\n%d\r\n'
                                   % (format, len(expected)), expected])
 
+    def test_set_runqueue(self):
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'setRunQueue comp connector queue'], count=3)
+        self.assertEqual(replies[-1],
+                         "ERROR: Exception: NotImplementedError('setRunQueue',)\r\n>")
+
+        replies = self.send_recv('setRunQueue')
+        self.assertEqual(replies[-1],
+                         'ERROR: invalid syntax. Proper syntax:\r\n'
+                         'setRunQueue <object> <connector> <queue>\r\n>')
+
     def test_start(self):
         replies = self.send_recv('start ASTestComp comp')
         self.assertEqual(replies[-1], 'Object comp started.\r\n>')
@@ -1021,6 +1065,10 @@ ASTestComp2"""
         replies = self.send_recv(['start ASTestComp comp',
                                   'start ASTestComp comp'])
         self.assertEqual(replies[-1], 'ERROR: Name already in use: "comp"\r\n>')
+
+        replies = self.send_recv('start ASTestComp comp connector queue')
+        self.assertEqual(replies[-1],
+                         "ERROR: Exception: NotImplementedError('start, args > 2',)\r\n>")
 
     def test_versions(self):
         tstamp1 = time.ctime(os.path.getmtime('ASTestComp-0.1.cfg'))
@@ -1126,20 +1174,20 @@ ASTestComp2"""
         expected = """\
 15 properties found:
 componentType (type=java.lang.Class) (access=g)
-description (type=java.lang.String) (access=sg)
-dimensions (type=int[1]) (access=sg)
-enumAliases (type=java.lang.String[0]) (access=sg)
-enumValues (type=double[0]) (access=sg)
-first (type=java.lang.Object) (access=sg)
+description (type=java.lang.String) (access=g)
+dimensions (type=int[1]) (access=g)
+enumAliases (type=java.lang.String[0]) (access=g)
+enumValues (type=double[0]) (access=g)
+first (type=java.lang.Object) (access=g)
 format (type=java.lang.String) (access=g)
-hasLowerBound (type=boolean) (access=sg)
-hasUpperBound (type=boolean) (access=sg)
-length (type=int) (access=sg)
-lockResize (type=boolean) (access=sg)
-lowerBound (type=double) (access=sg)
+hasLowerBound (type=boolean) (access=g)
+hasUpperBound (type=boolean) (access=g)
+length (type=int) (access=g)
+lockResize (type=boolean) (access=g)
+lowerBound (type=double) (access=g)
 numDimensions (type=int) (access=g)
-units (type=java.lang.String) (access=sg)
-upperBound (type=double) (access=sg)"""
+units (type=java.lang.String) (access=g)
+upperBound (type=double) (access=g)"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv(['start ASTestComp comp',
                                   'listProperties comp.sub_group.f1d'], count=3)
@@ -1148,20 +1196,20 @@ upperBound (type=double) (access=sg)"""
         expected = """\
 15 properties found:
 componentType (type=java.lang.Class) (access=g)
-description (type=java.lang.String) (access=sg)
-dimensions (type=int[1]) (access=sg)
-enumAliases (type=java.lang.String[0]) (access=sg)
-enumValues (type=long[0]) (access=sg)
-first (type=java.lang.Object) (access=sg)
+description (type=java.lang.String) (access=g)
+dimensions (type=int[1]) (access=g)
+enumAliases (type=java.lang.String[0]) (access=g)
+enumValues (type=long[0]) (access=g)
+first (type=java.lang.Object) (access=g)
 format (type=java.lang.String) (access=g)
-hasLowerBound (type=boolean) (access=sg)
-hasUpperBound (type=boolean) (access=sg)
-length (type=int) (access=sg)
-lockResize (type=boolean) (access=sg)
-lowerBound (type=long) (access=sg)
+hasLowerBound (type=boolean) (access=g)
+hasUpperBound (type=boolean) (access=g)
+length (type=int) (access=g)
+lockResize (type=boolean) (access=g)
+lowerBound (type=long) (access=g)
 numDimensions (type=int) (access=g)
-units (type=java.lang.String) (access=sg)
-upperBound (type=long) (access=sg)"""
+units (type=java.lang.String) (access=g)
+upperBound (type=long) (access=g)"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv(['start ASTestComp comp',
                                   'listProperties comp.sub_group.i1d'], count=3)
@@ -1191,15 +1239,15 @@ upperBound (type=long) (access=sg)"""
         expected = """\
 10 properties found:
 componentType (type=java.lang.Class) (access=g)
-description (type=java.lang.String) (access=sg)
-dimensions (type=int[1]) (access=sg)
-enumAliases (type=java.lang.String[0]) (access=sg)
-enumValues (type=java.lang.String[0]) (access=sg)
-first (type=java.lang.Object) (access=sg)
-length (type=int) (access=sg)
-lockResize (type=boolean) (access=sg)
+description (type=java.lang.String) (access=g)
+dimensions (type=int[1]) (access=g)
+enumAliases (type=java.lang.String[0]) (access=g)
+enumValues (type=java.lang.String[0]) (access=g)
+first (type=java.lang.Object) (access=g)
+length (type=int) (access=g)
+lockResize (type=boolean) (access=g)
 numDimensions (type=int) (access=g)
-units (type=java.lang.String) (access=sg)"""
+units (type=java.lang.String) (access=g)"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv(['start ASTestComp comp',
                                   'listProperties comp.sub_group.s1d'], count=3)
