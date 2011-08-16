@@ -23,20 +23,20 @@ class NeuralNet(object):
         return value
     
     def train(self, X, Y):
+
         inp = array(X)
-        self.targ = array(Y)
+        targ = array(Y)
         n_inputs = len(inp[0])
         
         # 1 Output node because Surrogate Model has only 1 output
         self._nn_surr = ffnet(mlgraph((n_inputs, self.n_hidden_nodes, 1)))
                         
         # Start the training
-        self._nn_surr.train_momentum(inp, self.targ, momentum = .1)
+        self._nn_surr.train_tnc(inp, targ,maxfun=5000)
                 
     def predict(self, X):
-        
-        output, regression = self._nn_surr.test(X, self.targ, iprint = 2)
-        return output,regression
+        output = self._nn_surr(X)
+        return output[0]
   
 if __name__ =="__main__":     
     import numpy as np    
