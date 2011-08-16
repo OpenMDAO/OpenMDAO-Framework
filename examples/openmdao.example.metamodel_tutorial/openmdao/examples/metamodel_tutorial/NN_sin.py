@@ -12,7 +12,7 @@ from openmdao.lib.surrogatemodels.api import NeuralNet
 
 class Sin(Component): 
     
-    x = Float(4,iotype="in",units="rad",low=3,high=5)
+    x = Float(0,iotype="in",units="rad",low=0,high=6.3)
     
     f_x = Float(0.0,iotype="out")
     
@@ -28,7 +28,7 @@ class Simulation(Assembly):
         #Components
         self.add("sin_meta_model",MetaModel())
         self.sin_meta_model.surrogate = {"default":NeuralNet()}    
-        self.sin_meta_model.n_hidden_nodes = 5
+        self.sin_meta_model.n_hidden_nodes = 4
         self.sin_meta_model.model = Sin()
         self.sin_meta_model.recorder = DBCaseRecorder()
         
@@ -37,7 +37,7 @@ class Simulation(Assembly):
         #Training the MetaModel
         self.add("DOE_Trainer",DOEdriver())
         self.DOE_Trainer.DOEgenerator = FullFactorial()
-        self.DOE_Trainer.DOEgenerator.num_levels = 20
+        self.DOE_Trainer.DOEgenerator.num_levels = 16
         self.DOE_Trainer.add_parameter("sin_meta_model.x")
         self.DOE_Trainer.add_event("sin_meta_model.train_next")
         self.DOE_Trainer.case_outputs = ["sin_meta_model.f_x"]
@@ -46,8 +46,10 @@ class Simulation(Assembly):
         
         #MetaModel Validation
         self.add("DOE_Validate",DOEdriver())
-        self.DOE_Validate.DOEgenerator = Uniform()
-        self.DOE_Validate.DOEgenerator.num_samples = 50
+        #self.DOE_Validate.DOEgenerator = Uniform()
+        #self.DOE_Validate.DOEgenerator.num_samples = 20
+        self.DOE_Validate.DOEgenerator = FullFactorial()
+        self.DOE_Validate.DOEgenerator.num_levels = 128
         self.DOE_Validate.add_parameter(("sin_meta_model.x","sin_calc.x"))
         #self.DOE_Validate.add_event("sin_meta_model.train_next")
         self.DOE_Validate.case_outputs = ["sin_calc.f_x","sin_meta_model.f_x"]
@@ -65,18 +67,30 @@ class Simulation(Assembly):
 
 if __name__ == "__main__":
     
-    import matplotlib
-    matplotlib.use('WxAgg')
+    #import matplotlib
+    #matplotlib.use('WxAgg')
     import pylab as plt
     
     sim = Simulation()
-    
     sim.run()
-    data = sim.DOE_Validate.recorder.get_iterator()
-    for case in data:    
-        print "%1.3f"%case['sin_calc.x'], "%1.3f"%case['sin_calc.f_x'], "%1.3f"%case['sin_meta_model.f_x']
     
-    plt.scatter([[case['sin_calc.f_x']] for case in data], [[case['sin_meta_model.f_x']] for case in data])
+    data = sim.DOE_Validate.recorder.get_iterator()
+        
+    
+    indeps = [case['sin_calc.x'] for case in data]    
+    actual = [case['sin_calc.f_x'] for case in data]  
+    predicted = [case['sin_meta_model.f_x'] for case in data]
+
+    #for a,p in zip(actual,predicted): 
+    #    print "%1.3f, %1.3f"%(a,p)
+    
+    plt.scatter(actual,predicted)
+    
+    plt.figure()
+    plt.scatter(indeps,actual,c='b')
+    plt.scatter(indeps,predicted,c='r')
+    
+    plt.show()
     
     
     
