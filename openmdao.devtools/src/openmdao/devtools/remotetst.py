@@ -18,8 +18,7 @@ from openmdao.devtools.tst_ec2 import run_on_ec2_image
 
 import paramiko.util
 
-def test_on_remote_host(fname=None, 
-                        pyversion='python', keep=False, 
+def test_on_remote_host(fname=None, pyversion='python', keep=False, 
                         branch=None, testargs=(), hostname='', **kwargs):
     if fname is None:
         raise RuntimeError("test_on_remote_host: missing arg 'fname'")
@@ -30,15 +29,15 @@ def test_on_remote_host(fname=None,
     locbldfile = os.path.join(os.path.dirname(__file__), 'locbuild.py')
     loctstfile = os.path.join(os.path.dirname(__file__), 'loctst.py')
     
+    pushfiles = [locbldfile]
+    
     if fname.endswith('.py'):
         build_type = 'release'
     else:
         build_type = 'dev'
         
     if os.path.isfile(fname):
-        remotefname = os.path.join(remotedir, os.path.basename(fname))
-        print 'putting %s on remote host' % fname
-        put(fname, remotefname) # copy file to remote host
+        pushfiles.append(fname)
         remoteargs = ['-f', os.path.basename(fname)]
     else:
         remoteargs = ['-f', fname]
@@ -47,14 +46,13 @@ def test_on_remote_host(fname=None,
     if branch:
         remoteargs.append('--branch=%s' % branch)
         
-    expectedfiles = set(['locbuild.py','build.out'])
+    expectedfiles = set([os.path.basename(locbldfile), 'build.out',
+                         os.path.basename(fname)])
     dirfiles = set(remote_listdir(remotedir))
     
     print 'building...'
     with settings(warn_only=True):
-        result = push_and_run([locbldfile], 
-                              remotepath=os.path.join(remotedir,
-                                                      os.path.basename(locbldfile)),
+        result = push_and_run(pushfiles, remotedir=remotedir,
                               args=remoteargs)
     print result
     
@@ -90,9 +88,7 @@ def test_on_remote_host(fname=None,
         remoteargs.append('--')
         remoteargs.extend(testargs)
         
-    result = push_and_run([loctstfile], 
-                          remotepath=os.path.join(remotedir,
-                                                  os.path.basename(loctstfile)),
+    result = push_and_run([loctstfile], remotedir=remotedir,
                           args=remoteargs)
     print result
         
@@ -121,6 +117,10 @@ def test_branch(argv=None):
                       help="If file is a git repo, supply branch name here")
 
     (options, args) = parser.parse_args(argv)
+    
+    if not options.hosts:
+        print "nothing to do - no hosts specified"
+        sys.exit(0)
     
     config, conn, image_hosts = process_options(options, parser)
     

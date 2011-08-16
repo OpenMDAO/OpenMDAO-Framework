@@ -60,22 +60,18 @@ def push_and_run(fpaths, remotedir, runner=None, args=()):
     """Puts the given files onto the current active host in the specified
     remote directory and executes the first file specified.
     """
-    if not os.path.isfile(fpath):
-        raise IOError("can't find file %s" % fpath)
     for fpath in fpaths:
+        print 'pushing %s to %s on remote host' % (fpath, remotedir)
         put(fpath, os.path.join(remotedir, os.path.basename(fpath)))
         
-    if not runner:
-        if fpaths[0].endswith('.py'):
-            runner = 'python'
-        else:
-            runner = ''
+    if runner is None:
+        runner = 'python' if fpaths[0].endswith('.py') else ''
 
     print 'cd-ing to %s' % remotedir
+    cmd = "%s %s %s" % (runner, os.path.basename(fpaths[0]), 
+                        ' '.join(args))
+    print 'running %s' % cmd
     with cd(remotedir):
-        cmd = "%s %s %s" % (runner, os.path.basename(os.path.basename(fpath[0])), 
-                            ' '.join(args))
-        print 'running %s' % cmd
         return run(cmd)
 
 def tar_dir(dirpath, archive_name, destdir):

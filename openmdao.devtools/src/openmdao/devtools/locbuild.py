@@ -22,7 +22,8 @@ def get_file(url):
         if not os.path.isfile(url):
             print "Can't find file '%s'" % url
             sys.exit(-1)
-        shutil.copy(url, fname)
+        if url != fname:
+            shutil.copy(url, fname)
     return fname
 
 def _run_gofile(stardir, gopath, pyversion, args=()):
