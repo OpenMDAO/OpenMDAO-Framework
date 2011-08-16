@@ -10,7 +10,7 @@ from fabric.api import run, env, local, put, cd, get, settings, prompt, \
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
                                     fabric_cleanup, remote_listdir, remote_mkdir,\
-                                    ssh_test
+                                    ssh_test, put_dir
 from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
                                          run_host_processes, get_tmp_user_dir
 
@@ -35,6 +35,11 @@ def remote_build_and_test(fname=None, pyversion='python', keep=False,
     if os.path.isfile(fname):
         pushfiles.append(fname)
         remoteargs = ['-f', os.path.basename(fname)]
+    elif os.path.isdir(fname):
+        put_dir(fname, os.path.join(remotedir, os.path.basename(fname)))
+        remoteargs = ['-f', os.path.join(os.path.basename(fname),
+                                         'downloads', 'latest',
+                                         'go-openmdao.py')]
     else:
         remoteargs = ['-f', fname]
         
@@ -130,6 +135,16 @@ def test_branch(argv=None):
         
     return retcode
 
+def is_release_dir(dname):
+    if not isinstance(dname, basestring):
+        return False
+    if not os.path.isdir(dname):
+        return False
+    dirstuff = os.listdir(dname)
+    if not 'dists' in dirstuff:
+        return False
+    return 'downloads' in dirstuff
+
 def test_release(argv=None):
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')
@@ -143,13 +158,13 @@ def test_release(argv=None):
                            "the temporary build directory "
                            "or terminate the remote instance if testing on EC2.")
     parser.add_option("-f","--file", action="store", type='string', dest='fname',
-                      help="Pathname or URL of a go-openmdao.py file")
+                      help="URL or pathname of a go-openmdao.py file or pathname of a release dir")
 
     (options, args) = parser.parse_args(argv)
     
     if options.fname is None:
         parser.print_help()
-        print '\nyou must supply the pathname or URL of a go-openmdao.py file'
+        print '\nyou must supply a release directory or the pathname or URL of a go-openmdao.py file'
         sys.exit(-1)
         
     config, conn, image_hosts = process_options(options, parser)
@@ -157,20 +172,21 @@ def test_release(argv=None):
     startdir = os.getcwd()
     
     fname = options.fname
-    if not fname.startswith('http'):
+    if fname.startswith('http'):
+        # if they cut & paste from the openmdao website, the fname
+        # will be followed by #md5=..., so get rid of that part
+        fname = fname.split('#')[0]
+    else:
         fname = os.path.abspath(os.path.expanduser(fname))
     
-    # if they cut & paste from the openmdao website, the fname
-    # will be followed by #md5=..., so get rid of that part
-    fname = fname.split('#')[0]
     if fname.endswith('.py'):
         if not fname.startswith('http'):
             if not os.path.isfile(fname):
                 print "can't find file '%s'" % fname
                 sys.exit(-1)
-    else:
+    elif not is_release_dir(fname):
         parser.print_help()
-        print "\nfilename must be a pathname or URL of a go-openmdao.py file"
+        print "\nfilename must be a release directory or a pathname or URL of a go-openmdao.py file"
         sys.exit(-1)
         
     funct_kwargs = { 'keep': options.keep,

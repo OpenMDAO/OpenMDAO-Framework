@@ -36,31 +36,25 @@ debug: true
 linux_user: ubuntu
 win_user: Administrator
 
-# a linux 32 bit EC2 image
 [meerkat32]
-image_id: ami-ddb574b4
+image_id: ami-15fd3c7c
 instance_type: c1.medium
 user: %(linux_user)s
-security_groups: default
 platform: linux
 
-# a linux 64 bit EC2 image
 [meerkat64]
-image_id: ami-d7b574be
+image_id: ami-abfd3cc2
 instance_type: m1.large
 user: %(linux_user)s
-security_groups: default
 platform: linux
 
-# a windows 2008 server 32 bit EC2 image
 [win2008_32]
-image_id: ami-ad38fec4
+image_id: ami-e3fc3d8a 
 instance_type: c1.medium
 user: %(win_user)s
 security_groups: windows
 platform: windows
 
-# a windows 2008 server 64 bit EC2 image
 [win2008_64]
 image_id: ami-d94680b0
 instance_type: m1.large
