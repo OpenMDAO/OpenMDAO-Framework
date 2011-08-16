@@ -12,7 +12,7 @@ from openmdao.main.interfaces import implements, ISurrogate
 class NeuralNet(object):
     implements(ISurrogate)
     
-    def __init__(self, n_hidden_nodes=2):
+    def __init__(self, n_hidden_nodes=4):
         """Initializes neural net surrogate model.
         
             n_hidden_nodes: int
@@ -32,7 +32,10 @@ class NeuralNet(object):
         self._nn_surr = ffnet(mlgraph((n_inputs, self.n_hidden_nodes, 1)))
                         
         # Start the training
+        self._nn_surr.train_genetic(inp, targ, individuals=10*n_inputs, generations=500)
+
         self._nn_surr.train_tnc(inp, targ,maxfun=5000)
+
                 
     def predict(self, X):
         output = self._nn_surr(X)
