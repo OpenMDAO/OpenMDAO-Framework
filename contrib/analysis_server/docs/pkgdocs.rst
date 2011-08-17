@@ -10,6 +10,11 @@ Package Metadata
 
 - **description-file:** README.txt
 
+- **entry_points**:: 
+
+    [openmdao.component]
+    analysis_server.proxy.ComponentProxy=analysis_server.proxy:ComponentProxy
+
 - **keywords:** openmdao
 
 - **name:** analysis_server
@@ -20,6 +25,8 @@ Package Metadata
 
     >=2.6
     <2.7
+
+- **summary:** OpenMDAO interface to Phoenix Integration's ModelCenter/AnalysisServer
 
 - **version:** 0.1
 

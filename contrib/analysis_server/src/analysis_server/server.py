@@ -478,6 +478,8 @@ class _Handler(SocketServer.BaseRequestHandler):
 Welcome to the OpenMDAO Analysis Server.
 version: %s""" % _VERSION)
 
+        self._logger.info('Serving client at %s:%s',
+                          self.client_address[0], self.client_address[1])
         try:
             while self._req != 'quit':
                 try:
@@ -533,6 +535,7 @@ version: %s""" % _VERSION)
 
     def cleanup(self):
         """ 'end' all existing objects. """
+        self._logger.info('Shutdown')
         if self._hb is not None:
             self._hb.stop()
         for name in self._instance_map.keys():
@@ -768,6 +771,7 @@ Object %s ended.""" % (name, name))
         name: string
             Instance to be deleted.
         """
+        self._logger.info('End %r', name)
         wrapper, worker = self._instance_map.pop(name)
         wrapper.pre_delete()
         WorkerPool.release(worker)
@@ -1478,6 +1482,9 @@ Available Commands:
         args, zero, eggdata = self._req.partition('\0')
         cmd, path, version, comment, author = shlex.split(args)
 
+        self._logger.info('Publish from %s: %s %s %r',
+                          author, path, version, comment)
+
         with self.server.dir_lock:
             # Create directory (category).
             path = path.strip('/')
@@ -1551,6 +1558,8 @@ egg: %s
             self._send_error('invalid syntax. Proper syntax:\n'
                              'quit')
             return
+
+        self._logger.info('Client quit')
 
     _COMMANDS['quit'] = _quit
 
@@ -1675,6 +1684,8 @@ egg: %s
             'orphan_modules': egg_info[2],
             'python_version': sys.version[:3]
         }
+
+        self._logger.info('Starting %r from %r', name, egg_file)
 
         # Create component instance.
         with self.server.dir_lock:
