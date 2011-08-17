@@ -1,6 +1,7 @@
 """
-Support for remote publishing of components.
-All inputs, outputs, and no-argument methods will be accessible.
+Support for remote publishing of components to an OpenMDAO analysis server.
+All inputs, outputs, and no-argument methods in the component's scope
+will be accessible.
 """
 
 import optparse
@@ -9,8 +10,7 @@ import sys
 
 from openmdao.main.api import set_as_top
 
-import client
-import server
+from analysis_server import client, server
 
 
 def publish_class(path, version, comment, filename, classname,
@@ -18,6 +18,27 @@ def publish_class(path, version, comment, filename, classname,
     """
     Publish egg on server at `host`:`port` under `path` and `version` with
     `comment` given `filename` and `classname`.
+
+    path: string
+        Component path to be published.
+
+    version: string
+        Version to be published.
+
+    comment: string
+        Description of this version of this component.
+
+    filename: string
+        Name of Python file.
+
+    classname: string
+        Name of component class in `filename`.
+
+    host: string
+        Host name of server to publish to.
+
+    port: int
+        Port number of server to publish to.
     """
     dirname = os.path.dirname(filename)
     if not os.path.isabs(dirname):
@@ -54,6 +75,24 @@ def publish_object(path, version, comment, obj,
     """
     Publish egg on server at `host`:`port` under `path` and `version` with
     `comment` given component `obj`.
+
+    path: string
+        Component path to be published.
+
+    version: string
+        Version to be published.
+
+    comment: string
+        Description of this version of this component.
+
+    obj: Component
+        Component to publish.
+
+    host: string
+        Host name of server to publish to.
+
+    port: int
+        Port number of server to publish to.
     """
     category, slash, name = path.rpartition('/')
     egg_info = obj.save_to_egg(name, version)
@@ -69,6 +108,24 @@ def publish_egg(path, version, comment, eggfile,
     """
     Publish egg on server at `host`:`port` under `path` and `version` with
     `comment` given `eggfile`.
+
+    path: string
+        Component path to be published.
+
+    version: string
+        Version to be published.
+
+    comment: string
+        Description of this version of this component.
+
+    eggfile: string
+        Name of egg file to publish.
+
+    host: string
+        Host name of server to publish to.
+
+    port: int
+        Port number of server to publish to.
     """
     try:
         _client = client.Client(host, port)

@@ -1,12 +1,12 @@
 import getpass
 import optparse
+import socket
 import sys
 import telnetlib
 import threading
 import xml.etree.cElementTree as ElementTree
 
-import server
-import stream
+from analysis_server import server, stream
 
 # These are used to shorten list_properties() output.
 _ASERVER_PREFIX = 'com.phoenix_int.aserver.'
@@ -46,7 +46,17 @@ class Client(object):
         self._conn.interact()
 
     def _send_recv(self, request, raw=False):
-        """ Send a request and wait for reply. """
+        """
+        Send a request and wait for reply.
+
+        request: string
+            Request to be sent.
+
+        raw: bool
+            If True, the stream is transitioning to ``raw`` mode.
+
+        Returns the reply string.
+        """
         with self._lock:
             if self._raw:
                 self._curr_id += 1
@@ -81,6 +91,9 @@ class Client(object):
         """
         Adds host IP addresses to the list of client hosts in the proxy chain
         between client and server. Used for permission checking.
+
+        client_host_1, client_host_2: string
+            IP addreses to be added.
         """
         self._send_recv('addProxyClients %s %s' \
                         % (client_host_1, client_host_2))
@@ -88,6 +101,9 @@ class Client(object):
     def describe(self, path):
         """
         Returns a dictionary of terms describing published component `path`.
+
+        path: string
+            Path to component.
         """
         reply = self._send_recv('describe %s' % path)
         dct = {}
@@ -104,13 +120,24 @@ class Client(object):
         return dct
 
     def end(self, name):
-        """ Unloads component instance `name`. """
+        """
+        Unloads component instance `name`.
+
+        name: string
+            Name of instance to unload.
+        """
         self._send_recv('end %s' % name)
 
     def execute(self, name, background=False):
         """
         Runs component instance `name`. If `background` is True, then return
         immediately. Otherwise block until execution completes.
+
+        name: string
+            Name of instance to execute.
+
+        background: bool
+            If True, execute as concurrent task.
         """
         req = 'execute %s' % name
         if background:
@@ -118,7 +145,12 @@ class Client(object):
         self._send_recv(req)
 
     def get(self, path):
-        """ Returns the value of variable `path` as a string. """
+        """
+        Returns the value of variable `path` as a string.
+
+        path: string
+            Path to variable.
+        """
         return self._send_recv('get %s' % path)
 
     def get_branches_and_tags(self):
@@ -133,13 +165,23 @@ class Client(object):
         return reply == 'true'
 
     def get_hierarchy(self, path):
-        """ Return all interface variable information for `path` as XML. """
+        """
+        Return all interface variable information for `path` as XML.
+
+        path: string
+            Path to component instance.
+        """
         reply = self._send_recv('getHierarchy %s' % path)
 # TODO: Pythonic return value.
         return reply
 
     def get_icon(self, path):
-        """ Gets the icon data for published component `path`. """
+        """
+        Gets the icon data for published component `path`.
+
+        path: string
+            Path to component.
+        """
 # TODO: getIcon
         raise NotImplementedError('Client.get_icon()')
 
@@ -177,22 +219,35 @@ class Client(object):
         If `start` is True, starts up socket heartbeating in order to keep
         sockets alive through firewalls with timeouts. Otherwise stops
         socket heartbeating.
+
+        start: bool
+            If True, start heartbeat.
         """
         req = 'heartbeat '
         req += 'start' if start else 'stop'
         self._send_recv(req)
 
     def help(self):
-        """ Help on Analysis Server commands. """
+        """ Help on Analysis Server commands as a list of strings. """
         reply = self._send_recv('help')
         return [line.strip() for line in reply.split('\n')]
 
     def invoke(self, path):
-        """ Invokes component instance method `path`. """
+        """
+        Invokes component instance method `path`.
+
+        path: string
+            Path to method.
+        """
         return self._send_recv('invoke %s()' % path)
 
     def list_array_values(self, path):
-        """ Lists all the values of array variable `path`. """
+        """
+        Lists all the values of array variable `path`.
+
+        path: string
+            Path to array variable.
+        """
         reply = self._send_recv('listArrayValues %s' % path)
         data = []
         for line in reply.split('\n')[1:]:
@@ -201,7 +256,12 @@ class Client(object):
         return data
 
     def list_categories(self, category=None):
-        """ Lists all subcategories available in `category`. """
+        """
+        Lists all subcategories available in `category`.
+
+        category: string
+            Category to list.
+        """
         req = 'listCategories'
         if category:
             req += ' %s' % category
@@ -209,7 +269,12 @@ class Client(object):
         return [line.strip() for line in reply.split('\n')[1:]]
 
     def list_components(self, category=None):
-        """ Lists all components available in `category`. """
+        """
+        Lists all components available in `category`.
+
+        category: string
+            Category to list.
+        """
         req = 'listComponents'
         if category:
             req += ' %s' % category
@@ -225,6 +290,12 @@ class Client(object):
         """
         Lists all methods available on component instance `name`.
         If `full` is True, returns a list of ``(method, fullname)``.
+
+        name: string
+            Component instance name.
+
+        full: bool
+            If True, include full name.
         """
         req = 'listMethods %s' % name
         if full:
@@ -242,7 +313,12 @@ class Client(object):
             return [line.strip()[:-2] for line in reply.split('\n')[1:]]
 
     def list_monitors(self, name):
-        """ Lists all monitorable items on component instance `name`. """
+        """
+        Lists all monitorable items on component instance `name`.
+
+        name: string
+            Component instance name.
+        """
         reply = self._send_recv('listMonitors %s' % name)
         return [line.strip() for line in reply.split('\n')[1:]]
 
@@ -253,6 +329,9 @@ class Client(object):
         ``(name, type, access)`` where `name` is the name of the property,
         `type` is the AnalysisServer type (such as 'PHXDouble'), and
         `access` is 'in' or 'out'.
+
+        path: string
+            Path to property.
         """
         req = 'listProperties'
         if path:
@@ -280,14 +359,24 @@ class Client(object):
             return lines[1:]
 
     def start_monitor(self, path):
-        """ Starts monitor `path`. Returns ``(initial_value, monitor_id)``. """
+        """
+        Starts monitor `path`. Returns ``(initial_value, monitor_id)``.
+
+        path: string
+            Path to monitor to be started.
+        """
 # TODO: callback argument to handle updates.
         reply = self._send_recv('monitor start %s' % path)
         monitor_id = self._curr_id if self._raw else None
         return (reply, monitor_id)
 
     def stop_monitor(self, monitor_id):
-        """ Stops monitor `monitor_id`. """
+        """
+        Stops monitor `monitor_id`.
+
+        monitor_id: string
+            Identifier of monitor to be stopped.
+        """
         self._send_recv('monitor stop %s' % monitor_id)
 
     def move(self, old, new):
@@ -295,6 +384,12 @@ class Client(object):
         Moves or renames a component instance `old` to `new`.
         Note that the global namespace is referenced by starting a path
         with ``globals/``.
+
+        old: string
+            Current instance name.
+
+        new: string
+            New instance name.
         """
         self._send_recv('move %s %s' % (old, new))
 
@@ -303,6 +398,9 @@ class Client(object):
         Lists all running processes for component instance `name`.
         Note that not all information may be valid, based on host
         operating system. Returns a list of dictionaries, one per process.
+
+        name: string
+            Component instance name.
         """
         reply = self._send_recv('ps %s' % name)
         root = ElementTree.fromstring(reply)
@@ -322,12 +420,25 @@ class Client(object):
     def publish_egg(self, path, version, comment, eggfile):
         """
         Publish `eggfile` under `path` and `version` with `comment`.
+        The 'author' field will be set from the current user and host.
         This is an extension to the AnalysisServer protocol.
+
+        path: string
+            Component path to be published.
+
+        version: string
+            Version to be published.
+
+        comment: string
+            Description of this version of this component.
+
+        eggfile: string
+            Filename of egg to be published.
         """
         if not self._raw:
             self.set_mode_raw()
-        author = getpass.getuser()
-        request = 'publishEgg %s %s "%s" "%s" ' \
+        author = '%s@%s' % (getpass.getuser(), socket.gethostname())
+        request = 'publishEgg %s %s "%s" "%s"\0' \
                   % (path, version, comment, author)
         with open(eggfile, 'rb') as inp:
             request += inp.read()
@@ -341,11 +452,27 @@ class Client(object):
             pass
 
     def set(self, path, valstr):
-        """ Sets the value of variable `path` from `valstr`. """
+        """
+        Sets the value of variable `path` from `valstr`.
+
+        path: string
+            Path to variable.
+
+        valstr: string
+            Value to set variable to in string form.
+        """
         self._send_recv('set %s = %s' % (path, valstr))
 
     def set_hierarchy(self, path, xml):
-        """ Set multiple variable values from `xml` data. """
+        """
+        Set multiple variable values from `xml` data.
+
+        path:
+            Path to component instance.
+
+        xml: string
+            XML describing values to be set.
+        """
         self._send_recv('setHierarchy %s %s' % (path, xml))
 
     def set_mode_raw(self):
@@ -353,11 +480,24 @@ class Client(object):
         self._send_recv('setMode raw', raw=True)
 
     def start(self, path, name):
-        """ Creates a new component instance of type `path` as `name`. """
+        """
+        Creates a new component instance of type `path` as `name`.
+
+        path: string
+            Component path.
+
+        name: string
+            name for instance.
+        """
         self._send_recv('start %s %s' % (path, name))
 
     def versions(self, path):
-        """ Returns a list of versions for `path`. """
+        """
+        Returns a list of versions for `path`.
+
+        path: string
+            Component path.
+        """
         reply = self._send_recv('versions %s' % path)
         root = ElementTree.fromstring(reply)
         versions = []

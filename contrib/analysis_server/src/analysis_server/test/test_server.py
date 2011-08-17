@@ -19,6 +19,7 @@ from openmdao.util.testutil import assert_raises
 
 from analysis_server.server import Server, _Handler
 from analysis_server.monitor import BaseMonitor
+from analysis_server.wrapper import lookup
 
 ORIG_DIR = os.getcwd()
 
@@ -26,9 +27,13 @@ ORIG_DIR = os.getcwd()
 class DummySocket(object):
     """ Something to provide requests and accept replies. """
 
+    count = 0
+
     def __init__(self):
         self.request_data = []
         self.replies = []
+        DummySocket.count += 1
+        self.port = DummySocket.count
 
     def set_command(self, cmd, raw=False):
         """ Set command to be 'sent' to the server. """
@@ -47,7 +52,7 @@ class DummySocket(object):
 
     def getpeername(self):
         """ Return name of 'socket' peer. """
-        return ('ClientHost', 12345)
+        return ('ClientHost', self.port)
 
     def getsockname(self):
         """ Return name of 'socket'. """
@@ -74,8 +79,11 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test. """
         os.chdir(TestCase.directory)
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
         self.client = DummySocket()
         self.server = Server(port=0)
+        self.server.per_client_loggers = False  # Avoid cleanup issues.
         self.handler = _Handler(self.client, self.client.getpeername(),
                                 self.server)
         self.handler.setup()
@@ -87,13 +95,14 @@ class TestCase(unittest.TestCase):
         del self.handler
         del self.server
         del self.client
-        for egg_name in glob.glob('*.egg'):
-            os.remove(egg_name)
+        for egg in glob.glob('*.egg'):
+            os.remove(egg)
         for filename in ('in_file.dat', 'inFile.dat', 'outFile.dat'):
             if os.path.exists(filename):
                 os.remove(filename)
-        if os.path.exists('ASTestComp'):
-            shutil.rmtree('ASTestComp')
+        for dirname in ('ASTestComp', 'logs'):
+            if os.path.exists(dirname):
+                shutil.rmtree(dirname)
         os.chdir(ORIG_DIR)
 
     def send_recv(self, cmd, raw=False, count=None):
@@ -132,6 +141,8 @@ class TestCase(unittest.TestCase):
         self.assertFalse(self.server.verify_request(self.client,
                                                     ('192.168.1.1', 1234)))
     def test_invalid(self):
+        self.assertEqual(lookup(['no-such-type']), None)
+
         replies = self.send_recv('no-such-command')
         self.assertEqual(replies[-1],
                          'ERROR: command <no-such-command> not recognized\r\n>')
@@ -151,12 +162,14 @@ class TestCase(unittest.TestCase):
 
         self.assertEqual(self.server.config_errors, 0)
 
-        code = "self.server._read_config('no-such-file.cfg')"
+        code = "self.server.read_config('no-such-file.cfg'," \
+                                      " self.handler._logger)"
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Can't read 'no-such-file.cfg'")
 
         config = ConfigParser.SafeConfigParser()
-        code = "self.server._process_config(config, 'test_invalid.cfg')"
+        code = "self.server._process_config(config, 'test_invalid.cfg'," \
+                                          " self.handler._logger)"
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "No Python section in 'test_invalid.cfg'")
 
@@ -184,7 +197,8 @@ class TestCase(unittest.TestCase):
 
         config.set('Python', 'classname', 'TestComponent')
         config.set('Methods', 'ext_name', 'no_such_method')
-        code = "self.server._process_config(config, 'ASTestComp-0.1.cfg')"
+        code = "self.server._process_config(config, 'ASTestComp-0.1.cfg'," \
+                                          " self.handler._logger)"
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Bad configuration in 'ASTestComp-0.1.cfg':"
                       " 'no_such_method' is not a valid method")
@@ -194,15 +208,15 @@ class TestCase(unittest.TestCase):
                       "Bad configuration in 'ASTestComp-0.1.cfg':"
                       " internal name must be '*' if the external name is '*'")
 
-        config.set('Inputs', '*', 'x')
-        assert_raises(self, code, globals(), locals(), RuntimeError,
-                      "Bad configuration in 'ASTestComp-0.1.cfg':"
-                      " internal path must be '*' if the external path is '*'")
-
         config.set('Inputs', 'ext_path', 'z')
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Bad configuration in 'ASTestComp-0.1.cfg':"
                       " 'z' is not a valid 'in' variable")
+
+        config.set('Inputs', '*', 'x')
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Bad configuration in 'ASTestComp-0.1.cfg':"
+                      " internal path must be '*' if the external path is '*'")
 
     def test_add_proxy_clients(self):
         replies = self.send_recv('addProxyClients clientHost1, clientHost2')
@@ -358,6 +372,8 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
 <Variable name="b" type="boolean" io="input" format="" description="A boolean">true</Variable>
 <Variable name="f" type="double" io="input" format="" description="A float" units="">0.5</Variable>
 <Variable name="f1d" type="double[]" io="input" format="" description="1D float array" units="cm">1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5</Variable>
+<Variable name="f2d" type="double[]" io="input" format="" description="2D float array" units="mm">bounds[2, 4] {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5}</Variable>
+<Variable name="f3d" type="double[]" io="input" format="" description="3D float array" units="">bounds[2, 3, 3] {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 20.5, 30.5, 40.5, 50.5, 60.5, 70.5, 80.5, 90.5}</Variable>
 <Variable name="fe" type="double" io="input" format="" description="Float enum" units="m">2.781828</Variable>
 <Variable name="i" type="long" io="input" format="" description="An int">7</Variable>
 <Variable name="i1d" type="long[]" io="input" format="" description="1D int array" units="">1, 2, 3, 4, 5, 6, 7, 8, 9</Variable>
@@ -378,7 +394,7 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
         replies = self.send_recv('getHierarchy')
         self.assertEqual(replies[-1],
                          'ERROR: invalid syntax. Proper syntax:\r\n'
-                         'getHierarchy <object>\r\n>')
+                         'getHierarchy <object> [gzipData]\r\n>')
 
     def test_get_icon(self):
         replies = self.send_recv('getIcon ASTestComp')
@@ -395,6 +411,20 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
                          'ERROR: component </NoSuchComp>'
                          ' does not match a known component\r\n>')
 
+        replies = self.send_recv('getIcon2 ASTestComp')
+        self.assertEqual(replies[-1],
+                         "ERROR: Exception: NotImplementedError('getIcon2',)\r\n>")
+
+        replies = self.send_recv('getIcon2')
+        self.assertEqual(replies[-1],
+                         'ERROR: invalid syntax. Proper syntax:\r\n'
+                         'getIcon2 <analysisComponent>\r\n>')
+
+        replies = self.send_recv('getIcon2 NoSuchComp')
+        self.assertEqual(replies[-1],
+                         'ERROR: component </NoSuchComp>'
+                         ' does not match a known component\r\n>')
+
     def test_get_license(self):
         replies = self.send_recv('getLicense')
         self.assertEqual(replies[-1], 'Use at your own risk!\r\n>')
@@ -403,6 +433,15 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
         self.assertEqual(replies[-1],
                          'ERROR: invalid syntax. Proper syntax:\r\n'
                          'getLicense\r\n>')
+
+    def test_get_queues(self):
+        replies = self.send_recv('getQueues ASTestComp')
+        self.assertEqual(replies[-1], '>')
+
+        replies = self.send_recv('getQueues')
+        self.assertEqual(replies[-1],
+                         'ERROR: invalid syntax. Proper syntax:\r\n'
+                         'getQueues <category/component> [full]\r\n>')
 
     def test_get_status(self):
         replies = self.send_recv(['start ASTestComp comp',
@@ -416,8 +455,8 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
 
     def test_get_sys_info(self):
         expected = """\
-version: 5.01
-build: 331
+version: 7.0
+build: 42968
 num clients: 0
 num components: 3
 os name: %s
@@ -441,7 +480,7 @@ user name: %s""" % (platform.system(), platform.processor(),
 OpenMDAO Analysis Server 0.1
 Use at your own risk!
 Attempting to support Phoenix Integration, Inc.
-version: 5.01, build: 331"""
+version: 7.0, build: 42968"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv('getVersion')
         self.compare(replies[-1], expected)
@@ -473,7 +512,8 @@ Available Commands:
    listComponents,lc [category]
    listCategories,la [category]
    describe,d <category/component> [-xml]
-   start <category/component> <instanceName>
+   setServerAuthInfo <serverURL> <username> <password> (NOT IMPLEMENTED)
+   start <category/component> <instanceName> [connector] [queue]
    end <object>
    execute,x <objectName>
    listProperties,list,ls,l [object]
@@ -484,6 +524,7 @@ Available Commands:
    set <object.property> = <value>
    move,rename,mv,rn <from> <to> (NOT IMPLEMENTED)
    getIcon <analysisComponent> (NOT IMPLEMENTED)
+   getIcon2 <analysisComponent> (NOT IMPLEMENTED)
    getVersion
    getLicense
    getStatus
@@ -506,7 +547,9 @@ Available Commands:
    getHierarchy <object.property>
    setHierarchy <object.property> <xml>
    deleteRunShare <key> (NOT IMPLEMENTED)
-   getBranchesAndTags"""
+   getBranchesAndTags (NOT IMPLEMENTED)
+   getQueues <category/component> [full] (NOT IMPLEMENTED)
+   setRunQueue <object> <connector> <queue> (NOT IMPLEMENTED)"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv('help')
         self.compare(replies[-1], expected)
@@ -645,6 +688,7 @@ __init__.py"""
         replies = self.send_recv(['start ASTestComp comp',
                                   'listMonitors comp'], count=3)
         self.compare(replies[-1], expected)
+
         replies = self.send_recv(['start ASTestComp comp',
                                   'lo comp'], count=3)
         self.compare(replies[-1], expected)
@@ -673,10 +717,12 @@ z (type=com.phoenix_int.aserver.types.PHXDouble) (access=g)"""
         self.compare(replies[-1], expected)
 
         expected = """\
-10 properties found:
+12 properties found:
 b (type=com.phoenix_int.aserver.types.PHXBoolean) (access=sg)
 f (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)
 f1d (type=double[9]) (access=sg)
+f2d (type=double[2][4]) (access=sg)
+f3d (type=double[2][3][3]) (access=sg)
 fe (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)
 i (type=com.phoenix_int.aserver.types.PHXLong) (access=sg)
 i1d (type=long[9]) (access=sg)
@@ -907,7 +953,7 @@ if __name__ == '__main__':
         replies = self.send_recv('publishEgg')
         self.assertEqual(replies[-1],
                          'ERROR: invalid syntax. Proper syntax:\r\n'
-                         'publishEgg <path> <version> <comment> <author> <eggdata>\r\n>')
+                         'publishEgg <path> <version> <comment> <author> ZEROBYTE <eggdata>\r\n>')
 
     def test_quit(self):
         replies = self.send_recv('quit')
@@ -918,6 +964,16 @@ if __name__ == '__main__':
                                   'set comp.x = 42'], count=3)
         self.assertEqual(replies[-1], 'value set for <x>\r\n>')
 
+    def test_set_authinfo(self):
+        replies = self.send_recv('setServerAuthInfo url user passwd')
+        self.assertEqual(replies[-1],
+                         "ERROR: Exception: NotImplementedError('setServerAuthInfo',)\r\n>")
+
+        replies = self.send_recv('setServerAuthInfo')
+        self.assertEqual(replies[-1],
+                         'ERROR: invalid syntax. Proper syntax:\r\n'
+                         'setServerAuthInfo <serverURL> <username> <password>\r\n>')
+
     def test_set_hierarchy(self):
         xml = """\
 <?xml version='1.0' encoding='utf-8'?>
@@ -926,6 +982,8 @@ if __name__ == '__main__':
 <Variable name="sub_group.b">false</Variable>
 <Variable name="sub_group.f">-0.5</Variable>
 <Variable name="sub_group.f1d">5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9</Variable>
+<Variable name="sub_group.f2d">bounds[2, 4] {.1, .2, .3, .4, .5, .6, .7, .8}</Variable>
+<Variable name="sub_group.f3d">bounds[2, 3, 3] {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9</Variable>
 <Variable name="sub_group.fe">3.14159</Variable>
 <Variable name="sub_group.i">-7</Variable>
 <Variable name="sub_group.i1d">-1, -2, -3, -4, -5, -6, -7, -8, -9</Variable>
@@ -979,6 +1037,17 @@ ASTestComp2"""
                                  ['1\r\nformat: %s\r\n%d\r\n'
                                   % (format, len(expected)), expected])
 
+    def test_set_runqueue(self):
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'setRunQueue comp connector queue'], count=3)
+        self.assertEqual(replies[-1],
+                         "ERROR: Exception: NotImplementedError('setRunQueue',)\r\n>")
+
+        replies = self.send_recv('setRunQueue')
+        self.assertEqual(replies[-1],
+                         'ERROR: invalid syntax. Proper syntax:\r\n'
+                         'setRunQueue <object> <connector> <queue>\r\n>')
+
     def test_start(self):
         replies = self.send_recv('start ASTestComp comp')
         self.assertEqual(replies[-1], 'Object comp started.\r\n>')
@@ -986,7 +1055,7 @@ ASTestComp2"""
         replies = self.send_recv('start')
         self.assertEqual(replies[-1],
                          'ERROR: invalid syntax. Proper syntax:\r\n'
-                         'start <category/component> <instanceName>\r\n>')
+                         'start <category/component> <instanceName> [connector] [queue]\r\n>')
 
         replies = self.send_recv('start NoSuchComp xyzzy')
         self.assertEqual(replies[-1],
@@ -996,6 +1065,10 @@ ASTestComp2"""
         replies = self.send_recv(['start ASTestComp comp',
                                   'start ASTestComp comp'])
         self.assertEqual(replies[-1], 'ERROR: Name already in use: "comp"\r\n>')
+
+        replies = self.send_recv('start ASTestComp comp connector queue')
+        self.assertEqual(replies[-1],
+                         "ERROR: Exception: NotImplementedError('start, args > 2',)\r\n>")
 
     def test_versions(self):
         tstamp1 = time.ctime(os.path.getmtime('ASTestComp-0.1.cfg'))
@@ -1048,7 +1121,7 @@ ASTestComp2"""
         self.assertEqual(replies[-1], '>')
 
         replies = self.send_recv(['start ASTestComp comp',
-                                  'get comp.sub_group.f1d.first'], count=3)
+                                  'get comp.sub_group.f2d.first'], count=3)
         self.assertEqual(replies[-1], '1.5\r\n>')
 
         replies = self.send_recv(['start ASTestComp comp',
@@ -1081,6 +1154,7 @@ ASTestComp2"""
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'get comp.sub_group.f1d.numDimensions'], count=3)
+        self.assertEqual(replies[-1], '1\r\n>')
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'set comp.sub_group.f1d.description = xyzzy'], count=3)
@@ -1100,20 +1174,20 @@ ASTestComp2"""
         expected = """\
 15 properties found:
 componentType (type=java.lang.Class) (access=g)
-description (type=java.lang.String) (access=sg)
-dimensions (type=int[1]) (access=sg)
-enumAliases (type=java.lang.String[0]) (access=sg)
-enumValues (type=double[0]) (access=sg)
-first (type=java.lang.Object) (access=sg)
+description (type=java.lang.String) (access=g)
+dimensions (type=int[1]) (access=g)
+enumAliases (type=java.lang.String[0]) (access=g)
+enumValues (type=double[0]) (access=g)
+first (type=java.lang.Object) (access=g)
 format (type=java.lang.String) (access=g)
-hasLowerBound (type=boolean) (access=sg)
-hasUpperBound (type=boolean) (access=sg)
-length (type=int) (access=sg)
-lockResize (type=boolean) (access=sg)
-lowerBound (type=double) (access=sg)
+hasLowerBound (type=boolean) (access=g)
+hasUpperBound (type=boolean) (access=g)
+length (type=int) (access=g)
+lockResize (type=boolean) (access=g)
+lowerBound (type=double) (access=g)
 numDimensions (type=int) (access=g)
-units (type=java.lang.String) (access=sg)
-upperBound (type=double) (access=sg)"""
+units (type=java.lang.String) (access=g)
+upperBound (type=double) (access=g)"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv(['start ASTestComp comp',
                                   'listProperties comp.sub_group.f1d'], count=3)
@@ -1122,23 +1196,61 @@ upperBound (type=double) (access=sg)"""
         expected = """\
 15 properties found:
 componentType (type=java.lang.Class) (access=g)
-description (type=java.lang.String) (access=sg)
-dimensions (type=int[1]) (access=sg)
-enumAliases (type=java.lang.String[0]) (access=sg)
-enumValues (type=long[0]) (access=sg)
-first (type=java.lang.Object) (access=sg)
+description (type=java.lang.String) (access=g)
+dimensions (type=int[1]) (access=g)
+enumAliases (type=java.lang.String[0]) (access=g)
+enumValues (type=long[0]) (access=g)
+first (type=java.lang.Object) (access=g)
 format (type=java.lang.String) (access=g)
-hasLowerBound (type=boolean) (access=sg)
-hasUpperBound (type=boolean) (access=sg)
-length (type=int) (access=sg)
-lockResize (type=boolean) (access=sg)
-lowerBound (type=long) (access=sg)
+hasLowerBound (type=boolean) (access=g)
+hasUpperBound (type=boolean) (access=g)
+length (type=int) (access=g)
+lockResize (type=boolean) (access=g)
+lowerBound (type=long) (access=g)
 numDimensions (type=int) (access=g)
-units (type=java.lang.String) (access=sg)
-upperBound (type=long) (access=sg)"""
+units (type=java.lang.String) (access=g)
+upperBound (type=long) (access=g)"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
         replies = self.send_recv(['start ASTestComp comp',
                                   'listProperties comp.sub_group.i1d'], count=3)
+        self.compare(replies[-1], expected)
+
+    def test_list(self):
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.s1d.dimensions'], count=3)
+        self.assertEqual(replies[-1], '"3"\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.s1d.first'], count=3)
+        self.assertEqual(replies[-1], 'Hello\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.s1d.length'], count=3)
+        self.assertEqual(replies[-1], '3\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.sub_group.s1d.numDimensions'], count=3)
+        self.assertEqual(replies[-1], '1\r\n>')
+
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'set comp.sub_group.s1d = "some", "new", "values"'], count=3)
+        self.assertEqual(replies[-1], 'value set for <sub_group.s1d>\r\n>')
+
+        expected = """\
+10 properties found:
+componentType (type=java.lang.Class) (access=g)
+description (type=java.lang.String) (access=g)
+dimensions (type=int[1]) (access=g)
+enumAliases (type=java.lang.String[0]) (access=g)
+enumValues (type=java.lang.String[0]) (access=g)
+first (type=java.lang.Object) (access=g)
+length (type=int) (access=g)
+lockResize (type=boolean) (access=g)
+numDimensions (type=int) (access=g)
+units (type=java.lang.String) (access=g)"""
+        expected = expected.replace('\n', '\r\n') + '\r\n>'
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'listProperties comp.sub_group.s1d'], count=3)
         self.compare(replies[-1], expected)
 
     def test_bool(self):

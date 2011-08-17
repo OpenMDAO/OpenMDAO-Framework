@@ -1,9 +1,11 @@
 """
 Proxies for AnalysisServer components and variables.
+Component proxies are returned by :class:`factory.Factory`.
+Variable proxies are members of their associated component and created when
+the component proxy is built.
 """
 
 import numpy
-import os.path
 import socket
 
 from enthought.traits.api import TraitError
@@ -12,8 +14,9 @@ from openmdao.main.api import Component, Container, FileRef
 from openmdao.main.mp_support import is_instance
 from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
                                        List, Str
-from client import Client
-from units  import get_translation
+
+from analysis_server.client import Client
+from analysis_server.units  import get_translation
 
 def _float2str(val):
     """ Return accurate string value for float. """
@@ -23,9 +26,6 @@ def _float2str(val):
 class ComponentProxy(Component):
     """
     Proxy for a component running under an AnalysisServer.
-    `typname` and `objname` are the component type and instance names on
-    the server located at `host` and `port`.
-
     The proxy will populate itself with proxies for all variables exposed
     by the remote component, in an identical hierarchy.
 
@@ -33,6 +33,15 @@ class ComponentProxy(Component):
         While variable attributes like 'units' are read from the remote
         component, attempts to set attributes other than 'value' from the local
         side will have no effect on the remote side.
+
+    typname: string
+        Component type.
+
+    host: string
+        Hostname of server.
+
+    port: int
+        Port on `host` used by server.
     """
 
     def __init__(self, typname, host, port):
@@ -47,7 +56,15 @@ class ComponentProxy(Component):
         self._populate(self, self._objname)
 
     def _populate(self, container, path):
-        """ Populate a container from a remote object. """
+        """
+        Populate a container from a remote object.
+
+        container: Container
+            The local container object to be populated.
+
+        path: string
+            Path on server corresponding to `container`.
+        """
 # TODO: local/remote name collision detection/resolution?
         info = self._client.list_properties(path)
         for prop, typ, iotype in info:
@@ -153,6 +170,12 @@ class ProxyMixin(object):
     """
     Common methods for variable proxies.
     The remote variable is accessed via `client` and `rpath`.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
     """
 
     def __init__(self, client, rpath):
@@ -172,7 +195,12 @@ class ProxyMixin(object):
         self.__dict__ = state
 
     def restore(self, client):
-        """ Restore remote state. """
+        """
+        Restore remote state.
+
+        client: :class:`client.Client`
+            The client to use to access the remote variable.
+        """
         self._client = client
         if self.iotype == 'in':
             self._client.set(self._rpath, self._valstr)
@@ -182,7 +210,12 @@ class ProxyMixin(object):
         return self._client.get(self._rpath)
 
     def rset(self, valstr):
-        """ Set remote value from `valstr`. """
+        """
+        Set remote value from `valstr`.
+
+        valstr: string
+            Value to be set, in string form.
+        """
         if self.iotype == 'out':
             raise TraitError("Can't set an output")
         self._client.set(self._rpath, valstr)
@@ -190,14 +223,27 @@ class ProxyMixin(object):
 
 
 class ArrayProxy(ProxyMixin, Array):
-    """ Array-style proxy for a remote double, long, or String array. """
+    """
+    Array-style proxy for a remote double, long, or String array.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+
+    typ: Python type
+        Type for each element.
+    """
 
     def __init__(self, iotype, client, rpath, typ):
         ProxyMixin.__init__(self, client, rpath)
         self._type = typ
 
-        default = numpy.array([typ(val.strip(' "'))
-                               for val in self._valstr.split(',')])
+        default = self._parse(self._valstr)
         desc = client.get(rpath+'.description')
 
         if typ == float:
@@ -231,22 +277,75 @@ class ArrayProxy(ProxyMixin, Array):
                            default_value=default)
 
     def get(self, obj, name):
-        """ Get remote value. """
-        return numpy.array([self._type(val.strip(' "'))
-                            for val in self.rget().split(',')])
+        """
+        Get remote value.
+
+        obj: object
+            Containing object, ignored.
+
+        name: string
+            Name in `obj`, ignored.
+        """
+        return self._parse(self.rget())
+
+    def _parse(self, valstr):
+        """
+        Return parsed `valstr` as :class:`numpy.ndarray`.
+        """
+        if valstr.startswith('bounds['):
+            dims, rbrack, rest = valstr[7:].partition(']')
+            dims = [int(val.strip(' "')) for val in dims.split(',')]
+            junk, lbrace, rest = rest.partition('{')
+            data, rbrace, rest = rest.partition('}')
+            return numpy.array([self._type(val.strip(' "'))
+                                for val in data.split(',')]).reshape(dims)
+        else:
+            return numpy.array([self._type(val.strip(' "'))
+                                for val in valstr.split(',')])
 
     def set(self, obj, name, value):
-        """ Set remote value. """
+        """
+        Set remote value after validation.
+
+        obj: object
+            Containing object.
+
+        name: string
+            Name in `obj`.
+
+        value:
+            Value to be set.
+        """
         value = self.validate(obj, name, value)
         if self._type == float:
-            valstr = ', '.join([_float2str(val) for val in value])
+            valstr = ', '.join([_float2str(val) for val in value.flat])
+        elif self._type == int:
+            valstr = ', '.join([str(val) for val in value.flat])
         else:
-            valstr = ', '.join([str(val) for val in value])
+            valstr = ', '.join(['"%s"' % val.encode('string_escape')
+                                for val in value.flat])
+        if len(value.shape) > 1:
+            valstr = 'bounds[%s] {%s}' \
+                     % (', '.join(['%d' % dim for dim in value.shape]), valstr)
         self.rset(valstr)
 
 
 class ListProxy(ProxyMixin, List):
-    """ List-style proxy for a remote 1D double, long, or String array. """
+    """
+    List-style proxy for a remote 1D double, long, or String array.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+
+    typ: Python type
+        Type for each element.
+    """
 
     def __init__(self, iotype, client, rpath, typ):
         ProxyMixin.__init__(self, client, rpath)
@@ -284,21 +383,54 @@ class ListProxy(ProxyMixin, List):
                           value=default)
 
     def get(self, obj, name):
-        """ Get remote value. """
+        """
+        Get remote value.
+
+        obj: object
+            Containing object, ignored.
+
+        name: string
+            Name in `obj`, ignored.
+        """
         return [self._type(val.strip(' "')) for val in self.rget().split(',')]
 
     def set(self, obj, name, value):
-        """ Set remote value. """
+        """
+        Set remote value after validation.
+
+        obj: object
+            Containing object.
+
+        name: string
+            Name in `obj`.
+
+        value:
+            Value to be set.
+        """
         value = self.validate(obj, name, value)
         if self._type == float:
             valstr = ', '.join([_float2str(val) for val in value])
-        else:
+        elif self._type == int:
             valstr = ', '.join([str(val) for val in value])
+        else:
+            valstr = ', '.join(['"%s"' % val.encode('string_escape')
+                                for val in value])
         self.rset(valstr)
 
 
 class BoolProxy(ProxyMixin, Bool):
-    """ Proxy for a remote ``PHXBoolean`` at `rpath` accessed via `client`. """
+    """
+    Proxy for a remote ``PHXBoolean`` at `rpath` accessed via `client`.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+    """
 
     def __init__(self, iotype, client, rpath):
         ProxyMixin.__init__(self, client, rpath)
@@ -309,11 +441,30 @@ class BoolProxy(ProxyMixin, Bool):
         Bool.__init__(self, default_value=default, iotype=iotype, desc=desc)
 
     def get(self, obj, name):
-        """ Get remote value. """
+        """
+        Get remote value.
+
+        obj: object
+            Containing object, ignored.
+
+        name: string
+            Name in `obj`, ignored.
+        """
         return self.rget() == 'true'
 
     def set(self, obj, name, value):
-        """ Set remote value. """
+        """
+        Set remote value after validation.
+
+        obj: object
+            Containing object.
+
+        name: string
+            Name in `obj`.
+
+        value: bool
+            Value to be set.
+        """
         self.rset('true' if self.validate(obj, name, value) else 'false')
 
 
@@ -322,6 +473,21 @@ class EnumProxy(ProxyMixin, Enum):
     Proxy for a remote ``PHXDouble``, ``PHXLong``, or ``PHXString`` which has
     a non-empty ``enumValues`` property.
     The remote variable is at `rpath` accessed via `client`.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+
+    typ: string
+        AnalysisServer type string.
+
+    valstrs: list[string]
+        Enumeration values as strings.
     """
 
     def __init__(self, iotype, client, rpath, typ, valstrs):
@@ -364,20 +530,55 @@ class EnumProxy(ProxyMixin, Enum):
                       values=enum_values, aliases=enum_aliases, units=om_units)
 
     def get(self, obj, name):
-        """ Get remote value. """
+        """
+        Get remote value.
+
+        obj: object
+            Containing object, ignored.
+
+        name: string
+            Name in `obj`, ignored.
+        """
         return self._from_string(self.rget())
 
     def set(self, obj, name, value):
-        """ Set remote value. """
+        """
+        Set remote value after validation.
+
+        obj: object
+            Containing object.
+
+        name: string
+            Name in `obj`.
+
+        value:
+            Value to be set.
+        """
         self.rset(self._to_string(self.validate(obj, name, value)))
 
     def _null(self, val):
-        """ Just returns `val` unmodified. """
+        """
+        Just returns `val` unmodified.
+        """
         return val
 
 
 class FileProxy(ProxyMixin, File):
-    """ Proxy for a remote ``PHXRawFile`` at `rpath` accessed via `client`. """
+    """
+    Proxy for a remote ``PHXRawFile`` at `rpath` accessed via `client`.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+
+    component: :class:`ComponentProxy`
+        Parent component of remote variable.
+    """
 
     def __init__(self, iotype, client, rpath, component):
         ProxyMixin.__init__(self, client, rpath)
@@ -393,7 +594,15 @@ class FileProxy(ProxyMixin, File):
                       **metadata)
 
     def get(self, obj, name):
-        """ Get remote value and write to local file. """
+        """
+        Get remote value and write to local file.
+
+        obj: object
+            Containing object, ignored.
+
+        name: string
+            Name in `obj`, ignored.
+        """
         if self._component._call_tree_rooted:
             return None  # Not initialized.
 
@@ -406,9 +615,19 @@ class FileProxy(ProxyMixin, File):
         return FileRef(self._path, self._component, binary=binary)
 
     def set(self, obj, name, value):
-        """ Set remote value. """
+        """
+        Set remote value after validation.
+
+        obj: object
+            Containing object.
+
+        name: string
+            Name in `obj`.
+
+        value: FileRef
+            Value to be set.
+        """
         value = self.validate(obj, name, value)
-        # `value` is a FileRef.
         with value.open() as inp:
             valstr = inp.read()
 #        binary = 'true' if value.binary else 'false'
@@ -417,7 +636,18 @@ class FileProxy(ProxyMixin, File):
 
 
 class FloatProxy(ProxyMixin, Float):
-    """ Proxy for a remote ``PHXDouble`` at `rpath` accessed via `client`. """
+    """
+    Proxy for a remote ``PHXDouble`` at `rpath` accessed via `client`.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+    """
 
     def __init__(self, iotype, client, rpath):
         ProxyMixin.__init__(self, client, rpath)
@@ -442,16 +672,46 @@ class FloatProxy(ProxyMixin, Float):
                        low=low, high=high, units=om_units)
 
     def get(self, obj, name):
-        """ Get remote value. """
+        """
+        Get remote value.
+
+        obj: object
+            Containing object, ignored.
+
+        name: string
+            Name in `obj`, ignored.
+        """
         return float(self.rget())
 
     def set(self, obj, name, value):
-        """ Set remote value. """
+        """
+        Set remote value after validation.
+
+        obj: object
+            Containing object.
+
+        name: string
+            Name in `obj`.
+
+        value: float
+            Value to be set.
+        """
         self.rset(_float2str(self.validate(obj, name, value)))
 
 
 class IntProxy(ProxyMixin, Int):
-    """ Proxy for a remote ``PHXLong`` at `rpath` accessed via `client`. """
+    """
+    Proxy for a remote ``PHXLong`` at `rpath` accessed via `client`.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+    """
 
     def __init__(self, iotype, client, rpath):
         ProxyMixin.__init__(self, client, rpath)
@@ -471,16 +731,46 @@ class IntProxy(ProxyMixin, Int):
                      low=low, high=high)
 
     def get(self, obj, name):
-        """ Get remote value. """
+        """
+        Get remote value.
+
+        obj: object
+            Containing object, ignored.
+
+        name: string
+            Name in `obj`, ignored.
+        """
         return int(self.rget())
 
     def set(self, obj, name, value):
-        """ Set remote value. """
+        """
+        Set remote value after validation.
+
+        obj: object
+            Containing object.
+
+        name: string
+            Name in `obj`.
+
+        value: int
+            Value to be set.
+        """
         self.rset(str(self.validate(obj, name, value)))
 
 
 class StrProxy(ProxyMixin, Str):
-    """ Proxy for a remote 'PHXString'. """
+    """
+    Proxy for a remote 'PHXString'.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+    """
 
     def __init__(self, iotype, client, rpath):
         ProxyMixin.__init__(self, client, rpath)
@@ -491,10 +781,30 @@ class StrProxy(ProxyMixin, Str):
         Str.__init__(self, default_value=default, iotype=iotype, desc=desc)
 
     def get(self, obj, name):
-        """ Get remote value. """
+        """
+        Get remote value.
+
+        obj: object
+            Containing object, ignored.
+
+        name: string
+            Name in `obj`, ignored.
+        """
         return self.rget()
 
     def set(self, obj, name, value):
-        """ Set remote value. """
-        self.rset('"%s"' % self.validate(obj, name, value).encode('string_escape'))
+        """
+        Set remote value after validation.
+
+        obj: object
+            Containing object.
+
+        name: string
+            Name in `obj`.
+
+        value: string
+            Value to be set.
+        """
+        self.rset('"%s"' % \
+                  self.validate(obj, name, value).encode('string_escape'))
 

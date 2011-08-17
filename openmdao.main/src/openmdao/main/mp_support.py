@@ -35,7 +35,6 @@ method.
 # else might bleed in) as our private multiprocessing package.
 # No obvious 'best' alternative.
 
-import atexit
 import errno
 import hashlib
 import inspect
@@ -757,8 +756,10 @@ class OpenMDAO_Server(Server):
     # Will only be seen on remote.
     def shutdown(self, conn):  #pragma no cover
         """ Shutdown this process. """
-        self._logger.debug('received shutdown request, running atexit functions')
-        atexit._run_exitfuncs()
+        self._logger.debug('received shutdown request, running exit functions')
+        # Deprecated, but marginally better than atexit._run_exitfuncs()
+        if hasattr(sys, 'exitfunc'):
+            sys.exitfunc()
         super(OpenMDAO_Server, self).shutdown(conn)
 
 

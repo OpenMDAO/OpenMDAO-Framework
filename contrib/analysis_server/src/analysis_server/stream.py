@@ -7,15 +7,22 @@ class Stream(object):
     """
     Stream abstraction on top of socket, supporting AnalysisServer protocol.
     Inspired by telnetlib, but drops 'cooking' of data.
-    `sock` is the socket to wrap. If `dbg_send` is True then sent message
-    data is shown on stdout. Similarly for `dbg_recv`.
+
+    sock: socket
+        Socket to wrap.
+
+    dbg_send: bool
+        If True then sent message data is shown on stdout.
+
+    dbg_recv: bool
+        If True then received message data is shown on stdout.
     """
 
     def __init__(self, sock, dbg_send=False, dbg_recv=False):
         if dbg_send or dbg_recv:  # pragma no cover
             print 'Stream', sock.getsockname(), sock.getpeername()
         self._sock = sock
-        self._peer = '%s:%s' % sock.getpeername()
+        self._peer = '%s:%s' % sock.getpeername()[:2]
         self._recv_buffer = ''
         self._raw = False
         self._dbg_send = dbg_send
@@ -49,6 +56,15 @@ class Stream(object):
         """
         Send `request` to server.
         If in 'raw' mode use `request_id` and `background`.
+
+        request: string
+            Message to send.
+
+        request_id: string
+            Request identifier, used in 'raw' mode.
+
+        background: bool
+            'Raw' mode background processing flag.
         """
         if self._raw:
             if self._dbg_send:  # pragma no cover
@@ -118,6 +134,15 @@ class Stream(object):
         """
         Send `reply` to client.
         If in 'raw' mode use `reply_id` and `format`.
+
+        reply: string
+            Message to be sent.
+
+        reply_id: string
+            Reply identifier, used in 'raw' mode.
+         
+        format: string
+            Reply message format: 'string', 'error', or 'PHXIcon'.
         """
         if self._raw:
             if self._dbg_send:  # pragma no cover
@@ -186,9 +211,12 @@ class Stream(object):
             return reply
 
     def _send(self, data):
-        """ Send `data`. """
-#        if self._dbg_send:  # pragma no cover
-#            print '    send %s %r' % (self._peer, data)
+        """
+        Send `data`.
+
+        data: string
+            Data to send.
+        """
         length = len(data)
         start = 0
         chunk = 1 << 17  # 128KB, chunking allows for send/recv overlap.
@@ -201,9 +229,10 @@ class Stream(object):
         """
         Wait for one or more patterns to match.
         Return (index, match_obj, data).
+
+        patterns: list[string]
+            List of regex patterns, compiled in-place.
         """
-#        if self._dbg_recv:  # pragma no cover
-#            print '    _expect: _recv_buffer %r' % self._recv_buffer
         indices = range(len(patterns))
         for i in indices:
             if not hasattr(patterns[i], 'search'):
@@ -221,10 +250,12 @@ class Stream(object):
             self._receive()
 
     def _recv(self, length):
-        """ Return next `length` bytes. """
-#        if self._dbg_recv:  # pragma no cover
-#            print '    recv: %d _recv_buffer %r (%d)' \
-#                  % (length, self._recv_buffer, len(self._recv_buffer))
+        """
+        Return next `length` bytes.
+
+        length: int
+            Number of bytes to be received.
+        """
         while len(self._recv_buffer) < length:
             self._receive()
         data = self._recv_buffer[:length]
@@ -233,8 +264,6 @@ class Stream(object):
 
     def _receive(self):
         """ Receive more data. """
-#        if self._dbg_recv:  # pragma no cover
-#            print '    _receive'
         try:
             data = self._sock.recv(4096)
         except socket.error as exc:  # pragma no cover
@@ -245,8 +274,6 @@ class Stream(object):
                 raise EOFError('Connection to %s closed' % self._peer)
             raise
         if data:
-#            if self._dbg_recv:  # pragma no cover
-#                print '       %r' % data
             self._recv_buffer += data
         else:
             raise EOFError('Connection to %s closed' % self._peer)

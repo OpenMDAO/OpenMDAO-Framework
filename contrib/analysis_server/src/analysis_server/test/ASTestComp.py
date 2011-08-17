@@ -75,8 +75,22 @@ class SubGroup(Container):
     f1d = Array(dtype=float, iotype='in', desc='1D float array', units='cm',
                 default_value=[1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5],
                 low=0, high=10)
+
+    f2d = Array(dtype=float, iotype='in', desc='2D float array', units='mm',
+                default_value=[ [1.5, 2.5, 3.5, 4.5],
+                                [5.5, 6.5, 7.5, 8.5] ])
+
+    f3d = Array(dtype=float, iotype='in', desc='3D float array',
+                default_value=[ [ [1.5, 2.5, 3.5],
+                                  [4.5, 5.5, 6.5],
+                                  [7.5, 8.5, 9.5] ],
+                                [ [10.5, 20.5, 30.5],
+                                  [40.5, 50.5, 60.5],
+                                  [70.5, 80.5, 90.5] ] ])
+
     i1d = Array(dtype=int, iotype='in', desc='1D int array',
                 default_value=[1, 2, 3, 4, 5, 6, 7, 8, 9])
+
 #    s1d = Array(dtype=str, iotype='in', desc='1D string array',
 #                default_value=['Hello', 'from', 'TestComponent.SubGroup'])
     s1d = List(Str, iotype='in', desc='1D string array',
@@ -93,7 +107,7 @@ class Bogus(object):
 if __name__ == '__main__':
     top = set_as_top(Assembly())
     comp = top.add('comp', TestComponent())
-    comp.in_file = FileRef(path='NoDesc.cfg', owner=top)
+    comp.in_file = FileRef(path='ASTestComp-0.1.cfg', owner=top)
     comp.run()
     for path in ('x', 'y', 'z', 'exe_count',
                  'sub_group.b', 'sub_group.f', 'sub_group.i', 'sub_group.s',

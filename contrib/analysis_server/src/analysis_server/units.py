@@ -4,18 +4,36 @@ side proxies. The translation table is initialized based on NPSS units.
 """
 
 def have_translation(as_units):
-    """ Return True if we can translate `as_units`. """
+    """
+    Return True if we can translate `as_units`.
+
+    as_units: string
+        AnalysisServer unit string.
+    """
     return as_units in _UNITS_MAP
 
 def get_translation(as_units):
-    """ Return translation for `as_units`. """
+    """
+    Return translation for `as_units`.
+
+    as_units: string
+        AnalysisServer unit string.
+    """
     try:
         return _UNITS_MAP[as_units]
     except KeyError:
         return as_units
 
 def set_translation(as_units, om_units):
-    """ Set translation for `as_units` to `om_units`. """
+    """
+    Set translation for `as_units` to `om_units`.
+
+    as_units: string
+        AnalysisServer unit string.
+
+    om_units: string
+        OpenMDAO unit string.
+    """
     assert isinstance(as_units, basestring)
     assert isinstance(om_units, basestring)
     _UNITS_MAP[as_units] = om_units

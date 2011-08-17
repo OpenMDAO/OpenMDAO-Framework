@@ -40,7 +40,9 @@ __all__ = ['logger', 'getLogger', 'enable_console', 'disable_console',
 import logging
 import logging.config
 import os.path
+import sys
 
+from multiprocessing.process import current_process
 
 LOG_DEBUG    = logging.DEBUG
 LOG_INFO     = logging.INFO
@@ -48,10 +50,15 @@ LOG_WARNING  = logging.WARNING
 LOG_ERROR    = logging.ERROR
 LOG_CRITICAL = logging.CRITICAL
 
-# Ensure we can write to the log file.
+if sys.platform == 'win32' and current_process().name != 'MainProcess':
+    _mode = 'a'  # Avoid mangling by subprocesses.
+else:
+    _mode = 'w'
 _filename = 'openmdao_log.txt'
+
+# Ensure we can write to the log file.
 try:
-    _tmplog = open(_filename, 'w')
+    _tmplog = open(_filename, _mode)
 except IOError:
     _filename = 'openmdao_log_%d.txt' % os.getpid()
 else:
@@ -62,7 +69,7 @@ logging.basicConfig(level=logging.WARNING,
                     datefmt='%b %d %H:%M:%S',
                     format='%(asctime)s %(levelname)s %(name)s: %(message)s',
                     filename=_filename,
-                    filemode='w')
+                    filemode=_mode)
 
 # Compress level names.
 logging.addLevelName(logging.NOTSET,   'N')

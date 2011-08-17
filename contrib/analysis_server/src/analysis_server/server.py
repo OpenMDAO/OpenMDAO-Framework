@@ -8,6 +8,13 @@ maintained in a separate namespace. Components are hosted by individual server
 processes, each serviced by a separate wrapper thread. Servers are allocated
 from configured resources based on component requirements.
 
+Separate log files for each client connection are written to the ``logs``
+directory. Log files are named ``<hostIP>_<port>.txt``.
+
+Component types may be added remotely via the `publish.py` tool. Multiple
+versions of the same component name are allowed. You cannot modify or remove
+component types remotely.
+
 Component types to be supported are described by ``<name>.cfg`` files parsed
 by :class:`ConfigParser.SafeConfigParser`, for example:
 
@@ -60,7 +67,7 @@ import optparse
 import os.path
 import pkg_resources
 import platform
-import re
+import shlex
 import shutil
 import signal
 import SocketServer
@@ -76,25 +83,29 @@ if sys.platform != 'win32':
 from distutils.version import LooseVersion
 from xml.sax.saxutils import escape
 
-from enthought.traits.traits import CTrait
-
 from openmdao.main.api import Component, Container, SimulationRoot, set_as_top
 from openmdao.main.mp_util import read_allowed_hosts
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
-from openmdao.main.resource import LocalAllocator
 
 from openmdao.util.filexfer import filexfer
 from openmdao.util.publickey import make_private, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT
 from openmdao.util.wrkpool import WorkerPool
 
-from monitor import Heartbeat
-from stream  import Stream
-from wrapper import ComponentWrapper, lookup
+from analysis_server.monitor import Heartbeat
+from analysis_server.stream  import Stream
+from analysis_server.wrapper import ComponentWrapper, lookup
 
 DEFAULT_PORT = 1835
 ERROR_PREFIX = 'ERROR: '
+
+# Our version.
+_VERSION = '0.1'
+
+# The implementation level we approximate.
+_AS_VERSION = '7.0'
+_AS_BUILD = '42968'
 
 # Attributes to be ignored (everything in a 'vanilla' component).
 _IGNORE_ATTR = set()
@@ -125,12 +136,18 @@ class _DictContextMgr(object):
 
 class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     """
-    Server to process client requests. `host` is the host name or IP address
-    of the host to connect to and `port` is the port to use. `allowed_hosts`
-    is a list of allowed host or domain addresses (domain addresses must end
-    in '.'). If None, '127.0.0.1' is used (only the local host is allowed
-    access). Reads all component configuration files found in the current
-    directory and subdirectories.
+    Server to process client requests. Reads all component configuration files
+    found in the current directory and subdirectories.
+
+    host: string
+        Host name or IP address to use.
+
+    port: int
+        The port to use
+
+    allowed_hosts: list[string]
+        Allowed host or domain addresses (domain addresses must end in '.').
+        If None, '127.0.0.1' is used (only the local host is allowed access).
     """
 
     allow_reuse_address = True
@@ -141,30 +158,46 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self._num_clients = 0
         self._components = {}  # Maps from category/component to (cfg, egg_info)
         self._comp_ctx = _DictContextMgr(self._components)
-        self.handlers = {}     # Maps from client address to handler.
+        self._handlers = {}    # Maps from client address to handler.
+        self._hdlr_ctx = _DictContextMgr(self._handlers)
         self._credentials = get_credentials()  # For PublicKey servers.
         self._root = os.getcwd()
+        self._dir_lock = threading.RLock()
         self._config_errors = 0
         self._read_configuration()
 
+        # Set False in test_server.py to avoid issues trying to clean up
+        # the 'logs' directory under Windows.
+        self.per_client_loggers = True
+
+    @property
+    def dir_lock(self):
+        """ Lock for synchronizing file operations. """
+        return self._dir_lock
+
     @property
     def num_clients(self):
-        """ Return number of clients. """
+        """ Number of clients. """
         return self._num_clients
 
     @property
+    def handlers(self):
+        """ Handler map context manager. """
+        return self._hdlr_ctx
+
+    @property
     def components(self):
-        """ Return component map context manager. """
+        """ Component map context manager. """
         return self._comp_ctx
 
     @property
     def credentials(self):
-        """ Return credentials. """
+        """ Security credentials. """
         return self._credentials
 
     @property
     def config_errors(self):
-        """ Return number of configuration errors detected. """
+        """ Number of configuration errors detected. """
         return self._config_errors
 
     def _read_configuration(self):
@@ -174,32 +207,53 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                 if name.endswith('.cfg'):
                     path = os.path.join(dirpath, name)
                     path = path.lstrip('.').lstrip(os.sep)
+                    print 'Reading config file %r' % path
                     try:
-                        self._read_config(path)
+                        self.read_config(path, _LOGGER)
                     except Exception as exc:
                         _LOGGER.error(str(exc))
                         self._config_errors += 1
 
-    def _read_config(self, path):
-        """ Read component configuration file. """
-        _LOGGER.info('Reading config file %r', path)
+    def read_config(self, path, logger):
+        """
+        Read component configuration file.
+
+        path: string
+            Path to config file.
+
+        logger: :class:`logging.Logger`
+            Used to log progress, errors, etc.
+        """
+        logger.info('Reading config file %r', path)
         config = ConfigParser.SafeConfigParser()
         config.optionxform = str  # Preserve case.
         files = config.read(path)
         if not files:
             raise RuntimeError("Can't read %r" % path)
 
-        orig = os.getcwd()
         directory = os.path.dirname(path)
-        if directory:
-            os.chdir(directory)
-        try:
-            self._process_config(config, path)
-        finally:
-            os.chdir(orig)
+        with self.dir_lock:
+            orig = os.getcwd()
+            if directory:
+                os.chdir(directory)
+            try:
+                self._process_config(config, path, logger)
+            finally:
+                os.chdir(orig)
 
-    def _process_config(self, config, path):
-        """ Process data read into `config` from `path`. """
+    def _process_config(self, config, path, logger):
+        """
+        Process data read into `config` from `path`.
+
+        config: :class:`ConfigParser.ConfigParser`
+            Configuration data.
+
+        path: string
+            Path to config file.
+
+        logger: :class:`logging.Logger`
+            Used to log progress, errors, etc.
+        """
         for sect in ('Python', 'Description', 'Inputs', 'Outputs', 'Methods'):
             if not config.has_section(sect):
                 raise RuntimeError("No %s section in %r" % (sect, path))
@@ -227,89 +281,96 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         if version != cfg_version:
             cfg_dir = os.path.dirname(path)
             new_path = os.path.join(cfg_dir, '%s-%s.cfg' % (name, cfg_version))
-            _LOGGER.warning('Renaming %r', path)
-            _LOGGER.warning('      to %r', new_path)
+            logger.warning('Renaming %r', path)
+            logger.warning('      to %r', new_path)
             os.rename(path, new_path)
             path = new_path
 
         cwd = os.getcwd()
-        cleanup = False
-
-        # This will be exercised by test_client.py:test_publish().
-        if config.has_option('Python', 'egg'):  # pragma no cover
-            # Create temporary instance from egg.
-            egg = config.get('Python', 'egg')
-            obj = Container.load_from_eggfile(egg)
-            egg_info = self._get_egg_info(egg)
-            cleanup = True
-        else:
-            for egg in glob.glob('%s-%s.*.egg' % (name, version)):
-                if os.path.getmtime(egg) > os.path.getmtime(path):
-                    # Create temporary instance from egg.
-                    obj = Container.load_from_eggfile(egg)
-                    egg_info = self._get_egg_info(egg)
-                    cleanup = True
-                    break
-                else:
-                    _LOGGER.warning('Removing stale egg %r', egg)
-                    os.remove(egg)
-            else:
-                # Get Python class and create temporary instance.
-                filename = config.get('Python', 'filename')
-                classname = config.get('Python', 'classname')
-                dirname = os.path.dirname(filename)
-                if not os.path.isabs(dirname):
-                    if dirname:
-                        dirname = os.path.join(cwd, dirname)
-                    else:
-                        dirname = cwd
-                if not dirname in sys.path:
-                    _LOGGER.debug('    prepending %r to sys.path', dirname)
-                    sys.path.insert(0, dirname)
-                modname = os.path.basename(filename)[:-3]  # drop '.py'
-                try:
-                    __import__(modname)
-                except ImportError as exc:
-                    raise RuntimeError("Can't import %r: %r" % (modname, exc))
-
-                module = sys.modules[modname]
-                try:
-                    cls = getattr(module, classname)
-                except AttributeError as exc:
-                    raise RuntimeError("Can't get class %r in %r: %r"
-                                       % (classname, modname, exc))
-                try:
-                    obj = set_as_top(cls())
-                except Exception as exc:
-                    _LOGGER.error(traceback.format_exc())
-                    raise RuntimeError("Can't instantiate %s.%s: %r"
-                                       % (modname, classname, exc))
-                # Save to egg.
-                egg_info = obj.save_to_egg(name, version)
-                egg_info = (os.path.join(cwd, egg_info[0]), egg_info[1],
-                            [name for name, pth in egg_info[2]])
-
-        # Create wrapper configuration object.
         try:
-            cfg = _WrapperConfig(config, obj,
-                                 os.path.join(cwd, os.path.basename(path)))
-        except Exception as exc:
-            _LOGGER.error(traceback.format_exc())
-            raise RuntimeError("Bad configuration in %r: %s" % (path, exc))
+            # This will be exercised by test_client.py:test_publish().
+            if config.has_option('Python', 'egg'):  # pragma no cover
+                # Create temporary instance from egg.
+                egg = config.get('Python', 'egg')
+                obj = Container.load_from_eggfile(egg, log=logger)
+                egg_info = self._get_egg_info(egg)
+            else:
+                filename = config.get('Python', 'filename')
+                for egg in glob.glob('%s-%s.*.egg' % (name, version)):
+                    if os.path.getmtime(egg) > os.path.getmtime(path) and \
+                       os.path.getmtime(egg) > os.path.getmtime(filename):
+                        # Create temporary instance from egg.
+                        obj = Container.load_from_eggfile(egg, log=logger)
+                        egg_info = self._get_egg_info(egg)
+                        break
+                    else:
+                        logger.warning('Removing stale egg %r', egg)
+                        os.remove(egg)
+                else:
+                    # Get Python class and create temporary instance.
+                    classname = config.get('Python', 'classname')
+                    dirname = os.path.dirname(filename)
+                    if not os.path.isabs(dirname):
+                        if dirname:
+                            dirname = os.path.join(cwd, dirname)
+                        else:
+                            dirname = cwd
+                    if not dirname in sys.path:
+                        logger.debug('    prepending %r to sys.path', dirname)
+                        sys.path.insert(0, dirname)
+                    modname = os.path.basename(filename)[:-3]  # drop '.py'
+                    try:
+                        __import__(modname)
+                    except ImportError as exc:
+                        raise RuntimeError("Can't import %r: %r" \
+                                           % (modname, exc))
 
-        # Register under path normalized to category/component form.
-        path = cfg.cfg_path[len(self._root)+1:-4]  # Drop prefix & '.cfg'
-        path = path.replace('\\', '/')  # Always use '/'.
-        _LOGGER.debug('    registering %s: %s', path, egg_info[0])
-        with self.components as comps:
-            comps[path] = (cfg, egg_info)
-        obj.pre_delete()
-        del obj
-        if cleanup:
-            shutil.rmtree(name)
+                    module = sys.modules[modname]
+                    try:
+                        cls = getattr(module, classname)
+                    except AttributeError as exc:
+                        raise RuntimeError("Can't get class %r in %r: %r"
+                                           % (classname, modname, exc))
+                    try:
+                        obj = set_as_top(cls())
+                    except Exception as exc:
+                        logger.error(traceback.format_exc())
+                        raise RuntimeError("Can't instantiate %s.%s: %r"
+                                           % (modname, classname, exc))
+                    # Save to egg.
+                    egg_info = obj.save_to_egg(name, version)
+                    egg_info = (os.path.join(cwd, egg_info[0]), egg_info[1],
+                                [name for name, pth in egg_info[2]])
 
-    def _get_egg_info(self, egg):
-        """ Return egg_info tuple from egg file. """
+            # Create wrapper configuration object.
+            cfg_path = os.path.join(cwd, os.path.basename(path))
+            try:
+                cfg = _WrapperConfig(config, obj, cfg_path, logger)
+            except Exception as exc:
+                logger.error(traceback.format_exc())
+                raise RuntimeError("Bad configuration in %r: %s" % (path, exc))
+
+            # Register under path normalized to category/component form.
+            path = cfg.cfg_path[len(self._root)+1:-4]  # Drop prefix & '.cfg'
+            path = path.replace('\\', '/')  # Always use '/'.
+            logger.debug('    registering %s: %s', path, egg_info[0])
+            with self.components as comps:
+                comps[path] = (cfg, egg_info)
+            obj.pre_delete()
+            del obj
+
+        finally:
+            if os.path.exists(name):
+                shutil.rmtree(name)
+
+    @staticmethod
+    def _get_egg_info(egg):
+        """
+        Return egg_info tuple from already-loaded egg file.
+
+        egg: string
+            Egg filename.
+        """
         for filename in glob.glob('*'):
             if not os.path.exists(os.path.join(filename, 'EGG-INFO')):
                 continue
@@ -329,6 +390,12 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     def verify_request(self, request, client_address):
         """
         Returns True if the client at `client_address` is on a legal host.
+
+        request: string
+            Request message.
+
+        client_address: ``(host, port)``
+            Source of client request.
         """
         host, port = client_address
         for pattern in self._allowed_hosts:
@@ -346,6 +413,12 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         """
         Overrides superclass to track active clients and cleanup
         upon client disconnect.
+
+        request: string
+            Request message.
+
+        client_address: ``(host, port)``
+            Source of client request.
         """
         host, port = client_address
         _LOGGER.info('Connection from %s:%s', host, port)
@@ -355,10 +428,11 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         finally:
             _LOGGER.info('Disconnect %s:%s', host, port)
             self._num_clients -= 1
-            try:  # It seems handler.finish() isn't called on disconnect...
-                self.handlers[client_address].cleanup()
-            except Exception, exc:
-                _LOGGER.warning('Exception during handler cleanup: %r', exc)
+            with self.handlers as handlers:
+                try:  # It seems handler.finish() isn't called on disconnect...
+                    handlers[client_address].cleanup()
+                except Exception, exc:
+                    _LOGGER.warning('Exception during handler cleanup: %r', exc)
 
 
 class _Handler(SocketServer.BaseRequestHandler):
@@ -366,7 +440,8 @@ class _Handler(SocketServer.BaseRequestHandler):
 
     def setup(self):
         """ Initialize before :meth:`handle` is invoked. """
-        self.server.handlers[self.client_address] = self
+        with self.server.handlers as handlers:
+            handlers[self.client_address] = self
         self._stream = Stream(self.request)
         self._lock = threading.Lock()  # Synchronize access to reply stream.
         self._raw = False
@@ -379,6 +454,20 @@ class _Handler(SocketServer.BaseRequestHandler):
         self._servers = {}       # Maps from wrapper to server.
         set_credentials(self.server.credentials)
 
+        # Set up separate logger for each client.
+        if self.server.per_client_loggers:  # pragma no cover
+            self._logger = logging.getLogger('%s:%s' % self.client_address)
+            self._logger.setLevel(_LOGGER.getEffectiveLevel())
+            self._logger.propagate = False
+            formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s',
+                                          '%b %d %H:%M:%S')
+            filename = os.path.join('logs', '%s_%s.txt' % self.client_address)
+            handler = logging.FileHandler(filename, mode='w')
+            handler.setFormatter(formatter)
+            self._logger.addHandler(handler)
+        else:
+            self._logger = _LOGGER
+
         # Set False during some testing for coverage check.
         # Also avoids odd problems under nose suite test.
         self._server_per_obj = True
@@ -387,31 +476,35 @@ class _Handler(SocketServer.BaseRequestHandler):
         """ Process any received requests. """
         self._send_reply("""\
 Welcome to the OpenMDAO Analysis Server.
-version: 0.1""")
+version: %s""" % _VERSION)
 
+        self._logger.info('Serving client at %s:%s',
+                          self.client_address[0], self.client_address[1])
         try:
             while self._req != 'quit':
                 try:
                     # Get next request.
                     if self._raw:
-                        _LOGGER.debug('Waiting for raw-mode request...')
+                        self._logger.debug('Waiting for raw-mode request...')
                         req, req_id, background = self._stream.recv_request()
                         text, zero, rest = req.partition('\x00')
                         if zero:
-                            _LOGGER.debug('Request from %s: %r <+binary...> (id %s bg %s)',
-                                          self.client_address, text[:_DBG_LEN],
-                                          req_id, background)
+                            self._logger.debug('Request: %r <+binary...> (id %s bg %s)',
+                                               text[:_DBG_LEN],
+                                               req_id, background)
                         else:
-                            _LOGGER.debug('Request from %s: %r (id %s bg %s)',
-                                          self.client_address, req[:_DBG_LEN],
-                                          req_id, background)
+                            trunc = 'truncated ' if len(req) > _DBG_LEN else ''
+                            self._logger.debug('Request: %r (%sid %s bg %s)',
+                                               req[:_DBG_LEN],
+                                               trunc, req_id, background)
                         self._req_id = req_id
                         self._background = background
                     else:
-                        _LOGGER.debug('Waiting for request...')
+                        self._logger.debug('Waiting for request...')
                         req = self._stream.recv_request()
-                        _LOGGER.debug('Request from %s: %r',
-                                      self.client_address, req[:_DBG_LEN])
+                        trunc = ' (truncated)' if len(req) > _DBG_LEN else ''
+                        self._logger.debug('Request: %r%s',
+                                           req[:_DBG_LEN], trunc)
                         self._req_id = None
                         self._background = False
 
@@ -442,6 +535,7 @@ version: 0.1""")
 
     def cleanup(self):
         """ 'end' all existing objects. """
+        self._logger.info('Shutdown')
         if self._hb is not None:
             self._hb.stop()
         for name in self._instance_map.keys():
@@ -451,6 +545,12 @@ version: 0.1""")
         """
         Return list of '(cls, cfg)' for `typ`.
         If `ascending`, sort in ascending version order, else descending.
+
+        typ: string
+            Component path.
+
+        ascending: bool
+            Sort order.
         """
         typ = typ.strip('"').lstrip('/')
         name, qmark, version = typ.partition('?')
@@ -484,6 +584,12 @@ version: 0.1""")
         the normal worker to complete before returning the background
         worker. This currently only occurs in the rare case of
         ``execute comp &``.
+
+        name: string
+            Name of instance.
+
+        background: bool
+            Special background processing flag.
         """
         try:
             wrapper, sync_worker = self._instance_map[name]
@@ -501,35 +607,62 @@ version: 0.1""")
         return (wrapper, worker)
 
     def _send_reply(self, reply, req_id=None):
-        """ Send reply to client, with optional logging. """
+        """
+        Send reply to client, with optional logging.
+
+        reply: string
+            Reply message.
+
+        req_id: string
+            Request ID, if requested in 'raw' mode.
+        """
         if self._raw:
             req_id = req_id or self._req_id
             text, zero, rest = reply.partition('\x00')
             if zero:
-                _LOGGER.debug('(req_id %s)\n%s\n<+binary...>',
-                              req_id, text[:_DBG_LEN])
+                self._logger.debug('(req_id %s)\n%s\n<+binary...>',
+                                   req_id, text[:_DBG_LEN])
             else:
-                _LOGGER.debug('(req_id %s)\n%s', req_id, reply[:_DBG_LEN])
+                trunc = ' truncated' if len(reply) > _DBG_LEN else ''
+                self._logger.debug('(req_id %s%s)\n%s',
+                                   req_id, trunc, reply[:_DBG_LEN])
         else:
-            _LOGGER.debug('    %s', reply[:_DBG_LEN])
+            trunc = ' (truncated)' if len(reply) > _DBG_LEN else ''
+            self._logger.debug('    %s%s', reply[:_DBG_LEN], trunc)
         with self._lock:
             self._stream.send_reply(reply, req_id)
 
     def _send_error(self, reply, req_id=None):
-        """ Send error reply to client, with optional logging. """
+        """
+        Send error reply to client, with optional logging.
+
+        reply: string
+            Reply message.
+
+        req_id: string
+            Request ID, if requested in 'raw' mode.
+        """
         if self._raw:
             req_id = req_id or self._req_id
-            _LOGGER.error('(req_id %s)\n%s', req_id, reply)
+            self._logger.error('(req_id %s)\n%s', req_id, reply)
         else:
-            _LOGGER.error('%s', reply)
+            self._logger.error('%s', reply)
         reply = ERROR_PREFIX+reply
         with self._lock:
             self._stream.send_reply(reply, req_id, 'error')
 
     def _send_exc(self, exc, req_id=None):
-        """ Send exception reply to client, with optional logging. """
+        """
+        Send exception reply to client, with optional logging.
+
+        exc: Exception
+            Exception data.
+
+        req_id: string
+            Request ID, if requested in 'raw' mode.
+        """
         self._send_error('Exception: %r' % exc, req_id)
-        _LOGGER.error(traceback.format_exc())
+        self._logger.error(traceback.format_exc())
 
 
     def _add_proxy_clients(self, args):
@@ -537,6 +670,9 @@ version: 0.1""")
         Adds one or more host IDs to the list of client hosts in the proxy
         chain between client and server. This supports access restrictions
         based on all hosts between client and server.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) < 1:
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -550,7 +686,12 @@ version: 0.1""")
 
 
     def _describe(self, args):
-        """ Describes a published component. """
+        """
+        Describes a published component.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) < 1 or len(args) > 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'describe,d <category/component> [-xml]')
@@ -602,7 +743,12 @@ Checksum: %s""" % (cfg.version, cfg.author, str(cfg.has_icon).lower(),
 
 
     def _end(self, args):
-        """ Unloads a component instance. """
+        """
+        Unloads a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'end <object>')
@@ -619,7 +765,13 @@ Checksum: %s""" % (cfg.version, cfg.author, str(cfg.has_icon).lower(),
 Object %s ended.""" % (name, name))
 
     def __end(self, name):
-        """ Delete component instance `name`. """
+        """
+        Delete component instance `name`.
+
+        name: string
+            Instance to be deleted.
+        """
+        self._logger.info('End %r', name)
         wrapper, worker = self._instance_map.pop(name)
         wrapper.pre_delete()
         WorkerPool.release(worker)
@@ -631,7 +783,12 @@ Object %s ended.""" % (name, name))
 
 
     def _execute(self, args):
-        """ Runs a component instance. """
+        """
+        Runs a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) < 1 or len(args) > 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'execute,x <objectName>[&]')
@@ -655,7 +812,12 @@ Object %s ended.""" % (name, name))
 
 
     def _get(self, args):
-        """ Gets the value of a variable. """
+        """
+        Gets the value of a variable.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'get <object.property>')
@@ -670,19 +832,29 @@ Object %s ended.""" % (name, name))
 
 
     def _get_branches(self, args):
-        """ Handler for ``getBranchesAndTags``. """
+        """
+        Handler for ``getBranchesAndTags``.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getBranchesAndTags')
             return
 
-        self._send_reply('')
+        self._send_reply('')  # Not supported.
 
     _COMMANDS['getBranchesAndTags'] = _get_branches
 
 
     def _get_direct_transfer(self, args):
-        """ Return 'true' if we support direct file transfers. """
+        """
+        Return 'true' if we support direct file transfers.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getDirectTransfer')
@@ -694,21 +866,41 @@ Object %s ended.""" % (name, name))
 
 
     def _get_hierarchy(self, args):
-        """ Get hierarchy of values in component. """
-        if len(args) != 1:
+        """
+        Get hierarchy of values in component.
+
+        args: list[string]
+            Arguments for the command.
+        """
+        if len(args) < 1 or len(args) > 2:
             self._send_error('invalid syntax. Proper syntax:\n'
-                             'getHierarchy <object>')
+                             'getHierarchy <object> [gzipData]')
             return
+
+        if len(args) == 2:
+            if args[1] == 'gzipData':
+                gzip = True
+            else:
+                self._send_error('invalid syntax. Proper syntax:\n'
+                                 'getHierarchy <object> [gzipData]')
+                return
+        else:
+            gzip = False
 
         wrapper, worker = self._get_wrapper(args[0])
         if wrapper is not None:
-            worker.put((wrapper.get_hierarchy, (self._req_id,), {}, None))
+            worker.put((wrapper.get_hierarchy, (self._req_id, gzip), {}, None))
 
     _COMMANDS['getHierarchy'] = _get_hierarchy
 
 
     def _get_icon(self, args):
-        """ Gets the icon data for the published component. """
+        """
+        Gets the icon data for the published component.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getIcon <analysisComponent>')
@@ -723,8 +915,35 @@ Object %s ended.""" % (name, name))
     _COMMANDS['getIcon'] = _get_icon
 
 
+    def _get_icon2(self, args):
+        """
+        Gets the icon data for the published component.
+        This version returns the data in base64 format.
+
+        args: list[string]
+            Arguments for the command.
+        """
+        if len(args) != 1:
+            self._send_error('invalid syntax. Proper syntax:\n'
+                             'getIcon2 <analysisComponent>')
+            return
+
+        lst = self._get_component(args[0])
+        if not lst:
+            return
+
+        raise NotImplementedError('getIcon2')
+
+    _COMMANDS['getIcon2'] = _get_icon2
+
+
     def _get_license(self, args):
-        """ Retrieves Analysis Server's license agreement. """
+        """
+        Retrieves Analysis Server's license agreement.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getLicense')
@@ -735,8 +954,34 @@ Object %s ended.""" % (name, name))
     _COMMANDS['getLicense'] = _get_license
 
 
+    def _get_queues(self, args):
+        """
+        Gets queues for the published component.
+
+        args: list[string]
+            Arguments for the command.
+        """
+        if len(args) < 1 or len(args) > 2:
+            self._send_error('invalid syntax. Proper syntax:\n'
+                             'getQueues <category/component> [full]')
+            return
+
+        lst = self._get_component(args[0])
+        if not lst:
+            return
+
+        self._send_reply('')  # Queues are a CenterLink thing.
+
+    _COMMANDS['getQueues'] = _get_queues
+
+
     def _get_status(self, args):
-        """ Lists the run status of all component instances. """
+        """
+        Lists the run status of all component instances.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getStatus')
@@ -753,6 +998,9 @@ Object %s ended.""" % (name, name))
     def _get_sys_info(self, args):
         """
         Retrieves information about the server and the system it is on.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -763,8 +1011,8 @@ Object %s ended.""" % (name, name))
             num_comps = len(comps)
 
         self._send_reply("""\
-version: 5.01
-build: 331
+version: %s
+build: %s
 num clients: %d
 num components: %d
 os name: %s
@@ -772,7 +1020,7 @@ os arch: %s
 os version: %s
 python version: %s
 user name: %s"""
-             % (self.server.num_clients, num_comps,
+             % (_AS_VERSION, _AS_BUILD, self.server.num_clients, num_comps,
                 platform.system(), platform.processor(),
                 platform.release(), platform.python_version(),
                 getpass.getuser()))
@@ -781,17 +1029,22 @@ user name: %s"""
 
 
     def _get_version(self, args):
-        """ Gets the version and build number for Analysis Server. """
+        """
+        Gets the version and build number for Analysis Server.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'getVersion')
             return
 
         self._send_reply("""\
-OpenMDAO Analysis Server 0.1
+OpenMDAO Analysis Server %s
 Use at your own risk!
 Attempting to support Phoenix Integration, Inc.
-version: 5.01, build: 331""")
+version: %s, build: %s""" % (_VERSION, _AS_VERSION, _AS_BUILD))
 
     _COMMANDS['getVersion'] = _get_version
 
@@ -800,6 +1053,9 @@ version: 5.01, build: 331""")
         """
         Starts up socket heartbeating in order to keep sockets alive through
         firewalls with timeouts.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) != 1 or args[0] not in ('start', 'stop'):
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -823,19 +1079,25 @@ version: 5.01, build: 331""")
 
 
     def _help(self, args):
-        """ Help on Analysis Server commands. """
+        """
+        Help on Analysis Server commands.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'help,h')
             return
 
-        # As listed by Analysis Server version: 5.01, build: 331.
+        # As listed by Analysis Server version: 7.0, build: 42968.
         self._send_reply("""\
 Available Commands:
    listComponents,lc [category]
    listCategories,la [category]
    describe,d <category/component> [-xml]
-   start <category/component> <instanceName>
+   setServerAuthInfo <serverURL> <username> <password> (NOT IMPLEMENTED)
+   start <category/component> <instanceName> [connector] [queue]
    end <object>
    execute,x <objectName>
    listProperties,list,ls,l [object]
@@ -846,6 +1108,7 @@ Available Commands:
    set <object.property> = <value>
    move,rename,mv,rn <from> <to> (NOT IMPLEMENTED)
    getIcon <analysisComponent> (NOT IMPLEMENTED)
+   getIcon2 <analysisComponent> (NOT IMPLEMENTED)
    getVersion
    getLicense
    getStatus
@@ -868,14 +1131,21 @@ Available Commands:
    getHierarchy <object.property>
    setHierarchy <object.property> <xml>
    deleteRunShare <key> (NOT IMPLEMENTED)
-   getBranchesAndTags""")
+   getBranchesAndTags (NOT IMPLEMENTED)
+   getQueues <category/component> [full] (NOT IMPLEMENTED)
+   setRunQueue <object> <connector> <queue> (NOT IMPLEMENTED)""")
 
     _COMMANDS['help'] = _help
     _COMMANDS['h'] = _help
 
 
     def _invoke(self, args):
-        """ Invokes a method on a component instance. """
+        """
+        Invokes a method on a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) < 1 or len(args) > 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'invoke <object.method()> [full]')
@@ -892,7 +1162,12 @@ Available Commands:
 
 
     def _list_array_values(self, args):
-        """ Lists all the values of an array variable. """
+        """
+        Lists all the values of an array variable.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'listArrayValues,lav <object>')
@@ -909,7 +1184,12 @@ Available Commands:
 
 
     def _list_categories(self, args):
-        """ Lists all the sub-categories available in a category. """
+        """
+        Lists all the sub-categories available in a category.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) > 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'listCategories,la [category]')
@@ -940,7 +1220,12 @@ Available Commands:
 
 
     def _list_components(self, args):
-        """ Lists all the components available in a category. """
+        """
+        Lists all the components available in a category.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) > 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'listComponents,lc [category]')
@@ -970,20 +1255,30 @@ Available Commands:
 
 
     def _list_globals(self, args):
-        """ Lists all component instances in the global namespace. """
+        """
+        Lists all component instances in the global namespace.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'listGlobals,lg')
             return
 
-        self._send_reply('0 global objects started:')
+        self._send_reply('0 global objects started:')  # Not supported.
 
     _COMMANDS['listGlobals'] = _list_globals
     _COMMANDS['lg'] = _list_globals
 
 
     def _list_methods(self, args):
-        """ Lists all methods available on a component instance. """
+        """
+        Lists all methods available on a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) < 1 or len(args) > 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'listMethods,lm <object> [full]')
@@ -1000,7 +1295,12 @@ Available Commands:
 
 
     def _list_monitors(self, args):
-        """ Lists all available monitorable items on a component instance. """
+        """
+        Lists all available monitorable items on a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'listMonitors,lo <objectName>')
@@ -1019,6 +1319,9 @@ Available Commands:
         """
         Lists all available variables and their sub-properties on a component
         instance or sub-variable.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) > 1:
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -1047,6 +1350,9 @@ Available Commands:
         """
         Lists all available variables and their sub-properties on a component
         instance or sub-variable.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) > 1:
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -1065,7 +1371,11 @@ Available Commands:
     def _list_values_url(self, args):
         """
         Lists all available variables and their sub-properties on a component
-        instance or sub-variable.
+        instance or sub-variable. This version supplies a URL for file data
+        if DirectFileTransfer is supported.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) > 1:
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -1085,6 +1395,9 @@ Available Commands:
     def _monitor(self, args):
         """
         Starts/stops a monitor on a raw output file or available monitor.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) != 2 or args[0] not in ('start', 'stop'):
             self._send_error('invalid syntax. Proper syntax:\n'
@@ -1113,7 +1426,12 @@ Available Commands:
 
 
     def _move(self, args):
-        """ Moves or renames a component instance. """
+        """
+        Moves or renames a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 2:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'move,rename,mv,rn <from> <to>')
@@ -1128,7 +1446,12 @@ Available Commands:
 
 
     def _ps(self, args):
-        """ Lists all running processes for a component instance. """
+        """
+        Lists all running processes for a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'ps <object>')
@@ -1147,49 +1470,50 @@ Available Commands:
         """
         Receive an egg file and publish it.
         This is an extension to the AnalysisServer protocol.
+
+        args: list[string]
+            Arguments for the command.
         """
         if len(args) < 5:
             self._send_error('invalid syntax. Proper syntax:\n'
-                             'publishEgg <path> <version> <comment> <author> <eggdata>')
+                             'publishEgg <path> <version> <comment> <author> ZEROBYTE <eggdata>')
             return
 
-        cmd, space, rest = self._req.partition(' ')
-        path, space, rest = rest.partition(' ')
-        version, space, rest = rest.partition(' ')
-        comment, space, rest = rest.partition(' ')
-        author, space, eggdata = rest.partition(' ')
+        args, zero, eggdata = self._req.partition('\0')
+        cmd, path, version, comment, author = shlex.split(args)
 
-        comment = comment.strip('"')
-        author = author.strip('"')
+        self._logger.info('Publish from %s: %s %s %r',
+                          author, path, version, comment)
 
-        # Create directory (category).
-        path = path.strip('/')
-        directory, slash, name = path.rpartition('/')
-        if directory and not os.path.exists(directory):
-            os.makedirs(directory)
+        with self.server.dir_lock:
+            # Create directory (category).
+            path = path.strip('/')
+            directory, slash, name = path.rpartition('/')
+            if directory and not os.path.exists(directory):
+                os.makedirs(directory)
 
-        # Write egg file.
-        egg_filename = '%s-%s.egg' % (name, version)
-        egg_path = os.path.join(directory, egg_filename)
-        if os.path.exists(egg_path):
-            self._send_error('Egg %r already exists' % egg_path)
-            return
-        with open(egg_path, 'wb') as out:
-            out.write(eggdata)
+            # Write egg file.
+            egg_filename = '%s-%s.egg' % (name, version)
+            egg_path = os.path.join(directory, egg_filename)
+            if os.path.exists(egg_path):
+                self._send_error('Egg %r already exists' % egg_path)
+                return
+            with open(egg_path, 'wb') as out:
+                out.write(eggdata)
 
-        # Load egg to verify.
-        component = Container.load_from_eggfile(egg_path)
-        description = component.__doc__
+            # Load egg to verify.
+            component = Container.load_from_eggfile(egg_path, log=self._logger)
+            description = component.__doc__
 
-        # Write config file.
-        cfg_filename = '%s-%s.cfg' % (name, version)
-        cfg_path = os.path.join(directory, cfg_filename)
-        if os.path.exists(cfg_path):
-            self._send_error('Config file %r already exists' % cfg_path)
-            os.remove(egg_path)
-            return
-        with open(cfg_path, 'w') as out:
-            out.write("""\
+            # Write config file.
+            cfg_filename = '%s-%s.cfg' % (name, version)
+            cfg_path = os.path.join(directory, cfg_filename)
+            if os.path.exists(cfg_path):
+                self._send_error('Config file %r already exists' % cfg_path)
+                os.remove(egg_path)
+                return
+            with open(cfg_path, 'w') as out:
+                out.write("""\
 [Description]
 version: %s
 comment: %s
@@ -1209,32 +1533,44 @@ egg: %s
 *: *
 """ % (version, comment, author, description, egg_filename))
 
-        component.pre_delete()
-        try:
-            self.server._read_config(cfg_path)
-        except Exception as exc:
-            _LOGGER.error("Can't publishEgg: %r", exc)
-            self._send_error(str(exc))
-            os.remove(egg_path)
-            os.remove(cfg_path)
-        else:
-            self._send_reply('Egg published.')
+            component.pre_delete()
+            try:
+                self.server.read_config(cfg_path, self._logger)
+            except Exception as exc:
+                self._logger.error("Can't publishEgg: %r", exc)
+                self._send_error(str(exc))
+                os.remove(egg_path)
+                os.remove(cfg_path)
+            else:
+                self._send_reply('Egg published.')
 
     _COMMANDS['publishEgg'] = _publish_egg
 
 
     def _quit(self, args):
-        """ Close the connection. """
+        """
+        Close the connection.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 0:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'quit')
             return
 
+        self._logger.info('Client quit')
+
     _COMMANDS['quit'] = _quit
 
 
     def _set(self, args):
-        """ Sets the value of a variable. """
+        """
+        Sets the value of a variable.
+
+        args: list[string]
+            Arguments for the command.
+        """
         cmd, space, assignment = self._req.partition(' ')
         lhs, eqsign, rhs = assignment.partition('=')
         name, dot, path = lhs.strip().partition('.')
@@ -1247,7 +1583,12 @@ egg: %s
 
 
     def _set_hierarchy(self, args):
-        """ Set hierarchy of variable values in component. """
+        """
+        Set hierarchy of variable values in component.
+
+        args: list[string]
+            Arguments for the command.
+        """
         cmd, space, rest = self._req.partition(' ')
         name, space, xml = rest.partition(' ')
         wrapper, worker = self._get_wrapper(name)
@@ -1258,7 +1599,12 @@ egg: %s
 
 
     def _set_mode(self, args):
-        """ Sets the connection into 'raw' mode. """
+        """
+        Sets the connection into 'raw' mode.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1 or args[0] != 'raw':
             self._send_error('invalid syntax. Proper syntax:\n'
                              'setMode raw')
@@ -1270,12 +1616,57 @@ egg: %s
     _COMMANDS['setMode'] = _set_mode
 
 
-    def _start(self, args):
-        """ Creates a new component instance. """
-        if len(args) != 2:
+    def _set_auth_info(self, args):
+        """
+        Set server authorization information.
+
+        args: list[string]
+            Arguments for the command.
+        """
+        if len(args) != 3:
             self._send_error('invalid syntax. Proper syntax:\n'
-                             'start <category/component> <instanceName>')
+                             'setServerAuthInfo <serverURL> <username> <password>')
             return
+
+        raise NotImplementedError('setServerAuthInfo')
+
+    _COMMANDS['setServerAuthInfo'] = _set_auth_info
+
+
+    def _set_run_queue(self, args):
+        """
+        Set run queue for a component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
+        if len(args) != 3:
+            self._send_error('invalid syntax. Proper syntax:\n'
+                             'setRunQueue <object> <connector> <queue>')
+            return
+
+        name = args[0].strip('"')
+        wrapper, worker = self._get_wrapper(name)
+
+        raise NotImplementedError('setRunQueue')
+
+    _COMMANDS['setRunQueue'] = _set_run_queue
+
+
+    def _start(self, args):
+        """
+        Creates a new component instance.
+
+        args: list[string]
+            Arguments for the command.
+        """
+        if len(args) < 2 or len(args) > 4:
+            self._send_error('invalid syntax. Proper syntax:\n'
+                             'start <category/component> <instanceName> [connector] [queue]')
+            return
+
+        if len(args) > 2:
+            raise NotImplementedError('start, args > 2')
 
         lst = self._get_component(args[0])
         if not lst:
@@ -1294,24 +1685,28 @@ egg: %s
             'python_version': sys.version[:3]
         }
 
+        self._logger.info('Starting %r from %r', name, egg_file)
+
         # Create component instance.
-        if self._server_per_obj:  # pragma no cover
-            # Allocate a server.
-            server, server_info = RAM.allocate(resource_desc)
-            if server is None:
-                raise RuntimeError('Server allocation failed :-(')
-            # Transfer egg to it and load.
-            egg_name = os.path.basename(egg_file)
-            filexfer(None, egg_file, server, egg_name, 'b')
-            obj = server.load_model(egg_name)
-        else:  # Used for testing.
-            server = None
-            obj = Container.load_from_eggfile(egg_file)
+        with self.server.dir_lock:
+            if self._server_per_obj:  # pragma no cover
+                # Allocate a server.
+                server, server_info = RAM.allocate(resource_desc)
+                if server is None:
+                    raise RuntimeError('Server allocation failed :-(')
+
+                # Transfer egg to it and load.
+                egg_name = os.path.basename(egg_file)
+                filexfer(None, egg_file, server, egg_name, 'b')
+                obj = server.load_model(egg_name)
+            else:  # Used for testing.
+                server = None
+                obj = Container.load_from_eggfile(egg_file, log=self._logger)
         obj.name = name
 
         # Create wrapper for component.
-        wrapper = ComponentWrapper(name, obj, cfg, server,
-                                   self._send_reply, self._send_exc)
+        wrapper = ComponentWrapper(name, obj, cfg, server, self._send_reply,
+                                   self._send_exc, self._logger)
         self._instance_map[name] = (wrapper, WorkerPool.get())
         self._servers[wrapper] = server
         self._send_reply('Object %s started.' % name)
@@ -1320,7 +1715,12 @@ egg: %s
 
 
     def _versions(self, args):
-        """ Lists the version history of a component. """
+        """
+        Lists the version history of a component.
+
+        args: list[string]
+            Arguments for the command.
+        """
         if len(args) != 1:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'versions,v category/component')
@@ -1347,12 +1747,21 @@ egg: %s
 class _WrapperConfig(object):
     """
     Retains configuration data for a wrapped component class.
-    `config` is a :class:`ConfigParser.SafeConfigParser` instance,
-    `instance` is a temporary wrapped instance to interrogate,
-    and `cfg_path` is the path to the configuration file.
+
+    config: :class:`ConfigParser.ConfigParser`
+        Configuration data.
+
+    instance: Component
+        Temporary wrapped instance to interrogate.
+
+    cfg_path: string
+        Path to the configuration file.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
     """
 
-    def __init__(self, config, instance, cfg_path):
+    def __init__(self, config, instance, cfg_path, logger):
         if not _IGNORE_ATTR:
             for attr in dir(Component()):
                 _IGNORE_ATTR.add(attr)
@@ -1388,8 +1797,8 @@ class _WrapperConfig(object):
         if version != self.version:
             cfg_dir = os.path.dirname(cfg_path)
             new_path = os.path.join(cfg_dir, '%s-%s.cfg' % (name, self.version))
-            _LOGGER.warning('Renaming %r', cfg_path)
-            _LOGGER.warning('      to %r', new_path)
+            logger.warning('Renaming %r', cfg_path)
+            logger.warning('      to %r', new_path)
             os.rename(cfg_path, new_path)
             cfg_path = new_path
         self.cfg_path = cfg_path
@@ -1410,88 +1819,125 @@ class _WrapperConfig(object):
             self.author = pwd.getpwuid(stat_info.st_uid).pw_name
 
         # Get properties.
-        self.inputs = self._setup_mapping(instance,
-                                          config.items('Inputs'), 'in')
-        self.outputs = self._setup_mapping(instance,
-                                           config.items('Outputs'), 'out')
+        self.inputs = self._setup_mapping(instance, config.items('Inputs'),
+                                          'in', logger)
+        self.outputs = self._setup_mapping(instance, config.items('Outputs'),
+                                           'out', logger)
         self.properties = {}
         self.properties.update(self.inputs)
         self.properties.update(self.outputs)
 
         # Get methods.
         self.methods = {}
-        for ext_name, int_name in config.items('Methods'):
+        for ext_name, int_name in sorted(config.items('Methods'),
+                                         key=lambda item: item[0]):
             if ext_name == '*':
                 if int_name != '*':
                     raise ValueError("internal name must be '*'"
                                      " if the external name is '*'")
                 # Register all valid non-vanilla methods.
-                for attr in dir(instance):
+                for attr in sorted(dir(instance)):
                     if attr in _IGNORE_ATTR or attr.startswith('_'):
                         continue
                     if self._valid_method(instance, attr):
-                        _LOGGER.debug('    register %s()', attr)
+                        logger.debug('    register %s()', attr)
                         self.methods[attr] = attr
             else:
                 if int_name == '*':
                     int_name = ext_name
                 if self._valid_method(instance, int_name):
-                    _LOGGER.debug('    register %r => %s()', ext_name, int_name)
+                    logger.debug('    register %r => %s()', ext_name, int_name)
                     self.methods[ext_name] = int_name
                 else:
                     raise ValueError('%r is not a valid method' % int_name)
 
-    def _setup_mapping(self, instance, paths, iotype):
-        """ Return dictionary mapping external paths to internal paths. """
+    def _setup_mapping(self, instance, paths, iotype, logger):
+        """
+        Return dictionary mapping external paths to internal paths.
+
+        instance: Component
+            Temporary wrapped instance to interrogate.
+
+        paths: list[(external, internal)]
+            List of tuples pairing external and internal references.
+
+        iotype: string
+            'in' or 'out'.
+
+        logger: :class:`logging.Logger`
+            Used for progress, errors, etc.
+        """
         mapping = {}
-        for ext_path, int_path in paths:
+        for ext_path, int_path in sorted(paths, key=lambda item: item[0]):
             if ext_path == '*':
                 if int_path != '*':
                     raise ValueError("internal path must be '*'"
                                      " if the external path is '*'")
                 # Register all valid top-level non-vanilla paths.
                 containers = [instance]
-                containers.extend([val for name, val in instance.items()
-                                       if isinstance(val, Container) and not
-                                          isinstance(val, Component)])
+                subs = [obj for name, obj in sorted(instance.items(recurse=True),
+                                                    key=lambda item: item[0])]
+                containers.extend([sub for sub in subs
+                                       if isinstance(sub, Container) and not
+                                          isinstance(sub, Component)])
                 for container in containers:
-                    for name, val in container.items(iotype=iotype):
+                    for name, val in sorted(container.items(iotype=iotype),
+                                            key=lambda item: item[0]):
                         if name in _IGNORE_ATTR or name.startswith('_'):
                             continue
                         # Only register if it's a supported type.
                         typenames = container.get_trait_typenames(name)
                         wrapper_class = lookup(typenames)
                         if wrapper_class is None:
-                             _LOGGER.warning('%r not a supported type: %r',
-                                             name, typenames[0])
-                             continue
+                            logger.warning('%r not a supported type: %r',
+                                           name, typenames[0])
+                            continue
                         if container is instance:
                             path = name
                         else:
                             path = '%s.%s' % (container.get_pathname(), name)
-                        _LOGGER.debug('    register %r %r', path, iotype)
+                        logger.debug('    register %r %r', path, iotype)
                         mapping[path] = path
             else:
                 if int_path == '*':
                     int_path = ext_path
                 if self._valid_path(instance, int_path, iotype):
-                    _LOGGER.debug('    register %r => %r %r',
-                                  ext_path, int_path, iotype)
+                    logger.debug('    register %r => %r %r',
+                                 ext_path, int_path, iotype)
                     mapping[ext_path] = int_path
                 else:
                     raise ValueError('%r is not a valid %r variable'
-                                      % (int_path, iotype))
+                                     % (int_path, iotype))
         return mapping
 
     @staticmethod
     def _valid_path(instance, path, iotype):
-        """ Return True if `path` refers to an `io_type` variable. """
+        """
+        Return True if `path` refers to an `iotype` variable.
+
+        instance: Component
+            Temporary wrapped instance to interrogate.
+
+        path: string
+            Internal variable reference.
+
+        iotype: string
+            'in' or 'out'.
+        """
         meta = instance.get_metadata(path, 'iotype')
         return meta == iotype
 
     @staticmethod
     def _valid_method(instance, attr):
-        """ Return True if `attr` is a valid method for `instance`. """
+        """
+        Return True if `attr` is a valid method for `instance`.
+
+        instance: Component
+            Temporary wrapped instance to interrogate.
+
+        attr: string
+            Internal method reference.
+        """
         try:
             obj = getattr(instance, attr)
         except AttributeError:
@@ -1507,6 +1953,15 @@ def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None):
     Start server process at `address` and `port` (use zero for a
     system-selected port). If `allowed_hosts` is None then
     ``['127.0.0.1', socket.gethostname()]`` is used. Returns ``(proc, port)``.
+
+    address: string
+        Server address to be used.
+
+    port: int
+        Server port to be used.
+
+    allowed_hosts: list[string]
+        Hosts to allow access.
     """
     if allowed_hosts is None:
         allowed_hosts = ['127.0.0.1', socket.gethostname()]
@@ -1558,7 +2013,12 @@ def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None):
 
 
 def stop_server(proc):
-    """ Stop server process. """
+    """
+    Stop server process.
+
+    proc: ShellProc
+        Process of server to stop.
+    """
     proc.terminate(timeout=10)
 
 
@@ -1577,11 +2037,15 @@ def main():  # pragma no cover
         start of a comment which continues to the end of the line.
 
     --address: string
-        IPv4 address or hostname. Default is the host's default IPv4 address.
+        IPv4 address or hostname for server.
+        Default is the host's default IPv4 address.
 
     --port: int
         Server port (default 1835).
         Note that ports below 1024 typically require special privileges.
+
+    --debug:
+        Set logging level to ``DEBUG``, default is ``INFO``.
 
     --no-heartbeat:
         Do not send heartbeat replies. Simplifies debugging.
@@ -1597,6 +2061,8 @@ def main():  # pragma no cover
                       help='network address to serve.')
     parser.add_option('--port', action='store', type='int',
                       default=DEFAULT_PORT, help='port to listen on')
+    parser.add_option('--debug', action='store_true',
+                      help='Set logging level to DEBUG')
     parser.add_option('--no-heartbeat', action='store_true',
                       help='Do not send heartbeat replies')
     parser.add_option('--up', action='store', default='',
@@ -1607,8 +2073,9 @@ def main():  # pragma no cover
         parser.print_help()
         sys.exit(1)
 
-    logging.getLogger().setLevel(logging.DEBUG)
-    _LOGGER.setLevel(logging.DEBUG)
+    level = logging.DEBUG if options.debug else logging.INFO
+    logging.getLogger().setLevel(level)
+    _LOGGER.setLevel(level)
 
     global _DISABLE_HEARTBEAT
     _DISABLE_HEARTBEAT = options.no_heartbeat
@@ -1627,8 +2094,10 @@ def main():  # pragma no cover
         print 'Allowed hosts file %r does not exist.' % options.hosts
         sys.exit(1)
 
-    # Set root directory.
+    # Set root directory, create 'logs' directory if not there.
     SimulationRoot.get_root()
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
 
     # Create server.
     host = options.address or socket.gethostname()
@@ -1661,7 +2130,15 @@ def main():  # pragma no cover
 
 
 def _sigterm_handler(signum, frame):  #pragma no cover
-    """ Try to go down gracefully. """
+    """
+    Try to go down gracefully.
+
+    signum: int
+        Signal received.
+
+    frame: stack frame
+        Where signal was received.
+    """
     _LOGGER.info('sigterm_handler invoked')
     print 'sigterm_handler invoked'
     sys.stdout.flush()
