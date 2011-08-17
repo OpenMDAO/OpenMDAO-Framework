@@ -54,8 +54,6 @@ def remote_build_and_test(fname=None, pyversion='python', keep=False,
     result = push_and_run(pushfiles, remotedir=remotedir, args=remoteargs)
     print result
     
-    get(os.path.join(remotedir, 'build.out'), 'build.out')
-
     if result.return_code==0 or not keep:
         rm_remote_tree(remotedir)
         

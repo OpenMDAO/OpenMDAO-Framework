@@ -35,7 +35,7 @@ def _run_gofile(startdir, gopath, pyversion, args=()):
     os.chdir(godir)
     
     outname = 'build.out'
-    f = codecs.open(outname, 'wb', encoding='ascii', errors='replace')
+    f = codecs.open(outname, 'wb', encoding='ascii', errors='ignore')
     try:
         p = subprocess.Popen('%s %s %s' % (pyversion, gofile, 
                                            ' '.join(args)), 
@@ -45,16 +45,17 @@ def _run_gofile(startdir, gopath, pyversion, args=()):
         retcode = p.returncode
     finally:
         f.close()
-        #with open(outname, 'r') as f:
-        #    print f.read()
+        with codecs.open(outname, 'rt', encoding='ascii', errors='ignore') as f:
+            for line in f:
+                print line
         os.chdir(startdir)
     return retcode
 
 def _run_sub(outname, cmd, env=None):
     # in some cases there are some unicode characters in the
     # build output which cause fabric to barf, so strip out unicode
-    # by writing to a file, replacing unicode chars with '?'
-    f = codecs.open(outname, 'wb', encoding='ascii', errors='replace')
+    # by writing to a file, ignoring unicode chars
+    f = codecs.open(outname, 'wb', encoding='ascii', errors='ignored')
     
     try:
         p = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT,
@@ -63,7 +64,8 @@ def _run_sub(outname, cmd, env=None):
     finally:
         f.close()
         with open(outname, 'r') as f:
-            print f.read()
+            for line in f:
+                print line
     return p.returncode
         
 

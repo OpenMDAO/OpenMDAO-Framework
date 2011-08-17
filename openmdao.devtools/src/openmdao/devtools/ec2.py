@@ -4,12 +4,12 @@ import shutil
 import subprocess
 import atexit
 import time
+from socket import gethostname
 from optparse import OptionParser
 from fabric.api import run, env, local, put, cd, get, settings, prompt, \
                        hide, show, hosts
 from fabric.state import connections
-from socket import gethostname
-from inspect import getargvalues, formatargvalues, currentframe
+from boto.ec2.connection import EC2Connection
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     rm_remote_tree, make_git_archive, \
@@ -122,6 +122,32 @@ def stop_instance(inst, host, stream):
                      (host, inst.state))
         return False
 
+__conn = None
+def get_connection():
+    global __conn
+    if __conn is None:
+        __conn = EC2Connection()
+    return __conn
+    
+def find_instance(inst_id):
+    reslist = get_connection().get_all_instances([inst_id])
+    if len(reslist) > 0:
+        return reslist[0].instances[0]
+    else:
+        raise RuntimeError("can't find ec2 instance with id %s" % inst_id)
+    
+def ec2_stop(inst_id):
+    inst = find_instance(inst_id)
+    inst.stop()
+    check_inst_state(inst, u'stopped', imgname=host, 
+                     stream=stream)
+    if inst.state == u'stopped':
+        print "stopped instance with id %s" % inst_id
+        return True
+    else:
+        print "instance with id %s failed to stop! (state=%s)" % (inst_id, inst.state)
+        return False
+
 def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     """Runs the given function on an EC2 instance. The instance may be either
     created from an image or may be an existing image that is stopped.
@@ -207,3 +233,4 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
         stop_instance(inst, host, orig_stdout)
         
     return retval
+
