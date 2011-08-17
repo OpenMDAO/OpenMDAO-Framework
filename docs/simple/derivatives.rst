@@ -97,11 +97,11 @@ We need to add an ``__init__`` method that defines derivatives between the input
         
         super(Paraboloid_Derivative, self).__init__()
 
-        self.derivatives.declare_first_derivative(self, 'f_xy', 'x')
-        self.derivatives.declare_first_derivative(self, 'f_xy', 'y')
-        self.derivatives.declare_second_derivative(self, 'f_xy', 'x', 'x')
-        self.derivatives.declare_second_derivative(self, 'f_xy', 'x', 'y')
-        self.derivatives.declare_second_derivative(self, 'f_xy', 'y', 'y')
+        self.derivatives.declare_first_derivative('f_xy', 'x')
+        self.derivatives.declare_first_derivative('f_xy', 'y')
+        self.derivatives.declare_second_derivative('f_xy', 'x', 'x')
+        self.derivatives.declare_second_derivative('f_xy', 'x', 'y')
+        self.derivatives.declare_second_derivative('f_xy', 'y', 'y')
 
 The ``super`` command executes the parent's ``__init__`` function. **This is
 required for the component to behave properly in OpenMDAO, so don't forget to

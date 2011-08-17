@@ -229,6 +229,10 @@ The other documentation file that you may want to edit is the ``README.txt`` fil
 A small amount of information is put there automatically but you may want to add
 more.
 
+Sometimes you want to add a static document like a PDF file to a plugin package.
+For example, if you are file wrapping a code and want to include the documentation
+for the code, you need to put the file into one of the directories listed in the
+``static_path`` variable inside the ``setup.cfg`` file. 
 
 *Setting Metadata*
 ++++++++++++++++++
@@ -267,6 +271,8 @@ case looks like this:
     
     [openmdao]
     copyright =
+    static_path = [ '_static' ]
+
     
 
 

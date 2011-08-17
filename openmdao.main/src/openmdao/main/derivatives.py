@@ -47,7 +47,9 @@ class Derivatives(object):
     component at specified orders.
     """
     
-    def __init__(self):
+    def __init__(self, parent):
+        
+        self.parent = parent
         
         # Multi-dimensional dicts contain first and second derivative for all
         # requested input-output pairs
@@ -63,13 +65,10 @@ class Derivatives(object):
         self.out_names = []
 
 
-    def declare_first_derivative(self, comp, out_name, in_name):
+    def declare_first_derivative(self, out_name, in_name):
         """ Declares that a component can calculate a first derivative
         between the given input and output.
         
-        comp: Component
-            Component that contains the variables out_name and in_name.
-            
         out_name: str
             Name of component's output variable.
             
@@ -77,8 +76,8 @@ class Derivatives(object):
             Name of component's first input variable for derivative.
         """
         
-        _check_var(comp, in_name, "input")
-        _check_var(comp, out_name, "output")
+        _check_var(self.parent, in_name, "input")
+        _check_var(self.parent, out_name, "output")
         
         if out_name not in self.first_derivatives:
             self.first_derivatives[out_name] = {}
@@ -117,13 +116,10 @@ class Derivatives(object):
             raise KeyError(msg)
         
 
-    def declare_second_derivative(self, comp, out_name, in_name1, in_name2):
+    def declare_second_derivative(self, out_name, in_name1, in_name2):
         """ Declares that a component can calculate a second derivative
         between the given input and output.
         
-        comp: Component
-            Component that contains the variables out_name and in_name(1,2)
-            
         out_name: str
             Name of component's output variable.
             
@@ -134,9 +130,9 @@ class Derivatives(object):
             Name of component's second input variable for derivative.
         """
         
-        _check_var(comp, in_name1, "input")
-        _check_var(comp, in_name2, "input")
-        _check_var(comp, out_name, "output")
+        _check_var(self.parent, in_name1, "input")
+        _check_var(self.parent, in_name2, "input")
+        _check_var(self.parent, out_name, "output")
         
         if out_name not in self.second_derivatives:
             self.second_derivatives[out_name] = {}
@@ -206,16 +202,16 @@ class Derivatives(object):
         """
         
         for name in self.in_names:
-            self.inputs[name] = comp.get(name)
+            self.inputs[name] = self.parent.get(name)
 
         for name in self.out_names:
-            self.outputs[name] = comp.get(name)
+            self.outputs[name] = self.parent.get(name)
 
 
-    def calculate_output(self, comp, out_name, order):
+    def calculate_output(self, out_name, order):
         """Returns the Fake Finite Difference output for the given output
         name using the stored baseline and derivatives along with the
-        new inputs in comp.
+        new inputs in the component.
         """
         
         y = self.outputs[out_name]
@@ -224,7 +220,7 @@ class Derivatives(object):
         if order == 1:
             
             for in_name, dx in self.first_derivatives[out_name].iteritems():
-                y += dx*(comp.get(in_name) - self.inputs[in_name])
+                y += dx*(self.parent.get(in_name) - self.inputs[in_name])
         
         # Second order derivatives
         elif order == 2:
@@ -232,8 +228,8 @@ class Derivatives(object):
             for in_name1, item in self.second_derivatives[out_name].iteritems():
                 for in_name2, dx in item.iteritems():
                     y += 0.5*dx* \
-                      (comp.get(in_name1) - self.inputs[in_name1])* \
-                      (comp.get(in_name2) - self.inputs[in_name2])
+                      (self.parent.get(in_name1) - self.inputs[in_name1])* \
+                      (self.parent.get(in_name2) - self.inputs[in_name2])
         
         else:
             msg = 'Fake Finite Difference does not currently support an ' + \
@@ -243,7 +239,7 @@ class Derivatives(object):
         return y
 
     
-    def validate(self, comp, order, driver_inputs, driver_outputs):
+    def validate(self, order, driver_inputs, driver_outputs):
         """Check the component's inputs and output and warn about any input-
         output combinations that are missing a derivative."""
         
@@ -252,16 +248,16 @@ class Derivatives(object):
         
         # only check float-valued outputs that are connected in the framework,
         # and have not been excluded from checking using 'no_deriv_check'
-        for outvar in comp.list_outputs(connected=True):
-            if isinstance(comp.get(outvar), float) and \
-               'no_deriv_check' not in comp.get_metadata(outvar):
+        for outvar in self.parent.list_outputs(connected=True):
+            if isinstance(self.parent.get(outvar), float) and \
+               'no_deriv_check' not in self.parent.get_metadata(outvar):
                 output_list.append(outvar)
             
         # only check float-valued inputs that are connected in the framework,
         # and have not been excluded from checking using 'no_deriv_check'
-        for invar in comp.list_inputs(connected=True):
-            if isinstance(comp.get(invar), float) and \
-               'no_deriv_check' not in comp.get_metadata(invar):
+        for invar in self.parent.list_inputs(connected=True):
+            if isinstance(self.parent.get(invar), float) and \
+               'no_deriv_check' not in self.parent.get_metadata(invar):
                 input_list.append(invar)
                 
         if order==1 and self.first_derivatives:
@@ -279,8 +275,8 @@ class Derivatives(object):
                         msg = 'Warning: no first derivative defined for ' \
                                'output %s and ' % outvar + \
                                'input %s ' % invar + \
-                               'in %s.' % comp.name
-                        comp._logger.warning(msg)
+                               'in %s.' % self.parent.name
+                        self.parent._logger.warning(msg)
                         
                         # TODO - This should be removed when logging is
                         # finalized.
@@ -305,8 +301,8 @@ class Derivatives(object):
                                    'for output %s and ' % outvar + \
                                    'input1 %s and' % invar + \
                                    'input2 %s ' % invar2 + \
-                                   'in %s.' % comp.name
-                            comp._logger.warning(msg)
+                                   'in %s.' % self.parent.name
+                            self.parent._logger.warning(msg)
                             
                             # TODO - This should be removed when logging is
                             # finalized.

@@ -25,11 +25,11 @@ class Paraboloid_Derivative(ComponentWithDerivatives):
         
         super(Paraboloid_Derivative, self).__init__()
 
-        self.derivatives.declare_second_derivative(self, 'f_xy', 'x', 'y')
-        self.derivatives.declare_second_derivative(self, 'f_xy', 'x', 'x')
-        self.derivatives.declare_second_derivative(self, 'f_xy', 'y', 'y')
-        self.derivatives.declare_first_derivative(self, 'f_xy', 'x')
-        self.derivatives.declare_first_derivative(self, 'f_xy', 'y')
+        self.derivatives.declare_second_derivative('f_xy', 'x', 'y')
+        self.derivatives.declare_second_derivative('f_xy', 'x', 'x')
+        self.derivatives.declare_second_derivative('f_xy', 'y', 'y')
+        self.derivatives.declare_first_derivative('f_xy', 'x')
+        self.derivatives.declare_first_derivative('f_xy', 'y')
         
         self.ran_real = False
 
@@ -146,16 +146,16 @@ class A_D(A):
         
         super(A_D, self).__init__()
 
-        self.derivatives.declare_first_derivative(self, 'y1', 'x1')
-        self.derivatives.declare_first_derivative(self, 'y1', 'x2')
-        self.derivatives.declare_first_derivative(self, 'y2', 'x1')
-        self.derivatives.declare_first_derivative(self, 'y2', 'x2')
-        self.derivatives.declare_second_derivative(self, 'y1', 'x1', 'x1')
-        self.derivatives.declare_second_derivative(self, 'y1', 'x1', 'x2')
-        self.derivatives.declare_second_derivative(self, 'y1', 'x2', 'x2')
-        self.derivatives.declare_second_derivative(self, 'y2', 'x1', 'x1')
-        self.derivatives.declare_second_derivative(self, 'y2', 'x1', 'x2')
-        self.derivatives.declare_second_derivative(self, 'y2', 'x2', 'x2')
+        self.derivatives.declare_first_derivative('y1', 'x1')
+        self.derivatives.declare_first_derivative('y1', 'x2')
+        self.derivatives.declare_first_derivative('y2', 'x1')
+        self.derivatives.declare_first_derivative('y2', 'x2')
+        self.derivatives.declare_second_derivative('y1', 'x1', 'x1')
+        self.derivatives.declare_second_derivative('y1', 'x1', 'x2')
+        self.derivatives.declare_second_derivative('y1', 'x2', 'x2')
+        self.derivatives.declare_second_derivative('y2', 'x1', 'x1')
+        self.derivatives.declare_second_derivative('y2', 'x1', 'x2')
+        self.derivatives.declare_second_derivative('y2', 'x2', 'x2')
         
         self.ran_real = False
         
@@ -292,7 +292,7 @@ class DerivativesTestCase(unittest.TestCase):
     def test_bad_variable_declaration(self):
         
         try:
-            self.comp.derivatives.declare_first_derivative(self.comp, 'x', 'y')
+            self.comp.derivatives.declare_first_derivative('x', 'y')
         except RuntimeError, err:
             msg = 'Variable x ' + \
                   'should be an output. '+ \
@@ -303,7 +303,7 @@ class DerivativesTestCase(unittest.TestCase):
             self.fail('RuntimeError expected')
             
         try:
-            self.comp.derivatives.declare_first_derivative(self.comp, 'f_xy', 'f_xy')
+            self.comp.derivatives.declare_first_derivative('f_xy', 'f_xy')
         except RuntimeError, err:
             msg = 'Variable f_xy ' + \
                   'should be an input. '+ \
@@ -314,7 +314,7 @@ class DerivativesTestCase(unittest.TestCase):
             self.fail('RuntimeError expected')
             
         try:
-            self.comp.derivatives.declare_second_derivative(self.comp, 'x', 'y', 'x')
+            self.comp.derivatives.declare_second_derivative('x', 'y', 'x')
         except RuntimeError, err:
             msg = 'Variable x ' + \
                   'should be an output. '+ \
@@ -327,7 +327,7 @@ class DerivativesTestCase(unittest.TestCase):
         self.comp.add('zint', Int(7777, iotype='in'))
         
         try:
-            self.comp.derivatives.declare_first_derivative(self.comp, 'f_xy', 'zint')
+            self.comp.derivatives.declare_first_derivative('f_xy', 'zint')
         except RuntimeError, err:
             msg = 'At present, derivatives can only be declared for float-' + \
                   'valued variables. Variable zint ' + \
@@ -393,7 +393,7 @@ class DerivativesTestCase(unittest.TestCase):
         
         self.comp.calc_derivatives(first=True, second=False)
         try:
-            self.comp.derivatives.calculate_output(self.comp, 'f_xy', 3)
+            self.comp.derivatives.calculate_output('f_xy', 3)
         except NotImplementedError, err:
             msg = 'Fake Finite Difference does not currently support an ' + \
                   'order of 3.'
@@ -404,7 +404,7 @@ class DerivativesTestCase(unittest.TestCase):
     def test_validate_simple(self):
 
         # Just making sure it works.
-        self.comp.derivatives.validate(self.comp, 1, [], [])
+        self.comp.derivatives.validate(1, [], [])
         
     def test_in_assembly(self):
         
