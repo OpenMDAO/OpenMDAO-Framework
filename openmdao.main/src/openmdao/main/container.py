@@ -26,7 +26,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 import zope.interface
 
 from enthought.traits.api import HasTraits, Missing, Undefined, \
-                                 push_exception_handler, TraitType
+                                 push_exception_handler, TraitType, CTrait
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
@@ -348,7 +348,7 @@ class Container(HasTraits):
         """Restore this component's state."""
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
-        
+
         # restore dynamically added traits, since they don't seem
         # to get restored automatically
         self._cached_traits_ = None
@@ -356,7 +356,21 @@ class Container(HasTraits):
         for name, trait in self._added_traits.items():
             if name not in traits:
                 self.add_trait(name, trait)
-        
+
+        # Fix property traits that were not just added above.
+        # For some reason they lost 'get()', but not 'set()' capability.
+        for name, trait in traits.items():
+            try:
+                get = trait.trait_type.get
+            except AttributeError:
+                continue
+            if get is not None:
+                if name not in self._added_traits:
+                    val = getattr(self, name)
+                    self.remove_trait(name)
+                    self.add_trait(name, trait)
+                    setattr(self, name, val)
+
         # make sure all input callbacks are in place.  If callback is
         # already there, this will have no effect. 
         for name, trait in self._alltraits().items():
@@ -631,11 +645,12 @@ class Container(HasTraits):
                 # we can have a temporary situation during loading
                 # where there are traits that don't point to anything,
                 # so check for them here and skip them if they don't point to anything.
-                if obj is not Missing and id(obj) not in visited:
-                    if is_instance(obj, Container):
+                if obj is not Missing:
+                    if is_instance(obj, Container) and id(obj) not in visited:
                         if not recurse:
                             yield (name, obj)
-                    elif trait.iotype is not None:
+                    elif trait.iotype is not None and id(trait) not in visited:
+                        visited.add(id(trait))
                         yield (name, obj)
 
     def items(self, recurse=False, **metadata):
@@ -739,7 +754,7 @@ class Container(HasTraits):
             "object has no attribute '%s'" % path, 
             AttributeError)
         
-    @rbac(('owner', 'user'))
+    @rbac(('owner', 'user'), proxy_types=[FileRef])
     def get(self, path, index=None):
         """Return the object specified by the given path, which may 
         contain '.' characters.  *index*, if not None,
@@ -1059,7 +1074,7 @@ class Container(HasTraits):
             self.parent = parent
 
     @staticmethod
-    def load_from_eggfile(filename, observer=None):
+    def load_from_eggfile(filename, observer=None, log=None):
         """Extract files in egg to a subdirectory matching the saved object
         name and then load object graph state.
 
@@ -1069,13 +1084,17 @@ class Container(HasTraits):
         observer: callable
             Will be called via an :class:`EggObserver`.
 
+        log: :class:`logging.Logger`
+            Used for logging progress, default is root logger.
+
         Returns the root object.
         """
         # Load from file gets everything.
         entry_group = 'openmdao.top'
         entry_name = 'top'
+        log = log or logger
         return eggloader.load_from_eggfile(filename, entry_group, entry_name,
-                                           logger, observer)
+                                           log, observer)
 
     @staticmethod
     def load_from_eggpkg(package, entry_name=None, instance_name=None,
@@ -1141,12 +1160,13 @@ class Container(HasTraits):
         for name in self.list_containers():
             getattr(self, name).post_load()
 
+    @rbac('owner')
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
         for name in self.list_containers():
             getattr(self, name).pre_delete()
             
-    @rbac(('owner', 'user'))
+    @rbac(('owner', 'user'), proxy_types=[CTrait])
     def get_dyn_trait(self, pathname, iotype=None, trait=None):
         """Returns a trait if a trait with the given pathname exists, possibly
         creating it "on-the-fly" and adding its Container. If an attribute exists
@@ -1177,16 +1197,53 @@ class Container(HasTraits):
         else:
             trait = self.get_trait(cname)
             if trait is not None:
-                if trait.iotype != iotype:
+                if iotype is not None and trait.iotype != iotype:
                     self.raise_exception('%s must be an %s variable' % 
                                          (pathname, _iodict[iotype]),
                                          RuntimeError)
                 return trait
             elif trait is None and self.contains(cname):
                 return None
-            
+
         self.raise_exception("Cannot locate variable named '%s'" %
                              pathname, AttributeError)
+
+    @rbac(('owner', 'user'))
+    def get_trait_typenames(self, pathname, iotype=None):
+        """Return names of the 'final' type (bypassing passthrough traits)
+        for `pathname` using :meth:`get_dyn_trait`. Used by dynamic wrappers
+        to determine the type of variable to wrap. The returned list is a
+        depth-first traversal of the class hierarchy.
+
+        pathname: str
+            Pathname of the desired trait. May contain dots.
+            
+        iotype: str (optional)
+            Expected iotype of the trait.
+        """
+        trait = self.get_dyn_trait(pathname, iotype=iotype)
+        if trait is None:
+            return []
+
+        trait = trait.trait_type or trait.trait or trait
+        if trait.target:  # PassthroughTrait, PassthroughProperty
+            trait = self.get_dyn_trait(trait.target)
+            try:
+                ttype = trait.trait_type
+            except AttributeError:
+                pass
+            else:
+                if ttype is not None:
+                    trait = ttype
+
+        def _bases(cls, names):
+            names.append('%s.%s' % (cls.__module__, cls.__name__))
+            for base in cls.__bases__:
+                _bases(base, names)
+        
+        names = []
+        _bases(type(trait), names)
+        return names
 
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""

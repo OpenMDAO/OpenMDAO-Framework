@@ -38,6 +38,7 @@ class DepTestCase(unittest.TestCase):
         comps.remove('DriverUsesDerivatives')
         comps.remove('CaseIterDriverBase')
         comps.remove('PassthroughTrait')
+        comps.remove('PassthroughProperty')
         
         from openmdao.main.api import get_available_types
         groups = [ 'openmdao.component',

@@ -6,6 +6,7 @@ Support for allocation of servers from one or more resources
 import logging
 import multiprocessing
 import os
+import pkg_resources
 import Queue
 import socket
 import sys
@@ -328,9 +329,14 @@ class ResourceAllocator(ObjServerFactory):
         distributions.
 
         resource_value: list
-            List of Distributions.
+            List of Distributions or Requirements.
         """
-        required = [dist.as_requirement() for dist in resource_value]
+        required = []
+        for item in resource_value:
+            if isinstance(item, pkg_resources.Distribution):
+                required.append(item.as_requirement())
+            else:
+                required.append(item)
         not_avail = check_requirements(sorted(required)) #, logger=self._logger)
         if not_avail:  # Distribution not found or version conflict.
             return (-2, {'required_distributions' : not_avail})
