@@ -26,6 +26,8 @@ Package Metadata
     >=2.6
     <2.7
 
+- **static_path:** [ '_static' ]
+
 - **summary:** OpenMDAO interface to Phoenix Integration's ModelCenter/AnalysisServer
 
 - **version:** 0.1
