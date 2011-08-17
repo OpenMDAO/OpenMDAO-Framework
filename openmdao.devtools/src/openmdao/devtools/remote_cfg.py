@@ -11,7 +11,7 @@ from multiprocessing import Process
 
 from fabric.api import settings, show, hide, run, local, put, get
 
-from openmdao.devtools.tst_ec2 import run_on_ec2_image
+from openmdao.devtools.ec2 import run_on_ec2_image
 from openmdao.util.debug import print_fuct_call
 
 def run_on_host(host, config, conn, funct, outdir, **kwargs):

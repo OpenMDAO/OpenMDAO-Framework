@@ -14,7 +14,7 @@ from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
 from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
                                          run_host_processes, get_tmp_user_dir
 
-from openmdao.devtools.tst_ec2 import run_on_ec2_image
+from openmdao.devtools.ec2 import run_on_ec2_image
 
 import paramiko.util
 
