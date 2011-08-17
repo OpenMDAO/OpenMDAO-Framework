@@ -5,17 +5,16 @@ Neural Network Surrogate Model
 
 This tutorial is a demonstration of how to construct a MetaModel using a
 neural network surrogate model to model a simple function. Generally, 
-MetaModel capabilities are used to contruct a low cost surrogate model for
- use, as opposed to an expensive function. A more detailed description of 
-this class can be found under :ref:`MetaModel`. This component has
- only one input and output, which will be mimicked by the MetaModel. Had
- there been additional variables, access to those would also be available 
-through the MetaModel.
- 
-For this example, a component  was written for the sine function, whose 
- behavior is being modeled in this case.
+MetaModel capabilities are used to contruct a low cost surrogate model whcih 
+can be used as opposed to an expensive function. A more detailed description of 
+this class can be found under :ref:`MetaModel`. 
 
-.. testcode:: NN_MetaModel_start
+For this example, a component was written for the sine function. This component 
+has only one input and output, which will be mimicked by the MetaModel. Had 
+there been additional variables, access to those would also be available 
+through the MetaModel.
+
+.. testcode:: NN_MetaModel_parts
 
     from openmdao.main.api import Assembly, Component, SequentialWorkflow
     from math import sin
@@ -36,15 +35,15 @@ For this example, a component  was written for the sine function, whose
         def execute(self): 
             self.f_x = .5*sin(self.x)
 
-To create a MetaModel of our component, we first define an assembly to work 
-in, and then instantiate the MetaModel component. In this case the MetaModel
- was instantiated as 'sin_meta_model,' making it easy to identify.
+To create a MetaModel, we first define an assembly to work in. After we have 
+created an assembly, the MetaModel component needs to be instantiated. In this example, 
+the MetaModel was instantiated as "sin_meta_model," making it easy to identify.
 
-.. testcode::
+.. testcode:: NN_MetaModel_parts
 
     class Simulation(Assembly):        
-    def __init__(self):
-        super(Simulation,self).__init__()
+        def __init__(self):
+                super(Simulation,self).__init__()
     
         #Components
         self.add("sin_meta_model",MetaModel())      
@@ -53,19 +52,26 @@ in, and then instantiate the MetaModel component. In this case the MetaModel
         self.sin_meta_model.model = Sin()        
         self.sin_meta_model.recorder = DBCaseRecorder()
 
-Once the MetaModel component is in place, the first step is to fill the `surrogate` socket.
- In this case we set the default to NeuralNet, meaning that all outputs would be modeled 
-with NeuralNet surrogate models. However, specific surrogate models can be specified for 
-specific output variables. :ref:`MetaModel` contains more details on how this is accomplished. 
-To pass arguments to the surrogate model, ``surrogate_args`` is used.  In this case the number 
-of hidden nodes within the neural netwrok needs to be specified, amd is currently set 
-to 5. The next step is to identify the component that is being modeled by placing it 
-in the `model` socket. This is the point where the Sin component is added to the MetaModel.
+Once the MetaModel component is in place, the first step is to fill the `surrogate` socket. 
+In this case we set the default to NeuralNet, meaning that all outputs would be modeled 
+with NeuralNet surrogate models. However, surrogate models can be specified for 
+specific output variables, and :ref:`MetaModel` contains more details on how this is accomplished. 
+
+To pass arguments to the surrogate model, ``surrogate_args`` is used.  For NeuralNet,
+the number of hidden nodes within the neural network needs to be specified, and is 
+currently set to 5. Note how it is specified that this variable is attributed to the 
+"default" surrogate model. 
+
+Only after the surrogate socket has been filled, can you specify the component that is 
+being modeled. This is done by placing the component in the socket called ``model``. 
+For this case we are looking at the Sin component created earlier, so this is what's 
+placed in the model socket. Once this has been put in, the MetaModel will now have the 
+same inputs and outputs as our sine function.
 
 Once the `surrogate` and `model` sockets of the MetaModel have been filled, the MetaModel
 can be run in *training* mode. 
 
-.. testcode::
+.. testcode:: NN_MetaModel_parts
 
         #Training the MetaModel
         self.add("DOE_Trainer",DOEdriver())
@@ -77,21 +83,33 @@ can be run in *training* mode.
         self.DOE_Trainer.recorder = DBCaseRecorder()
         self.DOE_Trainer.force_execute = True
         
-*Training* mode is set by adding a DOEdriver, which is allows a DOE to be executed for 
-this workflow.  The type of DOEGenerator used in this MetaModel is a FullFactorial. 
-This generator creates a set of evenly spaced points across an interval, which was set
-to 0-20 in the Sin component. The number of points is 50 as defined by ``num_levels`` 
-under the DOEGenerator, and the interval is the set of input values, which in this 
-case is 'x'. This MetaModel paramter, along with the output is added to the DOEdriver 
-via their respective add methods.
+*Training* is started by adding a DOEdriver, which is allows a DOE to be executed for 
+this workflow. This driver is called "DOE_Trainer" in order to distinguish between 
+other drivers that will be implemented. Along with a DOEdriver, a DOEGenerator is required
+to set the type of DOE that will be run. The type of DOEGenerator used in this MetaModel 
+is a FullFactorial. FullFactorial is used in this case, and this generator creates a 
+set of evenly spaced points across an interval. The number of points sampled is 50 as 
+defined by ``num_levels`` under the DOEGenerator. The interval over which this sampling 
+occurs is the inputs, which is only 'x' in this problem, which was set to be between 0 
+and 20 in the Sin component. This MetaModel paramter, along with the output, is added to 
+the DOEdriver via their respective add methods.
 
-When the ``train_next`` event is set, MetaModel passes the inputs to the model, which 
-in this case is Sin, to be run. The outputs generated by this run are stored to be used
- in the generation of a surrogate model.
+When the ``train_next`` event is set, MetaModel passes the inputs to the model(Sin) to 
+be run. The outputs generated by this run are stored to be used in the generation of a 
+surrogate model. This storage occurs via the use of ``DBCaseRecorder()``, on which more 
+information can be found under :ref:`caseiterdriver.py`.
+
+Finally, ``force_execute`` is set to True to ensure that the component will always
+run when its workflow is executed. 
  
-Once the training portion has been completed, the validation/prediction phase is run.
+Once the training portion has been completed, the validation/prediction phase is run. 
+Under this DOEdriver called "DOE_Validate," the Uniform  DOEGenerator was used.  This 
+provides a random sampling of points from within the range of input variables.  Twenty 
+validation points are being used in this particular case, and is defined by ``num_samples``.
+Here, "sin_calc" is also added, giving us the ability to generate data that can be used 
+to check the accuracy of the surrogate model.
 
-.. testcode::
+.. testcode:: NN_MetaModel_parts
 
         #MetaModel Validation
         self.add("sin_calc",Sin())
@@ -103,12 +121,72 @@ Once the training portion has been completed, the validation/prediction phase is
         self.DOE_Validate.recorder = DBCaseRecorder()
         self.DOE_Validate.force_execute = True
         
-Under this DOEdriver, the Uniform  DOEGenerator was used.  This provides you with a 
-random sampling of points from within the range of input variables.  Twenty validation 
-points are being used in this particular case, and is defined by ``num_samples`` Here, 
-"sin_calc" is also added, giving us the ability to generate data that can be used to check
-the accuracy of the surrogate model.
-
 When validating or predicting data, the ``train_next`` event is excluded.  MetaModel 
-automatically runs in predict mode when this event is excluded.  The outputs of the 
- MetaModel are now predicted outputs 
+automatically runs in predict mode when this event is excluded.  MetaModel will then check 
+for training data which will be used to generate a surrogate model for the provided outouts 
+using the given inputs. Since training data is required to run, the training mode must always 
+be run before predict mode. 
+
+Now, the outputs of the MetaModel are the predicted outputs as determined by the surrogate 
+model, NeuralNet. 
+
+Before this can be implemented, the :ref:`iteration hierarchy` must be specified. The top
+driver in any workflow must be called ``driver``, as seen in this example.  The type of 
+workflow being executed is a sequential workflow, meaning that is a simple sequence of 
+components. 
+
+To this workflow, the two drivers that were created, 'DOE_Trainer' and 'DOE_Validate', are 
+added. Furthermore, the individual components are added to each of the two new workflows. 
+The training and prediction modes both include 'sin_meta_model' so that it can be trained 
+and then used for prediction capabilities.  Then 'sin_calc' was added to workflow of the 
+prediction workflow so that the comparative values can be generated. 
+
+.. testcode:: NN_MetaModel_parts
+
+        #Iteration Hierarchy
+        self.driver.workflow = SequentialWorkflow()
+        self.driver.workflow.add(['DOE_Trainer','DOE_Validate'])
+        self.DOE_Trainer.workflow.add('sin_meta_model')
+        self.DOE_Validate.workflow.add('sin_meta_model')
+        self.DOE_Validate.workflow.add('sin_calc')
+
+The following figure visually shows the iteration hierarchy for this MetaModel.  Note that
+`sin_meta_model` appears in two workflows. This is necessary since in the training workflow 
+the MetaModel is trained, and within the prediction workflow, that data is used to run the 
+MetaModel again in order to create a prediction.  Thus it must be instantiated twice.
+   
+.. _`nn_metamodel iteration hierarchy`:
+
+.. figure:: NNTutorial.png
+   :align: center
+   :alt: Figure shows workflows for each of 3 drivers; the workflows contain a total of 2 components
+
+   View of the Iteration Hierarchy
+
+Finally, the first 2 lines of the following is the code required to actually run the 
+MetaModel.  The remainder is how to access and print the data.  Using the data recorded 
+by the implementation of ``DBCaseRecorder()``, we can access and print the run data. 
+        
+.. testcode:: NN_MetaModel_parts
+
+    if __name__ == "__main__":
+        
+       
+        sim = Simulation()
+        sim.run()
+                   
+        #This is how you can access any of the data
+        train_data = sim.DOE_Trainer.recorder.get_iterator()
+        validate_data = sim.DOE_Validate.recorder.get_iterator()
+        train_inputs = [case['sin_meta_model.x'] for case in train_data]
+        train_actual = [case['sin_meta_model.f_x'] for case in train_data]
+        inputs = [case['sin_calc.x'] for case in validate_data]    
+        actual = [case['sin_calc.f_x'] for case in validate_data]  
+        predicted = [case['sin_meta_model.f_x'] for case in validate_data]
+    
+    
+        for a,p in zip(actual,predicted): 
+            print "%1.3f, %1.3f"%(a,p)
+            
+To view this example, and try running and modifying the code for yourself, you can download it here:
+:download:`NN_Sin.py </../examples/openmdao.examples.metamodel_tutorial/openmdao/examples/metamodel_tutorial/NN_Sin.py>`.

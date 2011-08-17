@@ -3,17 +3,17 @@
 
 import numpy as np
 from numpy import append,array
-from pybrain.tools.shortcuts import buildNetwork
-from pybrain.supervised.trainers import BackpropTrainer
-from pybrain.datasets import SupervisedDataSet
-
 from ffnet import ffnet,mlgraph
 
 
 from openmdao.main.interfaces import implements, ISurrogate
+from openmdao.lib.datatypes.api import Int
+from enthought.traits.api import HasTraits
 
-class NeuralNet(object):
+class NeuralNet(HasTraits):
     implements(ISurrogate)
+    
+    n_hidden_nodes = Int(4, iotype='in', desc = 'Number of hidden nodes in hidden layer of network')
     
     def __init__(self, n_hidden_nodes=4):
         """Initializes neural net surrogate model.
