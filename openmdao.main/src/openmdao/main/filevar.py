@@ -5,6 +5,8 @@ import copy
 import os.path
 import pprint
 
+from openmdao.main.rbac import rbac, rbac_decorate
+
 __all__ = ('FileMetadata', 'FileRef', '_get_valid_owner')
 
 # Standard metadata and default values.
@@ -71,7 +73,77 @@ class FileMetadata(object):
         except AttributeError:
             return default
 
-        
+
+class RemoteFile(object):
+    """
+    Wraps a :class:`file` with remote-access annotations such that only role
+    'owner' may access the file.
+    """
+
+    def __init__(self, fileobj):
+        self.fileobj = fileobj
+
+    @property
+    def closed(self):
+        """ True if file is not open. """
+        return self.fileobj.closed
+
+    # Decorated below since we need to proxy ourselves.
+    def __enter__(self):
+        """ Enter context. """
+        self.fileobj.__enter__()
+        return self
+
+    @rbac('owner')
+    def __exit__(self, exc_type, exc_value, traceback):
+        """ Exit context. """
+        return self.fileobj.__exit__(exc_type, exc_value, traceback)
+
+    @rbac('owner')
+    def close(self):
+        """ Close the file. """
+        return self.fileobj.close()
+
+    @rbac('owner')
+    def flush(self):
+        """ Flush any buffered output. """
+        return self.fileobj.flush()
+
+    @rbac('owner')
+    def __iter__(self):
+        """ Return iterator. """
+        self.fileobj.__iter__()
+        return self
+    
+    @rbac('owner')
+    def next(self):
+        """ Return next input line or raise StopIteration. """
+        return self.fileobj.next()
+
+    @rbac('owner')
+    def read(self, size=-1):
+        """ Read up to `size` bytes. """
+        return self.fileobj.read(size)
+    
+    @rbac('owner')
+    def readline(self, size=-1):
+        """ Read one line. """
+        return self.fileobj.readline(size)
+
+    @rbac('owner')
+    def readlines(self, sizehint=-1):
+        """ Read until EOF. """
+        return self.fileobj.readlines(sizehint)
+
+    @rbac('owner')
+    def write(self, data):
+        """ Write `data` to the file. """
+        return self.fileobj.write(data)
+
+rbac_decorate(RemoteFile.__enter__, 'owner', proxy_types=(RemoteFile,))
+rbac_decorate(RemoteFile.__iter__,  'owner', proxy_types=(RemoteFile,))
+
+
 class FileRef(FileMetadata):
     """
     A reference to a file on disk. As well as containing metadata information,
@@ -97,8 +169,8 @@ class FileRef(FileMetadata):
         ref.owner = owner
         return ref
 
-    def open(self):
-        """ Open file for reading. """
+    def abspath(self):
+        """ Return absolute path to file. """
         path = self.path
         if os.path.isabs(path):
             try:
@@ -121,8 +193,13 @@ class FileRef(FileMetadata):
                 self.owner = owner
                 directory = self.owner.get_abs_directory()
             path = os.path.join(directory, path)
+        return path
+
+    @rbac('owner', proxy_types=[RemoteFile])
+    def open(self):
+        """ Open file for reading. """
         mode = 'rb' if self.binary else 'rU'
-        return open(path, mode)
+        return RemoteFile(open(self.abspath(), mode))
 
 def _get_valid_owner(owner):
     """ Try to find an owner that supports the required functionality. """
@@ -136,4 +213,3 @@ def _get_valid_owner(owner):
             return None
     return None
 
-    
