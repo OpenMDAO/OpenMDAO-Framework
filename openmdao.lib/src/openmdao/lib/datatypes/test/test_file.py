@@ -150,6 +150,15 @@ class TestCase(unittest.TestCase):
                 pass
         self.model = None
 
+    def test_items(self):
+        # This verifies a fix to a problem in Container.items() detected by
+        # an unassigned input file variable. It's here to avoid a datatypes
+        # dependency in main.
+        for name, obj in self.model.items(recurse=True, iotype='in'):
+            if name == 'sink.text_file':
+                return
+        self.fail('sink.text_file not found')
+
 
     # Need to come up with some good tests to cover what's not covered
     # in the more general fileref tests (test_filevar). Some of the stuff
