@@ -14,7 +14,7 @@ from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
 from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
                                          run_host_processes, get_tmp_user_dir
 
-from openmdao.devtools.ec2 import run_on_ec2_image
+from openmdao.devtools.ec2 import run_on_ec2
 
 import paramiko.util
 
@@ -53,6 +53,8 @@ def remote_build_and_test(fname=None, pyversion='python', keep=False,
         
     result = push_and_run(pushfiles, remotedir=remotedir, args=remoteargs)
     print result
+    
+    get(os.path.join(remotedir, 'build.out'), 'build.out')
 
     if result.return_code==0 or not keep:
         rm_remote_tree(remotedir)
@@ -81,10 +83,11 @@ def test_branch(argv=None):
     (options, args) = parser.parse_args(argv)
     
     if not options.hosts:
+        parser.print_help()
         print "nothing to do - no hosts specified"
         sys.exit(0)
     
-    config, conn, image_hosts = process_options(options, parser)
+    config, conn, ec2_hosts = process_options(options, parser)
     
     startdir = os.getcwd()
     
@@ -122,7 +125,7 @@ def test_branch(argv=None):
                      'branch': options.branch,
                      }
         
-    retcode = run_host_processes(config, conn, image_hosts, options, 
+    retcode = run_host_processes(config, conn, ec2_hosts, options, 
                                  funct=remote_build_and_test, 
                                  funct_kwargs=funct_kwargs)
     
@@ -167,7 +170,7 @@ def test_release(argv=None):
         print '\nyou must supply a release directory or the pathname or URL of a go-openmdao.py file'
         sys.exit(-1)
         
-    config, conn, image_hosts = process_options(options, parser)
+    config, conn, ec2_hosts = process_options(options, parser)
     
     startdir = os.getcwd()
     
@@ -195,7 +198,7 @@ def test_release(argv=None):
                    }
     
     if len(options.hosts) > 0:
-        return run_host_processes(config, conn, image_hosts, options, 
+        return run_host_processes(config, conn, ec2_hosts, options, 
                                   funct=remote_build_and_test, 
                                   funct_kwargs=funct_kwargs)
 

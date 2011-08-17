@@ -11,7 +11,7 @@ from multiprocessing import Process
 
 from fabric.api import settings, show, hide, run, local, put, get
 
-from openmdao.devtools.ec2 import run_on_ec2_image
+from openmdao.devtools.ec2 import run_on_ec2
 from openmdao.util.debug import print_fuct_call
 
 def run_on_host(host, config, conn, funct, outdir, **kwargs):
@@ -122,11 +122,11 @@ def process_options(options, parser):
     hosts, config = read_config(options, parser)
         
     # find out which hosts are ec2 images, if any
-    image_hosts = set()
+    ec2_hosts = set()
     ec2_needed = False
     for host in hosts:
         if config.has_option(host, 'image_id'):
-            image_hosts.add(host)
+            ec2_hosts.add(host)
             ec2_needed = True
         elif config.has_option(host, 'instance_id'):
             ec2_needed = True
@@ -139,7 +139,7 @@ def process_options(options, parser):
         conn = None
 
     for host in hosts:
-        if host not in image_hosts and not config.has_option(host, 'addr'):
+        if host not in ec2_hosts and not config.has_option(host, 'addr'):
             if not config.has_option(host, 'instance_id'):
                 raise RuntimeError("can't determine address for host %s" % host)
             
@@ -150,17 +150,20 @@ def process_options(options, parser):
                 inst = reslist[0].instances[0]
             else:
                 raise RuntimeError("can't find a running instance of host %s" % host)
-            config.set(host, 'addr', inst.public_dns_name)
+            if inst.state == u'stopped':
+                ec2_hosts.add(host)
+            else:
+                config.set(host, 'addr', inst.public_dns_name)
             
     options.hosts = hosts
     
     options.outdir = os.path.abspath(os.path.expanduser(
                                      os.path.expandvars(options.outdir)))
 
-    return (config, conn, image_hosts)
+    return (config, conn, ec2_hosts)
 
 
-def run_host_processes(config, conn, image_hosts, options, funct, funct_kwargs):
+def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
     """Start up a different process for each host in options.hosts. Hosts can
     be either EC2 images, EC2 instances, or any other kind of host as long
     as the caller has ssh access to it.  This routine returns after funct
@@ -177,8 +180,8 @@ def run_host_processes(config, conn, image_hosts, options, funct, funct_kwargs):
     
     try:
         for host in options.hosts:
-            if host in image_hosts:
-                runner = run_on_ec2_image
+            if host in ec2_hosts:
+                runner = run_on_ec2
             else:
                 runner = run_on_host
             proc_args = [host, config, conn, funct, options.outdir]

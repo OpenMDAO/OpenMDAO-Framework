@@ -10,7 +10,7 @@ vminfo = {
     'smithers': ('ami-72e3181b', 'm1.large', 'win32'),
     }
 
-def check_image_state(imgname, inst, start_state, sleeptime=10):
+def check_inst_state(imgname, inst, start_state, sleeptime=10):
     while True:
         inst.update()
         print '%s state = %s' % (imgname, inst.state)
@@ -26,7 +26,7 @@ def start_instance(name):
     reservation = img.run(key_name='lovejoykey', security_groups=['default'],
                           instance_type=vminfo[name][1])
     inst = reservation.instances[0]
-    check_image_state(name, inst, u'pending')
+    check_inst_state(name, inst, u'pending')
     return (img, inst)
 
 

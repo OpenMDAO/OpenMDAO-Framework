@@ -18,21 +18,23 @@ from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
 from openmdao.util.debug import print_fuct_call
 
 
-def check_image_state(inst, start_state, imgname='', sleeptime=10,
+def check_inst_state(inst, state, imgname='', sleeptime=10, maxtries=50,
                       debug=False, stream=sys.stdout):
     """Keeps querying the 'state' attribute of the instance every 'sleeptime'
-    seconds until the state changes from start_state.
+    seconds until the state equals the specified state.
     """
+    tries = 1
     while True:
         time.sleep(sleeptime)
         inst.update()
         if debug:
             stream.write("%s state = %s\n" % (imgname, inst.state))
-        if inst.state != start_state:
+        if inst.state == state or tries >= maxtries:
             break
+        tries += 1
     return inst.state
    
-def start_instance(conn, config, name, sleep=10, max_tries=50):
+def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
     """Starts up an EC2 instance having the specified 'short' name and
     returns the instance.
     """
@@ -58,10 +60,9 @@ def start_instance(conn, config, name, sleep=10, max_tries=50):
                           instance_type=instance_type)
     
     inst = reservation.instances[0]
-    check_image_state(inst, u'pending', imgname=name, debug=debug)
+    check_inst_state(inst, u'running', imgname=name, debug=debug)
     if inst.state != u'running':
-        raise RuntimeError("instance of '%s' failed to run (went from state 'pending' to state '%s')" %
-                           (name, inst.state))
+        raise RuntimeError("instance of '%s' failed to run" % name)
     
     if debug:
         print "instance at address '%s' is running" % inst.public_dns_name
@@ -81,12 +82,54 @@ def start_instance(conn, config, name, sleep=10, max_tries=50):
         
     return inst
 
+def start_instance(conn, inst_id, debug=False, sleep=10, max_tries=50):
+    """Starts up an existing EC2 instance given its id"""
+    if debug:
+        print 'starting a instance (id=%s)' % inst_id
+        
+    insts = conn.start_instances(instance_ids=[inst_id])
+    inst = insts[0]
+    
+    check_inst_state(inst, u'running', debug=debug)
+    if inst.state != u'running':
+        raise RuntimeError("instance with id '%s' failed to start" % inst_id)
+    
+    if debug:
+        print "instance at address '%s' is running" % inst.public_dns_name
+        
+    for i in range(max_tries):
+        time.sleep(sleep)
+        if debug: 
+            print "testing ssh connection (try #%d)" % (i+1)
+        # even though the instance is running, it takes a while before
+        # sshd is running, so we have to wait a bit longer
+        if ssh_test(inst.public_dns_name):
+            break
+    else:
+        raise RuntimeError("instance of '%s' ran but ssh connection attempts failed (%d attempts)" % (name,max_tries))
 
-def run_on_ec2_image(host, config, conn, funct, outdir, **kwargs):
-    """Runs the given function on an instance of the specified EC2 image. The
-    instance will be started, the function will run, and the instance will be
+    return inst
+
+def stop_instance(inst, host, stream):
+    inst.stop()
+    check_inst_state(inst, u'stopped', imgname=host, 
+                     stream=stream)
+    if inst.state == u'stopped':
+        stream.write("instance of %s has stopped\n" % host)
+        return True
+    else:
+        stream.write("instance of %s failed to stop! (state=%s)\n" % 
+                     (host, inst.state))
+        return False
+
+def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
+    """Runs the given function on an EC2 instance. The instance may be either
+    created from an image or may be an existing image that is stopped.
+    In either case, the instance will be started and the function will run.
+    If the instance was created from an image, it will be
     terminated, unless there is an error or keep==True, which will result in
-    the image being stopped but not terminated.
+    the instance being stopped but not terminated.  If the instance was
+    pre-existing, then it will just be stopped instead of terminated.
     """
     hostdir = os.path.join(outdir, host)
     if not os.path.isdir(hostdir):
@@ -105,10 +148,15 @@ def run_on_ec2_image(host, config, conn, funct, outdir, **kwargs):
     settings_kwargs['user'] = config.get(host, 'user')
     debug = config.getboolean(host, 'debug')
     
-    # stand up an instance of the specified image
-    orig_stdout.write("starting instance %s\n" % host)
-    
-    inst = start_instance(conn, config, host)
+    if config.has_option(host, 'instance_id'): # start a stopped instance
+        inst_id = config.get(host, 'instance_id')
+        orig_stdout.write("starting instance %s from stopped instance\n" % host)
+        inst = start_instance(conn, inst_id, debug=debug)
+        terminate = False
+    else: # stand up an instance of the specified image
+        orig_stdout.write("starting instance %s from image\n" % host)
+        inst = start_instance_from_image(conn, config, host)
+        terminate = True
     
     settings_kwargs['host_string'] = inst.public_dns_name
     settings_kwargs['disable_known_hosts'] = True
@@ -139,25 +187,23 @@ def run_on_ec2_image(host, config, conn, funct, outdir, **kwargs):
             retval = funct(**kwargs)
     except (SystemExit, Exception):
         retval = -1
+        
     keep = kwargs.get('keep', False)
     if retval == 0 or not keep:
-        orig_stdout.write("terminating %s\n" % host)
-        inst.terminate()
-        check_image_state(inst, u'shutting-down', imgname=host, debug=debug,
-                          stream=orig_stdout)
-        if inst.state == u'terminated':
-            orig_stdout.write("instance of %s is terminated.\n" % host)
+        if terminate is True:
+            orig_stdout.write("terminating %s\n" % host)
+            inst.terminate()
+            check_inst_state(inst, u'terminated', imgname=host, debug=debug,
+                             stream=orig_stdout)
+            if inst.state == u'terminated':
+                orig_stdout.write("instance of %s is terminated.\n" % host)
+            else:
+                orig_stdout.write("instance of %s failed to terminate!\n" % host)
         else:
-            orig_stdout.write("instance of %s failed to terminate!\n" % host)
+            stop_instance(inst, host, orig_stdout)
     else:
         orig_stdout.write("run failed, so stopping %s instead of terminating it.\n" % host)
         orig_stdout.write("%s will have to be terminated manually.\n" % host)
-        inst.stop()
-        check_image_state(inst, u'stopping', imgname=host, debug=debug,
-                          stream=orig_stdout)
-        if inst.state == u'stopped':
-            orig_stdout.write("instance of %s has stopped\n" % host)
-        else:
-            orig_stdout.write("instance of %s failed to stop! (state=%s)\n" % 
-                              (host, inst.state))
+        stop_instance(inst, host, orig_stdout)
+        
     return retval

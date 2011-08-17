@@ -12,8 +12,8 @@ import tarfile
 
 
 def get_file(url):
-    """Copies the specified file into the current directory if the
-    file is remote.  Otherwise, just returns the path that it's given.
+    """Copies the specified file into the current directory, whether
+    the file is local or remote.
     """
     fname = os.path.basename(url)
     if url.startswith('http'):
