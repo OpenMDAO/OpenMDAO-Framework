@@ -61,10 +61,10 @@ the number of hidden nodes within the neural network needs to be specified, and 
 currently set to 5. Note how it is specified that this variable is attributed to the 
 "default" surrogate model. 
 
-Only after the surrogate socket has been filled, can you specify the component that is 
+Only after the surrogate slot has been filled can you specify the component that is 
 being modeled. This is done by placing the component in the slot called ``model``. 
 For this case we are looking at the Sin component created earlier, so this is what's 
-placed in the model socket. Once this has been put in, the MetaModel will now have the 
+placed in the model slot. Once this has been put in, the MetaModel will now have the 
 same inputs and outputs as our sine function.
 
 Once the `surrogate` and `model` slots of the MetaModel have been filled, the MetaModel
@@ -98,9 +98,10 @@ Finally, ``force_execute`` is set to True to ensure that the component will alwa
 run when its workflow is executed. 
  
 Once the training portion has been completed, the validation/prediction phase is set up 
-with another DOEDriver called "DOE_Validate." This time the Uniform  DOEGenerator was used.  This 
+with another DOEDriver called "DOE_Validate." This time, the Uniform  DOEGenerator was used.  This 
 provides a random sampling of points from within the range of input variables.  Twenty 
 validation points are being used in this particular case. 
+
 Here, "sin_calc" is also added, giving us the ability to generate data that can be used 
 to check the accuracy of the surrogate model.
 
@@ -118,10 +119,10 @@ to check the accuracy of the surrogate model.
         
 Notice that the``train_next`` event is not added to the DOE_Validate driver, like it was for
 for the training driver.  MetaModel 
-automatically runs in predict mode when this event this event is set.  MetaModel will then check 
-for training data which will be used to generate a surrogate model for the provided outouts 
+automatically runs in predict mode when this event is not set. MetaModel will then check 
+for training data which will be used to generate a surrogate model for the provided outputs, 
 using the given inputs. Since training data is required to run, the training mode must always 
-be run before predict mode. 
+be run prior to the running of predict mode. 
 
 Now, the outputs of the MetaModel are the predicted outputs as determined by the surrogate 
 model, NeuralNet. 
@@ -134,7 +135,7 @@ components.
 To this workflow, the two drivers that were created, 'DOE_Trainer' and 'DOE_Validate', are 
 added. Furthermore, the individual components are added to each of the two new workflows. 
 The training and prediction modes both include 'sin_meta_model' so that it can be trained 
-and then used for prediction capabilities.  Then 'sin_calc' was added to workflow of the 
+and then used for prediction capabilities.  Then 'sin_calc' was added to the 
 prediction workflow so that the comparative values can be generated. 
 
 .. testcode:: NN_MetaModel_parts
@@ -149,7 +150,8 @@ prediction workflow so that the comparative values can be generated.
 The following figure visually shows the iteration hierarchy for this MetaModel.  Note that
 `sin_meta_model` appears in two workflows. This is necessary since in the training workflow 
 the MetaModel is trained, and within the prediction workflow, that data is used to run the 
-MetaModel again in order to create a prediction.  Thus it must be instantiated twice.
+MetaModel again in order to create a prediction.  Thus it must be added to each workflow 
+seperately.
    
 .. _`nn_metamodel iteration hierarchy`:
 

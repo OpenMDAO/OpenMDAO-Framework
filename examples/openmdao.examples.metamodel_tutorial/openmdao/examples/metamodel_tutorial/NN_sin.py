@@ -62,15 +62,13 @@ class Simulation(Assembly):
 
 if __name__ == "__main__":
     
-    import pylab as plt
     
     sim = Simulation()
     sim.run()
         
+    #This is how you can access any of the data
     train_data = sim.DOE_Trainer.recorder.get_iterator()
     validate_data = sim.DOE_Validate.recorder.get_iterator()
-    
-    #This is how you can access any of the data
     train_inputs = [case['sin_meta_model.x'] for case in train_data]
     train_actual = [case['sin_meta_model.f_x'] for case in train_data]
     inputs = [case['sin_calc.x'] for case in validate_data]    
