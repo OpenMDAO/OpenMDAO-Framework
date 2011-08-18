@@ -14,7 +14,7 @@ openmdao.WorkflowDiagram = function(id,model) {
     /***********************************************************************
      *  private
      ***********************************************************************/
-    if (arguments.length > 0)
+    if (arguments.length > 0) {
         // initialize private variables
         var workflowDiv = null,
             workflow  = null,
@@ -22,11 +22,17 @@ openmdao.WorkflowDiagram = function(id,model) {
             flow_figs = {}
         // build it
         init()
+    }
     
     function init() {
-        this.prototype = Object.create(openmdao.BasePane)
-        this.prototype.init(id,'Workflow')
+        // initialize the base pane
+        self.prototype = Object.create(openmdao.BasePane, {
+            id:     { value: id },
+            title:  { value: "Workflow" },
+        })        
+        self.prototype.init()
         
+        // add the workflow diagram
         var workflowID = "#"+id+"-workflow",
             workflowDiv = jQuery('<div id='+workflowID+'>').width(screen.width).height(screen.height).appendTo("#"+id)
             workflow = new draw2d.Workflow(workflowID)

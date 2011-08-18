@@ -24,7 +24,12 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @constructor
  */
 openmdao.O3DViewer = function(id,model,g_url) {
-    this.prototype = new openmdao.BasePane()
+    // initialize the base pane
+    self.prototype = Object.create(openmdao.BasePane, {
+        id:     { value: id },
+        title:  { value: "Geometry" },
+    })        
+    self.prototype.init()
     
     /***********************************************************************
      *  private

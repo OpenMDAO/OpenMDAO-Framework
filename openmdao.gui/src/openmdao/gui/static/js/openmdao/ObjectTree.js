@@ -16,28 +16,34 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
      *  private
      ***********************************************************************/
      
-    if (arguments.length > 0)
+    if (arguments.length > 0) {
         // initialize private variables
-        var tree = null,
+        var self = this,
+            tree = null,
             filterChars = '_'
         // build it
         init()
+    }
 
     function init() {
-        this.prototype = Object.create(openmdao.BasePane)
-        var menu =  [
-                        {   "text": "Component", 
-                            "items": [
-                                { "text": "Add Component", "onclick": "alert('Sorry, not implemented yet :(');" },
-                            ]
-                        },
-                    ]
-        this.prototype.init(id,'Object Manager', menu)
+        // initialize the base pane
+        self.prototype = Object.create(openmdao.BasePane, {
+            id:     { value: id },
+            title:  { value: "Objects" },
+            menu:   { value: 
+                        [
+                            {   "text": "Component", 
+                                "items": [
+                                    { "text": "Add Component", "onclick": "alert('Sorry, not implemented yet :(');" },
+                                ]
+                            },
+                        ],
+                    }
+        })
+        self.prototype.init()
+        
+        // add a div for the tree and make it droppable
         tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id)
-
-        filterChars = '_' // filter objects with names that start with these chars
-            
-        /** make the tree pane droppable */
         tree.parent().droppable({
             accept: '.objtype',
             drop: function(ev,ui) { 
@@ -79,79 +85,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
         })
         return data
     }
-
-    /** set node attributes (based on full jsonpickle dump, which is not currently used) * /
-    function setNodeAttributes(node,item) {
-        if !item || item['py/type'] || !(item && item['py/repr'])
-            return
-        
-        itemType = typeof item
-            
-        if (itemType !== "undefined")  {
-            if (item == null) {
-                node['attr'] = { 
-                     'class' : 'null',
-                     'path'  : pathname,
-                     'title' : 'null' 
-                }
-                node['value'] = null
-            }
-            else if (itemType=='number' || itemType=='string' || itemType=='boolean' ) {
-                node['attr'] = { 
-                     'class' : 'var',
-                     'path'  : pathname,
-                     'title' : itemType+': '+item
-                }
-                node['value'] = item
-            }
-            else if (item instanceof Array) {
-                node['attr'] = { 
-                     'class' : 'array', 
-                     'path'  : pathname,
-                     'title' : 'array: '+item.join("")
-                }
-                node['value'] = item
-            }
-            else if (item['py/object']) {
-                var tokens = item['py/object'].split('.'),
-                    typename = tokens[tokens.length-1]
-                node['attr'] = { 
-                     'class' : 'obj',
-                     'path'  : pathname,
-                     'title' : typename
-                }
-                node['objtype'] = item['py/object']
-                // TODO: may want to do something special with traits in general
-                if (item['py/seq']) // array/list object (traits)
-                    node['value'] = item['py/seq']
-                else if (item['py/state'])
-                    node['children'] = convertJSON(item['py/state'],pathname)
-                else {
-                    debug.warn('ObjectTree.convertJSON: '+name+' is a py/object with no py/state..')
-                    // TODO? what's the diff between this and a py/object with a py/state?
-                    node['children'] = convertJSON(item,pathname)
-                }
-            }
-            else if (item['py/ref']) {
-                node['attr'] = { 
-                     'class' : 'ref',
-                     'path'  : pathname,
-                     'title' : 'link to: '+item['py/ref']
-                }
-                node['value'] = item['py/ref']
-                //node['data'] = node['data'] + ' --> ' + node['ref']
-            }
-            else { // just a plain old container I guess
-                node['attr'] = { 
-                     'class' : 'obj',
-                     'path'  : pathname,
-                     'title' : 'object'
-                }
-            }
-        }
-    }
-    
-    
+  
     /** update the tree with JSON model data  */
     function updateTree(json) {
         jQuery.jstree._themes = "/static/css/jstree/";
