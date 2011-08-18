@@ -64,4 +64,4 @@ if __name__ =="__main__":
     
     nn.train(inp,y)
     
-    print nn.predict(x)
+    print nn.predict(inp)
