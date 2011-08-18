@@ -188,18 +188,20 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
                 orig_stdout.write("<%s>: calling %s\n" % 
                                   (host, print_fuct_call(funct, **kwargs)))
             retval = funct(**kwargs)
-    except (SystemExit, Exception):
-        retval = -1
+    except (SystemExit, Exception) as err:
+        print str(err)
+        if isinstance(err, SystemExit) and err.code is not None:
+            retval = err.code
+        else:
+            retval = -1
         
     # try to retrieve console output if we can
     try:
         out = inst.get_console_output().output
-    except:
-        out = None
-        
-    if out is not None:
         with open('console.out', 'wb') as f:
             f.write(out)
+    except:
+        pass
 
     keep = kwargs.get('keep', False)
     if retval == 0 or not keep:

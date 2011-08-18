@@ -68,6 +68,9 @@ class TestCase(unittest.TestCase):
         if os.path.exists(self.filename):
             os.remove(self.filename)
 
+    def test_fail(self):
+        self.fail("I failed!")
+        
     def test_forgot_to_read(self):
         
         my_comp = VarComponent()
