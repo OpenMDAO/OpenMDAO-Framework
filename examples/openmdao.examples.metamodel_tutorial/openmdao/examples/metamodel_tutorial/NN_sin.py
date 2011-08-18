@@ -28,7 +28,7 @@ class Simulation(Assembly):
         #Components
         self.add("sin_meta_model",MetaModel())      
         self.sin_meta_model.surrogate = {"default":NeuralNet()}  
-        self.sin_meta_model.surrogate_args = {"default":{'n_hidden_nodes':3}}
+        self.sin_meta_model.surrogate_args = {"default":{'n_hidden_nodes':5}}
         self.sin_meta_model.model = Sin()        
         self.sin_meta_model.recorder = DBCaseRecorder()
         

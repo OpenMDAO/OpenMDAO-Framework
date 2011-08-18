@@ -1,8 +1,7 @@
 """Surrogate Model based on an artificial neural network.
 """
 
-import numpy as np
-from numpy import append, array
+from numpy import array
 from ffnet import ffnet,mlgraph
 
 
@@ -31,14 +30,14 @@ class NeuralNet(HasTraits):
         and outputs. """
 
         inp = array(X)
-        self.targ = array(Y)
+        targ = array(Y)
         n_inputs = len(inp[0])
         
         # 1 Output node because Surrogate Model has only 1 output
         self._nn_surr = ffnet(mlgraph((n_inputs, self.n_hidden_nodes, 1)))
                         
         # Start the training
-        self._nn_surr.train_momentum(inp, self.targ, momentum = .1)
+        self._nn_surr.train_momentum(inp, targ, momentum = .1)
 
                 
     def predict(self, X):
