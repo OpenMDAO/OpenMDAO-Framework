@@ -109,7 +109,6 @@ class NastranParser(object):
         header_index = 0
         while header_index < len(headers):
                 
-            #print headers[page_index], page_index, len(headers)
             if headers[page_index]["actual"] and \
                    headers[page_index]["actual"] == last_header and \
                    subcases[page_index] and \
