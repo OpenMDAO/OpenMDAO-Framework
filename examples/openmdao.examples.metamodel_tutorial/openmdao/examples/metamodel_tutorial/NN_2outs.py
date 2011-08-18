@@ -28,9 +28,8 @@ class Simulation(Assembly):
     
         #Components
         self.add("trig_meta_model",MetaModel())
-        self.trig_meta_model.surrogate = {"f_x_sin":NeuralNet()}
-        #self.trig_meta_model.surrogate = {"f_x_sin":NeuralNet(),
-        #                                 "f_x_cos":KrigingSurrogate()}  
+        self.trig_meta_model.surrogate = {"f_x_sin":NeuralNet(),
+                                         "f_x_cos":KrigingSurrogate()}  
         self.trig_meta_model.surrogate_args = {"f_x_sin":{'n_hidden_nodes':3}}
         self.trig_meta_model.model = Trig()        
         self.trig_meta_model.recorder = DBCaseRecorder()
@@ -40,9 +39,8 @@ class Simulation(Assembly):
         self.DOE_Trainer.DOEgenerator = FullFactorial()
         self.DOE_Trainer.DOEgenerator.num_levels = 20
         self.DOE_Trainer.add_parameter("trig_meta_model.x")
-        self.DOE_Trainer.case_outputs = ["trig_meta_model.f_x_sin"]
-        #self.DOE_Trainer.case_outputs = ["trig_meta_model.f_x_sin",
-        #                                 "trig_meta_model.f_x_cos"]
+        self.DOE_Trainer.case_outputs = ["trig_meta_model.f_x_sin",
+                                         "trig_meta_model.f_x_cos"]
         self.DOE_Trainer.add_event("trig_meta_model.train_next")
         self.DOE_Trainer.recorder = DBCaseRecorder()
         self.DOE_Trainer.force_execute = True
@@ -55,11 +53,9 @@ class Simulation(Assembly):
         self.DOE_Validate.add_parameter(("trig_meta_model.x",
                                          "trig_calc.x"))
         self.DOE_Validate.case_outputs = ["trig_calc.f_x_sin",
-                                          "trig_meta_model.f_x_sin"]
-        #self.DOE_Validate.case_outputs = ["trig_calc.f_x_sin",
-        #                                  "trig_calc.f_x_cos",
-        #                                  "trig_meta_model.f_x_sin",
-        #                                  "trig_meta_model.f_x_cos"]
+                                          "trig_calc.f_x_cos",
+                                          "trig_meta_model.f_x_sin",
+                                          "trig_meta_model.f_x_cos"]
         self.DOE_Validate.recorder = DBCaseRecorder()
         self.DOE_Validate.force_execute = True
         
@@ -82,13 +78,13 @@ if __name__ == "__main__":
     validate_data = sim.DOE_Validate.recorder.get_iterator()
     train_inputs = [case['trig_meta_model.x'] for case in train_data]
     train_actual_sin = [case['trig_meta_model.f_x_sin'] for case in train_data]
-    #train_actual_cos = [case['trig_meta_model.f_x_cos'] for case in train_data]
+    train_actual_cos = [case['trig_meta_model.f_x_cos'] for case in train_data]
     inputs = [case['trig_calc.x'] for case in validate_data]    
     actual_sin = [case['trig_calc.f_x_sin'] for case in validate_data]
-    #actual_cos = [case['trig_calc.f_x_cos'] for case in validate_data]
+    actual_cos = [case['trig_calc.f_x_cos'] for case in validate_data]
     predicted_sin = [case['trig_meta_model.f_x_sin'] for case in validate_data]
-    #predicted_cos = [case['trig_meta_model.f_x_cos'] for case in validate_data]
+    predicted_cos = [case['trig_meta_model.f_x_cos'] for case in validate_data]
 
 
-    for sa,sp in zip(actual_sin,predicted_sin):
-        print "%1.3f, %1.3f"%(sa,sp)
+    for a,p in zip(actual_sin,predicted_sin):
+        print "%1.3f, %1.3f"%(a,p)

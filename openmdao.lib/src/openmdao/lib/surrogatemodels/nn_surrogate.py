@@ -2,7 +2,7 @@
 """
 
 import numpy as np
-from numpy import append,array
+from numpy import append, array
 from ffnet import ffnet,mlgraph
 
 
@@ -31,23 +31,22 @@ class NeuralNet(HasTraits):
         and outputs. """
 
         inp = array(X)
-        targ = array(Y)
+        self.targ = array(Y)
         n_inputs = len(inp[0])
         
         # 1 Output node because Surrogate Model has only 1 output
         self._nn_surr = ffnet(mlgraph((n_inputs, self.n_hidden_nodes, 1)))
                         
         # Start the training
-        self._nn_surr.train_genetic(inp, targ, individuals=10*n_inputs, generations=500)
-
-        self._nn_surr.train_tnc(inp, targ,maxfun=5000)
+        self._nn_surr.train_momentum(inp, self.targ, momentum = .1)
 
                 
     def predict(self, X):
         """ Calculates a predicted value of the response based on the weights
          determined by the current neural network. """
         
-        output = self._nn_surr(X)
+	output = self._nn_surr(X)
+ 	
         return output[0]
   
 if __name__ =="__main__":     
@@ -63,5 +62,8 @@ if __name__ =="__main__":
     nn.n_hidden_nodes = 5
     
     nn.train(inp,y)
+        
+    for a,p in zip(y,inp):
+	out = nn.predict(p)
+	print "%1.3f, %1.3f"%(a,out)
     
-    print nn.predict(x)
