@@ -21,7 +21,8 @@ from openmdao.util.debug import print_fuct_call
 def check_inst_state(inst, state, imgname='', sleeptime=10, maxtries=50,
                       debug=False, stream=sys.stdout):
     """Keeps querying the 'state' attribute of the instance every 'sleeptime'
-    seconds until the state equals the specified state.
+    seconds until the state equals the specified state (or maxtries are 
+    reached).
     """
     tries = 1
     while True:
