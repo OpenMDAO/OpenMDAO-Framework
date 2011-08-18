@@ -124,6 +124,13 @@ def stop_instance(inst, host, stream):
                      (host, inst.state))
         return False
 
+class MultiFile(object):
+    def __init__(self, *files):
+        self._files = files
+        
+    def write(self, s):
+        for f in self._files:
+            f.write(s)
 
 def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     """Runs the given function on an EC2 instance. The instance may be either
@@ -143,6 +150,8 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     orig_stderr = sys.stderr
     sys.stdout = sys.stderr = open('run.out', 'wb')
     
+    outf = MultiFile(sys.stdout, orig_stdout)
+    
     settings_kwargs = {}
     settings_args = []
     
@@ -153,17 +162,17 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     
     if config.has_option(host, 'instance_id'): # start a stopped instance
         inst_id = config.get(host, 'instance_id')
-        orig_stdout.write("starting instance %s from stopped instance\n" % host)
+        outf.write("starting instance %s from stopped instance\n" % host)
         inst = start_instance(conn, inst_id, debug=debug)
         terminate = False
     else: # stand up an instance of the specified image
-        orig_stdout.write("starting instance %s from image\n" % host)
+        outf.write("starting instance %s from image\n" % host)
         inst = start_instance_from_image(conn, config, host)
         terminate = True
     
     settings_kwargs['host_string'] = inst.public_dns_name
     settings_kwargs['disable_known_hosts'] = True
-    orig_stdout.write("instance %s was started successfully. dns=%s\n" % 
+    outf.write("instance %s was started successfully. dns=%s\n" % 
                       (host, inst.public_dns_name))
 
     if debug:
@@ -185,11 +194,11 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
             client = fab_connect(settings_kwargs['user'],
                                  settings_kwargs['host_string'], debug=debug)
             if debug:
-                orig_stdout.write("<%s>: calling %s\n" % 
+                outf.write("<%s>: calling %s\n" % 
                                   (host, print_fuct_call(funct, **kwargs)))
             retval = funct(**kwargs)
     except (SystemExit, Exception) as err:
-        print str(err)
+        outf.write(str(err))
         if isinstance(err, SystemExit) and err.code is not None:
             retval = err.code
         else:
@@ -206,22 +215,26 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     keep = kwargs.get('keep', False)
     if retval == 0 or not keep:
         if terminate is True:
-            orig_stdout.write("terminating %s\n" % host)
+            outf.write("terminating %s\n" % host)
             inst.terminate()
             check_inst_state(inst, u'terminated', imgname=host, debug=debug,
-                             stream=orig_stdout)
+                             stream=outf)
             if inst.state == u'terminated':
-                orig_stdout.write("instance of %s is terminated.\n" % host)
+                outf.write("instance of %s is terminated.\n" % host)
             else:
-                orig_stdout.write("instance of %s failed to terminate!\n" % host)
+                outf.write("instance of %s failed to terminate!\n" % host)
+                retval = -1
         else:
-            stop_instance(inst, host, orig_stdout)
+            if not stop_instance(inst, host, orig_stdout):
+                retval = -1
     else:
-        orig_stdout.write("run failed, so stopping %s instead of terminating it.\n" % host)
-        orig_stdout.write("%s will have to be terminated manually.\n" % host)
-        stop_instance(inst, host, orig_stdout)
+        outf.write("run failed, so stopping %s instead of terminating it.\n" % host)
+        outf.write("%s will have to be terminated manually.\n" % host)
+        if not stop_instance(inst, host, orig_stdout):
+            retval = -1
         
-    return retval
+    if retval != 0:
+        raise RuntimeError("return value = %d" % retval)
 
 
 #def find_instance(inst_id):
