@@ -470,7 +470,15 @@ class ConsoleServer(cmd.Cmd):
             return contents
         else:
             return None
-            
+
+    def ensure_dir(self,dirname):
+        ''' create directory in working directory
+            (does nothing if directory already exists)
+        '''
+        dirpath = os.getcwd()+'/'+str(dirname)
+        if not os.path.isdir(dirpath):
+            os.makedirs(dirpath)
+
     def write_file(self,filename,contents):
         ''' write contents to file in working directory
         '''
