@@ -40,7 +40,8 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
     returns the instance.
     """
     debug = config.getboolean(name, 'debug')
-    img = conn.get_image(config.get(name, 'image_id'))
+    img_id = config.get(name, 'image_id')
+    img = conn.get_image(img_id)
     instance_type = config.get(name, 'instance_type')
     platform = config.get(name, 'platform')
     identity = config.get(name, 'identity')
@@ -49,7 +50,7 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
                        if len(s.strip())>0]
     
     print 'starting instance of image %s' % name
-    print "   image: %s" % img
+    print "   image id: %s" % img_id
     print "   location: %s" % img.location
     print "   platform: %s" % platform
     print "   identity: %s" % identity
@@ -123,31 +124,6 @@ def stop_instance(inst, host, stream):
                      (host, inst.state))
         return False
 
-__conn = None
-def get_connection():
-    global __conn
-    if __conn is None:
-        __conn = EC2Connection()
-    return __conn
-    
-def find_instance(inst_id):
-    reslist = get_connection().get_all_instances([inst_id])
-    if len(reslist) > 0:
-        return reslist[0].instances[0]
-    else:
-        raise RuntimeError("can't find ec2 instance with id %s" % inst_id)
-    
-def ec2_stop(inst_id):
-    inst = find_instance(inst_id)
-    inst.stop()
-    check_inst_state(inst, u'stopped', imgname=host, 
-                     stream=stream)
-    if inst.state == u'stopped':
-        print "stopped instance with id %s" % inst_id
-        return True
-    else:
-        print "instance with id %s failed to stop! (state=%s)" % (inst_id, inst.state)
-        return False
 
 def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     """Runs the given function on an EC2 instance. The instance may be either
@@ -215,6 +191,16 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     except (SystemExit, Exception):
         retval = -1
         
+    # try to retrieve console output if we can
+    try:
+        out = inst.get_console_output().output
+    except:
+        out = None
+        
+    if out is not None:
+        with open('console.out', 'wb') as f:
+            f.write(out)
+
     keep = kwargs.get('keep', False)
     if retval == 0 or not keep:
         if terminate is True:
@@ -235,3 +221,32 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
         
     return retval
 
+
+#def find_instance(inst_id):
+    #reslist = EC2Connection().get_all_instances([inst_id])
+    #if len(reslist) > 0:
+        #return reslist[0].instances[0]
+    #return None
+    
+#def ec2_start(ident=None):
+    #if ident is None:
+        #ident = sys.argv[1]
+    #if ident.startswith('ami-'): # image
+        #pass
+    #elif ident.startswith('i-'):  # instance
+        #insts = EC2Connection().start_instances(instance_ids=[ident])
+        #inst = insts[0]
+        #check_inst_state(inst, u'running')
+        #return inst.state == u'running'
+    #else:
+        #raise RuntimeError("id '%s' is not an ec2 image or an ec2 instance" % ident)
+
+#def ec2_stop(inst_id=None):
+    #if inst_id is None:
+        #inst_id = sys.argv[1]
+    #inst = find_instance(inst_id)
+    #if inst is None:
+        #return False
+    #inst.stop()
+    #check_inst_state(inst, u'stopped')
+    #return inst.state == u'stopped'

@@ -229,8 +229,7 @@ def install_dev_env(url, pyversion, branch=None):
         tar.extractall()
         tar.close()
     else:
-        print "url '%s' does not end in '.git' or '.tar.gz' or '.tar'" % url
-        sys.exit(-1)
+        raise RuntimeError("url '%s' does not end in '.git' or '.tar.gz' or '.tar'" % url)
     
     newfiles = set(os.listdir('.')) - dirfiles
     if len(newfiles) != 1:

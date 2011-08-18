@@ -80,12 +80,12 @@ def test_branch(argv=None):
 
     (options, args) = parser.parse_args(argv)
     
+    config, conn, ec2_hosts = process_options(options, parser)
+    
     if not options.hosts:
         parser.print_help()
         print "nothing to do - no hosts specified"
         sys.exit(0)
-    
-    config, conn, ec2_hosts = process_options(options, parser)
     
     startdir = os.getcwd()
     
