@@ -194,7 +194,7 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
                         args=proc_args,
                         kwargs=kw_args)
             processes.append(p)
-            print "starting build/test process for %s" % p.name
+            print "starting process for %s" % p.name
             p.start()
         
         while len(processes) > 0:

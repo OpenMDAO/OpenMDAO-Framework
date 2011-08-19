@@ -51,14 +51,14 @@ def remote_build_and_test(fname=None, pyversion='python', keep=False,
         remoteargs.append('--')
         remoteargs.extend(testargs)
         
-    result = push_and_run(pushfiles, remotedir=remotedir, args=remoteargs)
-    print result
-    
-    if result.return_code==0 or not keep:
-        rm_remote_tree(remotedir)
-        
-    return result.return_code
-        
+    try:
+        result = push_and_run(pushfiles, remotedir=remotedir, args=remoteargs)
+        print result
+        return result.return_code
+    finally:
+        if not keep:
+            print "removing remote directory: %s" % remotedir
+            rm_remote_tree(remotedir)
 
 def test_branch(argv=None):
     atexit.register(fabric_cleanup, True)
@@ -123,13 +123,14 @@ def test_branch(argv=None):
                      'branch': options.branch,
                      }
         
-    retcode = run_host_processes(config, conn, ec2_hosts, options, 
-                                 funct=remote_build_and_test, 
-                                 funct_kwargs=funct_kwargs)
-    
-    if cleanup_tar:
-        if os.path.isfile(ziptarname):
-            os.remove(ziptarname)
+    try:
+        retcode = run_host_processes(config, conn, ec2_hosts, options, 
+                                     funct=remote_build_and_test, 
+                                     funct_kwargs=funct_kwargs)
+    finally:
+        if cleanup_tar:
+            if os.path.isfile(ziptarname):
+                os.remove(ziptarname)
     
     if retcode == 0 and os.path.isfile('paramiko.log'):
         os.remove('paramiko.log')

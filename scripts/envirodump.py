@@ -15,15 +15,13 @@ http://www.opensource.apple.com/source/python/python-3/python/Tools/freeze/modul
 def callit(f, funct):
     try:
         funct(f)
-    except Exception, err:
+    except (SystemExit, Exception), err:
         f.write(str(err)+'\n')
 
 try:
-    import compiler
     import datetime
     import os
     import platform
-    import site
     import subprocess
     import sys
     from cStringIO import StringIO
@@ -150,11 +148,10 @@ def get_aliases(f):
     """
     if  platform.system() is not "Windows":
         f.write('\n================ALIASES================\n')
-        cmd = 'alias'
-        result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (ferr, fout) = (result.stderr, result.stdout)                
-        f.write(fout.read())
-        f.write(ferr.read())
+        p = subprocess.Popen('alias', shell=True, 
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        out = p.communicate()[0]
+        f.write(out)
 
 
 def get_compiler_info(f):
@@ -309,7 +306,7 @@ def get_pkg_info(f):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        f = open(sys.argv[1], 'w')
+        f = open(sys.argv[1], 'wb')
     else:
         f = sys.stdout
     try:
