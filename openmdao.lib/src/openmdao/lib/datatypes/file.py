@@ -111,6 +111,10 @@ class File(Variable):
             directory = owner.get_abs_directory()
             path = os.path.join(directory, path)
 
+        # If accessing same path on same host (i.e. passthrough), skip.
+        if isinstance(value, FileRef) and path == value.abspath():
+            return
+
         mode = 'wb' if value.binary else 'w'
         chunk = 1 << 20  # 1MB
         src = value.open()
