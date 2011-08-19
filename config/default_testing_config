@@ -32,47 +32,46 @@
 [DEFAULT]
 identity: ~/.ssh/lovejoykey.pem
 py_versions: python2.6
+security_groups: default
 debug: true
-linux_user: ubuntu
-win_user: Administrator
 
 [meerkat32]
 image_id: ami-15fd3c7c
 instance_type: c1.medium
-user: %(linux_user)s
+user: ubuntu
 platform: linux
 
 [meerkat64]
 image_id: ami-abfd3cc2
 instance_type: m1.large
-user: %(linux_user)s
+user: ubuntu
 platform: linux
 
 [win2008_32]
 image_id: ami-e3fc3d8a 
 instance_type: c1.medium
-user: %(win_user)s
+user: Administrator
 security_groups: windows
 platform: windows
 
 [win2008_64]
 image_id: ami-d94680b0
 instance_type: m1.large
-user: %(win_user)s
+user: Administrator
 security_groups: windows
 platform: windows
 
 # a windows 2008 server 64 bit EC2 instance
 #[win2008_64_instance]
 #instance_id: i-0310516d
-#user: %(win_user)s
-platform: windows
+#user: Administrator
+#platform: windows
 
 # a linux 32 bit EC2 instance
 #[meerkat32_instance]
 #instance_id: i-27ba1746
-#user: %(linux_user)s
-platform: linux
+#user: ubuntu
+#platform: linux
 
 # an example of a non-EC2 host. 'addr' is the IP address
 #[local_mac]
