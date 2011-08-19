@@ -1,6 +1,6 @@
-.. index:: NNSurr_Meta
+.. index:: single_output_metamodel
 
-.. _NNSurr_Meta:
+.. _single_output_metamodel:
 
 Using a MetaModel Component
 ===========================
@@ -150,7 +150,7 @@ seperately.
    
 .. _`nn_metamodel iteration hierarchy`:
 
-.. figure:: NNTutorial.png
+.. figure:: metamodel_workflow.png
    :align: center
    :alt: Figure shows workflows for each of 3 drivers; the workflows contain a total of 2 components
 
