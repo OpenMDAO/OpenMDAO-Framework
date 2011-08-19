@@ -158,6 +158,7 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
     raise RuntimeError("failed to connect to host %s after %d tries" %
                        (host, tries))
 
+
 def remote_py_cmd(cmds, py='python', remote_dir=None):
     """Given a list of python statements, creates a self-deleting _cmd_.py
     file, pushes it to the remote host, and runs it, returning the result of

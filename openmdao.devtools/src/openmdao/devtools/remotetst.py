@@ -36,8 +36,15 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
         remoteargs = ['-f', os.path.basename(fname)]
     elif os.path.isdir(fname):
         put_dir(fname, os.path.join(remotedir, os.path.basename(fname)))
+        if sys.platform.startswith('win'):
+            vername = 'latest' #readlink doesn't work on windows, so try 'latest'
+        else:
+            vername = os.readlink(os.path.join(fname,
+                                               'downloads',
+                                               'latest'))
         remoteargs = ['-f', os.path.join(os.path.basename(fname),
-                                         'downloads', 'latest',
+                                         'downloads', 
+                                         vername,
                                          'go-openmdao.py')]
     else:
         remoteargs = ['-f', fname]
@@ -206,7 +213,7 @@ def test_release(argv=None):
         retval = run_host_processes(config, conn, ec2_hosts, options, 
                                     funct=_remote_build_and_test, 
                                     funct_kwargs=funct_kwargs)
-    if retval == 0:
+    if not options.keep:
         cleanup(*cleanup_files)
 
         

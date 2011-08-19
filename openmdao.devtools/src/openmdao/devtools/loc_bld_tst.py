@@ -149,11 +149,8 @@ def install_release(url, pyversion):
         sys.exit(-1)
     
     # parse pathname to find dists dir
-    parts = url.split(os.sep)
-    parts = parts[:-3] + ['dists']
-    dpath = os.path.join(*parts)
-    if url.startswith(os.sep):
-        dpath = os.sep+dpath
+    dn = os.path.dirname
+    dpath = os.path.join(dn(dn(dn(url))), 'dists')
     args = []
     if os.path.isdir(dpath): 
         args.append('--disturl=%s' % dpath)
