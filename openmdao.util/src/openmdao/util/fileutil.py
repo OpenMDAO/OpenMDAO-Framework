@@ -32,6 +32,13 @@ class DirContext(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         os.chdir(self.startdir)
 
+def cleanup(*fnames, **kwargs):
+    """delete the given files or directories if they exists"""
+    for fname in fnames:
+        if os.path.isfile(fname):
+            os.remove(fname)
+        elif os.path.isdir(fname):
+            shutil.rmtree(fname, **kwargs)
 
 def find_in_dir_list(fname, dirlist, exts=('',)):
     """Search the given list of directories for the specified file.
@@ -183,13 +190,6 @@ def get_ancestor_dir(path, num_levels=1):
         path = os.path.dirname(path)
     return path
 
-def rm(path):
-    """Delete a file or directory."""
-    if isdir(path):
-        shutil.rmtree(path)
-    else:
-        os.remove(path)
-        
 
 def copy(src, dest):
     """Copy a file or directory."""

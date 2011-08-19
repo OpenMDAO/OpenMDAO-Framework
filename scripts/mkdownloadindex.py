@@ -29,7 +29,6 @@ def list_dirs(startdir):
             dir_results.append(name)
 
     return sorted(dir_results, key=_keyfunct, reverse=True)
-   
 
 def make_download_index(url):
     # this file is assumed to live in the downloads directory, so use __file__ to get the path

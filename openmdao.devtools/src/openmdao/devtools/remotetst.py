@@ -1,6 +1,5 @@
 import sys
 import os
-import shutil
 import subprocess
 import atexit
 import fnmatch
@@ -10,7 +9,7 @@ from fabric.api import run, env, local, put, cd, get, settings, prompt, \
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
                                     fabric_cleanup, remote_listdir, remote_mkdir,\
-                                    ssh_test, put_dir
+                                    ssh_test, put_dir, cleanup
 from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
                                          run_host_processes, get_tmp_user_dir
 
@@ -18,10 +17,10 @@ from openmdao.devtools.ec2 import run_on_ec2
 
 import paramiko.util
 
-def remote_build_and_test(fname=None, pyversion='python', keep=False, 
+def _remote_build_and_test(fname=None, pyversion='python', keep=False, 
                           branch=None, testargs=(), hostname='', **kwargs):
     if fname is None:
-        raise RuntimeError("remote_build_and_test: missing arg 'fname'")
+        raise RuntimeError("_remote_build_and_test: missing arg 'fname'")
     
     remotedir = get_tmp_user_dir()
     remote_mkdir(remotedir)
@@ -93,8 +92,7 @@ def test_branch(argv=None):
         print 'creating tar file of current branch: ',
         options.fname = os.path.join(os.getcwd(), 'testbranch.tar')
         ziptarname = options.fname+'.gz'
-        if os.path.isfile(ziptarname): # clean up the old tar file
-            os.remove(ziptarname)
+        cleanup(ziptarname) # clean up the old tar file
         make_git_archive(options.fname)
         subprocess.check_call(['gzip', options.fname])
         options.fname = os.path.abspath(ziptarname)
@@ -125,19 +123,18 @@ def test_branch(argv=None):
         
     try:
         retcode = run_host_processes(config, conn, ec2_hosts, options, 
-                                     funct=remote_build_and_test, 
+                                     funct=_remote_build_and_test, 
                                      funct_kwargs=funct_kwargs)
     finally:
         if cleanup_tar:
-            if os.path.isfile(ziptarname):
-                os.remove(ziptarname)
+            cleanup(ziptarname)
     
-    if retcode == 0 and os.path.isfile('paramiko.log'):
-        os.remove('paramiko.log')
+    if retcode == 0:
+        cleanup('paramiko.log')
         
     return retcode
 
-def is_release_dir(dname):
+def _is_release_dir(dname):
     if not isinstance(dname, basestring):
         return False
     if not os.path.isdir(dname):
@@ -150,6 +147,7 @@ def is_release_dir(dname):
 def test_release(argv=None):
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')
+    cleanup_files = ['paramiko.log']
     
     if argv is None:
         argv = sys.argv[1:]
@@ -186,7 +184,15 @@ def test_release(argv=None):
             if not os.path.isfile(fname):
                 print "can't find file '%s'" % fname
                 sys.exit(-1)
-    elif not is_release_dir(fname):
+    elif _is_release_dir(fname):
+        pass
+    elif os.path.isdir(fname):
+        #create a structured release directory
+        release_dir = "%s__release" % fname
+        subprocess.check_call(['push_release', fname, release_dir])
+        fname = options.fname = release_dir
+        cleanup_files.append(release_dir)
+    else:
         parser.print_help()
         print "\nfilename must be a release directory or a pathname or URL of a go-openmdao.py file"
         sys.exit(-1)
@@ -198,14 +204,13 @@ def test_release(argv=None):
     retval = 0
     if len(options.hosts) > 0:
         retval = run_host_processes(config, conn, ec2_hosts, options, 
-                                    funct=remote_build_and_test, 
+                                    funct=_remote_build_and_test, 
                                     funct_kwargs=funct_kwargs)
-
-    if retval == 0 and os.path.isfile('paramiko.log'):
-        os.remove('paramiko.log')
+    if retval == 0:
+        cleanup(*cleanup_files)
 
         
 # make nose ignore these functions
 test_release.__test__ = False
 test_branch.__test__ = False
-remote_build_and_test.__test__ = False
+_remote_build_and_test.__test__ = False

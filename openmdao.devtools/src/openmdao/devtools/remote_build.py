@@ -1,6 +1,5 @@
 import sys
 import os
-import shutil
 import urllib2
 import atexit
 
@@ -15,9 +14,9 @@ import paramiko.util
 from openmdao.devtools.utils import put_dir, remote_check_setuptools, \
                                     remote_tmpdir, \
                                     remote_listdir, rm_remote_tree, fabric_cleanup
-
 from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
                                          run_host_processes, get_tmp_user_dir
+from openmdao.util.fileutil import cleanup
     
 def remote_build(srcdirs=(), destdir=None, build_type='bdist_egg',
                  py=None, remote_dir=None, debug=False, **kwargs):
@@ -115,8 +114,8 @@ def main(argv=None):
                                 funct=remote_build, 
                                 funct_kwargs=funct_kwargs)
     
-    if retval == 0 and os.path.isfile('paramiko.log'):
-        os.remove('paramiko.log')
+    if retval == 0:
+        cleanup('paramiko.log')
 
     sys.exit(retval)
     

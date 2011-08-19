@@ -15,7 +15,7 @@ from fabric.api import run, local, env, put, cd, prompt, hide, show, get, settin
 from fabric.state import connections
 from fabric.network import connect
 
-from openmdao.util.fileutil import find_up
+from openmdao.util.fileutil import find_up, cleanup
 
 class VersionError(RuntimeError):
     pass
