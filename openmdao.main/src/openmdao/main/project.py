@@ -126,8 +126,12 @@ class Project(object):
             # locate file containing state, create it if it doesn't exist
             statefile = os.path.join(projpath, '_project_state')
             if os.path.exists(statefile):
-                with open(statefile, 'r') as f:
-                    self.__dict__ = pickle.load(f)
+                try:
+                    with open(statefile, 'r') as f:
+                        self.__dict__ = pickle.load(f)
+                except e:
+                    print 'Unable to restore project state:',e
+                    self.top = Assembly()
             else:
                 self.top = Assembly()
 

@@ -28,6 +28,7 @@ openmdao.Palette = function(id,model) {
         self.prototype = Object.create(openmdao.BasePane, {
             id:     { value: id },
             title:  { value: "Libraries" },
+            menu:   { value: [] }            
         })        
         self.prototype.init()
     

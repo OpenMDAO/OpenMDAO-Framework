@@ -50,8 +50,8 @@ openmdao.PropertiesEditor = function(id,model) {
         // initialize the base pane
         self.prototype = Object.create(openmdao.BasePane, {
             id:     { value: id },
-            title:  { value: "Properties" },
-        })        
+            title:  { value: "Properties" }
+        })
         self.prototype.init()
         
         nameHeader = jQuery("<h3>")
@@ -93,7 +93,7 @@ openmdao.PropertiesEditor = function(id,model) {
     /** load the table with the given properties */
     function loadTables(properties) {
         if (properties['type']) {
-            nameHeader.html(properties['type']+': '+pathname)
+            nameHeader.html(properties['type']+': '+self.pathname)
             inputs.setData(properties['inputs'])
             outputs.setData(properties['outputs'])
         }
