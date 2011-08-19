@@ -195,12 +195,16 @@ def test_release(argv=None):
                      'testargs': args,
                      'fname': fname,
                    }
-    
+    retval = 0
     if len(options.hosts) > 0:
-        return run_host_processes(config, conn, ec2_hosts, options, 
-                                  funct=remote_build_and_test, 
-                                  funct_kwargs=funct_kwargs)
+        retval = run_host_processes(config, conn, ec2_hosts, options, 
+                                    funct=remote_build_and_test, 
+                                    funct_kwargs=funct_kwargs)
 
+    if retval == 0 and os.path.isfile('paramiko.log'):
+        os.remove('paramiko.log')
+
+        
 # make nose ignore these functions
 test_release.__test__ = False
 test_branch.__test__ = False

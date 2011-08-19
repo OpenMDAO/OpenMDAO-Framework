@@ -75,8 +75,6 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
-    startdir=os.getcwd()
-    
     parser = CfgOptionParser()
     parser.add_option("-d", "--dest", action="store", type='string', 
                       dest="dest", default='.',
@@ -113,9 +111,14 @@ def main(argv=None):
                      'py': options.py,
                      }
     
-    sys.exit(run_host_processes(config, conn, image_hosts, options, 
-                       funct=remote_build, funct_kwargs=funct_kwargs))
+    retval = run_host_processes(config, conn, image_hosts, options, 
+                                funct=remote_build, 
+                                funct_kwargs=funct_kwargs)
     
+    if retval == 0 and os.path.isfile('paramiko.log'):
+        os.remove('paramiko.log')
+
+    sys.exit(retval)
     
 if __name__ == '__main__':
     main()
