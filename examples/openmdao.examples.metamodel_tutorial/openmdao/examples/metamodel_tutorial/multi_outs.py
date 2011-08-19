@@ -6,12 +6,12 @@ from openmdao.lib.drivers.api import DOEdriver
 from openmdao.lib.doegenerators.api import FullFactorial, Uniform
 from openmdao.lib.components.api import MetaModel
 from openmdao.lib.casehandlers.api import DBCaseRecorder
-from openmdao.lib.surrogatemodels.api import NeuralNet, KrigingSurrogate
+from openmdao.lib.surrogatemodels.api import LogisticRegression, KrigingSurrogate
 
 
 class Trig(Component): 
     
-    x = Float(0,iotype="in",units="rad",low=0,high=20)
+    x = Float(0,iotype="in",units="rad")
     
     f_x_sin = Float(0.0,iotype="out")
     f_x_cos = Float(0.0,iotype="out")
@@ -28,9 +28,8 @@ class Simulation(Assembly):
     
         #Components
         self.add("trig_meta_model",MetaModel())
-        self.trig_meta_model.surrogate = {"f_x_sin":NeuralNet(),
+        self.trig_meta_model.surrogate = {"f_x_sin":LogisticRegression(),
                                          "f_x_cos":KrigingSurrogate()}  
-        self.trig_meta_model.surrogate_args = {"f_x_sin":{'n_hidden_nodes':3}}
         self.trig_meta_model.model = Trig()        
         self.trig_meta_model.recorder = DBCaseRecorder()
         
@@ -38,7 +37,7 @@ class Simulation(Assembly):
         self.add("DOE_Trainer",DOEdriver())
         self.DOE_Trainer.DOEgenerator = FullFactorial()
         self.DOE_Trainer.DOEgenerator.num_levels = 20
-        self.DOE_Trainer.add_parameter("trig_meta_model.x")
+        self.DOE_Trainer.add_parameter("trig_meta_model.x",low=0,high=20)
         self.DOE_Trainer.case_outputs = ["trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
         self.DOE_Trainer.add_event("trig_meta_model.train_next")
         self.DOE_Trainer.recorder = DBCaseRecorder()
@@ -49,7 +48,7 @@ class Simulation(Assembly):
         self.add("DOE_Validate",DOEdriver())
         self.DOE_Validate.DOEgenerator = Uniform()
         self.DOE_Validate.DOEgenerator.num_samples = 20
-        self.DOE_Validate.add_parameter(("trig_meta_model.x","trig_calc.x"))
+        self.DOE_Validate.add_parameter(("trig_meta_model.x","trig_calc.x"),low=0,high=20)
         self.DOE_Validate.case_outputs = ["trig_calc.f_x_sin","trig_calc.f_x_cos","trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
         self.DOE_Validate.recorder = DBCaseRecorder()
         self.DOE_Validate.force_execute = True
