@@ -42,7 +42,7 @@ The input arguments that are specific to the neural network surrogate model are 
 specified, and the sin output, which is the one relating to the neural network, is 
 referenced.  
 
-.. testcode::Mult_out_parts
+.. testcode:: Mult_out_parts
 
     class Simulation(Assembly):
         
