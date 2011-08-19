@@ -46,16 +46,16 @@ referenced.
 
     class Simulation(Assembly):
         
-    def __init__(self):
-        super(Simulation,self).__init__()
-    
-        #Components
-        self.add("trig_meta_model",MetaModel())
-        self.trig_meta_model.surrogate = {"f_x_sin":NeuralNet(),
-                                         "f_x_cos":KrigingSurrogate()}  
-        self.trig_meta_model.surrogate_args = {"f_x_sin":{'n_hidden_nodes':5}}
-        self.trig_meta_model.model = Trig()        
-        self.trig_meta_model.recorder = DBCaseRecorder()
+        def __init__(self):
+            super(Simulation,self).__init__()
+        
+            #Components
+            self.add("trig_meta_model",MetaModel())
+            self.trig_meta_model.surrogate = {"f_x_sin":NeuralNet(),
+                                             "f_x_cos":KrigingSurrogate()}  
+            self.trig_meta_model.surrogate_args = {"f_x_sin":{'n_hidden_nodes':5}}
+            self.trig_meta_model.model = Trig()        
+            self.trig_meta_model.recorder = DBCaseRecorder()
 
 The training changes in that both outputs must now be specified under ``case_outputs``. 
 The parameter `x` still only needs to be added once in this case, since the same input 
