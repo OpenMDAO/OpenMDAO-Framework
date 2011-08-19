@@ -38,10 +38,14 @@ class NeuralNet(HasTraits):
         self._nn_surr = ffnet(mlgraph((n_inputs, self.n_hidden_nodes, 1)))
                         
         # Start the training
-        self._nn_surr.train_genetic(inp, targ, individuals=10*n_inputs, generations=500)
+        #self._nn_surr.train_genetic(inp, targ, individuals=10*n_inputs, generations=500)
 
-        self._nn_surr.train_tnc(inp, targ,maxfun=5000)
-
+        #self._nn_surr.train_tnc(inp, targ,maxfun=5000)
+        
+        #self._nn_surr.train_momentum(inp,targ,momentum=1)
+        #self._nn_surr.train_rprop(inp,targ)
+        self._nn_surr.train_cg(inp,targ,disp=False)
+        #self._nn_surr.train_bfgs(inp,targ)
                 
     def predict(self, X):
         """ Calculates a predicted value of the response based on the weights
