@@ -4,7 +4,7 @@ Modeling Multiple Outputs
 ==================================
 
 This tutorial is a short demonstration of how to construct a MetaModel of a component with
-multiple outputs. This tutorial builds off of the :ref:`NNSurr_Meta` tutorial, with 
+multiple outputs. This tutorial builds off of the :ref:`single_output` tutorial, with 
 modifications for multiple outputs in a component.
 
 We created a new component called ``Trig()``. This component has one input and two 
@@ -20,12 +20,12 @@ outputs, both of which will be mimicked by the MetaModel.
     from openmdao.lib.doegenerators.api import FullFactorial, Uniform
     from openmdao.lib.components.api import MetaModel
     from openmdao.lib.casehandlers.api import DBCaseRecorder
-    from openmdao.lib.surrogatemodels.api import NeuralNet, KrigingSurrogate
+    from openmdao.lib.surrogatemodels.api import LogisticRegression, KrigingSurrogate
     
     
     class Trig(Component): 
         
-        x = Float(0,iotype="in",units="rad",low=0,high=20)
+        x = Float(0,iotype="in",units="rad")
         
         f_x_sin = Float(0.0,iotype="out")
         f_x_cos = Float(0.0,iotype="out")
@@ -36,11 +36,8 @@ outputs, both of which will be mimicked by the MetaModel.
 
 This next section differs from the the previous example in that there are two surrogate models, 
 one specified for each of the outputs. Note that each of the outputs had been assinged 
-a specific surrogate model, a neural network for sin, and a kriging surrogate for cos. In this case, 
+a specific surrogate model, a logistic regression for sin, and a kriging surrogate for cos. In this case, 
 no ``default`` was set at all. 
-The input arguments that are specific to the neural network surrogate model are still 
-specified, and the sin output, which is the one relating to the neural network, is 
-referenced.  
 
 .. testcode:: Mult_out_parts
 
@@ -51,9 +48,8 @@ referenced.
         
             #Components
             self.add("trig_meta_model",MetaModel())
-            self.trig_meta_model.surrogate = {"f_x_sin":NeuralNet(),
+            self.trig_meta_model.surrogate = {"f_x_sin":LogisticRegression(),
                                              "f_x_cos":KrigingSurrogate()}  
-            self.trig_meta_model.surrogate_args = {"f_x_sin":{'n_hidden_nodes':5}}
             self.trig_meta_model.model = Trig()        
             self.trig_meta_model.recorder = DBCaseRecorder()
 
@@ -66,22 +62,18 @@ is being evaluated for both outputs, thus a need for only one input.
         self.add("DOE_Trainer",DOEdriver())
         self.DOE_Trainer.DOEgenerator = FullFactorial()
         self.DOE_Trainer.DOEgenerator.num_levels = 20
-        self.DOE_Trainer.add_parameter("trig_meta_model.x")
+        self.DOE_Trainer.add_parameter("trig_meta_model.x",low=0,high=20)
         self.DOE_Trainer.case_outputs = ["trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
         self.DOE_Trainer.add_event("trig_meta_model.train_next")
         self.DOE_Trainer.recorder = DBCaseRecorder()
-        self.DOE_Trainer.force_execute = True
-        
-Notice that we are now tracking four outputs, two from both the MetaModel and Trig() components. 
-
-.. testcode:: Mult_out_parts
+        self.DOE_Trainer.force_execute = True 
 
         #MetaModel Validation
         self.add("trig_calc",Trig())
         self.add("DOE_Validate",DOEdriver())
         self.DOE_Validate.DOEgenerator = Uniform()
         self.DOE_Validate.DOEgenerator.num_samples = 20
-        self.DOE_Validate.add_parameter(("trig_meta_model.x","trig_calc.x"))
+        self.DOE_Validate.add_parameter(("trig_meta_model.x","trig_calc.x"),low=0,high=20)
         self.DOE_Validate.case_outputs = ["trig_calc.f_x_sin","trig_calc.f_x_cos","trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
         self.DOE_Validate.recorder = DBCaseRecorder()
         self.DOE_Validate.force_execute = True
@@ -132,4 +124,4 @@ alternative would be to append ``.sigma`` which would return the standard deviat
             print "%1.3f, %1.3f, %1.3f, %1.3f"%(a,b,c,d)
             
 To view this example, and try running and modifying the code for yourself, you can download it here:
-:download:`NN_2outs.py </../examples/openmdao.examples.metamodel_tutorial/openmdao/examples/metamodel_tutorial/NN_2outs.py>`.
+:download:`multi_outs.py </../examples/openmdao.examples.metamodel_tutorial/openmdao/examples/metamodel_tutorial/multi_outs.py>`.
