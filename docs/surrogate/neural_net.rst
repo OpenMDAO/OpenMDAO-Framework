@@ -1,6 +1,6 @@
 .. index:: NNSurr_Meta
 
-Neural Network Surrogate Model
+Using a Neural Network Surrogate Model
 ==================================
 
 This tutorial is a demonstration of how to construct a MetaModel of a component using a

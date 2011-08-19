@@ -37,7 +37,9 @@ class NeuralNet(HasTraits):
         self._nn_surr = ffnet(mlgraph((n_inputs, self.n_hidden_nodes, 1)))
                         
         # Start the training
-        self._nn_surr.train_momentum(inp, targ, momentum = .1)
+        self._nn_surr.train_genetic(inp, targ, individuals=10*n_inputs, generations=500)
+
+        self._nn_surr.train_tnc(inp, targ,maxfun=5000)
 
                 
     def predict(self, X):
@@ -65,4 +67,3 @@ if __name__ =="__main__":
     for a,p in zip(y,inp):
 	out = nn.predict(p)
 	print "%1.3f, %1.3f"%(a,out)
-    
