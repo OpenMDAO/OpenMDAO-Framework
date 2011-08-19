@@ -59,7 +59,6 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
         
     try:
         result = push_and_run(pushfiles, remotedir=remotedir, args=remoteargs)
-        print result
         return result.return_code
     finally:
         if not keep:
@@ -127,7 +126,6 @@ def test_branch(argv=None):
                      'remotedir': get_tmp_user_dir(),
                      'branch': options.branch,
                      }
-        
     try:
         retcode = run_host_processes(config, conn, ec2_hosts, options, 
                                      funct=_remote_build_and_test, 

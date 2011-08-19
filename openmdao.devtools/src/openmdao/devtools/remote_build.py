@@ -47,7 +47,7 @@ def remote_build(srcdirs=(), destdir=None, build_type='bdist_egg',
                                                     remtmp,
                                                     build_type))
         
-        print result
+        #print result
                 
         pkg = remote_listdir(remtmp)[0]  # should only have one file in directory
         pkgpath = os.path.join(destdir, pkg)
