@@ -7,5 +7,5 @@ Tutorial: MetaModel
 .. toctree::
    :maxdepth: 1
    
-   neural_net
+   single_output
    mult_outputs
