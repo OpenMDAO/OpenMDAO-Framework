@@ -62,7 +62,6 @@ class Simulation(Assembly):
 
 if __name__ == "__main__":
     
-    
     sim = Simulation()
     sim.run()
         
@@ -75,6 +74,7 @@ if __name__ == "__main__":
     actual = [case['sin_calc.f_x'] for case in validate_data]  
     predicted = [case['sin_meta_model.f_x'] for case in validate_data]
 
+
     import pylab as p
     
     p.scatter(train_inputs,train_actual,c='g')
@@ -82,5 +82,7 @@ if __name__ == "__main__":
     p.show()
         
     
-    #for a,p in zip(actual,predicted): 
-    #    print "%1.3f, %1.3f"%(a,p)
+
+   
+    for a,p in zip(actual,predicted): 
+        print "%1.3f, %1.3f"%(a,p)

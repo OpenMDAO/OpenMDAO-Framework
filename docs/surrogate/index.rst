@@ -8,3 +8,4 @@ Tutorial: MetaModel
    :maxdepth: 1
    
    neural_net
+   mult_outputs

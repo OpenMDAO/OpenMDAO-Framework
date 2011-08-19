@@ -1,7 +1,9 @@
 .. index:: NNSurr_Meta
 
-Neural Network Surrogate Model
-==================================
+.. _NNSurr_Meta:
+
+Using a Neural Network Surrogate Model
+========================================
 
 This tutorial is a demonstration of how to construct a MetaModel of a component using a
 neural network surrogate. Generally, MetaModel capabilities are used to contruct a 
@@ -166,7 +168,6 @@ by the implementation of ``DBCaseRecorder()``, we can access and print the run d
 
     if __name__ == "__main__":
         
-       
         sim = Simulation()
         sim.run()
                    

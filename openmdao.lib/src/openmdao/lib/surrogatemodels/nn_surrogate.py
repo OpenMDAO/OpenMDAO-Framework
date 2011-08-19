@@ -1,8 +1,7 @@
 """Surrogate Model based on an artificial neural network.
 """
 
-import numpy as np
-from numpy import append,array
+from numpy import array
 from ffnet import ffnet,mlgraph
 
 
@@ -51,7 +50,8 @@ class NeuralNet(HasTraits):
         """ Calculates a predicted value of the response based on the weights
          determined by the current neural network. """
         
-        output = self._nn_surr(X)
+	output = self._nn_surr(X)
+ 	
         return output[0]
   
 if __name__ =="__main__":     
@@ -67,5 +67,7 @@ if __name__ =="__main__":
     nn.n_hidden_nodes = 5
     
     nn.train(inp,y)
-    
-    print nn.predict(inp)
+        
+    for a,p in zip(y,inp):
+	out = nn.predict(p)
+	print "%1.3f, %1.3f"%(a,out)
