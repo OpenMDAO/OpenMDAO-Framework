@@ -4,12 +4,11 @@ Modeling Multiple Outputs
 ==================================
 
 This tutorial is a short demonstration of how to construct a MetaModel of a component with
-multiple outputs. This tutorial is based off of the :ref:`NNSurr_Meta` tutorial, with 
-modifications for multiple inputs.
+multiple outputs. This tutorial builds off of the :ref:`NNSurr_Meta` tutorial, with 
+modifications for multiple outputs in a component.
 
-For this example, a component was written for the sine and cosine functions, called 
-``Trig()``. This component has one input and two outputs, both of which will be mimicked by 
-the MetaModel. 
+We created a new component called ``Trig()``. This component has one input and two 
+outputs, both of which will be mimicked by the MetaModel. 
 
 .. testcode:: Mult_out_parts
 
@@ -35,9 +34,10 @@ the MetaModel.
             self.f_x_sin = .5*sin(self.x)
             self.f_x_cos = .5*cos(self.x)
 
-This next section differs from the original in that there are two surrogate models, 
+This next section differs from the the previous example in that there are two surrogate models, 
 one specified for each of the outputs. Note that each of the outputs had been assinged 
-a specific surrogate model, a neural network for sin, and a kriging surrogate for cos. 
+a specific surrogate model, a neural network for sin, and a kriging surrogate for cos. In this case, 
+no ``default`` was set at all. 
 The input arguments that are specific to the neural network surrogate model are still 
 specified, and the sin output, which is the one relating to the neural network, is 
 referenced.  
@@ -57,7 +57,6 @@ referenced.
             self.trig_meta_model.model = Trig()        
             self.trig_meta_model.recorder = DBCaseRecorder()
 
-The training changes in that both outputs must now be specified under ``case_outputs``. 
 The parameter `x` still only needs to be added once in this case, since the same input 
 is being evaluated for both outputs, thus a need for only one input.
 
@@ -73,9 +72,7 @@ is being evaluated for both outputs, thus a need for only one input.
         self.DOE_Trainer.recorder = DBCaseRecorder()
         self.DOE_Trainer.force_execute = True
         
-In the validation/prediction portion, it is similar to the changes made in training in 
-that the only difference from a single output metamodel is the specification of additional 
-``case_outputs``. There are now four outputs, two from both the MetaModel and Trig() component. 
+Notice that we are now tracking four outputs, two from both the MetaModel and Trig() components. 
 
 .. testcode:: Mult_out_parts
 
@@ -90,8 +87,8 @@ that the only difference from a single output metamodel is the specification of 
         self.DOE_Validate.force_execute = True
         
 The iteration hierarchy is structurally the same as it would be with one output.  Even 
-though there's multiple surrogate model for multiple outputs, they are still contained 
-within only one MetaModel.  So once again there is the MetaModel component seperately 
+though there's multiple surrogate models for multiple outputs, they are still contained 
+within only one MetaModel component.  So once again there is the MetaModel component seperately 
 added to each workflow, and the ``trig_calc`` component being added to the validation 
 stage so that comparitive values may be generated.
 
@@ -105,10 +102,10 @@ stage so that comparitive values may be generated.
         self.DOE_Validate.workflow.add('trig_calc')
 
 In the printing of the information, we have now included all four of the outputs. 
-For the kriging surrogate model, the answer is returned as a normal distribution. 
-To generate an anwer to be used for comparative purposes, the mean must be taken of 
-the distribution.  This is why there is a ``.mu`` appended to the 
-cos case under ``predicted_cos``. This is allows the mean to be calculated.  An 
+For the kriging surrogate model, the answer returned as a normal distribution 
+(kriging surrogate predicts both a mean and a standard deviation for a given input).
+When comparing the data, we just look at the mean here.  This is why there is a ``.mu`` appended to the 
+cos case under ``predicted_cos``.  An 
 alternative would be to append ``.sigma`` which would return the standard deviation.
         
 .. testcode:: Mult_out_parts
