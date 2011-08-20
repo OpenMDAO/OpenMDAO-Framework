@@ -129,7 +129,7 @@ class Project(object):
                 try:
                     with open(statefile, 'r') as f:
                         self.__dict__ = pickle.load(f)
-                except e:
+            	except Exception, e:
                     print 'Unable to restore project state:',e
                     self.top = Assembly()
             else:
