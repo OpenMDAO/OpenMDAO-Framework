@@ -33,7 +33,7 @@ jQuery(function() {
     )
     new openmdao.FileTree("ftree",model,
         new openmdao.CodeEditor("code",model).editFile,
-        function(path) { new openmdao.O3DViewer("geometry",model,path) }  // create when needed
+        function(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }
     )
     new openmdao.Palette("palette",model)
     new openmdao.WorkflowDiagram("workflow",model)

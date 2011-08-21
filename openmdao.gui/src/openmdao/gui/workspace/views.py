@@ -51,6 +51,15 @@ def AddOns(request):
                               context_instance=RequestContext(request))
         
 @never_cache
+@login_required()
+def Geometry(request):
+    ''' geometry viewer
+    '''
+    return render_to_response('o3dviewer.html',
+                              {'filename': request.GET['path'] },
+                              context_instance=RequestContext(request))
+ 
+@never_cache
 @csrf_exempt
 @login_required()
 def Command(request):

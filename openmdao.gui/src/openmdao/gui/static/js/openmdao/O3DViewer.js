@@ -18,27 +18,7 @@ o3djs.require('o3djs.canvas');
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-/**
- * 
- * @version 0.0.0
- * @constructor
- */
-openmdao.O3DViewer = function(id,model,g_url) {
-    // initialize the base pane
-    self.prototype = Object.create(openmdao.BasePane, {
-        id:     { value: id },
-        title:  { value: "Geometry" },
-    })        
-    self.prototype.init()
-    
-    /***********************************************************************
-     *  private
-     ***********************************************************************/
-     
-    var self = this,
-        elm,
-        o3dDiv,
-        messageDiv
+openmdao.O3DViewer = function(id,g_url) {
         
     var modelTransform;
     var g_simple;
@@ -61,25 +41,37 @@ openmdao.O3DViewer = function(id,model,g_url) {
 
     var g_camera;
 
-    if (arguments.length > 0)
+    if (arguments.length > 0) {
+        var self = this,
+            elm,
+            o3dDiv,
+            messageDiv
         init()
+    }
     
     function init() {
         var title = "Geometry Viewer",
             helpHTML = "<div>"+
-                "Drag the mouse, or use the W, A, S, and D keys to rotate<br/>"+
-                "Right-click and drag, or use the I, J, K, and L keys to pan<br/>"+
-                "Middle-Button and drag, scrollwheel, or + and -  keys to zoom<br/>"+
-                "When using keyboard, hold SHIFT to move model faster<br/>"+
-                "Press R to reset the view"+
-                "</div>",
-            menu = [
-                { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'"+title+"','width':400,'height':150})" }
-            ]
-            
+                    "Drag the mouse, or use the W, A, S, and D keys to rotate<br/>"+
+                    "Right-click and drag, or use the I, J, K, and L keys to pan<br/>"+
+                    "Middle-Button and drag, scrollwheel, or + and -  keys to zoom<br/>"+
+                    "When using keyboard, hold SHIFT to move model faster<br/>"+
+                    "Press R to reset the view"+
+                    "</div>"
+
+        // initialize the base pane
+        self.prototype = Object.create(openmdao.BasePane, {
+            id:     { value: id },
+            title:  { value: title },
+            menu:   { value: 
+                        [
+                            { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'"+title+"','width':400,'height':150})" }
+                        ]
+                    }
+        })        
+        self.prototype.init()
+
         elm = jQuery("#"+id).width(screen.width).height(screen.height)
-        
-        self.prototype.init(id,title,menu)
         
         o3dDiv = jQuery('<div id="o3d" style="width: 100%; height: 100%;">')
         jQuery('<div style="height:100%">').appendTo(elm).append(o3dDiv)
