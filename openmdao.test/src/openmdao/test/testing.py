@@ -57,8 +57,18 @@ def run_openmdao_suite():
         args.remove('--all')
         args.extend(tlist)
         
+    # some libs we use call multiprocessing.cpu_count() on import, which can
+    # raise NotImplementedError, so try to monkeypatch it here to return 1 if
+    # that's the case
+    try:
+        import multiprocessing
+        multiprocessing.cpu_count()
+    except ImportError:
+        pass
+    except NotImplementedError:
+        multiprocessing.cpu_count = lambda: 1
+    
     nose.run_exit(argv=args)
-
 
 if __name__ == '__main__':
     run_openmdao_suite()

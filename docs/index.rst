@@ -12,6 +12,7 @@ Contents:
    getting-started/index
    simple/index
    complex/index
+   surrogate/index
    mdao/index
    user-guide/index
    srcdocs/index
