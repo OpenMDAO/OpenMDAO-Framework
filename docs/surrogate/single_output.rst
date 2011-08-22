@@ -133,7 +133,7 @@ execution order of this example. The top driver in any workflow must be called `
 as seen in this example.  The type of workflow being executed is a sequential workflow, 
 meaning that is a simple sequence of components. 
 
-.. testcode:: NN_MetaModel_parts
+.. testcode:: MetaModel_parts
 
         #Iteration Hierarchy
         self.driver.workflow = SequentialWorkflow()
@@ -160,7 +160,7 @@ Finally, the first 2 lines of the following is the code required to actually run
 MetaModel.  The remainder is how to access and print the data.  Using the data recorded 
 by the implementation of ``DBCaseRecorder()``, we can access and print the run data. 
         
-.. testcode:: NN_MetaModel_parts
+.. testcode:: MetaModel_parts
 
     if __name__ == "__main__":
         
