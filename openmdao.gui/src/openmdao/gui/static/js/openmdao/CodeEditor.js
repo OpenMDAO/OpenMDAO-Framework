@@ -15,14 +15,14 @@ openmdao.CodeEditor = function(id,model) {
      *  private
      ***********************************************************************/
      
-    if (arguments.length > 0)
+    if (arguments.length > 0) {
         // initialize private variables
         var self = this,
             filepath = "",
             editor = null
         // build it
         init()
-    
+    }
     
     function init() {
         // initialize the base pane

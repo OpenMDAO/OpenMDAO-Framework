@@ -14,7 +14,7 @@ openmdao.Plotter = function(id,model) {    // requires flot.js
     /***********************************************************************
      *  private
      ***********************************************************************/
-    if (arguments.length > 0)
+    if (arguments.length > 0) {
         // initialize private variables
         var plot = null,
             options = {
@@ -27,6 +27,7 @@ openmdao.Plotter = function(id,model) {    // requires flot.js
             timer
         // build it
         init()
+    }
 
     function init() {
         this.prototype = Object.create(openmdao.BasePane)
