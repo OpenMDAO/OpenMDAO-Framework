@@ -57,17 +57,15 @@ def run_on_host(host, config, conn, funct, outdir, **kwargs):
             
 
 class CfgOptionParser(OptionParser):
-    def __init__(self):
-        OptionParser.__init__(self)
+    def __init__(self, *args, **kwargs):
+        OptionParser.__init__(self, *args, **kwargs)
         self.add_option("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
                           default='~/.openmdao/testhosts.cfg',
                           help="Path of config file where info for hosts is located")
         self.add_option("--host", action='append', dest='hosts', metavar='HOST',
                           default=[],
                           help="Select host from config file to run on. "
-                               "If not supplied, runs will occur on all hosts in "
-                               "config file. To run on a subset of the hosts in "
-                               "the config file, use multiple --host args")
+                               "To run on multiple hosts, use multiple --host args")
         self.add_option("--all", action="store_true", dest='allhosts',
                         help="If True, run on all hosts in config file.")
         self.add_option("-o","--outdir", action="store", type='string', 

@@ -13,6 +13,7 @@ Developer Guide
    issues
    testing
    git
+   scripts
    todo
    
 
