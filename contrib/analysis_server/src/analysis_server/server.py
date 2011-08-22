@@ -2028,7 +2028,7 @@ def main():  # pragma no cover
     are described by ``name.cfg`` files in the current directory or
     subdirectories.  Subdirectory names are used for category names.
 
-    Usage: python server.py [--hosts=filename][--address=address][--port=number][--up=filename]
+    Usage: python server.py [--hosts=filename][--address=address][--port=number][--debug][--no-heartbeat][--up=filename]
 
     --hosts: string
         Filename for allowed hosts specification. Default ``hosts.allow``.

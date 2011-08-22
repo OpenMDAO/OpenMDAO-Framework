@@ -150,6 +150,7 @@ class ComponentProxy(Component):
         super(ComponentProxy, self).pre_delete()
         if self._client is not None:
             self._client.end(self._objname)
+            self._client.quit()
             self._client = None
 
     def __del__(self):
@@ -157,6 +158,7 @@ class ComponentProxy(Component):
         if self._client is not None:
             try:
                 self._client.end(self._objname)
+                self._client.quit()
             except (EOFError, socket.error):  # pragma no cover
                 pass
             self._client = None

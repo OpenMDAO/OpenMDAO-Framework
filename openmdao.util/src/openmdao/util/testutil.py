@@ -71,7 +71,11 @@ def assert_rel_error(test_case, actual, desired, tolerance):
         test_case.fail('actual nan, desired %s, error nan, tolerance %s'
                        % (desired, tolerance))
     
-    error = (actual - desired) / desired
+    if desired == 0:
+        error = actual
+    else:
+        error = (actual - desired) / desired
+
     if abs(error) > tolerance:
         test_case.fail('actual %s, desired %s, error %s, tolerance %s'
                        % (actual, desired, error, tolerance))
