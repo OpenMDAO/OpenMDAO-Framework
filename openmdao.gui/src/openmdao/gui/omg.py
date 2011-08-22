@@ -66,7 +66,7 @@ if __name__ == '__main__':
     parser.add_option("-p", "--port", type="int", dest="port", default=0,
                       help="port to run server on (defaults to any available port)")
     parser.add_option("-b", "--browser", dest="browser", default="chrome",
-                      help="preferred browser (defaults to firefox)")
+                      help="preferred browser")
     parser.add_option("-s", "--server", action="store_true", dest="serveronly",
                       help="don't launch browser, just run server")
     parser.add_option("-i", "--init", action="store_true", dest="initialize",
