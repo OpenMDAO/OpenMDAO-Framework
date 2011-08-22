@@ -46,13 +46,13 @@ the MetaModel was instantiated as "sin_meta_model," making it easy to identify.
 
     class Simulation(Assembly):        
         def __init__(self):
-                super(Simulation,self).__init__()
-    
-        #Components
-        self.add("sin_meta_model",MetaModel())      
-        self.sin_meta_model.surrogate = {"default":KrigingSurrogate()}  
-        self.sin_meta_model.model = Sin()        
-        self.sin_meta_model.recorder = DBCaseRecorder()
+            super(Simulation,self).__init__()
+
+            #Components
+            self.add("sin_meta_model",MetaModel())      
+            self.sin_meta_model.surrogate = {"default":KrigingSurrogate()}  
+            self.sin_meta_model.model = Sin()        
+            self.sin_meta_model.recorder = DBCaseRecorder()
 
 Once the MetaModel component is in place, the first step is to fill the `surrogate` slot. 
 In this case we set the default to KrigingSurrogate, meaning that all outputs would be modeled 
@@ -70,17 +70,22 @@ model slot is filled with the Sin component, MetaModel will have an input names
 Once the `surrogate` and `model` slots of the MetaModel have been filled, the MetaModel
 is ready for training. 
 
+ .. testcode:: MetaModel_parts
+    :hide:
+    
+    self=Simulation()
+
 .. testcode:: MetaModel_parts
 
-        #Training the MetaModel
-        self.add("DOE_Trainer",DOEdriver())
-        self.DOE_Trainer.DOEgenerator = FullFactorial()
-        self.DOE_Trainer.DOEgenerator.num_levels = 25
-        self.DOE_Trainer.add_parameter("sin_meta_model.x",low=0,high=20)
-        self.DOE_Trainer.case_outputs = ["sin_meta_model.f_x"]
-        self.DOE_Trainer.add_event("sin_meta_model.train_next")
-        self.DOE_Trainer.recorder = DBCaseRecorder()
-        self.DOE_Trainer.force_execute = True
+            #Training the MetaModel
+            self.add("DOE_Trainer",DOEdriver())
+            self.DOE_Trainer.DOEgenerator = FullFactorial()
+            self.DOE_Trainer.DOEgenerator.num_levels = 25
+            self.DOE_Trainer.add_parameter("sin_meta_model.x",low=0,high=20)
+            self.DOE_Trainer.case_outputs = ["sin_meta_model.f_x"]
+            self.DOE_Trainer.add_event("sin_meta_model.train_next")
+            self.DOE_Trainer.recorder = DBCaseRecorder()
+            self.DOE_Trainer.force_execute = True
         
 In this case, we're going to train with a DOEdriver, called "DOE_Trainer".  
 We specify a FullFactorial DOEgenerator, which creates a set of evenly spaced 
@@ -118,6 +123,13 @@ Here, "sin_calc" is also added, so we can calculate an actual and a predicted va
         self.DOE_Validate.recorder = DBCaseRecorder()
         self.DOE_Validate.force_execute = True
         
+        #Iteration Hierarchy
+        self.driver.workflow = SequentialWorkflow()
+        self.driver.workflow.add(['DOE_Trainer','DOE_Validate'])
+        self.DOE_Trainer.workflow.add('sin_meta_model')
+        self.DOE_Validate.workflow.add('sin_meta_model')
+        self.DOE_Validate.workflow.add('sin_calc')
+        
 Notice that the``train_next`` event is not added to the DOE_Validate driver, like it was for
 for the training driver.  MetaModel 
 automatically runs in predict mode when this event is not set. MetaModel will then check 
@@ -132,15 +144,7 @@ The last thing we do is specify the :ref:`iteration hierarchy` which controlles 
 execution order of this example. The top driver in any workflow must be called ``driver``, 
 as seen in this example.  The type of workflow being executed is a sequential workflow, 
 meaning that is a simple sequence of components. 
-
-.. testcode:: MetaModel_parts
-
-        #Iteration Hierarchy
-        self.driver.workflow = SequentialWorkflow()
-        self.driver.workflow.add(['DOE_Trainer','DOE_Validate'])
-        self.DOE_Trainer.workflow.add('sin_meta_model')
-        self.DOE_Validate.workflow.add('sin_meta_model')
-        self.DOE_Validate.workflow.add('sin_calc')
+        
 
 The following figure visually shows the iteration hierarchy for this MetaModel.  Note that
 `sin_meta_model` appears in two workflows. This is necessary since in the training workflow 
