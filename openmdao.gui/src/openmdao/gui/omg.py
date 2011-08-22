@@ -1,13 +1,45 @@
 import os, sys
 from optparse import OptionParser
-from mdao_util import PickUnusedPort, launch_browser
+from mdao_util import ensure_dir, PickUnusedPort, launch_browser
+
+def init(reset):
+    # first time setup (or re-setup)
+    print "Initializing settings..."
+    
+    user_dir = os.path.expanduser("~/.openmdao/gui/")
+    ensure_dir(user_dir)
+    
+    settings_file = "settings.py"
+    database_file = user_dir+"mdaoproj.db"
+    media_storage = user_dir+"media"
+    
+    if os.path.exists(settings_file):
+        os.remove(settings_file)
+    o = open(settings_file,"a") #open for append
+    for line in open("settings.tmp"):
+       line = line.replace("'NAME': 'mdaoproj.db'","'NAME': '"+database_file+"'")
+       line = line.replace("MEDIA_ROOT = ''","MEDIA_ROOT = '"+media_storage+"'")
+       o.write(line) 
+    o.close()
+    
+    import settings
+    print "MEDIA_ROOT=",settings.MEDIA_ROOT
+    print "DATABASE=",settings.DATABASES['default']['NAME']
+    
+    print "Resetting project database..."
+    if reset and os.path.exists(database_file):
+        os.remove(database_file)
+    from django.core.management import execute_manager
+    execute_manager(settings,argv=[__file__,'syncdb'])
 
 def dev(port):
+    # run django development server
     import settings
     from django.core.management import execute_manager
     execute_manager(settings,argv=[__file__,'runserver',str(port)])
 
 def pro(port):
+    # run cherrypy 'production' server
     print "Running server on port",str(port)
     print "Quit the server with CTRL-BREAK"
     
@@ -37,9 +69,19 @@ if __name__ == '__main__':
                       help="preferred browser (defaults to firefox)")
     parser.add_option("-s", "--server", action="store_true", dest="serveronly",
                       help="don't launch browser, just run server")
+    parser.add_option("-i", "--init", action="store_true", dest="initialize",
+                      help="(re)initialize settings")
+    parser.add_option("-r", "--reset", action="store_true", dest="reset",
+                      help="reset project database (not valid with -d or --devserver)")
 
     (options, args) = parser.parse_args()
     
+    if options.initialize or not os.path.exists('settings.py'):
+        if options.reset and not options.devserver:
+            init(reset=True)
+        else:
+            init(reset=False)
+        
     if (options.port < 1):
         options.port = PickUnusedPort()    
 
