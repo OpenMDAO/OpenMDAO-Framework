@@ -39,6 +39,10 @@ one specified for each of the outputs. Note that each of the outputs had been as
 a specific surrogate model, a logistic regression for sin, and a kriging surrogate for cos. In this case, 
 no ``default`` was set at all. 
 
+The parameter `x` still only needs to be added once in this case, since the same input 
+is being evaluated for both outputs, thus a need for only one input.
+        
+
 .. testcode:: Mult_out_parts
 
     class Simulation(Assembly):
@@ -53,30 +57,33 @@ no ``default`` was set at all.
             self.trig_meta_model.model = Trig()        
             self.trig_meta_model.recorder = DBCaseRecorder()
 
-The parameter `x` still only needs to be added once in this case, since the same input 
-is being evaluated for both outputs, thus a need for only one input.
+            #Training the MetaModel
+            self.add("DOE_Trainer",DOEdriver())
+            self.DOE_Trainer.DOEgenerator = FullFactorial()
+            self.DOE_Trainer.DOEgenerator.num_levels = 20
+            self.DOE_Trainer.add_parameter("trig_meta_model.x",low=0,high=20)
+            self.DOE_Trainer.case_outputs = ["trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
+            self.DOE_Trainer.add_event("trig_meta_model.train_next")
+            self.DOE_Trainer.recorder = DBCaseRecorder()
+            self.DOE_Trainer.force_execute = True 
+            
+            #MetaModel Validation
+            self.add("trig_calc",Trig())
+            self.add("DOE_Validate",DOEdriver())
+            self.DOE_Validate.DOEgenerator = Uniform()
+            self.DOE_Validate.DOEgenerator.num_samples = 20
+            self.DOE_Validate.add_parameter(("trig_meta_model.x","trig_calc.x"),low=0,high=20)
+            self.DOE_Validate.case_outputs = ["trig_calc.f_x_sin","trig_calc.f_x_cos","trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
+            self.DOE_Validate.recorder = DBCaseRecorder()
+            self.DOE_Validate.force_execute = True
+            
+            #Iteration Hierarchy
+            self.driver.workflow = SequentialWorkflow()
+            self.driver.workflow.add(['DOE_Trainer','DOE_Validate'])
+            self.DOE_Trainer.workflow.add('trig_meta_model')    
+            self.DOE_Validate.workflow.add('trig_meta_model')
+            self.DOE_Validate.workflow.add('trig_calc')
 
-.. testcode:: Mult_out_parts
-        
-        #Training the MetaModel
-        self.add("DOE_Trainer",DOEdriver())
-        self.DOE_Trainer.DOEgenerator = FullFactorial()
-        self.DOE_Trainer.DOEgenerator.num_levels = 20
-        self.DOE_Trainer.add_parameter("trig_meta_model.x",low=0,high=20)
-        self.DOE_Trainer.case_outputs = ["trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
-        self.DOE_Trainer.add_event("trig_meta_model.train_next")
-        self.DOE_Trainer.recorder = DBCaseRecorder()
-        self.DOE_Trainer.force_execute = True 
-
-        #MetaModel Validation
-        self.add("trig_calc",Trig())
-        self.add("DOE_Validate",DOEdriver())
-        self.DOE_Validate.DOEgenerator = Uniform()
-        self.DOE_Validate.DOEgenerator.num_samples = 20
-        self.DOE_Validate.add_parameter(("trig_meta_model.x","trig_calc.x"),low=0,high=20)
-        self.DOE_Validate.case_outputs = ["trig_calc.f_x_sin","trig_calc.f_x_cos","trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
-        self.DOE_Validate.recorder = DBCaseRecorder()
-        self.DOE_Validate.force_execute = True
         
 The iteration hierarchy is structurally the same as it would be with one output.  Even 
 though there's multiple surrogate models for multiple outputs, they are still contained 
@@ -84,14 +91,6 @@ within only one MetaModel component.  So once again there is the MetaModel compo
 added to each workflow, and the ``trig_calc`` component being added to the validation 
 stage so that comparitive values may be generated.
 
-.. testcode:: Mult_out_parts
-
-        #Iteration Hierarchy
-        self.driver.workflow = SequentialWorkflow()
-        self.driver.workflow.add(['DOE_Trainer','DOE_Validate'])
-        self.DOE_Trainer.workflow.add('trig_meta_model')
-        self.DOE_Validate.workflow.add('trig_meta_model')
-        self.DOE_Validate.workflow.add('trig_calc')
 
 In the printing of the information, we have now included all four of the outputs. 
 For the kriging surrogate model, the answer returned as a normal distribution 
@@ -124,4 +123,4 @@ alternative would be to append ``.sigma`` which would return the standard deviat
             print "%1.3f, %1.3f, %1.3f, %1.3f"%(a,b,c,d)
             
 To view this example, and try running and modifying the code for yourself, you can download it here:
-:download:`multi_outs.py </../examples/openmdao.examples.metamodel_tutorial/openmdao/examples/metamodel_tutorial/multi_outs.py>`.
+:download:`multi_outs.py </../examples/openmdao.examples.metamodel_tutorial/openmdao/examples/metamodel_tutorial/multi_outs.py>`.    
