@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.template import RequestContext
 from django import forms
 from django.core.files.base import ContentFile
+from django.core.urlresolvers import reverse
 
 from openmdao.gui.settings import MEDIA_ROOT
 from openmdao.gui.projdb.models import Project
@@ -30,6 +31,23 @@ def index(request):
     project_list = Project.objects.filter(user=request.user)
     return render_to_response('project_list.html', 
                               {'project_list': project_list, 'user': request.user})
+
+#
+# project delete
+#                              
+@login_required()
+def delete(request, project_id):
+    p = get_object_or_404(Project, pk=project_id)
+    if request.POST:
+        if p.filename:
+            dir = 'projects/'+request.user.username
+            filename = MEDIA_ROOT+'/'+str(p.filename)
+            if os.path.exists(filename):
+                os.remove(filename)
+        p.delete()
+        return HttpResponseRedirect(reverse('projdb.views.index'))
+
+    return HttpResponseRedirect('')
 
 #
 # project detail
@@ -107,8 +125,28 @@ def new(request):
 #                              
 @login_required()
 def add(request):
-    return HttpResponse('Add project - Not yet implemented')
+    ''' upload a file and add it to the project database
+    '''
+    if request.method=='POST':
+        if 'myfile' in request.FILES:
+            file = request.FILES['myfile']
+            filename = file.name
+            if len(filename) > 0:
+                p = Project(user=request.user)
+                p.projectname   = 'Added ' + filename + strftime(" %Y-%m-%d %H%M%S")
+                p.save()
+            
+                dir = 'projects/'+request.user.username
+                if not os.path.isdir(dir):
+                    os.makedirs(dir)
+                file_content = ContentFile(file.read())
+                p.filename.save(filename, file_content)
+                
+                return HttpResponseRedirect('/projects/'+str(p.id))
 
+
+    return render_to_response('add_project.html', 
+                              context_instance=RequestContext(request))
 #
 # register user
 #

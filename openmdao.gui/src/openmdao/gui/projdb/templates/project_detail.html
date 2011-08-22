@@ -22,6 +22,12 @@
     <input type="submit" value="Create Project" />
     {% endif %}
     </form>
+    
+    <form action="/projects/delete/{{ project.id }}/" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="filename" value="{{ project.filename }}" />
+        <input type="submit" value="Delete this project" />
+    </form>
 
     <p>
     <b>Last Modified: </b> {{ project.modified }}

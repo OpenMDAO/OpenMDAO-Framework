@@ -3,8 +3,7 @@
       "items": [
         { "text": "Save",          "onclick": "model.saveProject();" },
         { "text": "Run",           "onclick": "model.runModel();" },
-        { "text": "New",           "url": "/workspace/exit" },
-        { "text": "Logout",        "url": "/workspace/logout" }
+        { "text": "Close",         "url": "/workspace/exit" }
       ]
     },
     { "text": "View", 

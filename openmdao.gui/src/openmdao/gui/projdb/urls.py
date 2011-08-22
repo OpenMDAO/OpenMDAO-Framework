@@ -10,6 +10,7 @@ urlpatterns = patterns('projdb.views',
     (r'^(?P<project_id>\d+)/$', 'detail'),
     (r'^new/$', 'new'),
     (r'^add/$', 'add'),
+    (r'^delete/(?P<project_id>\d+)/$', 'delete'),
     
     # debugging views
     (r'^meta$', 'display_meta'),
