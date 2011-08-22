@@ -2,6 +2,7 @@
 Some useful decorators
 """
 import types
+import time
 
 from decorator import FunctionMaker
 from inspect import getmembers, ismethod, getargspec, formatargspec, getmro
