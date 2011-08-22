@@ -6,6 +6,7 @@ import os
 import sys
 import re
 import linecache
+import StringIO
 
 def traceit(frame, event, arg):
     """A function useful for tracing Python execution. Wherever you want the 
@@ -51,3 +52,23 @@ def dumpit(obj, stream=sys.stdout, recurse=True, ignore_address=True):
     _dumpit(obj, stream, recurse, 0, set(), ignore_address)
 
 
+def print_fuct_call(funct, *args, **kwargs):
+    def quote_if_str(obj):
+        if isinstance(obj, basestring):
+            return "'%s'" % obj
+        return str(obj)
+    
+    s = StringIO.StringIO()
+    s.write(funct.__name__)
+    s.write('(')
+    for i,arg in enumerate(args):
+        if i>0: s.write(',')
+        s.write(quote_if_str(arg))
+    if len(args) > 0:
+        s.write(', ')
+    for j,tup in enumerate(kwargs.items()):
+        if j>0: s.write(', ')
+        s.write("%s=%s" % (tup[0], quote_if_str(tup[1])))
+    s.write(')')
+    return s.getvalue()
+    

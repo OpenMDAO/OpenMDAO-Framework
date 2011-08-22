@@ -11,8 +11,8 @@ from pkg_resources import Environment, WorkingSet, Requirement, working_set
 import tarfile
 import sphinx
 
-from openmdao.util.dumpdistmeta import get_dist_metadata
-import openmdao.util.releaseinfo
+from openmdao.devtools.dumpdistmeta import get_dist_metadata
+#import openmdao.util.releaseinfo
 
 # Specify modules and packages to be included in the OpenMDAO documentation here
 srcmods = [
@@ -28,18 +28,16 @@ packages = [
 
 logger = logging.getLogger()
 
-def get_revision():
+def get_rev_info():
     try:
-        p = Popen('git log -1', 
+        p = Popen('git describe --tags', 
                   stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
-        out = p.communicate()[0]
-        ret = p.returncode
+        out = p.communicate()[0].strip()
+        tag, ncommits, commit = out.rsplit('-', 2)
     except:
-        return '<unknown_commit>'
-    else:
-        return out.split()[1]
+        return ('?','?','?')
+    return tag, ncommits, commit
 
-# set all of our global configuration parameters
 def _get_dirnames():
     bindir = os.path.dirname(sys.executable)
     branchdir = os.path.dirname(os.path.dirname(bindir))
@@ -201,9 +199,13 @@ def build_docs(argv=None):
         version = argv[idx+1]
         shtitle = 'OpenMDAO Documentation v%s' % version
     else:
-        #version = openmdao.util.releaseinfo.__version__
-        version = 'rev %s' % get_revision()
-        shtitle = 'OpenMDAO Documentation (%s)' % version
+        try:
+            tag, ncommits, commit = get_rev_info()
+            version = "%s-%s-%s" % (tag, ncommits, commit)
+            shtitle = 'OpenMDAO Documentation (%s commits after tag %s)' % (ncommits,tag)
+        except:
+            version = "?-?-?"
+            shtitle = "OpenMDAO Documentation (unknown revision)"
     
     branchdir, docdir, bindir =_get_dirnames()
 
@@ -392,6 +394,8 @@ def _get_rst_path(obj):
                     return relpath
     else:
         return
+    
+    
 if __name__ == "__main__": #pragma: no cover
     build_docs()
 

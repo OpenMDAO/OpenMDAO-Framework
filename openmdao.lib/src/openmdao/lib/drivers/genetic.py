@@ -4,6 +4,16 @@ import re
 
 from numpy import float32, float64, int32, int64, array
 
+#pyevolve calls multiprocessing.cpu_count(), which can raise NotImplementedError
+#so try to monkeypatch it here to return 1 if that's the case
+try:
+    import multiprocessing
+    multiprocessing.cpu_count()
+except ImportError:
+    pass
+except NotImplementedError:
+    multiprocessing.cpu_count = lambda: 1
+    
 from pyevolve import G1DList, GAllele, GenomeBase, Scaling
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
