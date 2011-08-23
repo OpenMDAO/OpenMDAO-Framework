@@ -6,7 +6,7 @@ Using GitHub Issues
 
 Creating a Issue
 ----------------
-Whenever you're going to do development on the OpenMDAO code base, there should be an issue related
+Whenever you're going to do development on the OpenMDAO code base, you should have an issue related
 to that work. The issue could be related to a software requirement, or a bug that was found, or an 
 enhancement that has been requested. A number of issues have already been created
 for the project, but you can also create a new issue yourself.
@@ -15,28 +15,27 @@ To create a GitHub issue, follow these steps:
 
 
 1.  First, log into GitHub and go to http://github.com/OpenMDAO/OpenMDAO-Framework/issues. 
-    You must be logged in to create a new issue.
+    (You must be logged in to create a new issue.)
 
 2.  Select the the **New Issue** button in the upper right hand corner. 
     
     The *New Issue* page will appear, as shown below:
     
-    .. figure:: create_issue.png
+    .. figure:: new_issue.png
        :align: center
- 
+
        Creating a Issue on GitHub
+
     
-|
-    
-3.  There are two sections: a Title and a Comments section. Try to make the title short, but descriptive. 
-    "I found a bug" is not a good title. Instead try something like "Problem with XXX when doing Y". 
-    In the comments section you should put as much detail as you can. The more information you give, 
-    the easier it will be for someone to write code to address the issue you are reporting.  If you
-    can supply a small snippet of code that reproduces that problem, that would be ideal. You may also 
-    select a number of *labels* to attach to the issue. For instance if you are reporting a bug, you would 
-    select the *bug* label. If you have found a mistake in the documentation, then you would also attach 
-    the "docs" label. You can add as many labels as you feel are relevant to the issue.   
-    
+3.  There are two sections to this page: a *Title* and a *Comments* section. Try to make the title short, but descriptive. 
+    "I found a bug" is not a good title. Instead try something like "Problem with XXX when doing Y."  In the
+    comments section, you should put as much detail as you can. The more information you give,  the easier it
+    will be for someone to write code to address the issue you are reporting. If you can supply a small
+    snippet of code that reproduces that problem, that would be ideal. You may notice that a number of
+    issues have a *label* attached. Only OpenMDAO maintainers can create labels. If it is
+    important that your issue has a label, you can ask one of the maintainers to label it. An issue can
+    have multiple labels if they are relevant.   
+
 4.  When you submit the issue, it will be assigned a number. If you plan to work on this issue yourself, 
     you will reference this number in your commit messages to associate your branch with the issue. 
 
@@ -68,9 +67,9 @@ be trying to hash out what the problem really is. Adding comments is one of the 
 "social coding," and we hope you will make use of it!
 
 .. figure:: existing_issue.png
-       :align: center
+   :align: center
  
-       Viewing an existing issue.  
+   Viewing an Existing Issue  
        
        
 When you are done with an issue, indicate this by putting ``closes GH-???`` or ``closes #???`` into your

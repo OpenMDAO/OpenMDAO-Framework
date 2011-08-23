@@ -127,7 +127,7 @@ have to install it in your openmdao environment like this:
 
    easy_install coverage
 
-
+.. _Adding-New-Tests:
 
 Adding New Tests
 ----------------
