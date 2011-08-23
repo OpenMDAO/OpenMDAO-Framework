@@ -1,4 +1,3 @@
-
 import sys
 import os.path
 import webbrowser
@@ -542,7 +541,10 @@ def _get_template_options(distdir, cfg, **kwargs):
     if cfg.has_section('openmdao'):
         openmdao_metadata = dict([item for item in cfg.items('openmdao')])
     else:
-        openmdao.metadata = {}
+        openmdao_metadata = {}
+        
+    if 'static_path' not in openmdao_metadata:
+        openmdao_metadata['static_path'] = ''
 
     if 'packages' in kwargs:
         metadata['packages'] = kwargs['packages']
