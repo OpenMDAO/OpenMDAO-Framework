@@ -72,13 +72,14 @@ def test_branch(argv=None):
     if argv is None:
         argv = sys.argv[1:]
         
-    parser = CfgOptionParser()
+    parser = CfgOptionParser(usage="%prog [OPTIONS] -- [options to openmdao_test]")
     parser.add_option("-k","--keep", action="store_true", dest='keep',
-                      help="If there are test/build failures, don't delete "
-                           "the temporary build directory "
-                           "or terminate the remote instance if testing on EC2.")
-    parser.add_option("-f","--file", action="store", type='string', dest='fname',
-                      help="Pathname of a tarfile or URL of a git repo")
+                      help="Don't delete the temporary build directory. "
+                           "If testing on EC2 stop the instance instead of terminating it.")
+    parser.add_option("-f","--file", action="store", type='string', 
+                      dest='fname',
+                      help="Pathname of a tarfile or URL of a git repo. "
+                           "Defaults to the current repo.")
     parser.add_option("-b","--branch", action="store", type='string', 
                       dest='branch',
                       help="If file is a git repo, supply branch name here")
@@ -157,11 +158,10 @@ def test_release(argv=None):
     if argv is None:
         argv = sys.argv[1:]
         
-    parser = CfgOptionParser()
+    parser = CfgOptionParser(usage="%prog [OPTIONS] -- [options to openmdao_test]")
     parser.add_option("-k","--keep", action="store_true", dest='keep',
-                      help="If there are test/build failures, don't delete "
-                           "the temporary build directory "
-                           "or terminate the remote instance if testing on EC2.")
+                      help="Don't delete the temporary build directory. "
+                           "If testing on EC2 stop the instance instead of terminating it.")
     parser.add_option("-f","--file", action="store", type='string', dest='fname',
                       help="URL or pathname of a go-openmdao.py file or pathname of a release dir")
 
