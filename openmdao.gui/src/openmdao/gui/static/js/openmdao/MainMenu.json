@@ -8,7 +8,7 @@
     },
     { "text": "View", 
       "items": [
-        { "text": "Code Editor",   "onclick": "jQuery('#editor_tab').click();" },
+        { "text": "Code Editor",   "onclick": "jQuery('#code_tab').click();" },
         { "text": "Command Line",  "onclick": "openmdao.Util.toggle_visibility('cmdform');" },
         { "text": "Console",       "onclick": "layout.open('south');" },
         { "text": "Files",         "onclick": "layout.open('west'); jQuery('#ftree_tab').click();" },

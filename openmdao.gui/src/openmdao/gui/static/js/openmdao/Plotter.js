@@ -30,12 +30,14 @@ openmdao.Plotter = function(id,model) {    // requires flot.js
     }
 
     function init() {
-        this.prototype = Object.create(openmdao.BasePane)
-        this.prototype.init(id,'Plotter')
-
+        self.prototype = Object.create(openmdao.BasePane, {
+            id:     { value: id },
+            title:  { value: "Plotter" },
+        })        
+        self.prototype.init()
+        
         // create plot in a div inside the element
-        plot = jQuery('<div>').appendTo('#'+id)
-        plot.css({"padding":"5px","height":"350px","width":"600px"})
+        plot = jQuery('<div style="height:350px;width:600px;padding:5px;">').appendTo('#'+id)
         plot = jQuery.plot(plot, [ getRandomData() ], options)
     
         // continuously update
