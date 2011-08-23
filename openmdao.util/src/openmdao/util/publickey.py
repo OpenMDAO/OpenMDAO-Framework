@@ -260,9 +260,12 @@ def is_private(path):
             return False  # No way to know.
 
         # Find the SIDs for user and system.
+        username = win32api.GetUserName()
+        if username == 'root':  # cygwin
+            username = 'Administrator'
         user, domain, type = \
-            win32security.LookupAccountName('', win32api.GetUserName())
-        logging.critical('    user: %r (%r)', user, win32api.GetUserName())
+            win32security.LookupAccountName('', username)
+        logging.critical('    user: %r (%r %r)', user, username, win32api.GetUserName())
         logging.critical('    domain: %r', domain)
         logging.critical('    type: %r', type)
 
@@ -314,9 +317,12 @@ def make_private(path):
             raise ImportError('No pywin32')
 
         # Find the SIDs for user and system.
+        username = win32api.GetUserName()
+        if username == 'root':  # cygwin
+            username = 'Administrator'
         user, domain, type = \
-            win32security.LookupAccountName('', win32api.GetUserName())
-        logging.critical('    user: %r (%r)', user, win32api.GetUserName())
+            win32security.LookupAccountName('', username)
+        logging.critical('    user: %r (%r %r)', user, username, win32api.GetUserName())
         logging.critical('    domain: %r', domain)
         logging.critical('    type: %r', type)
 
