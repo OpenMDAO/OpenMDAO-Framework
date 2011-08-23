@@ -247,33 +247,19 @@ def is_private(path):
         On Windows this requires the pywin32 extension.
 
     """
-    import logging
-    logging.critical('is_private %r', path)
-
     if not os.path.exists(path):
-        logging.critical('    does not exist')
         return True  # Nonexistent file is secure ;-)
 
     if sys.platform == 'win32':  #pragma no cover
         if not HAVE_PYWIN32:
-            logging.critical('    no pywin32')
             return False  # No way to know.
 
         # Find the SIDs for user and system.
         username = win32api.GetUserName()
-        if username == 'root':  # cygwin
+        if username == 'root':  # Map Cygwin 'root' to 'Administrator'.
             username = 'Administrator'
-        user, domain, type = \
-            win32security.LookupAccountName('', username)
-        logging.critical('    user: %r (%r %r)', user, username, win32api.GetUserName())
-        logging.critical('    domain: %r', domain)
-        logging.critical('    type: %r', type)
-
-        system, domain, type = \
-            win32security.LookupAccountName('', 'System')
-        logging.critical('    system: %r', system)
-        logging.critical('    domain: %r', domain)
-        logging.critical('    type: %r', type)
+        user, domain, type = win32security.LookupAccountName('', username)
+        system, domain, type = win32security.LookupAccountName('', 'System')
 
         # Find the DACL part of the Security Descriptor for the file
         sd = win32security.GetFileSecurity(path,
@@ -283,14 +269,11 @@ def is_private(path):
         # Verify the DACL contains just the two entries we expect.
         count = dacl.GetAceCount()
         if count != 2:
-            logging.critical('    count: %r', count)
             return False
         for i in range(count):
             ace = dacl.GetAce(i)
             if ace[2] != user and ace[2] != system:
-                logging.critical('    ace: %r', ace[2])
                 return False
-        logging.critical('    OK!')
         return True
     else:
         return (os.stat(path).st_mode & 0077) == 0
@@ -308,29 +291,16 @@ def make_private(path):
         On Windows this requires the pywin32 extension.
 
     """
-    import logging
-    logging.critical('make_private %r', path)
-
     if sys.platform == 'win32':  #pragma no cover
         if not HAVE_PYWIN32:
-            logging.critical('    no pywin32')
             raise ImportError('No pywin32')
 
         # Find the SIDs for user and system.
         username = win32api.GetUserName()
-        if username == 'root':  # cygwin
+        if username == 'root':  # Map Cygwin 'root' to 'Administrator'.
             username = 'Administrator'
-        user, domain, type = \
-            win32security.LookupAccountName('', username)
-        logging.critical('    user: %r (%r %r)', user, username, win32api.GetUserName())
-        logging.critical('    domain: %r', domain)
-        logging.critical('    type: %r', type)
-
-        system, domain, type = \
-            win32security.LookupAccountName('', 'System')
-        logging.critical('    system: %r', system)
-        logging.critical('    domain: %r', domain)
-        logging.critical('    type: %r', type)
+        user, domain, type = win32security.LookupAccountName('', username)
+        system, domain, type = win32security.LookupAccountName('', 'System')
 
         # Find the DACL part of the Security Descriptor for the file
         sd = win32security.GetFileSecurity(path,

@@ -121,15 +121,14 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
     if not env.reject_unknown_hosts:
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    env.password = 'squavyforce1!'
     password = env.password
+    password = 'squavyforce1!'
     tries = 0
 
     # Loop until successful connect
     while tries < max_tries:
         
         # Attempt connection
-        print 'connect %s:%s %r %r' % (host, port, user, password)
         try:
             client.connect(
                 hostname=host,
