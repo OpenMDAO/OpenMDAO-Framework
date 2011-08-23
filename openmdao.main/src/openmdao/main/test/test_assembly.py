@@ -562,6 +562,7 @@ class AssemblyTestCase(unittest.TestCase):
         finally:
             os.remove(egg_info[0])
             shutil.rmtree('Top')
+        self.fail('forced error - for debug')
 
 
 if __name__ == "__main__":

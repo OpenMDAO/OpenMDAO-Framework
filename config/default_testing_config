@@ -61,6 +61,11 @@ user: Administrator
 security_groups: windows
 platform: windows
 
+[scott_win64]
+platform: windows
+addr: ec2-107-20-23-252.compute-1.amazonaws.com
+user: Administrator
+
 # a windows 2008 server 64 bit EC2 instance
 #[win2008_64_instance]
 #instance_id: i-0310516d
