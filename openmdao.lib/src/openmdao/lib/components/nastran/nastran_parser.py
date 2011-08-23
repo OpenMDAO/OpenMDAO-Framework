@@ -106,12 +106,14 @@ class NastranParser(object):
         last_header = ""
         last_subcase = -1
         page_index = 0
-        while page_index < len(headers):
-            #print headers[page_index], page_index, len(headers)
-            if headers[page_index]["actual"] == last_header and \
-               subcases[page_index] == last_subcase:
+        header_index = 0
+        while header_index < len(headers):
+                
+            if headers[page_index]["actual"] and \
+                   headers[page_index]["actual"] == last_header and \
+                   subcases[page_index] and \
+                   subcases[page_index] == last_subcase:
                 # merge grids (but not header again)
-                #print page_index
                 for row in grids[page_index][1:]:
                     grids[page_index-1].append(row)
                 del headers[page_index]
@@ -123,6 +125,7 @@ class NastranParser(object):
                 last_subcase = subcases[page_index]
 
                 page_index += 1
+            header_index += 1
 
         self.grids = grids
         self.headers = headers

@@ -1,6 +1,6 @@
 
 import sys
-import os
+import os.path
 import webbrowser
 
 import pprint
@@ -126,7 +126,7 @@ html_style = 'default.css'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-#html_static_path = ['_static']
+html_static_path = %(static_path)s
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -277,7 +277,7 @@ project-url =
 
 [openmdao]
 copyright =
-
+static_path = [ '_static' ]
 """
 
 
@@ -386,14 +386,25 @@ Source Documentation
         """ % name
         ]
     
-    for mod in srcmods:
+    for mod in sorted(srcmods):
+        pkgfile = '%s.py' % mod
+        pkg, dot, name = mod.rpartition('.')
+        pyfile = '%s.py' % name
+        underline = '-'*len(pyfile)
         contents.append("""
+.. index:: %s
+
+.. _%s:
+
+%s
+%s
+
 .. automodule:: %s
    :members:
    :undoc-members:
    :show-inheritance:
     
-        """ % mod)
+        """ % (pyfile, pkgfile, pyfile, underline, mod))
 
     return ''.join(contents)
 
@@ -699,7 +710,8 @@ def _find_all_plugins(searchdir):
     plugin group name, e.g., openmdao.component, openmdao.variable, etc.
     """
     dct = {}
-    psta = PythonSourceTreeAnalyser(searchdir)
+    psta = PythonSourceTreeAnalyser(searchdir,
+                                    exclude=os.path.join('*', 'test', '*.py'))
     
     comps = psta.find_inheritors('openmdao.main.component.Component')
     comps.extend(psta.find_inheritors('openmdao.main.api.Component'))

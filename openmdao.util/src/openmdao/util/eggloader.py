@@ -314,6 +314,7 @@ def load(instream, fmt=SAVE_CPICKLE, package=None, logger=None):
     """
     logger = logger or NullLogger()
 
+    new_stream = False
     if isinstance(instream, basestring):
         if not os.path.exists(instream) and not os.path.isabs(instream):
             # Try to locate via pkg_resources.
@@ -338,20 +339,25 @@ def load(instream, fmt=SAVE_CPICKLE, package=None, logger=None):
         else:
             mode = 'rU'
         instream = open(instream, mode)
+        new_stream = True
 
-    if fmt is SAVE_CPICKLE:
-        top = cPickle.load(instream)
-    elif fmt is SAVE_PICKLE:
-        top = pickle.load(instream)
-    elif fmt is SAVE_YAML:
-        top = yaml.load(instream)
-    elif fmt is SAVE_LIBYAML:
-        # Test machines have libyaml.
-        if _libyaml is False:  #pragma no cover
-            logger.warning('libyaml not available, using yaml instead')
-        top = yaml.load(instream, Loader=Loader)
-    else:
-        raise RuntimeError("Can't load object using format '%s'" % fmt)
+    try:
+        if fmt is SAVE_CPICKLE:
+            top = cPickle.load(instream)
+        elif fmt is SAVE_PICKLE:
+            top = pickle.load(instream)
+        elif fmt is SAVE_YAML:
+            top = yaml.load(instream)
+        elif fmt is SAVE_LIBYAML:
+            # Test machines have libyaml.
+            if _libyaml is False:  #pragma no cover
+                logger.warning('libyaml not available, using yaml instead')
+            top = yaml.load(instream, Loader=Loader)
+        else:
+            raise RuntimeError("Can't load object using format '%s'" % fmt)
+    finally:
+        if new_stream:
+            instream.close()
 
     return top
 

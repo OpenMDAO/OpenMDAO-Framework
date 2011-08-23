@@ -2,7 +2,7 @@
 import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Int, Event, Float, Array, Enum
+from openmdao.lib.datatypes.api import Int, Event, Float, Array, Enum, Str
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.test.execcomp import ExecComp
@@ -36,6 +36,37 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.add('comp', ExecComp(exprs=['c=x+y','d=x-y']))
         self.top.driver.workflow.add('comp')
         
+    def test_single_bogus(self):
+        
+        try:
+            self.top.driver.add_parameter('comp.bogus', 0., 1.e99) 
+        except AttributeError, err:
+            self.assertEqual(str(err), "driver: Can't add parameter 'comp.bogus' because it doesn't exist.")
+        else: 
+            self.fail("Exception Expected")
+
+        try:
+            self.top.driver.add_parameter('zr()', 0., 1.e99) 
+        except ValueError, err:
+            self.assertEqual(str(err), "driver: Can't add parameter: 'zr()' is not a valid parameter expression")
+        else: 
+            self.fail("Exception Expected")
+
+        try:
+            self.top.driver.add_parameter('comp.x', 0., 1.e99, scope='bogus') 
+        except TypeError, err:
+            self.assertEqual(str(err), "driver: Can't add parameter: cannot create weak reference to 'str' object")
+        else: 
+            self.fail("Exception Expected")
+            
+        self.top.comp.add_trait('vstr', Str('Hey', iotype='in'))
+        try:
+            self.top.driver.add_parameter('comp.vstr', 0., 1.e99) 
+        except ValueError, err:
+            self.assertEqual(str(err), "driver: The value of parameter 'comp.vstr' must be of type float or int, but its type is 'str'.")
+        else: 
+            self.fail("Exception Expected")
+            
     def test_single_get_referenced_compnames(self): 
         self.top.driver.add_parameter('comp.x', 0., 1.e99) 
         self.assertEqual(set(["comp"]),self.top.driver.get_parameters()['comp.x'].get_referenced_compnames())
@@ -225,17 +256,21 @@ class ParametersTestCase(unittest.TestCase):
         self.top.driver.workflow.add('comp')
         
     def test_transform(self):
-        self.top.driver.add_parameter('comp.a', low=-3., high=5., scaler=1.5, adder=1.)
+
+        # Vars with no bounds params with bounds
+        self.top.driver.add_parameter('comp.a', low=8.6, high=9.4, scaler=1.5, adder=1.)
         self.top.driver2.add_parameter('comp.a', low=-6., high=10., scaler=4., adder=-2.)
-        params = self.top.driver.get_parameters()
-        params2 = self.top.driver2.get_parameters()
         
         self.top.comp.a = 15.
+        
+        params = self.top.driver.get_parameters()
+        params2 = self.top.driver2.get_parameters()
         
         d1val = params['comp.a'].evaluate()
         d2val = params2['comp.a'].evaluate()
         
-        self.assertNotEqual(d1val, d2val)
+        self.assertEqual(d1val, 9.0)
+        self.assertEqual(d2val, 5.75)
         
         params['comp.a'].set(d1val)
         self.assertEqual(self.top.comp.a, 15.)
@@ -243,8 +278,61 @@ class ParametersTestCase(unittest.TestCase):
         params2['comp.a'].set(d2val)
         self.assertEqual(self.top.comp.a, 15.)
         
+        # Vars with bounds, params with no bounds
+        self.top.comp.add_trait('v1', Float(0.0, low=0.0, high=10.0, iotype='in'))
+        self.top.comp.v1 = 5.0
+        self.top.driver.add_parameter('comp.v1', scaler=0.5, adder=-2.0)
         
+        params = self.top.driver.get_parameters()
+        self.assertEqual(params['comp.v1'].evaluate(), 12.0)
+        self.assertEqual(params['comp.v1'].high, 22.0)
+        self.assertEqual(params['comp.v1'].low, 2.0)
+
+        # Vars with bounds, params with bounds
+        self.top.comp.add_trait('v2', Float(0.0, low=0.0, high=10.0, iotype='in'))
+        self.top.comp.v1 = 5.0
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter('comp.v2', scaler=0.5, adder=-2.0, low=4.0, high=18.0)
+        
+        params = self.top.driver.get_parameters()
+        self.assertEqual(params['comp.v2'].high, 18.0)
+        self.assertEqual(params['comp.v2'].low, 4.0)
+
+    def test_transform_just_scale_or_add(self):
+
+        self.top.comp.add_trait('v1', Float(0.0, low=-100.0, high=100.0, iotype='in'))
+        self.top.driver.add_parameter('comp.v1', high=12.0, scaler=1.5)
+        self.top.driver2.add_parameter('comp.v1', low=-6.0, adder=-2.)
+        
+        self.top.comp.v1 = 15.
+        
+        params = self.top.driver.get_parameters()
+        params2 = self.top.driver2.get_parameters()
+        
+        d1val = params['comp.v1'].evaluate()
+        d2val = params2['comp.v1'].evaluate()
+        
+        self.assertEqual(d1val, 10.0)
+        self.assertEqual(d2val, 17.0)
+        
+    def test_transform_bad_wolf(self):
+        
+        try:
+            self.top.driver.add_parameter('comp.a', low=8.6, high=9.4, scaler="bad", adder=1.0)
+        except ValueError, err:
+            self.assertEqual(str(err), "driver: Bad value given for parameter's 'scaler' attribute")
+        else: 
+            self.fail("Exception Expected")
             
+        try:
+            self.top.driver.add_parameter('comp.a', low=8.6, high=9.4, scaler=1.0, adder="wolf")
+        except ValueError, err:
+            self.assertEqual(str(err), "driver: Bad value given for parameter's 'adder' attribute")
+        else: 
+            self.fail("Exception Expected")
+            
+
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -6,9 +6,7 @@ import os
 import sys
 import re
 import linecache
-from inspect import getmembers, isbuiltin
-from types import InstanceType, MethodType
-import weakref
+import StringIO
 
 def traceit(frame, event, arg):
     """A function useful for tracing Python execution. Wherever you want the 
@@ -60,61 +58,23 @@ class _objdiff(object):
         self.o2names = o2names
         self.diffdict = diffdict
 
-def dict_diff(d1, d2):
-    """Recursive dict comparison.  Returns a dict of differences having two possible
-    forms.  For differences between object instances, the difference value will be
-    a tuple of the form: (d1only, d2only, common) where d1only and d2only are dicts
-    containing values from d1 or d2 respectively that don't exist in the other. For
-    differences between built-in types, the difference value will be a tuple of the 
-    form (idx, v1, v2) where idx is the tuple index of a value that only exists in
-    either d1 or d2. If idx is None that indicates that both values exist but are
-    different. v1 will be the value from d1 if it exists and v2 will be the value
-    from d2 if it exists.
-    """
-    obj1_set = set(d1.keys())
-    obj2_set = set(d2.keys())
+def print_fuct_call(funct, *args, **kwargs):
+    def quote_if_str(obj):
+        if isinstance(obj, basestring):
+            return "'%s'" % obj
+        return str(obj)
     
-    common = obj1_set.intersection(obj2_set)
-    obj1_only = obj1_set.difference(common)
-    obj2_only = obj2_set.difference(common)
+    s = StringIO.StringIO()
+    s.write(funct.__name__)
+    s.write('(')
+    for i,arg in enumerate(args):
+        if i>0: s.write(',')
+        s.write(quote_if_str(arg))
+    if len(args) > 0:
+        s.write(', ')
+    for j,tup in enumerate(kwargs.items()):
+        if j>0: s.write(', ')
+        s.write("%s=%s" % (tup[0], quote_if_str(tup[1])))
+    s.write(')')
+    return s.getvalue()
     
-    del obj1_set
-    del obj2_set
-
-    diffs = {}
-    for name in common:
-        v1 = d1[name]
-        v2 = d2[name]
-        if not hasattr(v1, '__dict__') or not hasattr(v2, '__dict__'):
-            if isinstance(v1, dict) and isinstance(v2, dict):
-                diff = dict_diff(v1, v2)
-            else:
-                diff = obj_diff(v1, v2)
-            if diff:
-                diffs[name] = diff
-        elif v1 != v2:
-            diffs[name] = (None, v1, v2)
-        
-    for name in obj1_only:
-        diffs[name] = (1, d1[name], None)
-        
-    for name in obj2_only:
-        diffs[name] = (2, None, d2[name])
-        
-    return diffs
-
-
-def obj_diff(obj1, obj2, recurse=True):
-    """Find the difference between two objects of the same type and return it
-    as a dict of difference tuples. Methods are not investigated beyond detecting whether
-    they are present or absent, so two objects with methods of the same name
-    having different bodies will not be detected.  
-    """
-    # first, see if objs have their own way of comparing
-    if obj1 == obj2:
-        return {}
-    
-    if hasattr(obj1, '__dict__') and hasattr(obj2, '__dict__'):
-        return dict_diff(obj1.__dict__, obj2.__dict__)
-    else:
-        return (None, obj1, obj2)

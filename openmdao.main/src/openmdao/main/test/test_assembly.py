@@ -1,5 +1,7 @@
 # pylint: disable-msg=C0111,C0103
 
+import os
+import shutil
 import unittest
 import sys
 
@@ -78,6 +80,66 @@ class DummyComp(Component):
         self.sout = self.s[::-1]
         # pylint: disable-msg=E1101
         self.dummy.execute()
+
+
+class Wrapper(Assembly):
+    """
+    Define a single-component Assembly so we explicitly control
+    what variables are visible via passthrough traits.
+    """
+
+    def __init__(self):
+        super(Wrapper, self).__init__()
+        self.add('comp', Comp())
+        self.driver.workflow.add('comp')
+
+    def tree_rooted(self):
+        """ Defines passthrough conections once NPSS has loaded. """
+        super(Wrapper, self).tree_rooted()
+        for path in ('x', 'y', 'z'):
+            val = self.get('comp.'+path)
+            self.create_passthrough('comp.'+path)
+
+    def run(self):
+        self._logger.debug('Wrapper.run() %r %r (%r %r)',
+                           self.x, self.y, self.comp.x, self.comp.y)
+        super(Wrapper, self).run()
+        self._logger.debug('    complete')
+        self._logger.debug('        %r (%r)', self.z, self.comp.z)
+
+
+class FloatProxy(Float):
+    """
+    Example of a 'proxy' trait. Normally variables in the `_vals` dictionary
+    here would actually be somewhere else in a wrapped code.
+    """
+
+    def __init__(self, **metadata):
+        self._vals = {}
+        Float.__init__(self, **metadata)
+        self._metadata['type'] = 'property'  # Just to show correct type.
+
+    def get(self, obj, name):
+        return self._vals.get(id(obj), {}).get(name, 0.)
+
+    def set(self, obj, name, value):
+        if id(obj) not in self._vals:
+            self._vals[id(obj)] = {}
+        self._vals[id(obj)][name] = value
+
+
+class Comp(Component):
+
+    x = FloatProxy(iotype='in')
+    y = FloatProxy(iotype='in')
+    z = FloatProxy(iotype='out')
+
+    def execute(self):
+        self._logger.debug('execute')
+        self._logger.debug('    %r %r', self.x, self.y)
+        self.z = self.x * self.y
+        self._logger.debug('    done')
+
 
 class AssemblyTestCase(unittest.TestCase):
 
@@ -452,7 +514,57 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(asm.ModulesInstallPath, 'C:/work/IMOO2/imoo/modules')
         self.assertEqual(asm.propulsion.ModulesInstallPath, 'C:/work/IMOO2/imoo/modules')
 
-        
+    def test_wrapper(self):
+        # Test that wrapping via passthroughs to proxy traits works.
+        top = set_as_top(Wrapper())
+
+        expected = [
+            '%s.FloatProxy' % __name__,
+            'openmdao.lib.datatypes.float.Float',
+            'openmdao.main.variable.Variable',
+            'enthought.traits.trait_handlers.TraitType',
+            'enthought.traits.trait_handlers.BaseTraitHandler',
+            '__builtin__.object'
+        ]
+        self.assertEqual(top.get_trait_typenames('x'), expected)
+
+        for varname in ('x', 'comp.x', 'y', 'comp.y', 'z', 'comp.z'):
+            self.assertEqual(top.get(varname), 0.)
+
+        top.set('x', 6)
+        top.set('y', 7)
+        top.run()
+        self.assertEqual(top.get('x'), 6.)
+        self.assertEqual(top.get('comp.x'), 6.)
+        self.assertEqual(top.get('y'), 7.)
+        self.assertEqual(top.get('comp.y'), 7.)
+        self.assertEqual(top.get('z'), 42.)
+        self.assertEqual(top.get('comp.z'), 42.)
+
+        egg_info = top.save_to_egg('Top', 'v1')
+        try:
+            egg = Component.load_from_eggfile(egg_info[0])
+            self.assertEqual(egg.get('x'), 6.)
+            self.assertEqual(egg.get('comp.x'), 6.)
+            self.assertEqual(egg.get('y'), 7.)
+            self.assertEqual(egg.get('comp.y'), 7.)
+            self.assertEqual(egg.get('z'), 42.)
+            self.assertEqual(egg.get('comp.z'), 42.)
+
+            egg.set('x', 11)
+            egg.set('y', 3)
+            egg.run()
+            self.assertEqual(egg.get('x'), 11.)
+            self.assertEqual(egg.get('comp.x'), 11.)
+            self.assertEqual(egg.get('y'), 3)
+            self.assertEqual(egg.get('comp.y'), 3.)
+            self.assertEqual(egg.get('z'), 33.)
+            self.assertEqual(egg.get('comp.z'), 33.)
+        finally:
+            os.remove(egg_info[0])
+            shutil.rmtree('Top')
+
+
 if __name__ == "__main__":
     unittest.main()
 

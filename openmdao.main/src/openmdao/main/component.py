@@ -700,6 +700,7 @@ class Component (Container):
 # pylint: enable-msg=E1101
         return path
     
+    @rbac('owner')
     def get_abs_directory (self):
         """Return absolute path of execution directory."""
         path = self.directory

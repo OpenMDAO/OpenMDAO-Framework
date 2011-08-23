@@ -176,18 +176,6 @@ Value           Result
                 for additional notes about using this option.
 ==============  ========================================================
 
-The default setting is ``nscal=0`` for no scaling of the design variables. The 
-``nscal`` parameter can be set to a negative number to turn on user-defined
-scaling. When this is enabled, the array of values in the vector ``scal`` is
-used to scale the design variables.
-
-.. testcode:: CONMIN_show
-
-        self.driver.scal = [10.0, 10.0, 10.0, 10.0]
-        self.driver.nscal = -1
-
-There need to be as many scale values as there are design variables.
-
 If your problem uses linear constraints, you can improve the efficiency of the
 optimization process by designating those that are linear functions of the design
 variables as follows:

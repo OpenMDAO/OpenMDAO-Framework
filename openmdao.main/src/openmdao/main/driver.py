@@ -91,10 +91,6 @@ class Driver(Component):
             comps = self.workflow.get_components()
         except Exception as err:
             self.raise_exception(str(err), type(err))
-        if hasattr(self, 'check_gradients'):
-            self.check_gradients()
-        if hasattr(self, 'check_hessians'):
-            self.check_hessians()
 
     def iteration_set(self,recurse=True):
         """Return a set of all Components in our workflow(s), and 
