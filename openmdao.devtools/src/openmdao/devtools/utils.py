@@ -122,7 +122,6 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     password = env.password
-    password = 'squavyforce1!'
     tries = 0
 
     # Loop until successful connect
