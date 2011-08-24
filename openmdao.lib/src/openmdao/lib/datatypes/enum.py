@@ -88,4 +88,7 @@ class Enum(Variable):
             msg = "Unknown error while setting trait '%s';" % (name) +\
                   "a value of %s %s was specified." % (value, vtype)
             
-        obj.raise_exception(msg, ValueError)
+        try:
+            obj.raise_exception(msg, ValueError)
+        except AttributeError:
+            raise ValueError(msg)
