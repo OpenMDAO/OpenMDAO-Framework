@@ -98,10 +98,11 @@ openmdao.PropertiesEditor = function(id,model) {
             outputs.setData(properties['outputs'])
         }
         else {
-            nameHeader.html(pathname)
+            nameHeader.html(self.pathname)
             inputs.setData([])
             outputs.setData([])
-            alert('Error getting properties for '+pathname)
+            alert('Error getting properties for '+self.pathname)
+            debug.info(properties)
         }
         inputs.updateRowCount()
         inputs.render()
@@ -126,8 +127,9 @@ openmdao.PropertiesEditor = function(id,model) {
         model.getComponent(path, loadTables,
             function(jqXHR, textStatus, errorThrown) {
                 self.pathname = ''
-                alert("Error editing object: "+jqXHR.statusText)
-                debug.error(jqXHR)
+                alert("Error getting properties for "+self.pathname+" (status="+jqXHR.status+"): "+jqXHR.statusText)
+                openmdao.Util.htmlWindow(jqXHR.responseText,'Error getting properties',600,400)
+                debug.error(jqXHR,textStatus,errorThrown)
             }
         )
         return this

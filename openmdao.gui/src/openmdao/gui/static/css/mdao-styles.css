@@ -28,6 +28,9 @@ ul {
   background: #6a6a6a;
   border:1px solid #222;
 }
+.ui-layout-toggler {
+  border:1px groove #222;
+}
 
 /* nav styles */
 nav {

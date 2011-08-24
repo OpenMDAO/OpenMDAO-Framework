@@ -74,7 +74,7 @@ openmdao.Util = {
     },
        
     /**
-     * open a popup window
+     * open a popup window to view a URL
      *
      * url:     the url to open in the new window
      * title:   the title of the window (FIXME: doesn't work)
@@ -90,6 +90,21 @@ openmdao.Util = {
         return window.open(url,title,settings)
     },
 
+    /**
+     * open a popup window to view HTML
+     *
+     * url:     the url to open in the new window
+     * title:   the title of the window (FIXME: doesn't work)
+     * h:       the height of the window
+     * w:       the width of the window
+     */
+    htmlWindow: function(html,title,h,w) {
+        var win =  window.open('',title,'width='+w+',height='+h);
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+    },
+    
     /**
      * add a handler to the onload event
      * ref: http://simonwillison.net/2004/May/26/addLoadEvent/

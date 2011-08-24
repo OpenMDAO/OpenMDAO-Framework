@@ -29,13 +29,14 @@ openmdao.WorkflowDiagram = function(id,model) {
         self.prototype = Object.create(openmdao.BasePane, {
             id:     { value: id },
             title:  { value: "Workflow" },
+            menu:   { value: [] }                        
         })        
         self.prototype.init()
         
         // add the workflow diagram
-        var workflowID = "#"+id+"-workflow",
-            workflowDiv = jQuery('<div id='+workflowID+'>').width(screen.width).height(screen.height).appendTo("#"+id)
-            workflow = new draw2d.Workflow(workflowID)
+        var workflowID = "#"+id+"-workflow"
+        workflowDiv = jQuery('<div id='+workflowID+' style="height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px">').appendTo('#'+id)            
+        workflow = new draw2d.Workflow(workflowID)
         workflow.setBackgroundImage( "/static/images/grid_10.png", true)
         
         /** FIXME: workflow context menu conflicts with figure context menu ** /
@@ -214,7 +215,12 @@ openmdao.WorkflowDiagram = function(id,model) {
     
     /** update the schematic with data from the model */
     function update() {
-        model.getWorkflow(updateWorkflow)
+        model.getWorkflow(updateWorkflow, function(jqXHR, textStatus, errorThrown) {
+                self.pathname = ''
+                alert("Error getting workflow (status="+jqXHR.status+"): "+jqXHR.statusText)
+                openmdao.Util.htmlWindow(jqXHR.responseText,'Error getting workflow',600,400)
+                debug.error(jqXHR)
+            })
     }
     
     // ask model for an update whenever something changes

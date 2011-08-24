@@ -361,6 +361,34 @@ class ConsoleServer(cmd.Cmd):
                 parameters.append(attr)
             attrs['parameters'] = parameters
         
+        if has_interface(comp, IHasConstraints) or has_interface(comp, IHasEqConstraints):
+            constraints = []
+            cons = comp.get_eq_constraints()
+            for key,con in cons.iteritems():
+                attr = {}
+                attr['name']    = key
+                attr['lhs']     = con.lhs
+                attr['rhs']     = con.rhs
+                attr['scaler']  = con.scaler
+                attr['adder']   = con.adder
+                attr['scope']   = con[key].scope.name
+                constraints.append(attr)
+            attrs['eqconstraints'] = constraints
+            
+        if has_interface(comp, IHasConstraints) or has_interface(comp, IHasIneqConstraints):
+            constraints = []
+            cons = comp.get_ineq_constraints()
+            for key,con in cons.iteritems():
+                attr = {}
+                attr['name']    = key
+                attr['lhs']     = con.lhs
+                attr['rhs']     = con.rhs
+                attr['scaler']  = con.scaler
+                attr['adder']   = con.adder
+                attr['scope']   = con[key].scope.name
+                constraints.append(attr)
+            attrs['ineqconstraints'] = constraints
+            
         return attrs
         
     def get_attributes(self,name):
