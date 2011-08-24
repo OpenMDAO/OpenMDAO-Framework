@@ -371,7 +371,6 @@ class ConsoleServer(cmd.Cmd):
                 attr['rhs']     = con.rhs
                 attr['scaler']  = con.scaler
                 attr['adder']   = con.adder
-                attr['scope']   = con[key].scope.name
                 constraints.append(attr)
             attrs['eqconstraints'] = constraints
             
@@ -385,7 +384,6 @@ class ConsoleServer(cmd.Cmd):
                 attr['rhs']     = con.rhs
                 attr['scaler']  = con.scaler
                 attr['adder']   = con.adder
-                attr['scope']   = con[key].scope.name
                 constraints.append(attr)
             attrs['ineqconstraints'] = constraints
             
