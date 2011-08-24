@@ -73,7 +73,7 @@ def _check_version(version):
                            (version, lst[0]))
     
 
-def get_releaseinfo_str(version):
+def _get_releaseinfo_str(version):
     """Creates the content of the releaseinfo.py files"""
     opts = {}
     f = StringIO.StringIO()
@@ -84,7 +84,7 @@ def get_releaseinfo_str(version):
     f.write(relfile_template % opts)
     return f.getvalue()
 
-def create_releaseinfo_file(projname, relinfo_str):
+def _create_releaseinfo_file(projname, relinfo_str):
     """Creates a releaseinfo.py file in the current directory"""
     dirs = projname.split('.')
     os.chdir(os.path.join(*dirs))
@@ -92,7 +92,7 @@ def create_releaseinfo_file(projname, relinfo_str):
     with open('releaseinfo.py', 'w') as f:
         f.write(relinfo_str)
         
-def rollback_releaseinfo_file(projname):
+def _rollback_releaseinfo_file(projname):
     """Creates a releaseinfo.py file in the current directory"""
     dirs = projname.split('.')
     os.chdir(os.path.join(*dirs))
@@ -180,11 +180,11 @@ def _build_bdist_eggs(projdirs, destdir, hosts, configfile):
         os.chdir(startdir)
 
 
-def update_releaseinfo_files(version):
+def _update_releaseinfo_files(version):
     startdir = os.getcwd()
     topdir = repo_top()
     
-    releaseinfo_str = get_releaseinfo_str(version)
+    releaseinfo_str = _get_releaseinfo_str(version)
     
     try:
         for project_name, pdir, pkgtype in openmdao_packages:
@@ -193,11 +193,11 @@ def update_releaseinfo_files(version):
                 os.chdir(os.path.join(pdir, 'src'))
             else:
                 os.chdir(pdir)
-            create_releaseinfo_file(project_name, releaseinfo_str)
+            _create_releaseinfo_file(project_name, releaseinfo_str)
     finally:
         os.chdir(startdir)
     
-def rollback_releaseinfo_files():
+def _rollback_releaseinfo_files():
     startdir = os.getcwd()
     topdir = repo_top()
     
@@ -208,7 +208,7 @@ def rollback_releaseinfo_files():
                 os.chdir(os.path.join(pdir, 'src'))
             else:
                 os.chdir(pdir)
-            rollback_releaseinfo_file(project_name)
+            _rollback_releaseinfo_file(project_name)
     finally:
         os.chdir(startdir)
     
@@ -327,7 +327,7 @@ def make_release():
     cfgpath = os.path.expanduser(options.cfg)
     
     try:
-        update_releaseinfo_files(options.version)
+        _update_releaseinfo_files(options.version)
         
         # build the docs
         docdir = os.path.join(topdir, 'docs')
@@ -373,7 +373,7 @@ def make_release():
             comment = 'creating release %s' % options.version
         
         if options.test:
-            rollback_releaseinfo_files()
+            _rollback_releaseinfo_files()
         else:
             # tag the current revision with the release version id
             print "tagging release with '%s'" % options.version
