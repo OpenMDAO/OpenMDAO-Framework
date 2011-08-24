@@ -256,7 +256,10 @@ def is_private(path):
 
         # Find the SIDs for user and system.
         username = win32api.GetUserName()
-        if username == 'root':  # Map Cygwin 'root' to 'Administrator'.
+
+        # Map Cygwin 'root' to 'Administrator'. Typically these are intended
+        # to be identical, but /etc/passwd might configure them differently.
+        if username == 'root':
             username = 'Administrator'
         user, domain, type = win32security.LookupAccountName('', username)
         system, domain, type = win32security.LookupAccountName('', 'System')
@@ -297,7 +300,10 @@ def make_private(path):
 
         # Find the SIDs for user and system.
         username = win32api.GetUserName()
-        if username == 'root':  # Map Cygwin 'root' to 'Administrator'.
+
+        # Map Cygwin 'root' to 'Administrator'. Typically these are intended
+        # to be identical, but /etc/passwd might configure them differently.
+        if username == 'root':
             username = 'Administrator'
         user, domain, type = win32security.LookupAccountName('', username)
         system, domain, type = win32security.LookupAccountName('', 'System')
