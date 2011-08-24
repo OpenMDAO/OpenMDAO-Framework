@@ -187,6 +187,7 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
             debug = config.getboolean(host, 'debug')
             kw_args['debug'] = debug
             kw_args['hostname'] = host
+            kw_args['pyversion'] = config.get(host, 'pyversion')
             p = Process(target=runner,
                         name=host,
                         args=proc_args,

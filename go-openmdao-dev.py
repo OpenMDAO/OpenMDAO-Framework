@@ -4,8 +4,6 @@
 """Create a "virtual" Python installation
 """
 
-# If you change the version here, change it in setup.py 
-# and docs/conf.py as well.
 virtualenv_version = "1.6.4"
 
 import base64
@@ -1549,8 +1547,8 @@ def extend_parser(parser):
 
 def adjust_options(options, args):
     major_version = sys.version_info[:2]
-    if major_version != (2,6):
-        print 'ERROR: python major version must be 2.6. yours is %s' % str(major_version)
+    if major_version < (2,6) or major_version > (3,0):
+        print 'ERROR: python major version must be 2.6 or 2.7. yours is %s' % str(major_version)
         sys.exit(-1)
 
     for arg in args:
@@ -1578,10 +1576,19 @@ def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
     reqs = ['docutils==0.6', 'Pyevolve==0.6', 'newsumt==1.1.0', 'Pygments==1.3.1', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'PyYAML==3.09', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Traits==3.3.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'Jinja2==2.4', 'nose==0.11.3', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'virtualenv==1.6.4']
+    url = 'http://openmdao.org/dists'
+    # for testing we allow one to specify a url where the openmdao
+    # package dists are located that may be different from the main
+    # url where the dependencies are located. We do this because
+    # setuptools only allows us to specify a single -f parameter,
+    # which would force us to mirror the entire openmdao distribution
+    # directory in order to test our releases because setuptools will
+    # barf if it can't find everything in the same location (or on PyPI).
+    # TODO: get rid of this after we quit using setuptools.
     if options.disturl:
-        url = options.disturl
+        openmdao_url = options.disturl
     else:
-        url = 'http://openmdao.org/dists'
+        openmdao_url = 'http://openmdao.org/dists'
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
         lib_dir = join(home_dir, 'Lib')
@@ -1605,9 +1612,13 @@ def after_install(options, home_dir):
         sys.exit(-1)
     
     cmds = ['-f', url]
+    openmdao_cmds = ['-f', openmdao_url]
     try:
         for req in reqs:
-            _single_install(cmds, req, bin_dir)
+            if req.startswith('openmdao.'):
+                _single_install(openmdao_cmds, req, bin_dir)
+            else:
+                _single_install(cmds, req, bin_dir)
         
 
         # now install dev eggs for all of the openmdao packages
