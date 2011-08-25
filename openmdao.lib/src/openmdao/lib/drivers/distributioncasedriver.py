@@ -34,7 +34,6 @@ class IDistributionGenerator(Interface):
         a set of values
         """
 
-
 class FiniteDifferenceGenerator(HasTraits): 
     """
     Generate the input cases for finite differences
