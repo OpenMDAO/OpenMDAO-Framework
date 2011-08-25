@@ -120,7 +120,7 @@ class CaseIterDriverBase(Driver):
             if self._abort_exc is None:
                 self.raise_exception('Run stopped', RunStopped)
             else:
-                self.raise_exception('Run aborted: %r' % self._abort_exc,
+                self.raise_exception('Run aborted: %s' % self._abort_exc,
                                      RuntimeError)
 
     def step(self):
