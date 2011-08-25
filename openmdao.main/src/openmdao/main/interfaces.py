@@ -368,7 +368,7 @@ class ICaseIterator(Interface):
         
 class IDOEgenerator(Interface):
     """An iterator that returns lists of normalized values that are mapped
-    to design variables by a Driver.
+    from design variables by a Driver.
     """
     
     num_parameters = Attribute("number of parameters in the DOE")
