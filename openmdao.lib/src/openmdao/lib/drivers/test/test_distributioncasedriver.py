@@ -6,7 +6,8 @@ import unittest
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.datatypes.api import Float
-from openmdao.lib.drivers.distributioncasedriver import DistributionCaseDriver, FiniteDifferenceGenerator
+from openmdao.lib.drivers.api import DistributionCaseDriver
+from openmdao.lib.drivers.distributioncasedriver import FiniteDifferenceGenerator
 from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
 from openmdao.main.case import _Missing
 
