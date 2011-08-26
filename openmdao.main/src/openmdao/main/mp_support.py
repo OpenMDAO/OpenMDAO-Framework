@@ -1073,6 +1073,13 @@ class OpenMDAO_Proxy(BaseProxy):
         key, and the entry is removed before being passed to :class:`BaseProxy`.
 
     This version sends credentials and provides dynamic result proxy generation.
+
+    .. note::
+
+        :meth:`BaseProxy.__str__` (used by :meth:`str` and the ``%s`` format)
+        will return :meth:`__repr__` of the remote object.  To avoid the
+        network round-trip delay, use :meth:`repr` or the ``%r`` format.
+
     """
 
     def __init__(self, *args, **kwds):
@@ -1107,8 +1114,8 @@ class OpenMDAO_Proxy(BaseProxy):
             try:
                 self._connect()
             except Exception as exc:
-                msg = "Can't connect to server at %r: %r" \
-                      % (self._token.address, exc)
+                msg = "Can't connect to server at %r for %r: %r" \
+                      % (self._token.address, methodname, exc)
                 logging.error(msg)
                 raise RuntimeError(msg)
             conn = self._tls.connection
@@ -1136,7 +1143,8 @@ class OpenMDAO_Proxy(BaseProxy):
             conn.send(encrypt((self._id, methodname, new_args, kwds,
                                get_credentials().encode()), session_key))
         except IOError as exc:
-            msg = "Can't send to server at %r: %r" % (self._token.address, exc)
+            msg = "Can't send to server at %r for %r: %r" \
+                  % (self._token.address, methodname, exc)
             logging.error(msg)
             raise RuntimeError(msg)
 

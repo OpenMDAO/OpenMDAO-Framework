@@ -302,7 +302,7 @@ class CaseIterDriverBase(Driver):
                         except KeyError:
                             self._logger.error('    %r: no startup reply', name)
                         else:
-                            self._logger.error('    %r: %s %s %s', name,
+                            self._logger.error('    %r: %r %s %s', name,
                                                self._servers[name],
                                                self._server_states[name],
                                                self._server_info[name])
