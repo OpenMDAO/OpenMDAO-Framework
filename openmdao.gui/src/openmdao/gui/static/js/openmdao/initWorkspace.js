@@ -28,20 +28,18 @@ jQuery(function() {
 
     // add gui functionality to designated DOM nodes
     (function() {
-        var prop_editor = new openmdao.PropertiesEditor("propertieseditor",model),
-            code_editor = new openmdao.CodeEditor("code",model),
-            geom_editor = function(path) {
+        var select_fn = new openmdao.PropertiesEditor("propertieseditor",model).editObject,
+            dblclk_fn = function(path) {
+                new openmdao.ComponentEditor(model,path).editObject
+            }        
+        new openmdao.ObjectTree("otree",model,select_fn,dblclk_fn)
+        
+        var edit_fn = new openmdao.CodeEditor("code",model).editFile,
+            view_fn = function(path) {
                 openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800)
             }
+        new openmdao.FileTree("ftree",model,edit_fn,view_fn)
         
-        new openmdao.ObjectTree("otree",model,
-            prop_editor.editObject,
-            openmdao.PopupPropertiesEditor
-        )
-        new openmdao.FileTree("ftree",model,
-            code_editor.editFile,
-            geom_editor                         
-        )
         new openmdao.Palette("palette",model)
         new openmdao.WorkflowDiagram("workflow",model)
         new openmdao.Console("cmdform","command","history",model);

@@ -11,7 +11,6 @@ openmdao.PropertiesEditor = function(id,model) {
     // initialize private variables
     var self = this,
         pathname,
-        nameHeader,
         inputs,
         outputs,
         columns = [
@@ -32,42 +31,39 @@ openmdao.PropertiesEditor = function(id,model) {
             multiSelect: false,
             autoHeight: true,
             autoEdit: false,
-        }
-                
-        nameHeader = jQuery("<h3>")
+        },
+        nameHeader = jQuery("<h3>"),
+        inputsHeader = jQuery("<h3>Inputs</h3>"),
+        outputsHeader = jQuery("<h3>Outputs</h3>"),
+        inputsDiv = jQuery("<div id='inputs'>"),
+        outputsDiv = jQuery("<div id='outputs'>")
 
-        var inputsHeader = jQuery("<h3>Inputs</h3>"),
-            outputsHeader = jQuery("<h3>Outputs</h3>"),
-            inputsDiv = jQuery("<div id='inputs'>"),
-            outputsDiv = jQuery("<div id='outputs'>")
+    this.elm.append(nameHeader);
+    this.elm.append('<p>');
+    this.elm.append(inputsHeader);
+    this.elm.append(inputsDiv);
+    this.elm.append('<p>');
+    this.elm.append(outputsHeader);
+    this.elm.append(outputsDiv);
 
-        elm = jQuery('#'+id)    // should get this from prototype?        
-        elm.append(nameHeader);
-        elm.append('<p>')
-        elm.append(inputsHeader)
-        elm.append(inputsDiv)
-        elm.append('<p>')
-        elm.append(outputsHeader)
-        elm.append(outputsDiv)
-
-        inputs = new Slick.Grid(inputsDiv, [], columns, inputs_options)
-        inputsHeader.click(function () {
-            inputsDiv.toggle("normal")
-            return false;
-        });
-        inputs.onCellChange.subscribe(function(e,args) {
-            // TODO: better way to do this (e.g. model.setProperty(path,name,value)
-            cmd = 'top.'+self.pathname+'.'+args.item.name+'='+args.item.value
-            model.issueCommand(cmd)
-        })
-        
-        outputs = new Slick.Grid(outputsDiv, [], columns, outputs_options)       
-        outputsHeader.click(function () {
-            outputsDiv.toggle("normal")
-            return false;
-        });
-        
-        model.addListener(update)
+    inputs = new Slick.Grid(inputsDiv, [], columns, inputs_options)
+    inputsHeader.click(function () {
+        inputsDiv.toggle("normal")
+        return false;
+    });
+    inputs.onCellChange.subscribe(function(e,args) {
+        // TODO: better way to do this (e.g. model.setProperty(path,name,value)
+        cmd = 'top.'+self.pathname+'.'+args.item.name+'='+args.item.value
+        model.issueCommand(cmd)
+    });
+    
+    outputs = new Slick.Grid(outputsDiv, [], columns, outputs_options)       
+    outputsHeader.click(function () {
+        outputsDiv.toggle("normal")
+        return false;
+    });
+    
+    model.addListener(update);
           
     /** load the table with the given properties */
     function loadTables(properties) {
