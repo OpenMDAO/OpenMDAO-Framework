@@ -1,59 +1,39 @@
-/* 
-Copyright (c) 2010. All rights reserved.
-LICENSE: NASA Open Source License
-*/
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-/**
- * 
- * @version 0.0.0
- * @constructor
- */
 openmdao.PropertiesEditor = function(id,model) {
+    openmdao.PropertiesEditor.prototype.init.call(this,id,'Properties');
     
     /***********************************************************************
      *  private
      ***********************************************************************/
      
-    if (arguments.length > 0) {
-        // initialize private variables
-        var self = this,
-            pathname,
-            nameHeader,
-            inputs,
-            outputs,
-            columns = [
-                {id:"name",  name:"Name",  field:"name"},
-                {id:"value", name:"Value", field:"value", editor:TextCellEditor},
-            ],
-            inputs_options = {
-                editable: true,
-                asyncEditorLoading: false,
-                editOnDoubleClick: true,
-                multiSelect: false,
-                autoHeight: true,
-                autoEdit: false,
-                //enableAddRow: true,
-            },
-            outputs_options = {
-                asyncEditorLoading: false,
-                multiSelect: false,
-                autoHeight: true,
-                autoEdit: false,
-            }
-        // build it
-        init()
-    }
-    
-    function init() {
-        // initialize the base pane
-        self.prototype = Object.create(openmdao.BasePane, {
-            id:     { value: id },
-            title:  { value: "Properties" }
-        })
-        self.prototype.init()
-        
+    // initialize private variables
+    var self = this,
+        pathname,
+        nameHeader,
+        inputs,
+        outputs,
+        columns = [
+            {id:"name",  name:"Name",  field:"name"},
+            {id:"value", name:"Value", field:"value", editor:TextCellEditor},
+        ],
+        inputs_options = {
+            editable: true,
+            asyncEditorLoading: false,
+            editOnDoubleClick: true,
+            multiSelect: false,
+            autoHeight: true,
+            autoEdit: false,
+            //enableAddRow: true,
+        },
+        outputs_options = {
+            asyncEditorLoading: false,
+            multiSelect: false,
+            autoHeight: true,
+            autoEdit: false,
+        }
+                
         nameHeader = jQuery("<h3>")
 
         var inputsHeader = jQuery("<h3>Inputs</h3>"),
@@ -88,7 +68,6 @@ openmdao.PropertiesEditor = function(id,model) {
         });
         
         model.addListener(update)
-    }
           
     /** load the table with the given properties */
     function loadTables(properties) {
@@ -136,3 +115,7 @@ openmdao.PropertiesEditor = function(id,model) {
     }
     
 }
+
+/** set prototype */
+openmdao.PropertiesEditor.prototype = new openmdao.BasePane();
+openmdao.PropertiesEditor.prototype.constructor = openmdao.PropertiesEditor;

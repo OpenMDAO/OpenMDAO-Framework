@@ -1,53 +1,28 @@
-/* 
-Copyright (c) 2010. All rights reserved.
-LICENSE: NASA Open Source License
-*/
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-/**
- * 
- * @version 0.0.0
- * @constructor
- */
 openmdao.FileTree = function(id,model,edit_function,view_function) {
+    var menu = [  
+                    {   "text": "File",
+                        "items": [
+                            { "text": "New File",      "onclick": "model.newFile();" },
+                            { "text": "New Folder",    "onclick": "model.newFolder();" },
+                            { "text": "Add File",      "onclick": "model.uploadFile();" }
+                        ]
+                    }
+                ];
+    openmdao.PropertiesEditor.prototype.init.call(this,id,'Files',menu);
+    
     /***********************************************************************
      *  private
      ***********************************************************************/
      
-    if (arguments.length > 0) {
-        // initialize private variables
-        var self = this,
-            tree = null
-        // build it
-        init()
-    }
-    
-    function init() {
-        // initialize the base pane
-        self.prototype = Object.create(openmdao.BasePane, {
-            id:     { value: id },
-            title:  { value: "Files" },
-            menu:   { value: 
-                        [  
-                            {   "text": "File",
-                                "items": [
-                                    { "text": "New File",      "onclick": "model.newFile();" },
-                                    { "text": "New Folder",    "onclick": "model.newFolder();" },
-                                    { "text": "Add File",      "onclick": "model.uploadFile();" }
-                                ]
-                            }
-                        ]
-                    }
-        })
-        self.prototype.init()
-
-        // add a div for the tree
+    // initialize private variables
+    var self = this,
         tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id)
         
-        // ask model for an update whenever something changes
-        model.addListener(update)
-    }
+    // ask model for an update whenever something changes
+    model.addListener(update)
         
     /** recursively build an HTML representation of a JSON file structure */
     function getFileHTML(path,val) {
@@ -245,3 +220,7 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
      ***********************************************************************/
     
 }
+
+/** set prototype */
+openmdao.FileTree.prototype = new openmdao.BasePane();
+openmdao.FileTree.prototype.constructor = openmdao.FileTree;

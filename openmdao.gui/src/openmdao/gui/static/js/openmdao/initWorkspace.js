@@ -27,17 +27,25 @@ jQuery(function() {
     new openmdao.TabbedPane("rightcol_tabs");
 
     // add gui functionality to designated DOM nodes
-    new openmdao.ObjectTree("otree",model,
-        new openmdao.PropertiesEditor("propertieseditor",model).editObject,
-        openmdao.PopupPropertiesEditor
-    )
-    new openmdao.FileTree("ftree",model,
-        new openmdao.CodeEditor("code",model).editFile,
-        function(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }
-    )
-    new openmdao.Palette("palette",model)
-    new openmdao.WorkflowDiagram("workflow",model)
-    new openmdao.Console("cmdform","command","history",model);
+    (function() {
+        var prop_editor = new openmdao.PropertiesEditor("propertieseditor",model),
+            code_editor = new openmdao.CodeEditor("code",model),
+            geom_editor = function(path) {
+                openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800)
+            }
+        
+        new openmdao.ObjectTree("otree",model,
+            prop_editor.editObject,
+            openmdao.PopupPropertiesEditor
+        )
+        new openmdao.FileTree("ftree",model,
+            code_editor.editFile,
+            geom_editor                         
+        )
+        new openmdao.Palette("palette",model)
+        new openmdao.WorkflowDiagram("workflow",model)
+        new openmdao.Console("cmdform","command","history",model);
+    })()
 
     // initialize views
     model.updateListeners();

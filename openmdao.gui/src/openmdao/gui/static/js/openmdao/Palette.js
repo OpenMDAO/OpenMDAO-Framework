@@ -1,60 +1,37 @@
-/* 
-Copyright (c) 2010. All rights reserved.
-LICENSE: NASA Open Source License
-*/
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-/**
- * 
- * @version 0.0.0
- * @constructor
- */
 openmdao.Palette = function(id,model) {
+    openmdao.Palette.prototype.init.call(this,id,'Libraries',[]);
+
     /***********************************************************************
      *  private
      ***********************************************************************/
      
-    if (arguments.length > 0) {
-        // initialize private variables
-        var self = this,
-            libs = null
-        // build it
-        init()
-    }
-
-    function init() {
-        // initialize the base pane
-        self.prototype = Object.create(openmdao.BasePane, {
-            id:     { value: id },
-            title:  { value: "Libraries" },
-            menu:   { value: [] }            
-        })        
-        self.prototype.init()
-    
+    // initialize private variables
+    var self = this,
         libs = jQuery('<div>').appendTo("#"+id)
         
-        // dropping a filename onto the palette pane means import *
-        libs.droppable ({
-            accept: '.file',
-            drop: function(ev,ui) { 
-                debug.info('Palette drop: ',ev,ui)
-                var droppedObject = jQuery(ui.draggable).clone()            
-                debug.info('Palette drop: ',droppedObject)
-                var path = droppedObject.attr("path")
-                debug.info('Palette drop: '+path)
-                if (/.py$/.test(path)) {
-                    model.importFile(path)
-                }
-                else {
-                    alert("Not a python file:\n"+path)
-                }
+    // dropping a filename onto the palette pane means import *
+    libs.droppable ({
+        accept: '.file',
+        drop: function(ev,ui) { 
+            debug.info('Palette drop: ',ev,ui)
+            var droppedObject = jQuery(ui.draggable).clone()            
+            debug.info('Palette drop: ',droppedObject)
+            var path = droppedObject.attr("path")
+            debug.info('Palette drop: '+path)
+            if (/.py$/.test(path)) {
+                model.importFile(path)
             }
-        })
+            else {
+                alert("Not a python file:\n"+path)
+            }
+        }
+    })
     
-        // ask model for an update whenever something changes
-        model.addListener(update)
-    }
+    // ask model for an update whenever something changes
+    model.addListener(update)
 
     /** rebuild the Palette from an XML library list */
     function updatePalette(packages) {
@@ -118,3 +95,7 @@ openmdao.Palette = function(id,model) {
      ***********************************************************************/
  
 }
+
+/** set prototype */
+openmdao.Palette.prototype = new openmdao.BasePane();
+openmdao.Palette.prototype.constructor = openmdao.Palette;

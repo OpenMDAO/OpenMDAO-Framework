@@ -1,100 +1,77 @@
-/* 
-Copyright (c) 2010. All rights reserved.
-LICENSE: NASA Open Source License
-*/
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-/**
- * 
- * @version 0.0.0
- * @constructor
- */
 openmdao.WorkflowDiagram = function(id,model) {
+    openmdao.WorkflowDiagram.prototype.init.call(this,id,'Workflows',[]);
+    
     /***********************************************************************
      *  private
      ***********************************************************************/
-    if (arguments.length > 0) {
-        // initialize private variables
-        var workflowDiv = null,
-            workflow  = null,
-            comp_figs = {},
-            flow_figs = {}
-        // build it
-        init()
-    }
-    
-    function init() {
-        // initialize the base pane
-        self.prototype = Object.create(openmdao.BasePane, {
-            id:     { value: id },
-            title:  { value: "Workflow" },
-            menu:   { value: [] }                        
-        })        
-        self.prototype.init()
-        
-        // add the workflow diagram
-        var workflowID = "#"+id+"-workflow"
-        workflowDiv = jQuery('<div id='+workflowID+' style="height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px">').appendTo('#'+id)            
+    // initialize private variables
+    var self = this,
+        comp_figs = {},
+        flow_figs = {},
+        workflowID = "#"+id+"-workflow",
+        workflowDiv = jQuery('<div id='+workflowID+' style="height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px">').appendTo('#'+id),
         workflow = new draw2d.Workflow(workflowID)
-        workflow.setBackgroundImage( "/static/images/grid_10.png", true)
         
-        /** FIXME: workflow context menu conflicts with figure context menu ** /
-        // context menu
-        workflow.getContextMenu=function(){
-            var menu=new draw2d.Menu();
-            menu.appendMenuItem(new draw2d.MenuItem("Show Grid",null,function(x,y){
-                workflow.setGridWidth(10,10);
-                workflow.setBackgroundImage("/static/images/grid_10.png",true);
-            }));
-            menu.appendMenuItem(new draw2d.MenuItem("Hide Grid",null,function(x,y){
-                workflow.setBackgroundImage(null,false);
-            }));
-            // menu.appendMenuItem(new draw2d.MenuItem("Add Note",null,function(x,y){
-                // var annotation = new draw2d.Annotation("NOTE: ");
-                // annotation.setDimension(250,70);
-                // var off = workflowDiv.parent().offset()
-                // x = Math.round(x - off.left)
-                // y = Math.round(y - off.top)
-                // workflow.addFigure(annotation,x,y);
-            // }));
-            
-            return menu;
-        };
-        /**/
+    workflow.setBackgroundImage( "/static/images/grid_10.png", true)
         
-        /** / toolbar may be useful at some point?
-        var tbar = new openmdao.Toolbar();
-        workflow.showDialog(tbar,400,10);
-        /**/
+    /** FIXME: workflow context menu conflicts with figure context menu ** /
+    // context menu
+    workflow.getContextMenu=function(){
+        var menu=new draw2d.Menu();
+        menu.appendMenuItem(new draw2d.MenuItem("Show Grid",null,function(x,y){
+            workflow.setGridWidth(10,10);
+            workflow.setBackgroundImage("/static/images/grid_10.png",true);
+        }));
+        menu.appendMenuItem(new draw2d.MenuItem("Hide Grid",null,function(x,y){
+            workflow.setBackgroundImage(null,false);
+        }));
+        // menu.appendMenuItem(new draw2d.MenuItem("Add Note",null,function(x,y){
+            // var annotation = new draw2d.Annotation("NOTE: ");
+            // annotation.setDimension(250,70);
+            // var off = workflowDiv.parent().offset()
+            // x = Math.round(x - off.left)
+            // y = Math.round(y - off.top)
+            // workflow.addFigure(annotation,x,y);
+        // }));
         
-        // make the workflow pane droppable
-        workflowDiv.droppable ({
-            accept: '.obj, .objtype',
-            drop: function(ev,ui) { 
-                debug.info("Workflow drop:",ev,ui)
-                // get the object that was dropped and where it was dropped
-                var droppedObject = jQuery(ui.draggable).clone(),
-                    droppedName = droppedObject.text(),
-                    droppedPath = droppedObject.attr("path"),
-                    off = workflowDiv.parent().offset(),
-                    x = Math.round(ui.offset.left - off.left),
-                    y = Math.round(ui.offset.top - off.top)
-                debug.info("dropped:",droppedObject)
-                if (droppedObject.hasClass('objtype')) {
-                    openmdao.Util.promptForName(function(name) { 
-                        model.addComponent(droppedPath,name,x,y)
-                    })
-                }
-                else if (droppedObject.hasClass('obj')) {
-                    model.issueCommand('top.driver.workflow.add("'+droppedPath+'")')
-                }
+        return menu;
+    };
+    /**/
+    
+    /** / toolbar may be useful at some point?
+    var tbar = new openmdao.Toolbar();
+    workflow.showDialog(tbar,400,10);
+    /**/
+    
+    // make the workflow pane droppable
+    workflowDiv.droppable ({
+        accept: '.obj, .objtype',
+        drop: function(ev,ui) { 
+            debug.info("Workflow drop:",ev,ui)
+            // get the object that was dropped and where it was dropped
+            var droppedObject = jQuery(ui.draggable).clone(),
+                droppedName = droppedObject.text(),
+                droppedPath = droppedObject.attr("path"),
+                off = workflowDiv.parent().offset(),
+                x = Math.round(ui.offset.left - off.left),
+                y = Math.round(ui.offset.top - off.top)
+            debug.info("dropped:",droppedObject)
+            if (droppedObject.hasClass('objtype')) {
+                openmdao.Util.promptForName(function(name) { 
+                    model.addComponent(droppedPath,name,x,y)
+                })
             }
-        });
-        
-        // ask model for an update whenever something changes
-        model.addListener(update)
-    }
+            else if (droppedObject.hasClass('obj')) {
+                model.issueCommand('top.driver.workflow.add("'+droppedPath+'")')
+            }
+        }
+    });
+    
+    // ask model for an update whenever something changes
+    model.addListener(update)
 
     /** update workflow diagram */
     function updateWorkflow(json) {
@@ -231,3 +208,7 @@ openmdao.WorkflowDiagram = function(id,model) {
      ***********************************************************************/
         
 }
+
+/** set prototype */
+openmdao.WorkflowDiagram.prototype = new openmdao.BasePane();
+openmdao.WorkflowDiagram.prototype.constructor = openmdao.WorkflowDiagram;

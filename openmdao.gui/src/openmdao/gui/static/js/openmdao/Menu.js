@@ -1,16 +1,6 @@
-/* 
-Copyright (c) 2010. All rights reserved.
-LICENSE: NASA Open Source Agreement (NOSA)
-
-*/
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-/**
- * 
- * @version 0.0.0
- * @constructor
- */
 openmdao.Menu = function(id, json) {
     /***********************************************************************
      *  private

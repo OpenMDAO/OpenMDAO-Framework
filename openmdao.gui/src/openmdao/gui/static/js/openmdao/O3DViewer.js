@@ -19,6 +19,31 @@ o3djs.require('o3djs.canvas');
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
 openmdao.O3DViewer = function(id,g_url) {
+    var title    = "Geometry",
+        helpHTML = "<div>"+
+                   "Drag the mouse, or use the W, A, S, and D keys to rotate<br/>"+
+                   "Right-click and drag, or use the I, J, K, and L keys to pan<br/>"+
+                   "Middle-Button and drag, scrollwheel, or + and -  keys to zoom<br/>"+
+                   "When using keyboard, hold SHIFT to move model faster<br/>"+
+                   "Press R to reset the view"+
+                   "</div>",
+        menu =  [
+                    { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'"+title+"','width':400,'height':150})" }
+                ];
+    openmdao.O3DViewer.prototype.init.call(this,id,title,menu);
+                
+    var o3dDiv = jQuery('<div id="o3d" style="width: 100%; height: 100%;">'),
+        messageDiv = jQuery("<div>")
+        
+    this.elm.width(screen.width).height(screen.height)        
+    jQuery('<div style="height:100%">').appendTo(this.elm).append(o3dDiv)
+    
+    // create the client area.
+    o3djs.webgl.makeClients(initStep2);
+
+    // The following call enables a debug WebGL context, which makes debugging much easier.
+    // o3djs.webgl.makeClients(initStep2, undefined, undefined, undefined, undefined, undefined, true);
+                   
         
     var modelTransform;
     var g_simple;
@@ -41,54 +66,11 @@ openmdao.O3DViewer = function(id,g_url) {
 
     var g_camera;
 
-    if (arguments.length > 0) {
-        var self = this,
-            elm,
-            o3dDiv,
-            messageDiv
-        init()
-    }
-    
-    function init() {
-        var title = "Geometry Viewer",
-            helpHTML = "<div>"+
-                    "Drag the mouse, or use the W, A, S, and D keys to rotate<br/>"+
-                    "Right-click and drag, or use the I, J, K, and L keys to pan<br/>"+
-                    "Middle-Button and drag, scrollwheel, or + and -  keys to zoom<br/>"+
-                    "When using keyboard, hold SHIFT to move model faster<br/>"+
-                    "Press R to reset the view"+
-                    "</div>"
-
-        // initialize the base pane
-        self.prototype = Object.create(openmdao.BasePane, {
-            id:     { value: id },
-            title:  { value: title },
-            menu:   { value: 
-                        [
-                            { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'"+title+"','width':400,'height':150})" }
-                        ]
-                    }
-        })        
-        self.prototype.init()
-
-        elm = jQuery("#"+id).width(screen.width).height(screen.height)
-        
-        o3dDiv = jQuery('<div id="o3d" style="width: 100%; height: 100%;">')
-        jQuery('<div style="height:100%">').appendTo(elm).append(o3dDiv)
-            
-        messageDiv = jQuery("<div>")
-        
-        // create the client area.
-        o3djs.webgl.makeClients(initStep2);
-        // The following call enables a debug WebGL context, which makes debugging much easier.
-        // o3djs.webgl.makeClients(initStep2, undefined, undefined, undefined, undefined, undefined, true);
-        
-    }
 
     function showMessage(msg,color) {
         messageDiv.html(msg);
         messageDiv.css({"color":color});
-        messageDiv.dialog({'title':'Geometry Viewer'})
+        messageDiv.dialog({'title':title})
     }
     
     function startDragging(e) { //mousedown
@@ -339,3 +321,7 @@ openmdao.O3DViewer = function(id,g_url) {
     }
     
 }
+
+/** set prototype */
+openmdao.O3DViewer.prototype = new openmdao.BasePane();
+openmdao.O3DViewer.prototype.constructor = openmdao.O3DViewer;

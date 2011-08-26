@@ -1,48 +1,23 @@
-/* 
-Copyright (c) 2010. All rights reserved.
-LICENSE: NASA Open Source License
-*/
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-/**
- * 
- * @version 0.0.0
- * @constructor
- */
 openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
+    var menu =  [
+                    {   "text": "Component", 
+                        "items": [
+                            { "text": "Add Component", "onclick": "alert('Sorry, not implemented yet :(');" },
+                        ]
+                    },
+                ];
+    openmdao.ObjectTree.prototype.init.call(this,id,'Objects',menu);
     
     /***********************************************************************
      *  private
      ***********************************************************************/
      
-    if (arguments.length > 0) {
-        // initialize private variables
-        var self = this,
-            tree = null,
-            filterChars = '_'
-        // build it
-        init()
-    }
-
-    function init() {
-        // initialize the base pane
-        self.prototype = Object.create(openmdao.BasePane, {
-            id:     { value: id },
-            title:  { value: "Objects" },
-            menu:   { value: 
-                        [
-                            {   "text": "Component", 
-                                "items": [
-                                    { "text": "Add Component", "onclick": "alert('Sorry, not implemented yet :(');" },
-                                ]
-                            },
-                        ],
-                    }
-        })
-        self.prototype.init()
-        
-        // add a div for the tree and make it droppable
+    // initialize private variables
+    var self = this,
+        filterChars = '_',
         tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id)
         tree.parent().droppable({
             accept: '.objtype',
@@ -59,9 +34,8 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
             }
         })
         
-        // ask model for an update whenever something changes
-        model.addListener(update)
-    }
+    // ask model for an update whenever something changes
+    model.addListener(update)
     
     /** convert model.json to structure required for jstree */
     function convertJSON(json, path) {
@@ -170,3 +144,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
      ***********************************************************************/
  
 }
+
+/** set prototype */
+openmdao.ObjectTree.prototype = new openmdao.BasePane();
+openmdao.ObjectTree.prototype.constructor = openmdao.ObjectTree;

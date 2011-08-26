@@ -1,48 +1,31 @@
-/* 
-Copyright (c) 2010. All rights reserved.
-LICENSE: NASA Open Source License
-*/
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-/**
- * 
- * @version 0.0.0
- * @constructor
- */
-openmdao.Plotter = function(id,model) {    // requires flot.js
+// requires flot.js
+
+openmdao.Plotter = function(id,model) {
+    openmdao.Plotter.prototype.init.call(this,id,'Plotter');
+    
     /***********************************************************************
      *  private
      ***********************************************************************/
-    if (arguments.length > 0) {
-        // initialize private variables
-        var plot = null,
-            options = {
-                series: { shadowSize: 0 }, // drawing is faster without shadows
-                yaxis: { min: 0, max: 100 },
-                xaxis: { show: false }
-            },
-            data = [],
-            interval = 30,
-            timer
-        // build it
-        init()
-    }
-
-    function init() {
-        self.prototype = Object.create(openmdao.BasePane, {
-            id:     { value: id },
-            title:  { value: "Plotter" },
-        })        
-        self.prototype.init()
-        
-        // create plot in a div inside the element
-        plot = jQuery('<div style="height:350px;width:600px;padding:5px;">').appendTo('#'+id)
-        plot = jQuery.plot(plot, [ getRandomData() ], options)
+    // initialize private variables
+    var plot = null,
+        options = {
+            series: { shadowSize: 0 }, // drawing is faster without shadows
+            yaxis: { min: 0, max: 100 },
+            xaxis: { show: false }
+        },
+        data = [],
+        interval = 30,
+        timer = null
     
-        // continuously update
-        setRefresh(interval)
-    }
+    // create plot in a div inside the element
+    plot = jQuery('<div style="height:350px;width:600px;padding:5px;">').appendTo(this.elm)
+    plot = jQuery.plot(plot, [ getRandomData() ], options)
+
+    // continuously update
+    setRefresh(interval)
 
     /** set the plot to continuously update after specified ms */
     function setRefresh(interval) {
@@ -117,4 +100,9 @@ openmdao.Plotter = function(id,model) {    // requires flot.js
         s.send('');
  	};
     /**/
-}; 
+
+};
+
+/** set prototype */
+openmdao.Plotter.prototype = new openmdao.BasePane();
+openmdao.Plotter.prototype.constructor = openmdao.Plotter;

@@ -22,7 +22,7 @@
     },
     { "text": "Tools", 
       "items": [
-        { "text": "Plotter",       "onclick": "openmdao.Plotter('randomplot')"},
+        { "text": "Plotter",       "onclick": "new openmdao.Plotter()"},
         { "text": "Addons",        "onclick": "openmdao.Util.popupWindow('addons','Addons',575,540)"},
         { "text": "3DTin",         "onclick": "openmdao.Util.popupWindow('http://www.3dtin.com','3DTin',768,1024)"}
       ]
