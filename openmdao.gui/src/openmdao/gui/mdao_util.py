@@ -147,19 +147,18 @@ def launch_browser(port,preferred_browser=None):
     
     # webbrowser doesn't know about chrome, so try to find it (this is for win7)
     if preferred_browser and preferred_browser.lower() == 'chrome':
-        print 'Trying to find Google Chrome...'
         USERPROFILE = os.getenv("USERPROFILE")
         if USERPROFILE:
-            CHROMEPATH = USERPROFILE+'/AppData/Local/Google/Chrome/Application/chrome.exe'
+            CHROMEPATH = USERPROFILE+'\AppData\Local\Google\Chrome\Application\chrome.exe'
        	    if os.path.isfile(CHROMEPATH):
-                preferred_browser = CHROMEPATH+' %s'
+                preferred_browser = CHROMEPATH.replace('\\','\\\\')+' %s'
     
     # try to get preferred browser, fall back to default
     if preferred_browser:
         try:
             browser = webbrowser.get(preferred_browser);
         except:
-            print "Couldn't launch preferred browser ("+preferred_browser+"), using default..."
+            print "Couldn't get preferred browser ("+preferred_browser+"), using default..."
             browser = webbrowser.get()
     else:
         browser = webbrowser.get()
@@ -167,6 +166,7 @@ def launch_browser(port,preferred_browser=None):
     # open new browser window (may open in a tab depending on user preferences, etc.)
     if browser:
         browser.open(url,1,True)
+        print "Opened in",browser.name
     else:
         print "Couldn't launch browser: "+str(browser)
 
