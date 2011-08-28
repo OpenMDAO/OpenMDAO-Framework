@@ -141,33 +141,11 @@ nav2 ul ul a {
   z-index: 9999;
 }
 
+
 /* desktop tabbed panes (left, center & right) */
-dd {
+
+dl {
   margin: 0;
-}
-dl#central_tabs, dl#leftcol_tabs, dl#rightcol_tabs {
-  margin: 0;
-  width: 100%;
-  /* height: 100%; */
-  position: relative;
-}
-dl#central_tabs dt, dl#leftcol_tabs dt, dl#rightcol_tabs dt {
-  top: 0; 
-  margin: 0; 
-  position: relative; 
-  float: left;
-  display: block;
-  width: 75px;
-  height: 20px;
-  text-align: center;
-}
-dl#central_tabs dd, dl#leftcol_tabs dd, dl#rightcol_tabs dd {
-  margin: 0;
-  position: absolute;
-  left: 0;
-  top: 25px;
-  height: 100%;
-  width: 100%;
 }
 
 #otree, #ftree, #propertieseditor, #palette {

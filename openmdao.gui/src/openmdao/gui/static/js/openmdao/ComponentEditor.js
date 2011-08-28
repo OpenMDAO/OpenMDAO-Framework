@@ -2,7 +2,7 @@
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
 openmdao.ComponentEditor = function(model,pathname) {
-    openmdao.ComponentEditor.prototype.init.call(this,null,'Component');
+    openmdao.ComponentEditor.prototype.init.call(this,'_'+pathname,'Component');
     
     /***********************************************************************
      *  private
@@ -15,26 +15,33 @@ openmdao.ComponentEditor = function(model,pathname) {
           
     /** load the table with the given properties */
     function loadTabs(properties) {
-        var paneID = id_+'_tabs';
+        var paneID = self.id+'_tabs';
         self.elm.html('<dl id="'+paneID+'"></dl>');
+        if (properties['inputs']) {
+            self.elm.append('<dt id="'+self.id+'_inputs_tab">Inputs</dt>');
+            self.elm.append('<dd id="'+self.id+'_inputs_pane"><div id="'+self.id+'_inputs"></div></dd>');
+        }
+        if (properties['outputs']) {
+            self.elm.append('<dt id="'+self.id+'_outputs_tab">Outputs</dt>');
+            self.elm.append('<dd id="'+self.id+'_outputs_pane"><div id="'+self.id+'_outputs"></div></dd>');
+        }
         if (properties['parameters']) {
-            self.elm.append('<dt id="'+id_+'_parameters_tab">Parameters</dt>');
-            self.elm.append('<dd id="'+id_+'_parameters_pane"><div id="'+id_+'parameters"></div></dd>');
+            self.elm.append('<dt id="'+self.id+'_parameters_tab">Parameters</dt>');
+            self.elm.append('<dd id="'+self.id+'_parameters_pane"><div id="'+self.id+'_parameters"></div></dd>');
         }
         if (properties['objectives']) {
-            self.elm.append('<dt id="'+id_+'_objectives_tab">Objectives</dt>');
-            self.elm.append('<dd id="'+id_+'_parameters_pane"><div id="'+id_+'objectives"></div></dd>');
+            self.elm.append('<dt id="'+self.id+'_objectives_tab">Objectives</dt>');
+            self.elm.append('<dd id="'+self.id+'_parameters_pane"><div id="'+self.id+'_objectives"></div></dd>');
         }
         if (properties['eqconstraints']) {
-            self.elm.append('<dt id="'+id_+'_eqconstraints_tab">EqConstraints</dt>');
-            self.elm.append('<dd id="'+id_+'_parameters_pane"><div id="'+id_+'eqconstraints"></div></dd>');
+            self.elm.append('<dt id="'+self.id+'_eqconstraints_tab">EqConstraints</dt>');
+            self.elm.append('<dd id="'+self.id+'_parameters_pane"><div id="'+self.id+'_eqconstraints"></div></dd>');
         }
         if (properties['ineqconstraints']) {
-            self.elm.append('<dt id="'+id_+'_ineqconstraints_tab">IneqConstraints</dt>');
-            self.elm.append('<dd id="'+id_+'_parameters_pane"><div id="'+id_+'ineqconstraints"></div></dd>');
+            self.elm.append('<dt id="'+self.id+'_ineqconstraints_tab">IneqConstraints</dt>');
+            self.elm.append('<dd id="'+self.id+'_parameters_pane"><div id="'+self.id+'_ineqconstraints"></div></dd>');
         }
-        new openmdao.TabbedPane(paneID);
-        debug.info('ComponentEditor',self.elm)
+        openmdao.TabbedPane(self.id);
     }
     
     /** if there is an object loaded, update it from the model */
@@ -49,7 +56,6 @@ openmdao.ComponentEditor = function(model,pathname) {
     
     /** get the specified object from model, load properties into tabs */
     this.editObject = function(path) {
-        debug.info('ComponentEditor',self.elm)
         if (self.pathname !== path)
             self.pathname = path
         model.getComponent(path, loadTabs,
@@ -62,7 +68,11 @@ openmdao.ComponentEditor = function(model,pathname) {
         )
         return this
     }
-    
+
+    if (pathname) {
+        this.editObject(pathname)
+    }
+
 }
 
 /** set prototype */

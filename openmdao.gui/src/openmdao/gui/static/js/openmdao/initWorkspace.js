@@ -22,22 +22,18 @@ jQuery(function() {
     )
     
     // add tabbed pane functionality
-    new openmdao.TabbedPane("leftcol_tabs");
-    new openmdao.TabbedPane("central_tabs");
-    new openmdao.TabbedPane("rightcol_tabs");
+    openmdao.TabbedPane("leftcol_tabs");
+    openmdao.TabbedPane("central_tabs");
+    openmdao.TabbedPane("rightcol_tabs");
 
     // add gui functionality to designated DOM nodes
     (function() {
         var select_fn = new openmdao.PropertiesEditor("propertieseditor",model).editObject,
-            dblclk_fn = function(path) {
-                new openmdao.ComponentEditor(model,path).editObject
-            }        
+            dblclk_fn = function(model,path) { new openmdao.ComponentEditor(model,path) }
         new openmdao.ObjectTree("otree",model,select_fn,dblclk_fn)
         
         var edit_fn = new openmdao.CodeEditor("code",model).editFile,
-            view_fn = function(path) {
-                openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800)
-            }
+            view_fn = function(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }
         new openmdao.FileTree("ftree",model,edit_fn,view_fn)
         
         new openmdao.Palette("palette",model)

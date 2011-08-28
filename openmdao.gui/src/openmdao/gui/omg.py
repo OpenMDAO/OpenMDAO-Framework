@@ -28,6 +28,7 @@ def init(reset):
     
     print "Resetting project database..."
     if reset and os.path.exists(database_file):
+        print "Deleting existing project database..."
         os.remove(database_file)
     from django.core.management import execute_manager
     execute_manager(settings,argv=[__file__,'syncdb'])
@@ -72,7 +73,7 @@ if __name__ == '__main__':
     parser.add_option("-i", "--init", action="store_true", dest="initialize",
                       help="(re)initialize settings")
     parser.add_option("-r", "--reset", action="store_true", dest="reset",
-                      help="reset project database (not valid with -d or --devserver)")
+                      help="reset project database (valid only with -i and without -d)")
 
     (options, args) = parser.parse_args()
     
