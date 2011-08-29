@@ -5,6 +5,7 @@ hook on github.
 """
 
 import os
+import sys
 import shutil
 import json
 import pprint
@@ -42,10 +43,12 @@ def activate_and_run(envdir, cmd):
     for name in ['VIRTUAL_ENV','_OLD_VIRTUAL_PATH','_OLD_VIRTUAL_PROMPT']:
         if name in env: 
             del env[name]
-    return _run_sub(command, env=env)
+
+    return _run_sub(' '.join(command), env=env)
 
 def _run_sub(cmd, env=None):
-    p = subprocess.Popen(cmd, shell=True, stderr=subprocess.STDOUT, env=env)
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, env=env)
     output = p.communicate()[0]
     return (output, p.returncode)
 
@@ -65,6 +68,7 @@ class runtests:
         commit_id = payload['after']
         
         tmp_results_dir = os.path.join(RESULTS_DIR, commit_id)
+        os.mkdir(tmp_results_dir)
         
         #cmd = [PY, 'postrec_runtests.py', 
                #'-o', tmp_results_dir,
@@ -72,7 +76,8 @@ class runtests:
         cmd = ['ls']
         
         try:
-            output, retval = activate_and_run(cmd)
+            output, retval = activate_and_run(os.path.join(REPO_DIR,'devenv'),
+                                              cmd)
             
             f = StringIO.StringIO()
             f.write("repo url: %s\n" % payload['repository']['url'])
