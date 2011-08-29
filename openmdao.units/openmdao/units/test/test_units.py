@@ -531,7 +531,7 @@ class test__PhysicalUnit(unittest.TestCase):
     def test_repr_str(self):
         """__repr__should return a string which could be used to contruct the unit instance, __str__ should return a string with just the unit name for str"""
         u = units.PhysicalQuantity('1 d')
-        self.assertEqual(repr(u.unit),"PhysicalUnit({'d': 1},86400.0,[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],0)")
+        self.assertEqual(repr(u.unit),"PhysicalUnit({'d': 1},86400.0,[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],0.0)")
         self.assertEqual(str(u.unit),"<PhysicalUnit d>")
 
     def test_cmp(self):

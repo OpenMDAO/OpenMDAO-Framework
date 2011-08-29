@@ -5,9 +5,9 @@
 *MetaModel*
 ~~~~~~~~~~~
 
-MetaModel is a class which supports generalized meta modeling capabilities. It has two  sockets, one
+MetaModel is a class which supports generalized meta modeling capabilities. It has two  slots, one
 for surrogate model generators and a second for the  model that is being approximated. The first
-socket, named `surrogate`, must  always be filled before anything else is done. This socket gets
+slot, named `surrogate`, must  always be filled before anything else is done. This slot gets
 filled with  a dictionary that specifies which surrogate model generator should be used for  which
 outputs. The keys of the dictionary are the variable names, and the values are the particular
 surrogate model generators which adhere to the ISurrogate interface. A special key, ``'default'``,
@@ -15,7 +15,7 @@ can be used to indicate a surrogate model generator to be used if no specific on
 particular variable.  Any specified variables will override the default. OpenMDAO provides some
 surrogate modelers in ``openmdao.lib.surrogatemodels``. 
 
-.. testcode:: MetaModel_sockets
+.. testcode:: MetaModel_slots
         
    from openmdao.main.api import Assembly
    from openmdao.lib.components.api import MetaModel
@@ -33,11 +33,11 @@ surrogate modelers in ``openmdao.lib.surrogatemodels``.
            self.meta_model.surrogate = {'default':LogisticRegression(),
                                         'f_xy':KrigingSurrogate()}
 
-Once the surrogate dictionary has been specified, the model socket, called 
+Once the surrogate dictionary has been specified, the model slot, called 
 `model`, can be filled with a component. As soon as a component is put in the
-socket, MetaModel will automatically mirror the inputs and outputs of that 
+slot, MetaModel will automatically mirror the inputs and outputs of that 
 component. In other words, MetaModel will have the same inputs and 
-outputs as whatever component is put into the model socket. 
+outputs as whatever component is put into the model slot. 
 
 .. testcode:: MetaModel_model
 
@@ -126,12 +126,12 @@ surrogate models fit to them, and consequently, they won't be available to the s
 MetaModel. 
 
 Now you have set up your MetaModel with a specific surrogate model, and you have 
-put a model into the `model` socket. The input and output 
+put a model into the `model` slot. The input and output 
 inclusions/exclusions have been specified. The next step is to actually start
 training and executing the MetaModel in simulations. 
 
 MetaModel has two operating modes: *training* and *prediction.* When run in *training* mode, 
-MetaModel passes its given inputs down to the model in the model socket and runs 
+MetaModel passes its given inputs down to the model in the model slot and runs 
 it. Then it stores the outputs from the model to use for generating a
 surrogate model later. When run in *predict* mode, MetaModel will check for 
 any new training data and, if present, will generate a surrogate model for 

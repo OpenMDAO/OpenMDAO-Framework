@@ -117,15 +117,6 @@ def _release(version, is_local, home, url=REAL_URL):
     finally:
         shutil.rmtree(tmpdir)
 
-def _find_top_dir():
-    path = os.getcwd()
-    while path:
-        if '.git' in os.listdir(path):
-            return path
-        path = os.path.dirname(path)
-    raise RuntimeError("Can't find top dir of repository starting at %s" % os.getcwd())
-
-                
 @hosts('openmdao@web103.webfaction.com')
 def release(version=None):
     if sys.platform != 'win32':
@@ -143,39 +134,3 @@ def localrelease(version=None):
     print 'creating release...'
     _release(version, is_local=True, home='/OpenMDAO/release_test', url=TEST_URL)
 
-
-
-#Keith's function to update the dev docs - not on trunk yet?
-def _update_dev_docs():
-    startdir = os.getcwd()
-    try:
-        # tar up the docs so we can upload them to the server
-        topdir = _find_top_dir()
-        devtools_dir = os.path.join(topdir,'openmdao.devtools',
-                                    'src','openmdao','devtools')
-        check_call([sys.executable, os.path.join(devtools_dir,'build_docs.py')])        
-
-        try:
-            archive = tarfile.open(os.path.join(topdir,'docs','docs.tar.gz'), 'w:gz')
-            os.chdir(os.path.join(topdir, 'docs', '_build'))	
-            archive.add('html')
-            archive.close()
-        finally:
-            os.chdir(startdir)
-
-        # put the docs on the server and untar them
-        put(os.path.join(topdir,'docs', 'docs.tar.gz'), '~/downloads/dev_docs/docs.tar.gz') 
-        with cd('~/downloads/dev_docs'):
-            run('tar xzf docs.tar.gz')
-            run('mv html/* ~/downloads/dev_docs')
-            run('rm -rf html')
-            run('rm -f docs.tar.gz')
- 
-    finally:
-        cmd="rm -rf " + os.path.join(topdir,'docs','docs.tar.gz')
-        local(cmd)
-   
-@hosts('openmdao@web103.webfaction.com')
-def update_dev_docs():
-    _update_dev_docs()
- 

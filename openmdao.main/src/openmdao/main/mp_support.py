@@ -918,7 +918,12 @@ class OpenMDAO_Manager(BaseManager):
 
                 # Reset stdout & stderr.
                 for handler in logging._handlerList:
-                    handler.flush()
+                    try:
+                        handler.flush()
+                    except AttributeError:
+                        h = handler()
+                        if h:
+                            h.flush()
                 sys.stdout.flush()
                 sys.stderr.flush()
                 sys.stdout = open('stdout', 'w')
