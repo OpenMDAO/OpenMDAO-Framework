@@ -2,7 +2,8 @@
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
 openmdao.ComponentEditor = function(model,pathname) {
-    openmdao.ComponentEditor.prototype.init.call(this,'_'+pathname,'Component');
+    // TODO: hack alert... mangling pathname
+    openmdao.ComponentEditor.prototype.init.call(this,'-'+pathname.replace(/\./g,'-'),'Component');
     
     /***********************************************************************
      *  private
@@ -15,32 +16,49 @@ openmdao.ComponentEditor = function(model,pathname) {
           
     /** load the table with the given properties */
     function loadTabs(properties) {
-        var paneID = self.id+'_tabs';
-        self.elm.html('<dl id="'+paneID+'"></dl>');
-        if (properties['inputs']) {
-            self.elm.append('<dt id="'+self.id+'_inputs_tab">Inputs</dt>');
-            self.elm.append('<dd id="'+self.id+'_inputs_pane"><div id="'+self.id+'_inputs"></div></dd>');
-        }
-        if (properties['outputs']) {
-            self.elm.append('<dt id="'+self.id+'_outputs_tab">Outputs</dt>');
-            self.elm.append('<dd id="'+self.id+'_outputs_pane"><div id="'+self.id+'_outputs"></div></dd>');
-        }
-        if (properties['parameters']) {
-            self.elm.append('<dt id="'+self.id+'_parameters_tab">Parameters</dt>');
-            self.elm.append('<dd id="'+self.id+'_parameters_pane"><div id="'+self.id+'_parameters"></div></dd>');
-        }
-        if (properties['objectives']) {
-            self.elm.append('<dt id="'+self.id+'_objectives_tab">Objectives</dt>');
-            self.elm.append('<dd id="'+self.id+'_parameters_pane"><div id="'+self.id+'_objectives"></div></dd>');
-        }
-        if (properties['eqconstraints']) {
-            self.elm.append('<dt id="'+self.id+'_eqconstraints_tab">EqConstraints</dt>');
-            self.elm.append('<dd id="'+self.id+'_parameters_pane"><div id="'+self.id+'_eqconstraints"></div></dd>');
-        }
-        if (properties['ineqconstraints']) {
-            self.elm.append('<dt id="'+self.id+'_ineqconstraints_tab">IneqConstraints</dt>');
-            self.elm.append('<dd id="'+self.id+'_parameters_pane"><div id="'+self.id+'_ineqconstraints"></div></dd>');
-        }
+        var style = 'style="padding:5px;background-color:#6a6a6a;border:1px solid #fff;"',
+            dl = jQuery('<dl id="'+self.id+'_tabs"></dl>');
+            
+        self.elm.html("");
+        self.elm.append(dl);
+        
+        var tabcount = 0;
+        
+        jQuery.each(properties,function (name,val) {
+            if (name !== 'type') {
+                tabcount = tabcount + 1;
+                
+                if (name.length > 10) {
+                    tabname = name.substr(0,10);
+                }
+                else {
+                    tabname = name;
+                }
+                
+                var dt = jQuery('<dt id="'+self.id+'_'+name+'_tab" target="'+self.id+'_'+name+'_pane">'+tabname+'</dt>'),
+                    dd = jQuery('<dd id="'+self.id+'_'+name+'_pane"></dd>'),
+                    content_pane = jQuery('<div id="'+self.id+'_'+name+'" '+style+'>'+name+'</div>');
+                    
+                // TODO: get custom content pane based on name
+                var content_str = ""
+                jQuery.each(val,function (ix,v) {
+                    if (v['value']) {
+                        content_str = content_str + v['name'] + '=' + v['value'] + '<br>';
+                    }
+                    else {
+                        content_str = content_str + v['name'] + '<br>';
+                    }
+                });
+                content_pane.html(content_str);
+                
+                dl.append(dt);
+                dl.append(dd);
+                dd.append(content_pane)
+            }
+        });
+        
+        self.elm.width((tabcount+1)*75);
+
         openmdao.TabbedPane(self.id);
     }
     

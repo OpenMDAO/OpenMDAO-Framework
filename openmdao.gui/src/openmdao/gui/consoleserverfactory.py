@@ -322,7 +322,7 @@ class ConsoleServer(cmd.Cmd):
                 attr['type'] = type(v).__name__
                 attr['value'] = v
             inputs.append(attr)
-        attrs['inputs'] = inputs
+        attrs['Inputs'] = inputs
             
         outputs = []
         for vname in comp.list_outputs():
@@ -333,7 +333,7 @@ class ConsoleServer(cmd.Cmd):
                 attr['type'] = type(v).__name__
                 attr['value'] = v
             outputs.append(attr)
-        attrs['outputs'] = outputs
+        attrs['Outputs'] = outputs
 
         if has_interface(comp,IHasObjectives):
             objectives = []
@@ -344,7 +344,7 @@ class ConsoleServer(cmd.Cmd):
                 attr['expr'] = objs[key].text
                 attr['scope'] = objs[key].scope.name
                 objectives.append(attr)
-            attrs['objectives'] = objectives
+            attrs['Objectives'] = objectives
             
         if has_interface(comp, IHasParameters):
             parameters = []
@@ -359,7 +359,7 @@ class ConsoleServer(cmd.Cmd):
                 attr['adder']   = parm.adder
                 attr['fd_step'] = parm.fd_step
                 parameters.append(attr)
-            attrs['parameters'] = parameters
+            attrs['Parameters'] = parameters
         
         if has_interface(comp, IHasConstraints) or has_interface(comp, IHasEqConstraints):
             constraints = []
@@ -372,7 +372,7 @@ class ConsoleServer(cmd.Cmd):
                 attr['scaler']  = con.scaler
                 attr['adder']   = con.adder
                 constraints.append(attr)
-            attrs['eqconstraints'] = constraints
+            attrs['EqConstraints'] = constraints
             
         if has_interface(comp, IHasConstraints) or has_interface(comp, IHasIneqConstraints):
             constraints = []
@@ -385,7 +385,7 @@ class ConsoleServer(cmd.Cmd):
                 attr['scaler']  = con.scaler
                 attr['adder']   = con.adder
                 constraints.append(attr)
-            attrs['ineqconstraints'] = constraints
+            attrs['IneqConstraints'] = constraints
             
         return attrs
         
