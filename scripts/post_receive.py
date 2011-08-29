@@ -70,10 +70,11 @@ class runtests:
         tmp_results_dir = os.path.join(RESULTS_DIR, commit_id)
         os.mkdir(tmp_results_dir)
         
-        #cmd = [PY, 'postrec_runtests.py', 
-               #'-o', tmp_results_dir,
-               #]
-        cmd = ['ls']
+        cmd = ['test_branch', 
+               '-o', tmp_results_dir,
+               '-f', repo,
+               '--branch=%s' % branch,
+               ]
         
         try:
             output, retval = activate_and_run(os.path.join(REPO_DIR,'devenv'),
