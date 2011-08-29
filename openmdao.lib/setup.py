@@ -47,6 +47,7 @@ Component, Driver, and Variable plugins for OpenMDAO
           'Pyevolve==0.6',
           'ordereddict',
           'scipy',
+          #'ffnet>=0.7'
           ],
       entry_points="""
       [openmdao.driver]
@@ -82,5 +83,10 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.datatypes.file.File = openmdao.lib.datatypes.file:File
       openmdao.lib.datatypes.float.Float = openmdao.lib.datatypes.float:Float
       openmdao.lib.datatypes.int.Int = openmdao.lib.datatypes.int:Int
+      
+      [openmdao.surrogatesmodels]
+      openmdao.lib.surrogatemodels.kriging_surrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
+      openmdao.lib.surrogatemodels.logistic_regression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
+      openmdao.lib.surrogatemodels.nn_surrogate = openmdao.lib.surrogatemodels.nn_surrogate:NeuralNet
       """,
       )

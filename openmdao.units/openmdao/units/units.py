@@ -362,7 +362,7 @@ class PhysicalUnit(object):
             self.names = names
             
         self.factor = float(factor)
-        self.offset = offset
+        self.offset = float(offset)
         self.powers = powers
 
     def __repr__(self):

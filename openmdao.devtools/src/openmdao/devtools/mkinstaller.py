@@ -5,6 +5,9 @@ virtualenv with 'develop' versions of all of the openmdao packages. Both
 scripts bootstrap a virtualenv environment.
 
 Use the --dev option to generate a go-openmdao-dev.py script.
+
+This script should be run from within an activated OpenMDAO virtual environment
+in order to capture all of the required dependencies correctly.
 """
 
 import sys, os
@@ -12,6 +15,7 @@ import virtualenv
 import pprint
 import StringIO
 from pkg_resources import working_set, Requirement
+from optparse import OptionParser
 
 #
 #      EDIT THE FOLLOWING TWO LISTS TO CONTROL THE PACKAGES THAT WILL BE
@@ -40,7 +44,11 @@ openmdao_packages = [('openmdao.util', '', 'sdist'),
                      ('openmdao.examples.expected_improvement', 'examples', 'sdist'),
                     ]
 
-def get_adjust_options(options, version):
+# if it's a dev installer, these packages will also be included
+openmdao_dev_packages = [('openmdao.devtools', '', 'sdist'),
+                         ]
+
+def _get_adjust_options(options, version):
     """Return a string containing the definition of the adjust_options function
     that will be included in the generated virtualenv bootstrapping script.
     """
@@ -69,10 +77,28 @@ def adjust_options(options, args):
 
 """ % code
 
-def main(options):
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
+
+    parser = OptionParser()
+    parser.add_option("--dev", action="store_true", dest='dev', 
+                      help="if present, a development script will be generated instead of a release script")
+    parser.add_option("--dest", action="store", type="string", dest='dest', 
+                      help="specify destination directory", default='.')
+    parser.add_option("--disturl", action="store", type="string", dest="disturl",
+                      default='http://openmdao.org/dists',
+                      help="OpenMDAO distribution URL (used for testing)")
     
+    (options, args) = parser.parse_args(args)
+    
+    if len(args) > 0:
+        print 'unrecognized args: %s' % args
+        parser.print_help()
+        sys.exit(-1)
+
     if options.dev:
-        openmdao_packages.append(('openmdao.devtools', '', 'sdist'))
+        openmdao_packages.extend(openmdao_dev_packages)
         sout = StringIO.StringIO()
         pprint.pprint(openmdao_packages, sout)
         pkgstr = sout.getvalue()
@@ -103,11 +129,6 @@ def main(options):
         make_dev_eggs = ''
         wing = ''
 
-    if options.test:
-        url = 'http://torpedo.grc.nasa.gov:31004/dists'
-    else:
-        url = 'http://openmdao.org/dists'
-
     script_str = """
 
 openmdao_prereqs = %(openmdao_prereqs)s
@@ -115,6 +136,8 @@ openmdao_prereqs = %(openmdao_prereqs)s
 def extend_parser(parser):
     parser.add_option("-r","--req", action="append", type="string", dest='reqs', 
                       help="specify additional required distributions", default=[])
+    parser.add_option("--disturl", action="store", type="string", dest='disturl', 
+                      help="specify url where openmdao distribs are located")
 
 %(adjust_options)s
 
@@ -135,6 +158,18 @@ def after_install(options, home_dir):
     
     reqs = %(reqs)s
     url = '%(url)s'
+    # for testing we allow one to specify a url where the openmdao
+    # package dists are located that may be different from the main
+    # url where the dependencies are located. We do this because
+    # setuptools only allows us to specify a single -f parameter,
+    # which would force us to mirror the entire openmdao distribution
+    # directory in order to test our releases because setuptools will
+    # barf if it can't find everything in the same location (or on PyPI).
+    # TODO: get rid of this after we quit using setuptools.
+    if options.disturl:
+        openmdao_url = options.disturl
+    else:
+        openmdao_url = '%(url)s'
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
         lib_dir = join(home_dir, 'Lib')
@@ -158,9 +193,13 @@ def after_install(options, home_dir):
         sys.exit(-1)
     
     cmds = ['-f', url]
+    openmdao_cmds = ['-f', openmdao_url]
     try:
         for req in reqs:
-            _single_install(cmds, req, bin_dir)
+            if req.startswith('openmdao.'):
+                _single_install(openmdao_cmds, req, bin_dir)
+            else:
+                _single_install(cmds, req, bin_dir)
         
 %(make_dev_eggs)s
 
@@ -200,15 +239,15 @@ def after_install(options, home_dir):
             else:
                 reqs.add('%s' % dist.as_requirement())
 
-    reqs = openmdao_prereqs + list(reqs)
+    reqs = list(reqs)
     
     optdict = { 
         'reqs': reqs, 
         'version': version, 
-        'url': url ,
+        'url': options.disturl,
         'make_dev_eggs': make_dev_eggs,
         'wing': wing,
-        'adjust_options': get_adjust_options(options, version),
+        'adjust_options': _get_adjust_options(options, version),
         'openmdao_prereqs': openmdao_prereqs,
     }
     
@@ -221,22 +260,5 @@ def after_install(options, home_dir):
         f.write(virtualenv.create_bootstrap_script(script_str % optdict))
     os.chmod(scriptname, 0755)
     
-
 if __name__ == '__main__':
-    from optparse import OptionParser
-    parser = OptionParser()
-    parser.add_option("--dev", action="store_true", dest='dev', 
-                      help="if present, a development script will be generated instead of a release script")
-    parser.add_option("--dest", action="store", type="string", dest='dest', 
-                      help="specify destination directory", default='.')
-    parser.add_option("-t", "--test", action="store_true", dest="test",
-                      help="if present, generated installer will point to /OpenMDAO/release_test/dists")
-    
-    (options, args) = parser.parse_args()
-    
-    if len(args) > 0:
-        print 'unrecognized args: %s' % args
-        parser.print_help()
-        sys.exit(-1)
-
-    main(options)
+    main()

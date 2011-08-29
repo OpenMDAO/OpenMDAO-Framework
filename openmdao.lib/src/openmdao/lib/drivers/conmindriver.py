@@ -30,13 +30,13 @@ from numpy import int as numpy_int
 
 import conmin.conmin as conmin
 
-from openmdao.main.api import Case, Driver, ExprEvaluator
+from openmdao.main.api import Case, ExprEvaluator
+from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.exceptions import RunStopped
 from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
-from openmdao.main.uses_derivatives import UsesGradients
 from openmdao.util.decorators import add_delegate
 
 
@@ -169,8 +169,8 @@ class _consav(object):
         self.ispace = [0, 0]
         # pylint: enable-msg=W0201
 
-@add_delegate(HasParameters, HasIneqConstraints, HasObjective, UsesGradients)
-class CONMINdriver(Driver):
+@add_delegate(HasParameters, HasIneqConstraints, HasObjective)
+class CONMINdriver(DriverUsesDerivatives):
     """ Driver wrapper of Fortran version of CONMIN. 
         
     Note on self.cnmn1.igoto, which reports CONMIN's operation state:
@@ -193,9 +193,6 @@ class CONMINdriver(Driver):
     # CONMIN has quite a few parameters to give the user control over aspects
     # of the solution. 
     
-    scal = Array(zeros(0.,'d'), iotype='in', 
-        desc='Array of scaling factors for the parameters.')
-
     cons_is_linear = Array(zeros(0,'d'), dtype=numpy_int, iotype='in', 
         desc='Array designating whether each constraint is linear.')
                  
@@ -212,8 +209,6 @@ class CONMINdriver(Driver):
                       ' (only when CONMIN calculates gradient)')
     icndir = Float(0, iotype='in', desc='Conjugate gradient restart '
                       'parameter.')
-    nscal = Float(0, iotype='in', desc='Scaling control parameter -- '
-                      'controls scaling of decision variables.')
     ct = Float(-0.1, iotype='in', desc='Constraint thickness parameter.')
     ctmin = Float(0.004, iotype='in', desc='Minimum absolute value of ct '
                       'used in optimization.')
@@ -239,8 +234,8 @@ class CONMINdriver(Driver):
     printvars = List(Str, iotype='in', desc='List of extra variables to '
                                'output in the recorder.')
     
-    def __init__(self, doc=None):
-        super(CONMINdriver, self).__init__( doc)
+    def __init__(self, *args, **kwargs):
+        super(CONMINdriver, self).__init__(*args, **kwargs)
         
         # Save data from common blocks into our CONMINdriver object
         self.cnmn1 = _cnmn1()
@@ -291,15 +286,18 @@ class CONMINdriver(Driver):
         for i, val in enumerate(self.get_parameters().values()):
             self.design_vals[i] = dval = val.evaluate(self.parent)
             
-            if dval > val.high:
-                if (dval - val.high) < self.ctlmin:
-                    self.design_vals[i] = val.high
+            vlow = val.low
+            vhigh = val.high
+            
+            if dval > vhigh:
+                if (dval - vhigh) < self.ctlmin:
+                    self.design_vals[i] = vhigh
                 else:
                     self.raise_exception('initial value of: %s is greater than maximum' % val.target,
                                          ValueError)
-            if dval < val.low:
-                if (val.low - dval) < self.ctlmin:
-                    self.design_vals[i] = val.low
+            if dval < vlow:
+                if (vlow - dval) < self.ctlmin:
+                    self.design_vals[i] = vlow
                 else:
                     self.raise_exception('initial value of: %s is less than minimum' % val.target,
                                          ValueError)
@@ -488,18 +486,9 @@ class CONMINdriver(Driver):
         for i, param in enumerate(params):
             self._upper_bounds[i] = param.high
         
-        # create array for scaling of the design vars
+        # create array for CONMIN's internal scaling
+        # we no longer use these, but the still need the empty arrays
         self._scal = ones(num_dvs+2)
-        if len(self.scal) > 0:
-            if len(self.scal) != num_dvs:
-                msg = 'size of scale factor array (%d) does not match ' + \
-                      'number of design vars (%d)'
-                self.raise_exception(msg % (len(self.scal), num_dvs),
-                                     ValueError)
-            
-            for i, scale_factor in enumerate(self.scal):
-                self._scal[i] = scale_factor
-            
         self.s = zeros(num_dvs+2, 'd')
         
         # size constraint related arrays
@@ -560,7 +549,7 @@ class CONMINdriver(Driver):
         self.cnmn1.fdch = self.fdch
         self.cnmn1.fdchm = self.fdchm
         self.cnmn1.icndir = self.icndir
-        self.cnmn1.nscal = self.nscal
+        self.cnmn1.nscal = 0
         self.cnmn1.nfdg = self.nfdg
         self.cnmn1.ct = self.ct
         self.cnmn1.ctmin = self.ctmin

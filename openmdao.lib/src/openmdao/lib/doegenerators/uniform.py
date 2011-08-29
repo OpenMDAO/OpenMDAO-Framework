@@ -32,6 +32,8 @@ class Uniform(HasTraits):
         
     def __iter__(self):
         """Return an iterator over our sets of input values"""
+        if self.num_samples < 2: 
+            raise ValueError("Uniform distributions must have at least 2 samples. num_samples is set to less than 2")
         return self
                                            
     def next(self):

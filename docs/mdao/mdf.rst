@@ -353,7 +353,3 @@ We just change some of solver specific settings.
 The rest of the file does not change at all either. So you can see that it's pretty easy to reconfigure drivers 
 using this setup. Here is the new file, with the modifications: 
 :download:`sellar_MDF_solver.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_MDF_solver.py>`.
-
-        
-
-

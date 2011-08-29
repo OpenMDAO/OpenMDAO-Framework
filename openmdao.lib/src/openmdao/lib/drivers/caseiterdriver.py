@@ -120,7 +120,7 @@ class CaseIterDriverBase(Driver):
             if self._abort_exc is None:
                 self.raise_exception('Run stopped', RunStopped)
             else:
-                self.raise_exception('Run aborted: %r' % self._abort_exc,
+                self.raise_exception('Run aborted: %s' % self._abort_exc,
                                      RuntimeError)
 
     def step(self):
@@ -302,7 +302,7 @@ class CaseIterDriverBase(Driver):
                         except KeyError:
                             self._logger.error('    %r: no startup reply', name)
                         else:
-                            self._logger.error('    %r: %s %s %s', name,
+                            self._logger.error('    %r: %r %s %s', name,
                                                self._servers[name],
                                                self._server_states[name],
                                                self._server_info[name])

@@ -35,8 +35,11 @@ class DepTestCase(unittest.TestCase):
         comps.extend(psta.find_inheritors('enthought.traits.api.Array'))
         comps = [x.rsplit('.',1)[1] for x in comps]
         comps.remove('Driver')
+        comps.remove('DriverUsesDerivatives')
+        comps.remove('DistributionCaseDriver')
         comps.remove('CaseIterDriverBase')
         comps.remove('PassthroughTrait')
+        comps.remove('PassthroughProperty')
         
         from openmdao.main.api import get_available_types
         groups = [ 'openmdao.component',
