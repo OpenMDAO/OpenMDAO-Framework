@@ -1109,8 +1109,8 @@ class OpenMDAO_Proxy(BaseProxy):
             try:
                 self._connect()
             except Exception as exc:
-                msg = "Can't connect to server for %r at %r: %r" \
-                      % (methodname, self._token.address, exc)
+                msg = "Can't connect to server at %r for %r: %r" \
+                      % (self._token.address, methodname, exc)
                 logging.error(msg)
                 raise RuntimeError(msg)
             conn = self._tls.connection
@@ -1138,8 +1138,8 @@ class OpenMDAO_Proxy(BaseProxy):
             conn.send(encrypt((self._id, methodname, new_args, kwds,
                                get_credentials().encode()), session_key))
         except IOError as exc:
-            msg = "Can't send to server for %r at %r: %r" \
-                  % (methodname, self._token.address, exc)
+            msg = "Can't send to server at %r for %r: %r" \
+                  % (self._token.address, methodname, exc)
             logging.error(msg)
             raise RuntimeError(msg)
 
