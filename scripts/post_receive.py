@@ -153,7 +153,7 @@ def collect_results(tmp_results_dir):
     for d in os.listdir(tmp_results_dir):
         with open(os.path.join(tmp_results_dir, d, 'run.out'), 'r') as f:
             s = f.read()
-            results.write()
+            results.write(s)
             results.write('\n---------------------------------\n')
     return results.getvalue()
 
