@@ -71,6 +71,7 @@ def send_mail(commit_id, retval, msg):
 
 def test_commit(payload):
         pprint.pprint(payload)
+        print '\n\n--------------------------\n\n'
         
         repo = payload['repository']['url']
         commit_id = payload['after']
@@ -81,6 +82,7 @@ def test_commit(payload):
             return
         
         if branch != 'dev':
+            print 'branch is %s' % branch
             print 'ignoring commit %s: not on dev branch' % commit_id
             return
         
@@ -97,7 +99,6 @@ def test_commit(payload):
             return
     
         tmp_results_dir = os.path.join(RESULTS_DIR, commit_id)
-        os.mkdir(tmp_results_dir)
         
         cmd = ['test_branch', 
                '-o', tmp_results_dir,
@@ -109,15 +110,16 @@ def test_commit(payload):
             
         cmd += TEST_ARGS
         
+        os.mkdir(tmp_results_dir)
         try:
             out, ret = activate_and_run(os.path.join(REPO_DIR,'devenv'),
                                         cmd)
             if ret != 0:
+                print out
                 send_mail(commit_id, ret, out)
                 return
         finally:
-            pass
-            #shutil.rmtree(tmp_results_dir)
+            shutil.rmtree(tmp_results_dir)
 
 class TestRunner:
     def __init__(self, q):
