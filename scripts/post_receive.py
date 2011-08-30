@@ -44,11 +44,11 @@ def activate_and_run(envdir, cmd):
         if name in env: 
             del env[name]
 
-    return _run_sub(' '.join(command), env=env)
+    return _run_sub(' '.join(command), env=env, shell=True)
 
-def _run_sub(cmd, env=None):
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT, env=env)
+def _run_sub(cmd, **kwargs):
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, **kwargs)
     output = p.communicate()[0]
     return (output, p.returncode)
 
@@ -60,12 +60,14 @@ class runtests:
     def POST(self):
         data = web.input('payload')
         payload = json.loads(data.payload)
+        pprint.pprint(payload)
         
         repo = payload['repository']['url']
         if repo != REPO_URL:
             print 'repo URL %s does not match expected repo URL (%s)' % (repo, REPO_URL)
         
         commit_id = payload['after']
+        branch = payload['ref'].split('/')[-1]
         
         tmp_results_dir = os.path.join(RESULTS_DIR, commit_id)
         os.mkdir(tmp_results_dir)
@@ -79,17 +81,6 @@ class runtests:
         try:
             output, retval = activate_and_run(os.path.join(REPO_DIR,'devenv'),
                                               cmd)
-            
-            f = StringIO.StringIO()
-            f.write("repo url: %s\n" % payload['repository']['url'])
-            f.write("before: %s\n" % payload['before'])
-            f.write("after: %s\n" % payload['after'])
-            f.write("ref: %s\n" % payload['ref'])
-            f.write("commits:\n")
-            for commit in payload['commits']:
-                f.write("%s: %s\n" % (commit['author']['name'],
-                                      commit['message']))
-            print f.getvalue()
             
             if retval == 0:
                 status = 'succeeded'
