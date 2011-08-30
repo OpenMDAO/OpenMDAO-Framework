@@ -32,7 +32,7 @@ repository (assuming the maintainers approve the change).
 
     Log into GitHub.
     
-    Go to the issues page: http://github.com/OpenMDAO/OpenMDAO-Framework/issues 
+    Go to the issues page: https://github.com/OpenMDAO/OpenMDAO-Framework/issues 
     
     Select the **New Issue** button and fill out the form. (Some issues are labeled. Only users with admin rights can label an issue.) 
     

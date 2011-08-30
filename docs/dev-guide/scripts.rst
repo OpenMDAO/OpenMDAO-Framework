@@ -93,10 +93,10 @@ a **-h** option shows the following:
                       temporary build directory. If testing on EC2, stop 
                       the instance instead of terminating it. 
        -f FNAME, --file=FNAME
-                      Pathname of a tarfile or URL of a git repo. 
+                      Pathname of a tarfile or URL of a Git repo. 
                       Defaults to the current repo.
        -b BRANCH, --branch=BRANCH
-                      If file is a git repo, supply branch name here
+                      If file is a Git repo, supply branch name here
 
 
 The tests run concurrently and write their outputs to 
@@ -106,9 +106,9 @@ and *host_config_name* is the section name for that host in the config file.
 The --host arg can be used multiple times in order to specify more than one
 host.
 
-The script can test the current (committed) branch of a git repository, 
+The script can test the current (committed) branch of a Git repository, 
 a tarred repository, or a specific branch of a specified local or remote git 
-repository.  If a git repository is specified rather than a tar file, then
+repository.  If a Git repository is specified rather than a tar file, then
 the branch must also be specified.  If no **-f** is supplied, the current
 branch of the current repository is used.
 
@@ -228,4 +228,4 @@ a local directory path if you need to debug or test the process outside
 of the production environment.  This is actually what *test_release* does
 when you supply it with a release directory.
 
-The last step is to update the repository on github...
+The last step is to update the repository on GitHub ...
