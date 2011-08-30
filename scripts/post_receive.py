@@ -11,6 +11,9 @@ import json
 import pprint
 import StringIO
 import subprocess
+import time
+from threading import Thread
+from Queue import Queue
 
 import web
 
@@ -54,14 +57,12 @@ def _run_sub(cmd, **kwargs):
     output = p.communicate()[0]
     return (output, p.returncode)
 
-class runtests:
-    #def GET(self):
-        #i = web.input(name = 'web')
-        #return 'Hello, ' + web.websafe(i.name) + '!'
-
-    def POST(self):
-        data = web.input('payload')
-        payload = json.loads(data.payload)
+def do_tests(q):
+    while True:
+        payload = q.get(block=True)
+        test_commit(payload)
+        
+def test_commit(payload):
         pprint.pprint(payload)
         
         repo = payload['repository']['url']
@@ -88,23 +89,36 @@ class runtests:
             output, retval = activate_and_run(os.path.join(REPO_DIR,'devenv'),
                                               cmd)
             
-            if retval == 0:
-                status = 'succeeded'
-            else:
-                status = 'failed'
-                
+            status = 'succeeded' if retval == 0 else 'failed'
             web.sendmail('openmdao@web103.webfaction.com',
                          RESULTS_EMAILS,
-                         'test %s for https://github.com/OpenMDAO/OpenMDAO-Framework/commit/%s' % (status,commit_id),
+                         'test %s for commit %s' % (status,commit_id),
                          output)
         finally:
             pass
             #shutil.rmtree(tmp_results_dir)
-            
+
+class TestRunner:
+    def __init__(self, q):
+        self.q = q
+
+    #def GET(self):
+        #i = web.input(name = 'web')
+        #return 'Hello, ' + web.websafe(i.name) + '!'
+
+    def POST(self):
+        data = web.input('payload')
+        payload = json.loads(data.payload)
+        self.q.put(payload)
 
 if __name__ == "__main__":
     urls = ('/', 'runtests')
-    app = web.application(urls, globals())
+    q = Queue()
+    runtests = TestRunner(q)
+    tester = Thread(target=do_tests, name='tester', daemon=True,
+                    args=(q,))
+    tester.start()
+    app = web.application(urls, {'runtests', runtests})
     app.run()
 
 
