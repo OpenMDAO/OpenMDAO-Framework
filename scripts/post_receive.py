@@ -111,7 +111,7 @@ def test_commit(payload):
             
         cmd += TEST_ARGS
         
-        os.mkdir(tmp_results_dir)
+        os.makedirs(tmp_results_dir)
         try:
             out, ret = activate_and_run(os.path.join(REPO_DIR,'devenv'),
                                         cmd)
