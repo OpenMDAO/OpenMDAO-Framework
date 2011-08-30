@@ -136,19 +136,19 @@ def test_commit(payload):
         
         os.makedirs(tmp_results_dir)
         try:
-            out, ret = activate_and_run(os.path.join(REPO_DIR,'devenv'),
-                                        cmd)
+            out, ret = activate_and_run(os.path.join(REPO_DIR,'devenv'), cmd)
             print out
             if ret == 0:
                 send_mail(commit_id, ret, out)
+                shutil.rmtree(tmp_results_dir)
             else:
                 send_mail(commit_id, ret, collect_results(tmp_results_dir))
-        finally:
-            shutil.rmtree(tmp_results_dir)
+        except Exception as err:
+            send_mail(commit_id, -1, str(err))
 
 
 def collect_results(tmp_results_dir):
-    print 'collectingn results from %s' % tmp_results_dir
+    print 'collecting results from %s' % tmp_results_dir
     results = StringIO.StringIO()
     for d in os.listdir(tmp_results_dir):
         with open(os.path.join(tmp_results_dir, d, 'run.out'), 'r') as f:
@@ -167,12 +167,12 @@ class TestRunner:
         #return 'Hello, ' + web.websafe(i.name) + '!'
 
     def POST(self):
-        print 'POST received'
         data = web.input('payload')
         payload = json.loads(data.payload)
         self.q.put(payload)
-        #test_commit(payload)
         
+    # this is just a kludge to let me use an instance instead of a class
+    # with web.py
     def __call__(self):
         return self
 
