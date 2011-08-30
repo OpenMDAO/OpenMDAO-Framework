@@ -62,23 +62,47 @@ def do_tests(q):
         payload = q.get(block=True)
         test_commit(payload)
         
+def send_mail(commit_id, retval, msg):
+    status = 'succeeded' if retval == 0 else 'failed'
+    web.sendmail('openmdao@web103.webfaction.com',
+                 RESULTS_EMAILS,
+                 'test %s for commit %s' % (status, commit_id),
+                 msg)
+
 def test_commit(payload):
         pprint.pprint(payload)
         
         repo = payload['repository']['url']
-        if repo != REPO_URL:
-            print 'repo URL %s does not match expected repo URL (%s)' % (repo, REPO_URL)
-        
         commit_id = payload['after']
         branch = payload['ref'].split('/')[-1]
         
+        if repo != REPO_URL:
+            print 'repo URL %s does not match expected repo URL (%s)' % (repo, REPO_URL)
+            return
+        
+        if branch != 'dev':
+            print 'ignoring commit %s: not on dev branch' % commit_id
+            return
+        
+        out, ret = _run_sub('git checkout dev')
+        print out
+        if ret != 0:
+            send_mail(commit_id, ret, out)
+            return
+        
+        out, ret = _run_sub('git pull origin dev')
+        print out
+        if ret != 0:
+            send_mail(commit_id, ret, out)
+            return
+    
         tmp_results_dir = os.path.join(RESULTS_DIR, commit_id)
         os.mkdir(tmp_results_dir)
         
         cmd = ['test_branch', 
                '-o', tmp_results_dir,
-               '-f', repo,
-               '--branch=%s' % branch,
+               #'-f', repo,
+               #'--branch=%s' % branch,
                ]
         for host in HOSTS:
             cmd.append('--host=%s' % host)
@@ -86,14 +110,11 @@ def test_commit(payload):
         cmd += TEST_ARGS
         
         try:
-            output, retval = activate_and_run(os.path.join(REPO_DIR,'devenv'),
-                                              cmd)
-            
-            status = 'succeeded' if retval == 0 else 'failed'
-            web.sendmail('openmdao@web103.webfaction.com',
-                         RESULTS_EMAILS,
-                         'test %s for commit %s' % (status,commit_id),
-                         output)
+            out, ret = activate_and_run(os.path.join(REPO_DIR,'devenv'),
+                                        cmd)
+            if ret != 0:
+                send_mail(commit_id, ret, out)
+                return
         finally:
             pass
             #shutil.rmtree(tmp_results_dir)
@@ -115,6 +136,8 @@ class TestRunner:
         return self
 
 if __name__ == "__main__":
+    os.chdir(os.path.join(REPO_DIR,'devenv'))
+    
     urls = ('/', 'runtests')
     q = Queue()
     runtests = TestRunner(q)
