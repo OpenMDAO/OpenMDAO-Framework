@@ -125,9 +125,10 @@ def test_commit(payload):
             #shutil.rmtree(tmp_results_dir)
 
 def collect_results(tmp_results_dir):
+    print 'collectingn results from %s' % tmp_results_dir
     results = StringIO.StringIO()
     for d in os.listdir(tmp_results_dir):
-        with open(os.path.join(tmp_results_dir, d), 'r') as f:
+        with open(os.path.join(tmp_results_dir, d, 'run.out'), 'r') as f:
             s = f.read()
             results.write()
             results.write('\n---------------------------------\n')
