@@ -98,7 +98,7 @@ def test_commit(payload):
         branch = payload['ref'].split('/')[-1]
         
         if repo != REPO_URL:
-            print 'repo URL %s does not match expected repo URL (%s)' % (repo, REPO_URL)
+            print 'ignoring commit: repo URL %s does not match expected repo URL (%s)' % (repo, REPO_URL)
             return
         
         if branch not in REPO_BRANCHES:
