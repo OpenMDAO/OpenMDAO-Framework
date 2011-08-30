@@ -115,8 +115,8 @@ if __name__ == "__main__":
     urls = ('/', 'runtests')
     q = Queue()
     runtests = TestRunner(q)
-    tester = Thread(target=do_tests, name='tester', daemon=True,
-                    args=(q,))
+    tester = Thread(target=do_tests, name='tester', args=(q,))
+    tester.daemon = True
     tester.start()
     app = web.application(urls, {'runtests': runtests})
     app.run()
