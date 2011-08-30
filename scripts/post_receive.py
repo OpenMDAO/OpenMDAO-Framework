@@ -115,12 +115,21 @@ def test_commit(payload):
         try:
             out, ret = activate_and_run(os.path.join(REPO_DIR,'devenv'),
                                         cmd)
-            if ret != 0:
-                print out
+            print out
+            if ret == 0:
                 send_mail(commit_id, ret, out)
-                return
+            else:
+                send_mail(commit_id, ret, collect_results(tmp_results_dir))
         finally:
             shutil.rmtree(tmp_results_dir)
+
+def collect_results(tmp_results_dir):
+    results = StringIO.StringIO()
+    for d in os.listdir(tmp_results_dir):
+        with open(os.path.join(tmp_results_dir, d), 'r') as f:
+            results.write(f.read())
+            results.write('\n---------------------------------\n')
+    return results.getvalue()
 
 class TestRunner:
     def __init__(self, q):
