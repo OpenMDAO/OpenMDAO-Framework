@@ -17,14 +17,31 @@ from Queue import Queue
 
 import web
 
-REPO_URL = 'https://github.com/OpenMDAO/OpenMDAO-Framework'
+#REPO_URL = 'https://github.com/OpenMDAO/OpenMDAO-Framework'
+REPO_URL = 'https://github.com/naylor-b/OpenMDAO-Framework'
 REPO_DIR = '/home/openmdao/install/OpenMDAO-Framework'
+REPO_BRANCHES = ['dev']
 RESULTS_DIR = os.path.join(REPO_DIR,'devenv','host_results')
 RESULTS_EMAILS = ['naylor.b@gmail.com']
 PY = 'python2.6'
 HOSTS = ['meerkat32_instance']
 TEST_ARGS = ['--', '-v', 'openmdao.util.test.test_namelist']
 
+
+def _has_checkouts():
+    cmd = 'git status -s'
+    p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+    out = p.communicate()[0]
+    ret = p.returncode
+    if ret != 0:
+        raise RuntimeError(
+             'error while getting status of git repository from directory %s (return code=%d): %s'
+              % (os.getcwd(), ret, out))
+    for line in out.split('\n'):
+        line = line.strip()
+        if len(line)>1 and not line.startswith('?'):
+            return True
+    return False
 
 def activate_and_run(envdir, cmd):
     """"
@@ -82,18 +99,23 @@ def test_commit(payload):
             print 'repo URL %s does not match expected repo URL (%s)' % (repo, REPO_URL)
             return
         
-        if branch != 'dev':
+        if branch not in REPO_BRANCHES:
             print 'branch is %s' % branch
-            print 'ignoring commit %s: not on dev branch' % commit_id
+            print 'ignoring commit %s: branch is not one of %s' % (commit_id,
+                                                                   REPO_BRANCHES)
             return
         
-        out, ret = _run_sub('git checkout dev', shell=True)
+        if _has_checkouts():
+            send_mail(commit_id, -1, 'branch %s is not clean!' % branch)
+            return
+        
+        out, ret = _run_sub('git checkout %s' % branch, shell=True)
         print out
         if ret != 0:
             send_mail(commit_id, ret, out)
             return
         
-        out, ret = _run_sub('git pull origin dev', shell=True)
+        out, ret = _run_sub('git pull origin %s' % branch, shell=True)
         print out
         if ret != 0:
             send_mail(commit_id, ret, out)
@@ -103,8 +125,6 @@ def test_commit(payload):
         
         cmd = ['test_branch', 
                '-o', tmp_results_dir,
-               #'-f', repo,
-               #'--branch=%s' % branch,
                ]
         for host in HOSTS:
             cmd.append('--host=%s' % host)
@@ -121,8 +141,8 @@ def test_commit(payload):
             else:
                 send_mail(commit_id, ret, collect_results(tmp_results_dir))
         finally:
-            pass
-            #shutil.rmtree(tmp_results_dir)
+            shutil.rmtree(tmp_results_dir)
+
 
 def collect_results(tmp_results_dir):
     print 'collectingn results from %s' % tmp_results_dir
