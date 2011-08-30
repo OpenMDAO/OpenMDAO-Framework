@@ -118,7 +118,7 @@ if __name__ == "__main__":
     tester = Thread(target=do_tests, name='tester', daemon=True,
                     args=(q,))
     tester.start()
-    app = web.application(urls, {'runtests', runtests})
+    app = web.application(urls, {'runtests': runtests})
     app.run()
 
 
