@@ -20,7 +20,7 @@ import web
 #REPO_URL = 'https://github.com/OpenMDAO/OpenMDAO-Framework'
 REPO_URL = 'https://github.com/naylor-b/OpenMDAO-Framework'
 REPO_DIR = '/home/openmdao/install/OpenMDAO-Framework'
-REPO_BRANCHES = ['dev']
+REPO_BRANCHES = ['foo']
 RESULTS_DIR = os.path.join(REPO_DIR,'devenv','host_results')
 RESULTS_EMAILS = ['naylor.b@gmail.com']
 PY = 'python2.6'
