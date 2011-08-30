@@ -34,16 +34,13 @@ def activate_and_run(envdir, cmd):
     Returns the output and return code of the command as a tuple (output, returncode).
     """
     if sys.platform.startswith('win'):
-        devbindir = 'Scripts'
-        command = ['activate.bat',  '&&'] + cmd
+        command = ['Scripts/activate.bat',  '&&'] + cmd
     else:
-        devbindir = 'bin'
-        command = ['. ./activate', '&&'] + cmd
+        command = ['source ./bin/activate', '&&'] + cmd
     
     # activate the environment and run command
-    devbinpath = os.path.join(envdir, devbindir)
-    os.chdir(devbinpath)
-    print("running %s from %s" % (command, devbinpath))
+    os.chdir(envdir)
+    print("running %s from %s" % (' '.join(command), envdir))
     env = os.environ.copy()
     for name in ['VIRTUAL_ENV','_OLD_VIRTUAL_PATH','_OLD_VIRTUAL_PROMPT']:
         if name in env: 
