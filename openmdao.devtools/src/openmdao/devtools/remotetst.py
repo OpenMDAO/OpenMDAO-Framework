@@ -110,7 +110,8 @@ def test_branch(argv=None):
     else:
         cleanup_tar = False
         
-    fname = os.path.abspath(os.path.expanduser(options.fname))
+    if not (fname.startswith('http') or fname.startswith('git:') or fname.startswith('git$')):
+        fname = os.path.abspath(os.path.expanduser(options.fname))
     
     if fname.endswith('.tar.gz') or fname.endswith('.tar'):
         if not os.path.isfile(fname):
