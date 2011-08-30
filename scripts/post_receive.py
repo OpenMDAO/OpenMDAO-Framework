@@ -30,7 +30,8 @@ TEST_ARGS = ['--', '-v', 'openmdao.util.test.test_namelist']
 
 def _has_checkouts():
     cmd = 'git status -s'
-    p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                         env=os.environ, shell=True)
     out = p.communicate()[0]
     ret = p.returncode
     if ret != 0:
