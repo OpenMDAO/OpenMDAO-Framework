@@ -19,6 +19,8 @@ REPO_DIR = '/home/openmdao/install/OpenMDAO-Framework'
 RESULTS_DIR = os.path.join(REPO_DIR,'devenv','host_results')
 RESULTS_EMAILS = ['naylor.b@gmail.com']
 PY = 'python2.6'
+HOSTS = ['meerkat32_instance']
+TEST_ARGS = ['--', '-v', 'openmdao.util.test.test_namelist']
 
 
 def activate_and_run(envdir, cmd):
@@ -77,6 +79,10 @@ class runtests:
                '-f', repo,
                '--branch=%s' % branch,
                ]
+        for host in HOSTS:
+            cmd.append('--host=%s' % host)
+            
+        cmd += TEST_ARGS
         
         try:
             output, retval = activate_and_run(os.path.join(REPO_DIR,'devenv'),
