@@ -98,7 +98,8 @@ class runtests:
                          'test %s for https://github.com/OpenMDAO/OpenMDAO-Framework/commit/%s' % (status,commit_id),
                          output)
         finally:
-            shutil.rmtree(tmp_results_dir)
+            pass
+            #shutil.rmtree(tmp_results_dir)
             
 
 if __name__ == "__main__":
