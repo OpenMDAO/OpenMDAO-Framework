@@ -60,7 +60,11 @@ def _run_sub(cmd, **kwargs):
 def do_tests(q):
     while True:
         payload = q.get(block=True)
-        test_commit(payload)
+        print 'got a commit!!!!'
+        try:
+            test_commit(payload)
+        except Exception as err:
+            print str(err)
         
 def send_mail(commit_id, retval, msg):
     status = 'succeeded' if retval == 0 else 'failed'
@@ -130,6 +134,7 @@ class TestRunner:
         #return 'Hello, ' + web.websafe(i.name) + '!'
 
     def POST(self):
+        print 'POST received'
         data = web.input('payload')
         payload = json.loads(data.payload)
         self.q.put(payload)
@@ -145,8 +150,10 @@ if __name__ == "__main__":
     runtests = TestRunner(q)
     tester = Thread(target=do_tests, name='tester', args=(q,))
     tester.daemon = True
+    print 'starting tester thread'
     tester.start()
     app = web.application(urls, {'runtests': runtests})
+    print 'running app'
     app.run()
 
 
