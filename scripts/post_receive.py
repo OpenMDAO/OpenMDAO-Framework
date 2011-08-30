@@ -110,6 +110,9 @@ class TestRunner:
         data = web.input('payload')
         payload = json.loads(data.payload)
         self.q.put(payload)
+        
+    def __call__(self):
+        return self
 
 if __name__ == "__main__":
     urls = ('/', 'runtests')
