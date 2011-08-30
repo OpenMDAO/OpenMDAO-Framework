@@ -170,8 +170,8 @@ class TestRunner:
         print 'POST received'
         data = web.input('payload')
         payload = json.loads(data.payload)
-        #self.q.put(payload)
-        test_commit(payload)
+        self.q.put(payload)
+        #test_commit(payload)
         
     def __call__(self):
         return self
@@ -182,10 +182,10 @@ if __name__ == "__main__":
     urls = ('/', 'runtests')
     q = Queue()
     runtests = TestRunner(q)
-    #tester = Thread(target=do_tests, name='tester', args=(q,))
-    #tester.daemon = True
-    #print 'starting tester thread'
-    #tester.start()
+    tester = Thread(target=do_tests, name='tester', args=(q,))
+    tester.daemon = True
+    print 'starting tester thread'
+    tester.start()
     app = web.application(urls, {'runtests': runtests})
     print 'running app'
     app.run()
