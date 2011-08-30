@@ -84,13 +84,13 @@ def test_commit(payload):
             print 'ignoring commit %s: not on dev branch' % commit_id
             return
         
-        out, ret = _run_sub('git checkout dev')
+        out, ret = _run_sub('git checkout dev', shell=True)
         print out
         if ret != 0:
             send_mail(commit_id, ret, out)
             return
         
-        out, ret = _run_sub('git pull origin dev')
+        out, ret = _run_sub('git pull origin dev', shell=True)
         print out
         if ret != 0:
             send_mail(commit_id, ret, out)
