@@ -116,11 +116,11 @@ def test_branch(argv=None):
         if not os.path.isfile(fname):
             print "can't find file '%s'" % fname
             sys.exit(-1)
-    elif fname.endswith('.git') or fname.startswith('http') and os.path.splitext(fname)[1]=='':
+    elif fname.endswith('.git') or (fname.startswith('http') and os.path.splitext(fname)[1]==''):
         pass
     else:
         parser.print_help()
-        print "\nfilename must specify a tar file or git repository"
+        print "\nfilename '%s' must specify a tar file or git repository" % fname
         sys.exit(-1)
         
     funct_kwargs = { 'keep': options.keep,
