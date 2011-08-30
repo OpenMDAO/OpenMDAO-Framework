@@ -21,6 +21,7 @@ import web
 REPO_URL = 'https://github.com/naylor-b/OpenMDAO-Framework'
 REPO_DIR = '/home/openmdao/install/OpenMDAO-Framework'
 REPO_BRANCHES = ['foo']
+REMOTE_NAME = 'bret'
 RESULTS_DIR = os.path.join(REPO_DIR,'devenv','host_results')
 RESULTS_EMAILS = ['naylor.b@gmail.com']
 PY = 'python2.6'
@@ -116,7 +117,8 @@ def test_commit(payload):
             send_mail(commit_id, ret, out)
             return
         
-        out, ret = _run_sub('git pull origin %s' % branch, shell=True)
+        out, ret = _run_sub('git pull %s %s' % (REMOTE_NAME,
+                                                branch), shell=True)
         print out
         if ret != 0:
             send_mail(commit_id, ret, out)
