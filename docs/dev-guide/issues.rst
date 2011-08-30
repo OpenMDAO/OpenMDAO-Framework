@@ -14,7 +14,7 @@ for the project, but you can also create a new issue yourself.
 To create a GitHub issue, follow these steps:
 
 
-1.  First, log into GitHub and go to http://github.com/OpenMDAO/OpenMDAO-Framework/issues. 
+1.  First, log into GitHub and go to https://github.com/OpenMDAO/OpenMDAO-Framework/issues. 
     (You must be logged in to create a new issue.)
 
 2.  Select the the **New Issue** button in the upper right hand corner. 
