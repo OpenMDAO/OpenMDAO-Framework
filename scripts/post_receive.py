@@ -121,15 +121,18 @@ def test_commit(payload):
             else:
                 send_mail(commit_id, ret, collect_results(tmp_results_dir))
         finally:
-            shutil.rmtree(tmp_results_dir)
+            pass
+            #shutil.rmtree(tmp_results_dir)
 
 def collect_results(tmp_results_dir):
     results = StringIO.StringIO()
     for d in os.listdir(tmp_results_dir):
         with open(os.path.join(tmp_results_dir, d), 'r') as f:
-            results.write(f.read())
+            s = f.read()
+            results.write()
             results.write('\n---------------------------------\n')
     return results.getvalue()
+
 
 class TestRunner:
     def __init__(self, q):
