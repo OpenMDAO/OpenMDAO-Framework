@@ -142,8 +142,8 @@ def set_branch(branch, commit_id, repodir):
 
 
 def test_commit(payload):
-        pprint.pprint(payload)
-        print '\n\n--------------------------\n\n'
+        #pprint.pprint(payload)
+        #print '\n\n--------------------------\n\n'
         
         repo = payload['repository']['url']
         commit_id = payload['after']
@@ -174,7 +174,7 @@ def test_commit(payload):
         os.makedirs(tmp_results_dir)
         try:
             out, ret = activate_and_run(os.path.join(LOCAL_REPO_DIR,'devenv'), cmd)
-            print out
+            #print out
             process_results(commit_id, ret, tmp_results_dir, out)
         except Exception as err:
             process_results(commit_id, -1, tmp_results_dir, str(err))
