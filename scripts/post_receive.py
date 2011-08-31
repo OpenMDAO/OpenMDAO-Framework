@@ -149,6 +149,10 @@ def test_commit(payload):
         commit_id = payload['after']
         branch = payload['ref'].split('/')[-1]
         
+        #DEBUGGING.. remove
+        model.new_test(commit_id, 'blah')
+        if True: return
+        
         if repo != REPO_URL:
             print 'ignoring commit: repo URL %s does not match expected repo URL (%s)' % (repo, REPO_URL)
             return
