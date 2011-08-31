@@ -46,7 +46,9 @@ urls = (
 )
 
 ### Templates
-t_globals = globals()
+t_globals = {
+    'datestr': web.datestr
+    }
 
 render = web.template.render(os.path.join(APP_DIR,'templates'), 
                              base='base', globals=t_globals)
