@@ -52,10 +52,10 @@ render = web.template.render(os.path.join(APP_DIR,'templates'),
                              base='base', globals=t_globals)
 
 
-def _has_checkouts():
+def _has_checkouts(repodir):
     cmd = 'git status -s'
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
-                         env=os.environ, shell=True)
+                         env=os.environ, shell=True, cwd=repodir)
     out = p.communicate()[0]
     ret = p.returncode
     if ret != 0:
@@ -119,7 +119,7 @@ def set_branch(branch, commit_id):
     repo is clean, and then pull the latest changes from the remote
     branch.
     """
-    if _has_checkouts():
+    if _has_checkouts(LOCAL_REPO_DIR):
         send_mail(commit_id, -1, 'branch %s is not clean!' % branch)
         return
     
