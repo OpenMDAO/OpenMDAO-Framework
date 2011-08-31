@@ -114,26 +114,28 @@ def send_mail(commit_id, retval, msg):
                  'test %s for commit %s' % (status, commit_id),
                  msg)
 
-def set_branch(branch, commit_id):
+def set_branch(branch, commit_id, repodir):
     """Set the local repo to the specified branch as long as the local
     repo is clean, and then pull the latest changes from the remote
     branch.
     """
-    if _has_checkouts(LOCAL_REPO_DIR):
-        send_mail(commit_id, -1, 'branch %s is not clean!' % branch)
+    if _has_checkouts(repodir):
+        send_mail(commit_id, -1, 'branch %s is not clean in repo %s!' % (branch,
+                                                                         repodir))
         return
     
-    out, ret = _run_sub('git checkout %s' % branch, shell=True)
+    cmd = 'git checkout %s' % branch
+    out, ret = _run_sub(cmd, shell=True, cwd=repodir)
     print out
     if ret != 0:
-        send_mail(commit_id, ret, out)
+        send_mail(commit_id, ret, "command '%s' failed:\n%s" % (cmd, out))
         return
     
-    out, ret = _run_sub('git pull %s %s' % (REMOTE_NAME,
-                                            branch), shell=True)
+    cmd = 'git pull %s %s' % (REMOTE_NAME, branch)
+    out, ret = _run_sub(cmd, shell=True, cwd=repodir)
     print out
     if ret != 0:
-        send_mail(commit_id, ret, out)
+        send_mail(commit_id, ret, "command '%s' failed:\n%s" % (cmd, out))
         return
 
 
@@ -155,7 +157,7 @@ def test_commit(payload):
                                                                    REPO_BRANCHES)
             return
         
-        set_branch(branch, commit_id)
+        set_branch(branch, commit_id, LOCAL_REPO_DIR)
     
         tmp_results_dir = os.path.join(RESULTS_DIR, commit_id)
         
