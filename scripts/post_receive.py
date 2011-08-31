@@ -226,14 +226,15 @@ class Run:
         print 'Run:POST'
         data = web.input('payload')
         payload = json.loads(data.payload)
-        commit_queue.put(payload)
+        #commit_queue.put(payload)
+        test_commit(payload)
         
 
 if __name__ == "__main__":
-    tester = Thread(target=do_tests, name='tester', args=(commit_queue,))
-    tester.daemon = True
-    print 'starting tester thread'
-    tester.start()
+    #tester = Thread(target=do_tests, name='tester', args=(commit_queue,))
+    #tester.daemon = True
+    #print 'starting tester thread'
+    #tester.start()
     
     app = web.application(urls, globals())
     print 'running app'
