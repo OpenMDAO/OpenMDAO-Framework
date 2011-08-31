@@ -102,6 +102,7 @@ def do_tests(q):
     while True:
         payload = q.get(block=True)
         try:
+            print 'testing payload %s' % payload
             test_commit(payload)
         except Exception as err:
             print str(err)
@@ -199,12 +200,14 @@ class Index:
 
     def GET(self):
         """ Show test index """
+        print 'Index:GET'
         tests = model.get_tests()
         return render.index(tests)
 
 class View:
 
     def GET(self, commit_id):
+        print 'View:GET'
         """ View results for a single commit """
         test = model.get_test(commit_id)
         return render.view(test)
@@ -212,6 +215,7 @@ class View:
 class Delete:
 
     def POST(self, commit_id):
+        print 'Delete:POST'
         """ Delete results for a commit """
         model.delete_test(commit_id)
         raise web.seeother('/')
@@ -219,6 +223,7 @@ class Delete:
 class Run:
 
     def POST(self):
+        print 'Run:POST'
         data = web.input('payload')
         payload = json.loads(data.payload)
         commit_queue.put(payload)
