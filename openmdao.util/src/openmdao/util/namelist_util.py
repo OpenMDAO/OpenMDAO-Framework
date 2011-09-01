@@ -55,9 +55,16 @@ def _process_card_info(card):
     # Sometimes we have a 1D array declared by element
     if card.index:
         index = card.index[0]-1
-        val = array(card[2:])
-        value = zeros(index+len(val))
-        value[index:] = val
+        
+        # Strings go into lists, not arrays
+        if isinstance(card[2], str):
+            val = card[2:]
+            value = ['']*(index+len(val))
+            value[index:] = val
+        else:
+            val = array(card[2:])
+            value = zeros(index+len(val))
+            value[index:] = val
         
     # Alternate array specification
     elif card.dimension:
@@ -87,9 +94,9 @@ class ToBool(TokenConverter):
     def postParse( self, instring, loc, tokenlist ):
         """Converter to make token into a bool."""
         
-        if tokenlist[0] in ['T', 'True', 'TRUE', 'true', '.TRUE.']:
+        if tokenlist[0] in ['T', 'True', 'TRUE', 'true', '.TRUE.', '.T.']:
             return True
-        elif tokenlist[0] in ['F', 'False', 'FALSE', 'false', '.FALSE.']:
+        elif tokenlist[0] in ['F', 'False', 'FALSE', 'false', '.FALSE.', '.F.']:
             return False
         else:
             raise RuntimeError('Unexpected error while trying to identify a'
@@ -164,17 +171,24 @@ class Namelist(object):
 
         self.cards[self.currentgroup].append(Card(name, value))
         
-    def add_container(self, varpath=''):
+    def add_container(self, varpath='', skip=None):
         """Add every variable in an OpenMDAO container to the namelist. This
         can be used it your component has containers of variables.
         
         varpath: string
-            dotted path of container in the data hierarchy"""
+            dotted path of container in the data hierarchy
+            
+        skip: list of str
+            list of variables to skip printing to the file"""
         
         target_container = self.comp.get(varpath)
+        
+        if not skip:
+            skip = []
             
         for name, val in target_container.items(iotype=not_none):
-            self.add_var("%s.%s" % (varpath, name))
+            if name not in skip:
+                self.add_var("%s.%s" % (varpath, name))
         
     def add_comment(self, comment):
         """Add a comment in the namelist.
@@ -333,7 +347,7 @@ class Namelist(object):
         
         numval = num_float | mixed_exp | num_int | nan
         strval =  QuotedString(quoteChar='"') | QuotedString(quoteChar="'")
-        b_list = "T TRUE True true F FALSE False false .TRUE. .FALSE."
+        b_list = "T TRUE True true F FALSE False false .TRUE. .FALSE. .T. .F."
         boolval = ToBool(oneOf(b_list))
         fieldval = Word(alphanums)
         
@@ -357,10 +371,11 @@ class Namelist(object):
                         ZeroOrMore(Suppress(',') + numval)
         
         # Tokens for parsing the group head and tail
+        group_end_token = Literal("/") | Literal("$END") | Literal("$end")
         group_name_token = (Literal("$") | Literal("&")) + \
                            Word(alphanums).setResultsName("name") + \
-                           Optional(multi_card_token)    
-        group_end_token = Literal("/") | Literal("$END") | Literal("$end")
+                           Optional(multi_card_token) + \
+                           Optional(group_end_token)
         
         # Comment Token
         comment_token = Literal("!")
@@ -451,8 +466,12 @@ class Namelist(object):
                         cards = group_name[2:]
                         
                         for card in cards:
-                            name, value = _process_card_info(card)
-                            self.cards[-1].append(Card(name, value))
+                            # Sometimes an end card is on the same line.
+                            if group_end_token.searchString(card):
+                                current_group = None
+                            else:
+                                name, value = _process_card_info(card)
+                                self.cards[-1].append(Card(name, value))
 
                 # If there is an ungrouped card at the start, take it as the
                 # title for the analysis
@@ -561,23 +580,18 @@ class Namelist(object):
                         varpath1 = "%s.%s" % (container, name)
                         varpath2 = "%s.%s" % (container, name.lower())
                         
-                        if self.comp.contains(varpath1):
-                            found = True
-                            varpath = varpath1
-                            break
+                        for item in [varpath1, varpath2]:
+                            if self.comp.contains(item):
+                                found = True
+                                varpath = item
+                                break
                         
-                        if self.comp.contains(varpath2):
-                            found = True
-                            varpath = varpath2
-                            break
-                
                 else:
-                    if self.comp.contains(name):
-                        found = True
-                        varpath = name
-                    elif self.comp.contains(name.lower()):
-                        found = True
-                        varpath = name.lower()
+                    for item in [name, name.lower()]:
+                        if self.comp.contains(item):
+                            found = True
+                            varpath = item
+                            break
                 
                 if not found:
                     if name not in ignore and name.lower() not in ignore:
@@ -598,6 +612,8 @@ class Namelist(object):
                     elif isinstance(target, TraitListObject):
                         if isinstance(value, ndarray):
                             value = list(value)
+                        elif isinstance(value, list):
+                            pass
                         else:
                             value = [value]
                         
