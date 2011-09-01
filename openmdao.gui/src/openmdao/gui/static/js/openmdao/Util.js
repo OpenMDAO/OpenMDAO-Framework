@@ -12,7 +12,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @see http://javascript.crockford.com/prototypal.html
  */
  if (typeof Object.create !== 'function') {
-    alert("You are usng an older browser that is not supported.  We'll try anyway, but please upgrade to Chrome or Firefox 5...")
+    //alert("You are using an older browser that is not supported.  We'll try anyway, but please upgrade to Chrome or Firefox 5...")
     Object.create = function (o) {
         function F() {}
         F.prototype = o;
@@ -25,7 +25,6 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Object/keys
  */
 if(!Object.keys) Object.keys = function(o){
-    alert("You are usng an older browser that is not supported.  We'll try anyway, but please upgrade to Chrome or Firefox 5...")
     if (o !== Object(o))
         throw new TypeError('Object.keys called on non-object');
     var ret=[],p;

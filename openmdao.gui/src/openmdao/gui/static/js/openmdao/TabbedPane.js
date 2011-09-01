@@ -13,7 +13,7 @@ openmdao.TabbedPane = function(id) {
     jQuery("#"+id+" dl").css({
         'margin': '0',
         'width': '100%',
-        'position': 'relative',
+        'position': 'relative'
     });
     jQuery("#"+id+" dt").css({
         'top':'0', 
@@ -27,7 +27,7 @@ openmdao.TabbedPane = function(id) {
         'border': '1px solid #222', 
         'background-color':'#6a6a6a',
         'color': 'white',
-        'font-size': '14px',
+        'font-size': '14px'
     });
     jQuery("#"+id+" dd").css({
         'margin': '0',
@@ -35,7 +35,7 @@ openmdao.TabbedPane = function(id) {
         'left': '0',
         'top': '25px',
         'height': '100%',
-        'width': '100%',
+        'width': '100%'
     });
     
     jQuery("#"+id+" dd").hide();

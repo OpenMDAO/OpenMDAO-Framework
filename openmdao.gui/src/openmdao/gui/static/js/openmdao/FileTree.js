@@ -5,9 +5,9 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
     var menu = [  
                     {   "text": "File",
                         "items": [
-                            { "text": "New File",      "onclick": "model.newFile();" },
-                            { "text": "New Folder",    "onclick": "model.newFolder();" },
-                            { "text": "Add File",      "onclick": "model.uploadFile();" }
+                            { "text": "New File",      "onclick": "openmdao.model.newFile();" },
+                            { "text": "New Folder",    "onclick": "openmdao.model.newFolder();" },
+                            { "text": "Add File",      "onclick": "openmdao.model.uploadFile();" }
                         ]
                     }
                 ];

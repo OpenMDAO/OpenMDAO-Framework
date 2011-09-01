@@ -2,13 +2,13 @@
  * stuff to do after the page is loaded
  */
  
-// create interface to openmdao
-// TODO:  get this out of globals.. currently just here for menu access
-var model = new openmdao.Model();
-var layout
     
 jQuery(function() {
-    // set the layout
+    // define openmdao namespace & create interface to openmdao in global scope
+    openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+    openmdao.model = new openmdao.Model();
+    
+    // set the layout (note: global scope)
     layout = jQuery('body').layout({
         north__size: 40,
         north__resizable: false,
@@ -28,6 +28,8 @@ jQuery(function() {
 
     // add gui functionality to designated DOM nodes
     (function() {
+        var model = openmdao.model;
+        
         var select_fn = new openmdao.PropertiesEditor("propertieseditor",model).editObject,
             dblclk_fn = function(model,path) { new openmdao.ComponentEditor(model,path) }
         new openmdao.ObjectTree("otree",model,select_fn,dblclk_fn)
@@ -39,10 +41,11 @@ jQuery(function() {
         new openmdao.Palette("palette",model)
         new openmdao.WorkflowDiagram("workflow",model)
         new openmdao.Console("cmdform","command","history",model);
+        
+        // initialize views
+        model.updateListeners();
     })()
 
-    // initialize views
-    model.updateListeners();
     
     // start with objects, workflow & properties visible
     jQuery('#otree_tab').click();
