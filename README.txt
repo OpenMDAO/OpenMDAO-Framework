@@ -1,4 +1,3 @@
-
 To set up a development environment for OpenMDAO, run:
 
     python2.6 go-openmdao-dev.py
