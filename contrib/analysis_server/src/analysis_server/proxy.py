@@ -16,7 +16,11 @@ from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
                                        List, Str
 
 from analysis_server.client import Client
+from analysis_server.objxml import get_as_xml, set_from_xml
 from analysis_server.units  import get_translation
+
+# Map from server host,port to object class dictionary.
+_OBJECT_CLASSES = {}
 
 def _float2str(val):
     """ Return accurate string value for float. """
@@ -109,6 +113,10 @@ class ComponentProxy(Component):
                 container.add_trait(prop,
                                     ListProxy(iotype, self._client, rpath,
                                               str))
+            elif typ == 'PHXScriptObject':
+                container.add(prop,
+                              make_object_proxy(self._host, self._port,
+                                                iotype, self._client, rpath))
             else:
                 raise NotImplementedError('%r type %r' % (prop, typ))
 
@@ -809,4 +817,117 @@ class StrProxy(ProxyMixin, Str):
         """
         self.rset('"%s"' % \
                   self.validate(obj, name, value).encode('string_escape'))
+
+
+def make_object_proxy(host, port, iotype, client, rpath):
+    """
+    Create proxy for a remote 'PHXScriptObject'.
+
+    host: string
+        server hostname
+
+    port: int
+        server port on `host`.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+    """
+    server_id = '%s:%s' % (host, port)
+    url = client.get(rpath+'.classURL')
+    try:
+        classes = _OBJECT_CLASSES[server_id]
+    except KeyError:
+        _OBJECT_CLASSES[server_id] = {}
+        classes = _OBJECT_CLASSES[server_id]
+    try:
+        cls = classes[url]
+    except KeyError:
+        cls = make_proxy_class(client, rpath)
+        classes[url] = cls
+
+    return cls(iotype, client, rpath)
+
+
+def make_proxy_class(client, rpath):
+    """ Create proxy class to access `rpath` on `client`. """
+    return IBeamProxy
+
+
+class ObjectProxyMixin(ProxyMixin):
+    """ Generic proxy for an Object. """
+
+    def __init__(self, client, rpath, cls):
+        ProxyMixin.__init__(self, client, rpath)
+        self._cls = cls
+
+    def zget(self, obj, name):
+        """
+        Get remote value.
+
+        obj: object
+            Containing object, ignored.
+
+        name: string
+            Name in `obj`, ignored.
+        """
+        xml = self.rget()
+        set_from_xml(self, xml)
+        return self
+
+    def zset(self, obj, name, value):
+        """
+        Set remote value after validation.
+
+        obj: object
+            Containing object, ignored.
+
+        name: string
+            Name in `obj`.
+
+        value: Container
+            Value to be set.
+        """
+        xml = get_as_xml(value, name)
+        self.rset(xml)
+
+
+class Material(Container):
+    """ Hard-coded example of what needs to be built on-the-fly. """
+
+    def __init__(self, *args, **kwargs):
+        super(Material, self).__init__(*args, **kwargs)
+        iotype = kwargs.get('iotype', None)
+        self.add('E', Float(2990000.0, units='psi', iotype=iotype))
+        self.add('density', Float(0.284, units='lb/inch**3', iotype=iotype))
+        self.add('poissonRatio', Float(0.3, iotype=iotype))
+        self.add('type', Str('steel', iotype=iotype))
+
+
+class IBeam(Container):
+    """ Hard-coded example of what needs to be built on-the-fly. """
+
+    def __init__(self, *args, **kwargs):
+        super(IBeam, self).__init__(*args, **kwargs)
+        iotype = kwargs.get('iotype', None)
+        self.add('material', Material(iotype=iotype))
+        self.add('base', Float(10.0, units='inch', iotype=iotype))
+        self.add('flangeThickness', Float(0.5, units='inch', iotype=iotype))
+        self.add('height', Float(18.0, units='inch', iotype=iotype))
+        self.add('length', Float(180.0, units='inch', iotype=iotype))
+        self.add('thickness', Float(0.5, units='inch', iotype=iotype))
+
+
+class IBeamProxy(IBeam, ObjectProxyMixin):
+    """ Hard-coded example of what needs to be built on-the-fly. """
+
+    def __init__(self, iotype, client, rpath):
+        desc = client.get(rpath+'.description')
+        IBeam.__init__(self, doc=desc, iotype=iotype)
+        ObjectProxyMixin.__init__(self, client, rpath, IBeam)
 

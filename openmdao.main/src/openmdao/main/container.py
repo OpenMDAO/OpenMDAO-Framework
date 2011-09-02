@@ -25,7 +25,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 import zope.interface
 
-from enthought.traits.api import HasTraits, Missing, Undefined, \
+from enthought.traits.api import HasTraits, Missing, Undefined, Python, \
                                  push_exception_handler, TraitType, CTrait
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType, _clone_trait
@@ -143,11 +143,13 @@ class Container(HasTraits):
         self._parent = None
         self._name = None
         self._cached_traits_ = None
-        
+
         self._call_tree_rooted = True
         
         if doc is not None:
             self.__doc__ = doc
+        if iotype is not None:
+            self.iotype = iotype
 
         # TODO: see about turning this back into a regular logger and just
         # handling its unpickleability in __getstate__/__setstate__ in
@@ -1197,10 +1199,16 @@ class Container(HasTraits):
         else:
             trait = self.get_trait(cname)
             if trait is not None:
-                if iotype is not None and trait.iotype != iotype:
-                    self.raise_exception('%s must be an %s variable' % 
-                                         (pathname, _iodict[iotype]),
-                                         RuntimeError)
+                if iotype is not None:
+                    if isinstance(trait.trait_type, Python):  # Container
+                        obj = getattr(self, cname)
+                        t_iotype = getattr(obj, 'iotype', None)
+                    else:  # Variable
+                        t_iotype = trait.iotype
+                    if t_iotype != iotype:
+                        self.raise_exception('%s must be an %s variable' % 
+                                             (pathname, _iodict[iotype]),
+                                             RuntimeError)
                 return trait
             elif trait is None and self.contains(cname):
                 return None
@@ -1221,29 +1229,39 @@ class Container(HasTraits):
         iotype: str (optional)
             Expected iotype of the trait.
         """
-        trait = self.get_dyn_trait(pathname, iotype=iotype)
-        if trait is None:
-            return []
+        if not pathname:
+            obj = self
+        else:
+            trait = self.get_dyn_trait(pathname, iotype=iotype)
+            if trait is None:
+                return []
 
-        trait = trait.trait_type or trait.trait or trait
-        if trait.target:  # PassthroughTrait, PassthroughProperty
-            trait = self.get_dyn_trait(trait.target)
-            try:
-                ttype = trait.trait_type
-            except AttributeError:
-                pass
-            else:
-                if ttype is not None:
-                    trait = ttype
+            trait = trait.trait_type or trait.trait or trait
+            if trait.target:  # PassthroughTrait, PassthroughProperty
+                trait = self.get_dyn_trait(trait.target)
+                try:
+                    ttype = trait.trait_type
+                except AttributeError:
+                    pass
+                else:
+                    if ttype is not None:
+                        trait = ttype
 
-        def _bases(cls, names):
-            names.append('%s.%s' % (cls.__module__, cls.__name__))
-            for base in cls.__bases__:
-                _bases(base, names)
-        
+            if isinstance(trait, Python):  # Container
+                obj = self.get(pathname)
+            else:  # Variable
+                obj = trait
+
         names = []
-        _bases(type(trait), names)
+        Container._bases(type(obj), names)
         return names
+
+    @staticmethod
+    def _bases(cls, names):
+        """ Helper for :meth:`get_trait_typenames`. """
+        names.append('%s.%s' % (cls.__module__, cls.__name__))
+        for base in cls.__bases__:
+            Container._bases(base, names)
 
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""

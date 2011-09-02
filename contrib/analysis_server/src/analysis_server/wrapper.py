@@ -29,6 +29,7 @@ from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
                                        List, Str
 
 from analysis_server.monitor import FileMonitor
+from analysis_server.objxml import get_as_xml, set_from_xml
 
 class WrapperError(Exception):
     """ Denotes wrapper-specific errors. """
@@ -167,6 +168,8 @@ class ComponentWrapper(object):
                     container = obj
                     rpath = rel_path
                     name, dot, rel_path = rel_path.partition('.')
+                    if not dot:
+                        break
                     try:
                         obj = getattr(obj, name)
                     except Exception:
@@ -1778,4 +1781,101 @@ class StrWrapper(BaseWrapper):
                 'valueStr (type=java.lang.String) (access=g)')
 
 _register(Str, StrWrapper)
+
+
+class ObjWrapper(BaseWrapper):
+    """
+    Wrapper for a general object providing ``PHXScriptObject`` interface.
+
+    container: proxy
+        Proxy to remote parent container.
+
+    name: string
+        Name of variable.
+
+    ext_path: string
+        External reference to variable.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
+    """
+
+    def __init__(self, container, name, ext_path, logger):
+        super(ObjWrapper, self).__init__(container, name, ext_path, logger)
+        obj = self._container.get(self._name)
+        self._cls = type(obj)
+        self._access = 'sg' if obj.iotype == 'in' else 'g'
+        self._io = 'input' if obj.iotype == 'in' else 'output'
+
+    @property
+    def phx_type(self):
+        """ AnalysisServer type string for value. """
+        return 'com.phoenix_int.aserver.types.PHXScriptObject'
+
+    def get(self, attr, path):
+        """
+        Return attribute corresponding to `attr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+        """
+        if attr == 'value':
+            obj = self._container.get(self._name)
+            xml = get_as_xml(obj, self._name)
+            return xml
+        elif attr == 'classURL':
+            path = sys.modules[self._cls.__module__].__file__
+            if path.endswith(('.pyc', '.pyo')):
+                path = path[:-1]
+            return '%s#%s' % (path, self._cls.__name__)
+        else:
+            return super(ObjWrapper, self).get(attr, path)
+
+    def get_as_xml(self, gzipped):
+        """
+        Return info in XML form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
+        return '<Variable name="%s" type="object" io="%s"' \
+               ' description=%s>%s</Variable>' \
+               % (self._ext_name, self._io,
+                  quoteattr(self.get('description', self._ext_path)),
+                  escape(self.get('value', self._ext_path)))
+
+    def set(self, attr, path, valstr, gzipped):
+        """
+        Set attribute corresponding to `attr` to `valstr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+
+        valstr: string
+            Value to be set, in string form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
+        if attr == 'value':
+            obj = self._cls()
+            set_from_xml(obj, valstr)
+            self._container.set(self._name, obj)
+        elif attr in ('classURL', 'description'):
+            raise WrapperError('cannot set <%s>.' % path)
+        else:
+            raise WrapperError('no such property <%s>.' % path)
+
+    def list_properties(self):
+        """ Return lines listing properties. """
+        return ('classURL (type=java.lang.String) (access=g)',
+                'description (type=java.lang.String) (access=g)')
+
+_register(Container, ObjWrapper)
 

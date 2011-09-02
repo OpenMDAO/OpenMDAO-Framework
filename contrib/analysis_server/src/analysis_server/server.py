@@ -1873,18 +1873,41 @@ class _WrapperConfig(object):
                 if int_path != '*':
                     raise ValueError("internal path must be '*'"
                                      " if the external path is '*'")
-                # Register all valid top-level non-vanilla paths.
+
+                # Collect all plain subcontainers.
                 containers = [instance]
-                subs = [obj for name, obj in sorted(instance.items(recurse=True),
-                                                    key=lambda item: item[0])]
-                containers.extend([sub for sub in subs
-                                       if isinstance(sub, Container) and not
-                                          isinstance(sub, Component)])
+                namespaces = []
+                for name, obj in sorted(instance.items(recurse=True),
+                                        key=lambda item: item[0]):
+                    if isinstance(obj, Container) and not \
+                       isinstance(obj, Component):
+                        if hasattr(obj, 'iotype'):
+                            if obj.iotype == iotype:
+                                path = obj.get_pathname()
+                                for prefix in namespaces:
+                                    if path.startswith(prefix):
+                                        break
+                                else:
+                                    namespaces.append('%s.' % path)
+                        else:
+                            containers.append(obj)
+
+                # Register all valid top-level non-vanilla paths.
                 for container in containers:
-                    for name, val in sorted(container.items(iotype=iotype),
+                    # Filtering .items() by iotype loses containers :-(
+                    for name, val in sorted(container.items(),
                                             key=lambda item: item[0]):
                         if name in _IGNORE_ATTR or name.startswith('_'):
                             continue
+
+                        if isinstance(val, Container):
+                            if getattr(val, 'iotype', None) != iotype:
+                                continue
+                        else:
+                            trait = container.get_dyn_trait(name)
+                            if getattr(trait, 'iotype', None) != iotype:
+                                continue
+
                         # Only register if it's a supported type.
                         typenames = container.get_trait_typenames(name)
                         wrapper_class = lookup(typenames)

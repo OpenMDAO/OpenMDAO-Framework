@@ -239,6 +239,7 @@ version: 7.0, build: 42968"""
         self.assertEqual(result, ['comp'])
 
         expected = [
+            ('beam_input', 'PHXScriptObject', 'in'),
             ('exe_count', 'PHXLong', 'out'),
             ('in_file', 'PHXRawFile', 'in'),
             ('out_file', 'PHXRawFile', 'out'),

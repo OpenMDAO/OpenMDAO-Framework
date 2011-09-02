@@ -7,6 +7,31 @@ from openmdao.main.rbac import rbac
 from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, \
                                        Int, List, Str
 
+class Material(Container):
+    """ Port of AnalysisServer IBeam example. """
+
+    def __init__(self, *args, **kwargs):
+        super(Material, self).__init__(*args, **kwargs)
+        iotype = kwargs.get('iotype', None)
+        self.add('E', Float(2990000.0, units='psi', iotype=iotype))
+        self.add('density', Float(0.284, units='lb/inch**3', iotype=iotype))
+        self.add('poissonRatio', Float(0.3, iotype=iotype))
+        self.add('type', Str('steel', iotype=iotype))
+
+
+class IBeam(Container):
+    """ Port of AnalysisServer IBeam example. """
+
+    def __init__(self, *args, **kwargs):
+        super(IBeam, self).__init__(*args, **kwargs)
+        iotype = kwargs.get('iotype', None)
+        self.add('material', Material(iotype=iotype))
+        self.add('base', Float(10.0, units='inch', iotype=iotype))
+        self.add('flangeThickness', Float(0.5, units='inch', iotype=iotype))
+        self.add('height', Float(18.0, units='inch', iotype=iotype))
+        self.add('length', Float(180.0, units='inch', iotype=iotype))
+        self.add('thickness', Float(0.5, units='inch', iotype=iotype))
+
 
 class TestComponent(Component):
     """ Just something to test with. """
@@ -23,6 +48,7 @@ class TestComponent(Component):
     def __init__(self):
         super(TestComponent, self).__init__()
         self.add('sub_group', SubGroup())
+        self.add('beam_input', IBeam(iotype='in'))
 
     def execute(self):
         if self.x < 0:
