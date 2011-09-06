@@ -344,7 +344,7 @@ class ConsoleServer(cmd.Cmd):
             objs = comp.get_objectives()
             for key in objs.keys():
                 attr = {}
-                attr['name'] = key
+                attr['name'] = str(key)
                 attr['expr'] = objs[key].text
                 attr['scope'] = objs[key].scope.name
                 objectives.append(attr)
@@ -355,13 +355,14 @@ class ConsoleServer(cmd.Cmd):
             parms = comp.get_parameters()
             for key,parm in parms.iteritems():
                 attr = {}
-                attr['name']    = key
+                attr['name']    = str(key)
                 attr['target']  = parm.target
                 attr['low']     = parm.low
                 attr['high']    = parm.high
                 attr['scaler']  = parm.scaler
                 attr['adder']   = parm.adder
                 attr['fd_step'] = parm.fd_step
+                #attr['scope']   = parm.scope.name
                 parameters.append(attr)
             attrs['Parameters'] = parameters
         
@@ -370,9 +371,8 @@ class ConsoleServer(cmd.Cmd):
             cons = comp.get_eq_constraints()
             for key,con in cons.iteritems():
                 attr = {}
-                attr['name']    = key
-                attr['lhs']     = con.lhs
-                attr['rhs']     = con.rhs
+                attr['name']    = str(key)
+                attr['expr']    = con.__str__
                 attr['scaler']  = con.scaler
                 attr['adder']   = con.adder
                 constraints.append(attr)
@@ -383,9 +383,8 @@ class ConsoleServer(cmd.Cmd):
             cons = comp.get_ineq_constraints()
             for key,con in cons.iteritems():
                 attr = {}
-                attr['name']    = key
-                attr['lhs']     = con.lhs
-                attr['rhs']     = con.rhs
+                attr['name']    = str(key)
+                attr['expr']    = con.__str__
                 attr['scaler']  = con.scaler
                 attr['adder']   = con.adder
                 constraints.append(attr)

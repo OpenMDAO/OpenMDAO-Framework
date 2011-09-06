@@ -38,7 +38,7 @@ openmdao.BasePane.prototype.init = function (id,title,menu) {
     else {
         this.par = null;
         this.elm = jQuery('<div id='+this.id+'></div>');
-        this.popup(this.title+': '+this.id);        
+        this.popup(this.title);
     }
     
     // set the title

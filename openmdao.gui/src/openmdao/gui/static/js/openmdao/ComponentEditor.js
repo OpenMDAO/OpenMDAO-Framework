@@ -3,7 +3,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ComponentEditor = function(model,pathname) {
     // TODO: hack alert... mangling pathname
-    openmdao.ComponentEditor.prototype.init.call(this,'-'+pathname.replace(/\./g,'-'),'Component');
+    openmdao.ComponentEditor.prototype.init.call(this,'CE-'+pathname.replace(/\./g,'-'),'Component: '+pathname);
     
     /***********************************************************************
      *  private
@@ -54,12 +54,28 @@ openmdao.ComponentEditor = function(model,pathname) {
     
     /** populate content pane appropriately for the content */
     function getContent(contentPane,name,val) {
-        if (name == 'Outputs') {
+        if (name == 'Inputs') {
             new openmdao.PropertiesPane(contentPane,model,pathname,name,false)
                 .loadTable(val);
         }
+        else if (name == 'Outputs') {
+            new openmdao.PropertiesPane(contentPane,model,pathname,name,false)
+                .loadTable(val);
+        }
+        else if (name == 'Objectives') {
+            new openmdao.ObjectivesPane(contentPane,model,pathname,name,true)
+                .loadTable(val);
+        }
+        else if (name == 'Parameters') {
+            new openmdao.ParametersPane(contentPane,model,pathname,name,true)
+                .loadTable(val);
+        }
+        else if ((name == 'EqConstraints') || (name == 'IneqConstraints')) {
+            new openmdao.ConstraintsPane(contentPane,model,pathname,name,true)
+                .loadTable(val);
+        }
         else {
-            new openmdao.PropertiesPane(contentPane,model,pathname,name,true)
+            new openmdao.PropertiesPane(contentPane,model,pathname,name,false)
                 .loadTable(val);
         }
     }
