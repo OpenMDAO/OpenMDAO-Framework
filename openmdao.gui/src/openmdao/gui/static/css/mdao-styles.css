@@ -76,7 +76,7 @@ dl dt {
 
 .tab_here {
   background-color: #EFEFEF;
-  color: #23A4FF;
+  color: #23A4FF  !important;
 }
 
 /* base H3 (palette accordian header) styles */
