@@ -23,10 +23,14 @@ class VersionError(RuntimeError):
 def fabric_cleanup(debug=False):
     """close all active fabric connections"""
     for key in connections.keys():
-        if debug:
-            print 'closing connection %s' % key
-        connections[key].close()
-        del connections[key]
+        try:
+            if debug:
+                print 'closing connection %s' % key
+            connections[key].close()
+            del connections[key]
+        except Exception as err:
+            print str(err)
+
 
 def check_openmdao_version(release_dir, version):
     """Checks to see if the specified version of openmdao already exists on
