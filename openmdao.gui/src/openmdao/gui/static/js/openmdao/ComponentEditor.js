@@ -37,29 +37,29 @@ openmdao.ComponentEditor = function(model,pathname) {
                 
                 var dt = jQuery('<dt id="'+self.id+'_'+name+'_tab" target="'+self.id+'_'+name+'_pane">'+tabname+'</dt>'),
                     dd = jQuery('<dd id="'+self.id+'_'+name+'_pane"></dd>'),
-                    content_pane = jQuery('<div id="'+self.id+'_'+name+'" '+style+'>'+name+'</div>');
-                    
-                // TODO: get custom content pane based on name
-                var content_str = ""
-                jQuery.each(val,function (ix,v) {
-                    if (v['value']) {
-                        content_str = content_str + v['name'] + '=' + v['value'] + '<br>';
-                    }
-                    else {
-                        content_str = content_str + v['name'] + '<br>';
-                    }
-                });
-                content_pane.html(content_str);
-                
+                    contentPane = jQuery('<div id="'+self.id+'_'+name+'" '+style+'></div>');
+                                    
                 dl.append(dt);
                 dl.append(dd);
-                dd.append(content_pane)
+                dd.append(contentPane)
+                
+                getContent(contentPane,name,val)
             }
         });
         
         self.elm.width((tabcount+1)*75);
 
         openmdao.TabbedPane(self.id);
+    }
+    
+    /** populate content pane appropriately for the content */
+    function getContent(contentPane,name,val) {
+        if (name == 'Outputs') {
+            new openmdao.PropertiesPane(contentPane,model,pathname,name,val,false);
+        }
+        else {
+            new openmdao.PropertiesPane(contentPane,model,pathname,name,val,true);
+        }
     }
     
     /** if there is an object loaded, update it from the model */
