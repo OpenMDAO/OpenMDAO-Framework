@@ -13,25 +13,6 @@ openmdao.PropertiesEditor = function(id,model) {
         pathname,
         inputs,
         outputs,
-        columns = [
-            {id:"name",  name:"Name",  field:"name"},
-            {id:"value", name:"Value", field:"value", editor:TextCellEditor},
-        ],
-        inputs_options = {
-            editable: true,
-            asyncEditorLoading: false,
-            editOnDoubleClick: true,
-            multiSelect: false,
-            autoHeight: true,
-            autoEdit: false,
-            //enableAddRow: true,
-        },
-        outputs_options = {
-            asyncEditorLoading: false,
-            multiSelect: false,
-            autoHeight: true,
-            autoEdit: false,
-        },
         nameHeader = jQuery("<h3>"),
         inputsHeader = jQuery("<h3>Inputs</h3>"),
         outputsHeader = jQuery("<h3>Outputs</h3>"),
@@ -46,18 +27,13 @@ openmdao.PropertiesEditor = function(id,model) {
     this.elm.append(outputsHeader);
     this.elm.append(outputsDiv);
 
-    inputs = new Slick.Grid(inputsDiv, [], columns, inputs_options)
+    inputs = new openmdao.PropertiesPane(inputsDiv,model,self.pathname,'Inputs',true)
     inputsHeader.click(function () {
         inputsDiv.toggle("normal")
         return false;
     });
-    inputs.onCellChange.subscribe(function(e,args) {
-        // TODO: better way to do this (e.g. model.setProperty(path,name,value)
-        cmd = 'top.'+self.pathname+'.'+args.item.name+'='+args.item.value
-        model.issueCommand(cmd)
-    });
     
-    outputs = new Slick.Grid(outputsDiv, [], columns, outputs_options)       
+    outputs = new openmdao.PropertiesPane(outputsDiv,model,self.pathname,'Outputs',false)
     outputsHeader.click(function () {
         outputsDiv.toggle("normal")
         return false;
@@ -65,24 +41,20 @@ openmdao.PropertiesEditor = function(id,model) {
     
     model.addListener(update);
           
-    /** load the table with the given properties */
+    /** load the tables with the given properties */
     function loadTables(properties) {
         if (properties['type']) {
             nameHeader.html(properties['type']+': '+self.pathname)
-            inputs.setData(properties['Inputs'])
-            outputs.setData(properties['Outputs'])
+            inputs.loadTable(properties['Inputs'])
+            outputs.loadTable(properties['Outputs'])
         }
         else {
             nameHeader.html(self.pathname)
-            inputs.setData([])
-            outputs.setData([])
+            inputs.loadTable([])
+            outputs.loadTable([])
             alert('Error getting properties for '+self.pathname)
             debug.info(properties)
         }
-        inputs.updateRowCount()
-        inputs.render()
-        outputs.updateRowCount()
-        outputs.render()
     }
     
     /** if there is an object loaded, update it from the model */

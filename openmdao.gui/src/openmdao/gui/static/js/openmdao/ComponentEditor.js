@@ -10,7 +10,7 @@ openmdao.ComponentEditor = function(model,pathname) {
      ***********************************************************************/
      
     // initialize private variables
-    var self = this
+    var self = this;
         
     model.addListener(update)
           
@@ -55,15 +55,18 @@ openmdao.ComponentEditor = function(model,pathname) {
     /** populate content pane appropriately for the content */
     function getContent(contentPane,name,val) {
         if (name == 'Outputs') {
-            new openmdao.PropertiesPane(contentPane,model,pathname,name,val,false);
+            new openmdao.PropertiesPane(contentPane,model,pathname,name,false)
+                .loadTable(val);
         }
         else {
-            new openmdao.PropertiesPane(contentPane,model,pathname,name,val,true);
+            new openmdao.PropertiesPane(contentPane,model,pathname,name,true)
+                .loadTable(val);
         }
     }
     
     /** if there is an object loaded, update it from the model */
     function update() {
+        // TODO: should just update existing panes rather than recreate them
         if (self.pathname && self.pathname.length>0)
             self.editObject(self.pathname)
     }

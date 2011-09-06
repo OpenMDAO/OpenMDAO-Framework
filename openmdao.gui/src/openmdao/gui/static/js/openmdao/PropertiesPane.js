@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.PropertiesPane = function(elm,model,pathname,name,properties,editable) {
+openmdao.PropertiesPane = function(elm,model,pathname,name,editable) {
     var props,
         propsDiv = jQuery("<div id='"+name+"_props' >"),
         columns = [
@@ -22,21 +22,22 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,properties,editable) 
 
     elm.append(propsDiv);
     props = new Slick.Grid(propsDiv, [], columns, options)
-    props.onCellChange.subscribe(function(e,args) {
-        // TODO: better way to do this (e.g. model.setProperty(path,name,value)
-        cmd = 'top.'+pathname+'.'+args.item.name+'='+args.item.value
-        model.issueCommand(cmd)
-    });
-    loadTable(properties);
+    if (editable) {
+        props.onCellChange.subscribe(function(e,args) {
+            // TODO: better way to do this (e.g. model.setProperty(path,name,value)
+            cmd = 'top.'+pathname+'.'+args.item.name+'='+args.item.value
+            model.issueCommand(cmd)
+        });
+   }
     
     /** load the table with the given properties */
-    function loadTable(properties) {
+    this.loadTable = function(properties) {
         if (properties) {
             props.setData(properties)
         }
         else {
             props.setData([])
-            alert('Error getting properties for '+name)
+            alert('Error getting properties for '+pathname+' ('+name+')')
             debug.info(properties)
         }
         props.updateRowCount()
