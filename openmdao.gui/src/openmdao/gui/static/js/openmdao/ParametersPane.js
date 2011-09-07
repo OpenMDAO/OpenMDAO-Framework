@@ -4,6 +4,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     var parms,
         parmsDiv = jQuery("<div id='"+name+"_parms' >"),
+        addButton = jQuery("<div>Add Parameter</div>"),
         columns = [
             {id:"target",  name:"Target",  field:"target", editor:TextCellEditor},
             {id:"low", name:"Low", field:"low", editor:TextCellEditor},
@@ -21,12 +22,14 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             autoEdit: false,
         };
         
+    elm.append(parmsDiv);
+    elm.append(addButton);
+    
     if (editable) {
         options.editable = true;
         options.editOnDoubleClick = true;
-    }
+    };
 
-    elm.append(parmsDiv);
     parms = new Slick.Grid(parmsDiv, [], columns, options)
     if (editable) {
         parms.onCellChange.subscribe(function(e,args) {
@@ -34,8 +37,68 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             cmd = 'top.'+pathname+'.'+args.item.name+'='+args.item.value
             model.issueCommand(cmd)
         });
-   }
+   };
     
+    /** add a new parameter */
+    function addParameter(target,low,high,scaler,adder) {
+        cmd = "top."+pathname+".add_parameter('"+target+"'";
+        if (low) {
+            cmd = cmd + ",low="+low;
+        }            
+        if (high) {
+            cmd = cmd + ",high="+high;
+        }            
+        if (scaler) {
+            cmd = cmd + ",scaler="+scaler;
+        }            
+        if (adder) {
+            cmd = cmd + ",adder="+adder;
+        }            
+        cmd = cmd + ");"
+        model.issueCommand(cmd);
+    };
+   
+    /** prompt new parameter */
+    function promptForParameter(callback) {
+        // Build dialog markup
+        var win = jQuery('<div></div>'),
+            target = jQuery('<input type="text" style="width:100%"></input>'),
+            low    = jQuery('<input type="text" style="width:50%"></input>'),
+            high   = jQuery('<input type="text" style="width:50%"></input>'),
+            scaler = jQuery('<input type="text" style="width:50%"></input>'),
+            adder  = jQuery('<input type="text" style="width:50%"></input>');
+        
+        win.append(jQuery('<div>Target: </div>').append(target));
+        
+        var table = jQuery('<table>');
+        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Low: </div>').append(low)))
+                            .append(jQuery('<td>').append(jQuery('<div>High: </div>').append(high)));
+        table.append(row);
+        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Scaler: </div>').append(scaler)))
+                            .append(jQuery('<td>').append(jQuery('<div>Adder: </div>').append(adder)));
+                            
+        table.append(row);
+        win.append(table);
+
+        
+        // Display dialog
+        jQuery(win).dialog({
+            'modal': true,
+            'title': 'New Parameter',
+            'buttons': {
+                'Ok': function() {                    
+                    jQuery(this).dialog('close');
+                    callback(target.val(),low.val(),high.val(),scaler.val(),adder.val());
+                },
+                'Cancel': function() {
+                    jQuery(this).dialog('close');
+                }
+            }
+        });
+    };
+    
+    addButton.click(function() { promptForParameter(addParameter) });
+
     /** load the table with the given properties */
     this.loadTable = function(properties) {
         if (properties) {
@@ -48,5 +111,6 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         }
         parms.updateRowCount()
         parms.render()
-    }    
+    }
+        
 }
