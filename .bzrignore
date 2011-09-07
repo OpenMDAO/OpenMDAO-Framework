@@ -32,3 +32,5 @@ examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3-
 examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3module.c
 devenv
 *.DS_Store
+
+
