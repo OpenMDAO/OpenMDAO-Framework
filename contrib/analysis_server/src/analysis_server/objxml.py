@@ -36,25 +36,29 @@ def _float2str(val):
 def get_as_xml(container, name):
     """ Return XML for `container` with `name`. """
     xml = []
+# FIXME: hard-coded IBeam
     xml.append("""\
-<?xml version="1.0" encoding="utf-8"?>
-<Object className="%s" type="object" nonStrictType="false" customSerialization="false">""" % _lookup(container))
+<?xml version="1.0" encoding="utf-8"?>\
+<Object className="%s" type="object" nonStrictType="false" customSerialization="false">""" % 'IBeam')  #_lookup(container))
     _get_as_xml(container, name, xml)
     xml.append('</Object>')
-    return '\n'.join(xml)
+    return ''.join(xml)
 
 def _get_as_xml(container, name, xml):
     """ Recursive helper for :meth:`get_as_xml`. """
     xml.append('<members>')
-    for name, trait in container._alltraits().items():
+    for name, trait in sorted(container._alltraits().items(),
+                              key=lambda item: item[0]):
         if name in _IGNORE_ATTR or name.startswith('_'):
             continue
         val = getattr(container, name)
         if isinstance(val, Container):
+# FIXME: hard-coded phxPython.material
             xml.append("""\
 <member name="%s" type="object" access="public" className="%s">\
-""" % (name, _lookup(val)))
+""" % (name, 'phxPython.material'))  #_lookup(val)))
             _get_as_xml(val, name, xml)
+            xml.append('</member>')
         else:
             desc = trait.desc or ''
             desc = escape(desc.encode('string_escape'))
@@ -68,17 +72,17 @@ def _get_as_xml(container, name, xml):
                 hub = 'false' if trait.high is None else 'true'
                 high = '0.0' if trait.high is None else _float2str(trait.high)
                 xml.append("""\
-<member name="%s" type="double" access="public">%s
-  <properties>
-    <property name="description">%s</property>
-    <property name="units">%s</property>
-    <property name="enumValues"/>
-    <property name="enumAliases"/>
-    <property name="hasLowerBound">%s</property>
-    <property name="lowerBound">%s</property>
-    <property name="hasUpperBound">%s</property>
-    <property name="upperBound">%s</property>
-  </properties>
+<member name="%s" type="double" access="public">%s\
+<properties>\
+<property name="description">%s</property>\
+<property name="units">%s</property>\
+<property name="enumValues"/>\
+<property name="enumAliases"/>\
+<property name="hasLowerBound">%s</property>\
+<property name="lowerBound">%s</property>\
+<property name="hasUpperBound">%s</property>\
+<property name="upperBound">%s</property>\
+</properties>\
 </member>""" % (name, valstr, desc, units, hlb, low, hub, high))
 
             elif isinstance(ttype, Int):
@@ -88,29 +92,30 @@ def _get_as_xml(container, name, xml):
                 hub = 'false' if trait.high is None else 'true'
                 high = '0' if trait.high is None else str(trait.high)
                 xml.append("""\
-<member access="public" name="%s" type="double">%s
-  <properties>
-    <property name="description">%s</property>
-    <property name="units"/>
-    <property name="enumValues"/>
-    <property name="enumAliases"/>
-    <property name="hasLowerBound">%s</property>
-    <property name="lowerBound">%s</property>
-    <property name="hasUpperBound">%s</property>
-    <property name="upperBound">%s</property>
-  </properties>
+<member access="public" name="%s" type="double">%s\
+<properties>\
+<property name="description">%s</property>\
+<property name="units"/>\
+<property name="enumValues"/>\
+<property name="enumAliases"/>\
+<property name="hasLowerBound">%s</property>\
+<property name="lowerBound">%s</property>\
+<property name="hasUpperBound">%s</property>\
+<property name="upperBound">%s</property>\
+</properties>\
 </member>""" % (name, valstr, desc, hlb, low, hub, high))
 
             elif isinstance(ttype, Str):
                 valstr = escape(val.encode('string_escape'))
                 # String value delimited by > and <
                 xml.append("""\
-<member access="public" name="%s" type="string">%s<properties>
-    <property name="description">%s</property>
-    <property name="units"/>
-    <property name="enumValues"/>
-    <property name="enumAliases"/>
-  </properties>
+<member name="%s" type="string" access="public">%s\
+<properties>\
+<property name="description">%s</property>\
+<property name="units"/>\
+<property name="enumValues"/>\
+<property name="enumAliases"/>\
+</properties>\
 </member>""" % (name, valstr, desc))
 
             else:

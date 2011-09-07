@@ -116,7 +116,7 @@ _DISABLE_HEARTBEAT = False  # If True, no heartbeat replies are sent.
 
 _LOGGER = logging.getLogger('aserver')
 
-_DBG_LEN = 1000  # Max length of debug log message.
+_DBG_LEN = 10000  # Max length of debug log message.
 
 
 class _DictContextMgr(object):
@@ -860,7 +860,8 @@ Object %s ended.""" % (name, name))
                              'getDirectTransfer')
             return
 
-        self._send_reply('false')
+# FIXME: showing unsupported capability
+        self._send_reply('true')
 
     _COMMANDS['getDirectTransfer'] = _get_direct_transfer
 

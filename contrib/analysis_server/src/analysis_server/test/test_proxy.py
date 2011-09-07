@@ -135,7 +135,7 @@ class TestCase(unittest.TestCase):
             os.remove(state_file)
             os.remove('AS-the_obj.in_file.dat')
             os.remove('AS-the_obj.out_file.dat')
-        comp.pre_delete()
+            comp.pre_delete()
 
         comp = set_as_top(self.factory.create('ASTestComp'))
         comp.__del__()

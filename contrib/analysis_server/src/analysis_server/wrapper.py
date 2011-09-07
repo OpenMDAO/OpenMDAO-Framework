@@ -1830,6 +1830,8 @@ class ObjWrapper(BaseWrapper):
             path = sys.modules[self._cls.__module__].__file__
             if path.endswith(('.pyc', '.pyo')):
                 path = path[:-1]
+# FIXME: hard-coded path
+            path = 'C:/Users/setowns1/AppData/Roaming/Phoenix Integration/AServer7/analyses/wrappers/classes/IBeam.py'
             return '%s#%s' % (path, self._cls.__name__)
         else:
             return super(ObjWrapper, self).get(attr, path)
@@ -1865,7 +1867,7 @@ class ObjWrapper(BaseWrapper):
         """
         if attr == 'value':
             obj = self._cls()
-            set_from_xml(obj, valstr)
+            set_from_xml(obj, valstr.decode('string_escape'))
             self._container.set(self._name, obj)
         elif attr in ('classURL', 'description'):
             raise WrapperError('cannot set <%s>.' % path)
