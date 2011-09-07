@@ -55,7 +55,7 @@ openmdao.ComponentEditor = function(model,pathname) {
     /** populate content pane appropriately for the content */
     function getContent(contentPane,name,val) {
         if (name == 'Inputs') {
-            new openmdao.PropertiesPane(contentPane,model,pathname,name,false)
+            new openmdao.PropertiesPane(contentPane,model,pathname,name,true)
                 .loadTable(val);
         }
         else if (name == 'Outputs') {

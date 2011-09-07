@@ -3,8 +3,9 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     var parms,
-        parmsDiv = jQuery("<div id='"+name+"_parms' >"),
+        parmsDiv = jQuery("<div id='"+name+"_parms'>"),
         addButton = jQuery("<div>Add Parameter</div>"),
+        clrButton = jQuery("<div>Clear Parameters</div>"),
         columns = [
             {id:"target",  name:"Target",  field:"target", editor:TextCellEditor},
             {id:"low", name:"Low", field:"low", editor:TextCellEditor},
@@ -23,7 +24,12 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         };
         
     elm.append(parmsDiv);
-    elm.append(addButton);
+    
+    var table = jQuery('<table width="100%">'),
+        row = jQuery('<tr>').append(jQuery('<td style="text-align:left">').append(addButton))
+                            .append(jQuery('<td style="text-align:right">').append(clrButton));
+    table.append(row);
+    elm.append(table);
     
     if (editable) {
         options.editable = true;
@@ -73,10 +79,9 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         var table = jQuery('<table>');
         row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Low: </div>').append(low)))
                             .append(jQuery('<td>').append(jQuery('<div>High: </div>').append(high)));
-        table.append(row);
+        table.append(row);        
         row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Scaler: </div>').append(scaler)))
-                            .append(jQuery('<td>').append(jQuery('<div>Adder: </div>').append(adder)));
-                            
+                            .append(jQuery('<td>').append(jQuery('<div>Adder: </div>').append(adder)));                            
         table.append(row);
         win.append(table);
 
@@ -97,7 +102,14 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         });
     };
     
+    /** clear all parameters */
+    function clearParameters() {
+        cmd = "top."+pathname+".clear_parameters();"
+        model.issueCommand(cmd);        
+    }
+    
     addButton.click(function() { promptForParameter(addParameter) });
+    clrButton.click(function() { clearParameters() });
 
     /** load the table with the given properties */
     this.loadTable = function(properties) {
