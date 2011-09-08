@@ -144,15 +144,7 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
                 look_for_keys=not env.no_keys
             )
             return client
-        except paramiko.SSHException as e:
-            if 'No existing session' in str(e):
-                tries += 1
-                if debug:
-                    print "connection attempt %d for host %s failed: %s" % (tries, host, str(e))
-            else:
-                raise
-        # Handle timeouts
-        except socket.timeout as e:
+        except (paramiko.SSHException, socket.timeout) as e:
             tries += 1
             if debug:
                 print "connection attempt %d for host %s failed: %s" % (tries, host, str(e))
