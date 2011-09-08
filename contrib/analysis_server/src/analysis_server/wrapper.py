@@ -1830,8 +1830,7 @@ class ObjWrapper(BaseWrapper):
             path = sys.modules[self._cls.__module__].__file__
             if path.endswith(('.pyc', '.pyo')):
                 path = path[:-1]
-# FIXME: hard-coded path
-            path = 'C:/Users/setowns1/AppData/Roaming/Phoenix Integration/AServer7/analyses/wrappers/classes/IBeam.py'
+            path = os.path.abspath(path)
             return '%s#%s' % (path, self._cls.__name__)
         else:
             return super(ObjWrapper, self).get(attr, path)

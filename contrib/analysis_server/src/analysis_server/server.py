@@ -860,8 +860,7 @@ Object %s ended.""" % (name, name))
                              'getDirectTransfer')
             return
 
-# FIXME: showing unsupported capability
-        self._send_reply('true')
+        self._send_reply('false')
 
     _COMMANDS['getDirectTransfer'] = _get_direct_transfer
 

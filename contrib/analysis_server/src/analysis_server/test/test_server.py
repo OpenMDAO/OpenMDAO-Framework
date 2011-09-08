@@ -700,10 +700,11 @@ __init__.py"""
 
     def test_list_properties(self):
         expected = """\
-8 properties found:
-beam_input (type=com.phoenix_int.aserver.types.PHXScriptObject) (access=sg)
+9 properties found:
 exe_count (type=com.phoenix_int.aserver.types.PHXLong) (access=g)
 in_file (type=com.phoenix_int.aserver.types.PHXRawFile) (access=sg)
+obj_input (type=com.phoenix_int.aserver.types.PHXScriptObject) (access=sg)
+obj_output (type=com.phoenix_int.aserver.types.PHXScriptObject) (access=g)
 out_file (type=com.phoenix_int.aserver.types.PHXRawFile) (access=g)
 sub_group (type=com.phoenix_int.aserver.PHXGroup) (access=sg)
 x (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)

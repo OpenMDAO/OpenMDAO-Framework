@@ -6,7 +6,7 @@ import xml.etree.cElementTree as ElementTree
 from xml.sax.saxutils import escape
 
 from openmdao.main.api import Container
-from openmdao.lib.datatypes.api import Float, Int, Str
+from openmdao.lib.datatypes.api import Bool, Float, Int, Str
 
 # Attributes to ignore.
 _IGNORE_ATTR = ('iotype',)
@@ -36,10 +36,9 @@ def _float2str(val):
 def get_as_xml(container, name):
     """ Return XML for `container` with `name`. """
     xml = []
-# FIXME: hard-coded IBeam
     xml.append("""\
 <?xml version="1.0" encoding="utf-8"?>\
-<Object className="%s" type="object" nonStrictType="false" customSerialization="false">""" % 'IBeam')  #_lookup(container))
+<Object className="%s" type="object" nonStrictType="false" customSerialization="false">""" % _lookup(container))
     _get_as_xml(container, name, xml)
     xml.append('</Object>')
     return ''.join(xml)
@@ -53,10 +52,9 @@ def _get_as_xml(container, name, xml):
             continue
         val = getattr(container, name)
         if isinstance(val, Container):
-# FIXME: hard-coded phxPython.material
             xml.append("""\
 <member name="%s" type="object" access="public" className="%s">\
-""" % (name, 'phxPython.material'))  #_lookup(val)))
+""" % (name, _lookup(val)))
             _get_as_xml(val, name, xml)
             xml.append('</member>')
         else:
@@ -64,7 +62,16 @@ def _get_as_xml(container, name, xml):
             desc = escape(desc.encode('string_escape'))
 
             ttype = trait.trait_type
-            if isinstance(ttype, Float):
+            if isinstance(ttype, Bool):
+                valstr = 'true' if val else 'false'
+                xml.append("""\
+<member name="%s" type="boolean" access="public">%s\
+<properties>\
+<property name="description">%s</property>\
+</properties>\
+</member>""" % (name, valstr, desc))
+
+            elif isinstance(ttype, Float):
                 valstr = _float2str(val)
                 units = trait.units or ''
                 hlb = 'false' if trait.low is None else 'true'
@@ -92,7 +99,7 @@ def _get_as_xml(container, name, xml):
                 hub = 'false' if trait.high is None else 'true'
                 high = '0' if trait.high is None else str(trait.high)
                 xml.append("""\
-<member access="public" name="%s" type="double">%s\
+<member access="public" name="%s" type="long">%s\
 <properties>\
 <property name="description">%s</property>\
 <property name="units"/>\
@@ -107,7 +114,6 @@ def _get_as_xml(container, name, xml):
 
             elif isinstance(ttype, Str):
                 valstr = escape(val.encode('string_escape'))
-                # String value delimited by > and <
                 xml.append("""\
 <member name="%s" type="string" access="public">%s\
 <properties>\

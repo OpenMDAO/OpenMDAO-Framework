@@ -7,30 +7,29 @@ from openmdao.main.rbac import rbac
 from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, \
                                        Int, List, Str
 
-class Material(Container):
-    """ Port of AnalysisServer IBeam example. """
+class SubObj(Container):
+    """ Sub-object under TopObject. """
 
     def __init__(self, *args, **kwargs):
-        super(Material, self).__init__(*args, **kwargs)
+        super(SubObj, self).__init__(*args, **kwargs)
         iotype = kwargs.get('iotype', None)
-        self.add('E', Float(2990000.0, units='psi', iotype=iotype))
-        self.add('density', Float(0.284, units='lb/inch**3', iotype=iotype))
-        self.add('poissonRatio', Float(0.3, iotype=iotype))
-        self.add('type', Str('steel', iotype=iotype))
+        self.add('sob', Bool(False, iotype=iotype))
+        self.add('sof', Float(0.284, units='lb/inch**3', iotype=iotype))
+        self.add('soi', Int(3, iotype=iotype))
+        self.add('sos', Str('World', iotype=iotype))
 
 
-class IBeam(Container):
-    """ Port of AnalysisServer IBeam example. """
+class TopObj(Container):
+    """ Top-level object variable. """
 
     def __init__(self, *args, **kwargs):
-        super(IBeam, self).__init__(*args, **kwargs)
+        super(TopObj, self).__init__(*args, **kwargs)
         iotype = kwargs.get('iotype', None)
-        self.add('material', Material(iotype=iotype))
-        self.add('base', Float(10.0, units='inch', iotype=iotype))
-        self.add('flangeThickness', Float(0.5, units='inch', iotype=iotype))
-        self.add('height', Float(18.0, units='inch', iotype=iotype))
-        self.add('length', Float(180.0, units='inch', iotype=iotype))
-        self.add('thickness', Float(0.5, units='inch', iotype=iotype))
+        self.add('subobj', SubObj(iotype=iotype))
+        self.add('tob', Bool(True, iotype=iotype))
+        self.add('tof', Float(0.5, units='inch', iotype=iotype))
+        self.add('toi', Int(42, iotype=iotype))
+        self.add('tos', Str('Hello', iotype=iotype))
 
 
 class TestComponent(Component):
@@ -48,7 +47,8 @@ class TestComponent(Component):
     def __init__(self):
         super(TestComponent, self).__init__()
         self.add('sub_group', SubGroup())
-        self.add('beam_input', IBeam(iotype='in'))
+        self.add('obj_input', TopObj(iotype='in'))
+        self.add('obj_output', TopObj(iotype='out'))
 
     def execute(self):
         if self.x < 0:
@@ -65,6 +65,17 @@ class TestComponent(Component):
 #        sys.stderr.write('stderr: %s %s %s\n' % (self.x, self.y, self.z))
 #        sys.stderr.flush()
 
+        # Copy input object to output object.
+        self.obj_output.tob = self.obj_input.tob
+        self.obj_output.tof = self.obj_input.tof
+        self.obj_output.toi = self.obj_input.toi
+        self.obj_output.tos = self.obj_input.tos
+
+        self.obj_output.subobj.sob = self.obj_input.subobj.sob
+        self.obj_output.subobj.sof = self.obj_input.subobj.sof
+        self.obj_output.subobj.soi = self.obj_input.subobj.soi
+        self.obj_output.subobj.sos = self.obj_input.subobj.sos
+        
     @rbac(('owner', 'user'))
     def cause_exception(self):
         self.raise_exception("It's your own fault...", RuntimeError)
