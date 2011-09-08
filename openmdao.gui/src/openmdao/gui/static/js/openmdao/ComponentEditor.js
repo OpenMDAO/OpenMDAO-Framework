@@ -26,7 +26,13 @@ openmdao.ComponentEditor = function(model,pathname) {
         var tabcount = 0;
         
         jQuery.each(properties,function (name,val) {
-            if (name !== 'type') {
+            if (name == 'type') {
+                parent = self.elm.parent();
+                if (parent.hasClass('ui-dialog')) {
+                    self.elm.dialog("option","title",val+': '+pathname);
+                }
+            }
+            else {
                 tabcount = tabcount + 1;
                 
                 if (name.length > 10) {
