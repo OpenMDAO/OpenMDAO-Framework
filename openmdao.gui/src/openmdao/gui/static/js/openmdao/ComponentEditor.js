@@ -58,6 +58,7 @@ openmdao.ComponentEditor = function(model,pathname) {
     
     /** populate content pane appropriately for the content */
     function getContent(contentPane,name,val) {
+        // TODO: get content pane type more dynamically (a look up table maybe?)
         if (name == 'Inputs') {
             panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,true);
             panes[name].loadData(val);
@@ -76,6 +77,10 @@ openmdao.ComponentEditor = function(model,pathname) {
         }
         else if ((name == 'EqConstraints') || (name == 'IneqConstraints')) {
             panes[name] = new openmdao.ConstraintsPane(contentPane,model,pathname,name,true);
+            panes[name].loadData(val);
+        }
+        else if (name == 'Workflow') {
+            panes[name] = new openmdao.WorkflowPane(contentPane,model,pathname,name,false);
             panes[name].loadData(val);
         }
         else {

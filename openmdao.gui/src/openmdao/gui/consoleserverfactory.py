@@ -317,28 +317,32 @@ class ConsoleServer(cmd.Cmd):
         '''
         attrs = {}
         
-        inputs = []
-        for vname in comp.list_inputs():
-            v = comp.get(vname)
-            attr = {}
-            if not is_instance(v,Component):
-                attr['name'] = vname
-                attr['type'] = type(v).__name__
-                attr['value'] = v
-            inputs.append(attr)
-        attrs['Inputs'] = inputs
-            
-        outputs = []
-        for vname in comp.list_outputs():
-            v = comp.get(vname)
-            attr = {}
-            if not is_instance(v,Component):
-                attr['name'] = vname
-                attr['type'] = type(v).__name__
-                attr['value'] = v
-            outputs.append(attr)
-        attrs['Outputs'] = outputs
+        if has_interface(comp,IComponent):
+            inputs = []
+            for vname in comp.list_inputs():
+                v = comp.get(vname)
+                attr = {}
+                if not is_instance(v,Component):
+                    attr['name'] = vname
+                    attr['type'] = type(v).__name__
+                    attr['value'] = v
+                inputs.append(attr)
+            attrs['Inputs'] = inputs
+                
+            outputs = []
+            for vname in comp.list_outputs():
+                v = comp.get(vname)
+                attr = {}
+                if not is_instance(v,Component):
+                    attr['name'] = vname
+                    attr['type'] = type(v).__name__
+                    attr['value'] = v
+                outputs.append(attr)
+            attrs['Outputs'] = outputs
 
+        if has_interface(comp,IDriver):
+            attrs['Workflow'] = comp.workflow.get_names()
+        
         if has_interface(comp,IHasObjectives):
             objectives = []
             objs = comp.get_objectives()
@@ -350,7 +354,7 @@ class ConsoleServer(cmd.Cmd):
                 objectives.append(attr)
             attrs['Objectives'] = objectives
             
-        if has_interface(comp, IHasParameters):
+        if has_interface(comp,IHasParameters):
             parameters = []
             parms = comp.get_parameters()
             for key,parm in parms.iteritems():
@@ -366,7 +370,7 @@ class ConsoleServer(cmd.Cmd):
                 parameters.append(attr)
             attrs['Parameters'] = parameters
         
-        if has_interface(comp, IHasConstraints) or has_interface(comp, IHasEqConstraints):
+        if has_interface(comp,IHasConstraints) or has_interface(comp,IHasEqConstraints):
             constraints = []
             cons = comp.get_eq_constraints()
             for key,con in cons.iteritems():
@@ -378,7 +382,7 @@ class ConsoleServer(cmd.Cmd):
                 constraints.append(attr)
             attrs['EqConstraints'] = constraints
             
-        if has_interface(comp, IHasConstraints) or has_interface(comp, IHasIneqConstraints):
+        if has_interface(comp,IHasConstraints) or has_interface(comp,IHasIneqConstraints):
             constraints = []
             cons = comp.get_ineq_constraints()
             for key,con in cons.iteritems():
@@ -393,12 +397,15 @@ class ConsoleServer(cmd.Cmd):
         return attrs
         
     def get_attributes(self,name):
-        attr = {}
-        comp = self.top.get(name)
-        if self.top and comp:
-            attr = self._get_attributes(comp)
-            attr['type'] = type(comp).__name__
-        return attr
+        try:
+            attr = {}
+            comp = self.top.get(name)
+            if self.top and comp:
+                attr = self._get_attributes(comp)
+                attr['type'] = type(comp).__name__
+            return attr
+        except Exception, err:
+            print "Error getting attributes of",name,":", str(err)
     
     def get_available_types(self):
         return get_available_types()
@@ -447,10 +454,8 @@ class ConsoleServer(cmd.Cmd):
         '''
         try:
             if classname in self._globals:
-                print 'adding',classname,'from globals.'
                 self.top.add(name,self._globals[classname]())
             else:
-                print 'adding',classname,'using factorymanager create().'
                 self.top.add(name,create(classname))
         except Exception, err:
             print "Add component failed:", str(err)
@@ -479,7 +484,7 @@ class ConsoleServer(cmd.Cmd):
             try:
                 print "trying to rmtree ",self.root_dir
                 shutil.rmtree(self.root_dir)
-            except e:
+            except Exception, e:
                 print "failed to rmtree ",self.root_dir
                 print e
         
