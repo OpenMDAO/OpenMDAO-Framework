@@ -38,6 +38,29 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
             model.issueCommand(cmd)
         });
    }
+
+    // make the workflow pane droppable
+    elm.droppable ({
+        accept: '.obj',
+        drop: function(ev,ui) { 
+            debug.info("WorkflowPane drop:",ev,ui)
+            // get the object that was dropped and where it was dropped
+            var droppedObject = jQuery(ui.draggable).clone(),
+                path = droppedObject.attr("path"),
+                parentPath = openmdao.Util.getParentPath(pathname);
+            
+            if (path.indexOf(parentPath) == 0) {
+                path = path.substr(parentPath.length+1)
+                debug.info('path',path)
+            }
+            if (path) {
+                addComponent(path);
+            }
+            else {
+                debug.warn('WorkflowPane received unknown drop:',droppedObject,path);
+            }
+        }
+    });
     
     /** add a new objective */
     function addComponent(name) {

@@ -308,7 +308,10 @@ class ConsoleServer(cmd.Cmd):
 
     def get_workflow(self):
         if self.top:
-            return self._get_workflow(self.top.driver)
+            try:
+                return self._get_workflow(self.top.driver)
+            except Exception, err:
+                print "Error getting workflow:", str(err)
         else:
             return {}
 

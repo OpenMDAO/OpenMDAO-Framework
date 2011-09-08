@@ -223,7 +223,17 @@ openmdao.Util = {
             n = n-1;
             setTimeout( "openmdao.Util.refreshX("+n+")", 2000 );
         }
-    }
+    },
 
+    /** get the pathname of the parent component */
+    getParentPath: function(path) {
+        parent_path = ''
+        if (path) {
+            var lastdot = path.lastIndexOf('.')
+            if (lastdot > 0)
+                parent_path = path.substring(0,lastdot)
+        }
+        return parent_path
+    }    
    
 }
