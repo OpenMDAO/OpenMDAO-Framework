@@ -6,7 +6,7 @@ import xml.etree.cElementTree as ElementTree
 from xml.sax.saxutils import escape
 
 from openmdao.main.api import Container
-from openmdao.lib.datatypes.api import Bool, Float, Int, Str
+from openmdao.lib.datatypes.api import Bool, Enum, Float, Int, Str
 
 # Attributes to ignore.
 _IGNORE_ATTR = ('iotype',)
@@ -71,6 +71,43 @@ def _get_as_xml(container, name, xml):
 </properties>\
 </member>""" % (name, valstr, desc))
 
+            elif isinstance(ttype, Enum):
+                etyp = type(trait.values[0])
+                if etyp == float:
+                    valtyp = 'double'
+                    valstr = _float2str(val)
+                    values = ', '.join([_float2str(value)
+                                        for value in trait.values])
+                elif etyp == int:
+                    valtyp = 'long'
+                    valstr = str(val)
+                    values = ', '.join(['%s' % value
+                                        for value in trait.values])
+                else:
+                    valtyp = 'string'
+                    valstr = escape(val.encode('string_escape'))
+                    values = ', '.join(['"%s"' % value
+                                        for value in trait.values])
+                if trait.aliases:
+                    aliases = ', '.join(['"%s"' % alias
+                                         for alias in trait.aliases])
+                else:
+                    aliases = ''
+                units = trait.units or ''
+                xml.append("""\
+<member name="%s" type="%s" access="public">%s\
+<properties>\
+<property name="description">%s</property>\
+<property name="units">%s</property>\
+<property name="enumValues">%s</property>\
+<property name="enumAliases">%s</property>\
+<property name="hasLowerBound">false</property>\
+<property name="lowerBound"/>\
+<property name="hasUpperBound">false</property>\
+<property name="upperBound"/>\
+</properties>\
+</member>""" % (name, valtyp, valstr, desc, units, values, aliases))
+
             elif isinstance(ttype, Float):
                 valstr = _float2str(val)
                 units = trait.units or ''
@@ -118,15 +155,14 @@ def _get_as_xml(container, name, xml):
 <member name="%s" type="string" access="public">%s\
 <properties>\
 <property name="description">%s</property>\
-<property name="units"/>\
 <property name="enumValues"/>\
 <property name="enumAliases"/>\
 </properties>\
 </member>""" % (name, valstr, desc))
 
             else:
-                raise RuntimeError('%s: unsupported type' % name)
-
+                raise RuntimeError('%s.%s: unsupported type'
+                                   % (container.get_pathname(), name))
     xml.append('</members>')
 
 
@@ -149,28 +185,64 @@ def _set_from_xml(container, root):
         else:
             trait = container.get_dyn_trait(name)
             ttype = trait.trait_type
-            if isinstance(ttype, Float):
-                if typ == 'double':
-                    val = float(member.text)
-                    setattr(container, name, val)
+            if isinstance(ttype, Bool):
+                _set_bool(container, name, typ, member.text)
+            elif isinstance(ttype, Enum):
+                try:
+                    i = trait.aliases.index(member.text)
+                except (AttributeError, ValueError):
+                    etyp = type(trait.values[0])
+                    if etyp == float:
+                        _set_float(container, name, typ, member.text)
+                    elif etyp == int:
+                        _set_int(container, name, typ, member.text)
+                    else:
+                        _set_str(container, name, typ, member.text)
                 else:
-                    raise RuntimeError('Unsupported type %r for %s'
-                                       % (typ, name))
+                    setattr(container, name, trait.values[i])
+            elif isinstance(ttype, Float):
+                _set_float(container, name, typ, member.text)
             elif isinstance(ttype, Int):
-                if typ == 'long':
-                    val = int(member.text)
-                    setattr(container, name, val)
-                else:
-                    raise RuntimeError('Unsupported type %r for %s'
-                                       % (typ, name))
+                _set_int(container, name, typ, member.text)
             elif isinstance(ttype, Str):
-                if typ == 'string':
-                    val = member.text.strip()
-                    setattr(container, name, val)
-                else:
-                    raise RuntimeError('Unsupported type %r for %s'
-                                       % (typ, name))
+                _set_str(container, name, typ, member.text)
             else:
-                raise RuntimeError('Unsupported type %r for %s'
-                                   % (ttype, name))
+                raise RuntimeError('Unsupported type %r for %s.%s'
+                                   % (ttype, path))
+
+def _set_bool(container, name, typ, text):
+    """ Helper for :meth:`_set_from_xml`. """
+    if typ == 'boolean':
+        val = True if text == 'true' else False
+        setattr(container, name, val)
+    else:
+        raise RuntimeError('Unsupported type %r for %s.%s'
+                           % (typ, container.get_pathname(), name))
+
+def _set_float(container, name, typ, text):
+    """ Helper for :meth:`_set_from_xml`. """
+    if typ == 'double':
+        val = float(text)
+        setattr(container, name, val)
+    else:
+        raise RuntimeError('Unsupported type %r for %s.%s'
+                           % (typ, container.get_pathname(), name))
+
+def _set_int(container, name, typ, text):
+    """ Helper for :meth:`_set_from_xml`. """
+    if typ == 'long':
+        val = int(text)
+        setattr(container, name, val)
+    else:
+        raise RuntimeError('Unsupported type %r for %s.%s'
+                           % (typ, container.get_pathname(), name))
+
+def _set_str(container, name, typ, text):
+    """ Helper for :meth:`_set_from_xml`. """
+    if typ == 'string':
+        val = text.strip()
+        setattr(container, name, val)
+    else:
+        raise RuntimeError('Unsupported type %r for %s.%s'
+                           % (typ, container.get_pathname(), name))
 

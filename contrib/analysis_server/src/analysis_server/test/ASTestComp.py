@@ -30,6 +30,11 @@ class TopObj(Container):
         self.add('tof', Float(0.5, units='inch', iotype=iotype))
         self.add('toi', Int(42, iotype=iotype))
         self.add('tos', Str('Hello', iotype=iotype))
+        self.add('tofe', Enum(iotype='in', values=(2.781828, 3.14159),
+                              aliases=('e', 'pi'), desc='Float enum', units='m'))
+        self.add('toie', Enum(iotype='in', values=(9, 8, 7, 1), desc='Int enum'))
+        self.add('tose', Enum(iotype='in', values=('cold', 'hot', 'nice'),
+                              desc='Str enum'))
 
 
 class TestComponent(Component):
