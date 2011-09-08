@@ -45,13 +45,13 @@ openmdao.PropertiesEditor = function(id,model) {
     function loadTables(properties) {
         if (properties['type']) {
             nameHeader.html(properties['type']+': '+self.pathname)
-            inputs.loadTable(properties['Inputs'])
-            outputs.loadTable(properties['Outputs'])
+            inputs.loadData(properties['Inputs'])
+            outputs.loadData(properties['Outputs'])
         }
         else {
             nameHeader.html(self.pathname)
-            inputs.loadTable([])
-            outputs.loadTable([])
+            inputs.loadData([])
+            outputs.loadData([])
             alert('Error getting properties for '+self.pathname)
             debug.info(properties)
         }

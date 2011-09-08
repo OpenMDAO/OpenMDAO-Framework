@@ -23,7 +23,6 @@ openmdao.Model=function() {
 
     /** notify all listeners that something has changed (by calling all callbacks) */
     this.updateListeners = function() {
-        debug.info('Model: updating listeners:')
         for ( var i = 0; i < callbacks.length; i++ )
             if (typeof callbacks[i] == 'function')
                 callbacks[i]()

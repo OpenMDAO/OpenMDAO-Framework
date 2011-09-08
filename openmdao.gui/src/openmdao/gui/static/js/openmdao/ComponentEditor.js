@@ -10,7 +10,8 @@ openmdao.ComponentEditor = function(model,pathname) {
      ***********************************************************************/
      
     // initialize private variables
-    var self = this;
+    var self = this,
+        panes = {};
         
     model.addListener(update)
           
@@ -35,9 +36,12 @@ openmdao.ComponentEditor = function(model,pathname) {
                     tabname = name;
                 }
                 
-                var dt = jQuery('<dt id="'+self.id+'_'+name+'_tab" target="'+self.id+'_'+name+'_pane">'+tabname+'</dt>'),
-                    dd = jQuery('<dd id="'+self.id+'_'+name+'_pane"></dd>'),
-                    contentPane = jQuery('<div id="'+self.id+'_'+name+'" '+style+'></div>');
+                var contentID = self.id+'_'+name,
+                    tabID = contentID+'_tab',
+                    targetID = contentID+'_pane',                    
+                    dt = jQuery('<dt id="'+tabID+'" target="'+targetID+'">'+tabname+'</dt>'),
+                    dd = jQuery('<dd id="'+targetID+'"></dd>'),
+                    contentPane = jQuery('<div id="'+contentID+'" '+style+'></div>');
                                     
                 dl.append(dt);
                 dl.append(dd);
@@ -55,29 +59,40 @@ openmdao.ComponentEditor = function(model,pathname) {
     /** populate content pane appropriately for the content */
     function getContent(contentPane,name,val) {
         if (name == 'Inputs') {
-            new openmdao.PropertiesPane(contentPane,model,pathname,name,true)
-                .loadTable(val);
+            panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,true);
+            panes[name].loadData(val);
         }
         else if (name == 'Outputs') {
-            new openmdao.PropertiesPane(contentPane,model,pathname,name,false)
-                .loadTable(val);
+            panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,false);
+            panes[name].loadData(val);
         }
         else if (name == 'Objectives') {
-            new openmdao.ObjectivesPane(contentPane,model,pathname,name,true)
-                .loadTable(val);
+            panes[name] = new openmdao.ObjectivesPane(contentPane,model,pathname,name,true);
+            panes[name].loadData(val);
         }
         else if (name == 'Parameters') {
-            new openmdao.ParametersPane(contentPane,model,pathname,name,true)
-                .loadTable(val);
+            panes[name] = new openmdao.ParametersPane(contentPane,model,pathname,name,true);
+            panes[name].loadData(val);
         }
         else if ((name == 'EqConstraints') || (name == 'IneqConstraints')) {
-            new openmdao.ConstraintsPane(contentPane,model,pathname,name,true)
-                .loadTable(val);
+            panes[name] = new openmdao.ConstraintsPane(contentPane,model,pathname,name,true);
+            panes[name].loadData(val);
         }
         else {
-            new openmdao.PropertiesPane(contentPane,model,pathname,name,false)
-                .loadTable(val);
+            panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,false);
+            panes[name].loadData(val);
         }
+    }
+
+    function loadData(properties) {
+        jQuery.each(properties,function (name,val) {
+            if (panes[name]) {
+                panes[name].loadData(val);
+            }
+            else if (name !== 'type') {
+                debug.warn("ComponentEditor: Unexpected object",pathname,name,val)
+            }
+        })
     }
     
     /** if there is an object loaded, update it from the model */
@@ -92,10 +107,14 @@ openmdao.ComponentEditor = function(model,pathname) {
      ***********************************************************************/
     
     /** get the specified object from model, load properties into tabs */
-    this.editObject = function(path) {
-        if (self.pathname !== path)
-            self.pathname = path
-        model.getComponent(path, loadTabs,
+    this.editObject = function(path) {        
+        var callback = loadData;
+        if (self.pathname !== path) {
+            // if not already editing this object, create the tabbed panes
+            self.pathname = path;
+            callback = loadTabs;
+        }
+        model.getComponent(path, callback,
             function(jqXHR, textStatus, errorThrown) {
                 self.pathname = ''
                 alert("Error getting properties for "+self.pathname+" (status="+jqXHR.status+"): "+jqXHR.statusText)
@@ -103,11 +122,11 @@ openmdao.ComponentEditor = function(model,pathname) {
                 debug.error(jqXHR,textStatus,errorThrown)
             }
         )
-        return this
+        return this;
     }
 
     if (pathname) {
-        this.editObject(pathname)
+        this.editObject(pathname);
     }
 
 }

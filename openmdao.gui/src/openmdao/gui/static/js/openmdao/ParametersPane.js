@@ -112,7 +112,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     clrButton.click(function() { clearParameters() });
 
     /** load the table with the given properties */
-    this.loadTable = function(properties) {
+    this.loadData = function(properties) {
         if (properties) {
             parms.setData(properties)
         }

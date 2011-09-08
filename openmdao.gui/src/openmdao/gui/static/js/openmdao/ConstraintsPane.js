@@ -108,7 +108,7 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
     clrButton.click(function() { clearConstraints() });
     
     /** load the table with the given properties */
-    this.loadTable = function(properties) {
+    this.loadData = function(properties) {
         if (properties) {
             constraints.setData(properties)
         }

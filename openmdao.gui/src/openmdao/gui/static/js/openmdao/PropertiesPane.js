@@ -31,7 +31,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable) {
    }
     
     /** load the table with the given properties */
-    this.loadTable = function(properties) {
+    this.loadData = function(properties) {
         if (properties) {
             props.setData(properties)
         }
