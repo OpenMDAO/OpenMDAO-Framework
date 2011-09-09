@@ -6,7 +6,7 @@ import xml.etree.cElementTree as ElementTree
 from xml.sax.saxutils import escape
 
 from openmdao.main.api import Container
-from openmdao.lib.datatypes.api import Bool, Enum, Float, Int, Str
+from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, List, Str
 
 # Attributes to ignore.
 _IGNORE_ATTR = ('iotype',)
@@ -58,43 +58,157 @@ def _get_as_xml(container, name, xml):
             _get_as_xml(val, name, xml)
             xml.append('</member>')
         else:
-            desc = trait.desc or ''
-            desc = escape(desc.encode('string_escape'))
-
             ttype = trait.trait_type
-            if isinstance(ttype, Bool):
-                valstr = 'true' if val else 'false'
-                xml.append("""\
+            if isinstance(ttype, Array):
+                _get_array(name, val, trait, xml, True)
+            elif isinstance(ttype, List):
+                _get_array(name, val, trait, xml, False)
+            elif isinstance(ttype, Bool):
+                _get_bool(name, val, trait, xml)
+            elif isinstance(ttype, Enum):
+                _get_enum(name, val, trait, xml)
+            elif isinstance(ttype, Float):
+                _get_float(name, val, trait, xml)
+            elif isinstance(ttype, Int):
+                _get_int(name, val, trait, xml)
+            elif isinstance(ttype, Str):
+                _get_str(name, val, trait, xml)
+            else:
+                raise RuntimeError('%s.%s: unsupported type'
+                                   % (container.get_pathname(), name))
+    xml.append('</members>')
+
+
+def _get_array(name, val, trait, xml, is_array):
+    """ Helper for :meth:`_get_as_xml`. """
+    if is_array:
+        converters = {'f':float, 'i':int, 'S':str}
+        kind = val.dtype.kind
+        try:
+            typ = converters[kind]
+        except KeyError:
+            raise RuntimeError('%s.%s: unsupported dtype %r (%r)'
+                               % (container.get_pathname(), name,
+                                  val.dtype, kind))
+    else:
+        typ = str  # HACK!
+
+    if typ is float:
+        fmt = '%.16g'
+        valtyp = 'double'
+    elif typ is int:
+        fmt = '%d'
+        valtyp = 'long'
+    else:
+        fmt = '"%s"'
+        valtyp = 'string'
+
+    if is_array and len(val.shape) > 1:
+        valstr = 'bounds[%s] {%s}' % (
+                 ', '.join(['%d' % dim for dim in val.shape]),
+                 ', '.join([fmt % value for value in val.flat]))
+    else:
+        valstr = ', '.join([fmt % value for value in val])
+    if str:
+        valstr = valstr.encode('string_escape')
+
+    desc = trait.desc or ''
+    desc = escape(desc.encode('string_escape'))
+
+    if len(val):
+        if is_array and len(val.shape) > 1:
+            first = '%s' % val.flat[0]
+        else:
+            first = '%s' % val[0]
+    else:
+        first = ''
+
+    if is_array:
+        dims = ', '.join(['%d' % dim for dim in val.shape])
+        length = '%d' % val.shape[0]
+        ndims = '%d' % len(val.shape)
+    else:
+        dims = '%d' % len(val)
+        length = '%d' % len(val)
+        ndims = '1'
+
+    xml.append("""\
+<member name="%s" type="%s" access="public">%s\
+<properties>\
+<property name="description">%s</property>\
+<property name="dimensions">%s</property>\
+<property name="enumAliases"/>\
+<property name="enumValues"/>\
+<property name="first">%s</property>\
+<property name="length">%s</property>\
+<property name="lockResize">true</property>\
+<property name="numDimensions">%s</property>\
+""" % (name, valtyp, valstr, desc, dims, first, length, ndims))
+
+    if typ is not str:
+        units = trait.units or ''
+        hlb = 'false' if trait.low is None else 'true'
+        hub = 'false' if trait.high is None else 'true'
+        if typ is float:
+            low = '0.0' if trait.low is None else _float2str(trait.low)
+            high = '0.0' if trait.high is None else _float2str(trait.high)
+        else:
+            low = '0' if trait.low is None else str(trait.low)
+            high = '0' if trait.high is None else str(trait.high)
+
+        xml.append("""\
+<property name="units">%s</property>\
+<property name="hasLowerBound">%s</property>\
+<property name="lowerBound">%s</property>\
+<property name="hasUpperBound">%s</property>\
+<property name="upperBound">%s</property>\
+""" % (units, hlb, low, hub, high))
+
+    xml.append("""\
+</properties>\
+</member>""")
+
+
+def _get_bool(name, val, trait, xml):
+    """ Helper for :meth:`_get_as_xml`. """
+    valstr = 'true' if val else 'false'
+    desc = trait.desc or ''
+    desc = escape(desc.encode('string_escape'))
+
+    xml.append("""\
 <member name="%s" type="boolean" access="public">%s\
 <properties>\
 <property name="description">%s</property>\
 </properties>\
 </member>""" % (name, valstr, desc))
 
-            elif isinstance(ttype, Enum):
-                etyp = type(trait.values[0])
-                if etyp == float:
-                    valtyp = 'double'
-                    valstr = _float2str(val)
-                    values = ', '.join([_float2str(value)
-                                        for value in trait.values])
-                elif etyp == int:
-                    valtyp = 'long'
-                    valstr = str(val)
-                    values = ', '.join(['%s' % value
-                                        for value in trait.values])
-                else:
-                    valtyp = 'string'
-                    valstr = escape(val.encode('string_escape'))
-                    values = ', '.join(['"%s"' % value
-                                        for value in trait.values])
-                if trait.aliases:
-                    aliases = ', '.join(['"%s"' % alias
-                                         for alias in trait.aliases])
-                else:
-                    aliases = ''
-                units = trait.units or ''
-                xml.append("""\
+
+def _get_enum(name, val, trait, xml):
+    """ Helper for :meth:`_get_as_xml`. """
+    etyp = type(trait.values[0])
+    if etyp == float:
+        valtyp = 'double'
+        valstr = _float2str(val)
+        values = ', '.join([_float2str(value) for value in trait.values])
+    elif etyp == int:
+        valtyp = 'long'
+        valstr = str(val)
+        values = ', '.join(['%s' % value for value in trait.values])
+    else:
+        valtyp = 'string'
+        valstr = escape(val.encode('string_escape'))
+        values = ', '.join(['"%s"' % value for value in trait.values])
+
+    if trait.aliases:
+        aliases = ', '.join(['"%s"' % alias for alias in trait.aliases])
+    else:
+        aliases = ''
+
+    desc = trait.desc or ''
+    desc = escape(desc.encode('string_escape'))
+    units = trait.units or ''
+
+    xml.append("""\
 <member name="%s" type="%s" access="public">%s\
 <properties>\
 <property name="description">%s</property>\
@@ -108,14 +222,19 @@ def _get_as_xml(container, name, xml):
 </properties>\
 </member>""" % (name, valtyp, valstr, desc, units, values, aliases))
 
-            elif isinstance(ttype, Float):
-                valstr = _float2str(val)
-                units = trait.units or ''
-                hlb = 'false' if trait.low is None else 'true'
-                low = '0.0' if trait.low is None else _float2str(trait.low)
-                hub = 'false' if trait.high is None else 'true'
-                high = '0.0' if trait.high is None else _float2str(trait.high)
-                xml.append("""\
+
+def _get_float(name, val, trait, xml):
+    """ Helper for :meth:`_get_as_xml`. """
+    valstr = _float2str(val)
+    desc = trait.desc or ''
+    desc = escape(desc.encode('string_escape'))
+    units = trait.units or ''
+    hlb = 'false' if trait.low is None else 'true'
+    low = '0.0' if trait.low is None else _float2str(trait.low)
+    hub = 'false' if trait.high is None else 'true'
+    high = '0.0' if trait.high is None else _float2str(trait.high)
+
+    xml.append("""\
 <member name="%s" type="double" access="public">%s\
 <properties>\
 <property name="description">%s</property>\
@@ -129,13 +248,18 @@ def _get_as_xml(container, name, xml):
 </properties>\
 </member>""" % (name, valstr, desc, units, hlb, low, hub, high))
 
-            elif isinstance(ttype, Int):
-                valstr = str(val)
-                hlb = 'false' if trait.low is None else 'true'
-                low = '0' if trait.low is None else str(trait.low)
-                hub = 'false' if trait.high is None else 'true'
-                high = '0' if trait.high is None else str(trait.high)
-                xml.append("""\
+
+def _get_int(name, val, trait, xml):
+    """ Helper for :meth:`_get_as_xml`. """
+    valstr = str(val)
+    desc = trait.desc or ''
+    desc = escape(desc.encode('string_escape'))
+    hlb = 'false' if trait.low is None else 'true'
+    low = '0' if trait.low is None else str(trait.low)
+    hub = 'false' if trait.high is None else 'true'
+    high = '0' if trait.high is None else str(trait.high)
+
+    xml.append("""\
 <member access="public" name="%s" type="long">%s\
 <properties>\
 <property name="description">%s</property>\
@@ -149,9 +273,14 @@ def _get_as_xml(container, name, xml):
 </properties>\
 </member>""" % (name, valstr, desc, hlb, low, hub, high))
 
-            elif isinstance(ttype, Str):
-                valstr = escape(val.encode('string_escape'))
-                xml.append("""\
+
+def _get_str(name, val, trait, xml):
+    """ Helper for :meth:`_get_as_xml`. """
+    valstr = escape(val.encode('string_escape'))
+    desc = trait.desc or ''
+    desc = escape(desc.encode('string_escape'))
+
+    xml.append("""\
 <member name="%s" type="string" access="public">%s\
 <properties>\
 <property name="description">%s</property>\
@@ -160,10 +289,6 @@ def _get_as_xml(container, name, xml):
 </properties>\
 </member>""" % (name, valstr, desc))
 
-            else:
-                raise RuntimeError('%s.%s: unsupported type'
-                                   % (container.get_pathname(), name))
-    xml.append('</members>')
 
 
 def set_from_xml(container, xml):
@@ -178,69 +303,113 @@ def _set_from_xml(container, root):
     members = root.find('members')
     for member in members.findall('member'):
         name = member.attrib['name']
-        typ = member.attrib['type']
         obj = getattr(container, name)
         if isinstance(obj, Container):
             _set_from_xml(obj, member)
         else:
             trait = container.get_dyn_trait(name)
             ttype = trait.trait_type
-            if isinstance(ttype, Bool):
-                _set_bool(container, name, typ, member.text)
+            if isinstance(ttype, Array):
+                _set_array(container, name, member, True)
+            elif isinstance(ttype, List):
+                _set_array(container, name, member, False)
+            elif isinstance(ttype, Bool):
+                _set_bool(container, name, member)
             elif isinstance(ttype, Enum):
                 try:
                     i = trait.aliases.index(member.text)
                 except (AttributeError, ValueError):
                     etyp = type(trait.values[0])
                     if etyp == float:
-                        _set_float(container, name, typ, member.text)
+                        _set_float(container, name, member)
                     elif etyp == int:
-                        _set_int(container, name, typ, member.text)
+                        _set_int(container, name, member)
                     else:
-                        _set_str(container, name, typ, member.text)
+                        _set_str(container, name, member)
                 else:
                     setattr(container, name, trait.values[i])
             elif isinstance(ttype, Float):
-                _set_float(container, name, typ, member.text)
+                _set_float(container, name, member)
             elif isinstance(ttype, Int):
-                _set_int(container, name, typ, member.text)
+                _set_int(container, name, member)
             elif isinstance(ttype, Str):
-                _set_str(container, name, typ, member.text)
+                _set_str(container, name, member)
             else:
                 raise RuntimeError('Unsupported type %r for %s.%s'
-                                   % (ttype, path))
+                                   % (ttype, container.get_pathname(), name))
 
-def _set_bool(container, name, typ, text):
+
+def _set_array(container, name, member, is_array):
     """ Helper for :meth:`_set_from_xml`. """
+    if is_array:
+        converters = {'f':float, 'i':int, 'S':str}
+        val = getattr(container, name)
+        kind = val.dtype.kind
+        try:
+            dtyp = converters[kind]
+        except KeyError:
+            raise RuntimeError('Unsupported dtype %r (%r) for %s.%s'
+                               % (val.dtype, kind,
+                                  container.get_pathname(), name))
+    else:
+        dtyp = str  # HACK!
+
+    text = member.text
+    if dtyp == str:
+        text = text.decode('string_escape')
+
+    if is_array:
+        if text.startswith('bounds['):
+            dims, rbrack, rest = text[7:].partition(']')
+            dims = [int(val.strip(' "')) for val in dims.split(',')]
+            junk, lbrace, rest = rest.partition('{')
+            data, rbrace, rest = rest.partition('}')
+            value = numpy.array([dtyp(val.strip(' "'))
+                                 for val in data.split(',')]).reshape(dims)
+        else:
+            value = numpy.array([dtyp(val.strip(' "'))
+                                 for val in text.split(',')])
+    else:
+        value = [dtyp(val.strip(' "')) for val in text.split(',')]
+
+    setattr(container, name, value)
+
+
+def _set_bool(container, name, member):
+    """ Helper for :meth:`_set_from_xml`. """
+    typ = member.attrib['type']
     if typ == 'boolean':
-        val = True if text == 'true' else False
+        val = True if member.text == 'true' else False
         setattr(container, name, val)
     else:
         raise RuntimeError('Unsupported type %r for %s.%s'
                            % (typ, container.get_pathname(), name))
 
-def _set_float(container, name, typ, text):
+def _set_float(container, name, member):
     """ Helper for :meth:`_set_from_xml`. """
+    typ = member.attrib['type']
     if typ == 'double':
-        val = float(text)
+        val = float(member.text)
         setattr(container, name, val)
     else:
         raise RuntimeError('Unsupported type %r for %s.%s'
                            % (typ, container.get_pathname(), name))
 
-def _set_int(container, name, typ, text):
+def _set_int(container, name, member):
     """ Helper for :meth:`_set_from_xml`. """
+    typ = member.attrib['type']
     if typ == 'long':
-        val = int(text)
+        val = int(member.text)
         setattr(container, name, val)
     else:
         raise RuntimeError('Unsupported type %r for %s.%s'
                            % (typ, container.get_pathname(), name))
 
-def _set_str(container, name, typ, text):
+def _set_str(container, name, member):
     """ Helper for :meth:`_set_from_xml`. """
+    typ = member.attrib['type']
     if typ == 'string':
-        val = text.strip()
+        val = member.text.strip()
         setattr(container, name, val)
     else:
         raise RuntimeError('Unsupported type %r for %s.%s'

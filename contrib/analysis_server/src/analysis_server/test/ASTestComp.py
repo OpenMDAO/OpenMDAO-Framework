@@ -36,6 +36,31 @@ class TopObj(Container):
         self.add('tose', Enum(iotype='in', values=('cold', 'hot', 'nice'),
                               desc='Str enum'))
 
+        self.add('tof1d', Array(dtype=float, iotype=iotype,
+                                desc='1D float array', units='cm',
+                                default_value=[1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5],
+                                low=0, high=10))
+
+        self.add('tof2d', Array(dtype=float, iotype=iotype,
+                                desc='2D float array', units='mm',
+                                default_value=[ [1.5, 2.5, 3.5, 4.5],
+                                                [5.5, 6.5, 7.5, 8.5] ]))
+
+        self.add('tof3d', Array(dtype=float, iotype=iotype,
+                                desc='3D float array',
+                                default_value=[ [ [1.5, 2.5, 3.5],
+                                                  [4.5, 5.5, 6.5],
+                                                  [7.5, 8.5, 9.5] ],
+                                                [ [10.5, 20.5, 30.5],
+                                                  [40.5, 50.5, 60.5],
+                                                  [70.5, 80.5, 90.5] ] ]))
+
+        self.add('toi1d', Array(dtype=int, iotype=iotype, desc='1D int array',
+                                default_value=[1, 2, 3, 4, 5, 6, 7, 8, 9]))
+#
+#        self.add('tos1d', List(Str, iotype=iotype, desc='1D string array',
+#                               value=['Hello', 'from', 'TestComponent.tos1d']))
+
 
 class TestComponent(Component):
     """ Just something to test with. """
@@ -75,6 +100,16 @@ class TestComponent(Component):
         self.obj_output.tof = self.obj_input.tof
         self.obj_output.toi = self.obj_input.toi
         self.obj_output.tos = self.obj_input.tos
+
+        self.obj_output.tofe = self.obj_input.tofe
+        self.obj_output.toie = self.obj_input.toie
+        self.obj_output.tose = self.obj_input.tose
+
+        self.obj_output.tof1d = self.obj_input.tof1d
+        self.obj_output.tof2d = self.obj_input.tof2d
+        self.obj_output.tof3d = self.obj_input.tof3d
+        self.obj_output.toi1d = self.obj_input.toi1d
+#        self.obj_output.tos1d = self.obj_input.tos1d
 
         self.obj_output.subobj.sob = self.obj_input.subobj.sob
         self.obj_output.subobj.sof = self.obj_input.subobj.sof
