@@ -238,7 +238,7 @@ openmdao.ComponentFigure.prototype.getContextMenu=function(){
 // };
 
 openmdao.ComponentFigure.prototype.onDoubleClick=function(){
-    new openmdao.PopupPropertiesEditor(this.myModel,this.pathname)
+    new openmdao.ComponentEditor(this.myModel,this.pathname)
 };
 
 openmdao.ComponentFigure.prototype.onMouseEnter=function(){
