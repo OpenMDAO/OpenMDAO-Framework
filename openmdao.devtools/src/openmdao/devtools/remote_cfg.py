@@ -188,7 +188,7 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
             platform = config.get(host, 'platform')
             kw_args['debug'] = debug
             kw_args['hostname'] = host
-            py = config.get(host, 'pyversion')
+            py = config.get(host, 'py')
             if platform.startswith('win') and '.' in py:
                 # convert pythonX.Y form over to C:/PythonXY/python.exe
                 ver = py[6:]
