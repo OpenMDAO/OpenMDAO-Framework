@@ -4,16 +4,13 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.WorkflowDiagram = function(id,model) {
     openmdao.WorkflowDiagram.prototype.init.call(this,id,'Workflows',[]);
     
-    /***********************************************************************
-     *  private
-     ***********************************************************************/
     // initialize private variables
     var self = this,
         comp_figs = {},
         flow_figs = {},
         workflowID = "#"+id+"-workflow",
         workflowDiv = jQuery('<div id='+workflowID+' style="height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px">').appendTo('#'+id),
-        workflow = new draw2d.Workflow(workflowID)
+        workflow = new draw2d.Workflow(workflowID)        
         
     workflow.setBackgroundImage( "/static/images/grid_10.png", true)
         
@@ -70,32 +67,41 @@ openmdao.WorkflowDiagram = function(id,model) {
         }
     });
     
-    // ask model for an update whenever something changes
-    model.addListener(update)
-
     /** update workflow diagram */
     function updateWorkflow(json) {
         workflow.clear()
         comp_figs = {}
         flow_figs = {}
         if (Object.keys(json).length > 0) {
-            updateFigures('',json)
-            //for (fig in flow_figs) // quick & dirty way to fully contain sub-workflows
-                resizeFlowFigures()
+            updateFigures('',json,false)
+            resizeFlowFigures()
         }
     }
     
     /** expand workflow (container) figures to contain all their children */
     function resizeFlowFigures() {
-        var count,figWidth = 100,figHeight = 50
+        var figWidth = 100,figHeight = 50
         for (fig in flow_figs) {
-            var i=0, w=0, h=0,
+            var i=0, xmin=999999, xmax=0, ymin=999999, ymax=0,
                 children = flow_figs[fig].getChildren()
             for (i=0;i<children.size;i++) {
-                w = w+children.get(i).getWidth() +20
-                h = h+children.get(i).getHeight()+20
+                child = children.get(i);                
+                x = child.getAbsoluteX();
+                if (x < xmin) {
+                    xmin = x;
+                }
+                if (x > xmax) {
+                    xmax = x;
+                }
+                y = child.getAbsoluteY();
+                if (y < ymin) {
+                    ymin = y;
+                }
+                if (y > ymax) {
+                    ymax = y;
+                }                    
             }
-            flow_figs[fig].setDimension(w+20,h+20)
+            flow_figs[fig].setDimension(xmax+figWidth-xmin,ymax+figHeight-ymin)
         }
     }
     
@@ -110,56 +116,100 @@ openmdao.WorkflowDiagram = function(id,model) {
             y = count*(height+space)
         return { 'x': x, 'y': y }
     }
+
+    /** get the coordinates to place a figure */
+    function getCoords(flow,comp,horizontal) {
+        // stagger left to right, top to bottom
+        var count = Object.keys(comp_figs).length,
+            width = 100,
+            height = 50,
+            space = 20
+            x = count*(width+space),
+            y = count*(height+space)
+        return { 'x': x, 'y': y }
+    }
     
     /** update workflow by recreating figures from JSON workflow data
      *  TODO: prob just want to iterate through & update existing figures
      */
-    function updateFigures(flow_name,json) {
+    function updateFigures(flow_name,json,horizontal) {
         var path = json['pathname'],
             type = json['type'],
             drvr = json['driver'],
             flow = json['workflow'],
             asm  = openmdao.Util.getParentPath(path),
-            fig, coords
+            comp_fig, flow_fig, new_flow_name, count
         
         if (flow) {
             // add driver figure
-            fig = new openmdao.ComponentFigure(model,path,type)
-            coords = getNextCoords()
-            comp_figs[path] = fig
-            if (flow_figs[flow_name])
-                flow_figs[flow_name].addChild(fig)
-            workflow.addFigure(fig,coords['x']+20,coords['y']+20)
+            comp_fig = new openmdao.ComponentFigure(model,path,type);
+            comp_figs[path] = comp_fig;
+            
+            flow_fig = flow_figs[flow_name];
+            if (flow_fig) {
+                debug.info("flow:",flow_name,"children:",flow_fig.getChildren())
+                count = flow_fig.getChildren().size;
+                if (horizontal) {
+                    x = flow_fig.getAbsoluteX()+comp_fig.getWidth()*count*2;
+                    y = flow_fig.getAbsoluteY();
+                }
+                else {
+                    x = flow_fig.getAbsoluteX();
+                    y = flow_fig.getAbsoluteY()+comp_fig.getHeight()*count*2;
+                }                                            
+                flow_fig.addChild(comp_fig)
+            }
+            else {
+                x = 50;
+                y = 50;
+            }
+            debug.info("FLOW => flow:",flow_name,"comp:",path,"count:",count,"horiz:",horizontal,"x:",x,"y:",y)
+            workflow.addFigure(comp_fig,x,y)
 
-            // add workflow compartment figure
-            fig = new openmdao.WorkflowFigure(model,asm)
-            coords = getNextCoords()
-            workflow.addFigure(fig,coords['x'],coords['y'])
-            if (flow_figs[flow_name])
-                flow_figs[flow_name].addChild(fig)
-            flow_figs[asm] = fig
+            // add workflow compartment figure for this flow
+            new_flow_name = flow_name+'.'+path
+            flow_fig = new openmdao.WorkflowFigure(model,new_flow_name)            ;
+            workflow.addFigure(flow_fig,x+comp_fig.getWidth(),y+comp_fig.getHeight());
+            if (flow_figs[flow_name]) {
+                flow_figs[flow_name].addChild(flow_fig);
+            }            
+            flow_figs[new_flow_name] = flow_fig;
 
             jQuery.each(flow,function(idx,comp) {
-                updateFigures(asm,comp)
+                updateFigures(new_flow_name,comp,!horizontal)
             })
         }
         else if (drvr) {
             // don't add a figure for an assembly, it will be represented by it's driver
-            updateFigures(asm,drvr)
+            updateFigures(flow_name,drvr,!horizontal)
         }
         else {
             // add component figure
-            fig = new openmdao.ComponentFigure(model,path,type)
-            coords = getNextCoords()
-            comp_figs[path] = fig
-            if (flow_figs[asm]) {
-                workflow.addFigure(fig,coords['x']+20,coords['y']+20)
-                flow_figs[asm].addChild(fig)
+            comp_fig = new openmdao.ComponentFigure(model,path,type)
+            comp_figs[path] = comp_fig
+
+            flow_fig = flow_figs[flow_name];
+            if (flow_fig) {
+                count = flow_fig.getChildren().size;
+                if (horizontal) {
+                    x = flow_fig.getAbsoluteX()+comp_fig.getWidth()*count*2;
+                    y = flow_fig.getAbsoluteY();
+                }
+                else {
+                    x = flow_fig.getAbsoluteX();
+                    y = flow_fig.getAbsoluteY()+comp_fig.getHeight()*count*2;
+                }                                            
+                flow_fig.addChild(comp_fig)
             }
-            else
-                workflow.addFigure(fig,coords['x'],coords['y'])
+            else {
+                x = 50;
+                y = 50;
+            }
+            
+            debug.info("COMP => flow:",flow_name,"comp:",path,"count:",count,"horiz:",horizontal,"x:",x,"y:",y)
+
+            workflow.addFigure(comp_fig,x,y)
         }
-        
         
         /**
         jQuery.each(json['connections'],function(idx,conn) {

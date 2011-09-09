@@ -195,15 +195,16 @@ openmdao.ComponentFigure.prototype.setCanDrag=function(flag){
 openmdao.ComponentFigure.prototype.setWorkflow=function(_5019){
     draw2d.Node.prototype.setWorkflow.call(this,_5019);
     if(_5019!==null&&this.inputPort===null){
-        this.inputPort=new draw2d.InputPort();
-        this.inputPort.setWorkflow(_5019);
-        this.inputPort.setName("input");
-        this.addPort(this.inputPort,-5,this.height/2);
-        this.outputPort=new draw2d.OutputPort();
-        this.outputPort.setMaxFanOut(5);
-        this.outputPort.setWorkflow(_5019);
-        this.outputPort.setName("output");
-        this.addPort(this.outputPort,this.width+5,this.height/2);
+        // TODO: don't want ports for openmdao.Workflow, will want for Dataflow
+        // this.inputPort=new draw2d.InputPort();
+        // this.inputPort.setWorkflow(_5019);
+        // this.inputPort.setName("input");
+        // this.addPort(this.inputPort,-5,this.height/2);
+        // this.outputPort=new draw2d.OutputPort();
+        // this.outputPort.setMaxFanOut(5);
+        // this.outputPort.setWorkflow(_5019);
+        // this.outputPort.setName("output");
+        // this.addPort(this.outputPort,this.width+5,this.height/2);
     }
 };
 
