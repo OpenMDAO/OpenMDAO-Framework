@@ -105,6 +105,50 @@ openmdao.WorkflowDiagram = function(id,model) {
         }
     }
     
+    /** get the width of the flow container */
+    function getFlowWidth(flow_fig) {
+        var figWidth = 100,
+            i=0, xmin=999999, xmax=0,
+            children = flow_fig.getChildren()
+        if (children.size > 0) {
+            for (i=0;i<children.size;i++) {
+                child = children.get(i);                
+                x = child.getAbsoluteX();
+                if (x < xmin) {
+                    xmin = x;
+                }
+                if (x > xmax) {
+                    xmax = x;
+                }
+            }
+            return xmax+figWidth-xmin;
+        }
+        else
+            return 0;
+    }
+    
+    /** get the width of the flow container */
+    function getFlowHeight(flow_fig) {
+        var figHeight = 50,
+            i=0, ymin=999999, ymax=0,
+            children = flow_fig.getChildren()
+        if (children.size > 0) {
+            for (i=0;i<children.size;i++) {
+                child = children.get(i);                
+                y = child.getAbsoluteY();
+                if (y < ymin) {
+                    ymin = y;
+                }
+                if (y > ymax) {
+                    ymax = y;
+                }
+            }
+            return ymax+figHeight-ymin;
+        }
+        else
+            return 0;
+    }
+    
     /** get the coordinates of the next location to place a figure */
     function getNextCoords() {
         // stagger left to right, top to bottom
@@ -150,12 +194,14 @@ openmdao.WorkflowDiagram = function(id,model) {
                 debug.info("flow:",flow_name,"children:",flow_fig.getChildren())
                 count = flow_fig.getChildren().size;
                 if (horizontal) {
+                    //x = flow_fig.getAbsoluteX()+getFlowWidth(flow_fig);
                     x = flow_fig.getAbsoluteX()+comp_fig.getWidth()*count*2;
-                    y = flow_fig.getAbsoluteY();
+                    y = 20+flow_fig.getAbsoluteY();
                 }
                 else {
                     x = flow_fig.getAbsoluteX();
-                    y = flow_fig.getAbsoluteY()+comp_fig.getHeight()*count*2;
+                    //y = 20+flow_fig.getAbsoluteY()+getFlowHeight(flow_fig);
+                    y = 20+flow_fig.getAbsoluteY()+comp_fig.getHeight()*count*2;
                 }                                            
                 flow_fig.addChild(comp_fig)
             }
@@ -166,10 +212,10 @@ openmdao.WorkflowDiagram = function(id,model) {
             debug.info("FLOW => flow:",flow_name,"comp:",path,"count:",count,"horiz:",horizontal,"x:",x,"y:",y)
             workflow.addFigure(comp_fig,x,y)
 
-            // add workflow compartment figure for this flow
+            // add workflow compartment figure for this flow (overlap bottom right of driver figure)
             new_flow_name = flow_name+'.'+path
-            flow_fig = new openmdao.WorkflowFigure(model,new_flow_name)            ;
-            workflow.addFigure(flow_fig,x+comp_fig.getWidth(),y+comp_fig.getHeight());
+            flow_fig = new openmdao.WorkflowFigure(model,new_flow_name);
+            workflow.addFigure(flow_fig,x+comp_fig.getWidth()-20,y+comp_fig.getHeight()-10);
             if (flow_figs[flow_name]) {
                 flow_figs[flow_name].addChild(flow_fig);
             }            
@@ -190,14 +236,16 @@ openmdao.WorkflowDiagram = function(id,model) {
 
             flow_fig = flow_figs[flow_name];
             if (flow_fig) {
-                count = flow_fig.getChildren().size;
+                count = flow_fig.getChildren().size;                    
                 if (horizontal) {
+                    //x = flow_fig.getAbsoluteX()+getFlowWidth(flow_fig);
                     x = flow_fig.getAbsoluteX()+comp_fig.getWidth()*count*2;
-                    y = flow_fig.getAbsoluteY();
+                    y = 20+flow_fig.getAbsoluteY();
                 }
                 else {
                     x = flow_fig.getAbsoluteX();
-                    y = flow_fig.getAbsoluteY()+comp_fig.getHeight()*count*2;
+                    //y = 20+flow_fig.getAbsoluteY()+getFlowHeight(flow_fig);
+                    y = 20+flow_fig.getAbsoluteY()+comp_fig.getHeight()*count*2;
                 }                                            
                 flow_fig.addChild(comp_fig)
             }

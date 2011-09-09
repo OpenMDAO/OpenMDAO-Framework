@@ -2,8 +2,12 @@ openmdao.WorkflowFigure=function(myModel,pathname){
     this.myModel = myModel;
     this.pathname = pathname;
     var tok = pathname.split('.')    
-    if (tok.length > 1)
+    if (tok.length > 1) {
         this.name = tok[tok.length-1];
+        if (tok.length > 2 && this.name === 'driver') {
+            this.name = tok[tok.length-2];
+        }
+    }
     else
         this.name = pathname
     this.title = this.name
