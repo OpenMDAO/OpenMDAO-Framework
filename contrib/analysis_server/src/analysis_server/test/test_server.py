@@ -1152,7 +1152,7 @@ ASTestComp2"""
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'get comp.sub_group.f1d.lockResize'], count=3)
-        self.assertEqual(replies[-1], 'false\r\n>')
+        self.assertEqual(replies[-1], 'true\r\n>')
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'get comp.sub_group.f1d.numDimensions'], count=3)

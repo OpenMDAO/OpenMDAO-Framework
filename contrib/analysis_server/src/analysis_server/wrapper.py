@@ -839,7 +839,7 @@ class ArrayBase(BaseWrapper):
             else:
                 return '%d' % len(value)
         elif attr == 'lockResize':
-            return 'false'
+            return 'true' if self._is_array else 'false'
         elif attr == 'numDimensions':
             if self._is_array:
                 value = self._container.get(self._name)
@@ -995,8 +995,10 @@ class ListWrapper(ArrayBase):
 
     def __init__(self, container, name, ext_path, logger):
         value = container.get(name)
-# HACK!
-        typ = str
+        if value:
+            typ = type(value[0])
+        else:
+            typ = str  # HACK!
         super(ListWrapper, self).__init__(container, name, ext_path, logger,
                                           typ, is_array=False)
 

@@ -90,18 +90,20 @@ def _get_array(name, val, trait, xml, is_array):
             raise RuntimeError('%s.%s: unsupported dtype %r (%r)'
                                % (container.get_pathname(), name,
                                   val.dtype, kind))
+    elif val:
+        typ = type(val[0])
     else:
         typ = str  # HACK!
 
     if typ is float:
         fmt = '%.16g'
-        valtyp = 'double'
+        valtyp = 'double[]'
     elif typ is int:
         fmt = '%d'
-        valtyp = 'long'
+        valtyp = 'long[]'
     else:
         fmt = '"%s"'
-        valtyp = 'string'
+        valtyp = 'string[]'
 
     if is_array and len(val.shape) > 1:
         valstr = 'bounds[%s] {%s}' % (
