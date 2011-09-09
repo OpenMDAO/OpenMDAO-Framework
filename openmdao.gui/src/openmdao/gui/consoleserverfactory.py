@@ -417,12 +417,15 @@ class ConsoleServer(cmd.Cmd):
         ''' Return this server's user defined types. 
         '''
         types = []
-        g = self._globals.items()
-        for k,v in g:
-            if (type(v).__name__ == 'classobj') or str(v).startswith('<class'):
-                obj = self._globals[k]()
-                if isinstance(obj, HasTraits):
-                    types.append( ( k , 'n/a') )
+        try:
+            g = self._globals.items()
+            for k,v in g:
+                if (type(v).__name__ == 'classobj') or str(v).startswith('<class'):
+                    obj = self._globals[k]()
+                    if isinstance(obj, HasTraits):
+                        types.append( ( k , 'n/a') )
+        except Exception, err:
+            print "Error getting working types:", str(err)
         return types
 
     def load_project(self,filename):

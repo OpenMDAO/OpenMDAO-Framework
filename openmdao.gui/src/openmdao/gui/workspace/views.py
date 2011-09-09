@@ -244,8 +244,14 @@ def Types(request):
     cserver = server_mgr.console_server(request.session.session_key)
     types = cserver.get_available_types()
     types = packagedict(types)
-    types['working'] = packagedict(cserver.get_workingtypes())
-    json = jsonpickle.encode(types)
+    try:
+        types['working'] = packagedict(cserver.get_workingtypes())
+    except Exception, err:
+        print "Error adding working types:", str(err)        
+    try:
+        json = jsonpickle.encode(types)
+    except Exception, err:
+        print "Error encoding types:", str(err)        
     return HttpResponse(json,mimetype='application/json')
 
 @never_cache
