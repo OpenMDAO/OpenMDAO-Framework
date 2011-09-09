@@ -7,9 +7,9 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
         addButton = jQuery("<div>Add Objective</div>"),
         clrButton = jQuery("<div>Clear Objectives</div>"),        
         columns = [
-            {id:"expr",  name:"Expression",  field:"expr", editor:TextCellEditor},
-            {id:"scope", name:"Scope", field:"scope", editor:TextCellEditor},
-            {id:"name",  name:"Name",  field:"name", editor:TextCellEditor},
+            {id:"expr",  name:"Expression",  field:"expr",  width:180},
+            {id:"scope", name:"Scope",       field:"scope", width:80},
+            {id:"name",  name:"Name",        field:"name",  width:50},
         ],
         options = {
             asyncEditorLoading: false,

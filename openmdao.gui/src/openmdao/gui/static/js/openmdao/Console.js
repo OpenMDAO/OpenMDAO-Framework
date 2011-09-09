@@ -1,15 +1,6 @@
-/* 
-Copyright (c) 2010. All rights reserved.
-LICENSE: NASA Open Source License
-*/
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-/**
- * 
- * @version 0.0.0
- * @constructor
- */
 openmdao.Console = function(formID,commandID,historyID,model) {    
     /***********************************************************************
      *  private
@@ -21,7 +12,9 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         historyBox = history.parent(),
         menuhtml = "<ul id="+historyID+"-menu class='context-menu'>" +
                    "<li><a onclick=jQuery('#"+historyID+"').text('')>Clear</a></li>" +
-                   "</ul>"
+                   "</ul>",
+        interval = 0,  // ms
+        timer = null                   
 
     // create context menu for history
     historyBox.append(menuhtml)
@@ -53,6 +46,19 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         return false
     })
     
+    // if an interval is specified, continuously update
+    if (interval > 0) {
+        setRefresh(interval)
+    }
+
+    /** set the history to continuously update after specified ms */
+    function setRefresh(interval) {
+        self.interval = interval
+        if (timer != 'undefined')
+            clearInterval(timer)
+        timer = setInterval(update,interval)    
+    }
+        
     /** escape anything in the text that might look like HTML, etc. */
     function escapeHTML(text) {
         var result = "";
@@ -90,9 +96,5 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     
     // ask model for an update whenever something changes
     model.addListener(update)
-    
-    /***********************************************************************
-     *  privileged
-     ***********************************************************************/
  
 }

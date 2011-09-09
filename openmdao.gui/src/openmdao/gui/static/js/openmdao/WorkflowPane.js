@@ -7,7 +7,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
         addButton = jQuery("<div>Add Component</div>"),
         clrButton = jQuery("<div>Clear Workflow</div>"),        
         columns = [
-            {id:"name",  name:"Name",  field:"name", editor:TextCellEditor},
+            {id:"name",  name:"Name",  field:"name", width:140 },
         ],
         options = {
             asyncEditorLoading: false,

@@ -111,17 +111,6 @@ openmdao.WorkflowDiagram = function(id,model) {
         return { 'x': x, 'y': y }
     }
     
-    /** get the pathname of the parent component */
-    function getParentPath(path) {
-        parent_path = ''
-        if (path) {
-            var lastdot = path.lastIndexOf('.')
-            if (lastdot > 0)
-                parent_path = path.substring(0,lastdot)
-        }
-        return parent_path
-    }
-    
     /** update workflow by recreating figures from JSON workflow data
      *  TODO: prob just want to iterate through & update existing figures
      */
@@ -130,7 +119,7 @@ openmdao.WorkflowDiagram = function(id,model) {
             type = json['type'],
             drvr = json['driver'],
             flow = json['workflow'],
-            asm  = getParentPath(path),
+            asm  = openmdao.Util.getParentPath(path),
             fig, coords
         
         if (flow) {
@@ -203,10 +192,6 @@ openmdao.WorkflowDiagram = function(id,model) {
     // ask model for an update whenever something changes
     model.addListener(update)
 
-    /***********************************************************************
-     *  privileged
-     ***********************************************************************/
-        
 }
 
 /** set prototype */

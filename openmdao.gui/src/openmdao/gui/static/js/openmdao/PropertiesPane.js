@@ -5,8 +5,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable) {
     var props,
         propsDiv = jQuery("<div id='"+name+"_props' >"),
         columns = [
-            {id:"name",  name:"Name",  field:"name"},
-            {id:"value", name:"Value", field:"value", editor:TextCellEditor},
+            {id:"name",  name:"Name",  field:"name",  width:80 },
+            {id:"value", name:"Value", field:"value", width:80, editor:TextCellEditor},
         ],
         options = {
             asyncEditorLoading: false,

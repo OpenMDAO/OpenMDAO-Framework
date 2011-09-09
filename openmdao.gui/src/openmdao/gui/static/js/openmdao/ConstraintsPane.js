@@ -7,10 +7,10 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
         addButton = jQuery("<div>Add Constraint</div>"),
         clrButton = jQuery("<div>Clear Constraints</div>"),   
         columns = [
-            {id:"expr",  name:"Expression",  field:"expr", editor:TextCellEditor},
-            {id:"scaler", name:"Scaler", field:"scaler", editor:TextCellEditor},
-            {id:"adder", name:"Adder", field:"adder", editor:TextCellEditor},
-            {id:"name",  name:"Name",  field:"name", editor:TextCellEditor},
+            {id:"expr",   name:"Expression",  field:"expr",    width:148},
+            {id:"scaler", name:"Scaler",      field:"scaler",  width:60},
+            {id:"adder",  name:"Adder",       field:"adder",   width:50},
+            {id:"name",   name:"Name",        field:"name",    width:50},
         ],
         options = {
             asyncEditorLoading: false,

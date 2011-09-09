@@ -34,7 +34,7 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     this.titlebar.style.borderLeft="5px solid transparent";
     this.titlebar.style.whiteSpace="nowrap";
     this.titlebar.style.textAlign="left";
-    this.titlebar.style.backgroundImage="url(window_toolbar.png)";
+    //this.titlebar.style.backgroundImage="url(window_toolbar.png)";
     this.textNode=document.createTextNode(this.title);
     this.titlebar.appendChild(this.textNode);
     item.appendChild(this.titlebar);
