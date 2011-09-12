@@ -6,6 +6,7 @@ openmdao.WorkflowDiagram = function(id,model) {
     
     // initialize private variables
     var self = this,
+        pathname = 'driver',
         comp_figs = {},
         flow_figs = {},
         workflowID = "#"+id+"-workflow",
@@ -279,7 +280,7 @@ openmdao.WorkflowDiagram = function(id,model) {
     
     /** update the schematic with data from the model */
     function update() {
-        model.getWorkflow(updateWorkflow, function(jqXHR, textStatus, errorThrown) {
+        model.getWorkflow(self.pathname, updateWorkflow, function(jqXHR, textStatus, errorThrown) {
                 self.pathname = ''
                 alert("Error getting workflow (status="+jqXHR.status+"): "+jqXHR.statusText)
                 openmdao.Util.htmlWindow(jqXHR.responseText,'Error getting workflow',600,400)
@@ -289,7 +290,15 @@ openmdao.WorkflowDiagram = function(id,model) {
     
     // ask model for an update whenever something changes
     model.addListener(update)
-
+    
+    /** set the pathname of the object for which to display the workflow */
+    this.showWorkflow = function(path) {        
+        if (self.pathname !== path) {
+            // if not already editing this object, create the tabbed panes
+            self.pathname = path;
+            update();
+        }
+    }
 }
 
 /** set prototype */

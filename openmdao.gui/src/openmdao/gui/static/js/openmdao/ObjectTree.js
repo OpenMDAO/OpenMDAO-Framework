@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
+openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn) {
     var menu =  [
                     {   "text": "Component", 
                         "items": [
@@ -109,11 +109,21 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
         var menu = {}
         
         // TODO: implement stuff
+        // TODO: need to know object interfaces to properly do context menu
         menu.properties = {
             "label"  : 'Properties',
             "action" :  function(node) { 
                             new openmdao.PopupPropertiesEditor(model,path)
                         }
+        };
+        if (path === 'driver' || /.driver$/.test(path)) {
+            menu.set_top = {
+                "label"  : 'Show Workflow',
+                "action" :  function(node) { 
+                                debug.info('path:',path);
+                                workflow_fn(path);
+                            }
+            }
         };
         if (isAssembly) {
             menu.set_top = {
@@ -128,6 +138,12 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
             "action" :  function(node) { 
                             // TODO: need to show list of workflows and allow user to pick one
                             model.issueCommand('top.driver.workflow.add("'+path+'")');
+                        }
+        };
+        menu.run = {
+            "label"  : 'Run this Component',
+            "action" :  function(node) { 
+                            model.issueCommand('top.'+path+'.run()');
                         }
         };
         menu.toggle = {

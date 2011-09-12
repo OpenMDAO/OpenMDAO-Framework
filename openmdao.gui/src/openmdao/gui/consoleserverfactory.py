@@ -306,14 +306,14 @@ class ConsoleServer(cmd.Cmd):
                 })
         return ret
 
-    def get_workflow(self):
+    def get_workflow(self,name='driver'):
+        flow = {}
         if self.top:
             try:
-                return jsonpickle.encode(self._get_workflow(self.top.driver))
+                flow = self._get_workflow(self.top.get(name))
             except Exception, err:
                 print "Error getting workflow:", str(err)
-        else:
-            return {}
+        return jsonpickle.encode(flow)
 
     def _get_attributes(self,comp):
         ''' get attributes of object 

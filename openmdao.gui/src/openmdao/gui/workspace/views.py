@@ -289,9 +289,9 @@ def Upload(request):
                               context_instance=RequestContext(request))
 
 @never_cache
-def Workflow(request):
+def Workflow(request,name):
     cserver = server_mgr.console_server(request.session.session_key)
-    json = cserver.get_workflow()
+    json = cserver.get_workflow(name)
     return HttpResponse(json,mimetype='application/json')
     
 @never_cache

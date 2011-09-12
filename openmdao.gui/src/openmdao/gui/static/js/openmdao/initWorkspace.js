@@ -31,15 +31,15 @@ jQuery(function() {
         var model = openmdao.model;
         
         var select_fn = new openmdao.PropertiesEditor("propertieseditor",model).editObject,
-            dblclk_fn = function(model,path) { new openmdao.ComponentEditor(model,path) }
-        new openmdao.ObjectTree("otree",model,select_fn,dblclk_fn)
+            dblclk_fn = function(model,path) { new openmdao.ComponentEditor(model,path) },
+            workflow_fn = new openmdao.WorkflowDiagram("workflow",model).showWorkflow
+        new openmdao.ObjectTree("otree",model,select_fn,dblclk_fn,workflow_fn)
         
-        var edit_fn = new openmdao.CodeEditor("code",model).editFile,
-            view_fn = function(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }
-        new openmdao.FileTree("ftree",model,edit_fn,view_fn)
+        var code_fn = new openmdao.CodeEditor("code",model).editFile,            
+            geom_fn = function(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }
+        new openmdao.FileTree("ftree",model,code_fn,geom_fn)
         
-        new openmdao.Palette("palette",model)
-        new openmdao.WorkflowDiagram("workflow",model)
+        new openmdao.Palette("palette",model)        
         new openmdao.Console("cmdform","command","history",model);
         
         // initialize views
