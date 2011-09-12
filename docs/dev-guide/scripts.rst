@@ -1,4 +1,3 @@
-
 Remote Testing Tools
 ====================
 
@@ -27,7 +26,7 @@ EC2 Specific Setup
 
 To run the scripts on EC2 images or non-running instances, you must create
 a ``~/.boto``  config file with the appropriate id and secret key.  You may
-also specify other information in the ``.boto file``, e.g., debug level.  An
+also specify other information in the ``.boto`` file, e.g., debug level.  An
 example of a ``.boto`` file is shown below.
 
 
@@ -52,13 +51,12 @@ SSH keys
 
 You'll need an identity file to execute operations like starting and
 stopping instances on EC2 using the *boto* package. For OpenMDAO
-we use an identity file called ``lovejoy.pem`` for all of our EC2 images
+we use an identity file called ``lovejoykey.pem`` for all of our EC2 images
 and instances. The identity file should be placed in the ``~/.ssh`` directory.
 
-To actually connect to a given host via SSH, you'll need to take
-your personal public key for the host you're connecting from and put it
-in the ``authorized_keys`` file on the destination host.  This is true whether
-the host is an EC2 host or not.
+For hosts not on EC2, the ``authorized_keys`` file on that host must contain
+either your personal public key for the host you're connecting from, or
+the public key corresponding to ``lovejoykey.pem``.
 
 
 Scripts
