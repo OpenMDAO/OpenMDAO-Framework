@@ -283,7 +283,7 @@ The directory structure of your repository should look like this:
     The directory containing source to be packaged into distributions that can
     be released separately from OpenMDAO. These distributions may or may not depend upon
     OpenMDAO. Distributions that have not yet been approved to be part of
-    ``openmdao.lib`` can live here -- as long as their license is compatible with NOSA. No
+    ``openmdao.lib`` can live here -- as long as their license is compatible with Apache V2.0. No
     proprietary code or GPL code should be placed in the OpenMDAO-Framework repository.
 
 ``devenv``
