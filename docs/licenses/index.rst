@@ -4,8 +4,8 @@
 Licenses
 ========
 
-OpenMDAO is released under the NASA Open Source Agreement (:term:`NOSA`) Version 1.3. For a description of this
-license, see the NOSA Open Source Initiative (:term:`OSI`) license `page <http://www.opensource.org/licenses/nasa1.3.php>`_.
+OpenMDAO is being released under the Apache License, Version 2.0, which has been approved by the Open Source Initiative
+:term:`OSI`). The text of this license can be found `here <http://www.apache.org/licenses/LICENSE-2.0>`_.
 
 The following table provides a list of the distributions that are currently being used by
 the OpenMDAO framework as well as the version, type of license, and a link for obtaining
