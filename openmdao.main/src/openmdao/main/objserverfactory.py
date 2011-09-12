@@ -260,7 +260,7 @@ class ObjServerFactory(Factory):
         else:
             obj = server
 
-        self._logger.debug('create returning %s at %r', obj, obj._token.address)
+        self._logger.debug('create returning %r at %r', obj, obj._token.address)
         return obj
 
 

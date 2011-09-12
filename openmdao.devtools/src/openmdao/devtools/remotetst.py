@@ -18,7 +18,8 @@ from openmdao.devtools.ec2 import run_on_ec2
 import paramiko.util
 
 def _remote_build_and_test(fname=None, pyversion='python', keep=False, 
-                          branch=None, testargs=(), hostname='', **kwargs):
+                          branch=None, testargs=(), hostname='', 
+                          **kwargs):
     if fname is None:
         raise RuntimeError("_remote_build_and_test: missing arg 'fname'")
     
@@ -49,7 +50,6 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
     else:
         remoteargs = ['-f', fname]
         
-    remoteargs.append('--pyversion=%s' % pyversion)
     if branch:
         remoteargs.append('--branch=%s' % branch)
         
@@ -58,7 +58,9 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
         remoteargs.extend(testargs)
         
     try:
-        result = push_and_run(pushfiles, remotedir=remotedir, args=remoteargs)
+        result = push_and_run(pushfiles, runner=pyversion,
+                              remotedir=remotedir, 
+                              args=remoteargs)
         return result.return_code
     finally:
         if not keep:
@@ -108,17 +110,19 @@ def test_branch(argv=None):
     else:
         cleanup_tar = False
         
-    fname = os.path.abspath(os.path.expanduser(options.fname))
+    fname = options.fname
+    if not (fname.startswith('http') or fname.startswith('git:') or fname.startswith('git@')):
+        fname = os.path.abspath(os.path.expanduser(options.fname))
     
     if fname.endswith('.tar.gz') or fname.endswith('.tar'):
         if not os.path.isfile(fname):
             print "can't find file '%s'" % fname
             sys.exit(-1)
-    elif fname.endswith('.git'):
+    elif fname.endswith('.git') or (fname.startswith('http') and os.path.splitext(fname)[1]==''):
         pass
     else:
         parser.print_help()
-        print "\nfilename must end in '.tar.gz', '.tar', or '.git'"
+        print "\nfilename '%s' must specify a tar file or git repository" % fname
         sys.exit(-1)
         
     funct_kwargs = { 'keep': options.keep,
