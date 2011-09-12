@@ -351,7 +351,6 @@ class ConsoleServer(cmd.Cmd):
             objs = comp.list_coupling_vars()
             for indep,dep in objs:
                 attr = {}
-                print " ===> indep",indep,"dep:",dep
                 attr['independent'] = indep
                 attr['dependent'] = dep
                 couples.append(attr)
