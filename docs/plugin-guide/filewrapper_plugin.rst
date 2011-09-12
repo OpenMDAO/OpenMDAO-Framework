@@ -519,7 +519,7 @@ one of the community-developed engines, such as mako_ or django_.
 
 .. _mako: http://www.makotemplates.org/
 
-.. _django: http://docs.djangoproject.com/en/dev/topics/templates/
+.. _django: https://docs.djangoproject.com/en/dev/topics/templates/
 
 .. todo:: Include some examples with one of the templating engines.
 

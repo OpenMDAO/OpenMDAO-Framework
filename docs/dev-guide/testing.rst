@@ -8,7 +8,7 @@ Testing
 
 By default, your top level ``devenv/bin`` directory will contain a script
 called ``openmdao_test`` that uses a Python package called `nose
-<http://somethingaboutorange.com/mrl/projects/nose/0.11.2>`_ to run all of the unit
+<http://readthedocs.org/docs/nose/en/latest/>`_ to run all of the unit
 tests for any package that you specify. For example, to run the full set
 of openmdao unit tests, type:
 
@@ -127,7 +127,7 @@ have to install it in your openmdao environment like this:
 
    easy_install coverage
 
-
+.. _Adding-New-Tests:
 
 Adding New Tests
 ----------------

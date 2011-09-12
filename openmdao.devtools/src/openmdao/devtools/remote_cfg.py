@@ -185,8 +185,15 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
             proc_args = [host, config, conn, funct, options.outdir]
             kw_args = funct_kwargs.copy()
             debug = config.getboolean(host, 'debug')
+            platform = config.get(host, 'platform')
             kw_args['debug'] = debug
             kw_args['hostname'] = host
+            py = config.get(host, 'py')
+            if platform.startswith('win') and '.' in py:
+                # convert pythonX.Y form over to C:/PythonXY/python.exe
+                ver = py[6:]
+                py = 'C:/Python%s/python.exe' % ver.replace('.','')
+            kw_args['pyversion'] = py
             p = Process(target=runner,
                         name=host,
                         args=proc_args,

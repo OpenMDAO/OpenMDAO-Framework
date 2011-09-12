@@ -255,10 +255,14 @@ def is_private(path):
             return False  # No way to know.
 
         # Find the SIDs for user and system.
-        user, domain, type = \
-            win32security.LookupAccountName('', win32api.GetUserName())
-        system, domain, type = \
-            win32security.LookupAccountName('', 'System')
+        username = win32api.GetUserName()
+
+        # Map Cygwin 'root' to 'Administrator'. Typically these are intended
+        # to be identical, but /etc/passwd might configure them differently.
+        if username == 'root':
+            username = 'Administrator'
+        user, domain, type = win32security.LookupAccountName('', username)
+        system, domain, type = win32security.LookupAccountName('', 'System')
 
         # Find the DACL part of the Security Descriptor for the file
         sd = win32security.GetFileSecurity(path,
@@ -295,10 +299,14 @@ def make_private(path):
             raise ImportError('No pywin32')
 
         # Find the SIDs for user and system.
-        user, domain, type = \
-            win32security.LookupAccountName('', win32api.GetUserName())
-        system, domain, type = \
-            win32security.LookupAccountName('', 'System')
+        username = win32api.GetUserName()
+
+        # Map Cygwin 'root' to 'Administrator'. Typically these are intended
+        # to be identical, but /etc/passwd might configure them differently.
+        if username == 'root':
+            username = 'Administrator'
+        user, domain, type = win32security.LookupAccountName('', username)
+        system, domain, type = win32security.LookupAccountName('', 'System')
 
         # Find the DACL part of the Security Descriptor for the file
         sd = win32security.GetFileSecurity(path,

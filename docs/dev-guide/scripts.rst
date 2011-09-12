@@ -1,4 +1,3 @@
-
 Remote Testing Tools
 ====================
 
@@ -12,14 +11,14 @@ General Setup
 Information about remote hosts is contained in a config file.  An example
 of such a file is ``config/testhosts.cfg`` in the 
 OpenMDAO-Framework repository.  This file should be copied to
-``~/.openmdao/testhosts.cfg`` and modified to contain the hosts or ec2 images
+``~/.openmdao/testhosts.cfg`` and modified to contain the hosts or EC2 images
 you intend to test on.  The scripts look for this file in ``~/.openmdao``
 by default.  You can specify a different config file on the command line using
 the ``-c`` argument.
 
 Aside from the [DEFAULT] section, the file has one section per 
 host or EC2 image.  The section name is used as a short alias for that host 
-and is used with the --host=<section_name> arg in the testing scripts.
+and is used with the ``--host=<section_name>`` arg in the testing scripts.
 
 
 EC2 Specific Setup
@@ -27,7 +26,7 @@ EC2 Specific Setup
 
 To run the scripts on EC2 images or non-running instances, you must create
 a ``~/.boto``  config file with the appropriate id and secret key.  You may
-also specify other information in the .boto file, e.g., debug level.  An
+also specify other information in the ``.boto`` file, e.g., debug level.  An
 example of a ``.boto`` file is shown below.
 
 
@@ -51,30 +50,28 @@ SSH keys
 ~~~~~~~~
 
 You'll need an identity file to execute operations like starting and
-stopping instances on EC2 using the *boto* package. For openmdao
-we use an identity file called ``lovejoy.pem`` for all of our EC2 images
+stopping instances on EC2 using the *boto* package. For OpenMDAO
+we use an identity file called ``lovejoykey.pem`` for all of our EC2 images
 and instances. The identity file should be placed in the ``~/.ssh`` directory.
 
-In order to actually connect to a given host via SSH, you'll need to take
-your personal public key for the host your're connecting from and put it
-in the authorized_keys file on the destination host.  This is true whether
-the host is an EC2 host or not.
+For hosts not on EC2, the ``authorized_keys`` file on that host must contain
+either your personal public key for the host you're connecting from, or
+the public key corresponding to ``lovejoykey.pem``.
 
 
 Scripts
 -------
 
 The following section describes each script in detail. All scripts accept the
-**-h** and the **--help** command line options which will display all of their
+``-h`` and the ``--help`` command line options which will display all of their
 allowed arguments.
 
 
 test_branch
 ~~~~~~~~~~~
 
-The *test_branch* script is used to test a branch using *openmdao_test*
-run on a group of remote hosts. Running it with
-a **-h** option shows the following:
+The ``test_branch`` script is used to test a branch running ``openmdao_test`` 
+on a group of remote hosts. Running it with a ``-h`` option will display the following:
 
 ::
 
@@ -93,27 +90,26 @@ a **-h** option shows the following:
                       temporary build directory. If testing on EC2, stop 
                       the instance instead of terminating it. 
        -f FNAME, --file=FNAME
-                      Pathname of a tarfile or URL of a git repo. 
+                      Pathname of a tarfile or URL of a Git repo. 
                       Defaults to the current repo.
        -b BRANCH, --branch=BRANCH
-                      If file is a git repo, supply branch name here
+                      If file is a Git repo, supply branch name here
 
 
 The tests run concurrently and write their outputs to 
-<outdir>/<host_config_name>/run.out where *outdir* defaults to ``host_results``
-and *host_config_name* is the section name for that host in the config file.
+``<outdir>/<host_config_name>/run.out`` where ``outdir`` defaults to ``host_results``,
+and ``host_config_name`` is the section name for that host in the config file.
 
-The --host arg can be used multiple times in order to specify more than one
-host.
+The ``--host`` arg can be used multiple times to specify more than one host.
 
-The script can test the current (committed) branch of a git repository, 
-a tarred repository, or a specific branch of a specified local or remote git 
-repository.  If a git repository is specified rather than a tar file, then
-the branch must also be specified.  If no **-f** is supplied, the current
+The script can test the current (committed) branch of a Git repository, 
+a tarred repository, or a specific branch of a specified local or remote Git 
+repository.  If a Git repository is specified rather than a tar file, then
+the branch must also be specified. If no ``-f`` is supplied, the current
 branch of the current repository is used.
 
-If a **--** arg is supplied, any args after that are passed to openmdao_test
-on the remote host.  Adding a **-x** arg after the **--** arg, for example, 
+If a ``--`` arg is supplied, any args after that are passed to openmdao_test
+on the remote host.  Adding a ``-x`` arg after the ``--`` arg, for example, 
 would cause the test to end as soon as any test on the remote host failed.
 Adding the name of a specific module to test can also be a big time saver
 when debugging a specific test failure.
@@ -122,10 +118,10 @@ when debugging a specific test failure.
 test_release
 ~~~~~~~~~~~~
 
-The test_release script is used to test a release using *openmdao_test*
-run on a group of remote hosts.  It can also be used to test an existing 
-production release on a specific host. Running it with a **-h** option 
-shows the following:
+The ``test_release`` script is used to test a release by running ``openmdao_test``
+on a group of remote hosts.  It can also be used to test an existing 
+production release on a specific host. Running it with a ``-h`` option 
+will display the following:
 
 
 ::
@@ -148,9 +144,9 @@ shows the following:
                         URL or pathname of a go-openmdao.py file or pathname
                         of a release dir
 
-The **-f** argument is used to specify either the ``go-openmdao.py`` file that 
-builds the release environment, or the path to a directory that was built 
-using the *make_release* script.
+The ``-f`` argument is used to specify either the ``go-openmdao.py`` file that 
+builds the release environment or the path to a directory that was built 
+using the ``make_release`` script.
 
 
 Release Building and Publishing
@@ -164,10 +160,10 @@ easier.
 Release Creation
 ----------------
 
-The *make_release* script is used to build the required distribution tar
+The ``make_release`` script is used to build the required distribution tar
 files for all of the OpenMDAO packages. It also builds the html version
-of the docs and the go-openmdao.py bootstrapping installer file.  
-Running *make_release* with a **-h** option shows the following:
+of the docs and the ``go-openmdao.py`` bootstrapping installer file.  
+Running ``make_release`` with a ``-h`` option will display the following:
 
 ::
 
@@ -192,18 +188,18 @@ Running *make_release* with a **-h** option shows the following:
 
 
 The script places all of the tar files and docs in the destination directory
-specified with the **-d** option. The version number is specified with **-v**
-and must be later than any version already existing on openmdao.org. OpenMDAO
+specified with the ``-d`` option. The version number is specified with ``-v``
+and must be later than any version already existing on ``openmdao.org``. OpenMDAO
 releases require binary distributions on Windows for certain packages, so
-*make_release* will fail if you don't specify a Windows host using the
-**--host** option. The **-t** and **-n** options should only be used for
-testing purposes.
+``make_release`` will fail if you don't specify a Windows host using the
+``--host`` option. The ``-t`` and ``-n`` options should be used for
+testing purposes only.
 
 
 Release Testing
 ~~~~~~~~~~~~~~~
 
-See the previous description of *test_release*.
+See the previous description of ``test_release``.
 
 
 Making an Official Release
@@ -211,21 +207,21 @@ Making an Official Release
 
 Once all of the distribution packages have been made and the release has 
 been tested on all platforms of interest, it's time to make it official
-by pushing it up to the distribution area on openmdao.org using the
-*push_release* script as follows:
+by pushing it up to the distribution area on ``openmdao.org`` using the
+``push_release`` script as follows:
 
 ::
 
     push_relase <release_directory> http://openmdao.org
 
-where *release_directory* is the destination directory you supplied earlier
-when you called *make_release*.  The *push_release* script takes the files
+where ``release_directory`` is the destination directory you supplied earlier
+when you called ``make_release``.  The ``push_release`` script takes the files
 in the release directory and places them in the proper locations on the
-server, i.e. the docs and the go-openmdao.py file go in the *downloads* 
+server, i.e., the docs and the ``go-openmdao.py`` file go in the *downloads* 
 area and the distribution packages go in the *dists* area.  The second
-argument to *push_release* can be the URL of a different server or even
+argument to ``push_release`` can be the URL of a different server or even
 a local directory path if you need to debug or test the process outside
-of the production environment.  This is actually what *test_release* does
+of the production environment.  This is actually what ``test_release`` does
 when you supply it with a release directory.
 
-The last step is to update the repository on github...
+The last step is to update the repository on GitHub ...

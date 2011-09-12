@@ -112,7 +112,10 @@ class Array(TraitArray):
         vtype = type( value )
         msg = "Variable '%s' must be %s, but a %s of %s (%s) was specified." % \
                                (name, info, wtype, wvalue, vtype)
-        obj.raise_exception(msg, ValueError)
+        try:
+            obj.raise_exception(msg, ValueError)
+        except AttributeError:
+            raise ValueError(msg)
 
     def get_val_wrapper(self, value):
         """Return an AttrWrapper object.  Its value attribute
