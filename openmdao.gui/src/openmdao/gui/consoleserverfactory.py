@@ -249,7 +249,7 @@ class ConsoleServer(cmd.Cmd):
         comps = {}
         if self.top:
             comps = self._get_components(self.top)
-        return comps
+        return jsonpickle.encode(comps)
 
     def _get_dataflow(self,asm):
         ''' get the list of components and connections between them
@@ -309,7 +309,7 @@ class ConsoleServer(cmd.Cmd):
     def get_workflow(self):
         if self.top:
             try:
-                return self._get_workflow(self.top.driver)
+                return jsonpickle.encode(self._get_workflow(self.top.driver))
             except Exception, err:
                 print "Error getting workflow:", str(err)
         else:
@@ -346,6 +346,17 @@ class ConsoleServer(cmd.Cmd):
         if has_interface(comp,IDriver):
             attrs['Workflow'] = comp.workflow.get_names()
         
+        if has_interface(comp,IHasCouplingVars):
+            couples = []
+            objs = comp.list_coupling_vars()
+            for indep,dep in objs:
+                attr = {}
+                print " ===> indep",indep,"dep:",dep
+                attr['independent'] = indep
+                attr['dependent'] = dep
+                couples.append(attr)
+            attrs['CouplingVars'] = couples
+            
         if has_interface(comp,IHasObjectives):
             objectives = []
             objs = comp.get_objectives()
@@ -406,12 +417,12 @@ class ConsoleServer(cmd.Cmd):
             if self.top and comp:
                 attr = self._get_attributes(comp)
                 attr['type'] = type(comp).__name__
-            return attr
+            return jsonpickle.encode(attr)
         except Exception, err:
             print "Error getting attributes of",name,":", str(err)
     
     def get_available_types(self):
-        return get_available_types()
+        return packagedict(get_available_types())
         
     def get_workingtypes(self):
         ''' Return this server's user defined types. 
@@ -426,7 +437,7 @@ class ConsoleServer(cmd.Cmd):
                         types.append( ( k , 'n/a') )
         except Exception, err:
             print "Error getting working types:", str(err)
-        return types
+        return packagedict(types)
 
     def load_project(self,filename):
         print 'loading project from:',filename

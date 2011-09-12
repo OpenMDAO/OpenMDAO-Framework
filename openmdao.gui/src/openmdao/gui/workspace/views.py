@@ -117,14 +117,13 @@ def Component(request,name):
             print "*** print_exception:"
             traceback.print_exception(exc_type, exc_value, exc_traceback,file=sys.stdout)
             print "*** print_tb:"
-            traceback.print_tb(exc_traceback, limit=100, file=sys.stdout)
-        json = jsonpickle.encode(attr)
-        return HttpResponse(json,mimetype='application/json')
+            traceback.print_tb(exc_traceback, limit=100, file=sys.stdout)        
+        return HttpResponse(attr,mimetype='application/json')
 
 @never_cache
 def Components(request):
     cserver = server_mgr.console_server(request.session.session_key)
-    json = jsonpickle.encode(cserver.get_components())
+    json = cserver.get_components()
     return HttpResponse(json,mimetype='application/json')
 
 @never_cache
@@ -264,16 +263,11 @@ def Types(request):
     '''
     cserver = server_mgr.console_server(request.session.session_key)
     types = cserver.get_available_types()
-    types = packagedict(types)
     try:
-        types['working'] = packagedict(cserver.get_workingtypes())
+        types['working'] = cserver.get_workingtypes()
     except Exception, err:
         print "Error adding working types:", str(err)        
-    try:
-        json = jsonpickle.encode(types)
-    except Exception, err:
-        print "Error encoding types:", str(err)        
-    return HttpResponse(json,mimetype='application/json')
+    return HttpResponse(jsonpickle.encode(types),mimetype='application/json')
 
 @never_cache
 @csrf_exempt
@@ -297,7 +291,7 @@ def Upload(request):
 @never_cache
 def Workflow(request):
     cserver = server_mgr.console_server(request.session.session_key)
-    json = jsonpickle.encode(cserver.get_workflow())
+    json = cserver.get_workflow()
     return HttpResponse(json,mimetype='application/json')
     
 @never_cache

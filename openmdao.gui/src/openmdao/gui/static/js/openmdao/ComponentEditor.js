@@ -73,6 +73,10 @@ openmdao.ComponentEditor = function(model,pathname) {
             panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,false);
             panes[name].loadData(val);
         }
+        else if (name == 'CouplingVars') {
+            panes[name] = new openmdao.CouplingVarsPane(contentPane,model,pathname,name,true);
+            panes[name].loadData(val);
+        }
         else if (name == 'Objectives') {
             panes[name] = new openmdao.ObjectivesPane(contentPane,model,pathname,name,true);
             panes[name].loadData(val);

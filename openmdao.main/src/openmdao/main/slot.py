@@ -25,7 +25,7 @@ class Slot(Variable):
     supported.
     """
     
-    def __init__(self, klass = None, allow_none = True, factory = None, 
+    def __init__(self, klass = object, allow_none = True, factory = None, 
                  args = None, kw = None, **metadata):
         try:
             iszopeiface = issubclass(klass, zope.interface.Interface)
