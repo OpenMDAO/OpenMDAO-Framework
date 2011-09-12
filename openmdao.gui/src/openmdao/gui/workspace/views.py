@@ -115,7 +115,7 @@ def Component(request,name):
             print 'Exception calling get_attributes on',name
             print '-'*60
             print "*** print_exception:"
-            traceback.print_exception(exc_type, exc_value, exc_traceback,                          file=sys.stdout)
+            traceback.print_exception(exc_type, exc_value, exc_traceback,file=sys.stdout)
             print "*** print_tb:"
             traceback.print_tb(exc_traceback, limit=100, file=sys.stdout)
         json = jsonpickle.encode(attr)
@@ -235,7 +235,28 @@ def Project(request):
         cserver = server_mgr.console_server(request.session.session_key)        
         cserver.load_project(MEDIA_ROOT+'/'+request.GET['filename'])
         return HttpResponseSeeOther(reverse('workspace.views.Workspace'))
-    
+
+@never_cache
+@csrf_exempt
+@login_required()
+def Top(request):
+    ''' GET:  hmmm...
+        POST: set top to the named assembly
+    '''
+    if request.method=='POST':
+        cserver = server_mgr.console_server(request.session.session_key)
+        if 'name' in request.POST:
+            name = request.POST['name']
+            try:
+                cserver.set_top(name)
+                print 'Top is now '+name
+                return HttpResponse('Top is now '+name)
+            except Exception,e:
+                print 'Error settign top:',e
+                return HttpResponse('Error setting top: '+e)
+    else:
+        return HttpResponseSeeOther(reverse('workspace.views.Workspace'))
+        
 @never_cache
 @login_required()
 def Types(request):

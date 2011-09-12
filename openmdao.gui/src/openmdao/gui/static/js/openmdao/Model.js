@@ -79,6 +79,17 @@ openmdao.Model=function() {
         })
     }
     
+    /** set top assembly */
+    this.setTop = function(name, errorHandler) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'top',
+            data: { 'name': name },            
+            success: self.updateListeners,
+            error: errorHandler
+        })
+    }
+    
     /** get a JSON representation of the model */
     this.getJSON = function(callback, errorHandler) {
         if (typeof callback != 'function')

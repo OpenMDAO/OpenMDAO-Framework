@@ -191,7 +191,7 @@ openmdao.WorkflowDiagram = function(id,model) {
             
             flow_fig = flow_figs[flow_name];
             if (flow_fig) {
-                debug.info("flow:",flow_name,"children:",flow_fig.getChildren())
+                //debug.info("flow:",flow_name,"children:",flow_fig.getChildren())
                 count = flow_fig.getChildren().size;
                 if (horizontal) {
                     //x = flow_fig.getAbsoluteX()+getFlowWidth(flow_fig);
@@ -209,7 +209,7 @@ openmdao.WorkflowDiagram = function(id,model) {
                 x = 50;
                 y = 50;
             }
-            debug.info("FLOW => flow:",flow_name,"comp:",path,"count:",count,"horiz:",horizontal,"x:",x,"y:",y)
+            //debug.info("FLOW => flow:",flow_name,"comp:",path,"count:",count,"horiz:",horizontal,"x:",x,"y:",y)
             workflow.addFigure(comp_fig,x,y)
 
             // add workflow compartment figure for this flow (overlap bottom right of driver figure)
@@ -254,7 +254,7 @@ openmdao.WorkflowDiagram = function(id,model) {
                 y = 50;
             }
             
-            debug.info("COMP => flow:",flow_name,"comp:",path,"count:",count,"horiz:",horizontal,"x:",x,"y:",y)
+            //debug.info("COMP => flow:",flow_name,"comp:",path,"count:",count,"horiz:",horizontal,"x:",x,"y:",y)
 
             workflow.addFigure(comp_fig,x,y)
         }

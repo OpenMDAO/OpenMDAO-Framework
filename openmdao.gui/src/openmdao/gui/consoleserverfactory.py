@@ -455,6 +455,13 @@ class ConsoleServer(cmd.Cmd):
         else:
             print 'No Project to save'
 
+    def set_top(self,name):
+        print 'setting top to:',name
+        self._globals['top'] = self.top.get(name)
+        self.top = self._globals['top']
+        self.proj.top = self.top
+        set_as_top(self.top)
+
     def add_component(self,name,classname):
         ''' add a new component of the given type to the top assembly. 
         '''

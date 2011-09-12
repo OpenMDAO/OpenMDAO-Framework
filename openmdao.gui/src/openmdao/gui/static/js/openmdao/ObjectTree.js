@@ -93,13 +93,15 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
     /** get a context menu for the specified node */
     function contextMenu(node) {
         // first let's see what was clicked on
+        var isAssembly = false;
         if (node.is('.jstree-leaf')) {
-            debug.log('ObjectTree.contextMenu: clicked on leaf node')
-            debug.log(node)
+            debug.log('ObjectTree.contextMenu: clicked on leaf node');
+            debug.log(node);
         }
         else {
-            debug.log('ObjectTree.contextMenu: clicked on non-leaf node')
-            debug.log(node)
+            debug.log('ObjectTree.contextMenu: clicked on non-leaf node');
+            debug.log(node);
+            isAssembly = true;
         }
         var path = node.attr('path')
         
@@ -112,26 +114,34 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn) {
             "action" :  function(node) { 
                             new openmdao.PopupPropertiesEditor(model,path)
                         }
-        }
+        };
+        if (isAssembly) {
+            menu.set_top = {
+                "label"  : 'Set as Top',
+                "action" :  function(node) { 
+                                model.setTop(path)
+                            }
+            };
+        };
         menu.add_to_workflow = {
             "label"  : 'Add to Workflow',
             "action" :  function(node) { 
                             // TODO: need to show list of workflows and allow user to pick one
-                            model.issueCommand('top.driver.workflow.add("'+path+'")')
+                            model.issueCommand('top.driver.workflow.add("'+path+'")');
                         }
-        }
+        };
         menu.toggle = {
             "label"  : 'Toggle Underscores',
             "action" :  function(node) { 
                             if (filterChars.length == 0)
-                                filterChars = '_'
+                                filterChars = '_';
                             else
-                                filterChars = ''
-                            model.getJSON(updateTree)
+                                filterChars = '';
+                            model.getJSON(updateTree);
                         }
-        }
+        };
         
-        return menu
+        return menu;
     }
     
     /** update the tree, with data from the model  */
