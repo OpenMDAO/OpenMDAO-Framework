@@ -92,7 +92,7 @@ class Driver(Component):
         except Exception as err:
             self.raise_exception(str(err), type(err))
 
-    def iteration_set(self,recurse=True):
+    def iteration_set(self):
         """Return a set of all Components in our workflow(s), and 
         recursively in any workflow in any Driver in our workflow(s).
         """
@@ -102,7 +102,7 @@ class Driver(Component):
                 self.workflow.add(compname)
         for child in self.workflow.get_components():
             allcomps.add(child)
-            if recurse and has_interface(child, IDriver):
+            if has_interface(child, IDriver):
                 allcomps.update(child.iteration_set())
         return allcomps
         

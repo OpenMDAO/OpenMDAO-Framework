@@ -290,7 +290,7 @@ class ConsoleServer(cmd.Cmd):
         ret['pathname'] = drvr.get_pathname()
         ret['type'] = type(drvr).__module__+'.'+type(drvr).__name__ 
         ret['workflow'] = []
-        for comp in drvr.iteration_set(recurse=False):
+        for comp in drvr.workflow:
             if isinstance(comp,Assembly) and comp.driver:
                 ret['workflow'].append({ 
                     'pathname': comp.get_pathname(),
