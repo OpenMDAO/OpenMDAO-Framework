@@ -5,6 +5,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
     var objectives,
         objectivesDiv = jQuery("<div id='"+name+"_objectives' >"),
         addButton = jQuery("<div>Add Component</div>"),
+        opnButton = jQuery("<div>Open Workflow</div>"),
         clrButton = jQuery("<div>Clear Workflow</div>"),        
         columns = [
             {id:"name",  name:"Name",  field:"name", width:140 },
@@ -21,6 +22,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
     var table = jQuery('<table width="100%">'),
         row = jQuery('<tr>')
                 .append(jQuery('<td style="text-align:left">').append(addButton))
+                .append(jQuery('<td style="text-align:center">').append(opnButton))
                 .append(jQuery('<td style="text-align:right">').append(clrButton));
     table.append(row);
     elm.append(table);
@@ -51,7 +53,6 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
             
             if (path.indexOf(parentPath) == 0) {
                 path = path.substr(parentPath.length+1)
-                debug.info('path',path)
             }
             if (path) {
                 addComponent(path);
@@ -97,8 +98,16 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
         cmd = "top."+pathname+".workflow.clear();"
         model.issueCommand(cmd);        
     }
+    
+    /** add a new objective */
+    function openWorkflow() {
+        var id = pathname.replace(/\./g,'-');
+        new openmdao.WorkflowDiagram(id,model,pathname).showWorkflow(pathname);
+    };
+   
      
     addButton.click(function() { promptForComponent(addComponent) });
+    opnButton.click(function() { openWorkflow() });
     clrButton.click(function() { clearWorkflow() });
 
     /** load the table with the given properties */

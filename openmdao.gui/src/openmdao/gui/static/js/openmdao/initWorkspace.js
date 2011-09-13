@@ -32,7 +32,7 @@ jQuery(function() {
         
         var select_fn = new openmdao.PropertiesEditor("propertieseditor",model).editObject,
             dblclk_fn = function(model,path) { new openmdao.ComponentEditor(model,path) },
-            workflow_fn = new openmdao.WorkflowDiagram("workflow",model).showWorkflow
+            workflow_fn = new openmdao.WorkflowDiagram("workflow",model,'driver').showWorkflow
         new openmdao.ObjectTree("otree",model,select_fn,dblclk_fn,workflow_fn)
         
         var code_fn = new openmdao.CodeEditor("code",model).editFile,            

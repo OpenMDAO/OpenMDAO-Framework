@@ -82,3 +82,10 @@ openmdao.BasePane.prototype.popup = function (title) {
         height: 'auto'
     })
 }
+
+openmdao.BasePane.prototype.setTitle = function (title) {
+    if (title) {
+        this.title = title
+        this.elm.dialog({'title':title});
+    }
+}

@@ -1,12 +1,11 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.WorkflowDiagram = function(id,model) {
-    openmdao.WorkflowDiagram.prototype.init.call(this,id,'Workflows',[]);
+openmdao.WorkflowDiagram = function(id,model,pathname) {
+    openmdao.WorkflowDiagram.prototype.init.call(this,id,'Workflow: '+pathname,[]);
     
     // initialize private variables
     var self = this,
-        pathname = 'driver',
         comp_figs = {},
         flow_figs = {},
         workflowID = "#"+id+"-workflow",
@@ -296,6 +295,7 @@ openmdao.WorkflowDiagram = function(id,model) {
         if (self.pathname !== path) {
             // if not already editing this object, create the tabbed panes
             self.pathname = path;
+            self.setTitle('Workflow: '+path);
             update();
         }
     }
