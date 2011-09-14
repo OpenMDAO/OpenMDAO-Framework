@@ -85,7 +85,9 @@ class TestNastranMultipleModels(unittest.TestCase):
         if os.path.isfile(bdf_filepath):
             self.model.nastran_filename = bdf_filepath
         else:
-            raise SkipTest( "BDF file, '%s' not found" % bdf_filepath )
+            raise SkipTest( "Nastran BDF file, '%s' not found. Some BDF "
+                            "files are not included in OpenMDAO "
+                            "distribution as they are proprietary" % bdf_filepath )
 
     def test_bar3_static(self):
 
