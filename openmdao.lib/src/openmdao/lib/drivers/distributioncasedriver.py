@@ -23,8 +23,9 @@ from zope.interface import implements, Attribute, Interface
 
 
 class IDistributionGenerator(Interface):
-    """An iterator that returns lists of values that are mapped
-    from design variables by a Driver.
+    """An iterator that returns lists of input
+    values that are mapped from a single design
+    point via some point distribution
     """
     
     num_parameters = Attribute("number of parameters")
