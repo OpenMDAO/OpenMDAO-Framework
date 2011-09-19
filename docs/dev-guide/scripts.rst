@@ -16,7 +16,7 @@ you intend to test on.  The scripts look for this file in ``~/.openmdao``
 by default.  You can specify a different config file on the command line using
 the ``-c`` argument.
 
-Aside from the [DEFAULT] section, the file has one section per 
+Aside from the ``[DEFAULT]`` section, the file has one section per 
 host or EC2 image.  The section name is used as a short alias for that host 
 and is used with the ``--host=<section_name>`` arg in the testing scripts.
 
@@ -63,7 +63,7 @@ Scripts
 -------
 
 The following section describes each script in detail. All scripts accept the
-``-h`` and the ``--help`` command line options which will display all of their
+``-h`` and the ``--help`` command-line options which will display all of their
 allowed arguments.
 
 
@@ -161,7 +161,7 @@ Release Creation
 ----------------
 
 The ``make_release`` script is used to build the required distribution tar
-files for all of the OpenMDAO packages. It also builds the html version
+files for all of the OpenMDAO packages. It also builds the HTML version
 of the docs and the ``go-openmdao.py`` bootstrapping installer file.  
 Running ``make_release`` with a ``-h`` option will display the following:
 
@@ -224,4 +224,5 @@ a local directory path if you need to debug or test the process outside
 of the production environment.  This is actually what ``test_release`` does
 when you supply it with a release directory.
 
-The last step is to update the repository on GitHub ...
+The last step is to update the repository on GitHub. . . .
+
