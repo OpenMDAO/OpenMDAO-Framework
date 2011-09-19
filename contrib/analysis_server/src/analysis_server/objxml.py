@@ -2,6 +2,7 @@
 Support for XML object data messaging between ModelCenter and AnalysisServer.
 """
 
+import numpy
 import xml.etree.cElementTree as ElementTree
 from xml.sax.saxutils import escape
 
@@ -10,6 +11,7 @@ from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, List, Str
 
 # Attributes to ignore.
 _IGNORE_ATTR = ('iotype',)
+
 
 # Map from class to class name.
 _CLASS_MAP = {}
