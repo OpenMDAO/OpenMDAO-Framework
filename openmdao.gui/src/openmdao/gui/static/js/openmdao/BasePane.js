@@ -86,6 +86,6 @@ openmdao.BasePane.prototype.popup = function (title) {
 openmdao.BasePane.prototype.setTitle = function (title) {
     if (title) {
         this.title = title
-        this.elm.dialog({'title':title});
+        this.elm.dialog('option', 'title', title);
     }
 }
