@@ -131,7 +131,7 @@ class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
    
-    def __init__(self, doc=None, iotype=None):
+    def __init__(self, doc=None):
         super(Container, self).__init__()
         
         self._managers = {}  # Object manager for remote access by authkey.
@@ -399,10 +399,11 @@ class Container(HasTraits):
             super(Container, self).add_trait(name, trait)
             return
         
-        self._cached_traits_ = None
         #FIXME: saving our own list of added traits shouldn't be necessary...
         self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
+        if self._cached_traits_ is not None:
+            self._cached_traits_[name] = self.trait(name)
         
         # if it's an input trait, register a callback to be called whenever it's changed
         if trait.iotype == 'in':
@@ -412,15 +413,19 @@ class Container(HasTraits):
         """Overrides HasTraits definition of remove_trait in order to
         keep track of dynamically added traits for serialization.
         """
-        self._cached_traits_ = None
-        # this just forces the regeneration (lazily) of the lists of
-        # inputs, outputs, and containers
-        self._trait_added_changed(name)
+        ## this just forces the regeneration (lazily) of the lists of
+        ## inputs, outputs, and containers
+        #self._trait_added_changed(name)
         try:
             del self._added_traits[name]
         except KeyError:
             pass
+        try:
+            del self._cached_traits_[name]
+        except (KeyError, TypeError):
+            pass
         
+        # remove the callback if it's an input trait
         trait = self.get_trait(name)
         if trait and trait.iotype == 'in':
             self.on_trait_change(self._input_trait_modified, name, remove=True)
@@ -512,9 +517,6 @@ class Container(HasTraits):
         if obj == self:
             self.raise_exception('cannot make an object a child of itself',
                                  RuntimeError)
-            
-        self._cached_traits_ = None # force regen of _cached_traits_
-
         if is_instance(obj, Container):
             if isinstance(obj, OpenMDAO_Proxy):
                 obj.parent = self._get_proxy(obj)
@@ -525,6 +527,10 @@ class Container(HasTraits):
                 self.remove(name)
             obj.name = name
             setattr(self, name, obj)
+            if self._cached_traits_ is None:
+                self.get_trait(name)
+            else:
+                self._cached_traits_[name] = self.trait(name)
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
@@ -579,12 +585,9 @@ class Container(HasTraits):
                                  name, NameError)
         trait = self.get_trait(name)
         if trait is not None:
+            obj = getattr(self, name)
             # for Slot traits, set their value to None but don't remove
             # the trait
-            obj = getattr(self, name)
-            if obj is not None and not is_instance(obj, Container):
-                self.raise_exception('attribute %s is not a Container' % name,
-                                     RuntimeError)
             if trait.is_trait_type(Slot):
                 try:
                     setattr(self, name, None)

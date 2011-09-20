@@ -1,22 +1,22 @@
 
 import unittest
 
-from openmdao.main.api import Container, Component, Assembly, set_as_top
+from openmdao.main.api import Container, Component, Assembly, VariableTree, set_as_top
 from openmdao.lib.datatypes.api import Float, Slot
 
-class DumbContainer2(Container):
+class DumbVT2(VariableTree):
     def __init__(self, *args, **kwargs):
-        super(DumbContainer2, self).__init__(*args, **kwargs)
+        super(DumbVT2, self).__init__(*args, **kwargs)
         iotype = kwargs.get('iotype', None)
         self.add('x', Float(1., iotype=iotype))
         self.add('y', Float(2., iotype=iotype))
         self.add('z', Float(3., iotype=iotype))
     
-class DumbContainer(Container):
+class DumbVT(VariableTree):
     def __init__(self, *args, **kwargs):
-        super(DumbContainer, self).__init__(*args, **kwargs)
+        super(DumbVT, self).__init__(*args, **kwargs)
         iotype = kwargs.get('iotype', None)
-        self.add('cont', DumbContainer2(iotype=iotype))
+        self.add('cont', DumbVT2(iotype=iotype))
         self.add('v1', Float(1., iotype=iotype))
         self.add('v2', Float(2., iotype=iotype))
         self.add('v3', Float(3., iotype=iotype))
@@ -24,14 +24,14 @@ class DumbContainer(Container):
     
 
 class SimpleComp(Component):
-    cont_in = Slot(DumbContainer, iotype='in')
-    cont_out = Slot(DumbContainer, iotype='out')
+    cont_in = Slot(DumbVT, iotype='in')
+    cont_out = Slot(DumbVT, iotype='out')
     mult = Float(1., iotype='in')
     
     def __init__(self, *args, **kwargs):
         super(SimpleComp, self).__init__(*args, **kwargs)
-        self.add('cont_in', DumbContainer(iotype='in'))
-        self.add('cont_out', DumbContainer(iotype='out'))
+        self.add('cont_in', DumbVT(iotype='in'))
+        self.add('cont_out', DumbVT(iotype='out'))
     
     def execute(self):
         for name in ['v1', 'v2', 'v3']:
