@@ -412,40 +412,6 @@ class Container(HasTraits):
         
         super(Container, self).remove_trait(name)
             
-    # call this if any trait having 'iotype' metadata of 'in' is changed
-    def _input_trait_modified(self, obj, name, old, new):
-        self._input_check(name, old)
-        self._call_execute = True
-        self._input_updated(name)
-            
-    def _input_check(self, name, old):
-        """This raises an exception if the specified input is attached
-        to a source.
-        """
-        if self._depgraph.get_source(name):
-            # bypass the callback here and set it back to the old value
-            self._trait_change_notify(False)
-            try:
-                setattr(self, name, old)
-            finally:
-                self._trait_change_notify(True)
-            self.raise_exception(
-                "'%s' is already connected to source '%s' and "
-                "cannot be directly set"%
-                (name, self._depgraph.get_source(name)), RuntimeError)
-            
-    def _input_nocheck(self, name, old):
-        """This method is substituted for _input_check to avoid source
-        checking during a set() call when we've already verified the source.
-        """
-        pass
-    
-    def _input_updated(self, name):
-        """This just exists so inherited classes can add behavior when
-        inputs are set.
-        """
-        pass
-
     @rbac(('owner', 'user'))
     def get_wrapped_attr(self, name):
         """If the variable can return an AttrWrapper, then this
@@ -803,6 +769,9 @@ class Container(HasTraits):
                 "set by source '%s'" %
                 (path,source,src), RuntimeError)
 
+    def get_iotype(self, name):
+        return self.get_trait(name).iotype
+        
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
         """Set the value of the Variable specified by the given path, which
@@ -843,38 +812,39 @@ class Container(HasTraits):
                 src = 'parent.'+src
             obj.set(restofpath, value, index, src=src, force=force)
         else:
-            trait = self.get_trait(path)
-            if trait:
-                if trait.iotype == 'in': # setting an input, so have to check source
-                    if not force:
-                        self._check_source(path, src)
-                    if index is None:
-                        # bypass input source checking
-                        chk = self._input_check
-                        self._input_check = self._input_nocheck
-                        try:
-                            setattr(self, path, value)
-                        finally:
-                            self._input_check = chk
-                        # Note: This was done to make foo.bar = 3 behave the
-                        # same as foo.set('bar', 3).
-                        # Without this, the output of the comp was
-                        # always invalidated when you call set_parameters.
-                        # This meant that component was always executed
-                        # even when the inputs were unchanged.
-                        # _call_execute is set in the on-trait-changed
-                        # callback, so it's a good test for whether the
-                        # value changed.
-                        if hasattr(self, "_call_execute") and self._call_execute:
-                            self._input_updated(path)
-                    else:  # array index specified
-                        self._index_set(path, value, index)
-                elif index:  # array index specified for output
-                    self._index_set(path, value, index)
-                else: # output
-                    setattr(self, path, value)
-            else:
+            try:
+                iotype = self.get_iotype(path)
+            except Exception:
                 return self._set_failed(path, value, index, src, force)
+                
+            if iotype == 'in': # setting an input, so have to check source
+                if not force:
+                    self._check_source(path, src)
+                if index is None:
+                    # bypass input source checking
+                    chk = self._input_check
+                    self._input_check = self._input_nocheck
+                    try:
+                        setattr(self, path, value)
+                    finally:
+                        self._input_check = chk
+                    # Note: This was done to make foo.bar = 3 behave the
+                    # same as foo.set('bar', 3).
+                    # Without this, the output of the comp was
+                    # always invalidated when you call set_parameters.
+                    # This meant that component was always executed
+                    # even when the inputs were unchanged.
+                    # _call_execute is set in the on-trait-changed
+                    # callback, so it's a good test for whether the
+                    # value changed.
+                    if hasattr(self, "_call_execute") and self._call_execute:
+                        self._input_updated(path)
+                else:  # array index specified
+                    self._index_set(path, value, index)
+            elif index:  # array index specified for output
+                self._index_set(path, value, index)
+            else: # output
+                setattr(self, path, value)
 
     def _process_index_entry(self, obj, idx):
         """Return a new object based on a starting object and some operation
@@ -951,6 +921,28 @@ class Container(HasTraits):
             self._call_execute = True
             self._input_updated(name)
             
+    def _input_check(self, name, old):
+        """This raises an exception if the specified input is attached
+        to a source.
+        """
+        if self._depgraph.get_source(name):
+            # bypass the callback here and set it back to the old value
+            self._trait_change_notify(False)
+            try:
+                setattr(self, name, old)
+            finally:
+                self._trait_change_notify(True)
+            self.raise_exception(
+                "'%s' is already connected to source '%s' and "
+                "cannot be directly set"%
+                (name, self._depgraph.get_source(name)), RuntimeError)
+            
+    def _input_nocheck(self, name, old):
+        """This method is substituted for _input_check to avoid source
+        checking during a set() call when we've already verified the source.
+        """
+        pass
+    
     def save_to_egg(self, name, version, py_dir=None, src_dir=None,
                     src_files=None, child_objs=None, dst_dir=None,
                     observer=None, need_requirements=True):
