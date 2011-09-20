@@ -23,7 +23,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint apparently doesn't understand namespace packages...
 # pylint: disable-msg=E0611,F0401
 
-import zope.interface
+from zope.interface import Interface, implements
 
 from enthought.traits.api import HasTraits, Missing, Undefined, \
                                  push_exception_handler, TraitType, CTrait
@@ -43,7 +43,7 @@ from openmdao.main.rbac import rbac
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
-from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, obj_has_interface
+from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
 from openmdao.main.expreval import INDEX,ATTR,CALL,SLICE
 
 _copydict = {
@@ -131,6 +131,8 @@ class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
    
+    implements(IContainer)
+    
     def __init__(self, doc=None):
         super(Container, self).__init__()
         
@@ -943,6 +945,10 @@ class Container(HasTraits):
         """
         pass
     
+    def _add_path(self, msg):
+        """Adds our pathname to the beginning of the given message"""
+        return "%s: %s" % (self.get_pathname(), msg)
+        
     def save_to_egg(self, name, version, py_dir=None, src_dir=None,
                     src_files=None, child_objs=None, dst_dir=None,
                     observer=None, need_requirements=True):
@@ -1172,9 +1178,11 @@ class Container(HasTraits):
         else:
             trait = self.get_trait(cname)
             if trait is not None:
-                if iotype is not None and trait.iotype != iotype:
-                    self.raise_exception('%s must be an %s variable' % 
-                                         (pathname, _iodict[iotype]),
+                if iotype is not None:
+                    t_iotype = self.get_iotype(cname)
+                    if t_iotype != iotype:
+                        self.raise_exception('%s must be an %s variable' % 
+                                             (pathname, _iodict[iotype]),
                                          RuntimeError)
                 return trait
             elif trait is None and self.contains(cname):
@@ -1253,7 +1261,7 @@ def _get_entry_group(obj):
         ]
 
     for cls, group in _get_entry_group.group_map:
-        if issubclass(cls, zope.interface.Interface):
+        if issubclass(cls, Interface):
             if cls.providedBy(obj):
                 return group
         else:

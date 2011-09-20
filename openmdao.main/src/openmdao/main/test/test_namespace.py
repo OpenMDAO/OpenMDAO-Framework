@@ -7,21 +7,17 @@ from openmdao.lib.datatypes.api import Float, Slot
 class DumbVT2(VariableTree):
     def __init__(self, *args, **kwargs):
         super(DumbVT2, self).__init__(*args, **kwargs)
-        iotype = kwargs.get('iotype', None)
-        self.add('x', Float(1., iotype=iotype))
-        self.add('y', Float(2., iotype=iotype))
-        self.add('z', Float(3., iotype=iotype))
+        self.add('x', Float(1.))
+        self.add('y', Float(2.))
+        self.add('z', Float(3.))
     
 class DumbVT(VariableTree):
     def __init__(self, *args, **kwargs):
         super(DumbVT, self).__init__(*args, **kwargs)
-        iotype = kwargs.get('iotype', None)
-        self.add('cont', DumbVT2(iotype=iotype))
-        self.add('v1', Float(1., iotype=iotype))
-        self.add('v2', Float(2., iotype=iotype))
-        self.add('v3', Float(3., iotype=iotype))
-    
-    
+        self.add('cont', DumbVT2())
+        self.add('v1', Float(1.))
+        self.add('v2', Float(2.))
+        self.add('v3', Float(3.))
 
 class SimpleComp(Component):
     cont_in = Slot(DumbVT, iotype='in')
