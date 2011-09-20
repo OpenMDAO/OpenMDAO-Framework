@@ -116,6 +116,11 @@ class Component (Container):
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
+        # register callbacks for all of our 'in' traits
+        for name,trait in self.class_traits().items():
+            if trait.iotype == 'in':
+                self.on_trait_change(self._input_trait_modified, name)
+
         # contains validity flag for each io Trait (inputs are valid since they're not connected yet,
         # and outputs are invalid)
         self._valid_dict = dict([(name,t.iotype=='in') for name,t in self.class_traits().items() if t.iotype])
@@ -180,6 +185,15 @@ class Component (Container):
         state['_connected_outputs'] = None
         
         return state
+
+    def __setstate__(self, state):
+        super(Component, self).__setstate__(state)
+        
+        # make sure all input callbacks are in place.  If callback is
+        # already there, this will have no effect. 
+        for name, trait in self._alltraits().items():
+            if trait.iotype == 'in':
+                self.on_trait_change(self._input_trait_modified, name)
 
     def check_config (self):
         """Verify that this component is fully configured to execute.
@@ -438,6 +452,11 @@ class Component (Container):
         added.
         """
         super(Component, self).add_trait(name, trait)
+        
+        # if it's an input trait, register a callback to be called whenever it's changed
+        if trait.iotype == 'in':
+            self.on_trait_change(self._input_trait_modified, name)
+            
         self.config_changed()
         if name not in self._valid_dict:
             if trait.iotype:
@@ -451,6 +470,11 @@ class Component (Container):
         removed.
         """
         trait = self.get_trait(name)
+        
+        # remove the callback if it's an input trait
+        if trait and trait.iotype == 'in':
+            self.on_trait_change(self._input_trait_modified, name, remove=True)
+
         super(Component, self).remove_trait(name)
         self.config_changed()
 

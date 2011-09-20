@@ -160,11 +160,6 @@ class Container(HasTraits):
         for name, obj in self.items():
             if isinstance(obj, FileRef):
                 setattr(self, name, obj.copy(owner=self))
-                
-        # register callbacks for all of our 'in' traits
-        for name,trait in self.class_traits().items():
-            if trait.iotype == 'in':
-                self.on_trait_change(self._input_trait_modified, name)
 
     @property
     def parent(self):
@@ -371,12 +366,6 @@ class Container(HasTraits):
                     self.add_trait(name, trait)
                     setattr(self, name, val)
 
-        # make sure all input callbacks are in place.  If callback is
-        # already there, this will have no effect. 
-        for name, trait in self._alltraits().items():
-            if trait.iotype == 'in':
-                self.on_trait_change(self._input_trait_modified, name)
-            
         # after unpickling, implicitly defined traits disappear, so we have to
         # recreate them by assigning them to themselves.       
         #TODO: I'm probably missing something. There has to be a better way to
@@ -405,10 +394,6 @@ class Container(HasTraits):
         if self._cached_traits_ is not None:
             self._cached_traits_[name] = self.trait(name)
         
-        # if it's an input trait, register a callback to be called whenever it's changed
-        if trait.iotype == 'in':
-            self.on_trait_change(self._input_trait_modified, name)
-        
     def remove_trait(self, name):
         """Overrides HasTraits definition of remove_trait in order to
         keep track of dynamically added traits for serialization.
@@ -425,11 +410,6 @@ class Container(HasTraits):
         except (KeyError, TypeError):
             pass
         
-        # remove the callback if it's an input trait
-        trait = self.get_trait(name)
-        if trait and trait.iotype == 'in':
-            self.on_trait_change(self._input_trait_modified, name, remove=True)
-
         super(Container, self).remove_trait(name)
             
     # call this if any trait having 'iotype' metadata of 'in' is changed
