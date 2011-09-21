@@ -234,6 +234,15 @@ openmdao.Util = {
                 parent_path = path.substring(0,lastdot)
         }
         return parent_path
-    }    
+    },
    
+    /** get the name from the pathname */
+    getName: function(pathname) {
+        var tok = pathname.split('.'),
+            name = pathname;        
+        if (tok.length > 1) {
+            name = tok[tok.length-1];
+        }
+        return name;
+    }
 }

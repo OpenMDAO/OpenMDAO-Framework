@@ -27,6 +27,7 @@ from openmdao.main.project import *
 
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import *
+from zope.interface import implementedBy
 
 from mdao_util import *
 
@@ -232,15 +233,22 @@ class ConsoleServer(cmd.Cmd):
         ''' return current state as JSON 
         '''
         return jsonpickle.encode(self._globals)
-        
+
     def _get_components(self,cont):
-        comps = {}
+        comps = []
         for n,v in cont.items():
-            if isinstance(v, HasTraits):
-                if isinstance(v,Component):
-                    comps[n] = self._get_components(v)
-                else:
-                    comps[n] = v
+            if isinstance(v,Component):
+                comp = {}            
+                comp['pathname'] = v.get_pathname()
+                comp['class'] = str(v.__class__.__name__)
+                inames = []
+                for klass in list(implementedBy(v.__class__)):
+                    inames.append(klass.__name__)
+                comp['interfaces'] = inames
+                children = self._get_components(v)
+                if len(children) > 0:
+                    comp['children'] = children
+                comps.append(comp)
         return comps
         
     def get_components(self):

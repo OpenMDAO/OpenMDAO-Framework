@@ -39,21 +39,25 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn) {
     
     /** convert model.json to structure required for jstree */
     function convertJSON(json, path) {
-        var data = []
-        jQuery.each(json, function(name,item) {
-            //debug.info(name,item)
-            var showObj = filterChars.indexOf(name[0])<0 
-                        && name.indexOf('py/')<0 
+        var data = [];
+            
+        jQuery.each(json, function(idx,item) {
+            var pathname   = item['pathname'],
+                klass      = item['class'],
+                interfaces = item['interfaces'],
+                name = openmdao.Util.getName(pathname);
+            var showObj = filterChars.indexOf(name[0])<0;
             if (showObj) {
-                var pathname = path.length>0 ? path+'.'+name : name,
-                    node = { 'data': name }
-                    node['attr'] = { 
-                         'class' : 'obj',
-                         'path'  : pathname,
-                         'title' : name
-                    }
-                    node['children'] = convertJSON(item,pathname)
-                //debug.info(node)
+                var node = { 'data': name };
+                node['attr'] = { 
+                     'class' : klass,
+                     'path'  : pathname,
+                     'title' : klass+': '+name,
+                     'interfaces' : interfaces
+                };
+                if (item['children']) {
+                    node['children'] = convertJSON(item['children'],pathname);
+                };
                 data.push(node)
             }
         })
@@ -103,7 +107,8 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn) {
             debug.log(node);
             isAssembly = true;
         }
-        var path = node.attr('path')
+        var path = node.attr('path'),
+            interfaces = node.attr('interfaces');
         
         // now create the menu
         var menu = {}
@@ -116,7 +121,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn) {
                             new openmdao.PopupPropertiesEditor(model,path)
                         }
         };
-        if (path === 'driver' || /.driver$/.test(path)) {
+        if (jQuery.inArray('IDriver',interfaces)) {
             menu.set_top = {
                 "label"  : 'Show Workflow',
                 "action" :  function(node) { 
