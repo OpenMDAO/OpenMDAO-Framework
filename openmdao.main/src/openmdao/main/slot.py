@@ -78,6 +78,9 @@ class Slot(Variable):
                     obj.raise_exception("%s must be an instance of class '%s'" %
                                         (name, self._instance.klass.__name__), 
                                         TypeError)
+                    
+        # Containers must know their place within the hierarchy, so set their
+        # parent here
         if self._is_container:
             if value.parent is not obj:
                 value.parent = obj

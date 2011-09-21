@@ -4,38 +4,42 @@ import unittest
 from openmdao.main.api import Container, Component, Assembly, VariableTree, set_as_top
 from openmdao.lib.datatypes.api import Float, Slot
 
+class DumbVT3(VariableTree):
+    def __init__(self):
+        super(DumbVT3, self).__init__()
+        self.add('a', Float(1., units='ft'))
+        self.add('b', Float(12., units='inch'))
+        
 class DumbVT2(VariableTree):
-    def __init__(self, *args, **kwargs):
-        super(DumbVT2, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(DumbVT2, self).__init__()
         self.add('x', Float(1.))
         self.add('y', Float(2.))
-        self.add('z', Float(3.))
+        self.add('vt3', DumbVT3())
     
 class DumbVT(VariableTree):
-    def __init__(self, *args, **kwargs):
-        super(DumbVT, self).__init__(*args, **kwargs)
-        self.add('cont', DumbVT2())
+    def __init__(self):
+        super(DumbVT, self).__init__()
+        self.add('vt2', DumbVT2())
         self.add('v1', Float(1.))
         self.add('v2', Float(2.))
-        self.add('v3', Float(3.))
 
 class SimpleComp(Component):
     cont_in = Slot(DumbVT, iotype='in')
     cont_out = Slot(DumbVT, iotype='out')
-    mult = Float(1., iotype='in')
     
     def __init__(self, *args, **kwargs):
         super(SimpleComp, self).__init__(*args, **kwargs)
-        self.add('cont_in', DumbVT(iotype='in'))
-        self.add('cont_out', DumbVT(iotype='out'))
+        self.add('cont_in', DumbVT())
+        self.add('cont_out', DumbVT())
     
     def execute(self):
-        for name in ['v1', 'v2', 'v3']:
-            setattr(self.cont_out, name, 
-                    self.mult*getattr(self.cont_in, name))
-        for name in ['x', 'y', 'z']:
-            setattr(self.cont_out.cont, name, 
-                    self.mult*getattr(self.cont_in.cont, name))
+        self.cont_out.v1 = self.cont_in.v1 + 1.0
+        self.cont_out.v2 = self.cont_in.v2 + 1.0
+        self.cont_out.vt2.x = self.cont_in.vt2.x + 1.0
+        self.cont_out.vt2.y = self.cont_in.vt2.y + 1.0
+        self.cont_out.vt2.vt3.a = self.cont_in.vt2.vt3.a
+        self.cont_out.vt2.vt3.b = self.cont_in.vt2.vt3.b
 
 class NamespaceTestCase(unittest.TestCase):
 
@@ -50,21 +54,22 @@ class NamespaceTestCase(unittest.TestCase):
             #cont_in         /------->cont_in
                 #v1          |           v1
                 #v2          |           v2
-                #v3          |           v3
-                #cont        |           cont
+                #vt2         |           vt2
                     #x       |               x
                     #y       |               y
-                    #z       |               z
+                    #vt3     |               vt3
+                       #a    |                  a
+                       #b    |                  b
             #cont_out--------/        cont_out
                 #v1                      v1
                 #v2                      v2
-                #v3                      v3
-                #cont                    cont
+                #vt2                     vt2
                     #x                       x
                     #y                       y
-                    #z                       z
+                    #vt3                     vt3
+                       #a                       a
+                       #b                       b
         self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
-        self.asm.scomp1.mult = 2.0
         self.asm.run()
         cont_out = self.asm.scomp1.cont_out
         cont_in = self.asm.scomp2.cont_in
@@ -72,22 +77,40 @@ class NamespaceTestCase(unittest.TestCase):
         self.assertEqual(cont_out.v1, cont_in.v1)
         
     def test_connect_namespace(self):
-        self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v3')
-        self.asm.connect('scomp1.cont_out.v3', 'scomp2.cont_in.v1')
-        self.asm.scomp1.mult = 2.0
+        self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
+        self.asm.connect('scomp1.cont_out.v2', 'scomp2.cont_in.v1')
         self.asm.run()
-        self.assertEqual(self.asm.scomp1.cont_out.v1, self.asm.scomp2.cont_in.v3)
-        self.assertEqual(self.asm.scomp1.cont_out.v2, 2.0*self.asm.scomp2.cont_in.v2)
-        self.assertEqual(self.asm.scomp1.cont_out.v3, self.asm.scomp2.cont_in.v1)
+        self.assertEqual(self.asm.scomp1.cont_out.v1, self.asm.scomp2.cont_in.v2)
+        self.assertEqual(self.asm.scomp1.cont_out.v2, 1.0+self.asm.scomp2.cont_in.v2)
 
     def test_connect_nested(self):
-        self.asm.connect('scomp1.cont_out.cont.x', 'scomp2.cont_in.v3')
-        self.asm.connect('scomp1.cont_out.v3', 'scomp2.cont_in.cont.z')
-        self.asm.scomp1.mult = 2.0
+        self.asm.connect('scomp1.cont_out.vt2.vt3.a', 'scomp2.cont_in.vt2.vt3.b')
         self.asm.run()
-        self.assertEqual(self.asm.scomp1.cont_out.cont.x, self.asm.scomp2.cont_in.v3)
-        self.assertEqual(self.asm.scomp1.cont_out.v2, 2.0*self.asm.scomp2.cont_in.v2)
-        self.assertEqual(self.asm.scomp1.cont_out.v3, self.asm.scomp2.cont_in.cont.z)
+        self.assertAlmostEqual(12.0*self.asm.scomp1.cont_out.vt2.vt3.a, 
+                               self.asm.scomp2.cont_in.vt2.vt3.b)
+        
+    def test_callbacks(self):
+        # verify that setting a var nested down in a VariableTree hierarchy will
+        # notify the parent Component that an input has changed
+        self.asm.run()
+        self.assertEqual(self.asm.scomp1._call_execute, False)
+        self.asm.scomp1.cont_in.vt2.vt3.a = 5.0
+        self.assertEqual(self.asm.scomp1._call_execute, True)
+        self.asm.run()
+        self.assertEqual(self.asm.scomp1._call_execute, False)
+        
+        # setting something in an output VariableTree should NOT set _call_execute
+        self.asm.scomp1.cont_out.vt2.vt3.a = 55.0
+        self.assertEqual(self.asm.scomp1._call_execute, False)
+        
+    def test_pathname(self):
+        vt = self.asm.scomp2.cont_out.vt2.vt3
+        self.assertEqual(vt.iotype, 'out')
+        self.assertEqual('scomp2.cont_out.vt2.vt3', vt.get_pathname())
+        self.asm.scomp1.cont_in.vt2.vt3 = vt
+        self.assertEqual(vt.iotype, 'in')
+        self.assertEqual('scomp1.cont_in.vt2.vt3', 
+                         self.asm.scomp1.cont_in.vt2.vt3.get_pathname())
 
 if __name__ == "__main__":
     unittest.main()
