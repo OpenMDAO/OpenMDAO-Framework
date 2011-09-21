@@ -13,6 +13,8 @@ zope.interface).
 #public symbols
 __all__ = ["Slot"]
 
+from inspect import isclass
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Instance, Interface
 import zope.interface
@@ -40,7 +42,7 @@ class Slot(Variable):
         self.klass = klass
         default_value = None
         
-        if has_interface(klass, IContainer) or IContainer.implementedBy(klass):
+        if has_interface(klass, IContainer) or (isclass(klass) and IContainer.implementedBy(klass)):
             self._is_container = True
         else:
             self._is_container = False

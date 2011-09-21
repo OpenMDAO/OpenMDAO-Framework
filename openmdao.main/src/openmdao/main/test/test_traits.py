@@ -40,7 +40,7 @@ class MyHasTraits(HasTraits):
         
     
 class MyHasTraits2(MyHasTraits):
-    pass
+    ival = Int(2)
 
 
 
@@ -212,6 +212,8 @@ class TraitsTestCase(unittest.TestCase):
             
             def _callback(self, obj, name, old, new):
                 self.num_callbacks += 1
+                self.nested = MyHasTraits()
+                self.nested.mht2 = MyHasTraits2()
                 
         cbt = CallbackTester()
         self.assertEqual(cbt.num_callbacks, 0)
@@ -233,6 +235,16 @@ class TraitsTestCase(unittest.TestCase):
         cbt.on_trait_change(cbt._callback, 'some_trait', remove=True)
         cbt.some_trait = 6
         self.assertEqual(cbt.num_callbacks, 3)
+        
+        # see if changes to nested objects trigger callbacks properly
+        cbt.on_trait_change(cbt._callback, 'nested.+')
+        cbt.nested.explicit_int = 6
+        self.assertEqual(cbt.num_callbacks, 4)
+        
+        # doesn't work for more than one level down
+        cbt.nested.mht2.ival = 999
+        self.assertEqual(cbt.num_callbacks, 4)
+        
 
     def test_dotted_names(self):
         # traits can be registered using dotted names, but the result is that

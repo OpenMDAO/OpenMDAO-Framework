@@ -1,9 +1,10 @@
 
+import weakref
+
 from enthought.traits.api import Python
 
 from openmdao.main.container import Container
 from openmdao.main.rbac import rbac
-
 
 class VariableTree(Container):
     
@@ -19,21 +20,26 @@ class VariableTree(Container):
     @iotype.setter
     def iotype(self, val):
         if val != self._iotype:
+            self._iotype = val
             if val == 'in':
                 remove = False
             else:
                 remove = True
+
             self.on_trait_change(self._input_trait_modified, '+', remove=remove)
             for k,v in self.__dict__.items():
-                if isinstance(v, VariableTree) and k != '_parent':
+                if isinstance(v, VariableTree) and k is not self:
                     v.iotype = val
 
     @rbac(('owner', 'user'))
     def tree_rooted(self):
-        if self.parent and not isinstance(self.parent, VariableTree):
-            t = self.parent.trait(self.name)
-            if t and t.iotype:
-                self.iotype = t.iotype
+        if self.parent:
+            if isinstance(self.parent, VariableTree):
+                self.iotype = self.parent.iotype
+            else:
+                t = self.parent.trait(self.name)
+                if t and t.iotype:
+                    self.iotype = t.iotype
         super(VariableTree, self).tree_rooted()
     
     def _input_trait_modified(self, obj, name, old, new):
@@ -51,21 +57,4 @@ class VariableTree(Container):
         t = self.get_trait(name)
         if t is None:
             self.raise_exception("'%s' not found" % name)
-        if self.iotype is None:
-            self.iotype = self._find_iotype()
-            
         return self.iotype
-        
-    def _find_iotype(self):
-        """Figure out our iotype if it hasn't been set"""
-        p = self
-        while isinstance(p, VariableTree):
-            if p.iotype:
-                return p.iotype
-            vt = p
-            p = p.parent
-        if isinstance(p, Container):
-            t = p.trait(vt.name)
-            if t:
-                return t.iotype
-        return None
