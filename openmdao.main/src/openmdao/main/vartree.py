@@ -12,6 +12,7 @@ class VariableTree(Container):
         super(VariableTree, self).__init__(doc=doc)
         #self._iotype = None
         self.iotype = iotype
+        self.on_trait_change(self._input_trait_modified, '+')
 
     #@property
     #def iotype(self):
@@ -42,7 +43,13 @@ class VariableTree(Container):
                     self.iotype = t.iotype
         super(VariableTree, self).tree_rooted()
     
-    def _anytrait_changed(self, name, old, new):
+    def add(self, name, obj):
+        super(VariableTree, self).add(name, obj)
+        self.on_trait_change(self._input_trait_modified, '+')
+        
+    def _input_trait_modified(self, obj, name, old, new):
+    #def _anytrait_changed(self, name, old, new):
+        print 'name = %s' % name
         if name == 'iotype':
             for k,v in self.__dict__.items():
                 if isinstance(v, VariableTree) and k is not self:
