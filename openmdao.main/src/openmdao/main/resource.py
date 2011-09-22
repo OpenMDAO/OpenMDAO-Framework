@@ -133,7 +133,12 @@ class ResourceAllocationManager(object):
             Description of required resources.
         """
         for handler in logging._handlerList:
-            handler.flush()  # Try to keep log messages sane.
+            try:
+                handler.flush()  # Try to keep log messages sane.
+            except AttributeError:  # in python2.7, handlers are weakrefs
+                h = handler()
+                if h:
+                    h.flush()
 
         ram = ResourceAllocationManager.get_instance()
         with ResourceAllocationManager._lock:

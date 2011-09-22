@@ -36,6 +36,7 @@ class DepTestCase(unittest.TestCase):
         comps = [x.rsplit('.',1)[1] for x in comps]
         comps.remove('Driver')
         comps.remove('DriverUsesDerivatives')
+        comps.remove('DistributionCaseDriver')
         comps.remove('CaseIterDriverBase')
         comps.remove('PassthroughTrait')
         comps.remove('PassthroughProperty')

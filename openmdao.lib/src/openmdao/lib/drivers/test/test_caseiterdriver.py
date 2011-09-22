@@ -208,7 +208,7 @@ class TestCase(unittest.TestCase):
         else:
             assert_raises(self, 'self.model.run()', globals(), locals(),
                           RuntimeError,
-                          "driver: Run aborted: RuntimeError('driven: Forced error',)")
+                          "driver: Run aborted: driven: Forced error")
 
     def verify_results(self, forced_errors=False):
         """ Verify recorded results match expectations. """
