@@ -818,11 +818,14 @@ class ArrayBase(BaseWrapper):
             value = self._container.get(self._name)
             if len(value):
                 if self._is_array and len(value.shape) > 1:
-                    return '%s' % value.flat[0]
+                    first = '%s' % value.flat[0]
                 else:
-                    return '%s' % value[0]
+                    first = '%s' % value[0]
+                if self.typ == str:
+                    first = first.encode('string_escape')
             else:
-                return ''
+                first = ''
+            return first
         elif attr == 'format':
             return 'null'
         elif attr == 'hasUpperBound' and self._trait.dtype != str:
@@ -867,7 +870,7 @@ class ArrayBase(BaseWrapper):
                % (self._ext_name, self._typstr, self._io,
                   quoteattr(self.get('description', self._ext_path)),
                   self.get('units', self._ext_path),
-                  self.get('value', self._ext_path))
+                  escape(self.get('value', self._ext_path)))
 
     def set(self, attr, path, valstr, gzipped):
         """

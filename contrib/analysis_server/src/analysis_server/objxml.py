@@ -115,8 +115,8 @@ def _get_array(name, val, trait, xml, is_array):
                  ', '.join([fmt % value for value in val.flat]))
     else:
         valstr = ', '.join([fmt % value for value in val])
-    if str:
-        valstr = valstr.encode('string_escape')
+    if typ is str:
+        valstr = escape(valstr.encode('string_escape'))
 
     desc = trait.desc or ''
     desc = escape(desc.encode('string_escape'))
@@ -126,6 +126,8 @@ def _get_array(name, val, trait, xml, is_array):
             first = '%s' % val.flat[0]
         else:
             first = '%s' % val[0]
+        if typ is str:
+            first = escape(first.encode('string_escape'))
     else:
         first = ''
 
