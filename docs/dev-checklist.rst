@@ -17,9 +17,11 @@ that will be contributed to the OpenMDAO-Framework repository.
 
     git clone git@github.com:OpenMDAO/OpenMDAO-Framework.git  
   
-* Finally, to save some typing, define a remote branch in your local repo (if you haven't done this
-  already). Again, you have to do this just once, which is why it's included here rather than
-  below. Use your GitHub username; in this example it's ``hschilling``.  
+* Finally, if you haven't done this already, you can save some typing by defining a remote branch in
+  your local repo. Again, you have to do this just once, which is why it's included here rather than
+  below. Use your GitHub username; in this example it's ``hschilling``. 
+
+  From your local OpenMDAO-Framework repo, type: 
 
   ::
    
@@ -82,27 +84,50 @@ repository (assuming the maintainers approve the change).
 
 8.  Make changes to code and update the tests. (For more information, see :ref:`Adding-New-Tests`.)  
 
-9.  Run all the tests to make sure everything still works. (Remember that you must be in an active environment
-    to run the test and docs scripts. So, if you interrupted work and logged out, be sure to reactivate your
-    environment.)
+9.  It's a good idea to run pylint to check for any bugs in your code. If you do not
+    have pylint on your system, you can install and run it by typing:
+
+    ::
+     
+      easy_install pylint  
+      pylint <file_name>
+
+    Fix any errors that pylint found.
+
+
+10. Run all the tests to make sure everything still works. (Remember that you must be in an active
+    environment to run the test and docs scripts. So, if you interrupted work and logged out, be
+    sure to reactivate your environment.)
 
     ::
 
       openmdao_test
 
-10. Change the docs. (For more information, see :ref:`resources`.)   
+    Fix any errors found during testing.
+
+10. Change the docs if needed. (For more information on creating or updating docs, see
+    :ref:`resources`.)  
+
+    To build and then display the docs, use the following scripts:
+    
+    ::
+    
+      openmdao_build_docs
+      openmdao_docs
+
 
 11. Test the docs. 
-                 
-		 
+                 	 
     ::
     
       openmdao_testdocs
  
-    Note: The doctests are automatically run whenever you run ``openmdao_test``. Step 11 builds and tests only
-    the docs.
+    Note: The doctests are automatically run whenever you run ``openmdao_test``. Step 11 builds and tests
+    `only` the docs.
 
-12. Visually inspect the docs using the default browser. 
+    Fix errors if any.
+
+12. If you have not done so, visually inspect the docs using the default browser. 
                  
 		 
     ::
