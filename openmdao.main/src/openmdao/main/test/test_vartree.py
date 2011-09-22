@@ -98,6 +98,9 @@ class NamespaceTestCase(unittest.TestCase):
         self.assertEqual(self.asm.scomp1._call_execute, True)
         self.asm.run()
         self.assertEqual(self.asm.scomp1._call_execute, False)
+        self.asm.scomp1.cont_in.vt2.x = -5.0
+        self.assertEqual(self.asm.scomp1._call_execute, True)
+        self.asm.run()
         
         # setting something in an output VariableTree should NOT set _call_execute
         self.asm.scomp1.cont_out.vt2.vt3.a = 55.0

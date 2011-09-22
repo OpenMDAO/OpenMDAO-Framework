@@ -462,9 +462,6 @@ class Container(HasTraits):
             self.raise_exception(
                 'add does not allow dotted path names like %s' %
                 name, ValueError)
-        if obj == self:
-            self.raise_exception('cannot make an object a child of itself',
-                                 RuntimeError)
         if is_instance(obj, Container):
             if isinstance(obj, OpenMDAO_Proxy):
                 obj.parent = self._get_proxy(obj)

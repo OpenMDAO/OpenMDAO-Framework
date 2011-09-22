@@ -1,36 +1,16 @@
 
 import weakref
 
-from enthought.traits.api import Python
-
-from openmdao.main.container import Container
+from openmdao.main.variable import Variable
+from openmdao.main.container import Container, Slot
 from openmdao.main.rbac import rbac
 
 class VariableTree(Container):
     
     def __init__(self, iotype=None, doc=None):
         super(VariableTree, self).__init__(doc=doc)
-        #self._iotype = None
         self.iotype = iotype
-        self.on_trait_change(self._input_trait_modified, '+')
-
-    #@property
-    #def iotype(self):
-        #return self._iotype
-
-    #@iotype.setter
-    #def iotype(self, val):
-        #if val != self._iotype:
-            #self._iotype = val
-            #if val == 'in':
-                #remove = False
-            #else:
-                #remove = True
-
-            ##self.on_trait_change(self._input_trait_modified, '+', remove=remove)
-            #for k,v in self.__dict__.items():
-                #if isinstance(v, VariableTree) and k is not self:
-                    #v.iotype = val
+        self.on_trait_change(self._trait_modified, '+')
 
     @rbac(('owner', 'user'))
     def tree_rooted(self):
@@ -44,10 +24,12 @@ class VariableTree(Container):
         super(VariableTree, self).tree_rooted()
     
     def add(self, name, obj):
+        if isinstance(obj, VariableTree):
+            if self.trait(name) is None:
+                self.add_trait(name, Slot(VariableTree()))
         super(VariableTree, self).add(name, obj)
-        self.on_trait_change(self._input_trait_modified, '+')
         
-    def _input_trait_modified(self, obj, name, old, new):
+    def _trait_modified(self, obj, name, old, new):
     #def _anytrait_changed(self, name, old, new):
         print 'name = %s' % name
         if name == 'iotype':
@@ -69,7 +51,6 @@ class VariableTree(Container):
         
     def get_iotype(self, name):
         """Return the iotype of the Variable with the given name"""
-        t = self.get_trait(name)
-        if t is None:
+        if self.get_trait(name) is None:
             self.raise_exception("'%s' not found" % name)
         return self.iotype
