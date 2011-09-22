@@ -201,7 +201,7 @@ class Component (Container):
         
         # make sure all input callbacks are in place.  If callback is
         # already there, this will have no effect. 
-        for name, trait in self._alltraits().items():
+        for name, trait in self._filtertraits().items():
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
@@ -475,7 +475,7 @@ class Component (Container):
                 self._num_input_caseiters += 1
         
     def _set_input_callback(self, name, remove=False):
-        t = self.trait(name)
+        #t = self.trait(name)
         #if t.has_items or (t.trait_type and t.trait_type.has_items):
         #    name = name+'[]'
         self.on_trait_change(self._input_trait_modified, name, remove=remove)

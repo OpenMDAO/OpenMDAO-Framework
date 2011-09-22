@@ -1,6 +1,8 @@
 
 import unittest
 
+from enthought.traits.trait_base import not_none
+
 from openmdao.main.api import Container, Component, Assembly, VariableTree, set_as_top
 from openmdao.lib.datatypes.api import Float, Slot
 
@@ -114,7 +116,31 @@ class NamespaceTestCase(unittest.TestCase):
         self.assertEqual(vt.iotype, 'in')
         self.assertEqual('scomp1.cont_in.vt2.vt3', 
                          self.asm.scomp1.cont_in.vt2.vt3.get_pathname())
+        
+    def test_items(self):
+        vtvars = ['v1','v2','vt2']
+        vt2vars = ['vt2.x','vt2.y','vt2.vt3']
+        vt3vars = ['vt2.vt3.a','vt2.vt3.b']
+        
+        result = dict(self.asm.scomp1.cont_out.items(iotype='out'))
+        self.assertEqual(set(result.keys()), set(vtvars))
+        result = dict(self.asm.scomp1.cont_out.items(recurse=True, iotype='out'))
+        self.assertEqual(set(result.keys()), set(vtvars+vt2vars+vt3vars))
+        result = dict(self.asm.scomp1.cont_out.items(iotype='in'))
+        self.assertEqual(set(result.keys()), set([]))
+        result = dict(self.asm.scomp1.cont_out.items(iotype=None))
+        self.assertEqual(set(result.keys()), set([]))
+        result = dict(self.asm.scomp1.cont_out.items(iotype=not_none))
+        self.assertEqual(set(result.keys()), set(vtvars))
+        
+        result = dict(self.asm.scomp1.cont_in.items(iotype='in'))
+        self.assertEqual(set(result.keys()), set(vtvars))
+        result = dict(self.asm.scomp1.cont_in.items(recurse=True, iotype='in'))
+        self.assertEqual(set(result.keys()), set(vtvars+vt2vars+vt3vars))
+        result = dict(self.asm.scomp1.cont_in.items(iotype='out'))
+        self.assertEqual(set(result.keys()), set([]))
 
+        
 if __name__ == "__main__":
     unittest.main()
 

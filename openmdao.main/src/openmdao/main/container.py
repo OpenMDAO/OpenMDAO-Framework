@@ -349,7 +349,7 @@ class Container(HasTraits):
         # restore dynamically added traits, since they don't seem
         # to get restored automatically
         self._cached_traits_ = None
-        traits = self._alltraits()
+        traits = self._filtertraits()
         for name, trait in self._added_traits.items():
             if name not in traits:
                 self.add_trait(name, trait)
@@ -575,7 +575,7 @@ class Container(HasTraits):
         """
         if id(self) not in visited:
             visited.add(id(self))
-            match_dict = self._alltraits(**metadata)
+            match_dict = self._filtertraits(**metadata)
             
             if recurse:
                 for name in self.list_containers():
@@ -613,9 +613,10 @@ class Container(HasTraits):
         """Return a list of names of child Containers."""
         return [n for n, v in self.items() if is_instance(v, Container)]
     
-    def _alltraits(self, traits=None, events=False, **metadata):
-        """This returns a dict that contains all traits (class and instance)
-        that match the given metadata.
+    def _filtertraits(self, traits=None, events=False, **metadata):
+        """This returns a dict that contains traits (class and instance)
+        that match the given metadata.  If the 'traits' argument is not
+        None, then it is assumed to be the dict of traits to be filtered.
         """
         if traits is None:
             if self._cached_traits_:

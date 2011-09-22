@@ -213,7 +213,7 @@ class MetaModel(Component):
             
         if newmodel:
             # query for inputs
-            traitdict = newmodel._alltraits(iotype='in')
+            traitdict = newmodel._filtertraits(iotype='in')
             for name,trait in traitdict.items():
                 if self._eligible(name):
                     self._surrogate_input_names.append(name)
@@ -223,7 +223,7 @@ class MetaModel(Component):
                     setattr(self, name, getattr(newmodel, name))
                 
             # now outputs
-            traitdict = newmodel._alltraits(iotype='out')
+            traitdict = newmodel._filtertraits(iotype='out')
             
             for name,trait in traitdict.items():
                 if self._eligible(name):
