@@ -663,8 +663,9 @@ class ComponentWrapper(object):
                 try:
                     self._set(var.attrib['name'], valstr, gzipped)
                 except Exception as exc:
+                    self._logger.exception("Can't set %r", var.attrib['name'])
                     raise type(exc)("Can't set %r from %r: %s" 
-                                    % (var.attrib['name'], valstr, exc))
+                                    % (var.attrib['name'], valstr[:1000], exc))
             self._send_reply('values set', req_id)
         except Exception as exc:
             self._send_exc(exc, req_id)
