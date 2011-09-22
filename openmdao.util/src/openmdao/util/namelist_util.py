@@ -186,7 +186,7 @@ class Namelist(object):
         if not skip:
             skip = []
             
-        for name, val in target_container.items(iotype=not_none):
+        for name, val in sorted(list(target_container.items(iotype=not_none))):
             if name not in skip:
                 self.add_var("%s.%s" % (varpath, name))
         
