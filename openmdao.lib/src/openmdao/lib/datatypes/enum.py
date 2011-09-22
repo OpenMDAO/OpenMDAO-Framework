@@ -59,6 +59,13 @@ class Enum(Variable):
         # Put values in the metadata dictionary
         if values:
             metadata['values'] = values
+            
+            # We also need to store the values in a dict, to get around
+            # a weak typechecking (i.e., enum of [1,2,3] can be 1.0)
+            self.valuedict = {}
+            
+            for val in values:
+                self.valuedict[val] = val
 
         # Put aliases in the metadata dictionary
         if aliases:
@@ -71,10 +78,14 @@ class Enum(Variable):
         """ Validates that a specified value is valid for this trait."""
         
         try:
-            return self._validator.validate(obj, name, value)
+            val = self._validator.validate(obj, name, value)
         except Exception:
             self.error(obj, name, value)
 
+        # if someone uses a float to set an int-valued Enum, we want it to
+        # be an int. Enthought's Enum allows a float value, unfortunately.
+        return self.valuedict[val]
+        
     def error(self, obj, name, value):
         """Returns a general error string for Enum."""
         
