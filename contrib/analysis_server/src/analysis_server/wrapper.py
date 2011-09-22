@@ -1804,7 +1804,7 @@ class ObjWrapper(BaseWrapper):
 
     def __init__(self, container, name, ext_path, logger):
         super(ObjWrapper, self).__init__(container, name, ext_path, logger)
-        obj = self._container.get(self._name)
+        obj = container.get(name)
         self._cls = type(obj)
         self._access = 'sg' if obj.iotype == 'in' else 'g'
         self._io = 'input' if obj.iotype == 'in' else 'output'

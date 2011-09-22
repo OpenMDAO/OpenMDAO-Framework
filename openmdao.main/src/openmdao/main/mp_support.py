@@ -423,10 +423,13 @@ class OpenMDAO_Server(Server):
                     # 'echo' is used for performance tests, keepalives, etc.
                     self._logger.debug('Invoke %s %s %s',
                                        methodname, role, credentials)
+#                    self._logger.debug('       %s %s', args, kwds)
+
                 # Invoke function.
                 try:
                     try:
                         res = function(*args, **kwds)
+#                        self._logger.debug('       res %r', res)
                     except AttributeError as exc:
                         if isinstance(obj, BaseProxy) and \
                            methodname == '__getattribute__':
@@ -450,6 +453,7 @@ class OpenMDAO_Server(Server):
                     orig_traceback = traceback.format_exc()
                     try:
                         fallback_func = self.fallback_mapping[methodname]
+                        self._logger.debug('Fallback %s', methodname)
                         result = fallback_func(self, conn, ident, obj,
                                                *args, **kwds)
                         msg = ('#RETURN', result)
@@ -603,7 +607,7 @@ class OpenMDAO_Server(Server):
                     proxyid = typeid
                     if typeid not in self.registry:
                         self.registry[typeid] = (None, None, None, None)
-            elif need_proxy(function, res):
+            elif need_proxy(function, res, access_controller):
                 # Create proxy if in declared proxy types.
                 typeid = make_typeid(res)
                 proxyid = typeid

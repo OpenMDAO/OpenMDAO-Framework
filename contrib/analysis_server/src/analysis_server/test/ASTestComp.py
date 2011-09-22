@@ -57,9 +57,9 @@ class TopObj(Container):
 
         self.add('toi1d', Array(dtype=int, iotype=iotype, desc='1D int array',
                                 default_value=[1, 2, 3, 4, 5, 6, 7, 8, 9]))
-#
-#        self.add('tos1d', List(Str, iotype=iotype, desc='1D string array',
-#                               value=['Hello', 'from', 'TestComponent.tos1d']))
+
+        self.add('tos1d', List(Str, iotype=iotype, desc='1D string array',
+                               value=['Hello', 'from', 'TestComponent.tos1d']))
 
 
 class TestComponent(Component):
@@ -109,7 +109,7 @@ class TestComponent(Component):
         self.obj_output.tof2d = self.obj_input.tof2d
         self.obj_output.tof3d = self.obj_input.tof3d
         self.obj_output.toi1d = self.obj_input.toi1d
-#        self.obj_output.tos1d = self.obj_input.tos1d
+        self.obj_output.tos1d = self.obj_input.tos1d
 
         self.obj_output.subobj.sob = self.obj_input.subobj.sob
         self.obj_output.subobj.sof = self.obj_input.subobj.sof
@@ -168,8 +168,6 @@ class SubGroup(Container):
     i1d = Array(dtype=int, iotype='in', desc='1D int array',
                 default_value=[1, 2, 3, 4, 5, 6, 7, 8, 9])
 
-#    s1d = Array(dtype=str, iotype='in', desc='1D string array',
-#                default_value=['Hello', 'from', 'TestComponent.SubGroup'])
     s1d = List(Str, iotype='in', desc='1D string array',
                value=['Hello', 'from', 'TestComponent.SubGroup'])
 
@@ -189,6 +187,6 @@ if __name__ == '__main__':
     for path in ('x', 'y', 'z', 'exe_count',
                  'sub_group.b', 'sub_group.f', 'sub_group.i', 'sub_group.s',
                  'sub_group.fe', 'sub_group.ie', 'sub_group.se',
-                 'sub_group.f1d', 'sub_group.i1d'):
+                 'sub_group.f1d', 'sub_group.i1d', 'sub_group.s1d'):
         print '%s: %s' % (path, comp.get(path))
 

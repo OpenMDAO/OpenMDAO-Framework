@@ -7,6 +7,7 @@ import xml.etree.cElementTree as ElementTree
 from xml.sax.saxutils import escape
 
 from openmdao.main.api import Container
+from openmdao.main.mp_support import is_instance
 from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, List, Str
 
 # Attributes to ignore.
@@ -48,12 +49,13 @@ def get_as_xml(container, name):
 def _get_as_xml(container, name, xml):
     """ Recursive helper for :meth:`get_as_xml`. """
     xml.append('<members>')
+    # Using ._alltraits().items() since .items() returns a generator.
     for name, trait in sorted(container._alltraits().items(),
                               key=lambda item: item[0]):
         if name in _IGNORE_ATTR or name.startswith('_'):
             continue
         val = getattr(container, name)
-        if isinstance(val, Container):
+        if is_instance(val, Container):
             xml.append("""\
 <member name="%s" type="object" access="public" className="%s">\
 """ % (name, _lookup(val)))

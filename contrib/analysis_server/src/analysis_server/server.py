@@ -310,20 +310,27 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     # Get Python class and create temporary instance.
                     classname = config.get('Python', 'classname')
                     dirname = os.path.dirname(filename)
+                    modname = os.path.basename(filename)[:-3]  # drop '.py'
                     if not os.path.isabs(dirname):
                         if dirname:
                             dirname = os.path.join(cwd, dirname)
                         else:
                             dirname = cwd
+
                     if not dirname in sys.path:
                         logger.debug('    prepending %r to sys.path', dirname)
                         sys.path.insert(0, dirname)
-                    modname = os.path.basename(filename)[:-3]  # drop '.py'
+                        prepended = True
+                    else:
+                        prepended = False
                     try:
                         __import__(modname)
                     except ImportError as exc:
                         raise RuntimeError("Can't import %r: %r" \
                                            % (modname, exc))
+                    finally:
+                        if prepended:
+                            sys.path.pop(0)
 
                     module = sys.modules[modname]
                     try:

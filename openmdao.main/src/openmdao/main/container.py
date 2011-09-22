@@ -27,7 +27,7 @@ import zope.interface
 
 from enthought.traits.api import HasTraits, Missing, Undefined, Python, \
                                  push_exception_handler, TraitType, CTrait
-from enthought.traits.trait_handlers import NoDefaultSpecified
+from enthought.traits.trait_handlers import NoDefaultSpecified, TraitListObject
 from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
 
@@ -208,6 +208,7 @@ class Container(HasTraits):
         self._name = name
         self._logger.rename(self._name)
         
+    @rbac(('owner', 'user'))
     def get_pathname(self, rel_to_scope=None):
         """ Return full path name to this container, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
@@ -358,6 +359,10 @@ class Container(HasTraits):
         for name, trait in self._added_traits.items():
             if name not in traits:
                 self.add_trait(name, trait)
+                # List traits lose their 'name' for some reason.
+                val = getattr(self, name)
+                if isinstance(val, TraitListObject):
+                    val.name = name
 
         # Fix property traits that were not just added above.
         # For some reason they lost 'get()', but not 'set()' capability.
@@ -667,6 +672,8 @@ class Container(HasTraits):
         """Return a list of names of child Containers."""
         return [n for n, v in self.items() if is_instance(v, Container)]
     
+    # Can't use items() since it returns a generator (won't pickle).
+    @rbac(('owner', 'user'))
     def _alltraits(self, traits=None, events=False, **metadata):
         """This returns a dict that contains all traits (class and instance)
         that match the given metadata.
@@ -756,7 +763,7 @@ class Container(HasTraits):
             "object has no attribute '%s'" % path, 
             AttributeError)
         
-    @rbac(('owner', 'user'), proxy_types=[FileRef])
+    @rbac(('owner', 'user'))
     def get(self, path, index=None):
         """Return the object specified by the given path, which may 
         contain '.' characters.  *index*, if not None,
@@ -1270,8 +1277,9 @@ class Container(HasTraits):
         raise exception_class(full_msg)
     
 
-# By default we always proxy Containers.
+# By default we always proxy Containers and FileRefs.
 CLASSES_TO_PROXY.append(Container)
+CLASSES_TO_PROXY.append(FileRef)
 
     
 # Some utility functions

@@ -288,9 +288,11 @@ def rbac_methods(obj):
     return methods
 
 
-def need_proxy(meth, result):
+def need_proxy(meth, result, access_controller):
     """
     Returns True if `result` from `meth` requires a proxy.
+    If no proxy types have been explicitly defined for `meth` then
+    `access_controller` provides a default set.
 
     meth: method.
         Method to be checked.
@@ -298,13 +300,12 @@ def need_proxy(meth, result):
     result: object
         Result value to be checked.
 
+    access_controller: :class:`AccessController`
+        Provides default proxy type information.
     """
     try:
         roles, proxy_role, types, cache = meth._rbac
     except AttributeError:
-        return False
-
-    if not types:
         return False
 
     cls = result.__class__
@@ -312,7 +313,12 @@ def need_proxy(meth, result):
         return cache[cls]
     except KeyError:
         # Check if this result class or any base classes are in types.
-        cache[cls] = isinstance(result, types)
+        if not types:
+            types = tuple(access_controller.proxy_types)
+        if not types:
+            cache[cls] = False
+        else:
+            cache[cls] = isinstance(result, types)
         return cache[cls]
 
 
