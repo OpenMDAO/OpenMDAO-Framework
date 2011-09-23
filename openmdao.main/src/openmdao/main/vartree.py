@@ -11,9 +11,12 @@ from openmdao.main.mp_support import is_instance
 
 class VariableTree(Container):
     
+    iotype = Str()
+    
     def __init__(self, iotype=None, doc=None):
         super(VariableTree, self).__init__(doc=doc)
         self.iotype = iotype
+        self.on_trait_change(self._iotype_modified, 'iotype')
 
     @rbac(('owner', 'user'))
     def tree_rooted(self):
@@ -46,7 +49,7 @@ class VariableTree(Container):
             
         super(VariableTree, self).remove_trait(name)
 
-    def _iotype_changed(self, old, new):
+    def _iotype_modified(self, obj, name, old, new):
         for k,v in self.__dict__.items():
             if isinstance(v, VariableTree) and k is not self:
                 v.iotype = new

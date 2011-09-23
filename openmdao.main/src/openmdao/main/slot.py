@@ -84,6 +84,7 @@ class Slot(Variable):
         if self._is_container:
             if value.parent is not obj:
                 value.parent = obj
+            # VariableTrees also need to know their iotype
             if hasattr(value, 'iotype'):
                 value.iotype = self.iotype
             
