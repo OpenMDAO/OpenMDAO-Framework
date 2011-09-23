@@ -297,12 +297,15 @@ class ComponentWrapper(object):
                 attr = self._cfg.methods[method]
             except KeyError:
                 raise WrapperError('no such method <%s>.' % method)
+
             meth = getattr(self._comp, attr)
             result = meth()
             if result is None:
                 reply = ''
-            elif type(result) == float:
+            elif isinstance(result, float):
                 reply = _float2str(result)
+            elif isinstance(result, basestring):
+                reply = result.encode('string_escape')
             else:
                 reply = str(result)
 
@@ -314,7 +317,7 @@ class ComponentWrapper(object):
 <version>100.0</version>\
 <download>true</download>\
 <string>%s</string>\
-</response>""" % reply
+</response>""" % escape(reply)
 
             self._send_reply(reply, req_id)
         except Exception as exc:

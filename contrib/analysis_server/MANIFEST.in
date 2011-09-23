@@ -1,4 +1,4 @@
 
 graft src/analysis_server/sphinx_build/html
-recursive-include src/analysis_server/test *.py *.cfg
+recursive-include src/analysis_server/test *.py *.cfg get_hierarchy.txt list_values.txt
 

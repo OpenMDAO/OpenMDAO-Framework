@@ -362,33 +362,15 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
                          'getDirectTransfer\r\n>')
 
     def test_get_hierarchy(self):
-        expected = """\
-<?xml version='1.0' encoding='utf-8'?>
-<Group>
-<Variable name="exe_count" type="long" io="output" format="" description="Execution count">0</Variable>
-<Variable name="in_file" type="file" io="input" description="Input file" isBinary="false" fileName=""></Variable>
-<Variable name="out_file" type="file" io="output" description="Output file" isBinary="false" fileName=""></Variable>
-<Group name="sub_group">
-<Variable name="b" type="boolean" io="input" format="" description="A boolean">true</Variable>
-<Variable name="f" type="double" io="input" format="" description="A float" units="">0.5</Variable>
-<Variable name="f1d" type="double[]" io="input" format="" description="1D float array" units="cm">1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5</Variable>
-<Variable name="f2d" type="double[]" io="input" format="" description="2D float array" units="mm">bounds[2, 4] {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5}</Variable>
-<Variable name="f3d" type="double[]" io="input" format="" description="3D float array" units="">bounds[2, 3, 3] {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 20.5, 30.5, 40.5, 50.5, 60.5, 70.5, 80.5, 90.5}</Variable>
-<Variable name="fe" type="double" io="input" format="" description="Float enum" units="m">2.781828</Variable>
-<Variable name="i" type="long" io="input" format="" description="An int">7</Variable>
-<Variable name="i1d" type="long[]" io="input" format="" description="1D int array" units="">1, 2, 3, 4, 5, 6, 7, 8, 9</Variable>
-<Variable name="ie" type="long" io="input" format="" description="Int enum" units="">9</Variable>
-<Variable name="s" type="string" io="input" format="" description="A string">Hello World!  ( &amp; &lt; &gt; )</Variable>
-<Variable name="s1d" type="string[]" io="input" format="" description="1D string array" units="">"Hello", "from", "TestComponent.SubGroup"</Variable>
-<Variable name="se" type="string" io="input" format="" description="Str enum" units="">cold</Variable>
-</Group>
-<Variable name="x" type="double" io="input" format="" description="X input" units="">2</Variable>
-<Variable name="y" type="double" io="input" format="" description="Y input" units="ft">3</Variable>
-<Variable name="z" type="double" io="output" format="" description="Z output" units="ft">0</Variable>
-</Group>"""
-        expected = expected.replace('\n', '\r\n') + '\r\n>'
+        # Expected data is very large.
+        with open('get_hierarchy.txt', 'rU') as inp:
+            expected = inp.read()
+        expected = expected.replace('\n', '\r\n')
         replies = self.send_recv(['start ASTestComp comp',
                                   'getHierarchy comp'], count=3)
+# To generate updated data file:
+#        with open('../get_hierarchy.txt', 'w') as out:
+#            out.write(replies[-1])
         self.compare(replies[-1], expected)
 
         replies = self.send_recv('getHierarchy')
@@ -746,82 +728,17 @@ se (type=com.phoenix_int.aserver.types.PHXString) (access=sg)"""
                          'listProperties,list,ls,l [object]\r\n>')
 
     def test_list_values(self):
-        expected = """\
-7 properties found:
-exe_count (type=com.phoenix_int.aserver.types.PHXLong) (access=g)  vLen=1  val=0
-   10 SubProps found:
-description (type=java.lang.String) (access=g)  vLen=15  val=Execution count
-enumAliases (type=java.lang.String[0]) (access=g)  vLen=0  val=
-enumValues (type=long[0]) (access=g)  vLen=0  val=
-hasLowerBound (type=boolean) (access=g)  vLen=4  val=true
-hasUpperBound (type=boolean) (access=g)  vLen=4  val=true
-lowerBound (type=long) (access=g)  vLen=%d  val=%d
-units (type=java.lang.String) (access=g)  vLen=0  val=
-upperBound (type=long) (access=g)  vLen=%d  val=%d
-value (type=long) (access=g)  vLen=1  val=0
-valueStr (type=java.lang.String) (access=g)  vLen=1  val=0
-in_file (type=com.phoenix_int.aserver.types.PHXRawFile) (access=sg)  vLen=0  val=
-   6 SubProps found:
-description (type=java.lang.String) (access=g)  vLen=10  val=Input file
-isBinary (type=boolean) (access=g)  vLen=5  val=false
-mimeType (type=java.lang.String) (access=g)  vLen=0  val=
-name (type=java.lang.String) (access=g)  vLen=0  val=
-nameCoded (type=java.lang.String) (access=g)  vLen=0  val=
-url (type=java.lang.String) (access=g)  vLen=0  val=
-out_file (type=com.phoenix_int.aserver.types.PHXRawFile) (access=g)  vLen=0  val=
-   6 SubProps found:
-description (type=java.lang.String) (access=g)  vLen=11  val=Output file
-isBinary (type=boolean) (access=g)  vLen=5  val=false
-mimeType (type=java.lang.String) (access=g)  vLen=10  val=text/plain
-name (type=java.lang.String) (access=g)  vLen=0  val=
-nameCoded (type=java.lang.String) (access=g)  vLen=0  val=
-url (type=java.lang.String) (access=g)  vLen=0  val=
-sub_group (type=com.phoenix_int.aserver.PHXGroup) (access=sg)  vLen=16  val=Group: sub_group
-x (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)  vLen=1  val=2
-   11 SubProps found:
-description (type=java.lang.String) (access=g)  vLen=7  val=X input
-enumAliases (type=java.lang.String[0]) (access=g)  vLen=0  val=
-enumValues (type=double[0]) (access=g)  vLen=0  val=
-format (type=java.lang.String) (access=g)  vLen=4  val=null
-hasLowerBound (type=boolean) (access=g)  vLen=5  val=false
-hasUpperBound (type=boolean) (access=g)  vLen=5  val=false
-lowerBound (type=double) (access=g)  vLen=3  val=0.0
-units (type=java.lang.String) (access=g)  vLen=0  val=
-upperBound (type=double) (access=g)  vLen=3  val=0.0
-value (type=double) (access=sg)  vLen=1  val=2
-valueStr (type=java.lang.String) (access=g)  vLen=1  val=2
-y (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)  vLen=1  val=3
-   11 SubProps found:
-description (type=java.lang.String) (access=g)  vLen=7  val=Y input
-enumAliases (type=java.lang.String[0]) (access=g)  vLen=0  val=
-enumValues (type=double[0]) (access=g)  vLen=0  val=
-format (type=java.lang.String) (access=g)  vLen=4  val=null
-hasLowerBound (type=boolean) (access=g)  vLen=4  val=true
-hasUpperBound (type=boolean) (access=g)  vLen=4  val=true
-lowerBound (type=double) (access=g)  vLen=5  val=-10.0
-units (type=java.lang.String) (access=g)  vLen=2  val=ft
-upperBound (type=double) (access=g)  vLen=4  val=10.0
-value (type=double) (access=sg)  vLen=1  val=3
-valueStr (type=java.lang.String) (access=g)  vLen=1  val=3
-z (type=com.phoenix_int.aserver.types.PHXDouble) (access=g)  vLen=1  val=0
-   11 SubProps found:
-description (type=java.lang.String) (access=g)  vLen=8  val=Z output
-enumAliases (type=java.lang.String[0]) (access=g)  vLen=0  val=
-enumValues (type=double[0]) (access=g)  vLen=0  val=
-format (type=java.lang.String) (access=g)  vLen=4  val=null
-hasLowerBound (type=boolean) (access=g)  vLen=5  val=false
-hasUpperBound (type=boolean) (access=g)  vLen=5  val=false
-lowerBound (type=double) (access=g)  vLen=3  val=0.0
-units (type=java.lang.String) (access=g)  vLen=2  val=ft
-upperBound (type=double) (access=g)  vLen=3  val=0.0
-value (type=double) (access=g)  vLen=1  val=0
-valueStr (type=java.lang.String) (access=g)  vLen=1  val=0""" \
-            % (len(str(-sys.maxint)), -sys.maxint,
-               len(str( sys.maxint)),  sys.maxint)
-        expected = expected.replace('\n', '\r\n') + '\r\n>'
-
+        # Expected data is very large.
+        with open('list_values.txt', 'rU') as inp:
+            expected = inp.read()
+        expected = expected.replace('\n', '\r\n')
+        expected = expected.replace('9223372036854775807', str(sys.maxint))
+        expected = expected.replace('-9223372036854775807', str(-sys.maxint))
         replies = self.send_recv(['start ASTestComp comp',
                                   'listValues comp'], count=3)
+# To generate updated data file (on 64-bit machine):
+#        with open('../list_values.txt', 'w') as out:
+#            out.write(replies[-1])
         self.compare(replies[-1], expected)
         replies = self.send_recv(['start ASTestComp comp',
                                   'lv comp'], count=3)
