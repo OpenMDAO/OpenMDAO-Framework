@@ -363,13 +363,15 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
 
     def test_get_hierarchy(self):
         # Expected data is very large.
-        with open('get_hierarchy.txt', 'rU') as inp:
+        # Default int ranges are a pain.
+        i = 1
+        abi = 32 if sys.getsizeof(i) == 12 else 64  # sizeof int *object*.
+        with open('get_hierarchy%d.txt' % abi, 'rb') as inp:
             expected = inp.read()
-        expected = expected.replace('\n', '\r\n')
         replies = self.send_recv(['start ASTestComp comp',
                                   'getHierarchy comp'], count=3)
 # To generate updated data file:
-#        with open('../get_hierarchy.txt', 'w') as out:
+#        with open('get_hierarchy%d.new' % abi, 'wb') as out:
 #            out.write(replies[-1])
         self.compare(replies[-1], expected)
 
@@ -729,17 +731,18 @@ se (type=com.phoenix_int.aserver.types.PHXString) (access=sg)"""
 
     def test_list_values(self):
         # Expected data is very large.
-        with open('list_values.txt', 'rU') as inp:
+        # Default int ranges are a pain.
+        i = 1
+        abi = 32 if sys.getsizeof(i) == 12 else 64  # sizeof int *object*.
+        with open('list_values%d.txt' % abi, 'rb') as inp:
             expected = inp.read()
-        expected = expected.replace('\n', '\r\n')
-        expected = expected.replace('9223372036854775807', str(sys.maxint))
-        expected = expected.replace('-9223372036854775807', str(-sys.maxint))
         replies = self.send_recv(['start ASTestComp comp',
                                   'listValues comp'], count=3)
-# To generate updated data file (on 64-bit machine):
-#        with open('../list_values.txt', 'w') as out:
+# To generate updated data file:
+#        with open('list_values%d.new' % abi, 'wb') as out:
 #            out.write(replies[-1])
         self.compare(replies[-1], expected)
+
         replies = self.send_recv(['start ASTestComp comp',
                                   'lv comp'], count=3)
         self.compare(replies[-1], expected)
