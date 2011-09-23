@@ -279,12 +279,15 @@ class ComponentWrapper(object):
         except Exception as exc:
             self._send_exc(exc, req_id)
 
-    def invoke(self, method, req_id):
+    def invoke(self, method, full, req_id):
         """
         Invokes a method on a component instance.
 
         method: string
             External method reference.
+
+        full: bool
+            If True, return result as XML.
 
         req_id: string
             'Raw' mode request identifier.
@@ -296,13 +299,23 @@ class ComponentWrapper(object):
                 raise WrapperError('no such method <%s>.' % method)
             meth = getattr(self._comp, attr)
             result = meth()
-# FIXME: MC 8 doesn't understand return value (uses 'full' option)
             if result is None:
                 reply = ''
             elif type(result) == float:
                 reply = _float2str(result)
             else:
                 reply = str(result)
+
+            # Setting 'download' True since we have no idea about side-effects.
+            if full:
+                reply = """\
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\
+<response>\
+<version>100.0</version>\
+<download>true</download>\
+<string>%s</string>\
+</response>""" % reply
+
             self._send_reply(reply, req_id)
         except Exception as exc:
             self._send_exc(exc, req_id)
@@ -619,6 +632,9 @@ class ComponentWrapper(object):
         req_id: string
             'Raw' mode request identifier.
         """
+        # Quotes around the value are semi-optional.
+        if valstr.startswith('"') and valstr.endswith('"'):
+            valstr = valstr[1:-1]
         try:
             self._set(path, valstr)
             self._send_reply('value set for <%s>' % path, req_id)

@@ -417,7 +417,7 @@ def _set_str(container, name, member):
     """ Helper for :meth:`_set_from_xml`. """
     typ = member.attrib['type']
     if typ == 'string':
-        val = member.text.strip()
+        val = member.text.decode('string_escape')
         setattr(container, name, val)
     else:
         raise RuntimeError('Unsupported type %r for %s.%s'

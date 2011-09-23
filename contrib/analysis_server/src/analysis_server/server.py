@@ -1157,13 +1157,13 @@ Available Commands:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'invoke <object.method()> [full]')
             return
-# TODO: what does 'full' mean?
 
         name, dot, method = args[0].partition('.')
         method = method[:-2]
+        full = len(args) == 2 and args[1] == 'full'
         wrapper, worker = self._get_wrapper(name)
         if wrapper is not None:
-            worker.put((wrapper.invoke, (method, self._req_id), {}, None))
+            worker.put((wrapper.invoke, (method, full, self._req_id), {}, None))
 
     _COMMANDS['invoke'] = _invoke
 
