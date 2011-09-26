@@ -175,15 +175,15 @@ class CONMINdriver(DriverUsesDerivatives):
         
     Note on self.cnmn1.igoto, which reports CONMIN's operation state:
         0: Initial and final state
-	
+
         1: Initial evaluation of objective and constraint values
-	
+
         2: Evalute gradients of objective and constraints (internal only)
-	
+
         3: Evalute gradients of objective and constraints
-	
+
         4: One-dimensional search on unconstrained function
-	
+
         5: Solve 1D search problem for unconstrained function
             
     """
