@@ -110,12 +110,23 @@ class NamespaceTestCase(unittest.TestCase):
         
     def test_pathname(self):
         vt = self.asm.scomp2.cont_out.vt2.vt3
-        self.assertEqual(vt._iotype, 'out')
         self.assertEqual('scomp2.cont_out.vt2.vt3', vt.get_pathname())
         self.asm.scomp1.cont_in.vt2.vt3 = vt
-        self.assertEqual(vt._iotype, 'in')
         self.assertEqual('scomp1.cont_in.vt2.vt3', 
                          self.asm.scomp1.cont_in.vt2.vt3.get_pathname())
+        
+    def test_iotype(self):
+        vt = self.asm.scomp2.cont_out.vt2.vt3
+        self.assertEqual(vt._iotype, 'out')
+        self.asm.scomp1.cont_in.vt2.vt3 = vt
+        self.assertEqual(vt._iotype, 'in')
+        
+        dvt = DumbVT()
+        self.assertEqual(dvt._iotype, '')
+        self.asm.scomp2.cont_out = dvt
+        self.assertEqual(self.asm.scomp2.cont_out._iotype, 'out')
+        self.assertEqual(self.asm.scomp2.cont_out.vt2._iotype, 'out')
+        self.assertEqual(self.asm.scomp2.cont_out.vt2.vt3._iotype, 'out')
         
     def test_items(self):
         vtvars = ['v1','v2','vt2']

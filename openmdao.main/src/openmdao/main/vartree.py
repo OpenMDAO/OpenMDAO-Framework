@@ -1,8 +1,7 @@
 
 import weakref
 
-from enthought.traits.api import Python
-from enthought.traits.trait_base import not_none
+from enthought.traits.api import Python, Str
 from enthought.traits.has_traits import FunctionType
 
 from openmdao.main.variable import Variable
@@ -12,9 +11,9 @@ from openmdao.main.mp_support import is_instance
 
 class VariableTree(Container):
     
-    _iotype = Python()
+    _iotype = Str('')
     
-    def __init__(self, iotype=None, doc=None):
+    def __init__(self, iotype='', doc=None):
         super(VariableTree, self).__init__(doc=doc)
         self._iotype = iotype
         self.on_trait_change(self._iotype_modified, '_iotype')
@@ -33,13 +32,14 @@ class VariableTree(Container):
     def add(self, name, obj):
         if isinstance(obj, VariableTree):
             if self.trait(name) is None:
-                self.add_trait(name, Slot(VariableTree()))
+                self.add_trait(name, Slot(VariableTree(), iotype=obj._iotype))
                 self.on_trait_change(self._trait_modified, name)
         super(VariableTree, self).add(name, obj)
         
     def add_trait(self, name, trait):
         super(VariableTree, self).add_trait(name, trait)
-        self.on_trait_change(self._trait_modified, name)
+        if not name.startswith('_'):
+            self.on_trait_change(self._trait_modified, name)
             
     def remove_trait(self, name):
         trait = self.get_trait(name)
@@ -50,9 +50,13 @@ class VariableTree(Container):
             
         super(VariableTree, self).remove_trait(name)
 
+    def list_vars(self):
+        """Return a list of Variables in this VariableTree."""
+        return [k for k in self.__dict__.keys() if not k.startswith('_')]
+
     def _iotype_modified(self, obj, name, old, new):
         for k,v in self.__dict__.items():
-            if isinstance(v, VariableTree) and k is not self:
+            if isinstance(v, VariableTree) and v is not self.parent:
                 v._iotype = new
         
     def _trait_modified(self, obj, name, old, new):
@@ -65,6 +69,7 @@ class VariableTree(Container):
             while isinstance(p, VariableTree):
                 vt = p
                 p = p.parent
+            # notify parent Component that this VariableTree has been modified
             if p is not None:
                 p._input_trait_modified(p, vt.name, vt, vt)
         
@@ -103,7 +108,7 @@ class VariableTree(Container):
                 match_dict = dict([(k,v) for k,v in self._filtertraits(**newdict).items() 
                                         if not k.startswith('_')])
             else:
-                return  #iotype won't match any of our children either
+                return  #our children have same iotype as we do, so won't match if we didn't
             
             if recurse:
                 for name in self.list_containers():

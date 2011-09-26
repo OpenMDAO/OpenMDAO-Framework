@@ -42,8 +42,17 @@ class MyHasTraits(HasTraits):
 class MyHasTraits2(MyHasTraits):
     ival = Int(2)
 
+class CallbackTester(HasTraits):
+    num_callbacks = Int(0)
+    some_trait = Int()
+    _underscore = Int()
+    
+    def _callback(self, obj, name, old, new):
+        self.num_callbacks += 1
+        self.nested = MyHasTraits()
+        self.nested.mht2 = MyHasTraits2()
 
-
+        
 class TraitsTestCase(unittest.TestCase):
 
     def test_copy_on_assign(self):
@@ -206,14 +215,6 @@ class TraitsTestCase(unittest.TestCase):
         self.assertEqual(mht.implicit_property, 999)
         
     def test_callbacks(self):
-        class CallbackTester(HasTraits):
-            num_callbacks = Int(0)
-            some_trait = Int()
-            
-            def _callback(self, obj, name, old, new):
-                self.num_callbacks += 1
-                self.nested = MyHasTraits()
-                self.nested.mht2 = MyHasTraits2()
                 
         cbt = CallbackTester()
         self.assertEqual(cbt.num_callbacks, 0)
@@ -245,6 +246,15 @@ class TraitsTestCase(unittest.TestCase):
         cbt.nested.mht2.ival = 999
         self.assertEqual(cbt.num_callbacks, 4)
         
+    def test_underscore(self):
+        
+        cbt = CallbackTester()
+        self.assertEqual(cbt.num_callbacks, 0)
+        cbt.on_trait_change(cbt._callback, '_underscore')
+        cbt._underscore = 3
+        self.assertEqual(cbt.num_callbacks, 1)
+        cbt._underscore = 4
+        self.assertEqual(cbt.num_callbacks, 2)
 
     def test_dotted_names(self):
         # traits can be registered using dotted names, but the result is that

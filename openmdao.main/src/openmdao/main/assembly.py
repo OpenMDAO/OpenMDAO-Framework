@@ -335,8 +335,8 @@ class Assembly (Component):
                     srcval = srccomp.get_wrapped_attr(src)
                 except Exception, err:
                     self.raise_exception(
-                        "error retrieving value for %s from '%s'" %
-                        (src,srccompname), type(err))
+                        "error retrieving value for %s from '%s': %s" %
+                        (src,srccompname,str(err)), type(err))
                 try:
                     if srccomp is self:
                         srcname = src

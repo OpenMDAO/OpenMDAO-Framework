@@ -613,6 +613,10 @@ class Container(HasTraits):
         """Return a list of names of child Containers."""
         return [n for n, v in self.items() if is_instance(v, Container)]
     
+    def list_vars(self):
+        """Return a list of Variables in this Container."""
+        return [k for k,v in self.items(iotype=not_none)]
+    
     def _filtertraits(self, traits=None, events=False, **metadata):
         """This returns a dict that contains traits (class and instance)
         that match the given metadata.  If the 'traits' argument is not
