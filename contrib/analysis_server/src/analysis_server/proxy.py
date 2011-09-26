@@ -134,9 +134,9 @@ class ComponentProxy(Component):
 
     def _restore(self, container):
         """ Restore remote state (variables don't have a post_load()). """
-        # Using _filtertraits() here because at this point items()
+        # Using _alltraits() here because at this point items()
         # considers the ProxyMixin traits as 'Missing'.
-        for name, trait in container._filtertraits().items():
+        for name, trait in container._alltraits().items():
             typ = trait.trait_type
             if isinstance(typ, ProxyMixin):
                 typ.restore(self._client)

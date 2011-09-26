@@ -105,7 +105,7 @@ class VariableTree(Container):
             if matches_io:
                 newdict = metadata.copy()
                 del newdict['iotype']
-                match_dict = dict([(k,v) for k,v in self._filtertraits(**newdict).items() 
+                match_dict = dict([(k,v) for k,v in self._alltraits(**newdict).items() 
                                         if not k.startswith('_')])
             else:
                 return  #our children have same iotype as we do, so won't match if we didn't

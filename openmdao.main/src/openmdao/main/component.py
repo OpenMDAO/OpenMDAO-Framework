@@ -201,7 +201,7 @@ class Component (Container):
         
         # make sure all input callbacks are in place.  If callback is
         # already there, this will have no effect. 
-        for name, trait in self._filtertraits().items():
+        for name, trait in self._alltraits().items():
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
