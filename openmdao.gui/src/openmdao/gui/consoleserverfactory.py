@@ -237,7 +237,7 @@ class ConsoleServer(cmd.Cmd):
     def _get_components(self,cont):
         comps = []
         for n,v in cont.items():
-            if isinstance(v,Component):
+            if is_instance(v,Component):
                 comp = {}            
                 comp['pathname'] = v.get_pathname()
                 comp['class'] = str(v.__class__.__name__)
@@ -265,31 +265,33 @@ class ConsoleServer(cmd.Cmd):
         '''
         components = []
         connections = []
-        if isinstance(asm,Assembly):
-            # list of components (name & type) in the workflow
-            # TODO:  want to get the order using iter()
-            for comp in asm.driver.iteration_set():
-                if isinstance(comp,Assembly):
-                    components.append({ 'name': comp.name,
-                                        'pathname': comp.get_pathname(),
-                                        'type': type(comp).__name__,
-                                        'workflow': self._get_dataflow(comp) })
-                else:
-                    components.append({ 'name': comp.name,
-                                        'pathname': comp.get_pathname(),
-                                        'type': type(comp).__name__ })
+        if is_instance(asm,Assembly):
+            # list of components (name & type) in the assembly
+            for name in asm.list_containers():
+                #if not (name == 'driver'):
+                    comp = asm.get(name)
+                    if is_instance(comp,Component):
+                        components.append({ 'name': comp.name,
+                                            'pathname': comp.get_pathname(),
+                                            'type': type(comp).__name__ })
             # list of connections (convert tuples to lists)
             conntuples = asm.list_connections()
             for connection in conntuples:
                 connections.append(list(connection))
         return { 'components': components, 'connections': connections }
 
-    def get_dataflow(self):
+    def get_dataflow(self,name):
+        flow = {}
         if self.top:
-            return self._get_workflow(self.top)
-        else:
-            return {}
-            
+            try:
+                if name:
+                    flow = self._get_dataflow(self.top.get(name))
+                else:
+                    flow = self._get_dataflow(self.top)
+            except Exception, err:
+                print "Error getting workflow:", str(err)
+        return jsonpickle.encode(flow)
+
     def _get_workflow(self,drvr):
         ''' get the driver info and the list of components that make up the
             driver's workflow, recurse on nested drivers
@@ -299,13 +301,13 @@ class ConsoleServer(cmd.Cmd):
         ret['type'] = type(drvr).__module__+'.'+type(drvr).__name__ 
         ret['workflow'] = []
         for comp in drvr.workflow:
-            if isinstance(comp,Assembly) and comp.driver:
+            if is_instance(comp,Assembly) and comp.driver:
                 ret['workflow'].append({ 
                     'pathname': comp.get_pathname(),
                     'type':     type(comp).__module__+'.'+type(comp).__name__,
                     'driver':   self._get_workflow(comp.driver)
                 })
-            elif isinstance(comp,Driver):
+            elif is_instance(comp,Driver):
                 ret['workflow'].append(self._get_workflow(comp))            
             else:
                 ret['workflow'].append({ 
@@ -440,7 +442,7 @@ class ConsoleServer(cmd.Cmd):
             for k,v in g:
                 if (type(v).__name__ == 'classobj') or str(v).startswith('<class'):
                     obj = self._globals[k]()
-                    if isinstance(obj, HasTraits):
+                    if is_instance(obj, HasTraits):
                         types.append( ( k , 'n/a') )
         except Exception, err:
             print "Error getting working types:", str(err)

@@ -10,9 +10,11 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
         flow_figs = {},
         workflowID = "#"+id+"-workflow",
         workflowDiv = jQuery('<div id='+workflowID+' style="height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px">').appendTo('#'+id),
-        workflow = new draw2d.Workflow(workflowID)        
+        workflow = new draw2d.Workflow(workflowID);
         
-    workflow.setBackgroundImage( "/static/images/grid_10.png", true)
+    self.pathname = pathname;
+        
+    workflow.setBackgroundImage( "/static/images/grid_10.png", true);
         
     /** FIXME: workflow context menu conflicts with figure context menu ** /
     // context menu

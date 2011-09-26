@@ -143,6 +143,24 @@ openmdao.Model=function() {
         }
     }
     
+    /** get the dataflow for an assembly */
+    this.getDataflow = function(pathname,callback,errorHandler) {
+        if (typeof callback != 'function')
+            return
+        else {
+            if (!pathname) {
+                pathname = '';
+            };
+            jQuery.ajax({
+                type: 'GET',
+                url:  'dataflow/'+pathname,
+                dataType: 'json',
+                success: callback,
+                error: errorHandler
+            })
+        }
+    }
+ 
     /** get  hierarchical list of components*/
     this.getComponents = function(callback,errorHandler) {
         if (typeof callback != 'function')
@@ -381,6 +399,3 @@ openmdao.Model=function() {
     }
     
 }
-
-
-

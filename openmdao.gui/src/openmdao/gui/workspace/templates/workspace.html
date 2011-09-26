@@ -78,9 +78,11 @@
     <script src="/static/js/openmdao/Plotter.js"></script>
     <!-- schematic stuff -->
     <script src="/static/js/openmdao/WorkflowDiagram.js"></script>
-    <script src="/static/js/openmdao/ComponentFigure.js"></script>    
     <script src="/static/js/openmdao/WorkflowFigure.js"></script>    
-    <!-- script src="/static/js/openmdao/ContextMenuConnection.js"></script -->
+    <script src="/static/js/openmdao/WorkflowComponentFigure.js"></script>    
+    <script src="/static/js/openmdao/DataflowDiagram.js"></script>
+    <script src="/static/js/openmdao/DataflowComponentFigure.js"></script>    
+    <script src="/static/js/openmdao/ContextMenuConnection.js"></script>
     <!-- script src="/static/js/openmdao/Toolbar.js"></script -->
     <!-- script src="/static/js/openmdao/ToolShowGrid.js"></script -->
     <script src="/static/js/openmdao/initWorkspace.js"></script>
@@ -111,6 +113,10 @@
             <dt id="workflow_tab" target="workflow_pane">Workflow</dt>
             <dd id="workflow_pane">
                 <div id="workflow"></div>
+            </dd>
+            <dt id="dataflow_tab" target="dataflow_pane">Dataflow</dt>
+            <dd id="dataflow_pane">
+                <div id="dataflow"></div>
             </dd>
             <dt id="code_tab" target="code_pane">Code</dt>
             <dd id="code_pane">

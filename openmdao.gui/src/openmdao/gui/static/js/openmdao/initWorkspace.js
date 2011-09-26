@@ -30,17 +30,18 @@ jQuery(function() {
     (function() {
         var model = openmdao.model;
         
-        var select_fn = new openmdao.PropertiesEditor("propertieseditor",model).editObject,
-            dblclk_fn = function(model,path) { new openmdao.ComponentEditor(model,path) },
-            workflow_fn = new openmdao.WorkflowDiagram("workflow",model,'driver').showWorkflow
-        new openmdao.ObjectTree("otree",model,select_fn,dblclk_fn,workflow_fn)
+        var prop_fn = new openmdao.PropertiesEditor("propertieseditor",model).editObject;
+        var work_fn = new openmdao.WorkflowDiagram("workflow",model,'driver').showWorkflow;
+        var data_fn = new openmdao.DataflowDiagram("dataflow",model,'').showDataflow;        
+        var code_fn = new openmdao.CodeEditor("code",model).editFile;
         
-        var code_fn = new openmdao.CodeEditor("code",model).editFile,            
-            geom_fn = function(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }
-        new openmdao.FileTree("ftree",model,code_fn,geom_fn)
+        var geom_fn = function(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }
+        var comp_fn = function(model,path) { new openmdao.ComponentEditor(model,path) };
         
-        new openmdao.Palette("palette",model)        
-        new openmdao.Console("cmdform","command","history",model);
+        new openmdao.ObjectTree("otree", model, prop_fn, comp_fn, work_fn, data_fn);
+        new openmdao.FileTree("ftree",   model, code_fn, geom_fn);        
+        new openmdao.Palette("palette",  model)        
+        new openmdao.Console("cmdform", "command", "history", model);
         
         // initialize views
         model.updateListeners();

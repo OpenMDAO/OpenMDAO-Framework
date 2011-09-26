@@ -32,6 +32,7 @@ def AddOns(request):
     ''' addon installation utility
     '''
     addons_url = 'http://openmdao.org/dists'
+    addons_url = 'http://torpedo.grc.nasa.gov:31005/'
     
     if request.method=='POST':
         ''' easy_install the POST'd addon
@@ -124,6 +125,12 @@ def Component(request,name):
 def Components(request):
     cserver = server_mgr.console_server(request.session.session_key)
     json = cserver.get_components()
+    return HttpResponse(json,mimetype='application/json')
+
+@never_cache
+def Dataflow(request,name):
+    cserver = server_mgr.console_server(request.session.session_key)
+    json = cserver.get_dataflow(name)
     return HttpResponse(json,mimetype='application/json')
 
 @never_cache

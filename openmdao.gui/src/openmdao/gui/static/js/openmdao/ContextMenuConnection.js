@@ -8,9 +8,9 @@ openmdao.ContextMenuConnection=function(){
 };
 openmdao.ContextMenuConnection.prototype=new draw2d.Connection();
 openmdao.ContextMenuConnection.prototype.getContextMenu=function(){
-        var menu=new draw2d.Menu();
-        var oThis=this;
-        menu.appendMenuItem(new draw2d.MenuItem("NULL Router",null,function(){
+    var menu=new draw2d.Menu();
+    var oThis=this;
+    menu.appendMenuItem(new draw2d.MenuItem("NULL Router",null,function(){
             oThis.setRouter(null);
         })
     );

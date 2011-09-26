@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn) {
+openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,dataflow_fn) {
     var menu =  [
                     {   "text": "Component", 
                         "items": [
@@ -97,7 +97,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn) {
     /** get a context menu for the specified node */
     function contextMenu(node) {
         // first let's see what was clicked on
-        var isAssembly = false;
+        var isAssembly = false;  // there's no "IAssembly" interface, so..
         if (node.is('.jstree-leaf')) {
             debug.log('ObjectTree.contextMenu: clicked on leaf node');
             debug.log(node);
@@ -107,14 +107,14 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn) {
             debug.log(node);
             isAssembly = true;
         }
+        
         var path = node.attr('path'),
+            klass = node.attr('class'),
             interfaces = node.attr('interfaces');
         
         // now create the menu
         var menu = {}
         
-        // TODO: implement stuff
-        // TODO: need to know object interfaces to properly do context menu
         menu.properties = {
             "label"  : 'Properties',
             "action" :  function(node) { 
@@ -122,7 +122,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn) {
                         }
         };
         if (jQuery.inArray('IDriver',interfaces)) {
-            menu.set_top = {
+            menu.show_workflow = {
                 "label"  : 'Show Workflow',
                 "action" :  function(node) { 
                                 debug.info('path:',path);
@@ -131,6 +131,13 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn) {
             }
         };
         if (isAssembly) {
+            menu.show_dataflow = {
+                "label"  : 'Show Dataflow',
+                "action" :  function(node) { 
+                                debug.info('path:',path);
+                                dataflow_fn(path);
+                            }
+            }
             menu.set_top = {
                 "label"  : 'Set as Top',
                 "action" :  function(node) { 
