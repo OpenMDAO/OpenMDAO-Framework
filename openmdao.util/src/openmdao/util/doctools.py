@@ -9,7 +9,6 @@ from sys import maxint, float_info
 
 from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, Event, \
                                  Instance
-from enthought.traits.trait_base import not_none
 from enthought.traits.trait_types import _InstanceArgs
 from inspect import getmro, ismodule, getmembers, ismethod, isfunction, isclass
 
