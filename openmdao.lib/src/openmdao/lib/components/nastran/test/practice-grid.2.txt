@@ -1,9 +1,0 @@
-     UNTITLED.SC4
-0                                                                                                            SUBCASE 1
-      EIGENVALUE =  4.373367E+06
-                                     S T R E S S E S   I N   R O D   E L E M E N T S      ( C R O D )
-       ELEMENT       AXIAL       SAFETY      TORSIONAL     SAFETY       ELEMENT       AXIAL       SAFETY      TORSIONAL     SAFETY
-         ID.        STRESS       MARGIN        STRESS      MARGIN         ID.        STRESS       MARGIN        STRESS      MARGIN
-             1    3.273509E+05  -9.4E-01    0.0                               2    2.779327E+05  -9.3E-01    0.0
-             3    1.005818E+05  -8.0E-01    0.0
-1                                                                              JUNE  15, 2010  MSC.NASTRAN  2/15/06   PAGE    27
