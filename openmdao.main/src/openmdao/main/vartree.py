@@ -1,6 +1,7 @@
 
 import weakref
 
+from enthought.traits.api import Python
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import FunctionType
 
@@ -11,22 +12,22 @@ from openmdao.main.mp_support import is_instance
 
 class VariableTree(Container):
     
-    iotype = Str()
+    _iotype = Python()
     
     def __init__(self, iotype=None, doc=None):
         super(VariableTree, self).__init__(doc=doc)
-        self.iotype = iotype
-        self.on_trait_change(self._iotype_modified, 'iotype')
+        self._iotype = iotype
+        self.on_trait_change(self._iotype_modified, '_iotype')
 
     @rbac(('owner', 'user'))
     def tree_rooted(self):
         if self.parent:
             if isinstance(self.parent, VariableTree):
-                self.iotype = self.parent.iotype
+                self._iotype = self.parent._iotype
             else:
                 t = self.parent.trait(self.name)
                 if t and t.iotype:
-                    self.iotype = t.iotype
+                    self._iotype = t.iotype
         super(VariableTree, self).tree_rooted()
     
     def add(self, name, obj):
@@ -52,14 +53,14 @@ class VariableTree(Container):
     def _iotype_modified(self, obj, name, old, new):
         for k,v in self.__dict__.items():
             if isinstance(v, VariableTree) and k is not self:
-                v.iotype = new
+                v._iotype = new
         
     def _trait_modified(self, obj, name, old, new):
         if isinstance(new, VariableTree):
             obj = getattr(self, name)
             obj.parent = self
-            obj.iotype = self.iotype
-        if self.iotype == 'in':
+            obj._iotype = self._iotype
+        if self._iotype == 'in':
             p = self
             while isinstance(p, VariableTree):
                 vt = p
@@ -71,7 +72,7 @@ class VariableTree(Container):
         """Return the iotype of the Variable with the given name"""
         if self.get_trait(name) is None:
             self.raise_exception("'%s' not found" % name)
-        return self.iotype
+        return self._iotype
 
     def _items(self, visited, recurse=False, **metadata):
         """Return an iterator that returns a list of tuples of the form 
@@ -91,9 +92,9 @@ class VariableTree(Container):
             meta_io = metadata['iotype']
             matches_io = False
             if type( meta_io ) is FunctionType:
-                if meta_io(self.iotype):
+                if meta_io(self._iotype):
                     matches_io = True
-            elif meta_io == self.iotype:
+            elif meta_io == self._iotype:
                 matches_io = True
 
             if matches_io:

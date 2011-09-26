@@ -110,10 +110,10 @@ class NamespaceTestCase(unittest.TestCase):
         
     def test_pathname(self):
         vt = self.asm.scomp2.cont_out.vt2.vt3
-        self.assertEqual(vt.iotype, 'out')
+        self.assertEqual(vt._iotype, 'out')
         self.assertEqual('scomp2.cont_out.vt2.vt3', vt.get_pathname())
         self.asm.scomp1.cont_in.vt2.vt3 = vt
-        self.assertEqual(vt.iotype, 'in')
+        self.assertEqual(vt._iotype, 'in')
         self.assertEqual('scomp1.cont_in.vt2.vt3', 
                          self.asm.scomp1.cont_in.vt2.vt3.get_pathname())
         
