@@ -87,26 +87,25 @@ class VariableTree(Container):
         the given metadata. If recurse is True, also iterate through all
         child Containers of each Container found.
         """
-        if 'iotype' not in metadata:
-            for k,v in super(VariableTree, self)._items(visited, recurse=recurse,
-                                                        **metadata):
-                yield k,v
-            return
-        
         if id(self) not in visited:
             visited.add(id(self))
             
-            meta_io = metadata['iotype']
-            matches_io = False
-            if type( meta_io ) is FunctionType:
-                if meta_io(self._iotype):
+            if 'iotype' in metadata:
+                meta_io = metadata['iotype']
+                matches_io = False
+                if type( meta_io ) is FunctionType:
+                    if meta_io(self._iotype):
+                        matches_io = True
+                elif meta_io == self._iotype:
                     matches_io = True
-            elif meta_io == self._iotype:
+                if matches_io:
+                    newdict = metadata.copy()
+                    del newdict['iotype']
+            else:
                 matches_io = True
+                newdict = metadata
 
             if matches_io:
-                newdict = metadata.copy()
-                del newdict['iotype']
                 match_dict = dict([(k,v) for k,v in self._alltraits(**newdict).items() 
                                         if not k.startswith('_')])
             else:
