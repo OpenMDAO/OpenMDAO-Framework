@@ -71,7 +71,9 @@ class VariableTree(Container):
                 p = p.parent
             # notify parent Component that this VariableTree has been modified
             if p is not None:
-                p._input_trait_modified(p, vt.name, vt, vt)
+                t = p.trait(vt.name)
+                if t and t.iotype == 'in':
+                    p._input_trait_modified(p, vt.name, vt, vt)
         
     def get_iotype(self, name):
         """Return the iotype of the Variable with the given name"""
