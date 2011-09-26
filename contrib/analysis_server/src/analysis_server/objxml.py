@@ -64,9 +64,9 @@ def _get_as_xml(container, name, xml):
         else:
             ttype = trait.trait_type
             if isinstance(ttype, Array):
-                _get_array(name, val, trait, xml, True)
+                _get_array(name, val, trait, xml, True, container)
             elif isinstance(ttype, List):
-                _get_array(name, val, trait, xml, False)
+                _get_array(name, val, trait, xml, False, container)
             elif isinstance(ttype, Bool):
                 _get_bool(name, val, trait, xml)
             elif isinstance(ttype, Enum):
@@ -83,7 +83,7 @@ def _get_as_xml(container, name, xml):
     xml.append('</members>')
 
 
-def _get_array(name, val, trait, xml, is_array):
+def _get_array(name, val, trait, xml, is_array, container):
     """ Helper for :meth:`_get_as_xml`. """
     if is_array:
         converters = {'f':float, 'i':int, 'S':str}
@@ -94,10 +94,22 @@ def _get_array(name, val, trait, xml, is_array):
             raise RuntimeError('%s.%s: unsupported dtype %r (%r)'
                                % (container.get_pathname(), name,
                                   val.dtype, kind))
-    elif val:
-        typ = type(val[0])
     else:
-        typ = str  # HACK!
+        inner_traits = trait.trait_type.inner_traits()
+        if inner_traits:
+            inner_type = inner_traits[0].trait_type
+            if isinstance(inner_type, Float):
+                typ = float
+            elif isinstance(inner_type, Int):
+                typ = int
+            elif isinstance(inner_type, Str):
+                typ = str
+            else:
+                raise TypeError('%s.%s: unsupported List element type %r'
+                                % (container.get_pathname(), name, inner_type))
+        else:
+            raise TypeError('%s.%s: undefined List element type'
+                            % (container.get_pathname(), name))
 
     if typ is float:
         fmt = '%.16g'
@@ -123,9 +135,9 @@ def _get_array(name, val, trait, xml, is_array):
 
     if len(val):
         if is_array and len(val.shape) > 1:
-            first = '%s' % val.flat[0]
+            first = _float2str(val.flat[0])
         else:
-            first = '%s' % val[0]
+            first = str(val[0])
         if typ is str:
             first = escape(first.encode('string_escape'))
     else:
@@ -354,16 +366,31 @@ def _set_array(container, name, member, is_array):
         val = getattr(container, name)
         kind = val.dtype.kind
         try:
-            dtyp = converters[kind]
+            typ = converters[kind]
         except KeyError:
             raise RuntimeError('Unsupported dtype %r (%r) for %s.%s'
                                % (val.dtype, kind,
                                   container.get_pathname(), name))
     else:
-        dtyp = str  # HACK!
+        trait = container.get_dyn_trait(name)
+        inner_traits = trait.trait_type.inner_traits()
+        if inner_traits:
+            inner_type = inner_traits[0].trait_type
+            if isinstance(inner_type, Float):
+                typ = float
+            elif isinstance(inner_type, Int):
+                typ = int
+            elif isinstance(inner_type, Str):
+                typ = str
+            else:
+                raise TypeError('%s.%s: unsupported List element type %r'
+                                % (container.get_pathname(), name, inner_type))
+        else:
+            raise TypeError('%s.%s: undefined List element type'
+                            % (container.get_pathname(), name))
 
     text = member.text
-    if dtyp == str:
+    if typ == str:
         text = text.decode('string_escape')
 
     if is_array:
@@ -372,13 +399,16 @@ def _set_array(container, name, member, is_array):
             dims = [int(val.strip(' "')) for val in dims.split(',')]
             junk, lbrace, rest = rest.partition('{')
             data, rbrace, rest = rest.partition('}')
-            value = numpy.array([dtyp(val.strip(' "'))
+            value = numpy.array([typ(val.strip(' "'))
                                  for val in data.split(',')]).reshape(dims)
         else:
-            value = numpy.array([dtyp(val.strip(' "'))
+            value = numpy.array([typ(val.strip(' "'))
                                  for val in text.split(',')])
     else:
-        value = [dtyp(val.strip(' "')) for val in text.split(',')]
+        if text:
+            value = [typ(val.strip(' "')) for val in text.split(',')]
+        else:
+            value = []
 
     setattr(container, name, value)
 

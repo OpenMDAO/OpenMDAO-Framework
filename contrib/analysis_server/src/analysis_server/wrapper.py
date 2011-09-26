@@ -547,7 +547,8 @@ class ComponentWrapper(object):
         """
         try:
             monitor = self._monitors.pop(monitor_id)
-        except KeyError:
+        # Invalid monitor_id intercepted by server.py
+        except KeyError:  # pragma no cover
             raise WrapperError('No registered monitor for %r' % monitor_id)
         else:
             monitor.stop()
@@ -847,13 +848,13 @@ class ArrayBase(BaseWrapper):
             return first
         elif attr == 'format':
             return 'null'
-        elif attr == 'hasUpperBound' and self._trait.dtype != str:
+        elif attr == 'hasUpperBound' and self.typ != str:
             return 'false' if self._trait.high is None else 'true'
-        elif attr == 'upperBound' and self._trait.dtype != str:
+        elif attr == 'upperBound' and self.typ != str:
             return '0' if self._trait.high is None else str(self._trait.high)
-        elif attr == 'hasLowerBound' and self._trait.dtype != str:
+        elif attr == 'hasLowerBound' and self.typ != str:
             return 'false' if self._trait.low is None else 'true'
-        elif attr == 'lowerBound' and self._trait.dtype != str:
+        elif attr == 'lowerBound' and self.typ != str:
             return '0' if self._trait.low is None else str(self._trait.low)
         elif attr == 'length':
             value = self._container.get(self._name)
@@ -1017,11 +1018,22 @@ class ListWrapper(ArrayBase):
     """
 
     def __init__(self, container, name, ext_path, logger):
-        value = container.get(name)
-        if value:
-            typ = type(value[0])
+        trait = container.get_dyn_trait(name)
+        inner_traits = trait.trait_type.inner_traits()
+        if inner_traits:
+            inner_type = inner_traits[0].trait_type
+            if isinstance(inner_type, Float):
+                typ = float
+            elif isinstance(inner_type, Int):
+                typ = int
+            elif isinstance(inner_type, Str):
+                typ = str
+            else:
+                raise TypeError('%s.%s: unsupported List element type %r'
+                                % (container.get_pathname(), name, inner_type))
         else:
-            typ = str  # HACK!
+            raise TypeError('%s.%s: undefined List element type'
+                            % (container.get_pathname(), name))
         super(ListWrapper, self).__init__(container, name, ext_path, logger,
                                           typ, is_array=False)
 
@@ -1146,10 +1158,10 @@ class EnumWrapper(BaseWrapper):
             raise WrapperError('unexpected value type for %s.%s: %r'
                                % (container.get_pathname(), name, typ))
         self._py_type = typ
-        if typ == float:
+        if typ is float:
             self._phx_type = 'com.phoenix_int.aserver.types.PHXDouble'
             self._val_type = 'double'
-        elif typ == int:
+        elif typ is int:
             self._phx_type = 'com.phoenix_int.aserver.types.PHXLong'
             self._val_type = 'long'
         else:

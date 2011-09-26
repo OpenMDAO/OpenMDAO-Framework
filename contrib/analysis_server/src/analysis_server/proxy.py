@@ -309,9 +309,11 @@ class ArrayProxy(ProxyMixin, Array):
             data, rbrace, rest = rest.partition('}')
             return numpy.array([self._type(val.strip(' "'))
                                 for val in data.split(',')]).reshape(dims)
-        else:
+        elif valstr:
             return numpy.array([self._type(val.strip(' "'))
                                 for val in valstr.split(',')])
+        else:
+            return []
 
     def set(self, obj, name, value):
         """

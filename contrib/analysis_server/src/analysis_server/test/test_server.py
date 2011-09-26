@@ -14,6 +14,7 @@ import sys
 import time
 import unittest
 import nose
+from xml.sax.saxutils import escape
 
 from openmdao.util.testutil import assert_raises
 
@@ -546,6 +547,17 @@ Available Commands:
                          'help,h\r\n>')
 
     def test_invoke(self):
+        expected = """\
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\
+<response>\
+<version>100.0</version>\
+<download>true</download>\
+<string>0</string>\
+</response>\r\n>"""
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'invoke comp.int_method() full'], count=3)
+        self.assertEqual(replies[-1], expected)
+
         replies = self.send_recv(['start ASTestComp comp',
                                   'invoke comp.float_method()'], count=3)
         self.assertEqual(replies[-1], '0\r\n>')
@@ -631,9 +643,10 @@ ASTestComp2"""
 
     def test_list_methods(self):
         expected = """\
-4 methods found:
+5 methods found:
 cause_exception()
 float_method()
+int_method()
 null_method()
 str_method()"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
@@ -645,9 +658,10 @@ str_method()"""
         self.compare(replies[-1], expected)
 
         expected = """\
-4 methods found:
+5 methods found:
 cause_exception() fullName="cause_exception"
 float_method() fullName="float_method"
+int_method() fullName="int_method"
 null_method() fullName="null_method"
 str_method() fullName="str_method"\
 """
@@ -703,16 +717,18 @@ z (type=com.phoenix_int.aserver.types.PHXDouble) (access=g)"""
         self.compare(replies[-1], expected)
 
         expected = """\
-12 properties found:
+14 properties found:
 b (type=com.phoenix_int.aserver.types.PHXBoolean) (access=sg)
 f (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)
 f1d (type=double[9]) (access=sg)
 f2d (type=double[2][4]) (access=sg)
 f3d (type=double[2][3][3]) (access=sg)
 fe (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)
+flst (type=double[0]) (access=sg)
 i (type=com.phoenix_int.aserver.types.PHXLong) (access=sg)
 i1d (type=long[9]) (access=sg)
 ie (type=com.phoenix_int.aserver.types.PHXLong) (access=sg)
+ilst (type=long[0]) (access=sg)
 s (type=com.phoenix_int.aserver.types.PHXString) (access=sg)
 s1d (type=java.lang.String[3]) (access=sg)
 se (type=com.phoenix_int.aserver.types.PHXString) (access=sg)"""
@@ -897,10 +913,16 @@ if __name__ == '__main__':
                          'setServerAuthInfo <serverURL> <username> <password>\r\n>')
 
     def test_set_hierarchy(self):
+        # Grab value of obj_input (big XML string).
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.obj_input'], count=3)
+        obj_input = replies[-1][:-3]
+
         xml = """\
 <?xml version='1.0' encoding='utf-8'?>
 <Group>
 <Variable name="in_file">test setHierarchy</Variable>
+<Variable name="obj_input">%s</Variable>
 <Variable name="sub_group.b">false</Variable>
 <Variable name="sub_group.f">-0.5</Variable>
 <Variable name="sub_group.f1d">5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9</Variable>
@@ -914,7 +936,7 @@ if __name__ == '__main__':
 <Variable name="sub_group.se">hot</Variable>
 <Variable name="x">6</Variable>
 <Variable name="y">7</Variable>
-</Group>"""
+</Group>""" % escape(obj_input)
 
         cmd_1 = 'start ASTestComp comp'
         cmd_2 = 'setHierarchy comp %s' % xml

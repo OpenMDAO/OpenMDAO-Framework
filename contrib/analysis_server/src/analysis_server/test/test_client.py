@@ -214,12 +214,14 @@ version: 7.0, build: 42968"""
         result = self.client.list_methods('comp')
         self.assertEqual(result, ['cause_exception',
                                   'float_method',
+                                  'int_method',
                                   'null_method',
                                   'str_method'])
 
         result = self.client.list_methods('comp', full=True)
         self.assertEqual(result, [('cause_exception', 'cause_exception'),
                                   ('float_method', 'float_method'),
+                                  ('int_method', 'int_method'),
                                   ('null_method', 'null_method'),
                                   ('str_method', 'str_method')])
 

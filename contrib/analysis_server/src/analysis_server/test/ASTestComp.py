@@ -61,6 +61,9 @@ class TopObj(Container):
         self.add('tos1d', List(Str, iotype=iotype, desc='1D string array',
                                value=['Hello', 'from', 'TestComponent.tos1d']))
 
+        self.add('toflst', List(Float, iotype=iotype, desc='Float list'))
+        self.add('toilst', List(Int, iotype=iotype, desc='Int list'))
+
 
 class TestComponent(Component):
     """ Just something to test with. """
@@ -111,6 +114,9 @@ class TestComponent(Component):
         self.obj_output.toi1d = self.obj_input.toi1d
         self.obj_output.tos1d = self.obj_input.tos1d
 
+        self.obj_output.toflst = self.obj_input.toflst
+        self.obj_output.toilst = self.obj_input.toilst
+
         self.obj_output.subobj.sob = self.obj_input.subobj.sob
         self.obj_output.subobj.sof = self.obj_input.subobj.sof
         self.obj_output.subobj.soi = self.obj_input.subobj.soi
@@ -123,6 +129,10 @@ class TestComponent(Component):
     @rbac(('owner', 'user'))
     def float_method(self):
         return self.z
+
+    @rbac(('owner', 'user'))
+    def int_method(self):
+        return self.exe_count
 
     @rbac(('owner', 'user'))
     def null_method(self):
@@ -170,6 +180,9 @@ class SubGroup(Container):
 
     s1d = List(Str, iotype='in', desc='1D string array',
                value=['Hello', 'from', 'TestComponent.SubGroup'])
+
+    flst = List(Float, iotype='in', desc='List of floats')
+    ilst = List(Int, iotype='in', desc='List of ints')
 
 
 class Bogus(object):
