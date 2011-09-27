@@ -12,6 +12,7 @@ from openmdao.main.factorymanager import create, get_available_types
 
 from openmdao.main.container import Container, set_as_top, get_default_name, \
                                     create_io_traits
+from openmdao.main.vartree import VariableTree
 from openmdao.main.component import Component, SimulationRoot
 from openmdao.main.component_with_derivatives import ComponentWithDerivatives
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
