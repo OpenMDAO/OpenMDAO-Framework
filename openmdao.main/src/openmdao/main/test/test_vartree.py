@@ -82,7 +82,12 @@ class NamespaceTestCase(unittest.TestCase):
                          self.asm.scomp2.cont_in.vt2.x)
         self.assertEqual(self.asm.scomp1.cont_out.vt2.vt3.a, 
                          self.asm.scomp2.cont_in.vt2.vt3.a)
-        self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
+        try:
+            self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
+        except Exception as err:
+            self.assertEqual(str(err), ": 'scomp2.cont_in' is already connected to source 'scomp1.cont_out'")
+        else:
+            self.fail("exception expected")
         
     def test_connect_sub(self):
         self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
@@ -96,6 +101,21 @@ class NamespaceTestCase(unittest.TestCase):
         self.asm.run()
         self.assertAlmostEqual(12.0*self.asm.scomp1.cont_out.vt2.vt3.a, 
                                self.asm.scomp2.cont_in.vt2.vt3.b)
+        try:
+            self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
+        except Exception as err:
+            self.assertEqual(str(err), 
+                "'vt2.vt3.b' is already connected to source 'parent.parent.scomp1.cont_out.vt2.vt3.a'")
+        else:
+            self.fail("exception expected")
+        
+        try:
+            self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
+        except Exception as err:
+            self.assertEqual(str(err), 
+                "cont_in.vt2.vt3.b is already connected to source parent.scomp1.cont_out.vt2.vt3.a")
+        else:
+            self.fail("exception expected")
         
     def test_callbacks(self):
         # verify that setting a var nested down in a VariableTree hierarchy will
