@@ -1,53 +1,47 @@
 import sys
 
 from openmdao.main.api import Assembly, Component, Container, FileRef, \
-                              set_as_top
+                              VariableTree, set_as_top
 from openmdao.main.rbac import rbac
 
 from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, \
                                        Int, List, Str
 
-class SubObj(Container):
+class SubObj(VariableTree):
     """ Sub-object under TopObject. """
 
     def __init__(self, *args, **kwargs):
         super(SubObj, self).__init__(*args, **kwargs)
-        iotype = kwargs.get('iotype', None)
-        self.add('sob', Bool(False, iotype=iotype))
-        self.add('sof', Float(0.284, units='lb/inch**3', iotype=iotype))
-        self.add('soi', Int(3, iotype=iotype))
-        self.add('sos', Str('World', iotype=iotype))
+        self.add('sob', Bool(False))
+        self.add('sof', Float(0.284, units='lb/inch**3'))
+        self.add('soi', Int(3))
+        self.add('sos', Str('World'))
 
 
-class TopObj(Container):
+class TopObj(VariableTree):
     """ Top-level object variable. """
 
     def __init__(self, *args, **kwargs):
         super(TopObj, self).__init__(*args, **kwargs)
-        iotype = kwargs.get('iotype', None)
-        self.add('subobj', SubObj(iotype=iotype))
-        self.add('tob', Bool(True, iotype=iotype))
-        self.add('tof', Float(0.5, units='inch', iotype=iotype))
-        self.add('toi', Int(42, iotype=iotype))
-        self.add('tos', Str('Hello', iotype=iotype))
-        self.add('tofe', Enum(iotype='in', values=(2.781828, 3.14159),
+        self.add('subobj', SubObj())
+        self.add('tob', Bool(True))
+        self.add('tof', Float(0.5, units='inch'))
+        self.add('toi', Int(42))
+        self.add('tos', Str('Hello'))
+        self.add('tofe', Enum(values=(2.781828, 3.14159),
                               aliases=('e', 'pi'), desc='Float enum', units='m'))
-        self.add('toie', Enum(iotype='in', values=(9, 8, 7, 1), desc='Int enum'))
-        self.add('tose', Enum(iotype='in', values=('cold', 'hot', 'nice'),
-                              desc='Str enum'))
+        self.add('toie', Enum(values=(9, 8, 7, 1), desc='Int enum'))
+        self.add('tose', Enum(values=('cold', 'hot', 'nice'), desc='Str enum'))
 
-        self.add('tof1d', Array(dtype=float, iotype=iotype,
-                                desc='1D float array', units='cm',
+        self.add('tof1d', Array(dtype=float, desc='1D float array', units='cm',
                                 default_value=[1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5],
                                 low=0, high=10))
 
-        self.add('tof2d', Array(dtype=float, iotype=iotype,
-                                desc='2D float array', units='mm',
+        self.add('tof2d', Array(dtype=float, desc='2D float array', units='mm',
                                 default_value=[ [1.5, 2.5, 3.5, 4.5],
                                                 [5.5, 6.5, 7.5, 8.5] ]))
 
-        self.add('tof3d', Array(dtype=float, iotype=iotype,
-                                desc='3D float array',
+        self.add('tof3d', Array(dtype=float, desc='3D float array',
                                 default_value=[ [ [1.5, 2.5, 3.5],
                                                   [4.5, 5.5, 6.5],
                                                   [7.5, 8.5, 9.5] ],
@@ -55,14 +49,14 @@ class TopObj(Container):
                                                   [40.5, 50.5, 60.5],
                                                   [70.5, 80.5, 90.5] ] ]))
 
-        self.add('toi1d', Array(dtype=int, iotype=iotype, desc='1D int array',
+        self.add('toi1d', Array(dtype=int, desc='1D int array',
                                 default_value=[1, 2, 3, 4, 5, 6, 7, 8, 9]))
 
-        self.add('tos1d', List(Str, iotype=iotype, desc='1D string array',
+        self.add('tos1d', List(Str, desc='1D string array',
                                value=['Hello', 'from', 'TestComponent.tos1d']))
 
-        self.add('toflst', List(Float, iotype=iotype, desc='Float list'))
-        self.add('toilst', List(Int, iotype=iotype, desc='Int list'))
+        self.add('toflst', List(Float, desc='Float list'))
+        self.add('toilst', List(Int, desc='Int list'))
 
 
 class TestComponent(Component):

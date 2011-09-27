@@ -83,7 +83,8 @@ if sys.platform != 'win32':
 from distutils.version import LooseVersion
 from xml.sax.saxutils import escape
 
-from openmdao.main.api import Component, Container, SimulationRoot, set_as_top
+from openmdao.main.api import Component, Container, SimulationRoot, \
+                              VariableTree, set_as_top
 from openmdao.main.mp_util import read_allowed_hosts
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -1883,20 +1884,12 @@ class _WrapperConfig(object):
 
                 # Collect all plain subcontainers.
                 containers = [instance]
-                namespaces = []
                 for name, obj in sorted(instance.items(recurse=True),
                                         key=lambda item: item[0]):
-                    if isinstance(obj, Container) and not \
-                       isinstance(obj, Component):
-                        if hasattr(obj, 'iotype'):
-                            if obj.iotype == iotype:
-                                path = obj.get_pathname()
-                                for prefix in namespaces:
-                                    if path.startswith(prefix):
-                                        break
-                                else:
-                                    namespaces.append('%s.' % path)
-                        else:
+                    if isinstance(obj, VariableTree):
+                        continue
+                    elif isinstance(obj, Container) and \
+                         not isinstance(obj, Component):
                             containers.append(obj)
 
                 # Register all valid top-level non-vanilla paths.
@@ -1907,7 +1900,7 @@ class _WrapperConfig(object):
                         if name in _IGNORE_ATTR or name.startswith('_'):
                             continue
 
-                        if isinstance(val, Container):
+                        if isinstance(val, VariableTree):
                             if getattr(val, 'iotype', None) != iotype:
                                 continue
                         else:

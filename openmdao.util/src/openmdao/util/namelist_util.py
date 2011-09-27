@@ -7,7 +7,6 @@ import ordereddict
 
 from numpy import ndarray, array, append, vstack, zeros, \
                   int32, int64, float32, float64
-from enthought.traits.trait_base import not_none
 from enthought.traits.trait_handlers import TraitListObject 
 
 from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
@@ -186,7 +185,7 @@ class Namelist(object):
         if not skip:
             skip = []
             
-        for name, val in target_container.items(iotype=not_none):
+        for name in sorted(target_container.list_vars()):
             if name not in skip:
                 self.add_var("%s.%s" % (varpath, name))
         

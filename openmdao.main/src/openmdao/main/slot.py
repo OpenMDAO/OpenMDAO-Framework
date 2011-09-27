@@ -13,11 +13,15 @@ zope.interface).
 #public symbols
 __all__ = ["Slot"]
 
+from inspect import isclass
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Instance, Interface
 import zope.interface
 
 from openmdao.main.variable import Variable
+from openmdao.main.mp_support import has_interface
+from openmdao.main.interfaces import IContainer
 
 class Slot(Variable):
     """A trait for an object of a particular type or implementing a particular
@@ -37,6 +41,11 @@ class Slot(Variable):
         self._allow_none = allow_none
         self.klass = klass
         default_value = None
+        
+        if has_interface(klass, IContainer) or (isclass(klass) and IContainer.implementedBy(klass)):
+            self._is_container = True
+        else:
+            self._is_container = False
 
         if iszopeiface:
             self._instance = None
@@ -51,20 +60,17 @@ class Slot(Variable):
         super(Slot, self).__init__(default_value, **metadata)
 
     def validate ( self, obj, name, value ):
-        """ Validates that the value is a valid object instance."""
         if value is None:
             if self._allow_none:
                 return value
             self.validate_failed( obj, name, value )
 
         if self._instance is None:  # our iface is a zope.interface
-            if self.klass.providedBy(value):
-                return value
-            else:
+            if not self.klass.providedBy(value):
                 self._iface_error(obj, name, self.klass.__name__)
         else:
             try:
-                return self._instance.validate(obj, name, value)
+                value = self._instance.validate(obj, name, value)
             except Exception:
                 if issubclass(self._instance.klass, Interface):
                     self._iface_error(obj, name, self._instance.klass.__name__)
@@ -72,6 +78,17 @@ class Slot(Variable):
                     obj.raise_exception("%s must be an instance of class '%s'" %
                                         (name, self._instance.klass.__name__), 
                                         TypeError)
+                    
+        # Containers must know their place within the hierarchy, so set their
+        # parent here
+        if self._is_container:
+            if value.parent is not obj:
+                value.parent = obj
+            # VariableTrees also need to know their iotype
+            if hasattr(value, '_iotype'):
+                value._iotype = self.iotype
+            
+        return value
 
     def _iface_error(self, obj, name, iface_name):
         obj.raise_exception("%s must provide interface '%s'" % 

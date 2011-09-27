@@ -10,7 +10,7 @@ import socket
 
 from enthought.traits.api import TraitError
 
-from openmdao.main.api import Component, Container, FileRef
+from openmdao.main.api import Component, Container, FileRef, VariableTree
 from openmdao.main.mp_support import is_instance
 from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
                                        List, Str
@@ -899,30 +899,29 @@ class ObjectProxyMixin(ProxyMixin):
         self.rset(xml)
 
 
-class Material(Container):
+class Material(VariableTree):
     """ Hard-coded example of what needs to be built on-the-fly. """
 
     def __init__(self, *args, **kwargs):
         super(Material, self).__init__(*args, **kwargs)
-        iotype = kwargs.get('iotype', None)
-        self.add('E', Float(2990000.0, units='psi', iotype=iotype))
-        self.add('density', Float(0.284, units='lb/inch**3', iotype=iotype))
-        self.add('poissonRatio', Float(0.3, iotype=iotype))
-        self.add('type', Str('steel', iotype=iotype))
+        self.add('E', Float(2990000.0, units='psi'))
+        self.add('density', Float(0.284, units='lb/inch**3'))
+        self.add('poissonRatio', Float(0.3))
+        self.add('type', Str('steel'))
 
 
-class IBeam(Container):
+class IBeam(VariableTree):
     """ Hard-coded example of what needs to be built on-the-fly. """
 
     def __init__(self, *args, **kwargs):
         super(IBeam, self).__init__(*args, **kwargs)
         iotype = kwargs.get('iotype', None)
-        self.add('material', Material(iotype=iotype))
-        self.add('base', Float(10.0, units='inch', iotype=iotype))
-        self.add('flangeThickness', Float(0.5, units='inch', iotype=iotype))
-        self.add('height', Float(18.0, units='inch', iotype=iotype))
-        self.add('length', Float(180.0, units='inch', iotype=iotype))
-        self.add('thickness', Float(0.5, units='inch', iotype=iotype))
+        self.add('material', Material())
+        self.add('base', Float(10.0, units='inch'))
+        self.add('flangeThickness', Float(0.5, units='inch'))
+        self.add('height', Float(18.0, units='inch'))
+        self.add('length', Float(180.0, units='inch'))
+        self.add('thickness', Float(0.5, units='inch'))
 
 
 class IBeamProxy(IBeam, ObjectProxyMixin):

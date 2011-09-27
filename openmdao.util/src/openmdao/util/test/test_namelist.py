@@ -10,19 +10,19 @@ from numpy import float32 as numpy_float32
 from numpy import int32 as numpy_int32
 from numpy import array, zeros
 
-from openmdao.lib.datatypes.api import Float, Bool, Int, Str, Array, File, List, Enum
+from openmdao.lib.datatypes.api import Float, Bool, Int, Str, Array, File, List, Enum, Slot
 
-from openmdao.main.api import Container, Component
+from openmdao.main.api import VariableTree, Component
 from openmdao.util.namelist_util import Namelist, ToBool
 
-class VarContainer(Container):
+class VarContainer(VariableTree):
     """Contains some vars"""
 
-    boolvar = Bool(True, iotype='in')
-    intvar = Int(7777, iotype='in')
-    floatvar = Float(2.14543, iotype='in')
-    textvar = Str("Hey", iotype='in')
-    listenumvar = List(Enum(1,(1,2,3)), iotype='in')
+    boolvar = Bool(True)
+    intvar = Int(7777)
+    floatvar = Float(2.14543)
+    textvar = Str("Hey")
+    listenumvar = List(Enum(1,(1,2,3)))
 
 
 class VarComponent(Component):

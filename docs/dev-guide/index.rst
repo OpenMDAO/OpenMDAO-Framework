@@ -12,8 +12,8 @@ Developer Guide
    working
    issues
    testing
-   git
    scripts
+   git
    todo
    
 
