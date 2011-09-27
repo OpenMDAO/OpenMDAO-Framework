@@ -599,8 +599,7 @@ three variables that define two flight conditions:
     class AircraftSim(Component):
         """This component contains variables in a VariableTree"""
     
-        # create Slots to validate that our inputs will be
-        # FlightCondition objects
+        # create Slots to handle updates to our FlightCondition attributes
         fcc1 = Slot(FlightCondition(), iotype='in')
         fcc2 = Slot(FlightCondition(), iotype='in')
         
@@ -630,6 +629,13 @@ condition through ``self.fcc2.airspeed``. In this example we had only one
 level of nesting in our VariableTree class, but a VariableTree can be added to
 another VariableTree, so any level of nesting is possible.
 
+.. note::
+
+    It's important to create Slot variables for any VariableTree objects that
+    you want to pass between Components.  If you don't, changes to variables
+    within the VariableTree object won't properly notify the parent component.
+    
+    
 An interesting thing about this example is that we've
 implemented a data structure with this VariableTree and used it to create
 multiple copies of a set of variables. This can prove useful for blocks
