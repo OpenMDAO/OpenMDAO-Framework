@@ -129,9 +129,14 @@ class TestCase(unittest.TestCase):
                 self.fail('%d reply lines, %d expected lines'
                       % (len(reply_lines), len(expected_lines)))
             expected_line = expected_lines[i]
-            if reply_line != expected_line:
-                self.fail('Line %d: %r vs. %r'
-                           % (i+1, reply_line, expected_line))
+            if reply_line.startswith('classURL'): # installation-specific
+                if not expected_line.startswith('classURL'):
+                    self.fail('Line %d: %r vs. %r'
+                               % (i+1, reply_line, expected_line))
+            else:
+                if reply_line != expected_line:
+                    self.fail('Line %d: %r vs. %r'
+                               % (i+1, reply_line, expected_line))
         if len(reply_lines) != len(expected_lines):
             self.fail('%d reply lines, %d expected lines'
                       % (len(reply_lines), len(expected_lines)))
