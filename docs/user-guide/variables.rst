@@ -562,21 +562,21 @@ More details can be found in the `Traits 3 User Manual`__.
 
 .. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#predefined-traits-for-simple-types
 
-Variable Containers
---------------------
+Variable Trees
+--------------
 
 For components with many variables, it is often useful to compartmentalize
 them into a hierarchy of containers to enhance readability and "findability."
 
 Variables in OpenMDAO can be compartmentalized by creating a container from the
-Container base class. This container merely contains variables or other 
-containers.
+VariableTree base class. This container merely contains variables or other 
+VariableTrees.
 
 Normally a variable is accessed in the data hierarchy as:
 
 ``...component_name.var_name``
 
-but when it is in a container, it can be accessed as:
+but when it is in a VariableTree, it can be accessed as:
 
 ``...component_name.container_name(.subcontainer_name.etc).var_name``
 
@@ -585,20 +585,23 @@ three variables that define two flight conditions:
 
 .. testcode:: variable_containers
 
-    from openmdao.main.api import Component, Container
+    from openmdao.main.api import Component, VariableTree, Slot
     from openmdao.lib.datatypes.api import Float
 
-    class FlightCondition(Container):
+    class FlightCondition(VariableTree):
         """Container of variables"""
     
-        airspeed = Float(120.0, iotype='in', units='nmi/h')
-        angle_of_attack = Float(0.0, iotype='in', units='deg')
-        sideslip_angle = Float(0.0, iotype='in', units='deg')
+        airspeed = Float(120.0, units='nmi/h')
+        angle_of_attack = Float(0.0, units='deg')
+        sideslip_angle = Float(0.0, units='deg')
 
     
     class AircraftSim(Component):
-        """This component contains variables in a container"""
+        """This component contains variables in a VariableTree"""
     
+        fcc1 = Slot(FlightCondition(), iotype='in')
+        fcc2 = Slot(FlightCondition(), iotype='in')
+        
         weight = Float(5400.0, iotype='in', units='kg')
         # etc.
 
@@ -617,11 +620,13 @@ three variables that define two flight conditions:
             print "FCC1 angle of attack = ", self.fcc1.angle_of_attack
             print "FCC2 angle of attack = ", self.fcc2.angle_of_attack
 
-Here, the container ``FlightCondition`` was defined, containing three variables.
-The component ``AircraftSim`` is also defined with a variable *weight* and
-two variable containers *fcc1* and *fcc2*. We can access weight through ``self.weight``; 
-likewise, we can access the airspeed of the second flight condition through
-``self.fcc2.airspeed``. We can also add containers to containers.
+Here, the class ``FlightCondition`` was defined, containing three variables.
+The component ``AircraftSim`` is also defined with a variable *weight* and two
+FlightConditions *fcc1* and *fcc2*. We can access weight through
+``self.weight``; likewise, we can access the airspeed of the second flight
+condition through ``self.fcc2.airspeed``. In this example we had only one
+level of nesting in our VariableTree class, but a VariableTree can be added to
+another VariableTree, so any level of nesting is possible.
 
 An interesting thing about this example is that we've
 implemented a data structure with this container and used it to create

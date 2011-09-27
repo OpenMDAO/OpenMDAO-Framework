@@ -72,20 +72,26 @@ class NamespaceTestCase(unittest.TestCase):
                        #a                       a
                        #b                       b
         self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
+        self.asm.scomp1.cont_out.v1 = 99.
+        self.asm.scomp1.cont_out.vt2.x = 999.
+        self.asm.scomp1.cont_out.vt2.vt3.a = 9999.
         self.asm.run()
-        cont_out = self.asm.scomp1.cont_out
-        cont_in = self.asm.scomp2.cont_in
-        #self.assertFalse(cont_in is cont_out)
-        self.assertEqual(cont_out.v1, cont_in.v1)
+        self.assertFalse(self.asm.scomp2.cont_in is self.asm.scomp1.cont_out)
+        self.assertEqual(self.asm.scomp1.cont_out.v1, self.asm.scomp2.cont_in.v1)
+        self.assertEqual(self.asm.scomp1.cont_out.vt2.x, 
+                         self.asm.scomp2.cont_in.vt2.x)
+        self.assertEqual(self.asm.scomp1.cont_out.vt2.vt3.a, 
+                         self.asm.scomp2.cont_in.vt2.vt3.a)
+        self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
         
-    def test_connect_namespace(self):
+    def test_connect_sub(self):
         self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
         self.asm.connect('scomp1.cont_out.v2', 'scomp2.cont_in.v1')
         self.asm.run()
         self.assertEqual(self.asm.scomp1.cont_out.v1, self.asm.scomp2.cont_in.v2)
         self.assertEqual(self.asm.scomp1.cont_out.v2, 1.0+self.asm.scomp2.cont_in.v2)
 
-    def test_connect_nested(self):
+    def test_connect_subsub(self):
         self.asm.connect('scomp1.cont_out.vt2.vt3.a', 'scomp2.cont_in.vt2.vt3.b')
         self.asm.run()
         self.assertAlmostEqual(12.0*self.asm.scomp1.cont_out.vt2.vt3.a, 
@@ -150,8 +156,8 @@ class NamespaceTestCase(unittest.TestCase):
         self.assertEqual(set(result.keys()), set(vtvars+vt2vars+vt3vars))
         result = dict(self.asm.scomp1.cont_in.items(iotype='out'))
         self.assertEqual(set(result.keys()), set([]))
-
-        
+    
+    
 if __name__ == "__main__":
     unittest.main()
 
