@@ -42,6 +42,20 @@ class SimpleComp(Component):
         self.cont_out.vt2.y = self.cont_in.vt2.y + 1.0
         self.cont_out.vt2.vt3.a = self.cont_in.vt2.vt3.a
         self.cont_out.vt2.vt3.b = self.cont_in.vt2.vt3.b
+        
+    def get_vals(self, iotype):
+        if iotype == 'in':
+            cont = self.cont_in
+        else:
+            cont = self.cont_out
+        return [
+            cont.v1,
+            cont.v2,
+            cont.vt2.x,
+            cont.vt2.y,
+            cont.vt2.vt3.a,
+            cont.vt2.vt3.b,
+            ]
 
 class NamespaceTestCase(unittest.TestCase):
 

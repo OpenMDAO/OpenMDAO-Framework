@@ -444,12 +444,12 @@ mark a file as binary.
 
     Provide some examples to demonstrate the options.
                 
-.. index:: Slot Traits
+.. index:: Slot Variables
 
-*Slot Traits*
+*Slot Variables*
 ++++++++++++++++++
 
-An *Slot* is a trait that requires any value assigned to it to be either an instance of a
+An *Slot* is a variable that requires any value assigned to it to be either an instance of a
 specific class or an implementation of a specific Interface. The class or Interface to be matched is
 the first argument to the constructor. Failure to match the specified class or Interface will result
 in an exception being raised. Slot traits are typically used to implement 
@@ -549,14 +549,14 @@ the function ``convert_units`` from ``openmdao.main.api``.
 ++++++++++++++++++++++
 
 OpenMDAO variables have a certain pre-defined behavior when a value from a
-variable of a different type is assigned. Variables were created
-using the *casting* traits as opposed to the *coercion* traits. This means that
+variable of a different type is assigned. Generally, they do not try to
+coerce the given value into the type that they expect. This means that
 most mis-assignments in variable connections (e.g., a float connected to
-a string) should generate an exception. However, certain widening
+a string) will generate an exception. However, certain widening
 coercions are permitted (e.g., ``Int->Float, Bool->Int, Bool->Float``). No
 coercion from Str or to Str is allowed. If you need to apply different
-coercion behavior, it should be simple to create a Python component to
-do the type translation.
+coercion behavior, just create a new class inherited from Variable and 
+perform the coercion in the validate function.
 
 More details can be found in the `Traits 3 User Manual`__.
 
@@ -599,6 +599,8 @@ three variables that define two flight conditions:
     class AircraftSim(Component):
         """This component contains variables in a VariableTree"""
     
+        # create Slots to validate that our inputs will be
+        # FlightCondition objects
         fcc1 = Slot(FlightCondition(), iotype='in')
         fcc2 = Slot(FlightCondition(), iotype='in')
         
@@ -629,9 +631,10 @@ level of nesting in our VariableTree class, but a VariableTree can be added to
 another VariableTree, so any level of nesting is possible.
 
 An interesting thing about this example is that we've
-implemented a data structure with this container and used it to create
+implemented a data structure with this VariableTree and used it to create
 multiple copies of a set of variables. This can prove useful for blocks
 of variables that are repeated in a component. At the framework level,
-connections are still made by connecting individual variables. It is possible
-to create a custom data structure that the framework sees as a single entity
-for connection purposes. This is explained in :ref:`Building-a-Variable-Plugin`.
+connections can be made either to individual variables within a VariableTree or
+to entire VariableTrees. It is also possible
+to create custom data objects and validators to use when connecting 
+components. This is explained in :ref:`Building-a-Variable-Plugin`.
