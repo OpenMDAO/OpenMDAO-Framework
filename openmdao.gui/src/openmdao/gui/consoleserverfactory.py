@@ -240,7 +240,7 @@ class ConsoleServer(cmd.Cmd):
             if is_instance(v,Component):
                 comp = {}            
                 comp['pathname'] = v.get_pathname()
-                comp['class'] = str(v.__class__.__name__)
+                comp['type'] = str(v.__class__.__name__)
                 inames = []
                 for klass in list(implementedBy(v.__class__)):
                     inames.append(klass.__name__)
@@ -477,10 +477,7 @@ class ConsoleServer(cmd.Cmd):
 
     def set_top(self,name):
         print 'setting top to:',name
-        self._globals['top'] = self.top.get(name)
-        self.top = self._globals['top']
-        self.proj.top = self.top
-        set_as_top(self.top)
+        set_as_top(self.top.get(name))
 
     def add_component(self,name,classname):
         ''' add a new component of the given type to the top assembly. 

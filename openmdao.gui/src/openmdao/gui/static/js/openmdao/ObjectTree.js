@@ -24,7 +24,6 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             drop: function(ev,ui) { 
                 // get the object that was dropped
                 var droppedObject = jQuery(ui.draggable).clone();
-                debug.info('ObjectTree drop',droppedObj)
                 // get the type name and path
                 var typename = droppedObject.text();
                 var typepath = droppedObject.attr("path");
@@ -43,16 +42,16 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             
         jQuery.each(json, function(idx,item) {
             var pathname   = item['pathname'],
-                klass      = item['class'],
+                type       = item['type'],
                 interfaces = item['interfaces'],
                 name = openmdao.Util.getName(pathname);
-            var showObj = filterChars.indexOf(name[0])<0;
-            if (showObj) {
+                
+            if (filterChars.indexOf(name[0])<0) {
                 var node = { 'data': name };
                 node['attr'] = { 
-                     'class' : klass,
+                     'type'  : type,
                      'path'  : pathname,
-                     'title' : klass+': '+name,
+                     'title' : type+': '+name,
                      'interfaces' : interfaces
                 };
                 if (item['children']) {
@@ -99,18 +98,18 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         // first let's see what was clicked on
         var isAssembly = false;  // there's no "IAssembly" interface, so..
         if (node.is('.jstree-leaf')) {
-            debug.log('ObjectTree.contextMenu: clicked on leaf node');
-            debug.log(node);
+            //debug.log('ObjectTree.contextMenu: clicked on leaf node');
+            //debug.log(node);
         }
         else {
-            debug.log('ObjectTree.contextMenu: clicked on non-leaf node');
-            debug.log(node);
+            //debug.log('ObjectTree.contextMenu: clicked on non-leaf node');
+            //debug.log(node);
             isAssembly = true;
         }
         
         var path = node.attr('path'),
-            klass = node.attr('class'),
-            interfaces = node.attr('interfaces');
+            type = node.attr('type'),
+            interfaces = node.attr('interfaces').split(',');
         
         // now create the menu
         var menu = {}
@@ -121,11 +120,10 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                             new openmdao.PopupPropertiesEditor(model,path)
                         }
         };
-        if (jQuery.inArray('IDriver',interfaces)) {
+        if (jQuery.inArray('IDriver',interfaces) >= 0) {
             menu.show_workflow = {
                 "label"  : 'Show Workflow',
                 "action" :  function(node) { 
-                                debug.info('path:',path);
                                 workflow_fn(path);
                             }
             }
@@ -134,7 +132,6 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             menu.show_dataflow = {
                 "label"  : 'Show Dataflow',
                 "action" :  function(node) { 
-                                debug.info('path:',path);
                                 dataflow_fn(path);
                             }
             }
