@@ -33,8 +33,14 @@ calculation that it performs is to add the two inputs to produce the output.
 
 
 Components within OpenMDAO can be as simple or complex as necessary.
-The inputs and outputs to a Component are Python objects, so they are not limited
-to being simple types like floating point or integer.
+The inputs and outputs to a Component each have a value and a corresponding :term:`Variable`
+object.  The Variable contains metadata to describe the input or output, and it also 
+performs validation when new values are set.  In some cases it will also perform a conversion
+during validation as in the case of unit conversion between two Float Variables. The values
+passed between outputs and inputs can be any Python object and are not limited to simple
+types like float and int.  It's also easy to define new Variable classes to perform validation
+and conversion of custom data values.
+
 
 A :term:`Workflow` is an object that executes a group of components in a particular
 order.

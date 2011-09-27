@@ -1,4 +1,6 @@
 
+.. _Building-a-Variable-Plugin:
+
 Building a Variable Plugin
 ==========================
 

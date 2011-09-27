@@ -15,8 +15,8 @@ class DumbVT3(VariableTree):
 class DumbVT2(VariableTree):
     def __init__(self):
         super(DumbVT2, self).__init__()
-        self.add('x', Float(1.))
-        self.add('y', Float(2.))
+        self.add('x', Float(-1.))
+        self.add('y', Float(-2.))
         self.add('vt3', DumbVT3())
     
 class DumbVT(VariableTree):
@@ -42,6 +42,20 @@ class SimpleComp(Component):
         self.cont_out.vt2.y = self.cont_in.vt2.y + 1.0
         self.cont_out.vt2.vt3.a = self.cont_in.vt2.vt3.a
         self.cont_out.vt2.vt3.b = self.cont_in.vt2.vt3.b
+        
+    def get_vals(self, iotype):
+        if iotype == 'in':
+            cont = self.cont_in
+        else:
+            cont = self.cont_out
+        return [
+            cont.v1,
+            cont.v2,
+            cont.vt2.x,
+            cont.vt2.y,
+            cont.vt2.vt3.a,
+            cont.vt2.vt3.b,
+            ]
 
 class NamespaceTestCase(unittest.TestCase):
 
@@ -51,6 +65,10 @@ class NamespaceTestCase(unittest.TestCase):
         self.asm.add('scomp2', SimpleComp())
         self.asm.driver.workflow.add(['scomp1','scomp2'])
     
+    def _check_values(self, expected, actual):
+        for e, a in zip(expected, actual):
+            self.assertEqual(e,a)
+
     def test_pass_container(self):
         #scomp1                   scomp2
             #cont_in         /------->cont_in
@@ -72,24 +90,70 @@ class NamespaceTestCase(unittest.TestCase):
                        #a                       a
                        #b                       b
         self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
+        self.asm.scomp1.cont_out.v1 = 99.
+        self.asm.scomp1.cont_out.v2 = 88.
+        self.asm.scomp1.cont_out.vt2.x = 999.
+        self.asm.scomp1.cont_out.vt2.y = 888.
+        self.asm.scomp1.cont_out.vt2.vt3.a = 9999.
+        self.asm.scomp1.cont_out.vt2.vt3.b = 8888.
         self.asm.run()
-        cont_out = self.asm.scomp1.cont_out
-        cont_in = self.asm.scomp2.cont_in
-        #self.assertFalse(cont_in is cont_out)
-        self.assertEqual(cont_out.v1, cont_in.v1)
+        self.assertFalse(self.asm.scomp2.cont_in is self.asm.scomp1.cont_out)
+        self._check_values(self.asm.scomp1.get_vals('out'),
+                           self.asm.scomp2.get_vals('in'))
+        try:
+            self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
+        except Exception as err:
+            self.assertEqual(str(err), ": 'scomp2.cont_in' is already connected to source 'scomp1.cont_out'")
+        else:
+            self.fail("exception expected")
         
-    def test_connect_namespace(self):
+    def test_connect_subvartree(self):
+        self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
+        self.asm.run()
+        self.assertEqual(self.asm.scomp1.cont_out.v1, 
+                         self.asm.scomp2.cont_in.v1+1.0)
+        self.assertEqual(self.asm.scomp1.cont_out.v2, 
+                         self.asm.scomp2.cont_in.v2+1.0)
+        # [2:] indicates that all values from vt2 on down should agree
+        self._check_values(self.asm.scomp1.get_vals('out')[2:],
+                           self.asm.scomp2.get_vals('in')[2:])
+
+    def test_connect_subvar(self):
         self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
         self.asm.connect('scomp1.cont_out.v2', 'scomp2.cont_in.v1')
         self.asm.run()
-        self.assertEqual(self.asm.scomp1.cont_out.v1, self.asm.scomp2.cont_in.v2)
-        self.assertEqual(self.asm.scomp1.cont_out.v2, 1.0+self.asm.scomp2.cont_in.v2)
+        self.assertEqual(self.asm.scomp1.cont_out.v1, 
+                         self.asm.scomp2.cont_in.v2)
+        self.assertEqual(self.asm.scomp1.cont_out.v2, 
+                         self.asm.scomp2.cont_in.v2+1.0)
 
-    def test_connect_nested(self):
+    def test_connect_subsubvar(self):
         self.asm.connect('scomp1.cont_out.vt2.vt3.a', 'scomp2.cont_in.vt2.vt3.b')
         self.asm.run()
         self.assertAlmostEqual(12.0*self.asm.scomp1.cont_out.vt2.vt3.a, 
                                self.asm.scomp2.cont_in.vt2.vt3.b)
+        try:
+            self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
+        except Exception as err:
+            self.assertEqual(str(err), 
+                "'vt2.vt3.b' is already connected to source 'parent.parent.scomp1.cont_out.vt2.vt3.a'")
+        else:
+            self.fail("exception expected")
+        
+        try:
+            self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
+        except Exception as err:
+            self.assertEqual(str(err), 
+                "cont_in.vt2.vt3.b is already connected to source parent.scomp1.cont_out.vt2.vt3.a")
+        else:
+            self.fail("exception expected")
+            
+        self.asm.disconnect('scomp1.cont_out.vt2.vt3.a', 'scomp2.cont_in.vt2.vt3.b')
+        # now this should be allowed
+        self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
+        self.asm.disconnect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
+        # and now this
+        self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
         
     def test_callbacks(self):
         # verify that setting a var nested down in a VariableTree hierarchy will
@@ -150,8 +214,8 @@ class NamespaceTestCase(unittest.TestCase):
         self.assertEqual(set(result.keys()), set(vtvars+vt2vars+vt3vars))
         result = dict(self.asm.scomp1.cont_in.items(iotype='out'))
         self.assertEqual(set(result.keys()), set([]))
-
-        
+    
+    
 if __name__ == "__main__":
     unittest.main()
 
