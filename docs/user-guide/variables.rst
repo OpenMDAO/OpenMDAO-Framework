@@ -444,12 +444,12 @@ mark a file as binary.
 
     Provide some examples to demonstrate the options.
                 
-.. index:: Slot Traits
+.. index:: Slot Variables
 
-*Slot Traits*
+*Slot Variables*
 ++++++++++++++++++
 
-An *Slot* is a trait that requires any value assigned to it to be either an instance of a
+An *Slot* is a variable that requires any value assigned to it to be either an instance of a
 specific class or an implementation of a specific Interface. The class or Interface to be matched is
 the first argument to the constructor. Failure to match the specified class or Interface will result
 in an exception being raised. Slot traits are typically used to implement 
@@ -549,34 +549,34 @@ the function ``convert_units`` from ``openmdao.main.api``.
 ++++++++++++++++++++++
 
 OpenMDAO variables have a certain pre-defined behavior when a value from a
-variable of a different type is assigned. Variables were created
-using the *casting* traits as opposed to the *coercion* traits. This means that
+variable of a different type is assigned. Generally, they do not try to
+coerce the given value into the type that they expect. This means that
 most mis-assignments in variable connections (e.g., a float connected to
-a string) should generate an exception. However, certain widening
+a string) will generate an exception. However, certain widening
 coercions are permitted (e.g., ``Int->Float, Bool->Int, Bool->Float``). No
 coercion from Str or to Str is allowed. If you need to apply different
-coercion behavior, it should be simple to create a Python component to
-do the type translation.
+coercion behavior, just create a new class inherited from Variable and 
+perform the coercion in the validate function.
 
 More details can be found in the `Traits 3 User Manual`__.
 
 .. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#predefined-traits-for-simple-types
 
-Variable Containers
---------------------
+Variable Trees
+--------------
 
 For components with many variables, it is often useful to compartmentalize
 them into a hierarchy of containers to enhance readability and "findability."
 
 Variables in OpenMDAO can be compartmentalized by creating a container from the
-Container base class. This container merely contains variables or other 
-containers.
+VariableTree base class. This container merely contains variables or other 
+VariableTrees.
 
 Normally a variable is accessed in the data hierarchy as:
 
 ``...component_name.var_name``
 
-but when it is in a container, it can be accessed as:
+but when it is in a VariableTree, it can be accessed as:
 
 ``...component_name.container_name(.subcontainer_name.etc).var_name``
 
@@ -585,20 +585,24 @@ three variables that define two flight conditions:
 
 .. testcode:: variable_containers
 
-    from openmdao.main.api import Component, Container
+    from openmdao.main.api import Component, VariableTree, Slot
     from openmdao.lib.datatypes.api import Float
 
-    class FlightCondition(Container):
+    class FlightCondition(VariableTree):
         """Container of variables"""
     
-        airspeed = Float(120.0, iotype='in', units='nmi/h')
-        angle_of_attack = Float(0.0, iotype='in', units='deg')
-        sideslip_angle = Float(0.0, iotype='in', units='deg')
+        airspeed = Float(120.0, units='nmi/h')
+        angle_of_attack = Float(0.0, units='deg')
+        sideslip_angle = Float(0.0, units='deg')
 
     
     class AircraftSim(Component):
-        """This component contains variables in a container"""
+        """This component contains variables in a VariableTree"""
     
+        # create Slots to handle updates to our FlightCondition attributes
+        fcc1 = Slot(FlightCondition(), iotype='in')
+        fcc2 = Slot(FlightCondition(), iotype='in')
+        
         weight = Float(5400.0, iotype='in', units='kg')
         # etc.
 
@@ -617,16 +621,26 @@ three variables that define two flight conditions:
             print "FCC1 angle of attack = ", self.fcc1.angle_of_attack
             print "FCC2 angle of attack = ", self.fcc2.angle_of_attack
 
-Here, the container ``FlightCondition`` was defined, containing three variables.
-The component ``AircraftSim`` is also defined with a variable *weight* and
-two variable containers *fcc1* and *fcc2*. We can access weight through ``self.weight``; 
-likewise, we can access the airspeed of the second flight condition through
-``self.fcc2.airspeed``. We can also add containers to containers.
+Here, the class ``FlightCondition`` was defined, containing three variables.
+The component ``AircraftSim`` is also defined with a variable *weight* and two
+FlightConditions *fcc1* and *fcc2*. We can access weight through
+``self.weight``; likewise, we can access the airspeed of the second flight
+condition through ``self.fcc2.airspeed``. In this example we had only one
+level of nesting in our VariableTree class, but a VariableTree can be added to
+another VariableTree, so any level of nesting is possible.
 
+.. note::
+
+    It's important to create Slot variables for any VariableTree objects that
+    you want to pass between Components.  If you don't, changes to variables
+    within the VariableTree object won't properly notify the parent component.
+    
+    
 An interesting thing about this example is that we've
-implemented a data structure with this container and used it to create
+implemented a data structure with this VariableTree and used it to create
 multiple copies of a set of variables. This can prove useful for blocks
 of variables that are repeated in a component. At the framework level,
-connections are still made by connecting individual variables. It is possible
-to create a custom data structure that the framework sees as a single entity
-for connection purposes. This is explained in :ref:`Building-a-Variable-Plugin`.
+connections can be made either to individual variables within a VariableTree or
+to entire VariableTrees. It is also possible
+to create custom data objects and validators to use when connecting 
+components. This is explained in :ref:`Building-a-Variable-Plugin`.
