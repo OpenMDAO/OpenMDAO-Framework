@@ -196,10 +196,9 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
         tree.html(html)
         
         // convert to a jstree
-        jQuery.jstree._themes = "/static/css/jstree/";
         tree.jstree({
-            "plugins" :     [ "html_data", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
-            "themes" :      { "theme":  "classic" },
+            "plugins" :     [ "html", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
+            "themes" :      { "theme":  "classic-dark" },
             "cookies" :     { "prefix": "filetree", opts : { path : '/' } },
             "contextmenu" : { "items":  contextMenu }
         })

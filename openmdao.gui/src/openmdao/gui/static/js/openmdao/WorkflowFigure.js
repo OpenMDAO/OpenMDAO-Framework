@@ -1,7 +1,9 @@
-openmdao.WorkflowFigure=function(myModel,pathname){
+openmdao.WorkflowFigure=function(myModel,flowpath,pathname){
     this.myModel = myModel;
+    this.flowpath = flowpath;
     this.pathname = pathname;
-    var tok = pathname.split('.')    
+    // if my name is 'driver', then use my parent's (assembly) name
+    var tok = flowpath.split('.')    
     if (tok.length > 1) {
         this.name = tok[tok.length-1];
         if (tok.length > 2 && this.name === 'driver') {
@@ -9,7 +11,7 @@ openmdao.WorkflowFigure=function(myModel,pathname){
         }
     }
     else
-        this.name = pathname
+        this.name = flowpath;
     this.title = this.name
     this.defaultBackgroundColor=new draw2d.Color(230,230,250);
     this.highlightBackgroundColor=new draw2d.Color(250,250,200);

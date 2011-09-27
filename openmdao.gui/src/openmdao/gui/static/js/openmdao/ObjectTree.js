@@ -19,19 +19,23 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
     var self = this,
         filterChars = '_',
         tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id)
-        tree.parent().droppable({
-            accept: '.objtype',
-            drop: function(ev,ui) { 
-                // get the object that was dropped
-                var droppedObject = jQuery(ui.draggable).clone();
-                // get the type name and path
-                var typename = droppedObject.text();
-                var typepath = droppedObject.attr("path");
-                openmdao.Util.promptForName(function(name) { 
-                    model.addComponent(typepath,name);
-                })
-            }
-        })
+
+    /**  make the parent pane droppable * /
+    tree.parent().droppable({
+    accept: '.objtype',
+    drop: function(ev,ui) { 
+            debug.info("objtree drop:",ev,ui)
+            // get the object that was dropped
+            var droppedObject = jQuery(ui.draggable).clone();
+            // get the type name and path
+            var typename = droppedObject.text();
+            var typepath = droppedObject.attr("path");
+            openmdao.Util.promptForName(function(name) { 
+                model.addComponent(typepath,name);
+            })
+        }
+    })
+    /**/
         
     // ask model for an update whenever something changes
     model.addListener(update)
@@ -47,8 +51,8 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                 name = openmdao.Util.getName(pathname);
                 
             if (filterChars.indexOf(name[0])<0) {
-                var node = { 'data': name };
-                node['attr'] = { 
+                var node = { 'title': name  };
+                node['data'] = { 
                      'type'  : type,
                      'path'  : pathname,
                      'title' : type+': '+name,
@@ -65,26 +69,54 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
   
     /** update the tree with JSON model data  */
     function updateTree(json) {
-        jQuery.jstree._themes = "/static/css/jstree/";
+        var tree_data = convertJSON(json,'');
+        debug.info('tree_data:',tree_data)
         tree.empty()        
         tree.jstree({
-            plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
-            json_data   : { "data": convertJSON(json,'') },
-            themes      : { "theme":  "classic" },
+            plugins     : [ "json", "sort", "themes", "types", "cookies", "contextmenu", "ui", "dnd" ],
+            json        : { "data": tree_data },
+            themes      : { "theme":  "classic-dark" },
             cookies     : { "prefix": "objtree", opts : { path : '/' } },
             contextmenu : { "items":  contextMenu },
+            dnd         : { "drop_check" : function (data) {
+                                return true;
+                            },
+                            "drop_target" : ".ui-droppable",
+                            "drop_finish" : function (data) { 
+                                alert("DROP");
+                                debug.info(data);
+                                //drop.r.drop(data.o);
+                            },
+                            "drag_target" : ".objtype",
+                            "drag_check" : function (data) {
+                                // if(data.r.attr("id") == "phtml_1") {
+                                    // return false;
+                                // }
+                                return { 
+                                    after : true, 
+                                    before : true, 
+                                    inside : true 
+                                };
+                            },
+                            "drag_finish" : function (data) { 
+                                debug.info("drag_finish:",data)
+                                alert("DRAG OK"); 
+                            }
+                          },            
         })
         .bind("select_node.jstree", function(e,data) {
             if (typeof select_fn == 'function') {
-                var pathname = data.rslt.obj.attr("path")
-                select_fn(pathname)
+                var meta = data.rslt.obj.data(),
+                    path = meta["path"];
+                select_fn(path)
             }
         })
         .bind("dblclick.jstree", function (e,data) {
             if (typeof dblclick_fn == 'function') {
-                var node = jQuery(e.target).closest("li")
-                var pathname = node.attr("path")
-                dblclick_fn(model,pathname)
+                var node = jQuery(e.target).closest("li"),
+                    meta = node.data(),
+                    path = meta["path"];
+                dblclick_fn(model,path)
             }
         })
         .bind("loaded.jstree", function (e, data) {
@@ -107,9 +139,12 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             isAssembly = true;
         }
         
-        var path = node.attr('path'),
-            type = node.attr('type'),
-            interfaces = node.attr('interfaces').split(',');
+        var metadata = node.data();
+        debug.info(metadata)
+        var path = metadata['path'],
+            type = metadata['type'],
+            interfaces = metadata['interfaces']
+            
         
         // now create the menu
         var menu = {}
@@ -165,7 +200,13 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                             model.getJSON(updateTree);
                         }
         };
-        
+        menu.remove = {
+            "label"  : 'Remove',
+            "action" :  function(node) { 
+                            model.issueCommand('top.'+openmdao.Util.getParentPath(path)+
+                                '.remove("'+openmdao.Util.getName(path)+'")');
+                        }
+        };        
         return menu;
     }
     

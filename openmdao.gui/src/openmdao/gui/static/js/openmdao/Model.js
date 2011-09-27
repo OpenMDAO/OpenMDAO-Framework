@@ -194,7 +194,7 @@ openmdao.Model=function() {
     }
     
     /** add an object of the specified type & name to the model (at x,y) */
-    this.addComponent = function(typepath,name,x,y) {
+    this.addComponent = function(typepath,name,x,y,callback) {
         if (typeof(x) !== 'number')  x = 1
         if (typeof(y) !== 'number')  y = 1
         
@@ -202,7 +202,12 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'component/'+name,
             data: {'type': typepath, 'x': x, 'y': y },
-            success: self.updateListeners
+            success: function(text) { 
+                        if (typeof callback == 'function') {
+                            callback(text)
+                        };
+                        self.updateListeners;
+            },
         })
     }
 

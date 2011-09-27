@@ -56,15 +56,17 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
                 droppedPath = droppedObject.attr("path"),
                 off = workflowDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
-                y = Math.round(ui.offset.top - off.top)
-            debug.info("dropped:",droppedObject)
+                y = Math.round(ui.offset.top - off.top),
+                flowfig = workflow.getBestCompartmentFigure(x,y);
+            debug.info("dropped:",droppedObject)            
             if (droppedObject.hasClass('objtype')) {
                 openmdao.Util.promptForName(function(name) { 
-                    model.addComponent(droppedPath,name,x,y)
+                        model.addComponent(droppedPath,name,x,y)
                 })
             }
-            else if (droppedObject.hasClass('obj')) {
-                model.issueCommand('top.driver.workflow.add("'+droppedPath+'")')
+            else if (flowfig && droppedObject.hasClass('obj')) {
+                debug.info('flowfig:',flowfig,'pathname:',flowfig.pathname)
+                model.issueCommand('top'+flowfig.pathname+'.workflow.add("'+droppedPath+'")')
             }
         }
     });
@@ -184,7 +186,7 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
             drvr = json['driver'],
             flow = json['workflow'],
             asm  = openmdao.Util.getParentPath(path),
-            comp_fig, flow_fig, new_flow_name, count
+            comp_fig, flow_fig, flowpath, count
         
         if (flow) {
             // add driver figure
@@ -215,16 +217,16 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
             workflow.addFigure(comp_fig,x,y)
 
             // add workflow compartment figure for this flow (overlap bottom right of driver figure)
-            new_flow_name = flow_name+'.'+path
-            flow_fig = new openmdao.WorkflowFigure(model,new_flow_name);
+            flowpath = flow_name+'.'+path
+            flow_fig = new openmdao.WorkflowFigure(model,flowpath,path);
             workflow.addFigure(flow_fig,x+comp_fig.getWidth()-20,y+comp_fig.getHeight()-10);
             if (flow_figs[flow_name]) {
                 flow_figs[flow_name].addChild(flow_fig);
             }            
-            flow_figs[new_flow_name] = flow_fig;
+            flow_figs[flowpath] = flow_fig;
 
             jQuery.each(flow,function(idx,comp) {
-                updateFigures(new_flow_name,comp,!horizontal)
+                updateFigures(flowpath,comp,!horizontal)
             })
         }
         else if (drvr) {

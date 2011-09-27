@@ -275,7 +275,7 @@ class ConsoleServer(cmd.Cmd):
                                             'pathname': comp.get_pathname(),
                                             'type': type(comp).__name__ })
             # list of connections (convert tuples to lists)
-            conntuples = asm.list_connections()
+            conntuples = asm.list_connections(show_passthrough=False)
             for connection in conntuples:
                 connections.append(list(connection))
         return { 'components': components, 'connections': connections }
