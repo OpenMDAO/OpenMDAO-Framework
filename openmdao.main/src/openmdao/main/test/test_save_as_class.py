@@ -7,7 +7,7 @@ import shutil
 
 from enthought.traits.api import TraitError
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Float, Str, Instance, List
+from openmdao.lib.datatypes.api import Float, Str, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
 

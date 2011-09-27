@@ -9,7 +9,8 @@ from openmdao.lib.datatypes.int import Int
 from openmdao.lib.datatypes.array import Array
 from openmdao.main.slot import Slot
 
-# Traits from Enthought
-from enthought.traits.api import Bool, List, Str, Instance, \
-     Complex, CBool, Dict, ListStr, Any, TraitError, on_trait_change,\
-     implements, Interface, Python, Event, Dict
+# Traits from Enthought - don't import these directly because we may
+# change what they point to later
+from enthought.traits.api import Bool, List, Str, \
+     Complex, CBool, Dict, ListStr, Any, on_trait_change,\
+     Python, Event, Dict
