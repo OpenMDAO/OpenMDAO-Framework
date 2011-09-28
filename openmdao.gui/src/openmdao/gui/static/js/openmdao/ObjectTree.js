@@ -78,29 +78,46 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             themes      : { "theme":  "classic-dark" },
             cookies     : { "prefix": "objtree", opts : { path : '/' } },
             contextmenu : { "items":  contextMenu },
-            dnd         : { "drop_check" : function (data) {
+            dnd         : { 
+                            /* drop_check: false means move is invalid, otherwise true */
+                            "drop_check" : function (data) {
+                                // data.o - the object being dragged
+                                // data.r - the drop target                                
+                                debug.info("drop_check:",data);
                                 return true;
                             },
-                            "drop_target" : ".ui-droppable",
+                            
+                            /* drop_target: jquery selector matching all drop targets */
+                            "drop_target" : ".jstree-drop",
+                            
+                            /* drop_finish: executed after a valid drop */
                             "drop_finish" : function (data) { 
-                                alert("DROP");
-                                debug.info(data);
-                                //drop.r.drop(data.o);
+                                // data.o - the object being dragged
+                                // data.r - the drop target                                
+                                debug.info("drop_finish:",data)
+                                debug.info(data.o,"was dropped on",data.r);
                             },
-                            "drag_target" : ".objtype",
+                            
+                            /* drag_target: jquery selector matching all foreign nodes that can be dropped on the tree */
+                            "drag_target" : ".objtype, .ui-draggable, .jstree-draggable, .ui-droppable",
+                            
+                            /* drag_check: */
                             "drag_check" : function (data) {
-                                // if(data.r.attr("id") == "phtml_1") {
-                                    // return false;
-                                // }
+                                debug.info("drag_check:",data);
+                                // data.o - the foreign object being dragged
+                                // data.r - the hovered node
                                 return { 
                                     after : true, 
                                     before : true, 
                                     inside : true 
                                 };
                             },
+                            
+                            /* drag_finish:  executed after a dropping a foreign element on a tree item */
                             "drag_finish" : function (data) { 
+                                // data.o - the foreign object being dragged
+                                // data.r - the target node
                                 debug.info("drag_finish:",data)
-                                alert("DRAG OK"); 
                             }
                           },            
         })
@@ -122,7 +139,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         .bind("loaded.jstree", function (e, data) {
             jQuery('#'+id+' .obj').draggable({ helper: 'clone', appendTo: 'body' })
         })
-        
+        .one("reselect.jstree", function (e, data) { });
     }
 
     /** get a context menu for the specified node */
@@ -130,12 +147,12 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         // first let's see what was clicked on
         var isAssembly = false;  // there's no "IAssembly" interface, so..
         if (node.is('.jstree-leaf')) {
-            //debug.log('ObjectTree.contextMenu: clicked on leaf node');
-            //debug.log(node);
+            debug.log('ObjectTree.contextMenu: clicked on leaf node');
+            debug.log(node);
         }
         else {
-            //debug.log('ObjectTree.contextMenu: clicked on non-leaf node');
-            //debug.log(node);
+            debug.log('ObjectTree.contextMenu: clicked on non-leaf node');
+            debug.log(node);
             isAssembly = true;
         }
         

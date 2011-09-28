@@ -50,6 +50,7 @@ openmdao.Palette = function(id,model) {
         
         // make everything draggable
         jQuery('.objtype').draggable({ helper: 'clone', appendTo: 'body' })
+        jQuery('.objtype').addClass('jstree-draggable'); // allow drop on jstree (object tree)
                 
         // collapse all and add click functionality
         jQuery('.library-list').hide()

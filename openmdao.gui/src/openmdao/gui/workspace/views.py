@@ -228,7 +228,8 @@ from openmdao.gui.settings import MEDIA_ROOT
 @csrf_exempt
 @login_required()
 def Project(request):
-    ''' GET:  load model fom the given project archive
+    ''' GET:  load model fom the given project archive,
+              or reload remebered project for session if no file given
         POST: save project archive of the current project
     '''
     if request.method=='POST':
@@ -236,11 +237,20 @@ def Project(request):
         cserver.save_project()
         return HttpResponse('Saved.')
     else:
-        print "Loading project into workspace:",request.GET['filename']
-        server_mgr.delete_server(request.session.session_key) # delete old server
-        cserver = server_mgr.console_server(request.session.session_key)        
-        cserver.load_project(MEDIA_ROOT+'/'+request.GET['filename'])
-        return HttpResponseSeeOther(reverse('workspace.views.Workspace'))
+        filename = None
+        if 'filename' in request.GET:
+            filename = request.GET['filename']
+            request.session['filename'] = filename
+        elif 'filename' in request.session.keys():
+            filename = request.session.get('filename')
+        if filename:
+            print "Loading project into workspace:",filename
+            server_mgr.delete_server(request.session.session_key) # delete old server
+            cserver = server_mgr.console_server(request.session.session_key)        
+            cserver.load_project(MEDIA_ROOT+'/'+filename)
+            return HttpResponseSeeOther(reverse('workspace.views.Workspace'))
+        else:
+            return HttpResponseRedirect('/')
 
 @never_cache
 @csrf_exempt
