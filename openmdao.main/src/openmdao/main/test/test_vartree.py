@@ -1,22 +1,25 @@
-
+import glob
+import os
 import unittest
 
 from enthought.traits.trait_base import not_none
 
-from openmdao.main.api import Container, Component, Assembly, VariableTree, set_as_top
-from openmdao.lib.datatypes.api import Float, Slot
+from openmdao.main.api import Container, Component, Assembly, VariableTree, set_as_top, FileRef
+from openmdao.lib.datatypes.api import Float, Slot, File
 
 class DumbVT3(VariableTree):
     def __init__(self):
         super(DumbVT3, self).__init__()
         self.add('a', Float(1., units='ft'))
         self.add('b', Float(12., units='inch'))
+        self.add('data', File())
         
 class DumbVT2(VariableTree):
     def __init__(self):
         super(DumbVT2, self).__init__()
         self.add('x', Float(-1.))
         self.add('y', Float(-2.))
+        self.add('data', File())
         self.add('vt3', DumbVT3())
     
 class DumbVT(VariableTree):
@@ -25,6 +28,7 @@ class DumbVT(VariableTree):
         self.add('vt2', DumbVT2())
         self.add('v1', Float(1.))
         self.add('v2', Float(2.))
+        self.add('data', File())
 
 class SimpleComp(Component):
     cont_in = Slot(DumbVT, iotype='in')
@@ -42,7 +46,28 @@ class SimpleComp(Component):
         self.cont_out.vt2.y = self.cont_in.vt2.y + 1.0
         self.cont_out.vt2.vt3.a = self.cont_in.vt2.vt3.a
         self.cont_out.vt2.vt3.b = self.cont_in.vt2.vt3.b
-        
+
+        if self.cont_in.data is not None:
+            with self.cont_in.data.open() as inp:
+                filename = '%s.data.vt' % self.name
+                with open(filename, 'w') as out:
+                    out.write(inp.read())
+                self.cont_out.data = FileRef(filename, self)
+
+        if self.cont_in.vt2.data is not None:
+            with self.cont_in.vt2.data.open() as inp:
+                filename = '%s.data.vt2' % self.name
+                with open(filename, 'w') as out:
+                    out.write(inp.read())
+                self.cont_out.vt2.data = FileRef(filename, self)
+
+        if self.cont_in.vt2.vt3.data is not None:
+            with self.cont_in.vt2.vt3.data.open() as inp:
+                filename = '%s.data.vt3' % self.name
+                with open(filename, 'w') as out:
+                    out.write(inp.read())
+                self.cont_out.vt2.vt3.data = FileRef(filename, self)
+
     def get_vals(self, iotype):
         if iotype == 'in':
             cont = self.cont_in
@@ -57,17 +82,57 @@ class SimpleComp(Component):
             cont.vt2.vt3.b,
             ]
 
+    def get_files(self, iotype):
+        if iotype == 'in':
+            cont = self.cont_in
+        else:
+            cont = self.cont_out
+        return [
+            cont.data,
+            cont.vt2.data,
+            cont.vt2.vt3.data,
+            ]
+
+
 class NamespaceTestCase(unittest.TestCase):
 
     def setUp(self):
         self.asm = set_as_top(Assembly())
-        self.asm.add('scomp1', SimpleComp())
+        obj = self.asm.add('scomp1', SimpleComp())
         self.asm.add('scomp2', SimpleComp())
         self.asm.driver.workflow.add(['scomp1','scomp2'])
-    
+
+        with self.asm.dir_context:
+            filename = 'top.data.vt'
+            with open(filename, 'w') as out:
+                out.write('vt data\n')
+            obj.cont_in.data = FileRef(filename, self.asm)
+
+            filename = 'top.data.vt2'
+            with open(filename, 'w') as out:
+                out.write('vt2 data\n')
+            obj.cont_in.vt2.data = FileRef(filename, self.asm)
+
+            filename = 'top.data.vt3'
+            with open(filename, 'w') as out:
+                out.write('vt3 data\n')
+            obj.cont_in.vt2.vt3.data = FileRef(filename, self.asm)
+
+    def tearDown(self):
+        for name in glob.glob('*.data.vt*'):
+            os.remove(name)
+
     def _check_values(self, expected, actual):
         for e, a in zip(expected, actual):
             self.assertEqual(e,a)
+
+    def _check_files(self, expected, actual):
+        for e, a in zip(expected, actual):
+            with e.open() as inp:
+                edata = inp.read()
+            with a.open() as inp:
+                adata = inp.read()
+            self.assertEqual(edata,adata)
 
     def test_pass_container(self):
         #scomp1                   scomp2
@@ -100,6 +165,9 @@ class NamespaceTestCase(unittest.TestCase):
         self.assertFalse(self.asm.scomp2.cont_in is self.asm.scomp1.cont_out)
         self._check_values(self.asm.scomp1.get_vals('out'),
                            self.asm.scomp2.get_vals('in'))
+        # 'in/out' set for end-to-end check.
+        self._check_files(self.asm.scomp1.get_files('in'),
+                          self.asm.scomp2.get_files('out'))
         try:
             self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
         except Exception as err:
@@ -117,6 +185,10 @@ class NamespaceTestCase(unittest.TestCase):
         # [2:] indicates that all values from vt2 on down should agree
         self._check_values(self.asm.scomp1.get_vals('out')[2:],
                            self.asm.scomp2.get_vals('in')[2:])
+        # 'in/out' set for end-to-end check.
+        self.assertEqual(self.asm.scomp2.get_files('out')[0], None)
+        self._check_files(self.asm.scomp1.get_files('in')[1:],
+                          self.asm.scomp2.get_files('out')[1:])
 
     def test_connect_subvar(self):
         self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
@@ -193,9 +265,9 @@ class NamespaceTestCase(unittest.TestCase):
         self.assertEqual(self.asm.scomp2.cont_out.vt2.vt3._iotype, 'out')
         
     def test_items(self):
-        vtvars = ['v1','v2','vt2']
-        vt2vars = ['vt2.x','vt2.y','vt2.vt3']
-        vt3vars = ['vt2.vt3.a','vt2.vt3.b']
+        vtvars = ['v1','v2','vt2','data']
+        vt2vars = ['vt2.x','vt2.y','vt2.vt3','vt2.data']
+        vt3vars = ['vt2.vt3.a','vt2.vt3.b','vt2.vt3.data']
         
         result = dict(self.asm.scomp1.cont_out.items(iotype='out'))
         self.assertEqual(set(result.keys()), set(vtvars))
