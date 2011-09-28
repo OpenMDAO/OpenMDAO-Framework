@@ -923,7 +923,11 @@ class ArrayBase(BaseWrapper):
                     value = numpy.array([self.typ(val.strip(' "'))
                                          for val in valstr.split(',')])
             else:
-                value = [self.typ(val.strip(' "')) for val in valstr.split(',')]
+                if valstr:
+                    value = [self.typ(val.strip(' "'))
+                             for val in valstr.split(',')]
+                else:
+                    value = []
             self._container.set(self._name, value)
         elif attr in ('componentType', 'description', 'dimensions',
                       'enumAliases', 'enumValues', 'first', 'format',
