@@ -601,7 +601,7 @@ three variables that define two flight conditions:
     
         # create Slots to handle updates to our FlightCondition attributes
         fcc1 = Slot(FlightCondition(), iotype='in')
-        fcc2 = Slot(FlightCondition(), iotype='in')
+        fcc2 = Slot(FlightCondition(), iotype='out')
         
         weight = Float(5400.0, iotype='in', units='kg')
         # etc.
@@ -621,20 +621,48 @@ three variables that define two flight conditions:
             print "FCC1 angle of attack = ", self.fcc1.angle_of_attack
             print "FCC2 angle of attack = ", self.fcc2.angle_of_attack
 
-Here, the class ``FlightCondition`` was defined, containing three variables.
-The component ``AircraftSim`` is also defined with a variable *weight* and two
-FlightConditions *fcc1* and *fcc2*. We can access weight through
-``self.weight``; likewise, we can access the airspeed of the second flight
-condition through ``self.fcc2.airspeed``. In this example we had only one
-level of nesting in our VariableTree class, but a VariableTree can be added to
-another VariableTree, so any level of nesting is possible.
 
 .. note::
 
-    It's important to create Slot variables for any VariableTree objects that
-    you want to pass between Components.  If you don't, changes to variables
-    within the VariableTree object won't properly notify the parent component.
+    It's important to create a Slot variable for each VariableTree object contained
+    in your component if you intend to connect it to variables in other components.
+    Also make sure to set the *iotype* attribute in the Slot.  If you don't, changes 
+    to variables within the VariableTree object won't properly notify the component.
+    If you have a nested VariableTree, it's only necessary to create a Slot in the
+    component that contains it.  Adding Slots for VariableTrees inside of another
+    VariableTree is not necessary.
     
+    
+Here, the class ``FlightCondition`` was defined, containing three variables.
+The component ``AircraftSim`` is also defined with a variable *weight*, the
+input FlightCondition *fcc1* and the output FlightCondition *fcc2*. We can 
+access weight through
+``self.weight``; likewise, we can access the airspeed of the output flight
+condition through ``self.fcc2.airspeed``. In this example we had only one
+level of nesting in our FlightCondition class, but a VariableTree can be added to
+another VariableTree, so any level of nesting is possible.  For example:
+
+
+.. testsetup:: nested_vartree
+
+    from openmdao.main.api import VariableTree, Slot
+    from openmdao.lib.datatypes.api import Float
+
+    
+.. testcode:: nested_vartree
+
+
+    class MyNestedVars(VariableTree):
+        """A nested container of variables"""
+    
+        f1 = Float(120.0)
+        f2 = Float(0.0)
+        
+        def __init__(self):
+            super(MyNestedVars, self).__init__()
+            self.add('sub_vartree', FlightCondition())
+            
+        
     
 An interesting thing about this example is that we've
 implemented a data structure with this VariableTree and used it to create
