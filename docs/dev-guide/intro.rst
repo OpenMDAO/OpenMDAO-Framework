@@ -151,25 +151,18 @@ must issue a pull request to have your modifications merged in.
 *Git User Setup*
 ++++++++++++++++
 
-If you have not previously used Git on a particular machine where you intend
-to work with Git repositories, you should follow the instructions `here`__ to
-set your username, email, and API token.
-
+If you have not previously used Git on a particular machine where you intend to work with
+Git repositories, you should follow the instructions `here`__ to set your username, email,
+and API token. This way, your contact information will be included whenever you
+:term:`commit` to a :term:`repository` on that machine.
 
 .. __: http://help.github.com/set-your-user-name-email-and-github-token
 
 
 .. index:: repository
 
-This way, your contact information will be included whenever you :term:`commit`
-to a :term:`repository` on that machine.
-
-.. index:: pair: source code; location
-.. index:: pair: branch; creating
-
-
-
-
+If you're using Git on Windows, to follow the above instructions you'll first need to
+create a bash terminal by running ``Git -> Git Bash`` from the Windows start menu.
 
 .. accessing GitHub::
 
@@ -189,7 +182,7 @@ and log in to your GitHub account, since you will need to be logged in to
 register your key.
 
 If you're using Git on Windows, to follow the instructions below
-you'll first need to create a bash terminal by running "Git --> Git Bash" from
+you'll first need to create a bash terminal by running ``Git --> Git Bash`` from
 the Windows start menu.
 
 
@@ -225,6 +218,7 @@ You need to register and upload the *public* portion of your SSH key to GitHub.
    text box) to continue. 
 
 
+.. index:: pair: source code; location
 
 .. _getting-the-source-code:
 
@@ -234,9 +228,6 @@ Getting the Source Code
 
 The *official* OpenMDAO-Framework repository lives on GitHub at
 https://github.com/OpenMDAO/OpenMDAO-Framework. 
-
-
-
 
 To create a local
 OpenMDAO-Framework repository, you need to *clone* the OpenMDAO-Framework
