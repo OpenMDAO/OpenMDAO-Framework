@@ -126,5 +126,5 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
 }
 
 /** set prototype */
-openmdao.DataflowDiagram.prototype = new openmdao.BasePane();
+openmdao.DataflowDiagram.prototype = new openmdao.BaseFrame();
 openmdao.DataflowDiagram.prototype.constructor = openmdao.DataflowDiagram;

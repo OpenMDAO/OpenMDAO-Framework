@@ -98,5 +98,5 @@ openmdao.Palette = function(id,model) {
 }
 
 /** set prototype */
-openmdao.Palette.prototype = new openmdao.BasePane();
+openmdao.Palette.prototype = new openmdao.BaseFrame();
 openmdao.Palette.prototype.constructor = openmdao.Palette;

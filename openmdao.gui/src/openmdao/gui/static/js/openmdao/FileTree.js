@@ -221,5 +221,5 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
 }
 
 /** set prototype */
-openmdao.FileTree.prototype = new openmdao.BasePane();
+openmdao.FileTree.prototype = new openmdao.BaseFrame();
 openmdao.FileTree.prototype.constructor = openmdao.FileTree;

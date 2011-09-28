@@ -323,5 +323,5 @@ openmdao.O3DViewer = function(id,g_url) {
 }
 
 /** set prototype */
-openmdao.O3DViewer.prototype = new openmdao.BasePane();
+openmdao.O3DViewer.prototype = new openmdao.BaseFrame();
 openmdao.O3DViewer.prototype.constructor = openmdao.O3DViewer;

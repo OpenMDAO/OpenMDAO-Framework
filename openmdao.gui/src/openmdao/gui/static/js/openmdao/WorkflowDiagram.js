@@ -308,5 +308,5 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
 }
 
 /** set prototype */
-openmdao.WorkflowDiagram.prototype = new openmdao.BasePane();
+openmdao.WorkflowDiagram.prototype = new openmdao.BaseFrame();
 openmdao.WorkflowDiagram.prototype.constructor = openmdao.WorkflowDiagram;

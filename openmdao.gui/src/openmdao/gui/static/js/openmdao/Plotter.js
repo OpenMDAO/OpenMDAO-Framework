@@ -104,5 +104,5 @@ openmdao.Plotter = function(id,model) {
 };
 
 /** set prototype */
-openmdao.Plotter.prototype = new openmdao.BasePane();
+openmdao.Plotter.prototype = new openmdao.BaseFrame();
 openmdao.Plotter.prototype.constructor = openmdao.Plotter;

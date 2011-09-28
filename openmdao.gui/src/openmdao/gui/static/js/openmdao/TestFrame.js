@@ -11,8 +11,8 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
  * @constructor
  */
 
-openmdao.TestPane = function(id,model) {
-    this.prototype = new openmdao.BasePane()
+openmdao.TestFrame = function(id,model) {
+    this.prototype = new openmdao.BaseFrame()
     
     /***********************************************************************
      *  private
@@ -21,7 +21,7 @@ openmdao.TestPane = function(id,model) {
     var self = this,
         title    = "Test Pane",
         helpHTML = "<div>"+
-                   "This is just a test of a basic pane which can be built upon... <br/>"+
+                   "This is just a test of a basic frame which can be built upon... <br/>"+
                    "</div>",
         menu     = [
                      { "text": "Menu", 
@@ -30,19 +30,15 @@ openmdao.TestPane = function(id,model) {
                        ]
                      },
                      { "text": "Help",      "onclick": "jQuery('"+helpHTML+"').dialog({'title':'"+title+"','width':400,'height':150})" }
-                   ]
+                   ];
 
-    function init(id,model) {
-        self.prototype.init(id,title,menu)
-        // build your ui, access openmdao via model
-        // ...
-    }
+    openmdao.TestFrame.prototype.init.call(this,id,title,menu);
     
-    if (arguments.length > 0) {
-        init(id,model)
-    }
-
+    // build your ui, access openmdao via model, etc.
+    // ...
+    
 }
 
-
-
+/** set prototype */
+openmdao.TestFrame.prototype = new openmdao.BaseFrame();
+openmdao.TestFrame.prototype.constructor = openmdao.TestFrame;

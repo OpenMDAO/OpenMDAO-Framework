@@ -1,18 +1,18 @@
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.BasePane = function () {
-    id:         null;   // the id attribute of the element the pane is built on
-    elm:        null;   // the element the pane is built on as a jQuery object
+openmdao.BaseFrame = function () {
+    id:         null;   // the id attribute of the element the frame is built on
+    elm:        null;   // the element the frame is built on wrapped by jQuery
     par:        null;   // the parent element as a jQuery object
-    title:      "";     // the title to be used for this pane
+    title:      "";     // the title to be used for this frame
     menu:       null;   // an optional menu     
 }
      
-openmdao.BasePane.prototype.init = function (id,title,menu) {
-/*  initialize a BasePane on the element with the given ID
+openmdao.BaseFrame.prototype.init = function (id,title,menu) {
+/*  initialize a BaseFrame on the element with the given ID
     if the element doesn't exist it will be created as a popup
     any existing HTML under the element will be deleted
-    if a menu is provided, then it will be built into the pane
+    if a menu is provided, then it will be built into the frame
  */
     this.id = id;
     this.title = title;
@@ -28,7 +28,7 @@ openmdao.BasePane.prototype.init = function (id,title,menu) {
         else {
             openmdao.uniqueID = 1;
         }
-        this.id = "basepane"+openmdao.uniqueID
+        this.id = "BaseFrame"+openmdao.uniqueID
     }
     
     // if the elm doesn't exist, create it as a popup 
@@ -63,8 +63,8 @@ openmdao.BasePane.prototype.init = function (id,title,menu) {
     }                
 },
     
-openmdao.BasePane.prototype.popup = function (title) {
-    /* put this pane in a popup */
+openmdao.BaseFrame.prototype.popup = function (title) {
+    /* put this frame in a popup */
     this.elm.dialog({
         'modal': false,
         'title': title,
@@ -83,7 +83,7 @@ openmdao.BasePane.prototype.popup = function (title) {
     })
 }
 
-openmdao.BasePane.prototype.setTitle = function (title) {
+openmdao.BaseFrame.prototype.setTitle = function (title) {
     if (title) {
         this.title = title
         this.elm.dialog('option', 'title', title);

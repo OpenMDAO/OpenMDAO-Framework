@@ -64,5 +64,5 @@ openmdao.CodeEditor = function(id,model) {
 }
 
 /** set prototype */
-openmdao.CodeEditor.prototype = new openmdao.BasePane();
+openmdao.CodeEditor.prototype = new openmdao.BaseFrame();
 openmdao.CodeEditor.prototype.constructor = openmdao.CodeEditor;

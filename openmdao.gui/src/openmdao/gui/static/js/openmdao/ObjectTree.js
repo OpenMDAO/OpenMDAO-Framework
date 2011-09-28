@@ -237,5 +237,5 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
 }
 
 /** set prototype */
-openmdao.ObjectTree.prototype = new openmdao.BasePane();
+openmdao.ObjectTree.prototype = new openmdao.BaseFrame();
 openmdao.ObjectTree.prototype.constructor = openmdao.ObjectTree;

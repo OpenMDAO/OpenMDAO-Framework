@@ -147,5 +147,5 @@ openmdao.ComponentEditor = function(model,pathname) {
 }
 
 /** set prototype */
-openmdao.ComponentEditor.prototype = new openmdao.BasePane();
+openmdao.ComponentEditor.prototype = new openmdao.BaseFrame();
 openmdao.ComponentEditor.prototype.constructor = openmdao.ComponentEditor;

@@ -85,5 +85,5 @@ openmdao.PropertiesEditor = function(id,model) {
 }
 
 /** set prototype */
-openmdao.PropertiesEditor.prototype = new openmdao.BasePane();
+openmdao.PropertiesEditor.prototype = new openmdao.BaseFrame();
 openmdao.PropertiesEditor.prototype.constructor = openmdao.PropertiesEditor;
