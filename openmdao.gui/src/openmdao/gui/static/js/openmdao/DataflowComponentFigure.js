@@ -149,7 +149,7 @@ openmdao.DataflowComponentFigure.prototype.setDimension=function(w,h){
         this.outputPort.setPosition(this.width+5,this.height/2);
     }
     if(this.inputPort!==null){
-        this.inputPort.setPosition(-5,this.height/2);
+        this.inputPort.setPosition(this.width/2,0);
     }
 };
 
@@ -198,7 +198,7 @@ openmdao.DataflowComponentFigure.prototype.setWorkflow=function(_5019){
         this.inputPort=new draw2d.InputPort();
         this.inputPort.setWorkflow(_5019);
         this.inputPort.setName("input");
-        this.addPort(this.inputPort,-5,this.height/2);
+        this.addPort(this.inputPort,this.width/2,0);
         this.outputPort=new draw2d.OutputPort();
         this.outputPort.setMaxFanOut(5);
         this.outputPort.setWorkflow(_5019);

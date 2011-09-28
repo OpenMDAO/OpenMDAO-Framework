@@ -69,12 +69,10 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
   
     /** update the tree with JSON model data  */
     function updateTree(json) {
-        var tree_data = convertJSON(json,'');
-        debug.info('tree_data:',tree_data)
         tree.empty()        
         tree.jstree({
             plugins     : [ "json", "sort", "themes", "types", "cookies", "contextmenu", "ui", "dnd" ],
-            json        : { "data": tree_data },
+            json        : { "data": convertJSON(json,'') },
             themes      : { "theme":  "classic-dark" },
             cookies     : { "prefix": "objtree", opts : { path : '/' } },
             contextmenu : { "items":  contextMenu },
@@ -182,7 +180,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         };
         if (isAssembly) {
             menu.show_dataflow = {
-                "label"  : 'Show Dataflow',
+                "label"  : 'Show Data Connections',
                 "action" :  function(node) { 
                                 dataflow_fn(path);
                             }

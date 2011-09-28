@@ -29,6 +29,8 @@ from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import *
 from zope.interface import implementedBy
 
+import networkx as nx
+
 from mdao_util import *
 
 class ConsoleServerFactory(Factory):
@@ -267,8 +269,9 @@ class ConsoleServer(cmd.Cmd):
         connections = []
         if is_instance(asm,Assembly):
             # list of components (name & type) in the assembly
-            for name in asm.list_containers():
-                #if not (name == 'driver'):
+            g = asm._depgraph._graph
+            for name in nx.algorithms.dag.topological_sort(g):
+                if not name.startswith('@'):
                     comp = asm.get(name)
                     if is_instance(comp,Component):
                         components.append({ 'name': comp.name,
