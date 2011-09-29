@@ -112,13 +112,21 @@ class _ContainerDepends(object):
         self._srcs = {}
         
     def connect(self, srcpath, destpath):
-        if destpath in self._srcs:
-            raise RuntimeError("'%s' is already connected to source '%s'" %
-                               (destpath,self._srcs[destpath]))
+        dpdot = destpath+'.'
+        for dst,src in self._srcs.items():
+            if destpath.startswith(dst+'.') or dst.startswith(dpdot) or dst==destpath:
+                raise RuntimeError("'%s' is already connected to source '%s'" %
+                                   (dst, src))
         self._srcs[destpath] = srcpath
         
     def disconnect(self, srcpath, destpath):
-        del self._srcs[destpath]
+        try:
+            del self._srcs[destpath]
+        except KeyError:
+            pass
+        dpdot = destpath+'.'
+        for d in [k for k in self._srcs if k.startswith(dpdot)]:
+            del self._srcs[d]
     
     def get_source(self, destname):
         """For a given destination name, return the connected source, 
@@ -231,6 +239,26 @@ class Container(HasTraits):
             Pathname of destination variable.
         """
         cname = None
+        if not destpath.startswith('parent.'):
+            if not self.contains(destpath):
+                self.raise_exception("Can't find '%s'" % destpath, AttributeError)
+            parts = destpath.split('.')
+            for i in range(len(parts)):
+                dname = '.'.join(parts[:i+1])
+                sname = self._depgraph.get_source(dname)
+                if sname is not None:
+                    self.raise_exception(
+                        "'%s' is already connected to source '%s'" % 
+                        (dname, sname), RuntimeError)
+            cname2, _, restofpath = destpath.partition('.')
+            if cname == cname2 and cname is not None:
+                self.raise_exception("Can't connect '%s' to '%s'. Both variables are on the same component"%
+                                     (srcpath,destpath), RuntimeError)
+            if restofpath:
+                child = getattr(self, cname2)
+                if is_instance(child, Container):
+                    child.connect('parent.'+srcpath, restofpath)
+                    
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
@@ -239,23 +267,6 @@ class Container(HasTraits):
                 child = getattr(self, cname)
                 if is_instance(child, Container):
                     child.connect(restofpath, 'parent.'+destpath)
-        if not destpath.startswith('parent.'):
-            if not self.contains(destpath):
-                self.raise_exception("Can't find '%s'" % destpath, AttributeError)
-            sname = self._depgraph.get_source(destpath)
-            if sname is not None:
-                self.raise_exception(
-                    "'%s' is already connected to source '%s'" % 
-                    (destpath, sname), RuntimeError)
-            cname2, _, restofpath = destpath.partition('.')
-            if cname == cname2 and cname is not None:
-                self.raise_exception("Can't connect '%s' to '%s'. Both variables are on the same component"%
-                                     (srcpath,destpath), RuntimeError)
-
-            if restofpath:
-                child = getattr(self, cname2)
-                if is_instance(child, Container):
-                    child.connect('parent.'+srcpath, restofpath)
                 
         self._depgraph.connect(srcpath, destpath)
 

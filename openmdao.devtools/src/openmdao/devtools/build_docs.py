@@ -204,7 +204,7 @@ def build_docs(argv=None):
         try:
             tag, ncommits, commit = get_rev_info()
             version = "%s-%s-%s" % (tag, ncommits, commit)
-            shtitle = 'OpenMDAO Documentation (%s commits after tag %s)' % (ncommits,tag)
+            shtitle = 'OpenMDAO Documentation (%s commits after version %s)' % (ncommits,tag)
         except:
             version = "?-?-?"
             shtitle = "OpenMDAO Documentation (unknown revision)"

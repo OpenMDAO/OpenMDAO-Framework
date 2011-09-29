@@ -79,17 +79,18 @@ class Slot(Variable):
                                         (name, self._instance.klass.__name__), 
                                         TypeError)
                     
+        return value
+
+    def post_setattr ( self, obj, name, value ):
         # Containers must know their place within the hierarchy, so set their
-        # parent here
-        if self._is_container:
+        # parent here.  This keeps side effects out of validate()
+        if self._is_container and value is not None:
             if value.parent is not obj:
                 value.parent = obj
             # VariableTrees also need to know their iotype
             if hasattr(value, '_iotype'):
                 value._iotype = self.iotype
             
-        return value
-
     def _iface_error(self, obj, name, iface_name):
         obj.raise_exception("%s must provide interface '%s'" % 
                             (name, iface_name), TypeError)
