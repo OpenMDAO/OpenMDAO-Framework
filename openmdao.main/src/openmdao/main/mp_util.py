@@ -82,6 +82,7 @@ def read_server_config(filename):
     key = parser.get(section, 'key')
     if key:
         key = decode_public_key(key)
+    print 'key = %s' % key
     return (address, port, key)
 
 
