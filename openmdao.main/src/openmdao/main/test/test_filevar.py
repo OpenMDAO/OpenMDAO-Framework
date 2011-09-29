@@ -274,14 +274,6 @@ class TestCase(unittest.TestCase):
             self.fail('Expected Exception')
 
         try:
-            File()
-        except Exception, exc:
-            self.assertEqual(str(exc),
-                             "File must have 'iotype' defined.")
-        else:
-            self.fail('Expected Exception')
-
-        try:
             File(iotype='out')
         except Exception, exc:
             self.assertEqual(str(exc),
