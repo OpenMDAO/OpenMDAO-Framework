@@ -217,7 +217,10 @@ class ProxyMixin(object):
 
     def rget(self):
         """ Get remote value as a string. """
-        return self._client.get(self._rpath)
+        if self._client is None:  # Happens during component.__setstate__
+            return self._valstr
+        else:
+            return self._client.get(self._rpath)
 
     def rset(self, valstr):
         """
@@ -617,6 +620,9 @@ class FileProxy(ProxyMixin, File):
         """
         if self._component._call_tree_rooted:
             return None  # Not initialized.
+
+        if self._client is None:  # Happens during component.__setstate__
+            return None
 
         binary = self._client.get(self._rpath+'.isBinary') == 'true'
         valstr = self.rget()

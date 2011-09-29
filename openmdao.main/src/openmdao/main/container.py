@@ -8,6 +8,7 @@ import traceback
 import re
 import pprint
 import socket
+import sys
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -1033,8 +1034,8 @@ class Container(HasTraits):
                                         src_dir, src_files, dst_dir,
                                         self._logger, observer.observer,
                                         need_requirements)
-        except Exception, exc:
-            self.raise_exception(str(exc), type(exc))
+        except Exception:
+            self.reraise_exception()  # Just to get a pathname.
         finally:
             self.parent = parent
 
@@ -1058,8 +1059,8 @@ class Container(HasTraits):
         self.parent = None  # Don't want to save stuff above us.
         try:
             eggsaver.save(self, outstream, fmt, proto, self._logger)
-        except Exception, exc:
-            self.raise_exception(str(exc), type(exc))
+        except Exception:
+            self.reraise_exception()  # Just to get a pathname.
         finally:
             self.parent = parent
 
@@ -1257,6 +1258,19 @@ class Container(HasTraits):
         self._logger.error(msg)
         raise exception_class(full_msg)
     
+    def reraise_exception(self, msg=''):
+        """Re-raise an exception with updated message and original traceback."""
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        if msg:
+            msg = '%s: %s' % (msg, exc_value)
+        else:
+            msg = '%s' % exc_value
+        prefix = '%s: ' % self.get_pathname()
+        if not msg.startswith(prefix):
+            msg = prefix + msg
+        new_exc = exc_type(msg)
+        raise type(new_exc), new_exc, exc_traceback
+
 
 # By default we always proxy Containers and FileRefs.
 CLASSES_TO_PROXY.append(Container)
