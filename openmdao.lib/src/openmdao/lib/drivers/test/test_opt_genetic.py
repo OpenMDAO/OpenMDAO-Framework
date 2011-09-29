@@ -177,10 +177,10 @@ class TestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.x[2]', low=-5.12,high=5.13)
 
         #self.top.driver.seed = 123
-        self.top.driver.seed = 10
+        #self.top.driver.seed = 10
 
         self.top.driver.mutation_rate = .02
-        self.top.driver.generations = 1
+        self.top.driver.generations = 15
         self.top.driver.opt_type = "minimize"
         self.top.driver.selection_method="tournament"
 
@@ -188,11 +188,11 @@ class TestCase(unittest.TestCase):
         self.top.run()
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               4.28,places = 2)
+                               0,places = 2)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, 2.0, places = 2)
-        self.assertAlmostEqual(y, .07, places = 2)
-        self.assertAlmostEqual(z, .51, places = 2)  
+        self.assertAlmostEqual(x, 0.017, places = 2)
+        self.assertAlmostEqual(y, 0.006, places = 2)
+        self.assertAlmostEqual(z, 0.006, places = 2)  
 
 
     def test_list_remove_clear_params(self):
