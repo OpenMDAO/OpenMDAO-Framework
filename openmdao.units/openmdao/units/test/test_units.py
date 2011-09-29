@@ -92,16 +92,28 @@ class test_NumberDict(unittest.TestCase):
         self.assertEqual((.1,.20), (result1['t1'],result1['t2']))
         
        
+_unitLib = units.import_library(resource_stream(units.__name__, 
+                                                'unitLibdefault.ini'))
 
+def _get_powers(**powdict):
+    powers = [0]*len(_unitLib.base_types)
+    for name,power in powdict.items():
+        powers[_unitLib.base_types[name]] = power
+    return powers
+    
 #--------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------
 
 class test__PhysicalQuantity(unittest.TestCase):
     
-
+    def setUp(self):
+        unitLib = resource_stream(units.__name__, 'unitLibdefault.ini')
+        self.unitlib = units.import_library(unitLib)
+        
     def test_init(self):
-        """__init__ should have the same result regardless of the constructor calling pattern"""
-    
+        """__init__ should have the same result regardless of the 
+        constructor calling pattern
+        """    
  
         x=units.PhysicalQuantity('1m')
         y=units.PhysicalQuantity(1,'m')
@@ -159,7 +171,7 @@ class test__PhysicalQuantity(unittest.TestCase):
         x = units.PhysicalQuantity('1 1/min')
         self.assertAlmostEqual(x.unit.factor,0.0166666,places=5)
         self.assertEqual(x.unit.names,{'1': 1, 'min': -1})
-        self.assertEqual(x.unit.powers,[0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0])
+        self.assertEqual(x.unit.powers,_get_powers(time=-1))
 
 
     def test_currency_unit(self):
@@ -522,7 +534,8 @@ class test__PhysicalQuantity(unittest.TestCase):
     def test_integers_in_unit_definition(self):
         x=units.PhysicalQuantity('10 1/min')
         self.assertEqual(x.unit.factor,1/60.0)
-        self.assertEqual(x.unit.powers,[0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0])
+        self.assertEqual(x.unit.powers,_get_powers(time=-1))
+        
 #-----------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------
 
@@ -531,7 +544,8 @@ class test__PhysicalUnit(unittest.TestCase):
     def test_repr_str(self):
         """__repr__should return a string which could be used to contruct the unit instance, __str__ should return a string with just the unit name for str"""
         u = units.PhysicalQuantity('1 d')
-        self.assertEqual(repr(u.unit),"PhysicalUnit({'d': 1},86400.0,[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],0.0)")
+        self.assertEqual(repr(u.unit),
+                         "PhysicalUnit({'d': 1},86400.0,%s,0.0)" % _get_powers(time=1))
         self.assertEqual(str(u.unit),"<PhysicalUnit d>")
 
     def test_cmp(self):
@@ -559,8 +573,10 @@ class test__PhysicalUnit(unittest.TestCase):
         y = units.PhysicalQuantity('2s')
         z = units.PhysicalQuantity('1 degC')
         
-        self.assertEqual(x.unit*y.unit,units.PhysicalUnit({'s': 1, 'kg': 1},.001,[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0],0))
-        self.assertEqual(y.unit*x.unit,units.PhysicalUnit({'s': 1, 'kg': 1},.001,[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0],0))
+        self.assertEqual(x.unit*y.unit,units.PhysicalUnit({'s': 1, 'kg': 1},.001,
+                                                          _get_powers(mass=1,time=1),0))
+        self.assertEqual(y.unit*x.unit,units.PhysicalUnit({'s': 1, 'kg': 1},.001,
+                                                          _get_powers(mass=1,time=1),0))
         
 
         try:
@@ -581,15 +597,17 @@ class test__PhysicalUnit(unittest.TestCase):
         quo = w.unit/x.unit
         quo2 = x.unit/y.unit
 
-        self.assertEqual(quo,units.PhysicalUnit({'kg': 1, 'g': -1},1000.0,[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],0))
-        self.assertEqual(quo2,units.PhysicalUnit({'s': -1, 'g': 1},0.001,[0, 0, 0, 0, 0, 0, 0, 0, 1, -1, 0],0))
-        
+        self.assertEqual(quo,units.PhysicalUnit({'kg': 1, 'g': -1},
+                                                1000.0, _get_powers(),0))
+        self.assertEqual(quo2,units.PhysicalUnit({'s': -1, 'g': 1},
+                                                 0.001,
+                                                 _get_powers(mass=1, time=-1),0))
         quo = y.unit/2.0
-        self.assertEqual(quo,units.PhysicalUnit({'s': 1, "2.0":-1},.5,[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],0))
-        
+        self.assertEqual(quo,units.PhysicalUnit({'s': 1, "2.0":-1},
+                                                .5, _get_powers(time=1), 0))
         quo = 2.0/y.unit
-        self.assertEqual(quo,units.PhysicalUnit({'s': -1,"2.0":1},2,[0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0],0))        
-        
+        self.assertEqual(quo,units.PhysicalUnit({'s': -1,"2.0":1},2,
+                                                _get_powers(time=-1),0))        
         try:
             x.unit / z.unit
         except TypeError,err:
