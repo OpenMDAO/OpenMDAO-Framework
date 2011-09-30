@@ -44,6 +44,8 @@ import sys
 import tempfile
 import types
 
+from zope.interface.interface import InterfaceClass
+
 from openmdao.util.log import NullLogger
 from openmdao.util import eggobserver, eggwriter
 
@@ -338,7 +340,7 @@ def _get_objects(root, logger):
                 continue
             visited.add(id(obj))
             objs.append((obj, container, index))
-            if not inspect.isclass(obj):
+            if not inspect.isclass(obj) and not isinstance(obj, InterfaceClass):
                 _recurse_get_objects(obj, objs, visited, logger)
 
     objs = [(root, None, None)]
