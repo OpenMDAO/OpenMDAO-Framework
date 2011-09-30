@@ -230,6 +230,7 @@ from openmdao.gui.settings import MEDIA_ROOT
 def Project(request):
     ''' GET:  load model fom the given project archive,
               or reload remebered project for session if no file given
+              
         POST: save project archive of the current project
     '''
     if request.method=='POST':
