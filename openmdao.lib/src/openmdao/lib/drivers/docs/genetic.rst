@@ -169,9 +169,9 @@ what.
     top.driver.elitism = True
 
 A number of different commonly used selection algorithms are available. The default algorithm is the Roulette
-Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection are also available. The
+Wheel Algorithm, but Rank Selection, and Uniform Selection are also available. The
 ``selection_method`` variable allows you to select the algorithm; allowed values are: ``"roulette_wheel," 
-"tournament," "rank,"`` and ``"uniform"``.
+"rank,"`` and ``"uniform"``.
 
 .. testcode:: Genetic
     

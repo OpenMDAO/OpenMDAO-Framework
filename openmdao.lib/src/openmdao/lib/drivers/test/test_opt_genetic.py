@@ -178,9 +178,7 @@ class TestCase(unittest.TestCase):
         
         self.assertAlmostEqual(self.top.driver.best_individual.score,0.22,places = 2)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        #self.assertAlmostEqual(x, 0.017, places = 2)
-        #self.assertAlmostEqual(y, 0.006, places = 2)
-        #self.assertAlmostEqual(z, 0.006, places = 2)  
+ 
 
 
     def test_list_remove_clear_params(self):

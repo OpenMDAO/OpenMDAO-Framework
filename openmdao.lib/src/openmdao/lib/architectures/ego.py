@@ -86,7 +86,7 @@ class EGO(Architecture):
         EI_opt.opt_type = "maximize"
         EI_opt.population_size = 100
         EI_opt.generations = 10
-        EI_opt.selection_method = "tournament"
+        #EI_opt.selection_method = "tournament"
         
         for target in self.parent.get_parameters(): 
             EI_opt.add_parameter(target)
