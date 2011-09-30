@@ -72,7 +72,7 @@ class Analysis(Assembly):
         self.EI_opt.opt_type = "maximize"
         self.EI_opt.population_size = 100
         self.EI_opt.generations = 10
-        self.EI_opt.selection_method = "tournament"
+        #self.EI_opt.selection_method = "tournament"
         self.EI_opt.add_parameter("branin_meta_model.x")
         self.EI_opt.add_parameter("branin_meta_model.y")
         
