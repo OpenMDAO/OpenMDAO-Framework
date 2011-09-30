@@ -686,7 +686,7 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
         if port >= 0:
             if allowed_hosts is None:
                 allowed_hosts = [socket.gethostbyname(socket.gethostname())]
-                if allowed_hosts[0].startswith('127.0.') and '127.0.0.1' not in allowed_hosts:
+                if allowed_hosts[0].startswith('127.') and '127.0.0.1' not in allowed_hosts:
                     allowed_hosts.append('127.0.0.1')
             with open('hosts.allow', 'w') as out:
                 for pattern in allowed_hosts:
