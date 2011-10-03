@@ -18,6 +18,8 @@ openmdao.WorkflowFigure=function(myModel,flowpath,pathname){
     draw2d.CompartmentFigure.call(this);
     this.setBackgroundColor(this.defaultBackgroundColor);
     this.setDimension(110,60);    
+
+    this.setCanDrag(false);
 };
 openmdao.WorkflowFigure.prototype=new draw2d.CompartmentFigure();
 openmdao.WorkflowFigure.prototype.createHTMLElement=function(){

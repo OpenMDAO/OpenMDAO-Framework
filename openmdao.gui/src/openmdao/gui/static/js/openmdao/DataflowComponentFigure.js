@@ -35,6 +35,8 @@ openmdao.DataflowComponentFigure=function(myModel,pathname,type){
         this.setContent('<center><i>'+tok[tok.length-1]+'</i></center>')
     else
         this.setContent('<center><i>'+type+''+'</i></center>')
+
+    this.setCanDrag(false);
 };
 
 openmdao.DataflowComponentFigure.prototype=new draw2d.Node();
