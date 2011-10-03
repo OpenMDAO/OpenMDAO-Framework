@@ -118,7 +118,7 @@ def run_wing():
             
     if sys.platform == 'darwin':
         _modify_wpr_file(projpath) # have to put virtualenv sys path info in wing project file on Mac
-        cmd = ['open', '-a', projpath]
+        cmd = ['open', projpath]
     else:
         if not wingpath:
             wingpath = _find_wing()
