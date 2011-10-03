@@ -279,7 +279,6 @@ class AssemblyTestCase(unittest.TestCase):
         
         self.asm.create_passthrough('comp3.r3')
         metadata = self.asm.get_metadata('r3')
-        print metadata
         self.assertEqual(metadata['iotype'],'in')
         self.assertEqual(metadata['desc'],'some random variable')
         self.assertEqual(metadata['low'],-1.0)
@@ -496,7 +495,7 @@ class AssemblyTestCase(unittest.TestCase):
             ModulesInstallPath  = Str('', desc='', iotype='in')
             
             def execute(self):
-                print 'running MyComp'
+                pass
             
             
         class MyAsm(Assembly):    
