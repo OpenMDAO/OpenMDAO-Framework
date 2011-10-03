@@ -51,7 +51,35 @@ def _modify_wpr_file(fpath):
     f.write('#!wing\n#!version=3.0\n')
     f.write(content)
     f.close()
+
+def _find_wing():
+    if sys.platform == 'win32':
+        wname = 'wing.exe'
+        tdir = r'C:\Program Files (x86)'
+        locs = [os.path.join(tdir, p) for p in 
+                     fnmatch.filter(os.listdir(tdir), 'WingIDE ?.?')]
+    elif sys.platform == 'darwin':
+        wname = 'wing'
+        locs = ['/Applications/WingIDE.app/Contents/MacOS',
+                '/Applications/Wing/WingIDE.app/Contents/MacOS']
+    else:
+        wname = 'wing?.?'
+        locs = ['/usr/bin', '/usr/sbin', '/usr/local/bin']
+        
+    try:
+        pathvar = os.environ['PATH']
+    except KeyError:
+        pathvar = ''
     
+    all_locs = [p for p in pathvar.split(os.pathsep) if p.strip()] + locs
+    for path in all_locs:
+        matches = fnmatch.filter(os.listdir(path), wname)
+        if matches:
+            return os.path.join(path, sorted(matches)[-1])
+        
+    raise OSError("%s was not found in PATH or in any of the common places." %
+                  wname)
+
 def run_wing():
     """Runs the Wing IDE using our template project file."""
     wingpath = None
@@ -62,24 +90,8 @@ def run_wing():
         elif arg.startswith('--proj='):
             projpath = arg.split('=')[1]
     if not wingpath:
-        if sys.platform == 'win32':
-            wname = 'wing.exe'
-            locs = [r'C:\Program Files (x86)\WingIDE 3.2']
-        elif sys.platform == 'darwin':
-            wname = 'wing'
-            locs = ['/Applications/WingIDE.app/Contents/MacOS',
-                    '/Applications/Wing/WingIDE.app/Contents/MacOS']
-        else:
-            wname = 'wing3.2'
-            locs = ['/usr/bin', '/usr/sbin', '/usr/local/bin']
-            
-        wingpath = find_in_path(wname) # searches PATH
-        if not wingpath:
-            wingpath = find_in_dir_list(wname, locs) # look in common places
-        if not wingpath:
-            raise OSError("%s was not found in PATH or in any of the common places." %
-                          wname)
-
+        wingpath = _find_wing()
+        
     if not os.path.isfile(projpath):
         venvdir = os.path.dirname(os.path.dirname(sys.executable))
         projpath = os.path.join(venvdir, 'etc', 'wingproj.wpr')
