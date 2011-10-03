@@ -88,12 +88,13 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
                     src_fig = figures[src_name],
                     dst_fig = figures[dst_name];
                     c = new openmdao.ContextMenuConnection()
-                //debug.info('connection:',src_name,'==>',dst_name)
-                //debug.info('connection:',src_fig,'==>',dst_fig)
                 // TODO: only create new connection if one doesn't already exist
                 c.setSource(src_fig.getPort("output"));
                 c.setTarget(dst_fig.getPort("input"));
-                c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());                
+                c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
+                c.onDoubleClick = function() {
+                    new openmdao.DataConnectionEditor(model,self.pathname,src_name,dst_name);
+                };
                 dataflow.addFigure(c);
             }
         })

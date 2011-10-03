@@ -261,6 +261,47 @@ class ConsoleServer(cmd.Cmd):
             comps = self._get_components(self.top)
         return jsonpickle.encode(comps)
 
+    def get_connections(self,pathname,src_name,dst_name):
+        ''' get list of src outputs, dst inputs and connections between them
+        '''
+        conns = {}
+        if self.top:
+            try:
+                asm = self.top.get(pathname);
+                conns['outputs'] = asm.get(src_name).list_outputs();
+                conns['inputs']  = asm.get(dst_name).list_inputs();
+                connections = [];
+                conntuples = asm.list_connections(show_passthrough=False)
+                for src,dst in conntuples:
+                    if src.startswith(src_name+".") and dst.startswith(dst_name+"."):
+                        connections.append([src, dst])
+                conns['connections'] = connections;
+            except Exception, err:
+                print "Error getting connections:", str(err)
+        return jsonpickle.encode(conns)
+
+    def set_connections(self,pathname,src_name,dst_name,connections):
+        ''' set connections between src and dst components in the given assembly
+        '''
+        if self.top:
+            try:
+                asm = self.top.get(pathname);
+                conntuples = asm.list_connections(show_passthrough=False)
+                # disconnect any connections that are not in the new set
+                for src,dst in conntuples:
+                    if src.startswith(src_name+".") and dst.startswith(dst_name+"."):
+                        if [src,dst] not in connections:
+                            print "disconnecting",src,dst
+                            asm.disconnect(src,dst)
+                # connect stuff in new set that is not already connected
+                for src,dst in connections:
+                    if (src,dst) not in conntuples:
+                        print "connecting",src,dst
+                        asm.connect(src,dst)
+                conns['connections'] = connections;
+            except Exception, err:
+                print "Error getting connections:", str(err)
+        
     def _get_dataflow(self,asm):
         ''' get the list of components and connections between them
             that make up the workflow for the top level driver 

@@ -155,7 +155,6 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         }
         
         var metadata = node.data();
-        debug.info(metadata)
         var path = metadata['path'],
             type = metadata['type'],
             interfaces = metadata['interfaces']

@@ -192,6 +192,34 @@ openmdao.Model=function() {
             })
         }
     }
+
+    /** get connections between two components in an assembly */
+    this.getConnections = function(pathname,src_name,dst_name,callback,errorHandler) {
+        if (typeof callback != 'function')
+            return
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'connections/'+pathname,
+                dataType: 'json',
+                data: { 'src_name': src_name, 'dst_name': dst_name },
+                success: callback,
+                error: errorHandler
+            })
+        }
+    }
+
+    /** set connections between two components in an assembly */
+    this.setConnections = function(pathname,src_name,dst_name,connections,callback,errorHandler) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'connections/'+pathname,
+            dataType: 'json',
+            data: { 'src_name': src_name, 'dst_name': dst_name, 'connections': connections },
+            success: callback,
+            error: errorHandler
+        })
+    }
     
     /** add an object of the specified type & name to the model (at x,y) */
     this.addComponent = function(typepath,name,x,y,callback) {

@@ -127,6 +127,35 @@ def Components(request):
     json = cserver.get_components()
     return HttpResponse(json,mimetype='application/json')
 
+
+@never_cache
+@csrf_exempt
+@login_required()
+def Connections(request,pathname):
+    ''' get/set connections between two components in an assembly
+    '''
+    cserver = server_mgr.console_server(request.session.session_key)
+    if request.method=='POST':
+        result = ''
+        try:
+            src_name = request.POST['src_name'];
+            dst_name = request.POST['dst_name'];
+            connections = request.POST['connections'];
+            cserver.set_connections(pathname,src_name,dst_name,connections);
+        except Exception,e:
+            print e
+            result = sys.exc_info()
+        return HttpResponse(result)
+    else:
+        connections = {}
+        try:
+            src_name = request.GET['src_name'];
+            dst_name = request.GET['dst_name'];
+            connections = cserver.get_connections(pathname,src_name,dst_name);
+        except Exception, e:
+            print e
+        return HttpResponse(connections,mimetype='application/json')
+
 @never_cache
 def Dataflow(request,name):
     cserver = server_mgr.console_server(request.session.session_key)
