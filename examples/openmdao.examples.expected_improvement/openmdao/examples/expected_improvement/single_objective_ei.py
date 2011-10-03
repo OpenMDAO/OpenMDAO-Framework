@@ -76,7 +76,7 @@ class Analysis(Assembly):
         self.EI_opt.add_parameter("branin_meta_model.x")
         self.EI_opt.add_parameter("branin_meta_model.y")
         
-        self.EI_opt.add_objective("EI.EI")
+        self.EI_opt.add_objective("EI.PI")
         self.EI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
