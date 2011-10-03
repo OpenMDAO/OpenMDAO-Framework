@@ -95,15 +95,10 @@ def run_wing():
             wingpath = arg.split('=')[1]
         elif arg.startswith('--proj='):
             projpath = arg.split('=')[1]
-    if not wingpath:
-        wingpath = _find_wing()
-        
+            
     if not os.path.isfile(projpath):
         venvdir = os.path.dirname(os.path.dirname(sys.executable))
         projpath = os.path.join(venvdir, 'etc', 'wingproj.wpr')
-        
-    if sys.platform == 'darwin':
-        _modify_wpr_file(projpath) # have to put virtualenv sys path info in wing project file on Mac
         
     # in order to find all of our shared libraries,
     # put their directories in LD_LIBRARY_PATH
@@ -118,11 +113,18 @@ def run_wing():
             sodirs = set([os.path.dirname(x) for x in find_files(rtop,'*.so')])
             libs.extend(sodirs)
             env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
-    
+            
+    if sys.platform == 'darwin':
+        _modify_wpr_file(projpath) # have to put virtualenv sys path info in wing project file on Mac
+        cmd = ['open', '-a', projpath]
+    else:
+        if not wingpath:
+            wingpath = _find_wing()
+        cmd = [wingpath, projpath]
     try:
-        Popen([wingpath, projpath], env=env)
+        Popen(cmd, env=env)
     except Exception as err:
-        print 'Failed to run wing executable (%s) using project (%s).' % (wingpath, projpath)
+        print "Failed to run command '%s'." % ' '.join(cmd)
     
 if __name__ == '__main__':
     run_wing()
