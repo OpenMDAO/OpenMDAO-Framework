@@ -56,8 +56,11 @@ def _find_wing():
     if sys.platform == 'win32':
         wname = 'wing.exe'
         tdir = r'C:\Program Files (x86)'
-        locs = [os.path.join(tdir, p) for p in 
-                     fnmatch.filter(os.listdir(tdir), 'WingIDE ?.?')]
+        try:
+            locs = [os.path.join(tdir, p) for p in 
+                    fnmatch.filter(os.listdir(tdir), 'WingIDE ?.?')]
+        except:
+            locs = []
     elif sys.platform == 'darwin':
         wname = 'wing'
         locs = ['/Applications/WingIDE.app/Contents/MacOS',
@@ -73,7 +76,10 @@ def _find_wing():
     
     all_locs = [p for p in pathvar.split(os.pathsep) if p.strip()] + locs
     for path in all_locs:
-        matches = fnmatch.filter(os.listdir(path), wname)
+        try:
+            matches = fnmatch.filter(os.listdir(path), wname)
+        except:
+            continue
         if matches:
             return os.path.join(path, sorted(matches)[-1])
         
