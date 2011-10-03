@@ -49,7 +49,11 @@ def _run_gofile(startdir, gopath, args=()):
         # in some cases there are some unicode characters in the
         # output which cause fabric to barf, so strip out unicode
         # before returning
-        with codecs.open(outname, 'rt', encoding='ascii', errors='ignore') as f:
+        if sys.platform.startswith('win'):
+            mode = 'r'
+        else:
+            mode = 'rt'
+        with codecs.open(outname, mode, encoding='ascii', errors='ignore') as f:
             for line in f:
                 print line,
         os.chdir(startdir)
@@ -67,7 +71,11 @@ def _run_sub(outname, cmd, env=None):
         # in some cases there are some unicode characters in the
         # output which cause fabric to barf, so strip out unicode
         # before returning
-        with codecs.open(outname, 'rt', encoding='ascii', errors='ignore') as f:
+        if sys.platform.startswith('win'):
+            mode = 'r'
+        else:
+            mode = 'rt'
+        with codecs.open(outname, mode, encoding='ascii', errors='ignore') as f:
             for line in f:
                 print line,
     return p.returncode

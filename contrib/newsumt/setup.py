@@ -5,7 +5,8 @@ import sys
 from numpy.distutils.core import setup
 from numpy.distutils.misc_util import Configuration
 
-if sys.platform == 'win32':
+sdkdir = os.environ.get('WindowsSdkDir')
+if sys.platform == 'win32' and sdkdir:
     # Update the ``library_dir_option`` function in MSVCCompiler 
     # to add quotes around /LIBPATH entries.
     import types
@@ -16,7 +17,6 @@ if sys.platform == 'win32':
     setattr(MSVCCompiler, 'library_dir_option',
             types.MethodType(_lib_dir_option, None, MSVCCompiler))
     
-    sdkdir = os.environ.get('WindowsSdkDir')
     include_dirs = [os.path.join(sdkdir,'Include')]
     library_dirs = [os.path.join(sdkdir,'Lib')]
     # make sure we have mt.exe available in path
