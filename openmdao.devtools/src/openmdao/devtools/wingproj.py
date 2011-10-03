@@ -39,6 +39,8 @@ def _wingify(obj, left_margin=0):
 def _modify_wpr_file(fpath):
     config = ConfigParser.ConfigParser()
     config.read(fpath)
+    config.set('user attributes', 'proj.pyexec', 
+               dict({None: ('custom', sys.executable)}))
     config.set('user attributes', 'proj.pypath', 
                dict({None: ('custom',os.pathsep.join(sys.path))}))
     with open(fpath, 'w') as fp:
