@@ -70,8 +70,8 @@ def _get_adjust_options(options, version):
     return """
 def adjust_options(options, args):
     major_version = sys.version_info[:2]
-    if major_version != (2,6):
-        print 'ERROR: python major version must be 2.6. yours is %%s' %% str(major_version)
+    if major_version < (2,6) or major_version > (3,0):
+        print 'ERROR: python major version must be 2.6 or 2.7. yours is %%s' %% str(major_version)
         sys.exit(-1)
 %s
 
@@ -117,17 +117,8 @@ def main(args=None):
         finally:
             os.chdir(startdir)
         """ % pkgstr
-        wing = """
-    # copy the wing project file into the virtualenv
-    proj_template = join(topdir,'config','wing_proj_template.wpr')
-    
-    shutil.copy(proj_template, 
-                join(abshome,'etc','wingproj.wpr'))
-                
-        """
     else:
         make_dev_eggs = ''
-        wing = ''
 
     script_str = """
 
@@ -213,7 +204,6 @@ def after_install(options, home_dir):
 
     abshome = os.path.abspath(home_dir)
     
-%(wing)s
 
     print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s.' %% abshome
     print 'From %%s, type:\\n' %% abshome
@@ -246,7 +236,6 @@ def after_install(options, home_dir):
         'version': version, 
         'url': options.disturl,
         'make_dev_eggs': make_dev_eggs,
-        'wing': wing,
         'adjust_options': _get_adjust_options(options, version),
         'openmdao_prereqs': openmdao_prereqs,
     }
