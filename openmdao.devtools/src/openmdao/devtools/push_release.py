@@ -16,7 +16,7 @@ from openmdao.devtools.utils import get_openmdao_version, put_dir, tar_dir, \
                                     repo_top, fabric_cleanup
 
 
-def _push_release(release_dir, destination, obj):
+def _push_release(release_dir, destination, obj, py='python'):
     """Take a directory containing release files (openmdao package 
     distributions, install scripts, etc., and place the files in the 
     proper locations on the server.
@@ -31,6 +31,9 @@ def _push_release(release_dir, destination, obj):
     obj: _CommObj
         an object to wrap the behaviors of run, put, etc. so calls are the 
         same for local or remote release areas
+        
+    py: str
+        python version to use to build index files
     """
     files = os.listdir(release_dir)
     f = fnmatch.filter(files, 'go-openmdao-*.py')
@@ -76,13 +79,13 @@ def _push_release(release_dir, destination, obj):
     
     # update the index.html for the version download directory on the server
     dpath = '%s/downloads/%s' % (destination, version)
-    obj.run('cd %s && python2.6 mkdlversionindex.py' % dpath)
+    obj.run('cd %s && %s mkdlversionindex.py' % (dpath, py))
 
     os.chdir(cdir)
     
     # update the index.html for the dists directory on the server
     dpath = '%s/dists' % destination
-    obj.run('cd %s && python2.6 mkegglistindex.py' % dpath)
+    obj.run('cd %s && %s mkegglistindex.py' % (dpath, py))
 
     os.chdir(cdir)
     
@@ -94,7 +97,7 @@ def _push_release(release_dir, destination, obj):
     
     # update the index.html for the downloads directory on the server
     dpath = '%s/downloads' % destination
-    obj.run('cd %s && python mkdownloadindex.py' % dpath)
+    obj.run('cd %s && %s mkdownloadindex.py' % (dpath, py))
 
 
 def _setup_local_release_dir(dpath):
@@ -111,6 +114,9 @@ class _CommObj(object):
 def main():
     atexit.register(fabric_cleanup, True)
     parser = OptionParser(usage="%prog RELEASE_DIR DESTINATION")
+    parser.add_option("--py", action="store", type="string", dest="py",
+                      default="python2.6",
+                      help="python version to use on target host")
     (options, args) = parser.parse_args(sys.argv[1:])
     
     comm_obj = _CommObj()
@@ -131,7 +137,7 @@ def main():
         comm_obj.put_dir = shutil.copytree
         comm_obj.run = local
         
-        _push_release(args[0], args[1], comm_obj)
+        _push_release(args[0], args[1], comm_obj, py=options.py)
     else: # assume args[1] is a remote host:destdir
         comm_obj.put = put
         comm_obj.put_dir = put_dir
@@ -140,7 +146,7 @@ def main():
         home = destparts[1]
 
         with settings(host_string=destparts[0]):
-            _push_release(args[0], home, comm_obj)
+            _push_release(args[0], home, comm_obj, py=options.py)
 
 if __name__ == '__main__':
     main()
