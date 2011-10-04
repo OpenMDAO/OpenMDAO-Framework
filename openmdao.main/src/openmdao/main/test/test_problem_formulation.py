@@ -56,9 +56,9 @@ class ProblemFormulationTest(unittest.TestCase):
          
         
     def test_coupling_vars(self): 
-        self.asm.add_coupling_var("D1.a","D2.a")
-        self.asm.add_coupling_var("D4.a","D5.a")
-        self.asm.add_coupling_var("D6.a","D5.b")
+        c1 = self.asm.add_coupling_var("D1.a","D2.a")
+        c2 = self.asm.add_coupling_var("D4.a","D5.a")
+        c3 = self.asm.add_coupling_var("D6.a","D5.b")
         
         try: 
             self.asm.add_coupling_var("D1.a","D2.a")
@@ -82,12 +82,12 @@ class ProblemFormulationTest(unittest.TestCase):
             self.fail("Exception expected")
             
             
-        self.assertEqual([("D1.a","D2.a"),("D4.a","D5.a"),("D6.a","D5.b")],
-                         self.asm.list_coupling_vars())
+        self.assertEqual([c1,c2,c3],
+                         self.asm.get_coupling_vars())
         
         self.asm.remove_coupling_var(('D1.a','D2.a'))
-        self.assertEqual([("D4.a","D5.a"),("D6.a","D5.b")],
-                         self.asm.list_coupling_vars())
+        self.assertEqual([c2,c3],
+                         self.asm.get_coupling_vars())
         try: 
             self.asm.remove_coupling_var(('D1.a','D2.a'))
         except Exception as err: 
@@ -109,7 +109,7 @@ class ProblemFormulationTest(unittest.TestCase):
             
         self.asm.add_coupling_var("D1.a","D2.a")
         self.asm.clear_coupling_vars()
-        self.assertEqual([],self.asm.list_coupling_vars())
+        self.assertEqual([],self.asm.get_coupling_vars())
         
     def test_double_set_arch(self):
         self.asm.architecture = DummyArchitecture()

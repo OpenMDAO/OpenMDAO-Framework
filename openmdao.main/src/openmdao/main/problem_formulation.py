@@ -65,15 +65,15 @@ class HasCouplingVars(object):
                                              ValueError)        
         if self._couples: 
             indeps,deps = zip(*self._couples)
-            if indep in indeps:
+            if indep in [i.target for i in indeps]:
                 self._parent.raise_exception("Coupling variable with indep '%s' already "
                                              "exists in assembly"%indep,ValueError)    
-            if dep in deps:
+            if dep in [d.target for d in deps]:
                 self._parent.raise_exception("Coupling variable with dep '%s' already "
                                              "exists in assembly"%dep,ValueError)
                 
         self._couples.append((expr_indep,expr_dep))    
-    
+        return (expr_indep,expr_dep)
             
     def remove_coupling_var(self,couple):
         """removes the coupling var, indep/dep pair from the assembly. 
@@ -81,11 +81,15 @@ class HasCouplingVars(object):
         couple: tuple of str 
             two tuple of (<indep>,<dep>) to be removed
         """
-        try: 
-            self._couples.remove(couple)
-        except: 
+        if couple not in [(i.target,d.target) for i,d in self._couples]:
             self._parent.raise_exception("No coupling variable of ('%s','%s') exists "
                                          "in assembly"%couple,ValueError)
+        else: 
+            for i,d in self._couples: 
+                if couple == (i.target,d.target):     
+                    self._couples.remove((i,d))
+
+            
         
     def get_coupling_vars(self): 
         """returns a ordered list of (indep,dep) pairs of CouplingVar instances in the assembly"""
