@@ -141,10 +141,10 @@ openmdao.DataflowComponentFigure.prototype.setDimension=function(w,h){
         this.footer.style.width=(this.width-this.cornerWidth*2)+"px";
         this.footer.style.top=(this.height-this.cornerHeight)+"px";
     }
-    if(this.outputPort!==null){
-        this.outputPort.setPosition(this.width+5,this.height/2);
+    if (this.outputPort!==null) {
+        this.outputPort.setPosition(this.width+5,this.height/2);        
     }
-    if(this.inputPort!==null){
+    if (this.inputPort!==null) {
         this.inputPort.setPosition(this.width/2,0);
     }
 };
@@ -188,19 +188,34 @@ openmdao.DataflowComponentFigure.prototype.setCanDrag=function(flag){
     }
 };
 
-openmdao.DataflowComponentFigure.prototype.setWorkflow=function(_5019){
-    draw2d.Node.prototype.setWorkflow.call(this,_5019);
-    if(_5019!==null&&this.inputPort===null){
+openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
+    draw2d.Node.prototype.setWorkflow.call(this,wkflw);
+    if(wkflw!==null && this.inputPort===null){
         this.inputPort=new draw2d.InputPort();
-        this.inputPort.setWorkflow(_5019);
+        this.inputPort.setWorkflow(wkflw);
         this.inputPort.setName("input");
         this.addPort(this.inputPort,this.width/2,0);
+        
         this.outputPort=new draw2d.OutputPort();
-        this.outputPort.setMaxFanOut(5);
-        this.outputPort.setWorkflow(_5019);
+        this.outputPort.setWorkflow(wkflw);
         this.outputPort.setName("output");
-        this.addPort(this.outputPort,this.width+5,this.height/2);
-    }
+        var oThis=this;
+        this.outputPort.createCommand = function(request) {
+            if(request.getPolicy() ==draw2d.EditPolicy.CONNECT) {
+                if( request.source.parentNode.id == request.target.parentNode.id) {
+                    return null;
+                }
+                if (request.source instanceof draw2d.InputPort) {
+                    var path = openmdao.Util.getParentPath(oThis.pathname),
+                        src  = oThis.name,
+                        dst  = request.source.getParent().name;            
+                    new openmdao.DataConnectionEditor(oThis.myModel,path,src,dst)
+                };                
+                return null;
+            }
+        }
+        this.addPort(this.outputPort,this.width+5,this.height/2);    
+    };
 };
 
 openmdao.DataflowComponentFigure.prototype.toggle=function(){
