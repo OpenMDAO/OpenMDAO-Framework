@@ -66,7 +66,7 @@ def remote_build(srcdirs=(), destdir=None, build_type='bdist_egg',
             print 'removing %s' % remote_dir
         rm_remote_tree(remote_dir)
     
-    return pkgs
+    return 0
 
 def main(argv=None):
     atexit.register(fabric_cleanup, True)
