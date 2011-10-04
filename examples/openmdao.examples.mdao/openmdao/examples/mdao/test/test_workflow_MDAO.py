@@ -229,21 +229,16 @@ class TestCase(unittest.TestCase):
     
         # Set up initial conditions
     
-        prob.global_des_var_targets[0] = 5.0
         prob.dis1.z1 = 5.0
         prob.dis2.z1 = 5.0
     
-        prob.global_des_var_targets[1] = 2.0
         prob.dis1.z2 = 2.0
         prob.dis2.z2 = 2.0
     
-        prob.local_des_var_targets[0] = 1.0
         prob.dis1.x1 = 1.0
         
-        prob.coupling_var_targets[1] = 3.16
         prob.dis2.y1 = 3.16
         
-        prob.coupling_var_targets[1] = 0.0
         prob.dis1.y2 = 0.0
         
         prob.run()

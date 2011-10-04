@@ -48,7 +48,7 @@ class CO(Architecture):
         
         
         initial_conditions = [param.evaluate() for comp,param in global_dvs]
-        print "global initial conditions: ", initial_conditions
+        #print "global initial conditions: ", initial_conditions
         self.parent.add_trait('global_des_var_targets',Array(initial_conditions))
         for i,(comp,param) in enumerate(global_dvs): 
             target_var = 'global_des_var_targets[%d]'%i
@@ -60,7 +60,7 @@ class CO(Architecture):
                 self.target_var_map[var] = target_var
                 
         initial_conditions = [indep.evaluate() for indep,dep in coupling]   
-        print "coupling initial conditions: ", initial_conditions
+        #print "coupling initial conditions: ", initial_conditions
         self.parent.add_trait('coupling_var_targets',Array(initial_conditions))
         for i,(indep,dep) in enumerate(coupling): 
             target_var = 'coupling_var_targets[%d]'%i
@@ -72,14 +72,14 @@ class CO(Architecture):
             
         
         initial_conditions = [param.evaluate() for comp,param in local_dvs]    
-        print "local initial conditions: ", initial_conditions
+        #print "local initial conditions: ", initial_conditions
         self.parent.add_trait("local_des_var_targets",Array(initial_conditions))
         for i,(comp,param) in enumerate(local_dvs):
             #Target variables for the local optimizations
             target_var = 'local_des_var_targets[%d]'%i
             self.target_var_map[param.target] = target_var
             global_opt.add_parameter(target_var,low=param.low,high=param.high)
-            print "param: ",target_var,param.low,param.high
+            #print "param: ",target_var,param.low,param.high
         
             
         #create the new objective with the target variables
@@ -122,7 +122,7 @@ class CO(Architecture):
             local_opt.dabfun = .000001
             local_opt.force_execute = True
 
-            print local_opt.name
+        """    print local_opt.name
             print local_opt.get_objectives().keys()[0]
             for param in local_opt.get_parameters(): 
                 print param
@@ -142,7 +142,7 @@ class CO(Architecture):
             print constraint
         
         print 
-        print
+        print"""
             
             
             

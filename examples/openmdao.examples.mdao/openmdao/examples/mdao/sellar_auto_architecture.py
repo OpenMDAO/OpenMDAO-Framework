@@ -3,61 +3,11 @@
     Problem forumulation is specified, and MDF is automatically
     set up for you. 
 """
-from openmdao.examples.mdao.disciplines import SellarDiscipline1_WithDerivatives as SellarDiscipline1, \
-                                               SellarDiscipline2_WithDerivatives as SellarDiscipline2
-#from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
-#                                               SellarDiscipline2_WithDerivatives as SellarDiscipline2
-
-from openmdao.main.api import Assembly, Slot, implements, Component
-
-from openmdao.main.problem_formulation import ArchitectureAssembly
 
 from openmdao.lib.architectures.api import MDF, BLISS, CO
 from openmdao.lib.casehandlers.api import DBCaseRecorder
-        
-
-class Sellar(ArchitectureAssembly):
-    """ Optimization of the Sellar problem using MDF
-    Disciplines coupled with BroydenSolver.
-    """
     
-    def __init__(self):
-        """ Creates a new Assembly with this problem
-        
-        Optimal Design at (1.9776, 0, 0)
-        
-        Optimal Objective = 3.18339"""
-        
-        super(Sellar, self).__init__()
-        
-        #add the discipline components to the assembly
-        self.add('dis1', SellarDiscipline1())
-        self.add('dis2', SellarDiscipline2())
-        
-        #START OF MDAO Problem Definition
-        #Global Des Vars
-        self.add_parameter(("dis1.z1","dis2.z1"),low=-10,high=10)
-        self.add_parameter(("dis1.z2","dis2.z2"),low=0,high=10)
-        
-        #Local Des Vars 
-        self.add_parameter("dis1.x1",low=0,high=10)
-        
-        #Coupling Vars
-        self.add_coupling_var("dis2.y1","dis1.y1")
-        self.add_coupling_var("dis1.y2","dis2.y2")
-                           
-        self.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
-        self.add_constraint('3.16 < dis1.y1')
-        self.add_constraint('dis2.y2 < 24.0')
-        
-        #END OF MDAO Problem Definition
-        
-        self.dis1.z1 = self.dis2.z1 = 5.0
-        self.dis1.z2 = self.dis2.z2 = 2.0
-        self.dis1.x1 = 1.0
-        self.dis1.y2 = 0.0
-        self.dis2.y1 = 3.16
-    
+from openmdao.lib.optproblems.api import SellarProblem    
         
         
 if __name__ == "__main__": # pragma: no cover
@@ -75,7 +25,7 @@ if __name__ == "__main__": # pragma: no cover
     
     solution = (1.9776, 0, 0)
     
-    prob = Sellar()
+    prob = SellarProblem()
     set_as_top(prob)
     prob.architecture = MDF()
     prob.configure()
@@ -105,7 +55,7 @@ if __name__ == "__main__": # pragma: no cover
     print "\n"
     
     
-    prob = Sellar()
+    prob = SellarProblem()
     set_as_top(prob)
     prob.architecture = BLISS() 
     prob.configure()
@@ -149,13 +99,9 @@ if __name__ == "__main__": # pragma: no cover
     p.legend()
     
     
+       
     
-    
-    
-    #p.show()
-    
-    """
-    prob = Sellar()
+    prob = SellarProblem()
     set_as_top(prob)
     prob.architecture = CO() 
     
@@ -172,6 +118,6 @@ if __name__ == "__main__": # pragma: no cover
                                                              prob.dis1.x1-solution[2])
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Elapsed time: ", time.time()-tt, "seconds"
-    """
+    
     
     

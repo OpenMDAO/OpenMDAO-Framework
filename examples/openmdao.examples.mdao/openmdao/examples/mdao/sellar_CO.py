@@ -2,11 +2,11 @@
     Solution of the sellar analytical problem using Collaborative Optimization.
 """
 
-from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
-                                               SellarDiscipline2
+
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import CONMINdriver
+
 
 
 class SellarCO(Assembly):
@@ -34,39 +34,30 @@ class SellarCO(Assembly):
                                   'localopt2'])
         
         # Local Optimization 1
-        self.add('dis1', SellarDiscipline1())
+        self.add('dis1', sellar.Discipline1())
 
         # Local Optimization 2
-        self.add('dis2', SellarDiscipline2())
+        self.add('dis2', sellar.Discipline2())
         
         #Parameters - Global Optimization
         self.driver.add_objective('(local_des_var_targets[0])**2 + global_des_var_targets[1] + coupling_var_targets[0] + math.exp(-coupling_var_targets[1])')
-        #self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
         self.driver.add_parameter('global_des_var_targets[0]', low = -10.0, high = 10.0)
         self.driver.add_parameter('global_des_var_targets[1]', low = 0.0,   high = 10.0)
         
-        #self.driver.add_parameter('coupling_var_targets[0]', low = 3.16,  high = 10.0)
-        #self.driver.add_parameter('coupling_var_targets[1]', low = -10.0, high = 24.0)
         self.driver.add_parameter('coupling_var_targets[0]', low = -1e99,  high = 1e99)
         self.driver.add_parameter('coupling_var_targets[1]', low = -1e99, high = 1e99)
         self.driver.add_parameter('local_des_var_targets[0]', low = 0.0,   high = 10.0)
-        
-        #self.driver.add_constraint('3.16 < coupling_var_targets[0]')
-        #self.driver.add_constraint('coupling_var_targets[1] < 24.0')
 
-
-        """con1 = '(global_des_var_targets[0]-dis1.z1)**2 + (global_des_var_targets[1]-dis1.z2)**2 + ' + \
-               '(local_des_var_targets[0]-dis1.x1)**2 + ' + \
-               '(coupling_var_targets[0]-dis1.y1)**2 + (coupling_var_targets[1]-dis1.y2)**2 <= 0'"""
-        
         con1 = '(local_des_var_targets[0]-dis1.x1)**2+'+\
                '(global_des_var_targets[0]-dis1.z1)**2+'+\
                '(global_des_var_targets[1]-dis1.z2)**2+'+\
                '(coupling_var_targets[1]-dis1.y2)**2+'+\
                '(coupling_var_targets[0]-dis1.y1)**2<=.001'
         
-        con2 = '(global_des_var_targets[0]-dis2.z1)**2 + (global_des_var_targets[1]-dis2.z2)**2 + ' + \
-               '(coupling_var_targets[0]-dis2.y1)**2 + (coupling_var_targets[1]-dis2.y2)**2 <= .001'
+        con2 = '(global_des_var_targets[0]-dis2.z1)**2 +'+\
+               '(global_des_var_targets[1]-dis2.z2)**2 +'+\
+               '(coupling_var_targets[0]-dis2.y1)**2 +'+\
+               '(coupling_var_targets[1]-dis2.y2)**2 <= .001'
         self.driver.add_constraint(con1)
         self.driver.add_constraint(con2)
         
@@ -116,8 +107,8 @@ class SellarCO(Assembly):
         self.localopt2.add_constraint('dis2.y2 < 24.0')
         self.localopt2.iprint = 0
         self.localopt2.itmax = 100
-        self.localopt2.fdch = .001
-        self.localopt2.fdchm = .001
+        self.localopt2.fdch = .003
+        self.localopt2.fdchm = .003
         self.localopt2.delfun = .001
         self.localopt2.dabfun = .00001
         self.localopt2.force_execute = True
@@ -131,19 +122,14 @@ if __name__ == "__main__":
     prob = SellarCO()
     set_as_top(prob)
             
-    prob.global_des_var_targets[0] = 5.0
     prob.dis1.z1 = 5.0
     prob.dis2.z1 = 5.0
 
-    prob.global_des_var_targets[1] = 2.0
     prob.dis1.z2 = 2.0
     prob.dis2.z2 = 2.0
 
-    prob.local_des_var_targets[0] = 1.0
     prob.dis1.x1 = 1.0
     
-    prob.coupling_var_targets[0] = 3.16
-    prob.coupling_var_targets[1] = 0.0
     prob.dis1.y2 = 0.0
     prob.dis2.y1 = 3.16
     

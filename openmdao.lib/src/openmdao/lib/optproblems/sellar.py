@@ -9,11 +9,12 @@ From Sellar's analytic problem.
 """
 
 from openmdao.main.api import Component, ComponentWithDerivatives
+from openmdao.main.problem_formulation import ArchitectureAssembly
 from openmdao.lib.datatypes.api import Float
 
 
 
-class SellarDiscipline1(Component):
+class Discipline1(Component):
     """Component containing Discipline 1"""
     
     # pylint: disable-msg=E1101
@@ -38,7 +39,7 @@ class SellarDiscipline1(Component):
         #print "(%f, %f, %f)" % (z1, z2, x1)
         
         
-class SellarDiscipline1_WithDerivatives(ComponentWithDerivatives):
+class Discipline1_WithDerivatives(ComponentWithDerivatives):
     """Component containing Discipline 1"""
     
     # pylint: disable-msg=E1101
@@ -80,7 +81,7 @@ class SellarDiscipline1_WithDerivatives(ComponentWithDerivatives):
 
 
 
-class SellarDiscipline2(Component):
+class Discipline2(Component):
     """Component containing Discipline 2"""
     
     # pylint: disable-msg=E1101
@@ -106,7 +107,7 @@ class SellarDiscipline2(Component):
         self.y2 = y1**(.5) + z1 + z2
         
         
-class SellarDiscipline2_WithDerivatives(ComponentWithDerivatives):
+class Discipline2_WithDerivatives(ComponentWithDerivatives):
     """Component containing Discipline 2"""
     
     # pylint: disable-msg=E1101
@@ -144,105 +145,49 @@ class SellarDiscipline2_WithDerivatives(ComponentWithDerivatives):
         y1 = abs(self.y1)
         
         self.y2 = y1**(.5) + z1 + z2        
-
-
-
-class SellarDiscipline1withDerivatives(ComponentWithDerivatives):
-    """Component containing Discipline 1"""
+        
+        
+        
+class SellarProblem(ArchitectureAssembly):
+    """ Optimization of the Sellar problem using MDF
+    Disciplines coupled with BroydenSolver.
+    """
     
-    # pylint: disable-msg=E1101
-    z1 = Float(0.0, iotype='in', desc='Global Design Variable')
-    z2 = Float(0.0, iotype='in', desc='Global Design Variable')
-    x1 = Float(0.0, iotype='in', desc='Local Design Variable')
-    y2 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
-
-    y1 = Float(iotype='out', desc='Output of this Discipline')        
-
-
     def __init__(self):
-        """ declare what derivatives that we can provide"""
+        """ Creates a new Assembly with this problem
         
-        super(SellarDiscipline1withDerivatives, self).__init__()
-
-        self.derivatives.declare_first_derivative('y1', 'z1')
-        self.derivatives.declare_first_derivative('y1', 'z2')
-        self.derivatives.declare_first_derivative('y1', 'x1')
-        self.derivatives.declare_first_derivative('y1', 'y2')
-
-
-    def execute(self):
-        """Evaluates the equation  
-        y1 = z1**2 + z2 + x1 - 0.2*y2"""
+        Optimal Design at (1.9776, 0, 0)
         
-        z1 = self.z1
-        z2 = self.z2
-        x1 = self.x1
-        y2 = self.y2
+        Optimal Objective = 3.18339"""
         
-        self.y1 = z1**2 + z2 + x1 - 0.2*y2
-        #print "(%f, %f, %f)" % (z1, z2, x1)
-
-
-    def calculate_first_derivatives(self):
-        """Analytical first derivatives"""
+        super(SellarProblem, self).__init__()
         
-        dy1_dz1 = 2.0*self.z1
-        dy1_dz2 = 1.0
-        dy1_dx1 = 1.0
-        dy1_dy2 = -0.2
-    
-        self.derivatives.set_first_derivative('y1', 'z1', dy1_dz1)
-        self.derivatives.set_first_derivative('y1', 'z2', dy1_dz2)
-        self.derivatives.set_first_derivative('y1', 'x1', dy1_dx1)
-        self.derivatives.set_first_derivative('y1', 'y2', dy1_dy2)
+        #add the discipline components to the assembly
+        self.add('dis1', Discipline1())
+        self.add('dis2', Discipline2())
         
-
-
-class SellarDiscipline2withDerivatives(ComponentWithDerivatives):
-    """Component containing Discipline 2"""
-    
-    # pylint: disable-msg=E1101
-    z1 = Float(0.0, iotype='in', desc='Global Design Variable')
-    z2 = Float(0.0, iotype='in', desc='Global Design Variable')
-    y1 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
-
-    y2 = Float(iotype='out', desc='Output of this Discipline')        
-
-    def __init__(self):
-        """ declare what derivatives that we can provide"""
+        #START OF MDAO Problem Definition
+        #Global Des Vars
+        self.add_parameter(("dis1.z1","dis2.z1"),low=-10,high=10)
+        self.add_parameter(("dis1.z2","dis2.z2"),low=0,high=10)
         
-        super(SellarDiscipline2withDerivatives, self).__init__()
-
-        self.derivatives.declare_first_derivative('y2', 'z1')
-        self.derivatives.declare_first_derivative('y2', 'z2')
-        self.derivatives.declare_first_derivative('y2', 'y1')
-
-    def execute(self):
-        """Evaluates the equation  
-        y1 = y1**(.5) + z1 + z2"""
+        #Local Des Vars 
+        self.add_parameter("dis1.x1",low=0,high=10)
         
-        z1 = self.z1
-        z2 = self.z2
+        #Coupling Vars
+        self.add_coupling_var("dis2.y1","dis1.y1")
+        self.add_coupling_var("dis1.y2","dis2.y2")
+                           
+        self.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
+        self.add_constraint('3.16 < dis1.y1')
+        self.add_constraint('dis2.y2 < 24.0')
         
-        # Note: this may cause some issues. However, y1 is constrained to be
-        # above 3.16, so lets just let it converge, and the optimizer will 
-        # throw it out
-        y1 = abs(self.y1)
+        #END OF MDAO Problem Definition
         
-        self.y2 = y1**(.5) + z1 + z2
-
-        
-    def calculate_first_derivatives(self):
-        """Analytical first derivatives"""
-        
-        y1 = abs(self.y1)
-        
-        dy2_dz1 = 1.0
-        dy2_dz2 = 1.0
-        dy2_dy1 = .5*y1**(-.5)
-    
-        self.derivatives.set_first_derivative('y2', 'z1', dy2_dz1)
-        self.derivatives.set_first_derivative('y2', 'z2', dy2_dz2)
-        self.derivatives.set_first_derivative('y2', 'y1', dy2_dy1)
+        self.dis1.z1 = self.dis2.z1 = 5.0
+        self.dis1.z2 = self.dis2.z2 = 2.0
+        self.dis1.x1 = 1.0
+        self.dis1.y2 = 0.0
+        self.dis2.y1 = 3.16        
 
         
