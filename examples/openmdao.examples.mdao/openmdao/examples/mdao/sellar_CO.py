@@ -6,7 +6,7 @@
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import CONMINdriver
-
+from openmdao.lib.optproblems import sellar
 
 
 class SellarCO(Assembly):
