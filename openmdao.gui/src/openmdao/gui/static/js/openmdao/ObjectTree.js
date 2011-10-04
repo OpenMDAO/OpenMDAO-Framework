@@ -149,8 +149,6 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             debug.log(node);
         }
         else {
-            debug.log('ObjectTree.contextMenu: clicked on non-leaf node');
-            debug.log(node);
             isAssembly = true;
         }
         

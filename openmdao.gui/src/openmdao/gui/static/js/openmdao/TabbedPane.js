@@ -4,11 +4,6 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-/**
- * 
- * @version 0.0.0
- * @constructor
- */
 openmdao.TabbedPane = function(id) {
     jQuery("#"+id+" dl").css({
         'margin': '0',

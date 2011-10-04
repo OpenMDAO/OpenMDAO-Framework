@@ -1,9 +1,3 @@
-/* 
-Copyright (c) 2010. All rights reserved.
-
-LICENSE: NASA Open Source License
-
-*/
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
