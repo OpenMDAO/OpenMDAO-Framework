@@ -111,7 +111,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])  
         
-        self.top.driver.differentiator = FiniteDifference(self.top.driver)
+        self.top.driver.differentiator = FiniteDifference()
         self.top.run()
         
         # pylint: disable-msg=E1101
@@ -197,19 +197,6 @@ class CONMINdriverTestCase(unittest.TestCase):
         else:
             self.fail('Exception expected')
     
-    def test_scale_design_vector_size_mismatch(self):
-        self.top.driver.add_objective('comp.result')
-        map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]'])
-        self.top.driver.scal = [2,3,4]
-        try:
-            self.top.run()
-        except ValueError, err:
-            self.assertEqual(str(err),
-                             "driver: size of scale factor array"+
-                             " (3) does not match number of design vars (2)")
-        else:
-            self.fail('ValueError expected')
-
     
     def test_gradient_step_size_large(self):
         # Test that a larger value of fd step-size is less acurate
@@ -238,24 +225,6 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.fail("Coarsening CONMIN gradient step size did not make the objective worse.")
         
         
-    def test_scaling(self):
-        
-        self.top.driver.add_objective('comp.result')
-        map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]'])
-        self.top.driver.scal = [10.0, 10.0, 10.0, 10.0]
-        self.top.driver.nscal = -1
-        
-        # pylint: disable-msg=C0301
-        map(self.top.driver.add_constraint, [
-            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8.',
-            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10.',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5.'])
-        
-        self.top.run()
-        
-        # No test, just verifies that the syntax didn't fail.
-
     def test_linear_constraint_specification(self):
         # Note, just testing problem specification and setup
         
@@ -276,7 +245,6 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
                                              'comp.x[2]', 'comp.x[3]'])
-        self.top.driver.scal = [10.0, 10.0, 10.0, 10.0]
         self.top.driver.nscal = -1
         
         self.top.driver.itmax = 2
@@ -315,7 +283,46 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.driver.ctlmin = .001
         self.top.run()
 
+    def test_scaled_var_with_initial_violation(self):
+        
+        self.top.comp.add_trait('svar', Float(0.0, low=-10.0, high=10.0, iotype='in'))
+        self.top.driver.add_objective('comp.result')
+        
+        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        self.top.driver.ctlmin = 1.0
+        self.top.comp.svar = 1.5
+        self.top.driver.start_iteration()
 
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        self.top.driver.ctlmin = 1.0
+        self.top.comp.svar = 2.5
+        try:
+            self.top.driver.start_iteration()
+        except ValueError, err:
+            msg = 'driver: initial value of: comp.svar is greater than maximum'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('ValueError expected')
+
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        self.top.driver.ctlmin = 1.0
+        self.top.comp.svar = -0.5
+        self.top.driver.start_iteration()
+
+        self.top.driver.clear_parameters()
+        self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
+        self.top.driver.ctlmin = 1.0
+        self.top.comp.svar = -2.5
+        try:
+            self.top.driver.start_iteration()
+        except ValueError, err:
+            msg = 'driver: initial value of: comp.svar is less than minimum'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('ValueError expected')
+            
 if __name__ == "__main__":
     unittest.main()
 

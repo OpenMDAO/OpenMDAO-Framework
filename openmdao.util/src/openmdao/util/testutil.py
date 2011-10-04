@@ -53,7 +53,7 @@ def assert_raises(test_case, code, globals, locals, exception, msg,
 def assert_rel_error(test_case, actual, desired, tolerance):
     """
     Determine that the relative error between `actual` and `desired`
-    is within `tolerance`.
+    is within `tolerance`. If `desired` is zero then use absolute error.
 
     test_case: :class:`unittest.TestCase`
         TestCase instance used for assertions.
@@ -70,8 +70,10 @@ def assert_rel_error(test_case, actual, desired, tolerance):
     if isnan(actual) and not isnan(desired):
         test_case.fail('actual nan, desired %s, error nan, tolerance %s'
                        % (desired, tolerance))
-    
-    error = (actual - desired) / desired
+    if desired != 0:
+        error = (actual - desired) / desired
+    else:
+        error = actual - desired
     if abs(error) > tolerance:
         test_case.fail('actual %s, desired %s, error %s, tolerance %s'
                        % (actual, desired, error, tolerance))

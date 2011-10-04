@@ -43,16 +43,23 @@ setup(name='openmdao.devtools',
           'Fabric>=0.9.3',
           'virtualenv',
           'openmdao.util',
+          'boto',
+          'paramiko>=1.7.7',
       ],
       entry_points = {
           "console_scripts": [
                 "openmdao_build_docs=openmdao.devtools.build_docs:build_docs",
                 "wingproj=openmdao.devtools.wingproj:run_wing",
                 "openmdao_testdocs=openmdao.devtools.build_docs:test_docs",
-                "test_release=openmdao.devtools.tstrelease:main",
                 "push_docs=openmdao.devtools.push_docs:push_docs",
-                "test_branch=openmdao.devtools.tstbranch:main",
-                "make_release=openmdao.devtools.make_release:main",
+                "test_branch=openmdao.devtools.remotetst:test_branch",
+                "test_release=openmdao.devtools.remotetst:test_release",
+                "make_installer=openmdao.devtools.mkinstaller:main",
+                "make_release=openmdao.devtools.mkrelease:make_release",
+                "push_release=openmdao.devtools.push_release:main",
+                "remote_build=openmdao.devtools.remote_build:main",
               ],
       }
     )
+
+

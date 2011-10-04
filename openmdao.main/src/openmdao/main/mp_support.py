@@ -164,6 +164,8 @@ class OpenMDAO_Server(Server):
             for user_host in self._allowed_users.keys():
                 user, host = user_host.split('@')
                 hosts.add(socket.gethostbyname(host))
+                if host == socket.gethostname():
+                    hosts.add('127.0.0.1')
             self._allowed_hosts = list(hosts)
         else:
             self._allowed_hosts = allowed_hosts or []
@@ -535,7 +537,10 @@ class OpenMDAO_Server(Server):
                 access_controller = self._access_controller
             # Only happens on remote protected object.
             else:  #pragma no cover
-                access_controller = get_access_controller()
+                if get_access_controller is None:
+                    access_controller = self._access_controller
+                else:
+                    access_controller = get_access_controller()
             self._id_to_controller[ident] = access_controller
 
         # Get role based on credentials.
@@ -753,7 +758,10 @@ class OpenMDAO_Server(Server):
     # Will only be seen on remote.
     def shutdown(self, conn):  #pragma no cover
         """ Shutdown this process. """
-        self._logger.debug('received shutdown request')
+        self._logger.debug('received shutdown request, running exit functions')
+        # Deprecated, but marginally better than atexit._run_exitfuncs()
+        if hasattr(sys, 'exitfunc'):
+            sys.exitfunc()
         super(OpenMDAO_Server, self).shutdown(conn)
 
 
@@ -912,7 +920,12 @@ class OpenMDAO_Manager(BaseManager):
 
                 # Reset stdout & stderr.
                 for handler in logging._handlerList:
-                    handler.flush()
+                    try:
+                        handler.flush()
+                    except AttributeError:
+                        h = handler()
+                        if h:
+                            h.flush()
                 sys.stdout.flush()
                 sys.stderr.flush()
                 sys.stdout = open('stdout', 'w')
@@ -1062,6 +1075,13 @@ class OpenMDAO_Proxy(BaseProxy):
         key, and the entry is removed before being passed to :class:`BaseProxy`.
 
     This version sends credentials and provides dynamic result proxy generation.
+
+    .. note::
+
+        :meth:`BaseProxy.__str__` (used by :meth:`str` and the ``%s`` format)
+        will return :meth:`__repr__` of the remote object.  To avoid the
+        network round-trip delay, use :meth:`repr` or the ``%r`` format.
+
     """
 
     def __init__(self, *args, **kwds):
@@ -1096,8 +1116,8 @@ class OpenMDAO_Proxy(BaseProxy):
             try:
                 self._connect()
             except Exception as exc:
-                msg = "Can't connect to server at %r: %r" \
-                      % (self._token.address, exc)
+                msg = "Can't connect to server at %r for %r: %r" \
+                      % (self._token.address, methodname, exc)
                 logging.error(msg)
                 raise RuntimeError(msg)
             conn = self._tls.connection
@@ -1125,7 +1145,8 @@ class OpenMDAO_Proxy(BaseProxy):
             conn.send(encrypt((self._id, methodname, new_args, kwds,
                                get_credentials().encode()), session_key))
         except IOError as exc:
-            msg = "Can't send to server at %r: %r" % (self._token.address, exc)
+            msg = "Can't send to server at %r for %r: %r" \
+                  % (self._token.address, methodname, exc)
             logging.error(msg)
             raise RuntimeError(msg)
 

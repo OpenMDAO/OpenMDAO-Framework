@@ -44,6 +44,8 @@ import sys
 import tempfile
 import types
 
+from zope.interface.interface import InterfaceClass
+
 from openmdao.util.log import NullLogger
 from openmdao.util import eggobserver, eggwriter
 
@@ -338,7 +340,7 @@ def _get_objects(root, logger):
                 continue
             visited.add(id(obj))
             objs.append((obj, container, index))
-            if not inspect.isclass(obj):
+            if not inspect.isclass(obj) and not isinstance(obj, InterfaceClass):
                 _recurse_get_objects(obj, objs, visited, logger)
 
     objs = [(root, None, None)]
@@ -540,8 +542,11 @@ def _get_distributions(objs, py_dir, logger, observer):
         except AttributeError:
             logger.debug('    module %s has no __file__', name)
             continue
-        if sys.platform == 'win32':  #pragma no cover
+
+        if sys.platform == 'win32':  # pragma no cover
+            orig_path = path
             path = path.lower()
+
         found = False
         for prefix in prefixes:
             if path.startswith(prefix):
@@ -549,6 +554,9 @@ def _get_distributions(objs, py_dir, logger, observer):
                 break
         if found:
             continue
+
+        if sys.platform == 'win32':  # pragma no cover
+            path = orig_path
 
         egg = path.find('.egg')
         if egg > 0:
@@ -683,16 +691,18 @@ def _process_found_modules(py_dir, finder_info, modules, distributions,
             continue
         if name != '__main__':
             modules.add(name)
-        # Just being defensive, ModuleFinder hsould be excluding these.
+        # Just being defensive, ModuleFinder should be excluding these.
         if not path:  #pragma no cover
             continue
 
-        if sys.platform == 'win32':  #pragma no cover
+        orig_path = path
+        if sys.platform == 'win32':  # pragma no cover
             path = path.lower()
+
         dirpath = os.path.realpath(os.path.dirname(path))
         if dirpath.startswith(py_dir):
             # May need to be copied later.
-            local_modules.add(path)
+            local_modules.add(orig_path)
             continue
 
         # Skip modules in distributions we already know about.
@@ -703,6 +713,9 @@ def _process_found_modules(py_dir, finder_info, modules, distributions,
                 break
         if found:
             continue
+
+        if sys.platform == 'win32':  # pragma no cover
+            path = orig_path
 
         # Record distribution.
         for dist in working_set:

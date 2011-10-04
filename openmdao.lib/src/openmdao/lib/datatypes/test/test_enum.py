@@ -92,6 +92,14 @@ class IntTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
+    def enum_typecheck(self):
+        
+        self.hobj.add('E_float', Enum('2.0', (1.0, 2.0, 3.0), iotype='in'))
+        self.hobj.E_float = 2
+        self.assertTrue(isinstance(self.hobj.E_float, float))
+        self.hobj.add('E_int', Enum('2', (1, 2, 3), iotype='in'))
+        self.hobj.E_float = 3.0000
+        self.assertTrue(isinstance(self.hobj.E_float, int))
         
 if __name__ == "__main__":
     unittest.main()

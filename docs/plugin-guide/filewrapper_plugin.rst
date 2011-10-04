@@ -42,7 +42,7 @@ precision. Consider a variable with 15 digits of precision.
     >>> val = 3.1415926535897932
     >>>
     >>> val
-    3.1415926535897931
+    3.141592653589793...
     >>>
     >>> print val
     3.14159265359
@@ -54,7 +54,7 @@ precision. Consider a variable with 15 digits of precision.
     3.141593
     >>> 
     >>> print "%.16f" % val
-    3.1415926535897931
+    3.141592653589793...
     
 If the variable's value in the input file is created using the ``print``
 statement, only 11 digits of precision are in the generated output. The same
@@ -177,7 +177,7 @@ the input file and parse the output file. This example includes a placeholder
 comment for each of these tasks. More detail about what goes there can be
 found in the sections that follow.
 
-In order to run, this component still needs one more piece of information --
+To run, this component still needs one more piece of information --
 the command string that runs the external code. The ExternalCode object has an
 attribute named `command` which takes the command string. So, if you want to
 execute a code that you normally run by typing
@@ -519,7 +519,7 @@ one of the community-developed engines, such as mako_ or django_.
 
 .. _mako: http://www.makotemplates.org/
 
-.. _django: http://docs.djangoproject.com/en/dev/topics/templates/
+.. _django: https://docs.djangoproject.com/en/dev/topics/templates/
 
 .. todo:: Include some examples with one of the templating engines.
 
@@ -612,7 +612,7 @@ proceeding.
 In the ``execute`` method, a Namelist object is instantiated. This object
 allows you to sequentially build up a namelist input file. The only argument
 is `self`, which is passed because the Namelist object needs to access your
-component's OpenMDAO variables in order to automatically determine the data
+component's OpenMDAO variables to automatically determine the data
 type. The ``set_filename`` method is used to set the name of the input file that
 will be written. Here, you just pass it the variable ``self.stdin``, which is part
 of the ExternalCode API.

@@ -67,7 +67,7 @@ class SellarBLISS(Assembly):
         self.sa_dis1.add_constraint(constraint1) 
         self.sa_dis1.add_constraint(constraint2) 
         self.sa_dis1.add_objective(objective, name='obj')
-        self.sa_dis1.differentiator = FiniteDifference(self.sa_dis1)
+        self.sa_dis1.differentiator = FiniteDifference()
         self.sa_dis1.default_stepsize = 1.0e-6
         self.sa_dis1.force_execute = True
         
@@ -85,7 +85,7 @@ class SellarBLISS(Assembly):
         self.ssa.add_constraint(constraint1)
         self.ssa.add_constraint(constraint2)
         self.ssa.add_objective(objective, name='obj')
-        self.ssa.differentiator = FiniteDifference(self.ssa)
+        self.ssa.differentiator = FiniteDifference()
         self.ssa.default_stepsize = 1.0e-6
         self.ssa.force_execute = True
         
@@ -98,7 +98,7 @@ class SellarBLISS(Assembly):
         #this one is technically unncessary
         self.bbopt1.add_constraint('sa_dis1.G[1] + sa_dis1.dG[1][0]*(x1_store-dis1.x1) < 0')
         
-        self.bbopt1.add_constraint('(x1_store-dis1.x1)x<.5')
+        self.bbopt1.add_constraint('(x1_store-dis1.x1)<.5')
         self.bbopt1.add_constraint('(x1_store-dis1.x1)>-.5')
         self.bbopt1.linobj = True
         self.bbopt1.iprint = 0

@@ -229,28 +229,28 @@ class TestCase(unittest.TestCase):
     
         # Set up initial conditions
     
-        prob.z1_t = 5.0
+        prob.global_des_var_targets[0] = 5.0
         prob.dis1.z1 = 5.0
         prob.dis2.z1 = 5.0
     
-        prob.z2_t = 2.0
+        prob.global_des_var_targets[1] = 2.0
         prob.dis1.z2 = 2.0
         prob.dis2.z2 = 2.0
     
-        prob.x1_t = 1.0
+        prob.local_des_var_targets[0] = 1.0
         prob.dis1.x1 = 1.0
         
-        prob.y1_t = 3.16
+        prob.coupling_var_targets[1] = 3.16
         prob.dis2.y1 = 3.16
         
-        prob.y2_t = 0.0
+        prob.coupling_var_targets[1] = 0.0
         prob.dis1.y2 = 0.0
         
         prob.run()
 
-        assert_rel_error(self, prob.z1_t, 2.0, 0.1)
-        assert_rel_error(self, 1.0-prob.z2_t, 1.0, 0.01)
-        assert_rel_error(self, 1.0-prob.x1_t, 1.0, 0.1)
+        assert_rel_error(self, prob.global_des_var_targets[0], 2.0, 0.1)
+        assert_rel_error(self, 1.0-prob.global_des_var_targets[1], 1.0, 0.01)
+        assert_rel_error(self, 1.0-prob.local_des_var_targets[0], 1.0, 0.1)
 
     def test_CO_Multi(self):
         prob = SellarCO_Multi()
@@ -285,9 +285,9 @@ class TestCase(unittest.TestCase):
         prob = SellarBLISS()
         set_as_top(prob)
     
-        prob.dis1.z1 = prob.dis2.z1 = z1_store = 5.0
-        prob.dis1.z2 = prob.dis2.z2 = z2_store = 2.0
-        prob.dis1.x1 = x1_store = 1.0
+        prob.dis1.z1 = prob.dis2.z1 = prob.z_store[0] = 5.0
+        prob.dis1.z2 = prob.dis2.z2 = prob.z_store[1] = 2.0
+        prob.dis1.x1 = prob.x1_store = 1.0
     
         prob.run()
         assert_rel_error(self, prob.dis1.z1, 1.977, 0.04)

@@ -4,6 +4,16 @@ import re
 
 from numpy import float32, float64, int32, int64, array
 
+#pyevolve calls multiprocessing.cpu_count(), which can raise NotImplementedError
+#so try to monkeypatch it here to return 1 if that's the case
+try:
+    import multiprocessing
+    multiprocessing.cpu_count()
+except ImportError:
+    pass
+except NotImplementedError:
+    multiprocessing.cpu_count = lambda: 1
+    
 from pyevolve import G1DList, GAllele, GenomeBase, Scaling
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
@@ -44,13 +54,16 @@ class Genetic(Driver):
                                          "population members.")
     
     selection_method = Enum("roulette_wheel",
-                            ("roulette_wheel", "tournament", "rank", "uniform"),
+                            ("roulette_wheel", 
+                             #"tournament", #this seems to be broken 
+                             "rank", 
+                             "uniform"),
                             desc="The selection method used to pick population "
                                  "members who will survive for "
                                  "breeding into the next generation.",
                             iotype="in")
     _selection_mapping = {"roulette_wheel":Selectors.GRouletteWheel,
-                          "tournament":Selectors.GTournamentSelector,
+                          #"tournament":Selectors.GTournamentSelector, #this does not seem to function right for pyevolve
                           "rank":Selectors.GRankSelector,
                           "uniform":Selectors.GUniformSelector}
     

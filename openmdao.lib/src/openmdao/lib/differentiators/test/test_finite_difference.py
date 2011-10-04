@@ -7,11 +7,11 @@ import unittest
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Float, Int
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.main.api import Component, Assembly, Driver
+from openmdao.main.api import Component, Assembly
+from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective, HasObjectives
-from openmdao.main.uses_derivatives import UsesGradients, UsesHessians
 from openmdao.util.testutil import assert_rel_error
 from openmdao.util.decorators import add_delegate
 
@@ -32,9 +32,8 @@ class Comp(Component):
         self.v = (self.x)**3 * (self.u)**2
 
         
-@add_delegate(HasParameters, HasObjectives, UsesGradients, \
-              UsesHessians, HasConstraints)
-class Driv(Driver):
+@add_delegate(HasParameters, HasObjectives, HasConstraints)
+class Driv(DriverUsesDerivatives):
     """ Simple dummy driver"""
     
     def execute(self):
@@ -56,7 +55,7 @@ class Assy(Assembly):
         self.add('driver', Driv())
         self.driver.workflow.add(['comp'])
         
-        self.driver.differentiator = FiniteDifference(self.driver)
+        self.driver.differentiator = FiniteDifference()
         
         self.driver.add_objective('comp.y')
         self.driver.add_objective('comp.v')

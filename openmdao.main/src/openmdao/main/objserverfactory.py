@@ -22,11 +22,12 @@ from openmdao.main.component import SimulationRoot
 from openmdao.main.container import Container
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
+from openmdao.main.filevar import RemoteFile
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, register
 from openmdao.main.mp_util import keytype, read_allowed_hosts, \
                                   write_server_config
 from openmdao.main.rbac import get_credentials, set_credentials, \
-                               rbac, rbac_decorate, RoleError
+                               rbac, RoleError
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
 from openmdao.util.publickey import make_private, read_authorized_keys, \
@@ -259,7 +260,7 @@ class ObjServerFactory(Factory):
         else:
             obj = server
 
-        self._logger.debug('create returning %s at %r', obj, obj._token.address)
+        self._logger.debug('create returning %r at %r', obj, obj._token.address)
         return obj
 
 
@@ -272,64 +273,6 @@ class _FactoryManager(OpenMDAO_Manager):
 register(ObjServerFactory, _FactoryManager, 'openmdao.main.objserverfactory')
 
     
-class RemoteFile(object):
-    """
-    Wraps a :class:`file` with remote-access annotations such that only role
-    'owner' may access the file.
-    """
-
-    def __init__(self, fileobj):
-        self.fileobj = fileobj
-
-    @property
-    def closed(self):
-        """ True if file is not open. """
-        return self.fileobj.closed
-
-    # Decorated below since we need to proxy ourselves.
-    def __enter__(self):
-        """ Enter context. """
-        self.fileobj.__enter__()
-        return self
-
-    @rbac('owner')
-    def __exit__(self, exc_type, exc_value, traceback):
-        """ Exit context. """
-        return self.fileobj.__exit__(exc_type, exc_value, traceback)
-
-    @rbac('owner')
-    def close(self):
-        """ Close the file. """
-        return self.fileobj.close()
-
-    @rbac('owner')
-    def flush(self):
-        """ Flush any buffered output. """
-        return self.fileobj.flush()
-
-    @rbac('owner')
-    def read(self, size=-1):
-        """ Read up to `size` bytes. """
-        return self.fileobj.read(size)
-
-    @rbac('owner')
-    def readline(self, size=-1):
-        """ Read one line. """
-        return self.fileobj.readline(size)
-
-    @rbac('owner')
-    def readlines(self, sizehint=-1):
-        """ Read until EOF. """
-        return self.fileobj.readlines(sizehint)
-
-    @rbac('owner')
-    def write(self, data):
-        """ Write `data` to the file. """
-        return self.fileobj.write(data)
-
-rbac_decorate(RemoteFile.__enter__, 'owner', proxy_types=(RemoteFile,))
-
-
 class ObjServer(object):
     """
     An object which knows how to create other objects, load a model, etc.
@@ -370,6 +313,13 @@ class ObjServer(object):
 
         SimulationRoot.chroot(self._root_dir)
         self.tlo = None
+
+        # Ensure Traits Array support is initialized. The code contains
+        # globals for numpy symbols that are initialized within
+        # AbstractArray.__init__() which won't be executed if we simply
+        # load up egg state (or don't do a real fork, like Windows).
+        from enthought.traits.trait_numeric import AbstractArray
+        dummy = AbstractArray()
 
     # We only reset logging on the remote side.
     def _reset_logging(self, filename='server.out'):  #pragma no cover
@@ -515,6 +465,40 @@ class ObjServer(object):
         except Exception as exc:
             self._logger.error('chmod %r %o in %s failed %s',
                                path, mode, os.getcwd(), exc)
+            raise
+
+    @rbac('owner')
+    def isdir(self, path):
+        """
+        Returns ``os.path.isdir(path)`` if `path` is legal.
+
+        path: string
+            Path to check.
+        """
+        self._logger.debug('isdir %r', path)
+        self._check_path(path, 'isdir')
+        try:
+            return os.path.isdir(path)
+        except Exception as exc:
+            self._logger.error('isdir %r in %s failed %s',
+                               path, os.getcwd(), exc)
+            raise
+
+    @rbac('owner')
+    def listdir(self, path):
+        """
+        Returns ``os.listdir(path)`` if `path` is legal.
+
+        path: string
+            Path to directory to list.
+        """
+        self._logger.debug('listdir %r', path)
+        self._check_path(path, 'listdir')
+        try:
+            return os.listdir(path)
+        except Exception as exc:
+            self._logger.error('listdir %r in %s failed %s',
+                               path, os.getcwd(), exc)
             raise
 
     @rbac('owner', proxy_types=[RemoteFile])
@@ -702,6 +686,8 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
         if port >= 0:
             if allowed_hosts is None:
                 allowed_hosts = [socket.gethostbyname(socket.gethostname())]
+                if allowed_hosts[0].startswith('127.') and '127.0.0.1' not in allowed_hosts:
+                    allowed_hosts.append('127.0.0.1')
             with open('hosts.allow', 'w') as out:
                 for pattern in allowed_hosts:
                     out.write('%s\n' % pattern)

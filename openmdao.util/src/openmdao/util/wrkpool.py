@@ -45,7 +45,7 @@ class WorkerPool(object):
             self._workers = {}
 
     @staticmethod
-    def get():
+    def get(one_shot=False):
         """
         Get a worker queue from the pool. Work requests should be of the form:
 
@@ -54,10 +54,13 @@ class WorkerPool(object):
         Work replies are of the form:
 
         ``(queue, retval, exc, traceback)``
-        """
-        return WorkerPool.get_instance()._get()
 
-    def _get(self):
+        one_shot: bool
+            If True, the worker will self-release after processing one request.
+        """
+        return WorkerPool.get_instance()._get(one_shot)
+
+    def _get(self, one_shot):
         """ Get a worker queue from the pool. """
         with self._lock:
             try:
@@ -65,7 +68,7 @@ class WorkerPool(object):
             except IndexError:
                 queue = Queue.Queue()
                 worker = threading.Thread(target=self._service_loop,
-                                          args=(queue,))
+                                          args=(queue, one_shot))
                 worker.daemon = True
                 worker.start()
                 self._workers[queue] = worker
@@ -86,7 +89,7 @@ class WorkerPool(object):
         with self._lock:
             self._idle.append(queue)
 
-    def _service_loop(self, request_q):
+    def _service_loop(self, request_q, one_shot):
         """ Get (callable, args, kwargs) from request_q and queue result. """
         while True:
             callable, args, kwargs, reply_q = request_q.get()
@@ -109,4 +112,7 @@ class WorkerPool(object):
             request_q.task_done()
             if reply_q is not None:
                 reply_q.put((request_q, retval, exc, trace))
+
+            if one_shot:
+                self._release(request_q)
 

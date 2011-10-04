@@ -187,9 +187,9 @@ Glossary
         was developed and is actively maintained by Christian S. Perone.) 
 
       **Git**
-        A version control system.
+        An open source distributed version control system.
 
-      **Github**
+      **GitHub**
         A web community where projects using the *git* version control system are
         located.
 
@@ -275,13 +275,7 @@ Glossary
         A Fortran subroutine for solving linear and nonlinear constrained or
         unconstrained function minimization problems.
 
-
-      **NOSA**
-        NASA Open Source Agreement. A software license approved by the Open
-        Source Initiative (:term:`OSI`). The National Aeronautics and Space
-        Administration (NASA) releases some software under this license.
-      
-      
+     
       **nose**
         A unittest extension offering automatic test suite discovery and easy test
         authoring.

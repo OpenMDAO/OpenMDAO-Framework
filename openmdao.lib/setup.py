@@ -47,6 +47,7 @@ Component, Driver, and Variable plugins for OpenMDAO
           'Pyevolve==0.6',
           'ordereddict',
           'scipy',
+          #'ffnet>=0.7'
           ],
       entry_points="""
       [openmdao.driver]
@@ -71,7 +72,6 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.components.mux.DeMux = openmdao.lib.components.mux:DeMux
       openmdao.lib.components.broadcaster.Broadcaster = openmdao.lib.components.broadcaster:Broadcaster
       openmdao.lib.components.pareto_filter.ParetoFilter = openmdao.lib.components.pareto_filter:ParetoFilter
-      openmdao.lib.components.nastran.nastran.NastranComponent = openmdao.lib.components.nastran.nastran:NastranComponent
 
       [openmdao.differentiator]
       openmdao.lib.differentiators.finite_difference.FiniteDifference = openmdao.lib.differentiators.finite_difference:FiniteDifference
@@ -82,5 +82,10 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.datatypes.file.File = openmdao.lib.datatypes.file:File
       openmdao.lib.datatypes.float.Float = openmdao.lib.datatypes.float:Float
       openmdao.lib.datatypes.int.Int = openmdao.lib.datatypes.int:Int
+      
+      [openmdao.surrogatesmodels]
+      openmdao.lib.surrogatemodels.kriging_surrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
+      openmdao.lib.surrogatemodels.logistic_regression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
+      openmdao.lib.surrogatemodels.nn_surrogate = openmdao.lib.surrogatemodels.nn_surrogate:NeuralNet
       """,
       )

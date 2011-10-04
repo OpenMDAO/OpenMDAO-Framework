@@ -28,9 +28,8 @@ class File(Variable):
             if not isinstance(default_value, FileRef):
                 raise TypeError('File default value must be a FileRef.')
             
-        if iotype is None:
-            raise ValueError("File must have 'iotype' defined.")
-        metadata['iotype'] = iotype
+        if iotype is not None:
+            metadata['iotype'] = iotype
         
         # Put desc in the metadata dictionary
         if desc is not None:
@@ -50,9 +49,12 @@ class File(Variable):
                     if name in meta:
                         del meta[name]
                 default_value = FileRef(path, **meta)
-        else:
+
+        elif iotype == 'in':
             if 'path' in metadata:
                 raise ValueError("'path' invalid for input File.")
+
+        # iotype of None => we can't check anything.
             
         super(File, self).__init__(default_value, **metadata)
 
@@ -110,6 +112,10 @@ class File(Variable):
                                  " directory is available." % path)
             directory = owner.get_abs_directory()
             path = os.path.join(directory, path)
+
+        # If accessing same path on same host (i.e. passthrough), skip.
+        if isinstance(value, FileRef) and path == value.abspath():
+            return
 
         mode = 'wb' if value.binary else 'w'
         chunk = 1 << 20  # 1MB

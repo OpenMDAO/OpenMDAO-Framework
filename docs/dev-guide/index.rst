@@ -9,10 +9,10 @@ Developer Guide
    :maxdepth: 2
    
    intro
-   accessing
    working
    issues
    testing
+   scripts
    git
    todo
    

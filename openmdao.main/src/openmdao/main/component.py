@@ -116,6 +116,11 @@ class Component (Container):
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
+        # register callbacks for all of our 'in' traits
+        for name,trait in self.class_traits().items():
+            if trait.iotype == 'in':
+                self._set_input_callback(name)
+
         # contains validity flag for each io Trait (inputs are valid since they're not connected yet,
         # and outputs are invalid)
         self._valid_dict = dict([(name,t.iotype=='in') for name,t in self.class_traits().items() if t.iotype])
@@ -162,6 +167,16 @@ class Component (Container):
             self._dir_context = DirectoryContext(self)
         return self._dir_context
 
+    # call this if any trait having 'iotype' metadata of 'in' is changed
+    def _input_trait_modified(self, obj, name, old, new):
+        #if name.endswith('_items'):
+            #n = name[:-6]
+            #if n in self._valid_dict:
+                #name = n
+        self._input_check(name, old)
+        self._call_execute = True
+        self._input_updated(name)
+            
     def _input_updated(self, name):
         if self._valid_dict[name]:  # if var is not already invalid
             outs = self.invalidate_deps(varnames=[name])
@@ -180,6 +195,15 @@ class Component (Container):
         state['_connected_outputs'] = None
         
         return state
+
+    def __setstate__(self, state):
+        super(Component, self).__setstate__(state)
+        
+        # make sure all input callbacks are in place.  If callback is
+        # already there, this will have no effect. 
+        for name, trait in self._alltraits().items():
+            if trait.iotype == 'in':
+                self._set_input_callback(name)
 
     def check_config (self):
         """Verify that this component is fully configured to execute.
@@ -438,6 +462,11 @@ class Component (Container):
         added.
         """
         super(Component, self).add_trait(name, trait)
+        
+        # if it's an input trait, register a callback to be called whenever it's changed
+        if trait.iotype == 'in':
+            self._set_input_callback(name)
+            
         self.config_changed()
         if name not in self._valid_dict:
             if trait.iotype:
@@ -445,12 +474,23 @@ class Component (Container):
             if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
                 self._num_input_caseiters += 1
         
+    def _set_input_callback(self, name, remove=False):
+        #t = self.trait(name)
+        #if t.has_items or (t.trait_type and t.trait_type.has_items):
+        #    name = name+'[]'
+        self.on_trait_change(self._input_trait_modified, name, remove=remove)
+        
     def remove_trait(self, name):
         """Overrides base definition of add_trait in order to
         force call to *check_config* prior to execution when a trait is
         removed.
         """
         trait = self.get_trait(name)
+        
+        # remove the callback if it's an input trait
+        if trait and trait.iotype == 'in':
+            self._set_input_callback(name, remove=True)
+
         super(Component, self).remove_trait(name)
         self.config_changed()
 
@@ -664,6 +704,7 @@ class Component (Container):
 # pylint: enable-msg=E1101
         return path
     
+    @rbac('owner')
     def get_abs_directory (self):
         """Return absolute path of execution directory."""
         path = self.directory
