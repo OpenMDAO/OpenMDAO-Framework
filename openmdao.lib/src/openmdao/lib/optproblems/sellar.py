@@ -149,9 +149,7 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
         
         
 class SellarProblem(ArchitectureAssembly):
-    """ Optimization of the Sellar problem using MDF
-    Disciplines coupled with BroydenSolver.
-    """
+    """The Sellar Problem"""
     
     def __init__(self):
         """ Creates a new Assembly with this problem

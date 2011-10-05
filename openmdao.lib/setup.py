@@ -72,10 +72,10 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.components.mux.DeMux = openmdao.lib.components.mux:DeMux
       openmdao.lib.components.broadcaster.Broadcaster = openmdao.lib.components.broadcaster:Broadcaster
       openmdao.lib.components.pareto_filter.ParetoFilter = openmdao.lib.components.pareto_filter:ParetoFilter
-      openmdao.lib.components.SellarDiscipline1 = openmdao.lib.optproblems.sellar:Discipline1
-      openmdao.lib.components.SellarDiscipline2 = openmdao.lib.optproblems.sellar:Discipline2
-      openmdao.lib.components.SellarDiscipline1_WithDerivatives = openmdao.lib.optproblems.sellar:Discipline1_WithDerivatives
-      openmdao.lib.components.SellarDiscipline2_WithDerivatives = openmdao.lib.optproblems.sellar:Discipline2_WithDerivatives
+      openmdao.lib.optproblems.sellar.Discipline1 = openmdao.lib.optproblems.sellar:Discipline1
+      openmdao.lib.optproblems.sellar.Discipline2 = openmdao.lib.optproblems.sellar:Discipline2
+      openmdao.lib.optproblems.sellar.Discipline1_WithDerivatives = openmdao.lib.optproblems.sellar:Discipline1_WithDerivatives
+      openmdao.lib.optproblens.sellar.Discipline2_WithDerivatives = openmdao.lib.optproblems.sellar:Discipline2_WithDerivatives
       
 
       [openmdao.differentiator]
@@ -94,6 +94,6 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.surrogatemodels.nn_surrogate = openmdao.lib.surrogatemodels.nn_surrogate:NeuralNet
       
       [openmdao.optproblems]
-      openmdao.lib.optproblems.SellarProblem = openmdao.lib.optproblems.sellar:SellarProblem
+      openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optproblems.sellar:SellarProblem
       """,
       )
