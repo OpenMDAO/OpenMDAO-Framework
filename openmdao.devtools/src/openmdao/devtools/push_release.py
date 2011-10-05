@@ -113,7 +113,7 @@ class _CommObj(object):
 
 def main():
     atexit.register(fabric_cleanup, True)
-    parser = OptionParser(usage="%prog RELEASE_DIR DESTINATION")
+    parser = OptionParser(usage="%prog [options] RELEASE_DIR DESTINATION")
     parser.add_option("--py", action="store", type="string", dest="py",
                       default="python2.6",
                       help="python version to use on target host")
