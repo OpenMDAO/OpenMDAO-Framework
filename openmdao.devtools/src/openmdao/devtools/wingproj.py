@@ -6,6 +6,7 @@ import fnmatch
 import logging
 from subprocess import Popen
 import ConfigParser
+from optparse import OptionParser
 
 from openmdao.util.fileutil import find_in_path, find_in_dir_list, find_files, find_up
 
@@ -59,19 +60,23 @@ def _find_wing():
 
 def run_wing():
     """Runs the Wing IDE using our template project file."""
-    wingpath = None
-    projpath = ''
-    version = '4.0'
-    for arg in sys.argv[1:]:
-        if arg.startswith('--wingpath='):
-            wingpath = arg.split('=')[1]
-        elif arg.startswith('--proj='):
-            projpath = arg.split('=')[1]
-        elif arg.startswith('--version='):
-            version = arg.split('=')[1]
-            if len(version)==1:
-                version = version + '.0'
-            
+    parser = OptionParser()
+    parser.add_option("-w", "--wingpath", action="store", type="string", 
+                      dest="wingpath", help="location of WingIDE executable")
+    parser.add_option("-p", "--projpath", action="store", type="string", 
+                      dest="projpath", default='',
+                      help="location of WingIDE project file")
+    parser.add_option("-v", "--version", action="store", type="string", 
+                      dest="version", default='4.0',
+                      help="version of WingIDE")
+    (options, args) = parser.parse_args(sys.argv[1:])
+    
+    wingpath = options.wingpath
+    projpath = options.projpath
+    version = options.version
+    if len(version)==1:
+        version = version + '.0'
+    
     if not os.path.isfile(projpath):
         venvdir = os.path.dirname(os.path.dirname(sys.executable))
         proj_template = os.path.join(os.path.dirname(venvdir),
