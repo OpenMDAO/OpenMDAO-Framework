@@ -5,8 +5,6 @@ Test run/step/stop aspects of a simple workflow.
 import os
 import unittest
 
-from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
-                                               SellarDiscipline2
 from openmdao.examples.mdao.sellar_MDF import SellarMDF
 from openmdao.examples.mdao.sellar_IDF import SellarIDF
 from openmdao.examples.mdao.sellar_CO import SellarCO
@@ -15,6 +13,8 @@ from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.drivers.api import CONMINdriver
 from openmdao.lib.datatypes.api import Float
+from openmdao.lib.optproblems import sellar
+
 from openmdao.util.testutil import assert_rel_error
 
 # pylint: disable-msg=E1101,E1103
@@ -114,7 +114,7 @@ class SellarCO_Multi(Assembly):
         self.driver.workflow.add(['localopt1', 'localopt2'])
         
         # Local Optimization 1
-        self.add('dis1', SellarDiscipline1())
+        self.add('dis1', sellar.Discipline1())
         self.localopt1.workflow.add('dis1')
         
         # Local Optimization 2

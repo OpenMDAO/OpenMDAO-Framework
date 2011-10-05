@@ -49,7 +49,7 @@ Disciplines 1 and 2 were implemented in OpenMDAO as components.
     from openmdao.lib.datatypes.api import Float
     
     
-    class SellarDiscipline1(Component):
+    class Discipline1(Component):
         """Component containing Discipline 1"""
         
         # pylint: disable-msg=E1101
@@ -74,7 +74,7 @@ Disciplines 1 and 2 were implemented in OpenMDAO as components.
     
     
     
-    class SellarDiscipline2(Component):
+    class Discipline2(Component):
         """Component containing Discipline 2"""
         
         # pylint: disable-msg=E1101
@@ -99,7 +99,7 @@ Disciplines 1 and 2 were implemented in OpenMDAO as components.
             
             self.y2 = y1**(.5) + z1 + z2
             
-``SellarDiscipline2`` contains a square root of variable *y1* in its calculation. For negative values
+``Discipline2`` contains a square root of variable *y1* in its calculation. For negative values
 of *y1,* the result would be imaginary, so the absolute value is taken before the square root
 is applied. This component is clearly not valid for ``y1 < 0``, and our first thought was to add
 a *low* attribute to the variable definition for *y1.* However, the solver that was used to
@@ -107,7 +107,9 @@ converge the two disciplines occasionally forced *y1* to go slightly negative. T
 of the absolute value solved the problem without impacting the eventual convergence of the
 solver.
 
-These two components are contained in the file ``disciplines.py``.
+These two components are contained in the file `sellar.py </../openmdao.lib/src/openmdao/lib/optproblems/sellar.py>` 
+. in the openmdao.lib.optproblems sub-package. This package contains a number of common optimization
+problems which you can use to test your own optimization problems. 
 
 **Reference:**
 
