@@ -4,7 +4,7 @@ from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.drivers.api import DOEdriver
 from openmdao.lib.doegenerators.api import FullFactorial
 
-from openmdao.examples.mdao.disciplines import SellarDiscipline1, SellarDiscipline2
+from openmdao.lib.optproblems import sellar
 
 class SellarDOE(Assembly): 
     """Example assembly for running a Design Of Experiments (DOE) on a set of components"""
@@ -18,8 +18,8 @@ class SellarDOE(Assembly):
         #configure the specific DOE options
         self.driver.DOEgenerator.num_levels = 3
         
-        self.add("dis1",SellarDiscipline1())
-        self.add("dis2",SellarDiscipline2())
+        self.add("dis1",sellar.Discipline1())
+        self.add("dis2",sellar.Discipline2())
         
         #setting some variables to fixed values
         self.dis1.y2 = 3.15
