@@ -1971,20 +1971,24 @@ class _WrapperConfig(object):
         return len(args) == 1  # Just 'self'.
 
 
-def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None):
+def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None,
+                 debug=False):
     """
-    Start server process at `address` and `port` (use zero for a
-    system-selected port). If `allowed_hosts` is None then
-    ``['127.0.0.1', socket.gethostname()]`` is used. Returns ``(proc, port)``.
+    Start server process at `address` and `port`.
+    Returns ``(proc, port)``.
 
     address: string
         Server address to be used.
 
     port: int
-        Server port to be used.
+        Server port to be used. Use zero for a system-selected port.
 
     allowed_hosts: list[string]
         Hosts to allow access.
+        If None then ``['127.0.0.1', socket.gethostname()]`` is used.
+
+    debug: bool
+        Set logging level to ``DEBUG``, default is ``INFO``.
     """
     if allowed_hosts is None:
         allowed_hosts = ['127.0.0.1', socket.gethostname()]
@@ -2005,6 +2009,8 @@ def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None):
     # Start process.
     args = ['python', server_path,
             '--address', address, '--port', '%d' % port, '--up', server_up]
+    if debug:
+        args.append('--debug')
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
 
     # Wait for valid server_up file.

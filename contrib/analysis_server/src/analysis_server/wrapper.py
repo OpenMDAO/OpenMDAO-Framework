@@ -1845,6 +1845,7 @@ class ObjWrapper(BaseWrapper):
         super(ObjWrapper, self).__init__(container, name, ext_path, logger)
         obj = container.get(name)
         self._cls = type(obj)
+        self._iotype = obj.iotype
         self._access = 'sg' if obj.iotype == 'in' else 'g'
         self._io = 'input' if obj.iotype == 'in' else 'output'
 
@@ -1906,7 +1907,7 @@ class ObjWrapper(BaseWrapper):
             If True, file data is gzipped and then base64 encoded.
         """
         if attr == 'value':
-            obj = self._cls()
+            obj = self._cls(iotype=self._iotype)
             set_from_xml(obj, valstr.decode('string_escape'))
             self._container.set(self._name, obj)
         elif attr in ('classURL', 'description'):

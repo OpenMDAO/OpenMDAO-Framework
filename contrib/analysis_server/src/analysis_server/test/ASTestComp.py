@@ -23,7 +23,7 @@ class TopObj(VariableTree):
 
     def __init__(self, *args, **kwargs):
         super(TopObj, self).__init__(*args, **kwargs)
-        self.add('subobj', SubObj())
+        self.add('subobj', SubObj(iotype=kwargs['iotype']))
         self.add('tob', Bool(True))
         self.add('tof', Float(0.5, units='inch'))
         self.add('toi', Int(42))

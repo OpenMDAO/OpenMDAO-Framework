@@ -16,7 +16,7 @@ from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
                                        List, Str
 
 from analysis_server.client import Client
-from analysis_server.objxml import get_as_xml, set_from_xml
+from analysis_server.objxml import get_as_xml, set_from_xml, generate_from_xml
 from analysis_server.units  import get_translation
 
 # Map from server host,port to object class dictionary.
@@ -151,7 +151,10 @@ class ComponentProxy(Component):
 
         for name, obj in container.items():
             if is_instance(obj, Container):
-                self._restore(obj)  # Recurse.
+                if isinstance(obj, VarTreeMixin):
+                    obj.restore(self._client)
+                else:
+                    self._restore(obj)  # Recurse.
 
     def pre_delete(self):
         """ Unload remote instance before we get deleted. """
@@ -173,7 +176,19 @@ class ComponentProxy(Component):
 
     def execute(self):
         """ Execute remote component. """
+        # Flush all 'in' object proxies.
+        for name, obj in self.items():
+            if isinstance(obj, VariableTree):
+                if obj.iotype == 'in':
+                    obj.flush()
+
         self._client.execute(self._objname)
+
+        # Update all 'out' object proxies.
+        for name, obj in self.items():
+            if isinstance(obj, VariableTree):
+                if obj.iotype == 'out':
+                    obj.update()
 
 
 class ProxyMixin(object):
@@ -864,77 +879,151 @@ def make_object_proxy(host, port, iotype, client, rpath):
 
 def make_proxy_class(client, rpath):
     """ Create proxy class to access `rpath` on `client`. """
-    return IBeamProxy
-
-
-class ObjectProxyMixin(ProxyMixin):
-    """ Generic proxy for an Object. """
-
-    def __init__(self, client, rpath, cls):
-        ProxyMixin.__init__(self, client, rpath)
-        self._cls = cls
-
-    def zget(self, obj, name):
-        """
-        Get remote value.
-
-        obj: object
-            Containing object, ignored.
-
-        name: string
-            Name in `obj`, ignored.
-        """
-        xml = self.rget()
-        set_from_xml(self, xml)
-        return self
-
-    def zset(self, obj, name, value):
-        """
-        Set remote value after validation.
-
-        obj: object
-            Containing object, ignored.
-
-        name: string
-            Name in `obj`.
-
-        value: Container
-            Value to be set.
-        """
-        xml = get_as_xml(value, name)
-        self.rset(xml)
-
-
-class Material(VariableTree):
-    """ Hard-coded example of what needs to be built on-the-fly. """
-
-    def __init__(self, *args, **kwargs):
-        super(Material, self).__init__(*args, **kwargs)
-        self.add('E', Float(2990000.0, units='psi'))
-        self.add('density', Float(0.284, units='lb/inch**3'))
-        self.add('poissonRatio', Float(0.3))
-        self.add('type', Str('steel'))
-
-
-class IBeam(VariableTree):
-    """ Hard-coded example of what needs to be built on-the-fly. """
-
-    def __init__(self, *args, **kwargs):
-        super(IBeam, self).__init__(*args, **kwargs)
-        iotype = kwargs.get('iotype', None)
-        self.add('material', Material())
-        self.add('base', Float(10.0, units='inch'))
-        self.add('flangeThickness', Float(0.5, units='inch'))
-        self.add('height', Float(18.0, units='inch'))
-        self.add('length', Float(180.0, units='inch'))
-        self.add('thickness', Float(0.5, units='inch'))
-
-
-class IBeamProxy(IBeam, ObjectProxyMixin):
+    top_obj_proxy = '''
+class TopObjProxy(VarTreeMixin, VariableTree):
     """ Hard-coded example of what needs to be built on-the-fly. """
 
     def __init__(self, iotype, client, rpath):
+        VarTreeMixin.__init__(self, iotype, client, rpath)
         desc = client.get(rpath+'.description')
-        IBeam.__init__(self, doc=desc, iotype=iotype)
-        ObjectProxyMixin.__init__(self, client, rpath, IBeam)
+        VariableTree.__init__(self, doc=desc, iotype=iotype)
+
+        self.add('subobj', SubObj(iotype=iotype))
+        self.add('tob', Bool(True))
+        self.add('tof', Float(0.5, units='inch'))
+        self.add('toi', Int(42))
+        self.add('tos', Str('Hello'))
+        self.add('tofe', Enum(values=(2.781828, 3.14159),
+                              aliases=('e', 'pi'), desc='Float enum', units='m'))
+        self.add('toie', Enum(values=(9, 8, 7, 1), desc='Int enum'))
+        self.add('tose', Enum(values=('cold', 'hot', 'nice'), desc='Str enum'))
+
+        self.add('tof1d', Array(dtype=float, desc='1D float array', units='cm',
+                                default_value=[1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5],
+                                low=0, high=10))
+
+        self.add('tof2d', Array(dtype=float, desc='2D float array', units='mm',
+                                default_value=[ [1.5, 2.5, 3.5, 4.5],
+                                                [5.5, 6.5, 7.5, 8.5] ]))
+
+        self.add('tof3d', Array(dtype=float, desc='3D float array',
+                                default_value=[ [ [1.5, 2.5, 3.5],
+                                                  [4.5, 5.5, 6.5],
+                                                  [7.5, 8.5, 9.5] ],
+                                                [ [10.5, 20.5, 30.5],
+                                                  [40.5, 50.5, 60.5],
+                                                  [70.5, 80.5, 90.5] ] ]))
+
+        self.add('toi1d', Array(dtype=int, desc='1D int array',
+                                default_value=[1, 2, 3, 4, 5, 6, 7, 8, 9]))
+
+        self.add('tos1d', List(Str, desc='1D string array',
+                               value=['Hello', 'from', 'TestComponent.tos1d']))
+
+        self.add('toflst', List(Float, desc='Float list'))
+        self.add('toilst', List(Int, desc='Int list'))
+
+
+class SubObj(VariableTree):
+    """ Sub-object under TopObject. """
+
+    def __init__(self, *args, **kwargs):
+        super(SubObj, self).__init__(*args, **kwargs)
+        self.add('sob', Bool(False))
+        self.add('sof', Float(0.284, units='lb/inch**3'))
+        self.add('soi', Int(3))
+        self.add('sos', Str('World'))
+'''
+#    xml = client.get(rpath)
+#    import logging
+#    logging.critical('XML for %r', rpath)
+#    logging.critical(xml.replace('><', '>\n<'))
+#    name, definition = generate_from_xml(xml)
+#    logging.critical('Definition for %r', name)
+#    logging.critical(definition)
+#    exec definition in globals()
+#    return globals()[name]
+
+    exec top_obj_proxy in globals()
+    return TopObjProxy
+
+
+class VarTreeMixin(object):
+    """
+    Add and override some VariableTree methods to support proxying
+    a remote 'PHXScriptObject'.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+    """
+
+    def __init__(self, iotype, client, rpath):
+        self._iotype = iotype
+        self._client = client
+        self._rpath = rpath
+        self._valstr = client.get(rpath)  # Needed for later restore.
+        self._dirty = False  # Set True after something is modified,
+
+    def __getstate__(self):
+        """ Return state of object. """
+        state = VariableTree.__getstate__(self)
+        state['_client'] = None
+        return state
+
+    def __setstate__(self, state):
+        """ Set state of object from `state`. """
+        VariableTree.__setstate__(self, state)
+
+    def add(self, name, obj):
+        """ Overrides VariableTree to manipulate `_dirty` flag. """
+        retval = VariableTree.add(self, name, obj)
+        if self._iotype == 'in':
+            self.on_trait_change(self._trait_modified, name)
+            if isinstance(obj, VariableTree):
+                self._register(name, obj)
+        return retval
+
+    def _register(self, path, vartree):
+        """ Helper method for :meth:`add`. """
+        for name, obj in vartree.items():
+            name = '.'.join((path, name))
+            self.on_trait_change(self._trait_modified, name)
+            if isinstance(obj, VariableTree):
+                self._register(name, obj)
+        
+    def _trait_modified(self, obj, name, old, new):
+        """ Record that local is now different than remote. """
+        self._dirty = True
+
+    def flush(self):
+        """ If we've been modified, then update remote from local. """
+        if self._dirty:
+            xml = get_as_xml(self, self.name)
+            self._client.set(self._rpath, xml)
+            self._valstr = xml
+            self._dirty = False
+
+    def restore(self, client):
+        """
+        Restore remote state.
+
+        client: :class:`client.Client`
+            The client to use to access the remote variable.
+        """
+        self._client = client
+        if self.iotype == 'in':
+            self._client.set(self._rpath, self._valstr)
+
+    def update(self):
+        """ Update local from remote. """
+        xml = self._client.get(self._rpath)
+        set_from_xml(self, xml)
+
+
 
