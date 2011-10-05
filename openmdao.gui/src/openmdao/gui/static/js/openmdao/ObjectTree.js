@@ -142,13 +142,9 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
 
     /** get a context menu for the specified node */
     function contextMenu(node) {
-        // first let's see what was clicked on
+        
         var isAssembly = false;  // there's no "IAssembly" interface, so..
-        if (node.is('.jstree-leaf')) {
-            debug.log('ObjectTree.contextMenu: clicked on leaf node');
-            debug.log(node);
-        }
-        else {
+        if (! node.is('.jstree-leaf')) {
             isAssembly = true;
         }
         
@@ -164,7 +160,8 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         menu.properties = {
             "label"  : 'Properties',
             "action" :  function(node) { 
-                            new openmdao.PopupPropertiesEditor(model,path)
+                            var id = (path+'-properties').replace(/\./g,'-')
+                            new openmdao.PropertiesEditor(id,model).editObject(path)
                         }
         };
         if (jQuery.inArray('IDriver',interfaces) >= 0) {
@@ -215,8 +212,14 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         menu.remove = {
             "label"  : 'Remove',
             "action" :  function(node) { 
-                            model.issueCommand('top.'+openmdao.Util.getParentPath(path)+
-                                '.remove("'+openmdao.Util.getName(path)+'")');
+                            var parent = openmdao.Util.getParentPath(path);
+                            if (parent.length > 0 ) {
+                                parent = 'top.'+parent;
+                            }
+                            else {
+                                parent = 'top';
+                            }
+                            model.issueCommand(parent+'.remove("'+openmdao.Util.getName(path)+'")');
                         }
         };        
         return menu;

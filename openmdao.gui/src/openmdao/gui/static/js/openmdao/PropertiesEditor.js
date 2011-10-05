@@ -26,6 +26,7 @@ openmdao.PropertiesEditor = function(id,model) {
     this.elm.append('<p>');
     this.elm.append(outputsHeader);
     this.elm.append(outputsDiv);
+    this.elm.width(200);
 
     inputs = new openmdao.PropertiesPane(inputsDiv,model,self.pathname,'Inputs',true)
     inputsHeader.click(function () {
@@ -52,8 +53,6 @@ openmdao.PropertiesEditor = function(id,model) {
             nameHeader.html(self.pathname)
             inputs.loadData([])
             outputs.loadData([])
-            alert('Error getting properties for '+self.pathname)
-            debug.info(properties)
         }
     }
     
@@ -73,10 +72,13 @@ openmdao.PropertiesEditor = function(id,model) {
             self.pathname = path
         model.getComponent(path, loadTables,
             function(jqXHR, textStatus, errorThrown) {
-                self.pathname = ''
-                alert("Error getting properties for "+self.pathname+" (status="+jqXHR.status+"): "+jqXHR.statusText)
-                openmdao.Util.htmlWindow(jqXHR.responseText,'Error getting properties',600,400)
-                debug.error(jqXHR,textStatus,errorThrown)
+                self.pathname = '';
+                if (self.elm.parent().hasClass('ui-dialog')) {
+                    self.close();
+                }
+                else {
+                    loadTables({});
+                }
             }
         )
         return this

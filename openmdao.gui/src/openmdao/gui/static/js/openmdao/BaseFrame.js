@@ -69,17 +69,10 @@ openmdao.BaseFrame.prototype.popup = function (title) {
         'modal': false,
         'title': title,
         'close': function(ev, ui) {
-                    if (this.par) {
-                        this.elm.dialog('destroy')
-                        this.elm.appendTo(this.par)
-                        this.elm.show()
-                    }
-                    else {
-                        this.elm.remove(); 
-                    }
-                }.bind(this),
-        width: 'auto', 
-        height: 'auto'
+                    this.close();
+                 }.bind(this),
+        width:   'auto',
+        height:  'auto'
     })
 }
 
@@ -87,5 +80,18 @@ openmdao.BaseFrame.prototype.setTitle = function (title) {
     if (title) {
         this.title = title
         this.elm.dialog('option', 'title', title);
+    }
+}
+
+openmdao.BaseFrame.prototype.close = function () {
+    // assuming I'm a dialog: if I have a parent then re-dock with it, else self-destruct
+    if (this.par) {
+        this.elm.dialog('destroy')
+        this.elm.appendTo(this.par)
+        this.elm.show()
+    }
+    else {
+        this.elm.dialog('destroy')
+        this.elm.remove(); 
     }
 }

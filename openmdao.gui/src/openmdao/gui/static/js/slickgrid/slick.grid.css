@@ -25,8 +25,8 @@ classes should alter those!
 	display: inline-block;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	height: 14px;
-	line-height: 14px;
+	height: 16px;
+	line-height: 16px;
 	margin: 0;
 	padding: 4px;
 	border-right: 1px solid silver;
@@ -77,7 +77,6 @@ classes should alter those!
 .grid-canvas {
 	position: relative;
 	outline: 0;
-    width: 100% !important;
 }
 
 .slick-row.ui-widget-content, .slick-row.ui-state-active {

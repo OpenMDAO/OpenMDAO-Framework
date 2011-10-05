@@ -17,7 +17,7 @@ openmdao.ComponentEditor = function(model,pathname) {
           
     /** load the table with the given properties */
     function loadTabs(properties) {
-        var style = 'style="padding:5px;background-color:#6a6a6a;border:1px solid #fff;"',
+        var style = 'style="padding:5px;"',
             dl = jQuery('<dl id="'+self.id+'_tabs"></dl>');
             
         self.elm.html("");
@@ -27,8 +27,7 @@ openmdao.ComponentEditor = function(model,pathname) {
         
         jQuery.each(properties,function (name,val) {
             if (name == 'type') {
-                parent = self.elm.parent();
-                if (parent.hasClass('ui-dialog')) {
+                if (self.elm.parent().hasClass('ui-dialog')) {
                     self.elm.dialog("option","title",val+': '+pathname);
                 }
             }
@@ -132,9 +131,8 @@ openmdao.ComponentEditor = function(model,pathname) {
         model.getComponent(path, callback,
             function(jqXHR, textStatus, errorThrown) {
                 self.pathname = ''
-                alert("Error getting properties for "+self.pathname+" (status="+jqXHR.status+"): "+jqXHR.statusText)
-                openmdao.Util.htmlWindow(jqXHR.responseText,'Error getting properties',600,400)
-                debug.error(jqXHR,textStatus,errorThrown)
+                // assume component has been deleted, so close frame
+                self.close();                
             }
         )
         return this;
