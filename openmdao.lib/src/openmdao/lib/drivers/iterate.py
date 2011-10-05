@@ -8,8 +8,8 @@ are used as termination criteria.
 from numpy import zeros
 from numpy.linalg import norm
 
-from openmdao.lib.datatypes.api import Float, Int, Bool, Enum
-from openmdao.main.api import Driver
+from openmdao.lib.datatypes.api import Float, Int, Bool, Enum, List, Str
+from openmdao.main.api import Driver, Case, ExprEvaluator
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
 from openmdao.main.exceptions import RunStopped
@@ -34,7 +34,10 @@ class FixedPointIterator(Driver):
                        desc = 'For multivariable iteration, type of norm'
                                    'to use to test convergence.')
 
-
+    # Extra variables for printing
+    printvars = List(Str, iotype='in', desc='List of extra variables to '
+                               'output in the recorder.')
+    
     def __init__(self):
         super(FixedPointIterator, self).__init__()
         
@@ -87,6 +90,26 @@ class FixedPointIterator(Driver):
 
             # run the workflow
             self.run_iteration()
+            
+            if self.recorder:
+                # Write out some relevant information to the recorder
+                
+                
+                
+                case_input = []
+                for target,param in self.get_parameters().iteritems():
+                    case_input.append([target[0], param.evaluate()])
+                if self.printvars:
+                    case_output = [(name,
+                                    ExprEvaluator(name, scope=self.parent).evaluate())
+                                           for name in self.printvars]
+                else:
+                    case_output = []
+                
+                case = Case(case_input, case_output,parent_uuid=self._case_id)
+                
+                self.recorder.record(case)
+                
             self.current_iteration += 1
         
             # check convergence

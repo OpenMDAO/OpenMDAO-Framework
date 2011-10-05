@@ -1,10 +1,9 @@
 """
     Solution of the sellar analytical problem using IDF.
 """
-from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
-                                               SellarDiscipline2
 from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import CONMINdriver
+from openmdao.lib.optproblems import sellar
 
 
 class SellarIDF(Assembly):
@@ -23,8 +22,8 @@ class SellarIDF(Assembly):
         self.add('driver', CONMINdriver())
 
         # Disciplines
-        self.add('dis1', SellarDiscipline1())
-        self.add('dis2', SellarDiscipline2())
+        self.add('dis1', sellar.Discipline1())
+        self.add('dis2', sellar.Discipline2())
         
         # Driver process definition
         self.driver.workflow.add(['dis1', 'dis2'])

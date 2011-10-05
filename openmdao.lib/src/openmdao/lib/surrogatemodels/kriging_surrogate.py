@@ -112,8 +112,8 @@ class KrigingSurrogate(object):
             self.thetas = thetas
             self._calculate_log_likelihood()
             return -self.log_likelihood
-        if self.thetas == None:
-            self.thetas = fmin(_calcll, thetas, disp=False, ftol = 0.0001)
+        #if self.thetas == None:
+        self.thetas = fmin(_calcll, thetas, disp=False, ftol = 0.0001)
         self._calculate_log_likelihood()
         
     def _calculate_log_likelihood(self):
