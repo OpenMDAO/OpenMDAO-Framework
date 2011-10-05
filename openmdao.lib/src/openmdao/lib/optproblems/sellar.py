@@ -51,12 +51,12 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
     y1 = Float(iotype='out', desc='Output of this Discipline')        
    
     def __init__(self): 
-        super(SellarDiscipline1_WithDerivatives,self).__init__()
+        super(Discipline1_WithDerivatives,self).__init__()
         
-        self.derivatives.declare_first_derivative(self, 'y1', 'z1')
-        self.derivatives.declare_first_derivative(self, 'y1', 'z2')
-        self.derivatives.declare_first_derivative(self, 'y1', 'x1')
-        self.derivatives.declare_first_derivative(self, 'y1', 'y2')
+        self.derivatives.declare_first_derivative( 'y1', 'z1')
+        self.derivatives.declare_first_derivative( 'y1', 'z2')
+        self.derivatives.declare_first_derivative( 'y1', 'x1')
+        self.derivatives.declare_first_derivative( 'y1', 'y2')
         
     def calculate_first_derivatives(self):
         """Analytical first derivatives"""
@@ -70,14 +70,14 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
     def execute(self):
         """Evaluates the equation  
         y1 = z1**2 + z2 + x1 - 0.2*y2"""
-                
+        
         z1 = self.z1
         z2 = self.z2
         x1 = self.x1
         y2 = self.y2
         
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
-        #print "(%f, %f, %f)" % (z1, z2, x1)        
+        #print "(%f, %f, %f)" % (z1, z2, x1)     
 
 
 
@@ -118,24 +118,26 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
     y2 = Float(iotype='out', desc='Output of this Discipline') 
     
     def __init__(self): 
-        super(SellarDiscipline2_WithDerivatives,self).__init__()
+        super(Discipline2_WithDerivatives,self).__init__()
         
-        self.derivatives.declare_first_derivative(self, 'y2', 'z1')
-        self.derivatives.declare_first_derivative(self, 'y2', 'z2')
-        self.derivatives.declare_first_derivative(self, 'y2', 'y1')
+        self.derivatives.declare_first_derivative('y2', 'z1')
+        self.derivatives.declare_first_derivative('y2', 'z2')
+        self.derivatives.declare_first_derivative('y2', 'y1')
         
     def calculate_first_derivatives(self):
         """Analytical first derivatives"""
+        
+        y1 = abs(self.y1)
     
         self.derivatives.set_first_derivative('y2', 'z1', 1.0)
         self.derivatives.set_first_derivative('y2', 'z2', 1.0)
-        self.derivatives.set_first_derivative('y2', 'y1', .5*self.y1**-0.5)
+        self.derivatives.set_first_derivative('y2', 'y1', .5*y1**-0.5)
        
     
     def execute(self):
         """Evaluates the equation  
         y2 = y1**(.5) + z1 + z2"""
-                
+        
         z1 = self.z1
         z2 = self.z2
         
@@ -144,7 +146,7 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
         # throw it out
         y1 = abs(self.y1)
         
-        self.y2 = y1**(.5) + z1 + z2        
+        self.y2 = y1**(.5) + z1 + z2      
         
         
         

@@ -2,6 +2,8 @@ from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import CONMINdriver
 from openmdao.lib.datatypes.api import Float, Array
 
+# TODO - Sub-disciplines need the constraints on the input coupling variables to
+#        be applied.
 
 class CO(Architecture): 
     
@@ -41,7 +43,7 @@ class CO(Architecture):
         global_opt.fdchm = .003
         global_opt.delfun = .0001
         global_opt.dabfun = .00001
-        global_opt.ct = -.0008
+        global_opt.ct = -.01
         global_opt.ctlmin = 0.0008  
         
         
@@ -90,8 +92,8 @@ class CO(Architecture):
         global_opt.add_objective(new_objective)
         
         #setup the local optimizations
-        for comp,params in all_dvs_by_comp.iteritems(): 
-            local_opt = self.parent.add('local_opt_%s'%comp,CONMINdriver())
+        for comp, params in all_dvs_by_comp.iteritems(): 
+            local_opt = self.parent.add('local_opt_%s'%comp, CONMINdriver())
             global_opt.workflow.add(local_opt.name)
             residuals = []
             for param in params: 
@@ -111,38 +113,36 @@ class CO(Architecture):
                     local_opt.add_constraint(str(const))
                 
             residuals = "+".join(residuals)    
-            global_constraint = "%s<=.001"%residuals
+            global_constraint = "%s<=0"%residuals
             global_opt.add_constraint(global_constraint)
             local_opt.add_objective(residuals)
             local_opt.iprint = 0
             local_opt.itmax = 100
-            local_opt.fdch = .001
-            local_opt.fdchm = .001
+            local_opt.fdch = .003
+            local_opt.fdchm = .0003 #changing
             local_opt.delfun = .0001
             local_opt.dabfun = .000001
+            local_opt.ctlmin = 0.01
             local_opt.force_execute = True
 
-        """    print local_opt.name
-            print local_opt.get_objectives().keys()[0]
-            for param in local_opt.get_parameters(): 
-                print param
-            print "constraints: "     
-            for constraint in local_opt.list_constraints(): 
-                print constraint
+            #print local_opt.name
+            #print local_opt.get_objectives().keys()[0]
+            #for param in local_opt.get_parameters(): 
+                #print param
+            #print "constraints: "     
+            #for constraint in local_opt.list_constraints(): 
+                #print constraint
             
-            print 
-            print
+            #print 
+            #print
             
-        print global_opt.name
-        print global_opt.get_objectives().keys()[0]
-        for param in global_opt.get_parameters(): 
-            print param
-        print "constraints: "     
-        for constraint in global_opt.list_constraints(): 
-            print constraint
+        #print global_opt.name
+        #print global_opt.get_objectives().keys()[0]
+        #for param in global_opt.get_parameters(): 
+            #print param
+        #print "constraints: "     
+        #for constraint in global_opt.list_constraints(): 
+            #print constraint
         
-        print 
-        print"""
-            
-            
-            
+        #print 
+        #print
