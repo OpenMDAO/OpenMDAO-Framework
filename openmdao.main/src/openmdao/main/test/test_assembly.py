@@ -4,7 +4,7 @@ import os
 import shutil
 import unittest
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top
+from openmdao.main.api import Assembly, Component, Driver, set_as_top, SimulationRoot
 from openmdao.lib.datatypes.api import Float, Str, Slot, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
@@ -151,6 +151,7 @@ class AssemblyTestCase(unittest.TestCase):
             comp2
             comp3
         """
+        SimulationRoot.chroot(os.getcwd())
         top = self.asm = set_as_top(Assembly())
         top.add('comp1', DummyComp())
         nested = top.add('nested', Assembly())
