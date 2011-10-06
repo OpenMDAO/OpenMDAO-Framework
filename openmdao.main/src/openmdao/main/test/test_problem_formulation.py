@@ -56,26 +56,26 @@ class ProblemFormulationTest(unittest.TestCase):
          
         
     def test_coupling_vars(self): 
-        c1 = self.asm.add_coupling_var("D1.a","D2.a")
-        c2 = self.asm.add_coupling_var("D4.a","D5.a")
-        c3 = self.asm.add_coupling_var("D6.a","D5.b")
+        c1 = self.asm.add_coupling_var(("D1.a","D2.a"))
+        c2 = self.asm.add_coupling_var(("D4.a","D5.a"))
+        c3 = self.asm.add_coupling_var(("D6.a","D5.b"))
         
         try: 
-            self.asm.add_coupling_var("D1.a","D2.a")
+            self.asm.add_coupling_var(("D1.a","D2.a"))
         except Exception as err:
             self.assertEqual(": Coupling variable with indep 'D1.a' already exists in assembly",str(err))
         else: 
             self.fail("Exception expected")
         
         try: 
-            self.asm.add_coupling_var("D3.a","D2.a")
+            self.asm.add_coupling_var(("D3.a","D2.a"))
         except Exception as err:         
             self.assertEqual(": Coupling variable with dep 'D2.a' already exists in assembly",str(err))
         else: 
             self.fail("Exception expected")            
             
         try: 
-            self.asm.add_coupling_var("D1.z","D2.a")
+            self.asm.add_coupling_var(("D1.z","D2.a"))
         except Exception as err: 
             self.assertEqual(": Cant add coupling variable with indep 'D1.z' because is not a valid variable",str(err))
         else: 
@@ -107,7 +107,7 @@ class ProblemFormulationTest(unittest.TestCase):
         else:
             self.fail("Exception expected")
             
-        self.asm.add_coupling_var("D1.a","D2.a")
+        self.asm.add_coupling_var(("D1.a","D2.a"))
         self.asm.clear_coupling_vars()
         self.assertEqual([],self.asm.get_coupling_vars())
         

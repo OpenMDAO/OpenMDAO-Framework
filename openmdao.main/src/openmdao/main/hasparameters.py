@@ -9,7 +9,8 @@ from openmdao.util.decorators import add_delegate
 class Parameter(object): 
     
     def __init__(self, target, parent, high=None, low=None, 
-                 scaler=None, adder=None, fd_step=None, scope=None):
+                 scaler=None, adder=None, start=None, 
+                 fd_step=None, scope=None):
         self._metadata = None
         
         if scaler is None and adder is None:
@@ -271,7 +272,8 @@ class HasParameters(object):
         self._allowed_types = ['continuous']
 
     def add_parameter(self, target, low=None, high=None, 
-                      scaler=None, adder=None, fd_step=None, name=None, scope=None):
+                      scaler=None, adder=None, start=None,
+                      fd_step=None, name=None, scope=None):
         """Adds a parameter or group of parameters to the driver.
         
         target: string or iter of strings
@@ -295,6 +297,11 @@ class HasParameters(object):
             
         adder: float (optional)
             Value to add to parameter prior to possible scaling
+            
+        start: any (optional)
+            Value to set into the target or targets of a parameter before starting 
+            any executions. If not given, analysis will start with whatever values
+            are in the target or targets at that time. 
 
         fd_step: float (optional)
             Step-size to use for finite difference calculation. If no value is
@@ -333,8 +340,8 @@ class HasParameters(object):
                                          sorted(list(dups)), ValueError)
             
         parameters = [Parameter(name, self._parent, low=low, high=high, 
-                                scaler=scaler, adder=adder, fd_step=fd_step,
-                                scope=self._get_scope(scope)) 
+                                scaler=scaler, adder=adder, start=start,
+                                fd_step=fd_step, scope=self._get_scope(scope)) 
                       for name in names]
 
         if key in self._parameters:

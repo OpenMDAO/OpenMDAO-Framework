@@ -167,15 +167,15 @@ class SellarProblem(ArchitectureAssembly):
         
         #START OF MDAO Problem Definition
         #Global Des Vars
-        self.add_parameter(("dis1.z1","dis2.z1"),low=-10,high=10)
-        self.add_parameter(("dis1.z2","dis2.z2"),low=0,high=10)
+        self.add_parameter(("dis1.z1","dis2.z1"),low=-10,high=10,start=5.0)
+        self.add_parameter(("dis1.z2","dis2.z2"),low=0,high=10,start=2.0)
         
         #Local Des Vars 
-        self.add_parameter("dis1.x1",low=0,high=10)
+        self.add_parameter("dis1.x1",low=0,high=10,start=1.0)
         
         #Coupling Vars
-        self.add_coupling_var("dis2.y1","dis1.y1")
-        self.add_coupling_var("dis1.y2","dis2.y2")
+        self.add_coupling_var(("dis2.y1","dis1.y1"),start=1.0)
+        self.add_coupling_var(("dis1.y2","dis2.y2"),start=0.0)
                            
         self.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
         self.add_constraint('3.16 < dis1.y1')

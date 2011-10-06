@@ -53,9 +53,9 @@ class BLISS(Architecture):
         # Multidisciplinary Analysis
         mda = self.parent.add('mda', BroydenSolver())
         self.parent.force_execute=True
-        for indep,dep in coupling: 
-            mda.add_parameter(indep.target,low=-9.e99, high=9.e99)
-            mda.add_constraint("%s=%s"%(indep.target,dep.target))
+        for couple in coupling: 
+            mda.add_parameter(couple.indep.target,low=-9.e99, high=9.e99)
+            mda.add_constraint("%s=%s"%(couple.indep.target,couple.dep.target))
                 
         #Global Sensitivity Analysis
         #TODO: Need to solve GSE here instead of FD on MDA

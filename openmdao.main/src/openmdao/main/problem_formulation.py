@@ -30,6 +30,22 @@ class CouplingVar(ExprEvaluator):
     @property
     def high(self):
         return self.get_metadata('high')[0][1]
+    
+class Couple(object): 
+    
+    def __init__(self,indep,dep,start=None):
+        
+        self.indep = indep
+        self.dep =  dep
+        self.start=start
+        
+    def __repr__(self): 
+        return str((self.indep.target,self.dep.target))
+    
+    @property
+    def indep_dep(self): 
+        return (self.indep.target,self.dep.target)
+        
 
 class HasCouplingVars(object):
     """This class provides an implementation of the IHasCouplingVar interface 
@@ -42,16 +58,20 @@ class HasCouplingVars(object):
         self._parent = parent
         self._couples = []
         
-    def add_coupling_var(self,indep,dep):
+    def add_coupling_var(self,indep_dep,start=None):
         """adds a new coupling var to the assembly
         
-        indep: str
-            name of the independent variable, or the variable 
-            that should be varied, to meet the coupling constraint
-        dep: str
+        indep_dep: 2-tuple (str,str)
+            2-tuple of (indep,dep) where indep is the name of the 
+            independent variable, or the variable that should be 
+            varied, to meet the coupling constraint and dep is the
             name of the dependent variable, or the variable that 
-            needs to be forced to be consistent with the independent    
+            needs to be consistent with the independent    
         """
+        
+        
+        indep,dep = indep_dep
+        
         expr_indep = CouplingVar(indep,self._parent)
         if not expr_indep.check_resolve() or not expr_indep.is_valid_assignee():
                 self._parent.raise_exception("Cant add coupling variable with indep '%s' "
@@ -64,35 +84,37 @@ class HasCouplingVars(object):
                                              "because is not a valid variable"%dep,
                                              ValueError)        
         if self._couples: 
-            indeps,deps = zip(*self._couples)
-            if indep in [i.target for i in indeps]:
+            if indep in [c.indep.target for c in self._couples]:
                 self._parent.raise_exception("Coupling variable with indep '%s' already "
                                              "exists in assembly"%indep,ValueError)    
-            if dep in [d.target for d in deps]:
+            if dep in [c.dep.target for c in self._couples]:
                 self._parent.raise_exception("Coupling variable with dep '%s' already "
                                              "exists in assembly"%dep,ValueError)
-                
-        self._couples.append((expr_indep,expr_dep))    
-        return (expr_indep,expr_dep)
+        
+        c = Couple(expr_indep,expr_dep,start)
+        self._couples.append(c)    
+        return c
             
-    def remove_coupling_var(self,couple):
+    def remove_coupling_var(self,indep_dep):
         """removes the coupling var, indep/dep pair from the assembly. 
         
-        couple: tuple of str 
+        indep_dep: tuple of str 
             two tuple of (<indep>,<dep>) to be removed
+        
         """
-        if couple not in [(i.target,d.target) for i,d in self._couples]:
+        if indep_dep not in [c.indep_dep for c in self._couples]:
             self._parent.raise_exception("No coupling variable of ('%s','%s') exists "
                                          "in assembly"%couple,ValueError)
         else: 
-            for i,d in self._couples: 
-                if couple == (i.target,d.target):     
-                    self._couples.remove((i,d))
+            for c in self._couples: 
+                if indep_dep == c.indep_dep:     
+                    self._couples.remove(c)
+                    return c
 
             
         
     def get_coupling_vars(self): 
-        """returns a ordered list of (indep,dep) pairs of CouplingVar instances in the assembly"""
+        """returns a ordered list of (indep,dep,start) tuples of CouplingVar instances in the assembly"""
         return self._couples
     
     def clear_coupling_vars(self): 
@@ -197,12 +219,12 @@ class ArchitectureAssembly(Assembly):
         keyed to the component they are part of""" 
         
         result = {}
-        for indep,dep in self.get_coupling_vars(): 
-            comp = indep.get_referenced_compnames().pop()
+        for couple in self.get_coupling_vars(): 
+            comp = couple.indep.get_referenced_compnames().pop()
             try: 
-                result[comp].append(indep)
+                result[comp].append(couple.indep)
             except KeyError: 
-                result[comp] = [indep]
+                result[comp] = [couple.indep]
                 
         return result        
                 
@@ -211,12 +233,12 @@ class ArchitectureAssembly(Assembly):
         keyed to the component they are part of""" 
         
         result = {}
-        for indep,dep in self.get_coupling_vars(): 
-            comp = dep.get_referenced_compnames().pop()
+        for couple in self.get_coupling_vars(): 
+            comp = couple.dep.get_referenced_compnames().pop()
             try: 
-                result[comp].append(dep)
+                result[comp].append(couple.dep)
             except KeyError: 
-                result[comp] = [dep]            
+                result[comp] = [couple.dep]            
         
         return result
     
