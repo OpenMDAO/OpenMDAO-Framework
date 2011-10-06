@@ -277,8 +277,10 @@ def make_release():
             if platform == 'windows':
                 haswin = True
     if not haswin:
-        print "no windows host was specified, so can't build binary eggs for windows"
-        sys.exit(-1)
+        print "WARNING: no windows host was specified, so can't build binary eggs for windows"
+        if not options.test:
+            print 'aborting...'
+            sys.exit(-1)
         
     orig_branch = get_git_branch()
     if not orig_branch:
