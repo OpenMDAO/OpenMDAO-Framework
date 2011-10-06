@@ -85,6 +85,13 @@ class ProblemFormulationTest(unittest.TestCase):
         self.assertEqual([c1,c2,c3],
                          self.asm.get_coupling_vars())
         
+        self.assertEqual({'D1':[c1.indep],'D4':[c2.indep],'D6':[c3.indep]},
+                         self.asm.get_coupling_indeps_by_comp())
+        
+        self.assertEqual({'D2':[c1.dep],'D5':[c2.dep,c3.dep]},
+                         self.asm.get_coupling_deps_by_comp())
+        
+        
         self.asm.remove_coupling_var(('D1.a','D2.a'))
         self.assertEqual([c2,c3],
                          self.asm.get_coupling_vars())

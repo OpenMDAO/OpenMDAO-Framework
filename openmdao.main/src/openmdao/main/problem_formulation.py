@@ -104,7 +104,7 @@ class HasCouplingVars(object):
         """
         if indep_dep not in [c.indep_dep for c in self._couples]:
             self._parent.raise_exception("No coupling variable of ('%s','%s') exists "
-                                         "in assembly"%couple,ValueError)
+                                         "in assembly"%indep_dep,ValueError)
         else: 
             for c in self._couples: 
                 if indep_dep == c.indep_dep:     
