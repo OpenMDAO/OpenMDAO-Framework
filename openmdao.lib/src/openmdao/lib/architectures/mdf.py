@@ -72,9 +72,9 @@ class MDF(Architecture):
         self.parent.solver.algorithm = "broyden2"
         
         #add the coupling vars parameters/constraints to the solver
-        for couple in self.parent.get_coupling_vars(): 
-            self.parent.solver.add_parameter(couple.indep.target, low=-9.e99, high=9.e99)
-            self.parent.solver.add_constraint("%s=%s"%(couple.indep.target,couple.dep.target))
+        for (indep,dep),couple in self.parent.get_coupling_vars().iteritems(): 
+            self.parent.solver.add_parameter(indep, low=-9.e99, high=9.e99)
+            self.parent.solver.add_constraint("%s=%s"%(indep,dep))
 
         #setup the workflows
         self.parent.driver.workflow.add(['solver'])

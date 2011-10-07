@@ -56,7 +56,7 @@ class HasCouplingVars(object):
     
     def __init__(self,parent):
         self._parent = parent
-        self._couples = []    
+        self._couples = ordereddict.OrderedDict()    
         
     def add_coupling_var(self,indep_dep,start=None):
         """adds a new coupling var to the assembly
@@ -84,17 +84,17 @@ class HasCouplingVars(object):
                                              "because is not a valid variable"%dep,
                                              ValueError)        
         if self._couples: 
-            if indep in [c.indep.target for c in self._couples]:
+            if indep in [c[0] for c in self._couples]:
                 self._parent.raise_exception("Coupling variable with indep '%s' already "
                                              "exists in assembly"%indep,ValueError)    
-            if dep in [c.dep.target for c in self._couples]:
+            if dep in [c[1] for c in self._couples]:
                 self._parent.raise_exception("Coupling variable with dep '%s' already "
                                              "exists in assembly"%dep,ValueError)
         
         c = Couple(expr_indep,expr_dep,start)
         if start is not None: 
             expr_indep.set(start)
-        self._couples.append(c)    
+        self._couples[indep_dep] = c   
         return c
             
     def remove_coupling_var(self,indep_dep):
@@ -104,19 +104,18 @@ class HasCouplingVars(object):
             two tuple of (<indep>,<dep>) to be removed
         
         """
-        if indep_dep not in [c.indep_dep for c in self._couples]:
+        if indep_dep not in self._couples:
             self._parent.raise_exception("No coupling variable of ('%s','%s') exists "
                                          "in assembly"%indep_dep,ValueError)
         else: 
-            for c in self._couples: 
-                if indep_dep == c.indep_dep:     
-                    self._couples.remove(c)
-                    return c
+            c = self._couples[indep_dep]
+            del self._couples[indep_dep]
+            return c
 
             
         
     def get_coupling_vars(self): 
-        """returns a of CouplingVar instances in the assembly"""
+        """returns an OrderDict of CouplingVar instances keyes to the names of (indep,dep) in the assembly"""
         return self._couples
     
     def clear_coupling_vars(self): 
@@ -124,7 +123,7 @@ class HasCouplingVars(object):
         self._couples = [] 
         
     def init_coupling_vars(self): 
-        for couple in self._couples: 
+        for indep_dep,couple in self._couples.iteritems(): 
             if couple.start is not None: 
                 couple.indep.set(couple.start,self._parent.get_expr_scope())
 
@@ -235,7 +234,7 @@ class ArchitectureAssembly(Assembly):
         keyed to the component they are part of""" 
         
         result = {}
-        for couple in self.get_coupling_vars(): 
+        for indep_dep,couple in self.get_coupling_vars().iteritems(): 
             comp = couple.indep.get_referenced_compnames().pop()
             try: 
                 result[comp].append(couple.indep)
@@ -249,7 +248,7 @@ class ArchitectureAssembly(Assembly):
         keyed to the component they are part of""" 
         
         result = {}
-        for couple in self.get_coupling_vars(): 
+        for indep_dep,couple in self.get_coupling_vars().iteritems(): 
             comp = couple.dep.get_referenced_compnames().pop()
             try: 
                 result[comp].append(couple.dep)

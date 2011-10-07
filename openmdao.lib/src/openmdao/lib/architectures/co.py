@@ -59,16 +59,16 @@ class CO(Architecture):
             for var in param.targets: 
                 self.target_var_map[var] = target_var
                 
-        initial_conditions = [couple.indep.evaluate() for couple in coupling]   
+        initial_conditions = [couple.indep.evaluate() for idnep_dep,couple in coupling.iteritems()]   
         #print "coupling initial conditions: ", initial_conditions
         self.parent.add_trait('coupling_var_targets',Array(initial_conditions))
-        for i,couple in enumerate(coupling): 
+        for i,((indep,dep),couple) in enumerate(coupling.iteritems()): 
             target_var = 'coupling_var_targets[%d]'%i
             low = couple.indep.low or -1e99
             high = couple.indep.high or 1e99
             global_opt.add_parameter(target_var,low=low,high=high)
-            self.target_var_map[couple.indep.target] = target_var
-            self.target_var_map[couple.dep.target] = target_var
+            self.target_var_map[indep] = target_var
+            self.target_var_map[dep] = target_var
             
         
         initial_conditions = [param.evaluate() for comp,param in local_dvs]    

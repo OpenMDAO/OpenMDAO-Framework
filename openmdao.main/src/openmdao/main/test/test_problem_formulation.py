@@ -82,7 +82,7 @@ class ProblemFormulationTest(unittest.TestCase):
             self.fail("Exception expected")
             
             
-        self.assertEqual([c1,c2,c3],
+        self.assertEqual(ordereddict.OrderedDict(zip([("D1.a","D2.a"),("D4.a","D5.a"),("D6.a","D5.b")],[c1,c2,c3])),
                          self.asm.get_coupling_vars())
         
         self.assertEqual({'D1':[c1.indep],'D4':[c2.indep],'D6':[c3.indep]},
@@ -93,7 +93,7 @@ class ProblemFormulationTest(unittest.TestCase):
         
         
         self.asm.remove_coupling_var(('D1.a','D2.a'))
-        self.assertEqual([c2,c3],
+        self.assertEqual(ordereddict.OrderedDict(zip([("D4.a","D5.a"),("D6.a","D5.b")],[c2,c3])),
                          self.asm.get_coupling_vars())
         try: 
             self.asm.remove_coupling_var(('D1.a','D2.a'))

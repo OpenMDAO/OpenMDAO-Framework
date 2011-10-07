@@ -12,8 +12,6 @@ from openmdao.main.api import Component, ComponentWithDerivatives
 from openmdao.main.problem_formulation import ArchitectureAssembly
 from openmdao.lib.datatypes.api import Float
 
-
-
 class Discipline1(Component):
     """Component containing Discipline 1"""
     
@@ -145,12 +143,9 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
         y1 = abs(self.y1)
         
         self.y2 = y1**(.5) + z1 + z2        
-        
-        
-        
+           
 class SellarProblem(ArchitectureAssembly):
-    """ Sellar problem definition.
-    """
+    """ Sellar test problem definition."""
     
     def __init__(self):
         """ Creates a new Assembly with this problem
@@ -160,6 +155,14 @@ class SellarProblem(ArchitectureAssembly):
         Optimal Objective = 3.18339"""
         
         super(SellarProblem, self).__init__()
+        
+        solution = {
+            ("dis1.z1","dis2.z1"):1.9776,
+            ("dis1.z2","dis2.z2"):0.0,
+            "dis1.x1":0.0,
+            ("dis2.y1","dis1.y1"):3.16,
+            ("dis1.y2","dis2.y2"): 3.756
+        }
         
         #add the discipline components to the assembly
         self.add('dis1', Discipline1())
@@ -174,7 +177,7 @@ class SellarProblem(ArchitectureAssembly):
         self.add_parameter("dis1.x1",low=0,high=10,start=1.0)
         
         #Coupling Vars
-        self.add_coupling_var(("dis2.y1","dis1.y1"),start=3.16)
+        self.add_coupling_var(("dis2.y1","dis1.y1"),start=0.0)
         self.add_coupling_var(("dis1.y2","dis2.y2"),start=0.0)
                            
         self.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
