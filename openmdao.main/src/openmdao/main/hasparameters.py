@@ -362,6 +362,10 @@ class HasParameters(object):
             pg.typename = parameters[0].valtypename
             self._parameters[key] = pg
         
+        #if start is given, then initilze the var now
+        if start is not None: 
+            self._parameters[key].set(start,self._get_scope(scope))
+        
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
         try:

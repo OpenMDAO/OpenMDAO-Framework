@@ -114,7 +114,7 @@ class HasCouplingVars(object):
             
         
     def get_coupling_vars(self): 
-        """returns a ordered list of (indep,dep,start) tuples of CouplingVar instances in the assembly"""
+        """returns a of CouplingVar instances in the assembly"""
         return self._couples
     
     def clear_coupling_vars(self): 
@@ -150,9 +150,14 @@ class ArchitectureAssembly(Assembly):
                                  "architecture.", RuntimeError)
     
     def configure(self): 
+        """checks the configuration of the assmebly to make sure it's compatible 
+        with the architecture. Then initializes all the values in the 
+        parameters and coupling vars and configures the architecture"""
+        
         self.architecture.check_config()
-        self.architecture.configure()
         self.initialize()
+        self.architecture.configure()
+        
         self.architecture.configured = True
         
     def initialize(self): 
