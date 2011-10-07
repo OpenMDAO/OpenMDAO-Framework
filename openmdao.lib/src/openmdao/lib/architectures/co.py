@@ -30,6 +30,9 @@ class CO(Architecture):
         coupl_indeps_by_comp = self.parent.get_coupling_indeps_by_comp()
         coupl_deps_by_comp = self.parent.get_coupling_deps_by_comp()
         
+        #initialize the problem so all initial values are where we need them to be
+        self.parent.initialize()
+        
         self.target_var_map = dict()
         
         #Global Driver    

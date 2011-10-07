@@ -174,7 +174,7 @@ class SellarProblem(ArchitectureAssembly):
         self.add_parameter("dis1.x1",low=0,high=10,start=1.0)
         
         #Coupling Vars
-        self.add_coupling_var(("dis2.y1","dis1.y1"),start=1.0)
+        self.add_coupling_var(("dis2.y1","dis1.y1"),start=3.16)
         self.add_coupling_var(("dis1.y2","dis2.y2"),start=0.0)
                            
         self.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')

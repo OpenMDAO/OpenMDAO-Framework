@@ -56,7 +56,7 @@ class HasCouplingVars(object):
     
     def __init__(self,parent):
         self._parent = parent
-        self._couples = []
+        self._couples = []    
         
     def add_coupling_var(self,indep_dep,start=None):
         """adds a new coupling var to the assembly
@@ -119,7 +119,12 @@ class HasCouplingVars(object):
     
     def clear_coupling_vars(self): 
         """removes all coupling variables from the assembly"""
-        self._couples = []    
+        self._couples = [] 
+        
+    def init_coupling_vars(self): 
+        for couple in self._couples: 
+            if couple.start is not None: 
+                couple.indep.set(couple.start,self._parent.get_expr_scope())
 
         
 @add_delegate(HasConstraints,HasParameters,HasCouplingVars,HasObjectives)
@@ -147,7 +152,13 @@ class ArchitectureAssembly(Assembly):
     def configure(self): 
         self.architecture.check_config()
         self.architecture.configure()
+        self.initialize()
         self.architecture.configured = True
+        
+    def initialize(self): 
+        """Sets all des_vars and coupling_vars to the start values, if specified""" 
+        self.init_parameters()
+        self.init_coupling_vars()
     
     def check_config(self):
         super(ArchitectureAssembly, self).check_config()

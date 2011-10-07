@@ -98,9 +98,6 @@ if __name__ == "__main__": # pragma: no cover
     p.title("Optimization Convergence")
     p.legend()
     
-    
-       
-    
     prob = SellarProblem()
     set_as_top(prob)
     prob.architecture = CO() 

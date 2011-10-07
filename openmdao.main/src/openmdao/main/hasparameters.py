@@ -36,6 +36,7 @@ class Parameter(object):
         
         self.low = low
         self.high = high
+        self.start = start
         self.scaler = scaler
         self.adder = adder
         self.fd_step = fd_step
@@ -121,8 +122,8 @@ class Parameter(object):
         return self._expreval.text
 
     def __repr__(self): 
-        return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s)>' % \
-               (self.target, self.low, self.high, self.fd_step, self.scaler, self.adder)
+        return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s)>' % \
+               (self.target, self.low, self.high, self.fd_step, self.scaler, self.adder,self.start)
     
     def _transform(self, val):
         """ Unscales the variable (parameter space -> var space). """
@@ -191,6 +192,7 @@ class ParameterGroup(object):
         self._params = params[:]
         self.low = self._params[0].low
         self.high = self._params[0].high
+        self.start = self._params[0].start
         self.scaler = self._params[0].scaler
         self.adder = self._params[0].adder
         self.fd_step = self._params[0].fd_step
@@ -199,8 +201,8 @@ class ParameterGroup(object):
         return "%s" % self.targets
 
     def __repr__(self): 
-        return '<ParameterGroup(targets=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s)>' % \
-               (self.targets, self.low, self.high, self.fd_step, self.scaler, self.adder)
+        return '<ParameterGroup(targets=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s)>' % \
+               (self.targets, self.low, self.high,self.fd_step, self.scaler, self.adder,self.start)
 
     @property
     def target(self): 
@@ -385,6 +387,12 @@ class HasParameters(object):
     def get_parameters(self):
         """Returns an ordered dict of parameter objects."""
         return self._parameters
+    
+    def init_parameters(self): 
+        """Sets all parameters to their start value, if a start value is given""" 
+        for key,param in self._parameters.iteritems():
+            if param.start is not None: 
+                param.set(param.start, self._get_scope())
 
     def set_parameters(self, values, case=None, scope=None): 
         """Pushes the values in the iterator 'values' into the corresponding 
