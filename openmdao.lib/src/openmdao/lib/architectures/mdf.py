@@ -62,7 +62,8 @@ class MDF(Architecture):
             self.parent.driver.add_constraint(const)
             
         #set the global objective
-        self.parent.driver.add_objectives(self.parent.get_objectives().keys())
+        objective = self.parent.get_objectives().items()[0]
+        self.parent.driver.add_objective(objective[1].text, name=objective[0])
             
         #setup the inner loop solver
         self.parent.add('solver', BroydenSolver())    
@@ -72,9 +73,9 @@ class MDF(Architecture):
         self.parent.solver.algorithm = "broyden2"
         
         #add the coupling vars parameters/constraints to the solver
-        for (indep,dep),couple in self.parent.get_coupling_vars().iteritems(): 
-            self.parent.solver.add_parameter(indep, low=-9.e99, high=9.e99)
-            self.parent.solver.add_constraint("%s=%s"%(indep,dep))
+        for key,couple in self.parent.get_coupling_vars().iteritems(): 
+            self.parent.solver.add_parameter(couple.indep.target, low=-9.e99, high=9.e99)
+            self.parent.solver.add_constraint("%s=%s"%(couple.indep.target,couple.dep.target))
 
         #setup the workflows
         self.parent.driver.workflow.add(['solver'])

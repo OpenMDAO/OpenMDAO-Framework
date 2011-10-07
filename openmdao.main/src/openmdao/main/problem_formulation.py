@@ -2,6 +2,8 @@ import weakref
 
 import ordereddict
 
+from enthought.traits.api import Dict
+
 from openmdao.main.api import Interface, ExprEvaluator, Assembly, Slot
 from openmdao.util.decorators import add_delegate
 from openmdao.main.interfaces import IArchitecture
@@ -33,11 +35,12 @@ class CouplingVar(ExprEvaluator):
     
 class Couple(object): 
     
-    def __init__(self,indep,dep,start=None):
+    def __init__(self,indep,dep,name=None,start=None):
         
         self.indep = indep
         self.dep =  dep
         self.start=start
+        self.name=name
         
     def __repr__(self): 
         return str((self.indep.target,self.dep.target))
@@ -58,7 +61,7 @@ class HasCouplingVars(object):
         self._parent = parent
         self._couples = ordereddict.OrderedDict()    
         
-    def add_coupling_var(self,indep_dep,start=None):
+    def add_coupling_var(self,indep_dep,name=None,start=None):
         """adds a new coupling var to the assembly
         
         indep_dep: 2-tuple (str,str)
@@ -67,6 +70,12 @@ class HasCouplingVars(object):
             varied, to meet the coupling constraint and dep is the
             name of the dependent variable, or the variable that 
             needs to be consistent with the independent    
+            
+        name: str (optional)
+            short name used to idenfity the coupling variable
+            
+        start: float (optional)    
+            initial value to set to the independent part of the coupling constraint
         """
         
         
@@ -91,10 +100,13 @@ class HasCouplingVars(object):
                 self._parent.raise_exception("Coupling variable with dep '%s' already "
                                              "exists in assembly"%dep,ValueError)
         
-        c = Couple(expr_indep,expr_dep,start)
+        c = Couple(expr_indep,expr_dep,name,start)
         if start is not None: 
             expr_indep.set(start)
-        self._couples[indep_dep] = c   
+        if name is not None: 
+            self._couples[name] = c
+        else: 
+            self._couples[indep_dep] = c  
         return c
             
     def remove_coupling_var(self,indep_dep):
@@ -266,4 +278,57 @@ class ArchitectureAssembly(Assembly):
                     result[comp].append(const)
                 except: 
                     result[comp] = [const,]
-        return result            
+        return result 
+
+    
+class OptProblem(ArchitectureAssembly): 
+    """Class for specifying test problems for optimization 
+    algorithms and architectures"""
+    
+    solution = Dict({},iotype="in",desc="dictionary of expected values for "
+                     "all des_vars and coupling_vars")
+
+    
+    def check_solution(self,strict=False): 
+        """return dictionary errors (actual-expected) of all des_vars, coupling_vars,
+        and objectives
+
+        strict: Boolean (optional)
+            If True, then an error will be raised for any des_var, coupling_var, or 
+            objective where no solution is provided. If False, missing items are 
+            ignored. Defaults to False.
+        """
+        error = {}
+        
+        try: 
+            for k,v in self.get_parameters().iteritems():
+                sol = self.solution[k]
+                error[k] = v.evaluate() - sol
+        except KeyError: 
+            if strict: 
+                self.raise_exception("No solution was given for the des_var %s"%str(k),ValueError)
+            else: 
+                pass
+            
+        try: 
+            for k,v in self.get_coupling_vars().iteritems():
+                sol = self.solution[k]
+                error[k] = (v.indep.evaluate()-sol, v.dep.evaluate()-sol)
+        except KeyError: 
+            if strict: 
+                self.raise_exception("No solution was given for the coupling_var %s"%str(k),ValueError)
+            else: 
+                pass
+            
+        try: 
+            for k,v in self.get_objectives().iteritems(): 
+                sol = self.solution[k]
+                error[k] = v.evaluate()-sol
+        except KeyError: 
+            if strict: 
+                self.raise_exception("No solution was given for the objective %s"%str(k), ValueError)
+            else: 
+                pass
+            
+        return error    
+                
