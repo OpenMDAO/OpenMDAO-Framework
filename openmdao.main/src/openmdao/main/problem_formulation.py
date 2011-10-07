@@ -92,6 +92,8 @@ class HasCouplingVars(object):
                                              "exists in assembly"%dep,ValueError)
         
         c = Couple(expr_indep,expr_dep,start)
+        if start is not None: 
+            expr_indep.set(start)
         self._couples.append(c)    
         return c
             
@@ -155,9 +157,7 @@ class ArchitectureAssembly(Assembly):
         parameters and coupling vars and configures the architecture"""
         
         self.architecture.check_config()
-        self.initialize()
         self.architecture.configure()
-        
         self.architecture.configured = True
         
     def initialize(self): 
