@@ -234,7 +234,7 @@ openmdao.Model=function() {
                         if (typeof callback == 'function') {
                             callback(text)
                         };
-                        self.updateListeners;
+                        self.updateListeners();
             },
         })
     }
@@ -385,7 +385,7 @@ openmdao.Model=function() {
                             replace(/\\/g,'.').
                             replace(/\//g,'.')
         self.issueCommand("from "+path+" import *")
-        self.updateListeners
+        self.updateListeners()
     }
 
     /** execute the specified file */
