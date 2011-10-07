@@ -146,10 +146,12 @@ def _get_array(name, val, trait, xml, is_array, container):
     if is_array:
         dims = ', '.join(['%d' % dim for dim in val.shape])
         length = '%d' % val.shape[0]
+        lock_resize = 'true'
         ndims = '%d' % len(val.shape)
     else:
         dims = '%d' % len(val)
         length = '%d' % len(val)
+        lock_resize = 'false'
         ndims = '1'
 
     xml.append("""\
@@ -161,9 +163,9 @@ def _get_array(name, val, trait, xml, is_array, container):
 <property name="enumValues"/>\
 <property name="first">%s</property>\
 <property name="length">%s</property>\
-<property name="lockResize">true</property>\
+<property name="lockResize">%s</property>\
 <property name="numDimensions">%s</property>\
-""" % (name, valtyp, valstr, desc, dims, first, length, ndims))
+""" % (name, valtyp, valstr, desc, dims, first, length, lock_resize, ndims))
 
     if typ is not str:
         units = trait.units or ''
@@ -389,7 +391,7 @@ def _set_array(container, name, member, is_array):
             raise TypeError('%s.%s: undefined List element type'
                             % (container.get_pathname(), name))
 
-    text = member.text
+    text = member.text or ''
     if typ == str:
         text = text.decode('string_escape')
 
@@ -401,9 +403,11 @@ def _set_array(container, name, member, is_array):
             data, rbrace, rest = rest.partition('}')
             value = numpy.array([typ(val.strip(' "'))
                                  for val in data.split(',')]).reshape(dims)
-        else:
+        elif text:
             value = numpy.array([typ(val.strip(' "'))
                                  for val in text.split(',')])
+        else:
+            value = numpy.array([])
     else:
         if text:
             value = [typ(val.strip(' "')) for val in text.split(',')]
@@ -428,7 +432,7 @@ def _set_float(container, name, member):
     """ Helper for :meth:`_set_from_xml`. """
     typ = member.attrib['type']
     if typ == 'double':
-        val = float(member.text)
+        val = float(member.text or '')
         setattr(container, name, val)
     else:
         raise RuntimeError('Unsupported type %r for %s.%s'
@@ -439,7 +443,7 @@ def _set_int(container, name, member):
     """ Helper for :meth:`_set_from_xml`. """
     typ = member.attrib['type']
     if typ == 'long':
-        val = int(member.text)
+        val = int(member.text or '')
         setattr(container, name, val)
     else:
         raise RuntimeError('Unsupported type %r for %s.%s'
@@ -450,7 +454,8 @@ def _set_str(container, name, member):
     """ Helper for :meth:`_set_from_xml`. """
     typ = member.attrib['type']
     if typ == 'string':
-        val = member.text.decode('string_escape')
+        text = member.text or ''
+        val = text.decode('string_escape')
         setattr(container, name, val)
     else:
         raise RuntimeError('Unsupported type %r for %s.%s'
@@ -464,7 +469,8 @@ def generate_from_xml(xml):
     xml = xml[start:]
     root = ElementTree.fromstring(xml)
     class_def = []
-    cls = root.attrib['className']
+    subclasses = []
+    cls = root.attrib['className'].replace('.', '_')
     class_def.append("""
 class %s(VarTreeMixin, VariableTree):
     def __init__(self, iotype, client, rpath):
@@ -472,52 +478,82 @@ class %s(VarTreeMixin, VariableTree):
         desc = client.get(rpath+'.description')
         VariableTree.__init__(self, doc=desc, iotype=iotype)
 """ % cls)
-    _generate_from_xml(root, class_def)
+    _generate_from_xml(root, class_def, subclasses)
+    class_def.extend(subclasses)
     return (cls, '\n'.join(class_def))
 
-def _generate_from_xml(root, class_def):
+def _generate_from_xml(root, class_def, subclasses):
     """ Recursive helper for :meth:`generate_from_xml`. """
     members = root.find('members')
     for member in members.findall('member'):
-        properties = member.find('properties')
-        props = {}
-        enum = False
-        for property in properties.findall('property'):
-            name = property.attrib['name']
-            text = property.text
-            if name in ('enumValues', 'enumAliases') and text:
-                enum = True
-            props[name] = text
-        if enum:
-            _generate_enum(member, props, class_def)
+        typ = member.attrib['type']
+        if typ == 'object':
+            _generate_object(member, class_def, subclasses)
         else:
-            typ = member.attrib['type']
-            if typ in ('double[]', 'long[]', 'string[]'):
-                _generate_array(member, props, class_def)
-            elif typ == 'boolean':
-                _generate_bool(member, props, class_def)
-            elif typ == 'double':
-                _generate_float(member, props, class_def)
-            elif typ == 'long':
-                _generate_int(member, props, class_def)
-            elif typ == 'string':
-                _generate_str(member, props, class_def)
-            elif typ == 'object':
-                _generate_object(member, props, class_def)
+            properties = member.find('properties')
+            props = {}
+            enum = False
+            for property in properties.findall('property'):
+                name = property.attrib['name']
+                text = property.text
+                if name in ('enumValues', 'enumAliases') and text:
+                    enum = True
+                props[name] = text
+            if enum:
+                _generate_enum(member, props, class_def)
+            else:
+                if typ in ('double[]', 'long[]', 'string[]'):
+                    _generate_array(member, props, class_def)
+                elif typ == 'boolean':
+                    _generate_bool(member, props, class_def)
+                elif typ == 'double':
+                    _generate_float(member, props, class_def)
+                elif typ == 'long':
+                    _generate_int(member, props, class_def)
+                elif typ == 'string':
+                    _generate_str(member, props, class_def)
+                else:
+                    raise RuntimeError('unsupported member type %r' % typ)
 
 
 def _generate_array(member, props, class_def):
     """ Helper for :meth:`_generate_from_xml`. """
     name = member.attrib['name']
     typ = member.attrib['type']
+    cvt = {'double[]':float, 'long[]':int, 'string[]':str}[typ]
     if props.get('lockResize') == 'false' and props.get('numDimensions') == '1':
         objtyp = 'List'
     else:
         objtyp = 'Array'
+    text = member.text or ''
     args = []
-    desc = props.get('description').decode('string_escape')
+
+    if objtyp == 'Array':
+        dtype = {'double[]':'float', 'long[]':'int', 'string[]':'str'}[typ]
+        args.append('dtype=%s' % dtype)
+        if text.startswith('bounds['):
+            dims, rbrack, rest = text[7:].partition(']')
+            dims = [cvt(val.strip(' "')) for val in dims.split(',')]
+            junk, lbrace, rest = rest.partition('{')
+            data, rbrace, rest = rest.partition('}')
+            value = numpy.array([cvt(val.strip(' "'))
+                                 for val in data.split(',')]).reshape(dims)
+        elif text:
+            value = numpy.array([cvt(val.strip(' "'))
+                                 for val in text.split(',')])
+        else:
+            value = numpy.array([])
+        args.append('default_value=%s' % value.tolist())
+    else:
+        dtype = {'double[]':'Float', 'long[]':'Int', 'string[]':'Str'}[typ]
+        args.append(dtype)
+        if text:
+            value = [cvt(val.strip(' "')) for val in text.split(',')]
+            args.append('value=%s' % value)
+
+    desc = props.get('description')
     if desc:
-        args.append('desc=%r' % desc)
+        args.append('desc=%r' % desc.decode('string_escape'))
     units = props.get('units')
     if units:
         args.append('units=%r' % units)
@@ -528,7 +564,7 @@ def _generate_array(member, props, class_def):
     if high == 'true':
         args.append('high=%s' % props.get('upperBound'))
     args = ', '.join(args)
-    class_def.append('        self.add(%s, %s(%s))' % (name, objtyp, args))
+    class_def.append('        self.add(%r, %s(%s))' % (name, objtyp, args))
 
 
 def _generate_bool(member, props, class_def):
@@ -536,11 +572,11 @@ def _generate_bool(member, props, class_def):
     name = member.attrib['name']
     args = []
     args.append('True' if member.text == 'true' else 'False')
-    desc = props.get('description').decode('string_escape')
+    desc = props.get('description')
     if desc:
-        args.append('desc=%r' % desc)
+        args.append('desc=%r' % desc.decode('string_escape'))
     args = ', '.join(args)
-    class_def.append('        self.add(%s, Bool(%s))' % (name, args))
+    class_def.append('        self.add(%r, Bool(%s))' % (name, args))
 
 
 def _generate_enum(member, props, class_def):
@@ -552,9 +588,9 @@ def _generate_enum(member, props, class_def):
         args.append('%r' % member.text.decode('string_escape'))
     else:
         args.append(member.text)
-    desc = props.get('description').decode('string_escape')
+    desc = props.get('description')
     if desc:
-        args.append('desc=%r' % desc)
+        args.append('desc=%r' % desc.decode('string_escape'))
     values = props.get('enumValues')
     if values:
         if typ == 'string':
@@ -562,12 +598,12 @@ def _generate_enum(member, props, class_def):
         args.append('values=(%s)' % values)
     aliases = props.get('enumAliases')
     if aliases:
-        args.append('aliases=(%s)' % aliases).decode('string_escape')
+        args.append('aliases=(%s)' % aliases.decode('string_escape'))
     units = props.get('units')
     if units:
         args.append('units=%r' % units)
     args = ', '.join(args)
-    class_def.append('        self.add(%s, Enum(%s))' % (name, args))
+    class_def.append('        self.add(%r, Enum(%s))' % (name, args))
 
 
 def _generate_float(member, props, class_def):
@@ -575,9 +611,9 @@ def _generate_float(member, props, class_def):
     name = member.attrib['name']
     args = []
     args.append(member.text)
-    desc = props.get('description').decode('string_escape')
+    desc = props.get('description')
     if desc:
-        args.append('desc=%r' % desc)
+        args.append('desc=%r' % desc.decode('string_escape'))
     units = props.get('units')
     if units:
         args.append('units=%r' % units)
@@ -588,7 +624,7 @@ def _generate_float(member, props, class_def):
     if high == 'true':
         args.append('high=%s' % props.get('upperBound'))
     args = ', '.join(args)
-    class_def.append('        self.add(%s, Float(%s))' % (name, args))
+    class_def.append('        self.add(%r, Float(%s))' % (name, args))
 
 
 def _generate_int(member, props, class_def):
@@ -596,10 +632,9 @@ def _generate_int(member, props, class_def):
     name = member.attrib['name']
     args = []
     args.append(member.text)
-    desc = props.get('description').decode('string_escape')
+    desc = props.get('description')
     if desc:
-        args.append('desc=%r' % desc)
-    args = ', '.join(args)
+        args.append('desc=%r' % desc.decode('string_escape'))
     low = props.get('hasLowerBound')
     if low == 'true':
         args.append('low=%s' % props.get('lowerBound'))
@@ -607,7 +642,7 @@ def _generate_int(member, props, class_def):
     if high == 'true':
         args.append('high=%s' % props.get('upperBound'))
     args = ', '.join(args)
-    class_def.append('        self.add(%s, Int(%s))' % (name, args))
+    class_def.append('        self.add(%r, Int(%s))' % (name, args))
 
 
 def _generate_str(member, props, class_def):
@@ -615,32 +650,26 @@ def _generate_str(member, props, class_def):
     name = member.attrib['name']
     args = []
     args.append('%r' % member.text.decode('string_escape'))
-    desc = props.get('description').decode('string_escape')
+    desc = props.get('description')
     if desc:
-        args.append('desc=%r' % desc)
+        args.append('desc=%r' % desc.decode('string_escape'))
     args = ', '.join(args)
-    class_def.append('        self.add(%s, Str(%s))' % (name, args))
+    class_def.append('        self.add(%r, Str(%s))' % (name, args))
 
 
-def _generate_object(member, props, class_def):
+def _generate_object(member, class_def, subclasses):
     """ Helper for :meth:`_generate_from_xml`. """
     name = member.attrib['name']
-    args = []
-    desc = props.get('description').decode('string_escape')
-    if desc:
-        args.append('doc=%r' % desc)
-    args.append('iotype=iotype')
-    args = ', '.join(args)
-    class_def.append('        self.add(%s, %s(%s))' % (name, objtyp, args))
+    cls = member.attrib['className'].replace('.', '_')
+    class_def.append('        self.add(%r, %s(iotype=iotype))' % (name, cls))
 
     subclass_def = []  # Recurse.
-    cls = member.attrib['className']
-    subclass_def.append("""
+    subclasses.append("""
 class %s(VariableTree):
     def __init__(self, *args, **kwargs):
         super(%s, self).__init__(*args, **kwargs)
 """ % (cls, cls))
-    _generate_from_xml(member, subclass_def)
-    subclass_def.append('')
-    class_def.insert(0, subclass_def)
+    _generate_from_xml(member, subclasses, subclass_def)
+    subclasses.append('')
+    subclasses.extend(subclass_def)
 
