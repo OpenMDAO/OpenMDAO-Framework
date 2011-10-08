@@ -13,3 +13,6 @@ class TestMDF(unittest.TestCase):
         prob.run()
         
         error = prob.check_solution()
+        
+        #should be able to solve this problem with very high accuracy!
+        self.assertTrue(sum([v for k,v in error.iteritems()]) < .0001)
