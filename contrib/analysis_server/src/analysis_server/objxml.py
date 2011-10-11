@@ -6,7 +6,7 @@ import numpy
 import xml.etree.cElementTree as ElementTree
 from xml.sax.saxutils import escape
 
-from openmdao.main.api import Container
+from openmdao.main.api import Container, VariableTree
 from openmdao.main.mp_support import is_instance
 from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, List, Str
 
@@ -463,6 +463,198 @@ def _set_str(container, name, member):
 
 
 
+def populate_from_xml(vartree, xml):
+    """ Populate :class:`VariableTree` from `xml`. """
+    start = xml.find('<Object')
+    xml = xml[start:]
+    root = ElementTree.fromstring(xml)
+    _populate_from_xml(vartree, root)
+
+def _populate_from_xml(vartree, root):
+    """ Recursive helper for :meth:`populate_from_xml`. """
+    members = root.find('members')
+    for member in members.findall('member'):
+        typ = member.attrib['type']
+        if typ == 'object':
+            _add_object(vartree, member)
+        else:
+            properties = member.find('properties')
+            props = {}
+            enum = False
+            for property in properties.findall('property'):
+                name = property.attrib['name']
+                text = property.text
+                if name in ('enumValues', 'enumAliases') and text:
+                    enum = True
+                props[name] = text
+            if enum:
+                _add_enum(vartree, member, props)
+            else:
+                if typ in ('double[]', 'long[]', 'string[]'):
+                    _add_array(vartree, member, props)
+                elif typ == 'boolean':
+                    _add_bool(vartree, member, props)
+                elif typ == 'double':
+                    _add_float(vartree, member, props)
+                elif typ == 'long':
+                    _add_int(vartree, member, props)
+                elif typ == 'string':
+                    _add_str(vartree, member, props)
+                else:
+                    raise RuntimeError('unsupported member type %r' % typ)
+
+
+def _add_array(vartree, member, props):
+    """ Helper for :meth:`_populate_from_xml`. """
+    name = member.attrib['name']
+    typ = member.attrib['type']
+    cvt = {'double[]':float, 'long[]':int, 'string[]':str}[typ]
+    if props.get('lockResize') == 'false' and props.get('numDimensions') == '1':
+        objtyp = 'List'
+    else:
+        objtyp = 'Array'
+    text = member.text or ''
+    args = {}
+
+    if objtyp == 'Array':
+        args['dtype'] = cvt
+        if text.startswith('bounds['):
+            dims, rbrack, rest = text[7:].partition(']')
+            dims = [int(val.strip(' "')) for val in dims.split(',')]
+            junk, lbrace, rest = rest.partition('{')
+            data, rbrace, rest = rest.partition('}')
+            value = numpy.array([cvt(val.strip(' "'))
+                                 for val in data.split(',')]).reshape(dims)
+        elif text:
+            value = numpy.array([cvt(val.strip(' "'))
+                                 for val in text.split(',')])
+        else:
+            value = numpy.array([])
+        args['default_value'] = value
+    else:
+        args['trait'] = {'double[]':Float, 'long[]':Int, 'string[]':Str}[typ]
+        if text:
+            value = [cvt(val.strip(' "')) for val in text.split(',')]
+            args['value'] = value
+
+    desc = props.get('description')
+    if desc:
+        args['desc'] = desc.decode('string_escape')
+    units = props.get('units')
+    if units:
+        args['units'] = units
+    low = props.get('hasLowerBound')
+    if low == 'true':
+        args['low'] = cvt(props.get('lowerBound'))
+    high = props.get('hasUpperBound')
+    if high == 'true':
+        args['high'] = cvt(props.get('upperBound'))
+
+    if objtyp == 'Array':
+        vartree.add(name, Array(**args))
+    else:
+        vartree.add(name, List(**args))
+
+
+def _add_bool(vartree, member, props):
+    """ Helper for :meth:`_populate_from_xml`. """
+    name = member.attrib['name']
+    args = {}
+    args['default_value'] = member.text == 'true'
+    desc = props.get('description')
+    if desc:
+        args['desc'] = desc.decode('string_escape')
+    vartree.add(name, Bool(**args))
+
+
+def _add_enum(vartree, member, props):
+    """ Helper for :meth:`_populate_from_xml`. """
+    name = member.attrib['name']
+    typ = member.attrib['type']
+    cvt = {'double':float, 'long':int, 'string':str}[typ]
+    args = {}
+    if typ == 'string':
+        args['default_value'] = member.text.decode('string_escape')
+    else:
+        args['default_value'] = cvt(member.text)
+    desc = props.get('description')
+    if desc:
+        args['desc'] = desc.decode('string_escape')
+    values = props.get('enumValues')
+    if values:
+        if typ == 'string':
+            values = values.decode('string_escape')
+        args['values'] = [cvt(val.strip(' "')) for val in values.split(',')]
+    aliases = props.get('enumAliases')
+    if aliases:
+        aliases = aliases.decode('string_escape')
+        args['aliases'] = [val.strip(' "') for val in aliases.split(',')]
+    units = props.get('units')
+    if units:
+        args['units'] = units
+    vartree.add(name, Enum(**args))
+
+
+def _add_float(vartree, member, props):
+    """ Helper for :meth:`_populate_from_xml`. """
+    name = member.attrib['name']
+    args = {}
+    args['default_value'] = float(member.text)
+    desc = props.get('description')
+    if desc:
+        args['desc'] = desc.decode('string_escape')
+    units = props.get('units')
+    if units:
+        args['units'] = units
+    low = props.get('hasLowerBound')
+    if low == 'true':
+        args['low'] = float(props.get('lowerBound'))
+    high = props.get('hasUpperBound')
+    if high == 'true':
+        args['high'] = float(props.get('upperBound'))
+    vartree.add(name, Float(**args))
+
+
+def _add_int(vartree, member, props):
+    """ Helper for :meth:`_populate_from_xml`. """
+    name = member.attrib['name']
+    args = {}
+    args['default_value'] = int(member.text)
+    desc = props.get('description')
+    if desc:
+        args['desc'] = desc.decode('string_escape')
+    low = props.get('hasLowerBound')
+    if low == 'true':
+        args['low'] = int(props.get('lowerBound'))
+    high = props.get('hasUpperBound')
+    if high == 'true':
+        args['high'] = int(props.get('upperBound'))
+    vartree.add(name, Int(**args))
+
+
+def _add_str(vartree, member, props):
+    """ Helper for :meth:`_populate_from_xml`. """
+    name = member.attrib['name']
+    args = {}
+    args['default_value'] = member.text.decode('string_escape')
+    desc = props.get('description')
+    if desc:
+        args['desc'] = desc.decode('string_escape')
+    vartree.add(name, Str(**args))
+
+
+def _add_object(vartree, member):
+    """ Helper for :meth:`_populate_from_xml`. """
+    name = member.attrib['name']
+    obj = vartree.add(name, VariableTree(iotype=vartree.iotype))
+    _populate_from_xml(obj, member)  # Recurse.
+
+
+
+# Currently unused. While the code works, there are issues regarding how
+# other components can access the generated definition, as well as how the
+# definition could be accessed while loading from a pickled state.
+'''
 def generate_from_xml(xml):
     """ Generate class definition string from `xml`. """
     start = xml.find('<Object')
@@ -672,4 +864,5 @@ class %s(VariableTree):
     _generate_from_xml(member, subclasses, subclass_def)
     subclasses.append('')
     subclasses.extend(subclass_def)
+'''
 

@@ -38,7 +38,7 @@ class VariableTree(Container):
             if self.trait(name) is None:
                 self.add_trait(name, Slot(VariableTree(), iotype=obj._iotype))
                 self.on_trait_change(self._trait_modified, name)
-        super(VariableTree, self).add(name, obj)
+        return super(VariableTree, self).add(name, obj)
         
     def add_trait(self, name, trait):
         super(VariableTree, self).add_trait(name, trait)

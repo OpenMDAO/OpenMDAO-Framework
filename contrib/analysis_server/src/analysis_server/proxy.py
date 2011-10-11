@@ -16,7 +16,7 @@ from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
                                        List, Str
 
 from analysis_server.client import Client
-from analysis_server.objxml import get_as_xml, set_from_xml, generate_from_xml
+from analysis_server.objxml import get_as_xml, set_from_xml, populate_from_xml
 from analysis_server.units  import get_translation
 
 # Map from server host,port to object class dictionary.
@@ -115,8 +115,7 @@ class ComponentProxy(Component):
                                               str))
             elif typ == 'PHXScriptObject':
                 container.add(prop,
-                              make_object_proxy(self._host, self._port,
-                                                iotype, self._client, rpath))
+                              ObjectProxy(iotype, self._client, rpath))
             else:
                 raise NotImplementedError('%r type %r' % (prop, typ))
 
@@ -842,49 +841,6 @@ class StrProxy(ProxyMixin, Str):
                   self.validate(obj, name, value).encode('string_escape'))
 
 
-def make_object_proxy(host, port, iotype, client, rpath):
-    """
-    Create proxy for a remote 'PHXScriptObject'.
-
-    host: string
-        server hostname
-
-    port: int
-        server port on `host`.
-
-    iotype: string
-        'in' or 'out'.
-
-    client: :class:`client.Client`
-        The client to use to access the remote variable.
-
-    rpath: string
-        Path to the remote variable.
-    """
-    server_id = '%s:%s' % (host, port)
-    url = client.get(rpath+'.classURL')
-    try:
-        classes = _OBJECT_CLASSES[server_id]
-    except KeyError:
-        _OBJECT_CLASSES[server_id] = {}
-        classes = _OBJECT_CLASSES[server_id]
-    try:
-        cls = classes[url]
-    except KeyError:
-        cls = make_proxy_class(client, rpath)
-        classes[url] = cls
-
-    return cls(iotype, client, rpath)
-
-
-def make_proxy_class(client, rpath):
-    """ Create proxy class to access `rpath` on `client`. """
-    xml = client.get(rpath)
-    name, definition = generate_from_xml(xml)
-    exec definition in globals()
-    return globals()[name]
-
-
 class VarTreeMixin(object):
     """
     Add and override some VariableTree methods to support proxying
@@ -963,4 +919,70 @@ class VarTreeMixin(object):
         set_from_xml(self, xml)
 
 
+class ObjectProxy(VarTreeMixin, VariableTree):
+    """
+    Proxy for a remote 'PHXScriptObject'.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+    """
+
+    def __init__(self, iotype, client, rpath):
+        VarTreeMixin.__init__(self, iotype, client, rpath)
+        desc = client.get(rpath+'.description')
+        VariableTree.__init__(self, doc=desc, iotype=iotype)
+        xml = client.get(rpath)
+        populate_from_xml(self, xml)
+        self._dirty = False
+
+
+# Currently unused. While the code works, there are issues regarding how
+# other components can access the generated definition, as well as how the
+# definition could be accessed while loading from a pickled state.
+'''
+def make_object_proxy(host, port, iotype, client, rpath):
+    """
+    Create proxy for a remote 'PHXScriptObject'.
+    This will create a class definition if necessary via
+    :meth:`make_proxy_class` and then create an instance of that.
+
+    host: string
+        server hostname
+
+    port: int
+        server port on `host`.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+    """
+    server_id = '%s:%s' % (host, port)
+    url = client.get(rpath+'.classURL')
+    try:
+        classes = _OBJECT_CLASSES[server_id]
+    except KeyError:
+        _OBJECT_CLASSES[server_id] = {}
+        classes = _OBJECT_CLASSES[server_id]
+    try:
+        cls = classes[url]
+    except KeyError:
+        # Create a proxy class based on the object at `rpath` on `client`.
+        xml = client.get(rpath)
+        name, definition = generate_from_xml(xml)
+        exec definition in globals()
+        classes[url] = globals()[name]
+
+    return cls(iotype, client, rpath)
+'''
 
