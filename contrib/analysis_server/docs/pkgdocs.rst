@@ -24,7 +24,7 @@ Package Metadata
 - **requires-python**:: 
 
     >=2.6
-    <2.7
+    <3.0
 
 - **static_path:** [ '_static' ]
 

@@ -4,7 +4,7 @@ import os
 import shutil
 import unittest
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top
+from openmdao.main.api import Assembly, Component, Driver, set_as_top, SimulationRoot
 from openmdao.lib.datatypes.api import Float, Str, Slot, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
@@ -151,6 +151,7 @@ class AssemblyTestCase(unittest.TestCase):
             comp2
             comp3
         """
+        SimulationRoot.chroot(os.getcwd())
         top = self.asm = set_as_top(Assembly())
         top.add('comp1', DummyComp())
         nested = top.add('nested', Assembly())
@@ -279,7 +280,6 @@ class AssemblyTestCase(unittest.TestCase):
         
         self.asm.create_passthrough('comp3.r3')
         metadata = self.asm.get_metadata('r3')
-        print metadata
         self.assertEqual(metadata['iotype'],'in')
         self.assertEqual(metadata['desc'],'some random variable')
         self.assertEqual(metadata['low'],-1.0)
@@ -496,7 +496,7 @@ class AssemblyTestCase(unittest.TestCase):
             ModulesInstallPath  = Str('', desc='', iotype='in')
             
             def execute(self):
-                print 'running MyComp'
+                pass
             
             
         class MyAsm(Assembly):    

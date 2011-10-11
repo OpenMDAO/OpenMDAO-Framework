@@ -31,7 +31,7 @@ Component, Driver, and Variable plugins for OpenMDAO
       author='',
       author_email='',
       url='http://openmdao.org/docs/srcdocs/packages/openmdao.lib.html',
-      license='NASA Open Source Agreement 1.3',
+      license='Apache License, Version 2.0',
       namespace_packages=["openmdao"],
       packages=find_packages('src'),
       package_dir={'': 'src'},

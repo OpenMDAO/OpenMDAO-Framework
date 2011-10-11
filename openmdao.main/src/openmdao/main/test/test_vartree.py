@@ -4,7 +4,8 @@ import unittest
 
 from enthought.traits.trait_base import not_none
 
-from openmdao.main.api import Container, Component, Assembly, VariableTree, set_as_top, FileRef
+from openmdao.main.api import Container, Component, Assembly, VariableTree, \
+                              set_as_top, FileRef, SimulationRoot
 from openmdao.lib.datatypes.api import Float, Slot, File
 
 class DumbVT3(VariableTree):
@@ -97,6 +98,10 @@ class SimpleComp(Component):
 class NamespaceTestCase(unittest.TestCase):
 
     def setUp(self):
+        # SimulationRoot is static and so some junk can be left
+        # over from other tests when running under nose, so 
+        # set it to cwd here just to be safe
+        SimulationRoot.chroot(os.getcwd())
         self.asm = set_as_top(Assembly())
         obj = self.asm.add('scomp1', SimpleComp())
         self.asm.add('scomp2', SimpleComp())

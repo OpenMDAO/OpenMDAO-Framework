@@ -42,7 +42,7 @@ precision. Consider a variable with 15 digits of precision.
     >>> val = 3.1415926535897932
     >>>
     >>> val
-    3.1415926535897931
+    3.141592653589793...
     >>>
     >>> print val
     3.14159265359
@@ -54,7 +54,7 @@ precision. Consider a variable with 15 digits of precision.
     3.141593
     >>> 
     >>> print "%.16f" % val
-    3.1415926535897931
+    3.141592653589793...
     
 If the variable's value in the input file is created using the ``print``
 statement, only 11 digits of precision are in the generated output. The same

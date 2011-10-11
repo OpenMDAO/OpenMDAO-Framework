@@ -19,7 +19,7 @@ Package Metadata
 
 - **keywords:** openmdao
 
-- **license:** NOSA
+- **license:** Apache License, Version 2.0
 
 - **name:** mycomp
 
@@ -28,7 +28,7 @@ Package Metadata
 - **requires-python**:: 
 
     >=2.6
-    <2.7
+    <3.0
 
 - **summary:** An example of a Component plugin
 
