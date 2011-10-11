@@ -311,7 +311,8 @@ class %(classname)s(Component):
 
 _class_templates['openmdao.driver'] = '''
 
-from openmdao.main.api import Driver, HasParameters
+from openmdao.main.api import Driver
+from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.lib.datatypes.api import Float
 
