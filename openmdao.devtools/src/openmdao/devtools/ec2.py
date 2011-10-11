@@ -234,7 +234,7 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
             retval = -1
         
     if retval != 0:
-        raise RuntimeError("return value = %d" % retval)
+        raise RuntimeError("return value = %s" % retval)
 
 
 #def find_instance(inst_id):

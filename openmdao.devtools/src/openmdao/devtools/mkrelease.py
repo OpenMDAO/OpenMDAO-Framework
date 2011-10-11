@@ -240,8 +240,8 @@ def make_release():
     parser.add_option("-m", action="store", type="string", dest="comment",
                       help="optional comment for version tag")
     parser.add_option("-b", "--basebranch", action="store", type="string", 
-                      dest="base", default='master', 
-                      help="base branch for release. defaults to master")
+                      dest="base", default='dev', 
+                      help="base branch for release. defaults to dev")
     parser.add_option("-t", "--test", action="store_true", dest="test",
                       help="used for testing. A release branch will not be created")
     parser.add_option("-n", "--nodocbuild", action="store_true", 
@@ -277,8 +277,10 @@ def make_release():
             if platform == 'windows':
                 haswin = True
     if not haswin:
-        print "no windows host was specified, so can't build binary eggs for windows"
-        sys.exit(-1)
+        print "WARNING: no windows host was specified, so can't build binary eggs for windows"
+        if not options.test:
+            print 'aborting...'
+            sys.exit(-1)
         
     orig_branch = get_git_branch()
     if not orig_branch:
@@ -294,14 +296,14 @@ def make_release():
             print "There are uncommitted changes. You must run mkrelease.py from a clean branch"
             sys.exit(-1)
         
-        if orig_branch == 'master':
-            print "pulling master"
-            os.system("git pull origin master")
+        if orig_branch == 'dev':
+            print "pulling %s" % orig_branch
+            os.system("git pull origin %s" % orig_branch)
             if _has_checkouts():
                 print "something went wrong during pull.  aborting"
                 sys.exit(-1)
         else:
-            print "WARNING: base branch is not 'master' so it has not been"
+            print "WARNING: base branch is not 'dev' so it has not been"
             print "automatically brought up-to-date."
             answer = raw_input("Proceed? (Y/N) ")
             if answer.lower() not in ["y", "yes"]:
