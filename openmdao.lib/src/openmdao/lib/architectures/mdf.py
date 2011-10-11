@@ -43,18 +43,16 @@ class MDF(Architecture):
             local_dvs.append(v)
             #disciplines.update(v.get_referenced_compnames())
         
-        #TODO: possibly add methods for passing parameters directly?
-        #connect the broadcast outputs to the disciplines
         # and add the broadcast parameters to the driver
-        for glb_var in global_dvs: 
-            self.parent.driver.add_parameter(glb_var.targets,low=glb_var.low,
-                                             high=glb_var.high)   
+        for k,v in self.parent.get_global_des_vars():  
+            self.parent.driver.add_parameter(v.targets,low=v.low,
+                                             high=v.high,name=k)   
             
-        #TODO: possibly add methods for passing parameters directly?
+
         #add the local design variables to the driver
-        for loc_var in local_dvs:
-            self.parent.driver.add_parameter(loc_var.targets,low=loc_var.low,
-                                             high=loc_var.high)
+        for k,v in self.parent.get_local_des_vars(): 
+            self.parent.driver.add_parameter(v.targets,low=v.low,
+                                             high=v.high,name=k)
          
         #TODO: possibly add method for passing constraint directly?
         #add the constraints to the driver
@@ -74,7 +72,7 @@ class MDF(Architecture):
         
         #add the coupling vars parameters/constraints to the solver
         for key,couple in self.parent.get_coupling_vars().iteritems(): 
-            self.parent.solver.add_parameter(couple.indep.target, low=-9.e99, high=9.e99)
+            self.parent.solver.add_parameter(couple.indep.target, low=-9.e99, high=9.e99,name=key)
             self.parent.solver.add_constraint("%s=%s"%(couple.indep.target,couple.dep.target))
 
         #setup the workflows

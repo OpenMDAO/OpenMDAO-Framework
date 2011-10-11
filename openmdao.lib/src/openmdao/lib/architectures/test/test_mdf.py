@@ -11,8 +11,18 @@ class TestMDF(unittest.TestCase):
         prob.architecture = MDF()
         
         prob.run()
+        prob.configure()
+                
+        solver_params = prob.solver.get_parameters()
+        coupling = prob.get_coupling_vars()
         
-        error = prob.check_solution()
+        params = prob.get_parameters()
+        opt_params = prob.driver.get_parameters()
         
-        #should be able to solve this problem with very high accuracy!
-        self.assertTrue(sum([v for k,v in error.iteritems()]) < .0001)
+        
+        self.assertEqual(set(solver_params.keys()),set(coupling.keys()))
+        self.assertEqual(params,opt_params)
+        
+        
+if __name__ == "__main__":
+    unittest.main()        

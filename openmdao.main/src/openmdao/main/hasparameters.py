@@ -117,7 +117,10 @@ class Parameter(object):
         if self.low > self.high:
             parent.raise_exception("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
                                    (target, self.low, self.high), ValueError)
-
+    def __eq__(self,other):
+        return (self._expreval,self.scaler,self.adder,self.low,self.high,self.fd_step,self.start)== \
+               (other._expreval,other.scaler,other.adder,other.low,other.high,other.fd_step,other.start)
+            
     def __str__(self):
         return self._expreval.text
 
@@ -196,7 +199,10 @@ class ParameterGroup(object):
         self.scaler = self._params[0].scaler
         self.adder = self._params[0].adder
         self.fd_step = self._params[0].fd_step
-            
+    
+    def __eq__(self,other): 
+        return (self._params,self.low,self.high,self.start,self.scaler,self.adder,self.fd_step)==\
+               (other._params,other.low,other.high,other.start,other.scaler,other.adder,other.fd_step)
     def __str__(self):
         return "%s" % self.targets
 
@@ -365,6 +371,8 @@ class HasParameters(object):
         #if start is given, then initilze the var now
         if start is not None: 
             self._parameters[key].set(start,self._get_scope(scope))
+        
+        
         
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
