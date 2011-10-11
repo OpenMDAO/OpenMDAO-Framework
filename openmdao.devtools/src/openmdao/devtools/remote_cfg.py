@@ -208,7 +208,7 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
             time.sleep(1)
             for p in processes:
                 if p.exitcode is not None:
-                    summary[pr.name] = pr.exitcode
+                    summary[p.name] = p.exitcode
                     processes.remove(p)
                     if len(processes) > 0:
                         remaining = '\nremaining hosts: %s' % ([pr.name for pr in processes],)
