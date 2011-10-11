@@ -265,7 +265,7 @@ case looks like this:
     obsoletes-dist = 
     requires-python = 
         >=2.6
-        <2.7
+        <3.0
     requires-externals = 
     project-url = 
     
