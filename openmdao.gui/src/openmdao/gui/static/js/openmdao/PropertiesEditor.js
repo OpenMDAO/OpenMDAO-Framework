@@ -68,8 +68,11 @@ openmdao.PropertiesEditor = function(id,model) {
     
     /** get the specified object from model, load properties into table */
     this.editObject = function(path) {
-        if (self.pathname !== path)
+        if (self.pathname !== path) {
             self.pathname = path
+            inputs.pathname = path;
+            outputs.pathname = path;
+        }
         model.getComponent(path, loadTables,
             function(jqXHR, textStatus, errorThrown) {
                 self.pathname = '';

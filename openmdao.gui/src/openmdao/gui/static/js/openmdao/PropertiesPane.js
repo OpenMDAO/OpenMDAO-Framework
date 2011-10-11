@@ -2,7 +2,8 @@
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
 openmdao.PropertiesPane = function(elm,model,pathname,name,editable) {
-    var props,
+    var self = this,
+        props,
         propsDiv = jQuery("<div id='"+name+"_props' >"),
         columns = [
             {id:"name",  name:"Name",  field:"name",  width:80 },
@@ -15,6 +16,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable) {
             autoEdit: false,
         };
         
+    self.pathname = pathname;
+        
     if (editable) {
         options.editable = true;
         options.editOnDoubleClick = true;
@@ -25,7 +28,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable) {
     if (editable) {
         props.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
-            cmd = 'top.'+pathname+'.'+args.item.name+'='+args.item.value
+            cmd = 'top.'+self.pathname+'.'+args.item.name+'='+args.item.value
             model.issueCommand(cmd)
         });
    }
@@ -37,8 +40,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable) {
         }
         else {
             props.setData([])
-            alert('Error getting properties for '+pathname+' ('+name+')')
-            debug.info(properties)
+            alert('Error getting properties for '+self.pathname+' ('+name+')')
+            debug.info(self.pathname,properties)
         }
         props.updateRowCount()
         props.render()
