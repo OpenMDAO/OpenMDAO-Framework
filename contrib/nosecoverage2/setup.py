@@ -15,7 +15,7 @@ This nose plugin allows access to the new coverage features of html generation a
       author='',
       author_email='',
       url='',
-      license='NASA Open Source Agreement',
+      license='Apache License, Version 2.0',
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
