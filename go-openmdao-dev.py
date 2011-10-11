@@ -4,6 +4,8 @@
 """Create a "virtual" Python installation
 """
 
+# If you change the version here, change it in setup.py 
+# and docs/conf.py as well.
 virtualenv_version = "1.6.4"
 
 import base64
@@ -1657,14 +1659,6 @@ def after_install(options, home_dir):
 
     abshome = os.path.abspath(home_dir)
     
-
-    # copy the wing project file into the virtualenv
-    proj_template = join(topdir,'config','wing_proj_template.wpr')
-    
-    shutil.copy(proj_template, 
-                join(abshome,'etc','wingproj.wpr'))
-                
-        
 
     print '\n\nThe OpenMDAO virtual environment has been installed in %s.' % abshome
     print 'From %s, type:\n' % abshome

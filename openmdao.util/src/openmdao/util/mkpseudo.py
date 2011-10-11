@@ -29,7 +29,7 @@ setup(
    #author='',
    #author_email='',
    #url='http://???',
-   #license='NASA Open Source Agreement 1.3',
+   #license='Apache License, Version 2.0',
    #test_suite='nose.collector',
 )
 

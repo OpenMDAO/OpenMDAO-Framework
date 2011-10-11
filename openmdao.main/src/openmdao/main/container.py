@@ -524,6 +524,8 @@ class Container(HasTraits):
                 ip_addr = socket.gethostbyname(socket.gethostname())
                 address = (ip_addr, 0)
                 allowed_hosts = [addr]
+                if addr == ip_addr:
+                    allowed_hosts.append('127.0.0.1')
             else:
                 address = None
                 allowed_hosts = None

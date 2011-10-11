@@ -85,7 +85,7 @@ class Analysis(Assembly):
         self.MOEI_opt.opt_type = "maximize"
         self.MOEI_opt.population_size = 100
         self.MOEI_opt.generations = 10
-        self.MOEI_opt.selection_method = "tournament"
+        #self.MOEI_opt.selection_method = "tournament"
         self.MOEI_opt.add_parameter("spiral_meta_model.x")
         self.MOEI_opt.add_parameter("spiral_meta_model.y")
         self.MOEI_opt.add_objective("MOEI.PI")

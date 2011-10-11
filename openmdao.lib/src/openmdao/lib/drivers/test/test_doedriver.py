@@ -101,7 +101,7 @@ class TestCase(unittest.TestCase):
         # Verify we didn't mess-up working directory.
         end_dir = os.getcwd()
         os.chdir(ORIG_DIR)
-        if end_dir.lower() != self.directory.lower():
+        if os.path.realpath(end_dir).lower() != os.path.realpath(self.directory).lower():
             self.fail('Ended in %s, expected %s' % (end_dir, self.directory))
 
     def test_sequential(self):
