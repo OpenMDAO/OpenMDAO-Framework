@@ -36,6 +36,15 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable) {
     /** load the table with the given properties */
     this.loadData = function(properties) {
         if (properties) {
+	    // Sort by name
+	    properties.sort(function(a, b){
+	        var nameA=a.name.toLowerCase(), nameB=b.name.toLowerCase()
+		if (nameA < nameB) //sort string ascending
+		  return -1
+		if (nameA > nameB)
+		  return 1
+		return 0 //default return value (no sorting)
+	    })
             props.setData(properties)
         }
         else {
