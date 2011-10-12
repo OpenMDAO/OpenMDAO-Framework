@@ -184,6 +184,7 @@ class TestCase(unittest.TestCase):
         with model.source.dir_context:
             os.remove(model.source.output.path)
             os.remove('AS-the_obj.out_file.dat')
+        os.remove('AS-the_obj.in_file.dat')
         self.assertEqual(model.sink.z, 42)
         self.assertEqual(model.sink.tof, 2.781828)
         self.assertEqual(model.sink.sof, 3.14159)
