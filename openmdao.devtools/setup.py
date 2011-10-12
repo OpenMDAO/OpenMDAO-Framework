@@ -57,6 +57,7 @@ setup(name='openmdao.devtools',
                 "make_installer=openmdao.devtools.mkinstaller:main",
                 "make_release=openmdao.devtools.mkrelease:make_release",
                 "push_release=openmdao.devtools.push_release:main",
+                "push_dists=openmdao.devtools.push_dists:main",
                 "remote_build=openmdao.devtools.remote_build:main",
               ],
       }
