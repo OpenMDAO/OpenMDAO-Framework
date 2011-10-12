@@ -99,14 +99,14 @@ class CO(Architecture):
                 local_opt.add_parameter(param.target,low=param.low,high=param.high)
                 residuals.append("(%s-%s)**2"%(self.target_var_map[param.target],param.target))
             if comp in coupl_indeps_by_comp: 
-                for indep in coupl_indeps_by_comp[comp]: 
-                    low = indep.low or -1e99
-                    high = indep.high or 1e99
-                    local_opt.add_parameter(indep.target,low=low,high=high)
-                    residuals.append("(%s-%s)**2"%(self.target_var_map[indep.target],indep.target))
+                for couple in coupl_indeps_by_comp[comp]: 
+                    low = couple.indep.low or -1e99
+                    high = couple.indep.high or 1e99
+                    local_opt.add_parameter(couple.indep.target,low=low,high=high)
+                    residuals.append("(%s-%s)**2"%(self.target_var_map[couple.indep.target],couple.indep.target))
             if comp in coupl_deps_by_comp: 
-                for dep in coupl_deps_by_comp[comp]: 
-                    residuals.append("(%s-%s)**2"%(self.target_var_map[dep.target],dep.target))     
+                for couple in coupl_deps_by_comp[comp]: 
+                    residuals.append("(%s-%s)**2"%(self.target_var_map[couple.dep.target],couple.dep.target))     
             if comp in constraints_by_comp: 
                 for const in constraints_by_comp[comp]: 
                     local_opt.add_constraint(str(const))
@@ -143,7 +143,6 @@ class CO(Architecture):
             print constraint
         
         print 
-        print"""
-            
+        print"""            
             
             

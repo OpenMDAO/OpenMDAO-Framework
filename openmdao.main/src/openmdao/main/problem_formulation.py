@@ -80,7 +80,7 @@ class HasCouplingVars(object):
         
         
         indep,dep = indep_dep
-        
+                
         expr_indep = CouplingVar(indep,self._parent)
         if not expr_indep.check_resolve() or not expr_indep.is_valid_assignee():
                 self._parent.raise_exception("Cant add coupling variable with indep '%s' "
@@ -100,6 +100,8 @@ class HasCouplingVars(object):
                 self._parent.raise_exception("Coupling variable with dep '%s' already "
                                              "exists in assembly"%dep,ValueError)
         
+        if name is None: 
+            name = indep_dep
         c = Couple(expr_indep,expr_dep,name,start)
         if start is not None: 
             expr_indep.set(start)
@@ -249,9 +251,9 @@ class ArchitectureAssembly(Assembly):
         for indep_dep,couple in self.get_coupling_vars().iteritems(): 
             comp = couple.indep.get_referenced_compnames().pop()
             try: 
-                result[comp].append(couple.indep)
+                result[comp].append(couple)
             except KeyError: 
-                result[comp] = [couple.indep]
+                result[comp] = [couple]
                 
         return result        
                 
@@ -263,9 +265,9 @@ class ArchitectureAssembly(Assembly):
         for indep_dep,couple in self.get_coupling_vars().iteritems(): 
             comp = couple.dep.get_referenced_compnames().pop()
             try: 
-                result[comp].append(couple.dep)
+                result[comp].append(couple)
             except KeyError: 
-                result[comp] = [couple.dep]            
+                result[comp] = [couple]            
         
         return result
     

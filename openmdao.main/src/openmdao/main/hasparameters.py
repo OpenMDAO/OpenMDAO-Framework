@@ -10,7 +10,7 @@ class Parameter(object):
     
     def __init__(self, target, parent, high=None, low=None, 
                  scaler=None, adder=None, start=None, 
-                 fd_step=None, scope=None):
+                 fd_step=None, scope=None, name=None):
         self._metadata = None
         
         if scaler is None and adder is None:
@@ -40,6 +40,10 @@ class Parameter(object):
         self.scaler = scaler
         self.adder = adder
         self.fd_step = fd_step
+        if name is not None: 
+            self.name = name
+        else: 
+            self.name = target
         
         try:
             expreval = ExprEvaluator(target, scope)
@@ -199,6 +203,7 @@ class ParameterGroup(object):
         self.scaler = self._params[0].scaler
         self.adder = self._params[0].adder
         self.fd_step = self._params[0].fd_step
+        self.name = self._params[0].name
     
     def __eq__(self,other): 
         return (self._params,self.low,self.high,self.start,self.scaler,self.adder,self.fd_step)==\
@@ -349,7 +354,8 @@ class HasParameters(object):
             
         parameters = [Parameter(name, self._parent, low=low, high=high, 
                                 scaler=scaler, adder=adder, start=start,
-                                fd_step=fd_step, scope=self._get_scope(scope)) 
+                                fd_step=fd_step, name=key,
+                                scope=self._get_scope(scope)) 
                       for name in names]
 
         if key in self._parameters:

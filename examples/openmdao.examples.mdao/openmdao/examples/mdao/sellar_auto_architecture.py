@@ -68,6 +68,7 @@ if __name__ == "__main__": # pragma: no cover
     prob = SellarProblem()
     prob.architecture = CO() 
     
+    
     tt = time.time()
     prob.run()
     error = prob.check_solution()

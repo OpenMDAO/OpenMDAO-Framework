@@ -171,6 +171,7 @@ class SellarProblem(OptProblem):
         #Coupling Vars
         self.add_coupling_var(("dis2.y1","dis1.y1"),name="y1",start=0.0)
         self.add_coupling_var(("dis1.y2","dis2.y2"),name="y2",start=0.0)
+        #self.add_coupling_var(("dis1.y2","dis2.y2"),start=0.0)
                            
         self.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)',name="obj1")
         self.add_constraint('3.16 < dis1.y1')
@@ -181,8 +182,8 @@ class SellarProblem(OptProblem):
             "z1":1.9776,
             "z2":0.0,
             "dis1.x1":0.0,
-            ("dis2.y1","dis1.y1"):3.16,
-            ("dis1.y2","dis2.y2"): 3.756,
+            "y1":3.16,
+            "y2": 3.756,
             'obj1':3.1834
         }
         

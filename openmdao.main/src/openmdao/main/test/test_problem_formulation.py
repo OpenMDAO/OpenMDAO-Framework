@@ -45,12 +45,25 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.add("D5",Dummy()) 
         self.asm.add("D6",Dummy()) 
         
+        
+    def test_get_local_des_vars_by_comp(self): 
+        self.asm.add_parameter('D1.a',0,1e99)
+        self.asm.add_parameter('D1.b',0,1e99)
+        self.asm.add_parameter('D4.a',0,1e99)
+        
+        data = self.asm.get_local_des_vars_by_comp()
+        
+        self.assertEqual(set([param.target for param in data['D1']]),set(['D1.a','D1.b']))  
+        self.assertEqual(set([param.target for param in data['D4']]),set(['D4.a']))  
+        
+        
     def test_get_global_des_vars_by_comp(self): 
         self.asm.add_parameter(('D1.a','D2.a','D2.b'),0,1e99)
         
         data = self.asm.get_global_des_vars_by_comp()
         
         self.assertEqual(set(data.keys()),set(['D1','D2']))
+        
         self.assertEqual(set([param.target for param in data['D1']]),set(['D1.a']))  
         self.assertEqual(set([param.target for param in data['D2']]),set(['D2.a','D2.b']))  
          
@@ -85,10 +98,10 @@ class ProblemFormulationTest(unittest.TestCase):
         self.assertEqual(ordereddict.OrderedDict(zip([("D1.a","D2.a"),("D4.a","D5.a"),("D6.a","D5.b")],[c1,c2,c3])),
                          self.asm.get_coupling_vars())
         
-        self.assertEqual({'D1':[c1.indep],'D4':[c2.indep],'D6':[c3.indep]},
+        self.assertEqual({'D1':[c1],'D4':[c2],'D6':[c3]},
                          self.asm.get_coupling_indeps_by_comp())
         
-        self.assertEqual({'D2':[c1.dep],'D5':[c2.dep,c3.dep]},
+        self.assertEqual({'D2':[c1],'D5':[c2,c3]},
                          self.asm.get_coupling_deps_by_comp())
         
         
