@@ -465,6 +465,12 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(ex.evaluate(), None)
         self.assertEqual(self.top.a.f, 10.333)
         
+        # try a numpy function
+        ex = ExprEvaluator("numpy.eye(2)", self.top.a)
+        val = ex.evaluate()
+        self.assertTrue((val==numpy.eye(2)).all())
+        
+        
     def test_reparse_on_scope_change(self):
         self.top.comp.x = 99.5
         self.top.comp.y = -3.14
