@@ -184,7 +184,7 @@ version: 7.0, build: 42968"""
     def test_invoke(self):
         self.client.start('ASTestComp', 'comp')
         result = self.client.invoke('comp.float_method')
-        self.assertEqual(result, '0')
+        self.assertEqual(result, '5')
         result = self.client.invoke('comp.null_method')
         self.assertEqual(result, '')
         result = self.client.invoke('comp.str_method')

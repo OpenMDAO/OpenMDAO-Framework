@@ -1417,14 +1417,15 @@ class FileWrapper(BaseWrapper):
                         gz_file.writelines(inp)
                         gz_file.close()
                 except IOError as exc:
-                    self._logger.warning('get %s.value: %r', path, exc)
+                    self._logger.warning('get %s.value: %r',
+                                         self._ext_path, exc)
                     data = ''
                 else:
                     data = base64.b64encode(data.getvalue())
-            zipped=' gzipped="true"'
+            zipped = ' gzipped="true"'
         else:
             data = escape(self.get('value', self._ext_path))
-            zipped=''
+            zipped = ''
 
         return '<Variable name="%s" type="file" io="%s" description=%s' \
                ' isBinary="%s" fileName=""%s>%s</Variable>' \
@@ -1866,7 +1867,7 @@ class ObjWrapper(BaseWrapper):
         """
         if attr == 'value':
             obj = self._container.get(self._name)
-            xml = get_as_xml(obj, self._name)
+            xml = get_as_xml(obj)
             return xml
         elif attr == 'classURL':
             path = sys.modules[self._cls.__module__].__file__

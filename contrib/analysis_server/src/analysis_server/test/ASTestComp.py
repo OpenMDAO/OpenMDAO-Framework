@@ -122,7 +122,7 @@ class TestComponent(Component):
 
     @rbac(('owner', 'user'))
     def float_method(self):
-        return self.z
+        return self.x + self.y
 
     @rbac(('owner', 'user'))
     def int_method(self):

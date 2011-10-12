@@ -152,13 +152,16 @@ class TestCase(unittest.TestCase):
             data = inp.read()
         self.assertEqual(data, 'Hello world!')
 
+        result_b = comp.float_method()
         before = self.get_state(comp, 'the_obj', comp._client)
         state_file = 'state.pickle'
         try:
             comp.save(state_file)
             restored = Component.load(state_file)
+            result_a = restored.float_method()
             after = self.get_state(restored, 'the_obj', restored._client)
             restored.pre_delete()
+            self.assertEqual(result_a, result_b)
             self.compare_states(before, after)
         finally:
             os.remove(state_file)

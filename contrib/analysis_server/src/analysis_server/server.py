@@ -1890,7 +1890,7 @@ class _WrapperConfig(object):
                         continue
                     elif isinstance(obj, Container) and \
                          not isinstance(obj, Component):
-                            containers.append(obj)
+                        containers.append(obj)
 
                 # Register all valid top-level non-vanilla paths.
                 for container in containers:

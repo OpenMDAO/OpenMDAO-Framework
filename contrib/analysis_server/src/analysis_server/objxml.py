@@ -10,6 +10,8 @@ from openmdao.main.api import Container, VariableTree
 from openmdao.main.mp_support import is_instance
 from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, List, Str
 
+from analysis_server.units import get_translation
+
 # Attributes to ignore.
 _IGNORE_ATTR = ('iotype',)
 
@@ -17,9 +19,12 @@ _IGNORE_ATTR = ('iotype',)
 # Map from class to class name.
 _CLASS_MAP = {}
 
+# Not currently used. Intended for supporting specified AnalysisServer names.
+'''
 def register(cls, name):
     """ Register `name` for `cls`. """
     _CLASS_MAP[cls] = name
+'''
 
 def _lookup(obj):
     """ Return class name for `obj`. """
@@ -36,17 +41,22 @@ def _float2str(val):
     return '%.16g' % val
 
 
-def get_as_xml(container, name):
-    """ Return XML for `container` with `name`. """
+def get_as_xml(container):
+    """
+    Return XML for `container`.
+
+    container: Container
+        Object to return XML representation of.
+    """
     xml = []
     xml.append("""\
 <?xml version="1.0" encoding="utf-8"?>\
 <Object className="%s" type="object" nonStrictType="false" customSerialization="false">""" % _lookup(container))
-    _get_as_xml(container, name, xml)
+    _get_as_xml(container, xml)
     xml.append('</Object>')
     return ''.join(xml)
 
-def _get_as_xml(container, name, xml):
+def _get_as_xml(container, xml):
     """ Recursive helper for :meth:`get_as_xml`. """
     xml.append('<members>')
     # Using ._alltraits().items() since .items() returns a generator.
@@ -59,7 +69,7 @@ def _get_as_xml(container, name, xml):
             xml.append("""\
 <member name="%s" type="object" access="public" className="%s">\
 """ % (name, _lookup(val)))
-            _get_as_xml(val, name, xml)
+            _get_as_xml(val, xml)
             xml.append('</member>')
         else:
             ttype = trait.trait_type
@@ -314,7 +324,15 @@ def _get_str(name, val, trait, xml):
 
 
 def set_from_xml(container, xml):
-    """ Set values in `container` from `xml`. """
+    """
+    Set values in `container` from `xml`.
+
+    container: Container
+        Contains variables to be set.
+
+    xml: string
+        Representation of values to be set.
+    """
     start = xml.find('<Object')
     xml = xml[start:]
     root = ElementTree.fromstring(xml)
@@ -464,7 +482,15 @@ def _set_str(container, name, member):
 
 
 def populate_from_xml(vartree, xml):
-    """ Populate :class:`VariableTree` from `xml`. """
+    """
+    Populate `vartree` from `xml`.
+
+    vartree: VariableTree
+        Tree to be populated.
+
+    xml: string
+        Representation of tree structure.
+    """
     start = xml.find('<Object')
     xml = xml[start:]
     root = ElementTree.fromstring(xml)
@@ -542,7 +568,7 @@ def _add_array(vartree, member, props):
         args['desc'] = desc.decode('string_escape')
     units = props.get('units')
     if units:
-        args['units'] = units
+        args['units'] = get_translation(units)
     low = props.get('hasLowerBound')
     if low == 'true':
         args['low'] = cvt(props.get('lowerBound'))
@@ -591,7 +617,7 @@ def _add_enum(vartree, member, props):
         args['aliases'] = [val.strip(' "') for val in aliases.split(',')]
     units = props.get('units')
     if units:
-        args['units'] = units
+        args['units'] = get_translation(units)
     vartree.add(name, Enum(**args))
 
 
@@ -605,7 +631,7 @@ def _add_float(vartree, member, props):
         args['desc'] = desc.decode('string_escape')
     units = props.get('units')
     if units:
-        args['units'] = units
+        args['units'] = get_translation(units)
     low = props.get('hasLowerBound')
     if low == 'true':
         args['low'] = float(props.get('lowerBound'))
@@ -656,7 +682,12 @@ def _add_object(vartree, member):
 # definition could be accessed while loading from a pickled state.
 '''
 def generate_from_xml(xml):
-    """ Generate class definition string from `xml`. """
+    """
+    Generate class definition string from `xml`.
+
+    xml: string
+        Representation of class to be defined.
+    """
     start = xml.find('<Object')
     xml = xml[start:]
     root = ElementTree.fromstring(xml)
@@ -748,7 +779,7 @@ def _generate_array(member, props, class_def):
         args.append('desc=%r' % desc.decode('string_escape'))
     units = props.get('units')
     if units:
-        args.append('units=%r' % units)
+        args.append('units=%r' % get_translation(units))
     low = props.get('hasLowerBound')
     if low == 'true':
         args.append('low=%s' % props.get('lowerBound'))
@@ -793,7 +824,7 @@ def _generate_enum(member, props, class_def):
         args.append('aliases=(%s)' % aliases.decode('string_escape'))
     units = props.get('units')
     if units:
-        args.append('units=%r' % units)
+        args.append('units=%r' % get_translation(units))
     args = ', '.join(args)
     class_def.append('        self.add(%r, Enum(%s))' % (name, args))
 
@@ -808,7 +839,7 @@ def _generate_float(member, props, class_def):
         args.append('desc=%r' % desc.decode('string_escape'))
     units = props.get('units')
     if units:
-        args.append('units=%r' % units)
+        args.append('units=%r' % get_translation(units))
     low = props.get('hasLowerBound')
     if low == 'true':
         args.append('low=%s' % props.get('lowerBound'))

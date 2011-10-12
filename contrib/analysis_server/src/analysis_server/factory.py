@@ -1,6 +1,3 @@
-import optparse
-import sys
-
 from openmdao.main.factory import Factory
 
 from analysis_server import client, proxy, server

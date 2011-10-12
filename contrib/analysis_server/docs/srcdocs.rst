@@ -46,6 +46,19 @@ monitor.py
    :show-inheritance:
     
         
+.. index:: objxml.py
+
+.. _analysis_server.objxml.py:
+
+objxml.py
+---------
+
+.. automodule:: analysis_server.objxml
+   :members:
+   :undoc-members:
+   :show-inheritance:
+    
+        
 .. index:: proxy.py
 
 .. _analysis_server.proxy.py:

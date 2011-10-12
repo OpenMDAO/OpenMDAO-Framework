@@ -7,6 +7,7 @@ the component proxy is built.
 
 import numpy
 import socket
+import types
 
 from enthought.traits.api import TraitError
 
@@ -57,7 +58,13 @@ class ComponentProxy(Component):
         self._client = Client(host, port)
         self._client.start(typname, self._objname)
         super(ComponentProxy, self).__init__()
+
+        # Add properties (variables).
         self._populate(self, self._objname)
+
+        # Add methods.
+        self._methods = self._client.list_methods(self._objname)
+        self._add_methods()
 
     def _populate(self, container, path):
         """
@@ -69,9 +76,13 @@ class ComponentProxy(Component):
         path: string
             Path on server corresponding to `container`.
         """
-# TODO: local/remote name collision detection/resolution?
         info = self._client.list_properties(path)
         for prop, typ, iotype in info:
+            if hasattr(container, prop):
+                container.raise_exception('Name %r already bound to %r'
+                                          % (prop, getattr(container, prop)),
+                                          AttributeError)
+
             rpath = '.'.join([path, prop])
             if typ == 'PHXDouble' or typ == 'PHXLong' or typ == 'PHXString':
                 enum_valstrs = self._client.get(rpath+'.enumValues')
@@ -115,20 +126,38 @@ class ComponentProxy(Component):
                                               str))
             elif typ == 'PHXScriptObject':
                 container.add(prop,
-                              ObjectProxy(iotype, self._client, rpath))
+                              ObjProxy(iotype, self._client, rpath))
             else:
                 raise NotImplementedError('%r type %r' % (prop, typ))
+
+    def _add_methods(self):
+        """ Add methods to invoke remote methods. """
+        for name in self._methods:
+            if hasattr(self, name):
+                self.raise_exception('Name %r already bound to %r'
+                                     % (name, getattr(self, name)),
+                                     AttributeError)
+            dct = {}
+            exec """
+def %s(self):
+    return self._invoke_method(%r)
+""" % (name, name) in dct
+            setattr(self, name,
+                    types.MethodType(dct[name], self, self.__class__))
 
     def __getstate__(self):
         """ Return dict representing this component's local state. """
         state = super(ComponentProxy, self).__getstate__()
         del state['_client']
+        for name in self._methods:
+            del state[name]
         return state
 
     def __setstate__(self, state):
         """ Restore this component's local state. """
         state['_client'] = None
         super(ComponentProxy, self).__setstate__(state)
+        self._add_methods()
 
     def post_load(self):
         """
@@ -175,15 +204,26 @@ class ComponentProxy(Component):
 
     def execute(self):
         """ Execute remote component. """
-        # Flush all 'in' object proxies.
+        self._flush_proxies()
+        self._client.execute(self._objname)
+        self._update_proxies()
+
+    def _invoke_method(self, name):
+        """ Invoke remote method. """
+        self._flush_proxies()
+        result = self._client.invoke('%s.%s' % (self._objname, name))
+        self._update_proxies()
+        return result
+
+    def _flush_proxies(self):
+        """ Flush all 'in' object proxies. """
         for name, obj in self.items():
             if isinstance(obj, VariableTree):
                 if obj.iotype == 'in':
                     obj.flush()
 
-        self._client.execute(self._objname)
-
-        # Update all 'out' object proxies.
+    def _update_proxies(self):
+        """ Update all 'out' object proxies. """
         for name, obj in self.items():
             if isinstance(obj, VariableTree):
                 if obj.iotype == 'out':
@@ -897,7 +937,7 @@ class VarTreeMixin(object):
     def flush(self):
         """ If we've been modified, then update remote from local. """
         if self._dirty:
-            xml = get_as_xml(self, self.name)
+            xml = get_as_xml(self)
             self._client.set(self._rpath, xml)
             self._valstr = xml
             self._dirty = False
@@ -919,7 +959,7 @@ class VarTreeMixin(object):
         set_from_xml(self, xml)
 
 
-class ObjectProxy(VarTreeMixin, VariableTree):
+class ObjProxy(VarTreeMixin, VariableTree):
     """
     Proxy for a remote 'PHXScriptObject'.
 

@@ -565,7 +565,7 @@ Available Commands:
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'invoke comp.float_method()'], count=3)
-        self.assertEqual(replies[-1], '0\r\n>')
+        self.assertEqual(replies[-1], '5\r\n>')
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'invoke comp.null_method()'], count=3)

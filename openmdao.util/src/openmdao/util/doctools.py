@@ -83,7 +83,10 @@ def get_traits_info(app, what, name, obj, options, lines):
     this_class_traits = obj.class_traits()
    
     #gets a dict of all traits in this class' base class
-    base_class_traits = classes[1].class_traits()
+    base_class_traits = {}
+    for cls in classes[1:]:
+       if hasattr(cls, 'class_traits'): 
+            base_class_traits.update(cls.class_traits())
 
     #The things we want to keep will be those that are
     #unique to the current class, and those that appear in the
