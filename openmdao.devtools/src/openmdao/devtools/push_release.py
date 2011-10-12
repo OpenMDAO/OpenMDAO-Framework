@@ -129,8 +129,7 @@ def main():
         print "release directory %s not found" % args[0]
         sys.exit(-1)
     
-    destparts = args[1].split(':', 1)
-    if len(destparts)==1: # it's a local release test area
+    if not ('@' in args[1] or ':' in args[1]): # it's a local release test area
         if not os.path.isdir(args[1]):
             _setup_local_release_dir(args[1])
         comm_obj.put = shutil.copy
@@ -138,12 +137,16 @@ def main():
         comm_obj.run = local
         
         _push_release(args[0], args[1], comm_obj, py=options.py)
-    else: # assume args[1] is a remote host:destdir
+    else: # assume args[1] is a remote user@host:destdir
         comm_obj.put = put
         comm_obj.put_dir = put_dir
         comm_obj.run = run
         
-        home = destparts[1]
+        destparts = args[1].split(':', 1)
+        if len(destparts) > 1:
+            home = destparts[1]
+        else:
+            home = '~'
 
         with settings(host_string=destparts[0]):
             _push_release(args[0], home, comm_obj, py=options.py)
