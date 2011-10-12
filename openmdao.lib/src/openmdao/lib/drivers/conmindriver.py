@@ -34,6 +34,7 @@ from openmdao.main.api import Case, ExprEvaluator
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.exceptions import RunStopped
 from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
+from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, IHasObjective, implements
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
@@ -187,6 +188,8 @@ class CONMINdriver(DriverUsesDerivatives):
         5: Solve 1D search problem for unconstrained function
             
     """
+    # I don't see an IUsesGradients
+    implements(IHasParameters, IHasIneqConstraints, IHasObjective)
     
     # pylint: disable-msg=E1101
     # Control parameters for CONMIN.

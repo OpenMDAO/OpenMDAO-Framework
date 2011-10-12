@@ -3,6 +3,7 @@ from openmdao.main.workflow import Workflow
 from openmdao.main.interfaces import implements, IComponent
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.mp_support import has_interface
+from openmdao.main.configinfo import ConfigInfo
 
 __all__ = ['SequentialWorkflow']
 
@@ -24,6 +25,22 @@ class SequentialWorkflow(Workflow):
     def __contains__(self, comp):
         return comp in self._names
     
+    def get_configinfo(self, pathname):
+        """Return a ConfigInfo object for this instance.  The
+        ConfigInfo object should also contain ConfigInfo objects
+        for children of this object.
+        """
+        info = ConfigInfo(self, pathname)
+        for name in self._names:
+            info.cmds.append("%s.add('%s')" % (pathname, name))
+        return info
+        
+    def __eq__(self, other):
+        return type(self) is type(other) and self._names == other._names
+    
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def get_names(self):
         """Return a list of component names in this workflow."""
         return self._names[:]

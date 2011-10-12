@@ -1,0 +1,49 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<META HTTP-EQUIV="CACHE-CONTROL" CONTENT="NO-CACHE">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>{% block title %} OpenMDAO O3D Viewer: {{ user.username }} {% endblock %}</title>
+</head>
+
+<body bgcolor="Grey">
+	<!----------------------------------------->
+	<!-- load all the scripts & style sheets -->
+	<!----------------------------------------->
+
+    <link rel="stylesheet" href="/static/css/mdao-styles.css">
+    <link rel="stylesheet" href="/static/css/mdao-layout.css">
+
+    <!-- jQuery -->
+    <link rel="stylesheet" href="/static/css/ui-darkness/jquery-ui-1.8.7.custom.css">
+    <script src="/static/js/jquery-1.6.2.js"></script>
+    <script src="/static/js/jquery-ui-1.8.7.custom.min.js"></script>
+    
+    <!--  ben alman's debug script (for development only, remove for flight)  -->
+    <script src="/static/js/ba-debug.min.js"></script>
+    
+    <!-- webGL -->
+    <script type="text/javascript" src="/static/js/3Dresources/o3d-webgl-base.js"></script>
+    <script type="text/javascript" src="/static/js/3Dresources/o3djs-base.js"></script>
+
+    <!-- openmdao specific imports -->
+    <script src="/static/js/openmdao/BasePane.js"></script>
+    <script src="/static/js/openmdao/Menu.js"></script>
+    <script src="/static/js/openmdao/O3DViewer.js"></script>
+    
+    <script>
+        jQuery(function() {
+            new openmdao.O3DViewer("geometry","{{ filename }}")
+        });
+    </script>
+   
+    <div id="geometry">
+    </div>
+    
+</body>
+
+</html>
