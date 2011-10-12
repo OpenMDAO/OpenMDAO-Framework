@@ -45,14 +45,14 @@ class MDF(Architecture):
         
         # and add the broadcast parameters to the driver
         for k,v in self.parent.get_global_des_vars():  
-            self.parent.driver.add_parameter(v.targets,low=v.low,
-                                             high=v.high,name=k)   
+            self.parent.driver.add_parameter(v,name=k)   
             
 
         #add the local design variables to the driver
         for k,v in self.parent.get_local_des_vars(): 
-            self.parent.driver.add_parameter(v.targets,low=v.low,
-                                             high=v.high,name=k)
+            print type(v) 
+            
+            self.parent.driver.add_parameter(v,name=k)
          
         #TODO: possibly add method for passing constraint directly?
         #add the constraints to the driver

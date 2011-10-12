@@ -122,15 +122,17 @@ class Parameter(object):
             parent.raise_exception("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
                                    (target, self.low, self.high), ValueError)
     def __eq__(self,other):
-        return (self._expreval,self.scaler,self.adder,self.low,self.high,self.fd_step,self.start)== \
-               (other._expreval,other.scaler,other.adder,other.low,other.high,other.fd_step,other.start)
+        if not isinstance(other,Parameter): 
+            return False
+        return (self._expreval,self.scaler,self.adder,self.low,self.high,self.fd_step,self.start,self.name)== \
+               (other._expreval,other.scaler,other.adder,other.low,other.high,other.fd_step,other.start,self.name)
             
     def __str__(self):
         return self._expreval.text
 
     def __repr__(self): 
-        return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s)>' % \
-               (self.target, self.low, self.high, self.fd_step, self.scaler, self.adder,self.start)
+        return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s,name=%s)>' % \
+               (self.target, self.low, self.high, self.fd_step, self.scaler, self.adder,self.start,self.name)
     
     def _transform(self, val):
         """ Unscales the variable (parameter space -> var space). """
@@ -206,14 +208,16 @@ class ParameterGroup(object):
         self.name = self._params[0].name
     
     def __eq__(self,other): 
-        return (self._params,self.low,self.high,self.start,self.scaler,self.adder,self.fd_step)==\
-               (other._params,other.low,other.high,other.start,other.scaler,other.adder,other.fd_step)
+        if not isinstance(other,ParameterGroup): 
+            return False
+        return (self._params,self.low,self.high,self.start,self.scaler,self.adder,self.fd_step,self.name)==\
+               (other._params,other.low,other.high,other.start,other.scaler,other.adder,other.fd_step,self.name)
     def __str__(self):
         return "%s" % self.targets
 
     def __repr__(self): 
-        return '<ParameterGroup(targets=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s)>' % \
-               (self.targets, self.low, self.high,self.fd_step, self.scaler, self.adder,self.start)
+        return '<ParameterGroup(targets=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s,name=%s)>' % \
+               (self.targets, self.low, self.high,self.fd_step, self.scaler, self.adder,self.start,self.name)
 
     @property
     def target(self): 
@@ -289,13 +293,15 @@ class HasParameters(object):
                       fd_step=None, name=None, scope=None):
         """Adds a parameter or group of parameters to the driver.
         
-        target: string or iter of strings
+        target: string or iter of strings or Parameter
             What the driver should vary during execution. A *target* is an expression
             that can reside on the left-hand side of an assignment statement, so 
             typically it will be the name of a variable or possibly a subscript 
             expression indicating an entry within an array variable, e.g., x[3].
             If an iterator of targets is given, then the driver will set all targets given
             to the same value whenever it varies this parameter during execution.
+            If a Parameter instance is given, then that instance is copied into the driver
+            with any other arguments specified, overiding the values in the given parameter. 
             
         low: float (optional)
             Minimum allowed value of the parameter. If scaler and/or adder
@@ -334,49 +340,79 @@ class HasParameters(object):
         referenced. If they are not specified in the metadata and not provided
         as arguments, a ValueError is raised.
         """
-        if isinstance(target, basestring): 
-            names = [target]
-            key = target
-        else: 
-            names = target
-            key = tuple(target)
-
-        if name is not None:
-            key = name
+        if isinstance(target,Parameter): 
+            self._parameters[target.name] = target
             
-        dups = set(self.list_param_targets()).intersection(names)
-        if len(dups) == 1:
-            self._parent.raise_exception("'%s' is already a Parameter target" % 
-                                         dups.pop(), ValueError)
-        elif len(dups) > 1:
-            self._parent.raise_exception("%s are already Parameter targets" % 
-                                         sorted(list(dups)), ValueError)
+            self._parameters[target.name].low = low or target.low 
+            self._parameters[target.name].high = high or target.high
+            self._parameters[target.name].scaler = scaler or target.scaler
+            self._parameters[target.name].start = adder or target.start
+            self._parameters[target.name].fd_step = fd_step or target.fd_step
+            self._parameters[target.name].name = name or target.name
             
-        parameters = [Parameter(name, self._parent, low=low, high=high, 
-                                scaler=scaler, adder=adder, start=start,
-                                fd_step=fd_step, name=key,
-                                scope=self._get_scope(scope)) 
-                      for name in names]
+        elif isinstance(target,ParameterGroup): 
+            self._parameters[target.name] = target
+            
+            self._parameters[target.name].low = low or target.low
+            self._parameters[target.name].high = high or target.high
+            self._parameters[target.name].scaler = scaler or target.scaler
+            self._parameters[target.name].start = adder or target.start
+            self._parameters[target.name].fd_step = fd_step or target.fd_step
+            self._parameters[target.name].name = name or target.name
+            
+            for param in self._parameters[target.name]._params: 
+                param.low = low or target.low
+                param.high = high or target.high
+                param.scaler = scaler or target.scaler
+                param.start = adder or target.start
+                param.fd_step = fd_step or target.fd_step
+                param.name = name or target.name
 
-        if key in self._parameters:
-            self._parent.raise_exception("%s is already a Parameter" % key,
-                                         ValueError)
-
-        if len(parameters) == 1:
-            self._parameters[key] = parameters[0]
-        else: # defining a ParameterGroup
-            types = set([p.valtypename for p in parameters])
-            if len(types) > 1: 
-                self._parent.raise_exception("Can't add parameter %s because "
-                    "%s are not all of the same type" %
-                    (key," and ".join(names)), ValueError)
-            pg = ParameterGroup(parameters)
-            pg.typename = parameters[0].valtypename
-            self._parameters[key] = pg
-        
-        #if start is given, then initilze the var now
-        if start is not None: 
-            self._parameters[key].set(start,self._get_scope(scope))
+            
+        else:     
+            if isinstance(target, basestring): 
+                names = [target]
+                key = target
+            else: 
+                names = target
+                key = tuple(target)
+    
+            if name is not None:
+                key = name
+                
+            dups = set(self.list_param_targets()).intersection(names)
+            if len(dups) == 1:
+                self._parent.raise_exception("'%s' is already a Parameter target" % 
+                                             dups.pop(), ValueError)
+            elif len(dups) > 1:
+                self._parent.raise_exception("%s are already Parameter targets" % 
+                                             sorted(list(dups)), ValueError)
+                
+            parameters = [Parameter(name, self._parent, low=low, high=high, 
+                                    scaler=scaler, adder=adder, start=start,
+                                    fd_step=fd_step, name=key,
+                                    scope=self._get_scope(scope)) 
+                          for name in names]
+    
+            if key in self._parameters:
+                self._parent.raise_exception("%s is already a Parameter" % key,
+                                             ValueError)
+    
+            if len(parameters) == 1:
+                self._parameters[key] = parameters[0]
+            else: # defining a ParameterGroup
+                types = set([p.valtypename for p in parameters])
+                if len(types) > 1: 
+                    self._parent.raise_exception("Can't add parameter %s because "
+                        "%s are not all of the same type" %
+                        (key," and ".join(names)), ValueError)
+                pg = ParameterGroup(parameters)
+                pg.typename = parameters[0].valtypename
+                self._parameters[key] = pg
+            
+            #if start is given, then initilze the var now
+            if start is not None: 
+                self._parameters[key].set(start,self._get_scope(scope))
         
         
         
