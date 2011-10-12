@@ -21,20 +21,13 @@ for name in dir(math):
     if not name.startswith('_'):
         _expr_dict[name] = getattr(math, name)
         
-# make numpy and scipy functions available if possible
+# make numpy functions available if possible
 try:
     import numpy
 except ImportError:
     pass
 else:
     _expr_dict['numpy'] = numpy
-    
-try:
-    import scipy
-except ImportError:
-    pass
-else:
-    _expr_dict['scipy'] = scipy
 
 _Missing = object()
 
