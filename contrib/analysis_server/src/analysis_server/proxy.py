@@ -192,16 +192,6 @@ def %s(self):
             self._client.quit()
             self._client = None
 
-    def __del__(self):
-        """ Cleanup client if it hasn't been already. """
-        if self._client is not None:
-            try:
-                self._client.end(self._objname)
-                self._client.quit()
-            except (EOFError, socket.error):  # pragma no cover
-                pass
-            self._client = None
-
     def execute(self):
         """ Execute remote component. """
         self._flush_proxies()

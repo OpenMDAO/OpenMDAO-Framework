@@ -169,9 +169,6 @@ class TestCase(unittest.TestCase):
             os.remove('AS-the_obj.out_file.dat')
             comp.pre_delete()
 
-        comp = set_as_top(self.factory.create('ASTestComp'))
-        comp.__del__()
-
     def test_model(self):
         logging.debug('')
         logging.debug('test_model')

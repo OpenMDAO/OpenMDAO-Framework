@@ -27,7 +27,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 from zope.interface import Interface, implements
 
 from enthought.traits.api import HasTraits, Missing, Undefined, Python, \
-                                 push_exception_handler, TraitType, CTrait
+                                 push_exception_handler, TraitType, CTrait, List
 from enthought.traits.trait_handlers import NoDefaultSpecified, TraitListObject
 from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
@@ -346,16 +346,25 @@ class Container(HasTraits):
         """Return dict representing this container's state."""
         state = super(Container, self).__getstate__()
         dct = {}
+        list_fixups = {}
         for name, trait in state['_added_traits'].items():
             if trait.transient is not True:
                 dct[name] = trait
+                # List trait values lose their 'name' for some reason.
+                # Remember the values here so we don't need to getattr()
+                # during __setstate__().
+                if isinstance(trait, List):
+                    val = getattr(self, name)
+                    if isinstance(val, TraitListObject):
+                        list_fixups[name] = val
         state['_added_traits'] = dct
         state['_cached_traits_'] = None
-        
+        state['_list_fixups'] = list_fixups
         return state
 
     def __setstate__(self, state):
         """Restore this component's state."""
+        list_fixups = state.pop('_list_fixups')
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
 
@@ -366,10 +375,11 @@ class Container(HasTraits):
         for name, trait in self._added_traits.items():
             if name not in traits:
                 self.add_trait(name, trait)
-                # List traits lose their 'name' for some reason.
-                val = getattr(self, name)
-                if isinstance(val, TraitListObject):
-                    val.name = name
+
+        # List trait values lose their 'name' for some reason.
+        # Restore from remembered values.
+        for name in list_fixups:
+            list_fixups[name].name = name
 
         # Fix property traits that were not just added above.
         # For some reason they lost 'get()', but not 'set()' capability.
