@@ -31,6 +31,12 @@ def run_openmdao_suite():
     args.append('--exe') # by default, nose will skip any .py files that are
                          # executable. --exe prevents this behavior
     
+    # Clobber cached eggsaver data in case Python environment has changed.
+    base = os.path.expanduser(os.path.join('~', '.openmdao'))
+    path = os.path.join(base, 'eggsaver.dat')
+    if os.path.exists(path):
+        os.remove(path)
+
     if '--with-coverage' in args:
         args.append('--cover-erase')
         if '--all' in args and not covpkg:
@@ -39,12 +45,10 @@ def run_openmdao_suite():
                 if opt not in args:
                     args.append(opt)
 
-            # Better coverage if we clobber cached data.
-            base = os.path.expanduser(os.path.join('~', '.openmdao'))
-            for name in ('eggsaver.dat', 'keys'):
-                path = os.path.join(base, name)
-                if os.path.exists(path):
-                    os.remove(path)
+            # Better coverage if we clobber credential data.
+            path = os.path.join(base, 'keys')
+            if os.path.exists(path):
+                os.remove(path)
 
     # this tells it to enable the console in the environment so that
     # the logger will print output to stdout. This helps greatly when 
