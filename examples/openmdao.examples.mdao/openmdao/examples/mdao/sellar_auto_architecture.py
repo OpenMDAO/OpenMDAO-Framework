@@ -35,7 +35,7 @@ if __name__ == "__main__": # pragma: no cover
                                                              error["z2"],
                                                              error['dis1.x1'])
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
-    print "Minimum objective: ", error['obj1']
+    print "Minimum objective: ", prob.solution['obj1']
     print "Elapsed time: ", time.time()-tt, "seconds"
     print "\n"
         
@@ -60,7 +60,7 @@ if __name__ == "__main__": # pragma: no cover
                                                              error["z2"],
                                                              error['dis1.x1'])
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
-    print "Minimum objective: ", error['obj1']
+    print "Minimum objective: ", prob.solution['obj1']
 
     print "Elapsed time: ", time.time()-tt, "seconds"
     print "\n"
@@ -82,7 +82,7 @@ if __name__ == "__main__": # pragma: no cover
                                                              error["z2"],
                                                              error['dis1.x1'])
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
-    print "Minimum objective: ", error['obj1']
+    print "Minimum objective: ", prob.solution['obj1']
 
     print "Elapsed time: ", time.time()-tt, "seconds"
     
